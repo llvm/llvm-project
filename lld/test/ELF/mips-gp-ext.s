@@ -36,7 +36,7 @@
 #                 ^-- 0-0x10c
 
 # REL: 00000000         .text           00000000 foo
-# REL: 0000010c         *ABS*           00000000 .hidden _gp_disp
+# REL: 00000000         *ABS*           00000000 .hidden _gp_disp
 # REL: 0000010c         *ABS*           00000000 .hidden _gp
 
 # ABS:      Contents of section .text:
@@ -56,7 +56,7 @@
 #                 ^-- 0-0x200
 
 # ABS: 00000000         .text           00000000 foo
-# ABS: 00000200         *ABS*           00000000 .hidden _gp_disp
+# ABS: 00000000         *ABS*           00000000 .hidden _gp_disp
 # ABS: 00000200         *ABS*           00000000 .hidden _gp
 
   .text

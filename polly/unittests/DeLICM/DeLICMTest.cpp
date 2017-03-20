@@ -51,32 +51,24 @@ typedef struct {
   const char *WrittenStr;
 } Knowledge;
 
+isl::union_set parseSetOrNull(isl_ctx *Ctx, const char *Str) {
+  if (!Str)
+    return nullptr;
+  return isl::union_set(Ctx, Str);
+}
+
 bool checkIsConflictingNonsymmetric(Knowledge Existing, Knowledge Proposed) {
   std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
                                                         &isl_ctx_free);
 
   // Parse knowledge.
-  auto ExistingOccupied =
-      Existing.OccupiedStr
-          ? give(isl_union_set_read_from_str(Ctx.get(), Existing.OccupiedStr))
-          : nullptr;
-  auto ExistingUnused =
-      Existing.UndefStr
-          ? give(isl_union_set_read_from_str(Ctx.get(), Existing.UndefStr))
-          : nullptr;
-  auto ExistingWritten =
-      give(isl_union_set_read_from_str(Ctx.get(), Existing.WrittenStr));
+  auto ExistingOccupied = parseSetOrNull(Ctx.get(), Existing.OccupiedStr);
+  auto ExistingUnused = parseSetOrNull(Ctx.get(), Existing.UndefStr);
+  auto ExistingWritten = parseSetOrNull(Ctx.get(), Existing.WrittenStr);
 
-  auto ProposedOccupied =
-      Proposed.OccupiedStr
-          ? give(isl_union_set_read_from_str(Ctx.get(), Proposed.OccupiedStr))
-          : nullptr;
-  auto ProposedUnused =
-      Proposed.UndefStr
-          ? give(isl_union_set_read_from_str(Ctx.get(), Proposed.UndefStr))
-          : nullptr;
-  auto ProposedWritten =
-      give(isl_union_set_read_from_str(Ctx.get(), Proposed.WrittenStr));
+  auto ProposedOccupied = parseSetOrNull(Ctx.get(), Proposed.OccupiedStr);
+  auto ProposedUnused = parseSetOrNull(Ctx.get(), Proposed.UndefStr);
+  auto ProposedWritten = parseSetOrNull(Ctx.get(), Proposed.WrittenStr);
 
   // Determine universe (set of all possible domains).
   auto Universe =
@@ -107,6 +99,8 @@ bool checkIsConflictingNonsymmetric(Knowledge Existing, Knowledge Proposed) {
   // The space must contains at least one dimension to allow order
   // modifications.
   auto NewSpace = give(isl_space_set_alloc(Ctx.get(), 0, 1));
+  NewSpace =
+      give(isl_space_set_tuple_id(NewSpace.take(), isl_dim_set, NewId.copy()));
   auto NewSet = give(isl_set_universe(NewSpace.take()));
   Universe = give(isl_union_set_add_set(Universe.take(), NewSet.take()));
 

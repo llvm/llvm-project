@@ -523,7 +523,8 @@ bool IRTranslator::translateMemfunc(const CallInst &CI,
     return false;
   }
 
-  return CLI->lowerCall(MIRBuilder, MachineOperand::CreateES(Callee),
+  return CLI->lowerCall(MIRBuilder, CI.getCallingConv(),
+                        MachineOperand::CreateES(Callee),
                         CallLowering::ArgInfo(0, CI.getType()), Args);
 }
 

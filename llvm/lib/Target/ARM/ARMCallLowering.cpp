@@ -373,6 +373,7 @@ struct CallReturnHandler : public IncomingValueHandler {
 } // End anonymous namespace.
 
 bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv,
                                 const MachineOperand &Callee,
                                 const ArgInfo &OrigRet,
                                 ArrayRef<ArgInfo> OrigArgs) const {
@@ -386,10 +387,6 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   auto CallSeqStart = MIRBuilder.buildInstr(ARM::ADJCALLSTACKDOWN);
-
-  // FIXME: This is the calling convention of the caller - we should use the
-  // calling convention of the callee instead.
-  auto CallConv = MF.getFunction()->getCallingConv();
 
   // Create the call instruction so we can add the implicit uses of arg
   // registers, but don't insert it yet.

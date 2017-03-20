@@ -4348,10 +4348,8 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
       // TODO: We should really test what happens if an instruction overflows.
       // This is tricky to test with IR tests, but when the outliner is moved
       // to a MIR test, it really ought to be checked.
-      if (Offset + 16 < MinOffset || Offset + 16 > MaxOffset) {
-        errs() << "Overflow!\n";
-        return MachineOutlinerInstrType::Illegal;
-      }
+      if (Offset + 16 < MinOffset || Offset + 16 > MaxOffset)
+	return MachineOutlinerInstrType::Illegal;
 
       // It's in range, so we can outline it.
       return MachineOutlinerInstrType::Legal;

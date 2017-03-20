@@ -498,12 +498,100 @@ In non-PIE executables the address of an external function (taken from
 the main executable) is the address of that function’s PLT record in
 the main executable. This would break the CFI checks.
 
+Backward-edge CFI for return statements (RCFI)
+==============================================
+
+This section is a proposal. As of March 2017 it is not implemented.
+
+Backward-edge control flow (`RET` instructions) can be hijacked
+via overwriting the return address (`RA`) on stack.
+Various mitigation techniques (e.g. `SafeStack`_, `RFG`_, `Intel CET`_)
+try to detect or prevent `RA` corruption on stack.
+
+RCFI enforces the expected control flow in several different ways described below.
+RCFI heavily relies on LTO.
+
+Leaf Functions
+--------------
+If `f()` is a leaf function (i.e. it has no calls
+except maybe no-return calls) it can be called using a special calling convention
+that stores `RA` in a dedicated register `R` before the `CALL` instruction.
+`f()` does not spill `R` and does not use the `RET` instruction,
+instead it uses the value in `R` to `JMP` to `RA`.
+
+This flavour of CFI is *precise*, i.e. the function is guaranteed to return
+to the point exactly following the call.
+
+An alternative approach is to
+copy `RA` from stack to `R` in the first instruction of `f()`,
+then `JMP` to `R`.
+This approach is simpler to implement (does not require changing the caller)
+but weaker (there is a small window when `RA` is actually stored on stack).
+
+
+Functions called once
+---------------------
+Suppose `f()` is called in just one place in the program
+(assuming we can verify this in LTO mode).
+In this case we can replace the `RET` instruction with a `JMP` instruction
+with the immediate constant for `RA`.
+This will *precisely* enforce the return control flow no matter what is stored on stack.
+
+Another variant is to compare `RA` on stack with the known constant and abort
+if they don't match; then `JMP` to the known constant address.
+
+Functions called in a small number of call sites
+------------------------------------------------
+We may extend the above approach to cases where `f()`
+is called more than once (but still a small number of times).
+With LTO we know all possible values of `RA` and we check them
+one-by-one (or using binary search) against the value on stack.
+If the match is found, we `JMP` to the known constant address, otherwise abort.
+
+This protection is *near-precise*, i.e. it guarantees that the control flow will
+be transferred to one of the valid return addresses for this function,
+but not necessary to the point of the most recent `CALL`.
+
+General case
+------------
+For functions called multiple times a *return jump table* is constructed
+in the same manner as jump tables for indirect function calls (see above).
+The correct jump table entry (or it's index) is passed by `CALL` to `f()`
+(as an extra argument) and then spilled to stack.
+The `RET` instruction is replaced with a load of the jump table entry,
+jump table range check, and `JMP` to the jump table entry.
+
+This protection is also *near-precise*.
+
+Returns from functions called indirectly
+----------------------------------------
+
+If a function is called indirectly, the return jump table is constructed for the
+equivalence class of functions instead of a single function.
+
+Cross-DSO calls
+---------------
+Consider two instrumented DSOs, `A` and `B`. `A` defines `f()` and `B` calls it.
+
+This case will be handled similarly to the cross-DSO scheme using the slow path callback.
+
+Non-goals
+---------
+
+RCFI does not protect `RET` instructions:
+  * in non-instrumented DSOs,
+  * in instrumented DSOs for functions that are called from non-instrumented DSOs,
+  * embedded into other instructions (e.g. `0f4fc3 cmovg %ebx,%eax`).
+
+.. _SafeStack: https://clang.llvm.org/docs/SafeStack.html
+.. _RFG: http://xlab.tencent.com/en/2016/11/02/return-flow-guard
+.. _Intel CET: https://software.intel.com/en-us/blogs/2016/06/09/intel-release-new-technology-specifications-protect-rop-attacks
 
 Hardware support
 ================
 
 We believe that the above design can be efficiently implemented in hardware.
-A single new instruction added to an ISA would allow to perform the CFI check
+A single new instruction added to an ISA would allow to perform the forward-edge CFI check
 with fewer bytes per check (smaller code size overhead) and potentially more
 efficiently. The current software-only instrumentation requires at least
 32-bytes per check (on x86_64).

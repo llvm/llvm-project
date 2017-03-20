@@ -1493,8 +1493,9 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                               ByteStreamer &Streamer,
                               const DebugLocEntry::Value &Value,
                               DwarfExpression &DwarfExpr) {
-  DIExpressionCursor ExprCursor(Value.getExpression());
-  DwarfExpr.addFragmentOffset(Value.getExpression());
+  auto *DIExpr = Value.getExpression();
+  DIExpressionCursor ExprCursor(DIExpr);
+  DwarfExpr.addFragmentOffset(DIExpr);
   // Regular entry.
   if (Value.isInt()) {
     if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
@@ -1503,12 +1504,21 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     else
       DwarfExpr.addUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
-    MachineLocation Loc = Value.getLoc();
+    MachineLocation Location = Value.getLoc();
+
+    SmallVector<uint64_t, 8> Ops;
+    // FIXME: Should this condition be Location.isIndirect() instead?
+    if (Location.getOffset()) {
+      Ops.push_back(dwarf::DW_OP_plus);
+      Ops.push_back(Location.getOffset());
+      Ops.push_back(dwarf::DW_OP_deref);
+    }
+    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+    DIExpressionCursor Cursor(Ops);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
-    if (Loc.getOffset())
-      DwarfExpr.addMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
-    else
-      DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Loc.getReg());
+    if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+      return;
+    return DwarfExpr.addExpression(std::move(Cursor));
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.addUnsignedConstant(RawBytes);

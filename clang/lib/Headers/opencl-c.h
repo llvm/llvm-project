@@ -13703,10 +13703,10 @@ float __ovld atomic_xchg(volatile __local float *p, float val);
 
 #if defined(cl_khr_global_int32_base_atomics)
 int __ovld atom_xchg(volatile __global int *p, int val);
-int __ovld atom_xchg(volatile __local int *p, int val);
+unsigned int __ovld atom_xchg(volatile __global unsigned int *p, unsigned int val);
 #endif
 #if defined(cl_khr_local_int32_base_atomics)
-unsigned int __ovld atom_xchg(volatile __global unsigned int *p, unsigned int val);
+int __ovld atom_xchg(volatile __local int *p, int val);
 unsigned int __ovld atom_xchg(volatile __local unsigned int *p, unsigned int val);
 #endif
 
@@ -13823,8 +13823,6 @@ unsigned int __ovld atom_min(volatile __local unsigned int *p, unsigned int val)
 #if defined(cl_khr_int64_extended_atomics)
 long __ovld atom_min(volatile __global long *p, long val);
 unsigned long __ovld atom_min(volatile __global unsigned long *p, unsigned long val);
-#endif
-#if defined(cl_khr_local_int32_extended_atomics)
 long __ovld atom_min(volatile __local long *p, long val);
 unsigned long __ovld atom_min(volatile __local unsigned long *p, unsigned long val);
 #endif

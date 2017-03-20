@@ -31,6 +31,7 @@
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "Memory.h"
+#include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -852,7 +853,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
   elf::Symtab<ELFT>::X = &Symtab;
   Target = createTarget();
-  ScriptBase = Script<ELFT>::X = make<LinkerScript<ELFT>>();
+  Script = make<LinkerScriptBase>();
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);

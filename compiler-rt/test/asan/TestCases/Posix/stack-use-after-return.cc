@@ -14,6 +14,9 @@
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:max_uar_stack_size_log=20:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-20 %s
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:min_uar_stack_size_log=24:max_uar_stack_size_log=24:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-24 %s
 
+// This test runs out of stack on AArch64.
+// UNSUPPORTED: aarch64
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>

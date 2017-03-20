@@ -73,10 +73,10 @@ entry:
 
 ; CHECK-LABEL: define internal void @asan.module_ctor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_register_elf_globals
+; CHECK: call void @__asan_register_globals
 ; CHECK: ret
 
 ; CHECK-LABEL: define internal void @asan.module_dtor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_unregister_elf_globals
+; CHECK: call void @__asan_unregister_globals
 ; CHECK: ret

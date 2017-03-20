@@ -230,6 +230,14 @@ bool LineTable::FindLineEntryByAddress(const Address &so_addr,
             }
           }
         }
+        else
+        {
+          // There might be code in the containing objfile before the first line
+          // table entry.  Make sure that does not get considered part of the first
+          // line table entry.
+          if (pos->file_addr > so_addr.GetFileAddress())
+            return false;
+        }
 
         // Make sure we have a valid match and that the match isn't a
         // terminating

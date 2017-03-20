@@ -180,8 +180,11 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
   // Walk all of the files within this directory.
   for (sys::fs::directory_iterator File(CachePathNative, EC), FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
-    // Do not touch the timestamp.
-    if (File->path() == TimestampFile)
+    // Ignore any files not beginning with the string "llvmcache-". This
+    // includes the timestamp file as well as any files created by the user.
+    // This acts as a safeguard against data loss if the user specifies the
+    // wrong directory as their cache directory.
+    if (!sys::path::filename(File->path()).startswith("llvmcache-"))
       continue;
 
     // Look at this file. If we can't stat it, there's nothing interesting

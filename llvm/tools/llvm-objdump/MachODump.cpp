@@ -9391,117 +9391,21 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
 // rebase table dumping
 //===----------------------------------------------------------------------===//
 
-namespace {
-class SegInfo {
-public:
-  SegInfo(const object::MachOObjectFile *Obj);
-
-  StringRef segmentName(uint32_t SegIndex);
-  StringRef sectionName(uint32_t SegIndex, uint64_t SegOffset);
-  uint64_t address(uint32_t SegIndex, uint64_t SegOffset);
-  bool isValidSegIndexAndOffset(uint32_t SegIndex, uint64_t SegOffset);
-
-private:
-  struct SectionInfo {
-    uint64_t Address;
-    uint64_t Size;
-    StringRef SectionName;
-    StringRef SegmentName;
-    uint64_t OffsetInSegment;
-    uint64_t SegmentStartAddress;
-    uint32_t SegmentIndex;
-  };
-  const SectionInfo &findSection(uint32_t SegIndex, uint64_t SegOffset);
-  SmallVector<SectionInfo, 32> Sections;
-};
-}
-
-SegInfo::SegInfo(const object::MachOObjectFile *Obj) {
-  // Build table of sections so segIndex/offset pairs can be translated.
-  uint32_t CurSegIndex = Obj->hasPageZeroSegment() ? 1 : 0;
-  StringRef CurSegName;
-  uint64_t CurSegAddress;
-  for (const SectionRef &Section : Obj->sections()) {
-    SectionInfo Info;
-    error(Section.getName(Info.SectionName));
-    Info.Address = Section.getAddress();
-    Info.Size = Section.getSize();
-    Info.SegmentName =
-        Obj->getSectionFinalSegmentName(Section.getRawDataRefImpl());
-    if (!Info.SegmentName.equals(CurSegName)) {
-      ++CurSegIndex;
-      CurSegName = Info.SegmentName;
-      CurSegAddress = Info.Address;
-    }
-    Info.SegmentIndex = CurSegIndex - 1;
-    Info.OffsetInSegment = Info.Address - CurSegAddress;
-    Info.SegmentStartAddress = CurSegAddress;
-    Sections.push_back(Info);
-  }
-}
-
-StringRef SegInfo::segmentName(uint32_t SegIndex) {
-  for (const SectionInfo &SI : Sections) {
-    if (SI.SegmentIndex == SegIndex)
-      return SI.SegmentName;
-  }
-  llvm_unreachable("invalid segIndex");
-}
-
-bool SegInfo::isValidSegIndexAndOffset(uint32_t SegIndex,
-                                       uint64_t OffsetInSeg) {
-  for (const SectionInfo &SI : Sections) {
-    if (SI.SegmentIndex != SegIndex)
-      continue;
-    if (SI.OffsetInSegment > OffsetInSeg)
-      continue;
-    if (OffsetInSeg >= (SI.OffsetInSegment + SI.Size))
-      continue;
-    return true;
-  }
-  return false;
-}
-
-const SegInfo::SectionInfo &SegInfo::findSection(uint32_t SegIndex,
-                                                 uint64_t OffsetInSeg) {
-  for (const SectionInfo &SI : Sections) {
-    if (SI.SegmentIndex != SegIndex)
-      continue;
-    if (SI.OffsetInSegment > OffsetInSeg)
-      continue;
-    if (OffsetInSeg >= (SI.OffsetInSegment + SI.Size))
-      continue;
-    return SI;
-  }
-  llvm_unreachable("segIndex and offset not in any section");
-}
-
-StringRef SegInfo::sectionName(uint32_t SegIndex, uint64_t OffsetInSeg) {
-  return findSection(SegIndex, OffsetInSeg).SectionName;
-}
-
-uint64_t SegInfo::address(uint32_t SegIndex, uint64_t OffsetInSeg) {
-  const SectionInfo &SI = findSection(SegIndex, OffsetInSeg);
-  return SI.SegmentStartAddress + OffsetInSeg;
-}
-
-void llvm::printMachORebaseTable(const object::MachOObjectFile *Obj) {
-  // Build table of sections so names can used in final output.
-  SegInfo sectionTable(Obj);
-
+void llvm::printMachORebaseTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     type\n";
-  for (const llvm::object::MachORebaseEntry &Entry : Obj->rebaseTable()) {
-    uint32_t SegIndex = Entry.segmentIndex();
-    uint64_t OffsetInSeg = Entry.segmentOffset();
-    StringRef SegmentName = sectionTable.segmentName(SegIndex);
-    StringRef SectionName = sectionTable.sectionName(SegIndex, OffsetInSeg);
-    uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
+  Error Err = Error::success();
+  for (const llvm::object::MachORebaseEntry &Entry : Obj->rebaseTable(Err)) {
+    StringRef SegmentName = Entry.segmentName();
+    StringRef SectionName = Entry.sectionName();
+    uint64_t Address = Entry.address();
 
     // Table lines look like: __DATA  __nl_symbol_ptr  0x0000F00C  pointer
     outs() << format("%-8s %-18s 0x%08" PRIX64 "  %s\n",
                      SegmentName.str().c_str(), SectionName.str().c_str(),
                      Address, Entry.typeName().str().c_str());
   }
+  if (Err)
+    report_error(Obj->getFileName(), std::move(Err));
 }
 
 static StringRef ordinalName(const object::MachOObjectFile *Obj, int Ordinal) {
@@ -9529,19 +9433,15 @@ static StringRef ordinalName(const object::MachOObjectFile *Obj, int Ordinal) {
 // bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOBindTable(const object::MachOObjectFile *Obj) {
+void llvm::printMachOBindTable(object::MachOObjectFile *Obj) {
   // Build table of sections so names can used in final output.
-  SegInfo sectionTable(Obj);
-
   outs() << "segment  section            address    type       "
             "addend dylib            symbol\n";
   Error Err = Error::success();
   for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable(Err)) {
-    uint32_t SegIndex = Entry.segmentIndex();
-    uint64_t OffsetInSeg = Entry.segmentOffset();
-    StringRef SegmentName = sectionTable.segmentName(SegIndex);
-    StringRef SectionName = sectionTable.sectionName(SegIndex, OffsetInSeg);
-    uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
+    StringRef SegmentName = Entry.segmentName();
+    StringRef SectionName = Entry.sectionName();
+    uint64_t Address = Entry.address();
 
     // Table lines look like:
     //  __DATA  __got  0x00012010    pointer   0 libSystem ___stack_chk_guard
@@ -9564,19 +9464,14 @@ void llvm::printMachOBindTable(const object::MachOObjectFile *Obj) {
 // lazy bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOLazyBindTable(const object::MachOObjectFile *Obj) {
-  // Build table of sections so names can used in final output.
-  SegInfo sectionTable(Obj);
-
+void llvm::printMachOLazyBindTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     "
             "dylib            symbol\n";
   Error Err = Error::success();
   for (const llvm::object::MachOBindEntry &Entry : Obj->lazyBindTable(Err)) {
-    uint32_t SegIndex = Entry.segmentIndex();
-    uint64_t OffsetInSeg = Entry.segmentOffset();
-    StringRef SegmentName = sectionTable.segmentName(SegIndex);
-    StringRef SectionName = sectionTable.sectionName(SegIndex, OffsetInSeg);
-    uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
+    StringRef SegmentName = Entry.segmentName();
+    StringRef SectionName = Entry.sectionName();
+    uint64_t Address = Entry.address();
 
     // Table lines look like:
     //  __DATA  __got  0x00012010 libSystem ___stack_chk_guard
@@ -9594,10 +9489,7 @@ void llvm::printMachOLazyBindTable(const object::MachOObjectFile *Obj) {
 // weak bind table dumping
 //===----------------------------------------------------------------------===//
 
-void llvm::printMachOWeakBindTable(const object::MachOObjectFile *Obj) {
-  // Build table of sections so names can used in final output.
-  SegInfo sectionTable(Obj);
-
+void llvm::printMachOWeakBindTable(object::MachOObjectFile *Obj) {
   outs() << "segment  section            address     "
             "type       addend   symbol\n";
   Error Err = Error::success();
@@ -9608,11 +9500,9 @@ void llvm::printMachOWeakBindTable(const object::MachOObjectFile *Obj) {
              << Entry.symbolName() << "\n";
       continue;
     }
-    uint32_t SegIndex = Entry.segmentIndex();
-    uint64_t OffsetInSeg = Entry.segmentOffset();
-    StringRef SegmentName = sectionTable.segmentName(SegIndex);
-    StringRef SectionName = sectionTable.sectionName(SegIndex, OffsetInSeg);
-    uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
+    StringRef SegmentName = Entry.segmentName();
+    StringRef SectionName = Entry.sectionName();
+    uint64_t Address = Entry.address();
 
     // Table lines look like:
     // __DATA  __data  0x00001000  pointer    0   _foo
@@ -9635,17 +9525,9 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
                                                  struct DisassembleInfo *info) {
   if (info->bindtable == nullptr) {
     info->bindtable = llvm::make_unique<SymbolAddressMap>();
-    SegInfo sectionTable(info->O);
     Error Err = Error::success();
     for (const llvm::object::MachOBindEntry &Entry : info->O->bindTable(Err)) {
-      uint32_t SegIndex = Entry.segmentIndex();
-      uint64_t OffsetInSeg = Entry.segmentOffset();
-      if (!sectionTable.isValidSegIndexAndOffset(SegIndex, OffsetInSeg)) {
-        if (Err)
-          report_error(info->O->getFileName(), std::move(Err));
-        return nullptr;
-      }
-      uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
+      uint64_t Address = Entry.address();
       StringRef name = Entry.symbolName();
       if (!name.empty())
         (*info->bindtable)[Address] = name;

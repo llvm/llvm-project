@@ -319,16 +319,15 @@ static size_t getHashSize() {
   }
 }
 
-template <class ELFT>
-BuildIdSection<ELFT>::BuildIdSection()
+BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 1, ".note.gnu.build-id"),
       HashSize(getHashSize()) {}
 
-template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 4);                   // Name size
-  write32<E>(Buf + 4, HashSize);        // Content size
-  write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
+void BuildIdSection::writeTo(uint8_t *Buf) {
+  const endianness E = Config->IsLE ? endianness::little : endianness::big;
+  write32(Buf, 4, E);                   // Name size
+  write32(Buf + 4, HashSize, E);        // Content size
+  write32(Buf + 8, NT_GNU_BUILD_ID, E); // Type
   memcpy(Buf + 12, "GNU", 4);           // Name string
   HashBuf = Buf + 16;
 }
@@ -350,8 +349,7 @@ static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
 // In order to utilize multiple cores, we first split data into 1MB
 // chunks, compute a hash for each chunk, and then compute a hash value
 // of the hash values.
-template <class ELFT>
-void BuildIdSection<ELFT>::computeHash(
+void BuildIdSection::computeHash(
     llvm::ArrayRef<uint8_t> Data,
     std::function<void(uint8_t *Dest, ArrayRef<uint8_t> Arr)> HashFn) {
   std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
@@ -376,8 +374,7 @@ size_t BssSection::reserveSpace(uint32_t Alignment, size_t Size) {
   return this->Size - Size;
 }
 
-template <class ELFT>
-void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
     computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
@@ -668,14 +665,11 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
   this->template relocate<ELFT>(Buf, Buf + Size);
 }
 
-template <class ELFT>
-MipsGotSection<ELFT>::MipsGotSection()
+MipsGotSection::MipsGotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
                        ".got") {}
 
-template <class ELFT>
-void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
-                                    RelExpr Expr) {
+void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
   // For "true" local symbols which can be referenced from the same module
   // only compiler creates two instructions for address loading:
   //
@@ -718,7 +712,7 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
     TlsEntries.push_back(&Sym);
     return;
   }
-  auto AddEntry = [&](SymbolBody &S, uintX_t A, GotEntries &Items) {
+  auto AddEntry = [&](SymbolBody &S, uint64_t A, GotEntries &Items) {
     if (S.isInGot() && !A)
       return;
     size_t NewIndex = Items.size();
@@ -743,8 +737,7 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
   }
 }
 
-template <class ELFT>
-bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
+bool MipsGotSection::addDynTlsEntry(SymbolBody &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
   Sym.GlobalDynIndex = TlsEntries.size();
@@ -756,10 +749,10 @@ bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
 
 // Reserves TLS entries for a TLS module ID and a TLS block offset.
 // In total it takes two GOT slots.
-template <class ELFT> bool MipsGotSection<ELFT>::addTlsIndex() {
+bool MipsGotSection::addTlsIndex() {
   if (TlsIndexOff != uint32_t(-1))
     return false;
-  TlsIndexOff = TlsEntries.size() * sizeof(uintX_t);
+  TlsIndexOff = TlsEntries.size() * Config->Wordsize;
   TlsEntries.push_back(nullptr);
   TlsEntries.push_back(nullptr);
   return true;
@@ -773,25 +766,21 @@ static uint64_t getMipsPageCount(uint64_t Size) {
   return (Size + 0xfffe) / 0xffff + 1;
 }
 
-template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
-                                         int64_t Addend) const {
+uint64_t MipsGotSection::getPageEntryOffset(const SymbolBody &B,
+                                            int64_t Addend) const {
   const OutputSection *OutSec =
       cast<DefinedRegular>(&B)->Section->getOutputSection();
-  uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
-  uintX_t SymAddr = getMipsPageAddr(B.getVA(Addend));
-  uintX_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
+  uint64_t SecAddr = getMipsPageAddr(OutSec->Addr);
+  uint64_t SymAddr = getMipsPageAddr(B.getVA(Addend));
+  uint64_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
   assert(Index < PageEntriesNum);
-  return (HeaderEntriesNum + Index) * sizeof(uintX_t);
+  return (HeaderEntriesNum + Index) * Config->Wordsize;
 }
 
-template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getBodyEntryOffset(const SymbolBody &B,
-                                         int64_t Addend) const {
+uint64_t MipsGotSection::getBodyEntryOffset(const SymbolBody &B,
+                                            int64_t Addend) const {
   // Calculate offset of the GOT entries block: TLS, global, local.
-  uintX_t Index = HeaderEntriesNum + PageEntriesNum;
+  uint64_t Index = HeaderEntriesNum + PageEntriesNum;
   if (B.isTls())
     Index += LocalEntries.size() + LocalEntries32.size() + GlobalEntries.size();
   else if (B.IsInGlobalMipsGot)
@@ -806,37 +795,31 @@ MipsGotSection<ELFT>::getBodyEntryOffset(const SymbolBody &B,
     assert(It != EntryIndexMap.end());
     Index += It->second;
   }
-  return Index * sizeof(uintX_t);
+  return Index * Config->Wordsize;
 }
 
-template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getTlsOffset() const {
-  return (getLocalEntriesNum() + GlobalEntries.size()) * sizeof(uintX_t);
+uint64_t MipsGotSection::getTlsOffset() const {
+  return (getLocalEntriesNum() + GlobalEntries.size()) * Config->Wordsize;
 }
 
-template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
-  return B.GlobalDynIndex * sizeof(uintX_t);
+uint64_t MipsGotSection::getGlobalDynOffset(const SymbolBody &B) const {
+  return B.GlobalDynIndex * Config->Wordsize;
 }
 
-template <class ELFT>
-const SymbolBody *MipsGotSection<ELFT>::getFirstGlobalEntry() const {
+const SymbolBody *MipsGotSection::getFirstGlobalEntry() const {
   return GlobalEntries.empty() ? nullptr : GlobalEntries.front().first;
 }
 
-template <class ELFT>
-unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
+unsigned MipsGotSection::getLocalEntriesNum() const {
   return HeaderEntriesNum + PageEntriesNum + LocalEntries.size() +
          LocalEntries32.size();
 }
 
-template <class ELFT> void MipsGotSection<ELFT>::finalizeContents() {
+void MipsGotSection::finalizeContents() {
   updateAllocSize();
 }
 
-template <class ELFT> void MipsGotSection<ELFT>::updateAllocSize() {
+void MipsGotSection::updateAllocSize() {
   PageEntriesNum = 0;
   for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
     // For each output section referenced by GOT page relocations calculate
@@ -849,27 +832,29 @@ template <class ELFT> void MipsGotSection<ELFT>::updateAllocSize() {
     PageEntriesNum += getMipsPageCount(P.first->Size);
   }
   Size = (getLocalEntriesNum() + GlobalEntries.size() + TlsEntries.size()) *
-         sizeof(uintX_t);
+         Config->Wordsize;
 }
 
-template <class ELFT> bool MipsGotSection<ELFT>::empty() const {
+bool MipsGotSection::empty() const {
   // We add the .got section to the result for dynamic MIPS target because
   // its address and properties are mentioned in the .dynamic section.
   return Config->Relocatable;
 }
 
-template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t MipsGotSection<ELFT>::getGp() const {
+uint64_t MipsGotSection::getGp() const {
   return ElfSym::MipsGp->getVA(0);
 }
 
-template <class ELFT>
-static void writeUint(uint8_t *Buf, typename ELFT::uint Val) {
-  typedef typename ELFT::uint uintX_t;
-  write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Buf, Val);
+static void writeUint(uint8_t *Buf, uint64_t Val) {
+  support::endianness E =
+      Config->IsLE ? support::endianness::little : support::endianness::big;
+  if (Config->Wordsize == 8)
+    write64(Buf, Val, E);
+  else
+    write32(Buf, Val, E);
 }
 
-template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
+void MipsGotSection::writeTo(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
   //
@@ -884,25 +869,24 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   // we've been doing this for years, it is probably a safe bet to
   // keep doing this for now. We really need to revisit this to see
   // if we had to do this.
-  auto *P = reinterpret_cast<typename ELFT::Off *>(Buf);
-  P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
-  Buf += HeaderEntriesNum * sizeof(uintX_t);
+  writeUint(Buf + Config->Wordsize, (uint64_t)1 << (Config->Wordsize * 8 - 1));
+  Buf += HeaderEntriesNum * Config->Wordsize;
   // Write 'page address' entries to the local part of the GOT.
   for (std::pair<const OutputSection *, size_t> &L : PageIndexMap) {
     size_t PageCount = getMipsPageCount(L.first->Size);
-    uintX_t FirstPageAddr = getMipsPageAddr(L.first->Addr);
+    uint64_t FirstPageAddr = getMipsPageAddr(L.first->Addr);
     for (size_t PI = 0; PI < PageCount; ++PI) {
-      uint8_t *Entry = Buf + (L.second + PI) * sizeof(uintX_t);
-      writeUint<ELFT>(Entry, FirstPageAddr + PI * 0x10000);
+      uint8_t *Entry = Buf + (L.second + PI) * Config->Wordsize;
+      writeUint(Entry, FirstPageAddr + PI * 0x10000);
     }
   }
-  Buf += PageEntriesNum * sizeof(uintX_t);
+  Buf += PageEntriesNum * Config->Wordsize;
   auto AddEntry = [&](const GotEntry &SA) {
     uint8_t *Entry = Buf;
-    Buf += sizeof(uintX_t);
+    Buf += Config->Wordsize;
     const SymbolBody *Body = SA.first;
-    uintX_t VA = Body->getVA(SA.second);
-    writeUint<ELFT>(Entry, VA);
+    uint64_t VA = Body->getVA(SA.second);
+    writeUint(Entry, VA);
   };
   std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
   std::for_each(std::begin(LocalEntries32), std::end(LocalEntries32), AddEntry);
@@ -913,20 +897,20 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   // for thread-local storage.
   // https://www.linux-mips.org/wiki/NPTL
   if (TlsIndexOff != -1U && !Config->Pic)
-    writeUint<ELFT>(Buf + TlsIndexOff, 1);
+    writeUint(Buf + TlsIndexOff, 1);
   for (const SymbolBody *B : TlsEntries) {
     if (!B || B->isPreemptible())
       continue;
-    uintX_t VA = B->getVA();
+    uint64_t VA = B->getVA();
     if (B->GotIndex != -1U) {
-      uint8_t *Entry = Buf + B->GotIndex * sizeof(uintX_t);
-      writeUint<ELFT>(Entry, VA - 0x7000);
+      uint8_t *Entry = Buf + B->GotIndex * Config->Wordsize;
+      writeUint(Entry, VA - 0x7000);
     }
     if (B->GlobalDynIndex != -1U) {
-      uint8_t *Entry = Buf + B->GlobalDynIndex * sizeof(uintX_t);
-      writeUint<ELFT>(Entry, 1);
-      Entry += sizeof(uintX_t);
-      writeUint<ELFT>(Entry, VA - 0x8000);
+      uint8_t *Entry = Buf + B->GlobalDynIndex * Config->Wordsize;
+      writeUint(Entry, 1);
+      Entry += Config->Wordsize;
+      writeUint(Entry, VA - 0x8000);
     }
   }
 }
@@ -1771,12 +1755,10 @@ class ObjInfoTy : public llvm::LoadedObjectInfo {
 };
 
 template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
-  elf::ObjectFile<ELFT> *File = Sec->template getFile<ELFT>();
-
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
-      object::ObjectFile::createObjectFile(File->MB);
+      object::ObjectFile::createObjectFile(Sec->File->MB);
   if (!Obj) {
-    error(toString(File) + ": error creating DWARF context");
+    error(toString(Sec->File) + ": error creating DWARF context");
     return;
   }
 
@@ -1854,7 +1836,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   Buf += 24;
 
   // Write the CU list.
-  for (std::pair<uintX_t, uintX_t> CU : CompilationUnits) {
+  for (std::pair<uint64_t, uint64_t> CU : CompilationUnits) {
     write64le(Buf, CU.first);
     write64le(Buf + 8, CU.second);
     Buf += 16;
@@ -1862,7 +1844,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // Write the address area.
   for (AddressEntry &E : AddressArea) {
-    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    uint64_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
     write64le(Buf, BaseAddr + E.LowAddress);
     write64le(Buf + 8, BaseAddr + E.HighAddress);
     write32le(Buf + 16, E.CuIndex);
@@ -2199,7 +2181,7 @@ MipsRldMapSection::MipsRldMapSection()
 
 void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
-  uint64_t Filler = ScriptBase->getFiller(this->Name);
+  uint64_t Filler = Script->getFiller(this->Name);
   Filler = (Filler << 32) | Filler;
   memcpy(Buf, &Filler, getSize());
 }
@@ -2253,11 +2235,13 @@ InputSection *ThunkSection::getTargetInputSection() const {
 InputSection *InX::ARMAttributes;
 BssSection *InX::Bss;
 BssSection *InX::BssRelRo;
+BuildIdSection *InX::BuildId;
 InputSection *InX::Common;
 StringTableSection *InX::DynStrTab;
 InputSection *InX::Interp;
 GotPltSection *InX::GotPlt;
 IgotPltSection *InX::IgotPlt;
+MipsGotSection *InX::MipsGot;
 MipsRldMapSection *InX::MipsRldMap;
 PltSection *InX::Plt;
 PltSection *InX::Iplt;
@@ -2307,20 +2291,10 @@ template class elf::MipsReginfoSection<ELF32BE>;
 template class elf::MipsReginfoSection<ELF64LE>;
 template class elf::MipsReginfoSection<ELF64BE>;
 
-template class elf::BuildIdSection<ELF32LE>;
-template class elf::BuildIdSection<ELF32BE>;
-template class elf::BuildIdSection<ELF64LE>;
-template class elf::BuildIdSection<ELF64BE>;
-
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
 template class elf::GotSection<ELF64LE>;
 template class elf::GotSection<ELF64BE>;
-
-template class elf::MipsGotSection<ELF32LE>;
-template class elf::MipsGotSection<ELF32BE>;
-template class elf::MipsGotSection<ELF64LE>;
-template class elf::MipsGotSection<ELF64BE>;
 
 template class elf::DynamicSection<ELF32LE>;
 template class elf::DynamicSection<ELF32BE>;

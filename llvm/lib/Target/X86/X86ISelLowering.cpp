@@ -2077,7 +2077,7 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
   if (hasStackGuardSlotTLS(Subtarget.getTargetTriple())) {
     if (Subtarget.isTargetFuchsia()) {
       // <magenta/tls.h> defines MX_TLS_STACK_GUARD_OFFSET with this value.
-      return SegmentOffset(IRB, 0x10, 257);
+      return SegmentOffset(IRB, 0x10, getAddressSpace());
     } else {
       // %fs:0x28, unless we're using a Kernel code model, in which case
       // it's %gs:0x28.  gs:0x14 on i386.
@@ -2142,7 +2142,7 @@ Value *X86TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   // Fuchsia is similar.
   if (Subtarget.isTargetFuchsia()) {
     // <magenta/tls.h> defines MX_TLS_UNSAFE_SP_OFFSET with this value.
-    return SegmentOffset(IRB, 0x18, 257);
+    return SegmentOffset(IRB, 0x18, getAddressSpace());
   }
 
   return TargetLowering::getSafeStackPointerLocation(IRB);

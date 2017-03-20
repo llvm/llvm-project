@@ -135,7 +135,7 @@ private:
 };
 
 // .note.gnu.build-id section.
-template <class ELFT> class BuildIdSection : public SyntheticSection {
+class BuildIdSection : public SyntheticSection {
   // First 16 bytes are a header.
   static const unsigned HeaderSize = 16;
 
@@ -169,9 +169,7 @@ private:
   size_t Size = 0;
 };
 
-template <class ELFT> class MipsGotSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
+class MipsGotSection final : public SyntheticSection {
 public:
   MipsGotSection();
   void writeTo(uint8_t *Buf) override;
@@ -182,9 +180,9 @@ public:
   void addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  uintX_t getPageEntryOffset(const SymbolBody &B, int64_t Addend) const;
-  uintX_t getBodyEntryOffset(const SymbolBody &B, int64_t Addend) const;
-  uintX_t getGlobalDynOffset(const SymbolBody &B) const;
+  uint64_t getPageEntryOffset(const SymbolBody &B, int64_t Addend) const;
+  uint64_t getBodyEntryOffset(const SymbolBody &B, int64_t Addend) const;
+  uint64_t getGlobalDynOffset(const SymbolBody &B) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
   // of GOT on MIPS platform. It is required to fill up MIPS-specific dynamic
@@ -198,11 +196,11 @@ public:
 
   // Returns offset of TLS part of the MIPS GOT table. This part goes
   // after 'local' and 'global' entries.
-  uintX_t getTlsOffset() const;
+  uint64_t getTlsOffset() const;
 
   uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
-  uintX_t getGp() const;
+  uint64_t getGp() const;
 
 private:
   // MIPS GOT consists of three parts: local, global and tls. Each part
@@ -250,7 +248,7 @@ private:
   // to the first index of "Page" entries allocated for this section.
   llvm::SmallMapVector<const OutputSection *, size_t, 16> PageIndexMap;
 
-  typedef std::pair<const SymbolBody *, uintX_t> GotEntry;
+  typedef std::pair<const SymbolBody *, uint64_t> GotEntry;
   typedef std::vector<GotEntry> GotEntries;
   // Map from Symbol-Addend pair to the GOT index.
   llvm::DenseMap<GotEntry, size_t> EntryIndexMap;
@@ -266,7 +264,7 @@ private:
   std::vector<const SymbolBody *> TlsEntries;
 
   uint32_t TlsIndexOff = -1;
-  uintX_t Size = 0;
+  uint64_t Size = 0;
 };
 
 class GotPltSection final : public SyntheticSection {
@@ -500,8 +498,6 @@ private:
 };
 
 template <class ELFT> class GdbIndexSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
   const unsigned OffsetTypeSize = 4;
   const unsigned CuListOffset = 6 * OffsetTypeSize;
   const unsigned CompilationUnitSize = 16;
@@ -516,7 +512,7 @@ public:
   bool empty() const override;
 
   // Pairs of [CU Offset, CU length].
-  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+  std::vector<std::pair<uint64_t, uint64_t>> CompilationUnits;
 
   llvm::StringTableBuilder StringPool;
 
@@ -762,11 +758,13 @@ struct InX {
   static InputSection *ARMAttributes;
   static BssSection *Bss;
   static BssSection *BssRelRo;
+  static BuildIdSection *BuildId;
   static InputSection *Common;
   static StringTableSection *DynStrTab;
   static InputSection *Interp;
   static GotPltSection *GotPlt;
   static IgotPltSection *IgotPlt;
+  static MipsGotSection *MipsGot;
   static MipsRldMapSection *MipsRldMap;
   static PltSection *Plt;
   static PltSection *Iplt;
@@ -775,7 +773,6 @@ struct InX {
 };
 
 template <class ELFT> struct In : public InX {
-  static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static SymbolTableSection<ELFT> *DynSymTab;
   static EhFrameHeader<ELFT> *EhFrameHdr;
@@ -783,7 +780,6 @@ template <class ELFT> struct In : public InX {
   static GdbIndexSection<ELFT> *GdbIndex;
   static GotSection<ELFT> *Got;
   static EhFrameSection<ELFT> *EhFrame;
-  static MipsGotSection<ELFT> *MipsGot;
   static HashTableSection<ELFT> *HashTab;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
@@ -794,7 +790,6 @@ template <class ELFT> struct In : public InX {
   static VersionNeedSection<ELFT> *VerNeed;
 };
 
-template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
 template <class ELFT> EhFrameHeader<ELFT> *In<ELFT>::EhFrameHdr;
@@ -802,7 +797,6 @@ template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
 template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;
-template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;

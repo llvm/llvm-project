@@ -805,7 +805,8 @@ used by people developing LLVM.
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
-|                         | slow and generates a lot of output.                |
+|                         | slow and generates a lot of output. Sphinx version |
+|                         | 1.5 or later recommended.                          |
 +-------------------------+----------------------------------------------------+
 | LLVM_BUILD_LLVM_DYLIB   | Generate libLLVM.so. This library contains a       |
 |                         | default set of LLVM components that can be         |

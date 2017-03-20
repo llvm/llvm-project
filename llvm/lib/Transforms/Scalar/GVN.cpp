@@ -750,7 +750,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
     if (Load->getType() == LoadTy && Offset == 0) {
       Res = Load;
     } else {
-      Res = getLoadValueForLoad(Load, Offset, LoadTy, InsertPt);
+      Res = getLoadValueForLoad(Load, Offset, LoadTy, InsertPt, DL);
       // We would like to use gvn.markInstructionForDeletion here, but we can't
       // because the load is already memoized into the leader map table that GVN
       // tracks.  It is potentially possible to remove the load from the table,

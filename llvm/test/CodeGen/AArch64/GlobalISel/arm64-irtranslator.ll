@@ -1401,3 +1401,13 @@ define i32 @test_constantdatavector_v1s32(i32 %arg){
   %res = extractelement <1 x i32> %add, i32 0
   ret i32 %res
 }
+
+declare ghccc float @different_call_conv_target(float %x)
+define float @test_different_call_conv_target(float %x) {
+; CHECK-LABEL: name: test_different_call_conv
+; CHECK: [[X:%[0-9]+]](s32) = COPY %s0
+; CHECK: %s8 = COPY [[X]]
+; CHECK: BL @different_call_conv_target, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s8, implicit-def %s0
+  %res = call ghccc float @different_call_conv_target(float %x)
+  ret float %res
+}

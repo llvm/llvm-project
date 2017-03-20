@@ -52,7 +52,7 @@ bool CallLowering::lowerCall(
   if (!OrigRet.Ty->isVoidTy())
     setArgFlags(OrigRet, AttributeSet::ReturnIndex, DL, CS);
 
-  return lowerCall(MIRBuilder, Callee, OrigRet, OrigArgs);
+  return lowerCall(MIRBuilder, CS.getCallingConv(), Callee, OrigRet, OrigArgs);
 }
 
 template <typename FuncInfoTy>
