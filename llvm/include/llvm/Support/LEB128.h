@@ -113,11 +113,30 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
 
 
 /// Utility function to decode a ULEB128 value.
-inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr) {
+inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
+                              const uint8_t *end = nullptr,
+                              const char **error = nullptr) {
   const uint8_t *orig_p = p;
   uint64_t Value = 0;
   unsigned Shift = 0;
+  if(error)
+    *error = nullptr;
   do {
+    if(end && p == end){
+      if(error)
+        *error = "malformed uleb128, extends past end";
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
+    }
+    uint64_t Slice = *p & 0x7f;
+    if(Shift >= 64 || Slice << Shift >> Shift != Slice){
+      if(error)
+        *error = "uleb128 too big for uint64";
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
+    }
     Value += uint64_t(*p & 0x7f) << Shift;
     Shift += 7;
   } while (*p++ >= 128);
@@ -127,12 +146,21 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr) {
 }
 
 /// Utility function to decode a SLEB128 value.
-inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr) {
+inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
+                             const uint8_t *end = nullptr,
+                             const char **error = nullptr) {
   const uint8_t *orig_p = p;
   int64_t Value = 0;
   unsigned Shift = 0;
   uint8_t Byte;
   do {
+    if(end && p == end){
+      if(error)
+        *error = "malformed sleb128, extends past end";
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
+    }
     Byte = *p++;
     Value |= ((Byte & 0x7f) << Shift);
     Shift += 7;

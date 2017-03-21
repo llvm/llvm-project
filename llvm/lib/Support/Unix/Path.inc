@@ -230,6 +230,10 @@ UniqueID file_status::getUniqueID() const {
   return UniqueID(fs_st_dev, fs_st_ino);
 }
 
+uint32_t file_status::getLinkCount() const {
+  return fs_st_nlinks;
+}
+
 ErrorOr<space_info> disk_space(const Twine &Path) {
   struct STATVFS Vfs;
   if (::STATVFS(Path.str().c_str(), &Vfs))
@@ -549,10 +553,9 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
     Type = file_type::symlink_file;
 
   perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
-  Result =
-      file_status(Type, Perms, Status.st_dev, Status.st_ino, Status.st_atime,
-                  Status.st_mtime, Status.st_uid, Status.st_gid,
-                  Status.st_size);
+  Result = file_status(Type, Perms, Status.st_dev, Status.st_nlink,
+                       Status.st_ino, Status.st_atime, Status.st_mtime,
+                       Status.st_uid, Status.st_gid, Status.st_size);
 
   return std::error_code();
 }

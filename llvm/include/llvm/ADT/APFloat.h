@@ -18,6 +18,7 @@
 #define LLVM_ADT_APFLOAT_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
@@ -145,16 +146,16 @@ struct APFloatBase {
   /// \name Floating Point Semantics.
   /// @{
 
-  static const fltSemantics &IEEEhalf();
-  static const fltSemantics &IEEEsingle();
-  static const fltSemantics &IEEEdouble();
-  static const fltSemantics &IEEEquad();
-  static const fltSemantics &PPCDoubleDouble();
-  static const fltSemantics &x87DoubleExtended();
+  static const fltSemantics &IEEEhalf() LLVM_READNONE;
+  static const fltSemantics &IEEEsingle() LLVM_READNONE;
+  static const fltSemantics &IEEEdouble() LLVM_READNONE;
+  static const fltSemantics &IEEEquad() LLVM_READNONE;
+  static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
+  static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus();
+  static const fltSemantics &Bogus() LLVM_READNONE;
 
   /// @}
 
@@ -273,8 +274,8 @@ public:
   /// @{
 
   opStatus convert(const fltSemantics &, roundingMode, bool *);
-  opStatus convertToInteger(integerPart *, unsigned int, bool, roundingMode,
-                            bool *) const;
+  opStatus convertToInteger(MutableArrayRef<integerPart>, unsigned int, bool,
+                            roundingMode, bool *) const;
   opStatus convertFromAPInt(const APInt &, bool, roundingMode);
   opStatus convertFromSignExtendedInteger(const integerPart *, unsigned int,
                                           bool, roundingMode);
@@ -361,7 +362,7 @@ public:
   /// Returns true if and only if the number has the largest possible finite
   /// magnitude in the current semantics.
   bool isLargest() const;
-  
+
   /// Returns true if and only if the number is an exact integer.
   bool isInteger() const;
 
@@ -495,8 +496,9 @@ private:
   opStatus addOrSubtract(const IEEEFloat &, roundingMode, bool subtract);
   opStatus handleOverflow(roundingMode);
   bool roundAwayFromZero(roundingMode, lostFraction, unsigned int) const;
-  opStatus convertToSignExtendedInteger(integerPart *, unsigned int, bool,
-                                        roundingMode, bool *) const;
+  opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart>,
+                                        unsigned int, bool, roundingMode,
+                                        bool *) const;
   opStatus convertFromUnsignedParts(const integerPart *, unsigned int,
                                     roundingMode);
   opStatus convertFromHexadecimalString(StringRef, roundingMode);
@@ -625,8 +627,8 @@ public:
   opStatus convertFromString(StringRef, roundingMode);
   opStatus next(bool nextDown);
 
-  opStatus convertToInteger(integerPart *Input, unsigned int Width,
-                            bool IsSigned, roundingMode RM,
+  opStatus convertToInteger(MutableArrayRef<integerPart> Input,
+                            unsigned int Width, bool IsSigned, roundingMode RM,
                             bool *IsExact) const;
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned, roundingMode RM);
   opStatus convertFromSignExtendedInteger(const integerPart *Input,
@@ -1055,8 +1057,8 @@ public:
 
   opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
                    bool *losesInfo);
-  opStatus convertToInteger(integerPart *Input, unsigned int Width,
-                            bool IsSigned, roundingMode RM,
+  opStatus convertToInteger(MutableArrayRef<integerPart> Input,
+                            unsigned int Width, bool IsSigned, roundingMode RM,
                             bool *IsExact) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertToInteger(Input, Width, IsSigned, RM, IsExact));

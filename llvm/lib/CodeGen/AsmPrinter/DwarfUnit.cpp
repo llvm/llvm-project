@@ -470,50 +470,47 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
   // Decode the original location, and use that as the start of the byref
   // variable's location.
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-  SmallVector<uint64_t, 6> DIExpr;
-  DIEDwarfExpression Expr(*Asm, *this, *Loc);
+  DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
 
-  bool validReg;
-  if (Location.isReg())
-    validReg = Expr.addMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                  Location.getReg());
-  else
-    validReg =
-        Expr.addMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                   Location.getReg(), Location.getOffset());
-
-  if (!validReg)
-    return;
-
+  SmallVector<uint64_t, 9> Ops;
+  if (Location.isIndirect()) {
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(Location.getOffset());
+    Ops.push_back(dwarf::DW_OP_deref);
+  }
   // If we started with a pointer to the __Block_byref... struct, then
   // the first thing we need to do is dereference the pointer (DW_OP_deref).
   if (isPointer)
-    DIExpr.push_back(dwarf::DW_OP_deref);
+    Ops.push_back(dwarf::DW_OP_deref);
 
   // Next add the offset for the '__forwarding' field:
   // DW_OP_plus_uconst ForwardingFieldOffset.  Note there's no point in
   // adding the offset if it's 0.
   if (forwardingFieldOffset > 0) {
-    DIExpr.push_back(dwarf::DW_OP_plus);
-    DIExpr.push_back(forwardingFieldOffset);
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(forwardingFieldOffset);
   }
 
   // Now dereference the __forwarding field to get to the real __Block_byref
   // struct:  DW_OP_deref.
-  DIExpr.push_back(dwarf::DW_OP_deref);
+  Ops.push_back(dwarf::DW_OP_deref);
 
   // Now that we've got the real __Block_byref... struct, add the offset
   // for the variable's field to get to the location of the actual variable:
   // DW_OP_plus_uconst varFieldOffset.  Again, don't add if it's 0.
   if (varFieldOffset > 0) {
-    DIExpr.push_back(dwarf::DW_OP_plus);
-    DIExpr.push_back(varFieldOffset);
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(varFieldOffset);
   }
-  Expr.addExpression(makeArrayRef(DIExpr));
-  Expr.finalize();
+
+  DIExpressionCursor Cursor(Ops);
+  const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+  if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+    return;
+  DwarfExpr.addExpression(std::move(Cursor));
 
   // Now attach the location information to the DIE.
-  addBlock(Die, Attribute, Loc);
+  addBlock(Die, Attribute, DwarfExpr.finalize());
 }
 
 /// Return true if type encoding is unsigned.

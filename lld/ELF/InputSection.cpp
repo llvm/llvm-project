@@ -162,10 +162,9 @@ uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {
   return getOffset(Sym.Value);
 }
 
-template <class ELFT>
 InputSectionBase *InputSectionBase::getLinkOrderDep() const {
   if ((Flags & SHF_LINK_ORDER) && Link != 0)
-    return getFile<ELFT>()->getSections()[Link];
+    return File->getSections()[Link];
   return nullptr;
 }
 
@@ -829,11 +828,6 @@ template void InputSectionBase::uncompress<ELF32LE>();
 template void InputSectionBase::uncompress<ELF32BE>();
 template void InputSectionBase::uncompress<ELF64LE>();
 template void InputSectionBase::uncompress<ELF64BE>();
-
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32LE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32BE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64LE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64BE>() const;
 
 template InputSectionBase *InputSection::getRelocatedSection<ELF32LE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF32BE>();

@@ -1011,6 +1011,20 @@ TEST_F(FileSystemTest, Resize) {
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
+TEST_F(FileSystemTest, MD5) {
+  int FD;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
+  StringRef Data("abcdefghijklmnopqrstuvwxyz");
+  write(FD, Data.data(), Data.size());
+  lseek(FD, 0, SEEK_SET);
+  auto Hash = fs::md5_contents(FD);
+  ::close(FD);
+  ASSERT_NO_ERROR(Hash.getError());
+
+  EXPECT_STREQ("c3fcd3d76192e4007dfb496cca67e13b", Hash->digest().c_str());
+}
+
 TEST_F(FileSystemTest, FileMapping) {
   // Create a temp file.
   int FileDescriptor;

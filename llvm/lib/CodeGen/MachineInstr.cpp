@@ -420,6 +420,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       bool Unused;
       APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &Unused);
       OS << "half " << APF.convertToFloat();
+    } else if (getFPImm()->getType()->isFP128Ty()) {
+      APFloat APF = getFPImm()->getValueAPF();
+      SmallString<16> Str;
+      getFPImm()->getValueAPF().toString(Str);
+      OS << "quad " << Str;
     } else {
       OS << getFPImm()->getValueAPF().convertToDouble();
     }

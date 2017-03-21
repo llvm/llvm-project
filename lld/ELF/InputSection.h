@@ -157,7 +157,7 @@ public:
     return getFile<ELFT>()->getObj();
   }
 
-  template <class ELFT> InputSectionBase *getLinkOrderDep() const;
+  InputSectionBase *getLinkOrderDep() const;
 
   template <class ELFT> void uncompress();
 

@@ -1674,8 +1674,7 @@ unsigned PltSection::getPltRelocOff() const {
   return (HeaderSize == 0) ? InX::Plt->getSize() : 0;
 }
 
-template <class ELFT>
-GdbIndexSection<ELFT>::GdbIndexSection()
+GdbIndexSection::GdbIndexSection()
     : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"),
       StringPool(llvm::StringTableBuilder::ELF) {}
 
@@ -1707,7 +1706,6 @@ static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
   return nullptr;
 }
 
-template <class ELFT>
 static std::vector<AddressEntry>
 readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
   std::vector<AddressEntry> Ret;
@@ -1716,9 +1714,7 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
     DWARFAddressRangesVector Ranges;
     CU->collectAddressRanges(Ranges);
 
-    ArrayRef<InputSectionBase *> Sections =
-        Sec->template getFile<ELFT>()->getSections();
-
+    ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
       if (InputSectionBase *S = findSection(Sections, R.first))
         Ret.push_back({S, R.first - S->getOffsetInFile(),
@@ -1754,7 +1750,7 @@ class ObjInfoTy : public llvm::LoadedObjectInfo {
   std::unique_ptr<llvm::LoadedObjectInfo> clone() const override { return {}; }
 };
 
-template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
+void GdbIndexSection::readDwarf(InputSection *Sec) {
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
       object::ObjectFile::createObjectFile(Sec->File->MB);
   if (!Obj) {
@@ -1769,11 +1765,11 @@ template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
   for (std::pair<uint64_t, uint64_t> &P : readCuList(Dwarf, Sec))
     CompilationUnits.push_back(P);
 
-  for (AddressEntry &Ent : readAddressArea<ELFT>(Dwarf, Sec, CuId))
+  for (AddressEntry &Ent : readAddressArea(Dwarf, Sec, CuId))
     AddressArea.push_back(Ent);
 
   std::vector<std::pair<StringRef, uint8_t>> NamesAndTypes =
-      readPubNamesAndTypes(Dwarf, ELFT::TargetEndianness == support::little);
+      readPubNamesAndTypes(Dwarf, Config->IsLE);
 
   for (std::pair<StringRef, uint8_t> &Pair : NamesAndTypes) {
     uint32_t Hash = hash(Pair.first);
@@ -1792,7 +1788,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
   }
 }
 
-template <class ELFT> void GdbIndexSection<ELFT>::finalizeContents() {
+void GdbIndexSection::finalizeContents() {
   if (Finalized)
     return;
   Finalized = true;
@@ -1821,12 +1817,12 @@ template <class ELFT> void GdbIndexSection<ELFT>::finalizeContents() {
   StringPool.finalizeInOrder();
 }
 
-template <class ELFT> size_t GdbIndexSection<ELFT>::getSize() const {
-  const_cast<GdbIndexSection<ELFT> *>(this)->finalizeContents();
+size_t GdbIndexSection::getSize() const {
+  const_cast<GdbIndexSection *>(this)->finalizeContents();
   return StringPoolOffset + StringPool.getSize();
 }
 
-template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
+void GdbIndexSection::writeTo(uint8_t *Buf) {
   write32le(Buf, 7);                       // Write version.
   write32le(Buf + 4, CuListOffset);        // CU list offset.
   write32le(Buf + 8, CuTypesOffset);       // Types CU list offset.
@@ -1880,7 +1876,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   StringPool.write(Buf);
 }
 
-template <class ELFT> bool GdbIndexSection<ELFT>::empty() const {
+bool GdbIndexSection::empty() const {
   return !Out::DebugInfo;
 }
 
@@ -2200,7 +2196,7 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
   auto RI = cast<OutputSection>(this->OutSec)->Sections.rbegin();
   InputSection *LE = *(++RI);
-  InputSection *LC = cast<InputSection>(LE->template getLinkOrderDep<ELFT>());
+  InputSection *LC = cast<InputSection>(LE->getLinkOrderDep());
   uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
   uint64_t P = this->getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
@@ -2239,6 +2235,7 @@ BuildIdSection *InX::BuildId;
 InputSection *InX::Common;
 StringTableSection *InX::DynStrTab;
 InputSection *InX::Interp;
+GdbIndexSection *InX::GdbIndex;
 GotPltSection *InX::GotPlt;
 IgotPltSection *InX::IgotPlt;
 MipsGotSection *InX::MipsGot;
@@ -2320,11 +2317,6 @@ template class elf::HashTableSection<ELF32LE>;
 template class elf::HashTableSection<ELF32BE>;
 template class elf::HashTableSection<ELF64LE>;
 template class elf::HashTableSection<ELF64BE>;
-
-template class elf::GdbIndexSection<ELF32LE>;
-template class elf::GdbIndexSection<ELF32BE>;
-template class elf::GdbIndexSection<ELF64LE>;
-template class elf::GdbIndexSection<ELF64BE>;
 
 template class elf::EhFrameHeader<ELF32LE>;
 template class elf::EhFrameHeader<ELF32BE>;

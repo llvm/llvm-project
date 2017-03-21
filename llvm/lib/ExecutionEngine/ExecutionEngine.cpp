@@ -515,7 +515,7 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
   // to the function tells DynamicLibrary to load the program, not a library.
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr, ErrorStr))
     return nullptr;
-  
+
   // If the user specified a memory manager but didn't specify which engine to
   // create, we assume they only want the JIT, and we fail if they only want
   // the interpreter.
@@ -616,7 +616,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         for (unsigned int i = 0; i < elemNum; ++i) {
           Type *ElemTy = STy->getElementType(i);
           if (ElemTy->isIntegerTy())
-            Result.AggregateVal[i].IntVal = 
+            Result.AggregateVal[i].IntVal =
               APInt(ElemTy->getPrimitiveSizeInBits(), 0);
           else if (ElemTy->isAggregateType()) {
               const Constant *ElemUndef = UndefValue::get(ElemTy);
@@ -727,7 +727,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
         uint64_t v;
         bool ignored;
-        (void)apf.convertToInteger(&v, BitWidth,
+        (void)apf.convertToInteger(makeMutableArrayRef(v), BitWidth,
                                    CE->getOpcode()==Instruction::FPToSI,
                                    APFloat::rmTowardZero, &ignored);
         GV.IntVal = v; // endian?
@@ -979,7 +979,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     // Check if vector holds integers.
     if (ElemTy->isIntegerTy()) {
       if (CAZ) {
-        GenericValue intZero;     
+        GenericValue intZero;
         intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
         std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
                   intZero);
@@ -1079,7 +1079,7 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
         *(((float*)Ptr)+i) = Val.AggregateVal[i].FloatVal;
       if (cast<VectorType>(Ty)->getElementType()->isIntegerTy()) {
         unsigned numOfBytes =(Val.AggregateVal[i].IntVal.getBitWidth()+7)/8;
-        StoreIntToMemory(Val.AggregateVal[i].IntVal, 
+        StoreIntToMemory(Val.AggregateVal[i].IntVal,
           (uint8_t*)Ptr + numOfBytes*i, numOfBytes);
       }
     }
@@ -1186,7 +1186,7 @@ void ExecutionEngine::InitializeMemory(const Constant *Init, void *Addr) {
   DEBUG(Init->dump());
   if (isa<UndefValue>(Init))
     return;
-  
+
   if (const ConstantVector *CP = dyn_cast<ConstantVector>(Init)) {
     unsigned ElementSize =
         getDataLayout().getTypeAllocSize(CP->getType()->getElementType());
@@ -1194,12 +1194,12 @@ void ExecutionEngine::InitializeMemory(const Constant *Init, void *Addr) {
       InitializeMemory(CP->getOperand(i), (char*)Addr+i*ElementSize);
     return;
   }
-  
+
   if (isa<ConstantAggregateZero>(Init)) {
     memset(Addr, 0, (size_t)getDataLayout().getTypeAllocSize(Init->getType()));
     return;
   }
-  
+
   if (const ConstantArray *CPA = dyn_cast<ConstantArray>(Init)) {
     unsigned ElementSize =
         getDataLayout().getTypeAllocSize(CPA->getType()->getElementType());
@@ -1207,7 +1207,7 @@ void ExecutionEngine::InitializeMemory(const Constant *Init, void *Addr) {
       InitializeMemory(CPA->getOperand(i), (char*)Addr+i*ElementSize);
     return;
   }
-  
+
   if (const ConstantStruct *CPS = dyn_cast<ConstantStruct>(Init)) {
     const StructLayout *SL =
         getDataLayout().getStructLayout(cast<StructType>(CPS->getType()));

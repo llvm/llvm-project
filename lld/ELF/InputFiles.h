@@ -74,6 +74,13 @@ public:
   StringRef getName() const { return MB.getBufferIdentifier(); }
   MemoryBufferRef MB;
 
+  // If it is a file that can have sections, like object file or binary file,
+  // then method returns them.
+  ArrayRef<InputSectionBase *> getSections() const {
+    assert(FileKind == ObjectKind || FileKind == BinaryKind);
+    return Sections;
+  }
+
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
@@ -87,6 +94,8 @@ public:
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
+
+  std::vector<InputSectionBase *> Sections;
 
 private:
   const Kind FileKind;
@@ -189,9 +198,6 @@ private:
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);
-
-  // List of all sections defined by this file.
-  std::vector<InputSectionBase *> Sections;
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
@@ -320,10 +326,6 @@ public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
   template <class ELFT> void parse();
-  ArrayRef<InputSectionBase *> getSections() const { return Sections; }
-
-private:
-  std::vector<InputSectionBase *> Sections;
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",

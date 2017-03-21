@@ -291,7 +291,7 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, PreservedAnalysesT,
       AnalysisResultConcept<IRUnitT, PreservedAnalysesT, InvalidatorT>>
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) override {
-    return make_unique<ResultModelT>(Pass.run(IR, AM, ExtraArgs...));
+    return llvm::make_unique<ResultModelT>(Pass.run(IR, AM, ExtraArgs...));
   }
 
   /// \brief The model delegates to a static \c PassT::name method.

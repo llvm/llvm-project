@@ -69,14 +69,13 @@ OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
                   /*Info*/ 0,
                   /*Link*/ 0) {}
 
-template <typename ELFT>
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
   // Synthetic doesn't have link order dependecy, stable_sort will keep it last
   if (A->kind() == InputSectionBase::Synthetic ||
       B->kind() == InputSectionBase::Synthetic)
     return false;
-  auto *LA = cast<InputSection>(A->template getLinkOrderDep<ELFT>());
-  auto *LB = cast<InputSection>(B->template getLinkOrderDep<ELFT>());
+  auto *LA = cast<InputSection>(A->getLinkOrderDep());
+  auto *LB = cast<InputSection>(B->getLinkOrderDep());
   OutputSection *AOut = LA->OutSec;
   OutputSection *BOut = LB->OutSec;
   if (AOut != BOut)
@@ -86,14 +85,14 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
 
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
-    std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
+    std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
     assignOffsets();
 
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = this->Sections.front()->template getLinkOrderDep<ELFT>())
+    if (auto *D = this->Sections.front()->getLinkOrderDep())
       this->Link = D->OutSec->SectionIndex;
   }
 

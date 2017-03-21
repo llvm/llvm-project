@@ -497,7 +497,7 @@ private:
   size_t HeaderSize;
 };
 
-template <class ELFT> class GdbIndexSection final : public SyntheticSection {
+class GdbIndexSection final : public SyntheticSection {
   const unsigned OffsetTypeSize = 4;
   const unsigned CuListOffset = 6 * OffsetTypeSize;
   const unsigned CompilationUnitSize = 16;
@@ -762,6 +762,7 @@ struct InX {
   static InputSection *Common;
   static StringTableSection *DynStrTab;
   static InputSection *Interp;
+  static GdbIndexSection *GdbIndex;
   static GotPltSection *GotPlt;
   static IgotPltSection *IgotPlt;
   static MipsGotSection *MipsGot;
@@ -777,7 +778,6 @@ template <class ELFT> struct In : public InX {
   static SymbolTableSection<ELFT> *DynSymTab;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static GnuHashTableSection<ELFT> *GnuHashTab;
-  static GdbIndexSection<ELFT> *GdbIndex;
   static GotSection<ELFT> *Got;
   static EhFrameSection<ELFT> *EhFrame;
   static HashTableSection<ELFT> *HashTab;
@@ -793,7 +793,6 @@ template <class ELFT> struct In : public InX {
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
 template <class ELFT> EhFrameHeader<ELFT> *In<ELFT>::EhFrameHdr;
-template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
 template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;

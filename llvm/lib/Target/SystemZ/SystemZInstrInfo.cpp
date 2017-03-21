@@ -1140,12 +1140,12 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     // destination register instead.
     if (OpNum == 1) {
       unsigned LoadOpcode = Op0IsGPR ? SystemZ::LG : SystemZ::LD;
-      unsigned Dest = MI.getOperand(0).getReg();
       return BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(),
-                     get(LoadOpcode), Dest)
-          .addFrameIndex(FrameIndex)
-          .addImm(0)
-          .addReg(0);
+                     get(LoadOpcode))
+        .add(MI.getOperand(0))
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addReg(0);
     }
   }
 
