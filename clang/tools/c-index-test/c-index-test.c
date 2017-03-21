@@ -717,6 +717,7 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
           CXType Underlying = clang_getTypedefDeclUnderlyingType(Referenced);
           CXString S = clang_getTypeSpelling(Underlying);
           printf(" (Transparent: %s)", clang_getCString(S));
+          clang_disposeString(S);
         }
       }
     }
