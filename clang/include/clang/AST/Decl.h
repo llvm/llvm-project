@@ -3235,6 +3235,18 @@ public:
     return isCompleteDefinition() || isFixed();
   }
 
+  /// Returns true if this enum is either annotated with
+  /// enum_extensibility(closed) or isn't annotated with enum_extensibility.
+  bool isClosed() const;
+
+  /// Returns true if this enum is annotated with flag_enum and isn't annotated
+  /// with enum_extensibility(open).
+  bool isClosedFlag() const;
+
+  /// Returns true if this enum is annotated with neither flag_enum nor
+  /// enum_extensibility(open).
+  bool isClosedNonFlag() const;
+
   /// \brief Retrieve the enum definition from which this enumeration could
   /// be instantiated, if it is an instantiation (rather than a non-template).
   EnumDecl *getTemplateInstantiationPattern() const;

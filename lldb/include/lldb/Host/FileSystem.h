@@ -39,16 +39,6 @@ public:
 
   static Error ResolveSymbolicLink(const FileSpec &src, FileSpec &dst);
 
-  static bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                           uint64_t &high);
-  static bool CalculateMD5(const FileSpec &file_spec, uint64_t offset,
-                           uint64_t length, uint64_t &low, uint64_t &high);
-
-  static bool CalculateMD5AsString(const FileSpec &file_spec,
-                                   std::string &digest_str);
-  static bool CalculateMD5AsString(const FileSpec &file_spec, uint64_t offset,
-                                   uint64_t length, std::string &digest_str);
-
   /// Return \b true if \a spec is on a locally mounted file system, \b false
   /// otherwise.
   static bool IsLocal(const FileSpec &spec);

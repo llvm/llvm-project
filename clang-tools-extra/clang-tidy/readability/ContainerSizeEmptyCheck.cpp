@@ -56,8 +56,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),
                                       hasType(pointsTo(ValidContainer)),
-                                      hasType(references(ValidContainer))))
-                               .bind("STLObject")),
+                                      hasType(references(ValidContainer))))),
                         callee(cxxMethodDecl(hasName("size"))), WrongUse,
                         unless(hasAncestor(cxxMethodDecl(
                             ofClass(equalsBoundNode("container"))))))
@@ -69,7 +68,7 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemberCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("SizeCallExpr");
   const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("SizeBinaryOp");
-  const auto *E = Result.Nodes.getNodeAs<Expr>("STLObject");
+  const auto *E = MemberCall->getImplicitObjectArgument();
   FixItHint Hint;
   std::string ReplacementText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),

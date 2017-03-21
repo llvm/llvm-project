@@ -410,6 +410,18 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
            In<ELFT>::MipsGot->getGp();
   case R_MIPS_GOTREL:
     return Body.getVA(A) - In<ELFT>::MipsGot->getGp();
+  case R_MIPS_GOT_GP:
+    return In<ELFT>::MipsGot->getGp() + A;
+  case R_MIPS_GOT_GP_PC: {
+    // R_MIPS_LO16 expression has R_MIPS_GOT_GP_PC type iif the target
+    // is _gp_disp symbol. In that case we should use the following
+    // formula for calculation "AHL + GP - P + 4". For details see p. 4-19 at
+    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+    uint64_t V = In<ELFT>::MipsGot->getGp() + A - P;
+    if (Type == R_MIPS_LO16)
+      V += 4;
+    return V;
+  }
   case R_MIPS_TLSGD:
     return In<ELFT>::MipsGot->getVA() + In<ELFT>::MipsGot->getTlsOffset() +
            In<ELFT>::MipsGot->getGlobalDynOffset(Body) -

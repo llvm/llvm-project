@@ -1346,10 +1346,13 @@ lldb_private::Error Platform::RunShellCommand(
 
 bool Platform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                             uint64_t &high) {
-  if (IsHost())
-    return FileSystem::CalculateMD5(file_spec, low, high);
-  else
+  if (!IsHost())
     return false;
+  auto Result = llvm::sys::fs::md5_contents(file_spec.GetPath());
+  if (!Result)
+    return false;
+  std::tie(high, low) = Result->words();
+  return true;
 }
 
 void Platform::SetLocalCacheDirectory(const char *local) {

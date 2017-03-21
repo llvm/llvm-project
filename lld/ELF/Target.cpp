@@ -2083,13 +2083,16 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
     return R_PLT;
   case R_MIPS_HI16:
   case R_MIPS_LO16:
-  case R_MIPS_GOT_OFST:
     // R_MIPS_HI16/R_MIPS_LO16 relocations against _gp_disp calculate
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
     if (&S == ElfSym::MipsGpDisp)
-      return R_PC;
+      return R_MIPS_GOT_GP_PC;
+    if (&S == ElfSym::MipsLocalGp)
+      return R_MIPS_GOT_GP;
+    // fallthrough
+  case R_MIPS_GOT_OFST:
     return R_ABS;
   case R_MIPS_PC32:
   case R_MIPS_PC16:

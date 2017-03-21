@@ -19,6 +19,7 @@
 #include "lldb/Host/windows/windows.h"
 #else
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <termios.h>
 #endif
 

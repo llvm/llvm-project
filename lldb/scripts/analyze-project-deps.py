@@ -8,6 +8,10 @@ parser = argparse.ArgumentParser(
     description='Analyze LLDB project #include dependencies.')
 parser.add_argument('--show-counts', default=False, action='store_true', 
     help='When true, show the number of dependencies from each subproject')
+parser.add_argument('--discover-cycles', default=False, action='store_true',
+    help='When true, find and display all project dependency cycles.  Note,'
+         'this option is very slow')
+
 args = parser.parse_args()
 
 src_dir = os.path.join(lldb_root, "source")
@@ -17,9 +21,17 @@ src_map = {}
 
 include_regex = re.compile('#include \"((lldb|Plugins|clang)(.*/)+).*\"')
 
+def is_sublist(small, big):
+    it = iter(big)
+    return all(c in it for c in small)
+
 def normalize_host(str):
     if str.startswith("lldb/Host"):
         return "lldb/Host"
+    if str.startswith("Plugins"):
+        return "lldb/" + str
+    if str.startswith("lldb/../../source"):
+        return str.replace("lldb/../../source", "lldb")
     return str
 
 def scan_deps(this_dir, file):
@@ -40,7 +52,7 @@ def scan_deps(this_dir, file):
             relative = normalize_host(relative)
             if relative in deps:
                 deps[relative] += 1
-            else:
+            elif relative != this_dir:
                 deps[relative] = 1
     if this_dir not in src_map and len(deps) > 0:
         src_map[this_dir] = deps
@@ -65,6 +77,57 @@ for (base, dirs, files) in os.walk(src_dir):
         scan_deps(norm_base_path, src_path)
     pass
 
+def is_existing_cycle(path, cycles):
+    # If we have a cycle like # A -> B -> C (with an implicit -> A at the end)
+    # then we don't just want to check for an occurrence of A -> B -> C in the
+    # list of known cycles, but every possible rotation of A -> B -> C.  For
+    # example, if we previously encountered B -> C -> A (with an implicit -> B
+    # at the end), then A -> B -> C is also a cycle.  This is an important
+    # optimization which reduces the search space by multiple orders of
+    # magnitude.
+    for i in xrange(0,len(path)):
+        if any(is_sublist(x, path) for x in cycles):
+            return True
+        path = [path[-1]] + path[0:-1]
+    return False
+
+def expand(path_queue, path_lengths, cycles, src_map):
+    # We do a breadth first search, to make sure we visit all paths in order
+    # of ascending length.  This is an important optimization to make sure that
+    # short cycles are discovered first, which will allow us to discard longer
+    # cycles which grow the search space exponentially the longer they get.
+    while len(path_queue) > 0:
+        cur_path = path_queue.pop(0)
+        if is_existing_cycle(cur_path, cycles):
+            continue
+
+        next_len = path_lengths.pop(0) + 1
+
+        last_component = cur_path[-1]
+
+        for item in src_map[last_component]:
+            if item.startswith("clang"):
+                continue
+
+            if item in cur_path:
+                # This is a cycle.  Minimize it and then check if the result is
+                # already in the list of cycles.  Insert it (or not) and then
+                # exit.
+                new_index = cur_path.index(item)
+                cycle = cur_path[new_index:]
+                if not is_existing_cycle(cycle, cycles):
+                    cycles.append(cycle)
+                continue
+
+            path_lengths.append(next_len)
+            path_queue.append(cur_path + [item])
+    pass
+
+cycles = []
+
+path_queue = [[x] for x in src_map.iterkeys()]
+path_lens = [1] * len(path_queue)
+
 items = list(src_map.iteritems())
 items.sort(lambda A, B : cmp(A[0], B[0]))
 
@@ -79,4 +142,17 @@ for (path, deps) in items:
         sorted_deps.sort(lambda A, B: cmp(A[0], B[0]))
         for dep in sorted_deps:
             print "\t{}".format(dep[0])
+
+if args.discover_cycles:
+    print "Analyzing cycles..."
+
+    expand(path_queue, path_lens, cycles, src_map)
+
+    average = sum([len(x)+1 for x in cycles]) / len(cycles)
+
+    print "Found {} cycles.  Average cycle length = {}.".format(len(cycles), average)
+    for cycle in cycles:
+        cycle.append(cycle[0])
+        print " -> ".join(cycle)
+
 pass

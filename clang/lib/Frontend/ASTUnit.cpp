@@ -18,6 +18,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/VirtualFileSystem.h"
@@ -185,7 +186,8 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData() : Stream(Buffer), Writer(Stream, Buffer, {}) {}
+  ASTWriterData(MemoryBufferCache &PCMCache)
+      : Stream(Buffer), Writer(Stream, Buffer, PCMCache, {}) {}
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -681,6 +683,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
+  AST->PCMCache = new MemoryBufferCache;
   AST->HSOpts = std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = PCHContainerRdr.getFormat();
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
@@ -701,7 +704,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   AST->PP = std::make_shared<Preprocessor>(
       std::move(PPOpts), AST->getDiagnostics(), AST->ASTFileLangOpts,
-      AST->getSourceManager(), HeaderInfo, *AST,
+      AST->getSourceManager(), *AST->PCMCache, HeaderInfo, *AST,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
   Preprocessor &PP = *AST->PP;
@@ -1249,7 +1252,7 @@ ASTUnit::PreambleFileHash::createForFile(off_t Size, time_t ModTime) {
   PreambleFileHash Result;
   Result.Size = Size;
   Result.ModTime = ModTime;
-  memset(Result.MD5, 0, sizeof(Result.MD5));
+  Result.MD5 = {};
   return Result;
 }
 
@@ -1270,7 +1273,7 @@ namespace clang {
 bool operator==(const ASTUnit::PreambleFileHash &LHS,
                 const ASTUnit::PreambleFileHash &RHS) {
   return LHS.Size == RHS.Size && LHS.ModTime == RHS.ModTime &&
-         memcmp(LHS.MD5, RHS.MD5, sizeof(LHS.MD5)) == 0;
+         LHS.MD5 == RHS.MD5;
 }
 } // namespace clang
 
@@ -1727,6 +1730,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
                                      UserFilesAreVolatile);
+  AST->PCMCache = new MemoryBufferCache;
 
   return AST;
 }
@@ -1997,6 +2001,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   if (!VFS)
     return nullptr;
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
+  AST->PCMCache = new MemoryBufferCache;
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
@@ -2008,7 +2013,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   AST->StoredDiagnostics.swap(StoredDiagnostics);
   AST->Invocation = CI;
   if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData());
+    AST->WriterData.reset(new ASTWriterData(*AST->PCMCache));
   // Zero out now to ease cleanup during crash recovery.
   CI = nullptr;
   Diags = nullptr;
@@ -2523,7 +2528,8 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ASTWriter Writer(Stream, Buffer, {});
+  MemoryBufferCache PCMCache;
+  ASTWriter Writer(Stream, Buffer, PCMCache, {});
   return serializeUnit(Writer, Buffer, getSema(), hasErrors, OS);
 }
 
