@@ -67,16 +67,10 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
                                  *Result.SourceManager,
                                  Result.Context->getLangOpts())));
   if (Compound) {
-    Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-        Compound->getLBracLoc(),
-        Lexer::getLocForEndOfToken(Compound->getLBracLoc(), 0,
-                                   *Result.SourceManager,
-                                   Result.Context->getLangOpts())));
-    Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-        Compound->getRBracLoc(),
-        Lexer::getLocForEndOfToken(Compound->getRBracLoc(), 0,
-                                   *Result.SourceManager,
-                                   Result.Context->getLangOpts())));
+    Diag << FixItHint::CreateRemoval(
+        CharSourceRange::getTokenRange(Compound->getLBracLoc()));
+    Diag << FixItHint::CreateRemoval(
+        CharSourceRange::getTokenRange(Compound->getRBracLoc()));
   }
 }
 

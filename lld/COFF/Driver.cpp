@@ -137,9 +137,6 @@ void LinkerDriver::enqueuePath(StringRef Path) {
       fatal(MBOrErr.second, "could not open " + PathStr);
     Driver->addBuffer(std::move(MBOrErr.first));
   });
-
-  if (Config->OutputFile == "")
-    Config->OutputFile = getOutputPath(Path);
 }
 
 void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
@@ -885,6 +882,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     } else {
       Config->DelayLoadHelper = addUndefined("__delayLoadHelper2");
     }
+  }
+
+  // Set default image name if neither /out or /def set it.
+  if (Config->OutputFile.empty()) {
+    Config->OutputFile =
+        getOutputPath((*Args.filtered_begin(OPT_INPUT))->getValue());
   }
 
   // Set default image base if /base is not given.

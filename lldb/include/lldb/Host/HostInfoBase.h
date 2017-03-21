@@ -35,39 +35,6 @@ public:
   static void Terminate();
 
   //------------------------------------------------------------------
-  /// Returns the number of CPUs on this current host.
-  ///
-  /// @return
-  ///     Number of CPUs on this current host, or zero if the number
-  ///     of CPUs can't be determined on this host.
-  //------------------------------------------------------------------
-  static uint32_t GetNumberCPUS();
-
-  //------------------------------------------------------------------
-  /// Returns the maximum length of a thread name on this platform.
-  ///
-  /// @return
-  ///     Maximum length of a thread name on this platform.
-  //------------------------------------------------------------------
-  static uint32_t GetMaxThreadNameLength();
-
-  //------------------------------------------------------------------
-  /// Gets the host vendor string.
-  ///
-  /// @return
-  ///     A const string object containing the host vendor name.
-  //------------------------------------------------------------------
-  static llvm::StringRef GetVendorString();
-
-  //------------------------------------------------------------------
-  /// Gets the host Operating System (OS) string.
-  ///
-  /// @return
-  ///     A const string object containing the host OS name.
-  //------------------------------------------------------------------
-  static llvm::StringRef GetOSString();
-
-  //------------------------------------------------------------------
   /// Gets the host target triple as a const string.
   ///
   /// @return

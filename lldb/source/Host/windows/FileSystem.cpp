@@ -26,49 +26,6 @@ const char *FileSystem::DEV_NULL = "nul";
 const char *FileSystem::PATH_CONVERSION_ERROR =
     "Error converting path between UTF-8 and native encoding";
 
-FileSpec::PathSyntax FileSystem::GetNativePathSyntax() {
-  return FileSpec::ePathSyntaxWindows;
-}
-
-lldb::user_id_t FileSystem::GetFileSize(const FileSpec &file_spec) {
-  return file_spec.GetByteSize();
-}
-
-bool FileSystem::GetFileExists(const FileSpec &file_spec) {
-  return file_spec.Exists();
-}
-
-Error FileSystem::Hardlink(const FileSpec &src, const FileSpec &dst) {
-  Error error;
-  std::wstring wsrc, wdst;
-  if (!llvm::ConvertUTF8toWide(src.GetCString(), wsrc) ||
-      !llvm::ConvertUTF8toWide(dst.GetCString(), wdst))
-    error.SetErrorString(PATH_CONVERSION_ERROR);
-  else if (!::CreateHardLinkW(wsrc.c_str(), wdst.c_str(), nullptr))
-    error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
-  return error;
-}
-
-int FileSystem::GetHardlinkCount(const FileSpec &file_spec) {
-  std::wstring path;
-  if (!llvm::ConvertUTF8toWide(file_spec.GetCString(), path))
-    return -1;
-
-  HANDLE file_handle =
-      ::CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ,
-                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-  if (file_handle == INVALID_HANDLE_VALUE)
-    return -1;
-
-  AutoHandle auto_file_handle(file_handle);
-  BY_HANDLE_FILE_INFORMATION file_info;
-  if (::GetFileInformationByHandle(file_handle, &file_info))
-    return file_info.nNumberOfLinks;
-
-  return -1;
-}
-
 Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   Error error;
   std::wstring wsrc, wdst;
@@ -85,19 +42,6 @@ Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   bool is_directory = !!(attrib & FILE_ATTRIBUTE_DIRECTORY);
   DWORD flag = is_directory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
   BOOL result = ::CreateSymbolicLinkW(wsrc.c_str(), wdst.c_str(), flag);
-  if (!result)
-    error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
-  return error;
-}
-
-Error FileSystem::Unlink(const FileSpec &file_spec) {
-  Error error;
-  std::wstring path;
-  if (!llvm::ConvertUTF8toWide(file_spec.GetCString(), path)) {
-    error.SetErrorString(PATH_CONVERSION_ERROR);
-    return error;
-  }
-  BOOL result = ::DeleteFileW(path.c_str());
   if (!result)
     error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
   return error;
@@ -140,15 +84,6 @@ Error FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
   return Error("ResolveSymbolicLink() isn't implemented on Windows");
 }
 
-bool FileSystem::IsLocal(const FileSpec &spec) {
-  if (spec) {
-    // TODO: return true if the file is on a locally mounted file system
-    return true;
-  }
-
-  return false;
-}
-
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
   std::wstring wpath, wmode;
   if (!llvm::ConvertUTF8toWide(path, wpath))
@@ -159,26 +94,4 @@ FILE *FileSystem::Fopen(const char *path, const char *mode) {
   if (_wfopen_s(&file, wpath.c_str(), wmode.c_str()) != 0)
     return nullptr;
   return file;
-}
-
-int FileSystem::Stat(const char *path, struct stat *stats) {
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(path, wpath)) {
-    errno = EINVAL;
-    return -EINVAL;
-  }
-  int stat_result;
-#ifdef _USE_32BIT_TIME_T
-  struct _stat32 file_stats;
-  stat_result = ::_wstat32(wpath.c_str(), &file_stats);
-#else
-  struct _stat64i32 file_stats;
-  stat_result = ::_wstat64i32(wpath.c_str(), &file_stats);
-#endif
-  if (stat_result == 0) {
-    static_assert(sizeof(struct stat) == sizeof(file_stats),
-                  "stat and _stat32/_stat64i32 must have the same layout");
-    *stats = *reinterpret_cast<struct stat *>(&file_stats);
-  }
-  return stat_result;
 }

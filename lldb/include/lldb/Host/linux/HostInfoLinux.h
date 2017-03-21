@@ -29,7 +29,6 @@ private:
 
 public:
   static void Initialize();
-  static uint32_t GetMaxThreadNameLength();
 
   static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
   static bool GetOSBuildString(std::string &s);

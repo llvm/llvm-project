@@ -50,9 +50,6 @@ struct HostInfoBaseFields {
     }
   }
 
-  uint32_t m_number_cpus;
-  std::string m_vendor_string;
-  std::string m_os_string;
   std::string m_host_triple;
 
   ArchSpec m_host_arch_32;
@@ -77,34 +74,6 @@ void HostInfoBase::Initialize() { g_fields = new HostInfoBaseFields(); }
 void HostInfoBase::Terminate() {
   delete g_fields;
   g_fields = nullptr;
-}
-
-uint32_t HostInfoBase::GetNumberCPUS() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    g_fields->m_number_cpus = std::thread::hardware_concurrency();
-  });
-  return g_fields->m_number_cpus;
-}
-
-uint32_t HostInfoBase::GetMaxThreadNameLength() { return 0; }
-
-llvm::StringRef HostInfoBase::GetVendorString() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    g_fields->m_vendor_string =
-        HostInfo::GetArchitecture().GetTriple().getVendorName().str();
-  });
-  return g_fields->m_vendor_string;
-}
-
-llvm::StringRef HostInfoBase::GetOSString() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    g_fields->m_os_string =
-        std::move(HostInfo::GetArchitecture().GetTriple().getOSName());
-  });
-  return g_fields->m_os_string;
 }
 
 llvm::StringRef HostInfoBase::GetTargetTriple() {

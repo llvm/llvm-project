@@ -246,7 +246,7 @@ template <class ELFT> void elf::markLive() {
       scanEhFrameSection<ELFT>(*EH, Enqueue);
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
-    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
+    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))
       Enqueue({Sec, 0});
     else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);

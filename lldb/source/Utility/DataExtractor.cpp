@@ -1233,6 +1233,6 @@ void DataExtractor::Checksum(llvm::SmallVectorImpl<uint8_t> &dest,
   llvm::MD5::MD5Result result;
   md5.final(result);
 
-  dest.resize(16);
-  std::copy(result, result + 16, dest.begin());
+  dest.clear();
+  dest.append(result.Bytes.begin(), result.Bytes.end());
 }

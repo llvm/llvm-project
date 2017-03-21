@@ -496,10 +496,10 @@ extern volatile int ReadabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
 
-// This anchor is used to force the linker to link the SafetyModule.
-extern volatile int SafetyModuleAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED SafetyModuleAnchorDestination =
-    SafetyModuleAnchorSource;
+// This anchor is used to force the linker to link the HICPPModule.
+extern volatile int HICPPModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED HICPPModuleAnchorDestination =
+    HICPPModuleAnchorSource;
 
 } // namespace tidy
 } // namespace clang

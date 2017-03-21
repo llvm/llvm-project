@@ -767,7 +767,8 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
+BitcodeFile::BitcodeFile(MemoryBufferRef MB, uint64_t OffsetInArchive)
+    : InputFile(BitcodeKind, MB), OffsetInArchive(OffsetInArchive) {
   EKind = getBitcodeELFKind(MB);
   EMachine = getBitcodeMachineKind(MB);
 }
@@ -905,10 +906,9 @@ static bool isBitcode(MemoryBufferRef MB) {
 
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F =
-      isBitcode(MB) ? make<BitcodeFile>(MB) : createELFFile<ObjectFile>(MB);
+  InputFile *F = isBitcode(MB) ? make<BitcodeFile>(MB, OffsetInArchive)
+                               : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
-  F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 
