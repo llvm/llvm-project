@@ -28,7 +28,7 @@
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
-#include "ObjCRuntimeSyntheticProvider.cpp"
+#include "ObjCRuntimeSyntheticProvider.h"
 #include "SwiftFormatters.h"
 
 #include <functional>
@@ -58,24 +58,26 @@ using lldb_private::formatters::AddSummary;
 
 void SwiftLanguage::Initialize() {
   static ConstString g_NSDictionaryClass1(
-      "_TtCSs29_NativeDictionaryStorageOwner");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs29_NativeDictionaryStorageOwner"));
   static ConstString g_NSDictionaryClass2(
-      "_TtCs29_NativeDictionaryStorageOwner");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs29_NativeDictionaryStorageOwner"));
   static ConstString g_NSDictionaryClass3Old(
-      "_TtGCs29_NativeDictionaryStorageOwner");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtGCs29_NativeDictionaryStorageOwner"));
   static ConstString g_NSDictionaryClass3(
-      MANGLING_PREFIX_STR "s29_NativeDictionaryStorageOwner");
+      SwiftLanguageRuntime::GetCurrentMangledName(MANGLING_PREFIX_STR "s29_NativeDictionaryStorageOwner"));
   static ConstString g_NSDictionaryClass4Old(
-      "_TtGCs26_SwiftDeferredNSDictionary");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtGCs26_SwiftDeferredNSDictionary"));
   static ConstString g_NSDictionaryClass4(
-      MANGLING_PREFIX_STR "s26_SwiftDeferredNSDictionary");
+      SwiftLanguageRuntime::GetCurrentMangledName(MANGLING_PREFIX_STR "s26_SwiftDeferredNSDictionary"));
 
-  static ConstString g_NSSetClass1("_TtCSs22_NativeSetStorageOwner");
-  static ConstString g_NSSetClass2("_TtCs22_NativeSetStorageOwner");
-  static ConstString g_NSStringClass1("_NSContiguousString");
-  static ConstString g_NSStringClass2("_TtCSs19_NSContiguousString");
-  static ConstString g_NSStringClass3("_TtCs19_NSContiguousString");
-  static ConstString g_NSArrayClass1("_TtCs21_SwiftDeferredNSArray");
+  static ConstString g_NSSetClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs22_NativeSetStorageOwner"));
+  static ConstString g_NSSetClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22_NativeSetStorageOwner"));
+  static ConstString g_NSStringClass1(SwiftLanguageRuntime::GetCurrentMangledName("_NSContiguousString"));
+  static ConstString g_NSStringClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs19_NSContiguousString"));
+  static ConstString g_NSStringClass3Old("_TtCs19_NSContiguousString");
+  static ConstString g_NSStringClass3(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs19_NSContiguousString"));
+  static ConstString g_NSArrayClass1Old("_TtCs21_SwiftDeferredNSArray");
+  static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray"));
 
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Swift Language",
                                 CreateInstance);
@@ -170,9 +172,16 @@ void SwiftLanguage::Initialize() {
       .emplace(
           g_NSStringClass3,
           lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
+  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
+      .emplace(
+          g_NSStringClass3Old,
+          lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
 
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
       .emplace(g_NSArrayClass1,
+               lldb_private::formatters::swift::Array_SummaryProvider);
+  lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
+      .emplace(g_NSArrayClass1Old,
                lldb_private::formatters::swift::Array_SummaryProvider);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics()
       .emplace(g_NSArrayClass1,
@@ -180,16 +189,19 @@ void SwiftLanguage::Initialize() {
 }
 
 void SwiftLanguage::Terminate() {
+  // FIXME: Duplicating this list from Initialize seems error-prone.
   static ConstString g_NSDictionaryClass1(
-      "_TtCSs29_NativeDictionaryStorageOwner");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs29_NativeDictionaryStorageOwner"));
   static ConstString g_NSDictionaryClass2(
-      "_TtCs29_NativeDictionaryStorageOwner");
-  static ConstString g_NSSetClass1("_TtCSs22_NativeSetStorageOwner");
-  static ConstString g_NSSetClass2("_TtCs22_NativeSetStorageOwner");
-  static ConstString g_NSStringClass1("_NSContiguousString");
-  static ConstString g_NSStringClass2("_TtCSs19_NSContiguousString");
-  static ConstString g_NSStringClass3("_TtCs19_NSContiguousString");
-  static ConstString g_NSArrayClass1("_TtCs21_SwiftDeferredNSArray");
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs29_NativeDictionaryStorageOwner"));
+  static ConstString g_NSSetClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs22_NativeSetStorageOwner"));
+  static ConstString g_NSSetClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22_NativeSetStorageOwner"));
+  static ConstString g_NSStringClass1(SwiftLanguageRuntime::GetCurrentMangledName("_NSContiguousString"));
+  static ConstString g_NSStringClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs19_NSContiguousString"));
+  static ConstString g_NSStringClass3Old("_TtCs19_NSContiguousString");
+  static ConstString g_NSStringClass3(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs19_NSContiguousString"));
+  static ConstString g_NSArrayClass1Old("_TtCs21_SwiftDeferredNSArray");
+  static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray"));
 
   lldb_private::formatters::NSSet_Additionals::GetAdditionalSummaries().erase(
       g_NSSetClass1);
@@ -206,9 +218,13 @@ void SwiftLanguage::Terminate() {
       .erase(g_NSStringClass2);
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
       .erase(g_NSStringClass3);
+  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
+      .erase(g_NSStringClass3Old);
 
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
       g_NSArrayClass1);
+  lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
+      g_NSArrayClass1Old);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics()
       .erase(g_NSArrayClass1);
 
@@ -418,6 +434,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "Swift.Array summary provider",
+      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray")), summary_flags, false);
+  AddCXXSummary(
+      swift_category_sp, lldb_private::formatters::NSArraySummaryProvider,
+      "Swift.Array summary provider",
       ConstString("_TtCs21_SwiftDeferredNSArray"), summary_flags, false);
 
   AddCXXSummary(swift_category_sp,
@@ -482,7 +502,14 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSynthetic(swift_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
                   "Swift.Array synthetic children",
-                  ConstString("_TtCs21_SwiftDeferredNSArray"), synth_flags,
+                  ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray")),
+                  synth_flags,
+                  false);
+  AddCXXSynthetic(swift_category_sp,
+                  lldb_private::formatters::NSArraySyntheticFrontEndCreator,
+                  "Swift.Array synthetic children",
+                  ConstString("_TtCs21_SwiftDeferredNSArray"),
+                  synth_flags,
                   false);
 
   AddCXXSynthetic(
@@ -576,7 +603,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::NSContiguousString_SummaryProvider,
       "NSContiguousString summary provider",
-      ConstString("_TtCs19_NSContiguousString"), summary_flags);
+      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs19_NSContiguousString")), summary_flags);
   summary_flags.SetSkipPointers(true);
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::BuiltinObjC_SummaryProvider,
@@ -941,7 +968,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
             static bool Check(const CompilerType &type) {
               if ((ClangASTContext::IsObjCObjectPointerType(type) ||
                    ClangASTContext::IsObjCObjectOrInterfaceType(type)) &&
-                  type.GetTypeName().GetStringRef().startswith("_TtC"))
+                  SwiftLanguageRuntime::IsSwiftClassName(type.GetTypeName().GetCString()))
                 return true;
 
               return false;
@@ -1199,6 +1226,8 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
                  return retval;
                };
   }
+
+  llvm_unreachable("Unhandled StringPrinter in switch.");
 }
 
 static void SplitDottedName(llvm::StringRef name,

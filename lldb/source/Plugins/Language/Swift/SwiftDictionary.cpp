@@ -16,6 +16,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 #include "swift/AST/ASTContext.h"
 #include "llvm/ADT/StringRef.h"
@@ -126,7 +127,7 @@ bool lldb_private::formatters::swift::Dictionary_SummaryProvider(
 };
 
 ConstString SwiftDictionaryNativeBufferHandler::GetMangledStorageTypeName() {
-  static ConstString g_name("_TtCs29_NativeDictionaryStorageOwner");
+  static ConstString g_name(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs29_NativeDictionaryStorageOwner"));
   return g_name;
 }
 

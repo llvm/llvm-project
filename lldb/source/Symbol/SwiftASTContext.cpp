@@ -23,7 +23,7 @@
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/IRGenOptions.h"
-#include "swift/AST/Mangle.h"
+#include "swift/AST/ASTMangler.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/Type.h"
@@ -64,6 +64,7 @@
 #include "swift/../../lib/IRGen/IRGenModule.h"
 #include "swift/../../lib/IRGen/Linking.h"
 #include "swift/../../lib/IRGen/TypeInfo.h"
+#include "swift/../../lib/IRGen/IRGenMangler.h"
 
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/Strings.h"
@@ -2930,6 +2931,8 @@ public:
     case swift::DiagnosticKind::Note:
       return eDiagnosticSeverityRemark;
     }
+
+    llvm_unreachable("Unhandled DiagnosticKind in switch.");
   }
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
@@ -3091,15 +3094,15 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     // types that didn't come out of the visitor (e.g. fallback ObjCPointers)
     // still exist in our tables for later mangled name retrieval
     // (the expression parser needs to do this).
-    CacheDemangledType(ConstString("_TtBO").GetCString(),
+    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBO").c_str()).GetCString(),
                        m_ast_context_ap->TheUnknownObjectType.getPointer());
-    CacheDemangledType(ConstString("_TtBp").GetCString(),
+    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBp").c_str()).GetCString(),
                        m_ast_context_ap->TheRawPointerType.getPointer());
-    CacheDemangledType(ConstString("_TtBb").GetCString(),
+    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBb").c_str()).GetCString(),
                        m_ast_context_ap->TheBridgeObjectType.getPointer());
-    CacheDemangledType(ConstString("_TtBo").GetCString(),
+    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtBo").c_str()).GetCString(),
                        m_ast_context_ap->TheNativeObjectType.getPointer());
-    CacheDemangledType(ConstString("_TtT_").GetCString(),
+    CacheDemangledType(ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtT_").c_str()).GetCString(),
                        m_ast_context_ap->TheEmptyTupleType.getPointer());
   }
 
@@ -4022,9 +4025,8 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
   });
 
   if (!has_archetypes) {
-    swift::Mangle::Mangler mangler(true);
-    mangler.mangleTypeForDebugger(swift_type, nullptr);
-    std::string s = mangler.finalize();
+    swift::Mangle::ASTMangler mangler(true);
+    std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
 
     if (!s.empty()) {
       ConstString mangled_cs(s.c_str());
@@ -4055,8 +4057,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                                             Error &error) {
   VALID_OR_RETURN(CompilerType());
 
-  if (mangled_typename && mangled_typename[0] == '_' &&
-      mangled_typename[1] == 'T') {
+  if (mangled_typename 
+      && SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
     if (log)
       log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
@@ -4639,7 +4641,7 @@ SwiftASTContext::CreateTupleType(const std::vector<CompilerType> &elements) {
 
   Error error;
   if (elements.size() == 0)
-    return GetTypeFromMangledTypename("_TtT_", error);
+    return CompilerType(GetASTContext(), GetASTContext()->TheEmptyTupleType);
   else {
     std::vector<swift::TupleTypeElt> tuple_elems;
     for (const CompilerType &type : elements) {
@@ -4661,7 +4663,7 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
 
   Error error;
   if (elements.size() == 0)
-    return GetTypeFromMangledTypename("_TtT_", error);
+    return CompilerType(GetASTContext(), GetASTContext()->TheEmptyTupleType);
   else {
     std::vector<swift::TupleTypeElt> tuple_elems;
     for (const TupleElement &element : elements) {
@@ -4719,7 +4721,7 @@ CompilerType SwiftASTContext::GetErrorType() {
 CompilerType SwiftASTContext::GetNSErrorType(Error &error) {
   VALID_OR_RETURN(CompilerType());
 
-  return GetTypeFromMangledTypename("_TtC10Foundation7NSError", error);
+  return GetTypeFromMangledTypename(SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError").c_str(), error);
 }
 
 CompilerType SwiftASTContext::CreateProtocolCompositionType(
@@ -7547,9 +7549,8 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
       }
 
       if (the_value_decl) {
-        swift::Mangle::Mangler mangler;
-        mangler.mangleFieldOffsetFull(the_value_decl, false);
-        std::string buffer = mangler.finalize();
+        swift::irgen::IRGenMangler mangler;
+        std::string buffer = mangler.mangleFieldOffsetFull(the_value_decl, false);
 
         StreamString symbol_name;
         symbol_name.Printf("%s", buffer.c_str());

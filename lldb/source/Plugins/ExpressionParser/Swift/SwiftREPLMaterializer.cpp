@@ -23,6 +23,29 @@
 
 using namespace lldb_private;
 
+static llvm::StringRef
+GetNameOfDemangledVariable(swift::Demangle::NodePointer node_pointer) {
+  if (!node_pointer ||
+      node_pointer->getKind() != swift::Demangle::Node::Kind::Global)
+    return llvm::StringRef();
+
+  swift::Demangle::NodePointer variable_pointer =
+      node_pointer->getFirstChild();
+
+  if (!variable_pointer ||
+      variable_pointer->getKind() != swift::Demangle::Node::Kind::Variable)
+    return llvm::StringRef();
+
+  for (swift::Demangle::NodePointer child : *variable_pointer) {
+    if (child &&
+        child->getKind() == swift::Demangle::Node::Kind::Identifier &&
+        child->hasText()) {
+      return child->getText();
+    }
+  }
+  return llvm::StringRef();
+}
+
 class EntityREPLResultVariable : public Materializer::Entity {
 public:
   EntityREPLResultVariable(const CompilerType &type,
@@ -146,13 +169,21 @@ public:
       return;
     }
 
+    swift::Demangle::Context demangle_ctx;
+    llvm::StringRef result_name = SwiftASTManipulator::GetResultName();
+
     for (const IRExecutionUnit::JittedGlobalVariable &variable :
          execution_unit->GetJittedGlobalVariables()) {
-      if (strstr(variable.m_name.GetCString(),
-                 SwiftASTManipulator::GetResultName())) {
+      swift::Demangle::NodePointer node_pointer =
+          demangle_ctx.demangleSymbolAsNode(variable.m_name.GetStringRef());
+
+      llvm::StringRef variable_name = GetNameOfDemangledVariable(node_pointer);
+      if (variable_name == result_name) {
         MakeREPLResult(*execution_unit, err, &variable);
         return;
       }
+
+      demangle_ctx.clear();
     }
 
     if (SwiftASTContext::IsPossibleZeroSizeType(m_type)) {
@@ -304,27 +335,7 @@ public:
       swift::Demangle::NodePointer node_pointer =
           demangle_ctx.demangleSymbolAsNode(variable.m_name.GetStringRef());
 
-      if (!node_pointer ||
-          node_pointer->getKind() != swift::Demangle::Node::Kind::Global)
-        continue;
-
-      swift::Demangle::NodePointer variable_pointer =
-          node_pointer->getFirstChild();
-
-      if (!variable_pointer ||
-          variable_pointer->getKind() != swift::Demangle::Node::Kind::Variable)
-        continue;
-
-      llvm::StringRef last_component;
-
-      for (swift::Demangle::NodePointer child : *variable_pointer) {
-        if (child &&
-            child->getKind() == swift::Demangle::Node::Kind::Identifier &&
-            child->hasText()) {
-          last_component = child->getText();
-          break;
-        }
-      }
+      llvm::StringRef last_component = GetNameOfDemangledVariable(node_pointer);
 
       if (last_component.empty())
         continue;

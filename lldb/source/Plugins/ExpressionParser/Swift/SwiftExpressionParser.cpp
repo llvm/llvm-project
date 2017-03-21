@@ -1830,6 +1830,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 static bool FindFunctionInModule(ConstString &mangled_name,
                                  llvm::Module *module, const char *orig_name,
                                  bool exact) {
+  swift::Demangle::Context demangle_ctx;
   for (llvm::Module::iterator fi = module->getFunctionList().begin(),
                               fe = module->getFunctionList().end();
        fi != fe; ++fi) {
@@ -1842,6 +1843,37 @@ static bool FindFunctionInModule(ConstString &mangled_name,
       if (fi->getName().str().find(orig_name) != std::string::npos) {
         mangled_name.SetCString(fi->getName().str().c_str());
         return true;
+      }
+
+      // The new demangling is cannier about compression, so the name may
+      // not be in the mangled name plain.  Let's demangle it and see if we 
+      // can find it in the demangled nodes.
+      demangle_ctx.clear();
+      
+      swift::Demangle::NodePointer node_ptr = demangle_ctx.demangleSymbolAsNode(fi->getName());
+      if (node_ptr)
+      {
+        if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+          continue;
+        if (node_ptr->getNumChildren() != 1)
+          continue;
+        node_ptr = node_ptr->getFirstChild();
+        if (node_ptr->getKind() != swift::Demangle::Node::Kind::Function)
+          continue;
+        size_t num_children = node_ptr->getNumChildren();
+        for (size_t i = 0; i < num_children; i++)
+        {
+          swift::Demangle::NodePointer child_ptr = node_ptr->getChild(i);
+          if (child_ptr->getKind() == swift::Demangle::Node::Kind::Identifier) {
+            if (!child_ptr->hasText())
+              continue;
+            if(child_ptr->getText().contains(orig_name))
+            {
+              mangled_name.SetCString(fi->getName().str().c_str());
+              return true;
+            }
+          }
+        }
       }
     }
   }
