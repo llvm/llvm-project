@@ -710,6 +710,15 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
         clang_getSpellingLocation(Loc, 0, &line, &column, 0);
         printf(":%d:%d", line, column);
       }
+
+      if (clang_getCursorKind(Referenced) == CXCursor_TypedefDecl) {
+        CXType T = clang_getCursorType(Referenced);
+        if (clang_Type_isTransparentTagTypedef(T)) {
+          CXType Underlying = clang_getTypedefDeclUnderlyingType(Referenced);
+          CXString S = clang_getTypeSpelling(Underlying);
+          printf(" (Transparent: %s)", clang_getCString(S));
+        }
+      }
     }
 
     if (clang_isCursorDefinition(Cursor))
