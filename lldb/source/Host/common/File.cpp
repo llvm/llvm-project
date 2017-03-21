@@ -24,11 +24,11 @@
 #endif
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
@@ -249,14 +249,12 @@ Error File::Open(const char *path, uint32_t options, uint32_t permissions) {
 
 uint32_t File::GetPermissions(const FileSpec &file_spec, Error &error) {
   if (file_spec) {
-    struct stat file_stats;
-    int stat_result = FileSystem::Stat(file_spec.GetCString(), &file_stats);
-    if (stat_result == -1)
-      error.SetErrorToErrno();
-    else {
-      error.Clear();
-      return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
-    }
+    error.Clear();
+    auto Perms = llvm::sys::fs::getPermissions(file_spec.GetPath());
+    if (Perms)
+      return *Perms;
+    error = Error(Perms.getError());
+    return 0;
   } else
     error.SetErrorString("empty file spec");
   return 0;

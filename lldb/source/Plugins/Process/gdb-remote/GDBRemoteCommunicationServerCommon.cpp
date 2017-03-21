@@ -642,14 +642,15 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Size(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    lldb::user_id_t retcode = FileSystem::GetFileSize(FileSpec(path, false));
+    uint64_t Size;
+    if (llvm::sys::fs::file_size(path, Size))
+      return SendErrorResponse(5);
     StreamString response;
     response.PutChar('F');
-    response.PutHex64(retcode);
-    if (retcode == UINT64_MAX) {
+    response.PutHex64(Size);
+    if (Size == UINT64_MAX) {
       response.PutChar(',');
-      response.PutHex64(
-          retcode); // TODO: replace with Host::GetSyswideErrorCode()
+      response.PutHex64(Size); // TODO: replace with Host::GetSyswideErrorCode()
     }
     return SendPacketNoLock(response.GetString());
   }
@@ -681,7 +682,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Exists(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    bool retcode = FileSystem::GetFileExists(FileSpec(path, false));
+    bool retcode = llvm::sys::fs::exists(path);
     StreamString response;
     response.PutChar('F');
     response.PutChar(',');
@@ -714,7 +715,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.SetFilePos(::strlen("vFile:unlink:"));
   std::string path;
   packet.GetHexByteString(path);
-  Error error = FileSystem::Unlink(FileSpec{path, true});
+  Error error(llvm::sys::fs::remove(path));
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());

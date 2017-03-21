@@ -1,3 +1,7 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+// XFAIL: armhf-target-arch
+// This test fails for armhf (see pr32261)
+
 //===-- fixsfsivfp_test.c - Test __fixsfsivfp -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

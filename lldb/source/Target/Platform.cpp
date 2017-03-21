@@ -696,8 +696,7 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
     namespace fs = llvm::sys::fs;
     switch (fs::get_file_type(src.GetPath(), false)) {
     case fs::file_type::directory_file: {
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       uint32_t permissions = src.GetPermissions();
       if (permissions == 0)
         permissions = eFilePermissionsDirectoryDefault;
@@ -716,14 +715,12 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
     } break;
 
     case fs::file_type::regular_file:
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       error = PutFile(src, fixed_dst);
       break;
 
     case fs::file_type::symlink_file: {
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       FileSpec src_resolved;
       error = FileSystem::Readlink(src, src_resolved);
       if (error.Success())

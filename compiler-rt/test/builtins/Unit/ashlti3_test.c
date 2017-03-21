@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- ashlti3_test.c - Test __ashlti3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

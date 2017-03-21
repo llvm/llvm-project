@@ -192,15 +192,18 @@ size_t EmulationStateARM::WritePseudoMemory(
   EmulationStateARM *pseudo_state = (EmulationStateARM *)baton;
 
   if (length <= 4) {
-    uint32_t value = *((const uint32_t *)dst);
+    uint32_t value;
+    memcpy (&value, dst, sizeof (uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
       value = llvm::ByteSwap_32(value);
 
     pseudo_state->StoreToPseudoAddress(addr, value);
     return length;
   } else if (length == 8) {
-    uint32_t value1 = ((const uint32_t *)dst)[0];
-    uint32_t value2 = ((const uint32_t *)dst)[1];
+    uint32_t value1;
+    uint32_t value2;
+    memcpy (&value1, dst, sizeof (uint32_t));
+    memcpy (&value2, (uint8_t *) dst + sizeof (uint32_t), sizeof (uint32_t));
     if (endian::InlHostByteOrder() == lldb::eByteOrderBig) {
       value1 = llvm::ByteSwap_32(value1);
       value2 = llvm::ByteSwap_32(value2);

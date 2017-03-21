@@ -67,11 +67,6 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_unregister_image_globals(uptr *flag);
 
-  SANITIZER_INTERFACE_ATTRIBUTE
-  void __asan_register_elf_globals(uptr *flag, void *start, void *stop);
-  SANITIZER_INTERFACE_ATTRIBUTE
-  void __asan_unregister_elf_globals(uptr *flag, void *start, void *stop);
-
   // These two functions should be called by the instrumented code.
   // 'globals' is an array of structures describing 'n' globals.
   SANITIZER_INTERFACE_ATTRIBUTE

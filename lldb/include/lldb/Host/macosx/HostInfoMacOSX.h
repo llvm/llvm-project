@@ -30,7 +30,6 @@ public:
   static bool GetOSBuildString(std::string &s);
   static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
-  static uint32_t GetMaxThreadNameLength();
 
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
