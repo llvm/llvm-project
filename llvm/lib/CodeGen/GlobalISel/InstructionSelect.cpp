@@ -123,7 +123,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       // If so, erase it.
       if (isTriviallyDead(MI, MRI)) {
         DEBUG(dbgs() << "Is dead; erasing.\n");
-        MI.eraseFromParent();
+        MI.eraseFromParentAndMarkDBGValuesForRemoval();
         continue;
       }
 
