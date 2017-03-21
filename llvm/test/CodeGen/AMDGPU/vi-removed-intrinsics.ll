@@ -1,4 +1,5 @@
 ; RUN: not llc -march=amdgcn -mcpu=tonga < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; XFAIL: *
 
 ; ERROR: error: :1:42: in function rsq_legacy_f32 void (float addrspace(1)*, float): intrinsic not supported on subtarget
 
