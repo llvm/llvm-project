@@ -432,7 +432,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
            "illegal to increase number of bytes modified by a store");
 
     unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(SrcExt, MI.getOperand(0).getReg());
+    MIRBuilder.buildZExt(SrcExt, MI.getOperand(0).getReg());
     MIRBuilder.buildStore(SrcExt, MI.getOperand(1).getReg(),
                           **MI.memoperands_begin());
     MI.eraseFromParent();
