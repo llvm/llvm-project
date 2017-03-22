@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass simple-register-coalescing,rename-independent-subregs -o - %s | FileCheck %s
 --- |
-  define void @test0() { ret void }
-  define void @test1() { ret void }
+  define amdgpu_kernel void @test0() { ret void }
+  define amdgpu_kernel void @test1() { ret void }
 ...
 ---
 # In the test below we have two independent def+use pairs of subregister1 which

@@ -37,6 +37,12 @@ namespace std
       typedef S<T> type;
     };
 
+//  P0548
+    template <class T>
+    struct common_type< ::S<T>, ::S<T> > {
+      typedef S<T> type;
+    };
+
     template <> struct common_type< ::S<long>, long> {};
     template <> struct common_type<long, ::S<long> > {};
 }
@@ -284,4 +290,19 @@ int main()
   test_bullet_three_two();
   test_bullet_four();
 #endif
+
+//  P0548
+    static_assert((std::is_same<std::common_type<S<int> >::type,         S<int> >::value), "");
+    static_assert((std::is_same<std::common_type<S<int>, S<int> >::type, S<int> >::value), "");
+
+    static_assert((std::is_same<std::common_type<int>::type,                int>::value), "");
+    static_assert((std::is_same<std::common_type<const int>::type,          int>::value), "");
+    static_assert((std::is_same<std::common_type<volatile int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<const volatile int>::type, int>::value), "");
+
+    static_assert((std::is_same<std::common_type<int, int>::type,             int>::value), "");
+    static_assert((std::is_same<std::common_type<const int, int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<int, const int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<const int, const int>::type, int>::value), "");
+    
 }

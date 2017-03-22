@@ -1645,8 +1645,9 @@ Error Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
                                     const FileSpec &dst_file_spec) {
   Error error;
 
-  std::ofstream dst(dst_file_spec.GetPath(), std::ios::out | std::ios::binary);
-  if (!dst.is_open()) {
+  std::error_code EC;
+  llvm::raw_fd_ostream dst(dst_file_spec.GetPath(), EC, llvm::sys::fs::F_None);
+  if (EC) {
     error.SetErrorStringWithFormat("unable to open destination file: %s",
                                    dst_file_spec.GetPath().c_str());
     return error;

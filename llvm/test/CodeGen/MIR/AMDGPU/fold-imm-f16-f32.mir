@@ -1,6 +1,6 @@
 # RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
-  define void @add_f32_1.0_one_f16_use() #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -11,7 +11,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_f32_1.0_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -22,7 +22,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_one_f32_use_one_f16_use () #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f32_use_one_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -33,7 +33,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_one_f32_use_multi_f16_use () #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f32_use_multi_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -46,7 +46,7 @@
     ret void
   }
 
-  define void @add_i32_1_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_i32_1_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f16.add0 = fadd half %f16.val0, 0xH0001
@@ -56,7 +56,7 @@
     ret void
   }
 
-  define void @add_i32_m2_one_f32_use_multi_f16_use () #0 {
+  define amdgpu_kernel void @add_i32_m2_one_f32_use_multi_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -69,7 +69,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_multi_f32_use() #0 {
+  define amdgpu_kernel void @add_f16_1.0_multi_f32_use() #0 {
     %f32.val0 = load volatile float, float addrspace(1)* undef
     %f32.val1 = load volatile float, float addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -80,7 +80,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_other_high_bits_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_f16_1.0_other_high_bits_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile half, half addrspace(1)* undef
@@ -91,7 +91,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_other_high_bits_use_f16_f32() #0 {
+  define amdgpu_kernel void @add_f16_1.0_other_high_bits_use_f16_f32() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile half, half addrspace(1)* undef

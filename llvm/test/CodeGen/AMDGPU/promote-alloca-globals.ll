@@ -5,12 +5,12 @@
 @global_array0 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
 @global_array1 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
 
-; IR-LABEL: define void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+; IR-LABEL: define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 ; IR: alloca [10 x i32]
 ; ASM-LABEL: {{^}}promote_alloca_size_256:
 ; ASM: ; LDSByteSize: 60000 bytes/workgroup (compile time only)
 
-define void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [10 x i32], align 4
   %tmp = load i32, i32 addrspace(1)* %in, align 4

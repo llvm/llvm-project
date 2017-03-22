@@ -18,7 +18,7 @@ define i32 addrspace(4)* @return_select_group_flat(i1 %c, i32 addrspace(3)* %gro
 ; CHECK-LABEL: @store_select_group_flat(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* %group.ptr.1
 ; CHECK: store i32 -1, i32 addrspace(3)* %select
-define void @store_select_group_flat(i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* %group.ptr.1) #0 {
+define amdgpu_kernel void @store_select_group_flat(i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* %group.ptr.1) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %cast1 = addrspacecast i32 addrspace(3)* %group.ptr.1 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* %cast1
@@ -43,7 +43,7 @@ define i32 @load_select_group_flat_md(i1 %c, i32 addrspace(3)* %group.ptr.0, i32
 ; CHECK: %2 = addrspacecast i32* %private.ptr.1 to i32 addrspace(4)*
 ; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* %2
 ; CHECK: store i32 -1, i32 addrspace(4)* %select
-define void @store_select_mismatch_group_private_flat(i1 %c, i32 addrspace(3)* %group.ptr.0, i32* %private.ptr.1) #0 {
+define amdgpu_kernel void @store_select_mismatch_group_private_flat(i1 %c, i32 addrspace(3)* %group.ptr.0, i32* %private.ptr.1) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %cast1 = addrspacecast i32* %private.ptr.1 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* %cast1
@@ -73,7 +73,7 @@ bb:
 ; CHECK-LABEL: @store_select_group_flat_null(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*)
 ; CHECK: store i32 -1, i32 addrspace(3)* %select
-define void @store_select_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* null
   store i32 -1, i32 addrspace(4)* %select
@@ -83,7 +83,7 @@ define void @store_select_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0)
 ; CHECK-LABEL: @store_select_group_flat_null_swap(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*), i32 addrspace(3)* %group.ptr.0
 ; CHECK: store i32 -1, i32 addrspace(3)* %select
-define void @store_select_group_flat_null_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_null_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* null, i32 addrspace(4)* %cast0
   store i32 -1, i32 addrspace(4)* %select
@@ -93,7 +93,7 @@ define void @store_select_group_flat_null_swap(i1 %c, i32 addrspace(3)* %group.p
 ; CHECK-LABEL: @store_select_group_flat_undef(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* undef
 ; CHECK: store i32 -1, i32 addrspace(3)* %select
-define void @store_select_group_flat_undef(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_undef(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* undef
   store i32 -1, i32 addrspace(4)* %select
@@ -103,7 +103,7 @@ define void @store_select_group_flat_undef(i1 %c, i32 addrspace(3)* %group.ptr.0
 ; CHECK-LABEL: @store_select_group_flat_undef_swap(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* undef, i32 addrspace(3)* %group.ptr.0
 ; CHECK: store i32 -1, i32 addrspace(3)* %select
-define void @store_select_group_flat_undef_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_undef_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* undef, i32 addrspace(4)* %cast0
   store i32 -1, i32 addrspace(4)* %select
@@ -114,7 +114,7 @@ define void @store_select_group_flat_undef_swap(i1 %c, i32 addrspace(3)* %group.
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*)
 ; CHECK: %gep = getelementptr i32, i32 addrspace(3)* %select, i64 16
 ; CHECK: store i32 -1, i32 addrspace(3)* %gep
-define void @store_select_gep_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_gep_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* null
   %gep = getelementptr i32, i32 addrspace(4)* %select, i64 16
@@ -127,7 +127,7 @@ define void @store_select_gep_group_flat_null(i1 %c, i32 addrspace(3)* %group.pt
 ; CHECK-LABEL: @store_select_group_flat_constexpr(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* @lds1
 ; CHECK: store i32 7, i32 addrspace(3)* %select
-define void @store_select_group_flat_constexpr(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_constexpr(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds1 to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
@@ -137,7 +137,7 @@ define void @store_select_group_flat_constexpr(i1 %c, i32 addrspace(3)* %group.p
 ; CHECK-LABEL: @store_select_group_flat_inttoptr_flat(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* inttoptr (i64 12345 to i32 addrspace(4)*) to i32 addrspace(3)*)
 ; CHECK: store i32 7, i32 addrspace(3)* %select
-define void @store_select_group_flat_inttoptr_flat(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_inttoptr_flat(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* inttoptr (i64 12345 to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
@@ -147,7 +147,7 @@ define void @store_select_group_flat_inttoptr_flat(i1 %c, i32 addrspace(3)* %gro
 ; CHECK-LABEL: @store_select_group_flat_inttoptr_group(
 ; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* inttoptr (i32 400 to i32 addrspace(3)*)
 ; CHECK-NEXT: store i32 7, i32 addrspace(3)* %select
-define void @store_select_group_flat_inttoptr_group(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_inttoptr_group(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i32 400 to i32 addrspace(3)*) to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
@@ -158,7 +158,7 @@ define void @store_select_group_flat_inttoptr_group(i1 %c, i32 addrspace(3)* %gr
 ; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
 ; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)
 ; CHECK: store i32 7, i32 addrspace(4)* %select
-define void @store_select_group_global_mismatch_flat_constexpr(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_flat_constexpr(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
@@ -169,7 +169,7 @@ define void @store_select_group_global_mismatch_flat_constexpr(i1 %c, i32 addrsp
 ; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
 ; CHECK: %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*), i32 addrspace(4)* %1
 ; CHECK: store i32 7, i32 addrspace(4)* %select
-define void @store_select_group_global_mismatch_flat_constexpr_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_flat_constexpr_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*), i32 addrspace(4)* %cast0
   store i32 7, i32 addrspace(4)* %select
@@ -179,7 +179,7 @@ define void @store_select_group_global_mismatch_flat_constexpr_swap(i1 %c, i32 a
 ; CHECK-LABEL: @store_select_group_global_mismatch_null_null(
 ; CHECK: %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)
 ; CHECK: store i32 7, i32 addrspace(4)* %select
-define void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
   %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
   ret void
@@ -187,42 +187,42 @@ define void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_null_null_constexpr(
 ; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
-define void @store_select_group_global_mismatch_null_null_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_null_null_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
   ret void
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_gv_null_constexpr(
 ; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
-define void @store_select_group_global_mismatch_gv_null_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_gv_null_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
   ret void
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_null_gv_constexpr(
 ; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)), align 4
-define void @store_select_group_global_mismatch_null_gv_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_null_gv_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)), align 4
   ret void
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_inttoptr_null_constexpr(
 ; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i64 123 to i32 addrspace(3)*) to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
-define void @store_select_group_global_mismatch_inttoptr_null_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_inttoptr_null_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i64 123 to i32 addrspace(3)*) to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
   ret void
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_inttoptr_flat_null_constexpr(
 ; CHECK: store i32 7, i32 addrspace(1)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(1)* addrspacecast (i32 addrspace(4)* inttoptr (i64 123 to i32 addrspace(4)*) to i32 addrspace(1)*), i32 addrspace(1)* null), align 4
-define void @store_select_group_global_mismatch_inttoptr_flat_null_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_inttoptr_flat_null_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* inttoptr (i64 123 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
   ret void
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_undef_undef_constexpr(
 ; CHECK: store i32 7, i32 addrspace(3)* null
-define void @store_select_group_global_mismatch_undef_undef_constexpr() #0 {
+define amdgpu_kernel void @store_select_group_global_mismatch_undef_undef_constexpr() #0 {
   store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* undef to i32 addrspace(4)*)), align 4
   ret void
 }
@@ -233,7 +233,7 @@ define void @store_select_group_global_mismatch_undef_undef_constexpr() #0 {
 ; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
 ; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* inttoptr (i32 add (i32 ptrtoint ([1024 x i32] addrspace(3)* @lds2 to i32), i32 124) to i32 addrspace(1)*) to i32 addrspace(4)*)
 ; CHECK: store i32 7, i32 addrspace(4)* %select
-define void @store_select_group_constexpr_ptrtoint(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_constexpr_ptrtoint(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* inttoptr (i32 add (i32 ptrtoint ([1024 x i32] addrspace(3)* @lds2 to i32), i32 124) to i32 addrspace(1)*) to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
@@ -248,7 +248,7 @@ define void @store_select_group_constexpr_ptrtoint(i1 %c, i32 addrspace(3)* %gro
 ; CHECK: %extract1 = extractelement <2 x i32 addrspace(4)*> %select, i32 1
 ; CHECK: store i32 -1, i32 addrspace(4)* %extract0
 ; CHECK: store i32 -2, i32 addrspace(4)* %extract1
-define void @store_select_group_flat_vector(i1 %c, <2 x i32 addrspace(3)*> %group.ptr.0, <2 x i32 addrspace(3)*> %group.ptr.1) #0 {
+define amdgpu_kernel void @store_select_group_flat_vector(i1 %c, <2 x i32 addrspace(3)*> %group.ptr.0, <2 x i32 addrspace(3)*> %group.ptr.1) #0 {
   %cast0 = addrspacecast <2 x i32 addrspace(3)*> %group.ptr.0 to <2 x i32 addrspace(4)*>
   %cast1 = addrspacecast <2 x i32 addrspace(3)*> %group.ptr.1 to <2 x i32 addrspace(4)*>
   %select = select i1 %c, <2 x i32 addrspace(4)*> %cast0, <2 x i32 addrspace(4)*> %cast1

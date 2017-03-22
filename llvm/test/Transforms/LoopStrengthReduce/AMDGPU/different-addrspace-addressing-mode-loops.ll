@@ -10,7 +10,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; OPT: %lsr.iv2 = phi i8 addrspace(1)* [ %scevgep3, %.lr.ph ], [ %arg1, %.lr.ph.preheader ]
 ; OPT: %scevgep4 = getelementptr i8, i8 addrspace(1)* %lsr.iv2, i64 4095
 ; OPT: load i8, i8 addrspace(1)* %scevgep4, align 1
-define void @test_global_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(1)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_global_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(1)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -48,7 +48,7 @@ bb:
 ; OPT: {{^}}.lr.ph:
 ; OPT: %lsr.iv3 = phi i8 addrspace(1)* [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
 ; OPT: %scevgep4 = getelementptr i8, i8 addrspace(1)* %lsr.iv3, i64 1
-define void @test_global_addressing_loop_uniform_index_max_offset_p1_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(1)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_global_addressing_loop_uniform_index_max_offset_p1_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(1)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -83,7 +83,7 @@ bb:
 ; OPT: %lsr.iv2 = phi i8 addrspace(3)* [ %scevgep3, %.lr.ph ], [ %arg1, %.lr.ph.preheader ]
 ; OPT: %scevgep4 = getelementptr i8, i8 addrspace(3)* %lsr.iv2, i32 65535
 ; OPT: %tmp4 = load i8, i8 addrspace(3)* %scevgep4, align 1
-define void @test_local_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_local_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -122,7 +122,7 @@ bb:
 ; OPT: {{^}}.lr.ph:
 ; OPT: %lsr.iv3 = phi i8 addrspace(3)* [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
 ; OPT: %scevgep4 = getelementptr i8, i8 addrspace(3)* %lsr.iv3, i32 1
-define void @test_local_addressing_loop_uniform_index_max_offset_p1_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_local_addressing_loop_uniform_index_max_offset_p1_i32(i32 addrspace(1)* noalias nocapture %arg0, i8 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge

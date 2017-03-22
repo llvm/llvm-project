@@ -72,7 +72,7 @@
 ; GCN: buffer_load_dword [[RELOAD_VAL:v[0-9]+]], off, s[0:3], s7 offset:[[VAL_OFFSET]] ; 4-byte Folded Reload
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RELOAD_VAL]]
-define void @divergent_if_endif(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_if_endif(i32 addrspace(1)* %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, i32 addrspace(3)* undef
@@ -150,7 +150,7 @@ endif:
 ; GCN: buffer_load_dword v[[VAL_END:[0-9]+]], off, s[0:3], s7 offset:[[VAL_SUB_OFFSET]] ; 4-byte Folded Reload
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[VAL_END]]
-define void @divergent_loop(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_loop(i32 addrspace(1)* %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, i32 addrspace(3)* undef
@@ -272,7 +272,7 @@ end:
 
 ; GCN: buffer_load_dword v[[RESULT:[0-9]+]], off, s[0:3], s7 offset:[[RESULT_OFFSET]] ; 4-byte Folded Reload
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[RESULT]]
-define void @divergent_if_else_endif(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_if_else_endif(i32 addrspace(1)* %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %load0 = load volatile i32, i32 addrspace(3)* undef

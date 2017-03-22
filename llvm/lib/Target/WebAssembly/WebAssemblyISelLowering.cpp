@@ -258,7 +258,8 @@ bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
   return true;
 }
 
-bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
+bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
+                                              AttributeList Attr) const {
   // The current thinking is that wasm engines will perform this optimization,
   // so we can save on code size.
   return true;

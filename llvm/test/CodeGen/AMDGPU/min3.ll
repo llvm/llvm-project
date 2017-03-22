@@ -4,7 +4,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: @v_test_imin3_slt_i32
 ; SI: v_min3_i32
-define void @v_test_imin3_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_imin3_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
@@ -23,7 +23,7 @@ define void @v_test_imin3_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %apt
 
 ; FUNC-LABEL: @v_test_umin3_ult_i32
 ; SI: v_min3_u32
-define void @v_test_umin3_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_umin3_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
@@ -43,7 +43,7 @@ define void @v_test_umin3_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %apt
 ; FUNC-LABEL: @v_test_umin_umin_umin
 ; SI: v_min_i32
 ; SI: v_min3_i32
-define void @v_test_umin_umin_umin(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_umin_umin_umin(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid2 = mul i32 %tid, 2
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
@@ -77,7 +77,7 @@ define void @v_test_umin_umin_umin(i32 addrspace(1)* %out, i32 addrspace(1)* %ap
 
 ; FUNC-LABEL: @v_test_umin3_2_uses
 ; SI-NOT: v_min3
-define void @v_test_umin3_2_uses(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_umin3_2_uses(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tid2 = mul i32 %tid, 2
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid

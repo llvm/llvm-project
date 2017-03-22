@@ -6,13 +6,13 @@
 ; CHECK-LABEL: {{^}}test:
 ; CHECK: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, __unnamed_1
 ; CHECK: s_endpgm
-define void @test() {
+define amdgpu_kernel void @test() {
   store i32 1, i32 addrspace(1)* @0
   ret void
 }
 
 ; CHECK-LABEL: {{^}}__unnamed_2:
 ; CHECK: s_endpgm
-define void @1() {
+define amdgpu_kernel void @1() {
   ret void
 }

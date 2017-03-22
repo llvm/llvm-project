@@ -3,7 +3,7 @@
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32
 ; CHECK: select i1 undef, i32* undef, i32* %alloca
-define void @lds_promoted_alloca_select_invalid_pointer_operand() #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() #0 {
   %alloca = alloca i32, align 4
   %select = select i1 undef, i32* undef, i32* %alloca
   store i32 0, i32* %select, align 4
@@ -16,7 +16,7 @@ define void @lds_promoted_alloca_select_invalid_pointer_operand() #0 {
 ; CHECK: %ptr1 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(3)* [[ARRAYGEP]], i32 0, i32 %b
 ; CHECK: %select = select i1 undef, i32 addrspace(3)* %ptr0, i32 addrspace(3)* %ptr1
 ; CHECK: store i32 0, i32 addrspace(3)* %select, align 4
-define void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32], align 4
   %ptr0 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %b
@@ -33,7 +33,7 @@ define void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
 ; CHECK: %ptr0 = getelementptr inbounds i32, i32* %alloca0, i32 %a
 ; CHECK: %ptr1 = getelementptr inbounds i32, i32* %alloca1, i32 %b
 ; CHECK: %select = select i1 undef, i32* %ptr0, i32* %ptr1
-define void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) #0 {
   %alloca0 = alloca i32, i32 16, align 4
   %alloca1 = alloca i32, i32 16, align 4
   %ptr0 = getelementptr inbounds i32, i32* %alloca0, i32 %a
@@ -50,7 +50,7 @@ define void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) #0 {
 ; CHECK: %ptr1 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(3)* [[ARRAYGEP]], i32 0, i32 3
 ; CHECK: %select = select i1 undef, i32 addrspace(3)* %ptr0, i32 addrspace(3)* %ptr1
 ; CHECK: store i32 0, i32 addrspace(3)* %select, align 4
-define void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
+define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
   %alloca = alloca [16 x i32], align 4
   %ptr0 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 1
   %ptr1 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 3
@@ -67,7 +67,7 @@ define void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
 ; CHECK: %select0 = select i1 undef, i32 addrspace(3)* %ptr0, i32 addrspace(3)* %ptr1
 ; CHECK: %select1 = select i1 undef, i32 addrspace(3)* %select0, i32 addrspace(3)* %ptr2
 ; CHECK: store i32 0, i32 addrspace(3)* %select1, align 4
-define void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c) #0 {
   %alloca = alloca [16 x i32], align 4
   %ptr0 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %b
@@ -78,7 +78,7 @@ define void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c) #0 
   ret void
 }
 
-define void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c) #0 {
 entry:
   %alloca = alloca [16 x i32], align 4
   %ptr0 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a
@@ -102,7 +102,7 @@ bb2:
 ; CHECK-LABEL: @select_null_rhs(
 ; CHECK-NOT: alloca
 ; CHECK: select i1 %tmp2, double addrspace(3)* %{{[0-9]+}}, double addrspace(3)* null
-define void @select_null_rhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
+define amdgpu_kernel void @select_null_rhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
 bb:
   %tmp = alloca double, align 8
   store double 0.000000e+00, double* %tmp, align 8
@@ -117,7 +117,7 @@ bb:
 ; CHECK-LABEL: @select_null_lhs(
 ; CHECK-NOT: alloca
 ; CHECK: select i1 %tmp2, double addrspace(3)* null, double addrspace(3)* %{{[0-9]+}}
-define void @select_null_lhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
+define amdgpu_kernel void @select_null_lhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
 bb:
   %tmp = alloca double, align 8
   store double 0.000000e+00, double* %tmp, align 8

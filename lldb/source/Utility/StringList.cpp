@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StringList.h"
+#include "lldb/Utility/StringList.h"
 
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -219,9 +218,7 @@ StringList &StringList::operator<<(StringList strings) {
 }
 
 StringList &StringList::operator=(const std::vector<std::string> &rhs) {
-  Clear();
-  for (const auto &s : rhs)
-    m_strings.push_back(s);
+  m_strings.assign(rhs.begin(), rhs.end());
 
   return *this;
 }

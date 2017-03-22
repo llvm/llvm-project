@@ -8,7 +8,7 @@
 # CHECK: DBG_VALUE{{.*}}debug-use %13.sub2
 
 --- |
-  define void @test(i32 addrspace(1)* %out) { ret void }
+  define amdgpu_kernel void @test(i32 addrspace(1)* %out) { ret void }
   
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4)
   !1 = !DILocalVariable(name: "a", scope: !2, file: !4, line: 126, type: !6)

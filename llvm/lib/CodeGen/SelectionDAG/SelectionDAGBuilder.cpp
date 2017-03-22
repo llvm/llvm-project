@@ -1373,16 +1373,16 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
       const Function *F = I.getParent()->getParent();
 
       ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
-      if (F->getAttributes().hasAttribute(AttributeSet::ReturnIndex,
+      if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
                                           Attribute::SExt))
         ExtendKind = ISD::SIGN_EXTEND;
-      else if (F->getAttributes().hasAttribute(AttributeSet::ReturnIndex,
+      else if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
                                                Attribute::ZExt))
         ExtendKind = ISD::ZERO_EXTEND;
 
       LLVMContext &Context = F->getContext();
-      bool RetInReg = F->getAttributes().hasAttribute(AttributeSet::ReturnIndex,
-                                                      Attribute::InReg);
+      bool RetInReg = F->getAttributes().hasAttribute(
+          AttributeList::ReturnIndex, Attribute::InReg);
 
       for (unsigned j = 0; j != NumValues; ++j) {
         EVT VT = ValueVTs[j];
@@ -5525,7 +5525,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::trap: {
     StringRef TrapFuncName =
         I.getAttributes()
-            .getAttribute(AttributeSet::FunctionIndex, "trap-func-name")
+            .getAttribute(AttributeList::FunctionIndex, "trap-func-name")
             .getValueAsString();
     if (TrapFuncName.empty()) {
       ISD::NodeType Op = (Intrinsic == Intrinsic::trap) ?
@@ -7603,9 +7603,9 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   FuncInfo.MF->getFrameInfo().setHasPatchPoint();
 }
 
-/// Returns an AttributeSet representing the attributes applied to the return
+/// Returns an AttributeList representing the attributes applied to the return
 /// value of the given call.
-static AttributeSet getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
+static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
   SmallVector<Attribute::AttrKind, 2> Attrs;
   if (CLI.RetSExt)
     Attrs.push_back(Attribute::SExt);
@@ -7614,8 +7614,8 @@ static AttributeSet getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.IsInReg)
     Attrs.push_back(Attribute::InReg);
 
-  return AttributeSet::get(CLI.RetTy->getContext(), AttributeSet::ReturnIndex,
-                           Attrs);
+  return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
+                            Attrs);
 }
 
 /// TargetLowering::LowerCallTo - This is the default LowerCallTo

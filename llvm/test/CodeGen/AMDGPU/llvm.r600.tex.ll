@@ -17,7 +17,7 @@
 ;CHECK: TEX_SAMPLE T{{[0-9]+\.XYZW, T[0-9]+\.XYZW}} RID:0 SID:0 CT:NNNN
 ;CHECK: TEX_SAMPLE T{{[0-9]+\.XYZW, T[0-9]+\.XYZW}} RID:0 SID:0 CT:NNUN
 
-define void @test(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) {
+define amdgpu_kernel void @test(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) {
 bb:
   %addr = load <4 x float>, <4 x float> addrspace(1)* %in
   %tmp = shufflevector <4 x float> %addr, <4 x float> %addr, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

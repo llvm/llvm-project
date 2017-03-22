@@ -2,34 +2,24 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=sse2 | FileCheck %s --check-prefix=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=AVX2
 
-; FIXME: Equality checks of 128/256-bit values can use PMOVMSK or PTEST to avoid scalarization.
+; Equality checks of 128/256-bit values can use PMOVMSK or PTEST to avoid scalarization.
 
 define i32 @ne_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: ne_i128:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %rax
-; SSE2-NEXT:    movd %xmm0, %rcx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rdx
-; SSE2-NEXT:    movd %xmm1, %rsi
-; SSE2-NEXT:    xorq %rcx, %rsi
-; SSE2-NEXT:    xorq %rax, %rdx
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rsi, %rdx
+; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_i128:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    vmovq %xmm1, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX2-NEXT:    xorq %rcx, %rsi
-; AVX2-NEXT:    xorq %rax, %rdx
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    retq
   %bcx = bitcast <2 x i64> %x to i128
@@ -42,29 +32,19 @@ define i32 @ne_i128(<2 x i64> %x, <2 x i64> %y) {
 define i32 @eq_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: eq_i128:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %rax
-; SSE2-NEXT:    movd %xmm0, %rcx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rdx
-; SSE2-NEXT:    movd %xmm1, %rsi
-; SSE2-NEXT:    xorq %rcx, %rsi
-; SSE2-NEXT:    xorq %rax, %rdx
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rsi, %rdx
+; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: eq_i128:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    vmovq %xmm1, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX2-NEXT:    xorq %rcx, %rsi
-; AVX2-NEXT:    xorq %rax, %rdx
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    retq
   %bcx = bitcast <2 x i64> %x to i128
@@ -102,24 +82,10 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ;
 ; AVX2-LABEL: ne_i256:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq %xmm0, %r8
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vmovq %xmm2, %r9
-; AVX2-NEXT:    vpextrq $1, %xmm0, %r10
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rsi
-; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX2-NEXT:    xorq %rsi, %rdx
-; AVX2-NEXT:    xorq %r10, %rcx
-; AVX2-NEXT:    orq %rdx, %rcx
-; AVX2-NEXT:    xorq %r9, %rax
-; AVX2-NEXT:    xorq %r8, %rdi
-; AVX2-NEXT:    orq %rax, %rdi
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    cmpl $-1, %ecx
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -158,24 +124,10 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ;
 ; AVX2-LABEL: eq_i256:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq %xmm0, %r8
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vmovq %xmm2, %r9
-; AVX2-NEXT:    vpextrq $1, %xmm0, %r10
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rsi
-; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX2-NEXT:    xorq %rsi, %rdx
-; AVX2-NEXT:    xorq %r10, %rcx
-; AVX2-NEXT:    orq %rdx, %rcx
-; AVX2-NEXT:    xorq %r9, %rax
-; AVX2-NEXT:    xorq %r8, %rdi
-; AVX2-NEXT:    orq %rax, %rdi
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    cmpl $-1, %ecx
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

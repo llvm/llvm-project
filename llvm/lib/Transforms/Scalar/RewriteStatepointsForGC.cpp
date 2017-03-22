@@ -1128,14 +1128,14 @@ normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
 
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.
-static AttributeSet legalizeCallAttributes(AttributeSet AS) {
-  AttributeSet Ret;
+static AttributeList legalizeCallAttributes(AttributeList AS) {
+  AttributeList Ret;
 
   for (unsigned Slot = 0; Slot < AS.getNumSlots(); Slot++) {
     unsigned Index = AS.getSlotIndex(Slot);
 
-    if (Index == AttributeSet::ReturnIndex ||
-        Index == AttributeSet::FunctionIndex) {
+    if (Index == AttributeList::ReturnIndex ||
+        Index == AttributeList::FunctionIndex) {
 
       for (Attribute Attr : make_range(AS.begin(Slot), AS.end(Slot))) {
 
@@ -1153,7 +1153,7 @@ static AttributeSet legalizeCallAttributes(AttributeSet AS) {
 
         Ret = Ret.addAttributes(
             AS.getContext(), Index,
-            AttributeSet::get(AS.getContext(), Index, AttrBuilder(Attr)));
+            AttributeList::get(AS.getContext(), Index, AttrBuilder(Attr)));
       }
     }
 
@@ -1304,12 +1304,11 @@ static StringRef getDeoptLowering(CallSite CS) {
   const char *DeoptLowering = "deopt-lowering";
   if (CS.hasFnAttr(DeoptLowering)) {
     // FIXME: CallSite has a *really* confusing interface around attributes
-    // with values.  
-    const AttributeSet &CSAS = CS.getAttributes();
-    if (CSAS.hasAttribute(AttributeSet::FunctionIndex,
-                          DeoptLowering))
-      return CSAS.getAttribute(AttributeSet::FunctionIndex,
-                               DeoptLowering).getValueAsString();
+    // with values.
+    const AttributeList &CSAS = CS.getAttributes();
+    if (CSAS.hasAttribute(AttributeList::FunctionIndex, DeoptLowering))
+      return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
+          .getValueAsString();
     Function *F = CS.getCalledFunction();
     assert(F && F->hasFnAttribute(DeoptLowering));
     return F->getFnAttribute(DeoptLowering).getValueAsString();
@@ -1393,7 +1392,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;
-  AttributeSet ReturnAttrs;
+  AttributeList ReturnAttrs;
   if (CS.isCall()) {
     CallInst *ToReplace = cast<CallInst>(CS.getInstruction());
     CallInst *Call = Builder.CreateGCStatepointCall(
@@ -1405,7 +1404,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
     // Currently we will fail on parameter attributes and on certain
     // function attributes.
-    AttributeSet NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
+    AttributeList NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
     // In case if we can handle this set of attributes - set up function attrs
     // directly on statepoint and return attrs later for gc_result intrinsic.
     Call->setAttributes(NewAttrs.getFnAttributes());
@@ -1433,7 +1432,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
     // Currently we will fail on parameter attributes and on certain
     // function attributes.
-    AttributeSet NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
+    AttributeList NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
     // In case if we can handle this set of attributes - set up function attrs
     // directly on statepoint and return attrs later for gc_result intrinsic.
     Invoke->setAttributes(NewAttrs.getFnAttributes());
@@ -2309,7 +2308,7 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
 
   if (!R.empty())
     AH.setAttributes(AH.getAttributes().removeAttributes(
-        Ctx, Index, AttributeSet::get(Ctx, Index, R)));
+        Ctx, Index, AttributeList::get(Ctx, Index, R)));
 }
 
 void
@@ -2321,7 +2320,7 @@ RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
       RemoveNonValidAttrAtIndex(Ctx, F, A.getArgNo() + 1);
 
   if (isa<PointerType>(F.getReturnType()))
-    RemoveNonValidAttrAtIndex(Ctx, F, AttributeSet::ReturnIndex);
+    RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
 }
 
 void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
@@ -2356,7 +2355,7 @@ void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
         if (isa<PointerType>(CS.getArgument(i)->getType()))
           RemoveNonValidAttrAtIndex(Ctx, CS, i + 1);
       if (isa<PointerType>(CS.getType()))
-        RemoveNonValidAttrAtIndex(Ctx, CS, AttributeSet::ReturnIndex);
+        RemoveNonValidAttrAtIndex(Ctx, CS, AttributeList::ReturnIndex);
     }
   }
 }

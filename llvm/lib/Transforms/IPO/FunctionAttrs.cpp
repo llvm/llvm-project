@@ -225,11 +225,11 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
     AttrBuilder B;
     B.addAttribute(Attribute::ReadOnly).addAttribute(Attribute::ReadNone);
     F->removeAttributes(
-        AttributeSet::FunctionIndex,
-        AttributeSet::get(F->getContext(), AttributeSet::FunctionIndex, B));
+        AttributeList::FunctionIndex,
+        AttributeList::get(F->getContext(), AttributeList::FunctionIndex, B));
 
     // Add in the new attribute.
-    F->addAttribute(AttributeSet::FunctionIndex,
+    F->addAttribute(AttributeList::FunctionIndex,
                     ReadsMemory ? Attribute::ReadOnly : Attribute::ReadNone);
 
     if (ReadsMemory)
@@ -535,7 +535,7 @@ static bool addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes) {
 
     if (Value *RetArg = FindRetArg()) {
       auto *A = cast<Argument>(RetArg);
-      A->addAttr(AttributeSet::get(F->getContext(), A->getArgNo() + 1, B));
+      A->addAttr(AttributeList::get(F->getContext(), A->getArgNo() + 1, B));
       ++NumReturned;
       Changed = true;
     }
@@ -614,7 +614,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
       for (Function::arg_iterator A = F->arg_begin(), E = F->arg_end(); A != E;
            ++A) {
         if (A->getType()->isPointerTy() && !A->hasNoCaptureAttr()) {
-          A->addAttr(AttributeSet::get(F->getContext(), A->getArgNo() + 1, B));
+          A->addAttr(AttributeList::get(F->getContext(), A->getArgNo() + 1, B));
           ++NumNoCapture;
           Changed = true;
         }
@@ -634,7 +634,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
           if (Tracker.Uses.empty()) {
             // If it's trivially not captured, mark it nocapture now.
             A->addAttr(
-                AttributeSet::get(F->getContext(), A->getArgNo() + 1, B));
+                AttributeList::get(F->getContext(), A->getArgNo() + 1, B));
             ++NumNoCapture;
             Changed = true;
           } else {
@@ -662,7 +662,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
         if (R != Attribute::None) {
           AttrBuilder B;
           B.addAttribute(R);
-          A->addAttr(AttributeSet::get(A->getContext(), A->getArgNo() + 1, B));
+          A->addAttr(AttributeList::get(A->getContext(), A->getArgNo() + 1, B));
           Changed = true;
           R == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
         }
@@ -687,7 +687,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        A->addAttr(AttributeSet::get(A->getContext(), A->getArgNo() + 1, B));
+        A->addAttr(AttributeList::get(A->getContext(), A->getArgNo() + 1, B));
         ++NumNoCapture;
         Changed = true;
       }
@@ -729,7 +729,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
 
     for (unsigned i = 0, e = ArgumentSCC.size(); i != e; ++i) {
       Argument *A = ArgumentSCC[i]->Definition;
-      A->addAttr(AttributeSet::get(A->getContext(), A->getArgNo() + 1, B));
+      A->addAttr(AttributeList::get(A->getContext(), A->getArgNo() + 1, B));
       ++NumNoCapture;
       Changed = true;
     }
@@ -766,8 +766,9 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
       for (unsigned i = 0, e = ArgumentSCC.size(); i != e; ++i) {
         Argument *A = ArgumentSCC[i]->Definition;
         // Clear out existing readonly/readnone attributes
-        A->removeAttr(AttributeSet::get(A->getContext(), A->getArgNo() + 1, R));
-        A->addAttr(AttributeSet::get(A->getContext(), A->getArgNo() + 1, B));
+        A->removeAttr(
+            AttributeList::get(A->getContext(), A->getArgNo() + 1, R));
+        A->addAttr(AttributeList::get(A->getContext(), A->getArgNo() + 1, B));
         ReadAttr == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
         Changed = true;
       }
@@ -963,7 +964,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
   // pointers.
   for (Function *F : SCCNodes) {
     // Already nonnull.
-    if (F->getAttributes().hasAttribute(AttributeSet::ReturnIndex,
+    if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
                                         Attribute::NonNull))
       continue;
 
@@ -984,7 +985,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
         // Mark the function eagerly since we may discover a function
         // which prevents us from speculating about the entire SCC
         DEBUG(dbgs() << "Eagerly marking " << F->getName() << " as nonnull\n");
-        F->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
+        F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
         ++NumNonNullReturn;
         MadeChange = true;
       }
@@ -997,13 +998,13 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
 
   if (SCCReturnsNonNull) {
     for (Function *F : SCCNodes) {
-      if (F->getAttributes().hasAttribute(AttributeSet::ReturnIndex,
+      if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
                                           Attribute::NonNull) ||
           !F->getReturnType()->isPointerTy())
         continue;
 
       DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
-      F->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
+      F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
       ++NumNonNullReturn;
       MadeChange = true;
     }

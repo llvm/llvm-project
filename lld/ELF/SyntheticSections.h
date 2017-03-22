@@ -718,7 +718,7 @@ public:
   void writeTo(uint8_t *Buf) override;
 };
 
-template <class ELFT> class ARMExidxSentinelSection : public SyntheticSection {
+class ARMExidxSentinelSection : public SyntheticSection {
 public:
   ARMExidxSentinelSection();
   size_t getSize() const override { return 8; }

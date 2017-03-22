@@ -311,6 +311,11 @@ def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
                                  AssemblerPredicate<"FeatureNaClTrap", "NaCl">;
 def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
 
+def UseNegativeImmediates :
+  Predicate<"false">,
+            AssemblerPredicate<"!FeatureNoNegativeImmediates",
+                               "NegativeImmediates">;
+
 // FIXME: Eventually this will be just "hasV6T2Ops".
 def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
 def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
@@ -5790,33 +5795,49 @@ def : MnemonicAlias<"usubaddx", "usax">;
 
 // "mov Rd, mod_imm_not" can be handled via "mvn" in assembly, just like
 // for isel.
-def : ARMInstAlias<"mov${s}${p} $Rd, $imm",
+def : ARMInstSubst<"mov${s}${p} $Rd, $imm",
                    (MVNi rGPR:$Rd, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
-def : ARMInstAlias<"mvn${s}${p} $Rd, $imm",
+def : ARMInstSubst<"mvn${s}${p} $Rd, $imm",
                    (MOVi rGPR:$Rd, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
 // Same for AND <--> BIC
-def : ARMInstAlias<"bic${s}${p} $Rd, $Rn, $imm",
+def : ARMInstSubst<"bic${s}${p} $Rd, $Rn, $imm",
                    (ANDri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
-def : ARMInstAlias<"bic${s}${p} $Rdn, $imm",
+def : ARMInstSubst<"bic${s}${p} $Rdn, $imm",
                    (ANDri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
-def : ARMInstAlias<"and${s}${p} $Rd, $Rn, $imm",
+def : ARMInstSubst<"and${s}${p} $Rd, $Rn, $imm",
                    (BICri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
-def : ARMInstAlias<"and${s}${p} $Rdn, $imm",
+def : ARMInstSubst<"and${s}${p} $Rdn, $imm",
                    (BICri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm,
                           pred:$p, cc_out:$s)>;
 
 // Likewise, "add Rd, mod_imm_neg" -> sub
-def : ARMInstAlias<"add${s}${p} $Rd, $Rn, $imm",
+def : ARMInstSubst<"add${s}${p} $Rd, $Rn, $imm",
                  (SUBri GPR:$Rd, GPR:$Rn, mod_imm_neg:$imm, pred:$p, cc_out:$s)>;
-def : ARMInstAlias<"add${s}${p} $Rd, $imm",
+def : ARMInstSubst<"add${s}${p} $Rd, $imm",
                  (SUBri GPR:$Rd, GPR:$Rd, mod_imm_neg:$imm, pred:$p, cc_out:$s)>;
+// Likewise, "sub Rd, mod_imm_neg" -> add
+def : ARMInstSubst<"sub${s}${p} $Rd, $Rn, $imm",
+                 (ADDri GPR:$Rd, GPR:$Rn, mod_imm_neg:$imm, pred:$p, cc_out:$s)>;
+def : ARMInstSubst<"sub${s}${p} $Rd, $imm",
+                 (ADDri GPR:$Rd, GPR:$Rd, mod_imm_neg:$imm, pred:$p, cc_out:$s)>;
+
+
+def : ARMInstSubst<"adc${s}${p} $Rd, $Rn, $imm",
+                 (SBCri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
+def : ARMInstSubst<"adc${s}${p} $Rdn, $imm",
+                 (SBCri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
+def : ARMInstSubst<"sbc${s}${p} $Rd, $Rn, $imm",
+                 (ADCri GPR:$Rd, GPR:$Rn, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
+def : ARMInstSubst<"sbc${s}${p} $Rdn, $imm",
+                 (ADCri GPR:$Rdn, GPR:$Rdn, mod_imm_not:$imm, pred:$p, cc_out:$s)>;
+
 // Same for CMP <--> CMN via mod_imm_neg
-def : ARMInstAlias<"cmp${p} $Rd, $imm",
+def : ARMInstSubst<"cmp${p} $Rd, $imm",
                    (CMNri rGPR:$Rd, mod_imm_neg:$imm, pred:$p)>;
-def : ARMInstAlias<"cmn${p} $Rd, $imm",
+def : ARMInstSubst<"cmn${p} $Rd, $imm",
                    (CMPri rGPR:$Rd, mod_imm_neg:$imm, pred:$p)>;
 
 // The shifter forms of the MOV instruction are aliased to the ASR, LSL,

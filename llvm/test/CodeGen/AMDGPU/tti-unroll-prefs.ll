@@ -19,7 +19,7 @@
 ; CHECK: store i8 0, i8 addrspace(1)*
 ; CHECK-NOT: store i8 0, i8 addrspace(1)*
 ; CHECK: ret void
-define void @test(i8 addrspace(1)* nocapture %dst, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @test(i8 addrspace(1)* nocapture %dst, i32 %a, i32 %b, i32 %c) {
 entry:
   %add = add nsw i32 %b, 4
   %cmp = icmp sgt i32 %add, %a

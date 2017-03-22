@@ -8,7 +8,7 @@ declare i1 @llvm.amdgcn.class.f32(float, i32)
 ; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e64 v0, 0, 1, s{{\[[0-9]+:[0-9]+\]}}
-define void @vcc_shrink_vcc_def(float %arg, i32 %arg1, float %arg2, i32 %arg3) {
+define amdgpu_kernel void @vcc_shrink_vcc_def(float %arg, i32 %arg1, float %arg2, i32 %arg3) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
   %c = icmp eq i32 %arg3, 0
@@ -35,7 +35,7 @@ bb2:
 ; GCN-NOT: vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e64 v0, 0, 1, s{{\[[0-9]+:[0-9]+\]}}
-define void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
+define amdgpu_kernel void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
   %undef = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)

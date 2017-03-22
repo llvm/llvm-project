@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -221,9 +220,15 @@ void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
 // are low registers, otherwise use RISB[LH]G.
 void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                                         unsigned Size) const {
-  emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(),
-                MI.getOperand(0).getReg(), MI.getOperand(1).getReg(), LowOpcode,
-                Size, MI.getOperand(1).isKill(), MI.getOperand(1).isUndef());
+  MachineInstrBuilder MIB =
+    emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(),
+               MI.getOperand(0).getReg(), MI.getOperand(1).getReg(), LowOpcode,
+               Size, MI.getOperand(1).isKill(), MI.getOperand(1).isUndef());
+
+  // Keep the remaining operands as-is.
+  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+
   MI.eraseFromParent();
 }
 
@@ -263,12 +268,13 @@ void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
 // are low registers, otherwise use RISB[LH]G.  Size is the number of bits
 // taken from the low end of SrcReg (8 for LLCR, 16 for LLHR and 32 for LR).
 // KillSrc is true if this move is the last use of SrcReg.
-void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI,
-                                     const DebugLoc &DL, unsigned DestReg,
-                                     unsigned SrcReg, unsigned LowLowOpcode,
-                                     unsigned Size, bool KillSrc,
-                                     bool UndefSrc) const {
+MachineInstrBuilder
+SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL, unsigned DestReg,
+                                unsigned SrcReg, unsigned LowLowOpcode,
+                                unsigned Size, bool KillSrc,
+                                bool UndefSrc) const {
   unsigned Opcode;
   bool DestIsHigh = isHighReg(DestReg);
   bool SrcIsHigh = isHighReg(SrcReg);
@@ -279,12 +285,11 @@ void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
   else if (!DestIsHigh && SrcIsHigh)
     Opcode = SystemZ::RISBLH;
   else {
-    BuildMI(MBB, MBBI, DL, get(LowLowOpcode), DestReg)
+    return BuildMI(MBB, MBBI, DL, get(LowLowOpcode), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc) | getUndefRegState(UndefSrc));
-    return;
   }
   unsigned Rotate = (DestIsHigh != SrcIsHigh ? 32 : 0);
-  BuildMI(MBB, MBBI, DL, get(Opcode), DestReg)
+  return BuildMI(MBB, MBBI, DL, get(Opcode), DestReg)
     .addReg(DestReg, RegState::Undef)
     .addReg(SrcReg, getKillRegState(KillSrc) | getUndefRegState(UndefSrc))
     .addImm(32 - Size).addImm(128 + 31).addImm(Rotate);

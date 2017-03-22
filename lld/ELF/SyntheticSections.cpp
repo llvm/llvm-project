@@ -324,7 +324,7 @@ BuildIdSection::BuildIdSection()
       HashSize(getHashSize()) {}
 
 void BuildIdSection::writeTo(uint8_t *Buf) {
-  const endianness E = Config->IsLE ? endianness::little : endianness::big;
+  endianness E = Config->Endianness;
   write32(Buf, 4, E);                   // Name size
   write32(Buf + 4, HashSize, E);        // Content size
   write32(Buf + 8, NT_GNU_BUILD_ID, E); // Type
@@ -846,12 +846,10 @@ uint64_t MipsGotSection::getGp() const {
 }
 
 static void writeUint(uint8_t *Buf, uint64_t Val) {
-  support::endianness E =
-      Config->IsLE ? support::endianness::little : support::endianness::big;
-  if (Config->Wordsize == 8)
-    write64(Buf, Val, E);
+  if (Config->Is64)
+    write64(Buf, Val, Config->Endianness);
   else
-    write32(Buf, Val, E);
+    write32(Buf, Val, Config->Endianness);
 }
 
 void MipsGotSection::writeTo(uint8_t *Buf) {
@@ -2182,17 +2180,15 @@ void MipsRldMapSection::writeTo(uint8_t *Buf) {
   memcpy(Buf, &Filler, getSize());
 }
 
-template <class ELFT>
-ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
+ARMExidxSentinelSection::ARMExidxSentinelSection()
     : SyntheticSection(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
-                       sizeof(typename ELFT::uint), ".ARM.exidx") {}
+                       Config->Wordsize, ".ARM.exidx") {}
 
 // Write a terminating sentinel entry to the end of the .ARM.exidx table.
 // This section will have been sorted last in the .ARM.exidx table.
 // This table entry will have the form:
 // | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
-template <class ELFT>
-void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
+void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
   auto RI = cast<OutputSection>(this->OutSec)->Sections.rbegin();
   InputSection *LE = *(++RI);
@@ -2337,11 +2333,6 @@ template class elf::VersionDefinitionSection<ELF32LE>;
 template class elf::VersionDefinitionSection<ELF32BE>;
 template class elf::VersionDefinitionSection<ELF64LE>;
 template class elf::VersionDefinitionSection<ELF64BE>;
-
-template class elf::ARMExidxSentinelSection<ELF32LE>;
-template class elf::ARMExidxSentinelSection<ELF32BE>;
-template class elf::ARMExidxSentinelSection<ELF64LE>;
-template class elf::ARMExidxSentinelSection<ELF64BE>;
 
 template class elf::EhFrameSection<ELF32LE>;
 template class elf::EhFrameSection<ELF32BE>;

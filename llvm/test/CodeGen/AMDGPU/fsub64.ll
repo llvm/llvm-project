@@ -5,7 +5,7 @@ declare double @llvm.fabs.f64(double) #0
 
 ; SI-LABEL: {{^}}fsub_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define void @fsub_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fsub_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                       double addrspace(1)* %in2) {
   %r0 = load double, double addrspace(1)* %in1
   %r1 = load double, double addrspace(1)* %in2
@@ -16,7 +16,7 @@ define void @fsub_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 
 ; SI-LABEL: {{^}}fsub_fabs_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
-define void @fsub_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fsub_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                            double addrspace(1)* %in2) {
   %r0 = load double, double addrspace(1)* %in1
   %r1 = load double, double addrspace(1)* %in2
@@ -28,7 +28,7 @@ define void @fsub_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 
 ; SI-LABEL: {{^}}fsub_fabs_inv_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], |v\[[0-9]+:[0-9]+\]|, -v\[[0-9]+:[0-9]+\]}}
-define void @fsub_fabs_inv_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fsub_fabs_inv_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                                double addrspace(1)* %in2) {
   %r0 = load double, double addrspace(1)* %in1
   %r1 = load double, double addrspace(1)* %in2
@@ -40,7 +40,7 @@ define void @fsub_fabs_inv_f64(double addrspace(1)* %out, double addrspace(1)* %
 
 ; SI-LABEL: {{^}}s_fsub_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\]}}
-define void @s_fsub_f64(double addrspace(1)* %out, double %a, double %b) {
+define amdgpu_kernel void @s_fsub_f64(double addrspace(1)* %out, double %a, double %b) {
   %sub = fsub double %a, %b
   store double %sub, double addrspace(1)* %out
   ret void
@@ -48,7 +48,7 @@ define void @s_fsub_f64(double addrspace(1)* %out, double %a, double %b) {
 
 ; SI-LABEL: {{^}}s_fsub_imm_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], -s\[[0-9]+:[0-9]+\]}}, 4.0
-define void @s_fsub_imm_f64(double addrspace(1)* %out, double %a, double %b) {
+define amdgpu_kernel void @s_fsub_imm_f64(double addrspace(1)* %out, double %a, double %b) {
   %sub = fsub double 4.0, %a
   store double %sub, double addrspace(1)* %out
   ret void
@@ -56,7 +56,7 @@ define void @s_fsub_imm_f64(double addrspace(1)* %out, double %a, double %b) {
 
 ; SI-LABEL: {{^}}s_fsub_imm_inv_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\]}}, -4.0
-define void @s_fsub_imm_inv_f64(double addrspace(1)* %out, double %a, double %b) {
+define amdgpu_kernel void @s_fsub_imm_inv_f64(double addrspace(1)* %out, double %a, double %b) {
   %sub = fsub double %a, 4.0
   store double %sub, double addrspace(1)* %out
   ret void
@@ -64,7 +64,7 @@ define void @s_fsub_imm_inv_f64(double addrspace(1)* %out, double %a, double %b)
 
 ; SI-LABEL: {{^}}s_fsub_self_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -s\[[0-9]+:[0-9]+\]}}
-define void @s_fsub_self_f64(double addrspace(1)* %out, double %a) {
+define amdgpu_kernel void @s_fsub_self_f64(double addrspace(1)* %out, double %a) {
   %sub = fsub double %a, %a
   store double %sub, double addrspace(1)* %out
   ret void
@@ -73,7 +73,7 @@ define void @s_fsub_self_f64(double addrspace(1)* %out, double %a) {
 ; SI-LABEL: {{^}}fsub_v2f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define void @fsub_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, <2 x double> %b) {
+define amdgpu_kernel void @fsub_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, <2 x double> %b) {
   %sub = fsub <2 x double> %a, %b
   store <2 x double> %sub, <2 x double> addrspace(1)* %out
   ret void
@@ -84,7 +84,7 @@ define void @fsub_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, <2 x d
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define void @fsub_v4f64(<4 x double> addrspace(1)* %out, <4 x double> addrspace(1)* %in) {
+define amdgpu_kernel void @fsub_v4f64(<4 x double> addrspace(1)* %out, <4 x double> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x double>, <4 x double> addrspace(1)* %in, i32 1
   %a = load <4 x double>, <4 x double> addrspace(1)* %in
   %b = load <4 x double>, <4 x double> addrspace(1)* %b_ptr
@@ -98,7 +98,7 @@ define void @fsub_v4f64(<4 x double> addrspace(1)* %out, <4 x double> addrspace(
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define void @s_fsub_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %a, <4 x double> %b) {
+define amdgpu_kernel void @s_fsub_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %a, <4 x double> %b) {
   %result = fsub <4 x double> %a, %b
   store <4 x double> %result, <4 x double> addrspace(1)* %out, align 16
   ret void

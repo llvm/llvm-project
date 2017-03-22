@@ -3,7 +3,7 @@
 ; CHECK-LABEL: @volatile_load(
 ; CHECK: alloca [5 x i32]
 ; CHECK: load volatile i32, i32*
-define void @volatile_load(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define amdgpu_kernel void @volatile_load(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [5 x i32], align 4
   %tmp = load i32, i32 addrspace(1)* %in, align 4
@@ -16,7 +16,7 @@ entry:
 ; CHECK-LABEL: @volatile_store(
 ; CHECK: alloca [5 x i32]
 ; CHECK: store volatile i32 %tmp, i32*
-define void @volatile_store(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define amdgpu_kernel void @volatile_store(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [5 x i32], align 4
   %tmp = load i32, i32 addrspace(1)* %in, align 4
@@ -30,7 +30,7 @@ entry:
 ; CHECK: alloca double
 ; CHECK: load double
 ; CHECK: load volatile double
-define void @volatile_and_non_volatile_load(double addrspace(1)* nocapture %arg, i32 %arg1) #0 {
+define amdgpu_kernel void @volatile_and_non_volatile_load(double addrspace(1)* nocapture %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca double, align 8
   store double 0.000000e+00, double* %tmp, align 8

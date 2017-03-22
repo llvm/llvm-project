@@ -406,7 +406,7 @@ def FeatureGFX9 : SubtargetFeatureGeneration<"GFX9",
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P
+   FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P, FeatureVGPRIndexMode
   ]
 >;
 

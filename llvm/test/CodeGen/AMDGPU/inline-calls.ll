@@ -11,7 +11,7 @@ entry:
 
 ; CHECK: {{^}}kernel:
 ; CHECK-NOT: call
-define void @kernel(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel(i32 addrspace(1)* %out) {
 entry:
   %tmp0 = call i32 @func(i32 1)
   store i32 %tmp0, i32 addrspace(1)* %out
@@ -20,7 +20,7 @@ entry:
 
 ; CHECK: {{^}}kernel2:
 ; CHECK-NOT: call
-define void @kernel2(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel2(i32 addrspace(1)* %out) {
 entry:
   call void @kernel(i32 addrspace(1)* %out)
   ret void
@@ -31,7 +31,7 @@ entry:
 
 ; CHECK: {{^}}kernel3:
 ; CHECK-NOT: call
-define void @kernel3(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel3(i32 addrspace(1)* %out) {
 entry:
   %tmp0 = call i32 @func_alias(i32 1)
   store i32 %tmp0, i32 addrspace(1)* %out
@@ -43,7 +43,7 @@ entry:
 
 ; CHECK: {{^}}kernel4:
 ; CHECK-NOT: call
-define void @kernel4(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel4(i32 addrspace(1)* %out) {
 entry:
   call void @kernel_alias(i32 addrspace(1)* %out)
   ret void

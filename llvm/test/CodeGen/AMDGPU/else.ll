@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow
 ; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],
 ; CHECK-NEXT: s_xor_b64 exec, exec, [[DST]]
 ; CHECK-NEXT: ; mask branch
-define amdgpu_ps float @else_no_execfix(i32 %z, float %v) {
+define amdgpu_ps float @else_no_execfix(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5
   br i1 %cc, label %if, label %else
@@ -33,7 +33,7 @@ end:
 ; CHECK-NEXT: s_and_b64 [[AND_INIT:s\[[0-9]+:[0-9]+\]]], exec, [[DST]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, [[AND_INIT]]
 ; CHECK-NEXT: ; mask branch
-define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) {
+define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5
   br i1 %cc, label %if, label %else
@@ -44,8 +44,7 @@ if:
 
 else:
   %c = fmul float %v, 3.0
-  %c.i = bitcast float %c to i32
-  %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %c.i, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float %c, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %v.else = extractelement <4 x float> %tex, i32 0
   br label %end
 
@@ -55,6 +54,9 @@ end:
   ret void
 }
 
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) nounwind
+declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
+declare <4 x float> @llvm.amdgcn.image.sample.v4f32.f32.v8i32(float, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
 
-declare <4 x float> @llvm.SI.image.sample.i32(i32, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) nounwind readnone
+attributes #0 = { nounwind }
+attributes #1 = { nounwind writeonly }
+attributes #2 = { nounwind readonly }

@@ -37,6 +37,7 @@ FunctionPass *createAMDGPUCFGStructurizerPass();
 FunctionPass *createSITypeRewriter();
 FunctionPass *createSIAnnotateControlFlowPass();
 FunctionPass *createSIFoldOperandsPass();
+FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass(TargetMachine &tm);
@@ -57,6 +58,9 @@ extern char &AMDGPULowerIntrinsicsID;
 
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
+
+void initializeSIPeepholeSDWAPass(PassRegistry &);
+extern char &SIPeepholeSDWAID;
 
 void initializeSIShrinkInstructionsPass(PassRegistry&);
 extern char &SIShrinkInstructionsID;

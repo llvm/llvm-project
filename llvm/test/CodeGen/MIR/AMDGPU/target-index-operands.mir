@@ -7,7 +7,7 @@
 
   @float_gv = internal unnamed_addr addrspace(2) constant [5 x float] [float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00], align 4
 
-  define void @float(float addrspace(1)* %out, i32 %index) #0 {
+  define amdgpu_kernel void @float(float addrspace(1)* %out, i32 %index) #0 {
   entry:
     %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(2)* @float_gv, i32 0, i32 %index
     %1 = load float, float addrspace(2)* %0
@@ -15,7 +15,7 @@
     ret void
   }
 
-  define void @float2(float addrspace(1)* %out, i32 %index) #0 {
+  define amdgpu_kernel void @float2(float addrspace(1)* %out, i32 %index) #0 {
   entry:
     %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(2)* @float_gv, i32 0, i32 %index
     %1 = load float, float addrspace(2)* %0

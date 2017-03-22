@@ -268,7 +268,7 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   if (DisableInline) {
     // No inlining pass
   } else if (OptLevel > 1) {
-    Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel);
+    Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel, false);
   } else {
     Builder.Inliner = createAlwaysInlinerLegacyPass();
   }

@@ -1058,8 +1058,8 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
       if (It == FoldedOps.end()) {
         if (auto *FoldedC =
                 ConstantFoldConstantImpl(NewC, DL, TLI, FoldedOps)) {
-          NewC = FoldedC;
           FoldedOps.insert({NewC, FoldedC});
+          NewC = FoldedC;
         } else {
           FoldedOps.insert({NewC, NewC});
         }

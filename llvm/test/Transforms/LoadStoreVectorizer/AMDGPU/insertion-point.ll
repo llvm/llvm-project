@@ -11,7 +11,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; CHECK: load <2 x float>
 ; CHECK: %w = add i32 %y, 9
 ; CHECK: %foo = add i32 %z, %w
-define void @insert_load_point(float addrspace(1)* nocapture %a, float addrspace(1)* nocapture %b, float addrspace(1)* nocapture readonly %c, i64 %idx, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @insert_load_point(float addrspace(1)* nocapture %a, float addrspace(1)* nocapture %b, float addrspace(1)* nocapture readonly %c, i64 %idx, i32 %x, i32 %y) #0 {
 entry:
   %a.idx.x = getelementptr inbounds float, float addrspace(1)* %a, i64 %idx
   %c.idx.x = getelementptr inbounds float, float addrspace(1)* %c, i64 %idx
@@ -38,7 +38,7 @@ entry:
 ; CHECK: %w = add i32 %y, 9
 ; CHECK: store <2 x float>
 ; CHECK: %foo = add i32 %z, %w
-define void @insert_store_point(float addrspace(1)* nocapture %a, float addrspace(1)* nocapture %b, float addrspace(1)* nocapture readonly %c, i64 %idx, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @insert_store_point(float addrspace(1)* nocapture %a, float addrspace(1)* nocapture %b, float addrspace(1)* nocapture readonly %c, i64 %idx, i32 %x, i32 %y) #0 {
 entry:
   %a.idx.x = getelementptr inbounds float, float addrspace(1)* %a, i64 %idx
   %c.idx.x = getelementptr inbounds float, float addrspace(1)* %c, i64 %idx

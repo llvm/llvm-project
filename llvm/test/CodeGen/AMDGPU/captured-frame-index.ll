@@ -3,7 +3,7 @@
 ; GCN-LABEL: {{^}}store_fi_lifetime:
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
 ; GCN: buffer_store_dword [[FI]]
-define void @store_fi_lifetime(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @store_fi_lifetime(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %b = alloca i8
   call void @llvm.lifetime.start(i64 1, i8* %b)
@@ -18,7 +18,7 @@ entry:
 ; GCN: v_mov_b32_e32 [[ZERO0:v[0-9]+]], 4{{$}}
 ; GCN: v_mov_b32_e32 [[VLDSPTR:v[0-9]+]], [[LDSPTR]]
 ; GCN: ds_write_b32  [[VLDSPTR]], [[ZERO0]]
-define void @stored_fi_to_lds(float* addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @stored_fi_to_lds(float* addrspace(3)* %ptr) #0 {
   %tmp = alloca float
   store float 4.0, float *%tmp
   store float* %tmp, float* addrspace(3)* %ptr
@@ -38,7 +38,7 @@ define void @stored_fi_to_lds(float* addrspace(3)* %ptr) #0 {
 
 ; GCN-DAG: v_mov_b32_e32 [[FI1:v[0-9]+]], 8{{$}}
 ; GCN: ds_write_b32  [[VLDSPTR]], [[FI1]]
-define void @stored_fi_to_lds_2_small_objects(float* addrspace(3)* %ptr) #0 {
+define amdgpu_kernel void @stored_fi_to_lds_2_small_objects(float* addrspace(3)* %ptr) #0 {
   %tmp0 = alloca float
   %tmp1 = alloca float
   store float 4.0, float* %tmp0
@@ -54,7 +54,7 @@ define void @stored_fi_to_lds_2_small_objects(float* addrspace(3)* %ptr) #0 {
 ; GCN: buffer_store_dword [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 4{{$}}
 ; GCN: buffer_store_dword [[ZERO]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4{{$}}
-define void @stored_fi_to_self() #0 {
+define amdgpu_kernel void @stored_fi_to_self() #0 {
   %tmp = alloca i32*
 
   ; Avoid optimizing everything out
@@ -73,7 +73,7 @@ define void @stored_fi_to_self() #0 {
 
 ; GCN: v_mov_b32_e32 [[OFFSETK:v[0-9]+]], 0x804{{$}}
 ; GCN: buffer_store_dword [[OFFSETK]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:2052{{$}}
-define void @stored_fi_to_self_offset() #0 {
+define amdgpu_kernel void @stored_fi_to_self_offset() #0 {
   %tmp0 = alloca [512 x i32]
   %tmp1 = alloca i32*
 
@@ -98,7 +98,7 @@ define void @stored_fi_to_self_offset() #0 {
 
 ; GCN: v_mov_b32_e32 [[FI2:v[0-9]+]], 12{{$}}
 ; GCN: buffer_store_dword [[FI2]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:8{{$}}
-define void @stored_fi_to_fi() #0 {
+define amdgpu_kernel void @stored_fi_to_fi() #0 {
   %tmp0 = alloca i32*
   %tmp1 = alloca i32*
   %tmp2 = alloca i32*
@@ -118,7 +118,7 @@ define void @stored_fi_to_fi() #0 {
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4{{$}}
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
 ; GCN: buffer_store_dword [[FI]]
-define void @stored_fi_to_global(float* addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @stored_fi_to_global(float* addrspace(1)* %ptr) #0 {
   %tmp = alloca float
   store float 0.0, float *%tmp
   store float* %tmp, float* addrspace(1)* %ptr
@@ -136,7 +136,7 @@ define void @stored_fi_to_global(float* addrspace(1)* %ptr) #0 {
 
 ; GCN-DAG: v_mov_b32_e32 [[FI2:v[0-9]+]], 12{{$}}
 ; GCN: buffer_store_dword [[FI2]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-define void @stored_fi_to_global_2_small_objects(float* addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @stored_fi_to_global_2_small_objects(float* addrspace(1)* %ptr) #0 {
   %tmp0 = alloca float
   %tmp1 = alloca float
   %tmp2 = alloca float
@@ -163,7 +163,7 @@ define void @stored_fi_to_global_2_small_objects(float* addrspace(1)* %ptr) #0 {
 ; GCN: buffer_store_dword [[K]], [[BASE_1_OFF_1]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
 
 ; GCN: buffer_store_dword [[BASE_1_OFF_2]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-define void @stored_fi_to_global_huge_frame_offset(i32* addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @stored_fi_to_global_huge_frame_offset(i32* addrspace(1)* %ptr) #0 {
   %tmp0 = alloca [4096 x i32]
   %tmp1 = alloca [4096 x i32]
   %gep0.tmp0 = getelementptr [4096 x i32], [4096 x i32]* %tmp0, i32 0, i32 0
@@ -186,7 +186,7 @@ define void @stored_fi_to_global_huge_frame_offset(i32* addrspace(1)* %ptr) #0 {
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC_HI]], g1@gotpcrel32@hi+4
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
 ; GCN: buffer_store_dword [[FI]]
-define void @cannot_select_assertzext_valuetype(i32 addrspace(1)* %out, i32 %idx) #0 {
+define amdgpu_kernel void @cannot_select_assertzext_valuetype(i32 addrspace(1)* %out, i32 %idx) #0 {
 entry:
   %b = alloca i32, align 4
   %tmp1 = load volatile i32*, i32* addrspace(1)* @g1, align 4

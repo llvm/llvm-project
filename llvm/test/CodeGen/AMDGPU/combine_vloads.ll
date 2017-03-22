@@ -12,7 +12,7 @@
 ; EG-LABEL: {{^}}combine_vloads:
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define void @combine_vloads(<8 x i8> addrspace(1)* nocapture %src, <8 x i8> addrspace(1)* nocapture %result) nounwind {
+define amdgpu_kernel void @combine_vloads(<8 x i8> addrspace(1)* nocapture %src, <8 x i8> addrspace(1)* nocapture %result) nounwind {
 entry:
   br label %for.body
 

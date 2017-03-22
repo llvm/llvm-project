@@ -1,12 +1,12 @@
 # RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -check-prefix=GCN %s
 --- |
-  define void @s_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+  define amdgpu_kernel void @s_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
     %and = and i32 %a, 1234567
     store volatile i32 %and, i32 addrspace(1)* %out
     ret void
   }
 
-  define void @v_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
+  define amdgpu_kernel void @v_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
     %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
@@ -17,13 +17,13 @@
     ret void
   }
 
-  define void @s_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+  define amdgpu_kernel void @s_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
     %shl = shl i32 %a, 12
     store volatile i32 %shl, i32 addrspace(1)* %out
     ret void
   }
 
-  define void @v_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
+  define amdgpu_kernel void @v_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
     %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
@@ -34,13 +34,13 @@
     ret void
   }
 
-  define void @s_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+  define amdgpu_kernel void @s_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
     %ashr = ashr i32 %a, 12
     store volatile i32 %ashr, i32 addrspace(1)* %out
     ret void
   }
 
-  define void @v_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
+  define amdgpu_kernel void @v_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
     %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
@@ -51,13 +51,13 @@
     ret void
   }
 
-   define void @s_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+   define amdgpu_kernel void @s_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
     %lshr = lshr i32 %a, 12
     store volatile i32 %lshr, i32 addrspace(1)* %out
     ret void
   }
 
-  define void @v_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
+  define amdgpu_kernel void @v_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
     %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom

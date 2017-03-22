@@ -15,7 +15,7 @@ target triple = "amdgcn--"
 ;CHECK: buffer_store_dword
 ;CHECK: s_branch [[LOOP_LABEL]]
 
-define void @foo() {
+define amdgpu_kernel void @foo() {
 entry:
   br label %loop
 

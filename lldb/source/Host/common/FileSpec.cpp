@@ -7,21 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <fstream>
-#include <set>
-#include <string.h>
-
-#include "llvm/Config/llvm-config.h"
-#ifndef LLVM_ON_WIN32
-#include <pwd.h>
-#endif
-
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -144,115 +136,13 @@ size_t ParentPathEnd(llvm::StringRef path, FileSpec::PathSyntax syntax) {
 
 } // end anonymous namespace
 
-// Resolves the username part of a path of the form ~user/other/directories, and
-// writes the result into dst_path.  This will also resolve "~" to the current
-// user.
-// If you want to complete "~" to the list of users, pass it to
-// ResolvePartialUsername.
-void FileSpec::ResolveUsername(llvm::SmallVectorImpl<char> &path) {
-#ifndef LLVM_ON_WIN32
-  if (path.empty() || path[0] != '~')
-    return;
-
-  llvm::StringRef path_str(path.data(), path.size());
-  size_t slash_pos = path_str.find('/', 1);
-  if (slash_pos == 1 || path.size() == 1) {
-    // A path of ~/ resolves to the current user's home dir
-    llvm::SmallString<64> home_dir;
-    // llvm::sys::path::home_directory() only checks if "HOME" is set in the
-    // environment and does nothing else to locate the user home directory
-    if (!llvm::sys::path::home_directory(home_dir)) {
-      struct passwd *pw = getpwuid(getuid());
-      if (pw && pw->pw_dir && pw->pw_dir[0]) {
-        // Update our environemnt so llvm::sys::path::home_directory() works
-        // next time
-        setenv("HOME", pw->pw_dir, 0);
-        home_dir.assign(llvm::StringRef(pw->pw_dir));
-      } else {
-        return;
-      }
-    }
-
-    // Overwrite the ~ with the first character of the homedir, and insert
-    // the rest.  This way we only trigger one move, whereas an insert
-    // followed by a delete (or vice versa) would trigger two.
-    path[0] = home_dir[0];
-    path.insert(path.begin() + 1, home_dir.begin() + 1, home_dir.end());
-    return;
-  }
-
-  auto username_begin = path.begin() + 1;
-  auto username_end = (slash_pos == llvm::StringRef::npos)
-                          ? path.end()
-                          : (path.begin() + slash_pos);
-  size_t replacement_length = std::distance(path.begin(), username_end);
-
-  llvm::SmallString<20> username(username_begin, username_end);
-  struct passwd *user_entry = ::getpwnam(username.c_str());
-  if (user_entry != nullptr) {
-    // Copy over the first n characters of the path, where n is the smaller of
-    // the length
-    // of the home directory and the slash pos.
-    llvm::StringRef homedir(user_entry->pw_dir);
-    size_t initial_copy_length = std::min(homedir.size(), replacement_length);
-    auto src_begin = homedir.begin();
-    auto src_end = src_begin + initial_copy_length;
-    std::copy(src_begin, src_end, path.begin());
-    if (replacement_length > homedir.size()) {
-      // We copied the entire home directory, but the ~username portion of the
-      // path was
-      // longer, so there's characters that need to be removed.
-      path.erase(path.begin() + initial_copy_length, username_end);
-    } else if (replacement_length < homedir.size()) {
-      // We copied all the way up to the slash in the destination, but there's
-      // still more
-      // characters that need to be inserted.
-      path.insert(username_end, src_end, homedir.end());
-    }
-  } else {
-    // Unable to resolve username (user doesn't exist?)
-    path.clear();
-  }
-#endif
-}
-
-size_t FileSpec::ResolvePartialUsername(llvm::StringRef partial_name,
-                                        StringList &matches) {
-#if !defined(LLVM_ON_WIN32) && !defined(__ANDROID__)
-  size_t extant_entries = matches.GetSize();
-
-  setpwent();
-  struct passwd *user_entry;
-  partial_name = partial_name.drop_front();
-  std::set<std::string> name_list;
-
-  while ((user_entry = getpwent()) != NULL) {
-    if (llvm::StringRef(user_entry->pw_name).startswith(partial_name)) {
-      std::string tmp_buf("~");
-      tmp_buf.append(user_entry->pw_name);
-      tmp_buf.push_back('/');
-      name_list.insert(tmp_buf);
-    }
-  }
-
-  for (auto &name : name_list) {
-    matches.AppendString(name);
-  }
-  return matches.GetSize() - extant_entries;
-#else
-  // Resolving home directories is not supported, just copy the path...
-  return 0;
-#endif // #ifdef LLVM_ON_WIN32
-}
-
 void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   if (path.empty())
     return;
 
-#ifndef LLVM_ON_WIN32
-  if (path[0] == '~')
-    ResolveUsername(path);
-#endif // #ifdef LLVM_ON_WIN32
+  llvm::SmallString<32> Source(path.begin(), path.end());
+  StandardTildeExpressionResolver Resolver;
+  Resolver.ResolveFullPath(Source, path);
 
   // Save a copy of the original path that's passed in
   llvm::SmallString<128> original_path(path.begin(), path.end());

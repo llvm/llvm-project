@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/common/NativeRegisterContextRegisterInfo.h"
+#include "NativeRegisterContextRegisterInfo.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 

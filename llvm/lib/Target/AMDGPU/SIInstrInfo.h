@@ -769,6 +769,9 @@ namespace AMDGPU {
   int getVOPe32(uint16_t Opcode);
 
   LLVM_READONLY
+  int getSDWAOp(uint16_t Opcode);
+
+  LLVM_READONLY
   int getCommuteRev(uint16_t Opcode);
 
   LLVM_READONLY

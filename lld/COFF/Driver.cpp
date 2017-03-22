@@ -890,6 +890,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         getOutputPath((*Args.filtered_begin(OPT_INPUT))->getValue());
   }
 
+  // Put the PDB next to the image if no /pdb flag was passed.
+  if (Config->Debug && Config->PDBPath.empty()) {
+    Config->PDBPath = Config->OutputFile;
+    sys::path::replace_extension(Config->PDBPath, ".pdb");
+  }
+
   // Set default image base if /base is not given.
   if (Config->ImageBase == uint64_t(-1))
     Config->ImageBase = getDefaultImageBase();

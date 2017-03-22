@@ -497,10 +497,10 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   OS << "// Add parameter attributes that are not common to all intrinsics.\n";
   OS << "#ifdef GET_INTRINSIC_ATTRIBUTES\n";
   if (TargetOnly)
-    OS << "static AttributeSet getAttributes(LLVMContext &C, " << TargetPrefix
+    OS << "static AttributeList getAttributes(LLVMContext &C, " << TargetPrefix
        << "Intrinsic::ID id) {\n";
   else
-    OS << "AttributeSet Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
+    OS << "AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {\n";
 
   // Compute the maximum number of attribute arguments and the map
   typedef std::map<const CodeGenIntrinsic*, unsigned,
@@ -518,7 +518,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     N = ++AttrNum;
   }
 
-  // Emit an array of AttributeSet.  Most intrinsics will have at least one
+  // Emit an array of AttributeList.  Most intrinsics will have at least one
   // entry, for the function itself (index ~1), which is usually nounwind.
   OS << "  static const uint8_t IntrinsicsToAttributesMap[] = {\n";
 
@@ -530,7 +530,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   }
   OS << "  };\n\n";
 
-  OS << "  AttributeSet AS[" << maxArgAttrs+1 << "];\n";
+  OS << "  AttributeList AS[" << maxArgAttrs + 1 << "];\n";
   OS << "  unsigned NumAttrs = 0;\n";
   OS << "  if (id != 0) {\n";
   OS << "    switch(IntrinsicsToAttributesMap[id - ";
@@ -595,8 +595,8 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
           ++ai;
         } while (ai != ae && intrinsic.ArgumentAttributes[ai].first == argNo);
         OS << "};\n";
-        OS << "      AS[" << numAttrs++ << "] = AttributeSet::get(C, "
-           << argNo+1 << ", AttrParam" << argNo +1 << ");\n";
+        OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
+           << argNo + 1 << ", AttrParam" << argNo + 1 << ");\n";
       }
     }
 
@@ -699,8 +699,8 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         break;
       }
       OS << "};\n";
-      OS << "      AS[" << numAttrs++ << "] = AttributeSet::get(C, "
-         << "AttributeSet::FunctionIndex, Atts);\n";
+      OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
+         << "AttributeList::FunctionIndex, Atts);\n";
     }
 
     if (numAttrs) {
@@ -708,14 +708,14 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
       OS << "      break;\n";
       OS << "      }\n";
     } else {
-      OS << "      return AttributeSet();\n";
+      OS << "      return AttributeList();\n";
       OS << "      }\n";
     }
   }
 
   OS << "    }\n";
   OS << "  }\n";
-  OS << "  return AttributeSet::get(C, makeArrayRef(AS, NumAttrs));\n";
+  OS << "  return AttributeList::get(C, makeArrayRef(AS, NumAttrs));\n";
   OS << "}\n";
   OS << "#endif // GET_INTRINSIC_ATTRIBUTES\n\n";
 }

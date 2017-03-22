@@ -12759,8 +12759,8 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.objectsize.i32(i8* <object>, i1 <min>)
-      declare i64 @llvm.objectsize.i64(i8* <object>, i1 <min>)
+      declare i32 @llvm.objectsize.i32(i8* <object>, i1 <min>, i1 <nullunknown>)
+      declare i64 @llvm.objectsize.i64(i8* <object>, i1 <min>, i1 <nullunknown>)
 
 Overview:
 """""""""
@@ -12775,11 +12775,16 @@ other object.
 Arguments:
 """"""""""
 
-The ``llvm.objectsize`` intrinsic takes two arguments. The first
-argument is a pointer to or into the ``object``. The second argument is
-a boolean and determines whether ``llvm.objectsize`` returns 0 (if true)
-or -1 (if false) when the object size is unknown. The second argument
-only accepts constants.
+The ``llvm.objectsize`` intrinsic takes three arguments. The first argument is
+a pointer to or into the ``object``. The second argument determines whether
+``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size
+is unknown. The third argument controls how ``llvm.objectsize`` acts when
+``null`` is used as its pointer argument. If it's true and the pointer is in
+address space 0, ``null`` is treated as an opaque value with an unknown number
+of bytes. Otherwise, ``llvm.objectsize`` reports 0 bytes available when given
+``null``.
+
+The second and third arguments only accept constants.
 
 Semantics:
 """"""""""

@@ -103,17 +103,18 @@ __isl_give isl_point *isl_point_copy(__isl_keep isl_point *pnt)
 	return pnt;
 }
 
-void isl_point_free(__isl_take isl_point *pnt)
+__isl_null isl_point *isl_point_free(__isl_take isl_point *pnt)
 {
 	if (!pnt)
-		return;
+		return NULL;
 
 	if (--pnt->ref > 0)
-		return;
+		return NULL;
 
 	isl_space_free(pnt->dim);
 	isl_vec_free(pnt->vec);
 	free(pnt);
+	return NULL;
 }
 
 __isl_give isl_point *isl_point_void(__isl_take isl_space *dim)

@@ -14,7 +14,7 @@ declare <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
 ; VI:  v_min_f16_e32 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @minnum_f16(
+define amdgpu_kernel void @minnum_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -34,7 +34,7 @@ entry:
 ; VI:  v_min_f16_e32 v[[R_F16:[0-9]+]], 0x4200, v[[B_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @minnum_f16_imm_a(
+define amdgpu_kernel void @minnum_f16_imm_a(
     half addrspace(1)* %r,
     half addrspace(1)* %b) {
 entry:
@@ -52,7 +52,7 @@ entry:
 ; VI:  v_min_f16_e32 v[[R_F16:[0-9]+]], 4.0, v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @minnum_f16_imm_b(
+define amdgpu_kernel void @minnum_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -86,7 +86,7 @@ entry:
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @minnum_v2f16(
+define amdgpu_kernel void @minnum_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -117,7 +117,7 @@ entry:
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @minnum_v2f16_imm_a(
+define amdgpu_kernel void @minnum_v2f16_imm_a(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %b) {
 entry:
@@ -143,7 +143,7 @@ entry:
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @minnum_v2f16_imm_b(
+define amdgpu_kernel void @minnum_v2f16_imm_b(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) {
 entry:

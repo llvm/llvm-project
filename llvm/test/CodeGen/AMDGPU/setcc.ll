@@ -9,7 +9,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; GCN-DAG: v_cmp_eq_u32_e32
 ; GCN-DAG: v_cmp_eq_u32_e64
-define void @setcc_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <2 x i32> %b) #0 {
+define amdgpu_kernel void @setcc_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %result = icmp eq <2 x i32> %a, %b
   %sext = sext <2 x i1> %result to <2 x i32>
   store <2 x i32> %sext, <2 x i32> addrspace(1)* %out
@@ -26,7 +26,7 @@ define void @setcc_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <2 x i32> %
 ; GCN: v_cmp_eq_u32_e64
 ; GCN: v_cmp_eq_u32_e64
 ; GCN: v_cmp_eq_u32_e64
-define void @setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
   %b = load <4 x i32>, <4 x i32> addrspace(1)* %b_ptr
@@ -43,7 +43,7 @@ define void @setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %
 ; FUNC-LABEL: {{^}}f32_oeq:
 ; R600: SETE_DX10
 ; GCN: v_cmp_eq_f32
-define void @f32_oeq(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_oeq(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp oeq float %a, %b
   %1 = sext i1 %0 to i32
@@ -54,7 +54,7 @@ entry:
 ; FUNC-LABEL: {{^}}f32_ogt:
 ; R600: SETGT_DX10
 ; GCN: v_cmp_gt_f32
-define void @f32_ogt(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ogt(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ogt float %a, %b
   %1 = sext i1 %0 to i32
@@ -65,7 +65,7 @@ entry:
 ; FUNC-LABEL: {{^}}f32_oge:
 ; R600: SETGE_DX10
 ; GCN: v_cmp_ge_f32
-define void @f32_oge(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_oge(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp oge float %a, %b
   %1 = sext i1 %0 to i32
@@ -76,7 +76,7 @@ entry:
 ; FUNC-LABEL: {{^}}f32_olt:
 ; R600: SETGT_DX10
 ; GCN: v_cmp_lt_f32
-define void @f32_olt(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_olt(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp olt float %a, %b
   %1 = sext i1 %0 to i32
@@ -87,7 +87,7 @@ entry:
 ; FUNC-LABEL: {{^}}f32_ole:
 ; R600: SETGE_DX10
 ; GCN: v_cmp_le_f32
-define void @f32_ole(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ole(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ole float %a, %b
   %1 = sext i1 %0 to i32
@@ -105,7 +105,7 @@ entry:
 
 ; GCN: v_cmp_lg_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_one(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_one(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp one float %a, %b
   %1 = sext i1 %0 to i32
@@ -119,7 +119,7 @@ entry:
 ; R600-DAG: AND_INT
 ; R600-DAG: SETNE_INT
 ; GCN: v_cmp_o_f32
-define void @f32_ord(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ord(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ord float %a, %b
   %1 = sext i1 %0 to i32
@@ -137,7 +137,7 @@ entry:
 
 ; GCN: v_cmp_nlg_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_ueq(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ueq(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ueq float %a, %b
   %1 = sext i1 %0 to i32
@@ -150,7 +150,7 @@ entry:
 ; R600: SETE_DX10
 ; GCN: v_cmp_nle_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_ugt(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ugt(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ugt float %a, %b
   %1 = sext i1 %0 to i32
@@ -164,7 +164,7 @@ entry:
 
 ; GCN: v_cmp_nlt_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_uge(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_uge(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp uge float %a, %b
   %1 = sext i1 %0 to i32
@@ -178,7 +178,7 @@ entry:
 
 ; GCN: v_cmp_nge_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_ult(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ult(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ult float %a, %b
   %1 = sext i1 %0 to i32
@@ -192,7 +192,7 @@ entry:
 
 ; GCN: v_cmp_ngt_f32_e32 vcc
 ; GCN-NEXT: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
-define void @f32_ule(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_ule(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp ule float %a, %b
   %1 = sext i1 %0 to i32
@@ -203,7 +203,7 @@ entry:
 ; FUNC-LABEL: {{^}}f32_une:
 ; R600: SETNE_DX10
 ; GCN: v_cmp_neq_f32
-define void @f32_une(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_une(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp une float %a, %b
   %1 = sext i1 %0 to i32
@@ -217,7 +217,7 @@ entry:
 ; R600: OR_INT
 ; R600: SETNE_INT
 ; GCN: v_cmp_u_f32
-define void @f32_uno(i32 addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @f32_uno(i32 addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %0 = fcmp uno float %a, %b
   %1 = sext i1 %0 to i32
@@ -232,7 +232,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_eq:
 ; R600: SETE_INT
 ; GCN: v_cmp_eq_u32
-define void @i32_eq(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_eq(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp eq i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -243,7 +243,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_ne:
 ; R600: SETNE_INT
 ; GCN: v_cmp_ne_u32
-define void @i32_ne(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_ne(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp ne i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -254,7 +254,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_ugt:
 ; R600: SETGT_UINT
 ; GCN: v_cmp_gt_u32
-define void @i32_ugt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_ugt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp ugt i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -265,7 +265,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_uge:
 ; R600: SETGE_UINT
 ; GCN: v_cmp_ge_u32
-define void @i32_uge(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_uge(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp uge i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -276,7 +276,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_ult:
 ; R600: SETGT_UINT
 ; GCN: v_cmp_lt_u32
-define void @i32_ult(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_ult(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp ult i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -287,7 +287,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_ule:
 ; R600: SETGE_UINT
 ; GCN: v_cmp_le_u32
-define void @i32_ule(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_ule(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp ule i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -298,7 +298,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_sgt:
 ; R600: SETGT_INT
 ; GCN: v_cmp_gt_i32
-define void @i32_sgt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_sgt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp sgt i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -309,7 +309,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_sge:
 ; R600: SETGE_INT
 ; GCN: v_cmp_ge_i32
-define void @i32_sge(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_sge(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp sge i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -320,7 +320,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_slt:
 ; R600: SETGT_INT
 ; GCN: v_cmp_lt_i32
-define void @i32_slt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_slt(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp slt i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -331,7 +331,7 @@ entry:
 ; FUNC-LABEL: {{^}}i32_sle:
 ; R600: SETGE_INT
 ; GCN: v_cmp_le_i32
-define void @i32_sle(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @i32_sle(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %0 = icmp sle i32 %a, %b
   %1 = sext i1 %0 to i32
@@ -348,7 +348,7 @@ entry:
 ; GCN-DAG: v_cmp_eq_u32
 ; GCN-DAG: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1,
 ; GCN: s_endpgm
-define void @v3i32_eq(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %ptra, <3 x i32> addrspace(1)* %ptrb) #0 {
+define amdgpu_kernel void @v3i32_eq(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %ptra, <3 x i32> addrspace(1)* %ptrb) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %gep.a = getelementptr <3 x i32>, <3 x i32> addrspace(1)* %ptra, i32 %tid
   %gep.b = getelementptr <3 x i32>, <3 x i32> addrspace(1)* %ptrb, i32 %tid
@@ -369,7 +369,7 @@ define void @v3i32_eq(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %ptr
 ; GCN-DAG: v_cmp_eq_u32
 ; GCN-DAG: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1,
 ; GCN: s_endpgm
-define void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %ptra, <3 x i8> addrspace(1)* %ptrb) #0 {
+define amdgpu_kernel void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %ptra, <3 x i8> addrspace(1)* %ptrb) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %gep.a = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %ptra, i32 %tid
   %gep.b = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %ptrb, i32 %tid
@@ -386,7 +386,7 @@ define void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %ptra, 
 ; FUNC-LABEL: setcc-i1
 ; GCN: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 1
 ; GCN: s_cmp_eq_u32 [[AND]], 0
-define void @setcc-i1(i32 %in) #0 {
+define amdgpu_kernel void @setcc-i1(i32 %in) #0 {
   %and = and i32 %in, 1
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %endif, label %if
@@ -400,7 +400,7 @@ endif:
 ; GCN-DAG: v_cmp_ge_f32_e64 [[A:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
 ; GCN-DAG: v_cmp_le_f32_e64 [[B:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
 ; GCN: s_and_b64 s[2:3], [[A]], [[B]]
-define void @setcc-i1-and-xor(i32 addrspace(1)* %out, float %cond) #0 {
+define amdgpu_kernel void @setcc-i1-and-xor(i32 addrspace(1)* %out, float %cond) #0 {
 bb0:
   %tmp5 = fcmp oge float %cond, 0.000000e+00
   %tmp7 = fcmp ole float %cond, 1.000000e+00

@@ -12,7 +12,7 @@
 ; CHECK: OR_INT
 ; CHECK-NEXT: OR_INT
 ; CHECK-NEXT: OR_INT
-define void @_Z9chk1D_512v() #0 {
+define amdgpu_kernel void @_Z9chk1D_512v() #0 {
 entry:
   %a0 = alloca i32, align 4
   %b0 = alloca i32, align 4

@@ -5,7 +5,7 @@
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsg sendmsg(MSG_INTERRUPT)
-define void @test_interrupt() {
+define amdgpu_kernel void @test_interrupt() {
 body:
   call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0);
   ret void
@@ -15,7 +15,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT, 0)
-define void @test_gs_emit() {
+define amdgpu_kernel void @test_gs_emit() {
 body:
   call void @llvm.amdgcn.s.sendmsg(i32 34, i32 0);
   ret void
@@ -25,7 +25,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 1)
-define void @test_gs_cut() {
+define amdgpu_kernel void @test_gs_cut() {
 body:
   call void @llvm.amdgcn.s.sendmsg(i32 274, i32 0);
   ret void
@@ -35,7 +35,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT_CUT, 2)
-define void @test_gs_emit_cut() {
+define amdgpu_kernel void @test_gs_emit_cut() {
 body:
   call void @llvm.amdgcn.s.sendmsg(i32 562, i32 0)
   ret void
@@ -45,7 +45,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
-define void @test_gs_done() {
+define amdgpu_kernel void @test_gs_done() {
 body:
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
   ret void
@@ -66,7 +66,7 @@ define amdgpu_gs void @sendmsg(i32 inreg %a) #0 {
 ; VI-NEXT: s_nop 0
 ; GCN-NEXT: s_sendmsghalt sendmsg(MSG_INTERRUPT)
 ; GCN-NEXT: s_endpgm
-define void @sendmsghalt(i32 inreg %a) #0 {
+define amdgpu_kernel void @sendmsghalt(i32 inreg %a) #0 {
   call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 %a)
   ret void
 }
@@ -75,7 +75,7 @@ define void @sendmsghalt(i32 inreg %a) #0 {
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsghalt sendmsg(MSG_INTERRUPT)
-define void @test_interrupt_halt() {
+define amdgpu_kernel void @test_interrupt_halt() {
 body:
   call void @llvm.amdgcn.s.sendmsghalt(i32 1, i32 0)
   ret void
@@ -85,7 +85,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT, 0)
-define void @test_gs_emit_halt() {
+define amdgpu_kernel void @test_gs_emit_halt() {
 body:
   call void @llvm.amdgcn.s.sendmsghalt(i32 34, i32 0)
   ret void
@@ -95,7 +95,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsghalt sendmsg(MSG_GS, GS_OP_CUT, 1)
-define void @test_gs_cut_halt() {
+define amdgpu_kernel void @test_gs_cut_halt() {
 body:
   call void @llvm.amdgcn.s.sendmsghalt(i32 274, i32 0)
   ret void
@@ -105,7 +105,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT_CUT, 2)
-define void @test_gs_emit_cut_halt() {
+define amdgpu_kernel void @test_gs_emit_cut_halt() {
 body:
   call void @llvm.amdgcn.s.sendmsghalt(i32 562, i32 0)
   ret void
@@ -115,7 +115,7 @@ body:
 ; GCN: s_mov_b32 m0, 0
 ; GCN-NOT: s_mov_b32 m0
 ; GCN: s_sendmsghalt sendmsg(MSG_GS_DONE, GS_OP_NOP)
-define void @test_gs_done_halt() {
+define amdgpu_kernel void @test_gs_done_halt() {
 body:
   call void @llvm.amdgcn.s.sendmsghalt(i32 3, i32 0)
   ret void

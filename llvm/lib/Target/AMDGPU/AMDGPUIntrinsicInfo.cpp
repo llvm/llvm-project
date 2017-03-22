@@ -90,8 +90,8 @@ Function *AMDGPUIntrinsicInfo::getDeclaration(Module *M, unsigned IntrID,
   Function *F
     = cast<Function>(M->getOrInsertFunction(getName(IntrID, Tys), FTy));
 
-  AttributeSet AS = getAttributes(M->getContext(),
-                                  static_cast<AMDGPUIntrinsic::ID>(IntrID));
+  AttributeList AS =
+      getAttributes(M->getContext(), static_cast<AMDGPUIntrinsic::ID>(IntrID));
   F->setAttributes(AS);
   return F;
 }

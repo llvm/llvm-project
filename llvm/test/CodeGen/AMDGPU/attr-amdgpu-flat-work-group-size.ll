@@ -5,7 +5,7 @@
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define void @min_64_max_64() #0 {
+define amdgpu_kernel void @min_64_max_64() #0 {
 entry:
   ret void
 }
@@ -16,7 +16,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="64,64"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define void @min_64_max_128() #1 {
+define amdgpu_kernel void @min_64_max_128() #1 {
 entry:
   ret void
 }
@@ -27,7 +27,7 @@ attributes #1 = {"amdgpu-flat-work-group-size"="64,128"}
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-define void @min_128_max_128() #2 {
+define amdgpu_kernel void @min_128_max_128() #2 {
 entry:
   ret void
 }
@@ -39,7 +39,7 @@ attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 ; CHECK: NumSGPRsForWavesPerEU: 13
 ; CHECK: NumVGPRsForWavesPerEU: 32
 @var = addrspace(1) global float 0.0
-define void @min_1024_max_2048() #3 {
+define amdgpu_kernel void @min_1024_max_2048() #3 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var
   %val2 = load volatile float, float addrspace(1)* @var

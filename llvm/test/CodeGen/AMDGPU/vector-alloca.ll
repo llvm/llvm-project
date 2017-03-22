@@ -15,7 +15,7 @@
 ; EG: MOV
 ; EG: MOV
 ; EG: MOVA_INT
-define void @vector_read(i32 addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -44,7 +44,7 @@ entry:
 ; EG: MOV
 ; EG: MOVA_INT
 ; EG: MOVA_INT
-define void @vector_write(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
+define amdgpu_kernel void @vector_write(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -71,7 +71,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}bitcast_gep:
 ; EG: STORE_RAW
-define void @bitcast_gep(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
+define amdgpu_kernel void @bitcast_gep(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -93,7 +93,7 @@ entry:
 ; OPT-LABEL: @vector_read_bitcast_gep(
 ; OPT: %0 = extractelement <4 x i32> <i32 1065353216, i32 1, i32 2, i32 3>, i32 %index
 ; OPT: store i32 %0, i32 addrspace(1)* %out, align 4
-define void @vector_read_bitcast_gep(i32 addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read_bitcast_gep(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr inbounds [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -121,7 +121,7 @@ entry:
 ; OPT: store float
 ; OPT: store float
 ; OPT: load float
-define void @vector_read_bitcast_alloca(float addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read_bitcast_alloca(float addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %tmp.bc = bitcast [4 x i32]* %tmp to [4 x float]*

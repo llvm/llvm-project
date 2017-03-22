@@ -13,7 +13,7 @@
 ; CIVI: v_lshlrev_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CIVI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; CIVI: v_or_b32_e32
-define void @s_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
+define amdgpu_kernel void @s_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
   %result = shl <2 x i16> %lhs, %rhs
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out
   ret void
@@ -38,7 +38,7 @@ define void @s_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16>
 ; CI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
 ; CI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @v_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -55,7 +55,7 @@ define void @v_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %
 ; GFX9: s_load_dword [[RHS:s[0-9]+]]
 ; GFX9: {{buffer|flat}}_load_dword [[LHS:v[0-9]+]]
 ; GFX9: v_pk_lshlrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
-define void @shl_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
+define amdgpu_kernel void @shl_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -70,7 +70,7 @@ define void @shl_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)*
 ; GFX9: s_load_dword [[LHS:s[0-9]+]]
 ; GFX9: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_lshlrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
-define void @shl_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
+define amdgpu_kernel void @shl_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -84,7 +84,7 @@ define void @shl_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)*
 ; GCN-LABEL: {{^}}shl_imm_v_v2i16:
 ; GCN: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_lshlrev_b16 [[RESULT:v[0-9]+]], [[RHS]], 8
-define void @shl_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @shl_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -98,7 +98,7 @@ define void @shl_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1
 ; GCN-LABEL: {{^}}shl_v_imm_v2i16:
 ; GCN: {{buffer|flat}}_load_dword [[LHS:v[0-9]+]]
 ; GFX9: v_pk_lshlrev_b16 [[RESULT:v[0-9]+]], 8, [[LHS]]
-define void @shl_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @shl_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -115,7 +115,7 @@ define void @shl_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: {{buffer|flat}}_store_dwordx2
-define void @v_shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -133,7 +133,7 @@ define void @v_shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; GCN: {{buffer|flat}}_store_dwordx2
-define void @shl_v_imm_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @shl_v_imm_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i64 %tid.ext

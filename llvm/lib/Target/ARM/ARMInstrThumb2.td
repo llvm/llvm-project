@@ -2079,6 +2079,19 @@ defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1>;
 defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube>;
 }
 
+def : t2InstSubst<"adc${s}${p} $rd, $rn, $imm",
+                 (t2SBCri rGPR:$rd, rGPR:$rn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
+def : t2InstSubst<"sbc${s}${p} $rd, $rn, $imm",
+                 (t2ADCri rGPR:$rd, rGPR:$rn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
+
+def : t2InstSubst<"add${s}${p}.w $rd, $rn, $imm",
+                 (t2SUBri GPRnopc:$rd, GPRnopc:$rn, t2_so_imm_neg:$imm, pred:$p, s_cc_out:$s)>;
+def : t2InstSubst<"addw${p} $rd, $rn, $imm",
+                 (t2SUBri12 GPRnopc:$rd, GPR:$rn, t2_so_imm_neg:$imm, pred:$p)>;
+def : t2InstSubst<"sub${s}${p}.w $rd, $rn, $imm",
+                 (t2ADDri GPRnopc:$rd, GPRnopc:$rn, t2_so_imm_neg:$imm, pred:$p, s_cc_out:$s)>;
+def : t2InstSubst<"subw${p} $rd, $rn, $imm",
+                 (t2ADDri12 GPRnopc:$rd, GPR:$rn, t2_so_imm_neg:$imm, pred:$p)>;
 // RSB
 defm t2RSB  : T2I_rbin_irs  <0b1110, "rsb", sub>;
 
@@ -4375,26 +4388,26 @@ def : t2InstAlias<"add${s}${p} $Rdn, $ShiftedRm",
                            pred:$p, cc_out:$s)>;
 
 // add w/ negative immediates is just a sub.
-def : t2InstAlias<"add${s}${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"add${s}${p} $Rd, $Rn, $imm",
         (t2SUBri GPRnopc:$Rd, GPRnopc:$Rn, t2_so_imm_neg:$imm, pred:$p,
                  cc_out:$s)>;
-def : t2InstAlias<"add${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"add${p} $Rd, $Rn, $imm",
            (t2SUBri12 GPRnopc:$Rd, GPR:$Rn, imm0_4095_neg:$imm, pred:$p)>;
-def : t2InstAlias<"add${s}${p} $Rdn, $imm",
+def : t2InstSubst<"add${s}${p} $Rdn, $imm",
       (t2SUBri GPRnopc:$Rdn, GPRnopc:$Rdn, t2_so_imm_neg:$imm, pred:$p,
                cc_out:$s)>;
-def : t2InstAlias<"add${p} $Rdn, $imm",
+def : t2InstSubst<"add${p} $Rdn, $imm",
            (t2SUBri12 GPRnopc:$Rdn, GPRnopc:$Rdn, imm0_4095_neg:$imm, pred:$p)>;
 
-def : t2InstAlias<"add${s}${p}.w $Rd, $Rn, $imm",
+def : t2InstSubst<"add${s}${p}.w $Rd, $Rn, $imm",
         (t2SUBri GPRnopc:$Rd, GPRnopc:$Rn, t2_so_imm_neg:$imm, pred:$p,
                  cc_out:$s)>;
-def : t2InstAlias<"addw${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"addw${p} $Rd, $Rn, $imm",
            (t2SUBri12 GPRnopc:$Rd, GPR:$Rn, imm0_4095_neg:$imm, pred:$p)>;
-def : t2InstAlias<"add${s}${p}.w $Rdn, $imm",
+def : t2InstSubst<"add${s}${p}.w $Rdn, $imm",
       (t2SUBri GPRnopc:$Rdn, GPRnopc:$Rdn, t2_so_imm_neg:$imm, pred:$p,
                cc_out:$s)>;
-def : t2InstAlias<"addw${p} $Rdn, $imm",
+def : t2InstSubst<"addw${p} $Rdn, $imm",
            (t2SUBri12 GPRnopc:$Rdn, GPRnopc:$Rdn, imm0_4095_neg:$imm, pred:$p)>;
 
 
@@ -4625,34 +4638,34 @@ def : t2InstAlias<"sxth${p} $Rd, $Rm$rot",
 
 // "mov Rd, t2_so_imm_not" can be handled via "mvn" in assembly, just like
 // for isel.
-def : t2InstAlias<"mov${p} $Rd, $imm",
+def : t2InstSubst<"mov${p} $Rd, $imm",
                   (t2MVNi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, zero_reg)>;
-def : t2InstAlias<"mvn${p} $Rd, $imm",
-                  (t2MOVi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, zero_reg)>;
+def : t2InstSubst<"mvn${s}${p} $Rd, $imm",
+                  (t2MOVi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
 // Same for AND <--> BIC
-def : t2InstAlias<"bic${s}${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"bic${s}${p} $Rd, $Rn, $imm",
                   (t2ANDri rGPR:$Rd, rGPR:$Rn, t2_so_imm_not:$imm,
                            pred:$p, cc_out:$s)>;
-def : t2InstAlias<"bic${s}${p} $Rdn, $imm",
+def : t2InstSubst<"bic${s}${p} $Rdn, $imm",
                   (t2ANDri rGPR:$Rdn, rGPR:$Rdn, t2_so_imm_not:$imm,
                            pred:$p, cc_out:$s)>;
-def : t2InstAlias<"and${s}${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"and${s}${p} $Rd, $Rn, $imm",
                   (t2BICri rGPR:$Rd, rGPR:$Rn, t2_so_imm_not:$imm,
                            pred:$p, cc_out:$s)>;
-def : t2InstAlias<"and${s}${p} $Rdn, $imm",
+def : t2InstSubst<"and${s}${p} $Rdn, $imm",
                   (t2BICri rGPR:$Rdn, rGPR:$Rdn, t2_so_imm_not:$imm,
                            pred:$p, cc_out:$s)>;
 // Likewise, "add Rd, t2_so_imm_neg" -> sub
-def : t2InstAlias<"add${s}${p} $Rd, $Rn, $imm",
+def : t2InstSubst<"add${s}${p} $Rd, $Rn, $imm",
                   (t2SUBri GPRnopc:$Rd, GPRnopc:$Rn, t2_so_imm_neg:$imm,
                            pred:$p, cc_out:$s)>;
-def : t2InstAlias<"add${s}${p} $Rd, $imm",
+def : t2InstSubst<"add${s}${p} $Rd, $imm",
                   (t2SUBri GPRnopc:$Rd, GPRnopc:$Rd, t2_so_imm_neg:$imm,
                            pred:$p, cc_out:$s)>;
 // Same for CMP <--> CMN via t2_so_imm_neg
-def : t2InstAlias<"cmp${p} $Rd, $imm",
+def : t2InstSubst<"cmp${p} $Rd, $imm",
                   (t2CMNri rGPR:$Rd, t2_so_imm_neg:$imm, pred:$p)>;
-def : t2InstAlias<"cmn${p} $Rd, $imm",
+def : t2InstSubst<"cmn${p} $Rd, $imm",
                   (t2CMPri rGPR:$Rd, t2_so_imm_neg:$imm, pred:$p)>;
 
 

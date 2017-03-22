@@ -13,7 +13,7 @@
 ; Make sure we are not masking the inputs
 ; CM-NOT: AND
 ; CM: MUL_INT24
-define void @test_smul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %a.shl = shl i32 %a, 8
   %a.24 = ashr i32 %a.shl, 8
@@ -39,7 +39,7 @@ entry:
 ; CM: MULHI_INT24
 ; CM: MULHI_INT24
 ; CM: MULHI_INT24
-define void @test_smulhi24_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smulhi24_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 entry:
   %a.shl = shl i32 %a, 8
   %a.24 = ashr i32 %a.shl, 8
@@ -70,7 +70,7 @@ entry:
 ; GCN-DAG: v_mul_i32_i24_e32
 
 ; GCN: buffer_store_dwordx2
-define void @test_smul24_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %shl.i = shl i32 %a, 8
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64
@@ -87,7 +87,7 @@ define void @test_smul24_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 ; GCN-DAG: v_mul_hi_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
 ; GCN-DAG: v_mul_i32_i24_e64 v{{[0-9]+}}, [[A]], [[A]]
 ; GCN: buffer_store_dwordx2
-define void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %shl.i = shl i32 %a, 8
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64
@@ -112,7 +112,7 @@ define void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 ; VI: v_ashrrev_i64 v{{\[[0-9]+:[0-9]+\]}}, 31, v{{\[[0-9]+:[0-9]+\]}}
 
 ; GCN: buffer_store_dwordx2
-define void @test_smul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %b) #0 {
+define amdgpu_kernel void @test_smul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %b) #0 {
 entry:
   %a.shl = shl i33 %a, 9
   %a.24 = ashr i33 %a.shl, 9
@@ -133,7 +133,7 @@ entry:
 ; SI: v_mul_hi_i32_i24_e32 v[[MUL_HI:[0-9]+]],
 ; SI-NEXT: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
 ; SI-NEXT: buffer_store_dword v[[HI]]
-define void @test_smulhi24_i33(i32 addrspace(1)* %out, i33 %a, i33 %b) {
+define amdgpu_kernel void @test_smulhi24_i33(i32 addrspace(1)* %out, i33 %a, i33 %b) {
 entry:
   %tmp0 = shl i33 %a, 9
   %a_24 = ashr i33 %tmp0, 9
@@ -151,7 +151,7 @@ entry:
 ; GCN: v_mul_i32_i24_e32 v[[VAL_LO:[0-9]+]]
 ; GCN: v_mov_b32_e32 v[[VAL_HI:[0-9]+]], v[[VAL_LO]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[VAL_LO]]:[[VAL_HI]]{{\]}}
-define void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
+define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
 bb:
   %cmp = icmp eq i32 %arg0, 0
   br i1 %cmp, label %bb11, label %bb7

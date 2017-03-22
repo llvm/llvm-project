@@ -7,7 +7,7 @@
 ; GCN: v_cvt_f32_f16_e32 v[[R_F32:[0-9]+]], v[[A_F16]]
 ; GCN: buffer_store_dword v[[R_F32]]
 ; GCN: s_endpgm
-define void @fpext_f16_to_f32(
+define amdgpu_kernel void @fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) #0 {
 entry:
@@ -23,7 +23,7 @@ entry:
 ; GCN: v_cvt_f64_f32_e32 v{{\[}}[[R_F64_0:[0-9]+]]:[[R_F64_1:[0-9]+]]{{\]}}, v[[A_F32]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_F64_0]]:[[R_F64_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fpext_f16_to_f64(
+define amdgpu_kernel void @fpext_f16_to_f64(
     double addrspace(1)* %r,
     half addrspace(1)* %a) #0 {
 entry:
@@ -41,7 +41,7 @@ entry:
 ; GCN: v_cvt_f32_f16_e32 v[[R_F32_1:[0-9]+]], v[[A_F16_1]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_F32_0]]:[[R_F32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fpext_v2f16_to_v2f32(
+define amdgpu_kernel void @fpext_v2f16_to_v2f32(
     <2 x float> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) #0 {
 entry:
@@ -61,7 +61,7 @@ entry:
 ; GCN: v_cvt_f64_f32_e32
 ; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm
-define void @fpext_v2f16_to_v2f64(
+define amdgpu_kernel void @fpext_v2f16_to_v2f64(
     <2 x double> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) {
 entry:
@@ -73,7 +73,7 @@ entry:
 
 ; GCN-LABEL: {{^}}s_fneg_fpext_f16_to_f32:
 ; GCN: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
-define void @s_fneg_fpext_f16_to_f32(float addrspace(1)* %r, i32 %a) {
+define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(float addrspace(1)* %r, i32 %a) {
 entry:
   %a.trunc = trunc i32 %a to i16
   %a.val = bitcast i16 %a.trunc to half
@@ -85,7 +85,7 @@ entry:
 ; GCN-LABEL: {{^}}fneg_fpext_f16_to_f32:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, -[[A]]
-define void @fneg_fpext_f16_to_f32(
+define amdgpu_kernel void @fneg_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -99,7 +99,7 @@ entry:
 ; GCN-LABEL: {{^}}fabs_fpext_f16_to_f32:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, |[[A]]|
-define void @fabs_fpext_f16_to_f32(
+define amdgpu_kernel void @fabs_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -113,7 +113,7 @@ entry:
 ; GCN-LABEL: {{^}}fneg_fabs_fpext_f16_to_f32:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, -|[[A]]|
-define void @fneg_fabs_fpext_f16_to_f32(
+define amdgpu_kernel void @fneg_fabs_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -135,7 +135,7 @@ entry:
 
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
-define void @fneg_multi_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fneg_multi_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -159,7 +159,7 @@ entry:
 
 ; GCN: buffer_store_dword [[CVTA_NEG]]
 ; GCN: buffer_store_short [[MUL]]
-define void @fneg_multi_foldable_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fneg_multi_foldable_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -181,7 +181,7 @@ entry:
 
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
-define void @fabs_multi_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fabs_multi_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -205,7 +205,7 @@ entry:
 
 ; GCN: buffer_store_dword [[ABS_A]]
 ; GCN: buffer_store_short [[MUL]]
-define void @fabs_multi_foldable_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fabs_multi_foldable_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -227,7 +227,7 @@ entry:
 
 ; GCN: buffer_store_dword [[CVT]]
 ; GCN: buffer_store_short [[OR]]
-define void @fabs_fneg_multi_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fabs_fneg_multi_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -252,7 +252,7 @@ entry:
 
 ; GCN: buffer_store_dword [[FABS_FNEG]]
 ; GCN: buffer_store_short [[MUL]]
-define void @fabs_fneg_multi_foldable_use_fpext_f16_to_f32(
+define amdgpu_kernel void @fabs_fneg_multi_foldable_use_fpext_f16_to_f32(
     float addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:

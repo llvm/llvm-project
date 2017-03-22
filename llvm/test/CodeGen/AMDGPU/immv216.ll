@@ -6,7 +6,7 @@
 ; GCN-LABEL: {{^}}store_inline_imm_neg_0.0_v2i16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80008000{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_neg_0.0_v2i16(<2 x i16> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_neg_0.0_v2i16(<2 x i16> addrspace(1)* %out) #0 {
   store <2 x i16> <i16 -32768, i16 -32768>, <2 x i16> addrspace(1)* %out
   ret void
 }
@@ -14,7 +14,7 @@ define void @store_inline_imm_neg_0.0_v2i16(<2 x i16> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_0.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0.0, half 0.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -22,7 +22,7 @@ define void @store_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_imm_neg_0.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80008000{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_imm_neg_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_imm_neg_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -0.0, half -0.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -30,7 +30,7 @@ define void @store_imm_neg_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_0.5_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x38003800{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0.5, half 0.5>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -38,7 +38,7 @@ define void @store_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_m_0.5_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xb800b800{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_m_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_m_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -0.5, half -0.5>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -46,7 +46,7 @@ define void @store_inline_imm_m_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_1.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x3c003c00{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 1.0, half 1.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -54,7 +54,7 @@ define void @store_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_m_1.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xbc00bc00{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_m_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_m_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -1.0, half -1.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -62,7 +62,7 @@ define void @store_inline_imm_m_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_2.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x40004000{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 2.0, half 2.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -70,7 +70,7 @@ define void @store_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_m_2.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xc000c000{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_m_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_m_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -2.0, half -2.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -78,7 +78,7 @@ define void @store_inline_imm_m_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_4.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x44004400{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 4.0, half 4.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -86,7 +86,7 @@ define void @store_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_m_4.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xc400c400{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_m_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_m_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -4.0, half -4.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -94,7 +94,7 @@ define void @store_inline_imm_m_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_inv_2pi_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x31183118{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0xH3118, half 0xH3118>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -102,7 +102,7 @@ define void @store_inline_imm_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}store_inline_imm_m_inv_2pi_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xb118b118{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @store_inline_imm_m_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_inline_imm_m_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0xHB118, half 0xHB118>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -110,7 +110,7 @@ define void @store_inline_imm_m_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 
 ; GCN-LABEL: {{^}}store_literal_imm_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x6c006c00
 ; GCN: buffer_store_dword [[REG]]
-define void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 4096.0, half 4096.0>, <2 x half> addrspace(1)* %out
   ret void
 }
@@ -126,7 +126,7 @@ define void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out) #0 {
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0.0, half 0.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -143,7 +143,7 @@ define void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0.5, half 0.5>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -160,7 +160,7 @@ define void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -0.5, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half -0.5, half -0.5>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -177,7 +177,7 @@ define void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x ha
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 1.0, half 1.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -194,7 +194,7 @@ define void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half -1.0, half -1.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -211,7 +211,7 @@ define void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x ha
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 2.0, half 2.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -228,7 +228,7 @@ define void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half -2.0, half -2.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -245,7 +245,7 @@ define void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x ha
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 4.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 4.0, half 4.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -262,7 +262,7 @@ define void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -4.0, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half -4.0, half -4.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -280,7 +280,7 @@ define void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x ha
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %x = load <2 x half>, <2 x half> addrspace(1)* %in
   %y = fadd <2 x half> %x, <half 0.5, half 0.5>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
@@ -301,7 +301,7 @@ define void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %x = load <2 x half>, <2 x half> addrspace(1)* %in
   %y = fadd <2 x half> %x, <half 1024.0, half 1024.0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
@@ -319,7 +319,7 @@ define void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %out, <2 x half>
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xH0001, half 0xH0001>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -336,7 +336,7 @@ define void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xH0002, half 0xH0002>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -353,7 +353,7 @@ define void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 16, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xH0010, half 0xH0010>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -370,7 +370,7 @@ define void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xHFFFF, half 0xHFFFF>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -387,7 +387,7 @@ define void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xHFFFE, half 0xHFFFE>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -404,7 +404,7 @@ define void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -16, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xHFFF0, half 0xHFFF0>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -421,7 +421,7 @@ define void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* %out, <2 x hal
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 63, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xH003F, half 0xH003F>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void
@@ -438,7 +438,7 @@ define void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 64, [[VAL1]]
 ; VI: v_or_b32
 ; VI: buffer_store_dword
-define void @add_inline_imm_64_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
+define amdgpu_kernel void @add_inline_imm_64_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
   %y = fadd <2 x half> %x, <half 0xH0040, half 0xH0040>
   store <2 x half> %y, <2 x half> addrspace(1)* %out
   ret void

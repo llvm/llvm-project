@@ -17,7 +17,6 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
@@ -538,26 +537,6 @@ public:
   void RemoveLastPathComponent();
 
   ConstString GetLastPathComponent() const;
-
-  //------------------------------------------------------------------
-  /// Resolves the user name at the beginning of \a src_path, and writes the
-  /// output
-  /// to \a dst_path.  Note, \a src_path can contain other path components after
-  /// the
-  /// user name, they will be copied over, and if the path doesn't start with
-  /// "~" it
-  /// will also be copied over to \a dst_path.
-  ///
-  /// @param[in] src_path
-  ///     Input path to be resolved.
-  ///
-  /// @param[in] dst_path
-  ///     Buffer to store the resolved path.
-  //------------------------------------------------------------------
-  static void ResolveUsername(llvm::SmallVectorImpl<char> &path);
-
-  static size_t ResolvePartialUsername(llvm::StringRef partial_name,
-                                       StringList &matches);
 
   enum EnumerateDirectoryResult {
     eEnumerateDirectoryResultNext,  // Enumerate next entry in the current

@@ -7,7 +7,7 @@
 
 ; VI: v_add_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_add_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -27,7 +27,7 @@ define void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(
 
 ; VI: s_add_i32
 ; VI: s_add_i32
-define void @s_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0, <2 x i16> addrspace(2)* %in1) #1 {
+define amdgpu_kernel void @s_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0, <2 x i16> addrspace(2)* %in1) #1 {
   %a = load <2 x i16>, <2 x i16> addrspace(2)* %in0
   %b = load <2 x i16>, <2 x i16> addrspace(2)* %in1
   %add = add <2 x i16> %a, %b
@@ -41,7 +41,7 @@ define void @s_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(
 
 ; VI: s_add_i32
 ; VI: s_add_i32
-define void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0) #1 {
+define amdgpu_kernel void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(2)* %in0) #1 {
   %a = load <2 x i16>, <2 x i16> addrspace(2)* %in0
   %add = add <2 x i16> %a, %a
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
@@ -54,7 +54,7 @@ define void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrs
 
 ; VI: v_add_i32
 ; VI: v_add_i32
-define void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
+define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
   %add = add <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
   ret void
@@ -66,7 +66,7 @@ define void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a
 
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0x7b, v{{[0-9]+}}
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0x1c8, v{{[0-9]+}}
-define void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -83,7 +83,7 @@ define void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %out, <2 x i16> a
 
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0xfffffcb3, v{{[0-9]+}}
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0xfffffc21, v{{[0-9]+}}
-define void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -102,7 +102,7 @@ define void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i1
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, -1, [[LOAD1]]
 ; VI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
 ; VI: v_or_b32_e32
-define void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -121,7 +121,7 @@ define void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* %out, <2 x i16
 ; VI-NOT: v_add_u16
 ; VI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
 ; VI: v_or_b32_e32
-define void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -141,7 +141,7 @@ define void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspace(1)* %out, <2
 ; VI-NOT: v_add_u16
 ; VI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
 ; VI: v_or_b32_e32
-define void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -173,7 +173,7 @@ define void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(1)* %out, <2 x
 ; VI-NOT: and
 ; VI-NOT: shl
 ; VI: buffer_store_dwordx2 v{{\[}}[[ADD_LO]]:[[ADD_HI]]{{\]}}
-define void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -208,7 +208,7 @@ define void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 ; VI: v_add_u16_e32
 
 ; VI: buffer_store_dwordx4
-define void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i64>, <2 x i64> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -236,7 +236,7 @@ define void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i
 ; VI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; VI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; VI: buffer_store_dwordx2
-define void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
@@ -264,7 +264,7 @@ define void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, v{{[0-9]+}}
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, v{{[0-9]+}}
-define void @v_test_add_v2i16_sext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i64>, <2 x i64> addrspace(1)* %out, i32 %tid
   %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid

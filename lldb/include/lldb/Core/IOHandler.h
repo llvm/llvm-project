@@ -23,12 +23,12 @@
 // Project includes
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

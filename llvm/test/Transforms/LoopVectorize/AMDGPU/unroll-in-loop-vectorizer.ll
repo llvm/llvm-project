@@ -7,7 +7,7 @@
 ; CHECK: store i32
 ; CHECK-NOT: store i32
 ; CHECK: ret
-define void @small_loop(i32* nocapture %inArray, i32 %size) nounwind {
+define amdgpu_kernel void @small_loop(i32* nocapture %inArray, i32 %size) nounwind {
 entry:
   %0 = icmp sgt i32 %size, 0
   br i1 %0, label %loop, label %exit

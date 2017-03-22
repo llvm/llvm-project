@@ -153,14 +153,14 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   Function *InitFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           InitName, FunctionType::get(IRB.getVoidTy(), InitArgTypes, false),
-          AttributeSet()));
+          AttributeList()));
   InitFunction->setLinkage(Function::ExternalLinkage);
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
     Function *VersionCheckFunction =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
             VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
-            AttributeSet()));
+            AttributeList()));
     IRB.CreateCall(VersionCheckFunction, {});
   }
   return std::make_pair(Ctor, InitFunction);

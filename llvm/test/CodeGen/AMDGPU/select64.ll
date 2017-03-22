@@ -7,7 +7,7 @@
 ; CHECK-NOT: s_lshr_b64
 ; CHECK: v_cndmask
 ; CHECK: v_cndmask
-define void @select0(i64 addrspace(1)* %out, i32 %cond, i64 %in) {
+define amdgpu_kernel void @select0(i64 addrspace(1)* %out, i32 %cond, i64 %in) {
 entry:
   %0 = icmp ugt i32 %cond, 5
   %1 = select i1 %0, i64 0, i64 %in
@@ -18,7 +18,7 @@ entry:
 ; CHECK-LABEL: {{^}}select_trunc_i64:
 ; CHECK: v_cndmask_b32
 ; CHECK-NOT: v_cndmask_b32
-define void @select_trunc_i64(i32 addrspace(1)* %out, i32 %cond, i64 %in) nounwind {
+define amdgpu_kernel void @select_trunc_i64(i32 addrspace(1)* %out, i32 %cond, i64 %in) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %sel = select i1 %cmp, i64 0, i64 %in
   %trunc = trunc i64 %sel to i32
@@ -29,7 +29,7 @@ define void @select_trunc_i64(i32 addrspace(1)* %out, i32 %cond, i64 %in) nounwi
 ; CHECK-LABEL: {{^}}select_trunc_i64_2:
 ; CHECK: v_cndmask_b32
 ; CHECK-NOT: v_cndmask_b32
-define void @select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 %a, i64 %b) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %sel = select i1 %cmp, i64 %a, i64 %b
   %trunc = trunc i64 %sel to i32
@@ -40,7 +40,7 @@ define void @select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 %a, i64 %
 ; CHECK-LABEL: {{^}}v_select_trunc_i64_2:
 ; CHECK: v_cndmask_b32
 ; CHECK-NOT: v_cndmask_b32
-define void @v_select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %a = load i64, i64 addrspace(1)* %aptr, align 8
   %b = load i64, i64 addrspace(1)* %bptr, align 8
@@ -54,7 +54,7 @@ define void @v_select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 addrspa
 ; CHECK-DAG: v_cndmask_b32_e32 {{v[0-9]+}}, 0, {{v[0-9]+}}
 ; CHECK-DAG: v_cndmask_b32_e32 {{v[0-9]+}}, 63, {{v[0-9]+}}
 ; CHECK: s_endpgm
-define void @v_select_i64_split_imm(i64 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_select_i64_split_imm(i64 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %a = load i64, i64 addrspace(1)* %aptr, align 8
   %b = load i64, i64 addrspace(1)* %bptr, align 8

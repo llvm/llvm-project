@@ -11,7 +11,7 @@
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_lt(
+define amdgpu_kernel void @fcmp_f16_lt(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -37,7 +37,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_lt_abs(
+define amdgpu_kernel void @fcmp_f16_lt_abs(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -62,7 +62,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_eq(
+define amdgpu_kernel void @fcmp_f16_eq(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -85,7 +85,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_le(
+define amdgpu_kernel void @fcmp_f16_le(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -108,7 +108,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_gt(
+define amdgpu_kernel void @fcmp_f16_gt(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -131,7 +131,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_lg(
+define amdgpu_kernel void @fcmp_f16_lg(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -154,7 +154,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_ge(
+define amdgpu_kernel void @fcmp_f16_ge(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -177,7 +177,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_o(
+define amdgpu_kernel void @fcmp_f16_o(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -200,7 +200,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_u(
+define amdgpu_kernel void @fcmp_f16_u(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -223,7 +223,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_nge(
+define amdgpu_kernel void @fcmp_f16_nge(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -246,7 +246,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_nlg(
+define amdgpu_kernel void @fcmp_f16_nlg(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -269,7 +269,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_ngt(
+define amdgpu_kernel void @fcmp_f16_ngt(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -292,7 +292,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_nle(
+define amdgpu_kernel void @fcmp_f16_nle(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -315,7 +315,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_neq(
+define amdgpu_kernel void @fcmp_f16_neq(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -338,7 +338,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
-define void @fcmp_f16_nlt(
+define amdgpu_kernel void @fcmp_f16_nlt(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -368,7 +368,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_lt(
+define amdgpu_kernel void @fcmp_v2f16_lt(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -398,7 +398,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_eq(
+define amdgpu_kernel void @fcmp_v2f16_eq(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -428,7 +428,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_le(
+define amdgpu_kernel void @fcmp_v2f16_le(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -458,7 +458,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_gt(
+define amdgpu_kernel void @fcmp_v2f16_gt(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -488,7 +488,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_lg(
+define amdgpu_kernel void @fcmp_v2f16_lg(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -518,7 +518,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_ge(
+define amdgpu_kernel void @fcmp_v2f16_ge(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -548,7 +548,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_o(
+define amdgpu_kernel void @fcmp_v2f16_o(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -578,7 +578,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_u(
+define amdgpu_kernel void @fcmp_v2f16_u(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -608,7 +608,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_nge(
+define amdgpu_kernel void @fcmp_v2f16_nge(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -638,7 +638,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_nlg(
+define amdgpu_kernel void @fcmp_v2f16_nlg(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -668,7 +668,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_ngt(
+define amdgpu_kernel void @fcmp_v2f16_ngt(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -698,7 +698,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_nle(
+define amdgpu_kernel void @fcmp_v2f16_nle(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -728,7 +728,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_neq(
+define amdgpu_kernel void @fcmp_v2f16_neq(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {
@@ -758,7 +758,7 @@ entry:
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
-define void @fcmp_v2f16_nlt(
+define amdgpu_kernel void @fcmp_v2f16_nlt(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {

@@ -10,7 +10,7 @@
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
 ; and profile count, with value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[COLD:.*]] op7=1 op8=[[HOT2:.*]] op9=3 op10=[[NONE1:.*]] op11=2 op12=[[HOT3:.*]] op13=3 op14=[[NONE2:.*]] op15=2 op16=[[NONE3:.*]] op17=2 op18=[[LEGACY:.*]] op19=3/>
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[COLD:.*]] op7=1 op8=[[HOT2:.*]] op9=3 op10=[[HOT4:.*]] op11=3 op12=[[NONE1:.*]] op13=2 op14=[[HOT3:.*]] op15=3 op16=[[NONE2:.*]] op17=2 op18=[[NONE3:.*]] op19=2 op20=[[LEGACY:.*]] op21=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK-LABEL:  <VALUE_SYMTAB
 ; CHECK-NEXT:       <FNENTRY {{.*}} record string = 'hot_function
@@ -21,6 +21,7 @@
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT1]] {{.*}} record string = 'hot1'
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT2]] {{.*}} record string = 'hot2'
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT3]] {{.*}} record string = 'hot3'
+; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT4]] {{.*}} record string = 'hot4'
 ; CHECK-DAG:        <COMBINED_ENTRY abbrevid=11 op0=[[LEGACY]] op1=123/>
 ; CHECK-LABEL:  </VALUE_SYMTAB>
 
@@ -49,6 +50,7 @@ entry:
 Cold:           ; 1/1000 goes here
   call void @cold()
   call void @hot2()
+  call void @hot4(), !prof !15
   call void @none1()
   br label %exit
 Hot:            ; 999/1000 goes here
@@ -69,6 +71,7 @@ exit:
 declare void @hot1() #1
 declare void @hot2() #1
 declare void @hot3() #1
+declare void @hot4() #1
 declare void @cold() #1
 declare void @none1() #1
 declare void @none2() #1
@@ -97,3 +100,4 @@ declare void @none3() #1
 !12 = !{i32 10000, i64 100, i32 1}
 !13 = !{i32 999000, i64 100, i32 1}
 !14 = !{i32 999999, i64 1, i32 2}
+!15 = !{!"branch_weights", i32 100}

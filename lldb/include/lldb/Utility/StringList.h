@@ -15,12 +15,12 @@
 
 // C++ Includes
 #include <string>
+#include <vector>
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/STLUtils.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {
@@ -131,7 +131,7 @@ public:
   }
 
 private:
-  STLStringArray m_strings;
+  std::vector<std::string> m_strings;
 };
 
 } // namespace lldb_private

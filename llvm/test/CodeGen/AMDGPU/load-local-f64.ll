@@ -9,7 +9,7 @@
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_f64(double addrspace(3)* %out, double addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_f64(double addrspace(3)* %out, double addrspace(3)* %in) #0 {
   %ld = load double, double addrspace(3)* %in
   store double %ld, double addrspace(3)* %out
   ret void
@@ -22,7 +22,7 @@ define void @local_load_f64(double addrspace(3)* %out, double addrspace(3)* %in)
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v2f64(<2 x double> addrspace(3)* %out, <2 x double> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v2f64(<2 x double> addrspace(3)* %out, <2 x double> addrspace(3)* %in) #0 {
 entry:
   %ld = load <2 x double>, <2 x double> addrspace(3)* %in
   store <2 x double> %ld, <2 x double> addrspace(3)* %out
@@ -39,7 +39,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v3f64(<3 x double> addrspace(3)* %out, <3 x double> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v3f64(<3 x double> addrspace(3)* %out, <3 x double> addrspace(3)* %in) #0 {
 entry:
   %ld = load <3 x double>, <3 x double> addrspace(3)* %in
   store <3 x double> %ld, <3 x double> addrspace(3)* %out
@@ -59,7 +59,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v4f64(<4 x double> addrspace(3)* %out, <4 x double> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v4f64(<4 x double> addrspace(3)* %out, <4 x double> addrspace(3)* %in) #0 {
 entry:
   %ld = load <4 x double>, <4 x double> addrspace(3)* %in
   store <4 x double> %ld, <4 x double> addrspace(3)* %out
@@ -88,7 +88,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v8f64(<8 x double> addrspace(3)* %out, <8 x double> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v8f64(<8 x double> addrspace(3)* %out, <8 x double> addrspace(3)* %in) #0 {
 entry:
   %ld = load <8 x double>, <8 x double> addrspace(3)* %in
   store <8 x double> %ld, <8 x double> addrspace(3)* %out
@@ -144,7 +144,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v16f64(<16 x double> addrspace(3)* %out, <16 x double> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v16f64(<16 x double> addrspace(3)* %out, <16 x double> addrspace(3)* %in) #0 {
 entry:
   %ld = load <16 x double>, <16 x double> addrspace(3)* %in
   store <16 x double> %ld, <16 x double> addrspace(3)* %out

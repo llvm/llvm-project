@@ -9,7 +9,7 @@
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[SUB]]
 
 ; GCN-UNSAFE-NOT: xor
-define void @fneg_fsub_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @fneg_fsub_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %a = load float, float addrspace(1)* %in, align 4
   %b = load float, float addrspace(1)* %b_ptr, align 4

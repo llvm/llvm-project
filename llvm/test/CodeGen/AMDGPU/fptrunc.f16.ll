@@ -8,7 +8,7 @@
 ; GCN: v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fptrunc_f32_to_f16(
+define amdgpu_kernel void @fptrunc_f32_to_f16(
     half addrspace(1)* %r,
     float addrspace(1)* %a) {
 entry:
@@ -24,7 +24,7 @@ entry:
 ; GCN: v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fptrunc_f64_to_f16(
+define amdgpu_kernel void @fptrunc_f64_to_f16(
     half addrspace(1)* %r,
     double addrspace(1)* %a) {
 entry:
@@ -48,7 +48,7 @@ entry:
 
 ; GCN:     buffer_store_dword v[[R_V2_F16]]
 ; GCN:     s_endpgm
-define void @fptrunc_v2f32_to_v2f16(
+define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x float> addrspace(1)* %a) {
 entry:
@@ -74,7 +74,7 @@ entry:
 ; GFX9-DENORM: v_pack_b32_f16 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_1]]
 
 ; GCN: buffer_store_dword v[[R_V2_F16]]
-define void @fptrunc_v2f64_to_v2f16(
+define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x double> addrspace(1)* %a) {
 entry:
@@ -89,7 +89,7 @@ entry:
 ; GCN: v_cvt_f16_f32_e64 v[[R_F16:[0-9]+]], -v[[A_F32]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fneg_fptrunc_f32_to_f16(
+define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
     half addrspace(1)* %r,
     float addrspace(1)* %a) {
 entry:
@@ -105,7 +105,7 @@ entry:
 ; GCN: v_cvt_f16_f32_e64 v[[R_F16:[0-9]+]], |v[[A_F32]]|
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fabs_fptrunc_f32_to_f16(
+define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
     half addrspace(1)* %r,
     float addrspace(1)* %a) {
 entry:
@@ -121,7 +121,7 @@ entry:
 ; GCN: v_cvt_f16_f32_e64 v[[R_F16:[0-9]+]], -|v[[A_F32]]|
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fneg_fabs_fptrunc_f32_to_f16(
+define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
     half addrspace(1)* %r,
     float addrspace(1)* %a) {
 entry:

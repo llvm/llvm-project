@@ -412,7 +412,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   if (CI->doesNotReturn()) {
     if (auto *F = dyn_cast<Function>(CI->getCalledValue()))
       F->removeFnAttr(Attribute::NoReturn);
-    CI->removeAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
+    CI->removeAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
 
   IRBuilder<> IRB(C);
@@ -435,24 +435,25 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 
   // Because we added the pointer to the callee as first argument, all
   // argument attribute indices have to be incremented by one.
-  SmallVector<AttributeSet, 8> AttributesVec;
-  const AttributeSet &InvokePAL = CI->getAttributes();
+  SmallVector<AttributeList, 8> AttributesVec;
+  const AttributeList &InvokePAL = CI->getAttributes();
   CallSite::arg_iterator AI = CI->arg_begin();
   unsigned i = 1; // Argument attribute index starts from 1
   for (unsigned e = CI->getNumArgOperands(); i <= e; ++AI, ++i) {
     if (InvokePAL.hasAttributes(i)) {
       AttrBuilder B(InvokePAL, i);
-      AttributesVec.push_back(AttributeSet::get(C, i + 1, B));
+      AttributesVec.push_back(AttributeList::get(C, i + 1, B));
     }
   }
   // Add any return attributes.
-  if (InvokePAL.hasAttributes(AttributeSet::ReturnIndex))
-    AttributesVec.push_back(AttributeSet::get(C, InvokePAL.getRetAttributes()));
+  if (InvokePAL.hasAttributes(AttributeList::ReturnIndex))
+    AttributesVec.push_back(
+        AttributeList::get(C, InvokePAL.getRetAttributes()));
   // Add any function attributes.
-  if (InvokePAL.hasAttributes(AttributeSet::FunctionIndex))
-    AttributesVec.push_back(AttributeSet::get(C, InvokePAL.getFnAttributes()));
+  if (InvokePAL.hasAttributes(AttributeList::FunctionIndex))
+    AttributesVec.push_back(AttributeList::get(C, InvokePAL.getFnAttributes()));
   // Reconstruct the AttributesList based on the vector we constructed.
-  AttributeSet NewCallPAL = AttributeSet::get(C, AttributesVec);
+  AttributeList NewCallPAL = AttributeList::get(C, AttributesVec);
   NewCall->setAttributes(NewCallPAL);
 
   CI->replaceAllUsesWith(NewCall);

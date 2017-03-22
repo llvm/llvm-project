@@ -1119,7 +1119,7 @@ public:
   FPMapTy FPConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
-  FoldingSet<AttributeSetImpl> AttrsLists;
+  FoldingSet<AttributeListImpl> AttrsLists;
   FoldingSet<AttributeSetNode> AttrsSetNodes;
 
   StringMap<MDString, BumpPtrAllocator> MDStringCache;

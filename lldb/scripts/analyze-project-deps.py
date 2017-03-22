@@ -1,6 +1,8 @@
 import argparse
+import itertools
 import os
 import re
+import sys
 
 from use_lldb_suite import lldb_root
 
@@ -102,9 +104,7 @@ def expand(path_queue, path_lengths, cycles, src_map):
             continue
 
         next_len = path_lengths.pop(0) + 1
-
         last_component = cur_path[-1]
-
         for item in src_map[last_component]:
             if item.startswith("clang"):
                 continue
@@ -143,6 +143,19 @@ for (path, deps) in items:
         for dep in sorted_deps:
             print "\t{}".format(dep[0])
 
+def iter_cycles(cycles):
+    global src_map
+    for cycle in cycles:
+        cycle.append(cycle[0])
+        zipper = list(zip(cycle[0:-1], cycle[1:]))
+        result = [(x, src_map[x][y], y) for (x,y) in zipper]
+        total = 0
+        smallest = result[0][1]
+        for (first, value, last) in result:
+            total += value
+            smallest = min(smallest, value)
+        yield (total, smallest, result)
+
 if args.discover_cycles:
     print "Analyzing cycles..."
 
@@ -151,8 +164,18 @@ if args.discover_cycles:
     average = sum([len(x)+1 for x in cycles]) / len(cycles)
 
     print "Found {} cycles.  Average cycle length = {}.".format(len(cycles), average)
-    for cycle in cycles:
-        cycle.append(cycle[0])
-        print " -> ".join(cycle)
-
+    if args.show_counts:
+        counted = list(iter_cycles(cycles))
+        counted.sort(lambda A, B: cmp(A[0], B[0]))
+        for (total, smallest, cycle) in counted:
+            sys.stdout.write("{} deps to break: ".format(total))
+            sys.stdout.write(cycle[0][0])
+            for (first, count, last) in cycle:
+                sys.stdout.write(" [{}->] {}".format(count, last))
+            sys.stdout.write("\n")
+    else:
+        for cycle in cycles:
+            cycle.append(cycle[0])
+            print " -> ".join(cycle)
+    sys.stdout.flush()
 pass

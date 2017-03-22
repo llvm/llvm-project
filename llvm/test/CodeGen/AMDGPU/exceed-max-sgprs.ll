@@ -1,7 +1,7 @@
 ; RUN: not llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_tahiti
-define void @use_too_many_sgprs_tahiti() #0 {
+define amdgpu_kernel void @use_too_many_sgprs_tahiti() #0 {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
   call void asm sideeffect "", "~{SGPR16_SGPR17_SGPR18_SGPR19_SGPR20_SGPR21_SGPR22_SGPR23}" ()
@@ -20,7 +20,7 @@ define void @use_too_many_sgprs_tahiti() #0 {
 }
 
 ; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_bonaire
-define void @use_too_many_sgprs_bonaire() #1 {
+define amdgpu_kernel void @use_too_many_sgprs_bonaire() #1 {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
   call void asm sideeffect "", "~{SGPR16_SGPR17_SGPR18_SGPR19_SGPR20_SGPR21_SGPR22_SGPR23}" ()
@@ -39,7 +39,7 @@ define void @use_too_many_sgprs_bonaire() #1 {
 }
 
 ; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_bonaire_flat_scr
-define void @use_too_many_sgprs_bonaire_flat_scr() #1 {
+define amdgpu_kernel void @use_too_many_sgprs_bonaire_flat_scr() #1 {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
   call void asm sideeffect "", "~{SGPR16_SGPR17_SGPR18_SGPR19_SGPR20_SGPR21_SGPR22_SGPR23}" ()
@@ -59,7 +59,7 @@ define void @use_too_many_sgprs_bonaire_flat_scr() #1 {
 }
 
 ; ERROR: error: scalar registers limit of 96 exceeded (98) in use_too_many_sgprs_iceland
-define void @use_too_many_sgprs_iceland() #2 {
+define amdgpu_kernel void @use_too_many_sgprs_iceland() #2 {
   call void asm sideeffect "", "~{VCC}" ()
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
@@ -77,7 +77,7 @@ define void @use_too_many_sgprs_iceland() #2 {
 }
 
 ; ERROR: error: addressable scalar registers limit of 102 exceeded (103) in use_too_many_sgprs_fiji
-define void @use_too_many_sgprs_fiji() #3 {
+define amdgpu_kernel void @use_too_many_sgprs_fiji() #3 {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
   call void asm sideeffect "", "~{SGPR16_SGPR17_SGPR18_SGPR19_SGPR20_SGPR21_SGPR22_SGPR23}" ()

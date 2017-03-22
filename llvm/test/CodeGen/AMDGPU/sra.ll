@@ -13,7 +13,7 @@ declare i32 @llvm.r600.read.tidig.x() #0
 
 ; EG: ASHR {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: ASHR {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-define void @ashr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
   %a = load <2 x i32>, <2 x i32> addrspace(1)* %in
   %b = load <2 x i32>, <2 x i32> addrspace(1)* %b_ptr
@@ -37,7 +37,7 @@ define void @ashr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %i
 ; EG: ASHR {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: ASHR {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: ASHR {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-define void @ashr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
   %b = load <4 x i32>, <4 x i32> addrspace(1)* %b_ptr
@@ -51,7 +51,7 @@ define void @ashr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %i
 ; global load we end up with the vector instructions rather than scalar.
 ; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-define void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %in, i16 1
   %a = load <2 x i16>, <2 x i16> addrspace(1)* %in
   %b = load <2 x i16>, <2 x i16> addrspace(1)* %b_ptr
@@ -67,7 +67,7 @@ define void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %i
 ; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-define void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %in, i16 1
   %a = load <4 x i16>, <4 x i16> addrspace(1)* %in
   %b = load <4 x i16>, <4 x i16> addrspace(1)* %b_ptr
@@ -80,7 +80,7 @@ define void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %i
 ; GCN: s_ashr_i64 s[{{[0-9]}}:{{[0-9]}}], s[{{[0-9]}}:{{[0-9]}}], 8
 
 ; EG: ASHR
-define void @s_ashr_i64(i64 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @s_ashr_i64(i64 addrspace(1)* %out, i32 %in) {
 entry:
   %in.ext = sext i32 %in to i64
   %ashr = ashr i64 %in.ext, 8
@@ -105,7 +105,7 @@ entry:
 ; EG-DAG: SETGT_UINT {{\*? *}}[[RESC:T[0-9]+\.[XYZW]]], [[SHIFT]], literal
 ; EG-DAG: CNDE_INT {{\*? *}}[[RESLO:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
 ; EG-DAG: CNDE_INT {{\*? *}}[[RESHI:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
-define void @ashr_i64_2(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_i64_2(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 entry:
   %b_ptr = getelementptr i64, i64 addrspace(1)* %in, i64 1
   %a = load i64, i64 addrspace(1)* %in
@@ -143,7 +143,7 @@ entry:
 ; EG-DAG: CNDE_INT
 ; EG-DAG: CNDE_INT
 ; EG-DAG: CNDE_INT
-define void @ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i64>, <2 x i64> addrspace(1)* %in, i64 1
   %a = load <2 x i64>, <2 x i64> addrspace(1)* %in
   %b = load <2 x i64>, <2 x i64> addrspace(1)* %b_ptr
@@ -156,7 +156,7 @@ define void @ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %i
 ; XFUNC-LABEL: {{^}}s_ashr_v2i64:
 ; XGCN: s_ashr_i64 {{s\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], s[0-9]+}}
 ; XGCN: s_ashr_i64 {{s\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\], s[0-9]+}}
-; define void @s_ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in, <2 x i64> %a, <2 x i64> %b) {
+; define amdgpu_kernel void @s_ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in, <2 x i64> %a, <2 x i64> %b) {
 ;   %result = ashr <2 x i64> %a, %b
 ;   store <2 x i64> %result, <2 x i64> addrspace(1)* %out
 ;   ret void
@@ -221,7 +221,7 @@ define void @ashr_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %i
 ; EG-DAG: CNDE_INT
 ; EG-DAG: CNDE_INT
 ; EG-DAG: CNDE_INT
-define void @ashr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
+define amdgpu_kernel void @ashr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i64>, <4 x i64> addrspace(1)* %in, i64 1
   %a = load <4 x i64>, <4 x i64> addrspace(1)* %in
   %b = load <4 x i64>, <4 x i64> addrspace(1)* %b_ptr
@@ -235,7 +235,7 @@ define void @ashr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %i
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[HI]], s{{[0-9]+}}
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[SHIFT]], s{{[0-9]+}}
-define void @s_ashr_32_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_ashr_32_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
   %result = ashr i64 %a, 32
   %add = add i64 %result, %b
   store i64 %add, i64 addrspace(1)* %out
@@ -247,7 +247,7 @@ define void @s_ashr_32_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; VI: flat_load_dword v[[HI:[0-9]+]]
 ; GCN: v_ashrrev_i32_e32 v[[SHIFT:[0-9]+]], 31, v[[HI]]
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[HI]]:[[SHIFT]]{{\]}}
-define void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %tid = call i32 @llvm.r600.read.tidig.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -262,7 +262,7 @@ define void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
 ; GCN: s_add_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
 ; GCN: s_addc_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
-define void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
   %result = ashr i64 %a, 63
   %add = add i64 %result, %b
   store i64 %add, i64 addrspace(1)* %out
@@ -275,7 +275,7 @@ define void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GCN: v_ashrrev_i32_e32 v[[SHIFT:[0-9]+]], 31, v[[HI]]
 ; GCN: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[SHIFT]]
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[SHIFT]]:[[COPY]]{{\]}}
-define void @v_ashr_63_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @v_ashr_63_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %tid = call i32 @llvm.r600.read.tidig.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid

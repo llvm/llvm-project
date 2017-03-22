@@ -5,7 +5,7 @@
 
 ; GCN-LABEL: {{^}}stored_lds_pointer_value:
 ; GCN: buffer_store_dword v
-define void @stored_lds_pointer_value(float* addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value(float* addrspace(1)* %ptr) #0 {
   %tmp = alloca float
   store float 0.0, float *%tmp
   store float* %tmp, float* addrspace(1)* %ptr
@@ -14,7 +14,7 @@ define void @stored_lds_pointer_value(float* addrspace(1)* %ptr) #0 {
 
 ; GCN-LABEL: {{^}}stored_lds_pointer_value_offset:
 ; GCN: buffer_store_dword v
-define void @stored_lds_pointer_value_offset(float* addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value_offset(float* addrspace(1)* %ptr) #0 {
   %tmp0 = alloca float
   %tmp1 = alloca float
   store float 0.0, float *%tmp0
@@ -29,7 +29,7 @@ define void @stored_lds_pointer_value_offset(float* addrspace(1)* %ptr) #0 {
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GCN: buffer_store_dword v
 ; GCN: buffer_store_dword v
-define void @stored_lds_pointer_value_gep(float* addrspace(1)* %ptr, i32 %idx) #0 {
+define amdgpu_kernel void @stored_lds_pointer_value_gep(float* addrspace(1)* %ptr, i32 %idx) #0 {
 bb:
   %tmp = alloca float, i32 16
   store float 0.0, float* %tmp
@@ -46,7 +46,7 @@ bb:
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
-define void @stored_vector_pointer_value(i32* addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @stored_vector_pointer_value(i32* addrspace(1)* %out, i32 %index) {
 entry:
   %tmp0 = alloca [4 x i32]
   %x = getelementptr inbounds [4 x i32], [4 x i32]* %tmp0, i32 0, i32 0
@@ -64,7 +64,7 @@ entry:
 
 ; GCN-LABEL: {{^}}stored_fi_to_self:
 ; GCN-NOT: ds_
-define void @stored_fi_to_self() #0 {
+define amdgpu_kernel void @stored_fi_to_self() #0 {
   %tmp = alloca i32*
   store volatile i32* inttoptr (i32 1234 to i32*), i32** %tmp
   %bitcast = bitcast i32** %tmp to i32*

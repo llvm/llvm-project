@@ -517,7 +517,8 @@ TEST(InstructionsTest, CloneCall) {
   {
     AttrBuilder AB;
     AB.addAttribute(Attribute::ReadOnly);
-    Call->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+    Call->setAttributes(
+        AttributeList::get(C, AttributeList::FunctionIndex, AB));
     std::unique_ptr<CallInst> Clone(cast<CallInst>(Call->clone()));
     EXPECT_TRUE(Clone->onlyReadsMemory());
   }
@@ -535,7 +536,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
   AttrBuilder AB;
   AB.addAttribute(Attribute::Cold);
-  Call->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
   Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
@@ -563,7 +564,8 @@ TEST(InstructionsTest, AlterInvokeBundles) {
       Callee, NormalDest.get(), UnwindDest.get(), Args, OldBundle, "result"));
   AttrBuilder AB;
   AB.addAttribute(Attribute::Cold);
-  Invoke->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Invoke->setAttributes(
+      AttributeList::get(C, AttributeList::FunctionIndex, AB));
   Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));

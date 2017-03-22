@@ -17,7 +17,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; OPT: %tmp7 = atomicrmw add i32 addrspace(3)* %lsr.iv1, i32 undef seq_cst
 ; OPT: %0 = atomicrmw add i32 addrspace(3)* %lsr.iv1, i32 %tmp8 seq_cst
 ; OPT: br i1 %exitcond
-define void @test_local_atomicrmw_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(3)* noalias nocapture %arg0, i32 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_local_atomicrmw_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(3)* noalias nocapture %arg0, i32 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -54,7 +54,7 @@ bb:
 ; OPT: %lsr.iv = phi i32 [ %lsr.iv.next, %.lr.ph ], [ %n, %.lr.ph.preheader ]
 ; OPT: %scevgep4 = getelementptr i32, i32 addrspace(3)* %lsr.iv2, i32 16383
 ; OPT: %tmp4 = cmpxchg i32 addrspace(3)* %scevgep4, i32 undef, i32 undef seq_cst monotonic
-define void @test_local_cmpxchg_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(3)* noalias nocapture %arg0, i32 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
+define amdgpu_kernel void @test_local_cmpxchg_addressing_loop_uniform_index_max_offset_i32(i32 addrspace(3)* noalias nocapture %arg0, i32 addrspace(3)* noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge

@@ -79,9 +79,7 @@ MEMBER_RECORD(LF_INDEX, 0x1404, ListContinuation)
 TYPE_RECORD(LF_FUNC_ID, 0x1601, FuncId)
 TYPE_RECORD(LF_MFUNC_ID, 0x1602, MemberFuncId)
 TYPE_RECORD(LF_BUILDINFO, 0x1603, BuildInfo)
-// FIXME: We reuse the structure of ArgListRecord for substring lists, but it
-// makes for confusing dumper output.
-TYPE_RECORD_ALIAS(LF_SUBSTR_LIST, 0x1604, StringList, ArgList)
+TYPE_RECORD(LF_SUBSTR_LIST, 0x1604, StringList)
 TYPE_RECORD(LF_STRING_ID, 0x1605, StringId)
 TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLine)
 TYPE_RECORD(LF_UDT_MOD_SRC_LINE, 0x1607, UdtModSourceLine)

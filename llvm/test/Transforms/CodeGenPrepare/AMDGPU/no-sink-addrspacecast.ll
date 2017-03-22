@@ -5,7 +5,7 @@
 ; ASC-NOT: ptrtoint
 ; ASC-NOT: inttoptr
 
-define void @test_sink_ptrtoint_asc(float addrspace(1)* nocapture %arg, float addrspace(1)* nocapture readonly %arg1, float addrspace(3)* %arg2) #0 {
+define amdgpu_kernel void @test_sink_ptrtoint_asc(float addrspace(1)* nocapture %arg, float addrspace(1)* nocapture readonly %arg1, float addrspace(3)* %arg2) #0 {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg2, i32 16
   %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x() #1

@@ -82,7 +82,7 @@ body: |
     %0(p0) = COPY %x0
     %1(s32) = COPY %w1
 
-    ; CHECK: [[BIT8:%[0-9]+]](s8) = G_ANYEXT %2(s1)
+    ; CHECK: [[BIT8:%[0-9]+]](s8) = G_ZEXT %2(s1)
     ; CHECK: G_STORE [[BIT8]](s8), %0(p0) :: (store 1 into %ir.addr)
     %2(s1) = G_TRUNC %1
     G_STORE %2, %0 :: (store 1 into %ir.addr)

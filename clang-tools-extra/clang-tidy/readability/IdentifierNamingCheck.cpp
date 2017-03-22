@@ -49,7 +49,7 @@ struct DenseMapInfo<
     return Val.first.getRawEncoding() + SecondHash(Val.second);
   }
 
-  static bool isEqual(NamingCheckId LHS, NamingCheckId RHS) {
+  static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
     if (RHS == getEmptyKey())
       return LHS == getEmptyKey();
     if (RHS == getTombstoneKey())

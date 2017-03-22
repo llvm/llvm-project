@@ -648,7 +648,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       handleSendMsg(MBB, I);
 
       if (I->getOpcode() == AMDGPU::S_ENDPGM ||
-          I->getOpcode() == AMDGPU::SI_RETURN)
+          I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG)
         EndPgmBlocks.push_back(&MBB);
     }
 
@@ -679,7 +679,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
         // FIXME: It would be better to insert this before a waitcnt if any.
         if ((I->getOpcode() == AMDGPU::S_ENDPGM ||
-             I->getOpcode() == AMDGPU::SI_RETURN) && !SeenDCacheWB) {
+             I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) && !SeenDCacheWB) {
           Changes = true;
           BuildMI(*MBB, I, I->getDebugLoc(), TII->get(AMDGPU::S_DCACHE_WB));
         }

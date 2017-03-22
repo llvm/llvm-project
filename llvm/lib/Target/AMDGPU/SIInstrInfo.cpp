@@ -3693,10 +3693,13 @@ MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
 uint64_t SIInstrInfo::getDefaultRsrcDataFormat() const {
   uint64_t RsrcDataFormat = AMDGPU::RSRC_DATA_FORMAT;
   if (ST.isAmdHsaOS()) {
-    RsrcDataFormat |= (1ULL << 56);
+    // Set ATC = 1. GFX9 doesn't have this bit.
+    if (ST.getGeneration() <= SISubtarget::VOLCANIC_ISLANDS)
+      RsrcDataFormat |= (1ULL << 56);
 
-    if (ST.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
-      // Set MTYPE = 2
+    // Set MTYPE = 2 (MTYPE_UC = uncached). GFX9 doesn't have this.
+    // BTW, it disables TC L2 and therefore decreases performance.
+    if (ST.getGeneration() == SISubtarget::VOLCANIC_ISLANDS)
       RsrcDataFormat |= (2ULL << 59);
   }
 
@@ -3708,11 +3711,14 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
                     AMDGPU::RSRC_TID_ENABLE |
                     0xffffffff; // Size;
 
-  uint64_t EltSizeValue = Log2_32(ST.getMaxPrivateElementSize()) - 1;
+  // GFX9 doesn't have ELEMENT_SIZE.
+  if (ST.getGeneration() <= SISubtarget::VOLCANIC_ISLANDS) {
+    uint64_t EltSizeValue = Log2_32(ST.getMaxPrivateElementSize()) - 1;
+    Rsrc23 |= EltSizeValue << AMDGPU::RSRC_ELEMENT_SIZE_SHIFT;
+  }
 
-  Rsrc23 |= (EltSizeValue << AMDGPU::RSRC_ELEMENT_SIZE_SHIFT) |
-            // IndexStride = 64
-            (UINT64_C(3) << AMDGPU::RSRC_INDEX_STRIDE_SHIFT);
+  // IndexStride = 64.
+  Rsrc23 |= UINT64_C(3) << AMDGPU::RSRC_INDEX_STRIDE_SHIFT;
 
   // If TID_ENABLE is set, DATA_FORMAT specifies stride bits [14:17].
   // Clear them unless we want a huge stride.

@@ -4,7 +4,7 @@
 
 
 ; CHECK-LABEL: {{^}}func:
-define void @func() #0 {
+define amdgpu_kernel void @func() #0 {
 B0:
   br i1 undef, label %B1, label %B2
 
@@ -35,7 +35,8 @@ bb:
   %tmp1 = load volatile i32, i32 addrspace(1)* undef, align 4
   %tmp2 = insertelement <4 x i32> undef, i32 %tmp1, i32 0
   %tmp3 = insertelement <4 x i32> %tmp2, i32 %tmp1, i32 1
-  %tmp4 = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %tmp3, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp3.cast = bitcast <4 x i32> %tmp3 to <4 x float>
+  %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> %tmp3.cast, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
   %tmp6 = fmul float %tmp5, undef
   %tmp7 = fadd float %tmp6, %tmp6
@@ -71,7 +72,7 @@ bb11:                                             ; preds = %bb9
 ; CHECK: v_mov_b32_e32 v[[OUTPUT_LO]], v6
 
 ; CHECK: buffer_store_dwordx4 v{{\[}}[[OUTPUT_LO]]:[[OUTPUT_HI]]{{\]}}
-define void @partially_undef_copy() #0 {
+define amdgpu_kernel void @partially_undef_copy() #0 {
   %tmp0 = call i32 asm sideeffect "v_mov_b32_e32 v5, 5", "={VGPR5}"()
   %tmp1 = call i32 asm sideeffect "v_mov_b32_e32 v6, 6", "={VGPR6}"()
 
@@ -83,8 +84,7 @@ define void @partially_undef_copy() #0 {
   ret void
 }
 
-declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
-declare float @llvm.SI.image.sample.i32(i32, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readonly }

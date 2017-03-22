@@ -107,7 +107,7 @@ template <class ELFT> void OutputSection::finalize() {
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
-  InputSectionBase *S = First->getRelocatedSection<ELFT>();
+  InputSectionBase *S = First->getRelocatedSection();
   this->Info = S->OutSec->SectionIndex;
 }
 

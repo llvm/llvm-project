@@ -108,7 +108,8 @@ Pass *createFunctionImportPass();
 /// threshold given here.
 Pass *createFunctionInliningPass();
 Pass *createFunctionInliningPass(int Threshold);
-Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel);
+Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel,
+                                 bool DisableInlineHotCallSite);
 Pass *createFunctionInliningPass(InlineParams &Params);
 
 //===----------------------------------------------------------------------===//

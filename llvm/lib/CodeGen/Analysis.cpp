@@ -516,10 +516,9 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   bool &ADS = AllowDifferingSizes ? *AllowDifferingSizes : DummyADS;
   ADS = true;
 
-  AttrBuilder CallerAttrs(F->getAttributes(),
-                          AttributeSet::ReturnIndex);
+  AttrBuilder CallerAttrs(F->getAttributes(), AttributeList::ReturnIndex);
   AttrBuilder CalleeAttrs(cast<CallInst>(I)->getAttributes(),
-                          AttributeSet::ReturnIndex);
+                          AttributeList::ReturnIndex);
 
   // Noalias is completely benign as far as calling convention goes, it
   // shouldn't affect whether the call is a tail call.

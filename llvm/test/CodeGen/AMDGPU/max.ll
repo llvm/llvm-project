@@ -6,7 +6,7 @@
 ; SI: v_max_i32_e32
 
 ; EG: MAX_INT
-define void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
   %a = load i32, i32 addrspace(1)* %aptr, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp sge i32 %a, %b
@@ -26,7 +26,7 @@ define void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 ; EG: MAX_INT
 ; EG: MAX_INT
 ; EG: MAX_INT
-define void @v_test_imax_sge_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %aptr, <4 x i32> addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_imax_sge_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %aptr, <4 x i32> addrspace(1)* %bptr) nounwind {
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %aptr, align 4
   %b = load <4 x i32>, <4 x i32> addrspace(1)* %bptr, align 4
   %cmp = icmp sge <4 x i32> %a, %b
@@ -39,7 +39,7 @@ define void @v_test_imax_sge_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrs
 ; SI: s_max_i32
 
 ; EG: MAX_INT
-define void @s_test_imax_sge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_test_imax_sge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp sge i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -50,7 +50,7 @@ define void @s_test_imax_sge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 ; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
-define void @s_test_imax_sge_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_test_imax_sge_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
   %cmp = icmp sge i32 %a, 9
   %val = select i1 %cmp, i32 %a, i32 9
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -63,7 +63,7 @@ define void @s_test_imax_sge_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 ; SI: v_max_i32_e32
 
 ; EG: MAX_INT
-define void @v_test_imax_sge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_imax_sge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
   %a = load i8, i8 addrspace(1)* %aptr, align 1
   %b = load i8, i8 addrspace(1)* %bptr, align 1
   %cmp = icmp sge i8 %a, %b
@@ -76,7 +76,7 @@ define void @v_test_imax_sge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i
 ; SI: s_max_i32 {{s[0-9]+}}, {{s[0-9]+}}, 9
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
-define void @s_test_imax_sgt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_test_imax_sgt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
   %cmp = icmp sgt i32 %a, 9
   %val = select i1 %cmp, i32 %a, i32 9
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -89,7 +89,7 @@ define void @s_test_imax_sgt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
 ; EG: MAX_INT {{.*}}literal.{{[xyzw]}}
-define void @s_test_imax_sgt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a) nounwind {
+define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a) nounwind {
   %cmp = icmp sgt <2 x i32> %a, <i32 9, i32 9>
   %val = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> <i32 9, i32 9>
   store <2 x i32> %val, <2 x i32> addrspace(1)* %out, align 4
@@ -100,7 +100,7 @@ define void @s_test_imax_sgt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 ; SI: v_max_i32_e32
 
 ; EG: MAX_INT
-define void @v_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
   %a = load i32, i32 addrspace(1)* %aptr, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp sgt i32 %a, %b
@@ -113,7 +113,7 @@ define void @v_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 ; SI: s_max_i32
 
 ; EG: MAX_INT
-define void @s_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp sgt i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -124,7 +124,7 @@ define void @s_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 ; SI: v_max_u32_e32
 
 ; EG: MAX_UINT
-define void @v_test_umax_uge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_umax_uge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
   %a = load i32, i32 addrspace(1)* %aptr, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp uge i32 %a, %b
@@ -137,7 +137,7 @@ define void @v_test_umax_uge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 ; SI: s_max_u32
 
 ; EG: MAX_UINT
-define void @s_test_umax_uge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_test_umax_uge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp uge i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -155,7 +155,7 @@ define void @s_test_umax_uge_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 ; EG: MAX_UINT
 ; EG: MAX_UINT
 ; EG-NOT: MAX_UINT
-define void @s_test_umax_uge_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, <3 x i32> %b) nounwind {
+define amdgpu_kernel void @s_test_umax_uge_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, <3 x i32> %b) nounwind {
   %cmp = icmp uge <3 x i32> %a, %b
   %val = select <3 x i1> %cmp, <3 x i32> %a, <3 x i32> %b
   store <3 x i32> %val, <3 x i32> addrspace(1)* %out, align 4
@@ -168,7 +168,7 @@ define void @s_test_umax_uge_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, <
 ; SI: v_max_u32_e32
 
 ; EG: MAX_UINT
-define void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
   %a = load i8, i8 addrspace(1)* %aptr, align 1
   %b = load i8, i8 addrspace(1)* %bptr, align 1
   %cmp = icmp uge i8 %a, %b
@@ -181,7 +181,7 @@ define void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i
 ; SI: v_max_u32_e32
 
 ; EG: MAX_UINT
-define void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
   %a = load i32, i32 addrspace(1)* %aptr, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp ugt i32 %a, %b
@@ -194,7 +194,7 @@ define void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 ; SI: s_max_u32
 
 ; EG: MAX_UINT
-define void @s_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp ugt i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4
@@ -207,7 +207,7 @@ define void @s_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 
 ; EG: MAX_UINT {{.*}}literal.{{[xyzw]}}
 ; EG: MAX_UINT {{.*}}literal.{{[xyzw]}}
-define void @s_test_umax_ugt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a) nounwind {
+define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a) nounwind {
   %cmp = icmp ugt <2 x i32> %a, <i32 15, i32 23>
   %val = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> <i32 15, i32 23>
   store <2 x i32> %val, <2 x i32> addrspace(1)* %out, align 4
@@ -223,7 +223,7 @@ define void @s_test_umax_ugt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 ; SI: buffer_store_dword [[VMAX]]
 
 ; EG: MAX_UINT
-define void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b) nounwind {
+define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b) nounwind {
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %cmp = icmp ugt i32 %a.ext, %b.ext
@@ -243,7 +243,7 @@ define void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspace(1)* %out, i1
 ; SI: buffer_store_dword [[VMAX]]
 
 ; EG: MAX_INT
-define void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, i16 signext %a, i16 signext %b) nounwind {
+define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, i16 signext %a, i16 signext %b) nounwind {
   %a.ext = sext i16 %a to i32
   %b.ext = sext i16 %b to i32
   %cmp = icmp sgt i32 %a.ext, %b.ext
@@ -262,7 +262,7 @@ define void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, i16
 ; SI: s_max_i32
 
 ; EG: MAX_INT
-define void @s_test_imax_sge_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwind {
+define amdgpu_kernel void @s_test_imax_sge_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwind {
   %cmp = icmp sge i16 %a, %b
   %val = select i1 %cmp, i16 %a, i16 %b
   store i16 %val, i16 addrspace(1)* %out
@@ -275,7 +275,7 @@ define void @s_test_imax_sge_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwin
 
 ; EG: MAX_UINT
 ; EG: MAX_UINT
-define void @test_umax_ugt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @test_umax_ugt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp ugt i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
   store i64 %val, i64 addrspace(1)* %out, align 8
@@ -287,7 +287,7 @@ define void @test_umax_ugt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 
 ; EG: MAX_UINT
 ; EG: MAX_UINT
-define void @test_umax_uge_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @test_umax_uge_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp uge i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
   store i64 %val, i64 addrspace(1)* %out, align 8
@@ -299,7 +299,7 @@ define void @test_umax_uge_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 
 ; EG-DAG: MAX_UINT
 ; EG-DAG: MAX_INT
-define void @test_imax_sgt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @test_imax_sgt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp sgt i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
   store i64 %val, i64 addrspace(1)* %out, align 8
@@ -311,7 +311,7 @@ define void @test_imax_sgt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 
 ; EG-DAG: MAX_UINT
 ; EG-DAG: MAX_INT
-define void @test_imax_sge_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @test_imax_sge_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %tmp = icmp sge i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
   store i64 %val, i64 addrspace(1)* %out, align 8

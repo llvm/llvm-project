@@ -52,18 +52,40 @@ define void @allocai64() {
 ; CHECK: body:
 ;
 ; ABI/constant lowering and IR-level entry basic block.
-; CHECK: {{bb.[0-9]+}} (%ir-block.{{[0-9]+}}):
+; CHECK: {{bb.[0-9]+}}.entry:
 ;
 ; Make sure we have one successor and only one.
-; CHECK-NEXT: successors: %[[END:bb.[0-9]+.end]](0x80000000)
+; CHECK-NEXT: successors: %[[BB2:bb.[0-9]+.bb2]](0x80000000)
 ;
 ; Check that we emit the correct branch.
-; CHECK: G_BR %[[END]]
+; CHECK: G_BR %[[BB2]]
 ;
 ; Check that end contains the return instruction.
+; CHECK: [[END:bb.[0-9]+.end]]:
+; CHECK-NEXT: RET_ReallyLR
+;
+; CHECK: {{bb.[0-9]+}}.bb2:
+; CHECK-NEXT: successors: %[[END]](0x80000000)
+; CHECK: G_BR %[[END]]
+define void @uncondbr() {
+entry:
+  br label %bb2
+end:
+  ret void
+bb2:
+  br label %end
+}
+
+; CHECK-LABEL: name: uncondbr_fallthrough
+; CHECK: body:
+; CHECK: {{bb.[0-9]+}}.entry:
+; CHECK-NEXT: successors: %[[END:bb.[0-9]+.end]](0x80000000)
+; We don't emit a branch here, as we can fallthrough to the successor.
+; CHECK-NOT: G_BR
 ; CHECK: [[END]]:
 ; CHECK-NEXT: RET_ReallyLR
-define void @uncondbr() {
+define void @uncondbr_fallthrough() {
+entry:
   br label %end
 end:
   ret void
@@ -140,7 +162,6 @@ false:
 ; CHECK: [[BB_CASE200]]:
 ; CHECK-NEXT: successors: %[[BB_RET]](0x80000000)
 ; CHECK: %[[regretc200:[0-9]+]](s32) = G_ADD %0, %[[reg2]]
-; CHECK: G_BR %[[BB_RET]]
 ;
 ; CHECK: [[BB_RET]]:
 ; CHECK-NEXT: %[[regret:[0-9]+]](s32) = PHI %[[regretdefault]](s32), %[[BB_DEFAULT]], %[[regretc100]](s32), %[[BB_CASE100]]
@@ -232,7 +253,7 @@ phi.block:
 ; CHECK: {{bb.[0-9]+.entry}}:
 ; Make sure we have one successor
 ; CHECK-NEXT: successors: %[[BB_L1:bb.[0-9]+.L1]](0x80000000)
-; CHECK: G_BR %[[BB_L1]]
+; CHECK-NOT: G_BR
 ;
 ; Check basic block L1 has 2 successors: BBL1 and BBL2
 ; CHECK: [[BB_L1]] (address-taken):
@@ -467,7 +488,8 @@ define void @store(i64* %addr, i64 addrspace(42)* %addr42, i64 %val1, i64 %val2)
 ; CHECK-LABEL: name: intrinsics
 ; CHECK: [[CUR:%[0-9]+]](s32) = COPY %w0
 ; CHECK: [[BITS:%[0-9]+]](s32) = COPY %w1
-; CHECK: [[PTR:%[0-9]+]](p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
+; CHECK: [[CREG:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[PTR:%[0-9]+]](p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), [[CREG]]
 ; CHECK: [[PTR_VEC:%[0-9]+]](p0) = G_FRAME_INDEX %stack.0.ptr.vec
 ; CHECK: [[VEC:%[0-9]+]](<8 x s8>) = G_LOAD [[PTR_VEC]]
 ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), [[VEC]](<8 x s8>), [[VEC]](<8 x s8>), [[PTR]](p0)
@@ -525,8 +547,8 @@ define void @unreachable(i32 %a) {
 ; CHECK-LABEL: name: constant_int
 ; CHECK: [[IN:%[0-9]+]](s32) = COPY %w0
 ; CHECK: [[ONE:%[0-9]+]](s32) = G_CONSTANT i32 1
-; CHECK: G_BR
 
+; CHECK: {{bb.[0-9]+}}.next:
 ; CHECK: [[SUM1:%[0-9]+]](s32) = G_ADD [[IN]], [[ONE]]
 ; CHECK: [[SUM2:%[0-9]+]](s32) = G_ADD [[IN]], [[ONE]]
 ; CHECK: [[RES:%[0-9]+]](s32) = G_ADD [[SUM1]], [[SUM2]]
@@ -1181,7 +1203,7 @@ define i8* @test_const_placement() {
 ; CHECK: bb.{{[0-9]+}} (%ir-block.{{[0-9]+}}):
 ; CHECK:   [[VAL_INT:%[0-9]+]](s32) = G_CONSTANT i32 42
 ; CHECK:   [[VAL:%[0-9]+]](p0) = G_INTTOPTR [[VAL_INT]](s32)
-; CHECK:   G_BR
+; CHECK: {{bb.[0-9]+}}.next:
   br label %next
 
 next:
@@ -1415,9 +1437,9 @@ define float @test_different_call_conv_target(float %x) {
 define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](s32) = COPY %w0
-; CHECK: [[UNDEF:%[0-9]+]](s32) = IMPLICIT_DEF
-; CHECK: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
-; CHECK: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C0]](s32), [[C0]](s32)
+; CHECK-DAG: [[UNDEF:%[0-9]+]](s32) = IMPLICIT_DEF
+; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C0]](s32), [[C0]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], [[MASK]](<2 x s32>)
 ; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
@@ -1428,8 +1450,8 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
-; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK: [[RES:%[0-9]+]](s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[C1]](s32)
 ; CHECK: %w0 = COPY [[RES]](s32)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <1 x i32> <i32 1>
@@ -1440,10 +1462,10 @@ define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 define <2 x i32> @test_shufflevector_v2s32_v2s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
-; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
-; CHECK: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
-; CHECK: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32)
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[MASK]](<2 x s32>)
 ; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
   %res = shufflevector <2 x i32> %arg, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
@@ -1453,10 +1475,10 @@ define <2 x i32> @test_shufflevector_v2s32_v2s32(<2 x i32> %arg) {
 define i32 @test_shufflevector_v2s32_v3s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v3s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
-; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
-; CHECK: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
-; CHECK: [[MASK:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32), [[C1]](s32)
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK-DAG: [[MASK:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32), [[C1]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<3 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[MASK]](<3 x s32>)
 ; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<3 x s32>)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <3 x i32> <i32 1, i32 0, i32 1>
@@ -1482,10 +1504,10 @@ define <4 x i32> @test_shufflevector_v2s32_v4s32(<2 x i32> %arg1, <2 x i32> %arg
 define <2 x i32> @test_shufflevector_v4s32_v2s32(<4 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v4s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](<4 x s32>) = COPY %q0
-; CHECK: [[UNDEF:%[0-9]+]](<4 x s32>) = IMPLICIT_DEF
-; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
-; CHECK: [[C3:%[0-9]+]](s32) = G_CONSTANT i32 3
-; CHECK: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C3]](s32)
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<4 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK-DAG: [[C3:%[0-9]+]](s32) = G_CONSTANT i32 3
+; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C3]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](<4 x s32>), [[UNDEF]], [[MASK]](<2 x s32>)
 ; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
   %res = shufflevector <4 x i32> %arg, <4 x i32> undef, <2 x i32> <i32 1, i32 3>

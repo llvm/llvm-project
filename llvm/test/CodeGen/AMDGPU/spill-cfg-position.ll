@@ -13,7 +13,7 @@
 ; CHECK-NEXT: s_or_b64 exec
 ; CHECK: buffer_
 
-define void @spill_cfg_position(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @spill_cfg_position(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp14 = load i32, i32 addrspace(1)* %arg, align 4

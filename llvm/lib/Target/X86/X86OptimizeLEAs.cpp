@@ -389,9 +389,6 @@ bool OptimizeLEAPass::isReplaceable(const MachineInstr &First,
   assert(isLEA(First) && isLEA(Last) &&
          "The function works only with LEA instructions");
 
-  // Get new address displacement.
-  AddrDispShift = getAddrDispShift(Last, 1, First, 1);
-
   // Make sure that LEA def registers belong to the same class. There may be
   // instructions (like MOV8mr_NOREX) which allow a limited set of registers to
   // be used as their operands, so we must be sure that replacing one LEA
@@ -400,10 +397,13 @@ bool OptimizeLEAPass::isReplaceable(const MachineInstr &First,
       MRI->getRegClass(Last.getOperand(0).getReg()))
     return false;
 
+  // Get new address displacement.
+  AddrDispShift = getAddrDispShift(Last, 1, First, 1);
+
   // Loop over all uses of the Last LEA to check that its def register is
   // used only as address base for memory accesses. If so, it can be
   // replaced, otherwise - no.
-  for (auto &MO : MRI->use_operands(Last.getOperand(0).getReg())) {
+  for (auto &MO : MRI->use_nodbg_operands(Last.getOperand(0).getReg())) {
     MachineInstr &MI = *MO.getParent();
 
     // Get the number of the first memory operand.
@@ -563,8 +563,9 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
         // Loop over all uses of the Last LEA and update their operands. Note
         // that the correctness of this has already been checked in the
         // isReplaceable function.
-        for (auto UI = MRI->use_begin(Last.getOperand(0).getReg()),
-                  UE = MRI->use_end();
+        unsigned LastVReg = Last.getOperand(0).getReg();
+        for (auto UI = MRI->use_nodbg_begin(LastVReg),
+                  UE = MRI->use_nodbg_end();
              UI != UE;) {
           MachineOperand &MO = *UI++;
           MachineInstr &MI = *MO.getParent();
@@ -586,6 +587,9 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
             Op.setOffset(Op.getOffset() + AddrDispShift);
         }
 
+        // Mark debug values referring to Last LEA as undefined.
+        MRI->markUsesInDebugValueAsUndef(LastVReg);
+
         // Since we can possibly extend register lifetime, clear kill flags.
         MRI->clearKillFlags(First.getOperand(0).getReg());
 
@@ -594,7 +598,7 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
 
         // By this moment, all of the Last LEA's uses must be replaced. So we
         // can freely remove it.
-        assert(MRI->use_empty(Last.getOperand(0).getReg()) &&
+        assert(MRI->use_empty(LastVReg) &&
                "The LEA's def register must have no uses");
         Last.eraseFromParent();
 

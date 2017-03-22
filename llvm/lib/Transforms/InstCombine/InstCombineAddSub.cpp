@@ -1393,6 +1393,8 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.
   if (SIToFPInst *LHSConv = dyn_cast<SIToFPInst>(LHS)) {
+    Value *LHSIntVal = LHSConv->getOperand(0);
+
     // (fadd double (sitofp x), fpcst) --> (sitofp (add int x, intcst))
     // ... if the constant fits in the integer value.  This is useful for things
     // like (double)(x & 1234) + 4.0 -> (double)((X & 1234)+4) which no longer
@@ -1400,12 +1402,12 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
     // instcombined.
     if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS)) {
       Constant *CI =
-      ConstantExpr::getFPToSI(CFP, LHSConv->getOperand(0)->getType());
+      ConstantExpr::getFPToSI(CFP, LHSIntVal->getType());
       if (LHSConv->hasOneUse() &&
           ConstantExpr::getSIToFP(CI, I.getType()) == CFP &&
-          WillNotOverflowSignedAdd(LHSConv->getOperand(0), CI, I)) {
+          WillNotOverflowSignedAdd(LHSIntVal, CI, I)) {
         // Insert the new integer add.
-        Value *NewAdd = Builder->CreateNSWAdd(LHSConv->getOperand(0),
+        Value *NewAdd = Builder->CreateNSWAdd(LHSIntVal,
                                               CI, "addconv");
         return new SIToFPInst(NewAdd, I.getType());
       }
@@ -1413,17 +1415,17 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
 
     // (fadd double (sitofp x), (sitofp y)) --> (sitofp (add int x, y))
     if (SIToFPInst *RHSConv = dyn_cast<SIToFPInst>(RHS)) {
+      Value *RHSIntVal = RHSConv->getOperand(0);
+
       // Only do this if x/y have the same type, if at last one of them has a
       // single use (so we don't increase the number of int->fp conversions),
       // and if the integer add will not overflow.
-      if (LHSConv->getOperand(0)->getType() ==
-              RHSConv->getOperand(0)->getType() &&
+      if (LHSIntVal->getType() == RHSIntVal->getType() &&
           (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
-          WillNotOverflowSignedAdd(LHSConv->getOperand(0),
-                                   RHSConv->getOperand(0), I)) {
+          WillNotOverflowSignedAdd(LHSIntVal, RHSIntVal, I)) {
         // Insert the new integer add.
-        Value *NewAdd = Builder->CreateNSWAdd(LHSConv->getOperand(0),
-                                              RHSConv->getOperand(0),"addconv");
+        Value *NewAdd = Builder->CreateNSWAdd(LHSIntVal,
+                                              RHSIntVal, "addconv");
         return new SIToFPInst(NewAdd, I.getType());
       }
     }

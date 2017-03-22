@@ -24,6 +24,7 @@ add_lldb_library(lldbUtility
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringLexer.cpp
+  StringList.cpp
   TaskPool.cpp
   TildeExpressionResolver.cpp
   UserID.cpp
