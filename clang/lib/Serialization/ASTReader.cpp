@@ -4849,13 +4849,9 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         if (!CurrentModule->getUmbrellaHeader())
           ModMap.setUmbrellaHeader(CurrentModule, Umbrella, Blob);
         else if (CurrentModule->getUmbrellaHeader().Entry != Umbrella) {
-          // This can be a spurious difference caused by changing the VFS to
-          // point to a different copy of the file, and it is too late to
-          // to rebuild safely.
-          // FIXME: If we wrote the virtual paths instead of the 'real' paths,
-          // after input file validation only real problems would remain and we
-          // could just error. For now, assume it's okay.
-          break;
+          if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
+            Error("mismatched umbrella headers in submodule");
+          return OutOfDate;
         }
       }
       break;
