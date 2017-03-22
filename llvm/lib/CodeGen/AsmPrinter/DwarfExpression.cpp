@@ -196,6 +196,15 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   if (Op && Op->getOp() != dwarf::DW_OP_LLVM_fragment)
     HasComplexExpression = true;
 
+  // If the register can only be described by a complex expression (i.e.,
+  // multiple subregisters) it doesn't safely compose with another complex
+  // expression. For example, it is not possible to apply a DW_OP_deref
+  // operation to multiple DW_OP_pieces.
+  if (HasComplexExpression && DwarfRegs.size() > 1) {
+    DwarfRegs.clear();
+    return false;
+  }
+
   // Handle simple register locations.
   if (!HasComplexExpression) {
     for (auto &Reg : DwarfRegs) {
