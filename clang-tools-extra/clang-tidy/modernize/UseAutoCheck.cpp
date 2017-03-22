@@ -352,9 +352,9 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       << FixItHint::CreateReplacement(Range, "auto");
 }
 
-void UseAutoCheck::replaceExpr(const DeclStmt *D, ASTContext *Context,
-                               std::function<QualType(const Expr *)> GetType,
-                               StringRef Message) {
+void UseAutoCheck::replaceExpr(
+    const DeclStmt *D, ASTContext *Context,
+    llvm::function_ref<QualType(const Expr *)> GetType, StringRef Message) {
   const auto *FirstDecl = dyn_cast<VarDecl>(*D->decl_begin());
   // Ensure that there is at least one VarDecl within the DeclStmt.
   if (!FirstDecl)

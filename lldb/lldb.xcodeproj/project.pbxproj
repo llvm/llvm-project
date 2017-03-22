@@ -2793,8 +2793,8 @@
 		9A22A160135E30370024DDC3 /* EmulationStateARM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EmulationStateARM.h; sourceTree = "<group>"; };
 		9A357582116CFDEE00E8ED2F /* SBValueList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBValueList.h; path = include/lldb/API/SBValueList.h; sourceTree = "<group>"; };
 		9A35758D116CFE0F00E8ED2F /* SBValueList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBValueList.cpp; path = source/API/SBValueList.cpp; sourceTree = "<group>"; };
-		9A35765E116E76A700E8ED2F /* StringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringList.h; path = include/lldb/Core/StringList.h; sourceTree = "<group>"; };
-		9A35765F116E76B900E8ED2F /* StringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringList.cpp; path = source/Core/StringList.cpp; sourceTree = "<group>"; };
+		9A35765E116E76A700E8ED2F /* StringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringList.h; path = include/lldb/Utility/StringList.h; sourceTree = "<group>"; };
+		9A35765F116E76B900E8ED2F /* StringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringList.cpp; path = source/Utility/StringList.cpp; sourceTree = "<group>"; };
 		9A357670116E7B5200E8ED2F /* SBStringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBStringList.h; path = include/lldb/API/SBStringList.h; sourceTree = "<group>"; };
 		9A357672116E7B6400E8ED2F /* SBStringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBStringList.cpp; path = source/API/SBStringList.cpp; sourceTree = "<group>"; };
 		9A3576A7116E9AB700E8ED2F /* SBHostOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBHostOS.h; path = include/lldb/API/SBHostOS.h; sourceTree = "<group>"; };
@@ -4235,6 +4235,8 @@
 				2676A093119C93C8008A98EF /* StringExtractorGDBRemote.cpp */,
 				94380B8019940B0300BFE4A8 /* StringLexer.h */,
 				94380B8119940B0A00BFE4A8 /* StringLexer.cpp */,
+				9A35765E116E76A700E8ED2F /* StringList.h */,
+				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				94BA8B6E176F8CA0005A91B5 /* Range.h */,
 				94BA8B6C176F8C9B005A91B5 /* Range.cpp */,
 				6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */,
@@ -4729,8 +4731,6 @@
 				2623096E13D0EFFB006381D9 /* StreamBuffer.h */,
 				26BC7D7A10F1B77400F91463 /* StreamFile.h */,
 				26BC7E9210F1B85900F91463 /* StreamFile.cpp */,
-				9A35765E116E76A700E8ED2F /* StringList.h */,
-				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				26F2F8FD1B156678007857DE /* StructuredData.h */,
 				AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */,
 				26B167A41123BF5500DC7B4F /* ThreadSafeValue.h */,

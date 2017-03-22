@@ -46,7 +46,6 @@
 
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "ProcFileReader.h"
 #include "Procfs.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -1432,11 +1431,11 @@ Error NativeProcessLinux::Kill() {
 }
 
 static Error
-ParseMemoryRegionInfoFromProcMapsLine(const std::string &maps_line,
+ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef &maps_line,
                                       MemoryRegionInfo &memory_region_info) {
   memory_region_info.Clear();
 
-  StringExtractor line_extractor(maps_line.c_str());
+  StringExtractor line_extractor(maps_line);
 
   // Format: {address_start_hex}-{address_end_hex} perms offset  dev   inode
   // pathname
@@ -1597,36 +1596,36 @@ Error NativeProcessLinux::PopulateMemoryRegionCache() {
     return Error();
   }
 
-  Error error = ProcFileReader::ProcessLineByLine(
-      GetID(), "maps", [&](const std::string &line) -> bool {
-        MemoryRegionInfo info;
-        const Error parse_error =
-            ParseMemoryRegionInfoFromProcMapsLine(line, info);
-        if (parse_error.Success()) {
-          m_mem_region_cache.emplace_back(
-              info, FileSpec(info.GetName().GetCString(), true));
-          return true;
-        } else {
-          LLDB_LOG(log, "failed to parse proc maps line '{0}': {1}", line,
-                   parse_error);
-          return false;
-        }
-      });
-
-  // If we had an error, we'll mark unsupported.
-  if (error.Fail()) {
+  auto BufferOrError = getProcFile(GetID(), "maps");
+  if (!BufferOrError) {
     m_supports_mem_region = LazyBool::eLazyBoolNo;
-    return error;
-  } else if (m_mem_region_cache.empty()) {
+    return BufferOrError.getError();
+  }
+  StringRef Rest = BufferOrError.get()->getBuffer();
+  while (! Rest.empty()) {
+    StringRef Line;
+    std::tie(Line, Rest) = Rest.split('\n');
+    MemoryRegionInfo info;
+    const Error parse_error = ParseMemoryRegionInfoFromProcMapsLine(Line, info);
+    if (parse_error.Fail()) {
+      LLDB_LOG(log, "failed to parse proc maps line '{0}': {1}", Line,
+               parse_error);
+      m_supports_mem_region = LazyBool::eLazyBoolNo;
+      return parse_error;
+    }
+    m_mem_region_cache.emplace_back(
+        info, FileSpec(info.GetName().GetCString(), true));
+  }
+
+  if (m_mem_region_cache.empty()) {
     // No entries after attempting to read them.  This shouldn't happen if
     // /proc/{pid}/maps is supported. Assume we don't support map entries
     // via procfs.
+    m_supports_mem_region = LazyBool::eLazyBoolNo;
     LLDB_LOG(log,
              "failed to find any procfs maps entries, assuming no support "
              "for memory region metadata retrieval");
-    m_supports_mem_region = LazyBool::eLazyBoolNo;
-    error.SetErrorString("not supported");
-    return error;
+    return Error("not supported");
   }
 
   LLDB_LOG(log, "read {0} memory region entries from /proc/{1}/maps",

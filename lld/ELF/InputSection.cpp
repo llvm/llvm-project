@@ -139,10 +139,9 @@ OutputSection *SectionBase::getOutputSection() {
 
 // Uncompress section contents. Note that this function is called
 // from parallel_for_each, so it must be thread-safe.
-template <class ELFT> void InputSectionBase::uncompress() {
-  Decompressor Dec = check(Decompressor::create(
-      Name, toStringRef(Data), ELFT::TargetEndianness == llvm::support::little,
-      ELFT::Is64Bits));
+void InputSectionBase::uncompress() {
+  Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
+                                                Config->IsLE, Config->Is64));
 
   size_t Size = Dec.getDecompressedSize();
   char *OutputBuf;
@@ -162,10 +161,9 @@ uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {
   return getOffset(Sym.Value);
 }
 
-template <class ELFT>
 InputSectionBase *InputSectionBase::getLinkOrderDep() const {
   if ((Flags & SHF_LINK_ORDER) && Link != 0)
-    return getFile<ELFT>()->getSections()[Link];
+    return File->getSections()[Link];
   return nullptr;
 }
 
@@ -221,9 +219,9 @@ bool InputSectionBase::classof(const SectionBase *S) {
   return S->kind() != Output;
 }
 
-template <class ELFT> InputSectionBase *InputSection::getRelocatedSection() {
+InputSectionBase *InputSection::getRelocatedSection() {
   assert(this->Type == SHT_RELA || this->Type == SHT_REL);
-  ArrayRef<InputSectionBase *> Sections = this->getFile<ELFT>()->getSections();
+  ArrayRef<InputSectionBase *> Sections = this->File->getSections();
   return Sections[this->Info];
 }
 
@@ -232,7 +230,7 @@ template <class ELFT> InputSectionBase *InputSection::getRelocatedSection() {
 // for each relocation. So we copy relocations one by one.
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
-  InputSectionBase *RelocatedSection = getRelocatedSection<ELFT>();
+  InputSectionBase *RelocatedSection = getRelocatedSection();
 
   // Loop is slow and have complexity O(N*M), where N - amount of
   // relocations and M - amount of symbols in symbol table.
@@ -824,21 +822,6 @@ template void InputSection::writeTo<ELF32LE>(uint8_t *Buf);
 template void InputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void InputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void InputSection::writeTo<ELF64BE>(uint8_t *Buf);
-
-template void InputSectionBase::uncompress<ELF32LE>();
-template void InputSectionBase::uncompress<ELF32BE>();
-template void InputSectionBase::uncompress<ELF64LE>();
-template void InputSectionBase::uncompress<ELF64BE>();
-
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32LE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32BE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64LE>() const;
-template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64BE>() const;
-
-template InputSectionBase *InputSection::getRelocatedSection<ELF32LE>();
-template InputSectionBase *InputSection::getRelocatedSection<ELF32BE>();
-template InputSectionBase *InputSection::getRelocatedSection<ELF64LE>();
-template InputSectionBase *InputSection::getRelocatedSection<ELF64BE>();
 
 template elf::ObjectFile<ELF32LE> *InputSectionBase::getFile<ELF32LE>() const;
 template elf::ObjectFile<ELF32BE> *InputSectionBase::getFile<ELF32BE>() const;

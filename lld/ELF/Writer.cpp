@@ -228,7 +228,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Create output sections.
   Script->OutputSections = &OutputSections;
-  if (ScriptConfig->HasSections) {
+  if (Script->Opt.HasSections) {
     // If linker script contains SECTIONS commands, let it create sections.
     Script->processCommands(Factory);
 
@@ -261,7 +261,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    if (ScriptConfig->HasSections) {
+    if (Script->Opt.HasSections) {
       Script->assignAddresses(Phdrs);
     } else {
       fixSectionAlignments();
@@ -428,7 +428,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Add(In<ELFT>::IgotPlt);
 
   if (Config->GdbIndex) {
-    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+    In<ELFT>::GdbIndex = make<GdbIndexSection>();
     Add(In<ELFT>::GdbIndex);
   }
 
@@ -841,7 +841,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
-  if (ScriptConfig->HasSections)
+  if (Script->Opt.HasSections)
     return;
 
   // __ehdr_start is the location of ELF file headers.
@@ -960,7 +960,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   // relative order for SHF_LINK_ORDER sections.
   if (Config->Relocatable)
     return;
-  if (!ScriptConfig->HasSections) {
+  if (!Script->Opt.HasSections) {
     std::stable_sort(OutputSections.begin(), OutputSections.end(),
                      compareSectionsNonScript<ELFT>);
     return;
@@ -1197,7 +1197,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   // We have the terminater synthetic section class. Add that at the end.
   auto *OS = dyn_cast_or_null<OutputSection>(findSection(".ARM.exidx"));
   if (OS && !OS->Sections.empty() && !Config->Relocatable)
-    OS->addSection(make<ARMExidxSentinelSection<ELFT>>());
+    OS->addSection(make<ARMExidxSentinelSection>());
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
@@ -1437,7 +1437,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   }
   Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
 
-  if (!ScriptConfig->HasSections)
+  if (!Script->Opt.HasSections)
     Config->ImageBase = Min = std::min(Min, Config->ImageBase);
 
   Out::ElfHeader->Addr = Min;
@@ -1462,7 +1462,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
   Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   // If the script has SECTIONS, assignAddresses will compute the values.
-  if (ScriptConfig->HasSections)
+  if (Script->Opt.HasSections)
     return;
 
   // When -T<section> option is specified, lower the base to make room for those

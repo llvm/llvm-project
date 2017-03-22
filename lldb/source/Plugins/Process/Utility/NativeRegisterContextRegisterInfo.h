@@ -1,5 +1,4 @@
-//===-- NativeRegisterContextRegisterInfo.h ----------------------*- C++
-//-*-===//
+//===-- NativeRegisterContextRegisterInfo.h ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextRegisterInfo_h
-#define lldb_NativeRegisterContextRegisterInfo_h
+#ifndef LLDB_PLUGINS_PROCESS_UTIILTY_NATIVE_REGISTER_CONTEXT_REGISTER_INFO
+#define LLDB_PLUGINS_PROCESS_UTIILTY_NATIVE_REGISTER_CONTEXT_REGISTER_INFO
 
 #include <memory>
 
-#include "NativeRegisterContext.h"
-#include "Plugins/Process/Utility/RegisterInfoInterface.h"
+#include "RegisterInfoInterface.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
 class NativeRegisterContextRegisterInfo : public NativeRegisterContext {

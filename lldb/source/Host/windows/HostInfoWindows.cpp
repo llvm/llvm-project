@@ -14,6 +14,7 @@
 #include <mutex> // std::once
 
 #include "lldb/Host/windows/HostInfoWindows.h"
+#include "lldb/Host/windows/PosixApi.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"

@@ -19,11 +19,11 @@
 // Other libraries and framework includes
 // Project includes
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

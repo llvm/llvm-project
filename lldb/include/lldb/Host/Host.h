@@ -16,10 +16,10 @@
 #include <map>
 #include <string>
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
 

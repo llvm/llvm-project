@@ -78,7 +78,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();
-  ScriptConfig = make<ScriptConfiguration>();
+  Script = make<LinkerScript>();
 
   Driver->main(Args, CanExitEarly);
   freeArena();
@@ -707,18 +707,20 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 static void setConfigs() {
   ELFKind Kind = Config->EKind;
   uint16_t Machine = Config->EMachine;
-  bool Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
 
   // There is an ILP32 ABI for x86-64, although it's not very popular.
   // It is called the x32 ABI.
   bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
 
   Config->CopyRelocs = (Config->Relocatable || Config->EmitRelocs);
+  Config->Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
   Config->IsLE = (Kind == ELF32LEKind || Kind == ELF64LEKind);
+  Config->Endianness =
+      Config->IsLE ? support::endianness::little : support::endianness::big;
   Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
-  Config->IsRela = Is64 || IsX32 || Config->MipsN32Abi;
+  Config->IsRela = Config->Is64 || IsX32 || Config->MipsN32Abi;
   Config->Pic = Config->Pie || Config->Shared;
-  Config->Wordsize = Is64 ? 8 : 4;
+  Config->Wordsize = Config->Is64 ? 8 : 4;
 }
 
 // Returns a value of "-format" option.
@@ -853,7 +855,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
   elf::Symtab<ELFT>::X = &Symtab;
   Target = createTarget();
-  Script = make<LinkerScriptBase>();
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
@@ -929,7 +930,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     if (!S->Live)
       return;
     if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-      S->uncompress<ELFT>();
+      S->uncompress();
     if (auto *MS = dyn_cast<MergeInputSection>(S))
       MS->splitIntoPieces();
   });

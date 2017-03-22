@@ -154,6 +154,8 @@ isl_bool isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
 isl_stat isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,
 	__isl_keep isl_space *space);
 
+__isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
+
 #undef BASE
 #define BASE pw_aff
 

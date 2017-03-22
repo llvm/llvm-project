@@ -402,13 +402,14 @@ Error AdbClient::ShellToFile(const char *command, milliseconds timeout,
     return error;
 
   const auto output_filename = output_file_spec.GetPath();
-  std::ofstream dst(output_filename, std::ios::out | std::ios::binary);
-  if (!dst.is_open())
+  std::error_code EC;
+  llvm::raw_fd_ostream dst(output_filename, EC, llvm::sys::fs::F_None);
+  if (EC)
     return Error("Unable to open local file %s", output_filename.c_str());
 
   dst.write(&output_buffer[0], output_buffer.size());
   dst.close();
-  if (!dst)
+  if (dst.has_error())
     return Error("Failed to write file %s", output_filename.c_str());
   return Error();
 }
@@ -428,8 +429,9 @@ Error AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
   const auto local_file_path = local_file.GetPath();
   llvm::FileRemover local_file_remover(local_file_path);
 
-  std::ofstream dst(local_file_path, std::ios::out | std::ios::binary);
-  if (!dst.is_open())
+  std::error_code EC;
+  llvm::raw_fd_ostream dst(local_file_path, EC, llvm::sys::fs::F_None);
+  if (EC)
     return Error("Unable to open local file %s", local_file_path.c_str());
 
   const auto remote_file_path = remote_file.GetPath(false);
@@ -447,6 +449,9 @@ Error AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
     if (!eof)
       dst.write(&chunk[0], chunk.size());
   }
+  dst.close();
+  if (dst.has_error())
+    return Error("Failed to write file %s", local_file_path.c_str());
 
   local_file_remover.releaseFile();
   return error;

@@ -17,7 +17,7 @@ __isl_give isl_space *isl_point_get_space(__isl_keep isl_point *pnt);
 
 __isl_give isl_point *isl_point_zero(__isl_take isl_space *dim);
 __isl_give isl_point *isl_point_copy(__isl_keep isl_point *pnt);
-void isl_point_free(__isl_take isl_point *pnt);
+__isl_null isl_point *isl_point_free(__isl_take isl_point *pnt);
 
 __isl_give isl_val *isl_point_get_coordinate_val(__isl_keep isl_point *pnt,
 	enum isl_dim_type type, int pos);
