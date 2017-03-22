@@ -15,8 +15,8 @@
 // Other libraries and framework includes
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "NativeThreadNetBSD.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"

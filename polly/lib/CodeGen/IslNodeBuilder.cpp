@@ -381,6 +381,10 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
     isl_id_free(Id);
     return;
   }
+  if (!strcmp(isl_id_get_name(Id), "Inter iteration alias-free")) {
+    auto *BasePtr = static_cast<Value *>(isl_id_get_user(Id));
+    Annotator.addInterIterationAliasFreeBasePtr(BasePtr);
+  }
   create(Child);
   isl_id_free(Id);
 }
@@ -1211,6 +1215,9 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   auto *Alloca = new AllocaInst(AccInstTy, AccInst->getName() + ".preload.s2a");
   Alloca->insertBefore(&*EntryBB->getFirstInsertionPt());
   Builder.CreateStore(PreloadVal, Alloca);
+  ValueMapT PreloadedPointer;
+  PreloadedPointer[PreloadVal] = AccInst;
+  Annotator.addAlternativeAliasBases(PreloadedPointer);
 
   for (auto *DerivedSAI : SAI->getDerivedSAIs()) {
     Value *BasePtr = DerivedSAI->getBasePtr();

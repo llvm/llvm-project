@@ -11,7 +11,7 @@
 // collisions with WinAPI preprocessor macros.
 
 #include "WindowsMiniDump.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/ConvertUTF.h"
 
 #ifdef _WIN32

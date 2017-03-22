@@ -4,6 +4,7 @@ add_lldb_library(lldbPluginStructuredDataDarwinLog PLUGIN
   LINK_LIBS
     lldbBreakpoint
     lldbCore
+    lldbHost
     lldbInterpreter
     lldbTarget
   )

@@ -24,6 +24,7 @@ if(LIBOMPTARGET_DEP_LIBELF_FOUND)
       endif()
       
       include_directories(${LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS})
+      include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
     
       add_library(omptarget.rtl.cuda SHARED src/rtl.cpp)
       

@@ -33,6 +33,7 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CHECK-NEXT:              Stmt_bb9(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
+; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // Register tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 131; c0 += 1)
 ; CHECK-NEXT:        for (int c1 = 0; c1 <= 263; c1 += 1)
@@ -84,6 +85,7 @@
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:            for (int c3 = 0; c3 <= 31; c3 += 1)
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:              Stmt_bb9(32 * c0 + c2, 32 * c1 + c3);
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:        }
+; EXTRACTION-OF-MACRO-KERNEL-NEXT:      // Inter iteration alias-free
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:      // 1st level tiling - Tiles
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:      for (int c1 = 0; c1 <= 3; c1 += 1) {
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:        for (int c3 = 0; c3 <= 1055; c3 += 1)

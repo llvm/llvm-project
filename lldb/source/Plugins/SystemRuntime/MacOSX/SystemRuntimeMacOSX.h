@@ -20,12 +20,12 @@
 // Project includes
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Utility/UUID.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/UUID.h"
 
 #include "AppleGetItemInfoHandler.h"
 #include "AppleGetPendingItemsHandler.h"

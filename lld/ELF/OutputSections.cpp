@@ -238,8 +238,8 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   if (uint32_t Filler = Script->getFiller(this->Name))
     fill(Buf, this->Size, Filler);
 
-  auto Fn = [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); };
-  forEach(Sections.begin(), Sections.end(), Fn);
+  parallelForEach(Sections.begin(), Sections.end(),
+                  [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); });
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.

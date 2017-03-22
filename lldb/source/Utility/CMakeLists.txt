@@ -7,6 +7,7 @@ add_lldb_library(lldbUtility
   DataExtractor.cpp
   Error.cpp
   FastDemangle.cpp
+  FileSpec.cpp
   History.cpp
   JSON.cpp
   LLDBAssert.cpp

@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-array-to-pointer-decay %t
-#include <assert.h>
 #include <stddef.h>
 
 namespace gsl {
@@ -35,11 +34,6 @@ void f() {
 
   for (auto &e : a) // OK, iteration internally decays array to pointer
     e = 1;
-
-  assert(false); // OK, array decay inside system header macro
-
-  assert(a);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not implicitly decay an array into a pointer; consider using gsl::array_view or an explicit cast instead [cppcoreguidelines-pro-bounds-array-to-pointer-decay]
 }
 
 const char *g() {

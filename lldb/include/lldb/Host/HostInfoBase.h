@@ -11,7 +11,7 @@
 #define lldb_Host_HostInfoBase_h_
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"

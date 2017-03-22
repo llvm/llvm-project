@@ -16,13 +16,13 @@
 #include "llvm/Support/FileUtilities.h"
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <limits.h>

@@ -11,7 +11,7 @@
 #define liblldb_FileSpecList_h_
 #if defined(__cplusplus)
 
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 #include <vector>
 

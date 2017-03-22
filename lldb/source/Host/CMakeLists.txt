@@ -6,7 +6,6 @@ endmacro()
 add_host_subdirectory(common
   common/File.cpp
   common/FileCache.cpp
-  common/FileSpec.cpp
   common/FileSystem.cpp
   common/GetOptInc.cpp
   common/Host.cpp

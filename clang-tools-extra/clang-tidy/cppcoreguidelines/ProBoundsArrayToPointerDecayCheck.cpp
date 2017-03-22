@@ -47,25 +47,6 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
   return InnerMatcher.matches(*E, Finder, Builder);
 }
 
-AST_MATCHER(ImplicitCastExpr, isArrayToPointerDecay) {
-  return Node.getCastKind() == CK_ArrayToPointerDecay;
-}
-
-AST_MATCHER(ImplicitCastExpr, sysSymbolDecayInSysHeader) {
-  auto &SM = Finder->getASTContext().getSourceManager();
-  if (SM.isInSystemMacro(Node.getLocStart())) {
-    if (isa<PredefinedExpr>(Node.getSubExpr()))
-      return true;
-
-    if (const auto *SymbolDeclRef = dyn_cast<DeclRefExpr>(Node.getSubExpr())) {
-      const ValueDecl *SymbolDecl = SymbolDeclRef->getDecl();
-      if (SymbolDecl && SM.isInSystemHeader(SymbolDecl->getLocation()))
-        return true;
-    }
-  }
-  return false;
-}
-
 void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -75,12 +56,10 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   // 2) inside a range-for over an array
   // 3) if it converts a string literal to a pointer
   Finder->addMatcher(
-      implicitCastExpr(isArrayToPointerDecay(),
-                       unless(hasParent(arraySubscriptExpr())),
+      implicitCastExpr(unless(hasParent(arraySubscriptExpr())),
                        unless(hasParentIgnoringImpCasts(explicitCastExpr())),
                        unless(isInsideOfRangeBeginEndStmt()),
-                       unless(hasSourceExpression(stringLiteral())),
-                       unless(sysSymbolDecayInSysHeader()))
+                       unless(hasSourceExpression(stringLiteral())))
           .bind("cast"),
       this);
 }
@@ -88,6 +67,8 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
 void ProBoundsArrayToPointerDecayCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast");
+  if (MatchedCast->getCastKind() != CK_ArrayToPointerDecay)
+    return;
 
   diag(MatchedCast->getExprLoc(), "do not implicitly decay an array into a "
                                   "pointer; consider using gsl::array_view or "

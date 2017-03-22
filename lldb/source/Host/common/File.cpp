@@ -28,9 +28,9 @@
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
 #include "lldb/Host/Config.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;

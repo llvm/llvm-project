@@ -356,8 +356,9 @@ void BuildIdSection::computeHash(
   std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
 
   // Compute hash values.
-  forLoop(0, Chunks.size(),
-          [&](size_t I) { HashFn(Hashes.data() + I * HashSize, Chunks[I]); });
+  parallelFor(0, Chunks.size(), [&](size_t I) {
+    HashFn(Hashes.data() + I * HashSize, Chunks[I]);
+  });
 
   // Write to the final output buffer.
   HashFn(HashBuf, Hashes);

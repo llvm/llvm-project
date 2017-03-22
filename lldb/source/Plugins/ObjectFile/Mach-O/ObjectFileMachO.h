@@ -17,8 +17,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SafeMachO.h"
 
 //----------------------------------------------------------------------
