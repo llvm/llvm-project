@@ -18,8 +18,8 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 

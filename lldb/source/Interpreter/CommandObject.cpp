@@ -24,9 +24,9 @@
 // FIXME: Make a separate file for the completers.
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/Target/Language.h"
 

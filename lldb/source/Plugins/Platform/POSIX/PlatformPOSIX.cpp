@@ -21,7 +21,6 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileCache.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -31,6 +30,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 

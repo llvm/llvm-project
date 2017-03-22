@@ -70,7 +70,8 @@ typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
           SecondaryAllocator> Allocator;
 
 static Allocator allocator;
-static THREADLOCAL AllocatorCache cache;
+static THREADLOCAL AllocatorCache allocator_cache;
+AllocatorCache *GetAllocatorCache() { return &allocator_cache; }
 
 void InitializeAllocator() {
   allocator.InitLinkerInitialized(
@@ -79,7 +80,7 @@ void InitializeAllocator() {
 }
 
 void AllocatorThreadFinish() {
-  allocator.SwallowCache(&cache);
+  allocator.SwallowCache(GetAllocatorCache());
 }
 
 static ChunkMetadata *Metadata(const void *p) {
@@ -111,7 +112,7 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", size);
     return nullptr;
   }
-  void *p = allocator.Allocate(&cache, size, alignment, false);
+  void *p = allocator.Allocate(GetAllocatorCache(), size, alignment, false);
   // Do not rely on the allocator to clear the memory (it's slow).
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
@@ -125,7 +126,7 @@ void Deallocate(void *p) {
   if (&__sanitizer_free_hook) __sanitizer_free_hook(p);
   RunFreeHooks(p);
   RegisterDeallocation(p);
-  allocator.Deallocate(&cache, p);
+  allocator.Deallocate(GetAllocatorCache(), p);
 }
 
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
@@ -133,17 +134,17 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
   RegisterDeallocation(p);
   if (new_size > kMaxAllowedMallocSize) {
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", new_size);
-    allocator.Deallocate(&cache, p);
+    allocator.Deallocate(GetAllocatorCache(), p);
     return nullptr;
   }
-  p = allocator.Reallocate(&cache, p, new_size, alignment);
+  p = allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
   RegisterAllocation(stack, p, new_size);
   return p;
 }
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end) {
-  *begin = (uptr)&cache;
-  *end = *begin + sizeof(cache);
+  *begin = (uptr)GetAllocatorCache();
+  *end = *begin + sizeof(AllocatorCache);
 }
 
 uptr GetMallocUsableSize(const void *p) {

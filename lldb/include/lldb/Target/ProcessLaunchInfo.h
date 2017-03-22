@@ -16,11 +16,11 @@
 // LLDB Headers
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessInfo.h"
+#include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
 

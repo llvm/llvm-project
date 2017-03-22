@@ -10,7 +10,7 @@
 #ifndef liblldb_Target_FileAction_h
 #define liblldb_Target_FileAction_h
 
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include <string>
 
 namespace lldb_private {

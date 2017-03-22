@@ -509,12 +509,6 @@ public:
     checkConsistency();
   }
 
-  /// Alternative constructor taking isl_sets instead isl_union_sets.
-  Knowledge(isl::set Occupied, isl::set Unused, isl::set Written)
-      : Knowledge(give(isl_union_set_from_set(Occupied.take())),
-                  give(isl_union_set_from_set(Unused.take())),
-                  give(isl_union_set_from_set(Written.take()))) {}
-
   /// Return whether this object was not default-constructed.
   bool isUsable() const { return (Occupied || Unused) && Written; }
 
@@ -700,10 +694,6 @@ protected:
 
   /// Cached version of the schedule and domains.
   isl::union_map Schedule;
-
-  /// Set of all referenced elements.
-  /// { Element[] -> Element[] }
-  isl::union_set AllElements;
 
   /// Combined access relations of all MemoryKind::Array READ accesses.
   /// { DomainRead[] -> Element[] }
@@ -945,16 +935,6 @@ protected:
     // { DomainWrite[] -> Element[] }
     auto AllWrites =
         give(isl_union_map_union(AllMustWrites.copy(), AllMayWrites.copy()));
-
-    // { Element[] }
-    AllElements = makeEmptyUnionSet();
-    foreachElt(AllWrites, [this](isl::map Write) {
-      auto Space = give(isl_map_get_space(Write.keep()));
-      auto EltSpace = give(isl_space_range(Space.take()));
-      auto EltUniv = give(isl_set_universe(EltSpace.take()));
-      AllElements =
-          give(isl_union_set_add_set(AllElements.take(), EltUniv.take()));
-    });
   }
 
   /// Print the current state of all MemoryAccesses to @p.

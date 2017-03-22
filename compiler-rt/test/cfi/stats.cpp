@@ -2,8 +2,6 @@
 // RUN: env SANITIZER_STATS_PATH=%t.stats %t
 // RUN: sanstats %t.stats | FileCheck %s
 
-// XFAIL: win32
-
 // FIXME: We currently emit the wrong debug info under devirtualization.
 // UNSUPPORTED: devirt
 

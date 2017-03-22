@@ -896,6 +896,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     sys::path::replace_extension(Config->PDBPath, ".pdb");
   }
 
+  // Disable PDB generation if the user requested it.
+  if (Args.hasArg(OPT_nopdb))
+    Config->PDBPath = "";
+
   // Set default image base if /base is not given.
   if (Config->ImageBase == uint64_t(-1))
     Config->ImageBase = getDefaultImageBase();

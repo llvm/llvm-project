@@ -9,12 +9,12 @@
 
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBError.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/SmallString.h"
