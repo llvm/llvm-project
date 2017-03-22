@@ -84,6 +84,16 @@ public:
 /// entry.
 class DwarfExpression {
 protected:
+  /// Holds information about all subregisters comprising a register location.
+  struct Register {
+    int DwarfRegNo;
+    unsigned Size;
+    const char *Comment;
+  };
+
+  /// The register location, if any.
+  SmallVector<Register, 2> DwarfRegs;
+
   /// Current Fragment Offset in Bits.
   uint64_t OffsetInBits = 0;
   unsigned DwarfVersion;
@@ -116,11 +126,8 @@ protected:
   void addReg(int DwarfReg, const char *Comment = nullptr);
   /// Emit an (double-)indirect dwarf register operation.
   void addRegIndirect(int DwarfReg, int Offset);
-
-  /// Emit an indirect dwarf register operation for the given machine register.
-  /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
-                             int Offset = 0);
+  /// Emit DW_OP_fbreg <Offset>.
+  void addFBReg(int Offset);
 
   /// Emit a partial DWARF register operation.
   ///
