@@ -1840,7 +1840,7 @@ static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
       llvm::AttrBuilder B;
       B.addAttribute(llvm::Attribute::Returned);
 
-      F->arg_begin()->addAttr(llvm::AttributeSet::get(F->getContext(), 1, B));
+      F->arg_begin()->addAttr(llvm::AttributeList::get(F->getContext(), 1, B));
     }
   }
 

@@ -55,6 +55,12 @@
 //  S   -> signed
 //  U   -> unsigned
 //  I   -> Required to constant fold to an integer constant expression.
+//  N   -> Do not assume non-null for optimizations even if attributed nonnull.
+//         This can be used when a relevant standard requires arguments or
+//         returns to be non-null and they are attributed accordingly but in
+//         practice are not used in this way. This typically used when a size
+//         parameter is also provided and when zero it would be reasonable to
+//         give an invalid pointer.
 //
 // Types may be postfixed with the following modifiers:
 // * -> pointer (optionally followed by an address space number, if no address
@@ -787,27 +793,27 @@ LIBBUILTIN(_Exit, "vi",           "fr",    "stdlib.h", ALL_LANGUAGES)
 LIBBUILTIN(malloc, "v*z",         "f",     "stdlib.h", ALL_LANGUAGES)
 LIBBUILTIN(realloc, "v*v*z",      "f",     "stdlib.h", ALL_LANGUAGES)
 // C99 string.h
-LIBBUILTIN(memcpy, "v*v*vC*z",    "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(memcmp, "ivC*vC*z",    "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(memmove, "v*v*vC*z",   "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strcpy, "c*c*cC*",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strncpy, "c*c*cC*z",   "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strcmp, "icC*cC*",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strncmp, "icC*cC*z",   "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strcat, "c*c*cC*",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strncat, "c*c*cC*z",   "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strxfrm, "zc*cC*z",    "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(memchr, "v*vC*iz",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strchr, "c*cC*i",      "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strcspn, "zcC*cC*",    "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strpbrk, "c*cC*cC*",   "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strrchr, "c*cC*i",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strspn, "zcC*cC*",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strstr, "c*cC*cC*",    "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strtok, "c*c*cC*",     "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(memset, "v*v*iz",      "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strerror, "c*i",       "f",     "string.h", ALL_LANGUAGES)
-LIBBUILTIN(strlen, "zcC*",        "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(memcpy, "Nv*Nv*NvC*z",  "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(memcmp, "iNvC*NvC*z",   "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(memmove, "Nv*Nv*NvC*z", "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strcpy, "c*c*cC*",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strncpy, "Nc*Nc*NcC*z", "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strcmp, "icC*cC*",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strncmp, "iNcC*NcC*z",  "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strcat, "c*c*cC*",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strncat, "c*c*NcC*z",   "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strxfrm, "zc*cC*z",     "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(memchr, "Nv*NvC*iz",    "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strchr, "c*cC*i",       "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strcspn, "zcC*cC*",     "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strpbrk, "c*cC*cC*",    "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strrchr, "c*cC*i",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strspn, "zcC*cC*",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strstr, "c*cC*cC*",     "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strtok, "c*c*cC*",      "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(memset, "Nv*Nv*iz",     "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strerror, "c*i",        "f",     "string.h", ALL_LANGUAGES)
+LIBBUILTIN(strlen, "zcC*",         "f",     "string.h", ALL_LANGUAGES)
 // C99 stdio.h
 LIBBUILTIN(printf, "icC*.",       "fp:0:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(fprintf, "iP*cC*.",    "fp:1:", "stdio.h", ALL_LANGUAGES)
@@ -841,12 +847,12 @@ LIBBUILTIN(toupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
 // C99 wchar.h
 // FIXME: This list is incomplete. We should cover at least the functions that
 // take format strings.
-LIBBUILTIN(wcschr,  "w*wC*w",   "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wcscmp,  "iwC*wC*",  "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wcslen,  "zwC*",     "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wcsncmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wmemchr, "w*wC*wz",  "f", "wchar.h", ALL_LANGUAGES)
-LIBBUILTIN(wmemcmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcschr,  "w*wC*w",     "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcscmp,  "iwC*wC*",    "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcslen,  "zwC*",       "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcsncmp, "iNwC*NwC*z", "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wmemchr, "Nw*NwC*wz",  "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wmemcmp, "iNwC*NwC*z", "f", "wchar.h", ALL_LANGUAGES)
 
 // C99
 // In some systems setjmp is a macro that expands to _setjmp. We undefine

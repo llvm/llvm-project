@@ -1053,7 +1053,7 @@ Enable C++17 aligned allocation functions
 
 .. option:: -fallow-unsupported
 
-.. option:: -faltivec, -fno-altivec, -maltivec
+.. option:: -maltivec, -mno-altivec
 
 Enable AltiVec vector initializer syntax
 

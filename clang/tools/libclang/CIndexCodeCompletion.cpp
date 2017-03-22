@@ -320,7 +320,8 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     : CXCodeCompleteResults(), DiagOpts(new DiagnosticOptions),
       Diag(new DiagnosticsEngine(
           IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts)),
-      FileMgr(FileMgr), SourceMgr(new SourceManager(*Diag, *FileMgr)),
+      FileMgr(std::move(FileMgr)),
+      SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
           std::make_shared<clang::GlobalCodeCompletionAllocator>()),
       Contexts(CXCompletionContext_Unknown),

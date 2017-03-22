@@ -174,7 +174,7 @@
 ///    the corresponding three upper elements of the 128-bit result vector of
 ///    [4 x float]. Rounds down the lowest element of the second 128-bit vector
 ///    operand to an integer and copies it to the lowest element of the 128-bit
-///    result vector of [4 x float]. 
+///    result vector of [4 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -256,7 +256,7 @@
 #define _mm_round_ps(X, M) __extension__ ({ \
   (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M)); })
 
-/// \brief Copies three upper elements of the first 128-bit vector operand to 
+/// \brief Copies three upper elements of the first 128-bit vector operand to
 ///    the corresponding three upper elements of the 128-bit result vector of
 ///    [4 x float]. Rounds the lowest element of the second 128-bit vector
 ///    operand to an integer value according to the rounding control specified
@@ -265,7 +265,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// \code                       
+/// \code
 /// __m128 _mm_round_ss(__m128 X, __m128 Y, const int M);
 /// \endcode
 ///
@@ -336,7 +336,7 @@
 
 /// \brief Copies the upper element of the first 128-bit vector operand to the
 ///    corresponding upper element of the 128-bit result vector of [2 x double].
-///    Rounds the lower element of the second 128-bit vector operand to an 
+///    Rounds the lower element of the second 128-bit vector operand to an
 ///    integer value according to the rounding control specified by the third
 ///    argument and copies it to the lower element of the 128-bit result vector
 ///    of [2 x double].
@@ -575,7 +575,7 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 /// \param __V1
 ///    A 128-bit integer vector.
 /// \param __V2
-///    A 128-bit integer vector. 
+///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the products of both operands.
 static __inline__  __m128i __DEFAULT_FN_ATTRS
 _mm_mullo_epi32 (__m128i __V1, __m128i __V2)
@@ -795,7 +795,7 @@ _mm_min_epi32 (__m128i __V1, __m128i __V2)
   return (__m128i) __builtin_ia32_pminsd128 ((__v4si) __V1, (__v4si) __V2);
 }
 
-/// \brief Compares the corresponding elements of two 128-bit vectors of 
+/// \brief Compares the corresponding elements of two 128-bit vectors of
 ///    [4 x i32] and returns a 128-bit vector of [4 x i32] containing the
 ///    greater value of the two.
 ///
@@ -914,7 +914,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    A 128-bit vector of [4 x float].
 /// \param N
 ///    An immediate value. Bits [1:0] determines which bits from the argument
-///    \a X are extracted and returned: \n 
+///    \a X are extracted and returned: \n
 ///    00: Bits [31:0] of parameter \a X are returned. \n
 ///    01: Bits [63:32] of parameter \a X are returned. \n
 ///    10: Bits [95:64] of parameter \a X are returned. \n
@@ -1023,7 +1023,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 /// \brief Constructs a 128-bit vector of [2 x i64] by first making a copy of
 ///    the 128-bit integer vector parameter, and then inserting the 64-bit
 ///    integer parameter \a I, using the immediate value parameter \a N as an
-///    insertion location selector. 
+///    insertion location selector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1033,7 +1033,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///
 /// This intrinsic corresponds to the <c> <i> VPINSRQ / PINSRQ </i> </c>
 /// instruction.
-///                                                                      
+///
 /// \param X
 ///    A 128-bit integer vector of [2 x i64]. This vector is copied to the
 ///    result and then one of the two elements in the result vector is replaced
@@ -1535,7 +1535,7 @@ _mm_cvtepu32_epi64(__m128i __V)
 /* SSE4 Pack with Unsigned Saturation.  */
 /// \brief Converts 32-bit signed integers from both 128-bit integer vector
 ///    operands into 16-bit unsigned integers, and returns the packed result.
-///    Values greater than 0xFFFF are saturated to 0xFFFF. Values less than 
+///    Values greater than 0xFFFF are saturated to 0xFFFF. Values less than
 ///    0x0000 are saturated to 0x0000.
 ///
 /// \headerfile <x86intrin.h>
@@ -1738,7 +1738,7 @@ _mm_minpos_epu16(__m128i __V)
 ///    words, the type of comparison to perform, and the format of the return
 ///    value. \n
 ///    Bits [1:0]: Determine source data format. \n
-///      00: 16 unsigned bytes \n 
+///      00: 16 unsigned bytes \n
 ///      01: 8 unsigned words \n
 ///      10: 16 signed bytes \n
 ///      11: 8 signed words \n
@@ -2176,7 +2176,7 @@ _mm_minpos_epu16(__m128i __V)
 ///      10: Match: Compare each pair of corresponding characters in \a A and
 ///          \a B for equality. \n
 ///      11: Substring: Search \a B for substring matches of \a A. \n
-///    Bits [5:4]: Determine whether to perform a one's complement on the bit 
+///    Bits [5:4]: Determine whether to perform a one's complement on the bit
 ///                mask of the comparison results. \n
 ///      00: No effect. \n
 ///      01: Negate the bit mask. \n

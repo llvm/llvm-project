@@ -2644,6 +2644,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         D.Diag(diag::err_drv_clang_unsupported_opt_cxx_darwin_i386)
             << Unsupported->getOption().getName();
     }
+    // The faltivec option has been superseded by the maltivec option.
+    if ((Unsupported = Args.getLastArg(options::OPT_faltivec)))
+      D.Diag(diag::err_drv_clang_unsupported_opt_faltivec)
+          << Unsupported->getOption().getName()
+          << "please use -maltivec and include altivec.h explicitly";
+    if ((Unsupported = Args.getLastArg(options::OPT_fno_altivec)))
+      D.Diag(diag::err_drv_clang_unsupported_opt_faltivec)
+          << Unsupported->getOption().getName() << "please use -mno-altivec";
   }
 
   Args.AddAllArgs(CmdArgs, options::OPT_v);
@@ -3189,10 +3197,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    EmulatedTLSDefault))
     CmdArgs.push_back("-femulated-tls");
   // AltiVec-like language extensions aren't relevant for assembling.
-  if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm) {
-    Args.AddLastArg(CmdArgs, options::OPT_faltivec);
+  if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)
     Args.AddLastArg(CmdArgs, options::OPT_fzvector);
-  }
+
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_show_template_tree);
   Args.AddLastArg(CmdArgs, options::OPT_fno_elide_type);
 
@@ -3229,21 +3236,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const SanitizerArgs &Sanitize = getToolChain().getSanitizerArgs();
   Sanitize.addArgs(getToolChain(), Args, CmdArgs, InputType);
-
-  // Report an error for -faltivec on anything other than PowerPC.
-  if (const Arg *A = Args.getLastArg(options::OPT_faltivec)) {
-    const llvm::Triple::ArchType Arch = getToolChain().getArch();
-    if (!(Arch == llvm::Triple::ppc || Arch == llvm::Triple::ppc64 ||
-          Arch == llvm::Triple::ppc64le))
-      D.Diag(diag::err_drv_argument_only_allowed_with) << A->getAsString(Args)
-                                                       << "ppc/ppc64/ppc64le";
-  }
-
-  // -fzvector is incompatible with -faltivec.
-  if (Arg *A = Args.getLastArg(options::OPT_fzvector))
-    if (Args.hasArg(options::OPT_faltivec))
-      D.Diag(diag::err_drv_argument_not_allowed_with) << A->getAsString(Args)
-                                                      << "-faltivec";
 
   if (getToolChain().SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_pg);
@@ -3431,7 +3423,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -f options with positive and negative forms; we translate
   // these by hand.
-  if (Arg *A = Args.getLastArg(options::OPT_fprofile_sample_use_EQ)) {
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
     StringRef fname = A->getValue();
     if (!llvm::sys::fs::exists(fname))
       D.Diag(diag::err_drv_no_such_file) << fname;

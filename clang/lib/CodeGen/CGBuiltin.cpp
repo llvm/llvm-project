@@ -470,10 +470,13 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   assert(Ptr->getType()->isPointerTy() &&
          "Non-pointer passed to __builtin_object_size?");
 
-  // LLVM only supports 0 and 2, make sure that we pass along that as a boolean.
-  auto *CI = ConstantInt::get(Builder.getInt1Ty(), (Type & 2) >> 1);
   Value *F = CGM.getIntrinsic(Intrinsic::objectsize, {ResType, Ptr->getType()});
-  return Builder.CreateCall(F, {Ptr, CI});
+
+  // LLVM only supports 0 and 2, make sure that we pass along that as a boolean.
+  Value *Min = Builder.getInt1((Type & 2) != 0);
+  // For GCC compatability, __builtin_object_size treat NULL as unknown size.
+  Value *NullIsUnknown = Builder.getTrue();
+  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown});
 }
 
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
@@ -598,9 +601,9 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {Int32Ty}, false);
     llvm::InlineAsm *IA =
         llvm::InlineAsm::get(FTy, Asm, Constraints, /*SideEffects=*/true);
-    llvm::AttributeSet NoReturnAttr =
-        AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
-                          llvm::Attribute::NoReturn);
+    llvm::AttributeList NoReturnAttr = llvm::AttributeList::get(
+        getLLVMContext(), llvm::AttributeList::FunctionIndex,
+        llvm::Attribute::NoReturn);
     CallSite CS = Builder.CreateCall(IA, EmitScalarExpr(E->getArg(0)));
     CS.setAttributes(NoReturnAttr);
     return CS.getInstruction();
@@ -2258,9 +2261,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_setjmpex: {
     if (getTarget().getTriple().isOSMSVCRT()) {
       llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
-      llvm::AttributeSet ReturnsTwiceAttr =
-          AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
-                            llvm::Attribute::ReturnsTwice);
+      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
+          getLLVMContext(), llvm::AttributeList::FunctionIndex,
+          llvm::Attribute::ReturnsTwice);
       llvm::Constant *SetJmpEx = CGM.CreateRuntimeFunction(
           llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
           "_setjmpex", ReturnsTwiceAttr, /*Local=*/true);
@@ -2278,9 +2281,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   }
   case Builtin::BI_setjmp: {
     if (getTarget().getTriple().isOSMSVCRT()) {
-      llvm::AttributeSet ReturnsTwiceAttr =
-          AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
-                            llvm::Attribute::ReturnsTwice);
+      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
+          getLLVMContext(), llvm::AttributeList::FunctionIndex,
+          llvm::Attribute::ReturnsTwice);
       llvm::Value *Buf = Builder.CreateBitOrPointerCast(
           EmitScalarExpr(E->getArg(0)), Int8PtrTy);
       llvm::CallSite CS;
@@ -2559,8 +2562,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
       AttrBuilder B;
       B.addAttribute(Attribute::ByVal);
-      AttributeSet ByValAttrSet =
-          AttributeSet::get(CGM.getModule().getContext(), 3U, B);
+      llvm::AttributeList ByValAttrSet =
+          llvm::AttributeList::get(CGM.getModule().getContext(), 3U, B);
 
       auto RTCall =
           Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name, ByValAttrSet),
@@ -7995,9 +7998,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     llvm::InlineAsm *IA =
         llvm::InlineAsm::get(FTy, "int $$0x2c", "", /*SideEffects=*/true);
-    llvm::AttributeSet NoReturnAttr =
-        AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
-                          llvm::Attribute::NoReturn);
+    llvm::AttributeList NoReturnAttr = llvm::AttributeList::get(
+        getLLVMContext(), llvm::AttributeList::FunctionIndex,
+        llvm::Attribute::NoReturn);
     CallSite CS = Builder.CreateCall(IA);
     CS.setAttributes(NoReturnAttr);
     return CS.getInstruction();

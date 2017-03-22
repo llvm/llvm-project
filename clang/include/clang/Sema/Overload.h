@@ -98,6 +98,7 @@ namespace clang {
     ICR_Exact_Match = 0,         ///< Exact Match
     ICR_Promotion,               ///< Promotion
     ICR_Conversion,              ///< Conversion
+    ICR_OCL_Scalar_Widening,     ///< OpenCL Scalar Widening
     ICR_Complex_Real_Conversion, ///< Complex <-> Real conversion
     ICR_Writeback_Conversion,    ///< ObjC ARC writeback conversion
     ICR_C_Conversion,            ///< Conversion only allowed in the C standard.

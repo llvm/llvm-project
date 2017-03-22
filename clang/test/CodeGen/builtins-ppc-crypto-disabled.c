@@ -1,13 +1,13 @@
 // REQUIRES: powerpc-registered-target
-// RUN: not %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown \
+// RUN: not %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown \
 // RUN: -target-cpu pwr8 -target-feature -crypto -emit-llvm %s -o - 2>&1 \
 // RUN: | FileCheck %s
 
-// RUN: not %clang_cc1 -faltivec -triple powerpc64-unknown-unknown \
+// RUN: not %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown \
 // RUN: -target-cpu pwr8 -target-feature -crypto -emit-llvm %s -o - 2>&1 \
 // RUN: | FileCheck %s
 
-// RUN: not %clang_cc1 -faltivec -triple powerpc64-unknown-unknown \
+// RUN: not %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown \
 // RUN: -target-cpu pwr8 -target-feature -power8-vector \
 // RUN: -target-feature -crypto -emit-llvm %s -o - 2>&1 \
 // RUN: | FileCheck %s -check-prefix=CHECK-P8V

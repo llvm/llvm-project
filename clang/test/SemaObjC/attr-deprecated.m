@@ -83,8 +83,8 @@ int t5() {
 }
 
 
-__attribute ((deprecated))  
-@interface DEPRECATED { // expected-note 2 {{'DEPRECATED' has been explicitly marked deprecated here}}
+__attribute ((deprecated)) // expected-note 2 {{'DEPRECATED' has been explicitly marked deprecated here}}
+@interface DEPRECATED { 
   @public int ivar; 
   DEPRECATED *ivar2; // no warning.
 } 

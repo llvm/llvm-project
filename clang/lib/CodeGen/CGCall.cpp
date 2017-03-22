@@ -1754,9 +1754,37 @@ void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
   ConstructDefaultFnAttrList(F.getName(),
                              F.hasFnAttribute(llvm::Attribute::OptimizeNone),
                              /* AttrOnCallsite = */ false, FuncAttrs);
-  llvm::AttributeSet AS = llvm::AttributeSet::get(
-      getLLVMContext(), llvm::AttributeSet::FunctionIndex, FuncAttrs);
-  F.addAttributes(llvm::AttributeSet::FunctionIndex, AS);
+  llvm::AttributeList AS = llvm::AttributeList::get(
+      getLLVMContext(), llvm::AttributeList::FunctionIndex, FuncAttrs);
+  F.addAttributes(llvm::AttributeList::FunctionIndex, AS);
+}
+
+/// Returns the attribute (either parameter attribute, or function
+/// attribute), which declares argument ArgNo to be non-null.
+static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
+                                         QualType ArgType, unsigned ArgNo) {
+  // FIXME: __attribute__((nonnull)) can also be applied to:
+  //   - references to pointers, where the pointee is known to be
+  //     nonnull (apparently a Clang extension)
+  //   - transparent unions containing pointers
+  // In the former case, LLVM IR cannot represent the constraint. In
+  // the latter case, we have no guarantee that the transparent union
+  // is in fact passed as a pointer.
+  if (!ArgType->isAnyPointerType() && !ArgType->isBlockPointerType())
+    return nullptr;
+  // First, check attribute on parameter itself.
+  if (PVD) {
+    if (auto ParmNNAttr = PVD->getAttr<NonNullAttr>())
+      return ParmNNAttr;
+  }
+  // Check function attributes.
+  if (!FD)
+    return nullptr;
+  for (const auto *NNAttr : FD->specific_attrs<NonNullAttr>()) {
+    if (NNAttr->isNonNull(ArgNo))
+      return NNAttr;
+  }
+  return nullptr;
 }
 
 void CodeGenModule::ConstructAttributeList(
@@ -1775,6 +1803,18 @@ void CodeGenModule::ConstructAttributeList(
                                      CalleeInfo.getCalleeFunctionProtoType());
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl();
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+
+  // Check if this is a builtin function that might override some attributes.
+  unsigned BuiltinID = FD ? FD->getBuiltinID() : 0;
+  bool OverrideNonnullReturn = false;
+  unsigned OverrideNonnullArgs = 0;
+  if (BuiltinID) {
+    ASTContext::GetBuiltinTypeError Error;
+    getContext().GetBuiltinType(BuiltinID, Error, nullptr,
+                                &OverrideNonnullReturn, &OverrideNonnullArgs);
+    assert(Error == ASTContext::GE_None && "Should not codegen an error");
+  }
 
   bool HasOptnone = false;
   // FIXME: handle sseregparm someday...
@@ -1790,13 +1830,13 @@ void CodeGenModule::ConstructAttributeList(
     if (TargetDecl->hasAttr<ConvergentAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::Convergent);
 
-    if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
+    if (FD) {
       AddAttributesFromFunctionProtoType(
-          getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
+          getContext(), FuncAttrs, FD->getType()->getAs<FunctionProtoType>());
       // Don't use [[noreturn]] or _Noreturn for a call to a virtual function.
       // These attributes are not inherited by overloads.
-      const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
-      if (Fn->isNoReturn() && !(AttrOnCallSite && MD && MD->isVirtual()))
+      const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (FD->isNoReturn() && !(AttrOnCallSite && MD && MD->isVirtual()))
         FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
     }
 
@@ -1813,7 +1853,7 @@ void CodeGenModule::ConstructAttributeList(
     }
     if (TargetDecl->hasAttr<RestrictAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-    if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
+    if (TargetDecl->hasAttr<ReturnsNonNullAttr>() && !OverrideNonnullReturn)
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
@@ -1845,7 +1885,6 @@ void CodeGenModule::ConstructAttributeList(
     // we have a decl for the function and it has a target attribute then
     // parse that and add it to the feature set.
     StringRef TargetCPU = getTarget().getTargetOpts().CPU;
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
     if (FD && FD->hasAttr<TargetAttr>()) {
       llvm::StringMap<bool> FeatureMap;
       getFunctionFeatureMap(FeatureMap, FD);
@@ -1932,8 +1971,8 @@ void CodeGenModule::ConstructAttributeList(
 
   // Attach return attributes.
   if (RetAttrs.hasAttributes()) {
-    PAL.push_back(llvm::AttributeSet::get(
-        getLLVMContext(), llvm::AttributeSet::ReturnIndex, RetAttrs));
+    PAL.push_back(llvm::AttributeList::get(
+        getLLVMContext(), llvm::AttributeList::ReturnIndex, RetAttrs));
   }
 
   bool hasUsedSRet = false;
@@ -1945,7 +1984,7 @@ void CodeGenModule::ConstructAttributeList(
     hasUsedSRet = true;
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
-    PAL.push_back(llvm::AttributeSet::get(
+    PAL.push_back(llvm::AttributeList::get(
         getLLVMContext(), IRFunctionArgs.getSRetArgNo() + 1, SRETAttrs));
   }
 
@@ -1953,7 +1992,7 @@ void CodeGenModule::ConstructAttributeList(
   if (IRFunctionArgs.hasInallocaArg()) {
     llvm::AttrBuilder Attrs;
     Attrs.addAttribute(llvm::Attribute::InAlloca);
-    PAL.push_back(llvm::AttributeSet::get(
+    PAL.push_back(llvm::AttributeList::get(
         getLLVMContext(), IRFunctionArgs.getInallocaArgNo() + 1, Attrs));
   }
 
@@ -1968,7 +2007,7 @@ void CodeGenModule::ConstructAttributeList(
     // Add attribute for padding argument, if necessary.
     if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
       if (AI.getPaddingInReg())
-        PAL.push_back(llvm::AttributeSet::get(
+        PAL.push_back(llvm::AttributeList::get(
             getLLVMContext(), IRFunctionArgs.getPaddingArgNo(ArgNo) + 1,
             llvm::Attribute::InReg));
     }
@@ -2037,6 +2076,13 @@ void CodeGenModule::ConstructAttributeList(
       continue;
     }
 
+    if (FD && ArgNo < FD->param_size() && ParamType->isPointerType()) {
+      auto *PVD = FD->getParamDecl(ArgNo);
+      if (getNonNullAttr(FD, PVD, ParamType, PVD->getFunctionScopeIndex()) &&
+          (!BuiltinID || (OverrideNonnullArgs & (1 << ArgNo)) == 0))
+        Attrs.addAttribute(llvm::Attribute::NonNull);
+    }
+
     if (const auto *RefTy = ParamType->getAs<ReferenceType>()) {
       QualType PTy = RefTy->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
@@ -2085,17 +2131,15 @@ void CodeGenModule::ConstructAttributeList(
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
       for (unsigned i = 0; i < NumIRArgs; i++)
-        PAL.push_back(llvm::AttributeSet::get(getLLVMContext(),
-                                              FirstIRArg + i + 1, Attrs));
+        PAL.push_back(llvm::AttributeList::get(getLLVMContext(),
+                                               FirstIRArg + i + 1, Attrs));
     }
   }
   assert(ArgNo == FI.arg_size());
 
   if (FuncAttrs.hasAttributes())
-    PAL.push_back(llvm::
-                  AttributeSet::get(getLLVMContext(),
-                                    llvm::AttributeSet::FunctionIndex,
-                                    FuncAttrs));
+    PAL.push_back(llvm::AttributeList::get(
+        getLLVMContext(), llvm::AttributeList::FunctionIndex, FuncAttrs));
 }
 
 /// An argument came in as a promoted argument; demote it back to its
@@ -2116,34 +2160,6 @@ static llvm::Value *emitArgumentDemotion(CodeGenFunction &CGF,
     return CGF.Builder.CreateTrunc(value, varType, "arg.unpromote");
 
   return CGF.Builder.CreateFPCast(value, varType, "arg.unpromote");
-}
-
-/// Returns the attribute (either parameter attribute, or function
-/// attribute), which declares argument ArgNo to be non-null.
-static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
-                                         QualType ArgType, unsigned ArgNo) {
-  // FIXME: __attribute__((nonnull)) can also be applied to:
-  //   - references to pointers, where the pointee is known to be
-  //     nonnull (apparently a Clang extension)
-  //   - transparent unions containing pointers
-  // In the former case, LLVM IR cannot represent the constraint. In
-  // the latter case, we have no guarantee that the transparent union
-  // is in fact passed as a pointer.
-  if (!ArgType->isAnyPointerType() && !ArgType->isBlockPointerType())
-    return nullptr;
-  // First, check attribute on parameter itself.
-  if (PVD) {
-    if (auto ParmNNAttr = PVD->getAttr<NonNullAttr>())
-      return ParmNNAttr;
-  }
-  // Check function attributes.
-  if (!FD)
-    return nullptr;
-  for (const auto *NNAttr : FD->specific_attrs<NonNullAttr>()) {
-    if (NNAttr->isNonNull(ArgNo))
-      return NNAttr;
-  }
-  return nullptr;
 }
 
 namespace {
@@ -2206,8 +2222,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
   if (IRFunctionArgs.hasSRetArg()) {
     auto AI = cast<llvm::Argument>(FnArgs[IRFunctionArgs.getSRetArgNo()]);
     AI->setName("agg.result");
-    AI->addAttr(llvm::AttributeSet::get(getLLVMContext(), AI->getArgNo() + 1,
-                                        llvm::Attribute::NoAlias));
+    AI->addAttr(llvm::AttributeList::get(getLLVMContext(), AI->getArgNo() + 1,
+                                         llvm::Attribute::NoAlias));
   }
 
   // Track if we received the parameter as a pointer (indirect, byval, or
@@ -2298,9 +2314,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         if (const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(Arg)) {
           if (getNonNullAttr(CurCodeDecl, PVD, PVD->getType(),
                              PVD->getFunctionScopeIndex()))
-            AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                                AI->getArgNo() + 1,
-                                                llvm::Attribute::NonNull));
+            AI->addAttr(llvm::AttributeList::get(getLLVMContext(),
+                                                 AI->getArgNo() + 1,
+                                                 llvm::Attribute::NonNull));
 
           QualType OTy = PVD->getOriginalType();
           if (const auto *ArrTy =
@@ -2317,12 +2333,12 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
                 llvm::AttrBuilder Attrs;
                 Attrs.addDereferenceableAttr(
                   getContext().getTypeSizeInChars(ETy).getQuantity()*ArrSize);
-                AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                                    AI->getArgNo() + 1, Attrs));
+                AI->addAttr(llvm::AttributeList::get(
+                    getLLVMContext(), AI->getArgNo() + 1, Attrs));
               } else if (getContext().getTargetAddressSpace(ETy) == 0) {
-                AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                                    AI->getArgNo() + 1,
-                                                    llvm::Attribute::NonNull));
+                AI->addAttr(llvm::AttributeList::get(getLLVMContext(),
+                                                     AI->getArgNo() + 1,
+                                                     llvm::Attribute::NonNull));
               }
             }
           } else if (const auto *ArrTy =
@@ -2332,9 +2348,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // we know that it must be nonnull.
             if (ArrTy->getSizeModifier() == VariableArrayType::Static &&
                 !getContext().getTargetAddressSpace(ArrTy->getElementType()))
-              AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                                  AI->getArgNo() + 1,
-                                                  llvm::Attribute::NonNull));
+              AI->addAttr(llvm::AttributeList::get(getLLVMContext(),
+                                                   AI->getArgNo() + 1,
+                                                   llvm::Attribute::NonNull));
           }
 
           const auto *AVAttr = PVD->getAttr<AlignValueAttr>();
@@ -2352,15 +2368,14 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
             llvm::AttrBuilder Attrs;
             Attrs.addAlignmentAttr(Alignment);
-            AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                                AI->getArgNo() + 1, Attrs));
+            AI->addAttr(llvm::AttributeList::get(getLLVMContext(),
+                                                 AI->getArgNo() + 1, Attrs));
           }
         }
 
         if (Arg->getType().isRestrictQualified())
-          AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
-                                              AI->getArgNo() + 1,
-                                              llvm::Attribute::NoAlias));
+          AI->addAttr(llvm::AttributeList::get(
+              getLLVMContext(), AI->getArgNo() + 1, llvm::Attribute::NoAlias));
 
         // LLVM expects swifterror parameters to be used in very restricted
         // ways.  Copy the value into a less-restricted temporary.
@@ -4119,8 +4134,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              Callee.getAbstractInfo(),
                              AttributeList, CallingConv,
                              /*AttrOnCallSite=*/true);
-  llvm::AttributeSet Attrs = llvm::AttributeSet::get(getLLVMContext(),
-                                                     AttributeList);
+  llvm::AttributeList Attrs =
+      llvm::AttributeList::get(getLLVMContext(), AttributeList);
 
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
@@ -4131,15 +4146,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       !(Callee.getAbstractInfo().getCalleeDecl() &&
         Callee.getAbstractInfo().getCalleeDecl()->hasAttr<NoInlineAttr>())) {
     Attrs =
-        Attrs.addAttribute(getLLVMContext(),
-                           llvm::AttributeSet::FunctionIndex,
+        Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::AlwaysInline);
   }
 
   // Disable inlining inside SEH __try blocks.
   if (isSEHTryScope()) {
     Attrs =
-        Attrs.addAttribute(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
+        Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::NoInline);
   }
 
@@ -4156,7 +4170,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CannotThrow = true;
   } else {
     // Otherwise, nounwind call sites will never throw.
-    CannotThrow = Attrs.hasAttribute(llvm::AttributeSet::FunctionIndex,
+    CannotThrow = Attrs.hasAttribute(llvm::AttributeList::FunctionIndex,
                                      llvm::Attribute::NoUnwind);
   }
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();

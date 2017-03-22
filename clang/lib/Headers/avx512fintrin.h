@@ -4229,6 +4229,18 @@ _mm512_maskz_cvtpd_epu32 (__mmask8 __U, __m512d __A)
                   _MM_FROUND_CUR_DIRECTION);
 }
 
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_cvtsd_f64(__m512d __a)
+{
+  return __a[0];
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_cvtss_f32(__m512 __a)
+{
+  return __a[0];
+}
+
 /* Unpack and Interleave */
 
 static __inline __m512d __DEFAULT_FN_ATTRS

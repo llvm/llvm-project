@@ -1809,7 +1809,7 @@ _mm_setzero_pd(void)
 /// \brief Constructs a 128-bit floating-point vector of [2 x double]. The lower
 ///    64 bits are set to the lower 64 bits of the second parameter. The upper
 ///    64 bits are set to the upper 64 bits of the first parameter.
-//
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VBLENDPD / BLENDPD </c> instruction.
