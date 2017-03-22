@@ -133,9 +133,10 @@ public:
            static_cast<ptrdiff_t>(MetadataRecSize));
     if (auto BQ = Buffers.lock()) {
       writeEOBMetadata();
-      if (auto EC = BQ->releaseBuffer(Buffer))
+      auto EC = BQ->releaseBuffer(Buffer);
+      if (EC != BufferQueue::ErrorCode::Ok)
         Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-               EC.message().c_str());
+               BufferQueue::getErrorString(EC));
       return;
     }
   }
@@ -170,7 +171,7 @@ static inline bool loggingInitialized(
          XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
-} // namespace anonymous
+} // namespace
 
 static inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
                                           char *&MemPtr) XRAY_NEVER_INSTRUMENT {
@@ -339,20 +340,23 @@ static inline void processFunctionHook(
 
   if (!loggingInitialized(LoggingStatus) || LocalBQ->finalizing()) {
     writeEOBMetadata();
-    if (auto EC = BQ->releaseBuffer(Buffer)) {
+    auto EC = BQ->releaseBuffer(Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
       Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-             EC.message().c_str());
+             BufferQueue::getErrorString(EC));
       return;
     }
     RecordPtr = nullptr;
   }
 
   if (Buffer.Buffer == nullptr) {
-    if (auto EC = LocalBQ->getBuffer(Buffer)) {
+    auto EC = LocalBQ->getBuffer(Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
       auto LS = LoggingStatus.load(std::memory_order_acquire);
       if (LS != XRayLogInitStatus::XRAY_LOG_FINALIZING &&
           LS != XRayLogInitStatus::XRAY_LOG_FINALIZED)
-        Report("Failed to acquire a buffer; error=%s\n", EC.message().c_str());
+        Report("Failed to acquire a buffer; error=%s\n",
+               BufferQueue::getErrorString(EC));
       return;
     }
 
@@ -406,13 +410,16 @@ static inline void processFunctionHook(
   if ((RecordPtr + (MetadataRecSize + FunctionRecSize)) - BufferStart <
       static_cast<ptrdiff_t>(MetadataRecSize)) {
     writeEOBMetadata();
-    if (auto EC = LocalBQ->releaseBuffer(Buffer)) {
+    auto EC = LocalBQ->releaseBuffer(Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
       Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-             EC.message().c_str());
+             BufferQueue::getErrorString(EC));
       return;
     }
-    if (auto EC = LocalBQ->getBuffer(Buffer)) {
-      Report("Failed to acquire a buffer; error=%s\n", EC.message().c_str());
+    EC = LocalBQ->getBuffer(Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
+      Report("Failed to acquire a buffer; error=%s\n",
+             BufferQueue::getErrorString(EC));
       return;
     }
     setupNewBuffer(Buffer, wall_clock_reader);
@@ -471,9 +478,10 @@ static inline void processFunctionHook(
   // make sure that other threads may start using this buffer.
   if ((RecordPtr + MetadataRecSize) - BufferStart == MetadataRecSize) {
     writeEOBMetadata();
-    if (auto EC = LocalBQ->releaseBuffer(Buffer)) {
+    auto EC = LocalBQ->releaseBuffer(Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
       Report("Failed releasing buffer at %p; error=%s\n", Buffer.Buffer,
-             EC.message().c_str());
+             BufferQueue::getErrorString(EC));
       return;
     }
     RecordPtr = nullptr;

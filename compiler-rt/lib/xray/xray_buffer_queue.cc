@@ -13,10 +13,14 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_buffer_queue.h"
-#include <cassert>
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_libc.h"
+
 #include <cstdlib>
+#include <tuple>
 
 using namespace __xray;
+using namespace __sanitizer;
 
 BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
     : BufferSize(B), Buffers(N), Mutex(), OwnedBuffers(), Finalizing(false) {
@@ -35,37 +39,37 @@ BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
   Success = true;
 }
 
-std::error_code BufferQueue::getBuffer(Buffer &Buf) {
+BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   if (Finalizing.load(std::memory_order_acquire))
-    return std::make_error_code(std::errc::state_not_recoverable);
+    return ErrorCode::QueueFinalizing;
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Buffers.empty())
-    return std::make_error_code(std::errc::not_enough_memory);
+    return ErrorCode::NotEnoughMemory;
   auto &T = Buffers.front();
   auto &B = std::get<0>(T);
   Buf = B;
   B.Buffer = nullptr;
   B.Size = 0;
   Buffers.pop_front();
-  return {};
+  return ErrorCode::Ok;
 }
 
-std::error_code BufferQueue::releaseBuffer(Buffer &Buf) {
+BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
   if (OwnedBuffers.count(Buf.Buffer) == 0)
-    return std::make_error_code(std::errc::argument_out_of_domain);
+    return ErrorCode::UnrecognizedBuffer;
   std::lock_guard<std::mutex> Guard(Mutex);
 
   // Now that the buffer has been released, we mark it as "used".
   Buffers.emplace(Buffers.end(), Buf, true /* used */);
   Buf.Buffer = nullptr;
   Buf.Size = 0;
-  return {};
+  return ErrorCode::Ok;
 }
 
-std::error_code BufferQueue::finalize() {
+BufferQueue::ErrorCode BufferQueue::finalize() {
   if (Finalizing.exchange(true, std::memory_order_acq_rel))
-    return std::make_error_code(std::errc::state_not_recoverable);
-  return {};
+    return ErrorCode::QueueFinalizing;
+  return ErrorCode::Ok;
 }
 
 BufferQueue::~BufferQueue() {

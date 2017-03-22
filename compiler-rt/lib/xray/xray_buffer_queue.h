@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
-#include <system_error>
 #include <unordered_set>
 #include <utility>
 
@@ -34,11 +33,11 @@ class BufferQueue {
 public:
   struct Buffer {
     void *Buffer = nullptr;
-    std::size_t Size = 0;
+    size_t Size = 0;
   };
 
 private:
-  std::size_t BufferSize;
+  size_t BufferSize;
 
   // We use a bool to indicate whether the Buffer has been used in this
   // freelist implementation.
@@ -48,9 +47,33 @@ private:
   std::atomic<bool> Finalizing;
 
 public:
+  enum class ErrorCode : unsigned {
+    Ok,
+    NotEnoughMemory,
+    QueueFinalizing,
+    UnrecognizedBuffer,
+    AlreadyFinalized,
+  };
+
+  static const char *getErrorString(ErrorCode E) {
+    switch (E) {
+    case ErrorCode::Ok:
+      return "(none)";
+    case ErrorCode::NotEnoughMemory:
+      return "no available buffers in the queue";
+    case ErrorCode::QueueFinalizing:
+      return "queue already finalizing";
+    case ErrorCode::UnrecognizedBuffer:
+      return "buffer being returned not owned by buffer queue";
+    case ErrorCode::AlreadyFinalized:
+      return "queue already finalized";
+    }
+    return "unknown error";
+  }
+
   /// Initialise a queue of size |N| with buffers of size |B|. We report success
   /// through |Success|.
-  BufferQueue(std::size_t B, std::size_t N, bool &Success);
+  BufferQueue(size_t B, size_t N, bool &Success);
 
   /// Updates |Buf| to contain the pointer to an appropriate buffer. Returns an
   /// error in case there are no available buffers to return when we will run
@@ -63,13 +86,13 @@ public:
   ///   - std::errc::not_enough_memory on exceeding MaxSize.
   ///   - no error when we find a Buffer.
   ///   - std::errc::state_not_recoverable on finalising BufferQueue.
-  std::error_code getBuffer(Buffer &Buf);
+  ErrorCode getBuffer(Buffer &Buf);
 
   /// Updates |Buf| to point to nullptr, with size 0.
   ///
   /// Returns:
   ///   - ...
-  std::error_code releaseBuffer(Buffer &Buf);
+  ErrorCode releaseBuffer(Buffer &Buf);
 
   bool finalizing() const { return Finalizing.load(std::memory_order_acquire); }
 
@@ -80,7 +103,7 @@ public:
   ///
   /// After a call to finalize succeeds, all subsequent calls to finalize will
   /// fail with std::errc::state_not_recoverable.
-  std::error_code finalize();
+  ErrorCode finalize();
 
   /// Applies the provided function F to each Buffer in the queue, only if the
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a

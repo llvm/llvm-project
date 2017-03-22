@@ -24,18 +24,53 @@
 extern "C" void *memset(void *ptr, int value, uptr num);
 
 namespace __lsan {
+
+struct ChunkMetadata {
+  u8 allocated : 8;  // Must be first.
+  ChunkTag tag : 2;
+#if SANITIZER_WORDSIZE == 64
+  uptr requested_size : 54;
+#else
+  uptr requested_size : 32;
+  uptr padding : 22;
+#endif
+  u32 stack_trace_id;
+};
+
+#if defined(__mips64) || defined(__aarch64__) || defined(__i386__)
 #if defined(__i386__)
 static const uptr kMaxAllowedMallocSize = 1UL << 30;
-#elif defined(__mips64) || defined(__aarch64__)
+#else
 static const uptr kMaxAllowedMallocSize = 4UL << 30;
+#endif
+static const uptr kRegionSizeLog = 20;
+static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
+typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
+typedef CompactSizeClassMap SizeClassMap;
+typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE,
+    sizeof(ChunkMetadata), SizeClassMap, kRegionSizeLog, ByteMap>
+    PrimaryAllocator;
 #else
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
+
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = 0x600000000000ULL;
+  static const uptr kSpaceSize =  0x40000000000ULL; // 4T.
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #endif
+typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<> SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
           SecondaryAllocator> Allocator;
 
 static Allocator allocator;
+static THREADLOCAL AllocatorCache cache;
 
 void InitializeAllocator() {
   allocator.InitLinkerInitialized(
@@ -44,7 +79,7 @@ void InitializeAllocator() {
 }
 
 void AllocatorThreadFinish() {
-  allocator.SwallowCache(GetAllocatorCache());
+  allocator.SwallowCache(&cache);
 }
 
 static ChunkMetadata *Metadata(const void *p) {
@@ -76,7 +111,7 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", size);
     return nullptr;
   }
-  void *p = allocator.Allocate(GetAllocatorCache(), size, alignment, false);
+  void *p = allocator.Allocate(&cache, size, alignment, false);
   // Do not rely on the allocator to clear the memory (it's slow).
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
@@ -90,7 +125,7 @@ void Deallocate(void *p) {
   if (&__sanitizer_free_hook) __sanitizer_free_hook(p);
   RunFreeHooks(p);
   RegisterDeallocation(p);
-  allocator.Deallocate(GetAllocatorCache(), p);
+  allocator.Deallocate(&cache, p);
 }
 
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
@@ -98,17 +133,17 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
   RegisterDeallocation(p);
   if (new_size > kMaxAllowedMallocSize) {
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", new_size);
-    allocator.Deallocate(GetAllocatorCache(), p);
+    allocator.Deallocate(&cache, p);
     return nullptr;
   }
-  p = allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
+  p = allocator.Reallocate(&cache, p, new_size, alignment);
   RegisterAllocation(stack, p, new_size);
   return p;
 }
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end) {
-  *begin = (uptr)GetAllocatorCache();
-  *end = *begin + sizeof(AllocatorCache);
+  *begin = (uptr)&cache;
+  *end = *begin + sizeof(cache);
 }
 
 uptr GetMallocUsableSize(const void *p) {
