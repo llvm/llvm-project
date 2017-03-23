@@ -899,6 +899,8 @@ TEST(StringRefTest, joinStrings) {
   EXPECT_TRUE(v2_join2);
   bool v2_join3 = join(v2.begin(), v2.end(), "::") == join_result3;
   EXPECT_TRUE(v2_join3);
+  v2_join3 = join(v2, "::") == join_result3;
+  EXPECT_TRUE(v2_join3);
 }
 
 

@@ -163,17 +163,25 @@ private:
     case KwHeapsize:
       parseNumbers(&Config->HeapReserve, &Config->HeapCommit);
       return;
-    case KwLibrary:
-      parseName(&Config->OutputFile, &Config->ImageBase);
-      if (!StringRef(Config->OutputFile).endswith_lower(".dll"))
-        Config->OutputFile += ".dll";
-      return;
     case KwStacksize:
       parseNumbers(&Config->StackReserve, &Config->StackCommit);
       return;
-    case KwName:
-      parseName(&Config->OutputFile, &Config->ImageBase);
+    case KwLibrary:
+    case KwName: {
+      bool IsDll = Tok.K == KwLibrary; // Check before parseName.
+      std::string Name;
+      parseName(&Name, &Config->ImageBase);
+
+      // Append the appropriate file extension if not already present.
+      StringRef Ext = IsDll ? ".dll" : ".exe";
+      if (!StringRef(Name).endswith_lower(Ext))
+        Name += Ext;
+
+      // Set the output file, but don't override /out if it was already passed.
+      if (Config->OutputFile.empty())
+        Config->OutputFile = Name;
       return;
+    }
     case KwVersion:
       parseVersion(&Config->MajorImageVersion, &Config->MinorImageVersion);
       return;

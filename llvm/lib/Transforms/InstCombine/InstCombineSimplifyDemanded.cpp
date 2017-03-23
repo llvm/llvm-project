@@ -533,7 +533,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       // Right fill the mask of bits for this ADD/SUB to demand the most
       // significant bit and all those below it.
       APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
-      if (SimplifyDemandedBits(I->getOperandUse(0), DemandedFromOps,
+      if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
+          SimplifyDemandedBits(I->getOperandUse(0), DemandedFromOps,
                                LHSKnownZero, LHSKnownOne, Depth + 1) ||
           ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
           SimplifyDemandedBits(I->getOperandUse(1), DemandedFromOps,

@@ -9,7 +9,7 @@
 @internal_readonly = internal unnamed_addr addrspace(2) constant i32 0
 @external_readonly = unnamed_addr addrspace(2) constant i32 0
 
-define void @test() {
+define amdgpu_kernel void @test() {
   ret void
 }
 

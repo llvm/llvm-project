@@ -65,6 +65,13 @@ bool MemberFuncIdRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
 
 bool ArgListRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
   bool Success = true;
+  for (TypeIndex &Arg : ArgIndices)
+    Success &= remapIndex(IndexMap, Arg);
+  return Success;
+}
+
+bool StringListRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
+  bool Success = true;
   for (TypeIndex &Str : StringIndices)
     Success &= remapIndex(IndexMap, Str);
   return Success;

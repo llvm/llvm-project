@@ -7,7 +7,7 @@
 ; GCN: ds_write_b32
 ; GCN: s_branch [[LABEL]]
 ; GCN: s_endpgm
-define void @test_loop(float addrspace(3)* %ptr, i32 %n) nounwind {
+define amdgpu_kernel void @test_loop(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
   %cmp = icmp eq i32 %n, -1
   br i1 %cmp, label %for.exit, label %for.body
@@ -31,7 +31,7 @@ for.body:
 ; GCN: ds_read_b32
 ; GCN: ds_write_b32
 ; GCN: s_branch [[LABEL]]
-define void @loop_const_true(float addrspace(3)* %ptr, i32 %n) nounwind {
+define amdgpu_kernel void @loop_const_true(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
   br label %for.body
 
@@ -52,7 +52,7 @@ for.body:
 ; GCN-LABEL: {{^}}loop_const_false:
 ; GCN-NOT: s_branch
 ; GCN: s_endpgm
-define void @loop_const_false(float addrspace(3)* %ptr, i32 %n) nounwind {
+define amdgpu_kernel void @loop_const_false(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
   br label %for.body
 
@@ -74,7 +74,7 @@ for.body:
 ; GCN-LABEL: {{^}}loop_const_undef:
 ; GCN-NOT: s_branch
 ; GCN: s_endpgm
-define void @loop_const_undef(float addrspace(3)* %ptr, i32 %n) nounwind {
+define amdgpu_kernel void @loop_const_undef(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
   br label %for.body
 
@@ -104,7 +104,7 @@ for.body:
 ; GCN: s_cbranch_vccnz [[LOOPBB]]
 ; GCN-NEXT: ; BB#2
 ; GCN-NEXT: s_endpgm
-define void @loop_arg_0(float addrspace(3)* %ptr, i32 %n, i1 %cond) nounwind {
+define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n, i1 %cond) nounwind {
 entry:
   br label %for.body
 

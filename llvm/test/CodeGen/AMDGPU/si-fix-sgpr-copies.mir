@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GCN
 
 --- |
-  define void @phi_visit_order() { ret void }
+  define amdgpu_kernel void @phi_visit_order() { ret void }
 
 name: phi_visit_order
 tracksRegLiveness: true

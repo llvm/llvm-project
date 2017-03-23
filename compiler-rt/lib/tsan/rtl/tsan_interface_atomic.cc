@@ -450,10 +450,27 @@ static void AtomicFence(ThreadState *thr, uptr pc, morder mo) {
 
 // C/C++
 
+static morder convert_morder(morder mo) {
+  if (flags()->force_seq_cst_atomics)
+    return (morder)mo_seq_cst;
+
+  // Filter out additional memory order flags:
+  // MEMMODEL_SYNC        = 1 << 15
+  // __ATOMIC_HLE_ACQUIRE = 1 << 16
+  // __ATOMIC_HLE_RELEASE = 1 << 17
+  //
+  // HLE is an optimization, and we pretend that elision always fails.
+  // MEMMODEL_SYNC is used when lowering __sync_ atomics,
+  // since we use __sync_ atomics for actual atomic operations,
+  // we can safely ignore it as well. It also subtly affects semantics,
+  // but we don't model the difference.
+  return (morder)(mo & 0x7fff);
+}
+
 #define SCOPED_ATOMIC(func, ...) \
     const uptr callpc = (uptr)__builtin_return_address(0); \
     uptr pc = StackTrace::GetCurrentPc(); \
-    mo = flags()->force_seq_cst_atomics ? (morder)mo_seq_cst : mo; \
+    mo = convert_morder(mo); \
     ThreadState *const thr = cur_thread(); \
     if (thr->ignore_interceptors) \
       return NoTsanAtomic##func(__VA_ARGS__); \

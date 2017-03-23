@@ -13,7 +13,7 @@
 ; GCN: ScratchSize: 8{{$}}
 
 ; R600: MOV
-define void @foo() {
+define amdgpu_kernel void @foo() {
   %alloca = alloca i32, align 4
   store volatile i32 0, i32* %alloca
   ret void

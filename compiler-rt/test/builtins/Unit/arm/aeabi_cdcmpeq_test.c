@@ -1,3 +1,6 @@
+// REQUIRES-ANY: arm-target-arch,armv6m-target-arch
+// RUN: %arm_call_apsr -o %t.aspr.o
+// RUN: %clang_builtins %s %t.aspr.o %librt -o %t && %run %t
 //===-- aeabi_cdcmpeq.c - Test __aeabi_cdcmpeq ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

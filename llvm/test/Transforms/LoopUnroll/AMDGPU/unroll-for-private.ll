@@ -7,7 +7,7 @@
 ; CHECK:       store i32 %tmp15, i32 addrspace(1)* %arrayidx7, align 4
 ; CHECK:       ret void
 
-define void @non_invariant_ind(i32 addrspace(1)* nocapture %a, i32 %x) {
+define amdgpu_kernel void @non_invariant_ind(i32 addrspace(1)* nocapture %a, i32 %x) {
 entry:
   %arr = alloca [64 x i32], align 4
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -40,7 +40,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK:       br i1 %[[exitcond]]
 ; CHECK-NOT:   icmp eq i32 %{{.*}}, 100
 
-define void @invariant_ind(i32 addrspace(1)* nocapture %a, i32 %x) {
+define amdgpu_kernel void @invariant_ind(i32 addrspace(1)* nocapture %a, i32 %x) {
 entry:
   %arr = alloca [64 x i32], align 4
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -82,7 +82,7 @@ for.body6:                                        ; preds = %for.body6, %for.con
 ; CHECK:       icmp eq i32 %{{.*}}, 100
 ; CHECK:       br
 
-define void @too_big(i32 addrspace(1)* nocapture %a, i32 %x) {
+define amdgpu_kernel void @too_big(i32 addrspace(1)* nocapture %a, i32 %x) {
 entry:
   %arr = alloca [256 x i32], align 4
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -116,7 +116,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK:       icmp eq i32 %{{.*}}, 100
 ; CHECK:       br
 
-define void @dynamic_size_alloca(i32 addrspace(1)* nocapture %a, i32 %n, i32 %x) {
+define amdgpu_kernel void @dynamic_size_alloca(i32 addrspace(1)* nocapture %a, i32 %n, i32 %x) {
 entry:
   %arr = alloca i32, i32 %n, align 4
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1

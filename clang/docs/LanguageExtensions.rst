@@ -356,7 +356,7 @@ is:
 
 Query for this feature with ``__has_extension(attribute_ext_vector_type)``.
 
-Giving ``-faltivec`` option to clang enables support for AltiVec vector syntax
+Giving ``-maltivec`` option to clang enables support for AltiVec vector syntax
 and functions.  For example:
 
 .. code-block:: c++

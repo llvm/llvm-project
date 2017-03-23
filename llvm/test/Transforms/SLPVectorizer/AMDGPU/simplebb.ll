@@ -9,7 +9,7 @@ target datalayout = "e-p:32:32:32-p3:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 
 
 ; Simple 3-pair chain with loads and stores
-define void @test1_as_3_3_3(double addrspace(3)* %a, double addrspace(3)* %b, double addrspace(3)* %c) {
+define amdgpu_kernel void @test1_as_3_3_3(double addrspace(3)* %a, double addrspace(3)* %b, double addrspace(3)* %c) {
 ; CHECK-LABEL: @test1_as_3_3_3(
 ; CHECK: load <2 x double>, <2 x double> addrspace(3)*
 ; CHECK: load <2 x double>, <2 x double> addrspace(3)*
@@ -29,7 +29,7 @@ define void @test1_as_3_3_3(double addrspace(3)* %a, double addrspace(3)* %b, do
   ret void
 }
 
-define void @test1_as_3_0_0(double addrspace(3)* %a, double* %b, double* %c) {
+define amdgpu_kernel void @test1_as_3_0_0(double addrspace(3)* %a, double* %b, double* %c) {
 ; CHECK-LABEL: @test1_as_3_0_0(
 ; CHECK: load <2 x double>, <2 x double> addrspace(3)*
 ; CHECK: load <2 x double>, <2 x double>*
@@ -49,7 +49,7 @@ define void @test1_as_3_0_0(double addrspace(3)* %a, double* %b, double* %c) {
   ret void
 }
 
-define void @test1_as_0_0_3(double* %a, double* %b, double addrspace(3)* %c) {
+define amdgpu_kernel void @test1_as_0_0_3(double* %a, double* %b, double addrspace(3)* %c) {
 ; CHECK-LABEL: @test1_as_0_0_3(
 ; CHECK: load <2 x double>, <2 x double>*
 ; CHECK: load <2 x double>, <2 x double>*

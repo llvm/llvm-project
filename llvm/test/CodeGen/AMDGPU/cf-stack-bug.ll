@@ -35,7 +35,7 @@
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested3:
-define void @nested3(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested3(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -68,7 +68,7 @@ end:
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested4:
-define void @nested4(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested4(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -109,7 +109,7 @@ end:
 ; BUG32-NOT: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested7:
-define void @nested7(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested7(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end
@@ -174,7 +174,7 @@ end:
 ; BUG32: Applying bug work-around
 ; NOBUG-NOT: Applying bug work-around
 ; FUNC-LABEL: {{^}}nested8:
-define void @nested8(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @nested8(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %0 = icmp sgt i32 %cond, 0
   br i1 %0, label %if.1, label %end

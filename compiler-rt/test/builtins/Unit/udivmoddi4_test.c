@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- udivmoddi4_test.c - Test __udivmoddi4 -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

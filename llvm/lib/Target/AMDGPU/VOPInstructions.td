@@ -318,7 +318,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let SDWA = 1;
   let Uses = [EXEC];
 
-  let SubtargetPredicate = HasSDWA;
+  let SubtargetPredicate = !if(P.HasExt, HasSDWA, DisableInst);
   let AssemblerPredicate = !if(P.HasExt, HasSDWA, DisableInst);
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.SDWA,
                                      AMDGPUAsmVariants.Disable);

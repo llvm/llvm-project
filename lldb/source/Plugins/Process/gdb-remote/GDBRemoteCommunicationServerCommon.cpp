@@ -642,14 +642,15 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Size(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    lldb::user_id_t retcode = FileSystem::GetFileSize(FileSpec(path, false));
+    uint64_t Size;
+    if (llvm::sys::fs::file_size(path, Size))
+      return SendErrorResponse(5);
     StreamString response;
     response.PutChar('F');
-    response.PutHex64(retcode);
-    if (retcode == UINT64_MAX) {
+    response.PutHex64(Size);
+    if (Size == UINT64_MAX) {
       response.PutChar(',');
-      response.PutHex64(
-          retcode); // TODO: replace with Host::GetSyswideErrorCode()
+      response.PutHex64(Size); // TODO: replace with Host::GetSyswideErrorCode()
     }
     return SendPacketNoLock(response.GetString());
   }
@@ -681,7 +682,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Exists(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    bool retcode = FileSystem::GetFileExists(FileSpec(path, false));
+    bool retcode = llvm::sys::fs::exists(path);
     StreamString response;
     response.PutChar('F');
     response.PutChar(',');
@@ -714,7 +715,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.SetFilePos(::strlen("vFile:unlink:"));
   std::string path;
   packet.GetHexByteString(path);
-  Error error = FileSystem::Unlink(FileSpec{path, true});
+  Error error(llvm::sys::fs::remove(path));
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
@@ -773,13 +774,14 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_MD5(
   if (!path.empty()) {
     uint64_t a, b;
     StreamGDBRemote response;
-    if (!FileSystem::CalculateMD5(FileSpec(path, false), a, b)) {
+    auto Result = llvm::sys::fs::md5_contents(path);
+    if (!Result) {
       response.PutCString("F,");
       response.PutCString("x");
     } else {
       response.PutCString("F,");
-      response.PutHex64(a);
-      response.PutHex64(b);
+      response.PutHex64(Result->low());
+      response.PutHex64(Result->high());
     }
     return SendPacketNoLock(response.GetString());
   }
@@ -838,7 +840,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QThreadSuffixSupported+");
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NetBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
 #endif
@@ -1092,12 +1094,11 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
   StreamGDBRemote response;
 
   if (uuid_str.empty()) {
-    std::string md5_hash;
-    if (!FileSystem::CalculateMD5AsString(matched_module_spec.GetFileSpec(),
-                                          file_offset, file_size, md5_hash))
+    auto Result = llvm::sys::fs::md5_contents(matched_module_spec.GetFileSpec().GetPath());
+    if (!Result)
       return SendErrorResponse(5);
     response.PutCString("md5:");
-    response.PutCStringAsRawHex8(md5_hash.c_str());
+    response.PutCStringAsRawHex8(Result->digest().c_str());
   } else {
     response.PutCString("uuid:");
     response.PutCStringAsRawHex8(uuid_str.c_str());

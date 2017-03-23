@@ -10,7 +10,7 @@
 ; SI: s_and_saveexec_b64
 ; SI: s_xor_b64
 ; SI: s_endpgm
-define void @br_i1_phi(i32 %arg) {
+define amdgpu_kernel void @br_i1_phi(i32 %arg) {
 bb:
   %tidig = call i32 @llvm.r600.read.tidig.x() #0
   %cmp = trunc i32 %tidig to i1

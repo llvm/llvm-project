@@ -43,7 +43,7 @@
 ; TOSMEM: s_mov_b32 m0, [[M0_RESTORE]]
 
 ; GCN: s_add_i32 s{{[0-9]+}}, m0, 1
-define void @spill_m0(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @spill_m0(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
   %cmp0 = icmp eq i32 %cond, 0
@@ -136,7 +136,7 @@ endif:                                            ; preds = %else, %if
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define void @m0_unavailable_spill(i32 %m0.arg) #0 {
+define amdgpu_kernel void @m0_unavailable_spill(i32 %m0.arg) #0 {
 main_body:
   %m0 = call i32 asm sideeffect "; def $0, 1", "={M0}"() #0
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0.arg)
@@ -189,7 +189,7 @@ endif:
 
 ; TOSMEM: s_dcache_wb
 ; TOSMEM: s_endpgm
-define void @restore_m0_lds(i32 %arg) {
+define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
   %sval = load volatile i64, i64 addrspace(2)* undef
   %cmp = icmp eq i32 %arg, 0

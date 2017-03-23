@@ -21,10 +21,6 @@
 
 using namespace lldb_private;
 
-uint32_t HostInfoNetBSD::GetMaxThreadNameLength() {
-  return PTHREAD_MAX_NAMELEN_NP;
-}
-
 bool HostInfoNetBSD::GetOSVersion(uint32_t &major, uint32_t &minor,
                                   uint32_t &update) {
   struct utsname un;

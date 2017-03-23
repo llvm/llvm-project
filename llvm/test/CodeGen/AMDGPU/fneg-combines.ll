@@ -14,7 +14,7 @@
 
 ; GCN-NSZ: v_sub_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[B]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
-define void @v_fneg_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -35,7 +35,7 @@ define void @v_fneg_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr
 ; GCN-DAG: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_add_store_use_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_store_use_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -62,7 +62,7 @@ define void @v_fneg_add_store_use_add_f32(float addrspace(1)* %out, float addrsp
 ; GCN-NSZ-NEXT: v_mul_f32_e32 [[MUL:v[0-9]+]], -4.0, [[ADD]]
 ; GCN: buffer_store_dword [[NEG_ADD]]
 ; GCN-NEXT: buffer_store_dword [[MUL]]
-define void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -87,7 +87,7 @@ define void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out, float addrsp
 
 ; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -111,7 +111,7 @@ define void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)*
 
 ; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -135,7 +135,7 @@ define void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)*
 
 ; GCN-NSZ: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -164,7 +164,7 @@ define void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(
 ; GCN-NSZ-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_A]]
-define void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -192,7 +192,7 @@ define void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN-NSZ-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[MUL]]
-define void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
+define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -218,7 +218,7 @@ define void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_f32_e64 [[RESULT:v[0-9]+]], [[A]], -[[B]]
 ; GCN-NEXT: buffer_store_dword [[RESULT]]
-define void @v_fneg_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -239,7 +239,7 @@ define void @v_fneg_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr
 ; GCN-DAG: v_xor_b32_e32 [[NEG_MUL:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_store_use_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_store_use_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -261,7 +261,7 @@ define void @v_fneg_mul_store_use_mul_f32(float addrspace(1)* %out, float addrsp
 ; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MUL0]]
 ; GCN-NEXT: buffer_store_dword [[MUL0]]
 ; GCN-NEXT: buffer_store_dword [[MUL1]]
-define void @v_fneg_mul_multi_use_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_multi_use_mul_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -282,7 +282,7 @@ define void @v_fneg_mul_multi_use_mul_f32(float addrspace(1)* %out, float addrsp
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -302,7 +302,7 @@ define void @v_fneg_mul_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -322,7 +322,7 @@ define void @v_fneg_mul_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_f32_e64 [[ADD:v[0-9]+]], [[A]], -[[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -345,7 +345,7 @@ define void @v_fneg_mul_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(
 ; GCN-DAG: v_mul_f32_e32 [[NEG_MUL:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[NEG_A]]
-define void @v_fneg_mul_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -368,7 +368,7 @@ define void @v_fneg_mul_store_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_mul_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
+define amdgpu_kernel void @v_fneg_mul_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -394,7 +394,7 @@ define void @v_fneg_mul_multi_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -[[B]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -412,7 +412,7 @@ define void @v_fneg_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_self_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_self_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -428,7 +428,7 @@ define void @v_fneg_self_minnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -4.0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_posk_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_posk_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -444,7 +444,7 @@ define void @v_fneg_posk_minnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], 4.0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_negk_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_negk_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -460,7 +460,7 @@ define void @v_fneg_negk_minnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_min_f32_e32 [[RESULT:v[0-9]+]], 0, [[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -476,7 +476,7 @@ define void @v_fneg_0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], 0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_neg0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_neg0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -494,7 +494,7 @@ define void @v_fneg_neg0_minnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], 0, [[A]]
 ; GCN: v_mul_f32_e64 [[RESULT:v[0-9]+]], -[[MIN]], [[B]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_0_minnum_foldable_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_0_minnum_foldable_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -516,7 +516,7 @@ define void @v_fneg_0_minnum_foldable_use_f32(float addrspace(1)* %out, float ad
 ; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MUL0]]
 ; GCN-NEXT: buffer_store_dword [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MUL1]]
-define void @v_fneg_minnum_multi_use_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_minnum_multi_use_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -541,7 +541,7 @@ define void @v_fneg_minnum_multi_use_minnum_f32(float addrspace(1)* %out, float 
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -[[B]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -559,7 +559,7 @@ define void @v_fneg_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_self_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_self_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -575,7 +575,7 @@ define void @v_fneg_self_maxnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[RESULT:v[0-9]+]], -[[A]], -4.0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_posk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_posk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -591,7 +591,7 @@ define void @v_fneg_posk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[RESULT:v[0-9]+]], -[[A]], 4.0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_negk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_negk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -607,7 +607,7 @@ define void @v_fneg_negk_maxnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -623,7 +623,7 @@ define void @v_fneg_0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[RESULT:v[0-9]+]], -[[A]], 0
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_neg0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_neg0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -641,7 +641,7 @@ define void @v_fneg_neg0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0, [[A]]
 ; GCN: v_mul_f32_e64 [[RESULT:v[0-9]+]], -[[MAX]], [[B]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_0_maxnum_foldable_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_0_maxnum_foldable_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -663,7 +663,7 @@ define void @v_fneg_0_maxnum_foldable_use_f32(float addrspace(1)* %out, float ad
 ; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MUL0]]
 ; GCN-NEXT: buffer_store_dword [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MUL1]]
-define void @v_fneg_maxnum_multi_use_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_maxnum_multi_use_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -693,7 +693,7 @@ define void @v_fneg_maxnum_multi_use_maxnum_f32(float addrspace(1)* %out, float 
 
 ; GCN-NSZ: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
-define void @v_fneg_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -717,7 +717,7 @@ define void @v_fneg_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr
 ; GCN-DAG: v_xor_b32_e32 [[NEG_FMA:v[0-9]+]], 0x80000000, [[FMA]]
 ; GCN-NEXT: buffer_store_dword [[NEG_FMA]]
 ; GCN-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_store_use_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_store_use_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -748,7 +748,7 @@ define void @v_fneg_fma_store_use_fma_f32(float addrspace(1)* %out, float addrsp
 
 ; GCN-NEXT: buffer_store_dword [[NEG_FMA]]
 ; GCN-NEXT: buffer_store_dword [[MUL]]
-define void @v_fneg_fma_multi_use_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_multi_use_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -776,7 +776,7 @@ define void @v_fneg_fma_multi_use_fma_f32(float addrspace(1)* %out, float addrsp
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -803,7 +803,7 @@ define void @v_fneg_fma_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -830,7 +830,7 @@ define void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, float addrspace(1
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_fneg_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_fneg_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -858,7 +858,7 @@ define void @v_fneg_fma_fneg_fneg_y_f32(float addrspace(1)* %out, float addrspac
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], [[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_fneg_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_fneg_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -886,7 +886,7 @@ define void @v_fneg_fma_fneg_x_fneg_f32(float addrspace(1)* %out, float addrspac
 
 ; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], [[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
-define void @v_fneg_fma_x_y_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_x_y_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -916,7 +916,7 @@ define void @v_fneg_fma_x_y_fneg_f32(float addrspace(1)* %out, float addrspace(1
 ; GCN-NSZ-DAG: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_A]]
-define void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -946,7 +946,7 @@ define void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)* %out, float a
 ; GCN-NSZ-DAG: v_fma_f32 [[NEG_FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_FMA]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[MUL]]
-define void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float %d) #0 {
+define amdgpu_kernel void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float %d) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -979,7 +979,7 @@ define void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)* %out, float a
 
 ; GCN-NSZ: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
-define void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1009,7 +1009,7 @@ define void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.pt
 
 ; GCN: buffer_store_dword [[NEG_MAD]]
 ; GCN-NEXT: buffer_store_dword [[MUL]]
-define void @v_fneg_fmad_multi_use_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fmad_multi_use_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1035,7 +1035,7 @@ define void @v_fneg_fmad_multi_use_fmad_f32(float addrspace(1)* %out, float addr
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_cvt_f64_f32_e64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]]
 ; GCN: buffer_store_dwordx2 [[RESULT]]
-define void @v_fneg_fp_extend_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_extend_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1051,7 +1051,7 @@ define void @v_fneg_fp_extend_f32_to_f64(double addrspace(1)* %out, float addrsp
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_cvt_f64_f32_e32 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]]
 ; GCN: buffer_store_dwordx2 [[RESULT]]
-define void @v_fneg_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1070,7 +1070,7 @@ define void @v_fneg_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float a
 ; GCN-DAG: v_xor_b32_e32 [[FNEG_A:v[0-9]+]], 0x80000000, [[A]]
 ; GCN: buffer_store_dwordx2 [[RESULT]]
 ; GCN: buffer_store_dword [[FNEG_A]]
-define void @v_fneg_fp_extend_store_use_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_extend_store_use_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1090,7 +1090,7 @@ define void @v_fneg_fp_extend_store_use_fneg_f32_to_f64(double addrspace(1)* %ou
 ; GCN-DAG: v_xor_b32_e32 v[[FNEG_A:[0-9]+]], 0x80000000, v[[CVT_HI]]
 ; GCN: buffer_store_dwordx2 v{{\[[0-9]+}}:[[FNEG_A]]{{\]}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[CVT_LO]]:[[CVT_HI]]{{\]}}
-define void @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1110,7 +1110,7 @@ define void @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(double addrspace(1)* %ou
 ; GCN-DAG: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[CVT_LO]]:[[CVT_HI]]{{\]}}, 4.0
 ; GCN: buffer_store_dwordx2 v{{\[[0-9]+}}:[[FNEG_A]]{{\]}}
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define void @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(double addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1126,7 +1126,7 @@ define void @v_fneg_multi_foldable_use_fp_extend_fneg_f32_to_f64(double addrspac
 
 ; FIXME: Source modifiers not folded for f16->f32
 ; GCN-LABEL: {{^}}v_fneg_multi_use_fp_extend_fneg_f16_to_f32:
-define void @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(float addrspace(1)* %out, half addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(float addrspace(1)* %out, half addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds half, half addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1140,7 +1140,7 @@ define void @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(float addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32:
-define void @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(float addrspace(1)* %out, half addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(float addrspace(1)* %out, half addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds half, half addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1162,7 +1162,7 @@ define void @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f32(float addrspace
 ; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
 ; GCN: v_cvt_f32_f64_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_fp_round_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1178,7 +1178,7 @@ define void @v_fneg_fp_round_f64_to_f32(float addrspace(1)* %out, double addrspa
 ; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
 ; GCN: v_cvt_f32_f64_e32 [[RESULT:v[0-9]+]], [[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1197,7 +1197,7 @@ define void @v_fneg_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double ad
 ; GCN-DAG: v_xor_b32_e32 v[[NEG_A_HI:[0-9]+]], 0x80000000, v[[A_HI]]
 ; GCN: buffer_store_dword [[RESULT]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[A_LO]]:[[NEG_A_HI]]{{\]}}
-define void @v_fneg_fp_round_store_use_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_store_use_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1217,7 +1217,7 @@ define void @v_fneg_fp_round_store_use_fneg_f64_to_f32(float addrspace(1)* %out,
 ; GCN-DAG: v_mul_f64 [[USE1:v\[[0-9]+:[0-9]+\]]], -[[A]], s{{\[}}
 ; GCN: buffer_store_dword [[RESULT]]
 ; GCN: buffer_store_dwordx2 [[USE1]]
-define void @v_fneg_fp_round_multi_use_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr, double %c) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_multi_use_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr, double %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1236,7 +1236,7 @@ define void @v_fneg_fp_round_multi_use_fneg_f64_to_f32(float addrspace(1)* %out,
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_cvt_f16_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_short [[RESULT]]
-define void @v_fneg_fp_round_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1252,7 +1252,7 @@ define void @v_fneg_fp_round_f32_to_f16(half addrspace(1)* %out, float addrspace
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_cvt_f16_f32_e32 [[RESULT:v[0-9]+]], [[A]]
 ; GCN: buffer_store_short [[RESULT]]
-define void @v_fneg_fp_round_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1271,7 +1271,7 @@ define void @v_fneg_fp_round_fneg_f32_to_f16(half addrspace(1)* %out, float addr
 ; GCN-DAG: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80000000, [[CVT]]
 ; GCN: buffer_store_dword [[NEG]]
 ; GCN: buffer_store_dword [[CVT]]
-define void @v_fneg_multi_use_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_multi_use_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1290,7 +1290,7 @@ define void @v_fneg_multi_use_fp_round_fneg_f64_to_f32(float addrspace(1)* %out,
 ; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
 ; GCN: buffer_store_short [[RESULT]]
 ; GCN: buffer_store_dword [[NEG_A]]
-define void @v_fneg_fp_round_store_use_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_store_use_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1310,7 +1310,7 @@ define void @v_fneg_fp_round_store_use_fneg_f32_to_f16(half addrspace(1)* %out, 
 ; GCN-DAG: v_mul_f32_e64 [[USE1:v[0-9]+]], -[[A]], s
 ; GCN: buffer_store_short [[RESULT]]
 ; GCN: buffer_store_dword [[USE1]]
-define void @v_fneg_fp_round_multi_use_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr, float %c) #0 {
+define amdgpu_kernel void @v_fneg_fp_round_multi_use_fneg_f32_to_f16(half addrspace(1)* %out, float addrspace(1)* %a.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1333,7 +1333,7 @@ define void @v_fneg_fp_round_multi_use_fneg_f32_to_f16(half addrspace(1)* %out, 
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_rcp_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_rcp_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_rcp_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1349,7 +1349,7 @@ define void @v_fneg_rcp_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_rcp_f32_e32 [[RESULT:v[0-9]+]], [[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_rcp_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_rcp_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1368,7 +1368,7 @@ define void @v_fneg_rcp_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %
 ; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
 ; GCN: buffer_store_dword [[RESULT]]
 ; GCN: buffer_store_dword [[NEG_A]]
-define void @v_fneg_rcp_store_use_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_rcp_store_use_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1388,7 +1388,7 @@ define void @v_fneg_rcp_store_use_fneg_f32(float addrspace(1)* %out, float addrs
 ; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN: buffer_store_dword [[RESULT]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_rcp_multi_use_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float %c) #0 {
+define amdgpu_kernel void @v_fneg_rcp_multi_use_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1411,7 +1411,7 @@ define void @v_fneg_rcp_multi_use_fneg_f32(float addrspace(1)* %out, float addrs
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_rcp_legacy_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_rcp_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_rcp_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1432,7 +1432,7 @@ define void @v_fneg_rcp_legacy_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_legacy_f32_e64 [[RESULT:v[0-9]+]], [[A]], -[[B]]
 ; GCN-NEXT: buffer_store_dword [[RESULT]]
-define void @v_fneg_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1453,7 +1453,7 @@ define void @v_fneg_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN-DAG: v_xor_b32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_legacy_store_use_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_store_use_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1476,7 +1476,7 @@ define void @v_fneg_mul_legacy_store_use_mul_legacy_f32(float addrspace(1)* %out
 ; GCN: v_mul_legacy_f32_e32 [[MUL:v[0-9]+]], 4.0, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1497,7 +1497,7 @@ define void @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float addrspace(1)* %out
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_legacy_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1517,7 +1517,7 @@ define void @v_fneg_mul_legacy_fneg_x_f32(float addrspace(1)* %out, float addrsp
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_legacy_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1537,7 +1537,7 @@ define void @v_fneg_mul_legacy_x_fneg_f32(float addrspace(1)* %out, float addrsp
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_mul_legacy_f32_e64 [[ADD:v[0-9]+]], [[A]], -[[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
-define void @v_fneg_mul_legacy_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1560,7 +1560,7 @@ define void @v_fneg_mul_legacy_fneg_fneg_f32(float addrspace(1)* %out, float add
 ; GCN-DAG: v_mul_legacy_f32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], [[B]], [[A]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[NEG_A]]
-define void @v_fneg_mul_legacy_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1583,7 +1583,7 @@ define void @v_fneg_mul_legacy_store_use_fneg_x_f32(float addrspace(1)* %out, fl
 ; GCN-DAG: v_mul_legacy_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_mul_legacy_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
+define amdgpu_kernel void @v_fneg_mul_legacy_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1610,7 +1610,7 @@ define void @v_fneg_mul_legacy_multi_use_fneg_x_f32(float addrspace(1)* %out, fl
 ; GCN: v_fract_f32_e32 [[FRACT:v[0-9]+]], [[MUL]]
 ; GCN: v_sin_f32_e32 [[RESULT:v[0-9]+]], [[FRACT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_sin_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_sin_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1626,7 +1626,7 @@ define void @v_fneg_sin_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_sin_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_amdgcn_sin_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_amdgcn_sin_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1646,7 +1646,7 @@ define void @v_fneg_amdgcn_sin_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_trunc_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_trunc_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_trunc_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1673,7 +1673,7 @@ define void @v_fneg_trunc_f32(float addrspace(1)* %out, float addrspace(1)* %a.p
 
 ; GCN-NSZ: v_sub_f32_e64 [[RESULT:v[0-9]+]], -v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_round_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_round_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1693,7 +1693,7 @@ define void @v_fneg_round_f32(float addrspace(1)* %out, float addrspace(1)* %a.p
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_rndne_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_rint_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_rint_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1713,7 +1713,7 @@ define void @v_fneg_rint_f32(float addrspace(1)* %out, float addrspace(1)* %a.pt
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_rndne_f32_e64 [[RESULT:v[0-9]+]], -[[A]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @v_fneg_nearbyint_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+define amdgpu_kernel void @v_fneg_nearbyint_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1735,7 +1735,7 @@ define void @v_fneg_nearbyint_f32(float addrspace(1)* %out, float addrspace(1)* 
 ; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[A]], -[[B]]
 ; GCN: v_interp_p1_f32 v{{[0-9]+}}, [[MUL]]
 ; GCN: v_interp_p1_f32 v{{[0-9]+}}, [[MUL]]
-define void @v_fneg_interp_p1_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_interp_p1_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1758,7 +1758,7 @@ define void @v_fneg_interp_p1_f32(float addrspace(1)* %out, float addrspace(1)* 
 ; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[A]], -[[B]]
 ; GCN: v_interp_p2_f32 v{{[0-9]+}}, [[MUL]]
 ; GCN: v_interp_p2_f32 v{{[0-9]+}}, [[MUL]]
-define void @v_fneg_interp_p2_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_fneg_interp_p2_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1791,7 +1791,7 @@ define void @v_fneg_interp_p2_f32(float addrspace(1)* %out, float addrspace(1)* 
 ; GCN: buffer_store_dword [[MUL1]]
 
 ; GCN: buffer_store_dword [[MUL0]]
-define void @v_fneg_copytoreg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
+define amdgpu_kernel void @v_fneg_copytoreg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1827,7 +1827,7 @@ endif:
 ; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[A]], -[[B]]
 ; GCN: ; use [[MUL]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_inlineasm_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
+define amdgpu_kernel void @v_fneg_inlineasm_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1856,7 +1856,7 @@ define void @v_fneg_inlineasm_f32(float addrspace(1)* %out, float addrspace(1)* 
 ; GCN: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80000000, [[MUL]]
 ; GCN: ; use [[NEG]]
 ; GCN: buffer_store_dword [[MUL]]
-define void @v_fneg_inlineasm_multi_use_src_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
+define amdgpu_kernel void @v_fneg_inlineasm_multi_use_src_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, i32 %d) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1888,7 +1888,7 @@ define void @v_fneg_inlineasm_multi_use_src_f32(float addrspace(1)* %out, float 
 ; GCN-NEXT: v_fma_f32 [[FMA1:v[0-9]+]], -[[A]], [[C]], 2.0
 ; GCN-NEXT:	buffer_store_dword [[FMA0]]
 ; GCN-NEXT:	buffer_store_dword [[FMA1]]
-define void @multiuse_fneg_2_vop3_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @multiuse_fneg_2_vop3_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1920,7 +1920,7 @@ define void @multiuse_fneg_2_vop3_users_f32(float addrspace(1)* %out, float addr
 ; GCN: v_mul_f32_e64 [[MUL1:v[0-9]+]], -[[A]], [[C]]
 ; GCN-NEXT:	buffer_store_dword [[MUL0]]
 ; GCN-NEXT:	buffer_store_dword [[MUL1]]
-define void @multiuse_fneg_2_vop2_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @multiuse_fneg_2_vop2_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1951,7 +1951,7 @@ define void @multiuse_fneg_2_vop2_users_f32(float addrspace(1)* %out, float addr
 
 ; GCN:	buffer_store_dword [[FMA0]]
 ; GCN-NEXT:	buffer_store_dword [[MUL1]]
-define void @multiuse_fneg_vop2_vop3_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
+define amdgpu_kernel void @multiuse_fneg_vop2_vop3_users_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -1990,7 +1990,7 @@ define void @multiuse_fneg_vop2_vop3_users_f32(float addrspace(1)* %out, float a
 
 ; GCN: buffer_store_dword [[MUL1]]
 ; GCN-NEXT:	buffer_store_dword [[MUL2]]
-define void @free_fold_src_code_size_cost_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
+define amdgpu_kernel void @free_fold_src_code_size_cost_use_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -2025,7 +2025,7 @@ define void @free_fold_src_code_size_cost_use_f32(float addrspace(1)* %out, floa
 
 ; GCN: buffer_store_dwordx2 [[MUL0]]
 ; GCN: buffer_store_dwordx2 [[MUL1]]
-define void @free_fold_src_code_size_cost_use_f64(double addrspace(1)* %out, double addrspace(1)* %a.ptr, double addrspace(1)* %b.ptr, double addrspace(1)* %c.ptr, double addrspace(1)* %d.ptr) #0 {
+define amdgpu_kernel void @free_fold_src_code_size_cost_use_f64(double addrspace(1)* %out, double addrspace(1)* %a.ptr, double addrspace(1)* %b.ptr, double addrspace(1)* %c.ptr, double addrspace(1)* %d.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds double, double addrspace(1)* %a.ptr, i64 %tid.ext
@@ -2058,7 +2058,7 @@ define void @free_fold_src_code_size_cost_use_f64(double addrspace(1)* %out, dou
 ; GCN: v_trunc_f32_e32 [[TRUNC_A:v[0-9]+]], [[A]]
 ; GCN: v_fma_f32 [[FMA0:v[0-9]+]], -[[TRUNC_A]], [[B]], [[C]]
 ; GCN: buffer_store_dword [[FMA0]]
-define void @one_use_cost_to_fold_into_src_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
+define amdgpu_kernel void @one_use_cost_to_fold_into_src_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
@@ -2088,7 +2088,7 @@ define void @one_use_cost_to_fold_into_src_f32(float addrspace(1)* %out, float a
 ; GCN-DAG: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[D]], [[TRUNC_A]]
 ; GCN: buffer_store_dword [[FMA0]]
 ; GCN: buffer_store_dword [[MUL1]]
-define void @multi_use_cost_to_fold_into_src(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
+define amdgpu_kernel void @multi_use_cost_to_fold_into_src(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext

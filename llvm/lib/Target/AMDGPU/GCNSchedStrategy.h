@@ -55,6 +55,8 @@ public:
   SUnit *pickNode(bool &IsTopNode) override;
 
   void initialize(ScheduleDAGMI *DAG) override;
+
+  void setTargetOccupancy(unsigned Occ) { TargetOccupancy = Occ; }
 };
 
 class GCNScheduleDAGMILive : public ScheduleDAGMILive {

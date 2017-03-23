@@ -13,7 +13,7 @@ declare i64 @llvm.readcyclecounter() #0
 ; SI: s_memtime s{{\[[0-9]+:[0-9]+\]}}
 ; VI: s_memrealtime s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: store_dwordx2
-define void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
   %cycle0 = call i64 @llvm.readcyclecounter()
   store volatile i64 %cycle0, i64 addrspace(1)* %out
 

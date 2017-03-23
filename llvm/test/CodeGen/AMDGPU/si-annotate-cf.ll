@@ -10,7 +10,7 @@
 ; SI: s_andn2_b64
 ; s_cbranch_execnz [[LOOP_LABEL]]
 ; SI: s_endpgm
-define void @break_inserted_outside_of_loop(i32 addrspace(1)* %out, i32 %a) {
+define amdgpu_kernel void @break_inserted_outside_of_loop(i32 addrspace(1)* %out, i32 %a) {
 main_body:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %0 = and i32 %a, %tid
@@ -40,7 +40,7 @@ ENDIF:
 ; SI: s_cbranch_execnz [[LOOP_LABEL]]
 ; SI: s_endpgm
 
-define void @phi_cond_outside_loop(i32 %b) {
+define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %0 = icmp eq i32 %tid , 0
@@ -68,7 +68,7 @@ exit:
 ; CHECK-LABEL: {{^}}switch_unreachable:
 ; CHECK-NOT: s_endpgm
 ; CHECK: .Lfunc_end2
-define void @switch_unreachable(i32 addrspace(1)* %g, i8 addrspace(3)* %l, i32 %x) nounwind {
+define amdgpu_kernel void @switch_unreachable(i32 addrspace(1)* %g, i8 addrspace(3)* %l, i32 %x) nounwind {
 centry:
   switch i32 %x, label %sw.default [
     i32 0, label %sw.bb
@@ -100,7 +100,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; SI: [[ENDPGM]]:
 ; SI: s_endpgm
-define void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 %c3, i32 %x, i32 %y, i1 %arg) nounwind {
+define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 %c3, i32 %x, i32 %y, i1 %arg) nounwind {
 entry:
   %cmp = icmp sgt i32 %c0, 0
   br label %while.cond.outer

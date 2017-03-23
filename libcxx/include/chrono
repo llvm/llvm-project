@@ -48,7 +48,7 @@ class duration
     static_assert(Period::num > 0, "duration period must be positive");
 public:
     typedef Rep rep;
-    typedef Period period;
+    typedef typename _Period::type period;
 
     constexpr duration() = default;
     template <class Rep2>
@@ -75,8 +75,8 @@ public:
 
     // arithmetic
 
-    constexpr duration  operator+() const;
-    constexpr duration  operator-() const;
+    constexpr common_type<duration>::type  operator+() const;
+    constexpr common_type<duration>::type  operator-() const;
     constexpr duration& operator++();
     constexpr duration  operator++(int);
     constexpr duration& operator--();
@@ -523,7 +523,7 @@ class _LIBCPP_TEMPLATE_VIS duration
     
 public:
     typedef _Rep rep;
-    typedef _Period period;
+    typedef typename _Period::type period;
 private:
     rep __rep_;
 public:
@@ -565,8 +565,8 @@ public:
 
     // arithmetic
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR duration  operator+() const {return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR duration  operator-() const {return duration(-__rep_);}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename common_type<duration>::type operator+() const {return typename common_type<duration>::type(*this);}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename common_type<duration>::type operator-() const {return typename common_type<duration>::type(-__rep_);}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator++()      {++__rep_; return *this;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration  operator++(int)   {return duration(__rep_++);}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator--()      {--__rep_; return *this;}

@@ -52,6 +52,17 @@
 #define TEST_HAS_BUILTIN_IDENTIFIER(X) 0
 #endif
 
+#if defined(__clang__)
+#define TEST_COMPILER_CLANG
+# if defined(__apple_build_version__)
+#   define TEST_COMPILER_APPLE_CLANG
+# endif
+#elif defined(_MSC_VER)
+# define TEST_COMPILER_C1XX
+#elif defined(__GNUC__)
+# define TEST_COMPILER_GCC
+#endif
+
 #if defined(__apple_build_version__)
 #define TEST_APPLE_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__clang_major__)

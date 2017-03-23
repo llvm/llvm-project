@@ -201,6 +201,8 @@ void t20() {
 // CHECK: mov eax, $$4
   __asm mov eax, LENGTH _bar
 // CHECK: mov eax, $$2
+  __asm mov eax, [eax + LENGTH foo * 4]
+// CHECK: mov eax, [eax + $$1 * $$4]
 
   __asm mov eax, TYPE foo
 // CHECK: mov eax, $$4
@@ -210,6 +212,8 @@ void t20() {
 // CHECK: mov eax, $$4
   __asm mov eax, TYPE _bar
 // CHECK: mov eax, $$1
+  __asm mov eax, [eax + TYPE foo * 4]
+// CHECK: mov eax, [eax + $$4 * $$4]
 
   __asm mov eax, SIZE foo
 // CHECK: mov eax, $$4
@@ -217,9 +221,12 @@ void t20() {
 // CHECK: mov eax, $$1
   __asm mov eax, SIZE _foo
 // CHECK: mov eax, $$16
+  __asm mov eax, [eax + SIZE _foo * 4]
+// CHECK: mov eax, [eax + $$16 * $$4]
   __asm mov eax, SIZE _bar
 // CHECK: mov eax, $$2
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
+
 }
 
 void t21() {

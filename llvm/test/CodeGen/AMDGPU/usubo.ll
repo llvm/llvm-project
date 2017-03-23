@@ -9,7 +9,7 @@
 
 ; EG: SUBB_UINT
 ; EG: ADDC_UINT
-define void @s_usubo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @s_usubo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b) #0 {
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b) #0
   %val = extractvalue { i64, i1 } %usub, 0
   %carry = extractvalue { i64, i1 } %usub, 1
@@ -27,7 +27,7 @@ define void @s_usubo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b) #0 {
 
 ; EG-DAG: SUBB_UINT
 ; EG-DAG: SUB_INT
-define void @s_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @s_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %usub, 0
   %carry = extractvalue { i32, i1 } %usub, 1
@@ -42,7 +42,7 @@ define void @s_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32
 
 ; EG-DAG: SUBB_UINT
 ; EG-DAG: SUB_INT
-define void @v_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr
@@ -63,7 +63,7 @@ define void @v_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32
 
 ; EG-DAG: SUBB_UINT
 ; EG-DAG: SUB_INT
-define void @v_usubo_i32_novcc(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i32_novcc(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr
@@ -87,7 +87,7 @@ define void @v_usubo_i32_novcc(i32 addrspace(1)* %out, i1 addrspace(1)* %carryou
 ; EG-DAG: SUB_INT
 ; EG-DAG: SUB_INT
 ; EG: SUB_INT
-define void @s_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @s_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a, i64 %b) #0 {
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %usub, 0
   %carry = extractvalue { i64, i1 } %usub, 1
@@ -104,7 +104,7 @@ define void @s_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64
 ; EG-DAG: SUB_INT
 ; EG-DAG: SUB_INT
 ; EG: SUB_INT
-define void @v_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 addrspace(1)* %a.ptr, i64 addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 addrspace(1)* %a.ptr, i64 addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds i64, i64 addrspace(1)* %a.ptr
@@ -122,7 +122,7 @@ define void @v_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64
 ; FUNC-LABEL: {{^}}v_usubo_i16:
 ; VI: v_subrev_u16_e32
 ; VI: v_cmp_gt_u16_e32
-define void @v_usubo_i16(i16 addrspace(1)* %out, i1 addrspace(1)* %carryout, i16 addrspace(1)* %a.ptr, i16 addrspace(1)* %b.ptr) #0 {
+define amdgpu_kernel void @v_usubo_i16(i16 addrspace(1)* %out, i1 addrspace(1)* %carryout, i16 addrspace(1)* %a.ptr, i16 addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %a.gep = getelementptr inbounds i16, i16 addrspace(1)* %a.ptr

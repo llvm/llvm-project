@@ -36,7 +36,7 @@ class LocalAsMetadata;
 class MDNode;
 class MDOperand;
 class NamedMDNode;
-class AttributeSet;
+class AttributeList;
 class ValueSymbolTable;
 class MDSymbolTable;
 class raw_ostream;
@@ -102,13 +102,13 @@ private:
 
   bool ShouldPreserveUseListOrder;
 
-  typedef DenseMap<AttributeSet, unsigned> AttributeGroupMapType;
+  typedef DenseMap<AttributeList, unsigned> AttributeGroupMapType;
   AttributeGroupMapType AttributeGroupMap;
-  std::vector<AttributeSet> AttributeGroups;
+  std::vector<AttributeList> AttributeGroups;
 
-  typedef DenseMap<AttributeSet, unsigned> AttributeMapType;
+  typedef DenseMap<AttributeList, unsigned> AttributeMapType;
   AttributeMapType AttributeMap;
-  std::vector<AttributeSet> Attribute;
+  std::vector<AttributeList> Attribute;
 
   /// GlobalBasicBlockIDs - This map memoizes the basic block ID's referenced by
   /// the "getGlobalBasicBlockID" method.
@@ -166,14 +166,14 @@ public:
   unsigned getInstructionID(const Instruction *I) const;
   void setInstructionID(const Instruction *I);
 
-  unsigned getAttributeID(AttributeSet PAL) const {
+  unsigned getAttributeID(AttributeList PAL) const {
     if (PAL.isEmpty()) return 0;  // Null maps to zero.
     AttributeMapType::const_iterator I = AttributeMap.find(PAL);
     assert(I != AttributeMap.end() && "Attribute not in ValueEnumerator!");
     return I->second;
   }
 
-  unsigned getAttributeGroupID(AttributeSet PAL) const {
+  unsigned getAttributeGroupID(AttributeList PAL) const {
     if (PAL.isEmpty()) return 0;  // Null maps to zero.
     AttributeGroupMapType::const_iterator I = AttributeGroupMap.find(PAL);
     assert(I != AttributeGroupMap.end() && "Attribute not in ValueEnumerator!");
@@ -206,10 +206,8 @@ public:
   const std::vector<const BasicBlock*> &getBasicBlocks() const {
     return BasicBlocks;
   }
-  const std::vector<AttributeSet> &getAttributes() const {
-    return Attribute;
-  }
-  const std::vector<AttributeSet> &getAttributeGroups() const {
+  const std::vector<AttributeList> &getAttributes() const { return Attribute; }
+  const std::vector<AttributeList> &getAttributeGroups() const {
     return AttributeGroups;
   }
 
@@ -283,7 +281,7 @@ private:
   void EnumerateValue(const Value *V);
   void EnumerateType(Type *T);
   void EnumerateOperandType(const Value *V);
-  void EnumerateAttributes(AttributeSet PAL);
+  void EnumerateAttributes(AttributeList PAL);
 
   void EnumerateValueSymbolTable(const ValueSymbolTable &ST);
   void EnumerateNamedMetadata(const Module &M);

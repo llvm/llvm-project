@@ -130,9 +130,9 @@ bool LLParser::ValidateEndOfModule() {
       B.merge(NumberedAttrBuilders[Attr]);
 
     if (Function *Fn = dyn_cast<Function>(V)) {
-      AttributeSet AS = Fn->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeSet::FunctionIndex);
-      AS = AS.removeAttributes(Context, AttributeSet::FunctionIndex,
+      AttributeList AS = Fn->getAttributes();
+      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeList::FunctionIndex);
+      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex,
                                AS.getFnAttributes());
 
       FnAttrs.merge(B);
@@ -144,32 +144,29 @@ bool LLParser::ValidateEndOfModule() {
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
-      AS = AS.addAttributes(Context, AttributeSet::FunctionIndex,
-                            AttributeSet::get(Context,
-                                              AttributeSet::FunctionIndex,
-                                              FnAttrs));
+      AS = AS.addAttributes(
+          Context, AttributeList::FunctionIndex,
+          AttributeList::get(Context, AttributeList::FunctionIndex, FnAttrs));
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
-      AttributeSet AS = CI->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeSet::FunctionIndex);
-      AS = AS.removeAttributes(Context, AttributeSet::FunctionIndex,
+      AttributeList AS = CI->getAttributes();
+      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeList::FunctionIndex);
+      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex,
                                AS.getFnAttributes());
       FnAttrs.merge(B);
-      AS = AS.addAttributes(Context, AttributeSet::FunctionIndex,
-                            AttributeSet::get(Context,
-                                              AttributeSet::FunctionIndex,
-                                              FnAttrs));
+      AS = AS.addAttributes(
+          Context, AttributeList::FunctionIndex,
+          AttributeList::get(Context, AttributeList::FunctionIndex, FnAttrs));
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
-      AttributeSet AS = II->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeSet::FunctionIndex);
-      AS = AS.removeAttributes(Context, AttributeSet::FunctionIndex,
+      AttributeList AS = II->getAttributes();
+      AttrBuilder FnAttrs(AS.getFnAttributes(), AttributeList::FunctionIndex);
+      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex,
                                AS.getFnAttributes());
       FnAttrs.merge(B);
-      AS = AS.addAttributes(Context, AttributeSet::FunctionIndex,
-                            AttributeSet::get(Context,
-                                              AttributeSet::FunctionIndex,
-                                              FnAttrs));
+      AS = AS.addAttributes(
+          Context, AttributeList::FunctionIndex,
+          AttributeList::get(Context, AttributeList::FunctionIndex, FnAttrs));
       II->setAttributes(AS);
     } else {
       llvm_unreachable("invalid object with forward attribute group reference");
@@ -2132,9 +2129,8 @@ bool LLParser::ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
       if (ParseOptionalParamAttrs(ArgAttrs) || ParseValue(ArgTy, V, PFS))
         return true;
     }
-    ArgList.push_back(ParamInfo(ArgLoc, V, AttributeSet::get(V->getContext(),
-                                                             AttrIndex++,
-                                                             ArgAttrs)));
+    ArgList.push_back(ParamInfo(
+        ArgLoc, V, AttributeList::get(V->getContext(), AttrIndex++, ArgAttrs)));
   }
 
   if (IsMustTailCall && InVarArgsFunc)
@@ -2240,8 +2236,8 @@ bool LLParser::ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       return Error(TypeLoc, "invalid type for function argument");
 
     unsigned AttrIndex = 1;
-    ArgList.emplace_back(TypeLoc, ArgTy, AttributeSet::get(ArgTy->getContext(),
-                                                           AttrIndex++, Attrs),
+    ArgList.emplace_back(TypeLoc, ArgTy, AttributeList::get(ArgTy->getContext(),
+                                                            AttrIndex++, Attrs),
                          std::move(Name));
 
     while (EatIfPresent(lltok::comma)) {
@@ -2270,7 +2266,7 @@ bool LLParser::ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
 
       ArgList.emplace_back(
           TypeLoc, ArgTy,
-          AttributeSet::get(ArgTy->getContext(), AttrIndex++, Attrs),
+          AttributeList::get(ArgTy->getContext(), AttrIndex++, Attrs),
           std::move(Name));
     }
   }
@@ -4741,27 +4737,25 @@ bool LLParser::ParseFunctionHeader(Function *&Fn, bool isDefine) {
   // Okay, if we got here, the function is syntactically valid.  Convert types
   // and do semantic checks.
   std::vector<Type*> ParamTypeList;
-  SmallVector<AttributeSet, 8> Attrs;
+  SmallVector<AttributeList, 8> Attrs;
 
   if (RetAttrs.hasAttributes())
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::ReturnIndex,
-                                      RetAttrs));
+    Attrs.push_back(AttributeList::get(RetType->getContext(),
+                                       AttributeList::ReturnIndex, RetAttrs));
 
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
     ParamTypeList.push_back(ArgList[i].Ty);
     if (ArgList[i].Attrs.hasAttributes(i + 1)) {
       AttrBuilder B(ArgList[i].Attrs, i + 1);
-      Attrs.push_back(AttributeSet::get(RetType->getContext(), i + 1, B));
+      Attrs.push_back(AttributeList::get(RetType->getContext(), i + 1, B));
     }
   }
 
   if (FuncAttrs.hasAttributes())
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::FunctionIndex,
-                                      FuncAttrs));
+    Attrs.push_back(AttributeList::get(
+        RetType->getContext(), AttributeList::FunctionIndex, FuncAttrs));
 
-  AttributeSet PAL = AttributeSet::get(Context, Attrs);
+  AttributeList PAL = AttributeList::get(Context, Attrs);
 
   if (PAL.hasAttribute(1, Attribute::StructRet) && !RetType->isVoidTy())
     return Error(RetTypeLoc, "functions with 'sret' argument must return void");
@@ -5371,11 +5365,10 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   // Set up the Attribute for the function.
-  SmallVector<AttributeSet, 8> Attrs;
+  SmallVector<AttributeList, 8> Attrs;
   if (RetAttrs.hasAttributes())
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::ReturnIndex,
-                                      RetAttrs));
+    Attrs.push_back(AttributeList::get(RetType->getContext(),
+                                       AttributeList::ReturnIndex, RetAttrs));
 
   SmallVector<Value*, 8> Args;
 
@@ -5397,7 +5390,7 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
     Args.push_back(ArgList[i].V);
     if (ArgList[i].Attrs.hasAttributes(i + 1)) {
       AttrBuilder B(ArgList[i].Attrs, i + 1);
-      Attrs.push_back(AttributeSet::get(RetType->getContext(), i + 1, B));
+      Attrs.push_back(AttributeList::get(RetType->getContext(), i + 1, B));
     }
   }
 
@@ -5408,13 +5401,12 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
     if (FnAttrs.hasAlignmentAttr())
       return Error(CallLoc, "invoke instructions may not have an alignment");
 
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::FunctionIndex,
-                                      FnAttrs));
+    Attrs.push_back(AttributeList::get(RetType->getContext(),
+                                       AttributeList::FunctionIndex, FnAttrs));
   }
 
   // Finish off the Attribute and check them
-  AttributeSet PAL = AttributeSet::get(Context, Attrs);
+  AttributeList PAL = AttributeList::get(Context, Attrs);
 
   InvokeInst *II =
       InvokeInst::Create(Ty, Callee, NormalBB, UnwindBB, Args, BundleList);
@@ -5975,11 +5967,10 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
     return true;
 
   // Set up the Attribute for the function.
-  SmallVector<AttributeSet, 8> Attrs;
+  SmallVector<AttributeList, 8> Attrs;
   if (RetAttrs.hasAttributes())
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::ReturnIndex,
-                                      RetAttrs));
+    Attrs.push_back(AttributeList::get(RetType->getContext(),
+                                       AttributeList::ReturnIndex, RetAttrs));
 
   SmallVector<Value*, 8> Args;
 
@@ -6001,7 +5992,7 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
     Args.push_back(ArgList[i].V);
     if (ArgList[i].Attrs.hasAttributes(i + 1)) {
       AttrBuilder B(ArgList[i].Attrs, i + 1);
-      Attrs.push_back(AttributeSet::get(RetType->getContext(), i + 1, B));
+      Attrs.push_back(AttributeList::get(RetType->getContext(), i + 1, B));
     }
   }
 
@@ -6012,13 +6003,12 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
     if (FnAttrs.hasAlignmentAttr())
       return Error(CallLoc, "call instructions may not have an alignment");
 
-    Attrs.push_back(AttributeSet::get(RetType->getContext(),
-                                      AttributeSet::FunctionIndex,
-                                      FnAttrs));
+    Attrs.push_back(AttributeList::get(RetType->getContext(),
+                                       AttributeList::FunctionIndex, FnAttrs));
   }
 
   // Finish off the Attribute and check them
-  AttributeSet PAL = AttributeSet::get(Context, Attrs);
+  AttributeList PAL = AttributeList::get(Context, Attrs);
 
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);

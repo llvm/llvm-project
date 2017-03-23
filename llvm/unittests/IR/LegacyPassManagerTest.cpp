@@ -429,7 +429,7 @@ namespace llvm {
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"test1", mod);
       func_test1->setCallingConv(CallingConv::C);
-      AttributeSet func_test1_PAL;
+      AttributeList func_test1_PAL;
       func_test1->setAttributes(func_test1_PAL);
 
       Function* func_test2 = Function::Create(
@@ -437,7 +437,7 @@ namespace llvm {
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"test2", mod);
       func_test2->setCallingConv(CallingConv::C);
-      AttributeSet func_test2_PAL;
+      AttributeList func_test2_PAL;
       func_test2->setAttributes(func_test2_PAL);
 
       Function* func_test3 = Function::Create(
@@ -445,7 +445,7 @@ namespace llvm {
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"test3", mod);
       func_test3->setCallingConv(CallingConv::C);
-      AttributeSet func_test3_PAL;
+      AttributeList func_test3_PAL;
       func_test3->setAttributes(func_test3_PAL);
 
       Function* func_test4 = Function::Create(
@@ -453,7 +453,7 @@ namespace llvm {
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"test4", mod);
       func_test4->setCallingConv(CallingConv::C);
-      AttributeSet func_test4_PAL;
+      AttributeList func_test4_PAL;
       func_test4->setAttributes(func_test4_PAL);
 
       // Global Variable Declarations
@@ -474,7 +474,8 @@ namespace llvm {
         // Block entry (label_entry)
         CallInst* int32_3 = CallInst::Create(func_test2, "", label_entry);
         int32_3->setCallingConv(CallingConv::C);
-        int32_3->setTailCall(false);AttributeSet int32_3_PAL;
+        int32_3->setTailCall(false);
+        AttributeList int32_3_PAL;
         int32_3->setAttributes(int32_3_PAL);
 
         ReturnInst::Create(Context, int32_3, label_entry);
@@ -489,7 +490,8 @@ namespace llvm {
         // Block entry (label_entry_5)
         CallInst* int32_6 = CallInst::Create(func_test3, "", label_entry_5);
         int32_6->setCallingConv(CallingConv::C);
-        int32_6->setTailCall(false);AttributeSet int32_6_PAL;
+        int32_6->setTailCall(false);
+        AttributeList int32_6_PAL;
         int32_6->setAttributes(int32_6_PAL);
 
         ReturnInst::Create(Context, int32_6, label_entry_5);
@@ -504,7 +506,8 @@ namespace llvm {
         // Block entry (label_entry_8)
         CallInst* int32_9 = CallInst::Create(func_test1, "", label_entry_8);
         int32_9->setCallingConv(CallingConv::C);
-        int32_9->setTailCall(false);AttributeSet int32_9_PAL;
+        int32_9->setTailCall(false);
+        AttributeList int32_9_PAL;
         int32_9->setAttributes(int32_9_PAL);
 
         ReturnInst::Create(Context, int32_9, label_entry_8);

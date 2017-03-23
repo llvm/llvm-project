@@ -5,7 +5,7 @@
 # REQUIRES: global-isel
 
 --- |
-  define void @smrd_imm(i32 addrspace(2)* %const0) { ret void }
+  define amdgpu_kernel void @smrd_imm(i32 addrspace(2)* %const0) { ret void }
 ...
 ---
 

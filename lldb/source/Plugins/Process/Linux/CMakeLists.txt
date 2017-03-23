@@ -11,7 +11,6 @@ add_lldb_library(lldbPluginProcessLinux PLUGIN
   NativeRegisterContextLinux_mips64.cpp
   NativeRegisterContextLinux_s390x.cpp
   NativeThreadLinux.cpp
-  ProcFileReader.cpp
   SingleStepCheck.cpp
 
   LINK_LIBS

@@ -7,7 +7,7 @@
 # resume crashes
 
 --- |
-  define void @shrink_add_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @shrink_add_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
@@ -20,7 +20,7 @@
     ret void
   }
 
-  define void @shrink_sub_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @shrink_sub_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
@@ -33,7 +33,7 @@
     ret void
   }
 
-  define void @shrink_subrev_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @shrink_subrev_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
@@ -46,7 +46,7 @@
     ret void
   }
 
-  define void @check_addc_src2_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @check_addc_src2_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
@@ -59,7 +59,7 @@
     ret void
   }
 
-  define void @shrink_addc_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @shrink_addc_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
@@ -72,7 +72,7 @@
     ret void
   }
 
-  define void @shrink_addc_undef_vcc(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  define amdgpu_kernel void @shrink_addc_undef_vcc(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %tid.ext = sext i32 %tid to i64
     %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext

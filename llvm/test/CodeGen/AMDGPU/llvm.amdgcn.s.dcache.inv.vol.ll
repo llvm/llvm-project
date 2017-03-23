@@ -9,7 +9,7 @@ declare void @llvm.amdgcn.s.waitcnt(i32) #0
 ; CI-NEXT: s_dcache_inv_vol ; encoding: [0x00,0x00,0x40,0xc7]
 ; VI-NEXT: s_dcache_inv_vol ; encoding: [0x00,0x00,0x88,0xc0,0x00,0x00,0x00,0x00]
 ; GCN-NEXT: s_endpgm
-define void @test_s_dcache_inv_vol() #0 {
+define amdgpu_kernel void @test_s_dcache_inv_vol() #0 {
   call void @llvm.amdgcn.s.dcache.inv.vol()
   ret void
 }
@@ -18,7 +18,7 @@ define void @test_s_dcache_inv_vol() #0 {
 ; GCN-NEXT: ; BB#0:
 ; GCN-NEXT: s_dcache_inv_vol
 ; GCN: s_waitcnt lgkmcnt(0) ; encoding
-define void @test_s_dcache_inv_vol_insert_wait() #0 {
+define amdgpu_kernel void @test_s_dcache_inv_vol_insert_wait() #0 {
   call void @llvm.amdgcn.s.dcache.inv.vol()
   call void @llvm.amdgcn.s.waitcnt(i32 0)
   br label %end

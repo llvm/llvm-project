@@ -350,7 +350,8 @@ namespace {
       MostDerivedArraySize = 2;
       MostDerivedPathLength = Entries.size();
     }
-    void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E, APSInt N);
+    void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
+                                   const APSInt &N);
     /// Add N to the address of this subobject.
     void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N) {
       if (Invalid || !N) return;
@@ -1071,7 +1072,8 @@ bool SubobjectDesignator::checkSubobject(EvalInfo &Info, const Expr *E,
 }
 
 void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
-                                                    const Expr *E, APSInt N) {
+                                                    const Expr *E,
+                                                    const APSInt &N) {
   // If we're complaining, we must be able to statically determine the size of
   // the most derived array.
   if (MostDerivedPathLength == Entries.size() && MostDerivedIsArrayElement)
@@ -1296,8 +1298,8 @@ namespace {
     void clearIsNullPointer() {
       IsNullPtr = false;
     }
-    void adjustOffsetAndIndex(EvalInfo &Info, const Expr *E, APSInt Index,
-                              CharUnits ElementSize) {
+    void adjustOffsetAndIndex(EvalInfo &Info, const Expr *E,
+                              const APSInt &Index, CharUnits ElementSize) {
       // An index of 0 has no effect. (In C, adding 0 to a null pointer is UB,
       // but we're not required to diagnose it and it's valid in C++.)
       if (!Index)
@@ -8072,7 +8074,8 @@ bool DataRecursiveIntBinOpEvaluator::
   return true;
 }
 
-static void addOrSubLValueAsInteger(APValue &LVal, APSInt Index, bool IsSub) {
+static void addOrSubLValueAsInteger(APValue &LVal, const APSInt &Index,
+                                    bool IsSub) {
   // Compute the new offset in the appropriate width, wrapping at 64 bits.
   // FIXME: When compiling for a 32-bit target, we should use 32-bit
   // offsets.

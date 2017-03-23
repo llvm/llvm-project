@@ -1032,7 +1032,7 @@ size_t Module::FindTypes(
       // The "type_name_cstr" will have been modified if we have a valid type
       // class
       // prefix (like "struct", "class", "union", "typedef" etc).
-      FindTypes_Impl(sc, ConstString(type_name_cstr), nullptr, append,
+      FindTypes_Impl(sc, ConstString(type_basename), nullptr, append,
                      max_matches, searched_symbol_files, typesmap);
       typesmap.RemoveMismatchedTypes(type_class);
       num_matches = typesmap.GetSize();

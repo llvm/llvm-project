@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -faltivec -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 

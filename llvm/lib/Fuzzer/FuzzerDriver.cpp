@@ -601,7 +601,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (Flags.merge_control_file)
       F->CrashResistantMergeInternalStep(Flags.merge_control_file);
     else
-      F->CrashResistantMerge(Args, *Inputs);
+      F->CrashResistantMerge(Args, *Inputs,
+                             Flags.load_coverage_summary,
+                             Flags.save_coverage_summary);
     exit(0);
   }
 

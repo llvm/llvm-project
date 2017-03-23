@@ -28,7 +28,7 @@ namespace tooling {
 RefactoringTool::RefactoringTool(
     const CompilationDatabase &Compilations, ArrayRef<std::string> SourcePaths,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
-    : ClangTool(Compilations, SourcePaths, PCHContainerOps) {}
+    : ClangTool(Compilations, SourcePaths, std::move(PCHContainerOps)) {}
 
 std::map<std::string, Replacements> &RefactoringTool::getReplacements() {
   return FileToReplaces;

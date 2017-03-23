@@ -402,7 +402,7 @@ public:
     return AArch64::X1;
   }
 
-  bool isIntDivCheap(EVT VT, AttributeSet Attr) const override;
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool isCheapToSpeculateCttz() const override {
     return true;

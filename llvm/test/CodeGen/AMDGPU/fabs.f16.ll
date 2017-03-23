@@ -11,7 +11,7 @@
 ; GCN: v_and_b32_e32 [[RESULT:v[0-9]+]], 0x7fff, [[VAL]]
 ; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-define void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
+define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc= bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
   store half %fabs, half addrspace(1)* %out
@@ -22,7 +22,7 @@ define void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 ; CI: flat_load_ushort [[VAL:v[0-9]+]],
 ; CI: v_and_b32_e32 [[CVT0:v[0-9]+]], 0x7fff, [[VAL]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @s_fabs_f16(half addrspace(1)* %out, half %in) {
+define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   store half %fabs, half addrspace(1)* %out
   ret void
@@ -48,7 +48,7 @@ define void @s_fabs_f16(half addrspace(1)* %out, half %in) {
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
-define void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
+define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   store <2 x half> %fabs, <2 x half> addrspace(1)* %out
   ret void
@@ -68,7 +68,7 @@ define void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
 ; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
 
 ; GCN: flat_store_dwordx2
-define void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
+define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   store <4 x half> %fabs, <4 x half> addrspace(1)* %out
   ret void
@@ -87,7 +87,7 @@ define void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
 ; VI-NOT: and
 ; VI: v_mul_f16_e64 [[RESULT:v[0-9]+]], |[[IN1]]|, [[IN0]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fabs_fold_f16(half addrspace(1)* %out, half %in0, half %in1) {
+define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, half %in1) {
   %fabs = call half @llvm.fabs.f16(half %in0)
   %fmul = fmul half %fabs, %in1
   store half %fmul, half addrspace(1)* %out
@@ -97,7 +97,7 @@ define void @fabs_fold_f16(half addrspace(1)* %out, half %in0, half %in1) {
 ; GCN-LABEL: {{^}}v_fabs_v2f16:
 ; GCN: flat_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7fff7fff, [[VAL]]
-define void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
@@ -110,7 +110,7 @@ define void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)
 ; GCN-LABEL: {{^}}fabs_free_v2f16:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
-define void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
   %bc = bitcast i32 %in to <2 x half>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %bc)
   store <2 x half> %fabs, <2 x half> addrspace(1)* %out
@@ -133,7 +133,7 @@ define void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
 
 ; GFX9: v_and_b32_e32 [[FABS:v[0-9]+]], 0x7fff7fff, [[VAL]]
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[FABS]], v{{[0-9]+$}}
-define void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %val = load <2 x half>, <2 x half> addrspace(1)* %in
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fmul = fmul <2 x half> %fabs, %val

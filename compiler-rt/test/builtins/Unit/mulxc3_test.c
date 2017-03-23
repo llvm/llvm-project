@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -lm -o %t && %run %t
 //===-- mulxc3_test.c - Test __mulxc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

@@ -806,7 +806,7 @@ private:
   bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
   bool ParseDirectiveHSACodeObjectVersion();
   bool ParseDirectiveHSACodeObjectISA();
-  bool ParseDirectiveRuntimeMetadata();
+  bool ParseDirectiveCodeObjectMetadata();
   bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
   bool ParseDirectiveAMDKernelCodeT();
   bool ParseSectionDirectiveHSAText();
@@ -2259,43 +2259,45 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   return false;
 }
 
-bool AMDGPUAsmParser::ParseDirectiveRuntimeMetadata() {
-  std::string Metadata;
-  raw_string_ostream MS(Metadata);
+bool AMDGPUAsmParser::ParseDirectiveCodeObjectMetadata() {
+  std::string YamlString;
+  raw_string_ostream YamlStream(YamlString);
 
   getLexer().setSkipSpace(false);
 
   bool FoundEnd = false;
   while (!getLexer().is(AsmToken::Eof)) {
     while (getLexer().is(AsmToken::Space)) {
-      MS << ' ';
+      YamlStream << getLexer().getTok().getString();
       Lex();
     }
 
     if (getLexer().is(AsmToken::Identifier)) {
       StringRef ID = getLexer().getTok().getIdentifier();
-      if (ID == ".end_amdgpu_runtime_metadata") {
+      if (ID == AMDGPU::CodeObject::MetadataAssemblerDirectiveEnd) {
         Lex();
         FoundEnd = true;
         break;
       }
     }
 
-    MS << Parser.parseStringToEndOfStatement()
-       << getContext().getAsmInfo()->getSeparatorString();
+    YamlStream << Parser.parseStringToEndOfStatement()
+               << getContext().getAsmInfo()->getSeparatorString();
 
     Parser.eatToEndOfStatement();
   }
 
   getLexer().setSkipSpace(true);
 
-  if (getLexer().is(AsmToken::Eof) && !FoundEnd)
-    return TokError("expected directive .end_amdgpu_runtime_metadata not found");
+  if (getLexer().is(AsmToken::Eof) && !FoundEnd) {
+    return TokError(
+        "expected directive .end_amdgpu_code_object_metadata not found");
+  }
 
-  MS.flush();
+  YamlStream.flush();
 
-  if (getTargetStreamer().EmitRuntimeMetadata(getFeatureBits(), Metadata))
-    return Error(getParser().getTok().getLoc(), "invalid runtime metadata");
+  if (!getTargetStreamer().EmitCodeObjectMetadata(getFeatureBits(), YamlString))
+    return Error(getParser().getTok().getLoc(), "invalid code object metadata");
 
   return false;
 }
@@ -2407,8 +2409,8 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal == ".hsa_code_object_isa")
     return ParseDirectiveHSACodeObjectISA();
 
-  if (IDVal == ".amdgpu_runtime_metadata")
-    return ParseDirectiveRuntimeMetadata();
+  if (IDVal == AMDGPU::CodeObject::MetadataAssemblerDirectiveBegin)
+    return ParseDirectiveCodeObjectMetadata();
 
   if (IDVal == ".amd_kernel_code_t")
     return ParseDirectiveAMDKernelCodeT();

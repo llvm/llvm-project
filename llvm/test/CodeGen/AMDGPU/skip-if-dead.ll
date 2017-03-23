@@ -357,7 +357,7 @@ bb7:                                              ; preds = %bb4
 ; CHECK: [[END]]:
 ; CHECK: s_or_b64 exec, exec
 ; CHECK: s_endpgm
-define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, <4 x i32> %arg2) #0 {
+define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, <4 x float> %arg2) #0 {
 bb:
   %tmp = fcmp ult float %arg1, 0.000000e+00
   br i1 %tmp, label %bb3, label %bb4
@@ -367,7 +367,7 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  %tmp5 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %arg2, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float> %arg2, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp6 = extractelement <4 x float> %tmp5, i32 0
   %tmp7 = fcmp une float %tmp6, 0.000000e+00
   br i1 %tmp7, label %bb8, label %bb9
@@ -380,9 +380,8 @@ bb9:                                              ; preds = %bb4
   ret void
 }
 
+declare <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #1
 declare void @llvm.AMDGPU.kill(float) #0
-declare <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) nounwind
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readonly }

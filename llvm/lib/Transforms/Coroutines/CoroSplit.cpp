@@ -244,9 +244,9 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
 
   // Remove old return attributes.
   NewF->removeAttributes(
-      AttributeSet::ReturnIndex,
-      AttributeSet::get(
-          NewF->getContext(), AttributeSet::ReturnIndex,
+      AttributeList::ReturnIndex,
+      AttributeList::get(
+          NewF->getContext(), AttributeList::ReturnIndex,
           AttributeFuncs::typeIncompatible(NewF->getReturnType())));
 
   // Make AllocaSpillBlock the new entry block.

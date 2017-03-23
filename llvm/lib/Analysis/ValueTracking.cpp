@@ -751,8 +751,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
 
       // Whatever high bits in c are zero are known to be zero.
-      KnownZero |=
-        APInt::getHighBitsSet(BitWidth, RHSKnownZero.countLeadingOnes());
+      KnownZero.setHighBits(RHSKnownZero.countLeadingOnes());
     // assume(v <_u c)
     } else if (match(Arg, m_ICmp(Pred, m_V, m_Value(A))) &&
                Pred == ICmpInst::ICMP_ULT &&
@@ -763,11 +762,9 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       // Whatever high bits in c are zero are known to be zero (if c is a power
       // of 2, then one more).
       if (isKnownToBeAPowerOfTwo(A, false, Depth + 1, Query(Q, I)))
-        KnownZero |=
-          APInt::getHighBitsSet(BitWidth, RHSKnownZero.countLeadingOnes()+1);
+        KnownZero.setHighBits(RHSKnownZero.countLeadingOnes()+1);
       else
-        KnownZero |=
-          APInt::getHighBitsSet(BitWidth, RHSKnownZero.countLeadingOnes());
+        KnownZero.setHighBits(RHSKnownZero.countLeadingOnes());
     }
   }
 
@@ -927,7 +924,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       APInt KnownZero3(BitWidth, 0), KnownOne3(BitWidth, 0);
       computeKnownBits(Y, KnownZero3, KnownOne3, Depth + 1, Q);
       if (KnownOne3.countTrailingOnes() > 0)
-        KnownZero |= APInt::getLowBitsSet(BitWidth, 1);
+        KnownZero.setBit(0);
     }
     break;
   }
@@ -1029,9 +1026,9 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     KnownOne &= KnownOne2;
     KnownZero &= KnownZero2;
     if (MaxHighOnes > 0)
-      KnownOne |= APInt::getHighBitsSet(BitWidth, MaxHighOnes);
+      KnownOne.setHighBits(MaxHighOnes);
     if (MaxHighZeros > 0)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, MaxHighZeros);
+      KnownZero.setHighBits(MaxHighZeros);
     break;
   }
   case Instruction::FPTrunc:
@@ -1062,7 +1059,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     KnownOne = KnownOne.zextOrTrunc(BitWidth);
     // Any top bits are known to be zero.
     if (BitWidth > SrcBitWidth)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - SrcBitWidth);
+      KnownZero.setBitsFrom(SrcBitWidth);
     break;
   }
   case Instruction::BitCast: {
@@ -1089,9 +1086,9 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
     if (KnownZero[SrcBitWidth-1])             // Input sign bit known zero
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - SrcBitWidth);
+      KnownZero.setBitsFrom(SrcBitWidth);
     else if (KnownOne[SrcBitWidth-1])           // Input sign bit known set
-      KnownOne |= APInt::getHighBitsSet(BitWidth, BitWidth - SrcBitWidth);
+      KnownOne.setBitsFrom(SrcBitWidth);
     break;
   }
   case Instruction::Shl: {
@@ -1417,8 +1414,8 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       default: break;
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
-        KnownZero = KnownZero2.reverseBits();
-        KnownOne = KnownOne2.reverseBits();
+        KnownZero |= KnownZero2.reverseBits();
+        KnownOne |= KnownOne2.reverseBits();
         break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
@@ -1431,7 +1428,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
         // If this call is undefined for 0, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
           LowBits -= 1;
-        KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - LowBits);
+        KnownZero.setBitsFrom(LowBits);
         break;
       }
       case Intrinsic::ctpop: {
@@ -1442,14 +1439,14 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
         unsigned LeadingZeros =
           APInt(BitWidth, BitsPossiblySet).countLeadingZeros();
         assert(LeadingZeros <= BitWidth);
-        KnownZero |= APInt::getHighBitsSet(BitWidth, LeadingZeros);
+        KnownZero.setHighBits(LeadingZeros);
         KnownOne &= ~KnownZero;
         // TODO: we could bound KnownOne using the lower bound on the number
         // of bits which might be set provided by popcnt KnownOne2.
         break;
       }
       case Intrinsic::x86_sse42_crc32_64_64:
-        KnownZero |= APInt::getHighBitsSet(64, 32);
+        KnownZero.setBitsFrom(32);
         break;
       }
     }
@@ -1602,7 +1599,7 @@ void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
   if (V->getType()->isPointerTy()) {
     unsigned Align = V->getPointerAlignment(Q.DL);
     if (Align)
-      KnownZero |= APInt::getLowBitsSet(BitWidth, countTrailingZeros(Align));
+      KnownZero.setLowBits(countTrailingZeros(Align));
   }
 
   // computeKnownBitsFromAssume strictly refines KnownZero and

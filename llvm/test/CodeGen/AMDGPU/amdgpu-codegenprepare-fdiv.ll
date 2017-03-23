@@ -4,7 +4,7 @@
 
 ; NOOP-LABEL: @noop_fdiv_fpmath(
 ; NOOP: %md.25ulp = fdiv float %a, %b, !fpmath !0
-define void @noop_fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #3 {
+define amdgpu_kernel void @noop_fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #3 {
   %md.25ulp = fdiv float %a, %b, !fpmath !0
   store volatile float %md.25ulp, float addrspace(1)* %out
   ret void
@@ -18,7 +18,7 @@ define void @noop_fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #3 {
 ; CHECK: %md.3ulp = call float @llvm.amdgcn.fdiv.fast(float %a, float %b), !fpmath !3
 ; CHECK: %fast.md.25ulp = call fast float @llvm.amdgcn.fdiv.fast(float %a, float %b), !fpmath !0
 ; CHECK: arcp.md.25ulp = call arcp float @llvm.amdgcn.fdiv.fast(float %a, float %b), !fpmath !0
-define void @fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #1 {
+define amdgpu_kernel void @fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #1 {
   %no.md = fdiv float %a, %b
   store volatile float %no.md, float addrspace(1)* %out
 
@@ -51,7 +51,7 @@ define void @fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #1 {
 ; CHECK: %arcp.25ulp = fdiv arcp float 1.000000e+00, %x, !fpmath !0
 ; CHECK: %fast.no.md = fdiv fast float 1.000000e+00, %x{{$}}
 ; CHECK: %fast.25ulp = fdiv fast float 1.000000e+00, %x, !fpmath !0
-define void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #1 {
+define amdgpu_kernel void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #1 {
   %no.md = fdiv float 1.0, %x
   store volatile float %no.md, float addrspace(1)* %out
 
@@ -89,7 +89,7 @@ define void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #1 {
 ; CHECK: %[[B1:[0-9]+]] = extractelement <2 x float> %b, i64 1
 ; CHECK: %[[FDIV1:[0-9]+]] = call float @llvm.amdgcn.fdiv.fast(float %[[A1]], float %[[B1]]), !fpmath !0
 ; CHECK: %md.25ulp = insertelement <2 x float> %[[INS0]], float %[[FDIV1]], i64 1
-define void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) #1 {
+define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) #1 {
   %no.md = fdiv <2 x float> %a, %b
   store volatile <2 x float> %no.md, <2 x float> addrspace(1)* %out
 
@@ -120,7 +120,7 @@ define void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> %a, 
 ; CHECK: fdiv fast float 1.000000e+00, %{{[0-9]+}}, !fpmath !0
 ; CHECK: fdiv fast float 1.000000e+00, %{{[0-9]+}}, !fpmath !0
 ; CHECK: store volatile <2 x float> %fast.25ulp, <2 x float> addrspace(1)* %out
-define void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> %x) #1 {
+define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> %x) #1 {
   %no.md = fdiv <2 x float> <float 1.0, float 1.0>, %x
   store volatile <2 x float> %no.md, <2 x float> addrspace(1)* %out
 
@@ -158,7 +158,7 @@ define void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> 
 ; CHECK: %[[X1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: fdiv fast float 2.000000e+00, %[[X1]], !fpmath !0
 ; CHECK: store volatile <2 x float> %fast.25ulp
-define void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace(1)* %out, <2 x float> %x) #1 {
+define amdgpu_kernel void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace(1)* %out, <2 x float> %x) #1 {
   %no.md = fdiv <2 x float> <float 1.0, float 2.0>, %x
   store volatile <2 x float> %no.md, <2 x float> addrspace(1)* %out
 
@@ -186,7 +186,7 @@ define void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace(1)* %out, <2 
 ; CHECK: call fast float @llvm.amdgcn.fdiv.fast(float %{{[0-9]+}}, float %{{[0-9]+}}), !fpmath !0
 ; CHECK: call fast float @llvm.amdgcn.fdiv.fast(float %{{[0-9]+}}, float %{{[0-9]+}}), !fpmath !0
 ; CHECK: store volatile <2 x float> %fast.25ulp
-define void @rcp_fdiv_fpmath_vector_partial_constant(<2 x float> addrspace(1)* %out, <2 x float> %x, <2 x float> %y) #1 {
+define amdgpu_kernel void @rcp_fdiv_fpmath_vector_partial_constant(<2 x float> addrspace(1)* %out, <2 x float> %x, <2 x float> %y) #1 {
   %x.insert = insertelement <2 x float> %x, float 1.0, i32 0
 
   %arcp.25ulp = fdiv arcp <2 x float> %x.insert, %y, !fpmath !0
@@ -206,7 +206,7 @@ define void @rcp_fdiv_fpmath_vector_partial_constant(<2 x float> addrspace(1)* %
 ; CHECK: %md.3ulp = fdiv float %a, %b, !fpmath !3
 ; CHECK: call fast float @llvm.amdgcn.fdiv.fast(float %a, float %b), !fpmath !0
 ; CHECK: call arcp float @llvm.amdgcn.fdiv.fast(float %a, float %b), !fpmath !0
-define void @fdiv_fpmath_f32_denormals(float addrspace(1)* %out, float %a, float %b) #2 {
+define amdgpu_kernel void @fdiv_fpmath_f32_denormals(float addrspace(1)* %out, float %a, float %b) #2 {
   %no.md = fdiv float %a, %b
   store volatile float %no.md, float addrspace(1)* %out
 

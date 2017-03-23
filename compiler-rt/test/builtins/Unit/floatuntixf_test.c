@@ -1,3 +1,7 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+// XFAIL: aarch64
+// test fails for aarch64 (see pr32260)
+
 //===-- floatuntixf.c - Test __floatuntixf --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

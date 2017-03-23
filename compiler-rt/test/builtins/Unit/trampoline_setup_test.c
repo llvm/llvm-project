@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -fnested-functions -o %t && %run %t
 /* ===-- trampoline_setup_test.c - Test __trampoline_setup -----------------===
  *
  *                     The LLVM Compiler Infrastructure

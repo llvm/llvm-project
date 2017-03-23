@@ -322,7 +322,7 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   if (Indices.empty())
     return false;
 
-  AttributeSet AS = CS.getAttributes();
+  AttributeList AS = CS.getAttributes();
   LLVMContext &Ctx = CS.getInstruction()->getContext();
   AS = AS.addAttribute(Ctx, Indices, Attribute::get(Ctx, Attribute::NonNull));
   CS.setAttributes(AS);

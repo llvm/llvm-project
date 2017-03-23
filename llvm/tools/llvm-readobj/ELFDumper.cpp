@@ -129,7 +129,7 @@ public:
   void printMipsReginfo() override;
   void printMipsOptions() override;
 
-  void printAMDGPURuntimeMD() override;
+  void printAMDGPUCodeObjectMetadata() override;
 
   void printStackMap() const override;
 
@@ -2357,7 +2357,7 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printAMDGPURuntimeMD() {
+template <class ELFT> void ELFDumper<ELFT>::printAMDGPUCodeObjectMetadata() {
   const Elf_Shdr *Shdr = findSectionByName(*Obj, ".note");
   if (!Shdr) {
     W.startLine() << "There is no .note section in the file.\n";
@@ -2365,7 +2365,7 @@ template <class ELFT> void ELFDumper<ELFT>::printAMDGPURuntimeMD() {
   }
   ArrayRef<uint8_t> Sec = unwrapOrError(Obj->getSectionContents(Shdr));
 
-  const uint32_t RuntimeMDNoteType = 8;
+  const uint32_t RuntimeMDNoteType = 10;
   for (auto I = reinterpret_cast<const Elf_Word *>(&Sec[0]),
        E = I + Sec.size()/4; I != E;) {
     uint32_t NameSZ = I[0];

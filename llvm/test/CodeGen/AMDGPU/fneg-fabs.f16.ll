@@ -9,7 +9,7 @@
 
 ; GFX89-NOT: _and
 ; GFX89: v_sub_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|
-define void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
+define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
   %fadd = fadd half %y, %fsub
@@ -27,7 +27,7 @@ define void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
 ; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
 ; GFX89: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
-define void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
+define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
   %fmul = fmul half %y, %fsub
@@ -41,7 +41,7 @@ define void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
 
 ; GCN-LABEL: {{^}}fneg_fabs_free_f16:
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
-define void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
+define amdgpu_kernel void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc = bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
   %fsub = fsub half -0.0, %fabs
@@ -51,7 +51,7 @@ define void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 
 ; GCN-LABEL: {{^}}fneg_fabs_f16:
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
-define void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
+define amdgpu_kernel void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   %fsub = fsub half -0.0, %fabs
   store half %fsub, half addrspace(1)* %out, align 2
@@ -60,7 +60,7 @@ define void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
 
 ; GCN-LABEL: {{^}}v_fneg_fabs_f16:
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
-define void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
+define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
   %val = load half, half addrspace(1)* %in, align 2
   %fabs = call half @llvm.fabs.f16(half %val)
   %fsub = fsub half -0.0, %fabs
@@ -76,7 +76,7 @@ define void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
 ; CIVI: flat_store_dword
 
 ; GFX9: s_or_b32 s{{[0-9]+}}, 0x80008000, s{{[0-9]+}}
-define void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
+define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   store <2 x half> %fneg.fabs, <2 x half> addrspace(1)* %out
@@ -95,7 +95,7 @@ define void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 
 ; GCN: flat_store_dwordx2
-define void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
+define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   %fsub = fsub <4 x half> <half -0.0, half -0.0, half -0.0, half -0.0>, %fabs
   store <4 x half> %fsub, <4 x half> addrspace(1)* %out
@@ -113,7 +113,7 @@ define void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
 
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 neg_lo:[1,0] neg_hi:[1,0]
-define void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
+define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   %mul = fmul <2 x half> %fneg.fabs, <half 4.0, half 4.0>
@@ -125,7 +125,7 @@ define void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half>
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
 ; GFX9: v_mov_b32_e32 [[VABS:v[0-9]+]], [[ABS]]
 ; GFX9: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80008000, [[VABS]]
-define void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
+define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   store <2 x half> %fabs, <2 x half> addrspace(1)* %out0
@@ -136,7 +136,7 @@ define void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x ha
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_foldable_neg_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 neg_lo:[1,0] neg_hi:[1,0]
-define void @s_fneg_multi_use_fabs_foldable_neg_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
+define amdgpu_kernel void @s_fneg_multi_use_fabs_foldable_neg_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   %mul = fmul <2 x half> %fneg, <half 4.0, half 4.0>

@@ -163,7 +163,7 @@ TEST_F(CloneInstruction, Attributes) {
   Function *F2 = Function::Create(FT1, Function::ExternalLinkage);
 
   Attribute::AttrKind AK[] = { Attribute::NoCapture };
-  AttributeSet AS = AttributeSet::get(context, 0, AK);
+  AttributeList AS = AttributeList::get(context, 0, AK);
   Argument *A = &*F1->arg_begin();
   A->addAttr(AS);
 

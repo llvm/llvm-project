@@ -118,9 +118,6 @@ LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
           && TypeBitWidth == rhs.TypeBitWidth);
 }
 
-const LayoutAlignElem
-DataLayout::InvalidAlignmentElem = { INVALID_ALIGN, 0, 0, 0 };
-
 //===----------------------------------------------------------------------===//
 // PointerAlignElem, PointerAlign support
 //===----------------------------------------------------------------------===//
@@ -144,9 +141,6 @@ PointerAlignElem::operator==(const PointerAlignElem &rhs) const {
           && PrefAlign == rhs.PrefAlign
           && TypeByteWidth == rhs.TypeByteWidth);
 }
-
-const PointerAlignElem
-DataLayout::InvalidPointerElem = { 0U, 0U, 0U, ~0U };
 
 //===----------------------------------------------------------------------===//
 //                       DataLayout Class Implementation

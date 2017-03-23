@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Test homogeneous float aggregate passing and returning.
 

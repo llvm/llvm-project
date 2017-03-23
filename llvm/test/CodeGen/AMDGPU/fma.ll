@@ -12,7 +12,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}},
 ; EG: FMA {{\*? *}}[[RES]]
-define void @fma_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
+define amdgpu_kernel void @fma_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
                      float addrspace(1)* %in2, float addrspace(1)* %in3) {
   %r0 = load float, float addrspace(1)* %in1
   %r1 = load float, float addrspace(1)* %in2
@@ -29,7 +29,7 @@ define void @fma_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]]].[[CHLO:[XYZW]]][[CHHI:[XYZW]]], {{T[0-9]\.[XYZW]}},
 ; EG-DAG: FMA {{\*? *}}[[RES]].[[CHLO]]
 ; EG-DAG: FMA {{\*? *}}[[RES]].[[CHHI]]
-define void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in1,
+define amdgpu_kernel void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in1,
                        <2 x float> addrspace(1)* %in2, <2 x float> addrspace(1)* %in3) {
   %r0 = load <2 x float>, <2 x float> addrspace(1)* %in1
   %r1 = load <2 x float>, <2 x float> addrspace(1)* %in2
@@ -50,7 +50,7 @@ define void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)*
 ; EG-DAG: FMA {{\*? *}}[[RES]].Y
 ; EG-DAG: FMA {{\*? *}}[[RES]].Z
 ; EG-DAG: FMA {{\*? *}}[[RES]].W
-define void @fma_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in1,
+define amdgpu_kernel void @fma_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in1,
                        <4 x float> addrspace(1)* %in2, <4 x float> addrspace(1)* %in3) {
   %r0 = load <4 x float>, <4 x float> addrspace(1)* %in1
   %r1 = load <4 x float>, <4 x float> addrspace(1)* %in2
@@ -62,7 +62,7 @@ define void @fma_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)*
 
 ; FUNC-LABEL: @fma_commute_mul_inline_imm_f32
 ; SI: v_fma_f32 {{v[0-9]+}}, {{v[0-9]+}}, 2.0, {{v[0-9]+}}
-define void @fma_commute_mul_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
+define amdgpu_kernel void @fma_commute_mul_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
   %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %in.a.gep = getelementptr float, float addrspace(1)* %in.a, i32 %tid
   %in.b.gep = getelementptr float, float addrspace(1)* %in.b, i32 %tid
@@ -77,7 +77,7 @@ define void @fma_commute_mul_inline_imm_f32(float addrspace(1)* noalias %out, fl
 }
 
 ; FUNC-LABEL: @fma_commute_mul_s_f32
-define void @fma_commute_mul_s_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b, float %b) nounwind {
+define amdgpu_kernel void @fma_commute_mul_s_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b, float %b) nounwind {
   %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
   %in.a.gep = getelementptr float, float addrspace(1)* %in.a, i32 %tid
   %in.b.gep = getelementptr float, float addrspace(1)* %in.b, i32 %tid

@@ -86,8 +86,9 @@ main_body:
   %tmp47 = insertelement <2 x i32> undef, i32 %tmp45, i32 0
   %tmp48 = insertelement <2 x i32> %tmp47, i32 %tmp46, i32 1
   %tmp39.bc = bitcast <16 x i8> %tmp39 to <4 x i32>
-  %tmp49 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp48, <8 x i32> %tmp37, <4 x i32> %tmp39.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %tmp50 = extractelement <4 x float> %tmp49, i32 2
+  %a.bc.i = bitcast <2 x i32> %tmp48 to <2 x float>
+  %tmp1 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %a.bc.i, <8 x i32> %tmp37, <4 x i32> %tmp39.bc, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %tmp50 = extractelement <4 x float> %tmp1, i32 2
   %tmp51 = call float @llvm.fabs.f32(float %tmp50)
   %tmp52 = fmul float %p2.i18, %p2.i18
   %tmp53 = fmul float %p2.i12, %p2.i12
@@ -239,17 +240,17 @@ entry:
   br i1 %tmp27, label %if, label %else
 
 if:                                               ; preds = %entry
-  %val.if = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 11, i32 13>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %val.if.0 = extractelement <4 x float> %val.if, i32 0
-  %val.if.1 = extractelement <4 x float> %val.if, i32 1
-  %val.if.2 = extractelement <4 x float> %val.if, i32 2
+  %tmp1 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> <float 0x36D6000000000000, float 0x36DA000000000000>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %val.if.0 = extractelement <4 x float> %tmp1, i32 0
+  %val.if.1 = extractelement <4 x float> %tmp1, i32 1
+  %val.if.2 = extractelement <4 x float> %tmp1, i32 2
   br label %endif
 
 else:                                             ; preds = %entry
-  %val.else = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 5, i32 7>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %val.else.0 = extractelement <4 x float> %val.else, i32 0
-  %val.else.1 = extractelement <4 x float> %val.else, i32 1
-  %val.else.2 = extractelement <4 x float> %val.else, i32 2
+  %tmp2 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> <float 0x36C4000000000000, float 0x36CC000000000000>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %val.else.0 = extractelement <4 x float> %tmp2, i32 0
+  %val.else.1 = extractelement <4 x float> %tmp2, i32 1
+  %val.else.2 = extractelement <4 x float> %tmp2, i32 2
   br label %endif
 
 endif:                                            ; preds = %else, %if
@@ -264,7 +265,7 @@ endif:                                            ; preds = %else, %if
 ; CHECK: buffer_load_dword
 ; CHECK: v_add
 ; CHECK: s_endpgm
-define void @copy1(float addrspace(1)* %out, float addrspace(1)* %in0) {
+define amdgpu_kernel void @copy1(float addrspace(1)* %out, float addrspace(1)* %in0) {
 entry:
   %tmp = load float, float addrspace(1)* %in0
   %tmp1 = fcmp oeq float %tmp, 0.000000e+00
@@ -356,7 +357,8 @@ bb38:                                             ; preds = %bb
   %tmp54 = insertelement <2 x i32> undef, i32 %tmp52, i32 0
   %tmp55 = insertelement <2 x i32> %tmp54, i32 %tmp53, i32 1
   %tmp56 = bitcast <8 x i32> %tmp26 to <8 x i32>
-  %tmp58 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp55, <8 x i32> %tmp56, <4 x i32> %tmp28, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %a.bc.i = bitcast <2 x i32> %tmp55 to <2 x float>
+  %tmp2 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %a.bc.i, <8 x i32> %tmp56, <4 x i32> %tmp28, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   br label %bb71
 
 bb80:                                             ; preds = %bb
@@ -366,11 +368,12 @@ bb80:                                             ; preds = %bb
   %tmp83 = insertelement <2 x i32> undef, i32 %tmp81, i32 0
   %tmp84 = insertelement <2 x i32> %tmp83, i32 %tmp82.2, i32 1
   %tmp85 = bitcast <8 x i32> %tmp26 to <8 x i32>
-  %tmp87 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> %tmp84, <8 x i32> %tmp85, <4 x i32> %tmp28, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %a.bc.i1 = bitcast <2 x i32> %tmp84 to <2 x float>
+  %tmp3 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %a.bc.i1, <8 x i32> %tmp85, <4 x i32> %tmp28, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   br label %bb71
 
 bb71:                                             ; preds = %bb80, %bb38
-  %tmp72 = phi <4 x float> [ %tmp58, %bb38 ], [ %tmp87, %bb80 ]
+  %tmp72 = phi <4 x float> [ %tmp2, %bb38 ], [ %tmp3, %bb80 ]
   %tmp88 = extractelement <4 x float> %tmp72, i32 0
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp88, float %tmp88, float %tmp88, float %tmp88, i1 true, i1 true) #0
   ret void
@@ -384,8 +387,8 @@ bb:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp7 = getelementptr [34 x <8 x i32>], [34 x <8 x i32>] addrspace(2)* %arg, i32 0, i32 %tid
   %tmp8 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp7, align 32, !tbaa !0
-  %tmp9 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 1061158912, i32 1048576000>, <8 x i32> %tmp8, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %tmp10 = extractelement <4 x float> %tmp9, i32 0
+  %tmp = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> <float 7.500000e-01, float 2.500000e-01>, <8 x i32> %tmp8, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %tmp10 = extractelement <4 x float> %tmp, i32 0
   %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %tmp10)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
   ret void
@@ -399,8 +402,8 @@ bb:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp7 = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(2)* %arg, i32 0, i32 %tid
   %tmp8 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp7, align 16, !tbaa !0
-  %tmp9 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 1061158912, i32 1048576000>, <8 x i32> undef, <4 x i32> %tmp8, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %tmp10 = extractelement <4 x float> %tmp9, i32 0
+  %tmp = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> <float 7.500000e-01, float 2.500000e-01>, <8 x i32> undef, <4 x i32> %tmp8, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %tmp10 = extractelement <4 x float> %tmp, i32 0
   %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
   ret void
@@ -416,12 +419,12 @@ declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-
-declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
 declare float @llvm.SI.load.const(<16 x i8>, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

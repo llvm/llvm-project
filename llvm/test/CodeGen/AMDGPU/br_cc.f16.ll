@@ -20,7 +20,7 @@
 ; SI:  v_cvt_f16_f32_e32 v[[B_F16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short v[[B_F16]]
 ; GCN: s_endpgm
-define void @br_cc_f16(
+define amdgpu_kernel void @br_cc_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -59,7 +59,7 @@ two:
 ; GCN: two{{$}}
 ; SI:  v_cvt_f16_f32_e32 v[[B_F16:[0-9]+]], v[[B_F32]]
 
-define void @br_cc_f16_imm_a(
+define amdgpu_kernel void @br_cc_f16_imm_a(
     half addrspace(1)* %r,
     half addrspace(1)* %b) {
 entry:
@@ -92,7 +92,7 @@ two:
 ; VI:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x3800{{$}}
 ; GCN: buffer_store_short v[[B_F16]]
 ; GCN: s_endpgm
-define void @br_cc_f16_imm_b(
+define amdgpu_kernel void @br_cc_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:

@@ -68,3 +68,22 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
   return true;
 #endif
 }
+
+bool TildeExpressionResolver::ResolveFullPath(
+    StringRef Expr, llvm::SmallVectorImpl<char> &Output) {
+  Output.clear();
+  if (!Expr.startswith("~")) {
+    Output.append(Expr.begin(), Expr.end());
+    return false;
+  }
+
+  namespace path = llvm::sys::path;
+  StringRef Left =
+      Expr.take_until([](char c) { return path::is_separator(c); });
+
+  if (!ResolveExact(Left, Output))
+    return false;
+
+  Output.append(Expr.begin() + Left.size(), Expr.end());
+  return true;
+}

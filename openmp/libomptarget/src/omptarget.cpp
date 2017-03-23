@@ -1303,7 +1303,6 @@ static int InitLibrary(DeviceTy& Device) {
     }
 
     // process global data that needs to be mapped.
-    Device.DataMapMtx.lock();
     __tgt_target_table *HostTable = &TransTable->HostTable;
     for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
                              *CurrHostEntry = HostTable->EntriesBegin,
@@ -1314,20 +1313,20 @@ static int InitLibrary(DeviceTy& Device) {
         // has data.
         assert(CurrDeviceEntry->size == CurrHostEntry->size &&
                "data size mismatch");
-        assert(Device.getTgtPtrBegin(CurrHostEntry->addr,
-                                     CurrHostEntry->size) == NULL &&
-               "data in declared target should not be already mapped");
-        // add entry to map.
+
+        // Fortran may use multiple weak declarations for the same symbol,
+        // therefore we must allow for multiple weak symbols to be loaded from
+        // the fat binary. Treat these mappings as any other "regular" mapping.
+        // Add entry to map.
         DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
             "\n", DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
             CurrDeviceEntry->size);
-        Device.HostDataToTargetMap.push_front(HostDataToTargetTy(
-            (uintptr_t)CurrHostEntry->addr, (uintptr_t)CurrHostEntry->addr,
-            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size,
-            (uintptr_t)CurrDeviceEntry->addr));
+        bool IsNew; //unused
+        Device.getOrAllocTgtPtr(CurrHostEntry->addr /*HstPtrBegin*/,
+            CurrHostEntry->addr /*HstPtrBase*/, CurrHostEntry->size /*Size*/,
+            IsNew, false /*IsImplicit*/, true /*UpdateRefCount*/);
       }
     }
-    Device.DataMapMtx.unlock();
   }
   TrlTblMtx.unlock();
 

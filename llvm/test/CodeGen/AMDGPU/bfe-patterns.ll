@@ -5,7 +5,7 @@
 ; GCN: {{buffer|flat}}_load_dword [[SRC:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[WIDTH:v[0-9]+]]
 ; GCN: v_bfe_u32 v{{[0-9]+}}, [[SRC]], 0, [[WIDTH]]
-define void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
@@ -32,7 +32,7 @@ define void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 
 
 ; GCN: [[BFE]]
 ; GCN: [[SHL]]
-define void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
@@ -52,7 +52,7 @@ define void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; GCN: s_load_dword [[WIDTH:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]]
 ; GCN: v_bfe_u32 v{{[0-9]+}}, [[SRC]], 0, [[VWIDTH]]
-define void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
   %sub = sub i32 32, %width
@@ -68,7 +68,7 @@ define void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, [[WIDTH]]
 ; GCN-NEXT: s_lshl_b32 [[SHL:s[0-9]+]], [[SRC]], [[SUB]]
 ; GCN-NEXT: s_lshr_b32 s{{[0-9]+}}, [[SHL]], [[SUB]]
-define void @s_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
   %sub = sub i32 32, %width
@@ -83,7 +83,7 @@ define void @s_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 
 ; GCN: {{buffer|flat}}_load_dword [[SRC:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[WIDTH:v[0-9]+]]
 ; GCN: v_bfe_i32 v{{[0-9]+}}, [[SRC]], 0, [[WIDTH]]
-define void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
@@ -110,7 +110,7 @@ define void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 
 
 ; GCN: [[BFE]]
 ; GCN: [[SHL]]
-define void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
@@ -130,7 +130,7 @@ define void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; GCN: s_load_dword [[WIDTH:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]]
 ; GCN: v_bfe_i32 v{{[0-9]+}}, [[SRC]], 0, [[VWIDTH]]
-define void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
   %sub = sub i32 32, %width
@@ -146,7 +146,7 @@ define void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, [[WIDTH]]
 ; GCN-NEXT: s_lshl_b32 [[SHL:s[0-9]+]], [[SRC]], [[SUB]]
 ; GCN-NEXT: s_ashr_i32 s{{[0-9]+}}, [[SHL]], [[SUB]]
-define void @s_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
   %sub = sub i32 32, %width

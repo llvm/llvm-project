@@ -90,9 +90,9 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     assert(VMap.count(&I) && "No mapping from source argument specified!");
 #endif
 
-  // Copy all attributes other than those stored in the AttributeSet.  We need
-  // to remap the parameter indices of the AttributeSet.
-  AttributeSet NewAttrs = NewFunc->getAttributes();
+  // Copy all attributes other than those stored in the AttributeList.  We need
+  // to remap the parameter indices of the AttributeList.
+  AttributeList NewAttrs = NewFunc->getAttributes();
   NewFunc->copyAttributesFrom(OldFunc);
   NewFunc->setAttributes(NewAttrs);
 
@@ -103,21 +103,20 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                  ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                  TypeMapper, Materializer));
 
-  AttributeSet OldAttrs = OldFunc->getAttributes();
+  AttributeList OldAttrs = OldFunc->getAttributes();
   // Clone any argument attributes that are present in the VMap.
   for (const Argument &OldArg : OldFunc->args())
     if (Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg])) {
-      AttributeSet attrs =
-          OldAttrs.getParamAttributes(OldArg.getArgNo() + 1);
+      AttributeList attrs = OldAttrs.getParamAttributes(OldArg.getArgNo() + 1);
       if (attrs.getNumSlots() > 0)
         NewArg->addAttr(attrs);
     }
 
   NewFunc->setAttributes(
       NewFunc->getAttributes()
-          .addAttributes(NewFunc->getContext(), AttributeSet::ReturnIndex,
+          .addAttributes(NewFunc->getContext(), AttributeList::ReturnIndex,
                          OldAttrs.getRetAttributes())
-          .addAttributes(NewFunc->getContext(), AttributeSet::FunctionIndex,
+          .addAttributes(NewFunc->getContext(), AttributeList::FunctionIndex,
                          OldAttrs.getFnAttributes()));
 
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;

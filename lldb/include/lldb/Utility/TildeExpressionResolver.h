@@ -44,6 +44,11 @@ public:
   /// \returns true if there were any matches, false otherwise.
   virtual bool ResolvePartial(llvm::StringRef Expr,
                               llvm::StringSet<> &Output) = 0;
+
+  /// \brief Resolve an entire path that begins with a tilde expression,
+  /// replacing the username portion with the matched result.
+  bool ResolveFullPath(llvm::StringRef Expr,
+                       llvm::SmallVectorImpl<char> &Output);
 };
 
 class StandardTildeExpressionResolver : public TildeExpressionResolver {

@@ -271,12 +271,12 @@ def SI_INIT_M0 : SPseudoInstSI <(outs), (ins SSrc_b32:$src)> {
   let isReMaterializable = 1;
 }
 
-def SI_RETURN : SPseudoInstSI <
-  (outs), (ins variable_ops), [(AMDGPUreturn)]> {
+// Return for returning shaders to a shader variant epilog.
+def SI_RETURN_TO_EPILOG : SPseudoInstSI <
+  (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
   let isTerminator = 1;
   let isBarrier = 1;
   let isReturn = 1;
-  let hasSideEffects = 1;
   let hasNoSchedulingInfo = 1;
   let DisableWQM = 1;
 }

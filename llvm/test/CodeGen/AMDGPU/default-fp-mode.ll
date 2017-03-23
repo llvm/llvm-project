@@ -3,7 +3,7 @@
 ; GCN-LABEL: {{^}}test_default_si:
 ; GCN: FloatMode: 192
 ; GCN: IeeeMode: 1
-define void @test_default_si(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
+define amdgpu_kernel void @test_default_si(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -12,7 +12,7 @@ define void @test_default_si(float addrspace(1)* %out0, double addrspace(1)* %ou
 ; GCN-LABEL: {{^}}test_default_vi:
 ; GCN: FloatMode: 192
 ; GCN: IeeeMode: 1
-define void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
+define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -21,7 +21,7 @@ define void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %ou
 ; GCN-LABEL: {{^}}test_f64_denormals:
 ; GCN: FloatMode: 192
 ; GCN: IeeeMode: 1
-define void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #2 {
+define amdgpu_kernel void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #2 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -30,7 +30,7 @@ define void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* 
 ; GCN-LABEL: {{^}}test_f32_denormals:
 ; GCNL: FloatMode: 48
 ; GCN: IeeeMode: 1
-define void @test_f32_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #3 {
+define amdgpu_kernel void @test_f32_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #3 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -39,7 +39,7 @@ define void @test_f32_denormals(float addrspace(1)* %out0, double addrspace(1)* 
 ; GCN-LABEL: {{^}}test_f32_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-define void @test_f32_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #4 {
+define amdgpu_kernel void @test_f32_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #4 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -48,7 +48,7 @@ define void @test_f32_f64_denormals(float addrspace(1)* %out0, double addrspace(
 ; GCN-LABEL: {{^}}test_no_denormals
 ; GCN: FloatMode: 0
 ; GCN: IeeeMode: 1
-define void @test_no_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #5 {
+define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #5 {
   store float 0.0, float addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -57,7 +57,7 @@ define void @test_no_denormals(float addrspace(1)* %out0, double addrspace(1)* %
 ; GCN-LABEL: {{^}}test_f16_f64_denormals:
 ; GCN: FloatMode: 192
 ; GCN: IeeeMode: 1
-define void @test_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
+define amdgpu_kernel void @test_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
   store half 0.0, half addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -66,7 +66,7 @@ define void @test_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1
 ; GCN-LABEL: {{^}}test_no_f16_f64_denormals:
 ; GCN: FloatMode: 0
 ; GCN: IeeeMode: 1
-define void @test_no_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
+define amdgpu_kernel void @test_no_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
   store half 0.0, half addrspace(1)* %out0
   store double 0.0, double addrspace(1)* %out1
   ret void
@@ -75,7 +75,7 @@ define void @test_no_f16_f64_denormals(half addrspace(1)* %out0, double addrspac
 ; GCN-LABEL: {{^}}test_f32_f16_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-define void @test_f32_f16_f64_denormals(half addrspace(1)* %out0, float addrspace(1)* %out1, double addrspace(1)* %out2) #8 {
+define amdgpu_kernel void @test_f32_f16_f64_denormals(half addrspace(1)* %out0, float addrspace(1)* %out1, double addrspace(1)* %out2) #8 {
   store half 0.0, half addrspace(1)* %out0
   store float 0.0, float addrspace(1)* %out1
   store double 0.0, double addrspace(1)* %out2

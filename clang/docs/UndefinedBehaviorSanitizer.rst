@@ -50,9 +50,9 @@ instead of ``clang++`` if you're compiling/linking C code.
 You can enable only a subset of :ref:`checks <ubsan-checks>` offered by UBSan,
 and define the desired behavior for each kind of check:
 
-* print a verbose error report and continue execution (default);
-* print a verbose error report and exit the program;
-* execute a trap instruction (doesn't require UBSan run-time support).
+* ``-fsanitize=...``: print a verbose error report and continue execution (default);
+* ``-fno-sanitize-recover=...``: print a verbose error report and exit the program;
+* ``-fsanitize-trap=...``: execute a trap instruction (doesn't require UBSan run-time support).
 
 For example if you compile/link your program as:
 

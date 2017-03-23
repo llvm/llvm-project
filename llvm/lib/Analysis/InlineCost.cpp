@@ -670,7 +670,7 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
       BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
       if (PSI->isHotCallSite(CS, CallerBFI)) {
         DEBUG(dbgs() << "Hot callsite.\n");
-        Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
+        Threshold = Params.HotCallSiteThreshold.getValue();
       } else if (PSI->isFunctionEntryHot(&Callee)) {
         DEBUG(dbgs() << "Hot callee.\n");
         // If callsite hotness can not be determined, we may still know

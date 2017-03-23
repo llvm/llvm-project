@@ -1039,3 +1039,12 @@ CXType clang_Type_getNamedType(CXType CT){
 
   return MakeCXType(QualType(), GetTU(CT));
 }
+
+unsigned clang_Type_isTransparentTagTypedef(CXType TT){
+  QualType T = GetQualType(TT);
+  if (auto *TT = dyn_cast_or_null<TypedefType>(T.getTypePtrOrNull())) {
+    if (auto *D = TT->getDecl())
+      return D->isTransparentTag();
+  }
+  return false;
+}

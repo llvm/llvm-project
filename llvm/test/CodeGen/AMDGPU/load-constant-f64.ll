@@ -6,7 +6,7 @@
 ; GCN: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}]
 ; GCN-NOHSA: buffer_store_dwordx2
 ; GCN-HSA: flat_store_dwordx2
-define void @constant_load_f64(double addrspace(1)* %out, double addrspace(2)* %in) #0 {
+define amdgpu_kernel void @constant_load_f64(double addrspace(1)* %out, double addrspace(2)* %in) #0 {
   %ld = load double, double addrspace(2)* %in
   store double %ld, double addrspace(1)* %out
   ret void

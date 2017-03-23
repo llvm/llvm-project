@@ -23,7 +23,7 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 ; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_f16(
+define amdgpu_kernel void @test_copysign_f16(
   half addrspace(1)* %arg_out,
   half addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
@@ -43,7 +43,7 @@ entry:
 ; GCN: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG_EXT]], v[[SIGN]]
 ; GCN: buffer_store_dword v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_out_f32_mag_f16_sign_f32(
+define amdgpu_kernel void @test_copysign_out_f32_mag_f16_sign_f32(
   float addrspace(1)* %arg_out,
   half addrspace(1)* %arg_mag,
   float addrspace(1)* %arg_sign) {
@@ -65,7 +65,7 @@ entry:
 ; GCN: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_EXT_HI]], v[[SIGN_HI]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[MAG_EXT_LO]]:[[OUT_HI]]{{\]}}
 ; GCN: s_endpgm
-define void @test_copysign_out_f64_mag_f16_sign_f64(
+define amdgpu_kernel void @test_copysign_out_f64_mag_f16_sign_f64(
   double addrspace(1)* %arg_out,
   half addrspace(1)* %arg_mag,
   double addrspace(1)* %arg_sign) {
@@ -88,7 +88,7 @@ entry:
 ; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_dword v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_out_f32_mag_f32_sign_f16(
+define amdgpu_kernel void @test_copysign_out_f32_mag_f32_sign_f16(
   float addrspace(1)* %arg_out,
   float addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
@@ -111,7 +111,7 @@ entry:
 ; VI: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[MAG_LO]]:[[OUT_HI]]{{\]}}
 ; GCN: s_endpgm
-define void @test_copysign_out_f64_mag_f64_sign_f16(
+define amdgpu_kernel void @test_copysign_out_f64_mag_f64_sign_f16(
   double addrspace(1)* %arg_out,
   double addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
@@ -136,7 +136,7 @@ entry:
 ; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_out_f16_mag_f16_sign_f32(
+define amdgpu_kernel void @test_copysign_out_f16_mag_f16_sign_f32(
   half addrspace(1)* %arg_out,
   half addrspace(1)* %arg_mag,
   float addrspace(1)* %arg_sign) {
@@ -161,7 +161,7 @@ entry:
 ; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_out_f16_mag_f16_sign_f64(
+define amdgpu_kernel void @test_copysign_out_f16_mag_f16_sign_f64(
   half addrspace(1)* %arg_out,
   half addrspace(1)* %arg_mag,
   double addrspace(1)* %arg_sign) {
@@ -188,7 +188,7 @@ entry:
 ; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG_TRUNC]], v[[SIGN]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
-define void @test_copysign_out_f16_mag_f32_sign_f16(
+define amdgpu_kernel void @test_copysign_out_f16_mag_f32_sign_f16(
   half addrspace(1)* %arg_out,
   float addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
@@ -204,7 +204,7 @@ entry:
 ; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f64_sign_f16:
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
-define void @test_copysign_out_f16_mag_f64_sign_f16(
+define amdgpu_kernel void @test_copysign_out_f16_mag_f64_sign_f16(
   half addrspace(1)* %arg_out,
   double addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
@@ -221,7 +221,7 @@ entry:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
-define void @test_copysign_v2f16(
+define amdgpu_kernel void @test_copysign_v2f16(
   <2 x half> addrspace(1)* %arg_out,
   <2 x half> %arg_mag,
   <2 x half> %arg_sign) {
@@ -236,7 +236,7 @@ entry:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
-define void @test_copysign_v3f16(
+define amdgpu_kernel void @test_copysign_v3f16(
   <3 x half> addrspace(1)* %arg_out,
   <3 x half> %arg_mag,
   <3 x half> %arg_sign) {
@@ -252,7 +252,7 @@ entry:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
-define void @test_copysign_v4f16(
+define amdgpu_kernel void @test_copysign_v4f16(
   <4 x half> addrspace(1)* %arg_out,
   <4 x half> %arg_mag,
   <4 x half> %arg_sign) {

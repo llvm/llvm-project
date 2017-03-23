@@ -1,3 +1,7 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+// XFAIL: aarch64
+// test fails for aarch64 (see pr32260)
+
 //===-- fixxfti_test.c - Test __fixxfti -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

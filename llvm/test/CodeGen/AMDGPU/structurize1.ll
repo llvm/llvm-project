@@ -19,7 +19,7 @@
 ; CHECK-LABEL: {{^}}if_inside_loop:
 ; CHECK: LOOP_START_DX10
 ; CHECK: END_LOOP
-define void @if_inside_loop(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_kernel void @if_inside_loop(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   br label %for.body
 

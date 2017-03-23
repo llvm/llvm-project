@@ -10,7 +10,7 @@
 ; CHECK: {{^}}sint:
 ; CHECK: INT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-define void @sint(<4 x float> addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @sint(<4 x float> addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %sint = load i32, i32 addrspace(1) * %in
@@ -24,7 +24,7 @@ entry:
 ;CHECK: {{^}}uint:
 ;CHECK: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-define void @uint(<4 x float> addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @uint(<4 x float> addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %uint = load i32, i32 addrspace(1) * %in

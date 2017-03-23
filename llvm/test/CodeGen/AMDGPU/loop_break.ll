@@ -43,7 +43,7 @@
 ; GCN: ; BB#4: ; %bb9
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
 ; GCN-NEXT: s_endpgm
-define void @break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg
@@ -87,7 +87,7 @@ bb9:
 ; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
-define void @undef_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg
@@ -140,7 +140,7 @@ bb9:                                              ; preds = %Flow
 ; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
-define void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg
@@ -190,7 +190,7 @@ bb9:                                              ; preds = %Flow
 ; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
-define void @true_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg
@@ -240,7 +240,7 @@ bb9:                                              ; preds = %Flow
 ; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
-define void @false_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg
@@ -295,7 +295,7 @@ bb9:                                              ; preds = %Flow
 ; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %1)
 ; OPT-NEXT: store volatile i32 7, i32 addrspace(3)* undef
 ; OPT-NEXT: ret void
-define void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg

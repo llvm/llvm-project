@@ -228,6 +228,17 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ArgListRecord &Args) {
   return Error::success();
 }
 
+Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, StringListRecord &Strs) {
+  auto Indices = Strs.getIndices();
+  uint32_t Size = Indices.size();
+  W->printNumber("NumStrings", Size);
+  ListScope Arguments(*W, "Strings");
+  for (uint32_t I = 0; I < Size; ++I) {
+    printTypeIndex("String", Indices[I]);
+  }
+  return Error::success();
+}
+
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
   uint16_t Props = static_cast<uint16_t>(Class.getOptions());
   W->printNumber("MemberCount", Class.getMemberCount());

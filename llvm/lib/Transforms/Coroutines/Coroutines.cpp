@@ -245,9 +245,9 @@ void coro::Shape::buildFrom(Function &F) {
           if (CoroBegin)
             report_fatal_error(
                 "coroutine should have exactly one defining @llvm.coro.begin");
-          CB->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
-          CB->addAttribute(AttributeSet::ReturnIndex, Attribute::NoAlias);
-          CB->removeAttribute(AttributeSet::FunctionIndex,
+          CB->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+          CB->addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
+          CB->removeAttribute(AttributeList::FunctionIndex,
                               Attribute::NoDuplicate);
           CoroBegin = CB;
         }

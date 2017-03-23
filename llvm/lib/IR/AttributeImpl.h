@@ -150,10 +150,10 @@ typedef std::pair<unsigned, AttributeSetNode *> IndexAttrPair;
 /// \class
 /// \brief This class represents a set of attributes that apply to the function,
 /// return type, and parameters.
-class AttributeSetImpl final
+class AttributeListImpl final
     : public FoldingSetNode,
-      private TrailingObjects<AttributeSetImpl, IndexAttrPair> {
-  friend class AttributeSet;
+      private TrailingObjects<AttributeListImpl, IndexAttrPair> {
+  friend class AttributeList;
   friend TrailingObjects;
 
 private:
@@ -171,8 +171,8 @@ private:
   }
 
 public:
-  AttributeSetImpl(LLVMContext &C,
-                   ArrayRef<std::pair<unsigned, AttributeSetNode *>> Slots)
+  AttributeListImpl(LLVMContext &C,
+                    ArrayRef<std::pair<unsigned, AttributeSetNode *>> Slots)
       : Context(C), NumSlots(Slots.size()), AvailableFunctionAttrs(0) {
     static_assert(Attribute::EndAttrKinds <=
                       sizeof(AvailableFunctionAttrs) * CHAR_BIT,
@@ -192,10 +192,10 @@ public:
 
     // Initialize AvailableFunctionAttrs summary bitset.
     if (NumSlots > 0) {
-      static_assert(AttributeSet::FunctionIndex == ~0u,
+      static_assert(AttributeList::FunctionIndex == ~0u,
                     "FunctionIndex should be biggest possible index");
       const std::pair<unsigned, AttributeSetNode *> &Last = Slots.back();
-      if (Last.first == AttributeSet::FunctionIndex) {
+      if (Last.first == AttributeList::FunctionIndex) {
         const AttributeSetNode *Node = Last.second;
         for (Attribute I : *Node) {
           if (!I.isStringAttribute())
@@ -206,12 +206,12 @@ public:
   }
 
   // AttributesSetImpt is uniqued, these should not be available.
-  AttributeSetImpl(const AttributeSetImpl &) = delete;
-  AttributeSetImpl &operator=(const AttributeSetImpl &) = delete;
+  AttributeListImpl(const AttributeListImpl &) = delete;
+  AttributeListImpl &operator=(const AttributeListImpl &) = delete;
 
   void operator delete(void *p) { ::operator delete(p); }
 
-  /// \brief Get the context that created this AttributeSetImpl.
+  /// \brief Get the context that created this AttributeListImpl.
   LLVMContext &getContext() { return Context; }
 
   /// \brief Return the number of slots used in this attribute list. This is
@@ -230,8 +230,8 @@ public:
   /// \brief Retrieve the attributes for the given "slot" in the AttrNode list.
   /// \p Slot is an index into the AttrNodes list, not the index of the return /
   /// parameter/ function which the attributes apply to.
-  AttributeSet getSlotAttributes(unsigned Slot) const {
-    return AttributeSet::get(Context, *getNode(Slot));
+  AttributeList getSlotAttributes(unsigned Slot) const {
+    return AttributeList::get(Context, *getNode(Slot));
   }
 
   /// \brief Retrieve the attribute set node for the given "slot" in the

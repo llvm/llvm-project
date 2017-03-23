@@ -17,9 +17,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StringList.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/Baton.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

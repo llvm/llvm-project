@@ -14,7 +14,7 @@
 ; VI:  v_mac_f16_e32 v[[C_F16]], v[[B_F16]], v[[A_F16]]
 ; VI:  buffer_store_short v[[C_F16]]
 ; GCN: s_endpgm
-define void @mac_f16(
+define amdgpu_kernel void @mac_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -38,7 +38,7 @@ entry:
 ; VI:  v_mad_f16 v{{[0-9]}}, v{{[0-9]+}}, v{{[0-9]+}}, [[ADD:v[0-9]+]]
 ; VI:  v_mac_f16_e32 [[ADD]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_f16_same_add(
+define amdgpu_kernel void @mac_f16_same_add(
     half addrspace(1)* %r0,
     half addrspace(1)* %r1,
     half addrspace(1)* %a,
@@ -73,7 +73,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_a(
+define amdgpu_kernel void @mac_f16_neg_a(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -100,7 +100,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_b(
+define amdgpu_kernel void @mac_f16_neg_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -127,7 +127,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_c(
+define amdgpu_kernel void @mac_f16_neg_c(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -151,7 +151,7 @@ entry:
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A]]
 ; GCN: s_endpgm
-define void @mac_f16_neg_a_safe_fp_math(
+define amdgpu_kernel void @mac_f16_neg_a_safe_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -175,7 +175,7 @@ entry:
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A]], v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_f16_neg_b_safe_fp_math(
+define amdgpu_kernel void @mac_f16_neg_b_safe_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -199,7 +199,7 @@ entry:
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v[[NEG_A]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_f16_neg_c_safe_fp_math(
+define amdgpu_kernel void @mac_f16_neg_c_safe_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -226,7 +226,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_a_nsz_fp_math(
+define amdgpu_kernel void @mac_f16_neg_a_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -253,7 +253,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_b_nsz_fp_math(
+define amdgpu_kernel void @mac_f16_neg_b_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -280,7 +280,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_c_nsz_fp_math(
+define amdgpu_kernel void @mac_f16_neg_c_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -328,7 +328,7 @@ entry:
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
 ; GCN: {{buffer|flat}}_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @mac_v2f16(
+define amdgpu_kernel void @mac_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -355,7 +355,7 @@ entry:
 ; VI:  v_mac_f16_e32 [[ADD0]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 [[ADD1]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_v2f16_same_add(
+define amdgpu_kernel void @mac_v2f16_same_add(
     <2 x half> addrspace(1)* %r0,
     <2 x half> addrspace(1)* %r1,
     <2 x half> addrspace(1)* %a,
@@ -392,7 +392,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_a(
+define amdgpu_kernel void @mac_v2f16_neg_a(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -421,7 +421,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_b(
+define amdgpu_kernel void @mac_v2f16_neg_b(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -454,7 +454,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_c(
+define amdgpu_kernel void @mac_v2f16_neg_c(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -482,7 +482,7 @@ entry:
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]]
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 ; GCN: s_endpgm
-define void @mac_v2f16_neg_a_safe_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_a_safe_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -510,7 +510,7 @@ entry:
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_v2f16_neg_b_safe_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_b_safe_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -538,7 +538,7 @@ entry:
 ; VI:  v_mac_f16_e32 v[[NEG_A0]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v[[NEG_A1]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_endpgm
-define void @mac_v2f16_neg_c_safe_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_c_safe_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -571,7 +571,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_a_nsz_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_a_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -604,7 +604,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_b_nsz_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_b_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -637,7 +637,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_c_nsz_fp_math(
+define amdgpu_kernel void @mac_v2f16_neg_c_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,

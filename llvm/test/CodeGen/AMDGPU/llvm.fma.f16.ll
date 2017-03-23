@@ -16,7 +16,7 @@ declare <2 x half> @llvm.fma.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
 ; VI:  v_fma_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fma_f16(
+define amdgpu_kernel void @fma_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -42,7 +42,7 @@ define void @fma_f16(
 ; VI:  v_fma_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fma_f16_imm_a(
+define amdgpu_kernel void @fma_f16_imm_a(
     half addrspace(1)* %r,
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
@@ -65,7 +65,7 @@ define void @fma_f16_imm_a(
 ; VI:  v_fma_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fma_f16_imm_b(
+define amdgpu_kernel void @fma_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %c) {
@@ -88,7 +88,7 @@ define void @fma_f16_imm_b(
 ; VI:  v_fma_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fma_f16_imm_c(
+define amdgpu_kernel void @fma_f16_imm_c(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -130,7 +130,7 @@ define void @fma_f16_imm_c(
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @fma_v2f16(
+define amdgpu_kernel void @fma_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -165,7 +165,7 @@ define void @fma_v2f16(
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @fma_v2f16_imm_a(
+define amdgpu_kernel void @fma_v2f16_imm_a(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %b,
     <2 x half> addrspace(1)* %c) {
@@ -203,7 +203,7 @@ define void @fma_v2f16_imm_a(
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @fma_v2f16_imm_b(
+define amdgpu_kernel void @fma_v2f16_imm_b(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %c) {
@@ -241,7 +241,7 @@ define void @fma_v2f16_imm_b(
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @fma_v2f16_imm_c(
+define amdgpu_kernel void @fma_v2f16_imm_c(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b) {

@@ -3,6 +3,12 @@ set(ASAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASAN_TESTSUITES)
 set(ASAN_DYNAMIC_TESTSUITES)
 
+# FIXME: Shadow memory for 64-bit asan easily exhausts swap on most machines.
+# Find a way to make these tests pass reliably, and re-enable them.
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(EXCLUDE_FROM_ALL TRUE)
+endif()
+
 macro(get_bits_for_arch arch bits)
   if (${arch} MATCHES "i386|i686|arm|mips|mipsel")
     set(${bits} 32)
@@ -107,4 +113,10 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
   if(NOT OS_NAME MATCHES "Windows")
     set(EXCLUDE_FROM_ALL FALSE)
   endif()
+endif()
+
+# Reset EXCLUDE_FROM_ALL to its initial value.
+# FIXME: Remove when we run Win64 asan tests.
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(EXCLUDE_FROM_ALL FALSE)
 endif()

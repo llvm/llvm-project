@@ -15,13 +15,13 @@
 #define LLVM_ADT_STRINGMAP_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <utility>
 #include <initializer_list>
 #include <new>
 #include <utility>
@@ -32,6 +32,7 @@ namespace llvm {
   class StringMapConstIterator;
   template<typename ValueT>
   class StringMapIterator;
+  template <typename ValueT> class StringMapKeyIterator;
   template<typename ValueTy>
   class StringMapEntry;
 
@@ -312,6 +313,11 @@ public:
     return const_iterator(TheTable+NumBuckets, true);
   }
 
+  llvm::iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
+    return make_range(StringMapKeyIterator<ValueTy>(begin()),
+                      StringMapKeyIterator<ValueTy>(end()));
+  }
+
   iterator find(StringRef Key) {
     int Bucket = FindKey(Key);
     if (Bucket == -1) return end();
@@ -444,42 +450,39 @@ public:
   }
 };
 
-template <typename ValueTy> class StringMapConstIterator {
+template <typename DerivedTy, typename ValueTy>
+class StringMapIterBase
+    : public iterator_facade_base<DerivedTy, std::forward_iterator_tag,
+                                  ValueTy> {
 protected:
   StringMapEntryBase **Ptr = nullptr;
 
 public:
-  typedef StringMapEntry<ValueTy> value_type;
+  StringMapIterBase() = default;
 
-  StringMapConstIterator() = default;
-
-  explicit StringMapConstIterator(StringMapEntryBase **Bucket,
-                                  bool NoAdvance = false)
-  : Ptr(Bucket) {
+  explicit StringMapIterBase(StringMapEntryBase **Bucket,
+                             bool NoAdvance = false)
+      : Ptr(Bucket) {
     if (!NoAdvance) AdvancePastEmptyBuckets();
   }
 
-  const value_type &operator*() const {
-    return *static_cast<StringMapEntry<ValueTy>*>(*Ptr);
-  }
-  const value_type *operator->() const {
-    return static_cast<StringMapEntry<ValueTy>*>(*Ptr);
+  DerivedTy &operator=(const DerivedTy &Other) {
+    Ptr = Other.Ptr;
+    return static_cast<DerivedTy &>(*this);
   }
 
-  bool operator==(const StringMapConstIterator &RHS) const {
-    return Ptr == RHS.Ptr;
-  }
-  bool operator!=(const StringMapConstIterator &RHS) const {
-    return Ptr != RHS.Ptr;
-  }
+  bool operator==(const DerivedTy &RHS) const { return Ptr == RHS.Ptr; }
 
-  inline StringMapConstIterator& operator++() {   // Preincrement
+  DerivedTy &operator++() { // Preincrement
     ++Ptr;
     AdvancePastEmptyBuckets();
-    return *this;
+    return static_cast<DerivedTy &>(*this);
   }
-  StringMapConstIterator operator++(int) {        // Postincrement
-    StringMapConstIterator tmp = *this; ++*this; return tmp;
+
+  DerivedTy operator++(int) { // Post-increment
+    DerivedTy Tmp(Ptr);
+    ++*this;
+    return Tmp;
   }
 
 private:
@@ -489,22 +492,67 @@ private:
   }
 };
 
-template<typename ValueTy>
-class StringMapIterator : public StringMapConstIterator<ValueTy> {
+template <typename ValueTy>
+class StringMapConstIterator
+    : public StringMapIterBase<StringMapConstIterator<ValueTy>,
+                               const StringMapEntry<ValueTy>> {
+  using base = StringMapIterBase<StringMapConstIterator<ValueTy>,
+                                 const StringMapEntry<ValueTy>>;
+
+public:
+  StringMapConstIterator() = default;
+  explicit StringMapConstIterator(StringMapEntryBase **Bucket,
+                                  bool NoAdvance = false)
+      : base(Bucket, NoAdvance) {}
+
+  const StringMapEntry<ValueTy> &operator*() const {
+    return *static_cast<const StringMapEntry<ValueTy> *>(*this->Ptr);
+  }
+};
+
+template <typename ValueTy>
+class StringMapIterator : public StringMapIterBase<StringMapIterator<ValueTy>,
+                                                   StringMapEntry<ValueTy>> {
+  using base =
+      StringMapIterBase<StringMapIterator<ValueTy>, StringMapEntry<ValueTy>>;
+
 public:
   StringMapIterator() = default;
-
   explicit StringMapIterator(StringMapEntryBase **Bucket,
                              bool NoAdvance = false)
-    : StringMapConstIterator<ValueTy>(Bucket, NoAdvance) {
-  }
+      : base(Bucket, NoAdvance) {}
 
   StringMapEntry<ValueTy> &operator*() const {
-    return *static_cast<StringMapEntry<ValueTy>*>(*this->Ptr);
+    return *static_cast<StringMapEntry<ValueTy> *>(*this->Ptr);
   }
-  StringMapEntry<ValueTy> *operator->() const {
-    return static_cast<StringMapEntry<ValueTy>*>(*this->Ptr);
+
+  operator StringMapConstIterator<ValueTy>() const {
+    return StringMapConstIterator<ValueTy>(this->Ptr, true);
   }
+};
+
+template <typename ValueTy>
+class StringMapKeyIterator
+    : public iterator_adaptor_base<StringMapKeyIterator<ValueTy>,
+                                   StringMapConstIterator<ValueTy>,
+                                   std::forward_iterator_tag, StringRef> {
+  using base = iterator_adaptor_base<StringMapKeyIterator<ValueTy>,
+                                     StringMapConstIterator<ValueTy>,
+                                     std::forward_iterator_tag, StringRef>;
+
+public:
+  StringMapKeyIterator() = default;
+
+  explicit StringMapKeyIterator(StringMapConstIterator<ValueTy> Iter)
+      : base(std::move(Iter)) {}
+
+  StringRef &operator*() {
+    Key = this->wrapped()->getKey();
+    return Key;
+  }
+
+private:
+  StringRef Key;
 };
 
 } // end namespace llvm

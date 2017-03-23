@@ -112,14 +112,14 @@ static __isl_give isl_map *tag(__isl_take isl_map *Relation, MemoryAccess *MA,
 }
 
 /// Collect information about the SCoP @p S.
-static void collectInfo(Scop &S, isl_union_map *&Read, isl_union_map *&Write,
-                        isl_union_map *&MayWrite,
+static void collectInfo(Scop &S, isl_union_map *&Read,
+                        isl_union_map *&MustWrite, isl_union_map *&MayWrite,
                         isl_union_map *&ReductionTagMap,
                         isl_union_set *&TaggedStmtDomain,
                         Dependences::AnalysisLevel Level) {
   isl_space *Space = S.getParamSpace();
   Read = isl_union_map_empty(isl_space_copy(Space));
-  Write = isl_union_map_empty(isl_space_copy(Space));
+  MustWrite = isl_union_map_empty(isl_space_copy(Space));
   MayWrite = isl_union_map_empty(isl_space_copy(Space));
   ReductionTagMap = isl_union_map_empty(isl_space_copy(Space));
   isl_union_map *StmtSchedule = isl_union_map_empty(Space);
@@ -170,7 +170,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read, isl_union_map *&Write,
       else if (MA->isMayWrite())
         MayWrite = isl_union_map_add_map(MayWrite, accdom);
       else
-        Write = isl_union_map_add_map(Write, accdom);
+        MustWrite = isl_union_map_add_map(MustWrite, accdom);
     }
 
     if (!ReductionArrays.empty() && Level == Dependences::AL_Statement)
@@ -183,7 +183,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read, isl_union_map *&Write,
 
   ReductionTagMap = isl_union_map_coalesce(ReductionTagMap);
   Read = isl_union_map_coalesce(Read);
-  Write = isl_union_map_coalesce(Write);
+  MustWrite = isl_union_map_coalesce(MustWrite);
   MayWrite = isl_union_map_coalesce(MayWrite);
 }
 
@@ -301,19 +301,19 @@ static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
 }
 
 void Dependences::calculateDependences(Scop &S) {
-  isl_union_map *Read, *Write, *MayWrite, *ReductionTagMap;
+  isl_union_map *Read, *MustWrite, *MayWrite, *ReductionTagMap;
   isl_schedule *Schedule;
   isl_union_set *TaggedStmtDomain;
 
   DEBUG(dbgs() << "Scop: \n" << S << "\n");
 
-  collectInfo(S, Read, Write, MayWrite, ReductionTagMap, TaggedStmtDomain,
+  collectInfo(S, Read, MustWrite, MayWrite, ReductionTagMap, TaggedStmtDomain,
               Level);
 
   bool HasReductions = !isl_union_map_is_empty(ReductionTagMap);
 
   DEBUG(dbgs() << "Read: " << Read << '\n';
-        dbgs() << "Write: " << Write << '\n';
+        dbgs() << "MustWrite: " << MustWrite << '\n';
         dbgs() << "MayWrite: " << MayWrite << '\n';
         dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
         dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
@@ -354,7 +354,7 @@ void Dependences::calculateDependences(Scop &S) {
   }
 
   DEBUG(dbgs() << "Read: " << Read << "\n";
-        dbgs() << "Write: " << Write << "\n";
+        dbgs() << "MustWrite: " << MustWrite << "\n";
         dbgs() << "MayWrite: " << MayWrite << "\n";
         dbgs() << "Schedule: " << Schedule << "\n");
 
@@ -366,12 +366,12 @@ void Dependences::calculateDependences(Scop &S) {
     if (OptAnalysisType == VALUE_BASED_ANALYSIS) {
       isl_union_flow *Flow;
 
-      Flow = buildFlow(Read, Write, MayWrite, Schedule);
+      Flow = buildFlow(Read, MustWrite, MayWrite, Schedule);
 
       RAW = isl_union_flow_get_may_dependence(Flow);
       isl_union_flow_free(Flow);
 
-      Flow = buildFlow(Write, Write, Read, Schedule);
+      Flow = buildFlow(MustWrite, MustWrite, Read, Schedule);
 
       WAW = isl_union_flow_get_must_dependence(Flow);
       WAR = isl_union_flow_get_may_dependence(Flow);
@@ -388,7 +388,8 @@ void Dependences::calculateDependences(Scop &S) {
     } else {
       isl_union_flow *Flow;
 
-      Write = isl_union_map_union(Write, isl_union_map_copy(MayWrite));
+      isl_union_map *Write = isl_union_map_union(isl_union_map_copy(MustWrite),
+                                                 isl_union_map_copy(MayWrite));
 
       Flow = buildFlow(Read, nullptr, Write, Schedule);
 
@@ -405,10 +406,11 @@ void Dependences::calculateDependences(Scop &S) {
       WAW = isl_union_flow_get_may_dependence(Flow);
       isl_union_flow_free(Flow);
       isl_schedule_free(Schedule);
+      isl_union_map_free(Write);
     }
 
+    isl_union_map_free(MustWrite);
     isl_union_map_free(MayWrite);
-    isl_union_map_free(Write);
     isl_union_map_free(Read);
 
     RAW = isl_union_map_coalesce(RAW);

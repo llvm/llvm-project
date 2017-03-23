@@ -428,12 +428,24 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_STORE: {
-    assert(alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) ==
-               WideTy.getSizeInBits() &&
-           "illegal to increase number of bytes modified by a store");
+    if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(1) ||
+        WideTy != LLT::scalar(8))
+      return UnableToLegalize;
+
+    auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+    auto Content = TLI.getBooleanContents(false, false);
+
+    unsigned ExtOp = TargetOpcode::G_ANYEXT;
+    if (Content == TargetLoweringBase::ZeroOrOneBooleanContent)
+      ExtOp = TargetOpcode::G_ZEXT;
+    else if (Content == TargetLoweringBase::ZeroOrNegativeOneBooleanContent)
+      ExtOp = TargetOpcode::G_SEXT;
+    else
+      ExtOp = TargetOpcode::G_ANYEXT;
 
     unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(SrcExt, MI.getOperand(0).getReg());
+    MIRBuilder.buildInstr(ExtOp).addDef(SrcExt).addUse(
+        MI.getOperand(0).getReg());
     MIRBuilder.buildStore(SrcExt, MI.getOperand(1).getReg(),
                           **MI.memoperands_begin());
     MI.eraseFromParent();

@@ -179,6 +179,10 @@ TimePoint<> file_status::getLastModificationTime() const {
   return toTimePoint(Time);
 }
 
+uint32_t file_status::getLinkCount() const {
+  return NumLinks;
+}
+
 std::error_code current_path(SmallVectorImpl<char> &result) {
   SmallVector<wchar_t, MAX_PATH> cur_path;
   DWORD len = MAX_PATH;
@@ -534,7 +538,8 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
                             ? (all_read | all_exe)
                             : all_all;
     Result = file_status(
-        Type, Permissions, Info.ftLastAccessTime.dwHighDateTime,
+        Type, Permissions, Info.nNumberOfLinks,
+        Info.ftLastAccessTime.dwHighDateTime,
         Info.ftLastAccessTime.dwLowDateTime,
         Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
         Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,

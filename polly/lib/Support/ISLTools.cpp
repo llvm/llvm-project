@@ -226,6 +226,46 @@ isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
   return Result;
 }
 
+isl::map polly::shiftDim(isl::map Map, isl::dim Dim, int Pos, int Amount) {
+  int NumDims = Map.dim(Dim);
+  if (Pos < 0)
+    Pos = NumDims + Pos;
+  assert(Pos < NumDims && "Dimension index must be in range");
+  auto Space = give(isl_map_get_space(Map.keep()));
+  switch (Dim) {
+  case isl::dim::in:
+    Space = std::move(Space).domain();
+    break;
+  case isl::dim::out:
+    Space = give(isl_space_range(Space.take()));
+    break;
+  default:
+    llvm_unreachable("Unsupported value for 'dim'");
+  }
+  Space = give(isl_space_map_from_domain_and_range(Space.copy(), Space.copy()));
+  auto Translator = makeShiftDimAff(std::move(Space), Pos, Amount);
+  auto TranslatorMap = give(isl_map_from_multi_aff(Translator.take()));
+  switch (Dim) {
+  case isl::dim::in:
+    return Map.apply_domain(TranslatorMap);
+  case isl::dim::out:
+    return Map.apply_range(TranslatorMap);
+  default:
+    llvm_unreachable("Unsupported value for 'dim'");
+  }
+}
+
+isl::union_map polly::shiftDim(isl::union_map UMap, isl::dim Dim, int Pos,
+                               int Amount) {
+  auto Result = isl::union_map::empty(UMap.get_space());
+
+  foreachElt(UMap, [=, &Result](isl::map Map) {
+    auto Shifted = shiftDim(Map, Dim, Pos, Amount);
+    Result = std::move(Result).add_map(Shifted);
+  });
+  return Result;
+}
+
 void polly::simplify(isl::set &Set) {
   Set = give(isl_set_compute_divs(Set.take()));
   Set = give(isl_set_detect_equalities(Set.take()));
@@ -367,4 +407,103 @@ isl::union_set polly::convertZoneToTimepoints(isl::union_set Zone,
 
   assert(InclStart && InclEnd);
   return give(isl_union_set_union(Zone.take(), ShiftedZone.take()));
+}
+
+isl::union_map polly::convertZoneToTimepoints(isl::union_map Zone, isl::dim Dim,
+                                              bool InclStart, bool InclEnd) {
+  if (!InclStart && InclEnd)
+    return Zone;
+
+  auto ShiftedZone = shiftDim(Zone, Dim, -1, -1);
+  if (InclStart && !InclEnd)
+    return ShiftedZone;
+  else if (!InclStart && !InclEnd)
+    return give(isl_union_map_intersect(Zone.take(), ShiftedZone.take()));
+
+  assert(InclStart && InclEnd);
+  return give(isl_union_map_union(Zone.take(), ShiftedZone.take()));
+}
+
+isl::map polly::distributeDomain(isl::map Map) {
+  // Note that we cannot take Map apart into { Domain[] -> Range1[] } and {
+  // Domain[] -> Range2[] } and combine again. We would loose any relation
+  // between Range1[] and Range2[] that is not also a constraint to Domain[].
+
+  auto Space = give(isl_map_get_space(Map.keep()));
+  auto DomainSpace = give(isl_space_domain(Space.copy()));
+  assert(DomainSpace);
+  auto DomainDims = isl_space_dim(DomainSpace.keep(), isl_dim_set);
+  auto RangeSpace = give(isl_space_unwrap(isl_space_range(Space.copy())));
+  auto Range1Space = give(isl_space_domain(RangeSpace.copy()));
+  assert(Range1Space);
+  auto Range1Dims = isl_space_dim(Range1Space.keep(), isl_dim_set);
+  auto Range2Space = give(isl_space_range(RangeSpace.copy()));
+  assert(Range2Space);
+  auto Range2Dims = isl_space_dim(Range2Space.keep(), isl_dim_set);
+
+  auto OutputSpace = give(isl_space_map_from_domain_and_range(
+      isl_space_wrap(isl_space_map_from_domain_and_range(DomainSpace.copy(),
+                                                         Range1Space.copy())),
+      isl_space_wrap(isl_space_map_from_domain_and_range(DomainSpace.copy(),
+                                                         Range2Space.copy()))));
+
+  auto Translator =
+      give(isl_basic_map_universe(isl_space_map_from_domain_and_range(
+          isl_space_wrap(Space.copy()), isl_space_wrap(OutputSpace.copy()))));
+
+  for (unsigned i = 0; i < DomainDims; i += 1) {
+    Translator = give(
+        isl_basic_map_equate(Translator.take(), isl_dim_in, i, isl_dim_out, i));
+    Translator =
+        give(isl_basic_map_equate(Translator.take(), isl_dim_in, i, isl_dim_out,
+                                  DomainDims + Range1Dims + i));
+  }
+  for (unsigned i = 0; i < Range1Dims; i += 1) {
+    Translator =
+        give(isl_basic_map_equate(Translator.take(), isl_dim_in, DomainDims + i,
+                                  isl_dim_out, DomainDims + i));
+  }
+  for (unsigned i = 0; i < Range2Dims; i += 1) {
+    Translator = give(isl_basic_map_equate(
+        Translator.take(), isl_dim_in, DomainDims + Range1Dims + i, isl_dim_out,
+        DomainDims + Range1Dims + DomainDims + i));
+  }
+
+  return give(isl_set_unwrap(isl_set_apply(
+      isl_map_wrap(Map.copy()), isl_map_from_basic_map(Translator.copy()))));
+}
+
+isl::union_map polly::distributeDomain(isl::union_map UMap) {
+  auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
+  foreachElt(UMap, [=, &Result](isl::map Map) {
+    auto Distributed = distributeDomain(Map);
+    Result = give(isl_union_map_add_map(Result.take(), Distributed.copy()));
+  });
+  return Result;
+}
+
+isl::union_map polly::liftDomains(isl::union_map UMap, isl::union_set Factor) {
+
+  // { Factor[] -> Factor[] }
+  auto Factors = makeIdentityMap(std::move(Factor), true);
+
+  return std::move(Factors).product(std::move(UMap));
+}
+
+isl::union_map polly::applyDomainRange(isl::union_map UMap,
+                                       isl::union_map Func) {
+  // This implementation creates unnecessary cross products of the
+  // DomainDomain[] and Func. An alternative implementation could reverse
+  // domain+uncurry,apply Func to what now is the domain, then undo the
+  // preparing transformation. Another alternative implementation could create a
+  // translator map for each piece.
+
+  // { DomainDomain[] }
+  auto DomainDomain = UMap.domain().unwrap().domain();
+
+  // { [DomainDomain[] -> DomainRange[]] -> [DomainDomain[] -> NewDomainRange[]]
+  // }
+  auto LifetedFunc = liftDomains(std::move(Func), DomainDomain);
+
+  return std::move(UMap).apply_domain(std::move(LifetedFunc));
 }

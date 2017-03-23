@@ -12,22 +12,22 @@ declare i32 @llvm.r600.read.local.size.x() #0
 declare i32 @llvm.r600.read.local.size.y() #0
 declare i32 @llvm.r600.read.local.size.z() #0
 
-; ALL: define void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
-define void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tgid.x()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @use_tgid_y(i32 addrspace(1)* %ptr) #2 {
-define void @use_tgid_y(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_y(i32 addrspace(1)* %ptr) #2 {
+define amdgpu_kernel void @use_tgid_y(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tgid.y()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #2 {
-define void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #2 {
+define amdgpu_kernel void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tgid.y()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
   %val1 = call i32 @llvm.r600.read.tgid.y()
@@ -35,8 +35,8 @@ define void @multi_use_tgid_y(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tgid_x_y(i32 addrspace(1)* %ptr) #2 {
-define void @use_tgid_x_y(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_x_y(i32 addrspace(1)* %ptr) #2 {
+define amdgpu_kernel void @use_tgid_x_y(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.y()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -44,15 +44,15 @@ define void @use_tgid_x_y(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tgid_z(i32 addrspace(1)* %ptr) #3 {
-define void @use_tgid_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_z(i32 addrspace(1)* %ptr) #3 {
+define amdgpu_kernel void @use_tgid_z(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tgid.z()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @use_tgid_x_z(i32 addrspace(1)* %ptr) #3 {
-define void @use_tgid_x_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_x_z(i32 addrspace(1)* %ptr) #3 {
+define amdgpu_kernel void @use_tgid_x_z(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.z()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -60,8 +60,8 @@ define void @use_tgid_x_z(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tgid_y_z(i32 addrspace(1)* %ptr) #4 {
-define void @use_tgid_y_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_y_z(i32 addrspace(1)* %ptr) #4 {
+define amdgpu_kernel void @use_tgid_y_z(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tgid.y()
   %val1 = call i32 @llvm.r600.read.tgid.z()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -69,8 +69,8 @@ define void @use_tgid_y_z(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #4 {
-define void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #4 {
+define amdgpu_kernel void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tgid.x()
   %val1 = call i32 @llvm.r600.read.tgid.y()
   %val2 = call i32 @llvm.r600.read.tgid.z()
@@ -80,29 +80,29 @@ define void @use_tgid_x_y_z(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tidig_x(i32 addrspace(1)* %ptr) #1 {
-define void @use_tidig_x(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_x(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tidig.x()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @use_tidig_y(i32 addrspace(1)* %ptr) #5 {
-define void @use_tidig_y(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_y(i32 addrspace(1)* %ptr) #5 {
+define amdgpu_kernel void @use_tidig_y(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tidig.y()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @use_tidig_z(i32 addrspace(1)* %ptr) #6 {
-define void @use_tidig_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_z(i32 addrspace(1)* %ptr) #6 {
+define amdgpu_kernel void @use_tidig_z(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.tidig.z()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; ALL: define void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
-define void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tidig.x()
   %val1 = call i32 @llvm.r600.read.tgid.x()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -110,8 +110,8 @@ define void @use_tidig_x_tgid_x(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #7 {
-define void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #7 {
+define amdgpu_kernel void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tidig.y()
   %val1 = call i32 @llvm.r600.read.tgid.y()
   store volatile i32 %val0, i32 addrspace(1)* %ptr
@@ -119,8 +119,8 @@ define void @use_tidig_y_tgid_y(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #8 {
-define void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #8 {
+define amdgpu_kernel void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tidig.x()
   %val1 = call i32 @llvm.r600.read.tidig.y()
   %val2 = call i32 @llvm.r600.read.tidig.z()
@@ -130,8 +130,8 @@ define void @use_tidig_x_y_z(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; ALL: define void @use_all_workitems(i32 addrspace(1)* %ptr) #9 {
-define void @use_all_workitems(i32 addrspace(1)* %ptr) #1 {
+; ALL: define amdgpu_kernel void @use_all_workitems(i32 addrspace(1)* %ptr) #9 {
+define amdgpu_kernel void @use_all_workitems(i32 addrspace(1)* %ptr) #1 {
   %val0 = call i32 @llvm.r600.read.tidig.x()
   %val1 = call i32 @llvm.r600.read.tidig.y()
   %val2 = call i32 @llvm.r600.read.tidig.z()
@@ -147,25 +147,25 @@ define void @use_all_workitems(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
-; HSA: define void @use_get_local_size_x(i32 addrspace(1)* %ptr) #10 {
-; NOHSA: define void @use_get_local_size_x(i32 addrspace(1)* %ptr) #1 {
-define void @use_get_local_size_x(i32 addrspace(1)* %ptr) #1 {
+; HSA: define amdgpu_kernel void @use_get_local_size_x(i32 addrspace(1)* %ptr) #10 {
+; NOHSA: define amdgpu_kernel void @use_get_local_size_x(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_x(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.local.size.x()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; HSA: define void @use_get_local_size_y(i32 addrspace(1)* %ptr) #10 {
-; NOHSA: define void @use_get_local_size_y(i32 addrspace(1)* %ptr) #1 {
-define void @use_get_local_size_y(i32 addrspace(1)* %ptr) #1 {
+; HSA: define amdgpu_kernel void @use_get_local_size_y(i32 addrspace(1)* %ptr) #10 {
+; NOHSA: define amdgpu_kernel void @use_get_local_size_y(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_y(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.local.size.y()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void
 }
 
-; HSA: define void @use_get_local_size_z(i32 addrspace(1)* %ptr) #10 {
-; NOHSA: define void @use_get_local_size_z(i32 addrspace(1)* %ptr) #1 {
-define void @use_get_local_size_z(i32 addrspace(1)* %ptr) #1 {
+; HSA: define amdgpu_kernel void @use_get_local_size_z(i32 addrspace(1)* %ptr) #10 {
+; NOHSA: define amdgpu_kernel void @use_get_local_size_z(i32 addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @use_get_local_size_z(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.r600.read.local.size.z()
   store i32 %val, i32 addrspace(1)* %ptr
   ret void

@@ -27,7 +27,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; EG: FFBH_UINT
 ; EG: CNDE_INT
-define void @s_ctlz_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
+define amdgpu_kernel void @s_ctlz_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   store i32 %ctlz, i32 addrspace(1)* %out, align 4
   ret void
@@ -43,7 +43,7 @@ define void @s_ctlz_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
 
 ; EG: FFBH_UINT
 ; EG: CNDE_INT
-define void @v_ctlz_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
   %val = load i32, i32 addrspace(1)* %valptr, align 4
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   store i32 %ctlz, i32 addrspace(1)* %out, align 4
@@ -61,7 +61,7 @@ define void @v_ctlz_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalia
 ; EG: CNDE_INT
 ; EG: FFBH_UINT
 ; EG: CNDE_INT
-define void @v_ctlz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) nounwind {
   %val = load <2 x i32>, <2 x i32> addrspace(1)* %valptr, align 8
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %val, i1 false) nounwind readnone
   store <2 x i32> %ctlz, <2 x i32> addrspace(1)* %out, align 8
@@ -89,7 +89,7 @@ define void @v_ctlz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrsp
 
 ; EG-DAG: FFBH_UINT
 ; EG-DAG: CNDE_INT
-define void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %valptr) nounwind {
   %val = load <4 x i32>, <4 x i32> addrspace(1)* %valptr, align 16
   %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %val, i1 false) nounwind readnone
   store <4 x i32> %ctlz, <4 x i32> addrspace(1)* %out, align 16
@@ -101,7 +101,7 @@ define void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrsp
 ; GCN-DAG: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_byte [[RESULT]],
 ; GCN: s_endpgm
-define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
   %val = load i8, i8 addrspace(1)* %valptr
   %ctlz = call i8 @llvm.ctlz.i8(i8 %val, i1 false) nounwind readnone
   store i8 %ctlz, i8 addrspace(1)* %out
@@ -119,14 +119,14 @@ define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %
 ; GCN-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[VFFBH_HI]], [[VFFBH_LO]]
 ; GCN-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
-define void @s_ctlz_i64(i64 addrspace(1)* noalias %out, i64 %val) nounwind {
+define amdgpu_kernel void @s_ctlz_i64(i64 addrspace(1)* noalias %out, i64 %val) nounwind {
   %ctlz = call i64 @llvm.ctlz.i64(i64 %val, i1 false)
   store i64 %ctlz, i64 addrspace(1)* %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}s_ctlz_i64_trunc:
-define void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
+define amdgpu_kernel void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
   %ctlz = call i64 @llvm.ctlz.i64(i64 %val, i1 false)
   %trunc = trunc i64 %ctlz to i32
   store i32 %trunc, i32 addrspace(1)* %out
@@ -145,7 +145,7 @@ define void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind
 ; GCN-DAG: v_cmp_ne_u32_e32 vcc, 0, [[OR]]
 ; GCN-DAG: v_cndmask_b32_e32 v[[CLTZ_LO:[0-9]+]], 64, v[[CTLZ:[0-9]+]], vcc
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}
-define void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -156,7 +156,7 @@ define void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalia
 }
 
 ; FUNC-LABEL: {{^}}v_ctlz_i64_trunc:
-define void @v_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -172,7 +172,7 @@ define void @v_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 addrspace(1)* 
 ; GCN: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
- define void @v_ctlz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+ define amdgpu_kernel void @v_ctlz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
   %val = load i32, i32 addrspace(1)* %valptr
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp eq i32 %val, 0
@@ -186,7 +186,7 @@ define void @v_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 addrspace(1)* 
 ; GCN: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
-define void @v_ctlz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
   %val = load i32, i32 addrspace(1)* %valptr
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp ne i32 %val, 0
@@ -202,7 +202,7 @@ define void @v_ctlz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i32 addrspac
 ; GCN: v_cmp
 ; GCN: v_cndmask
 ; GCN: s_endpgm
-define void @v_ctlz_i32_sel_eq_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i32_sel_eq_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
   %val = load i32, i32 addrspace(1)* %valptr
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp eq i32 %ctlz, 32
@@ -217,7 +217,7 @@ define void @v_ctlz_i32_sel_eq_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
 ; GCN: v_cmp
 ; GCN: v_cndmask
 ; GCN: s_endpgm
-define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
   %val = load i32, i32 addrspace(1)* %valptr
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp ne i32 %ctlz, 32
@@ -230,7 +230,7 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
 ; GCN: {{buffer|flat}}_load_ubyte [[VAL:v[0-9]+]],
 ; GCN: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
 ; GCN: {{buffer|flat}}_store_byte [[FFBH]],
- define void @v_ctlz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
+ define amdgpu_kernel void @v_ctlz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %valptr.gep = getelementptr i8, i8 addrspace(1)* %valptr, i32 %tid
   %val = load i8, i8 addrspace(1)* %valptr.gep
@@ -245,7 +245,7 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
 ; SI: buffer_load_ushort [[VAL:v[0-9]+]],
 ; SI: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
 ; SI: buffer_store_short [[FFBH]],
- define void @v_ctlz_i16_sel_eq_neg1(i16 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %valptr) nounwind {
+ define amdgpu_kernel void @v_ctlz_i16_sel_eq_neg1(i16 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %valptr) nounwind {
   %val = load i16, i16 addrspace(1)* %valptr
   %ctlz = call i16 @llvm.ctlz.i16(i16 %val, i1 false) nounwind readnone
   %cmp = icmp eq i16 %val, 0
@@ -260,7 +260,7 @@ define void @v_ctlz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addr
 ; GCN: v_ffbh_u32_e32 [[FFBH:v[0-9]+]], [[VAL]]
 ; GCN: v_and_b32_e32 [[TRUNC:v[0-9]+]], 0x7f, [[FFBH]]
 ; GCN: {{buffer|flat}}_store_byte [[TRUNC]],
-define void @v_ctlz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, i7 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_ctlz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, i7 addrspace(1)* noalias %valptr) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %valptr.gep = getelementptr i7, i7 addrspace(1)* %valptr, i32 %tid
   %val = load i7, i7 addrspace(1)* %valptr.gep

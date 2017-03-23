@@ -52,7 +52,32 @@ class MD5 {
   MD5_u32plus block[16];
 
 public:
-  typedef uint8_t MD5Result[16];
+  struct MD5Result {
+    std::array<uint8_t, 16> Bytes;
+
+    operator std::array<uint8_t, 16>() const { return Bytes; }
+
+    const uint8_t &operator[](size_t I) const { return Bytes[I]; }
+    uint8_t &operator[](size_t I) { return Bytes[I]; }
+
+    SmallString<32> digest() const;
+
+    uint64_t low() const {
+      // Our MD5 implementation returns the result in little endian, so the low
+      // word is first.
+      using namespace support;
+      return endian::read<uint64_t, little, unaligned>(Bytes.data());
+    }
+
+    uint64_t high() const {
+      using namespace support;
+      return endian::read<uint64_t, little, unaligned>(Bytes.data() + 8);
+    }
+    std::pair<uint64_t, uint64_t> words() const {
+      using namespace support;
+      return std::make_pair(high(), low());
+    }
+  };
 
   MD5();
 
@@ -76,6 +101,10 @@ private:
   const uint8_t *body(ArrayRef<uint8_t> Data);
 };
 
+inline bool operator==(const MD5::MD5Result &LHS, const MD5::MD5Result &RHS) {
+  return LHS.Bytes == RHS.Bytes;
+}
+
 /// Helper to compute and return lower 64 bits of the given string's MD5 hash.
 inline uint64_t MD5Hash(StringRef Str) {
   using namespace support;
@@ -84,9 +113,8 @@ inline uint64_t MD5Hash(StringRef Str) {
   Hash.update(Str);
   MD5::MD5Result Result;
   Hash.final(Result);
-  // Return the least significant 8 bytes. Our MD5 implementation returns the
-  // result in little endian, so we may need to swap bytes.
-  return endian::read<uint64_t, little, unaligned>(Result);
+  // Return the least significant word.
+  return Result.low();
 }
 
 } // end namespace llvm

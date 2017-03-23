@@ -11,15 +11,15 @@
 #include <iostream>
 #include <limits.h>
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"

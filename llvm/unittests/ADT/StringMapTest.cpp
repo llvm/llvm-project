@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
@@ -267,6 +268,34 @@ TEST_F(StringMapTest, InsertRehashingPairTest) {
   EXPECT_EQ(16u, t.getNumBuckets());
   EXPECT_EQ("abcdef", It->first());
   EXPECT_EQ(42u, It->second);
+}
+
+TEST_F(StringMapTest, IterMapKeys) {
+  StringMap<int> Map;
+  Map["A"] = 1;
+  Map["B"] = 2;
+  Map["C"] = 3;
+  Map["D"] = 3;
+
+  auto Keys = to_vector<4>(Map.keys());
+  std::sort(Keys.begin(), Keys.end());
+
+  SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
+  EXPECT_EQ(Expected, Keys);
+}
+
+TEST_F(StringMapTest, IterSetKeys) {
+  StringSet<> Set;
+  Set.insert("A");
+  Set.insert("B");
+  Set.insert("C");
+  Set.insert("D");
+
+  auto Keys = to_vector<4>(Set.keys());
+  std::sort(Keys.begin(), Keys.end());
+
+  SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
+  EXPECT_EQ(Expected, Keys);
 }
 
 // Create a non-default constructable value

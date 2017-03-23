@@ -291,7 +291,11 @@ void MappingTraits<StringIdRecord>::mapping(IO &IO, StringIdRecord &String) {
 }
 
 void MappingTraits<ArgListRecord>::mapping(IO &IO, ArgListRecord &Args) {
-  IO.mapRequired("ArgIndices", Args.StringIndices);
+  IO.mapRequired("ArgIndices", Args.ArgIndices);
+}
+
+void MappingTraits<StringListRecord>::mapping(IO &IO, StringListRecord &Strings) {
+  IO.mapRequired("StringIndices", Strings.StringIndices);
 }
 
 void MappingTraits<ClassRecord>::mapping(IO &IO, ClassRecord &Class) {

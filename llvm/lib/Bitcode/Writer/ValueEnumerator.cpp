@@ -887,7 +887,7 @@ void ValueEnumerator::EnumerateOperandType(const Value *V) {
   }
 }
 
-void ValueEnumerator::EnumerateAttributes(AttributeSet PAL) {
+void ValueEnumerator::EnumerateAttributes(AttributeList PAL) {
   if (PAL.isEmpty()) return;  // null is always 0.
 
   // Do a lookup.
@@ -900,7 +900,7 @@ void ValueEnumerator::EnumerateAttributes(AttributeSet PAL) {
 
   // Do lookups for all attribute groups.
   for (unsigned i = 0, e = PAL.getNumSlots(); i != e; ++i) {
-    AttributeSet AS = PAL.getSlotAttributes(i);
+    AttributeList AS = PAL.getSlotAttributes(i);
     unsigned &Entry = AttributeGroupMap[AS];
     if (Entry == 0) {
       AttributeGroups.push_back(AS);

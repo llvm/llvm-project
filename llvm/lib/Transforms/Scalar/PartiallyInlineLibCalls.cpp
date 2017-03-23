@@ -66,7 +66,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // Add attribute "readnone" so that backend can use a native sqrt instruction
   // for this call. Insert a FP compare instruction and a conditional branch
   // at the end of CurrBB.
-  Call->addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
+  Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
   CurrBB.getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(&CurrBB);
   Value *FCmp = Builder.CreateFCmpOEQ(Call, Call);

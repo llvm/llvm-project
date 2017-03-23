@@ -289,7 +289,7 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   // treating them as truly abstract units etc.
   TotalSecondaryCost = 0;
   // The candidate cost to be imposed upon the current function.
-  int CandidateCost = IC.getCost() - (InlineConstants::CallPenalty + 1);
+  int CandidateCost = IC.getCost() - 1;
   // This bool tracks what happens if we do NOT inline C into B.
   bool callerWillBeRemoved = Caller->hasLocalLinkage();
   // This bool tracks what happens if we DO inline C into B.

@@ -12,7 +12,7 @@
 ; CHECK: [[LOOP_LABEL:[0-9A-Za-z_]+]]: ; %loop{{$}}
 ; CHECK-NOT: s_or_b64 exec, exec
 ; CHECK: s_cbranch_execnz [[LOOP_LABEL]]
-define void @test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
 entry:
   %cond = call i32 @llvm.r600.read.tidig.x() #0
   %tmp0 = icmp eq i32 %cond, 0

@@ -2388,6 +2388,10 @@ private:
                                               LI.isVolatile(), LI.getName());
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSynchScope());
+
+      // Try to preserve nonnull metadata
+      if (TargetTy->isPointerTy())
+        NewLI->copyMetadata(LI, LLVMContext::MD_nonnull);
       V = NewLI;
 
       // If this is an integer load past the end of the slice (which means the

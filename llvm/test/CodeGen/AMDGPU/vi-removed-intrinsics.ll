@@ -4,7 +4,7 @@
 
 declare float @llvm.amdgcn.rsq.legacy(float) #0
 
-define void @rsq_legacy_f32(float addrspace(1)* %out, float %src) #1 {
+define amdgpu_kernel void @rsq_legacy_f32(float addrspace(1)* %out, float %src) #1 {
   %rsq = call float @llvm.amdgcn.rsq.legacy(float %src), !dbg !4
   store float %rsq, float addrspace(1)* %out, align 4
   ret void

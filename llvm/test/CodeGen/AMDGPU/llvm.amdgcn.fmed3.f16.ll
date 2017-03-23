@@ -2,7 +2,7 @@
 
 ; GCN-LABEL: {{^}}test_fmed3_f16:
 ; GCN: v_med3_f16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @test_fmed3_f16(half addrspace(1)* %out, i32 %src0.arg, i32 %src1.arg, i32 %src2.arg) #1 {
+define amdgpu_kernel void @test_fmed3_f16(half addrspace(1)* %out, i32 %src0.arg, i32 %src1.arg, i32 %src2.arg) #1 {
   %src0.f16 = trunc i32 %src0.arg to i16
   %src0 = bitcast i16 %src0.f16 to half
   %src1.f16 = trunc i32 %src1.arg to i16
@@ -16,7 +16,7 @@ define void @test_fmed3_f16(half addrspace(1)* %out, i32 %src0.arg, i32 %src1.ar
 
 ; GCN-LABEL: {{^}}test_fmed3_srcmods_f16:
 ; GCN: v_med3_f16 v{{[0-9]+}}, -s{{[0-9]+}}, |v{{[0-9]+}}|, -|v{{[0-9]+}}|
-define void @test_fmed3_srcmods_f16(half addrspace(1)* %out, i32 %src0.arg, i32 %src1.arg, i32 %src2.arg) #1 {
+define amdgpu_kernel void @test_fmed3_srcmods_f16(half addrspace(1)* %out, i32 %src0.arg, i32 %src1.arg, i32 %src2.arg) #1 {
   %src0.f16 = trunc i32 %src0.arg to i16
   %src0 = bitcast i16 %src0.f16 to half
   %src1.f16 = trunc i32 %src1.arg to i16

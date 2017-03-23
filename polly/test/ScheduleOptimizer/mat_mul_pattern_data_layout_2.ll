@@ -27,6 +27,7 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CHECK-NEXT:              Stmt_bb9(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
+; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c1 = 0; c1 <= 3; c1 += 1) {
 ; CHECK-NEXT:        for (int c3 = 0; c3 <= 1055; c3 += 1)

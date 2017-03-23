@@ -3,7 +3,7 @@
 --- |
   target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
 
-  define void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) #0 {
   main_body:
     %id = call i32 @llvm.amdgcn.workitem.id.x()
     %cc = icmp eq i32 %id, 0
@@ -23,7 +23,7 @@
     ret void
   }
 
-  define void @optimize_if_and_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -34,7 +34,7 @@
     ret void
   }
 
-  define void @optimize_if_or_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_or_saveexec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -46,7 +46,7 @@
   }
 
 
-  define void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) #0 {
   main_body:
     %id = call i32 @llvm.amdgcn.workitem.id.x()
     %cc = icmp eq i32 %id, 0
@@ -67,7 +67,7 @@
     ret void
   }
 
-  define void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -78,7 +78,7 @@
     ret void
   }
 
-  define void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -89,7 +89,7 @@
     ret void
   }
 
-  define void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -100,7 +100,7 @@
     ret void
   }
 
-  define void @optimize_if_unknown_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_unknown_saveexec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -111,7 +111,7 @@
     ret void
   }
 
-  define void @optimize_if_andn2_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_andn2_saveexec(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 
@@ -122,7 +122,7 @@
     ret void
   }
 
-  define void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v)  #0 {
   main_body:
       br i1 undef, label %if, label %end
 

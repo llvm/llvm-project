@@ -489,12 +489,12 @@ private:
   void verifyMustTailCall(CallInst &CI);
   bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
                         unsigned ArgNo, std::string &Suffix);
-  bool verifyAttributeCount(AttributeSet Attrs, unsigned Params);
-  void verifyAttributeTypes(AttributeSet Attrs, unsigned Idx, bool isFunction,
+  bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
+  void verifyAttributeTypes(AttributeList Attrs, unsigned Idx, bool isFunction,
                             const Value *V);
-  void verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
+  void verifyParameterAttrs(AttributeList Attrs, unsigned Idx, Type *Ty,
                             bool isReturnValue, const Value *V);
-  void verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
+  void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
 
@@ -1331,7 +1331,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   }
 }
 
-void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
+void Verifier::verifyAttributeTypes(AttributeList Attrs, unsigned Idx,
                                     bool isFunction, const Value *V) {
   unsigned Slot = ~0U;
   for (unsigned I = 0, E = Attrs.getNumSlots(); I != E; ++I)
@@ -1342,8 +1342,8 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
 
   assert(Slot != ~0U && "Attribute set inconsistency!");
 
-  for (AttributeSet::iterator I = Attrs.begin(Slot), E = Attrs.end(Slot);
-         I != E; ++I) {
+  for (AttributeList::iterator I = Attrs.begin(Slot), E = Attrs.end(Slot);
+       I != E; ++I) {
     if (I->isStringAttribute())
       continue;
 
@@ -1403,7 +1403,7 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
 
 // VerifyParameterAttrs - Check the given attributes for an argument or return
 // value of the specified type.  The value V is printed in error messages.
-void Verifier::verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
+void Verifier::verifyParameterAttrs(AttributeList Attrs, unsigned Idx, Type *Ty,
                                     bool isReturnValue, const Value *V) {
   if (!Attrs.hasAttributes(Idx))
     return;
@@ -1481,7 +1481,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
   Assert(
       !AttrBuilder(Attrs, Idx).overlaps(AttributeFuncs::typeIncompatible(Ty)),
       "Wrong types for attribute: " +
-          AttributeSet::get(Context, Idx, AttributeFuncs::typeIncompatible(Ty))
+          AttributeList::get(Context, Idx, AttributeFuncs::typeIncompatible(Ty))
               .getAsString(Idx),
       V);
 
@@ -1511,7 +1511,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
 
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
-void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
+void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                                    const Value *V) {
   if (Attrs.isEmpty())
     return;
@@ -1577,67 +1577,70 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
     }
   }
 
-  if (!Attrs.hasAttributes(AttributeSet::FunctionIndex))
+  if (!Attrs.hasAttributes(AttributeList::FunctionIndex))
     return;
 
-  verifyAttributeTypes(Attrs, AttributeSet::FunctionIndex, true, V);
+  verifyAttributeTypes(Attrs, AttributeList::FunctionIndex, true, V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly)),
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly)),
       "Attributes 'readnone and readonly' are incompatible!", V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly)),
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly)),
       "Attributes 'readnone and writeonly' are incompatible!", V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly)),
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly)),
       "Attributes 'readonly and writeonly' are incompatible!", V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex, 
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex,
                            Attribute::InaccessibleMemOrArgMemOnly)),
-      "Attributes 'readnone and inaccessiblemem_or_argmemonly' are incompatible!", V);
+      "Attributes 'readnone and inaccessiblemem_or_argmemonly' are "
+      "incompatible!",
+      V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex, 
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex,
                            Attribute::InaccessibleMemOnly)),
       "Attributes 'readnone and inaccessiblememonly' are incompatible!", V);
 
   Assert(
-      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::NoInline) &&
-        Attrs.hasAttribute(AttributeSet::FunctionIndex,
+      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::NoInline) &&
+        Attrs.hasAttribute(AttributeList::FunctionIndex,
                            Attribute::AlwaysInline)),
       "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
-  if (Attrs.hasAttribute(AttributeSet::FunctionIndex, 
+  if (Attrs.hasAttribute(AttributeList::FunctionIndex,
                          Attribute::OptimizeNone)) {
-    Assert(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::NoInline),
-           "Attribute 'optnone' requires 'noinline'!", V);
+    Assert(
+        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::NoInline),
+        "Attribute 'optnone' requires 'noinline'!", V);
 
-    Assert(!Attrs.hasAttribute(AttributeSet::FunctionIndex,
+    Assert(!Attrs.hasAttribute(AttributeList::FunctionIndex,
                                Attribute::OptimizeForSize),
            "Attributes 'optsize and optnone' are incompatible!", V);
 
-    Assert(!Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::MinSize),
-           "Attributes 'minsize and optnone' are incompatible!", V);
+    Assert(
+        !Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::MinSize),
+        "Attributes 'minsize and optnone' are incompatible!", V);
   }
 
-  if (Attrs.hasAttribute(AttributeSet::FunctionIndex,
-                         Attribute::JumpTable)) {
+  if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Assert(GV->hasGlobalUnnamedAddr(),
            "Attribute 'jumptable' requires 'unnamed_addr'", V);
   }
 
-  if (Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::AllocSize)) {
+  if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::AllocSize)) {
     std::pair<unsigned, Optional<unsigned>> Args =
-        Attrs.getAllocSizeArgs(AttributeSet::FunctionIndex);
+        Attrs.getAllocSizeArgs(AttributeList::FunctionIndex);
 
     auto CheckParam = [&](StringRef Name, unsigned ParamNo) {
       if (ParamNo >= FT->getNumParams()) {
@@ -1744,15 +1747,15 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
   }
 }
 
-bool Verifier::verifyAttributeCount(AttributeSet Attrs, unsigned Params) {
+bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
   if (Attrs.getNumSlots() == 0)
     return true;
 
   unsigned LastSlot = Attrs.getNumSlots() - 1;
   unsigned LastIndex = Attrs.getSlotIndex(LastSlot);
-  if (LastIndex <= Params
-      || (LastIndex == AttributeSet::FunctionIndex
-          && (LastSlot == 0 || Attrs.getSlotIndex(LastSlot - 1) <= Params)))
+  if (LastIndex <= Params ||
+      (LastIndex == AttributeList::FunctionIndex &&
+       (LastSlot == 0 || Attrs.getSlotIndex(LastSlot - 1) <= Params)))
     return true;
 
   return false;
@@ -1982,7 +1985,7 @@ void Verifier::visitFunction(const Function &F) {
   Assert(!F.hasStructRetAttr() || F.getReturnType()->isVoidTy(),
          "Invalid struct return type!", &F);
 
-  AttributeSet Attrs = F.getAttributes();
+  AttributeList Attrs = F.getAttributes();
 
   Assert(verifyAttributeCount(Attrs, FT->getNumParams()),
          "Attribute after last parameter!", &F);
@@ -1993,7 +1996,7 @@ void Verifier::visitFunction(const Function &F) {
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
   // checking for Attributes that can/can not ever be on functions.
-  Assert(!Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::Builtin),
+  Assert(!Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::Builtin),
          "Attribute 'builtin' can only be applied to a callsite.", &F);
 
   // Check that this function meets the restrictions on this calling convention.
@@ -2619,7 +2622,7 @@ void Verifier::verifyCallSite(CallSite CS) {
            "Call parameter type does not match function signature!",
            CS.getArgument(i), FTy->getParamType(i), I);
 
-  AttributeSet Attrs = CS.getAttributes();
+  AttributeList Attrs = CS.getAttributes();
 
   Assert(verifyAttributeCount(Attrs, CS.arg_size()),
          "Attribute after last parameter!", I);
@@ -2763,7 +2766,7 @@ static bool isTypeCongruent(Type *L, Type *R) {
   return PL->getAddressSpace() == PR->getAddressSpace();
 }
 
-static AttrBuilder getParameterABIAttributes(int I, AttributeSet Attrs) {
+static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet, Attribute::ByVal, Attribute::InAlloca,
       Attribute::InReg, Attribute::Returned, Attribute::SwiftSelf,
@@ -2805,8 +2808,8 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
   // - All ABI-impacting function attributes, such as sret, byval, inreg,
   //   returned, and inalloca, must match.
-  AttributeSet CallerAttrs = F->getAttributes();
-  AttributeSet CalleeAttrs = CI.getAttributes();
+  AttributeList CallerAttrs = F->getAttributes();
+  AttributeList CalleeAttrs = CI.getAttributes();
   for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
     AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
     AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
