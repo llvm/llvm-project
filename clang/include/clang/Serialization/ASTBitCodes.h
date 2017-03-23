@@ -923,7 +923,9 @@ namespace clang {
       /// \brief A PipeType record.
       TYPE_PIPE                  = 43,
       /// \brief An ObjCTypeParamType record.
-      TYPE_OBJC_TYPE_PARAM       = 44
+      TYPE_OBJC_TYPE_PARAM       = 44,
+      /// \brief A DependentSizedExtVectorType record.
+      TYPE_DEPENDENT_SIZED_EXT_VECTOR = 46
     };
 
     /// \brief The type IDs for special types constructed by semantic
