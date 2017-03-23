@@ -1,4 +1,4 @@
-void moveToPoint(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));
+void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));
 
 void acceptClosure(void (^ __attribute__((noescape)) block)(void));
 
@@ -27,4 +27,11 @@ typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
 
 @property (nonatomic, readwrite, retain) id accessorsOnlyExceptInVersion3;
 @property (nonatomic, readwrite, retain, class) id accessorsOnlyForClassExceptInVersion3;
+@end
+
+@interface Base
+@end
+
+@interface TestGenericDUMP<Element> : Base
+- (Element)element;
 @end
