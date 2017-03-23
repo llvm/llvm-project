@@ -28,7 +28,7 @@
 ; GCN-SLOWFMA: v_mul_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
-define void @fast_add_fmuladd_fmul() #0 {
+define amdgpu_kernel void @fast_add_fmuladd_fmul() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -55,7 +55,7 @@ define void @fast_add_fmuladd_fmul() #0 {
 ; GCN-FASTFMA: v_fma_f32 [[FMA0:v[0-9]+]], [[U]], [[V]], -[[Z]]
 ; GCN-FASTFMA: v_fma_f32 [[FMA1:v[0-9]+]], [[X]], [[Y]], [[FMA0]]
 ; GCN-FASTFMA: buffer_store_dword [[FMA1]]
-define void @fast_sub_fmuladd_fmul() #0 {
+define amdgpu_kernel void @fast_sub_fmuladd_fmul() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -87,7 +87,7 @@ define void @fast_sub_fmuladd_fmul() #0 {
 ; GCN-SLOWFMA: v_mul_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
-define void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
+define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -120,7 +120,7 @@ define void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA: v_mul_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
-define void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
+define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -145,7 +145,7 @@ define void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
 ; GCN-SLOWFMA: v_mul_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
-define void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
+define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -170,7 +170,7 @@ define void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
 ; GCN-SLOWFMA: v_mul_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_add_f32_e32
-define void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 {
+define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -205,7 +205,7 @@ define void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 {
 
 ; GCN: buffer_store_dword [[MUL]]
 ; GCN: buffer_store_dword [[MAD]]
-define void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
+define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef
@@ -241,7 +241,7 @@ define void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[Y]], [[X]]
 ; GCN-SLOWFMA: v_add_f32_e32
 ; GCN-SLOWFMA: v_subrev_f32_e32
-define void @fast_sub_fmuladd_fmul_multi_use_fmuladd() #0 {
+define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd() #0 {
   %x = load volatile float, float addrspace(1)* undef
   %y = load volatile float, float addrspace(1)* undef
   %z = load volatile float, float addrspace(1)* undef

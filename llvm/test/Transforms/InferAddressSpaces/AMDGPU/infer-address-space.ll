@@ -28,7 +28,7 @@
 ; CHECK: store float %v, float addrspace(3)* %tmp7, align 4
 ; CHECK: call void @llvm.amdgcn.s.barrier()
 ; CHECK: ret void
-define void @load_store_lds_f32(i32 %i, float %v) #0 {
+define amdgpu_kernel void @load_store_lds_f32(i32 %i, float %v) #0 {
 bb:
   %tmp = load float, float addrspace(4)* addrspacecast (float addrspace(3)* @scalar to float addrspace(4)*), align 4
   call void @use(float %tmp)
@@ -83,7 +83,7 @@ bb:
 
 ; CHECK-LABEL: @nested_const_expr(
 ; CHECK: store i32 1, i32 addrspace(3)* bitcast (float addrspace(3)* getelementptr inbounds ([10 x float], [10 x float] addrspace(3)* @array, i64 0, i64 1) to i32 addrspace(3)*), align 4
-define void @nested_const_expr() #0 {
+define amdgpu_kernel void @nested_const_expr() #0 {
   store i32 1, i32 addrspace(4)* bitcast (float addrspace(4)* getelementptr ([10 x float], [10 x float] addrspace(4)* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*), i64 0, i64 1) to i32 addrspace(4)*), align 4
   ret void
 }
@@ -93,7 +93,7 @@ define void @nested_const_expr() #0 {
 ; CHECK-NEXT: %v = load float, float addrspace(1)* %addr
 ; CHECK-NEXT: store float %v, float addrspace(1)* %addr
 ; CHECK-NEXT: ret void
-define void @rauw(float addrspace(1)* %input) #0 {
+define amdgpu_kernel void @rauw(float addrspace(1)* %input) #0 {
 bb:
   %generic_input = addrspacecast float addrspace(1)* %input to float addrspace(4)*
   %addr = getelementptr float, float addrspace(4)* %generic_input, i64 10
@@ -117,7 +117,7 @@ bb:
 ; CHECK: %exit_cond = icmp eq float addrspace(3)* %i2, %end
 
 ; CHECK: br i1 %exit_cond, label %exit, label %loop
-define void @loop() #0 {
+define amdgpu_kernel void @loop() #0 {
 entry:
   %p = addrspacecast [10 x float] addrspace(3)* @array to float addrspace(4)*
   %end = getelementptr float, float addrspace(4)* %p, i64 10
@@ -150,7 +150,7 @@ exit:                                             ; preds = %loop
 ; CHECK: %0 = addrspacecast float addrspace(3)* %i2 to float addrspace(4)*
 ; CHECK: %exit_cond = icmp eq float addrspace(4)* %0, %end
 ; CHECK: br i1 %exit_cond, label %exit, label %loop
-define void @loop_with_generic_bound() #0 {
+define amdgpu_kernel void @loop_with_generic_bound() #0 {
 entry:
   %p = addrspacecast [10 x float] addrspace(3)* @array to float addrspace(4)*
   %end = load float addrspace(4)*, float addrspace(4)* addrspace(1)* @generic_end

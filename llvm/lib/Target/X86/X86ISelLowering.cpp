@@ -20781,7 +20781,7 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
       // Check that ECX wasn't needed by an 'inreg' parameter.
       FunctionType *FTy = Func->getFunctionType();
-      const AttributeSet &Attrs = Func->getAttributes();
+      const AttributeList &Attrs = Func->getAttributes();
 
       if (!Attrs.isEmpty() && !Func->isVarArg()) {
         unsigned InRegCount = 0;
@@ -34022,6 +34022,47 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Try to map a 128-bit or larger integer comparison to vector instructions
+/// before type legalization splits it up into chunks.
+static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
+                                               const X86Subtarget &Subtarget) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
+  assert((CC == ISD::SETNE || CC == ISD::SETEQ) && "Bad comparison predicate");
+
+  // We're looking for an oversized integer equality comparison, but ignore a
+  // comparison with zero because that gets special treatment in EmitTest().
+  SDValue X = SetCC->getOperand(0);
+  SDValue Y = SetCC->getOperand(1);
+  EVT OpVT = X.getValueType();
+  unsigned OpSize = OpVT.getSizeInBits();
+  if (!OpVT.isScalarInteger() || OpSize < 128 || isNullConstant(Y))
+    return SDValue();
+
+  // TODO: Use PXOR + PTEST for SSE4.1 or later?
+  // TODO: Add support for AVX-512.
+  EVT VT = SetCC->getValueType(0);
+  SDLoc DL(SetCC);
+  if ((OpSize == 128 && Subtarget.hasSSE2()) ||
+      (OpSize == 256 && Subtarget.hasAVX2())) {
+    EVT VecVT = OpSize == 128 ? MVT::v16i8 : MVT::v32i8;
+    SDValue VecX = DAG.getBitcast(VecVT, X);
+    SDValue VecY = DAG.getBitcast(VecVT, Y);
+
+    // If all bytes match (bitmask is 0x(FFFF)FFFF), that's equality.
+    // setcc i128 X, Y, eq --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, eq
+    // setcc i128 X, Y, ne --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, ne
+    // setcc i256 X, Y, eq --> setcc (vpmovmskb (vpcmpeqb X, Y)), 0xFFFFFFFF, eq
+    // setcc i256 X, Y, ne --> setcc (vpmovmskb (vpcmpeqb X, Y)), 0xFFFFFFFF, ne
+    SDValue Cmp = DAG.getNode(X86ISD::PCMPEQ, DL, VecVT, VecX, VecY);
+    SDValue MovMsk = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Cmp);
+    SDValue FFFFs = DAG.getConstant(OpSize == 128 ? 0xFFFF : 0xFFFFFFFF, DL,
+                                    MVT::i32);
+    return DAG.getSetCC(DL, VT, MovMsk, FFFFs, CC);
+  }
+
+  return SDValue();
+}
+
 static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             const X86Subtarget &Subtarget) {
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -34046,6 +34087,9 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
       return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
     }
+
+    if (SDValue V = combineVectorSizedSetCCEquality(N, DAG, Subtarget))
+      return V;
   }
 
   if (VT.getScalarType() == MVT::i1 &&
@@ -35757,7 +35801,7 @@ int X86TargetLowering::getScalingFactorCost(const DataLayout &DL,
   return -1;
 }
 
-bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
+bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // Integer division on x86 is expensive. However, when aggressively optimizing
   // for code size, we prefer to use a div instruction, as it is usually smaller
   // than the alternative sequence.
@@ -35765,8 +35809,8 @@ bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
   // integer division, leaving the division as-is is a loss even in terms of
   // size, because it will have to be scalarized, while the alternative code
   // sequence can be performed in vector form.
-  bool OptSize = Attr.hasAttribute(AttributeSet::FunctionIndex,
-                                   Attribute::MinSize);
+  bool OptSize =
+      Attr.hasAttribute(AttributeList::FunctionIndex, Attribute::MinSize);
   return OptSize && !VT.isVector();
 }
 

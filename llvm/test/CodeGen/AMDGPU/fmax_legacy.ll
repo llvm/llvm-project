@@ -13,7 +13,7 @@ declare i32 @llvm.r600.read.tidig.x() #1
 ; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 
 ; EG: MAX
-define void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -33,7 +33,7 @@ define void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(
 ; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 ; EG: MAX
-define void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -53,7 +53,7 @@ define void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(
 ; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 ; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 ; EG: MAX
-define void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -73,7 +73,7 @@ define void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(
 ; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 ; EG: MAX
-define void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -93,7 +93,7 @@ define void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(
 ; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 ; EG: MAX
-define void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
@@ -114,7 +114,7 @@ define void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x flo
 ; SI-NONAN: v_max_f32_e32
 ; SI-NONAN: v_max_f32_e32
 ; SI-NONAN: v_max_f32_e32
-define void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <3 x float>, <3 x float> addrspace(1)* %gep.0, i32 1
@@ -137,7 +137,7 @@ define void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x flo
 ; SI-NOT: v_max_
 
 ; EG: MAX
-define void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1

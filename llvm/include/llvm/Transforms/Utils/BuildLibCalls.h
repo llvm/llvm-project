@@ -84,14 +84,14 @@ namespace llvm {
   /// value with the same type. If 'Op' is a long double, 'l' is added as the
   /// suffix of name, if 'Op' is a float, we add a 'f' suffix.
   Value *emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,
-                              const AttributeSet &Attrs);
+                              const AttributeList &Attrs);
 
   /// Emit a call to the binary function named 'Name' (e.g. 'fmin'). This
   /// function is known to take type matching 'Op1' and 'Op2' and return one
   /// value with the same type. If 'Op1/Op2' are long double, 'l' is added as
   /// the suffix of name, if 'Op1/Op2' are float, we add a 'f' suffix.
   Value *emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
-                                  IRBuilder<> &B, const AttributeSet &Attrs);
+                               IRBuilder<> &B, const AttributeList &Attrs);
 
   /// Emit a call to the putchar function. This assumes that Char is an integer.
   Value *emitPutChar(Value *Char, IRBuilder<> &B, const TargetLibraryInfo *TLI);

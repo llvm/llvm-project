@@ -12,7 +12,7 @@ declare <2 x half> @llvm.log2.v2f16(<2 x half> %a)
 ; VI:  v_log_f16_e32 v[[R_F16:[0-9]+]], v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @log2_f16(
+define amdgpu_kernel void @log2_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -37,7 +37,7 @@ entry:
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @log2_v2f16(
+define amdgpu_kernel void @log2_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) {
 entry:

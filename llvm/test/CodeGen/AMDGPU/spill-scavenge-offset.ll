@@ -11,7 +11,7 @@
 
 ; Just test that it compiles successfully.
 ; CHECK-LABEL: test
-define void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)

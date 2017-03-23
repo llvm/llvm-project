@@ -6,7 +6,7 @@ declare double @llvm.amdgcn.fract.f64(double) #0
 
 ; GCN-LABEL: {{^}}v_fract_f32:
 ; GCN: v_fract_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}
-define void @v_fract_f32(float addrspace(1)* %out, float %src) #1 {
+define amdgpu_kernel void @v_fract_f32(float addrspace(1)* %out, float %src) #1 {
   %fract = call float @llvm.amdgcn.fract.f32(float %src)
   store float %fract, float addrspace(1)* %out
   ret void
@@ -14,7 +14,7 @@ define void @v_fract_f32(float addrspace(1)* %out, float %src) #1 {
 
 ; GCN-LABEL: {{^}}v_fract_f64:
 ; GCN: v_fract_f64_e32 {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
-define void @v_fract_f64(double addrspace(1)* %out, double %src) #1 {
+define amdgpu_kernel void @v_fract_f64(double addrspace(1)* %out, double %src) #1 {
   %fract = call double @llvm.amdgcn.fract.f64(double %src)
   store double %fract, double addrspace(1)* %out
   ret void
@@ -22,9 +22,8 @@ define void @v_fract_f64(double addrspace(1)* %out, double %src) #1 {
 
 ; GCN-LABEL: {{^}}v_fract_undef_f32:
 ; GCN-NOT: v_fract_f32
-; GCN-NOT: v0
-; GCN: buffer_store_dword v0
-define void @v_fract_undef_f32(float addrspace(1)* %out) #1 {
+; GCN-NOT: store_dword
+define amdgpu_kernel void @v_fract_undef_f32(float addrspace(1)* %out) #1 {
   %fract = call float @llvm.amdgcn.fract.f32(float undef)
   store float %fract, float addrspace(1)* %out
   ret void

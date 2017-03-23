@@ -15,7 +15,7 @@
 ; EG-NEXT: ALU clause
 
 ; EG: LDS_READ_RET
-define void @local_memory(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @local_memory(i32 addrspace(1)* %out) #0 {
 entry:
   %y.i = call i32 @llvm.r600.read.tidig.x() #1
   %arrayidx = getelementptr inbounds [128 x i32], [128 x i32] addrspace(3)* @local_memory.local_mem, i32 0, i32 %y.i
@@ -57,7 +57,7 @@ entry:
 ; EG: LDS_READ_RET {{[*]*}} OQAP, {{PV|T}}[[ADDRR:[0-9]*\.[XYZW]]]
 ; EG-NOT: LDS_READ_RET {{[*]*}} OQAP, T[[ADDRR]]
 
-define void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
 entry:
   %x.i = call i32 @llvm.r600.read.tidig.x() #1
   %arrayidx = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @local_memory_two_objects.local_mem0, i32 0, i32 %x.i

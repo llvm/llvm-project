@@ -1,3 +1,5 @@
+// REQUIRES-ANY: arm-target-arch,armv6m-target-arch
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- aeabi_idivmod_test.c - Test __aeabi_idivmod -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure

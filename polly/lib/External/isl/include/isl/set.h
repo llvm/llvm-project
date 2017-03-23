@@ -395,6 +395,7 @@ __isl_give isl_set *isl_set_neg(__isl_take isl_set *set);
 __isl_give isl_set *isl_set_make_disjoint(__isl_take isl_set *set);
 struct isl_set *isl_basic_set_compute_divs(struct isl_basic_set *bset);
 __isl_give isl_set *isl_set_compute_divs(__isl_take isl_set *set);
+ISL_DEPRECATED
 __isl_give isl_set *isl_set_align_divs(__isl_take isl_set *set);
 
 __isl_give isl_val *isl_set_plain_get_val_if_fixed(__isl_keep isl_set *set,

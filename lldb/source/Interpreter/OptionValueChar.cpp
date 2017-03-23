@@ -13,9 +13,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;

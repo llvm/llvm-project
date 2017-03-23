@@ -30,7 +30,7 @@
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_0:
 ; GCN: workgroup_group_segment_byte_size = 2340
-define void @promote_alloca_size_order_0(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_size_order_0(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %tmp0 = load i32, i32 addrspace(1)* %in, align 4
@@ -62,7 +62,7 @@ entry:
 
 ; GCN-LABEL: {{^}}promote_alloca_size_order_1:
 ; GCN: workgroup_group_segment_byte_size = 2352
-define void @promote_alloca_size_order_1(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_size_order_1(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %tmp0 = load i32, i32 addrspace(1)* %in, align 4
@@ -100,7 +100,7 @@ entry:
 
 ; GCN-LABEL: {{^}}promote_alloca_align_pad_guess_over_limit:
 ; GCN: workgroup_group_segment_byte_size = 1060
-define void @promote_alloca_align_pad_guess_over_limit(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
+define amdgpu_kernel void @promote_alloca_align_pad_guess_over_limit(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %idx) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %tmp0 = load i32, i32 addrspace(1)* %in, align 4

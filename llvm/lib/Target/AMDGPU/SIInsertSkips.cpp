@@ -318,14 +318,14 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         MI.eraseFromParent();
         break;
 
-      case AMDGPU::SI_RETURN:
+      case AMDGPU::SI_RETURN_TO_EPILOG:
         // FIXME: Should move somewhere else
         assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
 
         // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
         // because external bytecode will be appended at the end.
         if (BI != --MF.end() || I != MBB.getFirstTerminator()) {
-          // SI_RETURN is not the last instruction. Add an empty block at
+          // SI_RETURN_TO_EPILOG is not the last instruction. Add an empty block at
           // the end and jump there.
           if (!EmptyMBBAtEnd) {
             EmptyMBBAtEnd = MF.CreateMachineBasicBlock();

@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+vgpr-spilling,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
 ; RUN: llc -march=amdgcn -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
@@ -21,10 +22,11 @@
 
 ; GCNMESA-DAG: s_mov_b32 s16, s3
 ; GCNMESA-DAG: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCNMESA--DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCNMESA-DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCNMESA-DAG: s_mov_b32 s14, -1
 ; SIMESA-DAG: s_mov_b32 s15, 0xe8f000
 ; VIMESA-DAG: s_mov_b32 s15, 0xe80000
+; GFX9MESA-DAG: s_mov_b32 s15, 0xe00000
 
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill
@@ -43,7 +45,7 @@
 ; GCN: ScratchSize: 1536
 
 ; s[0:3] input user SGPRs. s4,s5,s6 = workgroup IDs. s8 scratch offset.
-define void @spill_vgpr_compute(<4 x float> %arg6, float addrspace(1)* %arg, i32 %arg1, i32 %arg2, float %arg3, float %arg4, float %arg5) #0 {
+define amdgpu_kernel void @spill_vgpr_compute(<4 x float> %arg6, float addrspace(1)* %arg, i32 %arg1, i32 %arg2, float %arg3, float %arg4, float %arg5) #0 {
 bb:
   %tmp = add i32 %arg1, %arg2
   %tmp7 = extractelement <4 x float> %arg6, i32 0

@@ -4,7 +4,7 @@
 
 declare i32 @llvm.read_register.i32(metadata) #0
 
-define void @test_invalid_read_exec(i32 addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @test_invalid_read_exec(i32 addrspace(1)* %out) nounwind {
   store volatile i32 0, i32 addrspace(3)* undef
   %m0 = call i32 @llvm.read_register.i32(metadata !0)
   store i32 %m0, i32 addrspace(1)* %out

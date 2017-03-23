@@ -185,7 +185,7 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 4> SplitVTs;
   ArgInfo RetInfo(VReg, Val->getType());
-  setArgFlags(RetInfo, AttributeSet::ReturnIndex, DL, F);
+  setArgFlags(RetInfo, AttributeList::ReturnIndex, DL, F);
   splitToValueTypes(RetInfo, SplitVTs, DL, MF.getRegInfo());
 
   CCAssignFn *AssignFn =

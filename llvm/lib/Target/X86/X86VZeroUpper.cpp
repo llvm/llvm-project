@@ -97,6 +97,7 @@ FunctionPass *llvm::createX86IssueVZeroUpperPass() {
   return new VZeroUpperInserter();
 }
 
+#ifndef NDEBUG
 const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
   switch (ST) {
     case PASS_THROUGH: return "Pass-through";
@@ -105,6 +106,7 @@ const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
   }
   llvm_unreachable("Invalid block exit state.");
 }
+#endif
 
 /// VZEROUPPER cleans state that is related to Y/ZMM0-15 only.
 /// Thus, there is no need to check for Y/ZMM16 and above.

@@ -18,7 +18,7 @@
 // Project includes
 #include "PlatformDarwin.h"
 #include "PlatformiOSSimulatorCoreSimulatorSupport.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/Optional.h"
 

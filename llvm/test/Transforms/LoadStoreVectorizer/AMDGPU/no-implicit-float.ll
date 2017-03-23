@@ -5,7 +5,7 @@
 ; CHECK: store i32
 ; CHECK: store i32
 ; CHECK: store i32
-define void @no_implicit_float(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @no_implicit_float(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3

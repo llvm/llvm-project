@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa < %s -mattr=-flat-for-global | FileCheck -check-prefix=GCNHSA -check-prefix=CIHSA -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
 
@@ -14,6 +15,7 @@
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
 ; CI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe8f000
 ; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe80000
+; GFX9-DAG: s_mov_b32 s{{[0-9]+}}, 0xe00000
 
 
 ; GCNHSA: .amd_kernel_code_t
@@ -46,7 +48,7 @@
 
 ; Scratch size = alloca size + emergency stack slot
 ; ALL: ; ScratchSize: 32772
-define void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
   %large = alloca [8192 x i32], align 4
   %gep = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 8191
   store volatile i32 %x, i32* %gep

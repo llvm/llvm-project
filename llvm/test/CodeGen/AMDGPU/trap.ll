@@ -38,7 +38,7 @@ declare void @llvm.debugtrap() #0
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-MESA-TRAP: s_endpgm
-define void @hsa_trap() {
+define amdgpu_kernel void @hsa_trap() {
   call void @llvm.trap()
   ret void
 }
@@ -64,7 +64,7 @@ define void @hsa_trap() {
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-MESA-TRAP: s_endpgm
-define void @hsa_debugtrap() {
+define amdgpu_kernel void @hsa_debugtrap() {
   call void @llvm.debugtrap()
   ret void
 }
@@ -75,7 +75,7 @@ define void @hsa_debugtrap() {
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-HSA-TRAP: s_endpgm
 ; NO-MESA-TRAP: s_endpgm
-define void @trap() {
+define amdgpu_kernel void @trap() {
   call void @llvm.trap()
   ret void
 }

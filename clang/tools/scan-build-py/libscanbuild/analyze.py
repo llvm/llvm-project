@@ -40,7 +40,8 @@ def scan_build():
     """ Entry point for scan-build command. """
 
     args = parse_args_for_scan_build()
-    with report_directory(args.output, args.keep_empty) as target_dir:
+    # will re-assign the report directory as new output
+    with report_directory(args.output, args.keep_empty) as args.output:
         # Run against a build command. there are cases, when analyzer run
         # is not required. But we need to set up everything for the
         # wrappers, because 'configure' needs to capture the CC/CXX values
@@ -50,13 +51,13 @@ def scan_build():
             exit_code = capture(args)
             # Run the analyzer against the captured commands.
             if need_analyzer(args.build):
-                run_analyzer(args, target_dir)
+                run_analyzer(args)
         else:
             # Run build command and analyzer with compiler wrappers.
-            environment = setup_environment(args, target_dir)
+            environment = setup_environment(args)
             exit_code = run_build(args.build, env=environment)
         # Cover report generation and bug counting.
-        number_of_bugs = document(args, target_dir, False)
+        number_of_bugs = document(args)
         # Set exit status as it was requested.
         return number_of_bugs if args.status_bugs else exit_code
 
@@ -66,11 +67,12 @@ def analyze_build():
     """ Entry point for analyze-build command. """
 
     args = parse_args_for_analyze_build()
-    with report_directory(args.output, args.keep_empty) as target_dir:
+    # will re-assign the report directory as new output
+    with report_directory(args.output, args.keep_empty) as args.output:
         # Run the analyzer against a compilation db.
-        run_analyzer(args, target_dir)
+        run_analyzer(args)
         # Cover report generation and bug counting.
-        number_of_bugs = document(args, target_dir, True)
+        number_of_bugs = document(args)
         # Set exit status as it was requested.
         return number_of_bugs if args.status_bugs else 0
 
@@ -88,7 +90,7 @@ def need_analyzer(args):
     return len(args) and not re.search('configure|autogen', args[0])
 
 
-def run_analyzer(args, output_dir):
+def run_analyzer(args):
     """ Runs the analyzer against the given compilation database. """
 
     def exclude(filename):
@@ -98,7 +100,7 @@ def run_analyzer(args, output_dir):
 
     consts = {
         'clang': args.clang,
-        'output_dir': output_dir,
+        'output_dir': args.output,
         'output_format': args.output_format,
         'output_failures': args.output_failures,
         'direct_args': analyzer_params(args),
@@ -120,7 +122,7 @@ def run_analyzer(args, output_dir):
         pool.join()
 
 
-def setup_environment(args, destination):
+def setup_environment(args):
     """ Set up environment for build command to interpose compiler wrapper. """
 
     environment = dict(os.environ)
@@ -129,7 +131,7 @@ def setup_environment(args, destination):
         'CC': COMPILER_WRAPPER_CC,
         'CXX': COMPILER_WRAPPER_CXX,
         'ANALYZE_BUILD_CLANG': args.clang if need_analyzer(args.build) else '',
-        'ANALYZE_BUILD_REPORT_DIR': destination,
+        'ANALYZE_BUILD_REPORT_DIR': args.output,
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
         'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
         'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args)),

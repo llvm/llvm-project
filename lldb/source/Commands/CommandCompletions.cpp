@@ -22,7 +22,6 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -32,6 +31,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/ADT/SmallString.h"

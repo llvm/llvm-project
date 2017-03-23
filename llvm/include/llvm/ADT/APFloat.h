@@ -146,16 +146,16 @@ struct APFloatBase {
   /// \name Floating Point Semantics.
   /// @{
 
-  static const fltSemantics &IEEEhalf();
-  static const fltSemantics &IEEEsingle();
-  static const fltSemantics &IEEEdouble();
-  static const fltSemantics &IEEEquad();
-  static const fltSemantics &PPCDoubleDouble();
-  static const fltSemantics &x87DoubleExtended();
+  static const fltSemantics &IEEEhalf() LLVM_READNONE;
+  static const fltSemantics &IEEEsingle() LLVM_READNONE;
+  static const fltSemantics &IEEEdouble() LLVM_READNONE;
+  static const fltSemantics &IEEEquad() LLVM_READNONE;
+  static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
+  static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus();
+  static const fltSemantics &Bogus() LLVM_READNONE;
 
   /// @}
 

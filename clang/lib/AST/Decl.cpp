@@ -3742,6 +3742,20 @@ void EnumDecl::completeDefinition(QualType NewType,
   TagDecl::completeDefinition();
 }
 
+bool EnumDecl::isClosed() const {
+  if (const auto *A = getAttr<EnumExtensibilityAttr>())
+    return A->getExtensibility() == EnumExtensibilityAttr::Closed;
+  return true;
+}
+
+bool EnumDecl::isClosedFlag() const {
+  return isClosed() && hasAttr<FlagEnumAttr>();
+}
+
+bool EnumDecl::isClosedNonFlag() const {
+  return isClosed() && !hasAttr<FlagEnumAttr>();
+}
+
 TemplateSpecializationKind EnumDecl::getTemplateSpecializationKind() const {
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo())
     return MSI->getTemplateSpecializationKind();
@@ -4226,6 +4240,30 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
   }
 
   return nullptr;
+}
+
+bool TypedefNameDecl::isTransparentTagSlow() const {
+  auto determineIsTransparent = [&]() {
+    if (auto *TT = getUnderlyingType()->getAs<TagType>()) {
+      if (auto *TD = TT->getDecl()) {
+        if (TD->getName() != getName())
+          return false;
+        SourceLocation TTLoc = getLocation();
+        SourceLocation TDLoc = TD->getLocation();
+        if (!TTLoc.isMacroID() || !TDLoc.isMacroID())
+          return false;
+        SourceManager &SM = getASTContext().getSourceManager();
+        return SM.getSpellingLoc(TTLoc) == SM.getSpellingLoc(TDLoc);
+      }
+    }
+    return false;
+  };
+
+  bool isTransparent = determineIsTransparent();
+  CacheIsTransparentTag = 1;
+  if (isTransparent)
+    CacheIsTransparentTag |= 0x2;
+  return isTransparent;
 }
 
 TypedefDecl *TypedefDecl::CreateDeserialized(ASTContext &C, unsigned ID) {

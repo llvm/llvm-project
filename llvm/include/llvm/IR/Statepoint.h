@@ -454,7 +454,7 @@ struct StatepointDirectives {
 
 /// Parse out statepoint directives from the function attributes present in \p
 /// AS.
-StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeSet AS);
+StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeList AS);
 
 /// Return \c true if the the \p Attr is an attribute that is a statepoint
 /// directive.

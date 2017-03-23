@@ -24,7 +24,6 @@
 // Project includes
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -34,6 +33,7 @@
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/SafeMachO.h"
+#include "lldb/Utility/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;

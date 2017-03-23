@@ -45,8 +45,6 @@ void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
 
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
 
-  if (MF != &DAG->MF)
-    TargetOccupancy = 0;
   MF = &DAG->MF;
 
   const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
@@ -531,7 +529,7 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
 
   Stage++;
   GCNMaxOccupancySchedStrategy &S = (GCNMaxOccupancySchedStrategy&)*SchedImpl;
-  S.TargetOccupancy = MinOccupancy;
+  S.setTargetOccupancy(MinOccupancy);
 
   MachineBasicBlock *MBB = nullptr;
   for (auto Region : Regions) {

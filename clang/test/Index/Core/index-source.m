@@ -348,3 +348,39 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE-1]]:3 | field/ObjC | _foo | c:objc(cs)I7@_foo | <no-cgname> | Ref,Writ,RelCont | rel: 1
 }
 @end
+
+#define NS_ENUM(_name, _type) enum _name:_type _name; enum _name : _type
+
+typedef NS_ENUM(AnotherEnum, int) {
+// CHECK-NOT: [[@LINE-1]]:17 | type-alias/C | AnotherEnum |
+// CHECK: [[@LINE-2]]:17 | enum/C | AnotherEnum | [[AnotherEnum_USR:.*]] | {{.*}} | Ref,RelCont | rel: 1
+  AnotherEnumFirst = 0,
+  AnotherEnumSecond = 1,
+  AnotherEnumThird = 2,
+};
+
+AnotherEnum anotherT;
+// CHECK: [[@LINE-1]]:1 | enum/C | AnotherEnum | [[AnotherEnum_USR]] | {{.*}} | Ref,RelCont | rel: 1
+enum AnotherEnum anotherE;
+// CHECK: [[@LINE-1]]:6 | enum/C | AnotherEnum | [[AnotherEnum_USR]] | {{.*}} | Ref,RelCont | rel: 1
+
+#define TRANSPARENT(_name) struct _name _name; struct _name
+#define OPAQUE(_name) struct _name *_name; struct _name
+
+typedef TRANSPARENT(AStruct) {
+  int x;
+};
+
+AStruct aStructT;
+// CHECK: [[@LINE-1]]:1 | struct/C | AStruct | {{.*}} | {{.*}} | Ref,RelCont | rel: 1
+struct AStruct aStructS;
+// CHECK: [[@LINE-1]]:8 | struct/C | AStruct | {{.*}} | {{.*}} | Ref,RelCont | rel: 1
+
+typedef OPAQUE(Separate) {
+  int x;
+};
+
+Separate separateT;
+// CHECK: [[@LINE-1]]:1 | type-alias/C | Separate | {{.*}} | {{.*}} | Ref,RelCont | rel: 1
+struct Separate separateE;
+// CHECK: [[@LINE-1]]:8 | struct/C | Separate | {{.*}} | {{.*}} | Ref,RelCont | rel: 1

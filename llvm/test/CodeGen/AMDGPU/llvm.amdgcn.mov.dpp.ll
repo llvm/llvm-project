@@ -7,7 +7,7 @@
 ; VI: v_mov_b32_e32 v0, s{{[0-9]+}}
 ; VI: s_nop 1
 ; VI: v_mov_b32_dpp v0, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x01,0x08,0x11]
-define void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
   store i32 %tmp0, i32 addrspace(1)* %out
   ret void
@@ -19,7 +19,7 @@ define void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
 ; VI: v_mov_b32_dpp [[VGPR1:v[0-9]+]], [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
 ; VI: s_nop 1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
-define void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
   %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) #0
   store i32 %tmp1, i32 addrspace(1)* %out
@@ -36,7 +36,7 @@ define void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
 ; VI: v_mov_b32_dpp [[VGPR1:v[0-9]+]], [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
 ; VI: s_nop 1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
-define void @dpp_first_in_bb(float addrspace(1)* %out, float addrspace(1)* %in, float %cond, float %a, float %b) {
+define amdgpu_kernel void @dpp_first_in_bb(float addrspace(1)* %out, float addrspace(1)* %in, float %cond, float %a, float %b) {
   %cmp = fcmp oeq float %cond, 0.0
   br i1 %cmp, label %if, label %else
 

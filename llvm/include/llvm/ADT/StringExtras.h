@@ -234,6 +234,13 @@ inline std::string join(IteratorT Begin, IteratorT End, StringRef Separator) {
   return detail::join_impl(Begin, End, Separator, tag());
 }
 
+/// Joins the strings in the range [R.begin(), R.end()), adding Separator
+/// between the elements.
+template <typename Range>
+inline std::string join(Range &&R, StringRef Separator) {
+  return join(R.begin(), R.end(), Separator);
+}
+
 /// Joins the strings in the parameter pack \p Items, adding \p Separator
 /// between the elements.  All arguments must be implicitly convertible to
 /// std::string, or there should be an overload of std::string::operator+=()

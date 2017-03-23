@@ -81,9 +81,8 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float %A, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float 4.200000e+01, i32 1
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float 4.200000e+01>, float %A, i32 0
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32
   %tmp24 = zext i32 %tmp23 to i64

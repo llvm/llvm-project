@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- negti2_test.c - Test __negti2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

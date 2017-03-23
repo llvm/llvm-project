@@ -22,7 +22,7 @@
 ; CHECK-NEXT: s_endpgm
 
 ; Function Attrs: nounwind
-define void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
+define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
 entry:
   %A.addr = alloca i32 addrspace(1)*, align 4
   store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4

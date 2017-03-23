@@ -2692,8 +2692,8 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   // Convert the array size into a canonical width matching the pointer size for
   // the target.
   llvm::APInt ArySize(ArySizeIn);
-  ArySize = ArySize.zextOrTrunc(
-      Target->getPreferredPointerWidth(getTargetAddressSpace(EltTy)));
+  ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
+
 
   llvm::FoldingSetNodeID ID;
   ConstantArrayType::Profile(ID, EltTy, ArySize, ASM, IndexTypeQuals);
@@ -8500,13 +8500,14 @@ void ASTMutationListener::DeducedReturnType(const FunctionDecl *FD,
 /// to be an Integer Constant Expression.
 static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
                                   ASTContext::GetBuiltinTypeError &Error,
-                                  bool &RequiresICE,
+                                  bool &RequiresICE, bool &OverrideNonnull,
                                   bool AllowTypeModifiers) {
   // Modifiers.
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
   RequiresICE = false;
-  
+  OverrideNonnull = false;
+
   // Read the prefixed modifiers first.
   bool Done = false;
   while (!Done) {
@@ -8514,6 +8515,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     default: Done = true; --Str; break;
     case 'I':
       RequiresICE = true;
+      break;
+    case 'N':
+      OverrideNonnull = true;
       break;
     case 'S':
       assert(!Unsigned && "Can't use both 'S' and 'U' modifiers!");
@@ -8649,8 +8653,8 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(End != Str && "Missing vector size");
     Str = End;
 
-    QualType ElementType = DecodeTypeFromStr(Str, Context, Error, 
-                                             RequiresICE, false);
+    QualType ElementType = DecodeTypeFromStr(Str, Context, Error, RequiresICE,
+                                             OverrideNonnull, false);
     assert(!RequiresICE && "Can't require vector ICE");
     
     // TODO: No way to make AltiVec vectors in builtins yet.
@@ -8665,15 +8669,15 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(End != Str && "Missing vector size");
     
     Str = End;
-    
+
     QualType ElementType = DecodeTypeFromStr(Str, Context, Error, RequiresICE,
-                                             false);
+                                             OverrideNonnull, false);
     Type = Context.getExtVectorType(ElementType, NumElements);
     break;    
   }
   case 'X': {
     QualType ElementType = DecodeTypeFromStr(Str, Context, Error, RequiresICE,
-                                             false);
+                                             OverrideNonnull, false);
     assert(!RequiresICE && "Can't require complex ICE");
     Type = Context.getComplexType(ElementType);
     break;
@@ -8755,26 +8759,36 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
 }
 
 /// GetBuiltinType - Return the type for the specified builtin.
-QualType ASTContext::GetBuiltinType(unsigned Id,
-                                    GetBuiltinTypeError &Error,
-                                    unsigned *IntegerConstantArgs) const {
+QualType ASTContext::GetBuiltinType(unsigned Id, GetBuiltinTypeError &Error,
+                                    unsigned *IntegerConstantArgs,
+                                    bool *OverrideNonnullReturn,
+                                    unsigned *OverrideNonnullArgs) const {
   const char *TypeStr = BuiltinInfo.getTypeString(Id);
 
   SmallVector<QualType, 8> ArgTypes;
 
   bool RequiresICE = false;
+  bool OverrideNonnull = false;
   Error = GE_None;
-  QualType ResType = DecodeTypeFromStr(TypeStr, *this, Error,
-                                       RequiresICE, true);
+  QualType ResType = DecodeTypeFromStr(TypeStr, *this, Error, RequiresICE,
+                                       OverrideNonnull, true);
   if (Error != GE_None)
     return QualType();
-  
+
+  if (OverrideNonnullReturn)
+    *OverrideNonnullReturn = OverrideNonnull;
   assert(!RequiresICE && "Result of intrinsic cannot be required to be an ICE");
-  
+
   while (TypeStr[0] && TypeStr[0] != '.') {
-    QualType Ty = DecodeTypeFromStr(TypeStr, *this, Error, RequiresICE, true);
+    QualType Ty = DecodeTypeFromStr(TypeStr, *this, Error, RequiresICE,
+                                    OverrideNonnull, true);
     if (Error != GE_None)
       return QualType();
+
+    // If this argument should have any nonnull annotations overriden, fill in
+    // the bitmask.
+    if (OverrideNonnull && OverrideNonnullArgs)
+      *OverrideNonnullArgs |= 1 << ArgTypes.size();
 
     // If this argument is required to be an IntegerConstantExpression and the
     // caller cares, fill in the bitmask we return.

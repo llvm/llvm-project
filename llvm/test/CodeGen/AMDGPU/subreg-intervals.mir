@@ -10,8 +10,8 @@
 # CHECK-LABEL: Machine code for function test1:
 
 --- |
-  define void @test0() { ret void }
-  define void @test1() { ret void }
+  define amdgpu_kernel void @test0() { ret void }
+  define amdgpu_kernel void @test1() { ret void }
 ...
 ---
 name: test0

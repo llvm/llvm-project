@@ -19,7 +19,6 @@
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/StringList.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/Process.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
 
 #include "CommunicationKDP.h"
 

@@ -581,10 +581,11 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     llvm::Type *Tys[2] = { IntPtrTy, Int8PtrTy };
     llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::objectsize, Tys);
     llvm::Value *Min = Builder.getFalse();
+    llvm::Value *NullIsUnknown = Builder.getFalse();
     llvm::Value *CastAddr = Builder.CreateBitCast(Ptr, Int8PtrTy);
-    llvm::Value *LargeEnough =
-        Builder.CreateICmpUGE(Builder.CreateCall(F, {CastAddr, Min}),
-                              llvm::ConstantInt::get(IntPtrTy, Size));
+    llvm::Value *LargeEnough = Builder.CreateICmpUGE(
+        Builder.CreateCall(F, {CastAddr, Min, NullIsUnknown}),
+        llvm::ConstantInt::get(IntPtrTy, Size));
     Checks.push_back(std::make_pair(LargeEnough, SanitizerKind::ObjectSize));
   }
 
@@ -2615,8 +2616,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 
   llvm::Value *Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
-      llvm::AttributeSet::get(CGF.getLLVMContext(),
-                              llvm::AttributeSet::FunctionIndex, B),
+      llvm::AttributeList::get(CGF.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
   if (!MayReturn) {
@@ -2891,7 +2892,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                   CGM.getCodeGenOpts().TrapFuncName);
-    TrapCall->addAttribute(llvm::AttributeSet::FunctionIndex, A);
+    TrapCall->addAttribute(llvm::AttributeList::FunctionIndex, A);
   }
 
   return TrapCall;

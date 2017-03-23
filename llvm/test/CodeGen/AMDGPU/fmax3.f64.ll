@@ -11,7 +11,7 @@ declare double @llvm.maxnum.f64(double, double) nounwind readnone
 ; SI: v_max_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[REGA]], [[REGC]]
 ; SI: buffer_store_dwordx2 [[RESULT]],
 ; SI: s_endpgm
-define void @test_fmax3_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) nounwind {
+define amdgpu_kernel void @test_fmax3_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) nounwind {
   %bptr = getelementptr double, double addrspace(1)* %aptr, i32 1
   %cptr = getelementptr double, double addrspace(1)* %aptr, i32 2
   %a = load volatile double, double addrspace(1)* %aptr, align 8

@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs
 ;REQUIRES: asserts
 
-define void @main() {
+define amdgpu_kernel void @main() {
 main_body:
   %0 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 2)
   %1 = extractelement <4 x float> %0, i32 0

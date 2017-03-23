@@ -1532,7 +1532,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
 
   Type *ResultTy;
   SmallVector<Value *, 6> Args;
-  AttributeSet Attr;
+  AttributeList Attr;
 
   // 'size' argument.
   if (!UseSizedLibcall) {
@@ -1593,7 +1593,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // Now, the return type.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addAttribute(Ctx, AttributeSet::ReturnIndex, Attribute::ZExt);
+    Attr = Attr.addAttribute(Ctx, AttributeList::ReturnIndex, Attribute::ZExt);
   } else if (HasResult && UseSizedLibcall)
     ResultTy = SizedIntTy;
   else

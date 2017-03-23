@@ -1441,6 +1441,15 @@ def getVOPe32 : InstrMapping {
   let ValueCols = [["4", "0"]];
 }
 
+// Maps ordinary instructions to their SDWA counterparts
+def getSDWAOp : InstrMapping {
+  let FilterClass = "VOP";
+  let RowFields = ["OpName"];
+  let ColFields = ["AsmVariantName"];
+  let KeyCol = ["Default"];
+  let ValueCols = [["SDWA"]];
+}
+
 def getMaskedMIMGOp : InstrMapping {
   let FilterClass = "MIMG_Mask";
   let RowFields = ["Op"];

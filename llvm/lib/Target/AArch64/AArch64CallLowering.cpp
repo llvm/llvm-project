@@ -219,7 +219,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     auto &DL = F.getParent()->getDataLayout();
 
     ArgInfo OrigArg{VReg, Val->getType()};
-    setArgFlags(OrigArg, AttributeSet::ReturnIndex, DL, F);
+    setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,

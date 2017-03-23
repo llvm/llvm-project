@@ -362,8 +362,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   //  "target-features" attribute allowing it to be lowered.
   // FIXME: This should be changed to check to see if a specific
   //           attribute can not be inherited.
-  AttributeSet OldFnAttrs = oldFunction->getAttributes().getFnAttributes();
-  AttrBuilder AB(OldFnAttrs, AttributeSet::FunctionIndex);
+  AttributeList OldFnAttrs = oldFunction->getAttributes().getFnAttributes();
+  AttrBuilder AB(OldFnAttrs, AttributeList::FunctionIndex);
   for (const auto &Attr : AB.td_attrs())
     newFunction->addFnAttr(Attr.first, Attr.second);
 

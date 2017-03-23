@@ -4,7 +4,7 @@
 ; GCN-DAG: ; wave barrier
 ; GCN-NOT: s_barrier
 
-define void @test_wave_barrier() #0 {
+define amdgpu_kernel void @test_wave_barrier() #0 {
 entry:
   call void @llvm.amdgcn.wave.barrier() #1
   ret void

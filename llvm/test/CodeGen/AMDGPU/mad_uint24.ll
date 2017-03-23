@@ -11,7 +11,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; SI: v_mad_u32_u24
 ; VI: v_mad_u32_u24
 
-define void @u32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @u32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = shl i32 %a, 8
   %a_24 = lshr i32 %0, 8
@@ -32,7 +32,7 @@ entry:
 ; FIXME: Should be using scalar instructions here.
 ; GCN: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MAD]], 0, 16
-define void @i16_mad24(i32 addrspace(1)* %out, i16 %a, i16 %b, i16 %c) {
+define amdgpu_kernel void @i16_mad24(i32 addrspace(1)* %out, i16 %a, i16 %b, i16 %c) {
 entry:
   %0 = mul i16 %a, %b
   %1 = add i16 %0, %c
@@ -49,7 +49,7 @@ entry:
 ; EG: 8
 ; GCN: v_mad_u32_u24 [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
-define void @i8_mad24(i32 addrspace(1)* %out, i8 %a, i8 %b, i8 %c) {
+define amdgpu_kernel void @i8_mad24(i32 addrspace(1)* %out, i8 %a, i8 %b, i8 %c) {
 entry:
   %0 = mul i8 %a, %b
   %1 = add i8 %0, %c
@@ -68,7 +68,7 @@ entry:
 ; FUNC-LABEL: {{^}}i24_i32_i32_mad:
 ; EG: CNDE_INT
 ; SI: v_cndmask
-define void @i24_i32_i32_mad(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_kernel void @i24_i32_i32_mad(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   %0 = ashr i32 %a, 8
   %1 = icmp ne i32 %c, 0

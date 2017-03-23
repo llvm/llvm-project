@@ -13,11 +13,11 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindTable.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

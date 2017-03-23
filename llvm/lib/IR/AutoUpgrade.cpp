@@ -495,12 +495,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'o':
     // We only need to change the name to match the mangling including the
     // address space.
-    if (F->arg_size() == 2 && Name.startswith("objectsize.")) {
+    if (Name.startswith("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
+      if (F->arg_size() == 2 ||
+          F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::objectsize, Tys);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::objectsize,
+                                          Tys);
         return true;
       }
     }
@@ -1954,10 +1955,14 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), Builder.getFalse()});
     break;
 
-  case Intrinsic::objectsize:
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1)});
+  case Intrinsic::objectsize: {
+    Value *NullIsUnknownSize = CI->getNumArgOperands() == 2
+                                   ? Builder.getFalse()
+                                   : CI->getArgOperand(2);
+    NewCall = Builder.CreateCall(
+        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize});
     break;
+  }
 
   case Intrinsic::ctpop:
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0)});

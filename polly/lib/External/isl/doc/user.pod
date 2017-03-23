@@ -2362,7 +2362,8 @@ Points can be copied or freed using
 
 	__isl_give isl_point *isl_point_copy(
 		__isl_keep isl_point *pnt);
-	void isl_point_free(__isl_take isl_point *pnt);
+	__isl_null isl_point *isl_point_free(
+		__isl_take isl_point *pnt);
 
 A singleton set can be created from a point using
 
@@ -6274,10 +6275,19 @@ into the first expression.
 	__isl_give isl_set *isl_aff_le_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
+	__isl_give isl_basic_set *isl_aff_lt_basic_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
+	__isl_give isl_set *isl_aff_lt_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
 	__isl_give isl_basic_set *isl_aff_ge_basic_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
 	__isl_give isl_set *isl_aff_ge_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
+	__isl_give isl_basic_set *isl_aff_gt_basic_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
 	__isl_give isl_set *isl_pw_aff_eq_set(

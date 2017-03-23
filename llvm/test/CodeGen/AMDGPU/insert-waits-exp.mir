@@ -58,6 +58,6 @@ body:             |
     %vgpr1 = V_MOV_B32_e32 1065353216, implicit %exec
     %vgpr2 = V_MOV_B32_e32 1073741824, implicit %exec
     %vgpr3 = V_MOV_B32_e32 1082130432, implicit %exec
-    SI_RETURN killed %vgpr0, killed %vgpr1, killed %vgpr2, killed %vgpr3
+    SI_RETURN_TO_EPILOG killed %vgpr0, killed %vgpr1, killed %vgpr2, killed %vgpr3
 
 ...

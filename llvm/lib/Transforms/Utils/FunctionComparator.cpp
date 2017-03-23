@@ -74,14 +74,14 @@ int FunctionComparator::cmpMem(StringRef L, StringRef R) const {
   return L.compare(R);
 }
 
-int FunctionComparator::cmpAttrs(const AttributeSet L,
-                                 const AttributeSet R) const {
+int FunctionComparator::cmpAttrs(const AttributeList L,
+                                 const AttributeList R) const {
   if (int Res = cmpNumbers(L.getNumSlots(), R.getNumSlots()))
     return Res;
 
   for (unsigned i = 0, e = L.getNumSlots(); i != e; ++i) {
-    AttributeSet::iterator LI = L.begin(i), LE = L.end(i), RI = R.begin(i),
-                           RE = R.end(i);
+    AttributeList::iterator LI = L.begin(i), LE = L.end(i), RI = R.begin(i),
+                            RE = R.end(i);
     for (; LI != LE && RI != RE; ++LI, ++RI) {
       Attribute LA = *LI;
       Attribute RA = *RI;

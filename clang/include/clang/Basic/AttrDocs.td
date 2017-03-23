@@ -1963,6 +1963,55 @@ manipulating bits of the enumerator when issuing warnings.
   }];
 }
 
+def EnumExtensibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Attribute ``enum_extensibility`` is used to distinguish between enum definitions
+that are extensible and those that are not. The attribute can take either
+``closed`` or ``open`` as an argument. ``closed`` indicates a variable of the
+enum type takes a value that corresponds to one of the enumerators listed in the
+enum definition or, when the enum is annotated with ``flag_enum``, a value that
+can be constructed using values corresponding to the enumerators. ``open``
+indicates a variable of the enum type can take any values allowed by the
+standard and instructs clang to be more lenient when issuing warnings.
+
+.. code-block:: c
+
+  enum __attribute__((enum_extensibility(closed))) ClosedEnum {
+    A0, A1
+  };
+
+  enum __attribute__((enum_extensibility(open))) OpenEnum {
+    B0, B1
+  };
+
+  enum __attribute__((enum_extensibility(closed),flag_enum)) ClosedFlagEnum {
+    C0 = 1 << 0, C1 = 1 << 1
+  };
+
+  enum __attribute__((enum_extensibility(open),flag_enum)) OpenFlagEnum {
+    D0 = 1 << 0, D1 = 1 << 1
+  };
+
+  void foo1() {
+    enum ClosedEnum ce;
+    enum OpenEnum oe;
+    enum ClosedFlagEnum cfe;
+    enum OpenFlagEnum ofe;
+
+    ce = A1;           // no warnings
+    ce = 100;          // warning issued
+    oe = B1;           // no warnings
+    oe = 100;          // no warnings
+    cfe = C0 | C1;     // no warnings
+    cfe = C0 | C1 | 4; // warning issued
+    ofe = D0 | D1;     // no warnings
+    ofe = D0 | D1 | 4; // no warnings
+  }
+
+  }];
+}
+
 def EmptyBasesDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

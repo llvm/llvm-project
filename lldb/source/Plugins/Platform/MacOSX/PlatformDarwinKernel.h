@@ -18,7 +18,7 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "llvm/Support/FileSystem.h"
 

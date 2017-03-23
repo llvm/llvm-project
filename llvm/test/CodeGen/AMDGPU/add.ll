@@ -8,7 +8,7 @@
 ;SI: v_add_i32_e32 [[REG:v[0-9]+]], vcc, {{v[0-9]+, v[0-9]+}}
 ;SI-NOT: [[REG]]
 ;SI: buffer_store_dword [[REG]],
-define void @test1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load i32, i32 addrspace(1)* %in
   %b = load i32, i32 addrspace(1)* %b_ptr
@@ -24,7 +24,7 @@ define void @test1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 ;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 
-define void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
   %a = load <2 x i32>, <2 x i32> addrspace(1)* %in
   %b = load <2 x i32>, <2 x i32> addrspace(1)* %b_ptr
@@ -44,7 +44,7 @@ define void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
 ;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 
-define void @test4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
   %b = load <4 x i32>, <4 x i32> addrspace(1)* %b_ptr
@@ -71,7 +71,7 @@ define void @test4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
 ; SI: s_add_i32
 ; SI: s_add_i32
 ; SI: s_add_i32
-define void @test8(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <8 x i32> %b) {
+define amdgpu_kernel void @test8(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <8 x i32> %b) {
 entry:
   %0 = add <8 x i32> %a, %b
   store <8 x i32> %0, <8 x i32> addrspace(1)* %out
@@ -112,7 +112,7 @@ entry:
 ; SI: s_add_i32
 ; SI: s_add_i32
 ; SI: s_add_i32
-define void @test16(<16 x i32> addrspace(1)* %out, <16 x i32> %a, <16 x i32> %b) {
+define amdgpu_kernel void @test16(<16 x i32> addrspace(1)* %out, <16 x i32> %a, <16 x i32> %b) {
 entry:
   %0 = add <16 x i32> %a, %b
   store <16 x i32> %0, <16 x i32> addrspace(1)* %out
@@ -129,7 +129,7 @@ entry:
 ; EG-DAG: ADD_INT
 ; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
-define void @add64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @add64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %0 = add i64 %a, %b
   store i64 %0, i64 addrspace(1)* %out
@@ -150,7 +150,7 @@ entry:
 ; EG-DAG: ADD_INT
 ; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
-define void @add64_sgpr_vgpr(i64 addrspace(1)* %out, i64 %a, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @add64_sgpr_vgpr(i64 addrspace(1)* %out, i64 %a, i64 addrspace(1)* %in) {
 entry:
   %0 = load i64, i64 addrspace(1)* %in
   %1 = add i64 %a, %0
@@ -169,7 +169,7 @@ entry:
 ; EG-DAG: ADD_INT
 ; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
-define void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
+define amdgpu_kernel void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else

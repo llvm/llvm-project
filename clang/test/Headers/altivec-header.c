@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -faltivec -ffreestanding -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -faltivec -ffreestanding -emit-llvm -fno-lax-vector-conversions -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -faltivec -ffreestanding -emit-llvm -x c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -fno-lax-vector-conversions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -x c++ -o - %s | FileCheck %s
 
 #include <altivec.h>
 

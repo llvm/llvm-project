@@ -1345,8 +1345,8 @@
 		23EDE3371926AAD500F6A132 /* RegisterInfoInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegisterInfoInterface.h; path = Utility/RegisterInfoInterface.h; sourceTree = "<group>"; };
 		23EFE388193D1ABC00E54E54 /* SBTypeEnumMember.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBTypeEnumMember.h; path = include/lldb/API/SBTypeEnumMember.h; sourceTree = "<group>"; };
 		23EFE38A193D1AEC00E54E54 /* SBTypeEnumMember.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SBTypeEnumMember.cpp; path = source/API/SBTypeEnumMember.cpp; sourceTree = "<group>"; };
-		23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NativeRegisterContextRegisterInfo.h; path = include/lldb/Host/common/NativeRegisterContextRegisterInfo.h; sourceTree = "<group>"; };
-		23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NativeRegisterContextRegisterInfo.cpp; path = source/Host/common/NativeRegisterContextRegisterInfo.cpp; sourceTree = "<group>"; };
+		23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NativeRegisterContextRegisterInfo.h; path = Utility/NativeRegisterContextRegisterInfo.h; sourceTree = "<group>"; };
+		23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NativeRegisterContextRegisterInfo.cpp; path = Utility/NativeRegisterContextRegisterInfo.cpp; sourceTree = "<group>"; };
 		250D6AE11A9679270049CC70 /* FileSystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileSystem.cpp; sourceTree = "<group>"; };
 		25420ECC1A6490B8009ADBCB /* OptionValueChar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OptionValueChar.cpp; path = source/Interpreter/OptionValueChar.cpp; sourceTree = "<group>"; };
 		25420ECE1A64911B009ADBCB /* OptionValueChar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = OptionValueChar.h; path = include/lldb/Interpreter/OptionValueChar.h; sourceTree = "<group>"; };
@@ -2301,8 +2301,8 @@
 		26F5C37410F3F61B009D5894 /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = /usr/lib/libobjc.dylib; sourceTree = "<absolute>"; };
 		26F5C39010F3FA26009D5894 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		26F996A7119B79C300412154 /* ARM_DWARF_Registers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARM_DWARF_Registers.h; path = source/Utility/ARM_DWARF_Registers.h; sourceTree = "<group>"; };
-		26FA4315130103F400E71120 /* FileSpec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileSpec.h; path = include/lldb/Host/FileSpec.h; sourceTree = "<group>"; };
-		26FA43171301048600E71120 /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileSpec.cpp; sourceTree = "<group>"; };
+		26FA4315130103F400E71120 /* FileSpec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileSpec.h; path = include/lldb/Utility/FileSpec.h; sourceTree = "<group>"; };
+		26FA43171301048600E71120 /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileSpec.cpp; path = source/Utility/FileSpec.cpp; sourceTree = "<group>"; };
 		26FFC19314FC072100087D58 /* AuxVector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AuxVector.cpp; sourceTree = "<group>"; };
 		26FFC19414FC072100087D58 /* AuxVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AuxVector.h; sourceTree = "<group>"; };
 		26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DYLDRendezvous.cpp; sourceTree = "<group>"; };
@@ -2793,8 +2793,8 @@
 		9A22A160135E30370024DDC3 /* EmulationStateARM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EmulationStateARM.h; sourceTree = "<group>"; };
 		9A357582116CFDEE00E8ED2F /* SBValueList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBValueList.h; path = include/lldb/API/SBValueList.h; sourceTree = "<group>"; };
 		9A35758D116CFE0F00E8ED2F /* SBValueList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBValueList.cpp; path = source/API/SBValueList.cpp; sourceTree = "<group>"; };
-		9A35765E116E76A700E8ED2F /* StringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringList.h; path = include/lldb/Core/StringList.h; sourceTree = "<group>"; };
-		9A35765F116E76B900E8ED2F /* StringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringList.cpp; path = source/Core/StringList.cpp; sourceTree = "<group>"; };
+		9A35765E116E76A700E8ED2F /* StringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringList.h; path = include/lldb/Utility/StringList.h; sourceTree = "<group>"; };
+		9A35765F116E76B900E8ED2F /* StringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringList.cpp; path = source/Utility/StringList.cpp; sourceTree = "<group>"; };
 		9A357670116E7B5200E8ED2F /* SBStringList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBStringList.h; path = include/lldb/API/SBStringList.h; sourceTree = "<group>"; };
 		9A357672116E7B6400E8ED2F /* SBStringList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBStringList.cpp; path = source/API/SBStringList.cpp; sourceTree = "<group>"; };
 		9A3576A7116E9AB700E8ED2F /* SBHostOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBHostOS.h; path = include/lldb/API/SBHostOS.h; sourceTree = "<group>"; };
@@ -4181,6 +4181,8 @@
 		2682F168115ED9C800CCFF99 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				26FA4315130103F400E71120 /* FileSpec.h */,
+				26FA43171301048600E71120 /* FileSpec.cpp */,
 				26CF992414428766001E4138 /* AnsiTerminal.h */,
 				26F996A7119B79C300412154 /* ARM_DWARF_Registers.h */,
 				264A12FF137252C700875C42 /* ARM64_DWARF_Registers.h */,
@@ -4235,6 +4237,8 @@
 				2676A093119C93C8008A98EF /* StringExtractorGDBRemote.cpp */,
 				94380B8019940B0300BFE4A8 /* StringLexer.h */,
 				94380B8119940B0A00BFE4A8 /* StringLexer.cpp */,
+				9A35765E116E76A700E8ED2F /* StringList.h */,
+				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				94BA8B6E176F8CA0005A91B5 /* Range.h */,
 				94BA8B6C176F8C9B005A91B5 /* Range.cpp */,
 				6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */,
@@ -4504,6 +4508,8 @@
 		26B4666E11A2080F00CF6220 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */,
+				23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */,
 				B287E63E12EFAE2C00C9BEFE /* ARMDefines.h */,
 				B23DD24F12EDFAC1000C3894 /* ARMUtils.h */,
 				26954EBC1401EE8B00294D09 /* DynamicRegisterInfo.cpp */,
@@ -4729,8 +4735,6 @@
 				2623096E13D0EFFB006381D9 /* StreamBuffer.h */,
 				26BC7D7A10F1B77400F91463 /* StreamFile.h */,
 				26BC7E9210F1B85900F91463 /* StreamFile.cpp */,
-				9A35765E116E76A700E8ED2F /* StringList.h */,
-				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				26F2F8FD1B156678007857DE /* StructuredData.h */,
 				AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */,
 				26B167A41123BF5500DC7B4F /* ThreadSafeValue.h */,
@@ -5030,7 +5034,6 @@
 				260C6EA013011578005E16B0 /* File.h */,
 				3FDFDDC0199D34E2009756A7 /* FileCache.h */,
 				3FDFDDBE199D345E009756A7 /* FileCache.cpp */,
-				26FA4315130103F400E71120 /* FileSpec.h */,
 				3FDFDDC1199D34E2009756A7 /* FileSystem.h */,
 				26BC7DD410F1B7D500F91463 /* Host.h */,
 				3FDFED1F19BA6D55009756A7 /* HostGetOpt.h */,
@@ -5302,8 +5305,6 @@
 				26E3EEBD11A9870400FBADB6 /* Unwind.h */,
 				264D8D4E13661BCC003A368F /* UnwindAssembly.h */,
 				264D8D4F13661BD7003A368F /* UnwindAssembly.cpp */,
-				23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */,
-				23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */,
 			);
 			name = Target;
 			sourceTree = "<group>";
@@ -5857,7 +5858,6 @@
 				25420ED11A649D88009ADBCB /* PipeBase.cpp */,
 				26CFDCA2186163A4000E63E5 /* Editline.cpp */,
 				260C6EA213011581005E16B0 /* File.cpp */,
-				26FA43171301048600E71120 /* FileSpec.cpp */,
 				69A01E1C1236C5D400C660B5 /* Host.cpp */,
 				3FDFE53419A29327009756A7 /* HostInfoBase.cpp */,
 				3FDFED2419BA6D96009756A7 /* HostNativeThreadBase.cpp */,

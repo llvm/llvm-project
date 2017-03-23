@@ -10,7 +10,7 @@
 
 declare i32 @external_function(i32) nounwind
 
-define void @test_call_external(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_call_external(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load i32, i32 addrspace(1)* %in
   %b = load i32, i32 addrspace(1)* %b_ptr
@@ -25,7 +25,7 @@ define i32 @defined_function(i32 %x) nounwind noinline {
   ret i32 %y
 }
 
-define void @test_call(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_call(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load i32, i32 addrspace(1)* %in
   %b = load i32, i32 addrspace(1)* %b_ptr
@@ -35,7 +35,7 @@ define void @test_call(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   ret void
 }
 
-define void @test_tail_call(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_tail_call(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load i32, i32 addrspace(1)* %in
   %b = load i32, i32 addrspace(1)* %b_ptr

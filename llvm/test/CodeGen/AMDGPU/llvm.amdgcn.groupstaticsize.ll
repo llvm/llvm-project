@@ -9,7 +9,7 @@
 
 ; CHECK-LABEL: {{^}}groupstaticsize_test0:
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0x800{{$}}
-define void @groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %lds_size) #0 {
+define amdgpu_kernel void @groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %lds_size) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 64
   %static_lds_size = call i32 @llvm.amdgcn.groupstaticsize() #1
@@ -23,7 +23,7 @@ define void @groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %
 
 ; CHECK-LABEL: {{^}}groupstaticsize_test1:
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0xc00{{$}}
-define void @groupstaticsize_test1(float addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %lds_size) {
+define amdgpu_kernel void @groupstaticsize_test1(float addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %lds_size) {
 entry:
   %static_lds_size = call i32 @llvm.amdgcn.groupstaticsize() #1
   store i32 %static_lds_size, i32 addrspace(1)* %lds_size, align 4
@@ -51,7 +51,7 @@ endif:                                            ; preds = %else, %if
 ; Exceeds 16-bit simm limit of s_movk_i32
 ; CHECK-LABEL: {{^}}large_groupstaticsize:
 ; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x4000{{$}}
-define void @large_groupstaticsize(i32 addrspace(1)* %size, i32 %idx) #0 {
+define amdgpu_kernel void @large_groupstaticsize(i32 addrspace(1)* %size, i32 %idx) #0 {
   %gep = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(3)* @large, i32 0, i32 %idx
   store volatile i32 0, i32 addrspace(3)* %gep
   %static_lds_size = call i32 @llvm.amdgcn.groupstaticsize()

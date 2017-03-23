@@ -21,7 +21,6 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileCache.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -31,6 +30,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -435,9 +435,12 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
 }
 
 lldb::user_id_t PlatformPOSIX::GetFileSize(const FileSpec &file_spec) {
-  if (IsHost())
-    return FileSystem::GetFileSize(file_spec);
-  else if (m_remote_platform_sp)
+  if (IsHost()) {
+    uint64_t Size;
+    if (llvm::sys::fs::file_size(file_spec.GetPath(), Size))
+      return 0;
+    return Size;
+  } else if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFileSize(file_spec);
   else
     return Platform::GetFileSize(file_spec);
@@ -463,7 +466,7 @@ bool PlatformPOSIX::GetFileExists(const FileSpec &file_spec) {
 
 Error PlatformPOSIX::Unlink(const FileSpec &file_spec) {
   if (IsHost())
-    return FileSystem::Unlink(file_spec);
+    return llvm::sys::fs::remove(file_spec.GetPath());
   else if (m_remote_platform_sp)
     return m_remote_platform_sp->Unlink(file_spec);
   else

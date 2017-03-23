@@ -24,7 +24,6 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/StringList.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"
@@ -34,6 +33,7 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationClient.h"

@@ -63,6 +63,7 @@ void addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       const llvm::opt::ArgList &Args);
 
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);
+llvm::opt::Arg *getLastProfileSampleUseArg(const llvm::opt::ArgList &Args);
 
 bool isObjCAutoRefCount(const llvm::opt::ArgList &Args);
 

@@ -2315,7 +2315,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function *F = MF.getFunction();
-  const AttributeSet &PAL = F->getAttributes();
+  const AttributeList &PAL = F->getAttributes();
   const TargetLowering *TLI = STI.getTargetLowering();
 
   SDValue Root = DAG.getRoot();

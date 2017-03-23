@@ -296,13 +296,6 @@ public:
     return AddrSpace == 0 ? PointerAlign : getPointerAlignV(AddrSpace);
   }
 
-  /// \brief Return the "preferred" width of pointers on this target, for the
-  /// specified address space.  This can be different from "getPointerWidth" in
-  /// cases where the final address space is not yet known.
-  virtual uint64_t getPreferredPointerWidth(unsigned AddrSpace) const {
-    return getPointerWidth(AddrSpace);
-  }
-
   /// \brief Return the maximum width of pointers on this target.
   virtual uint64_t getMaxPointerWidth() const {
     return PointerWidth;
@@ -830,8 +823,9 @@ public:
   /// \brief Set forced language options.
   ///
   /// Apply changes to the target information with respect to certain
-  /// language options which change the target configuration.
-  virtual void adjust(const LangOptions &Opts);
+  /// language options which change the target configuration and adjust
+  /// the language based on the target options where applicable.
+  virtual void adjust(LangOptions &Opts);
 
   /// \brief Adjust target options based on codegen options.
   virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,

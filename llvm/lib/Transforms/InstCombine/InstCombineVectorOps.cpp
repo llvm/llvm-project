@@ -645,6 +645,36 @@ static Instruction *foldInsSequenceIntoBroadcast(InsertElementInst &InsElt) {
   return new ShuffleVectorInst(InsertFirst, UndefValue::get(VT), ZeroMask);
 }
 
+/// If we have an insertelement instruction feeding into another insertelement
+/// and the 2nd is inserting a constant into the vector, canonicalize that
+/// constant insertion before the insertion of a variable:
+///
+/// insertelement (insertelement X, Y, IdxC1), ScalarC, IdxC2 -->
+/// insertelement (insertelement X, ScalarC, IdxC2), Y, IdxC1
+///
+/// This has the potential of eliminating the 2nd insertelement instruction
+/// via constant folding of the scalar constant into a vector constant.
+static Instruction *hoistInsEltConst(InsertElementInst &InsElt2,
+                                     InstCombiner::BuilderTy &Builder) {
+  auto *InsElt1 = dyn_cast<InsertElementInst>(InsElt2.getOperand(0));
+  if (!InsElt1 || !InsElt1->hasOneUse())
+    return nullptr;
+
+  Value *X, *Y;
+  Constant *ScalarC;
+  ConstantInt *IdxC1, *IdxC2;
+  if (match(InsElt1->getOperand(0), m_Value(X)) &&
+      match(InsElt1->getOperand(1), m_Value(Y)) && !isa<Constant>(Y) &&
+      match(InsElt1->getOperand(2), m_ConstantInt(IdxC1)) &&
+      match(InsElt2.getOperand(1), m_Constant(ScalarC)) &&
+      match(InsElt2.getOperand(2), m_ConstantInt(IdxC2)) && IdxC1 != IdxC2) {
+    Value *NewInsElt1 = Builder.CreateInsertElement(X, ScalarC, IdxC2);
+    return InsertElementInst::Create(NewInsElt1, Y, IdxC1);
+  }
+
+  return nullptr;
+}
+
 /// insertelt (shufflevector X, CVec, Mask|insertelt X, C1, CIndex1), C, CIndex
 /// --> shufflevector X, CVec', Mask'
 static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
@@ -805,6 +835,9 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE))
     return Shuf;
+
+  if (Instruction *NewInsElt = hoistInsEltConst(IE, *Builder))
+    return NewInsElt;
 
   // Turn a sequence of inserts that broadcasts a scalar into a single
   // insert + shufflevector.

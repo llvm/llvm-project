@@ -9,7 +9,7 @@
 ; R600: BFI_INT
 ; SI:   @bfi_def
 ; SI:   v_bfi_b32
-define void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = xor i32 %x, -1
   %1 = and i32 %z, %0
@@ -25,7 +25,7 @@ entry:
 ; R600: BFI_INT
 ; SI:   @bfi_sha256_ch
 ; SI:   v_bfi_b32
-define void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = xor i32 %y, %z
   %1 = and i32 %x, %0
@@ -42,7 +42,7 @@ entry:
 ; SI: v_xor_b32_e32 [[DST:v[0-9]+]], {{s[0-9]+, v[0-9]+}}
 ; SI: v_bfi_b32 {{v[0-9]+}}, [[DST]], {{s[0-9]+, v[0-9]+}}
 
-define void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = and i32 %x, %z
   %1 = or i32 %x, %z

@@ -64,8 +64,8 @@
 #include <vector>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Predicate.h"
+#include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
 namespace line_editor {

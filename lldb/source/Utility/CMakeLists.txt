@@ -7,6 +7,7 @@ add_lldb_library(lldbUtility
   DataExtractor.cpp
   Error.cpp
   FastDemangle.cpp
+  FileSpec.cpp
   History.cpp
   JSON.cpp
   LLDBAssert.cpp
@@ -24,6 +25,7 @@ add_lldb_library(lldbUtility
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringLexer.cpp
+  StringList.cpp
   TaskPool.cpp
   TildeExpressionResolver.cpp
   UserID.cpp

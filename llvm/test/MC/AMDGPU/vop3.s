@@ -390,6 +390,16 @@ v_mqsad_u32_u8 v[0:3], s[2:3], v4, v[0:3]
 // VI: v_mqsad_u32_u8 v[0:3], s[2:3], v4, v[0:3] ; encoding: [0x00,0x00,0xe7,0xd1,0x02,0x08,0x02,0x04]
 // NOSI: error: instruction not supported on this GPU
 
+v_mad_u64_u32 v[5:6], s[12:13], s1, 0, 0
+// CI: v_mad_u64_u32 v[5:6], s[12:13], s1, 0, 0 ; encoding: [0x05,0x0c,0xec,0xd2,0x01,0x00,0x01,0x02]
+// VI: v_mad_u64_u32 v[5:6], s[12:13], s1, 0, 0 ; encoding: [0x05,0x0c,0xe8,0xd1,0x01,0x00,0x01,0x02]
+// NOSI: error: instruction not supported on this GPU
+
+v_mad_i64_i32 v[5:6], s[12:13], s1, 0, v[254:255]
+// CI: v_mad_i64_i32 v[5:6], s[12:13], s1, 0, v[254:255] ; encoding: [0x05,0x0c,0xee,0xd2,0x01,0x00,0xf9,0x07]
+// VI: v_mad_i64_i32 v[5:6], s[12:13], s1, 0, v[254:255] ; encoding: [0x05,0x0c,0xe9,0xd1,0x01,0x00,0xf9,0x07]
+// NOSI: error: instruction not supported on this GPU
+
 //
 // Modifier tests:
 //

@@ -1442,10 +1442,22 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
     case Intrinsic::round:
     case Intrinsic::nearbyint:
     case Intrinsic::trunc: {
+      Value *Src = II->getArgOperand(0);
+      if (!Src->hasOneUse())
+        break;
+
+      // Except for fabs, this transformation requires the input of the unary FP
+      // operation to be itself an fpext from the type to which we're
+      // truncating.
+      if (II->getIntrinsicID() != Intrinsic::fabs) {
+        FPExtInst *FPExtSrc = dyn_cast<FPExtInst>(Src);
+        if (!FPExtSrc || FPExtSrc->getOperand(0)->getType() != CI.getType())
+          break;
+      }
+
       // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
-      Value *InnerTrunc = Builder->CreateFPTrunc(II->getArgOperand(0),
-                                                 CI.getType());
+      Value *InnerTrunc = Builder->CreateFPTrunc(Src, CI.getType());
       Type *IntrinsicType[] = { CI.getType() };
       Function *Overload = Intrinsic::getDeclaration(
         CI.getModule(), II->getIntrinsicID(), IntrinsicType);

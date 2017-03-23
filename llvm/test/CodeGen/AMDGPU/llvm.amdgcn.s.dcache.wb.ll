@@ -7,7 +7,7 @@ declare void @llvm.amdgcn.s.waitcnt(i32) #0
 ; VI-NEXT: ; BB#0:
 ; VI-NEXT: s_dcache_wb ; encoding: [0x00,0x00,0x84,0xc0,0x00,0x00,0x00,0x00]
 ; VI-NEXT: s_endpgm
-define void @test_s_dcache_wb() #0 {
+define amdgpu_kernel void @test_s_dcache_wb() #0 {
   call void @llvm.amdgcn.s.dcache.wb()
   ret void
 }
@@ -16,7 +16,7 @@ define void @test_s_dcache_wb() #0 {
 ; VI-NEXT: ; BB#0:
 ; VI-NEXT: s_dcache_wb
 ; VI: s_waitcnt lgkmcnt(0) ; encoding
-define void @test_s_dcache_wb_insert_wait() #0 {
+define amdgpu_kernel void @test_s_dcache_wb_insert_wait() #0 {
   call void @llvm.amdgcn.s.dcache.wb()
   call void @llvm.amdgcn.s.waitcnt(i32 0)
   br label %end

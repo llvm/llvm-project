@@ -64,10 +64,10 @@ define i8* @test_simplify5() {
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
   %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-; CHECK-NEXT: %len = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false)
+; CHECK-NEXT: %len = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false)
 ; CHECK-NEXT: %1 = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 %len)
 ; CHECK-NEXT: ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 11)
-  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false)
+  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false, i1 false)
   %ret = call i8* @__stpcpy_chk(i8* %dst, i8* %src, i32 %len)
   ret i8* %ret
 }
@@ -81,7 +81,7 @@ define i8* @test_simplify6() {
 ; CHECK-NEXT: %strlen = call i32 @strlen(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0))
 ; CHECK-NEXT: %1 = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 %strlen
 ; CHECK-NEXT: ret i8* %1
-  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false)
+  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false, i1 false)
   %ret = call i8* @__stpcpy_chk(i8* %dst, i8* %dst, i32 %len)
   ret i8* %ret
 }
@@ -100,4 +100,4 @@ define i8* @test_no_simplify1() {
 }
 
 declare i8* @__stpcpy_chk(i8*, i8*, i32) nounwind
-declare i32 @llvm.objectsize.i32.p0i8(i8*, i1) nounwind readonly
+declare i32 @llvm.objectsize.i32.p0i8(i8*, i1, i1) nounwind readonly

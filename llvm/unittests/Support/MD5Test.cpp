@@ -63,8 +63,10 @@ TEST(MD5HashTest, MD5) {
   std::array<uint8_t, 16> Vec = MD5::hash(Input);
   MD5::MD5Result MD5Res;
   SmallString<32> Res;
-  memcpy(MD5Res, Vec.data(), Vec.size());
+  memcpy(MD5Res.Bytes.data(), Vec.data(), Vec.size());
   MD5::stringifyResult(MD5Res, Res);
   EXPECT_EQ(Res, "c3fcd3d76192e4007dfb496cca67e13b");
+  EXPECT_EQ(0x3be167ca6c49fb7dULL, MD5Res.high());
+  EXPECT_EQ(0x00e49261d7d3fcc3ULL, MD5Res.low());
 }
 }

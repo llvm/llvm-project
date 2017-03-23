@@ -6,7 +6,7 @@
 
 ; EG: CF_END
 ; SI: s_endpgm
-define void @kernel(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out
   ret void

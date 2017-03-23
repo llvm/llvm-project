@@ -11,13 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Path.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/COFF.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/MachO.h"
 #include "llvm/Support/Process.h"
 #include <cctype>
 #include <cstring>
@@ -922,6 +923,36 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
   if (BytesRead < 0 || BytesWritten < 0)
     return std::error_code(errno, std::generic_category());
   return std::error_code();
+}
+
+ErrorOr<MD5::MD5Result> md5_contents(int FD) {
+  MD5 Hash;
+
+  constexpr size_t BufSize = 4096;
+  std::vector<uint8_t> Buf(BufSize);
+  int BytesRead = 0;
+  for (;;) {
+    BytesRead = read(FD, Buf.data(), BufSize);
+    if (BytesRead <= 0)
+      break;
+    Hash.update(makeArrayRef(Buf.data(), BytesRead));
+  }
+
+  if (BytesRead < 0)
+    return std::error_code(errno, std::generic_category());
+  MD5::MD5Result Result;
+  Hash.final(Result);
+  return Result;
+}
+
+ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
+  int FD;
+  if (auto EC = openFileForRead(Path, FD))
+    return EC;
+
+  auto Result = md5_contents(FD);
+  close(FD);
+  return Result;
 }
 
 bool exists(file_status status) {

@@ -11,7 +11,7 @@
 ; to do its transfomation, however now that we are using local memory for
 ; allocas, the transformation isn't happening.
 
-define void @_Z9chk1D_512v() #0 {
+define amdgpu_kernel void @_Z9chk1D_512v() #0 {
 entry:
   %a0 = alloca i32, align 4
   %b0 = alloca i32, align 4

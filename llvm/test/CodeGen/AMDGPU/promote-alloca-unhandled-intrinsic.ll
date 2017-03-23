@@ -8,7 +8,7 @@ declare void @llvm.stackrestore(i8*) #2
 ; CHECK-LABEL: @try_promote_unhandled_intrinsic(
 ; CHECK: alloca
 ; CHECK: call void @llvm.stackrestore(i8* %tmp1)
-define void @try_promote_unhandled_intrinsic(i32 addrspace(1)* %arg) #2 {
+define amdgpu_kernel void @try_promote_unhandled_intrinsic(i32 addrspace(1)* %arg) #2 {
 bb:
   %tmp = alloca i32, align 4
   %tmp1 = bitcast i32* %tmp to i8*

@@ -55,14 +55,15 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
 
   // Conservatively require the attributes of the call to match those of
   // the return. Ignore noalias because it doesn't affect the call sequence.
-  AttributeSet CallerAttrs = F->getAttributes();
-  if (AttrBuilder(CallerAttrs, AttributeSet::ReturnIndex)
-      .removeAttribute(Attribute::NoAlias).hasAttributes())
+  AttributeList CallerAttrs = F->getAttributes();
+  if (AttrBuilder(CallerAttrs, AttributeList::ReturnIndex)
+          .removeAttribute(Attribute::NoAlias)
+          .hasAttributes())
     return false;
 
   // It's not safe to eliminate the sign / zero extension of the return value.
-  if (CallerAttrs.hasAttribute(AttributeSet::ReturnIndex, Attribute::ZExt) ||
-      CallerAttrs.hasAttribute(AttributeSet::ReturnIndex, Attribute::SExt))
+  if (CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt) ||
+      CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
     return false;
 
   // Check if the only use is a function return node.
@@ -2981,7 +2982,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDValue Op1, APInt d,
 SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                       SelectionDAG &DAG,
                                       std::vector<SDNode *> *Created) const {
-  AttributeSet Attr = DAG.getMachineFunction().getFunction()->getAttributes();
+  AttributeList Attr = DAG.getMachineFunction().getFunction()->getAttributes();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N,0); // Lower SDIV as SDIV

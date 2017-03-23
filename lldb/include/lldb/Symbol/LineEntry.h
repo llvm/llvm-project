@@ -11,7 +11,7 @@
 #define liblldb_LineEntry_h_
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

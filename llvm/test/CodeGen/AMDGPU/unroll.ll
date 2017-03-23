@@ -9,7 +9,7 @@
 ; CHECK-LABEL: @test
 ; CHECK-NOT: alloca
 ; CHECK: store i32 5, i32 addrspace(1)* %out
-define void @test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
 entry:
   %0 = alloca [32 x i32]
   br label %loop.header

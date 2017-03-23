@@ -127,7 +127,9 @@ static uint64_t getObjectSize(const Value *V, const DataLayout &DL,
                               const TargetLibraryInfo &TLI,
                               bool RoundToAlign = false) {
   uint64_t Size;
-  if (getObjectSize(V, Size, DL, &TLI, RoundToAlign))
+  ObjectSizeOpts Opts;
+  Opts.RoundToAlign = RoundToAlign;
+  if (getObjectSize(V, Size, DL, &TLI, Opts))
     return Size;
   return MemoryLocation::UnknownSize;
 }

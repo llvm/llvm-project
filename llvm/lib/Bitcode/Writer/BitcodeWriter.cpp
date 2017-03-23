@@ -709,22 +709,22 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
 }
 
 void ModuleBitcodeWriter::writeAttributeGroupTable() {
-  const std::vector<AttributeSet> &AttrGrps = VE.getAttributeGroups();
+  const std::vector<AttributeList> &AttrGrps = VE.getAttributeGroups();
   if (AttrGrps.empty()) return;
 
   Stream.EnterSubblock(bitc::PARAMATTR_GROUP_BLOCK_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
   for (unsigned i = 0, e = AttrGrps.size(); i != e; ++i) {
-    AttributeSet AS = AttrGrps[i];
+    AttributeList AS = AttrGrps[i];
     for (unsigned i = 0, e = AS.getNumSlots(); i != e; ++i) {
-      AttributeSet A = AS.getSlotAttributes(i);
+      AttributeList A = AS.getSlotAttributes(i);
 
       Record.push_back(VE.getAttributeGroupID(A));
       Record.push_back(AS.getSlotIndex(i));
 
-      for (AttributeSet::iterator I = AS.begin(0), E = AS.end(0);
-           I != E; ++I) {
+      for (AttributeList::iterator I = AS.begin(0), E = AS.end(0); I != E;
+           ++I) {
         Attribute Attr = *I;
         if (Attr.isEnumAttribute()) {
           Record.push_back(0);
@@ -756,14 +756,14 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
 }
 
 void ModuleBitcodeWriter::writeAttributeTable() {
-  const std::vector<AttributeSet> &Attrs = VE.getAttributes();
+  const std::vector<AttributeList> &Attrs = VE.getAttributes();
   if (Attrs.empty()) return;
 
   Stream.EnterSubblock(bitc::PARAMATTR_BLOCK_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
   for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
-    const AttributeSet &A = Attrs[i];
+    const AttributeList &A = Attrs[i];
     for (unsigned i = 0, e = A.getNumSlots(); i != e; ++i)
       Record.push_back(VE.getAttributeGroupID(A.getSlotAttributes(i)));
 

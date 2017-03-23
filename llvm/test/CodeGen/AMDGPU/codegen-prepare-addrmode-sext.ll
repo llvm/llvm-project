@@ -8,7 +8,7 @@
 ; SI-LLC-LABEL: {{^}}test:
 ; SI-LLC: s_mul_i32
 ; SI-LLC-NOT: mul
-define void @test(i8 addrspace(1)* nocapture readonly %in, i32 %a, i8 %b) {
+define amdgpu_kernel void @test(i8 addrspace(1)* nocapture readonly %in, i32 %a, i8 %b) {
 entry:
   %0 = mul nsw i32 %a, 3
   %1 = sext i32 %0 to i64

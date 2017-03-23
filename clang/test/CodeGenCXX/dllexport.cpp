@@ -108,8 +108,8 @@ inline int __declspec(dllexport) inlineStaticLocalsFunc() {
 template<typename T> __declspec(dllexport) int VarTmplDef;
 INSTVAR(VarTmplDef<ExplicitInst_Exported>)
 
-// MSC-DAG: @"\01??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external dllexport global
-// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external dllexport global
+// MSC-DAG: @"\01??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external global
+// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external global
 template<typename T> __declspec(dllexport) int VarTmplImplicitDef;
 USEVAR(VarTmplImplicitDef<ImplicitInst_Exported>)
 
@@ -528,7 +528,7 @@ struct __declspec(dllexport) T {
   // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?a@T@@QAEXXZ"
 
   static int b;
-  // M32-DAG: @"\01?b@T@@2HA" = external dllexport global i32
+  // M32-DAG: @"\01?b@T@@2HA" = external global i32
 
   static int c;
   // M32-DAG: @"\01?c@T@@2HA" = dllexport global i32 0, align 4

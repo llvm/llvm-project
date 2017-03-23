@@ -284,6 +284,14 @@ IsRGBA(char c) {
   }
 }
 
+// OpenCL v1.1, s6.1.7
+// The component swizzle length must be in accordance with the acceptable
+// vector sizes.
+static bool IsValidOpenCLComponentSwizzleLength(unsigned len)
+{
+  return (len >= 1 && len <= 4) || len == 8 || len == 16;
+}
+
 /// Check an ext-vector component access expression.
 ///
 /// VK should be set in advance to the value kind of the base
@@ -373,6 +381,19 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
           << baseType << SourceRange(CompLoc);
         return QualType();
       }
+    }
+  }
+
+  if (!HalvingSwizzle) {
+    unsigned SwizzleLength = CompName->getLength();
+
+    if (HexSwizzle)
+      SwizzleLength--;
+
+    if (IsValidOpenCLComponentSwizzleLength(SwizzleLength) == false) {
+      S.Diag(OpLoc, diag::err_opencl_ext_vector_component_invalid_length)
+        << SwizzleLength << SourceRange(CompLoc);
+      return QualType();
     }
   }
 

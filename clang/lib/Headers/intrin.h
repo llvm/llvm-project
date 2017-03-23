@@ -869,50 +869,7 @@ _InterlockedCompareExchange64_rel(__int64 volatile *_Destination,
   return _Comparand;
 }
 #endif
-/*----------------------------------------------------------------------------*\
-|* readfs, readgs
-|* (Pointers in address space #256 and #257 are relative to the GS and FS
-|* segment registers, respectively.)
-\*----------------------------------------------------------------------------*/
-#define __ptr_to_addr_space(__addr_space_nbr, __type, __offset)              \
-    ((volatile __type __attribute__((__address_space__(__addr_space_nbr)))*) \
-    (__offset))
 
-#ifdef __i386__
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-__readfsbyte(unsigned long __offset) {
-  return *__ptr_to_addr_space(257, unsigned char, __offset);
-}
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
-__readfsword(unsigned long __offset) {
-  return *__ptr_to_addr_space(257, unsigned short, __offset);
-}
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-__readfsqword(unsigned long __offset) {
-  return *__ptr_to_addr_space(257, unsigned __int64, __offset);
-}
-#endif
-#ifdef __x86_64__
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-__readgsbyte(unsigned long __offset) {
-  return *__ptr_to_addr_space(256, unsigned char, (unsigned long long)__offset);
-}
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
-__readgsword(unsigned long __offset) {
-  return *__ptr_to_addr_space(256, unsigned short,
-                              (unsigned long long)__offset);
-}
-static __inline__ unsigned long __DEFAULT_FN_ATTRS
-__readgsdword(unsigned long __offset) {
-  return *__ptr_to_addr_space(256, unsigned long, (unsigned long long)__offset);
-}
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-__readgsqword(unsigned long __offset) {
-  return *__ptr_to_addr_space(256, unsigned __int64,
-                              (unsigned long long)__offset);
-}
-#endif
-#undef __ptr_to_addr_space
 /*----------------------------------------------------------------------------*\
 |* movs, stos
 \*----------------------------------------------------------------------------*/

@@ -1,7 +1,7 @@
 # RUN: llc -run-pass si-insert-waits -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
 --- |
 
-  define void @vccz_corrupt_workaround(float %cond, i32 addrspace(1)* %out) #0 {
+  define amdgpu_kernel void @vccz_corrupt_workaround(float %cond, i32 addrspace(1)* %out) #0 {
   entry:
     %cmp0 = fcmp oeq float %cond, 0.000000e+00
     br i1 %cmp0, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
@@ -20,7 +20,7 @@
     ret void
   }
 
-  define void @vccz_corrupt_undef_vcc(float %cond, i32 addrspace(1)* %out) #0 {
+  define amdgpu_kernel void @vccz_corrupt_undef_vcc(float %cond, i32 addrspace(1)* %out) #0 {
   entry:
     br i1 undef, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
 

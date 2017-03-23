@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader:
 ; GCN-DAG: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -7,6 +8,7 @@
 ; GCN-DAG: s_mov_b32 s10, -1
 ; CI-DAG: s_mov_b32 s11, 0xe8f000
 ; VI-DAG: s_mov_b32 s11, 0xe80000
+; GFX9-DAG: s_mov_b32 s11, 0xe00000
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
@@ -28,6 +30,7 @@ define amdgpu_ps void @large_alloca_pixel_shader(i32 %x, i32 %y) #0 {
 ; GCN-DAG: s_mov_b32 s10, -1
 ; CI-DAG: s_mov_b32 s11, 0xe8f000
 ; VI-DAG: s_mov_b32 s11, 0xe80000
+; GFX9-DAG: s_mov_b32 s11, 0xe00000
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen

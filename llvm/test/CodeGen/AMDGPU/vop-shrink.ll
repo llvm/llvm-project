@@ -8,7 +8,7 @@
 
 ; ModuleID = 'vop-shrink.ll'
 
-define void @sub_rev(i32 addrspace(1)* %out, <4 x i32> %sgpr, i32 %cond) {
+define amdgpu_kernel void @sub_rev(i32 addrspace(1)* %out, <4 x i32> %sgpr, i32 %cond) {
 entry:
   %vgpr = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tmp = icmp eq i32 %cond, 0
@@ -35,7 +35,7 @@ endif:                                            ; preds = %else, %if
 
 ; FUNC-LABEL: {{^}}add_fold:
 ; SI: v_add_f32_e32 v{{[0-9]+}}, 0x44800000
-define void @add_fold(float addrspace(1)* %out) {
+define amdgpu_kernel void @add_fold(float addrspace(1)* %out) {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = uitofp i32 %tmp to float

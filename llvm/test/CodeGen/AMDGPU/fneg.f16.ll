@@ -4,7 +4,7 @@
 
 ; FIXME: Should be able to do scalar op
 ; GCN-LABEL: {{^}}s_fneg_f16:
-define void @s_fneg_f16(half addrspace(1)* %out, half %in) #0 {
+define amdgpu_kernel void @s_fneg_f16(half addrspace(1)* %out, half %in) #0 {
   %fneg = fsub half -0.0, %in
   store half %fneg, half addrspace(1)* %out
   ret void
@@ -18,7 +18,7 @@ define void @s_fneg_f16(half addrspace(1)* %out, half %in) #0 {
 ; GCN: v_xor_b32_e32 [[XOR:v[0-9]+]], 0x8000, [[VAL]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[XOR]]
 ; SI: buffer_store_short [[XOR]]
-define void @v_fneg_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fneg_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds half, half addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds half, half addrspace(1)* %in, i32 %tid
@@ -34,7 +34,7 @@ define void @v_fneg_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
 ; XCI: s_xor_b32 [[XOR:s[0-9]+]], [[NEG_VALUE]], 0x8000{{$}}
 ; CI: v_xor_b32_e32 [[XOR:v[0-9]+]], 0x8000, [[NEG_VALUE]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[XOR]]
-define void @fneg_free_f16(half addrspace(1)* %out, i16 %in) #0 {
+define amdgpu_kernel void @fneg_free_f16(half addrspace(1)* %out, i16 %in) #0 {
   %bc = bitcast i16 %in to half
   %fsub = fsub half -0.0, %bc
   store half %fsub, half addrspace(1)* %out
@@ -52,7 +52,7 @@ define void @fneg_free_f16(half addrspace(1)* %out, i16 %in) #0 {
 
 ; VI-NOT: [[NEG_VALUE]]
 ; VI: v_mul_f16_e64 v{{[0-9]+}}, -[[NEG_VALUE]], [[NEG_VALUE]]
-define void @v_fneg_fold_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fneg_fold_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %val = load half, half addrspace(1)* %in
   %fsub = fsub half -0.0, %val
   %fmul = fmul half %fsub, %val
@@ -73,7 +73,7 @@ define void @v_fneg_fold_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0
 ; VI: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
 
 ; GFX9: v_xor_b32_e32 v{{[0-9]+}}, 0x80008000, v{{[0-9]+}}
-define void @s_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
+define amdgpu_kernel void @s_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %in
   store <2 x half> %fneg, <2 x half> addrspace(1)* %out
   ret void
@@ -82,7 +82,7 @@ define void @s_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
 ; GCN-LABEL: {{^}}v_fneg_v2f16:
 ; GCN: flat_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_xor_b32_e32 v{{[0-9]+}}, 0x80008000, [[VAL]]
-define void @v_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
@@ -98,7 +98,7 @@ define void @v_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)
 
 ; GFX9: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GFX9: v_xor_b32_e32 v{{[0-9]+}}, 0x80008000, [[VVAL]]
-define void @fneg_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @fneg_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
   %bc = bitcast i32 %in to <2 x half>
   %fsub = fsub <2 x half> <half -0.0, half -0.0>, %bc
   store <2 x half> %fsub, <2 x half> addrspace(1)* %out
@@ -120,7 +120,7 @@ define void @fneg_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
 ; VI: v_mul_f16_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
 
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} neg_lo:[1,0] neg_hi:[1,0]{{$}}
-define void @v_fneg_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fneg_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %val = load <2 x half>, <2 x half> addrspace(1)* %in
   %fsub = fsub <2 x half> <half -0.0, half -0.0>, %val
   %fmul = fmul <2 x half> %fsub, %val

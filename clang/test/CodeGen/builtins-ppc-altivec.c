@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -triple powerpc-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s
-// RUN: %clang_cc1 -faltivec -triple powerpc64-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s
-// RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -ferror-limit 0 -DNO_ALTIVEC -o - 2>&1 \

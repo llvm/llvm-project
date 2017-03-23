@@ -16,7 +16,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 

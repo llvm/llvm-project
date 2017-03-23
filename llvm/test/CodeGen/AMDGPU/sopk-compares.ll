@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.groupstaticsize() #1
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_inline_imm:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 4{{$}}
-define void @br_scc_eq_i32_inline_imm(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_inline_imm(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 4
   br i1 %cmp0, label %endif, label %if
@@ -25,7 +25,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_simm16_max:
 ; GCN: s_cmpk_eq_i32 s{{[0-9]+}}, 0x7fff{{$}}
-define void @br_scc_eq_i32_simm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_simm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 32767
   br i1 %cmp0, label %endif, label %if
@@ -41,7 +41,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_simm16_max_p1:
 ; GCN: s_cmpk_eq_u32 s{{[0-9]+}}, 0x8000{{$}}
-define void @br_scc_eq_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 32768
   br i1 %cmp0, label %endif, label %if
@@ -57,7 +57,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ne_i32_simm16_max_p1:
 ; GCN: s_cmpk_lg_u32 s{{[0-9]+}}, 0x8000{{$}}
-define void @br_scc_ne_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ne_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i32 %cond, 32768
   br i1 %cmp0, label %endif, label %if
@@ -73,7 +73,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_simm16_min:
 ; GCN: s_cmpk_eq_i32 s{{[0-9]+}}, 0x8000{{$}}
-define void @br_scc_eq_i32_simm16_min(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_simm16_min(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, -32768
   br i1 %cmp0, label %endif, label %if
@@ -89,7 +89,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_simm16_min_m1:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0xffff7fff{{$}}
-define void @br_scc_eq_i32_simm16_min_m1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_simm16_min_m1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, -32769
   br i1 %cmp0, label %endif, label %if
@@ -105,7 +105,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_uimm15_max:
 ; GCN: s_cmpk_eq_u32 s{{[0-9]+}}, 0xffff{{$}}
-define void @br_scc_eq_i32_uimm15_max(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_uimm15_max(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 65535
   br i1 %cmp0, label %endif, label %if
@@ -121,7 +121,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_uimm16_max:
 ; GCN: s_cmpk_eq_u32 s{{[0-9]+}}, 0xffff{{$}}
-define void @br_scc_eq_i32_uimm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_uimm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 65535
   br i1 %cmp0, label %endif, label %if
@@ -137,7 +137,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32_uimm16_max_p1:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0x10000{{$}}
-define void @br_scc_eq_i32_uimm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32_uimm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 65536
   br i1 %cmp0, label %endif, label %if
@@ -154,7 +154,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_eq_i32:
 ; GCN: s_cmpk_eq_i32 s{{[0-9]+}}, 0x41{{$}}
-define void @br_scc_eq_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i32 %cond, 65
   br i1 %cmp0, label %endif, label %if
@@ -170,7 +170,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ne_i32:
 ; GCN: s_cmpk_lg_i32 s{{[0-9]+}}, 0x41{{$}}
-define void @br_scc_ne_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ne_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i32 %cond, 65
   br i1 %cmp0, label %endif, label %if
@@ -186,7 +186,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_sgt_i32:
 ; GCN: s_cmpk_gt_i32 s{{[0-9]+}}, 0x41{{$}}
-define void @br_scc_sgt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_sgt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp sgt i32 %cond, 65
   br i1 %cmp0, label %endif, label %if
@@ -202,7 +202,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_sgt_i32_simm16_max:
 ; GCN: s_cmpk_gt_i32 s{{[0-9]+}}, 0x7fff{{$}}
-define void @br_scc_sgt_i32_simm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_sgt_i32_simm16_max(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp sgt i32 %cond, 32767
   br i1 %cmp0, label %endif, label %if
@@ -218,7 +218,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_sgt_i32_simm16_max_p1:
 ; GCN: s_cmp_gt_i32 s{{[0-9]+}}, 0x8000{{$}}
-define void @br_scc_sgt_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_sgt_i32_simm16_max_p1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp sgt i32 %cond, 32768
   br i1 %cmp0, label %endif, label %if
@@ -234,7 +234,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_sge_i32:
 ; GCN: s_cmpk_ge_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @br_scc_sge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_sge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp sge i32 %cond, %size
@@ -251,7 +251,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_slt_i32:
 ; GCN: s_cmpk_lt_i32 s{{[0-9]+}}, 0x41{{$}}
-define void @br_scc_slt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_slt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp slt i32 %cond, 65
   br i1 %cmp0, label %endif, label %if
@@ -267,7 +267,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_sle_i32:
 ; GCN: s_cmpk_le_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @br_scc_sle_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_sle_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp sle i32 %cond, %size
@@ -284,7 +284,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ugt_i32:
 ; GCN: s_cmpk_gt_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @br_scc_ugt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ugt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ugt i32 %cond, %size
@@ -301,7 +301,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_uge_i32:
 ; GCN: s_cmpk_ge_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @br_scc_uge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_uge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp uge i32 %cond, %size
@@ -318,7 +318,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32:
 ; GCN: s_cmpk_lt_u32 s{{[0-9]+}}, 0x41{{$}}
-define void @br_scc_ult_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ult_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ult i32 %cond, 65
   br i1 %cmp0, label %endif, label %if
@@ -334,7 +334,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32_min_simm16:
 ; GCN: s_cmp_lt_u32 s2, 0xffff8000
-define void @br_scc_ult_i32_min_simm16(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ult_i32_min_simm16(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ult i32 %cond, -32768
   br i1 %cmp0, label %endif, label %if
@@ -350,7 +350,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32_min_simm16_m1:
 ; GCN: s_cmp_lt_u32 s{{[0-9]+}}, 0xffff7fff{{$}}
-define void @br_scc_ult_i32_min_simm16_m1(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ult_i32_min_simm16_m1(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ult i32 %cond, -32769
   br i1 %cmp0, label %endif, label %if
@@ -366,7 +366,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ule_i32:
 ; GCN: s_cmpk_le_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @br_scc_ule_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ule_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ule i32 %cond, %size
@@ -383,7 +383,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_eq_i32:
 ; GCN: s_cmpk_eq_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_eq_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_eq_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp eq i32 %size, %cond
@@ -400,7 +400,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_ne_i32:
 ; GCN: s_cmpk_lg_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_ne_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_ne_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ne i32 %size, %cond
@@ -417,7 +417,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_sgt_i32:
 ; GCN: s_cmpk_lt_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_sgt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_sgt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp sgt i32 %size, %cond
@@ -434,7 +434,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_sge_i32:
 ; GCN: s_cmpk_le_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_sge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_sge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp sge i32 %size, %cond
@@ -451,7 +451,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_slt_i32:
 ; GCN: s_cmpk_gt_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_slt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_slt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp slt i32 %size, %cond
@@ -468,7 +468,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_sle_i32:
 ; GCN: s_cmpk_ge_i32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_sle_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_sle_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp sle i32 %size, %cond
@@ -485,7 +485,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_ugt_i32:
 ; GCN: s_cmpk_lt_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_ugt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_ugt_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ugt i32 %size, %cond
@@ -502,7 +502,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_uge_i32:
 ; GCN: s_cmpk_le_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_uge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_uge_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp uge i32 %size, %cond
@@ -519,7 +519,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_ult_i32:
 ; GCN: s_cmpk_gt_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_ult_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_ult_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ult i32 %size, %cond
@@ -536,7 +536,7 @@ endif:
 
 ; GCN-LABEL: {{^}}commute_br_scc_ule_i32:
 ; GCN: s_cmpk_ge_u32 s{{[0-9]+}}, 0x800{{$}}
-define void @commute_br_scc_ule_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @commute_br_scc_ule_i32(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %cmp0 = icmp ule i32 %size, %cond
@@ -553,7 +553,7 @@ endif:
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32_non_u16:
 ; GCN: s_cmp_lt_u32 s2, 0xfffff7ff
-define void @br_scc_ult_i32_non_u16(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ult_i32_non_u16(i32 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()
   %not.size = xor i32 %size, -1
@@ -573,7 +573,7 @@ endif:
 ; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
 
 ; SI: v_cmp_eq_u64_e64
-define void @br_scc_eq_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i64 %cond, 4
   br i1 %cmp0, label %endif, label %if
@@ -593,7 +593,7 @@ endif:
 ; VI: s_cmp_eq_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 
 ; SI: v_cmp_eq_u64_e32
-define void @br_scc_eq_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_eq_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp eq i64 %cond, 1234
   br i1 %cmp0, label %endif, label %if
@@ -611,7 +611,7 @@ endif:
 ; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, 4
 
 ; SI: v_cmp_ne_u64_e64
-define void @br_scc_ne_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ne_i64_inline_imm(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i64 %cond, 4
   br i1 %cmp0, label %endif, label %if
@@ -631,7 +631,7 @@ endif:
 ; VI: s_cmp_lg_u64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 
 ; SI: v_cmp_ne_u64_e32
-define void @br_scc_ne_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @br_scc_ne_i64_simm16(i64 %cond, i32 addrspace(1)* %out) #0 {
 entry:
   %cmp0 = icmp ne i64 %cond, 1234
   br i1 %cmp0, label %endif, label %if

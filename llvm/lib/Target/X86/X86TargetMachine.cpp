@@ -365,7 +365,7 @@ char X86ExecutionDepsFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS(X86ExecutionDepsFix, "x86-execution-deps-fix",
-                "X86 Execution Dependency Fix", false, false);
+                "X86 Execution Dependency Fix", false, false)
 
 TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new X86PassConfig(this, PM);

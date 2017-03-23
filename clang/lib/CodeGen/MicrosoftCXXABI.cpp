@@ -2210,9 +2210,8 @@ static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
   llvm::FunctionType *TLRegDtorTy = llvm::FunctionType::get(
       CGF.IntTy, DtorStub->getType(), /*IsVarArg=*/false);
 
-  llvm::Constant *TLRegDtor =
-      CGF.CGM.CreateRuntimeFunction(TLRegDtorTy, "__tlregdtor",
-                                    llvm::AttributeSet(), /*Local=*/true);
+  llvm::Constant *TLRegDtor = CGF.CGM.CreateRuntimeFunction(
+      TLRegDtorTy, "__tlregdtor", llvm::AttributeList(), /*Local=*/true);
   if (llvm::Function *TLRegDtorFn = dyn_cast<llvm::Function>(TLRegDtor))
     TLRegDtorFn->setDoesNotThrow();
 
@@ -2308,9 +2307,9 @@ static llvm::Constant *getInitThreadHeaderFn(CodeGenModule &CGM) {
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
   return CGM.CreateRuntimeFunction(
       FTy, "_Init_thread_header",
-      llvm::AttributeSet::get(CGM.getLLVMContext(),
-                              llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind),
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind),
       /*Local=*/true);
 }
 
@@ -2320,9 +2319,9 @@ static llvm::Constant *getInitThreadFooterFn(CodeGenModule &CGM) {
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
   return CGM.CreateRuntimeFunction(
       FTy, "_Init_thread_footer",
-      llvm::AttributeSet::get(CGM.getLLVMContext(),
-                              llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind),
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind),
       /*Local=*/true);
 }
 
@@ -2332,9 +2331,9 @@ static llvm::Constant *getInitThreadAbortFn(CodeGenModule &CGM) {
                               CGM.IntTy->getPointerTo(), /*isVarArg=*/false);
   return CGM.CreateRuntimeFunction(
       FTy, "_Init_thread_abort",
-      llvm::AttributeSet::get(CGM.getLLVMContext(),
-                              llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind),
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind),
       /*Local=*/true);
 }
 

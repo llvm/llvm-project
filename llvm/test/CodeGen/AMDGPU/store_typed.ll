@@ -6,7 +6,7 @@
 ; EG: MEM_RAT STORE_TYPED RAT(0) {{T[0-9]+, T[0-9]+}}, 1
 ; CM: MEM_RAT STORE_TYPED RAT(0) {{T[0-9]+, T[0-9]+}}
 
-define void @store_typed_rat0(<4 x i32> %data, <4 x i32> %index) {
+define amdgpu_kernel void @store_typed_rat0(<4 x i32> %data, <4 x i32> %index) {
   call void @llvm.r600.rat.store.typed(<4 x i32> %data, <4 x i32> %index, i32 0)
   ret void
 }
@@ -16,7 +16,7 @@ define void @store_typed_rat0(<4 x i32> %data, <4 x i32> %index) {
 ; EG: MEM_RAT STORE_TYPED RAT(11) {{T[0-9]+, T[0-9]+}}, 1
 ; CM: MEM_RAT STORE_TYPED RAT(11) {{T[0-9]+, T[0-9]+}}
 
-define void @store_typed_rat11(<4 x i32> %data, <4 x i32> %index) {
+define amdgpu_kernel void @store_typed_rat11(<4 x i32> %data, <4 x i32> %index) {
   call void @llvm.r600.rat.store.typed(<4 x i32> %data, <4 x i32> %index, i32 11)
   ret void
 }

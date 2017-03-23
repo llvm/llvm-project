@@ -93,6 +93,7 @@ def help : F<"help">;
 def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
+def nopdb : F<"nopdb">, HelpText<"Disable PDB generation for DWARF users">;
 def nosymtab : F<"nosymtab">;
 def msvclto : F<"msvclto">;
 

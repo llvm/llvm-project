@@ -91,7 +91,7 @@ struct DenseMapInfo<
     return Val.first.getRawEncoding() + SecondHash(Val.second);
   }
 
-  static bool isEqual(ClassDefId LHS, ClassDefId RHS) {
+  static bool isEqual(const ClassDefId &LHS, const ClassDefId &RHS) {
     if (RHS == getEmptyKey())
       return LHS == getEmptyKey();
     if (RHS == getTombstoneKey())

@@ -29,7 +29,7 @@
 ; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24
 
 ; GCN: s_endpgm
-define void @ds_reorder_vector_split(<4 x i64> addrspace(1)* nocapture readonly %srcValues, i32 addrspace(1)* nocapture readonly %offsets, <4 x i64> addrspace(1)* nocapture %destBuffer, i32 %alignmentOffset) #0 {
+define amdgpu_kernel void @ds_reorder_vector_split(<4 x i64> addrspace(1)* nocapture readonly %srcValues, i32 addrspace(1)* nocapture readonly %offsets, <4 x i64> addrspace(1)* nocapture %destBuffer, i32 %alignmentOffset) #0 {
 entry:
   %tmp = tail call i32 @llvm.r600.read.local.size.y()
   %tmp1 = tail call i32 @llvm.r600.read.local.size.z()

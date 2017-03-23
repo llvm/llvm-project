@@ -12,7 +12,7 @@
 
 #include "lldb/Interpreter/OptionValue.h"
 
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/Chrono.h"
 
 namespace lldb_private {

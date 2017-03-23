@@ -3,12 +3,12 @@
 # REQUIRES: global-isel
 
 --- |
-  define void @load_constant(i32 addrspace(2)* %ptr0) { ret void }
-  define void @load_global_uniform(i32 addrspace(1)* %ptr1) {
+  define amdgpu_kernel void @load_constant(i32 addrspace(2)* %ptr0) { ret void }
+  define amdgpu_kernel void @load_global_uniform(i32 addrspace(1)* %ptr1) {
     %tmp0 = load i32, i32 addrspace(1)* %ptr1
     ret void
   }
-  define void @load_global_non_uniform(i32 addrspace(1)* %ptr2) {
+  define amdgpu_kernel void @load_global_non_uniform(i32 addrspace(1)* %ptr2) {
     %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
     %tmp1 = getelementptr i32, i32 addrspace(1)* %ptr2, i32 %tmp0
     %tmp2 = load i32, i32 addrspace(1)* %tmp1

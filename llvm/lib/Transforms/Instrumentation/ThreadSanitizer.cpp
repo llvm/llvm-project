@@ -155,8 +155,9 @@ FunctionPass *llvm::createThreadSanitizerPass() {
 
 void ThreadSanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(M.getContext());
-  AttributeSet Attr;
-  Attr = Attr.addAttribute(M.getContext(), AttributeSet::FunctionIndex, Attribute::NoUnwind);
+  AttributeList Attr;
+  Attr = Attr.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                           Attribute::NoUnwind);
   // Initialize the callbacks.
   TsanFuncEntry = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       "__tsan_func_entry", Attr, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));

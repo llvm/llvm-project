@@ -2,7 +2,7 @@
 
 ; CHECK: {{^}}main1:
 ; CHECK: MOV * T{{[0-9]+\.[XYZW], KC0}}
-define void @main1() #0 {
+define amdgpu_kernel void @main1() #0 {
 main_body:
   %tmp = load <4 x float>, <4 x float> addrspace(8)* null
   %tmp7 = extractelement <4 x float> %tmp, i32 0
@@ -54,7 +54,7 @@ main_body:
 
 ; CHECK: {{^}}main2:
 ; CHECK-NOT: MOV
-define void @main2() #0 {
+define amdgpu_kernel void @main2() #0 {
 main_body:
   %tmp = load <4 x float>, <4 x float> addrspace(8)* null
   %tmp7 = extractelement <4 x float> %tmp, i32 0

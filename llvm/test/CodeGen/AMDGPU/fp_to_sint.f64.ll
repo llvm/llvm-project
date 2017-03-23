@@ -6,7 +6,7 @@ declare double @llvm.fabs.f64(double) #1
 
 ; FUNC-LABEL: @fp_to_sint_f64_i32
 ; SI: v_cvt_i32_f64_e32
-define void @fp_to_sint_f64_i32(i32 addrspace(1)* %out, double %in) {
+define amdgpu_kernel void @fp_to_sint_f64_i32(i32 addrspace(1)* %out, double %in) {
   %result = fptosi double %in to i32
   store i32 %result, i32 addrspace(1)* %out
   ret void
@@ -15,7 +15,7 @@ define void @fp_to_sint_f64_i32(i32 addrspace(1)* %out, double %in) {
 ; FUNC-LABEL: @fp_to_sint_v2f64_v2i32
 ; SI: v_cvt_i32_f64_e32
 ; SI: v_cvt_i32_f64_e32
-define void @fp_to_sint_v2f64_v2i32(<2 x i32> addrspace(1)* %out, <2 x double> %in) {
+define amdgpu_kernel void @fp_to_sint_v2f64_v2i32(<2 x i32> addrspace(1)* %out, <2 x double> %in) {
   %result = fptosi <2 x double> %in to <2 x i32>
   store <2 x i32> %result, <2 x i32> addrspace(1)* %out
   ret void
@@ -26,7 +26,7 @@ define void @fp_to_sint_v2f64_v2i32(<2 x i32> addrspace(1)* %out, <2 x double> %
 ; SI: v_cvt_i32_f64_e32
 ; SI: v_cvt_i32_f64_e32
 ; SI: v_cvt_i32_f64_e32
-define void @fp_to_sint_v4f64_v4i32(<4 x i32> addrspace(1)* %out, <4 x double> %in) {
+define amdgpu_kernel void @fp_to_sint_v4f64_v4i32(<4 x i32> addrspace(1)* %out, <4 x double> %in) {
   %result = fptosi <4 x double> %in to <4 x i32>
   store <4 x i32> %result, <4 x i32> addrspace(1)* %out
   ret void
@@ -47,7 +47,7 @@ define void @fp_to_sint_v4f64_v4i32(<4 x i32> addrspace(1)* %out, <4 x double> %
 ; CI-DAG: v_cvt_u32_f64_e32 v[[LO:[0-9]+]], [[FMA]]
 ; CI-DAG: v_cvt_i32_f64_e32 v[[HI:[0-9]+]], [[FLOOR]]
 ; CI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @fp_to_sint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in) {
+define amdgpu_kernel void @fp_to_sint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
   %val = load double, double addrspace(1)* %gep, align 8
@@ -58,7 +58,7 @@ define void @fp_to_sint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in
 
 ; FUNC-LABEL: {{^}}fp_to_sint_f64_to_i1:
 ; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, s{{\[[0-9]+:[0-9]+\]}}
-define void @fp_to_sint_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+define amdgpu_kernel void @fp_to_sint_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
   %conv = fptosi double %in to i1
   store i1 %conv, i1 addrspace(1)* %out
   ret void
@@ -66,7 +66,7 @@ define void @fp_to_sint_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
 
 ; FUNC-LABEL: {{^}}fp_to_sint_fabs_f64_to_i1:
 ; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, |s{{\[[0-9]+:[0-9]+\]}}|
-define void @fp_to_sint_fabs_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+define amdgpu_kernel void @fp_to_sint_fabs_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
   %in.fabs = call double @llvm.fabs.f64(double %in)
   %conv = fptosi double %in.fabs to i1
   store i1 %conv, i1 addrspace(1)* %out

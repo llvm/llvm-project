@@ -1977,7 +1977,7 @@ static void ChangeCalleesToFastCall(Function *F) {
   }
 }
 
-static AttributeSet StripNest(LLVMContext &C, const AttributeSet &Attrs) {
+static AttributeList StripNest(LLVMContext &C, const AttributeList &Attrs) {
   for (unsigned i = 0, e = Attrs.getNumSlots(); i != e; ++i) {
     unsigned Index = Attrs.getSlotIndex(i);
     if (!Attrs.getSlotAttributes(i).hasAttribute(Index, Attribute::Nest))

@@ -10,7 +10,7 @@
 ; CHECK-NOT: ALU_POP_AFTER
 ; CHECK: TEX
 ; CHECK-NEXT: POP
-define void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %cond) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %cond) {
 entry:
   %0 = icmp eq i32 %cond, 0
   br i1 %0, label %endif, label %if

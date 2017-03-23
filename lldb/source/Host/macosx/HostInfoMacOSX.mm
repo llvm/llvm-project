@@ -335,5 +335,3 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
     }
   }
 }
-
-uint32_t HostInfoMacOSX::GetMaxThreadNameLength() { return 64; }

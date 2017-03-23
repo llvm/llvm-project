@@ -281,6 +281,7 @@ __kmp_for_static_init(
                     }
                 }
             }
+            *pstride = trip_count;
             break;
         }
     case kmp_sch_static_chunked:

@@ -8,7 +8,7 @@
 
 ; ALL: SGPRBlocks: 1
 ; ALL: NumSGPRsForWavesPerEU: 9
-define void @max_9_sgprs(i32 addrspace(1)* %out1,
+define amdgpu_kernel void @max_9_sgprs(i32 addrspace(1)* %out1,
 
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,
@@ -49,7 +49,7 @@ define void @max_9_sgprs(i32 addrspace(1)* %out1,
 
 ; TOSMEM: SGPRBlocks: 1
 ; TOSMEM: NumSGPRsForWavesPerEU: 16
-define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
+define amdgpu_kernel void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
                                         i32 addrspace(1)* %out2,
                                         i32 addrspace(1)* %out3,
                                         i32 addrspace(1)* %out4,
@@ -90,7 +90,7 @@ stores:
 
 ; XALL: SGPRBlocks: 2
 ; XALL: NumSGPRsForWavesPerEU: 18
-;define void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
+;define amdgpu_kernel void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
 ;                                        i32 addrspace(1)* %out2,
 ;                                        i32 addrspace(1)* %out3,
 ;                                        i32 addrspace(1)* %out4,

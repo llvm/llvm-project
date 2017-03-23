@@ -11,7 +11,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:
 ; CHECK: store i32 0
 ; CHECK: store i32 0
 
-define void @no_crash(i32 %arg) {
+define amdgpu_kernel void @no_crash(i32 %arg) {
   %tmp2 = add i32 %arg, 14
   %tmp3 = getelementptr [16384 x i32], [16384 x i32] addrspace(3)* @0, i32 0, i32 %tmp2
   %tmp4 = add i32 %arg, 15
@@ -37,7 +37,7 @@ define void @no_crash(i32 %arg) {
 ; CHECK: load i32
 ; CHECK: load i32
 
-define void @interleave_get_longest(i32 %arg) {
+define amdgpu_kernel void @interleave_get_longest(i32 %arg) {
   %a1 = add i32 %arg, 1
   %a2 = add i32 %arg, 2
   %a3 = add i32 %arg, 3

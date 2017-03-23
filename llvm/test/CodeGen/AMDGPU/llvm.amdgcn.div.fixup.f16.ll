@@ -9,7 +9,7 @@ declare half @llvm.amdgcn.div.fixup.f16(half %a, half %b, half %c)
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16(
+define amdgpu_kernel void @div_fixup_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -30,7 +30,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_a(
+define amdgpu_kernel void @div_fixup_f16_imm_a(
     half addrspace(1)* %r,
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
@@ -49,7 +49,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_b(
+define amdgpu_kernel void @div_fixup_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %c) {
@@ -68,7 +68,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_c(
+define amdgpu_kernel void @div_fixup_f16_imm_c(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
@@ -86,7 +86,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[AB_F16]], v[[AB_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_a_imm_b(
+define amdgpu_kernel void @div_fixup_f16_imm_a_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %c) {
 entry:
@@ -102,7 +102,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[BC_F16]], v[[BC_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_b_imm_c(
+define amdgpu_kernel void @div_fixup_f16_imm_b_imm_c(
     half addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -118,7 +118,7 @@ entry:
 ; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[AC_F16]], v[[B_F16]], v[[AC_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @div_fixup_f16_imm_a_imm_c(
+define amdgpu_kernel void @div_fixup_f16_imm_a_imm_c(
     half addrspace(1)* %r,
     half addrspace(1)* %b) {
 entry:

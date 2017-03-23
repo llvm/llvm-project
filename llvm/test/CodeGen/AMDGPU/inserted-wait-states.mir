@@ -4,17 +4,17 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
 
 --- |
-  define void @div_fmas() { ret void }
-  define void @s_getreg() { ret void }
-  define void @s_setreg() { ret void }
-  define void @vmem_gt_8dw_store() { ret void }
-  define void @readwrite_lane() { ret void }
-  define void @rfe() { ret void }
-  define void @s_mov_fed_b32() { ret void }
-  define void @s_movrel() { ret void }
-  define void @v_interp() { ret void }
+  define amdgpu_kernel void @div_fmas() { ret void }
+  define amdgpu_kernel void @s_getreg() { ret void }
+  define amdgpu_kernel void @s_setreg() { ret void }
+  define amdgpu_kernel void @vmem_gt_8dw_store() { ret void }
+  define amdgpu_kernel void @readwrite_lane() { ret void }
+  define amdgpu_kernel void @rfe() { ret void }
+  define amdgpu_kernel void @s_mov_fed_b32() { ret void }
+  define amdgpu_kernel void @s_movrel() { ret void }
+  define amdgpu_kernel void @v_interp() { ret void }
 
-  define void @mov_fed_hazard_crash_on_dbg_value(i32 addrspace(1)* %A) {
+  define amdgpu_kernel void @mov_fed_hazard_crash_on_dbg_value(i32 addrspace(1)* %A) {
   entry:
     %A.addr = alloca i32 addrspace(1)*, align 4
     store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4

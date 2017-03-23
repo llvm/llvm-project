@@ -178,6 +178,7 @@ void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyValueInfoWrapperPassPass(PassRegistry&);
 void initializeLegacyLICMPassPass(PassRegistry&);
 void initializeLegacyLoopSinkPassPass(PassRegistry&);
+void initializeLazyValueInfoPrinterPass(PassRegistry&);
 void initializeLegalizerPass(PassRegistry&);
 void initializeLibCallsShrinkWrapLegacyPassPass(PassRegistry&);
 void initializeLintPass(PassRegistry&);

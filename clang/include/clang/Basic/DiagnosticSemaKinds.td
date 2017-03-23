@@ -8236,6 +8236,8 @@ def err_opencl_ptrptr_kernel_param : Error<
 def err_kernel_arg_address_space : Error<
   "pointer arguments to kernel functions must reside in '__global', "
   "'__constant' or '__local' address space">;
+def err_opencl_ext_vector_component_invalid_length : Error<
+  "vector component access has invalid length %0.  Supported: 1,2,3,4,8,16.">;
 def err_opencl_function_variable : Error<
   "%select{non-kernel function|function scope}0 variable cannot be declared in %1 address space">;
 def err_static_function_scope : Error<

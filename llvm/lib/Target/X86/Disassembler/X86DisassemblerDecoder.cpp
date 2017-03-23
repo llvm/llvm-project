@@ -650,11 +650,6 @@ static int readPrefixes(struct InternalInstruction* insn) {
       insn->addressSize        = (hasAdSize ? 4 : 8);
       insn->displacementSize   = 4;
       insn->immediateSize      = 4;
-    } else if (insn->rexPrefix) {
-      insn->registerSize       = (hasOpSize ? 2 : 4);
-      insn->addressSize        = (hasAdSize ? 4 : 8);
-      insn->displacementSize   = (hasOpSize ? 2 : 4);
-      insn->immediateSize      = (hasOpSize ? 2 : 4);
     } else {
       insn->registerSize       = (hasOpSize ? 2 : 4);
       insn->addressSize        = (hasAdSize ? 4 : 8);

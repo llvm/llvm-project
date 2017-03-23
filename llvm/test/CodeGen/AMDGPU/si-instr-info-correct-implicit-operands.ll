@@ -5,7 +5,7 @@
 
 ; CHECK: %{{[0-9]+}} = V_ADD_I32_e32 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def %vcc, implicit %exec
 
-define void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load volatile i32, i32 addrspace(1)* %in

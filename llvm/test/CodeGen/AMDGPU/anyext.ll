@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
 
 ; GCN-LABEL: {{^}}anyext_i1_i32:
 ; GCN: v_cndmask_b32_e64
-define void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @anyext_i1_i32(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %tmp = icmp eq i32 %cond, 0
   %tmp1 = zext i1 %tmp to i8
@@ -22,7 +22,7 @@ entry:
 ; VI: v_xor_b32_e32 [[XOR:v[0-9]+]], -1, [[ADD]]
 ; VI: v_and_b32_e32 [[AND:v[0-9]+]], 1, [[XOR]]
 ; VI: buffer_store_dword [[AND]]
-define void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspace(1)* %a, i16 addrspace(1)* %b) {
+define amdgpu_kernel void @s_anyext_i16_i32(i32 addrspace(1)* %out, i16 addrspace(1)* %a, i16 addrspace(1)* %b) {
 entry:
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.y = call i32 @llvm.amdgcn.workitem.id.y()

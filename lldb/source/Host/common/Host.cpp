@@ -50,8 +50,6 @@
 // Project includes
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
@@ -65,6 +63,7 @@
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
@@ -598,8 +597,7 @@ Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     }
   }
 
-  if (FileSystem::GetFileExists(output_file_spec))
-    FileSystem::Unlink(output_file_spec);
+  llvm::sys::fs::remove(output_file_spec.GetPath());
   return error;
 }
 

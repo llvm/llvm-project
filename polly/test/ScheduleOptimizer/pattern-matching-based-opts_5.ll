@@ -37,6 +37,7 @@
 ;	   C[i][j] += A[i][k] * B[k][j];
 ;
 ; CHECK:    if (ni >= 1) {
+; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= floord(nj - 1, 2048); c0 += 1)
 ; CHECK-NEXT:        for (int c1 = 0; c1 <= floord(nk - 1, 256); c1 += 1) {

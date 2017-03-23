@@ -108,17 +108,17 @@ public:
   bool hasSExtAttr() const;
 
   /// Add attributes to an argument.
-  void addAttr(AttributeSet AS);
+  void addAttr(AttributeList AS);
 
   void addAttr(Attribute::AttrKind Kind) {
-    addAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+    addAttr(AttributeList::get(getContext(), getArgNo() + 1, Kind));
   }
 
   /// Remove attributes from an argument.
-  void removeAttr(AttributeSet AS);
+  void removeAttr(AttributeList AS);
 
   void removeAttr(Attribute::AttrKind Kind) {
-    removeAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+    removeAttr(AttributeList::get(getContext(), getArgNo() + 1, Kind));
   }
 
   /// Check if an argument has a given attribute.

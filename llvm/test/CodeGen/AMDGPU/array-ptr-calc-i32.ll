@@ -24,7 +24,7 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-PROMOTE: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 64
 ; SI-PROMOTE: ds_write_b32 [[PTRREG]]
-define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) #0 {
+define amdgpu_kernel void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) #0 {
   %alloca = alloca [16 x i32], align 16
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)

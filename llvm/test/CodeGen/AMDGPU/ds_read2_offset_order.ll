@@ -10,7 +10,7 @@
 ; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:2 offset1:3
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:56
 ; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:11 offset1:12
-define void @offset_order(float addrspace(1)* %out) {
+define amdgpu_kernel void @offset_order(float addrspace(1)* %out) {
 entry:
   %ptr0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 0
   %val0 = load float, float addrspace(3)* %ptr0

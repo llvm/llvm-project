@@ -5267,18 +5267,22 @@ __kmp_free_team( kmp_root_t *root, kmp_team_t *team  USE_NESTED_HOT_ARG(kmp_info
             // Wait for threads to reach reapable state
             for (f = 1; f < team->t.t_nproc; ++f) {
                 KMP_DEBUG_ASSERT(team->t.t_threads[f]);
-                volatile kmp_uint32 *state = &team->t.t_threads[f]->th.th_reap_state;
+                kmp_info_t *th = team->t.t_threads[f];
+                volatile kmp_uint32 *state = &th->th.th_reap_state;
                 while (*state != KMP_SAFE_TO_REAP) {
 #if KMP_OS_WINDOWS
                     // On Windows a thread can be killed at any time, check this
                     DWORD ecode;
-                    if (__kmp_is_thread_alive(team->t.t_threads[f], &ecode))
-                        KMP_CPU_PAUSE();
-                    else
+                    if (!__kmp_is_thread_alive(th, &ecode)) {
                         *state = KMP_SAFE_TO_REAP; // reset the flag for dead thread
-#else
-                    KMP_CPU_PAUSE();
+                        break;
+                    }
 #endif
+                    // first check if thread is sleeping
+                    kmp_flag_64 fl(&th->th.th_bar[bs_forkjoin_barrier].bb.b_go, th);
+                    if (fl.is_sleeping())
+                        fl.resume(__kmp_gtid_from_thread(th));
+                    KMP_CPU_PAUSE();
                 }
             }
 

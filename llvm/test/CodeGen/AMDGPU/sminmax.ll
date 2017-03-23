@@ -7,7 +7,7 @@
 ; GCN: s_add_i32
 
 ; EG: MAX_INT
-define void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind {
+define amdgpu_kernel void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind {
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
   %res = select i1 %cond, i32 %val, i32 %neg
@@ -22,7 +22,7 @@ define void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind {
 ; GCN: v_add_i32
 
 ; EG: MAX_INT
-define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
+define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
   %val = load i32, i32 addrspace(1)* %src, align 4
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
@@ -36,7 +36,7 @@ define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind 
 ; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
 ; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[NEG]], [[SRC]]
 ; GCN: v_mul_lo_i32 v{{[0-9]+}}, [[MAX]], [[MAX]]
-define void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
+define amdgpu_kernel void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
   %val = load i32, i32 addrspace(1)* %src, align 4
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
@@ -54,7 +54,7 @@ define void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %sr
 
 ; EG: MAX_INT
 ; EG: MAX_INT
-define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind {
+define amdgpu_kernel void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind {
   %z0 = insertelement <2 x i32> undef, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
   %t0 = insertelement <2 x i32> undef, i32 2, i32 0
@@ -79,7 +79,7 @@ define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind 
 
 ; EG: MAX_INT
 ; EG: MAX_INT
-define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %src) nounwind {
+define amdgpu_kernel void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %src) nounwind {
   %z0 = insertelement <2 x i32> undef, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
   %t0 = insertelement <2 x i32> undef, i32 2, i32 0
@@ -109,7 +109,7 @@ define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %
 ; EG: MAX_INT
 ; EG: MAX_INT
 ; EG: MAX_INT
-define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind {
+define amdgpu_kernel void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind {
   %z0 = insertelement <4 x i32> undef, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1
   %z2 = insertelement <4 x i32> %z1, i32 0, i32 2
@@ -146,7 +146,7 @@ define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind 
 ; EG: MAX_INT
 ; EG: MAX_INT
 ; EG: MAX_INT
-define void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %src) nounwind {
+define amdgpu_kernel void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %src) nounwind {
   %z0 = insertelement <4 x i32> undef, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1
   %z2 = insertelement <4 x i32> %z1, i32 0, i32 2
@@ -170,7 +170,7 @@ define void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %
 
 ; GCN-DAG: s_min_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
 ; GCN-DAG: s_max_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
-define void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %val0, i32 %val1) nounwind {
+define amdgpu_kernel void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %val0, i32 %val1) nounwind {
   %cond0 = icmp sgt i32 %val0, %val1
   %sel0 = select i1 %cond0, i32 %val0, i32 %val1
   %sel1 = select i1 %cond0, i32 %val1, i32 %val0
@@ -186,7 +186,7 @@ define void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32
 
 ; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
 ; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
-define void @v_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
+define amdgpu_kernel void @v_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
   %val0 = load volatile i32, i32 addrspace(1)* %ptr0
   %val1 = load volatile i32, i32 addrspace(1)* %ptr1
 
@@ -208,7 +208,7 @@ define void @v_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32
 ; GCN-DAG: s_max_i32
 ; GCN-DAG: s_max_i32
 ; GCN-DAG: s_max_i32
-define void @s_min_max_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, <4 x i32> %val0, <4 x i32> %val1) nounwind {
+define amdgpu_kernel void @s_min_max_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, <4 x i32> %val0, <4 x i32> %val1) nounwind {
   %cond0 = icmp sgt <4 x i32> %val0, %val1
   %sel0 = select <4 x i1> %cond0, <4 x i32> %val0, <4 x i32> %val1
   %sel1 = select <4 x i1> %cond0, <4 x i32> %val1, <4 x i32> %val0
@@ -223,7 +223,7 @@ define void @s_min_max_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
-define void @v_min_max_i32_user(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
+define amdgpu_kernel void @v_min_max_i32_user(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
   %val0 = load volatile i32, i32 addrspace(1)* %ptr0
   %val1 = load volatile i32, i32 addrspace(1)* %ptr1
 
