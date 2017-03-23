@@ -321,11 +321,12 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   return Info;
 }
 
-void index::applyForEachSymbolRole(SymbolRoleSet Roles,
-                                   llvm::function_ref<void(SymbolRole)> Fn) {
+bool index::applyForEachSymbolRoleInterruptible(SymbolRoleSet Roles,
+                                   llvm::function_ref<bool(SymbolRole)> Fn) {
 #define APPLY_FOR_ROLE(Role) \
   if (Roles & (unsigned)SymbolRole::Role) \
-    Fn(SymbolRole::Role)
+    if (!Fn(SymbolRole::Role)) \
+      return false;
 
   APPLY_FOR_ROLE(Declaration);
   APPLY_FOR_ROLE(Definition);
@@ -347,6 +348,16 @@ void index::applyForEachSymbolRole(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationIBTypeOf);
 
 #undef APPLY_FOR_ROLE
+
+  return true;
+}
+
+void index::applyForEachSymbolRole(SymbolRoleSet Roles,
+                                   llvm::function_ref<void(SymbolRole)> Fn) {
+  applyForEachSymbolRoleInterruptible(Roles, [&](SymbolRole r) -> bool {
+    Fn(r);
+    return true;
+  });
 }
 
 void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {

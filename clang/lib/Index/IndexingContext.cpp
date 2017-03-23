@@ -204,6 +204,49 @@ static const Decl *getCanonicalDecl(const Decl *D) {
   return D;
 }
 
+static bool shouldReportOccurrenceForSystemDeclOnlyMode(
+    bool IsRef, SymbolRoleSet Roles, ArrayRef<SymbolRelation> Relations) {
+  if (!IsRef)
+    return true;
+
+  auto acceptForRelation = [](SymbolRoleSet roles) -> bool {
+    bool accept = false;
+    applyForEachSymbolRoleInterruptible(roles, [&accept](SymbolRole r) -> bool {
+      switch (r) {
+      case SymbolRole::RelationChildOf:
+      case SymbolRole::RelationBaseOf:
+      case SymbolRole::RelationOverrideOf:
+      case SymbolRole::RelationExtendedBy:
+      case SymbolRole::RelationAccessorOf:
+      case SymbolRole::RelationIBTypeOf:
+        accept = true;
+        return false;
+      case SymbolRole::Declaration:
+      case SymbolRole::Definition:
+      case SymbolRole::Reference:
+      case SymbolRole::Read:
+      case SymbolRole::Write:
+      case SymbolRole::Call:
+      case SymbolRole::Dynamic:
+      case SymbolRole::AddressOf:
+      case SymbolRole::Implicit:
+      case SymbolRole::RelationReceivedBy:
+      case SymbolRole::RelationCalledBy:
+      case SymbolRole::RelationContainedBy:
+        return true;
+      }
+    });
+    return accept;
+  };
+
+  for (auto &Rel : Relations) {
+    if (acceptForRelation(Rel.Roles))
+      return true;
+  }
+
+  return false;
+}
+
 bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
                                            bool IsRef, const Decl *Parent,
                                            SymbolRoleSet Roles,
@@ -239,7 +282,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     case IndexingOptions::SystemSymbolFilterKind::None:
       return true;
     case IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly:
-      if (IsRef)
+      if (!shouldReportOccurrenceForSystemDeclOnlyMode(IsRef, Roles, Relations))
         return true;
       break;
     case IndexingOptions::SystemSymbolFilterKind::All:
