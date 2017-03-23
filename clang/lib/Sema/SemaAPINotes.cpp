@@ -603,6 +603,13 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
                             const api_notes::ObjCContextInfo &info,
                             VersionedInfoMetadata metadata) {
+  if (auto asNonGeneric = info.getSwiftImportAsNonGeneric()) {
+    handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(S, D, *asNonGeneric,
+                                                         metadata, [&] {
+      return SwiftImportAsNonGenericAttr::CreateImplicit(S.Context);
+    });
+  }
+
   // Handle information common to Objective-C classes and protocols.
   ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), info,
                   metadata);

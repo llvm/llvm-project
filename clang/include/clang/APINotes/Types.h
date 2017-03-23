@@ -212,12 +212,17 @@ class ObjCContextInfo : public CommonTypeInfo {
   /// Whether this class has designated initializers recorded.
   unsigned HasDesignatedInits : 1;
 
+  unsigned SwiftImportAsNonGenericSpecified : 1;
+  unsigned SwiftImportAsNonGeneric : 1;
+
 public:
   ObjCContextInfo()
     : CommonTypeInfo(),
       HasDefaultNullability(0),
       DefaultNullability(0),
-      HasDesignatedInits(0)
+      HasDesignatedInits(0),
+      SwiftImportAsNonGenericSpecified(false),
+      SwiftImportAsNonGeneric(false)
   { }
 
   /// Determine the default nullability for properties and methods of this
@@ -240,6 +245,21 @@ public:
   bool hasDesignatedInits() const { return HasDesignatedInits; }
   void setHasDesignatedInits(bool value) { HasDesignatedInits = value; }
 
+  Optional<bool> getSwiftImportAsNonGeneric() const {
+    if (SwiftImportAsNonGenericSpecified)
+      return SwiftImportAsNonGeneric;
+    return None;
+  }
+  void setSwiftImportAsNonGeneric(Optional<bool> value) {
+    if (value.hasValue()) {
+      SwiftImportAsNonGenericSpecified = true;
+      SwiftImportAsNonGeneric = value.getValue();
+    } else {
+      SwiftImportAsNonGenericSpecified = false;
+      SwiftImportAsNonGeneric = false;
+    }
+  }
+
   /// Strip off any information within the class information structure that is
   /// module-local, such as 'audited' flags.
   void stripModuleLocalInfo() {
@@ -249,9 +269,9 @@ public:
 
   friend bool operator==(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
     return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
-           lhs.HasDefaultNullability == rhs.HasDefaultNullability &&
-           lhs.DefaultNullability == rhs.DefaultNullability &&
-           lhs.HasDesignatedInits == rhs.HasDesignatedInits;
+           lhs.getDefaultNullability() == rhs.getDefaultNullability() &&
+           lhs.HasDesignatedInits == rhs.HasDesignatedInits &&
+           lhs.getSwiftImportAsNonGeneric() == rhs.getSwiftImportAsNonGeneric();
   }
 
   friend bool operator!=(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
@@ -268,6 +288,12 @@ public:
       if (auto nullable = rhs.getDefaultNullability()) {
         lhs.setDefaultNullability(*nullable);
       }
+    }
+
+    if (!lhs.SwiftImportAsNonGenericSpecified &&
+        rhs.SwiftImportAsNonGenericSpecified) {
+      lhs.SwiftImportAsNonGenericSpecified = true;
+      lhs.SwiftImportAsNonGeneric = rhs.SwiftImportAsNonGeneric;
     }
 
     lhs.HasDesignatedInits |= rhs.HasDesignatedInits;
@@ -382,6 +408,12 @@ public:
       lhs.SwiftImportAsAccessors = rhs.SwiftImportAsAccessors;
     }
     return lhs;
+  }
+
+  friend bool operator==(const ObjCPropertyInfo &lhs,
+                         const ObjCPropertyInfo &rhs) {
+    return static_cast<const VariableInfo &>(lhs) == rhs &&
+           lhs.getSwiftImportAsAccessors() == rhs.getSwiftImportAsAccessors();
   }
 };
 
