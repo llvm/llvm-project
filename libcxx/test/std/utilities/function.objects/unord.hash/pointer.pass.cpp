@@ -23,6 +23,8 @@
 #include <type_traits>
 #include <limits>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test()
@@ -30,6 +32,7 @@ test()
     typedef std::hash<T> H;
     static_assert((std::is_same<typename H::argument_type, T>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+    ASSERT_NOEXCEPT(H()(T()));
     H h;
 
     typedef typename std::remove_pointer<T>::type type;
@@ -38,7 +41,17 @@ test()
     assert(h(&i) != h(&j));
 }
 
+void test_nullptr()
+{
+    typedef std::nullptr_t T;
+    typedef std::hash<T> H;
+    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
+    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+    ASSERT_NOEXCEPT(H()(T()));
+}
+
 int main()
 {
     test<int*>();
+    test_nullptr();
 }

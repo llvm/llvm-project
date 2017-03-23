@@ -1813,7 +1813,11 @@ void CodeGenModule::ConstructAttributeList(
     ASTContext::GetBuiltinTypeError Error;
     getContext().GetBuiltinType(BuiltinID, Error, nullptr,
                                 &OverrideNonnullReturn, &OverrideNonnullArgs);
-    assert(Error == ASTContext::GE_None && "Should not codegen an error");
+    // Note that we can't check the 'Error' here as there may be errors that
+    // have been diagnosed and reported to the programmer as warnings but
+    // repaired in the AST such as for implicit declarations of builtin
+    // functions. None of those impact our usage of this to analyze attributes
+    // for the builtins.
   }
 
   bool HasOptnone = false;

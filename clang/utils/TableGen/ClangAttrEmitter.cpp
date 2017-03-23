@@ -2479,19 +2479,26 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
 }
 
-void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
-                                            raw_ostream &OS,
-                                            bool AppliesToDecl) {
+// Emits code to instantiate dependent attributes on templates.
+void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("Template instantiation code for attributes", OS);
 
-  OS << "  switch (At->getKind()) {\n";
+  std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
+
+  OS << "namespace clang {\n"
+     << "namespace sema {\n\n"
+     << "Attr *instantiateTemplateAttribute(const Attr *At, ASTContext &C, "
+     << "Sema &S,\n"
+     << "        const MultiLevelTemplateArgumentList &TemplateArgs) {\n"
+     << "  switch (At->getKind()) {\n";
+
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
       continue;
+
     OS << "    case attr::" << R.getName() << ": {\n";
-    bool ShouldClone = R.getValueAsBit("Clone") &&
-                       (!AppliesToDecl ||
-                        R.getValueAsBit("MeaningfulToClassTemplateDefinition"));
+    bool ShouldClone = R.getValueAsBit("Clone");
 
     if (!ShouldClone) {
       OS << "      return nullptr;\n";
@@ -2528,27 +2535,8 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
   }
   OS << "  } // end switch\n"
      << "  llvm_unreachable(\"Unknown attribute!\");\n"
-     << "  return nullptr;\n";
-}
-
-// Emits code to instantiate dependent attributes on templates.
-void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Template instantiation code for attributes", OS);
-
-  std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
-
-  OS << "namespace clang {\n"
-     << "namespace sema {\n\n"
-     << "Attr *instantiateTemplateAttribute(const Attr *At, ASTContext &C, "
-     << "Sema &S,\n"
-     << "        const MultiLevelTemplateArgumentList &TemplateArgs) {\n";
-  EmitClangAttrTemplateInstantiateHelper(Attrs, OS, /*AppliesToDecl*/false);
-  OS << "}\n\n"
-     << "Attr *instantiateTemplateAttributeForDecl(const Attr *At,\n"
-     << " ASTContext &C, Sema &S,\n"
-     << "        const MultiLevelTemplateArgumentList &TemplateArgs) {\n";
-  EmitClangAttrTemplateInstantiateHelper(Attrs, OS, /*AppliesToDecl*/true);
-  OS << "}\n\n"
+     << "  return nullptr;\n"
+     << "}\n\n"
      << "} // end namespace sema\n"
      << "} // end namespace clang\n";
 }

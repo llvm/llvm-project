@@ -149,6 +149,14 @@ public:
     // the alignment process.
     const Change *StartOfBlockComment;
     int IndentationOffset;
+
+    // A combination of nesting level and indent level, which are used in
+    // tandem to compute lexical scope, for the purposes of deciding
+    // when to stop consecutive alignment runs.
+    std::pair<unsigned, unsigned>
+    nestingAndIndentLevel() const {
+      return std::make_pair(Tok->NestingLevel, Tok->IndentLevel);
+    }
   };
 
 private:

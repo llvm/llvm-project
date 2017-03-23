@@ -70,7 +70,6 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
-    lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginProcessUtility
 

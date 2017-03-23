@@ -26,8 +26,6 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
 
-#include "Plugins/Process/Utility/InstructionUtils.h"
-
 using namespace lldb;
 using namespace lldb_private;
 

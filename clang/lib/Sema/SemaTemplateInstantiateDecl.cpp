@@ -328,35 +328,6 @@ static void instantiateOMPDeclareSimdDeclAttr(
       Attr.getRange());
 }
 
-bool DeclContainsAttr(Decl* D, attr::Kind K) {
-  if (!D->hasAttrs())
-    return false;
-  for (auto&& attr : D->getAttrs())
-    if (attr->getKind() == K)
-      return true;
-  return false;
-}
-
-void Sema::InstantiateAttrsForDecl(
-    const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
-    Decl *New, LateInstantiatedAttrVec *LateAttrs,
-    LocalInstantiationScope *OuterMostScope) {
-  if (NamedDecl *ND = dyn_cast<NamedDecl>(New)) {
-    for (const auto *TmplAttr : Tmpl->attrs()) {
-      // FIXME: If any of the special case versions from InstantiateAttrs become
-      // applicable to template declaration, we'll need to add them here.
-      CXXThisScopeRAII ThisScope(
-          *this, dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext()),
-          /*TypeQuals*/ 0, ND->isCXXInstanceMember());
-
-      Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
-          TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && !DeclContainsAttr(New, NewAttr->getKind()))
-        New->addAttr(NewAttr);
-    }
-  }
-}
-
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -450,8 +421,7 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-
-      if (NewAttr && !DeclContainsAttr(New, NewAttr->getKind()))
+      if (NewAttr)
         New->addAttr(NewAttr);
     }
   }

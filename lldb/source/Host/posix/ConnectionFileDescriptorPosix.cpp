@@ -19,7 +19,6 @@
 #include "lldb/Host/IOObject.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/SelectHelper.h"
 
 // C Includes
@@ -47,7 +46,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 

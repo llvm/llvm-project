@@ -6075,6 +6075,17 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     return Context.getPipeType(ElementType, ReadOnly);
   }
 
+  case TYPE_DEPENDENT_SIZED_EXT_VECTOR: {
+    unsigned Idx = 0;
+
+    // DependentSizedExtVectorType
+    QualType ElementType = readType(*Loc.F, Record, Idx);
+    Expr *SizeExpr = ReadExpr(*Loc.F);
+    SourceLocation AttrLoc = ReadSourceLocation(*Loc.F, Record, Idx);
+
+    return Context.getDependentSizedExtVectorType(ElementType, SizeExpr,
+                                                  AttrLoc);
+  }
   }
   llvm_unreachable("Invalid TypeCode!");
 }

@@ -3037,7 +3037,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper<
     typedef unique_ptr<_Tp, _Dp> argument_type;
     typedef size_t               result_type;
     _LIBCPP_INLINE_VISIBILITY
-    result_type operator()(const argument_type& __ptr) const _NOEXCEPT
+    result_type operator()(const argument_type& __ptr) const
     {
         typedef typename argument_type::pointer pointer;
         return hash<pointer>()(__ptr.get());

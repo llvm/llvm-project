@@ -261,7 +261,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
     : public unary_function<__thread_id, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(__thread_id __v) const
+    size_t operator()(__thread_id __v) const _NOEXCEPT
     {
         return hash<__libcpp_thread_id>()(__v.__id_);
     }

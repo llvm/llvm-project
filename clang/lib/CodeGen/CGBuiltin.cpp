@@ -2238,16 +2238,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_InterlockedXor16:
   case Builtin::BI_InterlockedXor:
     return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E));
-  case Builtin::BI__readfsdword: {
-    llvm::Type *IntTy = ConvertType(E->getType());
-    Value *IntToPtr =
-      Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
-                             llvm::PointerType::get(IntTy, 257));
-    LoadInst *Load = Builder.CreateAlignedLoad(
-        IntTy, IntToPtr, getContext().getTypeAlignInChars(E->getType()));
-    Load->setVolatile(true);
-    return RValue::get(Load);
-  }
 
   case Builtin::BI__exception_code:
   case Builtin::BI_exception_code:
@@ -8004,6 +7994,30 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     CallSite CS = Builder.CreateCall(IA);
     CS.setAttributes(NoReturnAttr);
     return CS.getInstruction();
+  }
+  case X86::BI__readfsbyte:
+  case X86::BI__readfsword:
+  case X86::BI__readfsdword:
+  case X86::BI__readfsqword: {
+    llvm::Type *IntTy = ConvertType(E->getType());
+    Value *Ptr = Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
+                                        llvm::PointerType::get(IntTy, 257));
+    LoadInst *Load = Builder.CreateAlignedLoad(
+        IntTy, Ptr, getContext().getTypeAlignInChars(E->getType()));
+    Load->setVolatile(true);
+    return Load;
+  }
+  case X86::BI__readgsbyte:
+  case X86::BI__readgsword:
+  case X86::BI__readgsdword:
+  case X86::BI__readgsqword: {
+    llvm::Type *IntTy = ConvertType(E->getType());
+    Value *Ptr = Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
+                                        llvm::PointerType::get(IntTy, 256));
+    LoadInst *Load = Builder.CreateAlignedLoad(
+        IntTy, Ptr, getContext().getTypeAlignInChars(E->getType()));
+    Load->setVolatile(true);
+    return Load;
   }
   }
 }

@@ -825,11 +825,11 @@ private:
   }
 
 protected:
-  isl::union_set makeEmptyUnionSet() {
+  isl::union_set makeEmptyUnionSet() const {
     return give(isl_union_set_empty(ParamSpace.copy()));
   }
 
-  isl::union_map makeEmptyUnionMap() {
+  isl::union_map makeEmptyUnionMap() const {
     return give(isl_union_map_empty(ParamSpace.copy()));
   }
 
