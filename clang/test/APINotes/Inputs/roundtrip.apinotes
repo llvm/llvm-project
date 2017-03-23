@@ -9,6 +9,7 @@ Classes:
     AvailabilityMsg: ''
     SwiftPrivate:    false
     SwiftName:       ''
+    SwiftImportAsNonGeneric: true
     Methods:         
       - Selector:        'cellWithImage:'
         MethodKind:      Class
