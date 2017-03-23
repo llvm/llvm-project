@@ -142,12 +142,6 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
   std::unique_ptr<DIEDwarfExpression> DwarfExpr;
-  bool AllConstant = std::all_of(
-      GlobalExprs.begin(), GlobalExprs.end(),
-      [&](const GlobalExpr GE) {
-        return GE.Expr && GE.Expr->isConstant();
-      });
-
   for (const auto &GE : GlobalExprs) {
     const GlobalVariable *Global = GE.Var;
     const DIExpression *Expr = GE.Expr;
@@ -158,7 +152,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
       addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
       // We cannot describe the location of dllimport'd variables: the
       // computation of their address requires loads from the IAT.
-    } else if ((Global && !Global->hasDLLImportStorageClass()) || AllConstant) {
+    } else if ((Global && !Global->hasDLLImportStorageClass()) ||
+               (Expr && Expr->isConstant())) {
       if (!Loc) {
         Loc = new (DIEValueAllocator) DIELoc;
         DwarfExpr = llvm::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
