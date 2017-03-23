@@ -65,3 +65,10 @@ __attribute__((deprecated))
   return (void *)0;
 }
 @end
+
+__attribute__((deprecated))
+@interface Test(DeprecatedCategory) // expected-note {{category declared here}}
+@end
+
+@implementation Test(DeprecatedCategory) // expected-warning {{Implementing deprecated category}}
+@end

@@ -33,8 +33,8 @@ __attribute ((objc_requires_property_definitions))  // redundant, just for testi
 - (id) DeepMustSynthProperty { return 0; }
 @end
 
-__attribute ((objc_requires_property_definitions)) 
-@interface Deep(CAT)  // expected-error {{attributes may not be specified on a category}}
+__attribute ((objc_requires_property_definitions)) // expected-error {{'objc_requires_property_definitions' attribute only applies to Objective-C interfaces}}
+@interface Deep(CAT)
 @end
 
 __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_requires_property_definitions' attribute only applies to Objective-C interfaces}}
