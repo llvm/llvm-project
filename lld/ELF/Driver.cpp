@@ -921,6 +921,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (ErrorCount)
     return;
 
+  // Some symbols (such as __ehdr_start) are defined lazily only when there
+  // are undefined symbols for them, so we add these to trigger that logic.
+  for (StringRef Sym : Script->Opt.UndefinedSymbols)
+    Symtab.addUndefined(Sym);
+
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
 

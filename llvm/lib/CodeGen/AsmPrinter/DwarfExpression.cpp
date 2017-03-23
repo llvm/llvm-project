@@ -32,7 +32,7 @@ void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
   }
 }
 
-void DwarfExpression::addRegIndirect(int DwarfReg, int Offset) {
+void DwarfExpression::addBReg(int DwarfReg, int Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   if (DwarfReg < 32) {
     emitOp(dwarf::DW_OP_breg0 + DwarfReg);
@@ -241,7 +241,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       if (FBReg)
         addFBReg(SignedOffset);
       else
-        addRegIndirect(Reg.DwarfRegNo, SignedOffset);
+        addBReg(Reg.DwarfRegNo, SignedOffset);
 
       ExprCursor.consume(2);
       break;
@@ -254,7 +254,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     if (FBReg)
       addFBReg(0);
     else
-      addRegIndirect(Reg.DwarfRegNo, 0);
+      addBReg(Reg.DwarfRegNo, 0);
     ExprCursor.take();
     break;
   }

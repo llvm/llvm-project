@@ -2028,6 +2028,16 @@ static const AddSubFlagsOpcodePair AddSubFlagsOpcodeMap[] = {
   {ARM::RSBSrsi, ARM::RSBrsi},
   {ARM::RSBSrsr, ARM::RSBrsr},
 
+  {ARM::tADDSi3, ARM::tADDi3},
+  {ARM::tADDSi8, ARM::tADDi8},
+  {ARM::tADDSrr, ARM::tADDrr},
+  {ARM::tADCS, ARM::tADC},
+
+  {ARM::tSUBSi3, ARM::tSUBi3},
+  {ARM::tSUBSi8, ARM::tSUBi8},
+  {ARM::tSUBSrr, ARM::tSUBrr},
+  {ARM::tSBCS, ARM::tSBC},
+
   {ARM::t2ADDSri, ARM::t2ADDri},
   {ARM::t2ADDSrr, ARM::t2ADDrr},
   {ARM::t2ADDSrs, ARM::t2ADDrs},

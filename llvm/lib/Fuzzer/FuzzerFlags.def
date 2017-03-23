@@ -39,6 +39,13 @@ FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
 FUZZER_FLAG_STRING(merge_control_file, "internal flag")
+FUZZER_FLAG_STRING(save_coverage_summary, "Experimental:"
+                   " save coverage summary to a given file."
+                   " Used with -merge=1")
+FUZZER_FLAG_STRING(load_coverage_summary, "Experimental:"
+                   " load coverage summary from a given file."
+                   " Treat this coverage as belonging to the first corpus. "
+                   " Used with -merge=1")
 FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
   " crash input. Use with -runs=N or -max_total_time=N to limit "
   "the number attempts")

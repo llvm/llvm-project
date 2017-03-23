@@ -70,7 +70,9 @@ public:
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
   void CrashResistantMerge(const std::vector<std::string> &Args,
-                           const std::vector<std::string> &Corpora);
+                           const std::vector<std::string> &Corpora,
+                           const char *CoverageSummaryInputPathOrNull,
+                           const char *CoverageSummaryOutputPathOrNull);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();

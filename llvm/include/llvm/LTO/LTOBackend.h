@@ -42,7 +42,7 @@ Error backend(Config &C, AddStreamFn AddStream,
 
 /// Runs a ThinLTO backend.
 Error thinBackend(Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
-                  ModuleSummaryIndex &CombinedIndex,
+                  const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
                   MapVector<StringRef, BitcodeModule> &ModuleMap);

@@ -21,7 +21,6 @@
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "AMDGPU.h"
-#include "AMDKernelCodeT.h"
 #include "AMDGPUSubtarget.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
@@ -99,23 +98,32 @@ StringRef AMDGPUAsmPrinter::getPassName() const {
   return "AMDGPU Assembly Printer";
 }
 
+const MCSubtargetInfo* AMDGPUAsmPrinter::getSTI() const {
+  return TM.getMCSubtargetInfo();
+}
+
+AMDGPUTargetStreamer& AMDGPUAsmPrinter::getTargetStreamer() const {
+  return static_cast<AMDGPUTargetStreamer&>(*OutStreamer->getTargetStreamer());
+}
+
 void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
-  AMDGPUTargetStreamer *TS =
-      static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
-
-  TS->EmitDirectiveHSACodeObjectVersion(2, 1);
-
-  const MCSubtargetInfo *STI = TM.getMCSubtargetInfo();
   AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(STI->getFeatureBits());
-  TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
-                                    "AMD", "AMDGPU");
+      AMDGPU::IsaInfo::getIsaVersion(getSTI()->getFeatureBits());
 
-  // Emit runtime metadata.
-  TS->EmitRuntimeMetadata(STI->getFeatureBits(), M);
+  getTargetStreamer().EmitDirectiveHSACodeObjectVersion(2, 1);
+  getTargetStreamer().EmitDirectiveHSACodeObjectISA(
+      ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
+  getTargetStreamer().EmitStartOfCodeObjectMetadata(M);
+}
+
+void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+    return;
+
+  getTargetStreamer().EmitEndOfCodeObjectMetadata();
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
@@ -132,25 +140,32 @@ bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
   return (MBB->back().getOpcode() != AMDGPU::S_SETPC_B64);
 }
 
-
 void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   SIProgramInfo KernelInfo;
+  amd_kernel_code_t KernelCode;
   if (STM.isAmdCodeObjectV2(*MF)) {
     getSIProgramInfo(KernelInfo, *MF);
-    EmitAmdKernelCodeT(*MF, KernelInfo);
+    getAmdKernelCode(KernelCode, KernelInfo, *MF);
+
+    OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+    getTargetStreamer().EmitAMDKernelCodeT(KernelCode);
   }
+
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+    return;
+  getTargetStreamer().EmitKernelCodeObjectMetadata(*MF->getFunction(),
+                                                   KernelCode);
 }
 
 void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   if (MFI->isKernel() && STM.isAmdCodeObjectV2(*MF)) {
-    AMDGPUTargetStreamer *TS =
-        static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
     SmallString<128> SymbolName;
     getNameWithPrefix(SymbolName, MF->getFunction()),
-    TS->EmitAMDGPUSymbolType(SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
+    getTargetStreamer().EmitAMDGPUSymbolType(
+        SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
 
   AsmPrinter::EmitFunctionEntryLabel();
@@ -720,97 +735,88 @@ static amd_element_byte_size_t getElementByteSizeValue(unsigned Size) {
   }
 }
 
-void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
-                                         const SIProgramInfo &KernelInfo) const {
+void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
+                                        const SIProgramInfo &KernelInfo,
+                                        const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
-  amd_kernel_code_t header;
 
-  AMDGPU::initDefaultAMDKernelCodeT(header, STM.getFeatureBits());
+  AMDGPU::initDefaultAMDKernelCodeT(Out, STM.getFeatureBits());
 
-  header.compute_pgm_resource_registers =
+  Out.compute_pgm_resource_registers =
       KernelInfo.ComputePGMRSrc1 |
       (KernelInfo.ComputePGMRSrc2 << 32);
-  header.code_properties = AMD_CODE_PROPERTY_IS_PTR64;
+  Out.code_properties = AMD_CODE_PROPERTY_IS_PTR64;
 
-
-  AMD_HSA_BITS_SET(header.code_properties,
+  AMD_HSA_BITS_SET(Out.code_properties,
                    AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
                    getElementByteSizeValue(STM.getMaxPrivateElementSize()));
 
   if (MFI->hasPrivateSegmentBuffer()) {
-    header.code_properties |=
+    Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
 
   if (MFI->hasDispatchPtr())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (MFI->hasQueuePtr())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
 
   if (MFI->hasKernargSegmentPtr())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
 
   if (MFI->hasDispatchID())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
 
   if (MFI->hasFlatScratchInit())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
-
-  // TODO: Private segment size
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
 
   if (MFI->hasGridWorkgroupCountX()) {
-    header.code_properties |=
+    Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X;
   }
 
   if (MFI->hasGridWorkgroupCountY()) {
-    header.code_properties |=
+    Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y;
   }
 
   if (MFI->hasGridWorkgroupCountZ()) {
-    header.code_properties |=
+    Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z;
   }
 
   if (MFI->hasDispatchPtr())
-    header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.debuggerSupported())
-    header.code_properties |= AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED;
+    Out.code_properties |= AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED;
 
   if (STM.isXNACKEnabled())
-    header.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
+    Out.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
 
   // FIXME: Should use getKernArgSize
-  header.kernarg_segment_byte_size =
+  Out.kernarg_segment_byte_size =
     STM.getKernArgSegmentSize(MF, MFI->getABIArgOffset());
-  header.wavefront_sgpr_count = KernelInfo.NumSGPR;
-  header.workitem_vgpr_count = KernelInfo.NumVGPR;
-  header.workitem_private_segment_byte_size = KernelInfo.ScratchSize;
-  header.workgroup_group_segment_byte_size = KernelInfo.LDSSize;
-  header.reserved_vgpr_first = KernelInfo.ReservedVGPRFirst;
-  header.reserved_vgpr_count = KernelInfo.ReservedVGPRCount;
+  Out.wavefront_sgpr_count = KernelInfo.NumSGPR;
+  Out.workitem_vgpr_count = KernelInfo.NumVGPR;
+  Out.workitem_private_segment_byte_size = KernelInfo.ScratchSize;
+  Out.workgroup_group_segment_byte_size = KernelInfo.LDSSize;
+  Out.reserved_vgpr_first = KernelInfo.ReservedVGPRFirst;
+  Out.reserved_vgpr_count = KernelInfo.ReservedVGPRCount;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
-  header.kernarg_segment_alignment = std::max((size_t)4,
+  Out.kernarg_segment_alignment = std::max((size_t)4,
       countTrailingZeros(MFI->getMaxKernArgAlign()));
 
   if (STM.debuggerEmitPrologue()) {
-    header.debug_wavefront_private_segment_offset_sgpr =
+    Out.debug_wavefront_private_segment_offset_sgpr =
       KernelInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
-    header.debug_private_segment_buffer_sgpr =
+    Out.debug_private_segment_buffer_sgpr =
       KernelInfo.DebuggerPrivateSegmentBufferSGPR;
   }
-
-  AMDGPUTargetStreamer *TS =
-      static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
-
-  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
-  TS->EmitAMDKernelCodeT(header);
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

@@ -12,10 +12,12 @@ define <4 x float> @foo(<4 x float> %x) {
   ret <4 x float> %ins2
 }
 
+; Insert of a constant is canonicalized ahead of insert of a variable.
+
 define <4 x float> @bar(<4 x float> %x, float %a) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> %x, float %a, i32 1
-; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[INS1]], float 2.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> %x, float 2.000000e+00, i32 2
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[TMP1]], float %a, i32 1
 ; CHECK-NEXT:    ret <4 x float> [[INS2]]
 ;
   %ins1 = insertelement<4 x float> %x, float %a, i32 1

@@ -182,10 +182,9 @@ define <4 x float> @dead_shuffle_elt(<4 x float> %x, <2 x float> %y) nounwind {
 
 define <2 x float> @test_fptrunc(double %f) {
 ; CHECK-LABEL: @test_fptrunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %f, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fptrunc <2 x double> [[TMP2]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double undef, double 0.000000e+00>, double %f, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp9 = insertelement <4 x double> undef, double %f, i32 0
   %tmp10 = insertelement <4 x double> %tmp9, double 0.000000e+00, i32 1
@@ -198,10 +197,9 @@ define <2 x float> @test_fptrunc(double %f) {
 
 define <2 x double> @test_fpext(float %f) {
 ; CHECK-LABEL: @test_fpext(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float %f, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    ret <2 x double> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float 0.000000e+00>, float %f, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %tmp9 = insertelement <4 x float> undef, float %f, i32 0
   %tmp10 = insertelement <4 x float> %tmp9, float 0.000000e+00, i32 1
@@ -223,8 +221,7 @@ define <4 x double> @test_shuffle(<4 x double> %f) {
 
 define <4 x float> @test_select(float %f, float %g) {
 ; CHECK-LABEL: @test_select(
-; CHECK-NEXT:    [[A0:%.*]] = insertelement <4 x float> undef, float %f, i32 0
-; CHECK-NEXT:    [[A3:%.*]] = insertelement <4 x float> [[A0]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[A3:%.*]] = insertelement <4 x float> <float undef, float undef, float undef, float 3.000000e+00>, float %f, i32 0
 ; CHECK-NEXT:    [[RET:%.*]] = shufflevector <4 x float> [[A3]], <4 x float> <float undef, float 4.000000e+00, float 5.000000e+00, float undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[RET]]
 ;

@@ -999,8 +999,8 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (SymbolBody *B = findSymbol(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value};
-    auto *C = cast<DefinedCommon>(B);
-    return {InX::Common, C->Offset};
+    if (auto *C = dyn_cast<DefinedCommon>(B))
+      return {InX::Common, C->Offset};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
@@ -1867,8 +1867,11 @@ Expr ScriptParser::readPrimary() {
     return [=] { return V; };
 
   // Tok is a symbol name.
-  if (Tok != "." && !isValidCIdentifier(Tok))
-    setError("malformed number: " + Tok);
+  if (Tok != ".") {
+    if (!isValidCIdentifier(Tok))
+      setError("malformed number: " + Tok);
+    Script->Opt.UndefinedSymbols.push_back(Tok);
+  }
   return [=] { return Script->getSymbolValue(Location, Tok); };
 }
 

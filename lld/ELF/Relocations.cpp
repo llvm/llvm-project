@@ -95,8 +95,7 @@ static unsigned
 handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
                            InputSectionBase &C, typename ELFT::uint Offset,
                            int64_t Addend, RelExpr Expr) {
-  typedef typename ELFT::uint uintX_t;
-  auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
+  auto addModuleReloc = [&](uint64_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
     // if we know that we are linking an executable. For ARM we resolve the
     // relocation when writing the Got. MIPS has a custom Got implementation
@@ -110,25 +109,27 @@ handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
           {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
     }
   };
+
   if (isRelExprOneOf<R_MIPS_TLSLD, R_TLSLD_PC>(Expr)) {
     if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
-      addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
+      addModuleReloc(Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+
   if (Target->isTlsGlobalDynamicRel(Type)) {
     if (Got->addDynTlsEntry(Body) &&
         (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
-      uintX_t Off = Got->getGlobalDynOffset(Body);
-      addModuleReloc(Body, Got, Off, false);
+      uint64_t Off = Got->getGlobalDynOffset(Body);
+      addModuleReloc(Off, false);
       if (Body.isPreemptible())
         In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
-                                     Off + (uintX_t)sizeof(uintX_t), false,
-                                     &Body, 0});
+                                     Off + Config->Wordsize, false, &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+
   return 0;
 }
 
@@ -137,13 +138,13 @@ template <class ELFT>
 static unsigned
 handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
+  typedef typename ELFT::uint uintX_t;
+
   if (!(C.Flags & SHF_ALLOC))
     return 0;
 
   if (!Body.isTls())
     return 0;
-
-  typedef typename ELFT::uint uintX_t;
 
   if (Config->EMachine == EM_ARM)
     return handleNoRelaxTlsRelocation<ELFT>(In<ELFT>::Got, Type, Body, C,
@@ -220,11 +221,11 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
         In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
                                      Body.getGotOffset(), false, &Body, 0});
       }
-      return Target->TlsGdRelaxSkip;
+    } else {
+      C.Relocations.push_back(
+          {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
+                Offset, Addend, &Body});
     }
-    C.Relocations.push_back(
-        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
-         Offset, Addend, &Body});
     return Target->TlsGdRelaxSkip;
   }
 

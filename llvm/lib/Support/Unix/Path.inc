@@ -920,12 +920,18 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
 namespace path {
 
 bool home_directory(SmallVectorImpl<char> &result) {
-  if (char *RequestedDir = getenv("HOME")) {
-    result.clear();
-    result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
-    return true;
+  char *RequestedDir = getenv("HOME");
+  if (!RequestedDir) {
+    struct passwd *pw = getpwuid(getuid());
+    if (pw && pw->pw_dir)
+      RequestedDir = pw->pw_dir;
   }
-  return false;
+  if (!RequestedDir)
+    return false;
+
+  result.clear();
+  result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
+  return true;
 }
 
 static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {

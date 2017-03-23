@@ -37,25 +37,19 @@
 .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 // ASM: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 
-.amdgpu_runtime_metadata
-    {
-        amd.MDVersion: [ 2, 0 ]
-        amd.Kernels: [
-            { amd.KernelName: amd_kernel_code_t_test_all },
-            { amd.KernelName: amd_kernel_code_t_minimal }
-        ]
-    }
-.end_amdgpu_runtime_metadata
+.amdgpu_code_object_metadata
+  Version: [ 3, 0 ]
+  Kernels:
+    - Name: amd_kernel_code_t_test_all
+    - Name: amd_kernel_code_t_minimal
+.end_amdgpu_code_object_metadata
 
-// ASM: .amdgpu_runtime_metadata
-// ASM:  {
-// ASM:    amd.MDVersion: [ 2, 0 ]
-// ASM:    amd.IsaInfo: { amd.IsaInfoWavefrontSize: 64, amd.IsaInfoLocalMemorySize: 65536, amd.IsaInfoEUsPerCU: 4, amd.IsaInfoMaxWavesPerEU: 10, amd.IsaInfoMaxFlatWorkGroupSize: 2048, amd.IsaInfoSGPRAllocGranule: 8, amd.IsaInfoTotalNumSGPRs: 512, amd.IsaInfoAddressableNumSGPRs: 104, amd.IsaInfoVGPRAllocGranule: 4, amd.IsaInfoTotalNumVGPRs: 256, amd.IsaInfoAddressableNumVGPRs: 256 },
-// ASM:    amd.Kernels:
-// ASM:      - { amd.KernelName: amd_kernel_code_t_test_all }
-// ASM:      - { amd.KernelName: amd_kernel_code_t_minimal }
-// ASM:  }
-// ASM: .end_amdgpu_runtime_metadata
+// ASM: .amdgpu_code_object_metadata
+// ASM:    Version: [ 3, 0 ]
+// ASM:    Kernels:
+// ASM:      - Name: amd_kernel_code_t_test_all
+// ASM:      - Name: amd_kernel_code_t_minimal
+// ASM: .end_amdgpu_code_object_metadata
 
 .amdgpu_hsa_kernel amd_kernel_code_t_test_all
 .amdgpu_hsa_kernel amd_kernel_code_t_minimal

@@ -122,10 +122,10 @@ protected:
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
-  /// Emit a dwarf register operation.
+  /// Emit a DW_OP_reg operation.
   void addReg(int DwarfReg, const char *Comment = nullptr);
-  /// Emit an (double-)indirect dwarf register operation.
-  void addRegIndirect(int DwarfReg, int Offset);
+  /// Emit a DW_OP_breg operation.
+  void addBReg(int DwarfReg, int Offset);
   /// Emit DW_OP_fbreg <Offset>.
   void addFBReg(int Offset);
 

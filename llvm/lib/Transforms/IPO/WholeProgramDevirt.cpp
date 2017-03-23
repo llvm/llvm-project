@@ -373,8 +373,8 @@ struct DevirtModule {
   Module &M;
   function_ref<AAResults &(Function &)> AARGetter;
 
-  PassSummaryAction Action;
-  ModuleSummaryIndex *Summary;
+  ModuleSummaryIndex *ExportSummary;
+  const ModuleSummaryIndex *ImportSummary;
 
   IntegerType *Int8Ty;
   PointerType *Int8PtrTy;
@@ -397,14 +397,17 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
 
   DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
-               PassSummaryAction Action, ModuleSummaryIndex *Summary)
-      : M(M), AARGetter(AARGetter), Action(Action), Summary(Summary),
-        Int8Ty(Type::getInt8Ty(M.getContext())),
+               ModuleSummaryIndex *ExportSummary,
+               const ModuleSummaryIndex *ImportSummary)
+      : M(M), AARGetter(AARGetter), ExportSummary(ExportSummary),
+        ImportSummary(ImportSummary), Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
         IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
-        RemarksEnabled(areRemarksEnabled()) {}
+        RemarksEnabled(areRemarksEnabled()) {
+    assert(!(ExportSummary && ImportSummary));
+  }
 
   bool areRemarksEnabled();
 
@@ -488,15 +491,17 @@ struct WholeProgramDevirt : public ModulePass {
 
   bool UseCommandLine = false;
 
-  PassSummaryAction Action;
-  ModuleSummaryIndex *Summary;
+  ModuleSummaryIndex *ExportSummary;
+  const ModuleSummaryIndex *ImportSummary;
 
   WholeProgramDevirt() : ModulePass(ID), UseCommandLine(true) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
   }
 
-  WholeProgramDevirt(PassSummaryAction Action, ModuleSummaryIndex *Summary)
-      : ModulePass(ID), Action(Action), Summary(Summary) {
+  WholeProgramDevirt(ModuleSummaryIndex *ExportSummary,
+                     const ModuleSummaryIndex *ImportSummary)
+      : ModulePass(ID), ExportSummary(ExportSummary),
+        ImportSummary(ImportSummary) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
   }
 
@@ -505,7 +510,8 @@ struct WholeProgramDevirt : public ModulePass {
       return false;
     if (UseCommandLine)
       return DevirtModule::runForTesting(M, LegacyAARGetter(*this));
-    return DevirtModule(M, LegacyAARGetter(*this), Action, Summary).run();
+    return DevirtModule(M, LegacyAARGetter(*this), ExportSummary, ImportSummary)
+        .run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -524,9 +530,10 @@ INITIALIZE_PASS_END(WholeProgramDevirt, "wholeprogramdevirt",
                     "Whole program devirtualization", false, false)
 char WholeProgramDevirt::ID = 0;
 
-ModulePass *llvm::createWholeProgramDevirtPass(PassSummaryAction Action,
-                                               ModuleSummaryIndex *Summary) {
-  return new WholeProgramDevirt(Action, Summary);
+ModulePass *
+llvm::createWholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
+                                   const ModuleSummaryIndex *ImportSummary) {
+  return new WholeProgramDevirt(ExportSummary, ImportSummary);
 }
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
@@ -535,7 +542,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   auto AARGetter = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
-  if (!DevirtModule(M, AARGetter, PassSummaryAction::None, nullptr).run())
+  if (!DevirtModule(M, AARGetter, nullptr, nullptr).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -557,7 +564,12 @@ bool DevirtModule::runForTesting(
     ExitOnErr(errorCodeToError(In.error()));
   }
 
-  bool Changed = DevirtModule(M, AARGetter, ClSummaryAction, &Summary).run();
+  bool Changed =
+      DevirtModule(
+          M, AARGetter,
+          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
+          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
+          .run();
 
   if (!ClWriteSummary.empty()) {
     ExitOnError ExitOnErr(
@@ -1196,9 +1208,14 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
 }
 
 void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
-  const WholeProgramDevirtResolution &Res =
-      Summary->getTypeIdSummary(cast<MDString>(Slot.TypeID)->getString())
-          .WPDRes[Slot.ByteOffset];
+  const TypeIdSummary *TidSummary =
+      ImportSummary->getTypeIdSummary(cast<MDString>(Slot.TypeID)->getString());
+  if (!TidSummary)
+    return;
+  auto ResI = TidSummary->WPDRes.find(Slot.ByteOffset);
+  if (ResI == TidSummary->WPDRes.end())
+    return;
+  const WholeProgramDevirtResolution &Res = ResI->second;
 
   if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl) {
     // The type of the function in the declaration is irrelevant because every
@@ -1265,7 +1282,7 @@ bool DevirtModule::run() {
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need
   // to handle any users that appear only in the function summaries.
-  if (Action != PassSummaryAction::Export &&
+  if (!ExportSummary &&
       (!TypeTestFunc || TypeTestFunc->use_empty() || !AssumeFunc ||
        AssumeFunc->use_empty()) &&
       (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()))
@@ -1277,7 +1294,7 @@ bool DevirtModule::run() {
   if (TypeCheckedLoadFunc)
     scanTypeCheckedLoadUsers(TypeCheckedLoadFunc);
 
-  if (Action == PassSummaryAction::Import) {
+  if (ImportSummary) {
     for (auto &S : CallSlots)
       importResolution(S.first, S.second);
 
@@ -1296,7 +1313,7 @@ bool DevirtModule::run() {
     return true;
 
   // Collect information from summary about which calls to try to devirtualize.
-  if (Action == PassSummaryAction::Export) {
+  if (ExportSummary) {
     DenseMap<GlobalValue::GUID, TinyPtrVector<Metadata *>> MetadataByGUID;
     for (auto &P : TypeIdMap) {
       if (auto *TypeId = dyn_cast<MDString>(P.first))
@@ -1304,7 +1321,7 @@ bool DevirtModule::run() {
             TypeId);
     }
 
-    for (auto &P : *Summary) {
+    for (auto &P : *ExportSummary) {
       for (auto &S : P.second) {
         auto *FS = dyn_cast<FunctionSummary>(S.get());
         if (!FS)
@@ -1353,11 +1370,11 @@ bool DevirtModule::run() {
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeIdMap[S.first.TypeID],
                                   S.first.ByteOffset)) {
       WholeProgramDevirtResolution *Res = nullptr;
-      if (Action == PassSummaryAction::Export && isa<MDString>(S.first.TypeID))
-        Res =
-            &Summary
-                 ->getTypeIdSummary(cast<MDString>(S.first.TypeID)->getString())
-                 .WPDRes[S.first.ByteOffset];
+      if (ExportSummary && isa<MDString>(S.first.TypeID))
+        Res = &ExportSummary
+                   ->getOrInsertTypeIdSummary(
+                       cast<MDString>(S.first.TypeID)->getString())
+                   .WPDRes[S.first.ByteOffset];
 
       if (!trySingleImplDevirt(TargetsForSlot, S.second, Res) &&
           tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first))
@@ -1374,7 +1391,7 @@ bool DevirtModule::run() {
     // intrinsics were *not* devirtualized, we need to add the resulting
     // llvm.type.test intrinsics to the function summaries so that the
     // LowerTypeTests pass will export them.
-    if (Action == PassSummaryAction::Export && isa<MDString>(S.first.TypeID)) {
+    if (ExportSummary && isa<MDString>(S.first.TypeID)) {
       auto GUID =
           GlobalValue::getGUID(cast<MDString>(S.first.TypeID)->getString());
       for (auto FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)

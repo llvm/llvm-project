@@ -85,7 +85,7 @@ public:
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
-  User *getUser() const;
+  User *getUser() const LLVM_READONLY;
 
   inline void set(Value *Val);
 
@@ -111,7 +111,7 @@ public:
   static void zap(Use *Start, const Use *Stop, bool del = false);
 
 private:
-  const Use *getImpliedUser() const;
+  const Use *getImpliedUser() const LLVM_READONLY;
 
   Value *Val;
   Use *Next;

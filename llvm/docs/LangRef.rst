@@ -4366,29 +4366,42 @@ parameter, and it will be included in the ``variables:`` field of its
 DIExpression
 """"""""""""
 
-``DIExpression`` nodes represent DWARF expression sequences. They are used in
-:ref:`debug intrinsics<dbg_intrinsics>` (such as ``llvm.dbg.declare``) to
-describe how the referenced LLVM variable relates to the source language
-variable.
+``DIExpression`` nodes represent expressions that are inspired by the DWARF
+expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
+(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
+referenced LLVM variable relates to the source language variable.
 
 The current supported vocabulary is limited:
 
 - ``DW_OP_deref`` dereferences the working expression.
 - ``DW_OP_plus, 93`` adds ``93`` to the working expression.
-- ``DW_OP_bit_piece, 16, 8`` specifies the offset and size (``16`` and ``8``
-  here, respectively) of the variable piece from the working expression.
+- ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
+  here, respectively) of the variable fragment from the working expression. Note
+  that contrary to DW_OP_bit_piece, the offset is describing the the location
+  within the described source variable.
 - ``DW_OP_swap`` swaps top two stack entries.
 - ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
   of the stack is treated as an address. The second stack entry is treated as an
   address space identifier.
+- ``DW_OP_stack_value`` marks a constant value.
+
+DIExpression nodes that contain a ``DW_OP_stack_value`` operator are standalone
+location descriptions that describe constant values. This form is used to
+describe global constants that have been optimized away. All other expressions
+are modifiers to another location: A debug intrinsic ties a location and a
+DIExpression together. Contrary to DWARF expressions, a DIExpression always
+describes the *value* of a source variable and never its *address*. In DWARF
+terminology, a DIExpression can always be considered an implicit location
+description regardless whether it contains a ``DW_OP_stack_value`` or not.
 
 .. code-block:: text
 
     !0 = !DIExpression(DW_OP_deref)
     !1 = !DIExpression(DW_OP_plus, 3)
     !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
-    !3 = !DIExpression(DW_OP_deref, DW_OP_plus, 3, DW_OP_bit_piece, 3, 7)
+    !3 = !DIExpression(DW_OP_deref, DW_OP_plus, 3, DW_OP_LLVM_fragment, 3, 7)
     !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
+    !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIObjCProperty
 """"""""""""""

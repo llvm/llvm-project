@@ -125,12 +125,16 @@ void test_hash_variant_duplicate_elements() {
 struct A {};
 struct B {};
 
+namespace std {
+
 template <>
-struct std::hash<B> {
+struct hash<B> {
   size_t operator()(B const&) const {
     return 0;
   }
 };
+
+}
 
 void test_hash_variant_enabled() {
   {

@@ -472,6 +472,10 @@ bool ELFAsmParser::maybeParseUniqueID(int64_t &UniqueID) {
   return false;
 }
 
+static bool hasPrefix(StringRef SectionName, StringRef Prefix) {
+  return SectionName.startswith(Prefix) || SectionName == Prefix.drop_back();
+}
+
 bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef SectionName;
 
@@ -565,8 +569,12 @@ EndStmt:
   if (TypeName.empty()) {
     if (SectionName.startswith(".note"))
       Type = ELF::SHT_NOTE;
-    else if (SectionName == ".init_array")
+    else if (hasPrefix(SectionName, ".init_array."))
       Type = ELF::SHT_INIT_ARRAY;
+    else if (hasPrefix(SectionName, ".bss."))
+      Type = ELF::SHT_NOBITS;
+    else if (hasPrefix(SectionName, ".tbss."))
+      Type = ELF::SHT_NOBITS;
     else if (SectionName == ".fini_array")
       Type = ELF::SHT_FINI_ARRAY;
     else if (SectionName == ".preinit_array")

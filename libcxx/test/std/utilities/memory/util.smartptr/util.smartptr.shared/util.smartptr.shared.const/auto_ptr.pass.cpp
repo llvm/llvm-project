@@ -86,6 +86,7 @@ int main()
             // Without rvalue references, ptr got copied into
             // the shared_ptr destructor and the copy was
             // destroyed during unwinding.
+            (void) raw_ptr; // silence 'unused variable' warning
             assert(A::count == 0);
             assert(B::count == 0);
 #endif

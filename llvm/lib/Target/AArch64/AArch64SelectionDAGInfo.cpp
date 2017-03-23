@@ -55,7 +55,5 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 }
 bool AArch64SelectionDAGInfo::generateFMAsInMachineCombiner(
     CodeGenOpt::Level OptLevel) const {
-  if (OptLevel >= CodeGenOpt::Aggressive)
-    return true;
-  return false;
+  return OptLevel >= CodeGenOpt::Aggressive;
 }

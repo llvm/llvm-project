@@ -225,19 +225,33 @@ enum class PassSummaryAction {
 
 /// \brief This pass lowers type metadata and the llvm.type.test intrinsic to
 /// bitsets.
-/// \param Action What to do with the summary passed as Index.
-/// \param Index The summary to use for importing or exporting, this can be null
-///              when Action is None.
-ModulePass *createLowerTypeTestsPass(PassSummaryAction Action,
-                                     ModuleSummaryIndex *Index);
+///
+/// The behavior depends on the summary arguments:
+/// - If ExportSummary is non-null, this pass will export type identifiers to
+///   the given summary.
+/// - Otherwise, if ImportSummary is non-null, this pass will import type
+///   identifiers from the given summary.
+/// - Otherwise it does neither.
+/// It is invalid for both ExportSummary and ImportSummary to be non-null.
+ModulePass *createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
+                                     const ModuleSummaryIndex *ImportSummary);
 
 /// \brief This pass export CFI checks for use by external modules.
 ModulePass *createCrossDSOCFIPass();
 
 /// \brief This pass implements whole-program devirtualization using type
 /// metadata.
-ModulePass *createWholeProgramDevirtPass(PassSummaryAction Action,
-                                         ModuleSummaryIndex *Index);
+///
+/// The behavior depends on the summary arguments:
+/// - If ExportSummary is non-null, this pass will export type identifiers to
+///   the given summary.
+/// - Otherwise, if ImportSummary is non-null, this pass will import type
+///   identifiers from the given summary.
+/// - Otherwise it does neither.
+/// It is invalid for both ExportSummary and ImportSummary to be non-null.
+ModulePass *
+createWholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
+                             const ModuleSummaryIndex *ImportSummary);
 
 /// This pass splits globals into pieces for the benefit of whole-program
 /// devirtualization and control-flow integrity.

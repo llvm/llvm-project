@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <set>
+#include <sstream>
 
 using namespace fuzzer;
 
@@ -636,7 +637,10 @@ static void Merge(const std::string &Input,
   Merger M;
   std::vector<std::string> NewFiles;
   EXPECT_TRUE(M.Parse(Input, true));
+  std::stringstream SS;
+  M.PrintSummary(SS);
   EXPECT_EQ(NumNewFeatures, M.Merge(&NewFiles));
+  EXPECT_EQ(M.AllFeatures(), M.ParseSummary(SS));
   EQ(NewFiles, Result);
 }
 
@@ -705,6 +709,16 @@ TEST(Merge, Good) {
   EQ(M.Files[1].Features, {4, 5, 6});
   EQ(M.Files[2].Features, {1, 3, 6});
   EXPECT_EQ(3U, M.Merge(&NewFiles));
+  EQ(NewFiles, {"B"});
+
+  // Same as the above, but with InitialFeatures.
+  EXPECT_TRUE(M.Parse("2\n0\nB\nC\n"
+                        "STARTED 0 1001\nDONE 0 4 5 6 \n"
+                        "STARTED 1 1002\nDONE 1 6 1 3\n"
+                        "", true));
+  EQ(M.Files[0].Features, {4, 5, 6});
+  EQ(M.Files[1].Features, {1, 3, 6});
+  EXPECT_EQ(3U, M.Merge({1, 2, 3}, &NewFiles));
   EQ(NewFiles, {"B"});
 }
 
