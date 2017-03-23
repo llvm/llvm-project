@@ -1,9 +1,11 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck %s
 
 ; We expect a two digit VGPR usage here, not a three digit.
 ; CHECK: NumVgprs: {{[0-9][0-9]$}}
 
-define void @load_fma_store(float addrspace(3)* nocapture readonly %arg, float addrspace(1)* nocapture %arg1) {
+define amdgpu_kernel void @load_fma_store(float addrspace(3)* nocapture readonly %arg, float addrspace(1)* nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 1
   %tmp2 = load float, float addrspace(3)* %tmp, align 4

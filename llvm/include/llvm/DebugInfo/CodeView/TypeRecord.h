@@ -236,12 +236,29 @@ public:
   StringRef Name;
 };
 
-// LF_ARGLIST, LF_SUBSTR_LIST
+// LF_ARGLIST
 class ArgListRecord : public TypeRecord {
 public:
   explicit ArgListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   ArgListRecord(TypeRecordKind Kind, ArrayRef<TypeIndex> Indices)
+      : TypeRecord(Kind), ArgIndices(Indices) {}
+
+  /// Rewrite member type indices with IndexMap. Returns false if a type index
+  /// is not in the map.
+  bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
+
+  ArrayRef<TypeIndex> getIndices() const { return ArgIndices; }
+
+  std::vector<TypeIndex> ArgIndices;
+};
+
+// LF_SUBSTR_LIST
+class StringListRecord : public TypeRecord {
+public:
+  explicit StringListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
+  StringListRecord(TypeRecordKind Kind, ArrayRef<TypeIndex> Indices)
       : TypeRecord(Kind), StringIndices(Indices) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index

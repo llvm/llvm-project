@@ -1,3 +1,6 @@
+// REQUIRES: native-run
+// UNSUPPORTED: arm, aarch64
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- clear_cache_test.c - Test clear_cache -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

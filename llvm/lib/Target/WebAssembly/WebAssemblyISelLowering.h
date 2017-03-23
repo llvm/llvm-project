@@ -58,7 +58,7 @@ class WebAssemblyTargetLowering final : public TargetLowering {
                              unsigned AS) const override;
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, unsigned Align,
                                       bool *Fast) const override;
-  bool isIntDivCheap(EVT VT, AttributeSet Attr) const override;
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

@@ -1,4 +1,5 @@
-//===-- AttributeSetNode.h - AttributeSet Internal Node ---------*- C++ -*-===//
+//===-- AttributeSetNode.h - AttributeList Internal Node ---------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the node class used internally by AttributeSet.
+/// \brief This file defines the node class used internally by AttributeList.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -65,11 +66,11 @@ public:
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
-  static AttributeSetNode *get(AttributeSet AS, unsigned Index) {
+  static AttributeSetNode *get(AttributeList AS, unsigned Index) {
     return AS.getAttributes(Index);
   }
 
-  /// \brief Return the number of attributes this AttributeSet contains.
+  /// \brief Return the number of attributes this AttributeList contains.
   unsigned getNumAttributes() const { return NumAttrs; }
 
   bool hasAttribute(Attribute::AttrKind Kind) const {

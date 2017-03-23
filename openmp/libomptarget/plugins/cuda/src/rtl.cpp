@@ -646,8 +646,10 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   DP("Launch of entry point at " DPxMOD " successful!\n",
       DPxPTR(tgt_entry_ptr));
 
-  if (cudaDeviceSynchronize() != cudaSuccess) {
-    DP("Kernel execution error at " DPxMOD ".\n", DPxPTR(tgt_entry_ptr));
+  cudaError_t sync_error = cudaDeviceSynchronize();
+  if (sync_error != cudaSuccess) {
+  DP("Kernel execution error at " DPxMOD ", %s.\n", DPxPTR(tgt_entry_ptr),
+      cudaGetErrorString(sync_error));
     return OFFLOAD_FAIL;
   } else {
     DP("Kernel execution at " DPxMOD " successful!\n", DPxPTR(tgt_entry_ptr));

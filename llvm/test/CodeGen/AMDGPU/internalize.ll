@@ -8,14 +8,14 @@
 @gvar_used = addrspace(1) global i32 undef, align 4
 
 ; Function Attrs: alwaysinline nounwind
-define void @foo_unused(i32 addrspace(1)* %out) local_unnamed_addr #1 {
+define amdgpu_kernel void @foo_unused(i32 addrspace(1)* %out) local_unnamed_addr #1 {
 entry:
   store i32 1, i32 addrspace(1)* %out
   ret void
 }
 
 ; Function Attrs: alwaysinline nounwind
-define void @foo_used(i32 addrspace(1)* %out, i32 %tid) local_unnamed_addr #1 {
+define amdgpu_kernel void @foo_used(i32 addrspace(1)* %out, i32 %tid) local_unnamed_addr #1 {
 entry:
   store i32 %tid, i32 addrspace(1)* %out
   ret void

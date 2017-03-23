@@ -4,7 +4,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: @v_test_imax3_sgt_i32
 ; SI: v_max3_i32
-define void @v_test_imax3_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_imax3_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
@@ -23,7 +23,7 @@ define void @v_test_imax3_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %apt
 
 ; FUNC-LABEL: @v_test_umax3_ugt_i32
 ; SI: v_max3_u32
-define void @v_test_umax3_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
+define amdgpu_kernel void @v_test_umax3_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr, i32 addrspace(1)* %cptr) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid

@@ -5,7 +5,7 @@
 ; CHECK: DIVERGENT:  %tmp11 = load volatile float, float addrspace(1)* %tmp5, align 4
 
 ; The post dominator tree does not have a root node in this case
-define void @no_return_blocks(float addrspace(1)* noalias nocapture readonly %arg, float addrspace(1)* noalias nocapture readonly %arg1) #0 {
+define amdgpu_kernel void @no_return_blocks(float addrspace(1)* noalias nocapture readonly %arg, float addrspace(1)* noalias nocapture readonly %arg1) #0 {
 bb0:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp2 = sext i32 %tmp to i64

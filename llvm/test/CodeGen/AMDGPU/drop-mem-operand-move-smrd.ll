@@ -9,7 +9,7 @@
 ; GCN: buffer_load_dword
 ; GCN: ds_write2_b32
 ; GCN: s_endpgm
-define void @reschedule_global_load_lds_store(i32 addrspace(1)* noalias %gptr0, i32 addrspace(1)* noalias %gptr1, i32 addrspace(3)* noalias %lptr, i32 %c) #0 {
+define amdgpu_kernel void @reschedule_global_load_lds_store(i32 addrspace(1)* noalias %gptr0, i32 addrspace(1)* noalias %gptr1, i32 addrspace(3)* noalias %lptr, i32 %c) #0 {
 entry:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx = shl i32 %tid, 2

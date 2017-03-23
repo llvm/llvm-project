@@ -3,7 +3,7 @@
 ; definition on every path (there should at least be IMPLICIT_DEF instructions).
 target triple = "amdgcn--"
 
-define void @func() {
+define amdgpu_kernel void @func() {
 B0:
   br i1 undef, label %B1, label %B2
 

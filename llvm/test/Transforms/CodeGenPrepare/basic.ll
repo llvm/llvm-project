@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 ; rdar://8785296
 define i32 @test1(i8* %ptr) nounwind ssp noredzone align 2 {
 entry:
-  %0 = tail call i64 @llvm.objectsize.i64(i8* %ptr, i1 false)
+  %0 = tail call i64 @llvm.objectsize.i64(i8* %ptr, i1 false, i1 false)
   %1 = icmp ugt i64 %0, 3
   br i1 %1, label %T, label %trap
 
@@ -25,6 +25,44 @@ T:
   ret i32 4
 }
 
-declare i64 @llvm.objectsize.i64(i8*, i1) nounwind readonly
+; CHECK-LABEL: @test_objectsize_null_flag(
+define i64 @test_objectsize_null_flag(i8* %ptr) {
+entry:
+  ; CHECK: ret i64 -1
+  %0 = tail call i64 @llvm.objectsize.i64(i8* null, i1 false, i1 true)
+  ret i64 %0
+}
+
+; CHECK-LABEL: @test_objectsize_null_flag_min(
+define i64 @test_objectsize_null_flag_min(i8* %ptr) {
+entry:
+  ; CHECK: ret i64 0
+  %0 = tail call i64 @llvm.objectsize.i64(i8* null, i1 true, i1 true)
+  ret i64 %0
+}
+
+; Test foldable null pointers because we evaluate them with non-exact modes in
+; CodeGenPrepare.
+; CHECK-LABEL: @test_objectsize_null_flag_noas0(
+define i64 @test_objectsize_null_flag_noas0() {
+entry:
+  ; CHECK: ret i64 0
+  %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 false,
+                                               i1 true)
+  ret i64 %0
+}
+
+; CHECK-LABEL: @test_objectsize_null_flag_min_noas0(
+define i64 @test_objectsize_null_flag_min_noas0() {
+entry:
+  ; CHECK: ret i64 0
+  %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 true,
+                                               i1 true)
+  ret i64 %0
+}
+
+
+declare i64 @llvm.objectsize.i64(i8*, i1, i1) nounwind readonly
+declare i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)*, i1, i1) nounwind readonly
 
 declare void @llvm.trap() nounwind

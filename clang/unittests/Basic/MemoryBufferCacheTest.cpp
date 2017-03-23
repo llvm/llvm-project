@@ -50,7 +50,6 @@ TEST(MemoryBufferCacheTest, addBuffer) {
 
   // Replace the middle buffer.
   B2 = getBuffer(2);
-  ASSERT_NE(RawB2, B2.get());
   RawB2 = B2.get();
   EXPECT_EQ(RawB2, &Cache.addBuffer("2", std::move(B2)));
 

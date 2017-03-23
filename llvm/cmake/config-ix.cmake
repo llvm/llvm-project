@@ -244,7 +244,7 @@ endif()
 
 check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 if( LLVM_USING_GLIBC )
-  add_llvm_definitions( -D_GNU_SOURCE )
+  add_definitions( -D_GNU_SOURCE )
 endif()
 # This check requires _GNU_SOURCE
 if(HAVE_LIBPTHREAD)

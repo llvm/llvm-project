@@ -9,7 +9,7 @@
 ; GCN: s_cbranch_vccnz
 ; GCN-NOT: s_endpgm
 ; GCN: .Lfunc_end0
-define void @annotate_unreachable_noloop(<4 x float> addrspace(1)* noalias nocapture readonly %arg) #0 {
+define amdgpu_kernel void @annotate_unreachable_noloop(<4 x float> addrspace(1)* noalias nocapture readonly %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
@@ -40,7 +40,7 @@ bb5:                                              ; preds = %bb3, %bb1
 ; GCN: s_cbranch_scc1
 ; GCN: s_endpgm
 ; GCN: .Lfunc_end1
-define void @annotate_ret_noloop(<4 x float> addrspace(1)* noalias nocapture readonly %arg) #0 {
+define amdgpu_kernel void @annotate_ret_noloop(<4 x float> addrspace(1)* noalias nocapture readonly %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1

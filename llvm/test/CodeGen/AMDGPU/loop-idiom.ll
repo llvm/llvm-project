@@ -9,7 +9,7 @@
 ; FUNC: @no_memcpy
 ; R600-NOT: {{^}}llvm.memcpy
 ; SI-NOT: {{^}}llvm.memcpy
-define void @no_memcpy(i8 addrspace(3)* %in, i32 %size) {
+define amdgpu_kernel void @no_memcpy(i8 addrspace(3)* %in, i32 %size) {
 entry:
   %dest = alloca i8, i32 32
   br label %for.body
@@ -33,7 +33,7 @@ for.end:
 ; R600-NOT: {{^}}memset_pattern16:
 ; SI-NOT: {{^}}llvm.memset
 ; SI-NOT: {{^}}memset_pattern16:
-define void @no_memset(i32 %size) {
+define amdgpu_kernel void @no_memset(i32 %size) {
 entry:
   %dest = alloca i8, i32 32
   br label %for.body

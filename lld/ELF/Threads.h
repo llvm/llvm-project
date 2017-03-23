@@ -69,14 +69,15 @@ namespace lld {
 namespace elf {
 
 template <class IterTy, class FuncTy>
-void forEach(IterTy Begin, IterTy End, FuncTy Fn) {
+void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
   if (Config->Threads)
     parallel_for_each(Begin, End, Fn);
   else
     std::for_each(Begin, End, Fn);
 }
 
-inline void forLoop(size_t Begin, size_t End, std::function<void(size_t)> Fn) {
+inline void parallelFor(size_t Begin, size_t End,
+                        std::function<void(size_t)> Fn) {
   if (Config->Threads) {
     parallel_for(Begin, End, Fn);
   } else {

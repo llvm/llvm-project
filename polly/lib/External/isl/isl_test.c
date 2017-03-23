@@ -1926,7 +1926,7 @@ static int test_coalesce_special(struct isl_ctx *ctx)
 	    "(exists (e0 = [(-2 + y)/3]: 3e0 = -2 + y and y <= 200 and "
 		"y >= 5 and o1 <= 241 and o1 >= 212)) }";
 	map1 = isl_map_read_from_str(ctx, str);
-	map1 = isl_map_align_divs(map1);
+	map1 = isl_map_align_divs_internal(map1);
 	map1 = isl_map_coalesce(map1);
 	str = "[y] -> { [S_L220_OUT[] -> T7[]] -> "
 	    "[[S_L309_IN[] -> T11[]] -> ce_imag2[o0, o1]] : "
@@ -1935,7 +1935,7 @@ static int test_coalesce_special(struct isl_ctx *ctx)
 		"o0 >= 3 - y and o0 <= -2 + y and o0 >= 0) }";
 	map2 = isl_map_read_from_str(ctx, str);
 	map2 = isl_map_union(map2, map1);
-	map2 = isl_map_align_divs(map2);
+	map2 = isl_map_align_divs_internal(map2);
 	map2 = isl_map_coalesce(map2);
 	isl_map_free(map2);
 	if (!map2)

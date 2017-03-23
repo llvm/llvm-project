@@ -6,7 +6,7 @@
 
 ; Make sure this doesn't crash
 ; CHECK-LABEL: {{^}}copy_to_reg_frameindex:
-define void @copy_to_reg_frameindex(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @copy_to_reg_frameindex(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %alloca = alloca [16 x i32]
   br label %loop

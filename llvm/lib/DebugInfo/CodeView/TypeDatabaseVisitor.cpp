@@ -83,6 +83,22 @@ Error TypeDatabaseVisitor::visitKnownRecord(CVType &CVR, ArgListRecord &Args) {
   return Error::success();
 }
 
+Error TypeDatabaseVisitor::visitKnownRecord(CVType &CVR,
+                                            StringListRecord &Strings) {
+  auto Indices = Strings.getIndices();
+  uint32_t Size = Indices.size();
+  SmallString<256> TypeName("\"");
+  for (uint32_t I = 0; I < Size; ++I) {
+    StringRef ArgTypeName = TypeDB.getTypeName(Indices[I]);
+    TypeName.append(ArgTypeName);
+    if (I + 1 != Size)
+      TypeName.append("\" \"");
+  }
+  TypeName.push_back('\"');
+  Name = TypeDB.saveTypeName(TypeName);
+  return Error::success();
+}
+
 Error TypeDatabaseVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
   Name = Class.getName();
   return Error::success();

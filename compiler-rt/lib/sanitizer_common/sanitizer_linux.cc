@@ -78,7 +78,6 @@ extern char **environ;  // provided by crt1
 #endif
 
 #if SANITIZER_LINUX
-#include <sys/auxv.h>
 // <linux/time.h>
 struct kernel_timeval {
   long tv_sec;
@@ -806,8 +805,6 @@ uptr GetPageSize() {
   return 4096;
 #elif SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
   return EXEC_PAGESIZE;
-#elif SANITIZER_LINUX
-  return getauxval(AT_PAGESZ);
 #else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #endif

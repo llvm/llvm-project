@@ -1111,9 +1111,9 @@
 ; ALL:     {
 ; ALL:       StringList (0x1057) {
 ; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
-; ALL:         NumArgs: 1
-; ALL:         Arguments [
-; ALL:           ArgType: __vc_attributes::threadingAttribute (0x100B)
+; ALL:         NumStrings: 1
+; ALL:         Strings [
+; ALL:           String: __vc_attributes::threadingAttribute (0x100B)
 ; ALL:         ]
 ; ALL:       }
 ; ALL:     }

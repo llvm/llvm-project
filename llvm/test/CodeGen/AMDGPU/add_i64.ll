@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() readnone
 ; SI-LABEL: {{^}}test_i64_vreg:
 ; SI: v_add_i32
 ; SI: v_addc_u32
-define void @test_i64_vreg(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %inA, i64 addrspace(1)* noalias %inB) {
+define amdgpu_kernel void @test_i64_vreg(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %inA, i64 addrspace(1)* noalias %inB) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %a_ptr = getelementptr i64, i64 addrspace(1)* %inA, i32 %tid
   %b_ptr = getelementptr i64, i64 addrspace(1)* %inB, i32 %tid
@@ -21,7 +21,7 @@ define void @test_i64_vreg(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noa
 ; SI-LABEL: {{^}}sgpr_operand:
 ; SI: v_add_i32
 ; SI: v_addc_u32
-define void @sgpr_operand(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 addrspace(1)* noalias %in_bar, i64 %a) {
+define amdgpu_kernel void @sgpr_operand(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 addrspace(1)* noalias %in_bar, i64 %a) {
   %foo = load i64, i64 addrspace(1)* %in, align 8
   %result = add i64 %foo, %a
   store i64 %result, i64 addrspace(1)* %out
@@ -34,7 +34,7 @@ define void @sgpr_operand(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noal
 ; SI-LABEL: {{^}}sgpr_operand_reversed:
 ; SI: v_add_i32
 ; SI: v_addc_u32
-define void @sgpr_operand_reversed(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 %a) {
+define amdgpu_kernel void @sgpr_operand_reversed(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 %a) {
   %foo = load i64, i64 addrspace(1)* %in, align 8
   %result = add i64 %a, %foo
   store i64 %result, i64 addrspace(1)* %out
@@ -47,7 +47,7 @@ define void @sgpr_operand_reversed(i64 addrspace(1)* noalias %out, i64 addrspace
 ; SI: s_addc_u32
 ; SI: s_add_u32
 ; SI: s_addc_u32
-define void @test_v2i64_sreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> %a, <2 x i64> %b) {
+define amdgpu_kernel void @test_v2i64_sreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> %a, <2 x i64> %b) {
   %result = add <2 x i64> %a, %b
   store <2 x i64> %result, <2 x i64> addrspace(1)* %out
   ret void
@@ -58,7 +58,7 @@ define void @test_v2i64_sreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> %a,
 ; SI: v_addc_u32
 ; SI: v_add_i32
 ; SI: v_addc_u32
-define void @test_v2i64_vreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %inA, <2 x i64> addrspace(1)* noalias %inB) {
+define amdgpu_kernel void @test_v2i64_vreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %inA, <2 x i64> addrspace(1)* noalias %inB) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %a_ptr = getelementptr <2 x i64>, <2 x i64> addrspace(1)* %inA, i32 %tid
   %b_ptr = getelementptr <2 x i64>, <2 x i64> addrspace(1)* %inB, i32 %tid
@@ -76,7 +76,7 @@ define void @test_v2i64_vreg(<2 x i64> addrspace(1)* noalias %out, <2 x i64> add
 ; SI-NOT: addc
 ; SI: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; SI: buffer_store_dword [[VRESULT]],
-define void @trunc_i64_add_to_i32(i32 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @trunc_i64_add_to_i32(i32 addrspace(1)* %out, i64 %a, i64 %b) {
   %add = add i64 %b, %a
   %trunc = trunc i64 %add to i32
   store i32 %trunc, i32 addrspace(1)* %out, align 8

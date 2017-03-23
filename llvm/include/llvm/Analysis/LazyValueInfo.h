@@ -100,6 +100,9 @@ public:
   /// Inform the analysis cache that we have erased a block.
   void eraseBlock(BasicBlock *BB);
 
+  /// Print the \LazyValueInfoCache.
+  void printCache(Function &F, raw_ostream &OS);
+
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();
 

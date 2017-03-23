@@ -17,7 +17,7 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 ; GFX9-FLUSH: v_pk_add_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; GFX9-DENORM: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
-define void @fmuladd_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1,
+define amdgpu_kernel void @fmuladd_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1,
                          <2 x half> addrspace(1)* %in2, <2 x half> addrspace(1)* %in3) #0 {
   %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1
   %r1 = load <2 x half>, <2 x half> addrspace(1)* %in2
@@ -37,7 +37,7 @@ define void @fmuladd_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; GFX9-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fmuladd_2.0_a_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr <2 x half>, <2 x half> addrspace(1)* %gep.0, i32 1
@@ -61,7 +61,7 @@ define void @fmuladd_2.0_a_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> add
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; GFX9-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fmuladd_a_2.0_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr <2 x half>, <2 x half> addrspace(1)* %gep.0, i32 1
@@ -86,7 +86,7 @@ define void @fmuladd_a_2.0_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> add
 
 ; GFX9-DENORM-CONTRACT: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fadd_a_a_b_v2f16(<2 x half> addrspace(1)* %out,
+define amdgpu_kernel void @fadd_a_a_b_v2f16(<2 x half> addrspace(1)* %out,
                             <2 x half> addrspace(1)* %in1,
                             <2 x half> addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

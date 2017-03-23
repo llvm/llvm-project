@@ -24,7 +24,7 @@ declare <2 x half> @llvm.fmuladd.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> 
 ; VI-DENORM: buffer_store_short [[RESULT]]
 
 ; GCN: s_endpgm
-define void @fmuladd_f16(
+define amdgpu_kernel void @fmuladd_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -54,7 +54,7 @@ define void @fmuladd_f16(
 ; VI-DENORM: buffer_store_short [[RESULT]]
 
 ; GCN: s_endpgm
-define void @fmuladd_f16_imm_a(
+define amdgpu_kernel void @fmuladd_f16_imm_a(
     half addrspace(1)* %r,
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
@@ -83,7 +83,7 @@ define void @fmuladd_f16_imm_a(
 
 
 ; GCN: s_endpgm
-define void @fmuladd_f16_imm_b(
+define amdgpu_kernel void @fmuladd_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %c) {
@@ -135,7 +135,7 @@ define void @fmuladd_f16_imm_b(
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
-define void @fmuladd_v2f16(
+define amdgpu_kernel void @fmuladd_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,

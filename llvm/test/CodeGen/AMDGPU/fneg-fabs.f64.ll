@@ -6,7 +6,7 @@
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f64:
 ; GCN: v_add_f64 {{v\[[0-9]+:[0-9]+\]}}, -|v{{\[[0-9]+:[0-9]+\]}}|, {{s\[[0-9]+:[0-9]+\]}}
-define void @fneg_fabs_fadd_f64(double addrspace(1)* %out, double %x, double %y) {
+define amdgpu_kernel void @fneg_fabs_fadd_f64(double addrspace(1)* %out, double %x, double %y) {
   %fabs = call double @llvm.fabs.f64(double %x)
   %fsub = fsub double -0.000000e+00, %fabs
   %fadd = fadd double %y, %fsub
@@ -14,7 +14,7 @@ define void @fneg_fabs_fadd_f64(double addrspace(1)* %out, double %x, double %y)
   ret void
 }
 
-define void @v_fneg_fabs_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %xptr, double addrspace(1)* %yptr) {
+define amdgpu_kernel void @v_fneg_fabs_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %xptr, double addrspace(1)* %yptr) {
   %x = load double, double addrspace(1)* %xptr, align 8
   %y = load double, double addrspace(1)* %xptr, align 8
   %fabs = call double @llvm.fabs.f64(double %x)
@@ -26,7 +26,7 @@ define void @v_fneg_fabs_fadd_f64(double addrspace(1)* %out, double addrspace(1)
 
 ; GCN-LABEL: {{^}}fneg_fabs_fmul_f64:
 ; GCN: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, -|{{v\[[0-9]+:[0-9]+\]}}|, {{s\[[0-9]+:[0-9]+\]}}
-define void @fneg_fabs_fmul_f64(double addrspace(1)* %out, double %x, double %y) {
+define amdgpu_kernel void @fneg_fabs_fmul_f64(double addrspace(1)* %out, double %x, double %y) {
   %fabs = call double @llvm.fabs.f64(double %x)
   %fsub = fsub double -0.000000e+00, %fabs
   %fmul = fmul double %y, %fsub
@@ -35,7 +35,7 @@ define void @fneg_fabs_fmul_f64(double addrspace(1)* %out, double %x, double %y)
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_free_f64:
-define void @fneg_fabs_free_f64(double addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @fneg_fabs_free_f64(double addrspace(1)* %out, i64 %in) {
   %bc = bitcast i64 %in to double
   %fabs = call double @llvm.fabs.f64(double %bc)
   %fsub = fsub double -0.000000e+00, %fabs
@@ -46,7 +46,7 @@ define void @fneg_fabs_free_f64(double addrspace(1)* %out, i64 %in) {
 ; GCN-LABEL: {{^}}fneg_fabs_fn_free_f64:
 ; GCN: v_bfrev_b32_e32 [[IMMREG:v[0-9]+]], 1{{$}}
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-define void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
   %bc = bitcast i64 %in to double
   %fabs = call double @fabs(double %bc)
   %fsub = fsub double -0.000000e+00, %fabs
@@ -62,7 +62,7 @@ define void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
 ; GCN-DAG: v_or_b32_e32 v[[HI_V:[0-9]+]], s[[HI_X]], [[IMMREG]]
 ; GCN-DAG: v_mov_b32_e32 v[[LO_V:[0-9]+]], s[[LO_X]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO_V]]:[[HI_V]]{{\]}}
-define void @fneg_fabs_f64(double addrspace(1)* %out, double %in) {
+define amdgpu_kernel void @fneg_fabs_f64(double addrspace(1)* %out, double %in) {
   %fabs = call double @llvm.fabs.f64(double %in)
   %fsub = fsub double -0.000000e+00, %fabs
   store double %fsub, double addrspace(1)* %out, align 8
@@ -74,7 +74,7 @@ define void @fneg_fabs_f64(double addrspace(1)* %out, double %in) {
 ; GCN-NOT: 0x80000000
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-define void @fneg_fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) {
+define amdgpu_kernel void @fneg_fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) {
   %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %in)
   %fsub = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %fabs
   store <2 x double> %fsub, <2 x double> addrspace(1)* %out
@@ -88,7 +88,7 @@ define void @fneg_fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) 
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-define void @fneg_fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
+define amdgpu_kernel void @fneg_fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
   %fabs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %in)
   %fsub = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %fabs
   store <4 x double> %fsub, <4 x double> addrspace(1)* %out

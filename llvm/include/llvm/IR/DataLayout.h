@@ -134,14 +134,6 @@ private:
 
   PointersTy::iterator findPointerLowerBound(uint32_t AddressSpace);
 
-  /// This member is a signal that a requested alignment type and bit width were
-  /// not found in the SmallVector.
-  static const LayoutAlignElem InvalidAlignmentElem;
-
-  /// This member is a signal that a requested pointer type and bit width were
-  /// not found in the DenseSet.
-  static const PointerAlignElem InvalidPointerElem;
-
   // The StructType -> StructLayout map.
   mutable void *LayoutMap;
 
@@ -158,22 +150,6 @@ private:
 
   /// Internal helper method that returns requested alignment for type.
   unsigned getAlignment(Type *Ty, bool abi_or_pref) const;
-
-  /// \brief Valid alignment predicate.
-  ///
-  /// Predicate that tests a LayoutAlignElem reference returned by get() against
-  /// InvalidAlignmentElem.
-  bool validAlignment(const LayoutAlignElem &align) const {
-    return &align != &InvalidAlignmentElem;
-  }
-
-  /// \brief Valid pointer predicate.
-  ///
-  /// Predicate that tests a PointerAlignElem reference returned by get()
-  /// against \c InvalidPointerElem.
-  bool validPointer(const PointerAlignElem &align) const {
-    return &align != &InvalidPointerElem;
-  }
 
   /// Parses a target data specification string. Assert if the string is
   /// malformed.

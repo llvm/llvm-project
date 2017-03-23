@@ -35,7 +35,8 @@ main_body:
   %tmp33 = insertelement <4 x i32> %tmp32, i32 %tmp30, i32 2
   %tmp34 = insertelement <4 x i32> %tmp33, i32 undef, i32 3
   %tmp25.bc = bitcast <16 x i8> %tmp25 to <4 x i32>
-  %tmp35 = call <4 x float> @llvm.SI.image.sample.b.v4i32(<4 x i32> %tmp34, <8 x i32> %tmp23, <4 x i32> %tmp25.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp34.bc = bitcast <4 x i32> %tmp34 to <4 x float>
+  %tmp35 = call <4 x float> @llvm.amdgcn.image.sample.b.v4f32.v4f32.v8i32(<4 x float> %tmp34.bc, <8 x i32> %tmp23, <4 x i32> %tmp25.bc, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp36 = extractelement <4 x float> %tmp35, i32 0
   %tmp37 = extractelement <4 x float> %tmp35, i32 1
   %tmp38 = extractelement <4 x float> %tmp35, i32 2
@@ -47,12 +48,12 @@ main_body:
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-
+declare <4 x float> @llvm.amdgcn.image.sample.b.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
 declare float @llvm.SI.load.const(<16 x i8>, i32) #1
-declare <4 x float> @llvm.SI.image.sample.b.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

@@ -7,7 +7,7 @@ declare void @llvm.lifetime.end(i64, i8* nocapture) #0
 ; OPT-NOT: alloca i32
 ; OPT-NOT: llvm.lifetime
 ; OPT: store i32 %tmp3, i32 addrspace(3)*
-define void @use_lifetime_promotable_lds(i32 addrspace(1)* %arg) #2 {
+define amdgpu_kernel void @use_lifetime_promotable_lds(i32 addrspace(1)* %arg) #2 {
 bb:
   %tmp = alloca i32, align 4
   %tmp1 = bitcast i32* %tmp to i8*

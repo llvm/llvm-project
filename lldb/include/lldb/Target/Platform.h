@@ -24,9 +24,9 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/UserSettingsController.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 

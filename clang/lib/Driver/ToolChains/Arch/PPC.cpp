@@ -94,10 +94,6 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
   if (FloatABI == ppc::FloatABI::Soft)
     Features.push_back("-hard-float");
-
-  // Altivec is a bit weird, allow overriding of the Altivec feature here.
-  AddTargetFeature(Args, Features, options::OPT_faltivec,
-                   options::OPT_fno_altivec, "altivec");
 }
 
 ppc::FloatABI ppc::getPPCFloatABI(const Driver &D, const ArgList &Args) {

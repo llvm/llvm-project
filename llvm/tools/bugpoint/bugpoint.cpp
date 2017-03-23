@@ -181,7 +181,8 @@ int main(int argc, char **argv) {
     if (OptLevelO1)
       Builder.Inliner = createAlwaysInlinerLegacyPass();
     else if (OptLevelOs || OptLevelO2)
-      Builder.Inliner = createFunctionInliningPass(2, OptLevelOs ? 1 : 0);
+      Builder.Inliner = createFunctionInliningPass(
+          2, OptLevelOs ? 1 : 0, false);
     else
       Builder.Inliner = createFunctionInliningPass(275);
     Builder.populateFunctionPassManager(PM);

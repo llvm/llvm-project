@@ -16,7 +16,7 @@
 #include <string>
 
 // Other libraries and framework includes
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 

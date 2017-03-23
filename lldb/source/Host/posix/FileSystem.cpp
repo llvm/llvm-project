@@ -36,43 +36,9 @@ using namespace lldb_private;
 
 const char *FileSystem::DEV_NULL = "/dev/null";
 
-FileSpec::PathSyntax FileSystem::GetNativePathSyntax() {
-  return FileSpec::ePathSyntaxPosix;
-}
-
-lldb::user_id_t FileSystem::GetFileSize(const FileSpec &file_spec) {
-  return file_spec.GetByteSize();
-}
-
-bool FileSystem::GetFileExists(const FileSpec &file_spec) {
-  return file_spec.Exists();
-}
-
-Error FileSystem::Hardlink(const FileSpec &src, const FileSpec &dst) {
-  Error error;
-  if (::link(dst.GetCString(), src.GetCString()) == -1)
-    error.SetErrorToErrno();
-  return error;
-}
-
-int FileSystem::GetHardlinkCount(const FileSpec &file_spec) {
-  struct stat file_stat;
-  if (::stat(file_spec.GetCString(), &file_stat) == 0)
-    return file_stat.st_nlink;
-
-  return -1;
-}
-
 Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   Error error;
   if (::symlink(dst.GetCString(), src.GetCString()) == -1)
-    error.SetErrorToErrno();
-  return error;
-}
-
-Error FileSystem::Unlink(const FileSpec &file_spec) {
-  Error error;
-  if (::unlink(file_spec.GetCString()) == -1)
     error.SetErrorToErrno();
   return error;
 }
@@ -108,50 +74,6 @@ Error FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
   return Error();
 }
 
-#if defined(__NetBSD__)
-static bool IsLocal(const struct statvfs &info) {
-  return (info.f_flag & MNT_LOCAL) != 0;
-}
-#else
-static bool IsLocal(const struct statfs &info) {
-#ifdef __linux__
-#define CIFS_MAGIC_NUMBER 0xFF534D42
-  switch ((uint32_t)info.f_type) {
-  case NFS_SUPER_MAGIC:
-  case SMB_SUPER_MAGIC:
-  case CIFS_MAGIC_NUMBER:
-    return false;
-  default:
-    return true;
-  }
-#else
-  return (info.f_flags & MNT_LOCAL) != 0;
-#endif
-}
-#endif
-
-#if defined(__NetBSD__)
-bool FileSystem::IsLocal(const FileSpec &spec) {
-  struct statvfs statfs_info;
-  std::string path(spec.GetPath());
-  if (statvfs(path.c_str(), &statfs_info) == 0)
-    return ::IsLocal(statfs_info);
-  return false;
-}
-#else
-bool FileSystem::IsLocal(const FileSpec &spec) {
-  struct statfs statfs_info;
-  std::string path(spec.GetPath());
-  if (statfs(path.c_str(), &statfs_info) == 0)
-    return ::IsLocal(statfs_info);
-  return false;
-}
-#endif
-
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
   return ::fopen(path, mode);
-}
-
-int FileSystem::Stat(const char *path, struct stat *stats) {
-  return ::stat(path, stats);
 }

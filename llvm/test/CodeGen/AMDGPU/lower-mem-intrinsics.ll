@@ -9,7 +9,7 @@ declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture, i8, i64, i32, i1)
 ; Test the upper bound for sizes to leave
 ; OPT-LABEL: @max_size_small_static_memcpy_caller0(
 ; OPT: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i32 1, i1 false)
-define void @max_size_small_static_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
+define amdgpu_kernel void @max_size_small_static_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i32 1, i1 false)
   ret void
 }
@@ -21,14 +21,14 @@ define void @max_size_small_static_memcpy_caller0(i8 addrspace(1)* %dst, i8 addr
 ; OPT-NEXT: load i8
 ; OPT: getelementptr
 ; OPT-NEXT: store i8
-define void @min_size_large_static_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
+define amdgpu_kernel void @min_size_large_static_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1025, i32 1, i1 false)
   ret void
 }
 
 ; OPT-LABEL: @max_size_small_static_memmove_caller0(
 ; OPT: call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i32 1, i1 false)
-define void @max_size_small_static_memmove_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
+define amdgpu_kernel void @max_size_small_static_memmove_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
   call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i32 1, i1 false)
   ret void
 }
@@ -39,14 +39,14 @@ define void @max_size_small_static_memmove_caller0(i8 addrspace(1)* %dst, i8 add
 ; OPT-NEXT: load i8
 ; OPT: getelementptr
 ; OPT-NEXT: store i8
-define void @min_size_large_static_memmove_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
+define amdgpu_kernel void @min_size_large_static_memmove_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) #0 {
   call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1025, i32 1, i1 false)
   ret void
 }
 
 ; OPT-LABEL: @max_size_small_static_memset_caller0(
 ; OPT: call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 %val, i64 1024, i32 1, i1 false)
-define void @max_size_small_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val) #0 {
+define amdgpu_kernel void @max_size_small_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val) #0 {
   call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 %val, i64 1024, i32 1, i1 false)
   ret void
 }
@@ -55,7 +55,7 @@ define void @max_size_small_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val
 ; OPT-NOT: call
 ; OPT: getelementptr
 ; OPT: store i8
-define void @min_size_large_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val) #0 {
+define amdgpu_kernel void @min_size_large_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val) #0 {
   call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 %val, i64 1025, i32 1, i1 false)
   ret void
 }
@@ -63,7 +63,7 @@ define void @min_size_large_static_memset_caller0(i8 addrspace(1)* %dst, i8 %val
 ; OPT-LABEL: @variable_memcpy_caller0(
 ; OPT-NOT: call
 ; OPT: phi
-define void @variable_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n) #0 {
+define amdgpu_kernel void @variable_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n, i32 1, i1 false)
   ret void
 }
@@ -71,7 +71,7 @@ define void @variable_memcpy_caller0(i8 addrspace(1)* %dst, i8 addrspace(1)* %sr
 ; OPT-LABEL: @variable_memcpy_caller1(
 ; OPT-NOT: call
 ; OPT: phi
-define void @variable_memcpy_caller1(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n) #0 {
+define amdgpu_kernel void @variable_memcpy_caller1(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %n, i32 1, i1 false)
   ret void
 }
@@ -82,7 +82,7 @@ define void @variable_memcpy_caller1(i8 addrspace(1)* %dst, i8 addrspace(1)* %sr
 ; OPT-NOT: call
 ; OPT: phi
 ; OPT-NOT: call
-define void @memcpy_multi_use_one_function(i8 addrspace(1)* %dst0, i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 %n, i64 %m) #0 {
+define amdgpu_kernel void @memcpy_multi_use_one_function(i8 addrspace(1)* %dst0, i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 %n, i64 %m) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst0, i8 addrspace(1)* %src, i64 %n, i32 1, i1 false)
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 %m, i32 1, i1 false)
   ret void
@@ -94,7 +94,7 @@ define void @memcpy_multi_use_one_function(i8 addrspace(1)* %dst0, i8 addrspace(
 ; OPT: load i8, i8 addrspace(3)*
 ; OPT: getelementptr inbounds i8, i8 addrspace(1)*
 ; OPT: store i8
-define void @memcpy_alt_type(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 %n) #0 {
+define amdgpu_kernel void @memcpy_alt_type(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 %n) #0 {
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 %n, i32 1, i1 false)
   ret void
 }
@@ -107,7 +107,7 @@ define void @memcpy_alt_type(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 %
 ; OPT: store i8
 
 ; OPT: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 102, i32 1, i1 false)
-define void @memcpy_multi_use_one_function_keep_small(i8 addrspace(1)* %dst0, i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 %n) #0 {
+define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(i8 addrspace(1)* %dst0, i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 %n) #0 {
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst0, i8 addrspace(1)* %src, i64 %n, i32 1, i1 false)
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst1, i8 addrspace(1)* %src, i64 102, i32 1, i1 false)
   ret void

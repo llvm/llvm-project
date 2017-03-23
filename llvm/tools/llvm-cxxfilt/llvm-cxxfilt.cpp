@@ -68,6 +68,12 @@ static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
                 (DecoratedLength >= 4 && strncmp(Decorated, "___Z", 4) == 0)))
     Undecorated = itaniumDemangle(Decorated, nullptr, nullptr, &Status);
 
+  if (!Undecorated &&
+      (DecoratedLength > 6 && strncmp(Decorated, "__imp_", 6) == 0)) {
+    OS << "import thunk for ";
+    Undecorated = itaniumDemangle(Decorated + 6, nullptr, nullptr, &Status);
+  }
+
   OS << (Undecorated ? Undecorated : Mangled) << '\n';
 
   free(Undecorated);

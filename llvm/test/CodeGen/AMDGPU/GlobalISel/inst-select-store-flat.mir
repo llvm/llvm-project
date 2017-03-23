@@ -4,7 +4,7 @@
 # REQUIRES: global-isel
 
 --- |
-  define void @global_addrspace(i32 addrspace(1)* %global0) { ret void }
+  define amdgpu_kernel void @global_addrspace(i32 addrspace(1)* %global0) { ret void }
 ...
 ---
 

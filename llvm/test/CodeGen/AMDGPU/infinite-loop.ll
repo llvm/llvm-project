@@ -7,7 +7,7 @@
 ; SI: buffer_store_dword [[REG]]
 ; SI: s_waitcnt vmcnt(0) expcnt(0)
 ; SI: s_branch BB0_1
-define void @infinite_loop(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @infinite_loop(i32 addrspace(1)* %out) {
 entry:
   br label %for.body
 

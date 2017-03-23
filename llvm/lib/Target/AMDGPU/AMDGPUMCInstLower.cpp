@@ -195,8 +195,9 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       ++I;
     }
   } else {
-    // We don't want SI_MASK_BRANCH/SI_RETURN encoded. They are placeholder
-    // terminator instructions and should only be printed as comments.
+    // We don't want SI_MASK_BRANCH/SI_RETURN_TO_EPILOG encoded. They are
+    // placeholder terminator instructions and should only be printed as
+    // comments.
     if (MI->getOpcode() == AMDGPU::SI_MASK_BRANCH) {
       if (isVerbose()) {
         SmallVector<char, 16> BBStr;
@@ -212,9 +213,9 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
 
-    if (MI->getOpcode() == AMDGPU::SI_RETURN) {
+    if (MI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
       if (isVerbose())
-        OutStreamer->emitRawComment(" return");
+        OutStreamer->emitRawComment(" return to shader part epilog");
       return;
     }
 

@@ -5,7 +5,7 @@
 ; CHECK-LABEL: {{^}}max_20_vgprs:
 ; CHECK: VGPRBlocks: 4
 ; CHECK: NumVGPRsForWavesPerEU: 20
-define void @max_20_vgprs() #1 {
+define amdgpu_kernel void @max_20_vgprs() #1 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var
   %val2 = load volatile float, float addrspace(1)* @var

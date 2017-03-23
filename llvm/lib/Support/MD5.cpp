@@ -261,10 +261,16 @@ void MD5::final(MD5Result &Result) {
   support::endian::write32le(&Result[12], d);
 }
 
-void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
+SmallString<32> MD5::MD5Result::digest() const {
+  SmallString<32> Str;
   raw_svector_ostream Res(Str);
   for (int i = 0; i < 16; ++i)
-    Res << format("%.2x", Result[i]);
+    Res << format("%.2x", Bytes[i]);
+  return Str;
+}
+
+void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
+  Str = Result.digest();
 }
 
 std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
@@ -273,7 +279,5 @@ std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
   MD5::MD5Result Res;
   Hash.final(Res);
 
-  std::array<uint8_t, 16> Arr;
-  memcpy(Arr.data(), Res, sizeof(Res));
-  return Arr;
+  return Res;
 }

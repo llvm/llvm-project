@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i32:
 ; GCN: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
-define void @v_test_umed3_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -25,7 +25,7 @@ define void @v_test_umed3_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %a
 ; GCN-LABEL: {{^}}v_test_umed3_multi_use_r_i_i_i32:
 ; GCN: v_max_u32
 ; GCN: v_min_u32
-define void @v_test_umed3_multi_use_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_multi_use_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -45,7 +45,7 @@ define void @v_test_umed3_multi_use_r_i_i_i32(i32 addrspace(1)* %out, i32 addrsp
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_constant_order_i32:
 ; GCN: v_max_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
 ; GCN: v_min_u32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}
-define void @v_test_umed3_r_i_i_constant_order_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_r_i_i_constant_order_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -64,7 +64,7 @@ define void @v_test_umed3_r_i_i_constant_order_i32(i32 addrspace(1)* %out, i32 a
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_sign_mismatch_i32:
 ; GCN: v_max_i32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}
 ; GCN: v_min_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
-define void @v_test_umed3_r_i_i_sign_mismatch_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_r_i_i_sign_mismatch_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -83,7 +83,7 @@ define void @v_test_umed3_r_i_i_sign_mismatch_i32(i32 addrspace(1)* %out, i32 ad
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i64:
 ; GCN: v_cmp_lt_u64
 ; GCN: v_cmp_gt_u64
-define void @v_test_umed3_r_i_i_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_r_i_i_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -102,7 +102,7 @@ define void @v_test_umed3_r_i_i_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i16:
 ; SICIVI: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 ; GFX9: v_med3_u16 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
-define void @v_test_umed3_r_i_i_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_umed3_r_i_i_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, i16 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i16, i16 addrspace(1)* %out, i32 %tid
@@ -173,7 +173,7 @@ define internal i8 @umax8(i8 %x, i8 %y) #2 {
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -185,7 +185,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_1:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -197,7 +197,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_2:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -209,7 +209,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_3:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_3(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_3(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -221,7 +221,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_4:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_4(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_4(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -233,7 +233,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_5:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_5(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_5(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -245,7 +245,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_6:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_6(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_6(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -257,7 +257,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_7:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_7(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_7(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -269,7 +269,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_8:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_8(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_8(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -281,7 +281,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_9:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_9(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_9(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -293,7 +293,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_10:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_10(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_10(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -305,7 +305,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_11:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_11(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_11(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -317,7 +317,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_12:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_12(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_12(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -329,7 +329,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_13:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_13(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_13(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -341,7 +341,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_14:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_14(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_14(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -353,7 +353,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_15:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_15(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_15(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %y, i32 %x)
   %tmp1 = call i32 @umax(i32 %y, i32 %x)
@@ -368,7 +368,7 @@ bb:
 ; GCN: s_and_b32
 ; GCN: s_and_b32
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i16_pat_0(i16 addrspace(1)* %arg, i16 %x, i16 %y, i16 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i16_pat_0(i16 addrspace(1)* %arg, i16 %x, i16 %y, i16 %z) #1 {
 bb:
   %tmp0 = call i16 @umin16(i16 %x, i16 %y)
   %tmp1 = call i16 @umax16(i16 %x, i16 %y)
@@ -383,7 +383,7 @@ bb:
 ; GCN: s_and_b32
 ; GCN: s_and_b32
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i8_pat_0(i8 addrspace(1)* %arg, i8 %x, i8 %y, i8 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i8_pat_0(i8 addrspace(1)* %arg, i8 %x, i8 %y, i8 %z) #1 {
 bb:
   %tmp0 = call i8 @umin8(i8 %x, i8 %y)
   %tmp1 = call i8 @umax8(i8 %x, i8 %y)
@@ -395,7 +395,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_0:
 ; GCN-NOT: v_med3_u32
-define void @s_test_umed3_i32_pat_0_multi_use_0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -408,7 +408,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_1:
 ; GCN-NOT: v_med3_u32
-define void @s_test_umed3_i32_pat_0_multi_use_1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -421,7 +421,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_2:
 ; GCN-NOT: v_med3_u32
-define void @s_test_umed3_i32_pat_0_multi_use_2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -434,7 +434,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_result:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_0_multi_use_result(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_result(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -447,7 +447,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_imm_src0:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, 1, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_0_imm_src0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_imm_src0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 1, i32 %y)
   %tmp1 = call i32 @umax(i32 1, i32 %y)
@@ -459,7 +459,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_imm_src1:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, 2, v{{[0-9]+}}
-define void @s_test_umed3_i32_pat_0_imm_src1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_imm_src1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 2)
   %tmp1 = call i32 @umax(i32 %x, i32 2)
@@ -471,7 +471,7 @@ bb:
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_imm_src2:
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, 9
-define void @s_test_umed3_i32_pat_0_imm_src2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
+define amdgpu_kernel void @s_test_umed3_i32_pat_0_imm_src2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
   %tmp1 = call i32 @umax(i32 %x, i32 %y)
@@ -491,7 +491,7 @@ bb:
 ; VI: v_max_u16
 
 ; GFX9: v_med3_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @v_test_umed3_i16_pat_0(i16 addrspace(1)* %arg, i16 addrspace(1)* %out, i16 addrspace(1)* %a.ptr) #1 {
+define amdgpu_kernel void @v_test_umed3_i16_pat_0(i16 addrspace(1)* %arg, i16 addrspace(1)* %out, i16 addrspace(1)* %a.ptr) #1 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr inbounds i16, i16 addrspace(1)* %a.ptr, i32 %tid

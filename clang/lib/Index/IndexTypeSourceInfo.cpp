@@ -47,9 +47,15 @@ public:
   } while (0)
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    SourceLocation Loc = TL.getNameLoc();
+    TypedefNameDecl *ND = TL.getTypedefNameDecl();
+    if (ND->isTransparentTag()) {
+      TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
+      return IndexCtx.handleReference(Underlying, Loc, Parent,
+                                      ParentDC, SymbolRoleSet(), Relations);
+    }
     if (IsBase) {
-      SourceLocation Loc = TL.getNameLoc();
-      TRY_TO(IndexCtx.handleReference(TL.getTypedefNameDecl(), Loc,
+      TRY_TO(IndexCtx.handleReference(ND, Loc,
                                       Parent, ParentDC, SymbolRoleSet()));
       if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
         TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
@@ -57,7 +63,7 @@ public:
                                         Relations));
       }
     } else {
-      TRY_TO(IndexCtx.handleReference(TL.getTypedefNameDecl(), TL.getNameLoc(),
+      TRY_TO(IndexCtx.handleReference(ND, Loc,
                                       Parent, ParentDC, SymbolRoleSet(),
                                       Relations));
     }

@@ -38,36 +38,35 @@ Because attributes are no longer represented as a bit mask, you will need to
 convert any code which does treat them as a bit mask to use the new query
 methods on the Attribute class.
 
-``AttributeSet``
-================
+``AttributeList``
+=================
 
-The ``AttributeSet`` class replaces the old ``AttributeList`` class.  The
-``AttributeSet`` stores a collection of Attribute objects for each kind of
-object that may have an attribute associated with it: the function as a
-whole, the return type, or the function's parameters.  A function's attributes
-are at index ``AttributeSet::FunctionIndex``; the return type's attributes are
-at index ``AttributeSet::ReturnIndex``; and the function's parameters'
-attributes are at indices 1, ..., n (where 'n' is the number of parameters).
-Most methods on the ``AttributeSet`` class take an index parameter.
+The ``AttributeList`` stores a collection of Attribute objects for each kind of
+object that may have an attribute associated with it: the function as a whole,
+the return type, or the function's parameters.  A function's attributes are at
+index ``AttributeList::FunctionIndex``; the return type's attributes are at
+index ``AttributeList::ReturnIndex``; and the function's parameters' attributes
+are at indices 1, ..., n (where 'n' is the number of parameters).  Most methods
+on the ``AttributeList`` class take an index parameter.
 
-An ``AttributeSet`` is also a uniqued and immutable object.  You create an
-``AttributeSet`` through the ``AttributeSet::get`` methods.  You can add and
-remove attributes, which result in the creation of a new ``AttributeSet``.
+An ``AttributeList`` is also a uniqued and immutable object.  You create an
+``AttributeList`` through the ``AttributeList::get`` methods.  You can add and
+remove attributes, which result in the creation of a new ``AttributeList``.
 
-An ``AttributeSet`` object is designed to be passed around by value.
+An ``AttributeList`` object is designed to be passed around by value.
 
-Note: It is advised that you do *not* use the ``AttributeSet`` "introspection"
+Note: It is advised that you do *not* use the ``AttributeList`` "introspection"
 methods (e.g. ``Raw``, ``getRawPointer``, etc.).  These methods break
 encapsulation, and may be removed in a future release (i.e. LLVM 4.0).
 
 ``AttrBuilder``
 ===============
 
-Lastly, we have a "builder" class to help create the ``AttributeSet`` object
+Lastly, we have a "builder" class to help create the ``AttributeList`` object
 without having to create several different intermediate uniqued
-``AttributeSet`` objects.  The ``AttrBuilder`` class allows you to add and
+``AttributeList`` objects.  The ``AttrBuilder`` class allows you to add and
 remove attributes at will.  The attributes won't be uniqued until you call the
-appropriate ``AttributeSet::get`` method.
+appropriate ``AttributeList::get`` method.
 
 An ``AttrBuilder`` object is *not* designed to be passed around by value.  It
 should be passed by reference.

@@ -615,6 +615,16 @@ TEST(ISLTools, shiftDim) {
 
   // Parametrized
   EXPECT_EQ(USET("[n] -> { [n+1] }"), shiftDim(USET("[n] -> { [n] }"), 0, 1));
+
+  // Union maps
+  EXPECT_EQ(MAP("{ [1] -> [] }"),
+            shiftDim(MAP("{ [0] -> [] }"), isl::dim::in, 0, 1));
+  EXPECT_EQ(UMAP("{ [1] -> [] }"),
+            shiftDim(UMAP("{ [0] -> [] }"), isl::dim::in, 0, 1));
+  EXPECT_EQ(MAP("{ [] -> [1] }"),
+            shiftDim(MAP("{ [] -> [0] }"), isl::dim::out, 0, 1));
+  EXPECT_EQ(UMAP("{ [] -> [1] }"),
+            shiftDim(UMAP("{ [] -> [0] }"), isl::dim::out, 0, 1));
 }
 
 TEST(DeLICM, computeReachingWrite) {
@@ -838,6 +848,99 @@ TEST(DeLICM, convertZoneToTimepoints) {
             convertZoneToTimepoints(USET("{ [0,1] }"), false, true));
   EXPECT_EQ(USET("{ [0,0]; [0,1] }"),
             convertZoneToTimepoints(USET("{ [0,1] }"), true, true));
+
+  // Map domains
+  EXPECT_EQ(UMAP("{}"), convertZoneToTimepoints(UMAP("{ [1] -> [] }"),
+                                                isl::dim::in, false, false));
+  EXPECT_EQ(UMAP("{ [0] -> [] }"),
+            convertZoneToTimepoints(UMAP("{ [1] -> [] }"), isl::dim::in, true,
+                                    false));
+  EXPECT_EQ(UMAP("{ [1] -> [] }"),
+            convertZoneToTimepoints(UMAP("{ [1] -> [] }"), isl::dim::in, false,
+                                    true));
+  EXPECT_EQ(
+      UMAP("{ [0] -> []; [1] -> [] }"),
+      convertZoneToTimepoints(UMAP("{ [1] -> [] }"), isl::dim::in, true, true));
+
+  // Map ranges
+  EXPECT_EQ(UMAP("{}"), convertZoneToTimepoints(UMAP("{ [] -> [1] }"),
+                                                isl::dim::out, false, false));
+  EXPECT_EQ(UMAP("{ [] -> [0] }"),
+            convertZoneToTimepoints(UMAP("{ [] -> [1] }"), isl::dim::out, true,
+                                    false));
+  EXPECT_EQ(UMAP("{ [] -> [1] }"),
+            convertZoneToTimepoints(UMAP("{ [] -> [1] }"), isl::dim::out, false,
+                                    true));
+  EXPECT_EQ(UMAP("{ [] -> [0]; [] -> [1] }"),
+            convertZoneToTimepoints(UMAP("{ [] -> [1] }"), isl::dim::out, true,
+                                    true));
+}
+
+TEST(DeLICM, distribute) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(MAP("{ [Domain[] -> Range1[]] -> [Domain[] -> Range2[]] }"),
+            distributeDomain(MAP("{ Domain[] -> [Range1[] -> Range2[]] }")));
+  EXPECT_EQ(
+      MAP("{ [Domain[i,j] -> Range1[i,k]] -> [Domain[i,j] -> Range2[j,k]] }"),
+      distributeDomain(MAP("{ Domain[i,j] -> [Range1[i,k] -> Range2[j,k]] }")));
+
+  // Union maps
+  EXPECT_EQ(
+      UMAP(
+          "{ [DomainA[i,j] -> RangeA1[i,k]] -> [DomainA[i,j] -> RangeA2[j,k]];"
+          "[DomainB[i,j] -> RangeB1[i,k]] -> [DomainB[i,j] -> RangeB2[j,k]] }"),
+      distributeDomain(
+          UMAP("{ DomainA[i,j] -> [RangeA1[i,k] -> RangeA2[j,k]];"
+               "DomainB[i,j] -> [RangeB1[i,k] -> RangeB2[j,k]] }")));
+}
+
+TEST(DeLICM, lift) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(UMAP("{ [Factor[] -> Domain[]] -> [Factor[] -> Range[]] }"),
+            liftDomains(UMAP("{ Domain[] -> Range[] }"), USET("{ Factor[] }")));
+  EXPECT_EQ(UMAP("{ [Factor[l] -> Domain[i,k]] -> [Factor[l] -> Range[j,k]] }"),
+            liftDomains(UMAP("{ Domain[i,k] -> Range[j,k] }"),
+                        USET("{ Factor[l] }")));
+
+  // Multiple maps in union
+  EXPECT_EQ(
+      UMAP("{ [FactorA[] -> DomainA[]] -> [FactorA[] -> RangeA[]];"
+           "[FactorB[] -> DomainA[]] -> [FactorB[] -> RangeA[]];"
+           "[FactorA[] -> DomainB[]] -> [FactorA[] -> RangeB[]];"
+           "[FactorB[] -> DomainB[]] -> [FactorB[] -> RangeB[]] }"),
+      liftDomains(UMAP("{ DomainA[] -> RangeA[]; DomainB[] -> RangeB[] }"),
+                  USET("{ FactorA[]; FactorB[] }")));
+}
+
+TEST(DeLICM, apply) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(
+      UMAP("{ [DomainDomain[] -> NewDomainRange[]] -> Range[] }"),
+      applyDomainRange(UMAP("{ [DomainDomain[] -> DomainRange[]] -> Range[] }"),
+                       UMAP("{ DomainRange[] -> NewDomainRange[] }")));
+  EXPECT_EQ(
+      UMAP("{ [DomainDomain[i,k] -> NewDomainRange[j,k,l]] -> Range[i,j] }"),
+      applyDomainRange(
+          UMAP("{ [DomainDomain[i,k] -> DomainRange[j,k]] -> Range[i,j] }"),
+          UMAP("{ DomainRange[j,k] -> NewDomainRange[j,k,l] }")));
+
+  // Multiple maps in union
+  EXPECT_EQ(UMAP("{ [DomainDomainA[] -> NewDomainRangeA[]] -> RangeA[];"
+                 "[DomainDomainB[] -> NewDomainRangeB[]] -> RangeB[] }"),
+            applyDomainRange(
+                UMAP("{ [DomainDomainA[] -> DomainRangeA[]] -> RangeA[];"
+                     "[DomainDomainB[] -> DomainRangeB[]] -> RangeB[] }"),
+                UMAP("{ DomainRangeA[] -> NewDomainRangeA[];"
+                     "DomainRangeB[] -> NewDomainRangeB[] }")));
 }
 
 } // anonymous namespace

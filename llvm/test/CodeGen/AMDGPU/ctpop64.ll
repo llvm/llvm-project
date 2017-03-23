@@ -17,7 +17,7 @@ declare i128 @llvm.ctpop.i128(i128) nounwind readnone
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[VRESULT]],
 ; GCN: s_endpgm
-define void @s_ctpop_i64(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
+define amdgpu_kernel void @s_ctpop_i64(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
   %ctpop = call i64 @llvm.ctpop.i64(i64 %val) nounwind readnone
   %truncctpop = trunc i64 %ctpop to i32
   store i32 %truncctpop, i32 addrspace(1)* %out, align 4
@@ -31,7 +31,7 @@ define void @s_ctpop_i64(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
 ; VI-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
-define void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %val = load i64, i64 addrspace(1)* %in, align 8
   %ctpop = call i64 @llvm.ctpop.i64(i64 %val) nounwind readnone
   %truncctpop = trunc i64 %ctpop to i32
@@ -48,7 +48,7 @@ define void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noali
 ; GCN-DAG: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], s{{[0-9]+}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 ; GCN: s_endpgm
-define void @v_ctpop_i64_user(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 %s.val) nounwind {
+define amdgpu_kernel void @v_ctpop_i64_user(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 %s.val) nounwind {
   %val = load i64, i64 addrspace(1)* %in, align 8
   %ctpop = call i64 @llvm.ctpop.i64(i64 %val) nounwind readnone
   %or = or i64 %ctpop, %s.val
@@ -60,7 +60,7 @@ define void @v_ctpop_i64_user(i64 addrspace(1)* noalias %out, i64 addrspace(1)* 
 ; GCN: s_bcnt1_i32_b64
 ; GCN: s_bcnt1_i32_b64
 ; GCN: s_endpgm
-define void @s_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> %val) nounwind {
+define amdgpu_kernel void @s_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> %val) nounwind {
   %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %val) nounwind readnone
   %truncctpop = trunc <2 x i64> %ctpop to <2 x i32>
   store <2 x i32> %truncctpop, <2 x i32> addrspace(1)* %out, align 8
@@ -73,7 +73,7 @@ define void @s_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> %val)
 ; GCN: s_bcnt1_i32_b64
 ; GCN: s_bcnt1_i32_b64
 ; GCN: s_endpgm
-define void @s_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> %val) nounwind {
+define amdgpu_kernel void @s_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> %val) nounwind {
   %ctpop = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %val) nounwind readnone
   %truncctpop = trunc <4 x i64> %ctpop to <4 x i32>
   store <4 x i32> %truncctpop, <4 x i32> addrspace(1)* %out, align 16
@@ -86,7 +86,7 @@ define void @s_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> %val)
 ; GCN: v_bcnt_u32_b32
 ; GCN: v_bcnt_u32_b32
 ; GCN: s_endpgm
-define void @v_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in) nounwind {
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
   %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %val) nounwind readnone
   %truncctpop = trunc <2 x i64> %ctpop to <2 x i32>
@@ -104,7 +104,7 @@ define void @v_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> addrs
 ; GCN: v_bcnt_u32_b32
 ; GCN: v_bcnt_u32_b32
 ; GCN: s_endpgm
-define void @v_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> addrspace(1)* noalias %in) nounwind {
   %val = load <4 x i64>, <4 x i64> addrspace(1)* %in, align 32
   %ctpop = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %val) nounwind readnone
   %truncctpop = trunc <4 x i64> %ctpop to <4 x i32>
@@ -121,7 +121,7 @@ define void @v_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> addrs
 ; GCN-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[ZERO]]
 ; GCN: buffer_store_dwordx2 {{v\[}}[[VLO]]:[[VHI]]{{\]}}
 ; GCN: s_endpgm
-define void @ctpop_i64_in_br(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %ctpop_arg, i32 %cond) {
+define amdgpu_kernel void @ctpop_i64_in_br(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %ctpop_arg, i32 %cond) {
 entry:
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %else
@@ -146,7 +146,7 @@ endif:
 ; GCN: s_bcnt1_i32_b64 [[SRESULT1:s[0-9]+]],
 ; GCN: s_add_i32 s{{[0-9]+}}, [[SRESULT1]], [[SRESULT0]]
 ; GCN: s_endpgm
-define void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %val) nounwind {
+define amdgpu_kernel void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %val) nounwind {
   %ctpop = call i128 @llvm.ctpop.i128(i128 %val) nounwind readnone
   %truncctpop = trunc i128 %ctpop to i32
   store i32 %truncctpop, i32 addrspace(1)* %out, align 4
@@ -159,7 +159,7 @@ define void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %val) nounwind {
 ; GCN: s_bcnt1_i32_b64 [[REG1:s[0-9]+]],
 ; GCN: s_add_i32 {{s[0-9]+}}, [[REG0]], [[REG1]]
 ; GCN: s_endpgm
-define void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val) nounwind {
+define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val) nounwind {
   %ctpop = call i65 @llvm.ctpop.i65(i65 %val) nounwind readnone
   %truncctpop = trunc i65 %ctpop to i32
   store i32 %truncctpop, i32 addrspace(1)* %out, align 4
@@ -181,7 +181,7 @@ define void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val) nounwind {
 
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
-define void @v_ctpop_i128(i32 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_ctpop_i128(i32 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %in) nounwind {
   %val = load i128, i128 addrspace(1)* %in, align 8
   %ctpop = call i128 @llvm.ctpop.i128(i128 %val) nounwind readnone
   %truncctpop = trunc i128 %ctpop to i32

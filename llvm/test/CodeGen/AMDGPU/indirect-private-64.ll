@@ -20,7 +20,7 @@ declare void @llvm.amdgcn.s.barrier() #0
 ; SI-PROMOTE: ds_read_b64
 ; CI-PROMOTE: ds_write_b64
 ; CI-PROMOTE: ds_read_b64
-define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in, i32 %b) #1 {
+define amdgpu_kernel void @private_access_f64_alloca(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load double, double addrspace(1)* %in, align 8
   %array = alloca [8 x double], align 8
   %ptr = getelementptr inbounds [8 x double], [8 x double]* %array, i32 0, i32 %b
@@ -51,7 +51,7 @@ define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double
 ; SI-PROMOTE: ds_read_b64
 ; CI-PROMOTE: ds_write2_b64
 ; CI-PROMOTE: ds_read2_b64
-define void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out, <2 x double> addrspace(1)* noalias %in, i32 %b) #1 {
+define amdgpu_kernel void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out, <2 x double> addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load <2 x double>, <2 x double> addrspace(1)* %in, align 16
   %array = alloca [4 x <2 x double>], align 16
   %ptr = getelementptr inbounds [4 x <2 x double>], [4 x <2 x double>]* %array, i32 0, i32 %b
@@ -77,7 +77,7 @@ define void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out
 ; SI-PROMOTE: ds_read_b64
 ; CI-PROMOTE: ds_write_b64
 ; CI-PROMOTE: ds_read_b64
-define void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i32 %b) #1 {
+define amdgpu_kernel void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load i64, i64 addrspace(1)* %in, align 8
   %array = alloca [8 x i64], align 8
   %ptr = getelementptr inbounds [8 x i64], [8 x i64]* %array, i32 0, i32 %b
@@ -109,7 +109,7 @@ define void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrs
 ; SI-PROMOTE: ds_read_b64
 ; CI-PROMOTE: ds_write2_b64
 ; CI-PROMOTE: ds_read2_b64
-define void @private_access_v2i64_alloca(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in, i32 %b) #1 {
+define amdgpu_kernel void @private_access_v2i64_alloca(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
   %array = alloca [4 x <2 x i64>], align 16
   %ptr = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %array, i32 0, i32 %b

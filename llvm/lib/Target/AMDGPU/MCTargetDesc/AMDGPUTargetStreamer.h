@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
 
+#include "AMDGPUCodeObjectMetadataStreamer.h"
 #include "AMDKernelCodeT.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -17,7 +18,6 @@ namespace llvm {
 #include "AMDGPUPTNote.h"
 
 class DataLayout;
-class FeatureBitset;
 class Function;
 class MCELFStreamer;
 class MCSymbol;
@@ -27,6 +27,7 @@ class Type;
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
 protected:
+  AMDGPU::CodeObject::MetadataStreamer CodeObjectMetadataStreamer;
   MCContext &getContext() const { return Streamer.getContext(); }
 
 public:
@@ -47,15 +48,18 @@ public:
 
   virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
 
-  virtual void EmitRuntimeMetadata(const FeatureBitset &Features,
-                                   const Module &M) = 0;
+  virtual void EmitStartOfCodeObjectMetadata(const Module &Mod);
 
-  /// \returns False on success, true on failure.
-  virtual bool EmitRuntimeMetadata(const FeatureBitset &Features,
-                                   StringRef Metadata) = 0;
+  virtual void EmitKernelCodeObjectMetadata(
+      const Function &Func, const amd_kernel_code_t &KernelCode);
+
+  virtual void EmitEndOfCodeObjectMetadata();
+
+  /// \returns True on success, false on failure.
+  virtual bool EmitCodeObjectMetadata(StringRef YamlString) = 0;
 };
 
-class AMDGPUTargetAsmStreamer : public AMDGPUTargetStreamer {
+class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
   formatted_raw_ostream &OS;
 public:
   AMDGPUTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
@@ -74,15 +78,11 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void EmitRuntimeMetadata(const FeatureBitset &Features,
-                           const Module &M) override;
-
-  /// \returns False on success, true on failure.
-  bool EmitRuntimeMetadata(const FeatureBitset &Features,
-                           StringRef Metadata) override;
+  /// \returns True on success, false on failure.
+  bool EmitCodeObjectMetadata(StringRef YamlString) override;
 };
 
-class AMDGPUTargetELFStreamer : public AMDGPUTargetStreamer {
+class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
 
   void EmitAMDGPUNote(const MCExpr *DescSize,
@@ -109,12 +109,8 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void EmitRuntimeMetadata(const FeatureBitset &Features,
-                           const Module &M) override;
-
-  /// \returns False on success, true on failure.
-  bool EmitRuntimeMetadata(const FeatureBitset &Features,
-                           StringRef Metadata) override;
+  /// \returns True on success, false on failure.
+  bool EmitCodeObjectMetadata(StringRef YamlString) override;
 };
 
 }

@@ -16,7 +16,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
 

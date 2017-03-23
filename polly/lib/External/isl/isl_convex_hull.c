@@ -1923,7 +1923,7 @@ struct isl_basic_map *isl_map_convex_hull(struct isl_map *map)
 	struct isl_set *set = NULL;
 
 	map = isl_map_detect_equalities(map);
-	map = isl_map_align_divs(map);
+	map = isl_map_align_divs_internal(map);
 	if (!map)
 		goto error;
 
@@ -2415,7 +2415,7 @@ static __isl_give isl_basic_map *map_simple_hull(__isl_take isl_map *map,
 		return map_simple_hull_trivial(map);
 	affine_hull = isl_map_affine_hull(isl_map_copy(map));
 	input = isl_map_copy(map);
-	map = isl_map_align_divs(map);
+	map = isl_map_align_divs_internal(map);
 	model = map ? isl_basic_map_copy(map->p[0]) : NULL;
 
 	set = isl_map_underlying_set(map);

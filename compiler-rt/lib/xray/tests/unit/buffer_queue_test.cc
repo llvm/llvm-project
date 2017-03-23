@@ -14,7 +14,6 @@
 #include "gtest/gtest.h"
 
 #include <future>
-#include <system_error>
 #include <unistd.h>
 
 namespace __xray {
@@ -32,9 +31,9 @@ TEST(BufferQueueTest, GetAndRelease) {
   BufferQueue Buffers(kSize, 1, Success);
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf;
-  ASSERT_EQ(Buffers.getBuffer(Buf), std::error_code());
+  ASSERT_EQ(Buffers.getBuffer(Buf), BufferQueue::ErrorCode::Ok);
   ASSERT_NE(nullptr, Buf.Buffer);
-  ASSERT_EQ(Buffers.releaseBuffer(Buf), std::error_code());
+  ASSERT_EQ(Buffers.releaseBuffer(Buf), BufferQueue::ErrorCode::Ok);
   ASSERT_EQ(nullptr, Buf.Buffer);
 }
 
@@ -43,11 +42,10 @@ TEST(BufferQueueTest, GetUntilFailed) {
   BufferQueue Buffers(kSize, 1, Success);
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf0;
-  EXPECT_EQ(Buffers.getBuffer(Buf0), std::error_code());
+  EXPECT_EQ(Buffers.getBuffer(Buf0), BufferQueue::ErrorCode::Ok);
   BufferQueue::Buffer Buf1;
-  EXPECT_EQ(std::make_error_code(std::errc::not_enough_memory),
-            Buffers.getBuffer(Buf1));
-  EXPECT_EQ(Buffers.releaseBuffer(Buf0), std::error_code());
+  EXPECT_EQ(BufferQueue::ErrorCode::NotEnoughMemory, Buffers.getBuffer(Buf1));
+  EXPECT_EQ(Buffers.releaseBuffer(Buf0), BufferQueue::ErrorCode::Ok);
 }
 
 TEST(BufferQueueTest, ReleaseUnknown) {
@@ -57,7 +55,7 @@ TEST(BufferQueueTest, ReleaseUnknown) {
   BufferQueue::Buffer Buf;
   Buf.Buffer = reinterpret_cast<void *>(0xdeadbeef);
   Buf.Size = kSize;
-  EXPECT_EQ(std::make_error_code(std::errc::argument_out_of_domain),
+  EXPECT_EQ(BufferQueue::ErrorCode::UnrecognizedBuffer,
             Buffers.releaseBuffer(Buf));
 }
 
@@ -66,15 +64,15 @@ TEST(BufferQueueTest, ErrorsWhenFinalising) {
   BufferQueue Buffers(kSize, 2, Success);
   ASSERT_TRUE(Success);
   BufferQueue::Buffer Buf;
-  ASSERT_EQ(Buffers.getBuffer(Buf), std::error_code());
+  ASSERT_EQ(Buffers.getBuffer(Buf), BufferQueue::ErrorCode::Ok);
   ASSERT_NE(nullptr, Buf.Buffer);
-  ASSERT_EQ(Buffers.finalize(), std::error_code());
+  ASSERT_EQ(Buffers.finalize(), BufferQueue::ErrorCode::Ok);
   BufferQueue::Buffer OtherBuf;
-  ASSERT_EQ(std::make_error_code(std::errc::state_not_recoverable),
+  ASSERT_EQ(BufferQueue::ErrorCode::AlreadyFinalized,
             Buffers.getBuffer(OtherBuf));
-  ASSERT_EQ(std::make_error_code(std::errc::state_not_recoverable),
+  ASSERT_EQ(BufferQueue::ErrorCode::AlreadyFinalized,
             Buffers.finalize());
-  ASSERT_EQ(Buffers.releaseBuffer(Buf), std::error_code());
+  ASSERT_EQ(Buffers.releaseBuffer(Buf), BufferQueue::ErrorCode::Ok);
 }
 
 TEST(BufferQueueTest, MultiThreaded) {
@@ -83,14 +81,17 @@ TEST(BufferQueueTest, MultiThreaded) {
   ASSERT_TRUE(Success);
   auto F = [&] {
     BufferQueue::Buffer B;
-    while (!Buffers.getBuffer(B)) {
+    while (true) {
+      auto EC = Buffers.getBuffer(B);
+      if (EC != BufferQueue::ErrorCode::Ok)
+        return;
       Buffers.releaseBuffer(B);
     }
   };
   auto T0 = std::async(std::launch::async, F);
   auto T1 = std::async(std::launch::async, F);
   auto T2 = std::async(std::launch::async, [&] {
-    while (!Buffers.finalize())
+    while (Buffers.finalize() != BufferQueue::ErrorCode::Ok)
       ;
   });
   F();
@@ -103,8 +104,8 @@ TEST(BufferQueueTest, Apply) {
   auto Count = 0;
   BufferQueue::Buffer B;
   for (int I = 0; I < 10; ++I) {
-    ASSERT_FALSE(Buffers.getBuffer(B));
-    ASSERT_FALSE(Buffers.releaseBuffer(B));
+    ASSERT_EQ(Buffers.getBuffer(B), BufferQueue::ErrorCode::Ok);
+    ASSERT_EQ(Buffers.releaseBuffer(B), BufferQueue::ErrorCode::Ok);
   }
   Buffers.apply([&](const BufferQueue::Buffer &B) { ++Count; });
   ASSERT_EQ(Count, 10);

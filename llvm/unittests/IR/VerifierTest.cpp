@@ -52,9 +52,9 @@ TEST(VerifierTest, InvalidRetAttribute) {
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
   Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
-  AttributeSet AS = F->getAttributes();
-  F->setAttributes(AS.addAttribute(C, AttributeSet::ReturnIndex,
-                                   Attribute::UWTable));
+  AttributeList AS = F->getAttributes();
+  F->setAttributes(
+      AS.addAttribute(C, AttributeList::ReturnIndex, Attribute::UWTable));
 
   std::string Error;
   raw_string_ostream ErrorOS(Error);

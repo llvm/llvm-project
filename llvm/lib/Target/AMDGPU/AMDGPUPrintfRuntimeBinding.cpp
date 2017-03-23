@@ -378,8 +378,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       Builder.SetInsertPoint(CI);
       Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-      AttributeSet Attr = AttributeSet::get(Ctx, AttributeSet::FunctionIndex,
-                                            Attribute::NoUnwind);
+      AttributeList Attr = AttributeList::get(Ctx, AttributeList::FunctionIndex,
+                                              Attribute::NoUnwind);
 
       Type *SizetTy = Type::getInt32Ty(Ctx);
 

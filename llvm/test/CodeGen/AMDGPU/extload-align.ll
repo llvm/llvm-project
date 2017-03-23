@@ -9,7 +9,7 @@
 ; DEBUG: mem:LD2[<unknown>]{{[^(]}}
 ; DEBUG: {{^}}# End machine code for function extload_align.
 
-define void @extload_align(i32* %out, i32 %index) #0 {
+define amdgpu_kernel void @extload_align(i32* %out, i32 %index) #0 {
   %v0 = alloca [4 x i16]
   %a1 = getelementptr inbounds [4 x i16], [4 x i16]* %v0, i32 0, i32 0
   %a2 = getelementptr inbounds [4 x i16], [4 x i16]* %v0, i32 0, i32 1

@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
-define void @fold_sgpr(i32 addrspace(1)* %out, i32 %fold) {
+define amdgpu_kernel void @fold_sgpr(i32 addrspace(1)* %out, i32 %fold) {
 entry:
   %tmp0 = icmp ne i32 %fold, 0
   br i1 %tmp0, label %if, label %endif
@@ -20,7 +20,7 @@ endif:
 
 ; CHECK-LABEL: {{^}}fold_imm:
 ; CHECK: v_or_b32_e32 v{{[0-9]+}}, 5
-define void @fold_imm(i32 addrspace(1)* %out, i32 %cmp) {
+define amdgpu_kernel void @fold_imm(i32 addrspace(1)* %out, i32 %cmp) {
 entry:
   %fold = add i32 3, 2
   %tmp0 = icmp ne i32 %cmp, 0
@@ -46,7 +46,7 @@ endif:
 ; CHECK-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[HI]]
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}},
 
-define void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) {
+define amdgpu_kernel void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) {
 entry:
   %tmp0 = add i64 %val, 1
   store i64 %tmp0, i64 addrspace(1)* %out
@@ -61,7 +61,7 @@ entry:
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
 
-define void @vector_inline(<4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @vector_inline(<4 x i32> addrspace(1)* %out) {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
@@ -80,7 +80,7 @@ entry:
 ; CHECK-LABEL: {{^}}imm_one_use:
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 0x64, v{{[0-9]+}}
 
-define void @imm_one_use(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @imm_one_use(i32 addrspace(1)* %out) {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = xor i32 %tmp0, 100
@@ -94,7 +94,7 @@ entry:
 ; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
 ; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
 
-define void @vector_imm(<4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @vector_imm(<4 x i32> addrspace(1)* %out) {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
@@ -114,7 +114,7 @@ entry:
 ; CHECK: buffer_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 ; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
 ; CHECK: buffer_store_dword v[[LO]]
-define void @no_fold_tied_subregister() {
+define amdgpu_kernel void @no_fold_tied_subregister() {
   %tmp1 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
   %tmp2 = extractelement <2 x float> %tmp1, i32 0
   %tmp3 = extractelement <2 x float> %tmp1, i32 1

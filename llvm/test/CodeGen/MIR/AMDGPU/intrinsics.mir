@@ -2,7 +2,7 @@
 
 --- |
 
-  define void @use_intrin() {
+  define amdgpu_kernel void @use_intrin() {
     ret void
   }
 

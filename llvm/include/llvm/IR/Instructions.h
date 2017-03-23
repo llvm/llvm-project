@@ -1389,7 +1389,7 @@ class CallInst : public Instruction,
                  public OperandBundleUser<CallInst, User::op_iterator> {
   friend class OperandBundleUser<CallInst, User::op_iterator>;
 
-  AttributeSet AttributeList; ///< parameter attributes for call
+  AttributeList Attrs; ///< parameter attributes for call
   FunctionType *FTy;
 
   CallInst(const CallInst &CI);
@@ -1668,11 +1668,11 @@ public:
 
   /// Return the parameter attributes for this call.
   ///
-  AttributeSet getAttributes() const { return AttributeList; }
+  AttributeList getAttributes() const { return Attrs; }
 
   /// Set the parameter attributes for this call.
   ///
-  void setAttributes(AttributeSet Attrs) { AttributeList = Attrs; }
+  void setAttributes(AttributeList A) { Attrs = A; }
 
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
@@ -1735,26 +1735,26 @@ public:
 
   /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned i) const {
-    return AttributeList.getParamAlignment(i);
+    return Attrs.getParamAlignment(i);
   }
 
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {
-    return AttributeList.getDereferenceableBytes(i);
+    return Attrs.getDereferenceableBytes(i);
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned i) const {
-    return AttributeList.getDereferenceableOrNullBytes(i);
+    return Attrs.getDereferenceableOrNullBytes(i);
   }
 
   /// @brief Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   /// @param n The parameter to check. 1 is the first parameter, 0 is the return
   bool doesNotAlias(unsigned n) const {
-    return AttributeList.hasAttribute(n, Attribute::NoAlias);
+    return Attrs.hasAttribute(n, Attribute::NoAlias);
   }
 
   /// Return true if the call should not be treated as a call to a
@@ -1767,7 +1767,7 @@ public:
   /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoInline);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoInline);
   }
 
   /// Return true if the call can return twice
@@ -1775,7 +1775,7 @@ public:
     return hasFnAttr(Attribute::ReturnsTwice);
   }
   void setCanReturnTwice() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ReturnsTwice);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ReturnsTwice);
   }
 
   /// Determine if the call does not access memory.
@@ -1783,7 +1783,7 @@ public:
     return hasFnAttr(Attribute::ReadNone);
   }
   void setDoesNotAccessMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
   }
 
   /// Determine if the call does not access or only reads memory.
@@ -1791,7 +1791,7 @@ public:
     return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
   }
   void setOnlyReadsMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly);
   }
 
   /// Determine if the call does not access or only writes memory.
@@ -1799,7 +1799,7 @@ public:
     return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
   }
   void setDoesNotReadMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly);
   }
 
   /// @brief Determine if the call can access memmory only using pointers based
@@ -1808,34 +1808,34 @@ public:
     return hasFnAttr(Attribute::ArgMemOnly);
   }
   void setOnlyAccessesArgMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ArgMemOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ArgMemOnly);
   }
 
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
 
   /// Determine if the call cannot unwind.
   bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
   void setDoesNotThrow() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoUnwind);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   }
 
   /// Determine if the call cannot be duplicated.
   bool cannotDuplicate() const {return hasFnAttr(Attribute::NoDuplicate); }
   void setCannotDuplicate() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoDuplicate);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoDuplicate);
   }
 
   /// Determine if the call is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
   void setConvergent() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
+    addAttribute(AttributeList::FunctionIndex, Attribute::Convergent);
   }
   void setNotConvergent() {
-    removeAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
+    removeAttribute(AttributeList::FunctionIndex, Attribute::Convergent);
   }
 
   /// Determine if the call returns a structure through first
@@ -1850,7 +1850,7 @@ public:
 
   /// Determine if any call argument is an aggregate passed by value.
   bool hasByValArgument() const {
-    return AttributeList.hasAttrSomewhere(Attribute::ByVal);
+    return Attrs.hasAttrSomewhere(Attribute::ByVal);
   }
 
   /// Return the function called, or null if this is an
@@ -1893,7 +1893,7 @@ public:
 
 private:
   template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
-    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, Kind))
+    if (Attrs.hasAttribute(AttributeList::FunctionIndex, Kind))
       return true;
 
     // Operand bundles override attributes on the called function, but don't
@@ -1902,7 +1902,8 @@ private:
       return false;
 
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, Kind);
+      return F->getAttributes().hasAttribute(AttributeList::FunctionIndex,
+                                             Kind);
     return false;
   }
 
@@ -3500,7 +3501,7 @@ class InvokeInst : public TerminatorInst,
                    public OperandBundleUser<InvokeInst, User::op_iterator> {
   friend class OperandBundleUser<InvokeInst, User::op_iterator>;
 
-  AttributeSet AttributeList;
+  AttributeList Attrs;
   FunctionType *FTy;
 
   InvokeInst(const InvokeInst &BI);
@@ -3704,11 +3705,11 @@ public:
 
   /// Return the parameter attributes for this invoke.
   ///
-  AttributeSet getAttributes() const { return AttributeList; }
+  AttributeList getAttributes() const { return Attrs; }
 
   /// Set the parameter attributes for this invoke.
   ///
-  void setAttributes(AttributeSet Attrs) { AttributeList = Attrs; }
+  void setAttributes(AttributeList A) { Attrs = A; }
 
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
@@ -3772,26 +3773,26 @@ public:
 
   /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned i) const {
-    return AttributeList.getParamAlignment(i);
+    return Attrs.getParamAlignment(i);
   }
 
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {
-    return AttributeList.getDereferenceableBytes(i);
+    return Attrs.getDereferenceableBytes(i);
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned i) const {
-    return AttributeList.getDereferenceableOrNullBytes(i);
+    return Attrs.getDereferenceableOrNullBytes(i);
   }
 
   /// @brief Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   /// @param n The parameter to check. 1 is the first parameter, 0 is the return
   bool doesNotAlias(unsigned n) const {
-    return AttributeList.hasAttribute(n, Attribute::NoAlias);
+    return Attrs.hasAttribute(n, Attribute::NoAlias);
   }
 
   /// Return true if the call should not be treated as a call to a
@@ -3806,7 +3807,7 @@ public:
   /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoInline);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoInline);
   }
 
   /// Determine if the call does not access memory.
@@ -3814,7 +3815,7 @@ public:
     return hasFnAttr(Attribute::ReadNone);
   }
   void setDoesNotAccessMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
   }
 
   /// Determine if the call does not access or only reads memory.
@@ -3822,7 +3823,7 @@ public:
     return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
   }
   void setOnlyReadsMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly);
   }
 
   /// Determine if the call does not access or only writes memory.
@@ -3830,7 +3831,7 @@ public:
     return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
   }
   void setDoesNotReadMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly);
   }
 
   /// @brief Determine if the call access memmory only using it's pointer
@@ -3839,34 +3840,34 @@ public:
     return hasFnAttr(Attribute::ArgMemOnly);
   }
   void setOnlyAccessesArgMemory() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::ArgMemOnly);
+    addAttribute(AttributeList::FunctionIndex, Attribute::ArgMemOnly);
   }
 
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
 
   /// Determine if the call cannot unwind.
   bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
   void setDoesNotThrow() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoUnwind);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   }
 
   /// Determine if the invoke cannot be duplicated.
   bool cannotDuplicate() const {return hasFnAttr(Attribute::NoDuplicate); }
   void setCannotDuplicate() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::NoDuplicate);
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoDuplicate);
   }
 
   /// Determine if the invoke is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
   void setConvergent() {
-    addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
+    addAttribute(AttributeList::FunctionIndex, Attribute::Convergent);
   }
   void setNotConvergent() {
-    removeAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
+    removeAttribute(AttributeList::FunctionIndex, Attribute::Convergent);
   }
 
   /// Determine if the call returns a structure through first
@@ -3881,7 +3882,7 @@ public:
 
   /// Determine if any call argument is an aggregate passed by value.
   bool hasByValArgument() const {
-    return AttributeList.hasAttrSomewhere(Attribute::ByVal);
+    return Attrs.hasAttrSomewhere(Attribute::ByVal);
   }
 
   /// Return the function called, or null if this is an
@@ -3953,7 +3954,7 @@ private:
   void setSuccessorV(unsigned idx, BasicBlock *B) override;
 
   template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
-    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, Kind))
+    if (Attrs.hasAttribute(AttributeList::FunctionIndex, Kind))
       return true;
 
     // Operand bundles override attributes on the called function, but don't
@@ -3962,7 +3963,8 @@ private:
       return false;
 
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, Kind);
+      return F->getAttributes().hasAttribute(AttributeList::FunctionIndex,
+                                             Kind);
     return false;
   }
 

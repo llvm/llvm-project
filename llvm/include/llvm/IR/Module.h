@@ -311,7 +311,7 @@ public:
   ///   4. Finally, the function exists but has the wrong prototype: return the
   ///      function with a constantexpr cast to the right prototype.
   Constant *getOrInsertFunction(StringRef Name, FunctionType *T,
-                                AttributeSet AttributeList);
+                                AttributeList AttributeList);
 
   Constant *getOrInsertFunction(StringRef Name, FunctionType *T);
 
@@ -321,8 +321,7 @@ public:
   /// or a ConstantExpr BitCast of that type if the named function has a
   /// different type. This version of the method takes a null terminated list of
   /// function arguments, which makes it easier for clients to use.
-  Constant *getOrInsertFunction(StringRef Name,
-                                AttributeSet AttributeList,
+  Constant *getOrInsertFunction(StringRef Name, AttributeList AttributeList,
                                 Type *RetTy, ...) LLVM_END_WITH_NULL;
 
   /// Same as above, but without the attributes.

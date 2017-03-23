@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -target-feature +htm                       \
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +htm                       \
 // RUN: -triple powerpc64-unknown-unknown -DTEST_HTM -fsyntax-only      \
 // RUN: -verify %s
 
-// RUN: %clang_cc1 -faltivec -target-feature +crypto                    \
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +crypto                    \
 // RUN: -triple powerpc64le-unknown-unknown -DTEST_CRYPTO -fsyntax-only      \
 // RUN: -verify %s
 

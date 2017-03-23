@@ -11,7 +11,7 @@
 ; GCN-LABEL: {{^}}test_no_sink_flat_small_offset_i32:
 ; GCN: flat_load_dword
 ; GCN: {{^}}BB0_2:
-define void @test_no_sink_flat_small_offset_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
+define amdgpu_kernel void @test_no_sink_flat_small_offset_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(4)* %out, i64 999999
   %in.gep = getelementptr i32, i32 addrspace(4)* %in, i64 7
@@ -43,7 +43,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_noop_addrspacecast_flat_to_global_i32:
 ; CI: buffer_load_dword {{v[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:28
-define void @test_sink_noop_addrspacecast_flat_to_global_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
+define amdgpu_kernel void @test_sink_noop_addrspacecast_flat_to_global_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(4)* %out, i64 999999
   %in.gep = getelementptr i32, i32 addrspace(4)* %in, i64 7
@@ -76,7 +76,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; CI: s_load_dword {{s[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0xd
-define void @test_sink_noop_addrspacecast_flat_to_constant_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
+define amdgpu_kernel void @test_sink_noop_addrspacecast_flat_to_constant_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(4)* %out, i64 999999
   %in.gep = getelementptr i32, i32 addrspace(4)* %in, i64 7

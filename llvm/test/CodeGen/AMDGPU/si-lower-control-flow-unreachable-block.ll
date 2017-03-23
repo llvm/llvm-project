@@ -14,7 +14,7 @@
 ; GCN: [[UNREACHABLE]]:
 ; GCN: ds_write_b32
 ; GCN: s_waitcnt
-define void @lower_control_flow_unreachable_terminator() #0 {
+define amdgpu_kernel void @lower_control_flow_unreachable_terminator() #0 {
 bb:
   %tmp15 = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp63 = icmp eq i32 %tmp15, 32
@@ -41,7 +41,7 @@ ret:
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: ds_write_b32
 ; GCN: s_waitcnt
-define void @lower_control_flow_unreachable_terminator_swap_block_order() #0 {
+define amdgpu_kernel void @lower_control_flow_unreachable_terminator_swap_block_order() #0 {
 bb:
   %tmp15 = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp63 = icmp eq i32 %tmp15, 32

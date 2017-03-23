@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; This ends up using all 255 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -18,6 +19,7 @@
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
 ; SI-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe8f000
 ; VI-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe80000
+; GFX9-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe00000
 
 ; OFFREG is offset system SGPR
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s[[OFFREG]] offset:{{[0-9]+}} ; 4-byte Folded Spill

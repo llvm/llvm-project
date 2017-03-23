@@ -10,7 +10,7 @@
 ; GCN-DAG: v_cndmask_b32_e32 v[[RESULT_LO:[0-9]+]], v[[ADD_LO]], v[[VAL_LO]], vcc
 ; GCN-DAG: v_cndmask_b32_e32 v[[RESULT_HI:[0-9]+]], v[[ADD_HI]], v[[VAL_HI]], vcc
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
-define void @test_vccnz_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(1)* %in) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(1)* %in) #0 {
 entry:
   %v = load double, double addrspace(1)* %in
   %cc = fcmp oeq double %v, 1.000000e+00
@@ -32,7 +32,7 @@ endif:
 ; GCN: v_add_f64
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
-define void @test_vccnz_sgpr_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(2)* %in) #0 {
+define amdgpu_kernel void @test_vccnz_sgpr_ifcvt_triangle64(double addrspace(1)* %out, double addrspace(2)* %in) #0 {
 entry:
   %v = load double, double addrspace(2)* %in
   %cc = fcmp oeq double %v, 1.000000e+00
@@ -62,7 +62,7 @@ endif:
 
 ; GCN-DAG: buffer_store_dword v
 ; GCN-DAG: buffer_store_dwordx2
-define void @test_vccnz_ifcvt_triangle96(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle96(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %in, float %cnd) #0 {
 entry:
   %v = load <3 x i32>, <3 x i32> addrspace(1)* %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
@@ -93,7 +93,7 @@ endif:
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 
 ; GCN: buffer_store_dwordx4
-define void @test_vccnz_ifcvt_triangle128(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in, float %cnd) #0 {
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle128(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in, float %cnd) #0 {
 entry:
   %v = load <4 x i32>, <4 x i32> addrspace(1)* %in
   %cc = fcmp oeq float %cnd, 1.000000e+00

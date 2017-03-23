@@ -1,3 +1,7 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+// XFAIL: armhf-target-arch
+// This test fails for armhf (see pr32261)
+
 //===-- gedf2vfp_test.c - Test __gedf2vfp ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

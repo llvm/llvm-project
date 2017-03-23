@@ -9,6 +9,7 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   InferiorCallPOSIX.cpp
   LinuxSignals.cpp
   MipsLinuxSignals.cpp
+  NativeRegisterContextRegisterInfo.cpp
   NetBSDSignals.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp

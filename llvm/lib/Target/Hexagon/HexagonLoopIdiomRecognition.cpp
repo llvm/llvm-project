@@ -145,14 +145,13 @@ namespace {
       typedef DenseMap<Value*,Value*> ValueMapType;
 
       Value *Root;
-      ValueSetType Used;
-      ValueMapType Clones, Orig;
+      ValueSetType Used;    // The set of all cloned values used by Root.
+      ValueSetType Clones;  // The set of all cloned values.
       LLVMContext &Ctx;
 
       Context(Instruction *Exp)
         : Ctx(Exp->getParent()->getParent()->getContext()) {
         initialize(Exp);
-        reset();
       }
       ~Context() { cleanup(); }
       void print(raw_ostream &OS, const Value *V) const;
@@ -161,9 +160,12 @@ namespace {
 
     private:
       void initialize(Instruction *Exp);
-      void reset();
       void cleanup();
-      void cleanup(Value *V);
+
+      template <typename FuncT> void traverse(Value *V, FuncT F);
+      void record(Value *V);
+      void use(Value *V);
+      void unuse(Value *V);
 
       bool equal(const Instruction *I, const Instruction *J) const;
       Value *find(Value *Tree, Value *Sub) const;
@@ -187,6 +189,24 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PE &P) {
     P.C.print(OS, P.V ? P.V : P.C.Root);
     return OS;
+  }
+}
+
+
+template <typename FuncT>
+void Simplifier::Context::traverse(Value *V, FuncT F) {
+  WorkListType Q;
+  Q.push_back(V);
+
+  while (!Q.empty()) {
+    Instruction *U = dyn_cast<Instruction>(Q.front());
+    Q.pop_front();
+    if (!U || U->getParent())
+      continue;
+    if (!F(U))
+      continue;
+    for (Value *Op : U->operands())
+      Q.push_back(Op);
   }
 }
 
@@ -222,6 +242,7 @@ void Simplifier::Context::initialize(Instruction *Exp) {
   // Perform a deep clone of the expression, set Root to the root
   // of the clone, and build a map from the cloned values to the
   // original ones.
+  ValueMapType M;
   BasicBlock *Block = Exp->getParent();
   WorkListType Q;
   Q.push_back(Exp);
@@ -229,59 +250,72 @@ void Simplifier::Context::initialize(Instruction *Exp) {
   while (!Q.empty()) {
     Value *V = Q.front();
     Q.pop_front();
-    if (Clones.find(V) != Clones.end())
+    if (M.find(V) != M.end())
       continue;
     if (Instruction *U = dyn_cast<Instruction>(V)) {
       if (isa<PHINode>(U) || U->getParent() != Block)
         continue;
       for (Value *Op : U->operands())
         Q.push_back(Op);
-      Clones.insert({U, U->clone()});
+      M.insert({U, U->clone()});
     }
   }
 
-  for (std::pair<Value*,Value*> P : Clones) {
+  for (std::pair<Value*,Value*> P : M) {
     Instruction *U = cast<Instruction>(P.second);
     for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i) {
-      auto F = Clones.find(U->getOperand(i));
-      if (F != Clones.end())
+      auto F = M.find(U->getOperand(i));
+      if (F != M.end())
         U->setOperand(i, F->second);
     }
-    Orig.insert({P.second, P.first});
   }
 
-  auto R = Clones.find(Exp);
-  assert(R != Clones.end());
+  auto R = M.find(Exp);
+  assert(R != M.end());
   Root = R->second;
+
+  record(Root);
+  use(Root);
 }
 
 
-void Simplifier::Context::reset() {
-  ValueSetType NewUsed;
-  WorkListType Q;
-  Q.push_back(Root);
+void Simplifier::Context::record(Value *V) {
+  auto Record = [this](Instruction *U) -> bool {
+    Clones.insert(U);
+    return true;
+  };
+  traverse(V, Record);
+}
 
-  while (!Q.empty()) {
-    Instruction *U = dyn_cast<Instruction>(Q.front());
-    Q.pop_front();
-    if (!U || U->getParent())
-      continue;
-    NewUsed.insert(U);
-    for (Value *Op : U->operands())
-      Q.push_back(Op);
-  }
-  for (Value *V : Used)
-    if (!NewUsed.count(V))
-      cast<Instruction>(V)->dropAllReferences();
-  Used = NewUsed;
+
+void Simplifier::Context::use(Value *V) {
+  auto Use = [this](Instruction *U) -> bool {
+    Used.insert(U);
+    return true;
+  };
+  traverse(V, Use);
+}
+
+
+void Simplifier::Context::unuse(Value *V) {
+  if (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != nullptr)
+    return;
+
+  auto Unuse = [this](Instruction *U) -> bool {
+    if (!U->use_empty())
+      return false;
+    Used.erase(U);
+    return true;
+  };
+  traverse(V, Unuse);
 }
 
 
 Value *Simplifier::Context::subst(Value *Tree, Value *OldV, Value *NewV) {
-  if (Tree == OldV) {
-    cleanup(OldV);
+  if (Tree == OldV)
     return NewV;
-  }
+  if (OldV == NewV)
+    return Tree;
 
   WorkListType Q;
   Q.push_back(Tree);
@@ -294,8 +328,8 @@ Value *Simplifier::Context::subst(Value *Tree, Value *OldV, Value *NewV) {
     for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i) {
       Value *Op = U->getOperand(i);
       if (Op == OldV) {
-        cleanup(OldV);
         U->setOperand(i, NewV);
+        unuse(OldV);
       } else {
         Q.push_back(Op);
       }
@@ -308,7 +342,7 @@ Value *Simplifier::Context::subst(Value *Tree, Value *OldV, Value *NewV) {
 void Simplifier::Context::replace(Value *OldV, Value *NewV) {
   if (Root == OldV) {
     Root = NewV;
-    reset();
+    use(Root);
     return;
   }
 
@@ -337,32 +371,21 @@ void Simplifier::Context::replace(Value *OldV, Value *NewV) {
 
   // Now, simply replace OldV with NewV in Root.
   Root = subst(Root, OldV, NewV);
-  reset();
+  use(Root);
 }
 
 
 void Simplifier::Context::cleanup() {
-  for (Value *V : Used) {
+  for (Value *V : Clones) {
     Instruction *U = cast<Instruction>(V);
     if (!U->getParent())
       U->dropAllReferences();
   }
-}
 
-
-void Simplifier::Context::cleanup(Value *V) {
-  if (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != nullptr)
-    return;
-  WorkListType Q;
-  Q.push_back(V);
-  while (!Q.empty()) {
-    Instruction *U = dyn_cast<Instruction>(Q.front());
-    Q.pop_front();
-    if (!U || U->getParent() || Used.count(U))
-      continue;
-    for (Value *Op : U->operands())
-      Q.push_back(Op);
-    U->dropAllReferences();
+  for (Value *V : Clones) {
+    Instruction *U = cast<Instruction>(V);
+    if (!U->getParent())
+      delete U;
   }
 }
 
@@ -452,6 +475,7 @@ Value *Simplifier::simplify(Context &C) {
       if (!W)
         continue;
       Changed = true;
+      C.record(W);
       C.replace(U, W);
       Q.push_back(C.Root);
       break;

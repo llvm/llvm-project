@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #2
 ; FUNC-LABEL: @reorder_local_load_global_store_local_load
 ; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:1 offset1:3
 ; CI: buffer_store_dword
-define void @reorder_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
+define amdgpu_kernel void @reorder_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
@@ -33,7 +33,7 @@ define void @reorder_local_load_global_store_local_load(i32 addrspace(1)* %out, 
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:4
 ; CI: buffer_store_dword
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
-define void @no_reorder_local_load_volatile_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
+define amdgpu_kernel void @no_reorder_local_load_volatile_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
@@ -53,7 +53,7 @@ define void @no_reorder_local_load_volatile_global_store_local_load(i32 addrspac
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:4
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
 ; CI: buffer_store_dword
-define void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
+define amdgpu_kernel void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
@@ -77,7 +77,7 @@ define void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace
 ; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x1
 ; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x3
 ; CI: buffer_store_dword
-define void @reorder_constant_load_global_store_constant_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
+define amdgpu_kernel void @reorder_constant_load_global_store_constant_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(2)*, i32 addrspace(2)* addrspace(3)* @stored_constant_ptr, align 8
 
   %ptr1 = getelementptr inbounds i32, i32 addrspace(2)* %ptr0, i64 1
@@ -100,7 +100,7 @@ define void @reorder_constant_load_global_store_constant_load(i32 addrspace(1)* 
 ; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x3
 ; CI: ds_write_b32
 ; CI: buffer_store_dword
-define void @reorder_constant_load_local_store_constant_load(i32 addrspace(1)* %out, i32 addrspace(3)* %lptr) #0 {
+define amdgpu_kernel void @reorder_constant_load_local_store_constant_load(i32 addrspace(1)* %out, i32 addrspace(3)* %lptr) #0 {
   %ptr0 = load i32 addrspace(2)*, i32 addrspace(2)* addrspace(3)* @stored_constant_ptr, align 8
 
   %ptr1 = getelementptr inbounds i32, i32 addrspace(2)* %ptr0, i64 1
@@ -122,7 +122,7 @@ define void @reorder_constant_load_local_store_constant_load(i32 addrspace(1)* %
 ; CI: s_load_dword
 ; CI: ds_write_b32
 ; CI: buffer_store_dword
-define void @reorder_smrd_load_local_store_smrd_load(i32 addrspace(1)* %out, i32 addrspace(3)* noalias %lptr, i32 addrspace(2)* %ptr0) #0 {
+define amdgpu_kernel void @reorder_smrd_load_local_store_smrd_load(i32 addrspace(1)* %out, i32 addrspace(3)* noalias %lptr, i32 addrspace(2)* %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(2)* %ptr0, i64 1
   %ptr2 = getelementptr inbounds i32, i32 addrspace(2)* %ptr0, i64 2
 
@@ -141,7 +141,7 @@ define void @reorder_smrd_load_local_store_smrd_load(i32 addrspace(1)* %out, i32
 ; CI: buffer_load_dword
 ; CI: buffer_load_dword
 ; CI: buffer_store_dword
-define void @reorder_global_load_local_store_global_load(i32 addrspace(1)* %out, i32 addrspace(3)* %lptr, i32 addrspace(1)* %ptr0) #0 {
+define amdgpu_kernel void @reorder_global_load_local_store_global_load(i32 addrspace(1)* %out, i32 addrspace(3)* %lptr, i32 addrspace(1)* %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i64 1
   %ptr2 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i64 3
 
@@ -161,7 +161,7 @@ define void @reorder_global_load_local_store_global_load(i32 addrspace(1)* %out,
 ; CI-DAG: ds_write_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:408
 ; CI: buffer_store_dword
 ; CI: s_endpgm
-define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(3)* noalias nocapture %ptr0) #0 {
+define amdgpu_kernel void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(3)* noalias nocapture %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 3
   %ptr2 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 100
   %ptr3 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 102
@@ -187,7 +187,7 @@ define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspa
 ; CI-DAG: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:408
 ; CI: buffer_store_dword
 ; CI: s_endpgm
-define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(1)* noalias nocapture %ptr0) #0 {
+define amdgpu_kernel void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(1)* noalias nocapture %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 3
   %ptr2 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 100
   %ptr3 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 102
@@ -221,7 +221,7 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:36{{$}}
 ; GCN-NEXT: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:52{{$}}
-define void @reorder_global_offsets_addr64_soffset0(i32 addrspace(1)* noalias nocapture %ptr.base) #0 {
+define amdgpu_kernel void @reorder_global_offsets_addr64_soffset0(i32 addrspace(1)* noalias nocapture %ptr.base) #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
 

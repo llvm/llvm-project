@@ -537,4 +537,11 @@ def G_EXTRACT_VECTOR_ELT : Instruction {
   let hasSideEffects = 0;
 }
 
+// Generic shufflevector.
+def G_SHUFFLE_VECTOR: Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$v1, type1:$v2, type2:$mask);
+  let hasSideEffects = 0;
+}
+
 // TODO: Add the other generic opcodes.

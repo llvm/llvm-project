@@ -261,6 +261,12 @@ def FeatureNoMovt : SubtargetFeature<"no-movt", "NoMovt", "true",
                                      "Don't use movt/movw pairs for 32-bit "
                                      "imms">;
 
+def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
+                                        "NegativeImmediates", "false",
+                                        "Convert immediates and instructions "
+                                        "to their negated or complemented "
+                                        "equivalent when the immediate does "
+                                        "not fit in the encoding.">;
 
 //===----------------------------------------------------------------------===//
 // ARM ISAa.

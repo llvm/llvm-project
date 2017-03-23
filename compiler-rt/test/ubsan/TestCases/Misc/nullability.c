@@ -6,8 +6,6 @@
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:6: note: _Nonnull return type annotation specified here
 int *_Nonnull nonnull_retval1(int *p) { return p; }
 
-// CHECK: nullability.c:1001:19: runtime error: null pointer passed as argument 1, which is declared to never be null
-// CHECK-NEXT: nullability.c:[[@LINE+3]]:36: note: _Nonnull type annotation specified here
 // CHECK: nullability.c:1001:22: runtime error: null pointer passed as argument 2, which is declared to never be null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:56: note: _Nonnull type annotation specified here
 int *_Nonnull nonnull_retval2(int *_Nonnull arg1, int *_Nonnull arg2,

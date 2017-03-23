@@ -14,16 +14,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE
 endif()
 
 cmake_minimum_required(VERSION 3.4.3)
-# FIXME:
-# The OLD behavior (pre 3.2) for this policy is to not set the value of the 
-# CMAKE_EXE_LINKER_FLAGS variable in the generated test project. The NEW behavior
-# for this policy is to set the value of the CMAKE_EXE_LINKER_FLAGS variable 
-# in the test project to the same as it is in the calling project. The new 
-# behavior cause the compiler_rt test to fail during try_compile: see
-# projects/compiler-rt/cmake/Modules/CompilerRTUtils.cmake:121 such that
-# CAN_TARGET_${arch} is not set properly. This results in COMPILER_RT_SUPPORTED_ARCH
-# not being updated properly leading to poblems.
-cmake_policy(SET CMP0056 OLD)
 
 # Add path for custom compiler-rt modules.
 list(INSERT CMAKE_MODULE_PATH 0

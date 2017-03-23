@@ -3,14 +3,14 @@
 ; Check that loop unswitch happened and condition hoisted out of the loop.
 ; Condition is uniform so all targets should perform unswitching.
 
-; CHECK-LABEL: {{^}}define void @uniform_unswitch
+; CHECK-LABEL: {{^}}define amdgpu_kernel void @uniform_unswitch
 ; CHECK: entry:
 ; CHECK-NEXT: [[LOOP_COND:%[a-z0-9]+]] = icmp
 ; CHECK-NEXT: [[IF_COND:%[a-z0-9]+]] = icmp eq i32 %x, 123456
 ; CHECK-NEXT: and i1 [[LOOP_COND]], [[IF_COND]]
 ; CHECK-NEXT: br i1
 
-define void @uniform_unswitch(i32 * nocapture %out, i32 %n, i32 %x) {
+define amdgpu_kernel void @uniform_unswitch(i32 * nocapture %out, i32 %n, i32 %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.lr.ph, label %for.cond.cleanup
@@ -42,14 +42,14 @@ for.inc:                                          ; preds = %for.body, %if.then
 
 ; Check that loop unswitch does not happen if condition is divergent.
 
-; CHECK-LABEL: {{^}}define void @divergent_unswitch
+; CHECK-LABEL: {{^}}define amdgpu_kernel void @divergent_unswitch
 ; CHECK: entry:
 ; CHECK: icmp
 ; CHECK: [[IF_COND:%[a-z0-9]+]] = icmp {{.*}} 567890
 ; CHECK: br label
 ; CHECK: br i1 [[IF_COND]]
 
-define void @divergent_unswitch(i32 * nocapture %out, i32 %n) {
+define amdgpu_kernel void @divergent_unswitch(i32 * nocapture %out, i32 %n) {
 entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.cond.cleanup

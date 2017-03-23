@@ -80,7 +80,7 @@ bool Argument::hasInAllocaAttr() const {
 
 bool Argument::hasByValOrInAllocaAttr() const {
   if (!getType()->isPointerTy()) return false;
-  AttributeSet Attrs = getParent()->getAttributes();
+  AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasAttribute(getArgNo() + 1, Attribute::ByVal) ||
          Attrs.hasAttribute(getArgNo() + 1, Attribute::InAlloca);
 }
@@ -142,22 +142,22 @@ bool Argument::onlyReadsMemory() const {
       hasAttribute(getArgNo()+1, Attribute::ReadNone);
 }
 
-void Argument::addAttr(AttributeSet AS) {
+void Argument::addAttr(AttributeList AS) {
   assert(AS.getNumSlots() <= 1 &&
          "Trying to add more than one attribute set to an argument!");
   AttrBuilder B(AS, AS.getSlotIndex(0));
-  getParent()->addAttributes(getArgNo() + 1,
-                             AttributeSet::get(Parent->getContext(),
-                                               getArgNo() + 1, B));
+  getParent()->addAttributes(
+      getArgNo() + 1,
+      AttributeList::get(Parent->getContext(), getArgNo() + 1, B));
 }
 
-void Argument::removeAttr(AttributeSet AS) {
+void Argument::removeAttr(AttributeList AS) {
   assert(AS.getNumSlots() <= 1 &&
          "Trying to remove more than one attribute set from an argument!");
   AttrBuilder B(AS, AS.getSlotIndex(0));
-  getParent()->removeAttributes(getArgNo() + 1,
-                                AttributeSet::get(Parent->getContext(),
-                                                  getArgNo() + 1, B));
+  getParent()->removeAttributes(
+      getArgNo() + 1,
+      AttributeList::get(Parent->getContext(), getArgNo() + 1, B));
 }
 
 bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
@@ -322,49 +322,49 @@ void Function::dropAllReferences() {
 }
 
 void Function::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.addAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
 void Function::addAttribute(unsigned i, Attribute Attr) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.addAttribute(getContext(), i, Attr);
   setAttributes(PAL);
 }
 
-void Function::addAttributes(unsigned i, AttributeSet Attrs) {
-  AttributeSet PAL = getAttributes();
+void Function::addAttributes(unsigned i, AttributeList Attrs) {
+  AttributeList PAL = getAttributes();
   PAL = PAL.addAttributes(getContext(), i, Attrs);
   setAttributes(PAL);
 }
 
 void Function::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.removeAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
 void Function::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.removeAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
-void Function::removeAttributes(unsigned i, AttributeSet Attrs) {
-  AttributeSet PAL = getAttributes();
+void Function::removeAttributes(unsigned i, AttributeList Attrs) {
+  AttributeList PAL = getAttributes();
   PAL = PAL.removeAttributes(getContext(), i, Attrs);
   setAttributes(PAL);
 }
 
 void Function::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
   setAttributes(PAL);
 }
 
 void Function::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeSet PAL = getAttributes();
+  AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
   setAttributes(PAL);
 }

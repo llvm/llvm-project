@@ -26,7 +26,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define void @uniform_conditional_max_short_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
 bb:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
@@ -68,7 +68,7 @@ bb3:
 ; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define void @uniform_conditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
 bb0:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +9 dword branch
@@ -108,7 +108,7 @@ bb3:
 ; GCN: [[ENDBB]]:
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define void @uniform_conditional_min_long_forward_vcnd_branch(float addrspace(1)* %arg, float %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(float addrspace(1)* %arg, float %cnd) #0 {
 bb0:
   %cmp = fcmp oeq float %cnd, 0.0
   br i1 %cmp, label %bb3, label %bb2 ; + 8 dword branch
@@ -141,7 +141,7 @@ bb3:
 ; GCN: s_or_b64 exec, exec, [[SAVE]]
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
-define void @min_long_forward_vbranch(i32 addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @min_long_forward_vbranch(i32 addrspace(1)* %arg) #0 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = zext i32 %tid to i64
@@ -188,7 +188,7 @@ bb3:
 
 ; GCN-NEXT: [[ENDBB]]:
 ; GCN-NEXT: s_endpgm
-define void @long_backward_sbranch(i32 addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @long_backward_sbranch(i32 addrspace(1)* %arg) #0 {
 bb:
   br label %bb2
 
@@ -243,7 +243,7 @@ bb3:
 ; GCN: buffer_store_dword [[BB4_K]]
 ; GCN-NEXT: s_endpgm
 ; GCN-NEXT: .Lfunc_end{{[0-9]+}}:
-define void @uniform_unconditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
 bb0:
   %tmp = icmp ne i32 %arg1, 0
   br i1 %tmp, label %bb2, label %bb3
@@ -285,7 +285,7 @@ bb4:
 ; GCN-NEXT: s_subb_u32 vcc_hi, vcc_hi, 0{{$}}
 ; GCN-NEXT: s_setpc_b64 vcc
 ; GCN-NEXT .Lfunc_end{{[0-9]+}}:
-define void @uniform_unconditional_min_long_backward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
 entry:
   br label %loop
 
@@ -342,7 +342,7 @@ loop:
 ; GCN-NEXT: v_nop_e64
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_endpgm
-define void @expand_requires_expand(i32 %cond0) #0 {
+define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 bb0:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %cmp0 = icmp slt i32 %cond0, 0
@@ -399,7 +399,7 @@ bb3:
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
 ; GCN-NEXT: s_sleep 5
 ; GCN-NEXT: s_endpgm
-define void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) #0 {
+define amdgpu_kernel void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %d_cmp = icmp ult i32 %tid, 16
@@ -462,7 +462,7 @@ endif:
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
 ; GCN: buffer_store_dword
 ; GCN-NEXT: s_endpgm
-define void @analyze_mask_branch() #0 {
+define amdgpu_kernel void @analyze_mask_branch() #0 {
 entry:
   %reg = call float asm sideeffect "v_mov_b32_e64 $0, 0", "=v"()
   %cmp0 = fcmp ogt float %reg, 0.000000e+00

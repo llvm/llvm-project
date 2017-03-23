@@ -182,8 +182,8 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
 
   if (!MissingMembers.empty())
     diag(ID.first, "class '%0' defines %1 but does not define %2")
-        << ID.second << join(DefinedMembers, " and ")
-        << join(MissingMembers, " or ");
+        << ID.second << cppcoreguidelines::join(DefinedMembers, " and ")
+        << cppcoreguidelines::join(MissingMembers, " or ");
 }
 
 } // namespace cppcoreguidelines

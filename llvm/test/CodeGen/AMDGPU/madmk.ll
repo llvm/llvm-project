@@ -12,7 +12,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
-define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -35,7 +35,7 @@ define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noa
 ; GCN-DAG: v_mac_f32_e32 [[VB]], [[VK]], [[VA]]
 ; GCN-DAG: v_mac_f32_e32 [[VC]], [[VK]], [[VA]]
 ; GCN: s_endpgm
-define void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -64,7 +64,7 @@ define void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 4.0, [[VA]]
-define void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -83,7 +83,7 @@ define void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrsp
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b) nounwind {
+define amdgpu_kernel void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
@@ -97,7 +97,7 @@ define void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b)
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mad_f32
 ; GCN: s_endpgm
-define void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %b) nounwind {
+define amdgpu_kernel void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -113,7 +113,7 @@ define void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)*
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %a) nounwind {
+define amdgpu_kernel void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %a) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -130,7 +130,7 @@ define void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float add
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, [[VK]], |[[VA]]|, [[VB]]
-define void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -151,7 +151,7 @@ define void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float 
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, |{{[sv][0-9]+}}|
-define void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
@@ -172,7 +172,7 @@ define void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float 
 ; GCN: buffer_load_dword [[A:v[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, [[VK]], [[A]], 2.0
-define void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -189,7 +189,7 @@ define void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float ad
 ; SI: s_xor_b64
 ; SI: v_mac_f32_e32 {{v[0-9]+}}, 0x472aee8c, {{v[0-9]+}}
 ; SI: s_or_b64
-define void @kill_madmk_verifier_error() nounwind {
+define amdgpu_kernel void @kill_madmk_verifier_error() nounwind {
 bb:
   br label %bb2
 

@@ -9,7 +9,7 @@
 ; GCN-LABEL: {{^}}v_test_nnan_input_fmed3_r_i_i_f32:
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, v{{[0-9]+}}
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], 2.0, 4.0
-define void @v_test_nnan_input_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -27,7 +27,7 @@ define void @v_test_nnan_input_fmed3_r_i_i_f32(float addrspace(1)* %out, float a
 
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -45,7 +45,7 @@ define void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)
 
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -63,7 +63,7 @@ define void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float add
 
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -79,7 +79,7 @@ define void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float add
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_constant_order_f32:
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-define void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -96,7 +96,7 @@ define void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, flo
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_multi_use_f32:
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -113,7 +113,7 @@ define void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float ad
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_f64:
 ; GCN: v_max_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 2.0
 ; GCN: v_min_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 4.0
-define void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr double, double addrspace(1)* %out, i32 %tid
@@ -128,7 +128,7 @@ define void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(
 
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_no_nans_f32:
 ; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
-define void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -146,7 +146,7 @@ define void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %out, float addr
 
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define void @v_test_legacy_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -169,7 +169,7 @@ define void @v_test_legacy_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrs
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, -[[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -192,7 +192,7 @@ define void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrspace(1)* %out,
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], -[[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat0_srcmod1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -215,7 +215,7 @@ define void @v_test_global_nnans_med3_f32_pat0_srcmod1(float addrspace(1)* %out,
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], -[[C]]
-define void @v_test_global_nnans_med3_f32_pat0_srcmod2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -238,7 +238,7 @@ define void @v_test_global_nnans_med3_f32_pat0_srcmod2(float addrspace(1)* %out,
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, -[[A]], |[[B]]|, -|[[C]]|
-define void @v_test_global_nnans_med3_f32_pat0_srcmod012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -267,7 +267,7 @@ define void @v_test_global_nnans_med3_f32_pat0_srcmod012(float addrspace(1)* %ou
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, -|[[A]]|, -|[[B]]|, -|[[C]]|
-define void @v_test_global_nnans_med3_f32_pat0_negabs012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -301,7 +301,7 @@ define void @v_test_global_nnans_med3_f32_pat0_negabs012(float addrspace(1)* %ou
 ; GCN-DAG: v_add_f32_e32 [[B_ADD:v[0-9]+]], 2.0, [[B]]
 ; GCN-DAG: v_add_f32_e32 [[C_ADD:v[0-9]+]], 4.0, [[C]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A_ADD]], [[B_ADD]], [[C_ADD]]
-define void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -341,7 +341,7 @@ define void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out, float addrspa
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -363,7 +363,7 @@ define void @v_test_global_nnans_med3_f32_pat0(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -385,7 +385,7 @@ define void @v_test_global_nnans_med3_f32_pat1(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -407,7 +407,7 @@ define void @v_test_global_nnans_med3_f32_pat2(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat3(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat3(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -429,7 +429,7 @@ define void @v_test_global_nnans_med3_f32_pat3(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat4(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat4(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -451,7 +451,7 @@ define void @v_test_global_nnans_med3_f32_pat4(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat5(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat5(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -473,7 +473,7 @@ define void @v_test_global_nnans_med3_f32_pat5(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat6(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat6(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -495,7 +495,7 @@ define void @v_test_global_nnans_med3_f32_pat6(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat7(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat7(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -517,7 +517,7 @@ define void @v_test_global_nnans_med3_f32_pat7(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat8(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat8(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -539,7 +539,7 @@ define void @v_test_global_nnans_med3_f32_pat8(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat9(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat9(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -561,7 +561,7 @@ define void @v_test_global_nnans_med3_f32_pat9(float addrspace(1)* %out, float a
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat10(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat10(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -583,7 +583,7 @@ define void @v_test_global_nnans_med3_f32_pat10(float addrspace(1)* %out, float 
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat11(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat11(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -605,7 +605,7 @@ define void @v_test_global_nnans_med3_f32_pat11(float addrspace(1)* %out, float 
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat12(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat12(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -627,7 +627,7 @@ define void @v_test_global_nnans_med3_f32_pat12(float addrspace(1)* %out, float 
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat13(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat13(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -649,7 +649,7 @@ define void @v_test_global_nnans_med3_f32_pat13(float addrspace(1)* %out, float 
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[A]], [[B]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat14(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat14(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -671,7 +671,7 @@ define void @v_test_global_nnans_med3_f32_pat14(float addrspace(1)* %out, float 
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[B]], [[A]], [[C]]
-define void @v_test_global_nnans_med3_f32_pat15(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat15(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -697,7 +697,7 @@ define void @v_test_global_nnans_med3_f32_pat15(float addrspace(1)* %out, float 
 ; GCN-DAG: v_max_f32
 ; GCN: v_min_f32
 ; GCN: v_max_f32
-define void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -716,7 +716,7 @@ define void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}v_test_safe_med3_f32_pat0_multi_use1:
-define void @v_test_safe_med3_f32_pat0_multi_use1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -735,7 +735,7 @@ define void @v_test_safe_med3_f32_pat0_multi_use1(float addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}v_test_safe_med3_f32_pat0_multi_use2:
-define void @v_test_safe_med3_f32_pat0_multi_use2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -755,7 +755,7 @@ define void @v_test_safe_med3_f32_pat0_multi_use2(float addrspace(1)* %out, floa
 
 
 ; GCN-LABEL: {{^}}v_test_safe_med3_f32_pat0:
-define void @v_test_safe_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -773,7 +773,7 @@ define void @v_test_safe_med3_f32_pat0(float addrspace(1)* %out, float addrspace
 }
 
 ; GCN-LABEL: {{^}}v_nnan_inputs_missing0_med3_f32_pat0:
-define void @v_nnan_inputs_missing0_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing0_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -796,7 +796,7 @@ define void @v_nnan_inputs_missing0_med3_f32_pat0(float addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}v_nnan_inputs_missing1_med3_f32_pat0:
-define void @v_nnan_inputs_missing1_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing1_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -819,7 +819,7 @@ define void @v_nnan_inputs_missing1_med3_f32_pat0(float addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}v_nnan_inputs_missing2_med3_f32_pat0:
-define void @v_nnan_inputs_missing2_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -849,7 +849,7 @@ define void @v_nnan_inputs_missing2_med3_f32_pat0(float addrspace(1)* %out, floa
 ; GCN: v_max_f32
 ; GCN: v_min_f32
 ; GCN: v_max_f32
-define void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -874,7 +874,7 @@ define void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(float addrspace(
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
 ; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], [[B]], [[A]]
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, [[C]], [[MAX]]
-define void @v_test_global_nnans_min_max_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_min_max_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
@@ -901,7 +901,7 @@ define void @v_test_global_nnans_min_max_f32(float addrspace(1)* %out, float add
 
 ; GFX9: v_add_f16_e32 v{{[0-9]+}}, 1.0
 ; GFX9: v_med3_f16 v{{[0-9]+}}, [[ADD]], 2.0, 4.0
-define void @v_test_nnan_input_fmed3_r_i_i_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -938,7 +938,7 @@ define void @v_test_nnan_input_fmed3_r_i_i_f16(half addrspace(1)* %out, half add
 ; VI: v_max_f16
 
 ; GFX9: v_med3_f16 v{{[0-9]+}}, [[A_ADD]], [[B_ADD]], [[C_ADD]]
-define void @v_nnan_inputs_med3_f16_pat0(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr half, half addrspace(1)* %bptr, i32 %tid

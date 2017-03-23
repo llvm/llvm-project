@@ -224,7 +224,7 @@ registers:
 # CHECK:  body:
 # CHECK:    %0 = COPY %w0
 # CHECK:    %1 = COPY %w1
-# CHECK:    %2 = SUBSWrr %0, %1
+# CHECK:    %2 = SUBSWrr %0, %1, implicit-def %nzcv
 body:             |
   bb.0:
     liveins: %w0, %w1
@@ -254,7 +254,7 @@ registers:
 # CHECK:  body:
 # CHECK:    %0 = COPY %x0
 # CHECK:    %1 = COPY %x1
-# CHECK:    %2 = SUBSXrr %0, %1
+# CHECK:    %2 = SUBSXrr %0, %1, implicit-def %nzcv
 body:             |
   bb.0:
     liveins: %x0, %x1

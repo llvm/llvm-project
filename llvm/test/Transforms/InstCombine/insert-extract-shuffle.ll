@@ -86,11 +86,8 @@ define <8 x float> @widen_extract4(<8 x float> %ins, <2 x float> %ext) {
 
 define <8 x i16> @pr26015(<4 x i16> %t0) {
 ; CHECK-LABEL: @pr26015(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> %t0, <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> %t0, i32 2
-; CHECK-NEXT:    [[T2:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 undef>, i16 [[TMP2]], i32 3
-; CHECK-NEXT:    [[T3:%.*]] = insertelement <8 x i16> [[T2]], i16 0, i32 6
-; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> [[T3]], <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> %t0, <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 undef>, <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 10, i32 4, i32 5, i32 6, i32 11>
 ; CHECK-NEXT:    ret <8 x i16> [[T5]]
 ;
   %t1 = extractelement <4 x i16> %t0, i32 2
@@ -110,8 +107,7 @@ define <8 x i16> @pr25999(<4 x i16> %t0, i1 %b) {
 ; CHECK-NEXT:    br i1 %b, label %if, label %end
 ; CHECK:       if:
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> %t0, <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T2:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 undef>, i16 [[T1]], i32 3
-; CHECK-NEXT:    [[T3:%.*]] = insertelement <8 x i16> [[T2]], i16 0, i32 6
+; CHECK-NEXT:    [[T3:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 undef>, i16 [[T1]], i32 3
 ; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> [[T3]], <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
 ; CHECK-NEXT:    ret <8 x i16> [[T5]]
 ; CHECK:       end:

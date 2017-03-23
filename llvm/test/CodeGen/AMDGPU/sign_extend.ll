@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}s_sext_i1_to_i32:
 ; GCN: v_cndmask_b32_e64
 ; GCN: s_endpgm
-define void @s_sext_i1_to_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i32
   store i32 %sext, i32 addrspace(1)* %out, align 4
@@ -14,7 +14,7 @@ define void @s_sext_i1_to_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
 ; GCN-LABEL: {{^}}test_s_sext_i32_to_i64:
 ; GCN: s_ashr_i32
 ; GCN: s_endpg
-define void @test_s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
+define amdgpu_kernel void @test_s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
 entry:
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
@@ -28,7 +28,7 @@ entry:
 ; GCN: v_mov_b32_e32 v[[HIREG:[0-9]+]], v[[LOREG]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOREG]]:[[HIREG]]{{\]}}
 ; GCN: s_endpgm
-define void @s_sext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i64
   store i64 %sext, i64 addrspace(1)* %out, align 8
@@ -38,7 +38,7 @@ define void @s_sext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
 ; GCN-LABEL: {{^}}s_sext_i32_to_i64:
 ; GCN: s_ashr_i32
 ; GCN: s_endpgm
-define void @s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a) nounwind {
   %sext = sext i32 %a to i64
   store i64 %sext, i64 addrspace(1)* %out, align 8
   ret void
@@ -47,7 +47,7 @@ define void @s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a) nounwind {
 ; GCN-LABEL: {{^}}v_sext_i32_to_i64:
 ; GCN: v_ashr
 ; GCN: s_endpgm
-define void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
   %val = load i32, i32 addrspace(1)* %in, align 4
   %sext = sext i32 %val to i64
   store i64 %sext, i64 addrspace(1)* %out, align 8
@@ -56,7 +56,7 @@ define void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) no
 
 ; GCN-LABEL: {{^}}s_sext_i16_to_i64:
 ; GCN: s_bfe_i64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x100000
-define void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
+define amdgpu_kernel void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
   %sext = sext i16 %a to i64
   store i64 %sext, i64 addrspace(1)* %out, align 8
   ret void
@@ -65,7 +65,7 @@ define void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
 ; GCN-LABEL: {{^}}s_sext_i1_to_i16:
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
 ; GCN-NEXT: buffer_store_short [[RESULT]]
-define void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i16
   store i16 %sext, i16 addrspace(1)* %out
@@ -79,7 +79,7 @@ define void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
 ; GCN-LABEL: {{^}}s_sext_i1_to_i16_with_and:
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
 ; GCN-NEXT: buffer_store_short [[RESULT]]
-define void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
   %cmp0 = icmp eq i32 %a, %b
   %cmp1 = icmp eq i32 %c, %d
   %cmp = and i1 %cmp0, %cmp1
@@ -91,7 +91,7 @@ define void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i
 ; GCN-LABEL: {{^}}v_sext_i1_to_i16_with_and:
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
 ; GCN-NEXT: buffer_store_short [[RESULT]]
-define void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
+define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %cmp0 = icmp eq i32 %a, %tid
   %cmp1 = icmp eq i32 %b, %c
@@ -130,7 +130,7 @@ define void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i
 ; GCN-DAG: buffer_store_dword [[VEXT3]]
 
 ; GCN: s_endpgm
-define void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) nounwind {
   %cast = bitcast i32 %a to <4 x i8>
   %ext = sext <4 x i8> %cast to <4 x i32>
   %elt0 = extractelement <4 x i32> %ext, i32 0
@@ -162,7 +162,7 @@ define void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 ; GCN: buffer_store_dword [[EXT1]]
 ; GCN: buffer_store_dword [[EXT2]]
 ; GCN: buffer_store_dword [[EXT3]]
-define void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
   %a = load i32, i32 addrspace(1)* %in
   %cast = bitcast i32 %a to <4 x i8>
   %ext = sext <4 x i8> %cast to <4 x i32>
@@ -184,7 +184,7 @@ define void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 ; GCN-DAG: s_sext_i32_i16
 ; GCN-DAG: s_sext_i32_i16
 ; GCN: s_endpgm
-define void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a) nounwind {
+define amdgpu_kernel void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a) nounwind {
   %cast = bitcast i64 %a to <4 x i16>
   %ext = sext <4 x i16> %cast to <4 x i32>
   %elt0 = extractelement <4 x i32> %ext, i32 0
@@ -206,7 +206,7 @@ define void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a) nounwind {
 ; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; GCN: s_endpgm
-define void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 addrspace(1)* %in) nounwind {
   %a = load i64, i64 addrspace(1)* %in
   %cast = bitcast i64 %a to <4 x i16>
   %ext = sext <4 x i16> %cast to <4 x i32>

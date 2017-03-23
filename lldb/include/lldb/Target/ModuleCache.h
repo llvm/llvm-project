@@ -14,8 +14,8 @@
 #include "lldb/lldb-types.h"
 
 #include "lldb/Host/File.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include <functional>
 #include <string>

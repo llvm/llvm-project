@@ -45,6 +45,10 @@ unsigned constrainOperandRegClass(const MachineFunction &MF,
                                   MachineInstr &InsertPt, const MCInstrDesc &II,
                                   unsigned Reg, unsigned OpIdx);
 
+/// Check whether an instruction \p MI is dead: it only defines dead virtual
+/// registers, and doesn't have other side effects.
+bool isTriviallyDead(const MachineInstr &MI, const MachineRegisterInfo &MRI);
+
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,

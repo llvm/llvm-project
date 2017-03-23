@@ -4,7 +4,7 @@
 ; This works because promote allocas pass replaces these with LDS atomics.
 
 ; Private atomics have no real use, but at least shouldn't crash on it.
-define void @atomicrmw_private(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @atomicrmw_private(i32 addrspace(1)* %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32]
   %tmp1 = getelementptr inbounds [2 x i32], [2 x i32]* %tmp, i32 0, i32 0
@@ -17,7 +17,7 @@ entry:
   ret void
 }
 
-define void @cmpxchg_private(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @cmpxchg_private(i32 addrspace(1)* %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32]
   %tmp1 = getelementptr inbounds [2 x i32], [2 x i32]* %tmp, i32 0, i32 0

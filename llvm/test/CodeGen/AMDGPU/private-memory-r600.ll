@@ -16,7 +16,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; OPT: call i32 @llvm.r600.read.tidig.y(), !range !0
 ; OPT: call i32 @llvm.r600.read.tidig.z(), !range !0
 
-define void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
+define amdgpu_kernel void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -47,7 +47,7 @@ entry:
 ; R600-NOT: MOVA_INT
 %struct.point = type { i32, i32 }
 
-define void @multiple_structs(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @multiple_structs(i32 addrspace(1)* %out) #0 {
 entry:
   %a = alloca %struct.point
   %b = alloca %struct.point
@@ -75,7 +75,7 @@ entry:
 ; FUNC-LABEL: {{^}}direct_loop:
 ; R600-NOT: MOVA_INT
 
-define void @direct_loop(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @direct_loop(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
 entry:
   %prv_array_const = alloca [2 x i32]
   %prv_array = alloca [2 x i32]
@@ -110,7 +110,7 @@ for.end:
 ; FUNC-LABEL: {{^}}short_array:
 
 ; R600: MOVA_INT
-define void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i16]
   %1 = getelementptr inbounds [2 x i16], [2 x i16]* %0, i32 0, i32 0
@@ -127,7 +127,7 @@ entry:
 ; FUNC-LABEL: {{^}}char_array:
 
 ; R600: MOVA_INT
-define void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8]
   %1 = getelementptr inbounds [2 x i8], [2 x i8]* %0, i32 0, i32 0
@@ -148,7 +148,7 @@ entry:
 ; R600-NOT: MOV T0.X
 ; Additional check in case the move ends up in the last slot
 ; R600-NOT: MOV * TO.X
-define void @work_item_info(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @work_item_info(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [2 x i32]
   %1 = getelementptr inbounds [2 x i32], [2 x i32]* %0, i32 0, i32 0
@@ -169,7 +169,7 @@ entry:
 ; R600_CHECK: MOV
 ; R600_CHECK: [[CHAN:[XYZW]]]+
 ; R600-NOT: [[CHAN]]+
-define void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1
   %1 = alloca [2 x i8], align 1
@@ -193,7 +193,7 @@ entry:
   ret void
 }
 
-define void @char_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @char_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i8]]
   %gep0 = getelementptr inbounds [2 x [2 x i8]], [2 x [2 x i8]]* %alloca, i32 0, i32 0, i32 0
@@ -207,7 +207,7 @@ entry:
   ret void
 }
 
-define void @i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i32]]
   %gep0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %alloca, i32 0, i32 0, i32 0
@@ -220,7 +220,7 @@ entry:
   ret void
 }
 
-define void @i64_array_array(i64 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @i64_array_array(i64 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i64]]
   %gep0 = getelementptr inbounds [2 x [2 x i64]], [2 x [2 x i64]]* %alloca, i32 0, i32 0, i32 0
@@ -235,7 +235,7 @@ entry:
 
 %struct.pair32 = type { i32, i32 }
 
-define void @struct_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]]
   %gep0 = getelementptr inbounds [2 x [2 x %struct.pair32]], [2 x [2 x %struct.pair32]]* %alloca, i32 0, i32 0, i32 0, i32 1
@@ -248,7 +248,7 @@ entry:
   ret void
 }
 
-define void @struct_pair32_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @struct_pair32_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x %struct.pair32]
   %gep0 = getelementptr inbounds [2 x %struct.pair32], [2 x %struct.pair32]* %alloca, i32 0, i32 0, i32 1
@@ -261,7 +261,7 @@ entry:
   ret void
 }
 
-define void @select_private(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @select_private(i32 addrspace(1)* %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32]
   %tmp1 = getelementptr inbounds  [2 x i32], [2 x i32]* %tmp, i32 0, i32 0
@@ -282,7 +282,7 @@ entry:
 ; SI-NOT: ds_write
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
 ; SI: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ;
-define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32]
   %tmp0 = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a
   store i32 5, i32* %tmp0

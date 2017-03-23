@@ -11,7 +11,7 @@
 ; GCN: v_mov_b32_e32 [[VREGB:v[0-9]+]], [[SREGB]]
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], [[SREGA]], [[VREGB]]
 ; GCN: buffer_store_dword [[RESULT]],
-define void @add_f32(float addrspace(1)* %out, float %a, float %b) {
+define amdgpu_kernel void @add_f32(float addrspace(1)* %out, float %a, float %b) {
   %result = fadd float %a, %b
   store float %result, float addrspace(1)* %out
   ret void

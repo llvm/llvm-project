@@ -12,7 +12,7 @@ declare float @llvm.amdgcn.cubema(float, float, float) #0
 ; GCN-DAG: v_cubetc_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_cubema_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: _store_dwordx4
-define void @cube(<4 x float> addrspace(1)* %out, float %a, float %b, float %c) #1 {
+define amdgpu_kernel void @cube(<4 x float> addrspace(1)* %out, float %a, float %b, float %c) #1 {
   %cubeid = call float @llvm.amdgcn.cubeid(float %a, float %b, float %c)
   %cubesc = call float @llvm.amdgcn.cubesc(float %a, float %b, float %c)
   %cubetc = call float @llvm.amdgcn.cubetc(float %a, float %b, float %c)

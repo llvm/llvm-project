@@ -137,9 +137,6 @@ void LinkerDriver::enqueuePath(StringRef Path) {
       fatal(MBOrErr.second, "could not open " + PathStr);
     Driver->addBuffer(std::move(MBOrErr.first));
   });
-
-  if (Config->OutputFile == "")
-    Config->OutputFile = getOutputPath(Path);
 }
 
 void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
@@ -886,6 +883,22 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->DelayLoadHelper = addUndefined("__delayLoadHelper2");
     }
   }
+
+  // Set default image name if neither /out or /def set it.
+  if (Config->OutputFile.empty()) {
+    Config->OutputFile =
+        getOutputPath((*Args.filtered_begin(OPT_INPUT))->getValue());
+  }
+
+  // Put the PDB next to the image if no /pdb flag was passed.
+  if (Config->Debug && Config->PDBPath.empty()) {
+    Config->PDBPath = Config->OutputFile;
+    sys::path::replace_extension(Config->PDBPath, ".pdb");
+  }
+
+  // Disable PDB generation if the user requested it.
+  if (Args.hasArg(OPT_nopdb))
+    Config->PDBPath = "";
 
   // Set default image base if /base is not given.
   if (Config->ImageBase == uint64_t(-1))

@@ -168,6 +168,10 @@ int main() {
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
   // CHECK-FIXES: {{^  }}if (vect3->empty()){{$}}
+  if ((*vect3).size() == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}if ((*vect3).empty()){{$}}
 
   delete vect3;
 

@@ -120,9 +120,8 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
-Constant *Module::getOrInsertFunction(StringRef Name,
-                                      FunctionType *Ty,
-                                      AttributeSet AttributeList) {
+Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                                      AttributeList AttributeList) {
   // See if we have a definition for the specified function already.
   GlobalValue *F = getNamedValue(Name);
   if (!F) {
@@ -145,7 +144,7 @@ Constant *Module::getOrInsertFunction(StringRef Name,
 
 Constant *Module::getOrInsertFunction(StringRef Name,
                                       FunctionType *Ty) {
-  return getOrInsertFunction(Name, Ty, AttributeSet());
+  return getOrInsertFunction(Name, Ty, AttributeList());
 }
 
 // getOrInsertFunction - Look up the specified function in the module symbol
@@ -154,8 +153,8 @@ Constant *Module::getOrInsertFunction(StringRef Name,
 // arguments, which makes it easier for clients to use.
 //
 Constant *Module::getOrInsertFunction(StringRef Name,
-                                      AttributeSet AttributeList,
-                                      Type *RetTy, ...) {
+                                      AttributeList AttributeList, Type *RetTy,
+                                      ...) {
   va_list Args;
   va_start(Args, RetTy);
 
@@ -185,9 +184,8 @@ Constant *Module::getOrInsertFunction(StringRef Name,
   va_end(Args);
 
   // Build the function type and chain to the other getOrInsertFunction...
-  return getOrInsertFunction(Name,
-                             FunctionType::get(RetTy, ArgTys, false),
-                             AttributeSet());
+  return getOrInsertFunction(Name, FunctionType::get(RetTy, ArgTys, false),
+                             AttributeList());
 }
 
 // getFunction - Look up the specified function in the module symbol table.

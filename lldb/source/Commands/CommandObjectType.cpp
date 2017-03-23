@@ -19,8 +19,8 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/StringList.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -38,6 +38,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/StringList.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"

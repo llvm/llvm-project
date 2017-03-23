@@ -323,11 +323,11 @@ public:
   }
 
   /// Get the parameter attributes of the call.
-  AttributeSet getAttributes() const {
+  AttributeList getAttributes() const {
     CALLSITE_DELEGATE_GETTER(getAttributes());
   }
   /// Set the parameter attributes of the call.
-  void setAttributes(AttributeSet PAL) {
+  void setAttributes(AttributeList PAL) {
     CALLSITE_DELEGATE_SETTER(setAttributes(PAL));
   }
 

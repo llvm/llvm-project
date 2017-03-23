@@ -194,3 +194,15 @@ entry:
 ; CHECK: movs r1, r3
 }
 
+; "sub 2147483648" has to be lowered into "add -2147483648"
+define i64 @f12(i64 %x, i64 %y) {
+entry:
+        %tmp1 = sub i64 %x, 2147483648
+        ret i64 %tmp1
+; CHECK-LABEL: f12:
+; CHECK: movs r2, #1
+; CHECK: lsls r2, r2, #31
+; CHECK: movs r3, #0
+; CHECK: adds r0, r0, r2
+; CHECK: sbcs r1, r3
+}

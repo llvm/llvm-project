@@ -107,7 +107,7 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     const Function &F = *MF.getFunction();
 
     ArgInfo OrigArg{VReg, Val->getType()};
-    setArgFlags(OrigArg, AttributeSet::ReturnIndex, DL, F);
+    setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,

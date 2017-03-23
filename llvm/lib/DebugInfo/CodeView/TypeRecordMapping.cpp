@@ -171,6 +171,15 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArgListRecord &Record) {
   error(IO.mapVectorN<uint32_t>(
+      Record.ArgIndices,
+      [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
+
+  return Error::success();
+}
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
+                                          StringListRecord &Record) {
+  error(IO.mapVectorN<uint32_t>(
       Record.StringIndices,
       [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
 

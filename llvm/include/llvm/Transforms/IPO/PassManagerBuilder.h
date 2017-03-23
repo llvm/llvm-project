@@ -132,10 +132,15 @@ public:
   /// added to the per-module passes.
   Pass *Inliner;
 
-  /// The module summary index to use for passing information between the
-  /// regular LTO phase and the thin LTO backends, for example the CFI and
-  /// devirtualization type tests.
-  ModuleSummaryIndex *Summary = nullptr;
+  /// The module summary index to use for exporting information from the
+  /// regular LTO phase, for example for the CFI and devirtualization type
+  /// tests.
+  ModuleSummaryIndex *ExportSummary = nullptr;
+
+  /// The module summary index to use for importing information to the
+  /// thin LTO backends, for example for the CFI and devirtualization type
+  /// tests.
+  const ModuleSummaryIndex *ImportSummary = nullptr;
 
   bool DisableTailCalls;
   bool DisableUnitAtATime;

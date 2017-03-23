@@ -823,8 +823,9 @@ public:
   /// \brief Set forced language options.
   ///
   /// Apply changes to the target information with respect to certain
-  /// language options which change the target configuration.
-  virtual void adjust(const LangOptions &Opts);
+  /// language options which change the target configuration and adjust
+  /// the language based on the target options where applicable.
+  virtual void adjust(LangOptions &Opts);
 
   /// \brief Adjust target options based on codegen options.
   virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,

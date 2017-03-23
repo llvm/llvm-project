@@ -6,7 +6,7 @@
 ; CHECK-NEXT: -1
 ; Test a selectcc with i32 LHS/RHS and float True/False
 
-define void @test(float addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test(float addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %0 = load i32, i32 addrspace(1)* %in
   %1 = icmp sge i32 %0, 0

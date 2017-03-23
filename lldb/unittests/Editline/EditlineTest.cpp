@@ -19,11 +19,11 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/StringList.h"
 
 namespace {
 const size_t TIMEOUT_MILLIS = 5000;

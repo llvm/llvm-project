@@ -383,8 +383,8 @@ void CodeGenFunction::EmitMustTailThunk(const CXXMethodDecl *MD,
   CGM.ConstructAttributeList(CalleePtr->getName(),
                              *CurFnInfo, MD, AttributeList,
                              CallingConv, /*AttrOnCallSite=*/true);
-  llvm::AttributeSet Attrs =
-      llvm::AttributeSet::get(getLLVMContext(), AttributeList);
+  llvm::AttributeList Attrs =
+      llvm::AttributeList::get(getLLVMContext(), AttributeList);
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 

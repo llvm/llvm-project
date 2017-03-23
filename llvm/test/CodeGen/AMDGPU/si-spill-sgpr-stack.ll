@@ -24,7 +24,7 @@
 
 ; SMEM: s_dcache_wb
 ; ALL: s_endpgm
-define void @test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()
   call void asm sideeffect "", "~{SGPR16_SGPR17_SGPR18_SGPR19_SGPR20_SGPR21_SGPR22_SGPR23}" ()

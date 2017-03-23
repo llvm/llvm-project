@@ -5,7 +5,7 @@
 ;CHECK: LOOP_BREAK @10
 ;CHECK: POP @10
 
-define void @loop_ge(i32 addrspace(1)* nocapture %out, i32 %iterations) #0 {
+define amdgpu_kernel void @loop_ge(i32 addrspace(1)* nocapture %out, i32 %iterations) #0 {
 entry:
   %cmp5 = icmp sgt i32 %iterations, 0
   br i1 %cmp5, label %for.body, label %for.end

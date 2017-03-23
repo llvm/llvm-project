@@ -502,7 +502,6 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
   if (FirstCopy) {
     SlotIndexes &Indexes = *LIS.getSlotIndexes();
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
-    DestLI.createDeadDef(Def, Allocator);
   } else {
     CopyMI->bundleWithPred();
   }

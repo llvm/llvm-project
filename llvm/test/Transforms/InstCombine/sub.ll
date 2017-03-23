@@ -701,3 +701,46 @@ define i8 @bool_sext_sub_nuw(i8 %x, i1 %y) {
   ret i8 %sub
 }
 
+define i32 @test49(i32 %X) {
+; CHECK-LABEL: @test49(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 64
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sub = sub i32 129, %X
+  %res = and i32 %sub, 64
+  ret i32 %res
+}
+
+define i32 @test50(i32 %X) {
+; CHECK-LABEL: @test50(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 127
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sub = sub i32 129, %X
+  %res = and i32 %sub, 127
+  ret i32 %res
+}
+
+define i32 @test51(i32 %X) {
+; CHECK-LABEL: @test51(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 126, [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 64
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sub = sub i32 254, %X
+  %res = and i32 %sub, 64
+  ret i32 %res
+}
+
+define i32 @test52(i32 %X) {
+; CHECK-LABEL: @test52(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 126, [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[SUB]], 127
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sub = sub i32 254, %X
+  %res = and i32 %sub, 127
+  ret i32 %res
+}

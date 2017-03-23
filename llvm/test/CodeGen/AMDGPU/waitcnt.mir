@@ -1,18 +1,18 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-waits  %s -o - | FileCheck %s
 
 --- |
-  define void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
+  define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
                                  <4 x i32> addrspace(1)* %global16,
                                  i32 addrspace(4)* %flat4,
                                  <4 x i32> addrspace(4)* %flat16) {
     ret void
   }
 
-  define void @single_fallthrough_successor_no_end_block_wait() {
+  define amdgpu_kernel void @single_fallthrough_successor_no_end_block_wait() {
     ret void
   }
 
-  define void @single_branch_successor_not_next_block() {
+  define amdgpu_kernel void @single_branch_successor_not_next_block() {
     ret void
   }
 

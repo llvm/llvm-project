@@ -6,7 +6,7 @@
 
 ; SI-LABEL: {{^}}test_dup_operands:
 ; SI: v_add_i32_e32
-define void @test_dup_operands(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %in) {
+define amdgpu_kernel void @test_dup_operands(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %in) {
   %a = load <2 x i32>, <2 x i32> addrspace(1)* %in
   %lo = extractelement <2 x i32> %a, i32 0
   %hi = extractelement <2 x i32> %a, i32 1

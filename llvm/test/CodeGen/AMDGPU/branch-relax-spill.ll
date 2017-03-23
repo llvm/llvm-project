@@ -5,7 +5,7 @@
 
 ; FAIL: LLVM ERROR: Error while trying to spill VCC from class SReg_64: Cannot scavenge register without an emergency spill slot!
 
-define void @spill(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @spill(i32 addrspace(1)* %arg, i32 %cnd) #0 {
 entry:
   %sgpr0 = tail call i32 asm sideeffect "s_mov_b32 s0, 0", "={SGPR0}"() #0
   %sgpr1 = tail call i32 asm sideeffect "s_mov_b32 s1, 0", "={SGPR1}"() #0

@@ -27,7 +27,7 @@ declare double @llvm.floor.f64(double) #0
 ; GCN-UNSAFE: v_fract_f64_e32 [[FRACT:v\[[0-9]+:[0-9]+\]]], [[X]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
+define amdgpu_kernel void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
   %x = load double, double addrspace(1)* %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x
@@ -54,7 +54,7 @@ define void @fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 
 ; GCN-UNSAFE: v_fract_f64_e64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -[[X]]
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
+define amdgpu_kernel void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
   %x = load double, double addrspace(1)* %src
   %neg.x = fsub double -0.0, %x
   %floor.neg.x = call double @llvm.floor.f64(double %neg.x)
@@ -82,7 +82,7 @@ define void @fract_f64_neg(double addrspace(1)* %out, double addrspace(1)* %src)
 ; GCN-UNSAFE: v_fract_f64_e64 [[FRACT:v\[[0-9]+:[0-9]+\]]], -|[[X]]|
 
 ; GCN: buffer_store_dwordx2 [[FRACT]]
-define void @fract_f64_neg_abs(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
+define amdgpu_kernel void @fract_f64_neg_abs(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
   %x = load double, double addrspace(1)* %src
   %abs.x = call double @llvm.fabs.f64(double %x)
   %neg.abs.x = fsub double -0.0, %abs.x
@@ -98,7 +98,7 @@ define void @fract_f64_neg_abs(double addrspace(1)* %out, double addrspace(1)* %
 ; VI-UNSAFE-DAG: v_fract_f64_e32 [[FRACT:v\[[0-9]+:[0-9]+\]]], [[X]]
 ; VI-UNSAFE: buffer_store_dwordx2 [[FLOOR]]
 ; VI-UNSAFE: buffer_store_dwordx2 [[FRACT]]
-define void @multi_use_floor_fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
+define amdgpu_kernel void @multi_use_floor_fract_f64(double addrspace(1)* %out, double addrspace(1)* %src) #1 {
   %x = load double, double addrspace(1)* %src
   %floor.x = call double @llvm.floor.f64(double %x)
   %fract = fsub double %x, %floor.x

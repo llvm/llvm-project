@@ -36,7 +36,7 @@
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:4{{$}}
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:8{{$}}
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:12{{$}}
-define void @private_elt_size_v4i32(<4 x i32> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
+define amdgpu_kernel void @private_elt_size_v4i32(<4 x i32> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idxprom = sext i32 %tid to i64
@@ -106,7 +106,7 @@ entry:
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:20{{$}}
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:24{{$}}
 ; HSA-ELT4-DAG: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:28{{$}}
-define void @private_elt_size_v8i32(<8 x i32> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
+define amdgpu_kernel void @private_elt_size_v8i32(<8 x i32> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idxprom = sext i32 %tid to i64
@@ -143,7 +143,7 @@ entry:
 
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:4{{$}}
-define void @private_elt_size_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
+define amdgpu_kernel void @private_elt_size_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idxprom = sext i32 %tid to i64
@@ -179,7 +179,7 @@ entry:
 
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:4{{$}}
-define void @private_elt_size_f64(double addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
+define amdgpu_kernel void @private_elt_size_f64(double addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idxprom = sext i32 %tid to i64
@@ -228,7 +228,7 @@ entry:
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:4{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:8{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], s9 offen offset:12{{$}}
-define void @private_elt_size_v2i64(<2 x i64> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
+define amdgpu_kernel void @private_elt_size_v2i64(<2 x i64> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idxprom = sext i32 %tid to i64

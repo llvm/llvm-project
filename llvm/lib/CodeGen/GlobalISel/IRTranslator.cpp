@@ -223,10 +223,13 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
 
   const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ));
   MachineBasicBlock &TgtBB = getMBB(BrTgt);
-  MIRBuilder.buildBr(TgtBB);
+  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+
+  // If the unconditional target is the layout successor, fallthrough.
+  if (!CurBB.isLayoutSuccessor(&TgtBB))
+    MIRBuilder.buildBr(TgtBB);
 
   // Link successors.
-  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
   for (const BasicBlock *Succ : BrInst.successors())
     CurBB.addSuccessor(&getMBB(*Succ));
   return true;
@@ -769,10 +772,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     // Some intrinsics take metadata parameters. Reject them.
     if (isa<MetadataAsValue>(Arg))
       return false;
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg))
-      MIB.addImm(CI->getSExtValue());
-    else
-      MIB.addUse(getOrCreateVReg(*Arg));
+    MIB.addUse(getOrCreateVReg(*Arg));
   }
   return true;
 }
@@ -1002,6 +1002,16 @@ bool IRTranslator::translateExtractElement(const User &U,
   MIRBuilder.buildExtractVectorElement(getOrCreateVReg(U),
                                        getOrCreateVReg(*U.getOperand(0)),
                                        getOrCreateVReg(*U.getOperand(1)));
+  return true;
+}
+
+bool IRTranslator::translateShuffleVector(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.buildInstr(TargetOpcode::G_SHUFFLE_VECTOR)
+      .addDef(getOrCreateVReg(U))
+      .addUse(getOrCreateVReg(*U.getOperand(0)))
+      .addUse(getOrCreateVReg(*U.getOperand(1)))
+      .addUse(getOrCreateVReg(*U.getOperand(2)));
   return true;
 }
 

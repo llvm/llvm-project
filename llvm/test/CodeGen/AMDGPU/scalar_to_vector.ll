@@ -9,7 +9,7 @@
 ; GCN: v_or_b32_e32 v[[OR:[0-9]+]], [[SHL]], [[SHR]]
 ; GCN: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[OR]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[OR]]:[[COPY]]{{\]}}
-define void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
   %tmp1 = load i32, i32 addrspace(1)* %in, align 4
   %bc = bitcast i32 %tmp1 to <2 x i16>
   %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -21,7 +21,7 @@ define void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN: v_lshrrev_b32_e32 [[RESULT:v[0-9]+]], 16, [[VAL]]
 ; GCN: buffer_store_dwordx2
-define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspace(1)* %in) nounwind {
   %tmp1 = load float, float addrspace(1)* %in, align 4
   %bc = bitcast float %tmp1 to <2 x i16>
   %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -33,7 +33,7 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ; to produce one, but for some reason never made it to selection.
 
 
-; define void @scalar_to_vector_test2(<8 x i8> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+; define amdgpu_kernel void @scalar_to_vector_test2(<8 x i8> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
 ;   %tmp1 = load i32, i32 addrspace(1)* %in, align 4
 ;   %bc = bitcast i32 %tmp1 to <4 x i8>
 
@@ -42,7 +42,7 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ;   ret void
 ; }
 
-; define void @scalar_to_vector_test3(<4 x i32> addrspace(1)* %out) nounwind {
+; define amdgpu_kernel void @scalar_to_vector_test3(<4 x i32> addrspace(1)* %out) nounwind {
 ;   %newvec0 = insertelement <2 x i64> undef, i64 12345, i32 0
 ;   %newvec1 = insertelement <2 x i64> %newvec0, i64 undef, i32 1
 ;   %bc = bitcast <2 x i64> %newvec1 to <4 x i32>
@@ -51,7 +51,7 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ;   ret void
 ; }
 
-; define void @scalar_to_vector_test4(<8 x i16> addrspace(1)* %out) nounwind {
+; define amdgpu_kernel void @scalar_to_vector_test4(<8 x i16> addrspace(1)* %out) nounwind {
 ;   %newvec0 = insertelement <4 x i32> undef, i32 12345, i32 0
 ;   %bc = bitcast <4 x i32> %newvec0 to <8 x i16>
 ;   %add = add <8 x i16> %bc, <i16 1, i16 2, i16 3, i16 4, i16 1, i16 2, i16 3, i16 4>
@@ -59,7 +59,7 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ;   ret void
 ; }
 
-; define void @scalar_to_vector_test5(<4 x i16> addrspace(1)* %out) nounwind {
+; define amdgpu_kernel void @scalar_to_vector_test5(<4 x i16> addrspace(1)* %out) nounwind {
 ;   %newvec0 = insertelement <2 x i32> undef, i32 12345, i32 0
 ;   %bc = bitcast <2 x i32> %newvec0 to <4 x i16>
 ;   %add = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
@@ -67,7 +67,7 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ;   ret void
 ; }
 
-define void @scalar_to_vector_test6(<2 x half> addrspace(1)* %out, i8 zeroext %val) nounwind {
+define amdgpu_kernel void @scalar_to_vector_test6(<2 x half> addrspace(1)* %out, i8 zeroext %val) nounwind {
   %newvec0 = insertelement <4 x i8> undef, i8 %val, i32 0
   %bc = bitcast <4 x i8> %newvec0 to <2 x half>
   store <2 x half> %bc, <2 x half> addrspace(1)* %out

@@ -1,7 +1,7 @@
 ; RUN: llc -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
-define void @main() #0 {
+define amdgpu_kernel void @main() #0 {
 main_body:
   %tmp = load <4 x float>, <4 x float> addrspace(9)* null
   %tmp5 = extractelement <4 x float> %tmp, i32 3

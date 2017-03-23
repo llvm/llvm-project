@@ -6,7 +6,7 @@
 ;CHECK: SETNE_INT T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ;CHECK-NOT: SETNE_INT
 
-define void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %0 = load i32, i32 addrspace(1)* %in
   %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 1

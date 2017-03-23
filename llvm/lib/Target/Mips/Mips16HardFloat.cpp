@@ -405,7 +405,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
           "__mips16_ret_dc"
         };
         const char *Name = Helper[RV];
-        AttributeSet A;
+        AttributeList A;
         Value *Params[] = {RVal};
         Modified = true;
         //
@@ -414,11 +414,11 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         // during call setup, the proper call lowering to the helper
         // functions will take place.
         //
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            "__Mips16RetHelper");
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            Attribute::ReadNone);
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            Attribute::NoInline);
         Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T, nullptr));
         CallInst::Create(F, Params, "", &I);
@@ -490,15 +490,15 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
 // remove the use-soft-float attribute
 //
 static void removeUseSoftFloat(Function &F) {
-  AttributeSet A;
+  AttributeList A;
   DEBUG(errs() << "removing -use-soft-float\n");
-  A = A.addAttribute(F.getContext(), AttributeSet::FunctionIndex,
+  A = A.addAttribute(F.getContext(), AttributeList::FunctionIndex,
                      "use-soft-float", "false");
-  F.removeAttributes(AttributeSet::FunctionIndex, A);
+  F.removeAttributes(AttributeList::FunctionIndex, A);
   if (F.hasFnAttribute("use-soft-float")) {
     DEBUG(errs() << "still has -use-soft-float\n");
   }
-  F.addAttributes(AttributeSet::FunctionIndex, A);
+  F.addAttributes(AttributeList::FunctionIndex, A);
 }
 
 

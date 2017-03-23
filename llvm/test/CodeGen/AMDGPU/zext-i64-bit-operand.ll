@@ -11,7 +11,7 @@
 ; GCN-NOT: v[[HI]]
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @zext_or_operand_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
+define amdgpu_kernel void @zext_or_operand_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
   %ld.64 = load volatile i64, i64 addrspace(1)* %in0
   %ld.32 = load volatile i32, i32 addrspace(1)* %in1
   %ext = zext i32 %ld.32 to i64
@@ -31,7 +31,7 @@ define void @zext_or_operand_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0,
 ; GCN-NOT: _or_
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @zext_or_operand_commute_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
+define amdgpu_kernel void @zext_or_operand_commute_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
   %ld.64 = load volatile i64, i64 addrspace(1)* %in0
   %ld.32 = load volatile i32, i32 addrspace(1)* %in1
   %ext = zext i32 %ld.32 to i64

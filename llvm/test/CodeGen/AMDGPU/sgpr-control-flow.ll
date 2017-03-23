@@ -13,7 +13,7 @@
 
 ; SI: s_sub
 
-define void @sgpr_if_else_salu_br(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+define amdgpu_kernel void @sgpr_if_else_salu_br(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
   %0 = icmp eq i32 %a, 0
   br i1 %0, label %if, label %else
@@ -52,7 +52,7 @@ endif:
 ; SI: s_add_i32 s{{[0-9]+}}, [[LOAD0]], [[LOAD1]]
 ; SI: buffer_store_dword
 ; SI-NEXT: s_endpgm
-define void @sgpr_if_else_salu_br_opt(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+define amdgpu_kernel void @sgpr_if_else_salu_br_opt(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
   %0 = icmp eq i32 %a, 0
   br i1 %0, label %if, label %else
@@ -79,7 +79,7 @@ endif:
 ; SI: s_add_i32 [[SGPR:s[0-9]+]]
 ; SI-NOT: s_add_i32 [[SGPR]]
 
-define void @sgpr_if_else_valu_br(i32 addrspace(1)* %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+define amdgpu_kernel void @sgpr_if_else_valu_br(i32 addrspace(1)* %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid_f = uitofp i32 %tid to float
@@ -116,7 +116,7 @@ endif:
 ; SI: v_cmp_ne_u32_e32 [[CMP_CMP:vcc]], 0, [[V_CMP]]
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, [[CMP_CMP]]
 ; SI: buffer_store_dword [[RESULT]]
-define void @sgpr_if_else_valu_cmp_phi_br(i32 addrspace(1)* %out, i32 addrspace(1)* %a, i32 addrspace(1)* %b) {
+define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(i32 addrspace(1)* %out, i32 addrspace(1)* %a, i32 addrspace(1)* %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp1 = icmp eq i32 %tid, 0

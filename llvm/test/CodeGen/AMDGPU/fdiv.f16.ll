@@ -31,7 +31,7 @@
 ; VI: v_cvt_f16_f32_e32 [[CVT_BACK:v[0-9]+]], [[MUL]]
 ; VI: v_div_fixup_f16 [[RESULT:v[0-9]+]], [[CVT_BACK]], [[RHS]], [[LHS]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_fdiv_f16(
+define amdgpu_kernel void @v_fdiv_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b) #0 {
@@ -54,7 +54,7 @@ entry:
 ; VI: v_rcp_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; VI-NOT: [[RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rcp_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rcp_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -72,7 +72,7 @@ entry:
 ; VI: v_rcp_f16_e64 [[RESULT:v[0-9]+]], |[[VAL]]|
 ; VI-NOT: [RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rcp_f16_abs(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_abs(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -91,7 +91,7 @@ entry:
 ; VI: v_rcp_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; VI-NOT: [[RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rcp_f16_arcp(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_arcp(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -109,7 +109,7 @@ entry:
 ; VI: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[VAL]]
 ; VI-NOT: [RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rcp_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rcp_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -127,7 +127,7 @@ entry:
 ; VI: v_rsq_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; VI-NOT: [RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rsq_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rsq_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -147,7 +147,7 @@ entry:
 ; VI-NEXT: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[SQRT]]
 ; VI-NOT: [RESULT]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_rsq_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_rsq_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -168,7 +168,7 @@ entry:
 ; VI: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[RCP]], [[LHS]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_fdiv_f16_arcp(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #0 {
+define amdgpu_kernel void @v_fdiv_f16_arcp(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -190,7 +190,7 @@ entry:
 ; VI: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[RCP]], [[LHS]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @v_fdiv_f16_unsafe(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #2 {
+define amdgpu_kernel void @v_fdiv_f16_unsafe(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #2 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -209,7 +209,7 @@ entry:
 
 ; VI: v_mul_f16_e32 [[MUL:v[0-9]+]], 0.5, v{{[0-9]+}}
 ; VI: buffer_store_short [[MUL]]
-define void @div_arcp_2_x_pat_f16(half addrspace(1)* %out) #0 {
+define amdgpu_kernel void @div_arcp_2_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv arcp half %x, 2.0
   store half %rcp, half addrspace(1)* %out, align 4
@@ -221,7 +221,7 @@ define void @div_arcp_2_x_pat_f16(half addrspace(1)* %out) #0 {
 
 ; VI: v_mul_f16_e32 [[MUL:v[0-9]+]], 0x2e66, v{{[0-9]+}}
 ; VI: buffer_store_short [[MUL]]
-define void @div_arcp_k_x_pat_f16(half addrspace(1)* %out) #0 {
+define amdgpu_kernel void @div_arcp_k_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv arcp half %x, 10.0
   store half %rcp, half addrspace(1)* %out, align 4
@@ -233,7 +233,7 @@ define void @div_arcp_k_x_pat_f16(half addrspace(1)* %out) #0 {
 
 ; VI: v_mul_f16_e32 [[MUL:v[0-9]+]], 0xae66, v{{[0-9]+}}
 ; VI: buffer_store_short [[MUL]]
-define void @div_arcp_neg_k_x_pat_f16(half addrspace(1)* %out) #0 {
+define amdgpu_kernel void @div_arcp_neg_k_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv arcp half %x, -10.0
   store half %rcp, half addrspace(1)* %out, align 4

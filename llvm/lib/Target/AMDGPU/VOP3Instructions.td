@@ -106,6 +106,14 @@ def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
   let DstRC = RegisterOperand<VReg_64>;
 }
 
+def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
+  // FIXME: Hack to stop printing _e64
+  let DstRC = RegisterOperand<VReg_64>;
+
+  let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
+  let Asm64 = " $vdst, $sdst, $src0, $src1, $src2";
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 Instructions
 //===----------------------------------------------------------------------===//
@@ -229,10 +237,8 @@ def V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I3
 def V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOP3_Profile<VOP_V4I32_I64_I32_V4I32>, int_amdgcn_mqsad_u32_u8>;
 
 let isCommutable = 1 in {
-def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3_Profile<VOP_I64_I32_I32_I64>>;
-
-// XXX - Does this set VCC?
-def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3_Profile<VOP_I64_I32_I32_I64>>;
+def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
+def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 } // End isCommutable = 1
 
 } // End SubtargetPredicate = isCIVI
@@ -386,11 +392,19 @@ multiclass VOP3_Real_ci<bits<9> op> {
   }
 }
 
+multiclass VOP3be_Real_ci<bits<9> op> {
+  def _ci : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.SI>,
+            VOP3be_si <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+    let AssemblerPredicates = [isCIOnly];
+    let DecoderNamespace = "CI";
+  }
+}
+
 defm V_MQSAD_U16_U8     : VOP3_Real_ci <0x172>;
 defm V_QSAD_PK_U16_U8   : VOP3_Real_ci <0x172>;
 defm V_MQSAD_U32_U8     : VOP3_Real_ci <0x174>;
-defm V_MAD_U64_U32      : VOP3_Real_ci <0x176>;
-defm V_MAD_I64_I32      : VOP3_Real_ci <0x177>;
+defm V_MAD_U64_U32      : VOP3be_Real_ci <0x176>;
+defm V_MAD_I64_I32      : VOP3be_Real_ci <0x177>;
 
 //===----------------------------------------------------------------------===//
 // VI
@@ -411,8 +425,8 @@ multiclass VOP3be_Real_vi<bits<10> op> {
 } // End AssemblerPredicates = [isVI], DecoderNamespace = "VI"
 
 defm V_MQSAD_U16_U8     : VOP3_Real_vi <0x172>;
-defm V_MAD_U64_U32      : VOP3_Real_vi <0x176>;
-defm V_MAD_I64_I32      : VOP3_Real_vi <0x177>;
+defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
+defm V_MAD_I64_I32      : VOP3be_Real_vi <0x1E9>;
 
 defm V_MAD_LEGACY_F32   : VOP3_Real_vi <0x1c0>;
 defm V_MAD_F32          : VOP3_Real_vi <0x1c1>;

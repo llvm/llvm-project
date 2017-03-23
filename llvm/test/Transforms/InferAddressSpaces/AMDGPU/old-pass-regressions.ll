@@ -9,7 +9,7 @@
 
 ; CHECK-LABEL: @generic_address_bitcast_const(
 ; CHECK: %vecload1 = load <2 x double>, <2 x double> addrspace(1)* bitcast (double addrspace(1)* getelementptr inbounds ([100 x double], [100 x double] addrspace(1)* @data, i64 0, i64 4) to <2 x double> addrspace(1)*), align 8
-define void @generic_address_bitcast_const(i64 %arg0, i32 addrspace(1)* nocapture %results) #0 {
+define amdgpu_kernel void @generic_address_bitcast_const(i64 %arg0, i32 addrspace(1)* nocapture %results) #0 {
 entry:
   %tmp1 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = zext i32 %tmp1 to i64
@@ -39,7 +39,7 @@ declare i32 @_Z9get_fencePU3AS4v(i8 addrspace(4)*)
 ; CHECK: %tmp1 = bitcast %opencl.pipe_t addrspace(3)* %in_pipe to i32 addrspace(3)*
 ; CHECK: %add.ptr = getelementptr inbounds i32, i32 addrspace(3)* %tmp1, i32 2
 ; CHECK: %tmp2 = load i32, i32 addrspace(3)* %add.ptr, align 4
-define void @generic_address_pipe_bug9673(%opencl.pipe_t addrspace(3)* nocapture %in_pipe, i32 addrspace(1)* nocapture %dst) #0 {
+define amdgpu_kernel void @generic_address_pipe_bug9673(%opencl.pipe_t addrspace(3)* nocapture %in_pipe, i32 addrspace(1)* nocapture %dst) #0 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = bitcast %opencl.pipe_t addrspace(3)* %in_pipe to i32 addrspace(3)*
@@ -55,7 +55,7 @@ entry:
 ; CHECK: br i1
 ; CHECK: load float, float addrspace(4)*
 ; CHECK: br label
-define void @generic_address_bug9749(i32 addrspace(1)* nocapture %results) #0 {
+define amdgpu_kernel void @generic_address_bug9749(i32 addrspace(1)* nocapture %results) #0 {
 entry:
   %ptr = alloca float addrspace(4)*, align 8
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -85,7 +85,7 @@ helperFunction.exit:                              ; preds = %if.end.i, %entry
 ; CHECK-LABEL: @generic_address_opt_phi_bug9776_simple_phi_kernel(
 ; CHECK: phi i32 addrspace(3)*
 ; CHECK: store i32 %i.03, i32 addrspace(3)* %
-define void @generic_address_opt_phi_bug9776_simple_phi_kernel(i32 addrspace(3)* nocapture %in, i32 %numElems) #0 {
+define amdgpu_kernel void @generic_address_opt_phi_bug9776_simple_phi_kernel(i32 addrspace(3)* nocapture %in, i32 %numElems) #0 {
 entry:
   %cmp1 = icmp eq i32 %numElems, 0
   br i1 %cmp1, label %for.end, label %for.body.lr.ph
@@ -110,7 +110,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @generic_address_bug9899(
 ; CHECK: %vecload = load <2 x i32>, <2 x i32> addrspace(3)*
 ; CHECK: store <2 x i32> %tmp16, <2 x i32> addrspace(3)*
-define void @generic_address_bug9899(i64 %arg0, i32 addrspace(3)* nocapture %sourceA, i32 addrspace(3)* nocapture %destValues) #0 {
+define amdgpu_kernel void @generic_address_bug9899(i64 %arg0, i32 addrspace(3)* nocapture %sourceA, i32 addrspace(3)* nocapture %destValues) #0 {
 entry:
   %tmp1 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = zext i32 %tmp1 to i64

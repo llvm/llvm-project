@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- floattitf.c - Test __floattitf ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

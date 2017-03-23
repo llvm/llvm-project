@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- mulsf3vfp_test.c - Test __mulsf3vfp -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

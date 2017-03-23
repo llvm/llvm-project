@@ -93,8 +93,12 @@ Pass *llvm::createFunctionInliningPass(int Threshold) {
 }
 
 Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
-                                       unsigned SizeOptLevel) {
-  return new SimpleInliner(llvm::getInlineParams(OptLevel, SizeOptLevel));
+                                       unsigned SizeOptLevel,
+                                       bool DisableInlineHotCallSite) {
+  auto Param = llvm::getInlineParams(OptLevel, SizeOptLevel);
+  if (DisableInlineHotCallSite)
+    Param.HotCallSiteThreshold = 0;
+  return new SimpleInliner(Param);
 }
 
 Pass *llvm::createFunctionInliningPass(InlineParams &Params) {
