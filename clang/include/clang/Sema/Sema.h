@@ -1849,7 +1849,6 @@ public:
   void AddInitializerToDecl(Decl *dcl, Expr *init, bool DirectInit);
   void ActOnUninitializedDecl(Decl *dcl);
   void ActOnInitializerError(Decl *Dcl);
-  bool canInitializeWithParenthesizedList(QualType TargetType);
 
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
   void ActOnCXXForRangeDecl(Decl *D);
@@ -7546,6 +7545,12 @@ public:
                         LateInstantiatedAttrVec *LateAttrs = nullptr,
                         LocalInstantiationScope *OuterMostScope = nullptr);
 
+  void
+  InstantiateAttrsForDecl(const MultiLevelTemplateArgumentList &TemplateArgs,
+                          const Decl *Pattern, Decl *Inst,
+                          LateInstantiatedAttrVec *LateAttrs = nullptr,
+                          LocalInstantiationScope *OuterMostScope = nullptr);
+
   bool
   InstantiateClassTemplateSpecialization(SourceLocation PointOfInstantiation,
                            ClassTemplateSpecializationDecl *ClassTemplateSpec,
@@ -7707,7 +7712,8 @@ public:
                                     Decl * const *ProtoRefs,
                                     unsigned NumProtoRefs,
                                     const SourceLocation *ProtoLocs,
-                                    SourceLocation EndProtoLoc);
+                                    SourceLocation EndProtoLoc,
+                                    AttributeList *AttrList);
 
   Decl *ActOnStartClassImplementation(
                     SourceLocation AtClassImplLoc,

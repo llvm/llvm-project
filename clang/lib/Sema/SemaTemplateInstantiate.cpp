@@ -1939,6 +1939,9 @@ namespace clang {
   namespace sema {
     Attr *instantiateTemplateAttribute(const Attr *At, ASTContext &C, Sema &S,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
+    Attr *instantiateTemplateAttributeForDecl(
+        const Attr *At, ASTContext &C, Sema &S,
+        const MultiLevelTemplateArgumentList &TemplateArgs);
   }
 }
 

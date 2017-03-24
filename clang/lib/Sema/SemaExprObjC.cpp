@@ -2272,7 +2272,8 @@ static void checkFoundationAPI(Sema &S, SourceLocation Loc,
                                bool IsClassObjectCall) {
   // Check if this is a performSelector method that uses a selector that returns
   // a record or a vector type.
-  if (Method->getMethodFamily() != OMF_performSelector || Args.empty())
+  if (Method->getSelector().getMethodFamily() != OMF_performSelector ||
+      Args.empty())
     return;
   const auto *SE = dyn_cast<ObjCSelectorExpr>(Args[0]->IgnoreParens());
   if (!SE)

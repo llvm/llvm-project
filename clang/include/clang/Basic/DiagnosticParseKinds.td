@@ -364,8 +364,6 @@ def ext_decomp_decl_empty : ExtWarn<
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
   "method type specifier must start with '-' or '+'">;
-def err_objc_no_attributes_on_category : Error<
-  "attributes may not be specified on a category">;
 def err_objc_missing_end : Error<"missing '@end'">;
 def note_objc_container_start : Note<
   "%select{class|protocol|category|class extension|implementation"

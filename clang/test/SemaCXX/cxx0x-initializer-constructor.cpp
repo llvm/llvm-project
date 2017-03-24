@@ -173,8 +173,7 @@ namespace objects {
     // invalid
     H h1({1, 2}); // expected-error {{no matching constructor}}
     (void) new H({1, 2}); // expected-error {{no matching constructor}}
-    // FIXME: Bad diagnostic, mentions void type instead of init list.
-    (void) H({1, 2}); // expected-error {{no matching conversion}}
+    (void) H({1, 2}); // expected-error {{no matching constructor}}
 
     // valid (by copy constructor).
     H h2({1, nullptr});
