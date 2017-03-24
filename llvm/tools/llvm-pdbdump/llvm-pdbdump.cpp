@@ -125,8 +125,11 @@ cl::opt<uint64_t> LoadAddress(
     cl::desc("Assume the module is loaded at the specified address"),
     cl::cat(OtherOptions), cl::sub(PrettySubcommand));
 cl::opt<bool> Native("native", cl::desc("Use native PDB reader instead of DIA"),
-  cl::cat(OtherOptions), cl::sub(PrettySubcommand));
-
+                     cl::cat(OtherOptions), cl::sub(PrettySubcommand));
+cl::opt<cl::boolOrDefault>
+    ColorOutput("color-output",
+                cl::desc("Override use of color (default = isatty)"),
+                cl::cat(OtherOptions), cl::sub(PrettySubcommand));
 cl::list<std::string> ExcludeTypes(
     "exclude-types", cl::desc("Exclude types by regular expression"),
     cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
@@ -500,7 +503,11 @@ static void dumpPretty(StringRef Path) {
   if (opts::pretty::LoadAddress)
     Session->setLoadAddress(opts::pretty::LoadAddress);
 
-  LinePrinter Printer(2, outs());
+  auto &Stream = outs();
+  const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
+                            ? Stream.has_colors()
+                            : opts::pretty::ColorOutput == cl::BOU_TRUE;
+  LinePrinter Printer(2, UseColor, Stream);
 
   auto GlobalScope(Session->getGlobalScope());
   std::string FileName(GlobalScope->getSymbolsFileName());

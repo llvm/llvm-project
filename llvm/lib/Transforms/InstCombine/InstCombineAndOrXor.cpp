@@ -1335,18 +1335,6 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
         if (AndRHSMask == 1 && match(Op0LHS, m_Zero()))
           return BinaryOperator::CreateAnd(Op0RHS, AndRHS);
 
-        // (A - N) & AndRHS -> -N & AndRHS iff A&AndRHS==0 and AndRHS
-        // has 1's for all bits that the subtraction with A might affect.
-        if (Op0I->hasOneUse() && !match(Op0LHS, m_Zero())) {
-          uint32_t BitWidth = AndRHSMask.getBitWidth();
-          uint32_t Zeros = AndRHSMask.countLeadingZeros();
-          APInt Mask = APInt::getLowBitsSet(BitWidth, BitWidth - Zeros);
-
-          if (MaskedValueIsZero(Op0LHS, Mask, 0, &I)) {
-            Value *NewNeg = Builder->CreateNeg(Op0RHS);
-            return BinaryOperator::CreateAnd(NewNeg, AndRHS);
-          }
-        }
         break;
 
       case Instruction::Shl:

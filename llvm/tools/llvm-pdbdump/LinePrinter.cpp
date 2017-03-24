@@ -42,8 +42,8 @@ bool IsItemExcluded(llvm::StringRef Item,
 
 using namespace llvm;
 
-LinePrinter::LinePrinter(int Indent, llvm::raw_ostream &Stream)
-    : OS(Stream), IndentSpaces(Indent), CurrentIndent(0) {
+LinePrinter::LinePrinter(int Indent, bool UseColor, llvm::raw_ostream &Stream)
+    : OS(Stream), IndentSpaces(Indent), CurrentIndent(0), UseColor(UseColor) {
   SetFilters(ExcludeTypeFilters, opts::pretty::ExcludeTypes.begin(),
              opts::pretty::ExcludeTypes.end());
   SetFilters(ExcludeSymbolFilters, opts::pretty::ExcludeSymbols.begin(),
@@ -84,7 +84,8 @@ bool LinePrinter::IsCompilandExcluded(llvm::StringRef CompilandName) {
 }
 
 WithColor::WithColor(LinePrinter &P, PDB_ColorItem C) : OS(P.OS) {
-  applyColor(C);
+  if (P.hasColor())
+    applyColor(C);
 }
 
 WithColor::~WithColor() { OS.resetColor(); }

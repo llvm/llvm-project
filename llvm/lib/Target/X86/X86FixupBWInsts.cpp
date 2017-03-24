@@ -95,10 +95,9 @@ class FixupBWInstPass : public MachineFunctionPass {
 
   // Change the MachineInstr \p MI into an eqivalent 32 bit instruction if
   // possible.  Return the replacement instruction if OK, return nullptr
-  // otherwise. Set WasCandidate to true or false depending on whether the
-  // MI was a candidate for this sort of transformation.
-  MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB,
-                                bool &WasCandidate) const;
+  // otherwise.
+  MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
+
 public:
   static char ID;
 
@@ -269,12 +268,8 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceInstr(
-                  MachineInstr *MI, MachineBasicBlock &MBB,
-                  bool &WasCandidate) const {
-  MachineInstr *NewMI = nullptr;
-  WasCandidate = false;
-
+MachineInstr *FixupBWInstPass::tryReplaceInstr(MachineInstr *MI,
+                                               MachineBasicBlock &MBB) const {
   // See if this is an instruction of the type we are currently looking for.
   switch (MI->getOpcode()) {
 
@@ -282,12 +277,9 @@ MachineInstr *FixupBWInstPass::tryReplaceInstr(
     // Only replace 8 bit loads with the zero extending versions if
     // in an inner most loop and not optimizing for size. This takes
     // an extra byte to encode, and provides limited performance upside.
-    if (MachineLoop *ML = MLI->getLoopFor(&MBB)) {
-      if (ML->begin() == ML->end() && !OptForSize) {
-        NewMI = tryReplaceLoad(X86::MOVZX32rm8, MI);
-        WasCandidate = true;
-      }
-    }
+    if (MachineLoop *ML = MLI->getLoopFor(&MBB))
+      if (ML->begin() == ML->end() && !OptForSize)
+        return tryReplaceLoad(X86::MOVZX32rm8, MI);
     break;
 
   case X86::MOV16rm:
@@ -295,9 +287,7 @@ MachineInstr *FixupBWInstPass::tryReplaceInstr(
     // Code size is the same, and there is sometimes a perf advantage
     // from eliminating a false dependence on the upper portion of
     // the register.
-    NewMI = tryReplaceLoad(X86::MOVZX32rm16, MI);
-    WasCandidate = true;
-    break;
+    return tryReplaceLoad(X86::MOVZX32rm16, MI);
 
   case X86::MOV8rr:
   case X86::MOV16rr:
@@ -305,16 +295,14 @@ MachineInstr *FixupBWInstPass::tryReplaceInstr(
     // Code size is either less (16) or equal (8), and there is sometimes a
     // perf advantage from eliminating a false dependence on the upper portion
     // of the register.
-    NewMI = tryReplaceCopy(MI);
-    WasCandidate = true;
-    break;
+    return tryReplaceCopy(MI);
 
   default:
     // nothing to do here.
     break;
   }
 
-  return NewMI;
+  return nullptr;
 }
 
 void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
@@ -338,18 +326,11 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   // We run after PEI, so we need to AddPristinesAndCSRs.
   LiveRegs.addLiveOuts(MBB);
 
-  bool WasCandidate = false;
-
   for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
     MachineInstr *MI = &*I;
     
-    MachineInstr *NewMI = tryReplaceInstr(MI, MBB, WasCandidate);
-
-    // Add this to replacements if it was a candidate, even if NewMI is
-    // nullptr.  We will revisit that in a bit.
-    if (WasCandidate) {
+    if (MachineInstr *NewMI = tryReplaceInstr(MI, MBB))
       MIReplacements.push_back(std::make_pair(MI, NewMI));
-    }
 
     // We're done with this instruction, update liveness for the next one.
     LiveRegs.stepBackward(*MI);
@@ -359,9 +340,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
     MachineInstr *MI = MIReplacements.back().first;
     MachineInstr *NewMI = MIReplacements.back().second;
     MIReplacements.pop_back();
-    if (NewMI) {
-      MBB.insert(MI, NewMI);
-      MBB.erase(MI);
-    }
+    MBB.insert(MI, NewMI);
+    MBB.erase(MI);
   }
 }

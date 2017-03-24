@@ -21,10 +21,10 @@
 #define GET_TARGET_REGBANK_IMPL
 #include "X86GenRegisterBank.inc"
 
-// This file will be TableGen'ed at some point.
-#include "X86GenRegisterBankInfo.def"
-
 using namespace llvm;
+// This file will be TableGen'ed at some point.
+#define GET_TARGET_REGBANK_INFO_IMPL
+#include "X86GenRegisterBankInfo.def"
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
 #error "You shouldn't build this"
@@ -64,73 +64,67 @@ const RegisterBank &X86RegisterBankInfo::getRegBankFromRegClass(
   llvm_unreachable("Unsupported register kind yet.");
 }
 
+X86GenRegisterBankInfo::PartialMappingIdx
+X86GenRegisterBankInfo::getPartialMappingIdx(const LLT &Ty, bool isFP) {
+  if ((Ty.isScalar() && !isFP) || Ty.isPointer()) {
+    switch (Ty.getSizeInBits()) {
+    case 8:
+      return PMI_GPR8;
+    case 16:
+      return PMI_GPR16;
+    case 32:
+      return PMI_GPR32;
+    case 64:
+      return PMI_GPR64;
+      break;
+    default:
+      llvm_unreachable("Unsupported register size.");
+    }
+  } else if (Ty.isScalar()) {
+    switch (Ty.getSizeInBits()) {
+    case 32:
+      return PMI_FP32;
+    case 64:
+      return PMI_FP64;
+    default:
+      llvm_unreachable("Unsupported register size.");
+    }
+  } else {
+    switch (Ty.getSizeInBits()) {
+    case 128:
+      return PMI_VEC128;
+    case 256:
+      return PMI_VEC256;
+    case 512:
+      return PMI_VEC512;
+    default:
+      llvm_unreachable("Unsupported register size.");
+    }
+  }
+
+  return PMI_None;
+}
+
 RegisterBankInfo::InstructionMapping
-X86RegisterBankInfo::getOperandsMapping(const MachineInstr &MI, bool isFP) {
+X86RegisterBankInfo::getSameOperandsMapping(const MachineInstr &MI, bool isFP) {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned NumOperands = MI.getNumOperands();
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
 
-  if (NumOperands != 3 ||
-      (Ty != MRI.getType(MI.getOperand(1).getReg())) ||
+  if (NumOperands != 3 || (Ty != MRI.getType(MI.getOperand(1).getReg())) ||
       (Ty != MRI.getType(MI.getOperand(2).getReg())))
-    llvm_unreachable("Unsupported operand maping yet.");
+    llvm_unreachable("Unsupported operand mapping yet.");
 
-  ValueMappingIdx ValMapIdx = VMI_None;
-
-  if (Ty.isScalar()) {
-    if (!isFP) {
-      switch (Ty.getSizeInBits()) {
-      case 8:
-        ValMapIdx = VMI_3OpsGpr8Idx;
-        break;
-      case 16:
-        ValMapIdx = VMI_3OpsGpr16Idx;
-        break;
-      case 32:
-        ValMapIdx = VMI_3OpsGpr32Idx;
-        break;
-      case 64:
-        ValMapIdx = VMI_3OpsGpr64Idx;
-        break;
-      default:
-        llvm_unreachable("Unsupported register size.");
-      }
-    } else {
-      switch (Ty.getSizeInBits()) {
-      case 32:
-        ValMapIdx = VMI_3OpsFp32Idx;
-        break;
-      case 64:
-        ValMapIdx = VMI_3OpsFp64Idx;
-        break;
-      default:
-          llvm_unreachable("Unsupported register size.");
-      }
-    }
-  } else {
-    switch (Ty.getSizeInBits()) {
-    case 128:
-      ValMapIdx = VMI_3OpsVec128Idx;
-      break;
-    case 256:
-      ValMapIdx = VMI_3OpsVec256Idx;
-      break;
-    case 512:
-      ValMapIdx = VMI_3OpsVec512Idx;
-      break;
-    default:
-      llvm_unreachable("Unsupported register size.");
-    }
-  }
-
-  return InstructionMapping{DefaultMappingID, 1, &ValMappings[ValMapIdx],
-                            NumOperands};
+  auto Mapping = getValueMapping(getPartialMappingIdx(Ty, isFP), 3);
+  return InstructionMapping{DefaultMappingID, 1, Mapping, NumOperands};
 }
 
 RegisterBankInfo::InstructionMapping
 X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Opc = MI.getOpcode();
 
   // Try the default logic for non-generic instructions that are either copies
@@ -144,17 +138,46 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
-    return getOperandsMapping(MI, false);
+    return getSameOperandsMapping(MI, false);
     break;
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
-    return getOperandsMapping(MI, true);
+    return getSameOperandsMapping(MI, true);
     break;
   default:
-    return InstructionMapping{};
+    break;
   }
 
-  return InstructionMapping{};
+  unsigned NumOperands = MI.getNumOperands();
+  unsigned Cost = 1; // set dafault cost
+
+  // Track the bank of each register.
+  SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    auto &MO = MI.getOperand(Idx);
+    if (!MO.isReg())
+      continue;
+
+    // As a top-level guess, use NotFP mapping (all scalars in GPRs)
+    OpRegBankIdx[Idx] = getPartialMappingIdx(MRI.getType(MO.getReg()), false);
+  }
+
+  // Finally construct the computed mapping.
+  RegisterBankInfo::InstructionMapping Mapping =
+      InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
+  SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    if (MI.getOperand(Idx).isReg()) {
+      auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
+      if (!Mapping->isValid())
+        return InstructionMapping();
+
+      OpdsMapping[Idx] = Mapping;
+    }
+  }
+
+  Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
+  return Mapping;
 }

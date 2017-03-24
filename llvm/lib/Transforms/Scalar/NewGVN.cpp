@@ -368,6 +368,7 @@ private:
   const Expression *performSymbolicPredicateInfoEvaluation(Instruction *);
 
   // Congruence finding.
+  bool someEquivalentDominates(const Instruction *, const Instruction *) const;
   Value *lookupOperandLeader(Value *) const;
   void performCongruenceFinding(Instruction *, const Expression *);
   void moveValueToNewCongruenceClass(Instruction *, CongruenceClass *,
@@ -419,6 +420,7 @@ private:
   void verifyIterationSettled(Function &F);
   bool singleReachablePHIPath(const MemoryAccess *, const MemoryAccess *) const;
   BasicBlock *getBlockForValue(Value *V) const;
+  void deleteExpression(const Expression *E);
   // Debug counter info.  When verifying, we have to reset the value numbering
   // debug counter to the same state it started in to get the same results.
   std::pair<int, int> StartingVNCounter;
@@ -468,6 +470,16 @@ BasicBlock *NewGVN::getBlockForValue(Value *V) const {
     return MP->getBlock();
   llvm_unreachable("Should have been able to figure out a block for our value");
   return nullptr;
+}
+
+// Delete a definitely dead expression, so it can be reused by the expression
+// allocator.  Some of these are not in creation functions, so we have to accept
+// const versions.
+void NewGVN::deleteExpression(const Expression *E) {
+  assert(isa<BasicExpression>(E));
+  auto *BE = cast<BasicExpression>(E);
+  const_cast<BasicExpression *>(BE)->deallocateOperands(ArgRecycler);
+  ExpressionAllocator.Deallocate(E);
 }
 
 PHIExpression *NewGVN::createPHIExpression(Instruction *I) {
@@ -558,16 +570,13 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
     NumGVNOpsSimplified++;
     assert(isa<BasicExpression>(E) &&
            "We should always have had a basic expression here");
-
-    cast<BasicExpression>(E)->deallocateOperands(ArgRecycler);
-    ExpressionAllocator.Deallocate(E);
+    deleteExpression(E);
     return createConstantExpression(C);
   } else if (isa<Argument>(V) || isa<GlobalVariable>(V)) {
     if (I)
       DEBUG(dbgs() << "Simplified " << *I << " to "
                    << " variable " << *V << "\n");
-    cast<BasicExpression>(E)->deallocateOperands(ArgRecycler);
-    ExpressionAllocator.Deallocate(E);
+    deleteExpression(E);
     return createVariableExpression(V);
   }
 
@@ -577,10 +586,7 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
       DEBUG(dbgs() << "Simplified " << *I << " to "
                    << " expression " << *V << "\n");
     NumGVNOpsSimplified++;
-    assert(isa<BasicExpression>(E) &&
-           "We should always have had a basic expression here");
-    cast<BasicExpression>(E)->deallocateOperands(ArgRecycler);
-    ExpressionAllocator.Deallocate(E);
+    deleteExpression(E);
     return CC->DefiningExpr;
   }
   return nullptr;
@@ -724,6 +730,39 @@ const CallExpression *NewGVN::createCallExpression(CallInst *CI,
   return E;
 }
 
+// Return true if some equivalent of instruction Inst dominates instruction U.
+bool NewGVN::someEquivalentDominates(const Instruction *Inst,
+                                     const Instruction *U) const {
+  auto *CC = ValueToClass.lookup(Inst);
+  // This must be an instruction because we are only called from phi nodes
+  // in the case that the value it needs to check against is an instruction.
+
+  // The most likely candiates for dominance are the leader and the next leader.
+  // The leader or nextleader will dominate in all cases where there is an
+  // equivalent that is higher up in the dom tree.
+  // We can't *only* check them, however, because the
+  // dominator tree could have an infinite number of non-dominating siblings
+  // with instructions that are in the right congruence class.
+  //       A
+  // B C D E F G
+  // |
+  // H
+  // Instruction U could be in H,  with equivalents in every other sibling.
+  // Depending on the rpo order picked, the leader could be the equivalent in
+  // any of these siblings.
+  if (!CC)
+    return false;
+  if (DT->dominates(cast<Instruction>(CC->RepLeader), U))
+    return true;
+  if (CC->NextLeader.first &&
+      DT->dominates(cast<Instruction>(CC->NextLeader.first), U))
+    return true;
+  return llvm::any_of(CC->Members, [&](const Value *Member) {
+    return Member != CC->RepLeader &&
+           DT->dominates(cast<Instruction>(Member), U);
+  });
+}
+
 // See if we have a congruence class and leader for this operand, and if so,
 // return it. Otherwise, return the operand itself.
 Value *NewGVN::lookupOperandLeader(Value *V) const {
@@ -819,7 +858,8 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {
     // The RepStoredValue gets nulled if all the stores disappear in a class, so
     // we don't need to check if the class contains a store besides us.
     if (CC && CC->RepStoredValue == lookupOperandLeader(SI->getValueOperand()))
-      return createStoreExpression(SI, StoreRHS);
+      return OldStore;
+    deleteExpression(OldStore);
     // Also check if our value operand is defined by a load of the same memory
     // location, and the memory state is the same as it was then
     // (otherwise, it could have been overwritten later. See test32 in
@@ -1011,6 +1051,7 @@ bool NewGVN::setMemoryAccessEquivTo(MemoryAccess *From, CongruenceClass *To) {
 
   return Changed;
 }
+
 // Evaluate PHI nodes symbolically, and create an expression result.
 const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) {
   auto *E = cast<PHIExpression>(createPHIExpression(I));
@@ -1032,8 +1073,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) {
   if (Filtered.begin() == Filtered.end()) {
     DEBUG(dbgs() << "Simplified PHI node " << *I << " to undef"
                  << "\n");
-    E->deallocateOperands(ArgRecycler);
-    ExpressionAllocator.Deallocate(E);
+    deleteExpression(E);
     return createConstantExpression(UndefValue::get(I->getType()));
   }
   Value *AllSameValue = *(Filtered.begin());
@@ -1054,15 +1094,14 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) {
     if (HasUndef) {
       // Only have to check for instructions
       if (auto *AllSameInst = dyn_cast<Instruction>(AllSameValue))
-        if (!DT->dominates(AllSameInst, I))
+        if (!someEquivalentDominates(AllSameInst, I))
           return E;
     }
 
     NumGVNPhisAllSame++;
     DEBUG(dbgs() << "Simplified PHI node " << *I << " to " << *AllSameValue
                  << "\n");
-    E->deallocateOperands(ArgRecycler);
-    ExpressionAllocator.Deallocate(E);
+    deleteExpression(E);
     return createVariableOrConstant(AllSameValue);
   }
   return E;
@@ -1362,13 +1401,18 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
   // We assert on phi nodes when this happens, currently, for debugging, because
   // we want to make sure we name phi node cycles properly.
   if (isa<Instruction>(NewClass->RepLeader) && NewClass->RepLeader &&
-      I != NewClass->RepLeader &&
-      DT->properlyDominates(
-          I->getParent(),
-          cast<Instruction>(NewClass->RepLeader)->getParent())) {
-    ++NumGVNNotMostDominatingLeader;
-    assert(!isa<PHINode>(I) &&
-           "New class for instruction should not be dominated by instruction");
+      I != NewClass->RepLeader) {
+    auto *IBB = I->getParent();
+    auto *NCBB = cast<Instruction>(NewClass->RepLeader)->getParent();
+    bool Dominated = IBB == NCBB &&
+                     InstrDFS.lookup(I) < InstrDFS.lookup(NewClass->RepLeader);
+    Dominated = Dominated || DT->properlyDominates(IBB, NCBB);
+    if (Dominated) {
+      ++NumGVNNotMostDominatingLeader;
+      assert(
+          !isa<PHINode>(I) &&
+          "New class for instruction should not be dominated by instruction");
+    }
   }
 
   if (NewClass->RepLeader != I) {

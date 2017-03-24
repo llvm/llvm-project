@@ -298,8 +298,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_IF]]:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
-; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP1]], float* [[TMP7]], align 4
+; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP1]], float* [[TMP2]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_CONTINUE]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1

@@ -136,7 +136,24 @@ namespace {
     void addRule(const Rule &R) { Rules.push_back(R); }
 
   private:
-    typedef std::deque<Value*> WorkListType;
+    struct WorkListType {
+      WorkListType() = default;
+
+      void push_back(Value* V) {
+        // Do not push back duplicates.
+        if (!S.count(V)) { Q.push_back(V); S.insert(V); }
+      }
+      Value *pop_front_val() {
+        Value *V = Q.front(); Q.pop_front(); S.erase(V);
+        return V;
+      }
+      bool empty() const { return Q.empty(); }
+
+    private:
+      std::deque<Value*> Q;
+      std::set<Value*> S;
+    };
+
     typedef std::set<Value*> ValueSetType;
     std::vector<Rule> Rules;
 
@@ -199,8 +216,7 @@ void Simplifier::Context::traverse(Value *V, FuncT F) {
   Q.push_back(V);
 
   while (!Q.empty()) {
-    Instruction *U = dyn_cast<Instruction>(Q.front());
-    Q.pop_front();
+    Instruction *U = dyn_cast<Instruction>(Q.pop_front_val());
     if (!U || U->getParent())
       continue;
     if (!F(U))
@@ -248,8 +264,7 @@ void Simplifier::Context::initialize(Instruction *Exp) {
   Q.push_back(Exp);
 
   while (!Q.empty()) {
-    Value *V = Q.front();
-    Q.pop_front();
+    Value *V = Q.pop_front_val();
     if (M.find(V) != M.end())
       continue;
     if (Instruction *U = dyn_cast<Instruction>(V)) {
@@ -320,8 +335,7 @@ Value *Simplifier::Context::subst(Value *Tree, Value *OldV, Value *NewV) {
   WorkListType Q;
   Q.push_back(Tree);
   while (!Q.empty()) {
-    Instruction *U = dyn_cast<Instruction>(Q.front());
-    Q.pop_front();
+    Instruction *U = dyn_cast<Instruction>(Q.pop_front_val());
     // If U is not an instruction, or it's not a clone, skip it.
     if (!U || U->getParent())
       continue;
@@ -355,8 +369,7 @@ void Simplifier::Context::replace(Value *OldV, Value *NewV) {
   WorkListType Q;
   Q.push_back(NewV);
   while (!Q.empty()) {
-    Value *V = Q.front();
-    Q.pop_front();
+    Value *V = Q.pop_front_val();
     Instruction *U = dyn_cast<Instruction>(V);
     if (!U || U->getParent())
       continue;
@@ -421,8 +434,7 @@ Value *Simplifier::Context::find(Value *Tree, Value *Sub) const {
   Q.push_back(Tree);
 
   while (!Q.empty()) {
-    Value *V = Q.front();
-    Q.pop_front();
+    Value *V = Q.pop_front_val();
     if (V == Sub)
       return V;
     Instruction *U = dyn_cast<Instruction>(V);
@@ -463,10 +475,13 @@ Value *Simplifier::Context::materialize(BasicBlock *B,
 Value *Simplifier::simplify(Context &C) {
   WorkListType Q;
   Q.push_back(C.Root);
+  unsigned Count = 0;
+  const unsigned Limit = 100000;
 
   while (!Q.empty()) {
-    Instruction *U = dyn_cast<Instruction>(Q.front());
-    Q.pop_front();
+    if (Count++ >= Limit)
+      break;
+    Instruction *U = dyn_cast<Instruction>(Q.pop_front_val());
     if (!U || U->getParent() || !C.Used.count(U))
       continue;
     bool Changed = false;
@@ -485,6 +500,7 @@ Value *Simplifier::simplify(Context &C) {
         Q.push_back(Op);
     }
   }
+  assert(Count < Limit && "Infinite loop in HLIR/simplify?");
   return C.Root;
 }
 

@@ -61,6 +61,10 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # This variable makes sure that e.g. llvm-lit is found.
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
 
+  if(APPLE)
+   set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
+  endif()
+
   # Handle common options used by all runtimes.
   include(AddLLVM)
   include(HandleLLVMOptions)
@@ -145,11 +149,15 @@ else() # if this is included from LLVM's CMake
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
   include(LLVMExternalProjectUtils)
 
+  if(NOT LLVM_BUILD_RUNTIMES)
+    set(EXTRA_ARGS EXCLUDE_FROM_ALL)
+  endif()
+
   # If compiler-rt is present we need to build the builtin libraries first. This
   # is required because the other runtimes need the builtin libraries present
   # before the just-built compiler can pass the configuration tests.
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt)
-    if(APPLE OR NOT LLVM_BUILTIN_TARGETS)
+    if(NOT LLVM_BUILTIN_TARGETS)
       llvm_ExternalProject_Add(builtins
                                ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/lib/builtins
                                CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
@@ -157,11 +165,20 @@ else() # if this is included from LLVM's CMake
                                           -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                           -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                PASSTHROUGH_PREFIXES COMPILER_RT
-                               USE_TOOLCHAIN)
+                               USE_TOOLCHAIN
+                               ${EXTRA_ARGS})
     else()
       get_cmake_property(variableNames VARIABLES)
       add_custom_target(builtins)
       foreach(target ${LLVM_BUILTIN_TARGETS})
+        string(REPLACE "-" ";" builtin_target_list ${target})
+        foreach(item ${builtin_target_list})
+          string(TOLOWER "${item}" item_lower)
+          if(item_lower MATCHES "darwin")
+            message(FATAL_ERROR "LLVM_BUILTIN_TARGETS isn't implemented for Darwin platform!")
+          endif()
+        endforeach()
+
         foreach(variableName ${variableNames})
           if(variableName MATCHES "^BUILTINS_${target}")
             string(REPLACE "BUILTINS_${target}_" "" new_name ${variableName})
@@ -178,8 +195,10 @@ else() # if this is included from LLVM's CMake
                                           -DCMAKE_ASM_COMPILER_WORKS=On
                                           -DCOMPILER_RT_DEFAULT_TARGET_ONLY=On
                                           ${${target}_extra_args}
+                               TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
                                PASSTHROUGH_PREFIXES COMPILER_RT
-                               USE_TOOLCHAIN)
+                               USE_TOOLCHAIN
+                               ${EXTRA_ARGS})
         add_dependencies(builtins builtins-${target})
       endforeach()
     endif()
@@ -238,7 +257,8 @@ else() # if this is included from LLVM's CMake
                                             ${SUB_COMPONENTS}
                                             ${SUB_COMPONENT_CHECK_TARGETS}
                                             ${SUB_INSTALL_TARGETS}
-                             USE_TOOLCHAIN)
+                             USE_TOOLCHAIN
+                             ${EXTRA_ARGS})
     
     # TODO: This is a hack needed because the libcxx headers are copied into the
     # build directory during configuration. Without that step the clang in the

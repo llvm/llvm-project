@@ -24,12 +24,13 @@ class LinePrinter {
   friend class WithColor;
 
 public:
-  LinePrinter(int Indent, raw_ostream &Stream);
+  LinePrinter(int Indent, bool UseColor, raw_ostream &Stream);
 
   void Indent();
   void Unindent();
   void NewLine();
 
+  bool hasColor() const { return UseColor; }
   raw_ostream &getStream() { return OS; }
   int getIndentLevel() const { return CurrentIndent; }
 
@@ -48,6 +49,7 @@ private:
   raw_ostream &OS;
   int IndentSpaces;
   int CurrentIndent;
+  bool UseColor;
 
   std::list<Regex> ExcludeCompilandFilters;
   std::list<Regex> ExcludeTypeFilters;

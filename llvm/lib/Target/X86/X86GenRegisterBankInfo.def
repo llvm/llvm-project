@@ -15,7 +15,7 @@
 #error "You shouldn't build this"
 #endif
 
-namespace llvm {
+#ifdef GET_TARGET_REGBANK_INFO_IMPL
 RegisterBankInfo::PartialMapping X86GenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
     // GPR value
@@ -31,7 +31,9 @@ RegisterBankInfo::PartialMapping X86GenRegisterBankInfo::PartMappings[]{
     {0, 256, X86::VECRRegBank}, // :7
     {0, 512, X86::VECRRegBank}, // :8   
 };
+#endif // GET_TARGET_REGBANK_INFO_IMPL
 
+#ifdef GET_TARGET_REGBANK_INFO_CLASS
 enum PartialMappingIdx {
   PMI_None = -1,
   PMI_GPR8,
@@ -44,7 +46,9 @@ enum PartialMappingIdx {
   PMI_VEC256,
   PMI_VEC512
 };
+#endif // GET_TARGET_REGBANK_INFO_CLASS
 
+#ifdef GET_TARGET_REGBANK_INFO_IMPL
 #define INSTR_3OP(INFO) INFO, INFO, INFO,
 #define BREAKDOWN(INDEX, NUM)                                                  \
   { &X86GenRegisterBankInfo::PartMappings[INDEX], NUM }
@@ -65,7 +69,9 @@ RegisterBankInfo::ValueMapping X86GenRegisterBankInfo::ValMappings[]{
 };
 #undef INSTR_3OP
 #undef BREAKDOWN
+#endif // GET_TARGET_REGBANK_INFO_IMPL
 
+#ifdef GET_TARGET_REGBANK_INFO_CLASS
 enum ValueMappingIdx {
   VMI_None = -1,
   VMI_3OpsGpr8Idx =  PMI_GPR8  * 3,
@@ -78,5 +84,21 @@ enum ValueMappingIdx {
   VMI_3OpsVec256Idx = PMI_VEC256 * 3,
   VMI_3OpsVec512Idx = PMI_VEC512 * 3,
 };
+#undef GET_TARGET_REGBANK_INFO_CLASS
+#endif // GET_TARGET_REGBANK_INFO_CLASS
 
-} // End llvm namespace.
+#ifdef GET_TARGET_REGBANK_INFO_IMPL
+#undef GET_TARGET_REGBANK_INFO_IMPL
+const RegisterBankInfo::ValueMapping *
+X86GenRegisterBankInfo::getValueMapping(PartialMappingIdx Idx,
+                                        unsigned NumOperands) {
+  
+  // We can use VMI_3Ops Mapping for all the cases.
+  if (NumOperands <= 3 && (Idx >= PMI_GPR8 && Idx <= PMI_VEC512))
+    return &ValMappings[(unsigned)Idx * 3];
+  
+  llvm_unreachable("Unsupported PartialMappingIdx.");
+}
+
+#endif // GET_TARGET_REGBANK_INFO_IMPL
+

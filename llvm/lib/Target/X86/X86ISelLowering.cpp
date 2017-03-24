@@ -4732,28 +4732,30 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
                                     SmallVectorImpl<int> &WidenedMask) {
   WidenedMask.assign(Mask.size() / 2, 0);
   for (int i = 0, Size = Mask.size(); i < Size; i += 2) {
+    int M0 = Mask[i];
+    int M1 = Mask[i + 1];
+
     // If both elements are undef, its trivial.
-    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] == SM_SentinelUndef) {
+    if (M0 == SM_SentinelUndef && M1 == SM_SentinelUndef) {
       WidenedMask[i / 2] = SM_SentinelUndef;
       continue;
     }
 
     // Check for an undef mask and a mask value properly aligned to fit with
     // a pair of values. If we find such a case, use the non-undef mask's value.
-    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] >= 0 &&
-        Mask[i + 1] % 2 == 1) {
-      WidenedMask[i / 2] = Mask[i + 1] / 2;
+    if (M0 == SM_SentinelUndef && M1 >= 0 && (M1 % 2) == 1) {
+      WidenedMask[i / 2] = M1 / 2;
       continue;
     }
-    if (Mask[i + 1] == SM_SentinelUndef && Mask[i] >= 0 && Mask[i] % 2 == 0) {
-      WidenedMask[i / 2] = Mask[i] / 2;
+    if (M1 == SM_SentinelUndef && M0 >= 0 && (M0 % 2) == 0) {
+      WidenedMask[i / 2] = M0 / 2;
       continue;
     }
 
     // When zeroing, we need to spread the zeroing across both lanes to widen.
-    if (Mask[i] == SM_SentinelZero || Mask[i + 1] == SM_SentinelZero) {
-      if ((Mask[i] == SM_SentinelZero || Mask[i] == SM_SentinelUndef) &&
-          (Mask[i + 1] == SM_SentinelZero || Mask[i + 1] == SM_SentinelUndef)) {
+    if (M0 == SM_SentinelZero || M1 == SM_SentinelZero) {
+      if ((M0 == SM_SentinelZero || M0 == SM_SentinelUndef) &&
+          (M1 == SM_SentinelZero || M1 == SM_SentinelUndef)) {
         WidenedMask[i / 2] = SM_SentinelZero;
         continue;
       }
@@ -4762,9 +4764,8 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
 
     // Finally check if the two mask values are adjacent and aligned with
     // a pair.
-    if (Mask[i] != SM_SentinelUndef && Mask[i] % 2 == 0 &&
-        Mask[i] + 1 == Mask[i + 1]) {
-      WidenedMask[i / 2] = Mask[i] / 2;
+    if (M0 != SM_SentinelUndef && (M0 % 2) == 0 && (M0 + 1) == M1) {
+      WidenedMask[i / 2] = M0 / 2;
       continue;
     }
 
@@ -5227,8 +5228,7 @@ static SDValue concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
 /// Returns a vector of specified type with all bits set.
 /// Always build ones vectors as <4 x i32>, <8 x i32> or <16 x i32>.
 /// Then bitcast to their original type, ensuring they get CSE'd.
-static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
-                             SelectionDAG &DAG, const SDLoc &dl) {
+static SDValue getOnesVector(EVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected a 128/256/512-bit vector type");
 
@@ -7552,7 +7552,7 @@ static SDValue materializeVectorConstant(SDValue Op, SelectionDAG &DAG,
         (VT == MVT::v8i32 && Subtarget.hasInt256()))
       return Op;
 
-    return getOnesVector(VT, Subtarget, DAG, DL);
+    return getOnesVector(VT, DAG, DL);
   }
 
   return SDValue();
@@ -13584,7 +13584,7 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (ISD::isBuildVectorAllZeros(V1.getNode()))
     V1 = getZeroVector(ExtVT, Subtarget, DAG, DL);
   else if (ISD::isBuildVectorAllOnes(V1.getNode()))
-    V1 = getOnesVector(ExtVT, Subtarget, DAG, DL);
+    V1 = getOnesVector(ExtVT, DAG, DL);
   else
     V1 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V1);
 
@@ -13593,7 +13593,7 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   else if (ISD::isBuildVectorAllZeros(V2.getNode()))
     V2 = getZeroVector(ExtVT, Subtarget, DAG, DL);
   else if (ISD::isBuildVectorAllOnes(V2.getNode()))
-    V2 = getOnesVector(ExtVT, Subtarget, DAG, DL);
+    V2 = getOnesVector(ExtVT, DAG, DL);
   else
     V2 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V2);
 
@@ -15890,11 +15890,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(0, DL));
 }
 
-SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op,
-                                          const X86Subtarget &Subtarget,
-                                          SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
-
   MVT VT = Op.getSimpleValueType();
 
   if (VT.isVector()) {
@@ -15902,8 +15899,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op,
     SDValue Src = Op.getOperand(0);
     SDLoc dl(Op);
     if (VT == MVT::v2i64 && Src.getSimpleValueType() == MVT::v2f32) {
-      return DAG.getNode(IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI,
-                         dl, VT,
+      return DAG.getNode(IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI, dl, VT,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                                      DAG.getUNDEF(MVT::v2f32)));
     }
@@ -17747,17 +17743,10 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
 
   // SKX processor
   if ((InVTElt == MVT::i1) &&
-      (((Subtarget.hasBWI() && Subtarget.hasVLX() &&
-        VT.getSizeInBits() <= 256 && VTElt.getSizeInBits() <= 16)) ||
+      (((Subtarget.hasBWI() && VTElt.getSizeInBits() <= 16)) ||
 
-       ((Subtarget.hasBWI() && VT.is512BitVector() &&
-        VTElt.getSizeInBits() <= 16)) ||
+       ((Subtarget.hasDQI() && VTElt.getSizeInBits() >= 32))))
 
-       ((Subtarget.hasDQI() && Subtarget.hasVLX() &&
-        VT.getSizeInBits() <= 256 && VTElt.getSizeInBits() >= 32)) ||
-
-       ((Subtarget.hasDQI() && VT.is512BitVector() &&
-        VTElt.getSizeInBits() >= 32))))
     return DAG.getNode(X86ISD::VSEXT, dl, VT, In);
 
   unsigned NumElts = VT.getVectorNumElements();
@@ -17781,7 +17770,7 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
     V = getExtendInVec(X86ISD::VSEXT, dl, ExtVT, In, DAG);
     assert(!VT.is512BitVector() && "Unexpected vector type");
   } else {
-    SDValue NegOne = getOnesVector(ExtVT, Subtarget, DAG, dl);
+    SDValue NegOne = getOnesVector(ExtVT, DAG, dl);
     SDValue Zero = getZeroVector(ExtVT, Subtarget, DAG, dl);
     V = DAG.getNode(ISD::VSELECT, dl, ExtVT, In, NegOne, Zero);
     if (ExtVT == VT)
@@ -18002,7 +17991,8 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
   MVT VT = Op.getValueType().getSimpleVT();
   unsigned NumElts = VT.getVectorNumElements();
 
-  if ((Subtarget.hasVLX() && Subtarget.hasBWI() && Subtarget.hasDQI()) ||
+  if ((Subtarget.hasBWI() && NumElts >= 32) ||
+      (Subtarget.hasDQI() && NumElts < 16) ||
       NumElts == 16) {
     // Load and extend - everything is legal
     if (NumElts < 8) {
@@ -18031,7 +18021,7 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
 
   if (NumElts <= 8) {
     // A subset, assume that we have only AVX-512F
-    unsigned NumBitsToLoad = NumElts < 8 ? 8 : NumElts;
+    unsigned NumBitsToLoad = 8;
     MVT TypeToLoad = MVT::getIntegerVT(NumBitsToLoad);
     SDValue Load = DAG.getLoad(TypeToLoad, dl, Ld->getChain(),
                               Ld->getBasePtr(),
@@ -23729,7 +23719,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, Subtarget, DAG);
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT:         return LowerFP_TO_INT(Op, Subtarget, DAG);
+  case ISD::FP_TO_UINT:         return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
   case ISD::LOAD:               return LowerExtendedLoad(Op, Subtarget, DAG);
   case ISD::FABS:
@@ -29170,9 +29160,10 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   SDValue Src = N->getOperand(0);
   SDValue Idx = N->getOperand(1);
 
+  EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getVectorElementType();
-  EVT VT = N->getValueType(0);
+  unsigned NumSrcElts = SrcVT.getVectorNumElements();
 
   // Don't attempt this for boolean mask vectors or unknown extraction indices.
   if (SrcSVT == MVT::i1 || !isa<ConstantSDNode>(Idx))
@@ -29184,20 +29175,26 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (!resolveTargetShuffleInputs(peekThroughBitcasts(Src), Ops, Mask))
     return SDValue();
 
-  // At the moment we can only narrow a shuffle mask to handle extractions
-  // of smaller scalars.
-  // TODO - investigate support for wider shuffle masks with known upper
-  // undef/zero elements for implicit zero-extension.
-  unsigned NumMaskElts = Mask.size();
-  if ((SrcVT.getVectorNumElements() % NumMaskElts) != 0)
-    return SDValue();
-
-  int Scale = SrcVT.getVectorNumElements() / NumMaskElts;
-  if (Scale != 1) {
-    SmallVector<int, 16> ScaledMask;
-    scaleShuffleMask(Scale, Mask, ScaledMask);
-    Mask = ScaledMask;
+  // Attempt to narrow/widen the shuffle mask to the correct size.
+  if (Mask.size() != NumSrcElts) {
+    if ((NumSrcElts % Mask.size()) == 0) {
+      SmallVector<int, 16> ScaledMask;
+      int Scale = NumSrcElts / Mask.size();
+      scaleShuffleMask(Scale, Mask, ScaledMask);
+      Mask = std::move(ScaledMask);
+    } else if ((Mask.size() % NumSrcElts) == 0) {
+      SmallVector<int, 16> WidenedMask;
+      while (Mask.size() > NumSrcElts &&
+             canWidenShuffleElements(Mask, WidenedMask))
+        Mask = std::move(WidenedMask);
+      // TODO - investigate support for wider shuffle masks with known upper
+      // undef/zero elements for implicit zero-extension.
+    }
   }
+
+  // Check if narrowing/widening failed.
+  if (Mask.size() != NumSrcElts)
+    return SDValue();
 
   int SrcIdx = Mask[N->getConstantOperandVal(1)];
   SDLoc dl(N);
@@ -34709,7 +34706,7 @@ static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
 
   if (N->getOperand(0) == N->getOperand(1)) {
     if (N->getOpcode() == X86ISD::PCMPEQ)
-      return getOnesVector(VT, Subtarget, DAG, DL);
+      return getOnesVector(VT, DAG, DL);
     if (N->getOpcode() == X86ISD::PCMPGT)
       return getZeroVector(VT, Subtarget, DAG, DL);
   }

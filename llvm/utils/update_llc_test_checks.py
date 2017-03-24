@@ -29,6 +29,8 @@ def llc(args, cmd_args, ir):
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
 SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
+SCRUB_LOOP_COMMENT_RE = re.compile(
+    r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
 
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
@@ -114,6 +116,8 @@ def scrub_asm_powerpc64le(asm):
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
   # Expand the tabs used for indentation.
   asm = string.expandtabs(asm, 2)
+  # Stripe unimportant comments
+  asm = SCRUB_LOOP_COMMENT_RE.sub(r'', asm)
   # Strip trailing whitespace.
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm

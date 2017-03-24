@@ -27,6 +27,7 @@ class X86TargetMachine;
 class LLT;
 class RegisterBank;
 class MachineRegisterInfo;
+class MachineFunction;
 
 class X86InstructionSelector : public InstructionSelector {
 public:
@@ -45,7 +46,13 @@ private:
   unsigned getFSubOp(LLT &Ty, const RegisterBank &RB) const;
   unsigned getAddOp(LLT &Ty, const RegisterBank &RB) const;
   unsigned getSubOp(LLT &Ty, const RegisterBank &RB) const;
-  bool selectBinaryOp(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
+                          uint64_t Alignment) const;
+
+  bool selectBinaryOp(MachineInstr &I, MachineRegisterInfo &MRI,
+                      MachineFunction &MF) const;
+  bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
+                         MachineFunction &MF) const;
 
   const X86Subtarget &STI;
   const X86InstrInfo &TII;

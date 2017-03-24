@@ -155,3 +155,32 @@ define <4 x float>  @test_sub_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
   %ret = fsub <4 x float>  %arg1, %arg2
   ret <4 x float>  %ret
 }
+
+define i32  @test_copy_float(float %val) {
+; SSE-LABEL: test_copy_float:
+; SSE:       # BB#0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; ALL_AVX-LABEL: test_copy_float:
+; ALL_AVX:       # BB#0:
+; ALL_AVX-NEXT:    vmovd %xmm0, %eax
+; ALL_AVX-NEXT:    retq
+  %r = bitcast float %val to i32
+  ret i32 %r
+}
+
+define float  @test_copy_i32(i32 %val) {
+; SSE-LABEL: test_copy_i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    movd %edi, %xmm0
+; SSE-NEXT:    retq
+;
+; ALL_AVX-LABEL: test_copy_i32:
+; ALL_AVX:       # BB#0:
+; ALL_AVX-NEXT:    vmovd %edi, %xmm0
+; ALL_AVX-NEXT:    retq
+  %r = bitcast i32 %val to float
+  ret float %r
+}
+

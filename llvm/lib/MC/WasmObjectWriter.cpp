@@ -338,7 +338,7 @@ struct WasmImport {
   StringRef ModuleName;
   StringRef FieldName;
   unsigned Kind;
-  uint32_t Type;
+  int32_t Type;
 };
 
 // A wasm function to be written into the function section.

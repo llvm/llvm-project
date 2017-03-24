@@ -468,6 +468,84 @@ void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
+#if _LIBCPP_STD_VER > 14
+template <class ..._Mutexes>
+class _LIBCPP_TEMPLATE_VIS scoped_lock;
+
+template <>
+class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
+public:
+    explicit scoped_lock() {}
+    ~scoped_lock() = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(adopt_lock_t) {}
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+};
+
+template <class _Mutex>
+class _LIBCPP_TEMPLATE_VIS scoped_lock<_Mutex> {
+public:
+    typedef _Mutex  mutex_type;
+private:
+    mutex_type& __m_;
+public:
+    explicit scoped_lock(mutex_type & __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+        : __m_(__m) {__m_.lock();}
+
+    ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+        : __m_(__m) {}
+    
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+};
+
+template <class ..._MArgs>
+class _LIBCPP_TEMPLATE_VIS scoped_lock
+{
+    static_assert(sizeof...(_MArgs) > 1, "At least 2 lock types required");
+    typedef tuple<_MArgs&...> _MutexTuple;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(_MArgs&... __margs)
+      : __t_(__margs...)
+    {
+        _VSTD::lock(__margs...);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    scoped_lock(_MArgs&... __margs, adopt_lock_t)
+        : __t_(__margs...)
+    {
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    ~scoped_lock() {
+        typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
+        __unlock_unpack(_Indices{}, __t_);
+    }
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+
+private:
+    template <size_t ..._Indx>
+    _LIBCPP_INLINE_VISIBILITY
+    static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
+        _VSTD::__unlock(_VSTD::get<_Indx>(__mt)...);
+    }
+
+    _MutexTuple __t_;
+};
+
+#endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS
 
 struct _LIBCPP_TEMPLATE_VIS once_flag;
@@ -615,85 +693,6 @@ call_once(once_flag& __flag, const _Callable& __func)
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
-
-#if _LIBCPP_STD_VER > 14
-template <class ..._Mutexes>
-class _LIBCPP_TEMPLATE_VIS scoped_lock;
-
-template <>
-class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
-public:
-    explicit scoped_lock() {}
-    ~scoped_lock() = default;
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit scoped_lock(adopt_lock_t) {}
-
-    scoped_lock(scoped_lock const&) = delete;
-    scoped_lock& operator=(scoped_lock const&) = delete;
-};
-
-template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS scoped_lock<_Mutex> {
-public:
-    typedef _Mutex  mutex_type;
-private:
-    mutex_type& __m_;
-public:
-    explicit scoped_lock(mutex_type & __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
-        : __m_(__m) {__m_.lock();}
-
-    ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
-        : __m_(__m) {}
-    
-
-    scoped_lock(scoped_lock const&) = delete;
-    scoped_lock& operator=(scoped_lock const&) = delete;
-};
-
-template <class ..._MArgs>
-class _LIBCPP_TEMPLATE_VIS scoped_lock
-{
-    static_assert(sizeof...(_MArgs) > 1, "At least 2 lock types required");
-    typedef tuple<_MArgs&...> _MutexTuple;
-
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    explicit scoped_lock(_MArgs&... __margs)
-      : __t_(__margs...)
-    {
-        _VSTD::lock(__margs...);
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    scoped_lock(_MArgs&... __margs, adopt_lock_t)
-        : __t_(__margs...)
-    {
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    ~scoped_lock() {
-        typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
-        __unlock_unpack(_Indices{}, __t_);
-    }
-
-    scoped_lock(scoped_lock const&) = delete;
-    scoped_lock& operator=(scoped_lock const&) = delete;
-
-private:
-    template <size_t ..._Indx>
-    _LIBCPP_INLINE_VISIBILITY
-    static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
-        _VSTD::__unlock(_VSTD::get<_Indx>(__mt)...);
-    }
-
-    _MutexTuple __t_;
-};
-
-#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

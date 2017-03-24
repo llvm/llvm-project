@@ -61,6 +61,7 @@ class TracePC {
   void ResetMaps() {
     ValueProfileMap.Reset();
     memset(Counters(), 0, GetNumPCs());
+    ClearExtraCounters();
   }
 
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
@@ -107,36 +108,48 @@ private:
   ValueBitMap ValueProfileMap;
 };
 
-template <class Callback>
-size_t TracePC::CollectFeatures(Callback CB) const {
+template <class Callback> // void Callback(size_t Idx, uint8_t Value);
+ATTRIBUTE_NO_SANITIZE_ALL
+void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
+                        size_t FirstFeature, Callback Handle8bitCounter) {
+  typedef uintptr_t LargeType;
+  const size_t Step = sizeof(LargeType) / sizeof(uint8_t);
+  assert(!(reinterpret_cast<uintptr_t>(Begin) % 64));
+  for (auto P = Begin; P < End; P += Step)
+    if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P))
+      for (size_t I = 0; I < Step; I++, Bundle >>= 8)
+        if (uint8_t V = Bundle & 0xff)
+          Handle8bitCounter(FirstFeature + P - Begin + I, V);
+}
+
+template <class Callback>  // bool Callback(size_t Feature)
+ATTRIBUTE_NO_SANITIZE_ALL
+__attribute__((noinline))
+size_t TracePC::CollectFeatures(Callback HandleFeature) const {
   size_t Res = 0;
-  const size_t Step = 8;
   uint8_t *Counters = this->Counters();
-  assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
   size_t N = GetNumPCs();
-  N = (N + Step - 1) & ~(Step - 1);  // Round up.
-  for (size_t Idx = 0; Idx < N; Idx += Step) {
-    uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
-    if (!Bundle) continue;
-    for (size_t i = Idx; i < Idx + Step; i++) {
-      uint8_t Counter = (Bundle >> ((i - Idx) * 8)) & 0xff;
-      if (!Counter) continue;
-      unsigned Bit = 0;
-      /**/ if (Counter >= 128) Bit = 7;
-      else if (Counter >= 32) Bit = 6;
-      else if (Counter >= 16) Bit = 5;
-      else if (Counter >= 8) Bit = 4;
-      else if (Counter >= 4) Bit = 3;
-      else if (Counter >= 3) Bit = 2;
-      else if (Counter >= 2) Bit = 1;
-      size_t Feature = (i * 8 + Bit);
-      if (CB(Feature))
-        Res++;
-    }
-  }
+  auto Handle8bitCounter = [&](size_t Idx, uint8_t Counter) {
+    assert(Counter);
+    unsigned Bit = 0;
+    /**/ if (Counter >= 128) Bit = 7;
+    else if (Counter >= 32) Bit = 6;
+    else if (Counter >= 16) Bit = 5;
+    else if (Counter >= 8) Bit = 4;
+    else if (Counter >= 4) Bit = 3;
+    else if (Counter >= 3) Bit = 2;
+    else if (Counter >= 2) Bit = 1;
+    if (HandleFeature(Idx * 8 + Bit))
+      Res++;
+  };
+
+  ForEachNonZeroByte(Counters, Counters + N, 0, Handle8bitCounter);
+  ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), N * 8,
+                     Handle8bitCounter);
+
   if (UseValueProfile)
     ValueProfileMap.ForEach([&](size_t Idx) {
-      if (CB(N * 8 + Idx))
+      if (HandleFeature(N * 8 + Idx))
         Res++;
     });
   return Res;

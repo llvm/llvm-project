@@ -98,6 +98,44 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
   return FunctionCount && isHotCount(FunctionCount.getValue());
 }
 
+/// Returns true if the function's entry or total call edge count is hot.
+/// If it returns false, it either means it is not hot or it is unknown
+/// whether it is hot or not (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F) {
+  if (!F || !computeSummary())
+    return false;
+  if (auto FunctionCount = F->getEntryCount())
+    if (isHotCount(FunctionCount.getValue()))
+      return true;
+
+  uint64_t TotalCallCount = 0;
+  for (const auto &BB : *F)
+    for (const auto &I : BB)
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (auto CallCount = getProfileCount(&I, nullptr))
+          TotalCallCount += CallCount.getValue();
+  return isHotCount(TotalCallCount);
+}
+
+/// Returns true if the function's entry and total call edge count is cold.
+/// If it returns false, it either means it is not cold or it is unknown
+/// whether it is cold or not (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F) {
+  if (!F || !computeSummary())
+    return false;
+  if (auto FunctionCount = F->getEntryCount())
+    if (!isColdCount(FunctionCount.getValue()))
+      return false;
+  
+  uint64_t TotalCallCount = 0;
+  for (const auto &BB : *F)
+    for (const auto &I : BB) 
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (auto CallCount = getProfileCount(&I, nullptr))
+          TotalCallCount += CallCount.getValue();
+  return isColdCount(TotalCallCount);
+}
+
 /// Returns true if the function's entry is a cold. If it returns false, it
 /// either means it is not cold or it is unknown whether it is cold or not (for
 /// example, no profile data is available).

@@ -1162,9 +1162,13 @@ void SampleProfileLoader::propagateWeights(Function &F) {
       }
     }
 
+    uint64_t TempWeight;
     // Only set weights if there is at least one non-zero weight.
     // In any other case, let the analyzer set weights.
-    if (MaxWeight > 0) {
+    // Do not set weights if the weights are present. In ThinLTO, the profile
+    // annotation is done twice. If the first annotation already set the
+    // weights, the second pass does not need to set it.
+    if (MaxWeight > 0 && !TI->extractProfTotalWeight(TempWeight)) {
       DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
       TI->setMetadata(llvm::LLVMContext::MD_prof,
                       MDB.createBranchWeights(Weights));

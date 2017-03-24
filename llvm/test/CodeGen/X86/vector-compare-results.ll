@@ -630,9 +630,9 @@ define <8 x i1> @test_cmp_v8f64(<8 x double> %a0, <8 x double> %a1) nounwind {
 ;
 ; AVX512BW-LABEL: test_cmp_v8f64:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512BW-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
+; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %1 = fcmp ogt <8 x double> %a0, %a1
@@ -693,9 +693,9 @@ define <16 x i1> @test_cmp_v16f32(<16 x float> %a0, <16 x float> %a1) nounwind {
 ;
 ; AVX512BW-LABEL: test_cmp_v16f32:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vcmpltps %zmm0, %zmm1, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512BW-NEXT:    vcmpltps %zmm0, %zmm1, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %1 = fcmp ogt <16 x float> %a0, %a1
@@ -807,9 +807,9 @@ define <8 x i1> @test_cmp_v8i64(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ;
 ; AVX512BW-LABEL: test_cmp_v8i64:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512BW-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %1 = icmp sgt <8 x i64> %a0, %a1
@@ -873,9 +873,9 @@ define <16 x i1> @test_cmp_v16i32(<16 x i32> %a0, <16 x i32> %a1) nounwind {
 ;
 ; AVX512BW-LABEL: test_cmp_v16i32:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512BW-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %1 = icmp sgt <16 x i32> %a0, %a1
@@ -1149,10 +1149,9 @@ define <32 x i1> @test_cmp_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 ;
 ; AVX512BW-LABEL: test_cmp_v32i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpcmpgtw %zmm1, %zmm0, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpcmpgtw %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = icmp sgt <32 x i16> %a0, %a1
   ret <32 x i1> %1

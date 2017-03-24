@@ -108,6 +108,14 @@ class ModuleBitcodeWriter : public BitcodeWriterBase {
   /// True if a module hash record should be written.
   bool GenerateHash;
 
+  /// If non-null, when GenerateHash is true, the resulting hash is written
+  /// into ModHash. When GenerateHash is false, that specified value
+  /// is used as the hash instead of computing from the generated bitcode.
+  /// Can be used to produce the same module hash for a minimized bitcode
+  /// used just for the thin link as in the regular full bitcode that will
+  /// be used in the backend.
+  ModuleHash *ModHash;
+
   /// The start bit of the identification block.
   uint64_t BitcodeStartBit;
 
@@ -124,10 +132,12 @@ public:
   /// writing to the provided \p Buffer.
   ModuleBitcodeWriter(const Module *M, SmallVectorImpl<char> &Buffer,
                       BitstreamWriter &Stream, bool ShouldPreserveUseListOrder,
-                      const ModuleSummaryIndex *Index, bool GenerateHash)
+                      const ModuleSummaryIndex *Index, bool GenerateHash,
+                      ModuleHash *ModHash = nullptr)
       : BitcodeWriterBase(Stream), Buffer(Buffer), M(*M),
         VE(*M, ShouldPreserveUseListOrder), Index(Index),
-        GenerateHash(GenerateHash), BitcodeStartBit(Stream.GetCurrentBitNo()) {
+        GenerateHash(GenerateHash), ModHash(ModHash),
+        BitcodeStartBit(Stream.GetCurrentBitNo()) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
     // (which would have been assigned an ID by the ValueEnumerator).
@@ -3778,17 +3788,24 @@ static void writeIdentificationBlock(BitstreamWriter &Stream) {
 void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
   // Emit the module's hash.
   // MODULE_CODE_HASH: [5*i32]
-  SHA1 Hasher;
-  Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
-                                  Buffer.size() - BlockStartPos));
-  StringRef Hash = Hasher.result();
-  uint32_t Vals[5];
-  for (int Pos = 0; Pos < 20; Pos += 4) {
-    Vals[Pos / 4] = support::endian::read32be(Hash.data() + Pos);
-  }
+  if (GenerateHash) {
+    SHA1 Hasher;
+    uint32_t Vals[5];
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
+                                    Buffer.size() - BlockStartPos));
+    StringRef Hash = Hasher.result();
+    for (int Pos = 0; Pos < 20; Pos += 4) {
+      Vals[Pos / 4] = support::endian::read32be(Hash.data() + Pos);
+    }
 
-  // Emit the finished record.
-  Stream.EmitRecord(bitc::MODULE_CODE_HASH, Vals);
+    // Emit the finished record.
+    Stream.EmitRecord(bitc::MODULE_CODE_HASH, Vals);
+
+    if (ModHash)
+      // Save the written hash value.
+      std::copy(std::begin(Vals), std::end(Vals), std::begin(*ModHash));
+  } else if (ModHash)
+    Stream.EmitRecord(bitc::MODULE_CODE_HASH, ArrayRef<uint32_t>(*ModHash));
 }
 
 void ModuleBitcodeWriter::write() {
@@ -3849,9 +3866,7 @@ void ModuleBitcodeWriter::write() {
   writeValueSymbolTable(M.getValueSymbolTable(),
                         /* IsModuleLevel */ true, &FunctionToBitcodeIndex);
 
-  if (GenerateHash) {
-    writeModuleHash(BlockStartPos);
-  }
+  writeModuleHash(BlockStartPos);
 
   Stream.ExitBlock();
 }
@@ -3942,9 +3957,10 @@ BitcodeWriter::~BitcodeWriter() = default;
 void BitcodeWriter::writeModule(const Module *M,
                                 bool ShouldPreserveUseListOrder,
                                 const ModuleSummaryIndex *Index,
-                                bool GenerateHash) {
-  ModuleBitcodeWriter ModuleWriter(
-      M, Buffer, *Stream, ShouldPreserveUseListOrder, Index, GenerateHash);
+                                bool GenerateHash, ModuleHash *ModHash) {
+  ModuleBitcodeWriter ModuleWriter(M, Buffer, *Stream,
+                                   ShouldPreserveUseListOrder, Index,
+                                   GenerateHash, ModHash);
   ModuleWriter.write();
 }
 
@@ -3953,7 +3969,7 @@ void BitcodeWriter::writeModule(const Module *M,
 void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
                               const ModuleSummaryIndex *Index,
-                              bool GenerateHash) {
+                              bool GenerateHash, ModuleHash *ModHash) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256*1024);
 
@@ -3964,7 +3980,8 @@ void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash);
+  Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
+                     ModHash);
 
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     emitDarwinBCHeaderAndTrailer(Buffer, TT);

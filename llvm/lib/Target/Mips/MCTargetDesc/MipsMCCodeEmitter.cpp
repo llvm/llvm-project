@@ -111,18 +111,21 @@ static void LowerDins(MCInst& InstIn) {
   assert(InstIn.getOperand(3).isImm());
   int64_t size = InstIn.getOperand(3).getImm();
 
-  if (size <= 32) {
-    if (pos < 32)  // DINS, do nothing
-      return;
+  assert((pos + size) <= 64 &&
+         "DINS cannot have position plus size over 64");
+  if (pos < 32) {
+    if ((pos + size) > 0 && (pos + size) <= 32)
+      return; // DINS, do nothing
+    else if ((pos + size) > 32) {
+      //DINSM
+      InstIn.getOperand(3).setImm(size - 32);
+      InstIn.setOpcode(Mips::DINSM);
+    }
+  } else if ((pos + size) > 32 && (pos + size) <= 64) {
     // DINSU
     InstIn.getOperand(2).setImm(pos - 32);
     InstIn.setOpcode(Mips::DINSU);
-    return;
   }
-  // DINSM
-  assert(pos < 32 && "DINS cannot have both size and pos > 32");
-  InstIn.getOperand(3).setImm(size - 32);
-  InstIn.setOpcode(Mips::DINSM);
 }
 
 // Fix a bad compact branch encoding for beqc/bnec.
