@@ -1411,13 +1411,11 @@ void RegionGenerator::generateScalarStores(
 void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
                                       PHINode *PHICopy, BasicBlock *IncomingBB,
                                       LoopToScevMapT &LTS) {
-  Region *StmtR = Stmt.getRegion();
-
   // If the incoming block was not yet copied mark this PHI as incomplete.
   // Once the block will be copied the incoming value will be added.
   BasicBlock *BBCopy = BlockMap[IncomingBB];
   if (!BBCopy) {
-    assert(StmtR->contains(IncomingBB) &&
+    assert(Stmt.contains(IncomingBB) &&
            "Bad incoming block for PHI in non-affine region");
     IncompletePHINodeMap[IncomingBB].push_back(std::make_pair(PHI, PHICopy));
     return;
@@ -1428,7 +1426,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
 
   Value *OpCopy = nullptr;
 
-  if (StmtR->contains(IncomingBB)) {
+  if (Stmt.contains(IncomingBB)) {
     Value *Op = PHI->getIncomingValueForBlock(IncomingBB);
 
     // If the current insert block is different from the PHIs incoming block

@@ -28,8 +28,8 @@
 - (void) G {} 	// No warning, implementing its own deprecated method
 @end
 
-__attribute__((deprecated))
-@interface CL // expected-note 2 {{class declared here}} // expected-note 2 {{'CL' has been explicitly marked deprecated here}}
+__attribute__((deprecated)) // expected-note 2 {{'CL' has been explicitly marked deprecated here}}
+@interface CL // expected-note 2 {{class declared here}} 
 @end
 
 @implementation CL // expected-warning {{Implementing deprecated class}}
@@ -64,4 +64,11 @@ __attribute__((deprecated))
 - (id)initSpecialInPrivateHeader {
   return (void *)0;
 }
+@end
+
+__attribute__((deprecated))
+@interface Test(DeprecatedCategory) // expected-note {{category declared here}}
+@end
+
+@implementation Test(DeprecatedCategory) // expected-warning {{Implementing deprecated category}}
 @end

@@ -28,7 +28,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/FileAction.h"
@@ -772,7 +771,6 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_MD5(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    uint64_t a, b;
     StreamGDBRemote response;
     auto Result = llvm::sys::fs::md5_contents(path);
     if (!Result) {

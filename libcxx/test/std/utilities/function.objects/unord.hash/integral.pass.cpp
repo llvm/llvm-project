@@ -31,6 +31,7 @@ test()
     typedef std::hash<T> H;
     static_assert((std::is_same<typename H::argument_type, T>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+    ASSERT_NOEXCEPT(H()(T()));
     H h;
 
     for (int i = 0; i <= 5; ++i)
@@ -64,42 +65,42 @@ int main()
     test<long long>();
     test<unsigned long long>();
 
-//	LWG #2119
+//  LWG #2119
     test<std::ptrdiff_t>();
     test<size_t>();
 
-	test<int8_t>();
-	test<int16_t>();
-	test<int32_t>();
-	test<int64_t>();
+    test<int8_t>();
+    test<int16_t>();
+    test<int32_t>();
+    test<int64_t>();
 
-	test<int_fast8_t>();
-	test<int_fast16_t>();
-	test<int_fast32_t>();
-	test<int_fast64_t>();
+    test<int_fast8_t>();
+    test<int_fast16_t>();
+    test<int_fast32_t>();
+    test<int_fast64_t>();
 
-	test<int_least8_t>();
-	test<int_least16_t>();
-	test<int_least32_t>();
-	test<int_least64_t>();
+    test<int_least8_t>();
+    test<int_least16_t>();
+    test<int_least32_t>();
+    test<int_least64_t>();
 
     test<intmax_t>();
     test<intptr_t>();
 
-	test<uint8_t>();
-	test<uint16_t>();
-	test<uint32_t>();
-	test<uint64_t>();
+    test<uint8_t>();
+    test<uint16_t>();
+    test<uint32_t>();
+    test<uint64_t>();
 
-	test<uint_fast8_t>();
-	test<uint_fast16_t>();
-	test<uint_fast32_t>();
-	test<uint_fast64_t>();
+    test<uint_fast8_t>();
+    test<uint_fast16_t>();
+    test<uint_fast32_t>();
+    test<uint_fast64_t>();
 
-	test<uint_least8_t>();
-	test<uint_least16_t>();
-	test<uint_least32_t>();
-	test<uint_least64_t>();
+    test<uint_least8_t>();
+    test<uint_least16_t>();
+    test<uint_least32_t>();
+    test<uint_least64_t>();
 
     test<uintmax_t>();
     test<uintptr_t>();

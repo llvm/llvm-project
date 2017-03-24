@@ -27,7 +27,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FormattedStream.h"
-#include "AMDGPURuntimeMD.h"
 
 namespace llvm {
 #include "AMDGPUPTNote.h"
@@ -36,8 +35,26 @@ namespace llvm {
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
+//===----------------------------------------------------------------------===//
+// AMDGPUTargetStreamer
+//===----------------------------------------------------------------------===//
+
 AMDGPUTargetStreamer::AMDGPUTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S) {}
+
+void AMDGPUTargetStreamer::EmitStartOfCodeObjectMetadata(const Module &Mod) {
+  CodeObjectMetadataStreamer.begin(Mod);
+}
+
+void AMDGPUTargetStreamer::EmitKernelCodeObjectMetadata(
+    const Function &Func, const amd_kernel_code_t &KernelCode) {
+  CodeObjectMetadataStreamer.emitKernel(Func, KernelCode);
+}
+
+void AMDGPUTargetStreamer::EmitEndOfCodeObjectMetadata() {
+  CodeObjectMetadataStreamer.end();
+  EmitCodeObjectMetadata(CodeObjectMetadataStreamer.toYamlString().get());
+}
 
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetAsmStreamer
@@ -93,24 +110,16 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   OS << "\t.amdgpu_hsa_program_global " << GlobalName << '\n';
 }
 
-void AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
-                                                  const Module &M) {
-  OS << "\t.amdgpu_runtime_metadata\n";
-  OS << getRuntimeMDYAMLString(Features, M);
-  OS << "\n\t.end_amdgpu_runtime_metadata\n";
-}
+bool AMDGPUTargetAsmStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
+  auto VerifiedYamlString = CodeObjectMetadataStreamer.toYamlString(YamlString);
+  if (!VerifiedYamlString)
+    return false;
 
-bool AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
-                                                  StringRef Metadata) {
-  auto VerifiedMetadata = getRuntimeMDYAMLString(Features, Metadata);
-  if (!VerifiedMetadata)
-    return true;
+  OS << '\t' << AMDGPU::CodeObject::MetadataAssemblerDirectiveBegin << '\n';
+  OS << VerifiedYamlString.get();
+  OS << '\t' << AMDGPU::CodeObject::MetadataAssemblerDirectiveEnd << '\n';
 
-  OS << "\t.amdgpu_runtime_metadata";
-  OS << VerifiedMetadata.get();
-  OS << "\t.end_amdgpu_runtime_metadata\n";
-
-  return false;
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -223,11 +232,10 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   Symbol->setBinding(ELF::STB_GLOBAL);
 }
 
-bool AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
-                                                  StringRef Metadata) {
-  auto VerifiedMetadata = getRuntimeMDYAMLString(Features, Metadata);
-  if (!VerifiedMetadata)
-    return true;
+bool AMDGPUTargetELFStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
+  auto VerifiedYamlString = CodeObjectMetadataStreamer.toYamlString(YamlString);
+  if (!VerifiedYamlString)
+    return false;
 
   // Create two labels to mark the beginning and end of the desc field
   // and a MCExpr to calculate the size of the desc field.
@@ -240,18 +248,13 @@ bool AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
 
   EmitAMDGPUNote(
     DescSZ,
-    ElfNote::NT_AMDGPU_HSA_RUNTIME_METADATA,
+    ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_METADATA,
     [&](MCELFStreamer &OS) {
       OS.EmitLabel(DescBegin);
-      OS.EmitBytes(VerifiedMetadata.get());
+      OS.EmitBytes(VerifiedYamlString.get());
       OS.EmitLabel(DescEnd);
     }
   );
 
-  return false;
-}
-
-void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
-                                                  const Module &M) {
-  EmitRuntimeMetadata(Features, getRuntimeMDYAMLString(Features, M));
+  return true;
 }

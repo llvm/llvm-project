@@ -14,6 +14,7 @@ if( LLVM_USE_SANITIZE_COVERAGE )
     FuzzerExtFunctionsDlsym.cpp
     FuzzerExtFunctionsDlsymWin.cpp
     FuzzerExtFunctionsWeak.cpp
+    FuzzerExtraCounters.cpp
     FuzzerIO.cpp
     FuzzerIOPosix.cpp
     FuzzerIOWindows.cpp

@@ -414,6 +414,7 @@ void CodeGenModule::Release() {
     CoverageMapping->emit();
   if (CodeGenOpts.SanitizeCfiCrossDso)
     CodeGenFunction(*this).EmitCfiCheckFail();
+  emitAtAvailableLinkGuard();
   emitLLVMUsed();
   if (SanStats)
     SanStats->finish();

@@ -21,13 +21,21 @@
 
 namespace llvm {
 
+class LLT;
+
 class X86GenRegisterBankInfo : public RegisterBankInfo {
 protected:
+#define GET_TARGET_REGBANK_CLASS
+#include "X86GenRegisterBank.inc"
+#define GET_TARGET_REGBANK_INFO_CLASS
+#include "X86GenRegisterBankInfo.def"
+
   static RegisterBankInfo::PartialMapping PartMappings[];
   static RegisterBankInfo::ValueMapping ValMappings[];
 
-#define GET_TARGET_REGBANK_CLASS
-#include "X86GenRegisterBank.inc"
+  static PartialMappingIdx getPartialMappingIdx(const LLT &Ty, bool isFP);
+  static const RegisterBankInfo::ValueMapping *
+  getValueMapping(PartialMappingIdx Idx, unsigned NumOperands);
 };
 
 class TargetRegisterInfo;
@@ -38,8 +46,8 @@ private:
   /// Get an instruction mapping.
   /// \return An InstructionMappings with a statically allocated
   /// OperandsMapping.
-  static InstructionMapping getOperandsMapping(const MachineInstr &MI,
-                                               bool isFP);
+  static InstructionMapping getSameOperandsMapping(const MachineInstr &MI,
+                                                   bool isFP);
 
 public:
   X86RegisterBankInfo(const TargetRegisterInfo &TRI);
@@ -50,5 +58,5 @@ public:
   InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
 };
 
-} // End llvm namespace.
+} // namespace llvm
 #endif

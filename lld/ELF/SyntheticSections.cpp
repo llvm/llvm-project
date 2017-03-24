@@ -356,8 +356,9 @@ void BuildIdSection::computeHash(
   std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
 
   // Compute hash values.
-  forLoop(0, Chunks.size(),
-          [&](size_t I) { HashFn(Hashes.data() + I * HashSize, Chunks[I]); });
+  parallelFor(0, Chunks.size(), [&](size_t I) {
+    HashFn(Hashes.data() + I * HashSize, Chunks[I]);
+  });
 
   // Write to the final output buffer.
   HashFn(HashBuf, Hashes);
@@ -1033,6 +1034,8 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
     DtFlags |= DF_SYMBOLIC;
   if (Config->ZNodelete)
     DtFlags1 |= DF_1_NODELETE;
+  if (Config->ZNodlopen)
+    DtFlags1 |= DF_1_NOOPEN;
   if (Config->ZNow) {
     DtFlags |= DF_BIND_NOW;
     DtFlags1 |= DF_1_NOW;

@@ -381,15 +381,17 @@ public:
                        ArrayRef<SourceLocation> SelLocs = llvm::None);
 
   // Iterator access to parameter types.
-  typedef std::const_mem_fun_t<QualType, ParmVarDecl> deref_fun;
-  typedef llvm::mapped_iterator<param_const_iterator, deref_fun>
-  param_type_iterator;
+  struct GetTypeFn {
+    QualType operator()(const ParmVarDecl *PD) const { return PD->getType(); }
+  };
+  typedef llvm::mapped_iterator<param_const_iterator, GetTypeFn>
+      param_type_iterator;
 
   param_type_iterator param_type_begin() const {
-    return llvm::map_iterator(param_begin(), deref_fun(&ParmVarDecl::getType));
+    return llvm::map_iterator(param_begin(), GetTypeFn());
   }
   param_type_iterator param_type_end() const {
-    return llvm::map_iterator(param_end(), deref_fun(&ParmVarDecl::getType));
+    return llvm::map_iterator(param_end(), GetTypeFn());
   }
 
   /// createImplicitParams - Used to lazily create the self and cmd

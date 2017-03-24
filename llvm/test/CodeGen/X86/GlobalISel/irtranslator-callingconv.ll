@@ -291,3 +291,20 @@ define double @test_double_args(double %arg1, double %arg2) {
 
   ret double %arg2
 }
+
+define i32 * @test_memop_i32(i32 * %p1) {
+; ALL-LABEL:name:            test_memop_i32
+;X64    liveins: %rdi
+;X64:       %0(p0) = COPY %rdi
+;X64-NEXT:  %rax = COPY %0(p0)
+;X64-NEXT:  RET 0, implicit %rax
+
+;X32: fixedStack:
+;X32:  id: [[STACK0:[0-9]+]], offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+;X32:         %1(p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
+;X32-NEXT:    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.[[STACK0]], align 0)
+;X32-NEXT:    %eax = COPY %0(p0)
+;X32-NEXT:    RET 0, implicit %eax
+
+  ret i32 * %p1;
+}

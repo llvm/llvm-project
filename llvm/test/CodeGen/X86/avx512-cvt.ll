@@ -1107,11 +1107,9 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ; AVX512DQ-NEXT:    vxorpd %zmm2, %zmm2, %zmm2
 ; AVX512DQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k0
 ; AVX512DQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k1
-; AVX512DQ-NEXT:    vpmovm2q %k1, %zmm0
-; AVX512DQ-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpmovm2d %k1, %zmm0
 ; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm1
-; AVX512DQ-NEXT:    vpmovqd %zmm1, %ymm1
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm1
 ; AVX512DQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
 ; AVX512DQ-NEXT:    retq
   %cmpres = fcmp ogt <16 x double> %a, zeroinitializer
@@ -1150,8 +1148,7 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    vxorpd %zmm1, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
-; AVX512DQ-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; AVX512DQ-NEXT:    retq
   %cmpres = fcmp ogt <8 x double> %a, zeroinitializer
@@ -1192,8 +1189,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ; AVX512DQ-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; AVX512DQ-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vcmpltps %zmm0, %zmm1, %k0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
-; AVX512DQ-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512DQ-NEXT:    retq
   %cmpres = fcmp ogt <8 x float> %a, zeroinitializer

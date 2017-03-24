@@ -18,6 +18,9 @@
 - (id)performSelector:(SEL)aSelector;
 - (id)performSelector:(SEL)aSelector withObject:(id)object;
 - (id)performSelector:(SEL)aSelector withObject:(id)object1 withObject:(id)object2;
+
+- (void)performSelector:(SEL)aSelector withObject:(id)anArgument afterDelay:(double)delay inModes:(I *)modes;
+
 @end
 
 @implementation I
@@ -33,10 +36,15 @@
   return [self performSelector : @selector(PlusZero)];
   return [self performSelector : @selector(PlusOne)]; // expected-error {{performSelector names a selector which retains the object}}
 
+  // Avoid the unkown selector warning for more complicated performSelector
+  // variations because it produces too many false positives.
+  [self performSelector: sel1 withObject:0 afterDelay:0 inModes:0];
+
   return [self performSelector: @selector(self)]; // No error, -self is not +1!
 }
 
 - (id)performSelector:(SEL)aSelector { return 0; }
 - (id)performSelector:(SEL)aSelector withObject:(id)object { return 0; }
 - (id)performSelector:(SEL)aSelector withObject:(id)object1 withObject:(id)object2 { return 0; }
+- (void)performSelector:(SEL)aSelector withObject:(id)anArgument afterDelay:(double)delay inModes:(I *)modes { }
 @end

@@ -52,6 +52,17 @@
 #define TEST_HAS_BUILTIN_IDENTIFIER(X) 0
 #endif
 
+#if defined(__clang__)
+#define TEST_COMPILER_CLANG
+# if defined(__apple_build_version__)
+#   define TEST_COMPILER_APPLE_CLANG
+# endif
+#elif defined(_MSC_VER)
+# define TEST_COMPILER_C1XX
+#elif defined(__GNUC__)
+# define TEST_COMPILER_GCC
+#endif
+
 #if defined(__apple_build_version__)
 #define TEST_APPLE_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__clang_major__)
@@ -139,11 +150,16 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
+#if TEST_STD_VER < 11
+#define ASSERT_NOEXCEPT(...)
+#define ASSERT_NOT_NOEXCEPT(...)
+#else
 #define ASSERT_NOEXCEPT(...) \
     static_assert(noexcept(__VA_ARGS__), "Operation must be noexcept")
 
 #define ASSERT_NOT_NOEXCEPT(...) \
     static_assert(!noexcept(__VA_ARGS__), "Operation must NOT be noexcept")
+#endif
 
 /* Macros for testing libc++ specific behavior and extensions */
 #if defined(_LIBCPP_VERSION)

@@ -10,6 +10,7 @@
 #include "FuzzerDictionary.h"
 #include "FuzzerMerge.h"
 #include "FuzzerMutate.h"
+#include "FuzzerTracePC.h"
 #include "FuzzerRandom.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -749,4 +750,26 @@ TEST(Merge, Merge) {
         "STARTED 2 1100\nDONE 2 2 3 \n"
         "STARTED 3 1000\nDONE 3 1  \n",
         {"B", "D"}, 3);
+}
+
+TEST(Fuzzer, ForEachNonZeroByte) {
+  const size_t N = 64;
+  alignas(64) uint8_t Ar[N + 8] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 2, 0, 0, 0, 0, 0, 0,
+    0, 0, 3, 0, 4, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 0, 6, 0, 0,
+    0, 0, 0, 0, 0, 0, 7, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 8,
+    9, 9, 9, 9, 9, 9, 9, 9,
+  };
+  typedef std::vector<std::pair<size_t, uint8_t> > Vec;
+  Vec Res, Expected;
+  auto CB = [&](size_t Idx, uint8_t V) { Res.push_back({Idx, V}); };
+  ForEachNonZeroByte(Ar, Ar + N, 100, CB);
+  Expected = {{108, 1}, {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}, {163, 8}};
+  EXPECT_EQ(Res, Expected);
 }

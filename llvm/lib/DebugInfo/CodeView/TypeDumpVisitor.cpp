@@ -164,9 +164,14 @@ void TypeDumpVisitor::printTypeIndex(StringRef FieldName, TypeIndex TI) const {
   CVTypeDumper::printTypeIndex(*W, FieldName, TI, TypeDB);
 }
 
+void TypeDumpVisitor::printItemIndex(StringRef FieldName, TypeIndex TI) const {
+  CVTypeDumper::printTypeIndex(*W, FieldName, TI, getSourceDB());
+}
+
 Error TypeDumpVisitor::visitTypeBegin(CVType &Record) {
   W->startLine() << getLeafTypeName(Record.Type);
-  W->getOStream() << " (" << HexNumber(TypeDB.getNextTypeIndex().getIndex())
+  W->getOStream() << " ("
+                  << HexNumber(getSourceDB().getNextTypeIndex().getIndex())
                   << ")";
   W->getOStream() << " {\n";
   W->indent();
@@ -212,7 +217,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, StringIdRecord &String) {
-  printTypeIndex("Id", String.getId());
+  printItemIndex("Id", String.getId());
   W->printString("StringData", String.getString());
   return Error::success();
 }
@@ -341,7 +346,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, FuncIdRecord &Func) {
-  printTypeIndex("ParentScope", Func.getParentScope());
+  printItemIndex("ParentScope", Func.getParentScope());
   printTypeIndex("FunctionType", Func.getFunctionType());
   W->printString("Name", Func.getName());
   return Error::success();
@@ -402,7 +407,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         UdtSourceLineRecord &Line) {
   printTypeIndex("UDT", Line.getUDT());
-  printTypeIndex("SourceFile", Line.getSourceFile());
+  printItemIndex("SourceFile", Line.getSourceFile());
   W->printNumber("LineNumber", Line.getLineNumber());
   return Error::success();
 }
@@ -410,7 +415,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         UdtModSourceLineRecord &Line) {
   printTypeIndex("UDT", Line.getUDT());
-  printTypeIndex("SourceFile", Line.getSourceFile());
+  printItemIndex("SourceFile", Line.getSourceFile());
   W->printNumber("LineNumber", Line.getLineNumber());
   W->printNumber("Module", Line.getModule());
   return Error::success();
@@ -421,7 +426,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, BuildInfoRecord &Args) {
 
   ListScope Arguments(*W, "Arguments");
   for (auto Arg : Args.getArgs()) {
-    printTypeIndex("ArgType", Arg);
+    printItemIndex("ArgType", Arg);
   }
   return Error::success();
 }

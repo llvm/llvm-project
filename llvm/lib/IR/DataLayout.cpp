@@ -402,6 +402,18 @@ bool DataLayout::operator==(const DataLayout &Other) const {
   return Ret;
 }
 
+DataLayout::AlignmentsTy::iterator
+DataLayout::findAlignmentLowerBound(AlignTypeEnum AlignType,
+                                    uint32_t BitWidth) {
+  auto Pair = std::make_pair((unsigned)AlignType, BitWidth);
+  return std::lower_bound(Alignments.begin(), Alignments.end(), Pair,
+                          [](const LayoutAlignElem &LHS,
+                             const std::pair<unsigned, uint32_t> &RHS) {
+                            return std::tie(LHS.AlignType, LHS.TypeBitWidth) <
+                                   std::tie(RHS.first, RHS.second);
+                          });
+}
+
 void
 DataLayout::setAlignment(AlignTypeEnum align_type, unsigned abi_align,
                          unsigned pref_align, uint32_t bit_width) {
@@ -420,18 +432,17 @@ DataLayout::setAlignment(AlignTypeEnum align_type, unsigned abi_align,
     report_fatal_error(
         "Preferred alignment cannot be less than the ABI alignment");
 
-  for (LayoutAlignElem &Elem : Alignments) {
-    if (Elem.AlignType == (unsigned)align_type &&
-        Elem.TypeBitWidth == bit_width) {
-      // Update the abi, preferred alignments.
-      Elem.ABIAlign = abi_align;
-      Elem.PrefAlign = pref_align;
-      return;
-    }
+  AlignmentsTy::iterator I = findAlignmentLowerBound(align_type, bit_width);
+  if (I != Alignments.end() &&
+      I->AlignType == (unsigned)align_type && I->TypeBitWidth == bit_width) {
+    // Update the abi, preferred alignments.
+    I->ABIAlign = abi_align;
+    I->PrefAlign = pref_align;
+  } else {
+    // Insert before I to keep the vector sorted.
+    Alignments.insert(I, LayoutAlignElem::get(align_type, abi_align,
+                                              pref_align, bit_width));
   }
-
-  Alignments.push_back(LayoutAlignElem::get(align_type, abi_align,
-                                            pref_align, bit_width));
 }
 
 DataLayout::PointersTy::iterator
@@ -465,45 +476,29 @@ void DataLayout::setPointerAlignment(uint32_t AddrSpace, unsigned ABIAlign,
 unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
                                       uint32_t BitWidth, bool ABIInfo,
                                       Type *Ty) const {
-  // Check to see if we have an exact match and remember the best match we see.
-  int BestMatchIdx = -1;
-  int LargestInt = -1;
-  for (unsigned i = 0, e = Alignments.size(); i != e; ++i) {
-    if (Alignments[i].AlignType == (unsigned)AlignType &&
-        Alignments[i].TypeBitWidth == BitWidth)
-      return ABIInfo ? Alignments[i].ABIAlign : Alignments[i].PrefAlign;
+  AlignmentsTy::const_iterator I = findAlignmentLowerBound(AlignType, BitWidth);
+  // See if we found an exact match. Of if we are looking for an integer type,
+  // but don't have an exact match take the next largest integer. This is where
+  // the lower_bound will point to when it fails an exact match.
+  if (I != Alignments.end() && I->AlignType == (unsigned)AlignType &&
+      (I->TypeBitWidth == BitWidth || AlignType == INTEGER_ALIGN))
+    return ABIInfo ? I->ABIAlign : I->PrefAlign;
 
-    // The best match so far depends on what we're looking for.
-    if (AlignType == INTEGER_ALIGN &&
-        Alignments[i].AlignType == INTEGER_ALIGN) {
-      // The "best match" for integers is the smallest size that is larger than
-      // the BitWidth requested.
-      if (Alignments[i].TypeBitWidth > BitWidth && (BestMatchIdx == -1 ||
-          Alignments[i].TypeBitWidth < Alignments[BestMatchIdx].TypeBitWidth))
-        BestMatchIdx = i;
-      // However, if there isn't one that's larger, then we must use the
-      // largest one we have (see below)
-      if (LargestInt == -1 ||
-          Alignments[i].TypeBitWidth > Alignments[LargestInt].TypeBitWidth)
-        LargestInt = i;
+  if (AlignType == INTEGER_ALIGN) {
+    // If we didn't have a larger value try the largest value we have.
+    if (I != Alignments.begin()) {
+      --I; // Go to the previous entry and see if its an integer.
+      if (I->AlignType == INTEGER_ALIGN)
+        return ABIInfo ? I->ABIAlign : I->PrefAlign;
     }
-  }
-
-  // Okay, we didn't find an exact solution.  Fall back here depending on what
-  // is being looked for.
-  if (BestMatchIdx == -1) {
-    // If we didn't find an integer alignment, fall back on most conservative.
-    if (AlignType == INTEGER_ALIGN) {
-      BestMatchIdx = LargestInt;
-    } else if (AlignType == VECTOR_ALIGN) {
-      // By default, use natural alignment for vector types. This is consistent
-      // with what clang and llvm-gcc do.
-      unsigned Align = getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
-      Align *= cast<VectorType>(Ty)->getNumElements();
-      Align = PowerOf2Ceil(Align);
-      return Align;
-    }
-  }
+  } else if (AlignType == VECTOR_ALIGN) {
+    // By default, use natural alignment for vector types. This is consistent
+    // with what clang and llvm-gcc do.
+    unsigned Align = getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
+    Align *= cast<VectorType>(Ty)->getNumElements();
+    Align = PowerOf2Ceil(Align);
+    return Align;
+   }
 
   // If we still couldn't find a reasonable default alignment, fall back
   // to a simple heuristic that the alignment is the first power of two
@@ -511,15 +506,9 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
   // approximation of reality, and if the user wanted something less
   // less conservative, they should have specified it explicitly in the data
   // layout.
-  if (BestMatchIdx == -1) {
-    unsigned Align = getTypeStoreSize(Ty);
-    Align = PowerOf2Ceil(Align);
-    return Align;
-  }
-
-  // Since we got a "best match" index, just return it.
-  return ABIInfo ? Alignments[BestMatchIdx].ABIAlign
-                 : Alignments[BestMatchIdx].PrefAlign;
+  unsigned Align = getTypeStoreSize(Ty);
+  Align = PowerOf2Ceil(Align);
+  return Align;
 }
 
 namespace {

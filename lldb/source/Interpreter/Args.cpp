@@ -12,15 +12,12 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -632,9 +629,7 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
           add = str[0] == '+';
 
           if (regex_match.GetMatchAtIndex(s, 3, str)) {
-            offset = StringConvert::ToUInt64(str.c_str(), 0, 0, &success);
-
-            if (success) {
+            if (!llvm::StringRef(str).getAsInteger(0, offset)) {
               Error error;
               addr = StringToAddress(exe_ctx, name.c_str(),
                                      LLDB_INVALID_ADDRESS, &error);

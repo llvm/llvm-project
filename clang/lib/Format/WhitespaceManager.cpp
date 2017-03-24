@@ -50,9 +50,9 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
   if (Tok.Finalized)
     return;
   Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
-  Changes.push_back(Change(Tok, /*CreateReplacement=*/true,
-                           Tok.WhitespaceRange, Spaces, StartOfTokenColumn,
-                           Newlines, "", "", InPPDirective && !Tok.IsFirst,
+  Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
+                           Spaces, StartOfTokenColumn, Newlines, "", "",
+                           InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
 }
 
@@ -192,19 +192,54 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   bool FoundMatchOnLine = false;
   int Shift = 0;
+
+  // ScopeStack keeps track of the current scope depth. It contains indices of
+  // the first token on each scope.
+  // We only run the "Matches" function on tokens from the outer-most scope.
+  // However, we do need to pay special attention to one class of tokens
+  // that are not in the outer-most scope, and that is function parameters
+  // which are split across multiple lines, as illustrated by this example:
+  //   double a(int x);
+  //   int    b(int  y,
+  //          double z);
+  // In the above example, we need to take special care to ensure that
+  // 'double z' is indented along with it's owning function 'b'.
+  SmallVector<unsigned, 16> ScopeStack;
+
   for (unsigned i = Start; i != End; ++i) {
-    if (Changes[i].NewlinesBefore > 0) {
-      FoundMatchOnLine = false;
+    if (ScopeStack.size() != 0 &&
+        Changes[i].nestingAndIndentLevel() <
+            Changes[ScopeStack.back()].nestingAndIndentLevel())
+      ScopeStack.pop_back();
+
+    if (i != Start && Changes[i].nestingAndIndentLevel() >
+                          Changes[i - 1].nestingAndIndentLevel())
+      ScopeStack.push_back(i);
+
+    bool InsideNestedScope = ScopeStack.size() != 0;
+
+    if (Changes[i].NewlinesBefore > 0 && !InsideNestedScope) {
       Shift = 0;
+      FoundMatchOnLine = false;
     }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
     // shifted by the same amount
-    if (!FoundMatchOnLine && Matches(Changes[i])) {
+    if (!FoundMatchOnLine && !InsideNestedScope && Matches(Changes[i])) {
       FoundMatchOnLine = true;
       Shift = Column - Changes[i].StartOfTokenColumn;
       Changes[i].Spaces += Shift;
+    }
+
+    // This is for function parameters that are split across multiple lines,
+    // as mentioned in the ScopeStack comment.
+    if (InsideNestedScope && Changes[i].NewlinesBefore > 0) {
+      unsigned ScopeStart = ScopeStack.back();
+      if (Changes[ScopeStart - 1].Tok->is(TT_FunctionDeclarationName) ||
+          (ScopeStart > Start + 1 &&
+           Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName)))
+        Changes[i].Spaces += Shift;
     }
 
     assert(Shift >= 0);
@@ -214,15 +249,37 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
   }
 }
 
-// Walk through all of the changes and find sequences of matching tokens to
-// align. To do so, keep track of the lines and whether or not a matching token
-// was found on a line. If a matching token is found, extend the current
-// sequence. If the current line cannot be part of a sequence, e.g. because
-// there is an empty line before it or it contains only non-matching tokens,
-// finalize the previous sequence.
+// Walk through a subset of the changes, starting at StartAt, and find
+// sequences of matching tokens to align. To do so, keep track of the lines and
+// whether or not a matching token was found on a line. If a matching token is
+// found, extend the current sequence. If the current line cannot be part of a
+// sequence, e.g. because there is an empty line before it or it contains only
+// non-matching tokens, finalize the previous sequence.
+// The value returned is the token on which we stopped, either because we
+// exhausted all items inside Changes, or because we hit a scope level higher
+// than our initial scope.
+// This function is recursive. Each invocation processes only the scope level
+// equal to the initial level, which is the level of Changes[StartAt].
+// If we encounter a scope level greater than the initial level, then we call
+// ourselves recursively, thereby avoiding the pollution of the current state
+// with the alignment requirements of the nested sub-level. This recursive
+// behavior is necessary for aligning function prototypes that have one or more
+// arguments.
+// If this function encounters a scope level less than the initial level,
+// it returns the current position.
+// There is a non-obvious subtlety in the recursive behavior: Even though we
+// defer processing of nested levels to recursive invocations of this
+// function, when it comes time to align a sequence of tokens, we run the
+// alignment on the entire sequence, including the nested levels.
+// When doing so, most of the nested tokens are skipped, because their
+// alignment was already handled by the recursive invocations of this function.
+// However, the special exception is that we do NOT skip function parameters
+// that are split across multiple lines. See the test case in FormatTest.cpp
+// that mentions "split function parameter alignment" for an example of this.
 template <typename F>
-static void AlignTokens(const FormatStyle &Style, F &&Matches,
-                        SmallVector<WhitespaceManager::Change, 16> &Changes) {
+static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
+                            SmallVector<WhitespaceManager::Change, 16> &Changes,
+                            unsigned StartAt) {
   unsigned MinColumn = 0;
   unsigned MaxColumn = UINT_MAX;
 
@@ -230,14 +287,11 @@ static void AlignTokens(const FormatStyle &Style, F &&Matches,
   unsigned StartOfSequence = 0;
   unsigned EndOfSequence = 0;
 
-  // Keep track of the nesting level of matching tokens, i.e. the number of
-  // surrounding (), [], or {}. We will only align a sequence of matching
-  // token that share the same scope depth.
-  //
-  // FIXME: This could use FormatToken::NestingLevel information, but there is
-  // an outstanding issue wrt the brace scopes.
-  unsigned NestingLevelOfLastMatch = 0;
-  unsigned NestingLevel = 0;
+  // Measure the scope level (i.e. depth of (), [], {}) of the first token, and
+  // abort when we hit any token in a higher scope than the starting one.
+  auto NestingAndIndentLevel = StartAt < Changes.size()
+                                   ? Changes[StartAt].nestingAndIndentLevel()
+                                   : std::pair<unsigned, unsigned>(0, 0);
 
   // Keep track of the number of commas before the matching tokens, we will only
   // align a sequence of matching tokens if they are preceded by the same number
@@ -265,7 +319,11 @@ static void AlignTokens(const FormatStyle &Style, F &&Matches,
     EndOfSequence = 0;
   };
 
-  for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
+  unsigned i = StartAt;
+  for (unsigned e = Changes.size(); i != e; ++i) {
+    if (Changes[i].nestingAndIndentLevel() < NestingAndIndentLevel)
+      break;
+
     if (Changes[i].NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
       EndOfSequence = i;
@@ -279,29 +337,22 @@ static void AlignTokens(const FormatStyle &Style, F &&Matches,
 
     if (Changes[i].Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
-    } else if (Changes[i].Tok->isOneOf(tok::r_brace, tok::r_paren,
-                                       tok::r_square)) {
-      --NestingLevel;
-    } else if (Changes[i].Tok->isOneOf(tok::l_brace, tok::l_paren,
-                                       tok::l_square)) {
-      // We want sequences to skip over child scopes if possible, but not the
-      // other way around.
-      NestingLevelOfLastMatch = std::min(NestingLevelOfLastMatch, NestingLevel);
-      ++NestingLevel;
+    } else if (Changes[i].nestingAndIndentLevel() > NestingAndIndentLevel) {
+      // Call AlignTokens recursively, skipping over this scope block.
+      unsigned StoppedAt = AlignTokens(Style, Matches, Changes, i);
+      i = StoppedAt - 1;
+      continue;
     }
 
     if (!Matches(Changes[i]))
       continue;
 
     // If there is more than one matching token per line, or if the number of
-    // preceding commas, or the scope depth, do not match anymore, end the
-    // sequence.
-    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch ||
-        NestingLevel != NestingLevelOfLastMatch)
+    // preceding commas, do not match anymore, end the sequence.
+    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch)
       AlignCurrentSequence();
 
     CommasBeforeLastMatch = CommasBeforeMatch;
-    NestingLevelOfLastMatch = NestingLevel;
     FoundMatchOnLine = true;
 
     if (StartOfSequence == 0)
@@ -324,8 +375,9 @@ static void AlignTokens(const FormatStyle &Style, F &&Matches,
     MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
   }
 
-  EndOfSequence = Changes.size();
+  EndOfSequence = i;
   AlignCurrentSequence();
+  return i;
 }
 
 void WhitespaceManager::alignConsecutiveAssignments() {
@@ -344,7 +396,7 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 
                 return C.Tok->is(tok::equal);
               },
-              Changes);
+              Changes, /*StartAt=*/0);
 }
 
 void WhitespaceManager::alignConsecutiveDeclarations() {
@@ -357,13 +409,15 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   //   const char* const* v1;
   //   float const* v2;
   //   SomeVeryLongType const& v3;
-
   AlignTokens(Style,
               [](Change const &C) {
-                return C.Tok->isOneOf(TT_StartOfName,
-                                      TT_FunctionDeclarationName);
+                // tok::kw_operator is necessary for aligning operator overload
+                // definitions.
+                return C.Tok->is(TT_StartOfName) ||
+                       C.Tok->is(TT_FunctionDeclarationName) ||
+                       C.Tok->is(tok::kw_operator);
               },
-              Changes);
+              Changes, /*StartAt=*/0);
 }
 
 void WhitespaceManager::alignTrailingComments() {

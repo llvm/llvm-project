@@ -1286,6 +1286,10 @@ private:
   /// Emit any vtables which we deferred and still have a use for.
   void EmitDeferredVTables();
 
+  /// Emit a dummy function that reference a CoreFoundation symbol when
+  /// @available is used on Darwin.
+  void emitAtAvailableLinkGuard();
+
   /// Emit the llvm.used and llvm.compiler.used metadata.
   void emitLLVMUsed();
 

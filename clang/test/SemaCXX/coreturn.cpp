@@ -1,24 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wno-unreachable-code -Wno-unused-value
+#include "Inputs/std-coroutine.h"
 
-namespace std {
-namespace experimental {
-
-template <class Ret, typename... T>
-struct coroutine_traits { using promise_type = typename Ret::promise_type; };
-
-template <class Promise = void>
-struct coroutine_handle {
-  static coroutine_handle from_address(void *);
-};
-template <>
-struct coroutine_handle<void> {
-  template <class PromiseType>
-  coroutine_handle(coroutine_handle<PromiseType>);
-  static coroutine_handle from_address(void *);
-};
-
-}
-}
+using std::experimental::suspend_always;
+using std::experimental::suspend_never;
 
 struct awaitable {
   bool await_ready();
@@ -26,23 +10,12 @@ struct awaitable {
   void await_resume();
 } a;
 
-struct suspend_always {
-  bool await_ready() { return false; }
-  void await_suspend(std::experimental::coroutine_handle<>) {}
-  void await_resume() {}
-};
-
-struct suspend_never {
-  bool await_ready() { return true; }
-  void await_suspend(std::experimental::coroutine_handle<>) {}
-  void await_resume() {}
-};
-
 struct promise_void {
   void get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void return_void();
+  void unhandled_exception();
 };
 
 struct promise_float {
@@ -50,6 +23,7 @@ struct promise_float {
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void return_void();
+  void unhandled_exception();
 };
 
 struct promise_int {
@@ -57,6 +31,7 @@ struct promise_int {
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void return_value(int);
+  void unhandled_exception();
 };
 
 template <typename... T>

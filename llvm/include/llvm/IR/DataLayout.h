@@ -118,8 +118,19 @@ private:
 
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// \brief Primitive type alignment data.
-  SmallVector<LayoutAlignElem, 16> Alignments;
+  /// \brief Primitive type alignment data. This is sorted by type and bit
+  /// width during construction.
+  typedef SmallVector<LayoutAlignElem, 16> AlignmentsTy;
+  AlignmentsTy Alignments;
+
+  AlignmentsTy::const_iterator
+  findAlignmentLowerBound(AlignTypeEnum AlignType, uint32_t BitWidth) const {
+    return const_cast<DataLayout *>(this)->findAlignmentLowerBound(AlignType,
+                                                                   BitWidth);
+  }
+
+  AlignmentsTy::iterator
+  findAlignmentLowerBound(AlignTypeEnum AlignType, uint32_t BitWidth);
 
   /// \brief The string representation used to create this DataLayout
   std::string StringRepresentation;

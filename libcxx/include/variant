@@ -1562,7 +1562,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
   using result_type = size_t;
 
   inline _LIBCPP_INLINE_VISIBILITY
-  result_type operator()(const argument_type&) const {
+  result_type operator()(const argument_type&) const _NOEXCEPT {
     return 66740831; // return a fundamentally attractive random value.
   }
 };

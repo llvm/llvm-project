@@ -28,7 +28,15 @@ public:
   TypeDumpVisitor(TypeDatabase &TypeDB, ScopedPrinter *W, bool PrintRecordBytes)
       : W(W), PrintRecordBytes(PrintRecordBytes), TypeDB(TypeDB) {}
 
+  /// When dumping types from an IPI stream in a PDB, a type index may refer to
+  /// a type or an item ID. The dumper will lookup the "name" of the index in
+  /// the item database if appropriate. If ItemDB is null, it will use TypeDB,
+  /// which is correct when dumping types from an object file (/Z7).
+  void setItemDB(TypeDatabase &DB) { ItemDB = &DB; }
+
   void printTypeIndex(StringRef FieldName, TypeIndex TI) const;
+
+  void printItemIndex(StringRef FieldName, TypeIndex TI) const;
 
   /// Action to take on unknown types. By default, they are ignored.
   Error visitUnknownType(CVType &Record) override;
@@ -54,11 +62,17 @@ private:
   void printMemberAttributes(MemberAccess Access, MethodKind Kind,
                              MethodOptions Options);
 
+  /// Get the database of indices for the stream that we are dumping. If ItemDB
+  /// is set, then we must be dumping an item (IPI) stream. This will also
+  /// always get the appropriate DB for printing item names.
+  TypeDatabase &getSourceDB() const { return ItemDB ? *ItemDB : TypeDB; }
+
   ScopedPrinter *W;
 
   bool PrintRecordBytes = false;
 
   TypeDatabase &TypeDB;
+  TypeDatabase *ItemDB = nullptr;
 };
 
 } // end namespace codeview

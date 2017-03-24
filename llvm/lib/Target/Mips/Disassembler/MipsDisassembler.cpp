@@ -2264,7 +2264,14 @@ static DecodeStatus DecodeInsSize(MCInst &Inst,
                                   const void *Decoder) {
   // First we need to grab the pos(lsb) from MCInst.
   int Pos = Inst.getOperand(2).getImm();
-  int Size = (int) Insn - Pos + 1;
+  if (Inst.getOpcode() == Mips::DINSU)
+    Pos += 32;
+  int Size;
+  if (Inst.getOpcode() == Mips::DINSM ||
+      Inst.getOpcode() == Mips::DINSU)
+    Size = (int) Insn - Pos + 33;
+  else
+    Size = (int) Insn - Pos + 1;
   Inst.addOperand(MCOperand::createImm(SignExtend32<16>(Size)));
   return MCDisassembler::Success;
 }
