@@ -822,6 +822,8 @@ public:
   enum FailureKind {
     /// \brief Too many initializers provided for a reference.
     FK_TooManyInitsForReference,
+    /// \brief Reference initialized from a parenthesized initializer list.
+    FK_ParenthesizedListInitForReference,
     /// \brief Array must be initialized with an initializer list.
     FK_ArrayNeedsInitList,
     /// \brief Array must be initialized with an initializer list or a 
@@ -866,6 +868,8 @@ public:
     FK_ConversionFromPropertyFailed,
     /// \brief Too many initializers for scalar
     FK_TooManyInitsForScalar,
+    /// \brief Scalar initialized from a parenthesized initializer list.
+    FK_ParenthesizedListInitForScalar,
     /// \brief Reference initialization from an initializer list
     FK_ReferenceBindingToInitList,
     /// \brief Initialization of some unused destination type with an
@@ -892,7 +896,7 @@ public:
     /// having its address taken.
     FK_AddressOfUnaddressableFunction,
     /// \brief List-copy-initialization chose an explicit constructor.
-    FK_ExplicitConstructor
+    FK_ExplicitConstructor,
   };
   
 private:

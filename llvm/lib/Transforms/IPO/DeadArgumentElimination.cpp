@@ -194,6 +194,9 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
           cast<CallInst>(Call)->getTailCallKind());
     }
     New->setDebugLoc(Call->getDebugLoc());
+    uint64_t W;
+    if (Call->extractProfTotalWeight(W))
+      New->setProfWeight(W);
 
     Args.clear();
 
@@ -901,6 +904,9 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
           cast<CallInst>(Call)->getTailCallKind());
     }
     New->setDebugLoc(Call->getDebugLoc());
+    uint64_t W;
+    if (Call->extractProfTotalWeight(W))
+      New->setProfWeight(W);
 
     Args.clear();
 

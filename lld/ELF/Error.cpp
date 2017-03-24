@@ -20,10 +20,10 @@
 #include <unistd.h>
 #endif
 
-using namespace lld::elf;
 using namespace llvm;
 
-namespace lld {
+using namespace lld;
+using namespace lld::elf;
 
 uint64_t elf::ErrorCount;
 raw_ostream *elf::ErrorOS;
@@ -101,5 +101,3 @@ void elf::fatal(const Twine &Msg) {
   *ErrorOS << Msg << "\n";
   exitLld(1);
 }
-
-} // namespace lld
