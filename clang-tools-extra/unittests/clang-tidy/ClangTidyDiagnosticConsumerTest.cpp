@@ -66,6 +66,13 @@ TEST(GlobList, Simple) {
   EXPECT_FALSE(Filter.contains("bbb"));
 }
 
+TEST(GlobList, WhitespacesAtBegin) {
+  GlobList Filter("-*,   a.b.*");
+
+  EXPECT_TRUE(Filter.contains("a.b.c"));
+  EXPECT_FALSE(Filter.contains("b.c"));
+}
+
 TEST(GlobList, Complex) {
   GlobList Filter("*,-a.*, -b.*,   a.1.* ,-a.1.A.*,-..,-...,-..+,-*$, -*qwe* ");
 

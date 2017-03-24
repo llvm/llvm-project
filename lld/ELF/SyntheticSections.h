@@ -154,9 +154,9 @@ private:
 };
 
 // BssSection is used to reserve space for copy relocations and common symbols.
-// We create three instances of this class for .bss, .bss.rel.ro and "COMMON".
-// .bss is used for writable symbols, .bss.rel.ro is used for read-only symbols
-// and latter used for common symbols.
+// We create three instances of this class for .bss, .bss.rel.ro and "COMMON",
+// that are used for writable symbols, read-only symbols and common symbols,
+// respectively.
 class BssSection final : public SyntheticSection {
 public:
   BssSection(StringRef Name);

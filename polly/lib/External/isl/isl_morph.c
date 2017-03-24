@@ -83,19 +83,21 @@ __isl_give isl_morph *isl_morph_cow(__isl_take isl_morph *morph)
 	return isl_morph_dup(morph);
 }
 
-void isl_morph_free(__isl_take isl_morph *morph)
+__isl_null isl_morph *isl_morph_free(__isl_take isl_morph *morph)
 {
 	if (!morph)
-		return;
+		return NULL;
 
 	if (--morph->ref > 0)
-		return;
+		return NULL;
 
 	isl_basic_set_free(morph->dom);
 	isl_basic_set_free(morph->ran);
 	isl_mat_free(morph->map);
 	isl_mat_free(morph->inv);
 	free(morph);
+
+	return NULL;
 }
 
 /* Is "morph" an identity on the parameters?

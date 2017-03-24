@@ -182,7 +182,7 @@ def main():
     tmpdir = tempfile.mkdtemp()
 
   # Build up a big regexy filter from all command line arguments.
-  file_name_re = re.compile('(' + ')|('.join(args.files) + ')')
+  file_name_re = re.compile('|'.join(args.files))
 
   try:
     # Spin up a bunch of tidy-launching threads.

@@ -109,15 +109,17 @@ public:
     lock_guard& operator=(lock_guard const&) = delete;
 };
 
-template <class... MutexTypes> // Variadic lock_guard only provided in ABI V2.
-class lock_guard
+template <class... MutexTypes>
+class scoped_lock // C++17
 {
 public:
-    explicit lock_guard(MutexTypes&... m);
-    lock_guard(MutexTypes&... m, adopt_lock_t);
-    ~lock_guard();
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
+    using mutex_type = Mutex;  // If MutexTypes... consists of the single type Mutex
+
+    explicit scoped_lock(MutexTypes&... m);
+    scoped_lock(MutexTypes&... m, adopt_lock_t);
+    ~scoped_lock();
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
 private:
     tuple<MutexTypes&...> pm; // exposition only
 };
@@ -614,50 +616,72 @@ call_once(once_flag& __flag, const _Callable& __func)
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
+#if _LIBCPP_STD_VER > 14
+template <class ..._Mutexes>
+class _LIBCPP_TEMPLATE_VIS scoped_lock;
 
-#if defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD) \
-    && !defined(_LIBCPP_CXX03_LANG)
 template <>
-class _LIBCPP_TEMPLATE_VIS lock_guard<> {
+class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
 public:
-    explicit lock_guard() {}
-    ~lock_guard() = default;
+    explicit scoped_lock() {}
+    ~scoped_lock() = default;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit lock_guard(adopt_lock_t) {}
+    explicit scoped_lock(adopt_lock_t) {}
 
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+};
+
+template <class _Mutex>
+class _LIBCPP_TEMPLATE_VIS scoped_lock<_Mutex> {
+public:
+    typedef _Mutex  mutex_type;
+private:
+    mutex_type& __m_;
+public:
+    explicit scoped_lock(mutex_type & __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+        : __m_(__m) {__m_.lock();}
+
+    ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+        : __m_(__m) {}
+    
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
 };
 
 template <class ..._MArgs>
-class _LIBCPP_TEMPLATE_VIS lock_guard
+class _LIBCPP_TEMPLATE_VIS scoped_lock
 {
-    static_assert(sizeof...(_MArgs) >= 2, "At least 2 lock types required");
+    static_assert(sizeof...(_MArgs) > 1, "At least 2 lock types required");
     typedef tuple<_MArgs&...> _MutexTuple;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    explicit lock_guard(_MArgs&... __margs)
+    explicit scoped_lock(_MArgs&... __margs)
       : __t_(__margs...)
     {
         _VSTD::lock(__margs...);
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    lock_guard(_MArgs&... __margs, adopt_lock_t)
+    scoped_lock(_MArgs&... __margs, adopt_lock_t)
         : __t_(__margs...)
     {
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    ~lock_guard() {
+    ~scoped_lock() {
         typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
         __unlock_unpack(_Indices{}, __t_);
     }
 
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
 
 private:
     template <size_t ..._Indx>
@@ -669,7 +693,7 @@ private:
     _MutexTuple __t_;
 };
 
-#endif // _LIBCPP_ABI_VARIADIC_LOCK_GUARD
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

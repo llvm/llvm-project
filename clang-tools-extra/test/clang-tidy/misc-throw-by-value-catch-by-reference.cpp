@@ -62,7 +62,7 @@ void catchByValue() {
   try {
     testThrowFunc();
   } catch (logic_error e) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: catch handler catches a pointer value; should throw a non-pointer value and catch by reference instead [misc-throw-by-value-catch-by-reference]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: catch handler catches by value; should catch by reference instead [misc-throw-by-value-catch-by-reference]
   }
 }
 

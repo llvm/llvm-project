@@ -8,34 +8,38 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <mutex>
 
-// template <class ...Mutex> class lock_guard;
+// template <class ...Mutex> class scoped_lock;
 
-// lock_guard(lock_guard const&) = delete;
+// scoped_lock(scoped_lock const&) = delete;
 
-// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
+#include "test_macros.h"
 
 int main()
 {
     using M = std::mutex;
     M m0, m1, m2;
     {
-        using LG = std::lock_guard<>;
+        using LG = std::scoped_lock<>;
         const LG Orig;
         LG Copy(Orig); // expected-error{{call to deleted constructor of 'LG'}}
     }
     {
-        using LG = std::lock_guard<M, M>;
+        using LG = std::scoped_lock<M>;
+        const LG Orig(m0);
+        LG Copy(Orig); // expected-error{{call to deleted constructor of 'LG'}}
+    }
+    {
+        using LG = std::scoped_lock<M, M>;
         const LG Orig(m0, m1);
         LG Copy(Orig); // expected-error{{call to deleted constructor of 'LG'}}
     }
     {
-        using LG = std::lock_guard<M, M, M>;
+        using LG = std::scoped_lock<M, M, M>;
         const LG Orig(m0, m1, m2);
         LG Copy(Orig); // expected-error{{call to deleted constructor of 'LG'}}
     }

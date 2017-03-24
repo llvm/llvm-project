@@ -413,8 +413,10 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 __vector_base<_Tp, _Allocator>::__destruct_at_end(pointer __new_last) _NOEXCEPT
 {
-    while (__new_last != __end_)
-        __alloc_traits::destroy(__alloc(), _VSTD::__to_raw_pointer(--__end_));
+    pointer __soon_to_be_end = __end_;
+    while (__new_last != __soon_to_be_end)
+        __alloc_traits::destroy(__alloc(), _VSTD::__to_raw_pointer(--__soon_to_be_end));
+    __end_ = __new_last;
 }
 
 template <class _Tp, class _Allocator>

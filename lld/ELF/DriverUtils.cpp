@@ -129,7 +129,8 @@ void elf::printHelp(const char *Argv0) {
   // Here, we print out all the targets that we support.
   outs() << Argv0 << ": supported targets: "
          << "elf32-i386 elf32-iamcu elf32-littlearm elf32-powerpc "
-         << "elf32-tradbigmips elf32-tradlittlemips elf32-x86-64 "
+         << "elf32-tradbigmips elf32-tradlittlemips "
+         << "elf32-ntradbigmips elf32-ntradlittlemips elf32-x86-64 "
          << "elf64-amdgpu elf64-littleaarch64 elf64-powerpc "
          << "elf64-tradbigmips elf64-tradlittlemips elf64-x86-64\n";
 }
