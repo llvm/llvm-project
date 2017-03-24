@@ -52,11 +52,17 @@ namespace {
 /// - If the type record already exists in the destination stream, discard it
 ///   and update the type index map to forward the source type index to the
 ///   existing destination type index.
+///
+/// As an additional complication, type stream merging actually produces two
+/// streams: an item (or IPI) stream and a type stream, as this is what is
+/// actually stored in the final PDB. We choose which records go where by
+/// looking at the record kind.
 class TypeStreamMerger : public TypeVisitorCallbacks {
 public:
-  TypeStreamMerger(TypeTableBuilder &DestStream, TypeServerHandler *Handler)
-      : DestStream(DestStream), FieldListBuilder(DestStream), Handler(Handler) {
-  }
+  TypeStreamMerger(TypeTableBuilder &DestIdStream,
+                   TypeTableBuilder &DestTypeStream, TypeServerHandler *Handler)
+      : DestIdStream(DestIdStream), DestTypeStream(DestTypeStream),
+        FieldListBuilder(DestTypeStream), Handler(Handler) {}
 
 /// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
@@ -85,7 +91,18 @@ private:
           std::move(*LastError),
           llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
     }
-    IndexMap.push_back(DestStream.writeKnownType(R));
+    IndexMap.push_back(DestTypeStream.writeKnownType(R));
+    return Error::success();
+  }
+
+  template <typename RecordType>
+  Error writeIdRecord(RecordType &R, bool RemapSuccess) {
+    if (!RemapSuccess) {
+      LastError = joinErrors(
+          std::move(*LastError),
+          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
+    }
+    IndexMap.push_back(DestIdStream.writeKnownType(R));
     return Error::success();
   }
 
@@ -104,7 +121,8 @@ private:
 
   BumpPtrAllocator Allocator;
 
-  TypeTableBuilder &DestStream;
+  TypeTableBuilder &DestIdStream;
+  TypeTableBuilder &DestTypeStream;
   FieldListRecordBuilder FieldListBuilder;
   TypeServerHandler *Handler;
 
@@ -158,6 +176,62 @@ bool TypeStreamMerger::remapIndex(TypeIndex &Idx) {
   return false;
 }
 
+//----------------------------------------------------------------------------//
+// Item records
+//----------------------------------------------------------------------------//
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, FuncIdRecord &R) {
+  bool Success = true;
+  Success &= remapIndex(R.ParentScope);
+  Success &= remapIndex(R.FunctionType);
+  return writeIdRecord(R, Success);
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, MemberFuncIdRecord &R) {
+  bool Success = true;
+  Success &= remapIndex(R.ClassType);
+  Success &= remapIndex(R.FunctionType);
+  return writeIdRecord(R, Success);
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, StringIdRecord &R) {
+  return writeIdRecord(R, remapIndex(R.Id));
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, StringListRecord &R) {
+  bool Success = true;
+  for (TypeIndex &Str : R.StringIndices)
+    Success &= remapIndex(Str);
+  return writeIdRecord(R, Success);
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, BuildInfoRecord &R) {
+  bool Success = true;
+  for (TypeIndex &Arg : R.ArgIndices)
+    Success &= remapIndex(Arg);
+  return writeIdRecord(R, Success);
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, UdtSourceLineRecord &R) {
+  bool Success = true;
+  Success &= remapIndex(R.UDT);
+  Success &= remapIndex(R.SourceFile);
+  // FIXME: Translate UdtSourceLineRecord into UdtModSourceLineRecords in the
+  // IPI stream.
+  return writeIdRecord(R, Success);
+}
+
+Error TypeStreamMerger::visitKnownRecord(CVType &, UdtModSourceLineRecord &R) {
+  bool Success = true;
+  Success &= remapIndex(R.UDT);
+  Success &= remapIndex(R.SourceFile);
+  return writeIdRecord(R, Success);
+}
+
+//----------------------------------------------------------------------------//
+// Type records
+//----------------------------------------------------------------------------//
+
 Error TypeStreamMerger::visitKnownRecord(CVType &, ModifierRecord &R) {
   return writeRecord(R, remapIndex(R.ModifiedType));
 }
@@ -178,24 +252,10 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, MemberFunctionRecord &R) {
   return writeRecord(R, Success);
 }
 
-Error TypeStreamMerger::visitKnownRecord(CVType &, MemberFuncIdRecord &R) {
-  bool Success = true;
-  Success &= remapIndex(R.ClassType);
-  Success &= remapIndex(R.FunctionType);
-  return writeRecord(R, Success);
-}
-
 Error TypeStreamMerger::visitKnownRecord(CVType &, ArgListRecord &R) {
   bool Success = true;
   for (TypeIndex &Arg : R.ArgIndices)
     Success &= remapIndex(Arg);
-  return writeRecord(R, Success);
-}
-
-Error TypeStreamMerger::visitKnownRecord(CVType &, StringListRecord &R) {
-  bool Success = true;
-  for (TypeIndex &Str : R.StringIndices)
-    Success &= remapIndex(Str);
   return writeRecord(R, Success);
 }
 
@@ -245,38 +305,6 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, TypeServer2Record &R) {
   return writeRecord(R, true);
 }
 
-Error TypeStreamMerger::visitKnownRecord(CVType &, StringIdRecord &R) {
-  return writeRecord(R, remapIndex(R.Id));
-}
-
-Error TypeStreamMerger::visitKnownRecord(CVType &, FuncIdRecord &R) {
-  bool Success = true;
-  Success &= remapIndex(R.ParentScope);
-  Success &= remapIndex(R.FunctionType);
-  return writeRecord(R, Success);
-}
-
-Error TypeStreamMerger::visitKnownRecord(CVType &, UdtSourceLineRecord &R) {
-  bool Success = true;
-  Success &= remapIndex(R.UDT);
-  Success &= remapIndex(R.SourceFile);
-  return writeRecord(R, Success);
-}
-
-Error TypeStreamMerger::visitKnownRecord(CVType &, UdtModSourceLineRecord &R) {
-  bool Success = true;
-  Success &= remapIndex(R.UDT);
-  Success &= remapIndex(R.SourceFile);
-  return writeRecord(R, Success);
-}
-
-Error TypeStreamMerger::visitKnownRecord(CVType &, BuildInfoRecord &R) {
-  bool Success = true;
-  for (TypeIndex &Arg : R.ArgIndices)
-    Success &= remapIndex(Arg);
-  return writeRecord(R, Success);
-}
-
 Error TypeStreamMerger::visitKnownRecord(CVType &, VFTableRecord &R) {
   bool Success = true;
   Success &= remapIndex(R.CompleteClass);
@@ -299,6 +327,10 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
     return EC;
   return Error::success();
 }
+
+//----------------------------------------------------------------------------//
+// Member records
+//----------------------------------------------------------------------------//
 
 Error TypeStreamMerger::visitKnownMember(CVMemberRecord &,
                                          NestedTypeRecord &R) {
@@ -381,8 +413,10 @@ Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   return Ret;
 }
 
-Error llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestStream,
+Error llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestIdStream,
+                                       TypeTableBuilder &DestTypeStream,
                                        TypeServerHandler *Handler,
                                        const CVTypeArray &Types) {
-  return TypeStreamMerger(DestStream, Handler).mergeStream(Types);
+  return TypeStreamMerger(DestIdStream, DestTypeStream, Handler)
+      .mergeStream(Types);
 }

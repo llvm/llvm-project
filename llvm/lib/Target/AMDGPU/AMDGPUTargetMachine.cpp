@@ -253,15 +253,29 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
     FSAttr.getValueAsString();
 }
 
+static ImmutablePass *createAMDGPUExternalAAWrapperPass() {
+  return createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
+      if (auto *WrapperPass = P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
+        AAR.addAAResult(WrapperPass->getResult());
+      });
+}
+
 void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.DivergentTarget = true;
 
   bool Internalize = InternalizeSymbols &&
                      (getOptLevel() > CodeGenOpt::None) &&
                      (getTargetTriple().getArch() == Triple::amdgcn);
+  bool AMDGPUAA = EnableAMDGPUAliasAnalysis && getOptLevel() > CodeGenOpt::None;
+
   Builder.addExtension(
     PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [Internalize](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+    [Internalize, AMDGPUAA](const PassManagerBuilder &,
+                            legacy::PassManagerBase &PM) {
+      if (AMDGPUAA) {
+        PM.add(createAMDGPUAAWrapperPass());
+        PM.add(createAMDGPUExternalAAWrapperPass());
+      }
       PM.add(createAMDGPUUnifyMetadataPass());
       if (Internalize) {
         PM.add(createInternalizePass([=](const GlobalValue &GV) -> bool {
@@ -284,6 +298,15 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         }));
         PM.add(createGlobalDCEPass());
         PM.add(createAMDGPUAlwaysInlinePass());
+      }
+  });
+
+  Builder.addExtension(
+    PassManagerBuilder::EP_EarlyAsPossible,
+    [AMDGPUAA](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      if (AMDGPUAA) {
+        PM.add(createAMDGPUAAWrapperPass());
+        PM.add(createAMDGPUExternalAAWrapperPass());
       }
   });
 }

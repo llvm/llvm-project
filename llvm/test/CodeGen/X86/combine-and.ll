@@ -245,3 +245,29 @@ define <4 x i32> @and_or_zext_v4i16(<4 x i16> %a0) {
   %3 = and <4 x i32> %2, <i32 65536, i32 65536, i32 65536, i32 65536>
   ret <4 x i32> %3
 }
+
+;
+; known sign bits folding
+;
+
+define <8 x i16> @ashr_mask1_v8i16(<8 x i16> %a0) {
+; CHECK-LABEL: ashr_mask1_v8i16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    psraw $15, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = and <8 x i16> %1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  ret <8 x i16> %2
+}
+
+define <4 x i32> @ashr_mask7_v4i32(<4 x i32> %a0) {
+; CHECK-LABEL: ashr_mask7_v4i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %1 = ashr <4 x i32> %a0, <i32 31, i32 31, i32 31, i32 31>
+  %2 = and <4 x i32> %1, <i32 7, i32 7, i32 7, i32 7>
+  ret <4 x i32> %2
+}

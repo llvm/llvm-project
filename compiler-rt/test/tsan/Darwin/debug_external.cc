@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../test.h"
+
 extern "C" {
 void __tsan_on_report(void *report);
 int __tsan_get_report_loc(void *report, unsigned long idx, const char **type,
@@ -20,11 +22,13 @@ void __tsan_external_assign_tag(void *addr, void *tag);
 }
 
 void *Thread(void *arg) {
+  barrier_wait(&barrier);
   *((long *)arg) = 42;
   return NULL;
 }
 
 int main() {
+  barrier_init(&barrier, 2);
   void *tag = __tsan_external_register_tag("MyObject");
   long *obj = (long *)malloc(sizeof(long));
   fprintf(stderr, "obj = %p\n", obj);
@@ -34,6 +38,7 @@ int main() {
   pthread_t t;
   pthread_create(&t, 0, Thread, obj);
   *obj = 41;
+  barrier_wait(&barrier);
   pthread_join(t, 0);
   fprintf(stderr, "Done.\n");
   return 0;

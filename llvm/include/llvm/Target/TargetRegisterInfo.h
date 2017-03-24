@@ -45,7 +45,6 @@ public:
 
   // Instance variables filled by tablegen, do not use!
   const MCRegisterClass *MC;
-  const uint16_t SpillSize, SpillAlignment;
   const vt_iterator VTs;
   const uint32_t *SubClassMask;
   const uint16_t *SuperRegIndices;
@@ -95,10 +94,10 @@ public:
 
   /// Return the size of the register in bytes, which is also the size
   /// of a stack slot allocated to hold a spilled copy of this register.
-  unsigned getSize() const { return SpillSize; }
+  unsigned getSize() const { return MC->getSize(); }
 
   /// Return the minimum required alignment for a register of this class.
-  unsigned getAlignment() const { return SpillAlignment; }
+  unsigned getAlignment() const { return MC->getAlignment(); }
 
   /// Return the cost of copying a value between two registers in this class.
   /// A negative number means the register class is very expensive

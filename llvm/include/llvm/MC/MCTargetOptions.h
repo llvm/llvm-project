@@ -67,31 +67,6 @@ public:
   StringRef getABIName() const;
 };
 
-inline bool operator==(const MCTargetOptions &LHS, const MCTargetOptions &RHS) {
-#define ARE_EQUAL(X) LHS.X == RHS.X
-  return (ARE_EQUAL(SanitizeAddress) &&
-          ARE_EQUAL(MCRelaxAll) &&
-          ARE_EQUAL(MCNoExecStack) &&
-          ARE_EQUAL(MCFatalWarnings) &&
-          ARE_EQUAL(MCNoWarn) &&
-          ARE_EQUAL(MCNoDeprecatedWarn) &&
-          ARE_EQUAL(MCSaveTempLabels) &&
-          ARE_EQUAL(MCUseDwarfDirectory) &&
-          ARE_EQUAL(MCIncrementalLinkerCompatible) &&
-          ARE_EQUAL(MCPIECopyRelocations) &&
-          ARE_EQUAL(ShowMCEncoding) &&
-          ARE_EQUAL(ShowMCInst) &&
-          ARE_EQUAL(AsmVerbose) &&
-          ARE_EQUAL(DwarfVersion) &&
-          ARE_EQUAL(ABIName) &&
-          ARE_EQUAL(IASSearchPaths));
-#undef ARE_EQUAL
-}
-
-inline bool operator!=(const MCTargetOptions &LHS, const MCTargetOptions &RHS) {
-  return !(LHS == RHS);
-}
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCTARGETOPTIONS_H
