@@ -93,7 +93,7 @@ static tsan_block_context_t *AllocContext(ThreadState *thr, uptr pc,
   new_context->free_context_in_callback = true;
   new_context->submitted_synchronously = false;
   new_context->is_barrier_block = false;
-  new_context->non_queue_sync_object = false;
+  new_context->non_queue_sync_object = 0;
   return new_context;
 }
 
