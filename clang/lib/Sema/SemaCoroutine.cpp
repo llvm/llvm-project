@@ -658,34 +658,6 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   return Res;
 }
 
-static ExprResult buildStdCurrentExceptionCall(Sema &S, SourceLocation Loc) {
-  NamespaceDecl *Std = S.getStdNamespace();
-  if (!Std) {
-    S.Diag(Loc, diag::err_implied_std_current_exception_not_found);
-    return ExprError();
-  }
-  LookupResult Result(S, &S.PP.getIdentifierTable().get("current_exception"),
-                      Loc, Sema::LookupOrdinaryName);
-  if (!S.LookupQualifiedName(Result, Std)) {
-    S.Diag(Loc, diag::err_implied_std_current_exception_not_found);
-    return ExprError();
-  }
-
-  // FIXME The STL is free to provide more than one overload.
-  FunctionDecl *FD = Result.getAsSingle<FunctionDecl>();
-  if (!FD) {
-    S.Diag(Loc, diag::err_malformed_std_current_exception);
-    return ExprError();
-  }
-  ExprResult Res = S.BuildDeclRefExpr(FD, FD->getType(), VK_LValue, Loc);
-  Res = S.ActOnCallExpr(/*Scope*/ nullptr, Res.get(), Loc, None, Loc);
-  if (Res.isInvalid()) {
-    S.Diag(Loc, diag::err_malformed_std_current_exception);
-    return ExprError();
-  }
-  return Res;
-}
-
 // Find an appropriate delete for the promise.
 static FunctionDecl *findDeleteForPromise(Sema &S, SourceLocation Loc,
                                           QualType PromiseType) {
@@ -913,36 +885,34 @@ bool SubStmtBuilder::makeOnFallthrough() {
 }
 
 bool SubStmtBuilder::makeOnException() {
-  // Try to form 'p.set_exception(std::current_exception());' to handle
-  // uncaught exceptions.
-  // TODO: Post WG21 Issaquah 2016 renamed set_exception to unhandled_exception
-  // TODO: and dropped exception_ptr parameter. Make it so.
+  // Try to form 'p.unhandled_exception();'
 
   if (!PromiseRecordDecl)
     return true;
+
+  const bool RequireUnhandledException = S.getLangOpts().CXXExceptions;
+
+  if (!lookupMember(S, "unhandled_exception", PromiseRecordDecl, Loc)) {
+    auto DiagID =
+        RequireUnhandledException
+            ? diag::err_coroutine_promise_unhandled_exception_required
+            : diag::
+                  warn_coroutine_promise_unhandled_exception_required_with_exceptions;
+    S.Diag(Loc, DiagID) << PromiseRecordDecl;
+    return !RequireUnhandledException;
+  }
 
   // If exceptions are disabled, don't try to build OnException.
   if (!S.getLangOpts().CXXExceptions)
     return true;
 
-  ExprResult SetException;
+  ExprResult UnhandledException = buildPromiseCall(S, Fn.CoroutinePromise, Loc,
+                                                   "unhandled_exception", None);
+  UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc);
+  if (UnhandledException.isInvalid())
+    return false;
 
-  // [dcl.fct.def.coroutine]/3
-  // The unqualified-id set_exception is found in the scope of P by class
-  // member access lookup (3.4.5).
-  if (lookupMember(S, "set_exception", PromiseRecordDecl, Loc)) {
-    // Form the call 'p.set_exception(std::current_exception())'
-    SetException = buildStdCurrentExceptionCall(S, Loc);
-    if (SetException.isInvalid())
-      return false;
-    Expr *E = SetException.get();
-    SetException = buildPromiseCall(S, Fn.CoroutinePromise, Loc, "set_exception", E);
-    SetException = S.ActOnFinishFullExpr(SetException.get(), Loc);
-    if (SetException.isInvalid())
-      return false;
-  }
-
-  this->OnException = SetException.get();
+  this->OnException = UnhandledException.get();
   return true;
 }
 

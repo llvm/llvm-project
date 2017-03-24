@@ -2296,7 +2296,7 @@ bool AMDGPUAsmParser::ParseDirectiveCodeObjectMetadata() {
 
   YamlStream.flush();
 
-  if (!getTargetStreamer().EmitCodeObjectMetadata(getFeatureBits(), YamlString))
+  if (!getTargetStreamer().EmitCodeObjectMetadata(YamlString))
     return Error(getParser().getTok().getLoc(), "invalid code object metadata");
 
   return false;

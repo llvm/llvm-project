@@ -116,15 +116,14 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
   getTargetStreamer().EmitDirectiveHSACodeObjectVersion(2, 1);
   getTargetStreamer().EmitDirectiveHSACodeObjectISA(
       ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
-  getTargetStreamer().EmitStartOfCodeObjectMetadata(
-      getSTI()->getFeatureBits(), M);
+  getTargetStreamer().EmitStartOfCodeObjectMetadata(M);
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
-  getTargetStreamer().EmitEndOfCodeObjectMetadata(getSTI()->getFeatureBits());
+  getTargetStreamer().EmitEndOfCodeObjectMetadata();
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(

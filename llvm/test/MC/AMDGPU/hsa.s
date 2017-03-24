@@ -46,18 +46,6 @@
 
 // ASM: .amdgpu_code_object_metadata
 // ASM:    Version: [ 3, 0 ]
-// ASM:    Isa:
-// ASM:      WavefrontSize:        64
-// ASM:      LocalMemorySize:      65536
-// ASM:      EUsPerCU:             4
-// ASM:      MaxWavesPerEU:        10
-// ASM:      MaxFlatWorkGroupSize: 2048
-// ASM:      SGPRAllocGranule:     8
-// ASM:      TotalNumSGPRs:        512
-// ASM:      AddressableNumSGPRs:  104
-// ASM:      VGPRAllocGranule:     4
-// ASM:      TotalNumVGPRs:        256
-// ASM:      AddressableNumVGPRs:  256
 // ASM:    Kernels:
 // ASM:      - Name: amd_kernel_code_t_test_all
 // ASM:      - Name: amd_kernel_code_t_minimal

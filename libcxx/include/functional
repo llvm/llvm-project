@@ -470,6 +470,7 @@ template <> struct hash<double>;
 template <> struct hash<long double>;
 
 template<class T> struct hash<T*>;
+template <> struct hash<nullptr_t>;  // C++17
 
 }  // std
 

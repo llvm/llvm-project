@@ -918,7 +918,11 @@ PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_RUNTIME_START),
 
 void
 xexpand(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data, void (*copy_func)(void *, void *),
-  long arg_size, long arg_align, bool if_cond, unsigned gomp_flags)
+  long arg_size, long arg_align, bool if_cond, unsigned gomp_flags
+#if OMP_40_ENABLED
+  , void **depend
+#endif
+)
 {
     MKLOC(loc, "GOMP_task");
     int gtid = __kmp_entry_gtid();
@@ -962,6 +966,23 @@ xexpand(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data, void (*copy_fu
     }
 
     if (if_cond) {
+#if OMP_40_ENABLED
+        if (gomp_flags & 8) {
+            KMP_ASSERT(depend);
+            const size_t ndeps = (kmp_intptr_t)depend[0];
+            const size_t nout = (kmp_intptr_t)depend[1];
+            kmp_depend_info_t dep_list[ndeps];
+
+            for (size_t i = 0U; i < ndeps; i++) {
+                dep_list[i].base_addr = (kmp_intptr_t)depend[2U + i];
+                dep_list[i].len = 0U;
+                dep_list[i].flags.in = 1;
+                dep_list[i].flags.out = (i < nout);
+            }
+            __kmpc_omp_task_with_deps(&loc, gtid, task, ndeps, dep_list, 0, NULL);
+        }
+        else
+#endif
         __kmpc_omp_task(&loc, gtid, task);
     }
     else {

@@ -42,9 +42,8 @@ using namespace llvm::AMDGPU;
 AMDGPUTargetStreamer::AMDGPUTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S) {}
 
-void AMDGPUTargetStreamer::EmitStartOfCodeObjectMetadata(
-    const FeatureBitset &Features, const Module &Mod) {
-  CodeObjectMetadataStreamer.begin(Features, Mod);
+void AMDGPUTargetStreamer::EmitStartOfCodeObjectMetadata(const Module &Mod) {
+  CodeObjectMetadataStreamer.begin(Mod);
 }
 
 void AMDGPUTargetStreamer::EmitKernelCodeObjectMetadata(
@@ -52,11 +51,9 @@ void AMDGPUTargetStreamer::EmitKernelCodeObjectMetadata(
   CodeObjectMetadataStreamer.emitKernel(Func, KernelCode);
 }
 
-void AMDGPUTargetStreamer::EmitEndOfCodeObjectMetadata(
-    const FeatureBitset &Features) {
+void AMDGPUTargetStreamer::EmitEndOfCodeObjectMetadata() {
   CodeObjectMetadataStreamer.end();
-  EmitCodeObjectMetadata(Features,
-                         CodeObjectMetadataStreamer.toYamlString().get());
+  EmitCodeObjectMetadata(CodeObjectMetadataStreamer.toYamlString().get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -113,10 +110,8 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   OS << "\t.amdgpu_hsa_program_global " << GlobalName << '\n';
 }
 
-bool AMDGPUTargetAsmStreamer::EmitCodeObjectMetadata(
-    const FeatureBitset &Features, StringRef YamlString) {
-  auto VerifiedYamlString =
-      CodeObjectMetadataStreamer.toYamlString(Features, YamlString);
+bool AMDGPUTargetAsmStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
+  auto VerifiedYamlString = CodeObjectMetadataStreamer.toYamlString(YamlString);
   if (!VerifiedYamlString)
     return false;
 
@@ -237,10 +232,8 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   Symbol->setBinding(ELF::STB_GLOBAL);
 }
 
-bool AMDGPUTargetELFStreamer::EmitCodeObjectMetadata(
-    const FeatureBitset &Features, StringRef YamlString) {
-  auto VerifiedYamlString =
-      CodeObjectMetadataStreamer.toYamlString(Features, YamlString);
+bool AMDGPUTargetELFStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
+  auto VerifiedYamlString = CodeObjectMetadataStreamer.toYamlString(YamlString);
   if (!VerifiedYamlString)
     return false;
 

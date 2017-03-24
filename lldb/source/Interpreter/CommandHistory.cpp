@@ -9,7 +9,6 @@
 
 #include <inttypes.h>
 
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandHistory.h"
 
 using namespace lldb;

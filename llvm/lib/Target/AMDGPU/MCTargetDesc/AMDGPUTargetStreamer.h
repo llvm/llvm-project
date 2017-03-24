@@ -18,7 +18,6 @@ namespace llvm {
 #include "AMDGPUPTNote.h"
 
 class DataLayout;
-class FeatureBitset;
 class Function;
 class MCELFStreamer;
 class MCSymbol;
@@ -49,17 +48,15 @@ public:
 
   virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
 
-  virtual void EmitStartOfCodeObjectMetadata(const FeatureBitset &Features,
-                                             const Module &Mod);
+  virtual void EmitStartOfCodeObjectMetadata(const Module &Mod);
 
   virtual void EmitKernelCodeObjectMetadata(
       const Function &Func, const amd_kernel_code_t &KernelCode);
 
-  virtual void EmitEndOfCodeObjectMetadata(const FeatureBitset &Features);
+  virtual void EmitEndOfCodeObjectMetadata();
 
   /// \returns True on success, false on failure.
-  virtual bool EmitCodeObjectMetadata(const FeatureBitset &Features,
-                                      StringRef YamlString) = 0;
+  virtual bool EmitCodeObjectMetadata(StringRef YamlString) = 0;
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
@@ -82,8 +79,7 @@ public:
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
   /// \returns True on success, false on failure.
-  bool EmitCodeObjectMetadata(const FeatureBitset &Features,
-                              StringRef YamlString) override;
+  bool EmitCodeObjectMetadata(StringRef YamlString) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -114,8 +110,7 @@ public:
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
   /// \returns True on success, false on failure.
-  bool EmitCodeObjectMetadata(const FeatureBitset &Features,
-                              StringRef YamlString) override;
+  bool EmitCodeObjectMetadata(StringRef YamlString) override;
 };
 
 }

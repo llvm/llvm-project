@@ -99,67 +99,6 @@ enum class ValueType : uint8_t {
 };
 
 //===----------------------------------------------------------------------===//
-// Instruction Set Architecture Metadata (ISA).
-//===----------------------------------------------------------------------===//
-namespace Isa {
-
-namespace Key {
-/// \brief Key for Isa::Metadata::mWavefrontSize.
-constexpr char WavefrontSize[] = "WavefrontSize";
-/// \brief Key for Isa::Metadata::mLocalMemorySize.
-constexpr char LocalMemorySize[] = "LocalMemorySize";
-/// \brief Key for Isa::Metadata::mEUsPerCU.
-constexpr char EUsPerCU[] = "EUsPerCU";
-/// \brief Key for Isa::Metadata::mMaxWavesPerEU.
-constexpr char MaxWavesPerEU[] = "MaxWavesPerEU";
-/// \brief Key for Isa::Metadata::mMaxFlatWorkGroupSize.
-constexpr char MaxFlatWorkGroupSize[] = "MaxFlatWorkGroupSize";
-/// \brief Key for Isa::Metadata::mSGPRAllocGranule.
-constexpr char SGPRAllocGranule[] = "SGPRAllocGranule";
-/// \brief Key for Isa::Metadata::mTotalNumSGPRs.
-constexpr char TotalNumSGPRs[] = "TotalNumSGPRs";
-/// \brief Key for Isa::Metadata::mAddressableNumSGPRs.
-constexpr char AddressableNumSGPRs[] = "AddressableNumSGPRs";
-/// \brief Key for Isa::Metadata::mVGPRAllocGranule.
-constexpr char VGPRAllocGranule[] = "VGPRAllocGranule";
-/// \brief Key for Isa::Metadata::mTotalNumVGPRs.
-constexpr char TotalNumVGPRs[] = "TotalNumVGPRs";
-/// \brief Key for Isa::Metadata::mAddressableNumVGPRs.
-constexpr char AddressableNumVGPRs[] = "AddressableNumVGPRs";
-} // end namespace Key
-
-/// \brief In-memory representation of instruction set architecture metadata.
-struct Metadata final {
-  /// \brief Wavefront size. Required.
-  uint32_t mWavefrontSize = 0;
-  /// \brief Local memory size in bytes. Required.
-  uint32_t mLocalMemorySize = 0;
-  /// \brief Number of execution units per compute unit. Required.
-  uint32_t mEUsPerCU = 0;
-  /// \brief Maximum number of waves per execution unit. Required.
-  uint32_t mMaxWavesPerEU = 0;
-  /// \brief Maximum flat work group size. Required.
-  uint32_t mMaxFlatWorkGroupSize = 0;
-  /// \brief SGPR allocation granularity. Required.
-  uint32_t mSGPRAllocGranule = 0;
-  /// \brief Total number of SGPRs. Required.
-  uint32_t mTotalNumSGPRs = 0;
-  /// \brief Addressable number of SGPRs. Required.
-  uint32_t mAddressableNumSGPRs = 0;
-  /// \brief VGPR allocation granularity. Required.
-  uint32_t mVGPRAllocGranule = 0;
-  /// \brief Total number of VGPRs. Required.
-  uint32_t mTotalNumVGPRs = 0;
-  /// \brief Addressable number of VGPRs. Required.
-  uint32_t mAddressableNumVGPRs = 0;
-
-  /// \brief Default constructor.
-  Metadata() = default;
-};
-
-} // end namespace Isa
-
-//===----------------------------------------------------------------------===//
 // Kernel Metadata.
 //===----------------------------------------------------------------------===//
 namespace Kernel {
@@ -280,23 +219,23 @@ struct Metadata final {
 namespace CodeProps {
 
 namespace Key {
-/// \brief Key for Kernel::CodeProps::mKernargSegmentSize.
+/// \brief Key for Kernel::CodeProps::Metadata::mKernargSegmentSize.
 constexpr char KernargSegmentSize[] = "KernargSegmentSize";
-/// \brief Key for Kernel::CodeProps::mWorkgroupGroupSegmentSize.
+/// \brief Key for Kernel::CodeProps::Metadata::mWorkgroupGroupSegmentSize.
 constexpr char WorkgroupGroupSegmentSize[] = "WorkgroupGroupSegmentSize";
-/// \brief Key for Kernel::CodeProps::mWorkitemPrivateSegmentSize.
+/// \brief Key for Kernel::CodeProps::Metadata::mWorkitemPrivateSegmentSize.
 constexpr char WorkitemPrivateSegmentSize[] = "WorkitemPrivateSegmentSize";
-/// \brief Key for Kernel::CodeProps::mWavefrontNumSGPRs.
+/// \brief Key for Kernel::CodeProps::Metadata::mWavefrontNumSGPRs.
 constexpr char WavefrontNumSGPRs[] = "WavefrontNumSGPRs";
-/// \brief Key for Kernel::CodeProps::mWorkitemNumVGPRs.
+/// \brief Key for Kernel::CodeProps::Metadata::mWorkitemNumVGPRs.
 constexpr char WorkitemNumVGPRs[] = "WorkitemNumVGPRs";
-/// \brief Key for Kernel::CodeProps::mKernargSegmentAlign.
+/// \brief Key for Kernel::CodeProps::Metadata::mKernargSegmentAlign.
 constexpr char KernargSegmentAlign[] = "KernargSegmentAlign";
-/// \brief Key for Kernel::CodeProps::mGroupSegmentAlign.
+/// \brief Key for Kernel::CodeProps::Metadata::mGroupSegmentAlign.
 constexpr char GroupSegmentAlign[] = "GroupSegmentAlign";
-/// \brief Key for Kernel::CodeProps::mPrivateSegmentAlign.
+/// \brief Key for Kernel::CodeProps::Metadata::mPrivateSegmentAlign.
 constexpr char PrivateSegmentAlign[] = "PrivateSegmentAlign";
-/// \brief Key for Kernel::CodeProps::mWavefrontSize.
+/// \brief Key for Kernel::CodeProps::Metadata::mWavefrontSize.
 constexpr char WavefrontSize[] = "WavefrontSize";
 } // end namespace Key
 
@@ -349,6 +288,63 @@ struct Metadata final {
 
 } // end namespace CodeProps
 
+//===----------------------------------------------------------------------===//
+// Kernel Debug Properties Metadata.
+//===----------------------------------------------------------------------===//
+namespace DebugProps {
+
+namespace Key {
+/// \brief Key for Kernel::DebugProps::Metadata::mDebuggerABIVersion.
+constexpr char DebuggerABIVersion[] = "DebuggerABIVersion";
+/// \brief Key for Kernel::DebugProps::Metadata::mReservedNumVGPRs.
+constexpr char ReservedNumVGPRs[] = "ReservedNumVGPRs";
+/// \brief Key for Kernel::DebugProps::Metadata::mReservedFirstVGPR.
+constexpr char ReservedFirstVGPR[] = "ReservedFirstVGPR";
+/// \brief Key for Kernel::DebugProps::Metadata::mPrivateSegmentBufferSGPR.
+constexpr char PrivateSegmentBufferSGPR[] = "PrivateSegmentBufferSGPR";
+/// \brief Key for
+///     Kernel::DebugProps::Metadata::mWavefrontPrivateSegmentOffsetSGPR.
+constexpr char WavefrontPrivateSegmentOffsetSGPR[] =
+    "WavefrontPrivateSegmentOffsetSGPR";
+} // end namespace Key
+
+/// \brief In-memory representation of kernel debug properties metadata.
+struct Metadata final {
+  /// \brief Debugger ABI version. Optional.
+  std::vector<uint32_t> mDebuggerABIVersion = std::vector<uint32_t>();
+  /// \brief Consecutive number of VGPRs reserved for debugger use. Must be 0 if
+  /// mDebuggerABIVersion is not set. Optional.
+  uint16_t mReservedNumVGPRs = 0;
+  /// \brief First fixed VGPR reserved. Must be uint16_t(-1) if
+  /// mDebuggerABIVersion is not set or mReservedFirstVGPR is 0. Optional.
+  uint16_t mReservedFirstVGPR = uint16_t(-1);
+  /// \brief Fixed SGPR of the first of 4 SGPRs used to hold the scratch V# used
+  /// for the entire kernel execution. Must be uint16_t(-1) if
+  /// mDebuggerABIVersion is not set or SGPR not used or not known. Optional.
+  uint16_t mPrivateSegmentBufferSGPR = uint16_t(-1);
+  /// \brief Fixed SGPR used to hold the wave scratch offset for the entire
+  /// kernel execution. Must be uint16_t(-1) if mDebuggerABIVersion is not set
+  /// or SGPR is not used or not known. Optional.
+  uint16_t mWavefrontPrivateSegmentOffsetSGPR = uint16_t(-1);
+
+  /// \brief Default constructor.
+  Metadata() = default;
+
+  /// \returns True if kernel debug properties metadata is empty, false
+  /// otherwise.
+  bool empty() const {
+    return !notEmpty();
+  }
+
+  /// \returns True if kernel debug properties metadata is not empty, false
+  /// otherwise.
+  bool notEmpty() const {
+    return !mDebuggerABIVersion.empty();
+  }
+};
+
+} // end namespace DebugProps
+
 namespace Key {
 /// \brief Key for Kernel::Metadata::mName.
 constexpr char Name[] = "Name";
@@ -362,6 +358,8 @@ constexpr char Attrs[] = "Attrs";
 constexpr char Args[] = "Args";
 /// \brief Key for Kernel::Metadata::mCodeProps.
 constexpr char CodeProps[] = "CodeProps";
+/// \brief Key for Kernel::Metadata::mDebugProps.
+constexpr char DebugProps[] = "DebugProps";
 } // end namespace Key
 
 /// \brief In-memory representation of kernel metadata.
@@ -378,6 +376,8 @@ struct Metadata final {
   std::vector<Arg::Metadata> mArgs = std::vector<Arg::Metadata>();
   /// \brief Code properties metadata. Optional.
   CodeProps::Metadata mCodeProps = CodeProps::Metadata();
+  /// \brief Debug properties metadata. Optional.
+  DebugProps::Metadata mDebugProps = DebugProps::Metadata();
 
   /// \brief Default constructor.
   Metadata() = default;
@@ -388,8 +388,6 @@ struct Metadata final {
 namespace Key {
 /// \brief Key for CodeObject::Metadata::mVersion.
 constexpr char Version[] = "Version";
-/// \brief Key for CodeObject::Metadata::mIsa.
-constexpr char Isa[] = "Isa";
 /// \brief Key for CodeObject::Metadata::mPrintf.
 constexpr char Printf[] = "Printf";
 /// \brief Key for CodeObject::Metadata::mKernels.
@@ -400,8 +398,6 @@ constexpr char Kernels[] = "Kernels";
 struct Metadata final {
   /// \brief Code object metadata version. Required.
   std::vector<uint32_t> mVersion = std::vector<uint32_t>();
-  /// \brief Instruction set architecture metadata. Optional.
-  Isa::Metadata mIsa = Isa::Metadata();
   /// \brief Printf metadata. Optional.
   std::vector<std::string> mPrintf = std::vector<std::string>();
   /// \brief Kernels metadata. Optional.

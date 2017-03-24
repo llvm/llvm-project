@@ -7672,12 +7672,11 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "};",
                Alignment);
 
-  // FIXME: Should align all three assignments
   verifyFormat(
       "int i      = 1;\n"
       "SomeType a = SomeFunction(looooooooooooooooooooooongParameterA,\n"
       "                          loooooooooooooooooooooongParameterB);\n"
-      "int j = 2;",
+      "int j      = 2;",
       Alignment);
 
   verifyFormat("template <typename T, typename T_0 = very_long_type_name_0,\n"
@@ -7691,6 +7690,13 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                Alignment);
   verifyFormat("int aa       = ((1 > 2) ? 3 : 4);\n"
                "float b[1][] = {{3.f}};\n",
+               Alignment);
+  verifyFormat("for (int i = 0; i < 1; i++)\n"
+               "  int x = 1;\n",
+               Alignment);
+  verifyFormat("for (i = 0; i < 1; i++)\n"
+               "  x = 1;\n"
+               "y = 1;\n",
                Alignment);
 }
 
@@ -7759,7 +7765,57 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                    "unsigned oneTwoThree = 123;\n"
                    "int oneTwo = 12;",
                    Alignment));
+  // Function prototype alignment
+  verifyFormat("int    a();\n"
+               "double b();",
+               Alignment);
+  verifyFormat("int    a(int x);\n"
+               "double b();",
+               Alignment);
+  unsigned OldColumnLimit = Alignment.ColumnLimit;
+  // We need to set ColumnLimit to zero, in order to stress nested alignments,
+  // otherwise the function parameters will be re-flowed onto a single line.
+  Alignment.ColumnLimit = 0;
+  EXPECT_EQ("int    a(int   x,\n"
+            "         float y);\n"
+            "double b(int    x,\n"
+            "         double y);",
+            format("int a(int x,\n"
+                   " float y);\n"
+                   "double b(int x,\n"
+                   " double y);",
+                   Alignment));
+  // This ensures that function parameters of function declarations are
+  // correctly indented when their owning functions are indented.
+  // The failure case here is for 'double y' to not be indented enough.
+  EXPECT_EQ("double a(int x);\n"
+            "int    b(int    y,\n"
+            "         double z);",
+            format("double a(int x);\n"
+                   "int b(int y,\n"
+                   " double z);",
+                   Alignment));
+  // Set ColumnLimit low so that we induce wrapping immediately after
+  // the function name and opening paren.
+  Alignment.ColumnLimit = 13;
+  verifyFormat("int function(\n"
+               "    int  x,\n"
+               "    bool y);",
+               Alignment);
+  Alignment.ColumnLimit = OldColumnLimit;
+  // Ensure function pointers don't screw up recursive alignment
+  verifyFormat("int    a(int x, void (*fp)(int y));\n"
+               "double b();",
+               Alignment);
   Alignment.AlignConsecutiveAssignments = true;
+  // Ensure recursive alignment is broken by function braces, so that the
+  // "a = 1" does not align with subsequent assignments inside the function
+  // body.
+  verifyFormat("int func(int a = 1) {\n"
+               "  int b  = 2;\n"
+               "  int cc = 3;\n"
+               "}",
+               Alignment);
   verifyFormat("float      something = 2000;\n"
                "double     another   = 911;\n"
                "int        i = 1, j = 10;\n"
@@ -7768,6 +7824,28 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
   verifyFormat("int      oneTwoThree = {0}; // comment\n"
                "unsigned oneTwo      = 0;   // comment",
+               Alignment);
+  // Make sure that scope is correctly tracked, in the absence of braces
+  verifyFormat("for (int i = 0; i < n; i++)\n"
+               "  j = i;\n"
+               "double x = 1;\n",
+               Alignment);
+  verifyFormat("if (int i = 0)\n"
+               "  j = i;\n"
+               "double x = 1;\n",
+               Alignment);
+  // Ensure operator[] and operator() are comprehended
+  verifyFormat("struct test {\n"
+               "  long long int foo();\n"
+               "  int           operator[](int a);\n"
+               "  double        bar();\n"
+               "};\n",
+               Alignment);
+  verifyFormat("struct test {\n"
+               "  long long int foo();\n"
+               "  int           operator()(int a);\n"
+               "  double        bar();\n"
+               "};\n",
                Alignment);
   EXPECT_EQ("void SomeFunction(int parameter = 0) {\n"
             "  int const i   = 1;\n"
@@ -7870,17 +7948,16 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
   Alignment.AlignConsecutiveAssignments = false;
 
-  // FIXME: Should align all three declarations
   verifyFormat(
       "int      i = 1;\n"
       "SomeType a = SomeFunction(looooooooooooooooooooooongParameterA,\n"
       "                          loooooooooooooooooooooongParameterB);\n"
-      "int j = 2;",
+      "int      j = 2;",
       Alignment);
 
   // Test interactions with ColumnLimit and AlignConsecutiveAssignments:
   // We expect declarations and assignments to align, as long as it doesn't
-  // exceed the column limit, starting a new alignemnt sequence whenever it
+  // exceed the column limit, starting a new alignment sequence whenever it
   // happens.
   Alignment.AlignConsecutiveAssignments = true;
   Alignment.ColumnLimit = 30;

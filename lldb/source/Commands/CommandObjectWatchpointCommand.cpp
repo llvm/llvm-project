@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/State.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"

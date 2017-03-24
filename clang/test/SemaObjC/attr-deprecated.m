@@ -121,9 +121,15 @@ void test(Test2 *foo) {
 }
 
 __attribute__((deprecated))
-@interface A(Blah) // expected-error{{attributes may not be specified on a category}}
+@interface A(Blah) // no warning
+- (A*)getA;
 @end
 
+@implementation A(Blah) // Don't warn by default
+- (A*)getA {
+  return self;
+}
+@end
 
 typedef struct {
 	int x;

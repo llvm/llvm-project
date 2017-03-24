@@ -8865,11 +8865,6 @@ def err_coroutine_promise_type_incomplete : Error<
 def err_coroutine_type_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
   "specialization %q0">;
-def err_implied_std_current_exception_not_found : Error<
-  "you need to include <exception> before defining a coroutine that implicitly "
-  "uses 'set_exception'">;
-def err_malformed_std_current_exception : Error<
-  "'std::current_exception' must be a function">;
 def err_coroutine_promise_return_ill_formed : Error<
   "%0 declares both 'return_value' and 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
@@ -8877,6 +8872,11 @@ def note_coroutine_promise_implicit_await_transform_required_here : Note<
 def note_coroutine_promise_call_implicitly_required : Note<
   "call to '%select{initial_suspend|final_suspend}0' implicitly "
   "required by the %select{initial suspend point|final suspend point}0">;
+def err_coroutine_promise_unhandled_exception_required : Error<
+  "%0 is required to declare the member 'unhandled_exception()'">;
+def warn_coroutine_promise_unhandled_exception_required_with_exceptions : Warning<
+  "%0 is required to declare the member 'unhandled_exception()' when exceptions are enabled">,
+  InGroup<Coroutine>;
 }
 
 let CategoryName = "Documentation Issue" in {

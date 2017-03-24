@@ -1301,7 +1301,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<
     typedef size_t        result_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    result_type operator()(const argument_type& __opt) const _NOEXCEPT
+    result_type operator()(const argument_type& __opt) const
     {
         return static_cast<bool>(__opt) ? hash<remove_const_t<_Tp>>()(*__opt) : 0;
     }

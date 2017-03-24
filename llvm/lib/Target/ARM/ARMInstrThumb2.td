@@ -110,11 +110,8 @@ def t2_so_imm_notSext : Operand<i32>, PatLeaf<(imm), [{
 
 // t2_so_imm_neg - Match an immediate that is a negation of a t2_so_imm.
 def t2_so_imm_neg_asmoperand : AsmOperandClass { let Name = "T2SOImmNeg"; }
-def t2_so_imm_neg : Operand<i32>, PatLeaf<(imm), [{
-  int64_t Value = N->getZExtValue();
-  if (Value == 1LL<<31) return false; // INT_MIN cannot be negated
-  Value = -(int)Value;
-  return Value && ARM_AM::getT2SOImmVal(Value) != -1;
+def t2_so_imm_neg : Operand<i32>, ImmLeaf<i32, [{
+  return Imm && ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
 }], t2_so_imm_neg_XFORM> {
   let ParserMatchClass = t2_so_imm_neg_asmoperand;
 }

@@ -321,6 +321,8 @@ int TestRelational(int X, int Y) {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
   if (X <= 10 || X >= 11) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (X != 7 || X != 14) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always true
 
   if (X < 7 && X < 6) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
@@ -422,6 +424,8 @@ int TestRelatiopnalWithEnum(enum Color C) {
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always false
   if (C == Red && C != Red) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always false
+  if (C != Red || C != Yellow) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always true
 
   // Should not match.
   if (C == Red || C == Yellow) return 1;

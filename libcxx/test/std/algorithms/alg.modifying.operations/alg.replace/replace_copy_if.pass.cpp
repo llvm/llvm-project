@@ -23,6 +23,8 @@
 
 #include "test_iterators.h"
 
+bool equalToTwo(int v) { return v == 2; }
+
 template <class InIter, class OutIter>
 void
 test()
@@ -30,8 +32,8 @@ test()
     int ia[] = {0, 1, 2, 3, 4};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     int ib[sa] = {0};
-    OutIter r = std::replace_copy_if(InIter(ia), InIter(ia+sa), OutIter(ib),
-                                     std::bind2nd(std::equal_to<int>(), 2), 5);
+    OutIter r = std::replace_copy_if(InIter(ia), InIter(ia+sa),
+                                     OutIter(ib), equalToTwo, 5);
     assert(base(r) == ib + sa);
     assert(ib[0] == 0);
     assert(ib[1] == 1);

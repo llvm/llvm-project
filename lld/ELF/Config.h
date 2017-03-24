@@ -142,6 +142,7 @@ struct Configuration {
   bool ZExecstack;
   bool ZNocopyreloc;
   bool ZNodelete;
+  bool ZNodlopen;
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;

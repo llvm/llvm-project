@@ -16,7 +16,6 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeDatabase.cpp
   TypeDatabaseVisitor.cpp
   TypeDumpVisitor.cpp
-  TypeRecord.cpp
   TypeRecordMapping.cpp
   TypeSerializer.cpp
   TypeStreamMerger.cpp

@@ -397,10 +397,10 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_relocatable))
     return UnresolvedPolicy::IgnoreAll;
 
-  UnresolvedPolicy ErrorOrWarn =
-      getArg(Args, OPT_error_undef, OPT_warn_undef, true)
-          ? UnresolvedPolicy::ReportError
-          : UnresolvedPolicy::Warn;
+  UnresolvedPolicy ErrorOrWarn = getArg(Args, OPT_error_unresolved_symbols,
+                                        OPT_warn_unresolved_symbols, true)
+                                     ? UnresolvedPolicy::ReportError
+                                     : UnresolvedPolicy::Warn;
 
   // Process the last of -unresolved-symbols, -no-undefined or -z defs.
   for (auto *Arg : llvm::reverse(Args)) {
@@ -619,6 +619,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
   Config->ZNodelete = hasZOption(Args, "nodelete");
+  Config->ZNodlopen = hasZOption(Args, "nodlopen");
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
@@ -919,6 +920,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.addCombinedLTOObject();
   if (ErrorCount)
     return;
+
+  // Some symbols (such as __ehdr_start) are defined lazily only when there
+  // are undefined symbols for them, so we add these to trigger that logic.
+  for (StringRef Sym : Script->Opt.UndefinedSymbols)
+    Symtab.addUndefined(Sym);
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());

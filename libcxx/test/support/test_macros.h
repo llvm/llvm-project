@@ -150,11 +150,16 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
+#if TEST_STD_VER < 11
+#define ASSERT_NOEXCEPT(...)
+#define ASSERT_NOT_NOEXCEPT(...)
+#else
 #define ASSERT_NOEXCEPT(...) \
     static_assert(noexcept(__VA_ARGS__), "Operation must be noexcept")
 
 #define ASSERT_NOT_NOEXCEPT(...) \
     static_assert(!noexcept(__VA_ARGS__), "Operation must NOT be noexcept")
+#endif
 
 /* Macros for testing libc++ specific behavior and extensions */
 #if defined(_LIBCPP_VERSION)

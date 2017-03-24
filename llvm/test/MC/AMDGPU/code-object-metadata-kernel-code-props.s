@@ -7,10 +7,10 @@
 // CHECK:    Kernels:
 // CHECK:      - Name: test_kernel
 // CHECK:        CodeProps:
-// CHECK:        KernargSegmentSize:         24
-// CHECK:        WorkitemPrivateSegmentSize: 16
-// CHECK:        WavefrontNumSGPRs:          6
-// CHECK:        WorkitemNumVGPRs:           12
+// CHECK:          KernargSegmentSize:         24
+// CHECK:          WorkitemPrivateSegmentSize: 16
+// CHECK:          WavefrontNumSGPRs:          6
+// CHECK:          WorkitemNumVGPRs:           12
 .amdgpu_code_object_metadata
   Version: [ 1, 0 ]
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
