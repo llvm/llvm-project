@@ -486,6 +486,18 @@ namespace {
       OS << "; OverDefined values for block are: \n";
       for (auto *V : ODI->second)
         OS << ";" << *V << "\n";
+
+      // Find if there are latticevalues defined for arguments of the function.
+      auto *F = const_cast<Function *>(BB->getParent());
+      for (auto &Arg : F->args()) {
+        auto VI = LVICache->ValueCache.find_as(&Arg);
+        if (VI == LVICache->ValueCache.end())
+          continue;
+        auto BBI = VI->second->BlockVals.find(const_cast<BasicBlock *>(BB));
+        if (BBI != VI->second->BlockVals.end())
+          OS << "; CachedLatticeValue for: '" << *VI->first << "' is: '"
+             << BBI->second << "'\n";
+      }
     }
 
     virtual void emitInstructionAnnot(const Instruction *I,

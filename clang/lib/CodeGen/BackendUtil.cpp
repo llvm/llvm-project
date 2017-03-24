@@ -686,13 +686,28 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
 
+  std::unique_ptr<raw_fd_ostream> ThinLinkOS;
+
   switch (Action) {
   case Backend_EmitNothing:
     break;
 
   case Backend_EmitBC:
-    if (CodeGenOpts.EmitSummaryIndex)
-      PerModulePasses.add(createWriteThinLTOBitcodePass(*OS));
+    if (CodeGenOpts.EmitSummaryIndex) {
+      if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
+        std::error_code EC;
+        ThinLinkOS.reset(new llvm::raw_fd_ostream(
+            CodeGenOpts.ThinLinkBitcodeFile, EC,
+            llvm::sys::fs::F_None));
+        if (EC) {
+          Diags.Report(diag::err_fe_unable_to_open_output) << CodeGenOpts.ThinLinkBitcodeFile
+                                                           << EC.message();
+          return;
+        }
+      }
+      PerModulePasses.add(
+          createWriteThinLTOBitcodePass(*OS, ThinLinkOS.get()));
+    }
     else
       PerModulePasses.add(
           createBitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists));

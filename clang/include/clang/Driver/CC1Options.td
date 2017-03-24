@@ -312,6 +312,8 @@ def flto_visibility_public_std:
 def flto_unit: Flag<["-"], "flto-unit">,
     HelpText<"Emit IR to support LTO unit features (CFI, whole program vtable opt)">;
 def fno_lto_unit: Flag<["-"], "fno-lto-unit">;
+def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
+    HelpText<"Write minimized bitcode to <file> for the ThinLTO thin link only">;
 
 //===----------------------------------------------------------------------===//
 // Dependency Output Options

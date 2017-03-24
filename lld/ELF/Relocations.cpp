@@ -593,10 +593,12 @@ static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
 template <class ELFT>
 static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
                             typename ELFT::uint Offset) {
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
+    return;
+
   bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
                        Sym.getVisibility() == STV_DEFAULT;
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll ||
-      (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal))
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return;
 
   std::string Msg = S.getLocation<ELFT>(Offset) + ": undefined symbol '" +
@@ -736,26 +738,8 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
     if (Expr == R_TLSDESC_CALL)
       continue;
 
-    if (needsPlt(Expr) ||
-        refersToGotEntry(Expr) || !isPreemptible(Body, Type)) {
-      // If the relocation points to something in the file, we can process it.
-      bool Constant =
-          isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, C, RI.r_offset);
-
-      // If the output being produced is position independent, the final value
-      // is still not known. In that case we still need some help from the
-      // dynamic linker. We can however do better than just copying the incoming
-      // relocation. We can process some of it and and just ask the dynamic
-      // linker to add the load address.
-      if (!Constant)
-        AddDyn({Target->RelativeRel, &C, Offset, true, &Body, Addend});
-
-      // If the produced value is a constant, we just remember to write it
-      // when outputting this section. We also have to do it if the format
-      // uses Elf_Rel, since in that case the written value is the addend.
-      if (Constant || !RelTy::IsRela)
-        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
-    } else {
+    if (!needsPlt(Expr) && !refersToGotEntry(Expr) &&
+        isPreemptible(Body, Type)) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
@@ -782,6 +766,24 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
       continue;
     }
+
+    // If the relocation points to something in the file, we can process it.
+    bool Constant =
+        isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, C, RI.r_offset);
+
+    // If the output being produced is position independent, the final value
+    // is still not known. In that case we still need some help from the
+    // dynamic linker. We can however do better than just copying the incoming
+    // relocation. We can process some of it and and just ask the dynamic
+    // linker to add the load address.
+    if (!Constant)
+      AddDyn({Target->RelativeRel, &C, Offset, true, &Body, Addend});
+
+    // If the produced value is a constant, we just remember to write it
+    // when outputting this section. We also have to do it if the format
+    // uses Elf_Rel, since in that case the written value is the addend.
+    if (Constant || !RelTy::IsRela)
+      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
 
     // At this point we are done with the relocated position. Some relocations
     // also require us to create a got or plt entry.

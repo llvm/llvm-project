@@ -164,7 +164,7 @@
 ; EMPTY-NEXT:     Record count: 15
 ; EMPTY-NEXT:     Records [
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x104B) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1000) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::threadingAttribute (0x100B)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -176,7 +176,7 @@
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x104C) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1001) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::event_receiverAttribute (0x1017)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -188,7 +188,7 @@
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x104D) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1002) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::aggregatableAttribute (0x1021)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -200,7 +200,7 @@
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x104E) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1003) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::event_sourceAttribute (0x102C)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -212,7 +212,7 @@
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x104F) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1004) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::moduleAttribute (0x103A)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -224,7 +224,7 @@
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1050) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1005) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
 ; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
@@ -235,9 +235,141 @@
 ; EMPTY-NEXT:           0000: 42100000 01000000 6C000000 0100F2F1  |B.......l.......|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
-; EMPTY:          TypeIndexOffsets [
-; EMPTY-NEXT:       Index: 0x1000, Offset: 0
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x1006) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 96
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 4A100000 01000000 60000000 0100F2F1  |J.......`.......|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x1007) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: 0x0
+; EMPTY-NEXT:           StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
+; EMPTY-NEXT:           0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
+; EMPTY-NEXT:           0020: 44425C49 6E707574 7300F2F1           |DB\Inputs...|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x1008) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: 0x0
+; EMPTY-NEXT:           StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 00000000 433A5C50 726F6772 616D2046  |....C:\Program F|
+; EMPTY-NEXT:           0010: 696C6573 20287838 36295C4D 6963726F  |iles (x86)\Micro|
+; EMPTY-NEXT:           0020: 736F6674 20566973 75616C20 53747564  |soft Visual Stud|
+; EMPTY-NEXT:           0030: 696F2031 322E305C 56435C42 494E5C63  |io 12.0\VC\BIN\c|
+; EMPTY-NEXT:           0040: 6C2E6578 6500F2F1                    |l.exe...|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x1009) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: 0x0
+; EMPTY-NEXT:           StringData: empty.cpp
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 00000000 656D7074 792E6370 7000F2F1  |....empty.cpp...|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x100A) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: 0x0
+; EMPTY-NEXT:           StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
+; EMPTY-NEXT:           0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
+; EMPTY-NEXT:           0020: 44425C49 6E707574 735C7663 3132302E  |DB\Inputs\vc120.|
+; EMPTY-NEXT:           0030: 70646200                             |pdb.|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x100B) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: 0x0
+; EMPTY-NEXT:           StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 00000000 2D5A6920 2D4D5420 2D492243  |....-Zi -MT -I"C|
+; EMPTY-NEXT:           0010: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
+; EMPTY-NEXT:           0020: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
+; EMPTY-NEXT:           0030: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
+; EMPTY-NEXT:           0040: 2E305C56 435C494E 434C5544 4522202D  |.0\VC\INCLUDE" -|
+; EMPTY-NEXT:           0050: 4922433A 5C50726F 6772616D 2046696C  |I"C:\Program Fil|
+; EMPTY-NEXT:           0060: 65732028 78383629 5C4D6963 726F736F  |es (x86)\Microso|
+; EMPTY-NEXT:           0070: 66742056 69737561 6C205374 7564696F  |ft Visual Studio|
+; EMPTY-NEXT:           0080: 2031322E 305C5643 5C41544C 4D46435C  | 12.0\VC\ATLMFC\|
+; EMPTY-NEXT:           0090: 494E434C 55444522 202D4922 433A5C50  |INCLUDE" -I"C:\P|
+; EMPTY-NEXT:           00A0: 726F6772 616D2046 696C6573 20287838  |rogram Files (x8|
+; EMPTY-NEXT:           00B0: 36295C57 696E646F 7773204B 6974735C  |6)\Windows Kits\|
+; EMPTY-NEXT:           00C0: 382E315C 696E636C 7564655C 73686172  |8.1\include\shar|
+; EMPTY-NEXT:           00D0: 65642220 2D492243 3A5C5072 6F677261  |ed" -I"C:\Progra|
+; EMPTY-NEXT:           00E0: 6D204669 6C657320 28783836 295C5769  |m Files (x86)\Wi|
+; EMPTY-NEXT:           00F0: 6E646F77 7300F2F1                    |ndows...|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringList (0x100C) {
+; EMPTY-NEXT:           TypeLeafKind: LF_SUBSTR_LIST (0x1604)
+; EMPTY-NEXT:           NumStrings: 1
+; EMPTY-NEXT:           Strings [
+; EMPTY-NEXT:             String: __vc_attributes::threadingAttribute (0x100B)
+; EMPTY-NEXT:           ]
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 01000000 0B100000                    |........|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         StringId (0x100D) {
+; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
+; EMPTY-NEXT:           Id: "-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows" (0x100C)
+; EMPTY-NEXT:           StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 0C100000 204B6974 735C382E 315C696E  |.... Kits\8.1\in|
+; EMPTY-NEXT:           0010: 636C7564 655C756D 22202D49 22433A5C  |clude\um" -I"C:\|
+; EMPTY-NEXT:           0020: 50726F67 72616D20 46696C65 73202878  |Program Files (x|
+; EMPTY-NEXT:           0030: 3836295C 57696E64 6F777320 4B697473  |86)\Windows Kits|
+; EMPTY-NEXT:           0040: 5C382E31 5C696E63 6C756465 5C77696E  |\8.1\include\win|
+; EMPTY-NEXT:           0050: 72742220 2D545020 2D5800F1           |rt" -TP -X..|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         BuildInfo (0x100E) {
+; EMPTY-NEXT:           TypeLeafKind: LF_BUILDINFO (0x1603)
+; EMPTY-NEXT:           NumArgs: 5
+; EMPTY-NEXT:           Arguments [
+; EMPTY-NEXT:             ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs (0x1007)
+; EMPTY-NEXT:             ArgType: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe (0x1008)
+; EMPTY-NEXT:             ArgType: empty.cpp (0x1009)
+; EMPTY-NEXT:             ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb (0x100A)
+; EMPTY-NEXT:             ArgType:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X (0x100D)
+; EMPTY-NEXT:           ]
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 05000710 00000810 00000910 00000A10  |................|
+; EMPTY-NEXT:           0010: 00000D10 0000F2F1                    |........|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       TypeIndexOffsets [
+; EMPTY-NEXT:         Index: 0x1000, Offset: 0
+; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
 ; EMPTY:      DBI Stream {
 ; EMPTY-NEXT:   Dbi Version: 19990903
 ; EMPTY-NEXT:   Age: 1
@@ -1011,7 +1143,7 @@
 ; ALL:   Record count: 15
 ; ALL:   Records [
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x104B) {
+; ALL:       UdtModSourceLine (0x1000) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::threadingAttribute (0x100B)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1020,7 +1152,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x104C) {
+; ALL:       UdtModSourceLine (0x1001) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::event_receiverAttribute (0x1017)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1029,7 +1161,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x104D) {
+; ALL:       UdtModSourceLine (0x1002) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::aggregatableAttribute (0x1021)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1038,7 +1170,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x104E) {
+; ALL:       UdtModSourceLine (0x1003) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::event_sourceAttribute (0x102C)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1047,7 +1179,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x104F) {
+; ALL:       UdtModSourceLine (0x1004) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::moduleAttribute (0x103A)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1056,7 +1188,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x1050) {
+; ALL:       UdtModSourceLine (0x1005) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1065,7 +1197,7 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UdtModSourceLine (0x1051) {
+; ALL:       UdtModSourceLine (0x1006) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
 ; ALL:         UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
 ; ALL:         SourceFile: <unknown simple type> (0x1)
@@ -1074,42 +1206,42 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1052) {
+; ALL:       StringId (0x1007) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
 ; ALL:         Id: 0x0
 ; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1053) {
+; ALL:       StringId (0x1008) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
 ; ALL:         Id: 0x0
 ; ALL:         StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1054) {
+; ALL:       StringId (0x1009) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
 ; ALL:         Id: 0x0
 ; ALL:         StringData: empty.cpp
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1055) {
+; ALL:       StringId (0x100A) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
 ; ALL:         Id: 0x0
 ; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1056) {
+; ALL:       StringId (0x100B) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
 ; ALL:         Id: 0x0
 ; ALL:         StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringList (0x1057) {
+; ALL:       StringList (0x100C) {
 ; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
 ; ALL:         NumStrings: 1
 ; ALL:         Strings [
@@ -1118,22 +1250,22 @@
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       StringId (0x1058) {
+; ALL:       StringId (0x100D) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: <field list> (0x100C)
+; ALL:         Id: "-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows" (0x100C)
 ; ALL:         StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       BuildInfo (0x1059) {
+; ALL:       BuildInfo (0x100E) {
 ; ALL:         TypeLeafKind: LF_BUILDINFO (0x1603)
 ; ALL:         NumArgs: 5
 ; ALL:         Arguments [
-; ALL:           ArgType: void __vc_attributes::threadingAttribute::(__vc_attributes::threadingAttribute::threading_e) (0x1007)
-; ALL:           ArgType: void __vc_attributes::threadingAttribute::() (0x1008)
-; ALL:           ArgType: 0x1009
-; ALL:           ArgType: <field list> (0x100A)
-; ALL:           ArgType: __vc_attributes::event_receiverAttribute::type_e (0x100D)
+; ALL:           ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs (0x1007)
+; ALL:           ArgType: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe (0x1008)
+; ALL:           ArgType: empty.cpp (0x1009)
+; ALL:           ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb (0x100A)
+; ALL:           ArgType:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X (0x100D)
 ; ALL:         ]
 ; ALL:       }
 ; ALL:     }

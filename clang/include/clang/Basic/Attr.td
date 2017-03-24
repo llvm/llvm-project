@@ -302,6 +302,9 @@ class Attr {
   // Set to true if this attribute can be duplicated on a subject when merging
   // attributes. By default, attributes are not merged.
   bit DuplicatesAllowedWhileMerging = 0;
+  // Set to true if this attribute meaningful when applied to or inherited 
+  // in a class template definition.
+  bit MeaningfulToClassTemplateDefinition = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -373,6 +376,7 @@ def AbiTag : Attr {
   let Args = [VariadicStringArgument<"Tags">];
   let Subjects = SubjectList<[Struct, Var, Function, Namespace], ErrorDiag,
       "ExpectedStructClassVariableFunctionOrInlineNamespace">;
+  let MeaningfulToClassTemplateDefinition = 1;
   let Documentation = [AbiTagsDocs];
 }
 
@@ -805,6 +809,7 @@ def Deprecated : InheritableAttr {
               // An optional string argument that enables us to provide a
               // Fix-It.
               StringArgument<"Replacement", 1>];
+  let MeaningfulToClassTemplateDefinition = 1;
   let Documentation = [DeprecatedDocs];
 }
 
@@ -1723,6 +1728,7 @@ def Visibility : InheritableAttr {
   let Args = [EnumArgument<"Visibility", "VisibilityType",
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
+  let MeaningfulToClassTemplateDefinition = 1;
   let Documentation = [Undocumented];
 }
 

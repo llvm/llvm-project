@@ -445,6 +445,11 @@ static bool shouldInstrumentBlock(const Function& F, const BasicBlock *BB, const
   if (isa<UnreachableInst>(BB->getTerminator()))
     return false;
 
+  // Don't insert coverage into blocks without a valid insertion point
+  // (catchswitch blocks).
+  if (BB->getFirstInsertionPt() == BB->end())
+    return false;
+
   if (!ClPruneBlocks || &F.getEntryBlock() == BB)
     return true;
 

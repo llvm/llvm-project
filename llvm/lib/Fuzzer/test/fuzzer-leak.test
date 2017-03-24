@@ -29,7 +29,5 @@ RUN: not LLVMFuzzer-LeakTimeoutTest -timeout=1 2>&1 | FileCheck %s --check-prefi
 LEAK_TIMEOUT: ERROR: libFuzzer: timeout after
 LEAK_TIMEOUT-NOT: LeakSanitizer
 
-RUN: LLVMFuzzer-AccumulateAllocationsTest -detect_leaks=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=ACCUMULATE_ALLOCS
-ACCUMULATE_ALLOCS: INFO: libFuzzer disabled leak detection after every mutation
 
 RUN: LLVMFuzzer-LeakTest -error_exitcode=0

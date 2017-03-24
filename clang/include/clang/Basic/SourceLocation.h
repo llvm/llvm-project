@@ -321,8 +321,7 @@ public:
   }
 
   /// \brief Comparison function class, useful for sorting FullSourceLocs.
-  struct BeforeThanCompare : public std::binary_function<FullSourceLoc,
-                                                         FullSourceLoc, bool> {
+  struct BeforeThanCompare {
     bool operator()(const FullSourceLoc& lhs, const FullSourceLoc& rhs) const {
       return lhs.isBeforeInTranslationUnitThan(rhs);
     }

@@ -459,9 +459,13 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     P.printNumber("Record count", Tpi->NumTypeRecords());
   }
 
-  TypeDatabaseVisitor DBV(TypeDB);
-  CompactTypeDumpVisitor CTDV(TypeDB, &P);
+  TypeDatabase &StreamDB = (StreamIdx == StreamTPI) ? TypeDB : ItemDB;
+
+  TypeDatabaseVisitor DBV(StreamDB);
+  CompactTypeDumpVisitor CTDV(StreamDB, &P);
   TypeDumpVisitor TDV(TypeDB, &P, false);
+  if (StreamIdx == StreamIPI)
+    TDV.setItemDB(ItemDB);
   RecordBytesVisitor RBV(P);
   TypeDeserializer Deserializer;
 

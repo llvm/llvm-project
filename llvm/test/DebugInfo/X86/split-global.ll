@@ -30,7 +30,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 @point.y = global i32 2, align 4, !dbg !13
 @point.x = global i32 1, align 4, !dbg !12
 
-@part_const.x = global i32 1, align 4, !dbg !15
+@part_const.x = global i32 1, align 4, !dbg !14
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!10, !11}

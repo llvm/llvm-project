@@ -88,9 +88,12 @@ public:
 }
 
 /// Parse the module summary index out of an IR file and return the module
-/// summary index object if found, or nullptr if not.
+/// summary index object if found, or nullptr if not. If Identifier is
+/// non-empty, it is used as the module ID (module path) in the resulting
+/// index. This can be used when the index is being read from a file
+/// containing minimized bitcode just for the thin link.
 Expected<std::unique_ptr<ModuleSummaryIndex>>
-getModuleSummaryIndexForFile(StringRef Path);
+getModuleSummaryIndexForFile(StringRef Path, StringRef Identifier = "");
 }
 
 #endif

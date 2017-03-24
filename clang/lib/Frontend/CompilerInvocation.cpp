@@ -641,6 +641,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << "-x ir";
     Opts.ThinLTOIndexFile = Args.getLastArgValue(OPT_fthinlto_index_EQ);
   }
+  Opts.ThinLinkBitcodeFile = Args.getLastArgValue(OPT_fthin_link_bitcode_EQ);
 
   Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
 

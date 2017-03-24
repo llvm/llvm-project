@@ -2846,6 +2846,13 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
     }
 
+    if (Decl->getSpecializationKind() == TSK_Undeclared) {
+      MultiLevelTemplateArgumentList TemplateArgLists;
+      TemplateArgLists.addOuterTemplateArguments(Converted);
+      InstantiateAttrsForDecl(TemplateArgLists, ClassTemplate->getTemplatedDecl(),
+                              Decl);
+    }
+
     // Diagnose uses of this specialization.
     (void)DiagnoseUseOfDecl(Decl, TemplateLoc);
 

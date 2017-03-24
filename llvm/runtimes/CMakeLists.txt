@@ -145,6 +145,10 @@ else() # if this is included from LLVM's CMake
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
   include(LLVMExternalProjectUtils)
 
+  if(NOT LLVM_BUILD_RUNTIMES)
+    set(EXTRA_ARGS EXCLUDE_FROM_ALL)
+  endif()
+
   # If compiler-rt is present we need to build the builtin libraries first. This
   # is required because the other runtimes need the builtin libraries present
   # before the just-built compiler can pass the configuration tests.
@@ -157,7 +161,8 @@ else() # if this is included from LLVM's CMake
                                           -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                           -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                PASSTHROUGH_PREFIXES COMPILER_RT
-                               USE_TOOLCHAIN)
+                               USE_TOOLCHAIN
+                               ${EXTRA_ARGS})
     else()
       get_cmake_property(variableNames VARIABLES)
       add_custom_target(builtins)
@@ -179,7 +184,8 @@ else() # if this is included from LLVM's CMake
                                           -DCOMPILER_RT_DEFAULT_TARGET_ONLY=On
                                           ${${target}_extra_args}
                                PASSTHROUGH_PREFIXES COMPILER_RT
-                               USE_TOOLCHAIN)
+                               USE_TOOLCHAIN
+                               ${EXTRA_ARGS})
         add_dependencies(builtins builtins-${target})
       endforeach()
     endif()
@@ -238,7 +244,8 @@ else() # if this is included from LLVM's CMake
                                             ${SUB_COMPONENTS}
                                             ${SUB_COMPONENT_CHECK_TARGETS}
                                             ${SUB_INSTALL_TARGETS}
-                             USE_TOOLCHAIN)
+                             USE_TOOLCHAIN
+                             ${EXTRA_ARGS})
     
     # TODO: This is a hack needed because the libcxx headers are copied into the
     # build directory during configuration. Without that step the clang in the

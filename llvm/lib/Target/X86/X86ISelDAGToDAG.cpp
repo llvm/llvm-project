@@ -1335,8 +1335,8 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     AM.Scale = 1;
 
     // Insert the new nodes into the topological ordering.
-    insertDAGNode(*CurDAG, N, Zero);
-    insertDAGNode(*CurDAG, N, Neg);
+    insertDAGNode(*CurDAG, Handle.getValue(), Zero);
+    insertDAGNode(*CurDAG, Handle.getValue(), Neg);
     return false;
   }
 

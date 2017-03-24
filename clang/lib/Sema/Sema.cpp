@@ -744,7 +744,9 @@ void Sema::ActOnEndOfTranslationUnit() {
   UnusedFileScopedDecls.erase(
       std::remove_if(UnusedFileScopedDecls.begin(nullptr, true),
                      UnusedFileScopedDecls.end(),
-                     std::bind1st(std::ptr_fun(ShouldRemoveFromUnused), this)),
+                     [this](const DeclaratorDecl *DD) {
+                       return ShouldRemoveFromUnused(this, DD);
+                     }),
       UnusedFileScopedDecls.end());
 
   if (TUKind == TU_Prefix) {

@@ -6723,6 +6723,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   // Diagnostics for deprecated or unavailable.
   unsigned diag, diag_message, diag_fwdclass_message;
   unsigned diag_available_here = diag::note_availability_specified_here;
+  SourceLocation NoteLocation = D->getLocation();
 
   // Matches 'diag::note_property_attribute' options.
   unsigned property_note_select;
@@ -6745,6 +6746,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;
     available_here_select_kind = /* deprecated */ 2;
+    if (const auto *attr = D->getAttr<DeprecatedAttr>())
+      NoteLocation = attr->getLocation();
     break;
 
   case AR_Unavailable:
@@ -6863,7 +6866,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     }
   }
   else
-    S.Diag(D->getLocation(), diag_available_here)
+    S.Diag(NoteLocation, diag_available_here)
         << D << available_here_select_kind;
 
   if (K == AR_NotYetIntroduced)

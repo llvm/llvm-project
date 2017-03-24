@@ -9,6 +9,7 @@
 
 #include "Writer.h"
 #include "Config.h"
+#include "Filesystem.h"
 #include "LinkerScript.h"
 #include "MapFile.h"
 #include "Memory.h"
@@ -21,10 +22,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
-#include <thread>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1338,9 +1337,8 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags())
         ->add(In<ELFT>::EhFrameHdr->OutSec);
 
-  // PT_OPENBSD_RANDOMIZE specifies the location and size of a part of the
-  // memory image of the program that must be filled with random data before any
-  // code in the object is executed.
+  // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
+  // the dynamic linker fill the segment with random data.
   if (OutputSection *Sec = findSection(".openbsd.randomdata"))
     AddHdr(PT_OPENBSD_RANDOMIZE, Sec->getPhdrFlags())->add(Sec);
 
@@ -1745,41 +1743,6 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
   for (OutputSection *Sec : OutputSections)
     Sec->writeHeaderTo<ELFT>(++SHdrs);
-}
-
-// Removes a given file asynchronously. This is a performance hack,
-// so remove this when operating systems are improved.
-//
-// On Linux (and probably on other Unix-like systems), unlink(2) is a
-// noticeably slow system call. As of 2016, unlink takes 250
-// milliseconds to remove a 1 GB file on ext4 filesystem on my machine.
-//
-// To create a new result file, we first remove existing file. So, if
-// you repeatedly link a 1 GB program in a regular compile-link-debug
-// cycle, every cycle wastes 250 milliseconds only to remove a file.
-// Since LLD can link a 1 GB binary in about 5 seconds, that waste
-// actually counts.
-//
-// This function spawns a background thread to call unlink.
-// The calling thread returns almost immediately.
-static void unlinkAsync(StringRef Path) {
-  if (!Config->Threads || !sys::fs::exists(Config->OutputFile))
-    return;
-
-  // First, rename Path to avoid race condition. We cannot remove
-  // Path from a different thread because we are now going to create
-  // Path as a new file. If we do that in a different thread, the new
-  // thread can remove the new file.
-  SmallString<128> TempPath;
-  if (sys::fs::createUniqueFile(Path + "tmp%%%%%%%%", TempPath))
-    return;
-  if (sys::fs::rename(Path, TempPath)) {
-    sys::fs::remove(TempPath);
-    return;
-  }
-
-  // Remove TempPath in background.
-  std::thread([=] { ::remove(TempPath.str().str().c_str()); }).detach();
 }
 
 // Open a result file.

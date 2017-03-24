@@ -37,8 +37,8 @@ struct InputInfo {
 };
 
 class InputCorpus {
+  static const size_t kFeatureSetSize = 1 << 21;
  public:
-  static const size_t kFeatureSetSize = 1 << 16;
   InputCorpus(const std::string &OutputCorpus) : OutputCorpus(OutputCorpus) {
     memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
     memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
@@ -68,7 +68,8 @@ class InputCorpus {
   }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
-  void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile = false) {
+  void AddToCorpus(const Unit &U, size_t NumFeatures,
+                   bool MayDeleteFile = false) {
     assert(!U.empty());
     uint8_t Hash[kSHA1NumBytes];
     if (FeatureDebug)
@@ -82,7 +83,7 @@ class InputCorpus {
     II.MayDeleteFile = MayDeleteFile;
     memcpy(II.Sha1, Hash, kSHA1NumBytes);
     UpdateCorpusDistribution();
-    ValidateFeatureSet();
+    // ValidateFeatureSet();
   }
 
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
@@ -144,6 +145,8 @@ class InputCorpus {
         II.NumFeatures--;
         if (II.NumFeatures == 0)
           DeleteInput(OldIdx);
+      } else {
+        NumAddedFeatures++;
       }
       if (FeatureDebug)
         Printf("ADD FEATURE %zd sz %d\n", Idx, NewSize);
@@ -155,12 +158,7 @@ class InputCorpus {
     return false;
   }
 
-  size_t NumFeatures() const {
-    size_t Res = 0;
-    for (size_t i = 0; i < kFeatureSetSize; i++)
-      Res += GetFeature(i) != 0;
-    return Res;
-  }
+  size_t NumFeatures() const { return NumAddedFeatures; }
 
   void ResetFeatureSet() {
     assert(Inputs.empty());
@@ -213,6 +211,7 @@ private:
   std::vector<InputInfo*> Inputs;
 
   bool CountingFeatures = false;
+  size_t NumAddedFeatures = 0;
   uint32_t InputSizesPerFeature[kFeatureSetSize];
   uint32_t SmallestElementPerFeature[kFeatureSetSize];
 

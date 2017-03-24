@@ -483,6 +483,10 @@ option(LLVM_INCLUDE_UTILS "Generate build targets for the LLVM utils." ON)
 option(LLVM_BUILD_UTILS
   "Build LLVM utility binaries. If OFF, just generate build targets." ON)
 
+option(LLVM_INCLUDE_RUNTIMES "Generate build targets for the LLVM runtimes." ON)
+option(LLVM_BUILD_RUNTIMES
+  "Build the LLVM runtimes. If OFF, just generate build targets." ON)
+
 option(LLVM_BUILD_RUNTIME
   "Build the LLVM runtime libraries." ON)
 option(LLVM_BUILD_EXAMPLES
@@ -862,7 +866,9 @@ if( LLVM_INCLUDE_TOOLS )
   add_subdirectory(tools)
 endif()
 
-add_subdirectory(runtimes)
+if( LLVM_INCLUDE_RUNTIMES )
+  add_subdirectory(runtimes)
+endif()
 
 if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
