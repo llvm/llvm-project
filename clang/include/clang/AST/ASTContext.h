@@ -1864,9 +1864,7 @@ public:
   /// arguments to the builtin that are required to be integer constant
   /// expressions.
   QualType GetBuiltinType(unsigned ID, GetBuiltinTypeError &Error,
-                          unsigned *IntegerConstantArgs = nullptr,
-                          bool *OverrideNonnullReturn = nullptr,
-                          unsigned *OverrideNonnullArgs = nullptr) const;
+                          unsigned *IntegerConstantArgs = nullptr) const;
 
 private:
   CanQualType getFromTargetType(unsigned Type) const;

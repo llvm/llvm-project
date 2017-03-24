@@ -8,22 +8,21 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <mutex>
 
-// template <class Mutex>
-// class lock_guard
+// template <class Mutex...>
+// class scoped_lock
 // {
 // public:
-//     typedef Mutex mutex_type;
+//     typedef Mutex mutex_type;  // only if sizeof...(Mutex) == 1
 //     ...
 // };
 
-// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
 #include <type_traits>
+#include "test_macros.h"
 
 struct NAT {};
 
@@ -41,39 +40,39 @@ constexpr bool has_mutex_type() {
 int main()
 {
     {
-        using T = std::lock_guard<>;
+        using T = std::scoped_lock<>;
         static_assert(!has_mutex_type<T>(), "");
     }
     {
         using M1 = std::mutex;
-        using T = std::lock_guard<M1>;
+        using T = std::scoped_lock<M1>;
         static_assert(std::is_same<T::mutex_type, M1>::value, "");
     }
     {
         using M1 = std::recursive_mutex;
-        using T = std::lock_guard<M1>;
+        using T = std::scoped_lock<M1>;
         static_assert(std::is_same<T::mutex_type, M1>::value, "");
     }
     {
         using M1 = std::mutex;
         using M2 = std::recursive_mutex;
-        using T = std::lock_guard<M1, M2>;
+        using T = std::scoped_lock<M1, M2>;
         static_assert(!has_mutex_type<T>(), "");
     }
     {
         using M1 = std::mutex;
         using M2 = std::recursive_mutex;
-        using T = std::lock_guard<M1, M1, M2>;
+        using T = std::scoped_lock<M1, M1, M2>;
         static_assert(!has_mutex_type<T>(), "");
     }
     {
         using M1 = std::mutex;
-        using T = std::lock_guard<M1, M1>;
+        using T = std::scoped_lock<M1, M1>;
         static_assert(!has_mutex_type<T>(), "");
     }
     {
         using M1 = std::recursive_mutex;
-        using T = std::lock_guard<M1, M1, M1>;
+        using T = std::scoped_lock<M1, M1, M1>;
         static_assert(!has_mutex_type<T>(), "");
     }
 }

@@ -175,7 +175,7 @@ struct _LIBCPP_TYPE_VIS __shared_mutex_base
 #if _LIBCPP_STD_VER > 14
 class _LIBCPP_TYPE_VIS shared_mutex
 {
-	__shared_mutex_base __base;
+    __shared_mutex_base __base;
 public:
     shared_mutex() : __base() {}
     _LIBCPP_INLINE_VISIBILITY ~shared_mutex() = default;
@@ -201,7 +201,7 @@ public:
 
 class _LIBCPP_TYPE_VIS shared_timed_mutex
 {
-	__shared_mutex_base __base;
+    __shared_mutex_base __base;
 public:
     shared_timed_mutex();
     _LIBCPP_INLINE_VISIBILITY ~shared_timed_mutex() = default;

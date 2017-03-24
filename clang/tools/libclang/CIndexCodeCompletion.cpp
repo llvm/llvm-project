@@ -270,10 +270,6 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// \brief Source manager, used for diagnostics.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
   
-  /// \brief Temporary files that should be removed once we have finished
-  /// with the code-completion results.
-  std::vector<std::string> TemporaryFiles;
-
   /// \brief Temporary buffers that will be deleted once we have finished with
   /// the code-completion results.
   SmallVector<const llvm::MemoryBuffer *, 1> TemporaryBuffers;
@@ -335,8 +331,6 @@ AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   llvm::DeleteContainerPointers(DiagnosticsWrappers);
   delete [] Results;
 
-  for (unsigned I = 0, N = TemporaryFiles.size(); I != N; ++I)
-    llvm::sys::fs::remove(TemporaryFiles[I]);
   for (unsigned I = 0, N = TemporaryBuffers.size(); I != N; ++I)
     delete TemporaryBuffers[I];
 

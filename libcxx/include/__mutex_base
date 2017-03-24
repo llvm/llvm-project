@@ -80,21 +80,9 @@ constexpr adopt_lock_t  adopt_lock  = adopt_lock_t();
 
 #endif
 
-
-// Forward declare lock_guard as a variadic template even in C++03 to keep
-// the mangling consistent between dialects.
-#if defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
-template <class ..._Mutexes>
-class _LIBCPP_TEMPLATE_VIS lock_guard;
-#endif
-
 template <class _Mutex>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable)
-#if !defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
 lock_guard
-#else
-lock_guard<_Mutex>
-#endif
 {
 public:
     typedef _Mutex mutex_type;

@@ -313,7 +313,7 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
          "Invalid opcode for Div/Rem lowering");
-  bool isSigned = (Opcode == ISD::SDIVREM);
+  bool IsSigned = (Opcode == ISD::SDIVREM);
   EVT VT = Op->getValueType(0);
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
 
@@ -322,16 +322,16 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   default:
     llvm_unreachable("Unexpected request for libcall!");
   case MVT::i8:
-    LC = isSigned ? RTLIB::SDIVREM_I8 : RTLIB::UDIVREM_I8;
+    LC = IsSigned ? RTLIB::SDIVREM_I8 : RTLIB::UDIVREM_I8;
     break;
   case MVT::i16:
-    LC = isSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16;
+    LC = IsSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16;
     break;
   case MVT::i32:
-    LC = isSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
+    LC = IsSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
     break;
   case MVT::i64:
-    LC = isSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
+    LC = IsSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
     break;
   }
 
@@ -342,8 +342,8 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   for (SDValue const &Value : Op->op_values()) {
     Entry.Node = Value;
     Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.isSExt = isSigned;
-    Entry.isZExt = !isSigned;
+    Entry.IsSExt = IsSigned;
+    Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);
   }
 
@@ -358,8 +358,8 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
       .setChain(InChain)
       .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
       .setInRegister()
-      .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+      .setSExtResult(IsSigned)
+      .setZExtResult(!IsSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
   return CallInfo.first;

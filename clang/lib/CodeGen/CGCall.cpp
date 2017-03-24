@@ -1759,34 +1759,6 @@ void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
   F.addAttributes(llvm::AttributeList::FunctionIndex, AS);
 }
 
-/// Returns the attribute (either parameter attribute, or function
-/// attribute), which declares argument ArgNo to be non-null.
-static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
-                                         QualType ArgType, unsigned ArgNo) {
-  // FIXME: __attribute__((nonnull)) can also be applied to:
-  //   - references to pointers, where the pointee is known to be
-  //     nonnull (apparently a Clang extension)
-  //   - transparent unions containing pointers
-  // In the former case, LLVM IR cannot represent the constraint. In
-  // the latter case, we have no guarantee that the transparent union
-  // is in fact passed as a pointer.
-  if (!ArgType->isAnyPointerType() && !ArgType->isBlockPointerType())
-    return nullptr;
-  // First, check attribute on parameter itself.
-  if (PVD) {
-    if (auto ParmNNAttr = PVD->getAttr<NonNullAttr>())
-      return ParmNNAttr;
-  }
-  // Check function attributes.
-  if (!FD)
-    return nullptr;
-  for (const auto *NNAttr : FD->specific_attrs<NonNullAttr>()) {
-    if (NNAttr->isNonNull(ArgNo))
-      return NNAttr;
-  }
-  return nullptr;
-}
-
 void CodeGenModule::ConstructAttributeList(
     StringRef Name, const CGFunctionInfo &FI, CGCalleeInfo CalleeInfo,
     AttributeListType &PAL, unsigned &CallingConv, bool AttrOnCallSite) {
@@ -1803,22 +1775,6 @@ void CodeGenModule::ConstructAttributeList(
                                      CalleeInfo.getCalleeFunctionProtoType());
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl();
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-
-  // Check if this is a builtin function that might override some attributes.
-  unsigned BuiltinID = FD ? FD->getBuiltinID() : 0;
-  bool OverrideNonnullReturn = false;
-  unsigned OverrideNonnullArgs = 0;
-  if (BuiltinID) {
-    ASTContext::GetBuiltinTypeError Error;
-    getContext().GetBuiltinType(BuiltinID, Error, nullptr,
-                                &OverrideNonnullReturn, &OverrideNonnullArgs);
-    // Note that we can't check the 'Error' here as there may be errors that
-    // have been diagnosed and reported to the programmer as warnings but
-    // repaired in the AST such as for implicit declarations of builtin
-    // functions. None of those impact our usage of this to analyze attributes
-    // for the builtins.
-  }
 
   bool HasOptnone = false;
   // FIXME: handle sseregparm someday...
@@ -1834,13 +1790,13 @@ void CodeGenModule::ConstructAttributeList(
     if (TargetDecl->hasAttr<ConvergentAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::Convergent);
 
-    if (FD) {
+    if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
       AddAttributesFromFunctionProtoType(
-          getContext(), FuncAttrs, FD->getType()->getAs<FunctionProtoType>());
+          getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
       // Don't use [[noreturn]] or _Noreturn for a call to a virtual function.
       // These attributes are not inherited by overloads.
-      const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (FD->isNoReturn() && !(AttrOnCallSite && MD && MD->isVirtual()))
+      const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
+      if (Fn->isNoReturn() && !(AttrOnCallSite && MD && MD->isVirtual()))
         FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
     }
 
@@ -1857,7 +1813,7 @@ void CodeGenModule::ConstructAttributeList(
     }
     if (TargetDecl->hasAttr<RestrictAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-    if (TargetDecl->hasAttr<ReturnsNonNullAttr>() && !OverrideNonnullReturn)
+    if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
@@ -1889,6 +1845,7 @@ void CodeGenModule::ConstructAttributeList(
     // we have a decl for the function and it has a target attribute then
     // parse that and add it to the feature set.
     StringRef TargetCPU = getTarget().getTargetOpts().CPU;
+    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
     if (FD && FD->hasAttr<TargetAttr>()) {
       llvm::StringMap<bool> FeatureMap;
       getFunctionFeatureMap(FeatureMap, FD);
@@ -2080,13 +2037,6 @@ void CodeGenModule::ConstructAttributeList(
       continue;
     }
 
-    if (FD && ArgNo < FD->param_size() && ParamType->isPointerType()) {
-      auto *PVD = FD->getParamDecl(ArgNo);
-      if (getNonNullAttr(FD, PVD, ParamType, PVD->getFunctionScopeIndex()) &&
-          (!BuiltinID || (OverrideNonnullArgs & (1 << ArgNo)) == 0))
-        Attrs.addAttribute(llvm::Attribute::NonNull);
-    }
-
     if (const auto *RefTy = ParamType->getAs<ReferenceType>()) {
       QualType PTy = RefTy->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
@@ -2164,6 +2114,34 @@ static llvm::Value *emitArgumentDemotion(CodeGenFunction &CGF,
     return CGF.Builder.CreateTrunc(value, varType, "arg.unpromote");
 
   return CGF.Builder.CreateFPCast(value, varType, "arg.unpromote");
+}
+
+/// Returns the attribute (either parameter attribute, or function
+/// attribute), which declares argument ArgNo to be non-null.
+static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
+                                         QualType ArgType, unsigned ArgNo) {
+  // FIXME: __attribute__((nonnull)) can also be applied to:
+  //   - references to pointers, where the pointee is known to be
+  //     nonnull (apparently a Clang extension)
+  //   - transparent unions containing pointers
+  // In the former case, LLVM IR cannot represent the constraint. In
+  // the latter case, we have no guarantee that the transparent union
+  // is in fact passed as a pointer.
+  if (!ArgType->isAnyPointerType() && !ArgType->isBlockPointerType())
+    return nullptr;
+  // First, check attribute on parameter itself.
+  if (PVD) {
+    if (auto ParmNNAttr = PVD->getAttr<NonNullAttr>())
+      return ParmNNAttr;
+  }
+  // Check function attributes.
+  if (!FD)
+    return nullptr;
+  for (const auto *NNAttr : FD->specific_attrs<NonNullAttr>()) {
+    if (NNAttr->isNonNull(ArgNo))
+      return NNAttr;
+  }
+  return nullptr;
 }
 
 namespace {

@@ -102,12 +102,12 @@ extern "C" int __munmap(void *, size_t) SANITIZER_WEAK_ATTRIBUTE;
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
   if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
-  if (__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
+  if (&__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
   return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }
 
 uptr internal_munmap(void *addr, uptr length) {
-  if (__munmap) return __munmap(addr, length);
+  if (&__munmap) return __munmap(addr, length);
   return munmap(addr, length);
 }
 
@@ -198,7 +198,7 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
 extern "C" pid_t __fork(void) SANITIZER_WEAK_ATTRIBUTE;
 
 int internal_fork() {
-  if (__fork)
+  if (&__fork)
     return __fork();
   return fork();
 }
