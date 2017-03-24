@@ -15,6 +15,7 @@
 
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:
+# HELP: : supported targets:{{.*}} elf
 
 # RUN: ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
 # VERSION: LLD {{.*}} (compatible with GNU linkers)

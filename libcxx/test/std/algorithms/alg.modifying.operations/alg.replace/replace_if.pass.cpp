@@ -22,13 +22,15 @@
 
 #include "test_iterators.h"
 
+bool equalToTwo(int v) { return v == 2; }
+
 template <class Iter>
 void
 test()
 {
     int ia[] = {0, 1, 2, 3, 4};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-    std::replace_if(Iter(ia), Iter(ia+sa), std::bind2nd(std::equal_to<int>(), 2), 5);
+    std::replace_if(Iter(ia), Iter(ia+sa), equalToTwo, 5);
     assert(ia[0] == 0);
     assert(ia[1] == 1);
     assert(ia[2] == 5);

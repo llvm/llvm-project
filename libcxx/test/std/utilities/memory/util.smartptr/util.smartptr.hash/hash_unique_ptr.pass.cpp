@@ -67,6 +67,7 @@ int main()
     int* ptr = new int;
     std::unique_ptr<int> p(ptr);
     std::hash<std::unique_ptr<int> > f;
+    ASSERT_NOT_NOEXCEPT(f(p));
     std::size_t h = f(p);
     assert(h == std::hash<int*>()(ptr));
   }

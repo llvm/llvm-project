@@ -264,7 +264,8 @@ ModulePass *createSampleProfileLoaderPass();
 ModulePass *createSampleProfileLoaderPass(StringRef Name);
 
 /// Write ThinLTO-ready bitcode to Str.
-ModulePass *createWriteThinLTOBitcodePass(raw_ostream &Str);
+ModulePass *createWriteThinLTOBitcodePass(raw_ostream &Str,
+                                          raw_ostream *ThinLinkOS = nullptr);
 
 } // End llvm namespace
 

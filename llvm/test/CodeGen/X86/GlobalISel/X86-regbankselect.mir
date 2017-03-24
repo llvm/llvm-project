@@ -46,6 +46,61 @@
     ret <4 x float>  %ret
   }
 
+  define i8 @test_load_i8(i8* %p1) {
+    %r = load i8, i8* %p1
+    ret i8 %r
+  }
+
+  define i16 @test_load_i16(i16* %p1) {
+    %r = load i16, i16* %p1
+    ret i16 %r
+  }
+
+  define i32 @test_load_i32(i32* %p1) {
+    %r = load i32, i32* %p1
+    ret i32 %r
+  }
+
+  define i64 @test_load_i64(i64* %p1) {
+    %r = load i64, i64* %p1
+    ret i64 %r
+  }
+
+  define float @test_load_float(float* %p1) {
+    %r = load float, float* %p1
+    ret float %r
+  }
+
+  define double @test_load_double(double* %p1) {
+    %r = load double, double* %p1
+    ret double %r
+  }
+
+  define <4 x i32> @test_load_v4i32(<4 x i32>* %p1) {
+    %r = load <4 x i32>, <4 x i32>* %p1, align 16
+    ret <4 x i32> %r
+  }
+
+  define i32* @test_store_i32(i32 %val, i32* %p1) {
+    store i32 %val, i32* %p1
+    ret i32* %p1
+  }
+
+  define i64* @test_store_i64(i64 %val, i64* %p1) {
+    store i64 %val, i64* %p1
+    ret i64* %p1
+  }
+
+  define float* @test_store_float(float %val, float* %p1) {
+    store float %val, float* %p1
+    ret float* %p1
+  }
+
+  define double* @test_store_double(double %val, double* %p1) {
+    store double %val, double* %p1
+    ret double* %p1
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -261,6 +316,272 @@ body:             |
     %2(<4 x s32>) = G_FADD %0, %1
     %xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i8
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_load_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i16
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_load_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_load_i64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i64
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_load_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_float
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %xmm0 = COPY %1(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_double
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_double
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %xmm0 = COPY %1(s64)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_v4i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_v4i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: vecr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.p1, align 1)
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_store_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %rsi
+
+    %0(s32) = COPY %edi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_i64
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_float
+# CHECK: registers:
+# CHECK:    - { id: 0, class: vecr }
+# CHECK:    - { id: 1, class: gpr }
+# CHECK:    - { id: 2, class: gpr }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    ; CHECK:  %2(s32) = COPY %0(s32)
+    ; CHECK:  G_STORE %2(s32), %1(p0) :: (store 4 into %ir.p1)
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_double
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_double
+# CHECK: registers:
+# CHECK:    - { id: 0, class: vecr }
+# CHECK:    - { id: 1, class: gpr }
+# CHECK:    - { id: 2, class: gpr }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s64) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    ; CHECK:  %2(s64) = COPY %0(s64)
+    ; CHECK:  G_STORE %2(s64), %1(p0) :: (store 8 into %ir.p1)
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
 
 ...
 

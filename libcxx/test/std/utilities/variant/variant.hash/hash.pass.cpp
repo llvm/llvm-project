@@ -102,6 +102,7 @@ void test_hash_monostate() {
   assert(h(m1) == h(m2));
   {
     ASSERT_SAME_TYPE(decltype(h(m1)), std::size_t);
+    ASSERT_NOEXCEPT(h(m1));
     static_assert(std::is_copy_constructible<H>::value, "");
   }
   {
@@ -124,12 +125,16 @@ void test_hash_variant_duplicate_elements() {
 struct A {};
 struct B {};
 
+namespace std {
+
 template <>
-struct std::hash<B> {
+struct hash<B> {
   size_t operator()(B const&) const {
     return 0;
   }
 };
+
+}
 
 void test_hash_variant_enabled() {
   {

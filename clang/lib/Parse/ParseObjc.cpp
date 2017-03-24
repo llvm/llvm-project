@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
-#include "RAIIObjectsForParser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
@@ -278,11 +278,6 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
     T.consumeClose();
     if (T.getCloseLocation().isInvalid())
       return nullptr;
-
-    if (!attrs.empty()) { // categories don't support attributes.
-      Diag(nameLoc, diag::err_objc_no_attributes_on_category);
-      attrs.clear();
-    }
     
     // Next, we need to check for any protocol references.
     assert(LAngleLoc.isInvalid() && "Cannot have already parsed protocols");
@@ -294,16 +289,11 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
                                     /*consumeLastToken=*/true))
       return nullptr;
 
-    Decl *CategoryType =
-    Actions.ActOnStartCategoryInterface(AtLoc,
-                                        nameId, nameLoc,
-                                        typeParameterList,
-                                        categoryId, categoryLoc,
-                                        ProtocolRefs.data(),
-                                        ProtocolRefs.size(),
-                                        ProtocolLocs.data(),
-                                        EndProtoLoc);
-    
+    Decl *CategoryType = Actions.ActOnStartCategoryInterface(
+        AtLoc, nameId, nameLoc, typeParameterList, categoryId, categoryLoc,
+        ProtocolRefs.data(), ProtocolRefs.size(), ProtocolLocs.data(),
+        EndProtoLoc, attrs.getList());
+
     if (Tok.is(tok::l_brace))
       ParseObjCClassInstanceVariables(CategoryType, tok::objc_private, AtLoc);
       

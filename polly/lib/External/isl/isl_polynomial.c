@@ -620,13 +620,13 @@ __isl_give struct isl_upoly *isl_upoly_cow(__isl_take struct isl_upoly *up)
 	return isl_upoly_dup(up);
 }
 
-void isl_upoly_free(__isl_take struct isl_upoly *up)
+__isl_null struct isl_upoly *isl_upoly_free(__isl_take struct isl_upoly *up)
 {
 	if (!up)
-		return;
+		return NULL;
 
 	if (--up->ref > 0)
-		return;
+		return NULL;
 
 	if (up->var < 0)
 		upoly_free_cst((struct isl_upoly_cst *)up);
@@ -635,6 +635,7 @@ void isl_upoly_free(__isl_take struct isl_upoly *up)
 
 	isl_ctx_deref(up->ctx);
 	free(up);
+	return NULL;
 }
 
 static void isl_upoly_cst_reduce(__isl_keep struct isl_upoly_cst *cst)
@@ -4566,6 +4567,9 @@ error:
  *	0	if cst == 0
  *	1	if cst == 1
  *  infinity	if cst == -1
+ *
+ * If cst == -1, then explicitly check whether the domain is empty and,
+ * if so, return 0 instead.
  */
 static __isl_give isl_pw_qpolynomial *constant_on_domain(
 	__isl_take isl_basic_set *bset, int cst)
@@ -4573,6 +4577,8 @@ static __isl_give isl_pw_qpolynomial *constant_on_domain(
 	isl_space *dim;
 	isl_qpolynomial *qp;
 
+	if (cst < 0 && isl_basic_set_is_empty(bset) == isl_bool_true)
+		cst = 0;
 	if (!bset)
 		return NULL;
 

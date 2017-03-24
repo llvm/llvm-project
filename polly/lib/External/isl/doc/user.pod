@@ -7705,7 +7705,8 @@ the following.
 
 	int isl_vertices_get_n_vertices(
 		__isl_keep isl_vertices *vertices);
-	void isl_vertices_free(__isl_take isl_vertices *vertices);
+	__isl_null isl_vertices *isl_vertices_free(
+		__isl_take isl_vertices *vertices);
 
 Vertices can be inspected and destroyed using the following functions.
 
@@ -8725,9 +8726,12 @@ pairs of corresponding sink iterations and accessed data elements.
 To compute standard flow dependences, the sink should be
 a read, while the sources should be writes.
 If any of the source accesses are marked as being I<may>
-accesses, then there will be a dependence from the last
+accesses, then there will be a (may) dependence from the last
 I<must> access B<and> from any I<may> access that follows
-this last I<must> access.
+this last I<must> access, but still precedes the sink access.
+Only dependences originating in a must access and without
+any may accesses between the must access and the sink access
+are considered to be must dependences.
 In particular, if I<all> sources are I<may> accesses,
 then memory based dependence analysis is performed.
 If, on the other hand, all sources are I<must> accesses,

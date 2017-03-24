@@ -22,10 +22,14 @@
 struct A {};
 struct B {};
 
+namespace std {
+
 template <>
-struct std::hash<B> {
+struct hash<B> {
   size_t operator()(B const&) { return 0; }
 };
+
+}
 
 int main()
 {
@@ -36,6 +40,7 @@ int main()
     {
         typedef int T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = 2;
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));
@@ -43,6 +48,7 @@ int main()
     {
         typedef std::string T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = std::string("123");
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));
@@ -50,6 +56,7 @@ int main()
     {
         typedef std::unique_ptr<int> T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = std::unique_ptr<int>(new int(3));
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));

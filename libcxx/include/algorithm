@@ -281,12 +281,12 @@ template <class ForwardIterator, class OutputIterator>
 
 template <class RandomAccessIterator>
     void
-    random_shuffle(RandomAccessIterator first, RandomAccessIterator last); // deprecated in C++14
+    random_shuffle(RandomAccessIterator first, RandomAccessIterator last); // deprecated in C++14, removed in C++17
 
 template <class RandomAccessIterator, class RandomNumberGenerator>
     void
     random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
-                   RandomNumberGenerator& rand);  // deprecated in C++14
+                   RandomNumberGenerator& rand);  // deprecated in C++14, removed in C++17
 
 template<class PopulationIterator, class SampleIterator,
          class Distance, class UniformRandomBitGenerator>
@@ -3026,6 +3026,7 @@ uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p
     return static_cast<result_type>(__u + __p.a());
 }
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE)
 class _LIBCPP_TYPE_VIS __rs_default;
 
 _LIBCPP_FUNC_VIS __rs_default __rs_get();
@@ -3095,6 +3096,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
         }
     }
 }
+#endif
 
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>

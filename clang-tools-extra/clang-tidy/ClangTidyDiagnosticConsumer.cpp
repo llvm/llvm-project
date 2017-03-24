@@ -129,8 +129,9 @@ static bool ConsumeNegativeIndicator(StringRef &GlobList) {
 // Converts first glob from the comma-separated list of globs to Regex and
 // removes it and the trailing comma from the GlobList.
 static llvm::Regex ConsumeGlob(StringRef &GlobList) {
-  StringRef Glob = GlobList.substr(0, GlobList.find(',')).trim();
-  GlobList = GlobList.substr(Glob.size() + 1);
+  StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find(','));
+  StringRef Glob = UntrimmedGlob.trim(' ');
+  GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
   SmallString<128> RegexText("^");
   StringRef MetaChars("()^$|*+?.[]\\{}");
   for (char C : Glob) {

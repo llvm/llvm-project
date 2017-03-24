@@ -270,9 +270,9 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   if (ProfileGuidedSectionPrefix) {
     ProfileSummaryInfo *PSI =
         getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    if (PSI->isFunctionEntryHot(&F))
+    if (PSI->isFunctionHotInCallGraph(&F))
       F.setSectionPrefix(".hot");
-    else if (PSI->isFunctionEntryCold(&F))
+    else if (PSI->isFunctionColdInCallGraph(&F))
       F.setSectionPrefix(".cold");
   }
 

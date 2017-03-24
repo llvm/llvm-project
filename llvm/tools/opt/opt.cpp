@@ -102,6 +102,11 @@ static cl::opt<bool>
     OutputThinLTOBC("thinlto-bc",
                     cl::desc("Write output as ThinLTO-ready bitcode"));
 
+static cl::opt<std::string> ThinLinkBitcodeFile(
+    "thin-link-bitcode-file", cl::value_desc("filename"),
+    cl::desc(
+        "A file in which to write minimized bitcode for the thin link only"));
+
 static cl::opt<bool>
 NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
 
@@ -456,6 +461,7 @@ int main(int argc, char **argv) {
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<tool_output_file> Out;
+  std::unique_ptr<tool_output_file> ThinLinkOut;
   if (NoOutput) {
     if (!OutputFilename.empty())
       errs() << "WARNING: The -o (output filename) option is ignored when\n"
@@ -470,6 +476,15 @@ int main(int argc, char **argv) {
     if (EC) {
       errs() << EC.message() << '\n';
       return 1;
+    }
+
+    if (!ThinLinkBitcodeFile.empty()) {
+      ThinLinkOut.reset(
+          new tool_output_file(ThinLinkBitcodeFile, EC, sys::fs::F_None));
+      if (EC) {
+        errs() << EC.message() << '\n';
+        return 1;
+      }
     }
   }
 
@@ -700,7 +715,8 @@ int main(int argc, char **argv) {
         report_fatal_error("Text output is incompatible with -module-hash");
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
     } else if (OutputThinLTOBC)
-      Passes.add(createWriteThinLTOBitcodePass(*OS));
+      Passes.add(createWriteThinLTOBitcodePass(
+          *OS, ThinLinkOut ? &ThinLinkOut->os() : nullptr));
     else
       Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
                                          EmitSummaryIndex, EmitModuleHash));
@@ -746,6 +762,9 @@ int main(int argc, char **argv) {
 
   if (YamlFile)
     YamlFile->keep();
+
+  if (ThinLinkOut)
+    ThinLinkOut->keep();
 
   return 0;
 }

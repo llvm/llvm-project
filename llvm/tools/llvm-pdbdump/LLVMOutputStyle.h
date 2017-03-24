@@ -52,6 +52,7 @@ private:
   PDBFile &File;
   ScopedPrinter P;
   codeview::TypeDatabase TypeDB;
+  codeview::TypeDatabase ItemDB;
   SmallVector<std::string, 32> StreamPurposes;
 };
 }

@@ -771,7 +771,6 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_MD5(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    uint64_t a, b;
     StreamGDBRemote response;
     auto Result = llvm::sys::fs::md5_contents(path);
     if (!Result) {
