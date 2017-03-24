@@ -8,18 +8,17 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <mutex>
 
-// template <class ...Mutex> class lock_guard;
+// template <class ...Mutex> class scoped_lock;
 
-// lock_guard(Mutex&..., adopt_lock_t);
+// scoped_lock(Mutex&..., adopt_lock_t);
 
-// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
 #include <cassert>
+#include "test_macros.h"
 
 struct TestMutex {
     bool locked = false;
@@ -36,12 +35,22 @@ struct TestMutex {
 int main()
 {
     {
-        using LG = std::lock_guard<>;
+        using LG = std::scoped_lock<>;
         LG lg(std::adopt_lock);
     }
     {
+        TestMutex m1;
+        using LG = std::scoped_lock<TestMutex>;
+        m1.lock();
+        {
+            LG lg(m1, std::adopt_lock);
+            assert(m1.locked);
+        }
+        assert(!m1.locked);
+    }
+    {
         TestMutex m1, m2;
-        using LG = std::lock_guard<TestMutex, TestMutex>;
+        using LG = std::scoped_lock<TestMutex, TestMutex>;
         m1.lock(); m2.lock();
         {
             LG lg(m1, m2, std::adopt_lock);
@@ -51,7 +60,7 @@ int main()
     }
     {
         TestMutex m1, m2, m3;
-        using LG = std::lock_guard<TestMutex, TestMutex, TestMutex>;
+        using LG = std::scoped_lock<TestMutex, TestMutex, TestMutex>;
         m1.lock(); m2.lock(); m3.lock();
         {
             LG lg(m1, m2, m3, std::adopt_lock);

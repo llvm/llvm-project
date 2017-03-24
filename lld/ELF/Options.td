@@ -84,7 +84,7 @@ def entry: S<"entry">, MetaVarName<"<entry>">,
 def error_limit: S<"error-limit">,
   HelpText<"Maximum number of errors to emit before stopping (0 = no limit)">;
 
-def error_undef: F<"error-unresolved-symbols">,
+def error_unresolved_symbols: F<"error-unresolved-symbols">,
   HelpText<"Report unresolved symbols as errors">;
 
 def export_dynamic: F<"export-dynamic">,
@@ -262,7 +262,7 @@ def version_script: S<"version-script">,
 def warn_common: F<"warn-common">,
   HelpText<"Warn about duplicate common symbols">;
 
-def warn_undef: F<"warn-unresolved-symbols">,
+def warn_unresolved_symbols: F<"warn-unresolved-symbols">,
   HelpText<"Report unresolved symbols as warnings">;
 
 def whole_archive: F<"whole-archive">,

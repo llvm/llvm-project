@@ -777,8 +777,8 @@ static bool shouldSkip(const BaseCommand &Cmd) {
 //
 // When the control reaches this function, Opt.Commands contains
 // output section commands for non-orphan sections only. This function
-// adds new elements for orphan sections to Opt.Commands so that all
-// sections are explicitly handled by Opt.Commands.
+// adds new elements for orphan sections so that all sections are
+// explicitly handled by Opt.Commands.
 //
 // Writer<ELFT>::sortSections has already sorted output sections.
 // What we need to do is to scan OutputSections vector and
@@ -788,7 +788,7 @@ static bool shouldSkip(const BaseCommand &Cmd) {
 //
 // There is some ambiguity as to where exactly a new entry should be
 // inserted, because Opt.Commands contains not only output section
-// commands but other types of commands such as symbol assignment
+// commands but also other types of commands such as symbol assignment
 // expressions. There's no correct answer here due to the lack of the
 // formal specification of the linker script. We use heuristics to
 // determine whether a new output command should be added before or
@@ -999,8 +999,8 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (SymbolBody *B = findSymbol(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value};
-    auto *C = cast<DefinedCommon>(B);
-    return {InX::Common, C->Offset};
+    if (auto *C = dyn_cast<DefinedCommon>(B))
+      return {InX::Common, C->Offset};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
@@ -1867,8 +1867,11 @@ Expr ScriptParser::readPrimary() {
     return [=] { return V; };
 
   // Tok is a symbol name.
-  if (Tok != "." && !isValidCIdentifier(Tok))
-    setError("malformed number: " + Tok);
+  if (Tok != ".") {
+    if (!isValidCIdentifier(Tok))
+      setError("malformed number: " + Tok);
+    Script->Opt.UndefinedSymbols.push_back(Tok);
+  }
   return [=] { return Script->getSymbolValue(Location, Tok); };
 }
 

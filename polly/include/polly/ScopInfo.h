@@ -1324,6 +1324,15 @@ public:
     return getRegion()->contains(L);
   }
 
+  /// Return whether this statement contains @p BB.
+  bool contains(BasicBlock *BB) const {
+    if (isCopyStmt())
+      return false;
+    if (isBlockStmt())
+      return BB == getBasicBlock();
+    return getRegion()->contains(BB);
+  }
+
   /// Return the closest innermost loop that contains this statement, but is not
   /// contained in it.
   ///

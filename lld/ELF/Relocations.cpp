@@ -95,8 +95,7 @@ static unsigned
 handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
                            InputSectionBase &C, typename ELFT::uint Offset,
                            int64_t Addend, RelExpr Expr) {
-  typedef typename ELFT::uint uintX_t;
-  auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
+  auto addModuleReloc = [&](uint64_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
     // if we know that we are linking an executable. For ARM we resolve the
     // relocation when writing the Got. MIPS has a custom Got implementation
@@ -110,25 +109,27 @@ handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
           {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
     }
   };
+
   if (isRelExprOneOf<R_MIPS_TLSLD, R_TLSLD_PC>(Expr)) {
     if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
-      addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
+      addModuleReloc(Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+
   if (Target->isTlsGlobalDynamicRel(Type)) {
     if (Got->addDynTlsEntry(Body) &&
         (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
-      uintX_t Off = Got->getGlobalDynOffset(Body);
-      addModuleReloc(Body, Got, Off, false);
+      uint64_t Off = Got->getGlobalDynOffset(Body);
+      addModuleReloc(Off, false);
       if (Body.isPreemptible())
         In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
-                                     Off + (uintX_t)sizeof(uintX_t), false,
-                                     &Body, 0});
+                                     Off + Config->Wordsize, false, &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+
   return 0;
 }
 
@@ -137,13 +138,13 @@ template <class ELFT>
 static unsigned
 handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
+  typedef typename ELFT::uint uintX_t;
+
   if (!(C.Flags & SHF_ALLOC))
     return 0;
 
   if (!Body.isTls())
     return 0;
-
-  typedef typename ELFT::uint uintX_t;
 
   if (Config->EMachine == EM_ARM)
     return handleNoRelaxTlsRelocation<ELFT>(In<ELFT>::Got, Type, Body, C,
@@ -220,11 +221,11 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
         In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
                                      Body.getGotOffset(), false, &Body, 0});
       }
-      return Target->TlsGdRelaxSkip;
+    } else {
+      C.Relocations.push_back(
+          {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
+                Offset, Addend, &Body});
     }
-    C.Relocations.push_back(
-        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
-         Offset, Addend, &Body});
     return Target->TlsGdRelaxSkip;
   }
 
@@ -592,10 +593,12 @@ static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
 template <class ELFT>
 static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
                             typename ELFT::uint Offset) {
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
+    return;
+
   bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
                        Sym.getVisibility() == STV_DEFAULT;
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll ||
-      (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal))
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return;
 
   std::string Msg = S.getLocation<ELFT>(Offset) + ": undefined symbol '" +
@@ -735,26 +738,8 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
     if (Expr == R_TLSDESC_CALL)
       continue;
 
-    if (needsPlt(Expr) ||
-        refersToGotEntry(Expr) || !isPreemptible(Body, Type)) {
-      // If the relocation points to something in the file, we can process it.
-      bool Constant =
-          isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, C, RI.r_offset);
-
-      // If the output being produced is position independent, the final value
-      // is still not known. In that case we still need some help from the
-      // dynamic linker. We can however do better than just copying the incoming
-      // relocation. We can process some of it and and just ask the dynamic
-      // linker to add the load address.
-      if (!Constant)
-        AddDyn({Target->RelativeRel, &C, Offset, true, &Body, Addend});
-
-      // If the produced value is a constant, we just remember to write it
-      // when outputting this section. We also have to do it if the format
-      // uses Elf_Rel, since in that case the written value is the addend.
-      if (Constant || !RelTy::IsRela)
-        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
-    } else {
+    if (!needsPlt(Expr) && !refersToGotEntry(Expr) &&
+        isPreemptible(Body, Type)) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
@@ -781,6 +766,24 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
       continue;
     }
+
+    // If the relocation points to something in the file, we can process it.
+    bool Constant =
+        isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, C, RI.r_offset);
+
+    // If the output being produced is position independent, the final value
+    // is still not known. In that case we still need some help from the
+    // dynamic linker. We can however do better than just copying the incoming
+    // relocation. We can process some of it and and just ask the dynamic
+    // linker to add the load address.
+    if (!Constant)
+      AddDyn({Target->RelativeRel, &C, Offset, true, &Body, Addend});
+
+    // If the produced value is a constant, we just remember to write it
+    // when outputting this section. We also have to do it if the format
+    // uses Elf_Rel, since in that case the written value is the addend.
+    if (Constant || !RelTy::IsRela)
+      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
 
     // At this point we are done with the relocated position. Some relocations
     // also require us to create a got or plt entry.

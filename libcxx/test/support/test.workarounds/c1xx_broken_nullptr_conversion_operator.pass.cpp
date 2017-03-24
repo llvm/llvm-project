@@ -11,9 +11,9 @@
 
 // Verify TEST_WORKAROUND_C1XX_BROKEN_NULLPTR_CONVERSION_OPERATOR.
 
-#include "test_workarounds.h"
-
 #include <type_traits>
+
+#include "test_workarounds.h"
 
 struct ConvertsToNullptr {
   using DestType = decltype(nullptr);
