@@ -60,6 +60,9 @@
 # CHECK-NEXT:         Options:         [ None ]
 # CHECK-NEXT:         ParameterCount:  0
 # CHECK-NEXT:         ArgumentList:    4099
+# CHECK-NEXT: IpiStream:
+# CHECK-NEXT:   Version:         VC80
+# CHECK-NEXT:   Records:
 # CHECK-NEXT:     - Kind:            LF_FUNC_ID
 # CHECK-NEXT:       FuncId:
 # CHECK-NEXT:         ParentScope:     0
@@ -84,10 +87,10 @@
 # CHECK-NEXT:         String:          '-Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared"'
 # CHECK-NEXT:     - Kind:            LF_SUBSTR_LIST
 # CHECK-NEXT:       StringList:
-# CHECK-NEXT:         StringIndices:      [ 4105 ]
+# CHECK-NEXT:         StringIndices:   [ 4100 ]
 # CHECK-NEXT:     - Kind:            LF_STRING_ID
 # CHECK-NEXT:       StringId:
-# CHECK-NEXT:         Id:              4106
+# CHECK-NEXT:         Id:              4101
 # CHECK-NEXT:         String:          ' -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X'
 # CHECK-NEXT:     - Kind:            LF_STRING_ID
 # CHECK-NEXT:       StringId:
@@ -99,17 +102,14 @@
 # CHECK-NEXT:         String:          'D:\b\vc140.pdb'
 # CHECK-NEXT:     - Kind:            LF_BUILDINFO
 # CHECK-NEXT:       BuildInfo:
-# CHECK-NEXT:         ArgIndices:      [ 4103, 4104, 4108, 4109, 4107 ]
+# CHECK-NEXT:         ArgIndices:      [ 4098, 4099, 4103, 4104, 4102 ]
 # CHECK-NEXT:     - Kind:            LF_STRING_ID
 # CHECK-NEXT:       StringId:
 # CHECK-NEXT:         Id:              0
 # CHECK-NEXT:         String:          ret42-sub.c
 # CHECK-NEXT:     - Kind:            LF_BUILDINFO
 # CHECK-NEXT:       BuildInfo:
-# CHECK-NEXT:         ArgIndices:      [ 4103, 4104, 4111, 4109, 4107 ]
-# CHECK-NEXT: IpiStream:
-# CHECK-NEXT:   Version:         VC80
-# CHECK-NEXT:   Records:
+# CHECK-NEXT:         ArgIndices:      [ 4098, 4099, 4106, 4104, 4102 ]
 
 # RAW:      FileHeaders {
 # RAW-NEXT:   BlockSize: 4096

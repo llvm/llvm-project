@@ -8,19 +8,16 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <mutex>
 
-// template <class ...Mutex> class lock_guard;
+// template <class ...Mutex> class scoped_lock;
 
-// explicit lock_guard(mutex_type& m);
+// explicit scoped_lock(mutex_type& m);
 
-// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
 #include <cassert>
-
 #include "test_macros.h"
 
 struct TestMutex {
@@ -68,11 +65,20 @@ struct TestMutexThrows {
 int main()
 {
     {
-        using LG = std::lock_guard<>;
+        using LG = std::scoped_lock<>;
         LG lg;
     }
     {
-        using LG = std::lock_guard<TestMutex, TestMutex>;
+        using LG = std::scoped_lock<TestMutex>;
+        TestMutex m1;
+        {
+            LG lg(m1);
+            assert(m1.locked);
+        }
+        assert(!m1.locked);
+    }
+    {
+        using LG = std::scoped_lock<TestMutex, TestMutex>;
         TestMutex m1, m2;
         {
             LG lg(m1, m2);
@@ -81,7 +87,7 @@ int main()
         assert(!m1.locked && !m2.locked);
     }
     {
-        using LG = std::lock_guard<TestMutex, TestMutex, TestMutex>;
+        using LG = std::scoped_lock<TestMutex, TestMutex, TestMutex>;
         TestMutex m1, m2, m3;
         {
             LG lg(m1, m2, m3);
@@ -92,7 +98,18 @@ int main()
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
     {
         using MT = TestMutexThrows;
-        using LG = std::lock_guard<MT, MT>;
+        using LG = std::scoped_lock<MT>;
+        MT m1;
+        m1.throws_on_lock = true;
+        try {
+            LG lg(m1);
+            assert(false);
+        } catch (int) {}
+        assert(!m1.locked);
+    }
+    {
+        using MT = TestMutexThrows;
+        using LG = std::scoped_lock<MT, MT>;
         MT m1, m2;
         m1.throws_on_lock = true;
         try {
@@ -103,7 +120,7 @@ int main()
     }
     {
         using MT = TestMutexThrows;
-        using LG = std::lock_guard<MT, MT, MT>;
+        using LG = std::scoped_lock<MT, MT, MT>;
         MT m1, m2, m3;
         m2.throws_on_lock = true;
         try {
@@ -112,5 +129,27 @@ int main()
         } catch (int) {}
         assert(!m1.locked && !m2.locked && !m3.locked);
     }
+#endif
+
+#ifdef __cpp_deduction_guides
+    {
+    TestMutex m1, m2, m3;
+        {
+        std::scoped_lock sl{};
+        static_assert((std::is_same<decltype(sl), std::scoped_lock<>>::value), "" );
+        }
+        {
+        std::scoped_lock sl{m1};
+        static_assert((std::is_same<decltype(sl), std::scoped_lock<decltype(m1)>>::value), "" );
+        }
+        {
+        std::scoped_lock sl{m1, m2};
+        static_assert((std::is_same<decltype(sl), std::scoped_lock<decltype(m1), decltype(m2)>>::value), "" );
+        }
+        {
+        std::scoped_lock sl{m1, m2, m3};
+        static_assert((std::is_same<decltype(sl), std::scoped_lock<decltype(m1), decltype(m2), decltype(m3)>>::value), "" );
+        }
+    } 
 #endif
 }

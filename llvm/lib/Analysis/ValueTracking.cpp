@@ -250,37 +250,29 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
   return ::ComputeNumSignBits(V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT));
 }
 
-static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
-                                   bool NSW,
-                                   APInt &KnownZero, APInt &KnownOne,
-                                   APInt &KnownZero2, APInt &KnownOne2,
-                                   unsigned Depth, const Query &Q) {
-  unsigned BitWidth = KnownZero.getBitWidth();
-
-  // If an initial sequence of bits in the result is not needed, the
-  // corresponding bits in the operands are not needed.
-  APInt LHSKnownZero(BitWidth, 0), LHSKnownOne(BitWidth, 0);
-  computeKnownBits(Op0, LHSKnownZero, LHSKnownOne, Depth + 1, Q);
-  computeKnownBits(Op1, KnownZero2, KnownOne2, Depth + 1, Q);
-
+/// Compute known bits for add/sub using LHS/RHS known bits.
+void llvm::computeKnownBitsForAddSub(bool Add, bool NSW,
+                                     APInt &KnownZero, APInt &KnownOne,
+                                     APInt &LHSKnownZero, APInt &LHSKnownOne,
+                                     APInt &RHSKnownZero, APInt &RHSKnownOne) {
   // Carry in a 1 for a subtract, rather than a 0.
-  APInt CarryIn(BitWidth, 0);
+  uint64_t CarryIn = 0;
   if (!Add) {
     // Sum = LHS + ~RHS + 1
-    std::swap(KnownZero2, KnownOne2);
-    CarryIn.setBit(0);
+    std::swap(RHSKnownZero, RHSKnownOne);
+    CarryIn = 1;
   }
 
-  APInt PossibleSumZero = ~LHSKnownZero + ~KnownZero2 + CarryIn;
-  APInt PossibleSumOne = LHSKnownOne + KnownOne2 + CarryIn;
+  APInt PossibleSumZero = ~LHSKnownZero + ~RHSKnownZero + CarryIn;
+  APInt PossibleSumOne = LHSKnownOne + RHSKnownOne + CarryIn;
 
   // Compute known bits of the carry.
-  APInt CarryKnownZero = ~(PossibleSumZero ^ LHSKnownZero ^ KnownZero2);
-  APInt CarryKnownOne = PossibleSumOne ^ LHSKnownOne ^ KnownOne2;
+  APInt CarryKnownZero = ~(PossibleSumZero ^ LHSKnownZero ^ RHSKnownZero);
+  APInt CarryKnownOne = PossibleSumOne ^ LHSKnownOne ^ RHSKnownOne;
 
   // Compute set of known bits (where all three relevant bits are known).
   APInt LHSKnown = LHSKnownZero | LHSKnownOne;
-  APInt RHSKnown = KnownZero2 | KnownOne2;
+  APInt RHSKnown = RHSKnownZero | RHSKnownOne;
   APInt CarryKnown = CarryKnownZero | CarryKnownOne;
   APInt Known = LHSKnown & RHSKnown & CarryKnown;
 
@@ -296,14 +288,36 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
     if (NSW) {
       // Adding two non-negative numbers, or subtracting a negative number from
       // a non-negative one, can't wrap into negative.
-      if (LHSKnownZero.isNegative() && KnownZero2.isNegative())
+      if (LHSKnownZero.isNegative() && RHSKnownZero.isNegative())
         KnownZero.setSignBit();
       // Adding two negative numbers, or subtracting a non-negative number from
       // a negative one, can't wrap into non-negative.
-      else if (LHSKnownOne.isNegative() && KnownOne2.isNegative())
+      else if (LHSKnownOne.isNegative() && RHSKnownOne.isNegative())
         KnownOne.setSignBit();
     }
   }
+
+  // Put the RHS/LHS back how we found them.
+  if (!Add) {
+    std::swap(RHSKnownZero, RHSKnownOne);
+  }
+}
+
+static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
+                                   bool NSW,
+                                   APInt &KnownZero, APInt &KnownOne,
+                                   APInt &KnownZero2, APInt &KnownOne2,
+                                   unsigned Depth, const Query &Q) {
+  unsigned BitWidth = KnownZero.getBitWidth();
+
+  // If an initial sequence of bits in the result is not needed, the
+  // corresponding bits in the operands are not needed.
+  APInt LHSKnownZero(BitWidth, 0), LHSKnownOne(BitWidth, 0);
+  computeKnownBits(Op0, LHSKnownZero, LHSKnownOne, Depth + 1, Q);
+  computeKnownBits(Op1, KnownZero2, KnownOne2, Depth + 1, Q);
+
+  computeKnownBitsForAddSub(Add, NSW, KnownZero, KnownOne, LHSKnownZero,
+                            LHSKnownOne, KnownZero2, KnownOne2);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -971,7 +985,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       LeadZ = std::min(BitWidth,
                        LeadZ + BitWidth - RHSUnknownLeadingOnes - 1);
 
-    KnownZero = APInt::getHighBitsSet(BitWidth, LeadZ);
+    KnownZero.setHighBits(LeadZ);
     break;
   }
   case Instruction::Select: {
@@ -1233,7 +1247,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       Align = Q.DL.getABITypeAlignment(AI->getAllocatedType());
 
     if (Align > 0)
-      KnownZero = APInt::getLowBitsSet(BitWidth, countTrailingZeros(Align));
+      KnownZero.setLowBits(countTrailingZeros(Align));
     break;
   }
   case Instruction::GetElementPtr: {
@@ -1280,7 +1294,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       }
     }
 
-    KnownZero = APInt::getLowBitsSet(BitWidth, TrailZ);
+    KnownZero.setLowBits(TrailZ);
     break;
   }
   case Instruction::PHI: {
@@ -1321,9 +1335,8 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
           APInt KnownZero3(KnownZero), KnownOne3(KnownOne);
           computeKnownBits(L, KnownZero3, KnownOne3, Depth + 1, Q);
 
-          KnownZero = APInt::getLowBitsSet(
-              BitWidth, std::min(KnownZero2.countTrailingOnes(),
-                                 KnownZero3.countTrailingOnes()));
+          KnownZero.setLowBits(std::min(KnownZero2.countTrailingOnes(),
+                                        KnownZero3.countTrailingOnes()));
 
           if (DontImproveNonNegativePhiBits)
             break;
@@ -1343,7 +1356,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
               if (KnownZero2.isNegative() && KnownZero3.isNegative())
                 KnownZero.setSignBit();
               else if (KnownOne2.isNegative() && KnownOne3.isNegative())
-                KnownOne.setBit(BitWidth - 1);
+                KnownOne.setSignBit();
             }
 
             // (sub nsw non-negative, negative) --> non-negative

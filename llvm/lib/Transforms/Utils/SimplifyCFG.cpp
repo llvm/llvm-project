@@ -997,8 +997,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(TerminatorInst *TI,
       SmallSetVector<BasicBlock*, 4> FailBlocks;
       if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
         for (auto *Succ : FailBlocks) {
-          std::vector<BasicBlock*> Blocks = { TI->getParent() };
-          if (!SplitBlockPredecessors(Succ, Blocks, ".fold.split"))
+          if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split"))
             return false;
         }
       }

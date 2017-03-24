@@ -44,9 +44,9 @@ static bool readValueFromFile(const char *Filename,
   ssize_t BytesRead;
   bool Success;
   std::tie(BytesRead, Success) = retryingReadSome(Fd, Line, Line + BufSize);
+  close(Fd);
   if (!Success)
     return false;
-  close(Fd);
   char *End = nullptr;
   long long Tmp = internal_simple_strtoll(Line, &End, 10);
   bool Result = false;

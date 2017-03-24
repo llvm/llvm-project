@@ -8,17 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <mutex>
 
-// template <class ...Mutex> class lock_guard;
+// template <class ...Mutex> class scoped_lock;
 
-// lock_guard& operator=(lock_guard const&) = delete;
+// scoped_lock& operator=(scoped_lock const&) = delete;
 
-// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
+#include "test_macros.h"
 
 int main()
 {
@@ -26,18 +25,24 @@ int main()
     M m0, m1, m2;
     M om0, om1, om2;
     {
-        using LG = std::lock_guard<>;
+        using LG = std::scoped_lock<>;
         LG lg1, lg2;
         lg1 = lg2; // expected-error{{overload resolution selected deleted operator '='}}
     }
     {
-        using LG = std::lock_guard<M, M>;
+        using LG = std::scoped_lock<M>;
+        LG lg1(m0);
+        LG lg2(om0);
+        lg1 = lg2; // expected-error{{overload resolution selected deleted operator '='}}
+    }
+    {
+        using LG = std::scoped_lock<M, M>;
         LG lg1(m0, m1);
         LG lg2(om0, om1);
         lg1 = lg2; // expected-error{{overload resolution selected deleted operator '='}}
     }
     {
-        using LG = std::lock_guard<M, M, M>;
+        using LG = std::scoped_lock<M, M, M>;
         LG lg1(m0, m1, m2);
         LG lg2(om0, om1, om2);
         lg1 = lg2; // expected-error{{overload resolution selected deleted operator '='}}

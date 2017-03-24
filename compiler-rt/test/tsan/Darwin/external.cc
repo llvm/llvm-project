@@ -1,6 +1,15 @@
-// RUN: %clangxx_tsan %s -o %t-lib-instrumented.dylib              -shared -DSHARED_LIB
-// RUN: %clangxx_tsan %s -o %t-lib-noninstrumented.dylib           -shared -DSHARED_LIB -fno-sanitize=thread
-// RUN: %clangxx_tsan %s -o %t-lib-noninstrumented-callbacks.dylib -shared -DSHARED_LIB -fno-sanitize=thread -DUSE_TSAN_CALLBACKS
+// RUN: %clangxx_tsan %s -shared -DSHARED_LIB \
+// RUN:                               -o %t-lib-instrumented.dylib \
+// RUN:   -install_name @rpath/`basename %t-lib-instrumented.dylib`
+
+// RUN: %clangxx_tsan %s -shared -DSHARED_LIB -fno-sanitize=thread \
+// RUN:                               -o %t-lib-noninstrumented.dylib \
+// RUN:   -install_name @rpath/`basename %t-lib-noninstrumented.dylib`
+
+// RUN: %clangxx_tsan %s -shared -DSHARED_LIB -fno-sanitize=thread -DUSE_TSAN_CALLBACKS \
+// RUN:                               -o %t-lib-noninstrumented-callbacks.dylib \
+// RUN:   -install_name @rpath/`basename %t-lib-noninstrumented-callbacks.dylib`
+
 // RUN: %clangxx_tsan %s %t-lib-instrumented.dylib -o %t-lib-instrumented
 // RUN: %clangxx_tsan %s %t-lib-noninstrumented.dylib -o %t-lib-noninstrumented
 // RUN: %clangxx_tsan %s %t-lib-noninstrumented-callbacks.dylib -o %t-lib-noninstrumented-callbacks
