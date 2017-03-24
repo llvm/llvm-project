@@ -546,6 +546,10 @@ public:
     return *ObjCData;
   }
 
+  // Version checking function, used to implement ObjC's @available:
+  // i32 @__isOSVersionAtLeast(i32, i32, i32)
+  llvm::Constant *IsOSVersionAtLeastFn = nullptr;
+
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }
 
