@@ -33,5 +33,26 @@
         "mocha": "^2.3.3",
         "@types/node": "^6.0.40",
         "@types/mocha": "^2.2.32"
+    },
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "clangd configuration",
+            "properties": {
+                "clangd.path": {
+                    "type": "string",
+                    "default": "clangd",
+                    "description": "The path to clangd executable, e.g.: /usr/bin/clangd"
+                },
+                "clangd.arguments": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Arguments for clangd server"
+                }
+            }
+        }
     }
 }

@@ -108,20 +108,6 @@ void f20(void) {
   _setjmp(0);
 }
 
-// Bogus declarations that will end up with bad types when detecting builtins,
-// but that we will still process when considering whether to add attributes.
-struct __jmp_buf_tag;
-extern int __sigsetjmp(struct __jmp_buf_tag *__env, int __savemask);
-
-// CHECK-LABEL: define void @f21()
-// CHECK: {
-// CHECK: call i32 @__sigsetjmp(%{{.*}}* null, i32 0)
-// CHECK: [[RT_CALL]]
-// CHECK: ret void
-void f21(void) {
-  __sigsetjmp(0, 0);
-}
-
 // CHECK: attributes [[NUW]] = { nounwind optsize{{.*}} }
 // CHECK: attributes [[AI]] = { alwaysinline nounwind optsize{{.*}} }
 // CHECK: attributes [[NUW_OS_RN]] = { nounwind optsize readnone{{.*}} }

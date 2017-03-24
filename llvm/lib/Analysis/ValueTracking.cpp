@@ -264,11 +264,11 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op1, KnownZero2, KnownOne2, Depth + 1, Q);
 
   // Carry in a 1 for a subtract, rather than a 0.
-  APInt CarryIn(BitWidth, 0);
+  uint64_t CarryIn = 0;
   if (!Add) {
     // Sum = LHS + ~RHS + 1
     std::swap(KnownZero2, KnownOne2);
-    CarryIn.setBit(0);
+    CarryIn = 1;
   }
 
   APInt PossibleSumZero = ~LHSKnownZero + ~KnownZero2 + CarryIn;
