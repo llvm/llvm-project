@@ -979,12 +979,11 @@ ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
     break;
       
   case OMF_performSelector:
-    if (!isInstanceMethod() ||
-        !(getReturnType()->isObjCIdType() || getReturnType()->isVoidType()))
+    if (!isInstanceMethod() || !getReturnType()->isObjCIdType())
       family = OMF_None;
     else {
       unsigned noParams = param_size();
-      if (noParams < 1 || noParams > 5)
+      if (noParams < 1 || noParams > 3)
         family = OMF_None;
       else {
         ObjCMethodDecl::param_type_iterator it = param_type_begin();
@@ -993,11 +992,10 @@ ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
           family = OMF_None;
           break;
         }
-        // The first type should generally always be 'id' or 'Thread *', the
-        // other types can vary.
-        if (noParams > 1) {
-          ArgT = *(it + 1);
-          if (!ArgT->isObjCObjectPointerType()) {
+        while (--noParams) {
+          it++;
+          ArgT = (*it);
+          if (!ArgT->isObjCIdType()) {
             family = OMF_None;
             break;
           }
