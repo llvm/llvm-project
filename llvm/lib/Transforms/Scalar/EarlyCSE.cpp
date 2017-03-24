@@ -392,7 +392,7 @@ private:
     ParseMemoryInst(Instruction *Inst, const TargetTransformInfo &TTI)
       : IsTargetMemInst(false), Inst(Inst) {
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
-        if (TTI.getTgtMemIntrinsic(II, Info) && Info.NumMemRefs == 1)
+        if (TTI.getTgtMemIntrinsic(II, Info))
           IsTargetMemInst = true;
     }
     bool isLoad() const {
@@ -404,17 +404,14 @@ private:
       return isa<StoreInst>(Inst);
     }
     bool isAtomic() const {
-      if (IsTargetMemInst) {
-        assert(Info.IsSimple && "need to refine IsSimple in TTI");
-        return false;
-      }
+      if (IsTargetMemInst)
+        return Info.Ordering != AtomicOrdering::NotAtomic;
       return Inst->isAtomic();
     }
     bool isUnordered() const {
-      if (IsTargetMemInst) {
-        assert(Info.IsSimple && "need to refine IsSimple in TTI");
-        return true;
-      }
+      if (IsTargetMemInst)
+        return Info.isUnordered();
+
       if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
         return LI->isUnordered();
       } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
@@ -425,10 +422,9 @@ private:
     }
 
     bool isVolatile() const {
-      if (IsTargetMemInst) {
-        assert(Info.IsSimple && "need to refine IsSimple in TTI");
-        return false;
-      }
+      if (IsTargetMemInst)
+        return Info.IsVolatile;
+
       if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
         return LI->isVolatile();
       } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {

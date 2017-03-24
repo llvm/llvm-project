@@ -37,15 +37,10 @@ class X86EVEX2VEXTablesEmitter {
   std::vector<Entry> EVEX2VEX256;
 
   // Represents a manually added entry to the tables
-  class ManualEntry {
-  public:
-    std::string EVEXInstStr;
-    std::string VEXInstStr;
+  struct ManualEntry {
+    const char *EVEXInstStr;
+    const char *VEXInstStr;
     bool Is128Bit;
-
-    ManualEntry(std::string EVEXInstStr, std::string VEXInstStr, bool Is128Bit)
-        : EVEXInstStr(EVEXInstStr), VEXInstStr(VEXInstStr), Is128Bit(Is128Bit) {
-    }
   };
 
 public:
@@ -59,81 +54,30 @@ private:
   // X86EvexToVexCompressTableEntry
   void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
 
-  // List of EVEX instructions that match VEX instructions by the encoding
-  // but do not perform the same operation.
-  const std::vector<std::string> ExceptionList = {
-      "VCVTQQ2PD",
-      "VCVTQQ2PS",
-      "VPMAXSQ",
-      "VPMAXUQ",
-      "VPMINSQ",
-      "VPMINUQ",
-      "VPMULLQ",
-      "VPSRAQ",
-      "VDBPSADBW",
-      "VRNDSCALE",
-      "VSCALEFPS"
-  };
-
   bool inExceptionList(const CodeGenInstruction *Inst) {
+    // List of EVEX instructions that match VEX instructions by the encoding
+    // but do not perform the same operation.
+    static constexpr const char *ExceptionList[] = {
+        "VCVTQQ2PD",
+        "VCVTQQ2PS",
+        "VPMAXSQ",
+        "VPMAXUQ",
+        "VPMINSQ",
+        "VPMINUQ",
+        "VPMULLQ",
+        "VPSRAQ",
+        "VDBPSADBW",
+        "VRNDSCALE",
+        "VSCALEFPS"
+    };
     // Instruction's name starts with one of the entries in the exception list
-    for (const std::string& InstStr : ExceptionList) {
+    for (StringRef InstStr : ExceptionList) {
       if (Inst->TheDef->getName().startswith(InstStr))
         return true;
     }
     return false;
   }
 
-  // Some VEX instructions were duplicated to multiple EVEX versions due the
-  // introduction of mask variants, and thus some of the EVEX versions have
-  // different encoding than the VEX instruction. In order to maximize the
-  // compression we add these entries manually.
-  const std::vector<ManualEntry> ManuallyAddedEntries = {
-    // EVEX-Inst              VEX-Inst           Is128-bit
-    {"VMOVDQU8Z128mr",      "VMOVDQUmr",       true},
-    {"VMOVDQU8Z128rm",      "VMOVDQUrm",       true},
-    {"VMOVDQU8Z128rr",      "VMOVDQUrr",       true},
-    {"VMOVDQU8Z128rr_REV",  "VMOVDQUrr_REV",   true},
-    {"VMOVDQU16Z128mr",     "VMOVDQUmr",       true},
-    {"VMOVDQU16Z128rm",     "VMOVDQUrm",       true},
-    {"VMOVDQU16Z128rr",     "VMOVDQUrr",       true},
-    {"VMOVDQU16Z128rr_REV", "VMOVDQUrr_REV",   true},
-    {"VMOVDQU8Z256mr",      "VMOVDQUYmr",      false},
-    {"VMOVDQU8Z256rm",      "VMOVDQUYrm",      false},
-    {"VMOVDQU8Z256rr",      "VMOVDQUYrr",      false},
-    {"VMOVDQU8Z256rr_REV",  "VMOVDQUYrr_REV",  false},
-    {"VMOVDQU16Z256mr",     "VMOVDQUYmr",      false},
-    {"VMOVDQU16Z256rm",     "VMOVDQUYrm",      false},
-    {"VMOVDQU16Z256rr",     "VMOVDQUYrr",      false},
-    {"VMOVDQU16Z256rr_REV", "VMOVDQUYrr_REV",  false},
-
-    {"VPERMILPDZ128mi",     "VPERMILPDmi",     true},
-    {"VPERMILPDZ128ri",     "VPERMILPDri",     true},
-    {"VPERMILPDZ128rm",     "VPERMILPDrm",     true},
-    {"VPERMILPDZ128rr",     "VPERMILPDrr",     true},
-    {"VPERMILPDZ256mi",     "VPERMILPDYmi",    false},
-    {"VPERMILPDZ256ri",     "VPERMILPDYri",    false},
-    {"VPERMILPDZ256rm",     "VPERMILPDYrm",    false},
-    {"VPERMILPDZ256rr",     "VPERMILPDYrr",    false},
-
-    {"VPBROADCASTQZ128m",   "VPBROADCASTQrm",  true},
-    {"VPBROADCASTQZ128r",   "VPBROADCASTQrr",  true},
-    {"VPBROADCASTQZ256m",   "VPBROADCASTQYrm", false},
-    {"VPBROADCASTQZ256r",   "VPBROADCASTQYrr", false},
-
-    {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
-    {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
-
-    {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
-    {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
-    {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
-    {"VEXTRACTI64x2Z256rr", "VEXTRACTI128rr",  false},
-
-    {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
-    {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
-    {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
-    {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
-  };
 };
 
 void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
@@ -152,6 +96,57 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
     OS << "  { X86::" << Pair.first->TheDef->getName()
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
   }
+
+  // Some VEX instructions were duplicated to multiple EVEX versions due the
+  // introduction of mask variants, and thus some of the EVEX versions have
+  // different encoding than the VEX instruction. In order to maximize the
+  // compression we add these entries manually.
+  static constexpr ManualEntry ManuallyAddedEntries[] = {
+      // EVEX-Inst            VEX-Inst           Is128-bit
+      {"VMOVDQU8Z128mr",      "VMOVDQUmr",       true},
+      {"VMOVDQU8Z128rm",      "VMOVDQUrm",       true},
+      {"VMOVDQU8Z128rr",      "VMOVDQUrr",       true},
+      {"VMOVDQU8Z128rr_REV",  "VMOVDQUrr_REV",   true},
+      {"VMOVDQU16Z128mr",     "VMOVDQUmr",       true},
+      {"VMOVDQU16Z128rm",     "VMOVDQUrm",       true},
+      {"VMOVDQU16Z128rr",     "VMOVDQUrr",       true},
+      {"VMOVDQU16Z128rr_REV", "VMOVDQUrr_REV",   true},
+      {"VMOVDQU8Z256mr",      "VMOVDQUYmr",      false},
+      {"VMOVDQU8Z256rm",      "VMOVDQUYrm",      false},
+      {"VMOVDQU8Z256rr",      "VMOVDQUYrr",      false},
+      {"VMOVDQU8Z256rr_REV",  "VMOVDQUYrr_REV",  false},
+      {"VMOVDQU16Z256mr",     "VMOVDQUYmr",      false},
+      {"VMOVDQU16Z256rm",     "VMOVDQUYrm",      false},
+      {"VMOVDQU16Z256rr",     "VMOVDQUYrr",      false},
+      {"VMOVDQU16Z256rr_REV", "VMOVDQUYrr_REV",  false},
+
+      {"VPERMILPDZ128mi",     "VPERMILPDmi",     true},
+      {"VPERMILPDZ128ri",     "VPERMILPDri",     true},
+      {"VPERMILPDZ128rm",     "VPERMILPDrm",     true},
+      {"VPERMILPDZ128rr",     "VPERMILPDrr",     true},
+      {"VPERMILPDZ256mi",     "VPERMILPDYmi",    false},
+      {"VPERMILPDZ256ri",     "VPERMILPDYri",    false},
+      {"VPERMILPDZ256rm",     "VPERMILPDYrm",    false},
+      {"VPERMILPDZ256rr",     "VPERMILPDYrr",    false},
+
+      {"VPBROADCASTQZ128m",   "VPBROADCASTQrm",  true},
+      {"VPBROADCASTQZ128r",   "VPBROADCASTQrr",  true},
+      {"VPBROADCASTQZ256m",   "VPBROADCASTQYrm", false},
+      {"VPBROADCASTQZ256r",   "VPBROADCASTQYrr", false},
+
+      {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
+      {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
+
+      {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
+      {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
+      {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
+      {"VEXTRACTI64x2Z256rr", "VEXTRACTI128rr",  false},
+
+      {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
+      {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
+      {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
+      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
+  };
 
   // Print the manually added entries
   for (const ManualEntry &Entry : ManuallyAddedEntries) {

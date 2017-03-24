@@ -117,7 +117,7 @@ struct MappingTraits<Kernel::Arg::Metadata> {
   static void mapping(IO &YIO, Kernel::Arg::Metadata &MD) {
     YIO.mapRequired(Kernel::Arg::Key::Size, MD.mSize);
     YIO.mapRequired(Kernel::Arg::Key::Align, MD.mAlign);
-    YIO.mapRequired(Kernel::Arg::Key::Kind, MD.mValueKind);
+    YIO.mapRequired(Kernel::Arg::Key::ValueKind, MD.mValueKind);
     YIO.mapRequired(Kernel::Arg::Key::ValueType, MD.mValueType);
     YIO.mapOptional(Kernel::Arg::Key::PointeeAlign, MD.mPointeeAlign,
                     uint32_t(0));

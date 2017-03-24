@@ -538,7 +538,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                LHSKnownZero, LHSKnownOne, Depth + 1) ||
           ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
           SimplifyDemandedBits(I->getOperandUse(1), DemandedFromOps,
-                               LHSKnownZero, LHSKnownOne, Depth + 1)) {
+                               RHSKnownZero, RHSKnownOne, Depth + 1)) {
         // Disable the nsw and nuw flags here: We can no longer guarantee that
         // we won't wrap after simplification. Removing the nsw/nuw flags is
         // legal here because the top bit is not demanded.
@@ -549,9 +549,10 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
     }
 
-    // Otherwise just hand the add/sub off to computeKnownBits to fill in
-    // the known zeros and ones.
-    computeKnownBits(V, KnownZero, KnownOne, Depth, CxtI);
+    // Otherwise compute the known bits using the RHS/LHS known bits.
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    computeKnownBitsForAddSub(V, NSW, KnownZero, KnownOne, LHSKnownZero,
+                              LHSKnownOne, RHSKnownZero, RHSKnownOne);
     break;
   }
   case Instruction::Shl:

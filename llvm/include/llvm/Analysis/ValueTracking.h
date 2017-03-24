@@ -55,6 +55,11 @@ template <typename T> class ArrayRef;
                         const Instruction *CxtI = nullptr,
                         const DominatorTree *DT = nullptr,
                         OptimizationRemarkEmitter *ORE = nullptr);
+  /// Compute known bits for add/sub using LHS/RHS known bits.
+  void computeKnownBitsForAddSub(bool Add, bool NSW,
+                                 APInt &KnownZero, APInt &KnownOne,
+                                 APInt &LHSKnownZero, APInt &LHSKnownOne,
+                                 APInt &RHSKnownZero, APInt &RHSKnownOne);
   /// Compute known bits from the range metadata.
   /// \p KnownZero the set of bits that are known to be zero
   /// \p KnownOne the set of bits that are known to be one
