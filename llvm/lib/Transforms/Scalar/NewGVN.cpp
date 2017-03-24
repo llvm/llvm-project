@@ -368,6 +368,7 @@ private:
   const Expression *performSymbolicPredicateInfoEvaluation(Instruction *);
 
   // Congruence finding.
+  bool someEquivalentDominates(const Instruction *, const Instruction *) const;
   Value *lookupOperandLeader(Value *) const;
   void performCongruenceFinding(Instruction *, const Expression *);
   void moveValueToNewCongruenceClass(Instruction *, CongruenceClass *,
@@ -724,6 +725,18 @@ const CallExpression *NewGVN::createCallExpression(CallInst *CI,
   return E;
 }
 
+// Return true if some equivalent of instruction Inst dominates instruction U.
+bool NewGVN::someEquivalentDominates(const Instruction *Inst,
+                                     const Instruction *U) const {
+  auto *CC = ValueToClass.lookup(Inst);
+  assert(isa<Instruction>(CC->RepLeader) && CC->RepLeader == Inst);
+  if (CC)
+    return llvm::any_of(CC->Members, [&](const Value *Member) {
+      return DT->dominates(cast<Instruction>(Member), U);
+    });
+  return false;
+}
+
 // See if we have a congruence class and leader for this operand, and if so,
 // return it. Otherwise, return the operand itself.
 Value *NewGVN::lookupOperandLeader(Value *V) const {
@@ -1054,7 +1067,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) {
     if (HasUndef) {
       // Only have to check for instructions
       if (auto *AllSameInst = dyn_cast<Instruction>(AllSameValue))
-        if (!DT->dominates(AllSameInst, I))
+        if (!someEquivalentDominates(AllSameInst, I))
           return E;
     }
 

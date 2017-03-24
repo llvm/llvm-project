@@ -1814,8 +1814,9 @@ def note_uninit_fixit_remove_cond : Note<
   "remove the %select{'%1' if its condition|condition if it}0 "
   "is always %select{false|true}2">;
 def err_init_incomplete_type : Error<"initialization of incomplete type %0">;
-def err_list_init_in_parens : Error<"list-initializer for non-class type %0 "
-  "must not be parenthesized">;
+def err_list_init_in_parens : Error<
+  "cannot initialize %select{non-class|reference}0 type %1 with a "
+  "parenthesized initializer list">;
 
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
@@ -5865,8 +5866,8 @@ def err_builtin_func_cast_more_than_one_arg : Error<
   "function-style cast to a builtin type can only take one argument">;
 def err_value_init_for_array_type : Error<
   "array types cannot be value-initialized">;
-def err_value_init_for_function_type : Error<
-  "function types cannot be value-initialized">;
+def err_init_for_function_type : Error<
+  "cannot create object of function type %0">;
 def warn_format_nonliteral_noargs : Warning<
   "format string is not a string literal (potentially insecure)">,
   InGroup<FormatSecurity>;

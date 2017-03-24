@@ -255,6 +255,9 @@ public:
   /// Updates branch_weights metadata by scaling it by \p S / \p T.
   void updateProfWeight(uint64_t S, uint64_t T);
 
+  /// Sets the branch_weights metadata to \p W for CallInst.
+  void setProfWeight(uint64_t W);
+
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 

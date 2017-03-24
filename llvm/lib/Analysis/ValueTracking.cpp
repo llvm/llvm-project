@@ -971,7 +971,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       LeadZ = std::min(BitWidth,
                        LeadZ + BitWidth - RHSUnknownLeadingOnes - 1);
 
-    KnownZero = APInt::getHighBitsSet(BitWidth, LeadZ);
+    KnownZero.setHighBits(LeadZ);
     break;
   }
   case Instruction::Select: {
@@ -1233,7 +1233,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       Align = Q.DL.getABITypeAlignment(AI->getAllocatedType());
 
     if (Align > 0)
-      KnownZero = APInt::getLowBitsSet(BitWidth, countTrailingZeros(Align));
+      KnownZero.setLowBits(countTrailingZeros(Align));
     break;
   }
   case Instruction::GetElementPtr: {
@@ -1280,7 +1280,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       }
     }
 
-    KnownZero = APInt::getLowBitsSet(BitWidth, TrailZ);
+    KnownZero.setLowBits(TrailZ);
     break;
   }
   case Instruction::PHI: {
@@ -1321,9 +1321,8 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
           APInt KnownZero3(KnownZero), KnownOne3(KnownOne);
           computeKnownBits(L, KnownZero3, KnownOne3, Depth + 1, Q);
 
-          KnownZero = APInt::getLowBitsSet(
-              BitWidth, std::min(KnownZero2.countTrailingOnes(),
-                                 KnownZero3.countTrailingOnes()));
+          KnownZero.setLowBits(std::min(KnownZero2.countTrailingOnes(),
+                                        KnownZero3.countTrailingOnes()));
 
           if (DontImproveNonNegativePhiBits)
             break;
@@ -1343,7 +1342,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
               if (KnownZero2.isNegative() && KnownZero3.isNegative())
                 KnownZero.setSignBit();
               else if (KnownOne2.isNegative() && KnownOne3.isNegative())
-                KnownOne.setBit(BitWidth - 1);
+                KnownOne.setSignBit();
             }
 
             // (sub nsw non-negative, negative) --> non-negative

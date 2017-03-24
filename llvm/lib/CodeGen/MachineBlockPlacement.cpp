@@ -839,8 +839,13 @@ bool MachineBlockPlacement::isTrellis(
     int PredCount = 0;
     for (auto SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
-      if (Successors.count(SuccPred))
+      if (Successors.count(SuccPred)) {
+        // Make sure that it is actually a triangle.
+        for (MachineBasicBlock *CheckSucc : SuccPred->successors())
+          if (!Successors.count(CheckSucc))
+            return false;
         continue;
+      }
       const BlockChain *PredChain = BlockToChain[SuccPred];
       if (SuccPred == BB || (BlockFilter && !BlockFilter->count(SuccPred)) ||
           PredChain == &Chain || PredChain == BlockToChain[Succ])
