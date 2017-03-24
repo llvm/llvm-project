@@ -50,7 +50,6 @@ public:
   void checkPreCall(const CallEvent &MC, CheckerContext &C) const;
   void checkPostCall(const CallEvent &MC, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
-  bool wantsRegionChangeUpdate(ProgramStateRef State) const;
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
@@ -451,12 +450,6 @@ void MisusedMovedObjectChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     }
   }
   C.addTransition(State);
-}
-
-bool MisusedMovedObjectChecker::wantsRegionChangeUpdate(
-    ProgramStateRef State) const {
-  TrackedRegionMapTy Regions = State->get<TrackedRegionMap>();
-  return !Regions.isEmpty();
 }
 
 ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
