@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../test.h"
+#include "test.h"
 
 extern "C" {
 void __tsan_on_report(void *report);
