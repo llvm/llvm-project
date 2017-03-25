@@ -1,7 +1,12 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -fdisable-module-hash -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -ast-print %t/ModulesCache/SimpleKit.pcm | FileCheck %s
 
 #import <SomeKit/SomeKit.h>
+#import <SimpleKit/SimpleKit.h>
+
+// CHECK: struct __attribute__((swift_name("SuccessfullyRenamedA"))) RenamedAgainInAPINotesA {
+// CHECK: struct __attribute__((swift_name("SuccessfullyRenamedB"))) RenamedAgainInAPINotesB {
 
 void test(OverriddenTypes *overridden) {
   int *ip1 = global_int_ptr; // expected-warning{{incompatible pointer types initializing 'int *' with an expression of type 'double (*)(int, int)'}}
