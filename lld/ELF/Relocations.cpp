@@ -686,8 +686,10 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
       I += Processed;
     }
 
-    // We only report undefined symbols if they are referenced somewhere in the
-    // code.
+    // Report undefined symbols. The fact that we report undefined
+    // symbols here means that we report undefined symbols only when
+    // they have relocations pointing to them. We don't care about
+    // undefined symbols that are in dead-stripped sections.
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
       reportUndefined<ELFT>(Body, C, RI.r_offset);
 

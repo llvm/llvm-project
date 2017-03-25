@@ -10,4 +10,5 @@ add_lldb_library(lldbPluginUnwindAssemblyX86 PLUGIN
   LINK_COMPONENTS
     Support
     MC
+    MCDisassembler
   )
