@@ -5324,7 +5324,7 @@
 // PPC603E:#define _ARCH_PPCGR 1
 // PPC603E:#define _BIG_ENDIAN 1
 // PPC603E-NOT:#define _LP64
-// PPC603E:#define __BIGGEST_ALIGNMENT__ 8
+// PPC603E:#define __BIGGEST_ALIGNMENT__ 16
 // PPC603E:#define __BIG_ENDIAN__ 1
 // PPC603E:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC603E:#define __CHAR16_TYPE__ unsigned short
@@ -5436,6 +5436,7 @@
 // PPC603E:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC603E:#define __LDBL_MIN_EXP__ (-968)
 // PPC603E:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC603E:#define __LONGDOUBLE128 1
 // PPC603E:#define __LONG_DOUBLE_128__ 1
 // PPC603E:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC603E:#define __LONG_MAX__ 2147483647L
@@ -5524,7 +5525,7 @@
 // PPC64:#define _ARCH_PWR7 1
 // PPC64:#define _BIG_ENDIAN 1
 // PPC64:#define _LP64 1
-// PPC64:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64:#define __BIG_ENDIAN__ 1
 // PPC64:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC64:#define __CHAR16_TYPE__ unsigned short
@@ -5560,6 +5561,7 @@
 // PPC64:#define __FLT_MIN_EXP__ (-125)
 // PPC64:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64:#define __FLT_RADIX__ 2
+// PPC64:#define __HAVE_BSWAP__ 1
 // PPC64:#define __INT16_C_SUFFIX__
 // PPC64:#define __INT16_FMTd__ "hd"
 // PPC64:#define __INT16_FMTi__ "hi"
@@ -5637,6 +5639,7 @@
 // PPC64:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC64:#define __LDBL_MIN_EXP__ (-968)
 // PPC64:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC64:#define __LONGDOUBLE128 1
 // PPC64:#define __LONG_DOUBLE_128__ 1
 // PPC64:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64:#define __LONG_MAX__ 9223372036854775807L
@@ -5728,7 +5731,7 @@
 // PPC64LE:#define _CALL_ELF 2
 // PPC64LE:#define _LITTLE_ENDIAN 1
 // PPC64LE:#define _LP64 1
-// PPC64LE:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64LE:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64LE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // PPC64LE:#define __CHAR16_TYPE__ unsigned short
 // PPC64LE:#define __CHAR32_TYPE__ unsigned int
@@ -5763,6 +5766,7 @@
 // PPC64LE:#define __FLT_MIN_EXP__ (-125)
 // PPC64LE:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64LE:#define __FLT_RADIX__ 2
+// PPC64LE:#define __HAVE_BSWAP__ 1
 // PPC64LE:#define __INT16_C_SUFFIX__
 // PPC64LE:#define __INT16_FMTd__ "hd"
 // PPC64LE:#define __INT16_FMTi__ "hi"
@@ -5841,6 +5845,7 @@
 // PPC64LE:#define __LDBL_MIN_EXP__ (-968)
 // PPC64LE:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
 // PPC64LE:#define __LITTLE_ENDIAN__ 1
+// PPC64LE:#define __LONGDOUBLE128 1
 // PPC64LE:#define __LONG_DOUBLE_128__ 1
 // PPC64LE:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64LE:#define __LONG_MAX__ 9223372036854775807L
@@ -6093,6 +6098,9 @@
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power8 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER8 %s
 //
+// ppc64le also defaults to power8.
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-none-none -target-cpu ppc64le -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER8 %s
+//
 // PPCPOWER8:#define _ARCH_PPC 1
 // PPCPOWER8:#define _ARCH_PPC64 1
 // PPCPOWER8:#define _ARCH_PPCGR 1
@@ -6141,8 +6149,9 @@
 // PPC64-LINUX:#define _ARCH_PPC 1
 // PPC64-LINUX:#define _ARCH_PPC64 1
 // PPC64-LINUX:#define _BIG_ENDIAN 1
+// PPC64-LINUX:#define _CALL_LINUX 1
 // PPC64-LINUX:#define _LP64 1
-// PPC64-LINUX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64-LINUX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64-LINUX:#define __BIG_ENDIAN__ 1
 // PPC64-LINUX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC64-LINUX:#define __CHAR16_TYPE__ unsigned short
@@ -6178,6 +6187,7 @@
 // PPC64-LINUX:#define __FLT_MIN_EXP__ (-125)
 // PPC64-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64-LINUX:#define __FLT_RADIX__ 2
+// PPC64-LINUX:#define __HAVE_BSWAP__ 1
 // PPC64-LINUX:#define __INT16_C_SUFFIX__
 // PPC64-LINUX:#define __INT16_FMTd__ "hd"
 // PPC64-LINUX:#define __INT16_FMTi__ "hi"
@@ -6255,6 +6265,7 @@
 // PPC64-LINUX:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC64-LINUX:#define __LDBL_MIN_EXP__ (-968)
 // PPC64-LINUX:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC64-LINUX:#define __LONGDOUBLE128 1
 // PPC64-LINUX:#define __LONG_DOUBLE_128__ 1
 // PPC64-LINUX:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64-LINUX:#define __LONG_MAX__ 9223372036854775807L
@@ -6343,12 +6354,17 @@
 // PPC64-ELFv1:#define _CALL_ELF 1
 // PPC64-ELFv2:#define _CALL_ELF 2
 //
+// Most of this is encompassed in other places.
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-linux-gnu -target-abi elfv2 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64LE-LINUX %s
+//
+// PPC64LE-LINUX:#define _CALL_LINUX 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC %s
 //
 // PPC:#define _ARCH_PPC 1
 // PPC:#define _BIG_ENDIAN 1
 // PPC-NOT:#define _LP64
-// PPC:#define __BIGGEST_ALIGNMENT__ 8
+// PPC:#define __BIGGEST_ALIGNMENT__ 16
 // PPC:#define __BIG_ENDIAN__ 1
 // PPC:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC:#define __CHAR16_TYPE__ unsigned short
@@ -6384,6 +6400,7 @@
 // PPC:#define __FLT_MIN_EXP__ (-125)
 // PPC:#define __FLT_MIN__ 1.17549435e-38F
 // PPC:#define __FLT_RADIX__ 2
+// PPC:#define __HAVE_BSWAP__ 1
 // PPC:#define __INT16_C_SUFFIX__
 // PPC:#define __INT16_FMTd__ "hd"
 // PPC:#define __INT16_FMTi__ "hi"
@@ -6461,6 +6478,7 @@
 // PPC:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC:#define __LDBL_MIN_EXP__ (-968)
 // PPC:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC:#define __LONGDOUBLE128 1
 // PPC:#define __LONG_DOUBLE_128__ 1
 // PPC:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC:#define __LONG_MAX__ 2147483647L
@@ -6539,7 +6557,7 @@
 // PPC-LINUX:#define _ARCH_PPC 1
 // PPC-LINUX:#define _BIG_ENDIAN 1
 // PPC-LINUX-NOT:#define _LP64
-// PPC-LINUX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC-LINUX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC-LINUX:#define __BIG_ENDIAN__ 1
 // PPC-LINUX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC-LINUX:#define __CHAR16_TYPE__ unsigned short
@@ -6575,6 +6593,7 @@
 // PPC-LINUX:#define __FLT_MIN_EXP__ (-125)
 // PPC-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // PPC-LINUX:#define __FLT_RADIX__ 2
+// PPC-LINUX:#define __HAVE_BSWAP__ 1
 // PPC-LINUX:#define __INT16_C_SUFFIX__
 // PPC-LINUX:#define __INT16_FMTd__ "hd"
 // PPC-LINUX:#define __INT16_FMTi__ "hi"
@@ -6652,6 +6671,7 @@
 // PPC-LINUX:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC-LINUX:#define __LDBL_MIN_EXP__ (-968)
 // PPC-LINUX:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC-LINUX:#define __LONGDOUBLE128 1
 // PPC-LINUX:#define __LONG_DOUBLE_128__ 1
 // PPC-LINUX:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC-LINUX:#define __LONG_MAX__ 2147483647L
@@ -6766,6 +6786,7 @@
 // PPC-DARWIN:#define __FLT_MIN_EXP__ (-125)
 // PPC-DARWIN:#define __FLT_MIN__ 1.17549435e-38F
 // PPC-DARWIN:#define __FLT_RADIX__ 2
+// PPC-DARWIN:#define __HAVE_BSWAP__ 1
 // PPC-DARWIN:#define __INT16_C_SUFFIX__
 // PPC-DARWIN:#define __INT16_FMTd__ "hd"
 // PPC-DARWIN:#define __INT16_FMTi__ "hi"
@@ -6843,6 +6864,7 @@
 // PPC-DARWIN:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC-DARWIN:#define __LDBL_MIN_EXP__ (-968)
 // PPC-DARWIN:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC-DARWIN:#define __LONGDOUBLE128 1
 // PPC-DARWIN:#define __LONG_DOUBLE_128__ 1
 // PPC-DARWIN:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC-DARWIN:#define __LONG_MAX__ 2147483647L
