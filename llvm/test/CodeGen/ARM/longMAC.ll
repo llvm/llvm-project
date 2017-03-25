@@ -1,15 +1,15 @@
 ; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s -check-prefix=CHECK --check-prefix=CHECK-LE
-; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s --check-prefix=CHECK-V7-LE
+; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK --check-prefix=CHECK-V7-LE
 ; RUN: llc -mtriple=armeb-eabi %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
-; RUN: llc -mtriple=armebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-BE
-; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6-THUMB
-; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
-; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
-; RUN: llc -mtriple=thumbebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB-BE
-; RUN: llc -mtriple=thumbv6m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6M-THUMB
-; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7M-THUMB
-; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
-; RUN: llc -mtriple=armv5te-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V5TE
+; RUN: llc -mtriple=armebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V7-BE
+; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6-THUMB
+; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-T2-DSP
+; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-T2-DSP
+; RUN: llc -mtriple=thumbebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V7-THUMB-BE
+; RUN: llc -mtriple=thumbv6m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6M-THUMB
+; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V7M-THUMB
+; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-T2-DSP
+; RUN: llc -mtriple=armv5te-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V5TE
 ; Check generated signed and unsigned multiply accumulate long.
 
 define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
@@ -107,8 +107,8 @@ define i64 @MACLongTest6(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;CHECK-LABEL: MACLongTest6:
 ;CHECK-V6-THUMB-NOT: smull
 ;CHECK-V6-THUMB-NOT: smlal
-;CHECK: smull   r12, lr, r1, r0
-;CHECK: smlal   r12, lr, r3, r2
+;CHECK-LE: smull   r12, lr, r1, r0
+;CHECK-LE: smlal   r12, lr, r3, r2
 ;CHECK-V7: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
 ;CHECK-V7: smlal   [[RDLO]], [[RDHI]], [[Rn:r[0-9]+]], [[Rm:r[0-9]+]]
 ;CHECK-T2-DSP: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
@@ -214,20 +214,20 @@ define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 define i64 @MACLongTest11(i16 %a, i16 %b, i64 %c)  {
 ;CHECK-LABEL: MACLongTest11:
 ;CHECK-T2-DSP-NOT: sxth
-;CHECK-T2-DSP: smlalbb r3, r2
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlalbb r2, r3
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: sxth
-;CHECK-V5TE: smlalbb r3, r2
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V5TE: smlalbb r2, r3
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: sxth
-;CHECK-V7-LE: smlalbb r3, r2
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlalbb r2, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlalbb r2, r3
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlalbb r3, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlalbb
 ;CHECK-BE-NOT: smlalbb
 ;CHECK-V6M-THUMB-NOT: smlalbb
@@ -244,23 +244,23 @@ define i64 @MACLongTest12(i16 %b, i32 %t, i64 %c)  {
 ;CHECK-LABEL: MACLongTest12:
 ;CHECK-T2-DSP-NOT: sxth
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlalbt r3, r2, r0, r1
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlalbt r2, r3, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-T2-DSP-NOT: sxth
 ;CHECK-V5TE-NOT: sxth
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlalbt r3, r2, r0, r1
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V5TE: smlalbt r2, r3, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: sxth
 ;CHECK-V7-LE-NOT: {{asr|lsr}}
-;CHECK-V7-LE: smlalbt r3, r2, r0, r1
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlalbt r2, r3,
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlalbt r2, r3, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlalbt r3, r2,
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlalbt
 ;CHECK-BE-NOT: smlalbt
 ;CHECK-V6M-THUMB-NOT: smlalbt
@@ -277,22 +277,22 @@ define i64 @MACLongTest13(i32 %t, i16 %b, i64 %c)  {
 ;CHECK-LABEL: MACLongTest13:
 ;CHECK-T2-DSP-NOT: sxth
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlaltb r3, r2, r0, r1
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlaltb r2, r3, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: sxth
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlaltb r3, r2, r0, r1
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V5TE: smlaltb r2, r3, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: sxth
 ;CHECK-V7-LE-NOT: {{asr|lsr}}
-;CHECK-V7-LE: smlaltb r3, r2, r0, r1
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlaltb r2, r3, r0, r1
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlaltb r2, r3, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlaltb r3, r2, r0, r1
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlaltb
 ;CHECK-BE-NOT: smlaltb
 ;CHECK-V6M-THUMB-NOT: smlaltb
@@ -308,20 +308,20 @@ define i64 @MACLongTest13(i32 %t, i16 %b, i64 %c)  {
 define i64 @MACLongTest14(i32 %a, i32 %b, i64 %c)  {
 ;CHECK-LABEL: MACLongTest14:
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlaltt r3, r2,
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlaltt r2, r3,
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlaltt r3, r2,
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V5TE: smlaltt r2, r3,
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: {{asr|lsr}}
-;CHECK-V7-LE: smlaltt r3, r2,
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlaltt r2, r3,
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlaltt r2, r3,
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlaltt r3, r2,
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlaltt
 ;CHECK-BE-NOT: smlaltt
 ;CHECK-V6M-THUMB-NOT: smlaltt
@@ -337,20 +337,20 @@ define i64 @MACLongTest14(i32 %a, i32 %b, i64 %c)  {
 @global_b = external global i16, align 2
 ;CHECK-LABEL: MACLongTest15
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlaltb r3, r2, r0, r1
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlaltb r2, r3, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlaltb r3, r2, r0, r1
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V5TE: smlaltb r2, r3, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
 ;CHECK-V7-LE-NOT: {{asr|lsr}}
-;CHECK-V7-LE: smlaltb r3, r2, r0, r1
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlaltb r2, r3, r0, r1
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlaltb r2, r3, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlaltb r3, r2, r0, r1
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlaltb
 ;CHECK-BE-NOT: smlaltb
 ;CHECK-V6M-THUMB-NOT: smlaltb
@@ -368,19 +368,19 @@ entry:
 
 ;CHECK-LABEL: MACLongTest16
 ;CHECK-T2-DSP-NOT: {{asr|lsr}}
-;CHECK-T2-DSP: smlalbt r3, r2, r1, r0
-;CHECK-T2-DSP-NEXT: mov r0, r3
-;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP: smlalbt r2, r3, r1, r0
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V5TE-NOT: {{asr|lsr}}
-;CHECK-V5TE: smlalbt r3, r2, r1, r0
-;CHECK-V5TE-NEXT: mov r0, r3
-;CHECK-V5TE-NEXT: mov r1, r2
-;CHECK-V7-LE: smlalbt r3, r2, r1, r0
-;CHECK-V7-LE-NEXT: mov r0, r3
-;CHECK-V7-LE-NEXT: mov r1, r2
-;CHECK-V7-THUMB-BE: smlalbt r2, r3, r1, r0
-;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
-;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-V5TE: smlalbt r2, r3, r1, r0
+;CHECK-V5TE-NEXT: mov r0, r2
+;CHECK-V5TE-NEXT: mov r1, r3
+;CHECK-V7-LE: smlalbt r2, r3, r1, r0
+;CHECK-V7-LE-NEXT: mov r0, r2
+;CHECK-V7-LE-NEXT: mov r1, r3
+;CHECK-V7-THUMB-BE: smlalbt r3, r2, r1, r0
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r2
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r3
 ;CHECK-LE-NOT: smlalbt
 ;CHECK-BE-NOT: smlalbt
 ;CHECK-V6M-THUMB-NOT: smlalbt

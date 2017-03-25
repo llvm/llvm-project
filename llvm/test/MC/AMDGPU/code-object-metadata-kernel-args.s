@@ -12,25 +12,25 @@
 // CHECK:        Args:
 // CHECK:          - Size:          1
 // CHECK:            Align:         1
-// CHECK:            Kind:          ByValue
+// CHECK:            ValueKind:     ByValue
 // CHECK:            ValueType:     I8
 // CHECK:            AccQual:       Default
 // CHECK:            TypeName:      char
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
-// CHECK:            Kind:          HiddenGlobalOffsetX
+// CHECK:            ValueKind:     HiddenGlobalOffsetX
 // CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
-// CHECK:            Kind:          HiddenGlobalOffsetY
+// CHECK:            ValueKind:     HiddenGlobalOffsetY
 // CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
-// CHECK:            Kind:          HiddenGlobalOffsetZ
+// CHECK:            ValueKind:     HiddenGlobalOffsetZ
 // CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
-// CHECK:            Kind:          HiddenPrintfBuffer
+// CHECK:            ValueKind:     HiddenPrintfBuffer
 // CHECK:            ValueType:     I8
 // CHECK:            AddrSpaceQual: Global
 // CHECK:  .end_amdgpu_code_object_metadata
@@ -44,25 +44,25 @@
       Args:
         - Size:          1
           Align:         1
-          Kind:          ByValue
+          ValueKind:     ByValue
           ValueType:     I8
           AccQual:       Default
           TypeName:      char
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetX
+          ValueKind:     HiddenGlobalOffsetX
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetY
+          ValueKind:     HiddenGlobalOffsetY
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetZ
+          ValueKind:     HiddenGlobalOffsetZ
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenPrintfBuffer
+          ValueKind:     HiddenPrintfBuffer
           ValueType:     I8
           AddrSpaceQual: Global
 .end_amdgpu_code_object_metadata

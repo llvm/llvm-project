@@ -705,6 +705,9 @@ def int_amdgcn_loop : Intrinsic<[llvm_i1_ty],
 
 def int_amdgcn_end_cf : Intrinsic<[], [llvm_i64_ty], [IntrConvergent]>;
 
+// Represent unreachable in a divergent region.
+def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent]>;
+
 // Emit 2.5 ulp, no denormal division. Should only be inserted by
 // pass based on !fpmath metadata.
 def int_amdgcn_fdiv_fast : Intrinsic<

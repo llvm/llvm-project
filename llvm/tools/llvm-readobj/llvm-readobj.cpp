@@ -338,10 +338,12 @@ static bool isMipsArch(unsigned Arch) {
 }
 namespace {
 struct ReadObjTypeTableBuilder {
-  ReadObjTypeTableBuilder() : Allocator(), Builder(Allocator) {}
+  ReadObjTypeTableBuilder()
+      : Allocator(), IDTable(Allocator), TypeTable(Allocator) {}
 
   llvm::BumpPtrAllocator Allocator;
-  llvm::codeview::TypeTableBuilder Builder;
+  llvm::codeview::TypeTableBuilder IDTable;
+  llvm::codeview::TypeTableBuilder TypeTable;
 };
 }
 static ReadObjTypeTableBuilder CVTypes;
@@ -446,7 +448,7 @@ static void dumpObject(const ObjectFile *Obj) {
     if (opts::CodeView)
       Dumper->printCodeViewDebugInfo();
     if (opts::CodeViewMergedTypes)
-      Dumper->mergeCodeViewTypes(CVTypes.Builder);
+      Dumper->mergeCodeViewTypes(CVTypes.IDTable, CVTypes.TypeTable);
   }
   if (Obj->isMachO()) {
     if (opts::MachODataInCode)
@@ -551,7 +553,7 @@ int main(int argc, const char *argv[]) {
 
   if (opts::CodeViewMergedTypes) {
     ScopedPrinter W(outs());
-    dumpCodeViewMergedTypes(W, CVTypes.Builder);
+    dumpCodeViewMergedTypes(W, CVTypes.IDTable, CVTypes.TypeTable);
   }
 
   return 0;

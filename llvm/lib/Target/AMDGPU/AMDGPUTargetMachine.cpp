@@ -132,6 +132,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertSkipsPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
+  initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
 }
 
@@ -202,9 +203,14 @@ static StringRef computeDataLayout(const Triple &TT) {
 
   // 32-bit private, local, and region pointers. 64-bit global, constant and
   // flat.
-  return "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32"
+  if (TT.getEnvironmentName() == "amdgiz" ||
+      TT.getEnvironmentName() == "amdgizcl")
+    return "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32"
          "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
          "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
+  return "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32"
+      "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+      "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
 }
 
 LLVM_READNONE
@@ -253,15 +259,29 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
     FSAttr.getValueAsString();
 }
 
+static ImmutablePass *createAMDGPUExternalAAWrapperPass() {
+  return createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
+      if (auto *WrapperPass = P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
+        AAR.addAAResult(WrapperPass->getResult());
+      });
+}
+
 void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.DivergentTarget = true;
 
   bool Internalize = InternalizeSymbols &&
                      (getOptLevel() > CodeGenOpt::None) &&
                      (getTargetTriple().getArch() == Triple::amdgcn);
+  bool AMDGPUAA = EnableAMDGPUAliasAnalysis && getOptLevel() > CodeGenOpt::None;
+
   Builder.addExtension(
     PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [Internalize](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+    [Internalize, AMDGPUAA](const PassManagerBuilder &,
+                            legacy::PassManagerBase &PM) {
+      if (AMDGPUAA) {
+        PM.add(createAMDGPUAAWrapperPass());
+        PM.add(createAMDGPUExternalAAWrapperPass());
+      }
       PM.add(createAMDGPUUnifyMetadataPass());
       if (Internalize) {
         PM.add(createInternalizePass([=](const GlobalValue &GV) -> bool {
@@ -284,6 +304,15 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         }));
         PM.add(createGlobalDCEPass());
         PM.add(createAMDGPUAlwaysInlinePass());
+      }
+  });
+
+  Builder.addExtension(
+    PassManagerBuilder::EP_EarlyAsPossible,
+    [AMDGPUAA](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      if (AMDGPUAA) {
+        PM.add(createAMDGPUAAWrapperPass());
+        PM.add(createAMDGPUExternalAAWrapperPass());
       }
   });
 }
@@ -650,6 +679,10 @@ bool GCNPassConfig::addPreISel() {
   // supported.
   const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
   addPass(createAMDGPUAnnotateKernelFeaturesPass(&TM));
+
+  // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
+  // regions formed by them.
+  addPass(&AMDGPUUnifyDivergentExitNodesID);
   addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
   addPass(createSinkingPass());
   addPass(createSITypeRewriter());

@@ -17,25 +17,25 @@
       Args:
         - Size:          1
           Align:         1
-          Kind:          ByValue
+          ValueKind:     ByValue
           ValueType:     I8
           AccQual:       Default
           TypeName:      char
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetX
+          ValueKind:     HiddenGlobalOffsetX
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetY
+          ValueKind:     HiddenGlobalOffsetY
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenGlobalOffsetZ
+          ValueKind:     HiddenGlobalOffsetZ
           ValueType:     I64
         - Size:          8
           Align:         8
-          Kind:          HiddenPrintfBuffer
+          ValueKind:     HiddenPrintfBuffer
           ValueType:     I8
           AddrSpaceQual: Global
 .end_amdgpu_code_object_metadata

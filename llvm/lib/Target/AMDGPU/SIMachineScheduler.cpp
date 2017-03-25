@@ -974,12 +974,7 @@ void SIScheduleBlockCreator::colorMergeIfPossibleSmallGroupsToNextGroup() {
   for (unsigned SUNum : DAG->BottomUpIndex2SU) {
     SUnit *SU = &DAG->SUnits[SUNum];
     unsigned color = CurrentColoring[SU->NodeNum];
-    std::map<unsigned, unsigned>::iterator Pos = ColorCount.find(color);
-      if (Pos != ColorCount.end()) {
-        ++ColorCount[color];
-      } else {
-        ColorCount[color] = 1;
-      }
+     ++ColorCount[color];
   }
 
   for (unsigned SUNum : DAG->BottomUpIndex2SU) {
@@ -1331,13 +1326,7 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
         continue;
 
       int PredID = BlocksStruct.TopDownIndex2Block[topoInd];
-      std::map<unsigned, unsigned>::iterator RegPos =
-        LiveOutRegsNumUsages[PredID].find(Reg);
-      if (RegPos != LiveOutRegsNumUsages[PredID].end()) {
-        ++LiveOutRegsNumUsages[PredID][Reg];
-      } else {
-        LiveOutRegsNumUsages[PredID][Reg] = 1;
-      }
+      ++LiveOutRegsNumUsages[PredID][Reg];
     }
   }
 
@@ -1377,12 +1366,8 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
         }
       }
 
-      if (!Found) {
-        if (LiveRegsConsumers.find(Reg) == LiveRegsConsumers.end())
-          LiveRegsConsumers[Reg] = 1;
-        else
-          ++LiveRegsConsumers[Reg];
-      }
+      if (!Found)
+        ++LiveRegsConsumers[Reg];
     }
   }
 
@@ -1403,6 +1388,7 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
     for (SIScheduleBlock* Block : BlocksScheduled) {
       dbgs() << ' ' << Block->getID();
     }
+    dbgs() << '\n';
   );
 }
 
@@ -1464,8 +1450,8 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
                         VregCurrentUsage, SregCurrentUsage);
   if (VregCurrentUsage > maxVregUsage)
     maxVregUsage = VregCurrentUsage;
-  if (VregCurrentUsage > maxSregUsage)
-    maxSregUsage = VregCurrentUsage;
+  if (SregCurrentUsage > maxSregUsage)
+    maxSregUsage = SregCurrentUsage;
   DEBUG(
     dbgs() << "Picking New Blocks\n";
     dbgs() << "Available: ";
@@ -1578,12 +1564,10 @@ void SIScheduleBlockScheduler::blockScheduled(SIScheduleBlock *Block) {
        LiveOutRegsNumUsages[Block->getID()].begin(),
        E = LiveOutRegsNumUsages[Block->getID()].end(); RegI != E; ++RegI) {
     std::pair<unsigned, unsigned> RegP = *RegI;
-    if (LiveRegsConsumers.find(RegP.first) == LiveRegsConsumers.end())
-      LiveRegsConsumers[RegP.first] = RegP.second;
-    else {
-      assert(LiveRegsConsumers[RegP.first] == 0);
-      LiveRegsConsumers[RegP.first] += RegP.second;
-    }
+    // We produce this register, thus it must not be previously alive.
+    assert(LiveRegsConsumers.find(RegP.first) == LiveRegsConsumers.end() ||
+           LiveRegsConsumers[RegP.first] == 0);
+    LiveRegsConsumers[RegP.first] += RegP.second;
   }
   if (LastPosHighLatencyParentScheduled[Block->getID()] >
         (unsigned)LastPosWaitedHighLatency)
@@ -1825,7 +1809,9 @@ void SIScheduleDAGMI::schedule()
   // if VGPR usage is extremely high, try other good performing variants
   // which could lead to lower VGPR usage
   if (Best.MaxVGPRUsage > 180) {
-    std::vector<std::pair<SISchedulerBlockCreatorVariant, SISchedulerBlockSchedulerVariant>> Variants = {
+    static const std::pair<SISchedulerBlockCreatorVariant,
+                           SISchedulerBlockSchedulerVariant>
+        Variants[] = {
       { LatenciesAlone, BlockRegUsageLatency },
 //      { LatenciesAlone, BlockRegUsage },
       { LatenciesGrouped, BlockLatencyRegUsage },
@@ -1844,7 +1830,9 @@ void SIScheduleDAGMI::schedule()
   // if VGPR usage is still extremely high, we may spill. Try other variants
   // which are less performing, but that could lead to lower VGPR usage.
   if (Best.MaxVGPRUsage > 200) {
-    std::vector<std::pair<SISchedulerBlockCreatorVariant, SISchedulerBlockSchedulerVariant>> Variants = {
+    static const std::pair<SISchedulerBlockCreatorVariant,
+                           SISchedulerBlockSchedulerVariant>
+        Variants[] = {
 //      { LatenciesAlone, BlockRegUsageLatency },
       { LatenciesAlone, BlockRegUsage },
 //      { LatenciesGrouped, BlockLatencyRegUsage },

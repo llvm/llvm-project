@@ -15,12 +15,16 @@
 ; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], vcc, [[OTHERCC]]
 ; GCN: s_and_saveexec_b64 [[SAVED:s\[[0-9]+:[0-9]+\]]], [[AND]]
 ; GCN: s_xor_b64 {{s\[[0-9]+:[0-9]+\]}}, exec, [[SAVED]]
-;
-; TODO: The following sequence is a bug (missing s_endpgm)!
-;
-; GCN: s_branch [[BB:BB[0-9]+_[0-9]+]]
-; GCN: [[BB]]:
-; GCN-NEXT: .Lfunc_end0:
+; GCN: ; mask branch [[BB5:BB[0-9]+_[0-9]+]]
+
+; GCN-NEXT: BB{{[0-9]+_[0-9]+}}: ; %bb4
+; GCN: ds_write_b32
+; GCN: s_waitcnt
+
+; GCN-NEXT: [[BB5]]
+; GCN: s_or_b64 exec, exec
+; GCN-NEXT: s_endpgm
+; GCN-NEXT: .Lfunc_end
 define amdgpu_ps void @ham(float %arg, float %arg1) #0 {
 bb:
   %tmp = fcmp ogt float %arg, 0.000000e+00
@@ -29,6 +33,7 @@ bb:
   br i1 %tmp3, label %bb4, label %bb5
 
 bb4:                                              ; preds = %bb
+  store volatile i32 4, i32 addrspace(3)* undef
   unreachable
 
 bb5:                                              ; preds = %bb

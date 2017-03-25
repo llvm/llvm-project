@@ -62,6 +62,8 @@ void ImportedFunctionsInliningStatistics::recordInline(const Function &Caller,
 void ImportedFunctionsInliningStatistics::setModuleInfo(const Module &M) {
   ModuleName = M.getName();
   for (const auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
     AllFunctions++;
     ImportedFunctions += int(F.getMetadata("thinlto_src_module") != nullptr);
   }

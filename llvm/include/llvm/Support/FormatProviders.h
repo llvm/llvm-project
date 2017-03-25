@@ -370,8 +370,7 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
       return Default;
     }
 
-    std::vector<const char *> Delims = {"[]", "<>", "()"};
-    for (const char *D : Delims) {
+    for (const char *D : {"[]", "<>", "()"}) {
       if (Style.front() != D[0])
         continue;
       size_t End = Style.find_first_of(D[1]);

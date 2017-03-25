@@ -591,6 +591,32 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
   return false;
 }
 
+// Try to fold an instruction into a simpler one
+static bool tryFoldInst(const SIInstrInfo *TII,
+                        MachineInstr *MI) {
+  unsigned Opc = MI->getOpcode();
+
+  if (Opc == AMDGPU::V_CNDMASK_B32_e32    ||
+      Opc == AMDGPU::V_CNDMASK_B32_e64    ||
+      Opc == AMDGPU::V_CNDMASK_B64_PSEUDO) {
+    const MachineOperand *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1);
+    if (Src1->isIdenticalTo(*Src0)) {
+      DEBUG(dbgs() << "Folded " << *MI << " into ");
+      int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+      if (Src2Idx != -1)
+        MI->RemoveOperand(Src2Idx);
+      MI->RemoveOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1));
+      mutateCopyOp(*MI, TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY
+                                               : getMovOpc(false)));
+      DEBUG(dbgs() << *MI << '\n');
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void SIFoldOperands::foldInstOperand(MachineInstr &MI,
                                      MachineOperand &OpToFold) const {
   // We need mutate the operands of new mov instructions to add implicit
@@ -692,6 +718,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       }
       DEBUG(dbgs() << "Folded source from " << MI << " into OpNo " <<
             static_cast<int>(Fold.UseOpNo) << " of " << *Fold.UseMI << '\n');
+      tryFoldInst(TII, Fold.UseMI);
     }
   }
 }
@@ -906,6 +933,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
     for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
+
+      tryFoldInst(TII, &MI);
 
       if (!isFoldableCopy(MI)) {
         if (IsIEEEMode || !tryFoldOMod(MI))

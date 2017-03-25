@@ -733,8 +733,8 @@ Or a combination of multiple projects:
   % mkdir clang-build && cd clang-build
   % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"
 
-A helper script is provided in `llvm/utils/git-svn/git-llvm`. After you add it
-to your path, you can push committed changes upstream with `git llvm push`.
+A helper script is provided in ``llvm/utils/git-svn/git-llvm``. After you add it
+to your path, you can push committed changes upstream with ``git llvm push``.
 
 .. code-block:: console
 
@@ -743,10 +743,22 @@ to your path, you can push committed changes upstream with `git llvm push`.
 
 While this is using SVN under the hood, it does not require any interaction from
 you with git-svn.
-After a few minutes, `git pull` should get back the changes as they were
-committed. Note that a current limitation is that `git` does not directly record
-file rename, and thus it is propagated to SVN as a combination of delete-add
-instead of a file rename.
+After a few minutes, ``git pull`` should get back the changes as they were
+committed. Note that a current limitation is that ``git`` does not directly
+record file rename, and thus it is propagated to SVN as a combination of
+delete-add instead of a file rename.
+
+The SVN revision of each monorepo commit can be found in the commit notes.  git
+does not fetch notes by default. The following commands will fetch the notes and
+configure git to fetch future notes. Use ``git notes show $commit`` to look up
+the SVN revision of a git commit. The notes show up ``git log``, and searching
+the log is currently the recommended way to look up the git commit for a given
+SVN revision.
+
+.. code-block:: console
+
+  % git config --add remote.origin.fetch +refs/notes/commits:refs/notes/commits
+  % git fetch
 
 If you are using `arc` to interact with Phabricator, you need to manually put it
 at the root of the checkout:

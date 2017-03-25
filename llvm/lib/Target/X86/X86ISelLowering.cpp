@@ -15791,20 +15791,10 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::VTRUNC, DL, VT, In);
   }
 
-  // Truncate with PACKSS if we are truncating a vector comparison result.
-  // TODO: We should be able to support other operations as long as we
-  // we are saturating+packing zero/all bits only.
-  auto IsPackableComparison = [](SDValue V) {
-    unsigned Opcode = V.getOpcode();
-    return (Opcode == X86ISD::PCMPGT || Opcode == X86ISD::PCMPEQ ||
-            Opcode == X86ISD::CMPP);
-  };
-
-  if (IsPackableComparison(In) || (In.getOpcode() == ISD::CONCAT_VECTORS &&
-                                   all_of(In->ops(), IsPackableComparison))) {
+  // Truncate with PACKSS if we are truncating a vector zero/all-bits result.
+  if (InVT.getScalarSizeInBits() == DAG.ComputeNumSignBits(In))
     if (SDValue V = truncateVectorCompareWithPACKSS(VT, In, DL, DAG, Subtarget))
       return V;
-  }
 
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
     // On AVX2, v4i64 -> v4i32 becomes VPERMD.
@@ -26640,16 +26630,28 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
 unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     SDValue Op, const SelectionDAG &DAG, unsigned Depth) const {
-  // SETCC_CARRY sets the dest to ~0 for true or 0 for false.
-  if (Op.getOpcode() == X86ISD::SETCC_CARRY)
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case X86ISD::SETCC_CARRY:
+    // SETCC_CARRY sets the dest to ~0 for true or 0 for false.
     return Op.getScalarValueSizeInBits();
 
-  if (Op.getOpcode() == X86ISD::VSEXT) {
+  case X86ISD::VSEXT: {
+    SDValue Src = Op.getOperand(0);
     EVT VT = Op.getValueType();
-    EVT SrcVT = Op.getOperand(0).getValueType();
-    unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    EVT SrcVT = Src.getValueType();
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     Tmp += VT.getScalarSizeInBits() - SrcVT.getScalarSizeInBits();
     return Tmp;
+  }
+
+  case X86ISD::PCMPGT:
+  case X86ISD::PCMPEQ:
+  case X86ISD::CMPP:
+  case X86ISD::VPCOM:
+  case X86ISD::VPCOMU:
+    // Vector compares return zero/all-bits result values.
+    return Op.getScalarValueSizeInBits();
   }
 
   // Fallback case.
