@@ -13649,7 +13649,6 @@ CreateNewDecl:
 
   if (Attr)
     ProcessDeclAttributeList(S, New, Attr);
-  ProcessAPINotes(New);
 
   // If this has an identifier, add it to the scope stack.
   if (TUK == TUK_Friend) {
