@@ -21,6 +21,8 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterContextOpenBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterContextOpenBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "ProcessElfCore.h"
@@ -126,6 +128,26 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         break;
       case llvm::Triple::x86_64:
         reg_interface = new RegisterContextLinux_x86_64(arch);
+        break;
+      default:
+        break;
+      }
+      break;
+    }
+
+    case llvm::Triple::OpenBSD: {
+      switch (arch.GetMachine()) {
+      case llvm::Triple::aarch64:
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
+        break;
+      case llvm::Triple::arm:
+        reg_interface = new RegisterInfoPOSIX_arm(arch);
+        break;
+      case llvm::Triple::x86:
+	reg_interface = new RegisterContextOpenBSD_i386(arch);
+	break;
+      case llvm::Triple::x86_64:
+        reg_interface = new RegisterContextOpenBSD_x86_64(arch);
         break;
       default:
         break;

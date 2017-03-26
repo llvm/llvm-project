@@ -74,6 +74,7 @@
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
 #include "Plugins/Platform/NetBSD/PlatformNetBSD.h"
+#include "Plugins/Platform/OpenBSD/PlatformOpenBSD.h"
 #include "Plugins/Platform/Windows/PlatformWindows.h"
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
@@ -266,6 +267,7 @@ void SystemInitializerFull::Initialize() {
   platform_freebsd::PlatformFreeBSD::Initialize();
   platform_linux::PlatformLinux::Initialize();
   platform_netbsd::PlatformNetBSD::Initialize();
+  platform_openbsd::PlatformOpenBSD::Initialize();
   PlatformWindows::Initialize();
   PlatformKalimba::Initialize();
   platform_android::PlatformAndroid::Initialize();
@@ -487,6 +489,7 @@ void SystemInitializerFull::Terminate() {
   platform_freebsd::PlatformFreeBSD::Terminate();
   platform_linux::PlatformLinux::Terminate();
   platform_netbsd::PlatformNetBSD::Terminate();
+  platform_openbsd::PlatformOpenBSD::Terminate();
   PlatformWindows::Terminate();
   PlatformKalimba::Terminate();
   platform_android::PlatformAndroid::Terminate();
