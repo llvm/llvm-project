@@ -20,6 +20,11 @@ include_directories(
   )
 endif ()
 
+if ( CMAKE_SYSTEM_NAME MATCHES "OpenBSD" )
+include_directories(
+  Plugins/Process/POSIX
+  )
+endif ()
 
 set(lldbBase_SOURCES
     lldb.cpp

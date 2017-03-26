@@ -26591,6 +26591,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       unsigned Depth) const {
   unsigned BitWidth = KnownZero.getBitWidth();
   unsigned Opc = Op.getOpcode();
+  EVT VT = Op.getValueType();
   assert((Opc >= ISD::BUILTIN_OP_END ||
           Opc == ISD::INTRINSIC_WO_CHAIN ||
           Opc == ISD::INTRINSIC_W_CHAIN ||
@@ -26624,9 +26625,33 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownZero.setBits(NumLoBits, BitWidth);
     break;
   }
+  case X86ISD::VSHLI:
+  case X86ISD::VSRLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
+        KnownZero = APInt::getAllOnesValue(BitWidth);
+        break;
+      }
+
+      DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      if (Opc == X86ISD::VSHLI) {
+        KnownZero = KnownZero << ShAmt;
+        KnownOne = KnownOne << ShAmt;
+        // Low bits are known zero.
+        KnownZero.setLowBits(ShAmt);
+      } else {
+        KnownZero = KnownZero.lshr(ShAmt);
+        KnownOne = KnownOne.lshr(ShAmt);
+        // High bits are known zero.
+        KnownZero.setHighBits(ShAmt);
+      }
+    }
+    break;
+  }
   case X86ISD::VZEXT: {
     SDValue N0 = Op.getOperand(0);
-    unsigned NumElts = Op.getValueType().getVectorNumElements();
+    unsigned NumElts = VT.getVectorNumElements();
 
     EVT SrcVT = N0.getValueType();
     unsigned InNumElts = SrcVT.getVectorNumElements();

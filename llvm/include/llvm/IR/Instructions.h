@@ -3093,25 +3093,33 @@ public:
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
 
-  template <class SwitchInstTy, class ConstantIntTy, class BasicBlockTy>
-  class CaseIteratorT {
+  template <class SwitchInstT, class ConstantIntT, class BasicBlockT>
+  class CaseIteratorT
+      : public iterator_facade_base<
+            CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT>,
+            std::random_access_iterator_tag,
+            CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT>> {
   protected:
-    SwitchInstTy *SI;
-    unsigned Index;
+    SwitchInstT *SI;
+    ptrdiff_t Index;
 
   public:
-    typedef CaseIteratorT<SwitchInstTy, ConstantIntTy, BasicBlockTy> Self;
+    typedef CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT> Self;
+
+    /// Default constructed iterator is in an invalid state until assigned to
+    /// a case for a particular switch.
+    CaseIteratorT() : SI(nullptr) {}
 
     /// Initializes case iterator for given SwitchInst and for given
     /// case number.
-    CaseIteratorT(SwitchInstTy *SI, unsigned CaseNum) {
+    CaseIteratorT(SwitchInstT *SI, unsigned CaseNum) {
       this->SI = SI;
       Index = CaseNum;
     }
 
     /// Initializes case iterator for given SwitchInst and for given
     /// TerminatorInst's successor index.
-    static Self fromSuccessorIndex(SwitchInstTy *SI, unsigned SuccessorIndex) {
+    static Self fromSuccessorIndex(SwitchInstT *SI, unsigned SuccessorIndex) {
       assert(SuccessorIndex < SI->getNumSuccessors() &&
              "Successor index # out of range!");
       return SuccessorIndex != 0 ?
@@ -3120,15 +3128,16 @@ public:
     }
 
     /// Resolves case value for current case.
-    ConstantIntTy *getCaseValue() {
-      assert(Index < SI->getNumCases() && "Index out the number of cases.");
-      return reinterpret_cast<ConstantIntTy*>(SI->getOperand(2 + Index*2));
+    ConstantIntT *getCaseValue() {
+      assert((unsigned)Index < SI->getNumCases() &&
+             "Index out the number of cases.");
+      return reinterpret_cast<ConstantIntT *>(SI->getOperand(2 + Index * 2));
     }
 
     /// Resolves successor for current case.
-    BasicBlockTy *getCaseSuccessor() {
-      assert((Index < SI->getNumCases() ||
-              Index == DefaultPseudoIndex) &&
+    BasicBlockT *getCaseSuccessor() {
+      assert(((unsigned)Index < SI->getNumCases() ||
+              (unsigned)Index == DefaultPseudoIndex) &&
              "Index out the number of cases.");
       return SI->getSuccessor(getSuccessorIndex());
     }
@@ -3138,48 +3147,38 @@ public:
 
     /// Returns TerminatorInst's successor index for current case successor.
     unsigned getSuccessorIndex() const {
-      assert((Index == DefaultPseudoIndex || Index < SI->getNumCases()) &&
+      assert(((unsigned)Index == DefaultPseudoIndex ||
+              (unsigned)Index < SI->getNumCases()) &&
              "Index out the number of cases.");
-      return Index != DefaultPseudoIndex ? Index + 1 : 0;
+      return (unsigned)Index != DefaultPseudoIndex ? Index + 1 : 0;
     }
 
-    Self operator++() {
-      // Check index correctness after increment.
+    Self &operator+=(ptrdiff_t N) {
+      // Check index correctness after addition.
       // Note: Index == getNumCases() means end().
-      assert(Index+1 <= SI->getNumCases() && "Index out the number of cases.");
-      ++Index;
-      return *this;
-    }
-    Self operator++(int) {
-      Self tmp = *this;
-      ++(*this);
-      return tmp;
-    }
-    Self operator--() {
-      // Check index correctness after decrement.
-      // Note: Index == getNumCases() means end().
-      // Also allow "-1" iterator here. That will became valid after ++.
-      assert((Index == 0 || Index-1 <= SI->getNumCases()) &&
+      assert(Index + N >= 0 && (unsigned)(Index + N) <= SI->getNumCases() &&
              "Index out the number of cases.");
-      --Index;
+      Index += N;
       return *this;
     }
-    Self operator--(int) {
-      Self tmp = *this;
-      --(*this);
-      return tmp;
+    Self &operator-=(ptrdiff_t N) {
+      // Check index correctness after subtraction.
+      // Note: Index == getNumCases() means end().
+      assert(Index - N >= 0 && (unsigned)(Index - N) <= SI->getNumCases() &&
+             "Index out the number of cases.");
+      Index -= N;
+      return *this;
     }
     bool operator==(const Self& RHS) const {
-      assert(RHS.SI == SI && "Incompatible operators.");
-      return RHS.Index == Index;
+      assert(SI == RHS.SI && "Incompatible operators.");
+      return Index == RHS.Index;
     }
-    bool operator!=(const Self& RHS) const {
-      assert(RHS.SI == SI && "Incompatible operators.");
-      return RHS.Index != Index;
+    bool operator<(const Self& RHS) const {
+      assert(SI == RHS.SI && "Incompatible operators.");
+      return Index < RHS.Index;
     }
-    Self &operator*() {
-      return *this;
-    }
+    Self &operator*() { return *this; }
+    const Self &operator*() const { return *this; }
   };
 
   typedef CaseIteratorT<const SwitchInst, const ConstantInt, const BasicBlock>
@@ -3194,7 +3193,8 @@ public:
 
     /// Sets the new value for current case.
     void setValue(ConstantInt *V) {
-      assert(Index < SI->getNumCases() && "Index out the number of cases.");
+      assert((unsigned)Index < SI->getNumCases() &&
+             "Index out the number of cases.");
       SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
     }
 
@@ -3325,8 +3325,9 @@ public:
   /// index idx and above.
   /// Note:
   /// This action invalidates iterators for all cases following the one removed,
-  /// including the case_end() iterator.
-  void removeCase(CaseIt i);
+  /// including the case_end() iterator. It returns an iterator for the next
+  /// case.
+  CaseIt removeCase(CaseIt i);
 
   unsigned getNumSuccessors() const { return getNumOperands()/2; }
   BasicBlock *getSuccessor(unsigned idx) const {

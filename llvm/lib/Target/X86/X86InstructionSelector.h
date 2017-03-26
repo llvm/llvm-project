@@ -53,6 +53,8 @@ private:
                       MachineFunction &MF) const;
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
                          MachineFunction &MF) const;
+  bool selectFrameIndex(MachineInstr &I, MachineRegisterInfo &MRI,
+                        MachineFunction &MF) const;
 
   const X86Subtarget &STI;
   const X86InstrInfo &TII;

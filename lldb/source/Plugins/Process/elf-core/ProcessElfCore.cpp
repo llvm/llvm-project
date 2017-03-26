@@ -431,6 +431,10 @@ enum {
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,
   NT_SIGINFO = 0x53494749,
+  NT_OPENBSD_PROCINFO = 10,
+  NT_OPENBSD_AUXV = 11,
+  NT_OPENBSD_REGS = 20,
+  NT_OPENBSD_FPREGS = 21,
 };
 
 namespace FREEBSD {
@@ -479,6 +483,18 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data, DataExtractor &data,
 static void ParseFreeBSDThrMisc(ThreadData &thread_data, DataExtractor &data) {
   lldb::offset_t offset = 0;
   thread_data.name = data.GetCStr(&offset, 20);
+}
+
+static void ParseOpenBSDProcInfo(ThreadData &thread_data, DataExtractor &data)
+{
+  lldb::offset_t offset = 0;
+  
+  int version = data.GetU32(&offset);
+  if (version != 1)
+	  return;
+
+  offset += 4;
+  thread_data.signo = data.GetU32(&offset);
 }
 
 /// Parse Thread context from PT_NOTE segment and store it in the thread list
@@ -568,6 +584,24 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         break;
       default:
         break;
+      }
+    } else if (note.n_name.substr(0, 7) == "OpenBSD") {
+      // OpenBSD per-thread information is stored in notes named
+      // "OpenBSD@nnn" so match on the initial part of the string.
+      m_os = llvm::Triple::OpenBSD;
+      switch (note.n_type) {
+      case NT_OPENBSD_PROCINFO:
+	ParseOpenBSDProcInfo(*thread_data, note_data);
+	break;
+      case NT_OPENBSD_AUXV:
+	m_auxv = DataExtractor(note_data);
+	break;
+      case NT_OPENBSD_REGS:
+	thread_data->gpregset = note_data;
+	break;
+      case NT_OPENBSD_FPREGS:
+	thread_data->fpregset = note_data;
+	break;
       }
     } else if (note.n_name == "CORE") {
       switch (note.n_type) {

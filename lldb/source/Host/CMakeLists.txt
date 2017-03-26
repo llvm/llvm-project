@@ -137,6 +137,12 @@ else()
       netbsd/Host.cpp
       netbsd/HostInfoNetBSD.cpp
       )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+    add_host_subdirectory(openbsd
+      openbsd/Host.cpp
+      openbsd/HostInfoOpenBSD.cpp
+      )
   endif()
 endif()
 

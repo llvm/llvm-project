@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -latesimplifycfg -S | FileCheck %s
 
 target datalayout = "e-n32"
 

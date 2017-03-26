@@ -81,6 +81,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeIPSCCPLegacyPassPass(Registry);
   initializeSROALegacyPassPass(Registry);
   initializeCFGSimplifyPassPass(Registry);
+  initializeLateCFGSimplifyPassPass(Registry);
   initializeStructurizeCFGPass(Registry);
   initializeSinkingLegacyPassPass(Registry);
   initializeTailCallElimPass(Registry);
@@ -115,6 +116,10 @@ void LLVMAddAlignmentFromAssumptionsPass(LLVMPassManagerRef PM) {
 
 void LLVMAddCFGSimplificationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createCFGSimplificationPass());
+}
+
+void LLVMAddLateCFGSimplificationPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createLateCFGSimplificationPass());
 }
 
 void LLVMAddDeadStoreEliminationPass(LLVMPassManagerRef PM) {

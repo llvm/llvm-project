@@ -235,8 +235,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
   // Analyse each switch case in turn.  This is done in reverse order so that
   // removing a case doesn't cause trouble for the iteration.
   bool Changed = false;
-  for (SwitchInst::CaseIt CI = SI->case_end(), CE = SI->case_begin(); CI-- != CE;
-       ) {
+  for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
     ConstantInt *Case = CI.getCaseValue();
 
     // Check to see if the switch condition is equal to/not equal to the case
@@ -271,7 +270,8 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
     if (State == LazyValueInfo::False) {
       // This case never fires - remove it.
       CI.getCaseSuccessor()->removePredecessor(BB);
-      SI->removeCase(CI); // Does not invalidate the iterator.
+      CI = SI->removeCase(CI);
+      CE = SI->case_end();
 
       // The condition can be modified by removePredecessor's PHI simplification
       // logic.
@@ -279,7 +279,9 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
 
       ++NumDeadCases;
       Changed = true;
-    } else if (State == LazyValueInfo::True) {
+      continue;
+    }
+    if (State == LazyValueInfo::True) {
       // This case always fires.  Arrange for the switch to be turned into an
       // unconditional branch by replacing the switch condition with the case
       // value.
@@ -288,6 +290,9 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
       Changed = true;
       break;
     }
+
+    // Increment the case iterator sense we didn't delete it.
+    ++CI;
   }
 
   if (Changed)

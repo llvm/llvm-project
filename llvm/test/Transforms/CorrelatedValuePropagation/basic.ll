@@ -115,9 +115,9 @@ negative:
     i32 1, label %out
 ; CHECK-NOT: i32 1
     i32 -1, label %next
-; CHECK: i32 -1, label %next
+; CHECK-DAG: i32 -1, label %next
     i32 -2, label %next
-; CHECK: i32 -2, label %next
+; CHECK-DAG: i32 -2, label %next
     i32 2, label %out
 ; CHECK-NOT: i32 2
     i32 3, label %out

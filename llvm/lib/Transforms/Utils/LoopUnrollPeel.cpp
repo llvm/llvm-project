@@ -415,6 +415,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
                     NewBlocks, LoopBlocks, VMap, LVMap, DT, LI);
+
+    // Remap to use values from the current iteration instead of the
+    // previous one.
+    remapInstructionsInBlocks(NewBlocks, VMap);
+
     if (DT) {
       // Latches of the cloned loops dominate over the loop exit, so idom of the
       // latter is the first cloned loop body, as original PreHeader dominates
@@ -437,10 +442,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     F->getBasicBlockList().splice(InsertTop->getIterator(),
                                   F->getBasicBlockList(),
                                   NewBlocks[0]->getIterator(), F->end());
-
-    // Remap to use values from the current iteration instead of the
-    // previous one.
-    remapInstructionsInBlocks(NewBlocks, VMap);
   }
 
   // Now adjust the phi nodes in the loop header to get their initial values

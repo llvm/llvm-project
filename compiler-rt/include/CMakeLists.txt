@@ -8,6 +8,7 @@ set(SANITIZER_HEADERS
   sanitizer/linux_syscall_hooks.h
   sanitizer/lsan_interface.h
   sanitizer/msan_interface.h
+  sanitizer/tsan_interface.h
   sanitizer/tsan_interface_atomic.h)
 
 set(XRAY_HEADERS

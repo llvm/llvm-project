@@ -247,13 +247,17 @@ void __tsan_finalizer_goroutine(ThreadState *thr) {
 }
 
 void __tsan_mutex_before_lock(ThreadState *thr, uptr addr, uptr write) {
+  if (write)
+    MutexPreLock(thr, 0, addr);
+  else
+    MutexPreReadLock(thr, 0, addr);
 }
 
 void __tsan_mutex_after_lock(ThreadState *thr, uptr addr, uptr write) {
   if (write)
-    MutexLock(thr, 0, addr);
+    MutexPostLock(thr, 0, addr);
   else
-    MutexReadLock(thr, 0, addr);
+    MutexPostReadLock(thr, 0, addr);
 }
 
 void __tsan_mutex_before_unlock(ThreadState *thr, uptr addr, uptr write) {
