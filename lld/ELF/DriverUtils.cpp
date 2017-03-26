@@ -53,12 +53,10 @@ ELFOptTable::ELFOptTable() : OptTable(OptInfo) {}
 
 // Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
 static bool getColorDiagnostics(opt::InputArgList &Args) {
-  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
-
   auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                               OPT_no_color_diagnostics);
   if (!Arg)
-    return Default;
+    return ErrorOS->has_colors();
   if (Arg->getOption().getID() == OPT_color_diagnostics)
     return true;
   if (Arg->getOption().getID() == OPT_no_color_diagnostics)
@@ -66,7 +64,7 @@ static bool getColorDiagnostics(opt::InputArgList &Args) {
 
   StringRef S = Arg->getValue();
   if (S == "auto")
-    return Default;
+    return ErrorOS->has_colors();
   if (S == "always")
     return true;
   if (S != "never")

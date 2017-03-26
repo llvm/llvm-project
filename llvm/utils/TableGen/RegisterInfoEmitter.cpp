@@ -1023,18 +1023,14 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
-    // Asserts to make sure values will fit in table assuming types from
-    // MCRegisterInfo.h
-    assert((RC.SpillSize/8) <= 0xffff && "SpillSize too large.");
-    assert((RC.SpillAlignment/8) <= 0xffff && "SpillAlignment too large.");
-    assert(RC.CopyCost >= -128 && RC.CopyCost <= 127 && "Copy cost too large.");
-
+    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
+    // Register size and spill size will become independent, but are not at
+    // the moment. For now use SpillSize as the register size.
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << RegClassStrings.get(RC.getName()) << ", "
        << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
        << RC.getQualifiedName() + "RegClassID" << ", "
        << RC.SpillSize/8 << ", "
-       << RC.SpillAlignment/8 << ", "
        << RC.CopyCost << ", "
        << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }
@@ -1316,9 +1312,13 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
        << " {   // Register class instances\n";
 
     for (const auto &RC : RegisterClasses) {
+      assert(isUInt<16>(RC.SpillSize/8) && "SpillSize too large.");
+      assert(isUInt<16>(RC.SpillAlignment/8) && "SpillAlignment too large.");
       OS << "  extern const TargetRegisterClass " << RC.getName()
          << "RegClass = {\n    " << '&' << Target.getName()
          << "MCRegisterClasses[" << RC.getName() << "RegClassID],\n    "
+         << RC.SpillSize/8 << ", /* SpillSize */\n    "
+         << RC.SpillAlignment/8 << ", /* SpillAlignment */\n    "
          << "VTLists + " << VTSeqs.get(RC.VTs) << ",\n    " << RC.getName()
          << "SubClassMask,\n    SuperRegIdxSeqs + "
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";

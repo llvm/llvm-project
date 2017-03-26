@@ -3662,7 +3662,7 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 
 /// removeCase - This method removes the specified case and its successor
 /// from the switch instruction.
-void SwitchInst::removeCase(CaseIt i) {
+SwitchInst::CaseIt SwitchInst::removeCase(CaseIt i) {
   unsigned idx = i.getCaseIndex();
   
   assert(2 + idx*2 < getNumOperands() && "Case index out of range!!!");
@@ -3680,6 +3680,8 @@ void SwitchInst::removeCase(CaseIt i) {
   OL[NumOps-2].set(nullptr);
   OL[NumOps-2+1].set(nullptr);
   setNumHungOffUseOperands(NumOps-2);
+
+  return CaseIt(this, idx);
 }
 
 /// growOperands - grow operands - This grows the operand list in response

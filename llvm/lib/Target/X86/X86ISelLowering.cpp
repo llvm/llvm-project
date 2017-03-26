@@ -4637,6 +4637,22 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   return true;
 }
 
+MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
+  MVT VT = MVT::getIntegerVT(NumBits);
+  if (isTypeLegal(VT))
+    return VT;
+
+  // PMOVMSKB can handle this.
+  if (NumBits == 128 && isTypeLegal(MVT::v16i8))
+    return MVT::v16i8;
+
+  // TODO: Allow 64-bit type for 32-bit target.
+  // TODO: 256- and 512-bit types should be allowed, but make sure that those
+  // cases are handled in combineVectorSizedSetCCEquality().
+
+  return MVT::INVALID_SIMPLE_VALUE_TYPE;
+}
+
 /// Val is the undef sentinel value or equal to the specified value.
 static bool isUndefOrEqual(int Val, int CmpVal) {
   return ((Val == SM_SentinelUndef) || (Val == CmpVal));
@@ -21674,15 +21690,15 @@ static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
   if (VT.getScalarSizeInBits() < 16)
     return false;
 
-  if (VT.is512BitVector() &&
+  if (VT.is512BitVector() && Subtarget.hasAVX512() &&
       (VT.getScalarSizeInBits() > 16 || Subtarget.hasBWI()))
     return true;
 
-  bool LShift = VT.is128BitVector() ||
-    (VT.is256BitVector() && Subtarget.hasInt256());
+  bool LShift = (VT.is128BitVector() && Subtarget.hasSSE2()) ||
+                (VT.is256BitVector() && Subtarget.hasInt256());
 
   bool AShift = LShift && (Subtarget.hasAVX512() ||
-    (VT != MVT::v2i64 && VT != MVT::v4i64));
+                           (VT != MVT::v2i64 && VT != MVT::v4i64));
   return (Opcode == ISD::SRA) ? AShift : LShift;
 }
 
@@ -26575,6 +26591,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       unsigned Depth) const {
   unsigned BitWidth = KnownZero.getBitWidth();
   unsigned Opc = Op.getOpcode();
+  EVT VT = Op.getValueType();
   assert((Opc >= ISD::BUILTIN_OP_END ||
           Opc == ISD::INTRINSIC_WO_CHAIN ||
           Opc == ISD::INTRINSIC_W_CHAIN ||
@@ -26608,9 +26625,33 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownZero.setBits(NumLoBits, BitWidth);
     break;
   }
+  case X86ISD::VSHLI:
+  case X86ISD::VSRLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
+        KnownZero = APInt::getAllOnesValue(BitWidth);
+        break;
+      }
+
+      DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      if (Opc == X86ISD::VSHLI) {
+        KnownZero = KnownZero << ShAmt;
+        KnownOne = KnownOne << ShAmt;
+        // Low bits are known zero.
+        KnownZero.setLowBits(ShAmt);
+      } else {
+        KnownZero = KnownZero.lshr(ShAmt);
+        KnownOne = KnownOne.lshr(ShAmt);
+        // High bits are known zero.
+        KnownZero.setHighBits(ShAmt);
+      }
+    }
+    break;
+  }
   case X86ISD::VZEXT: {
     SDValue N0 = Op.getOperand(0);
-    unsigned NumElts = Op.getValueType().getVectorNumElements();
+    unsigned NumElts = VT.getVectorNumElements();
 
     EVT SrcVT = N0.getValueType();
     unsigned InNumElts = SrcVT.getVectorNumElements();
@@ -26630,19 +26671,26 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
 unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     SDValue Op, const SelectionDAG &DAG, unsigned Depth) const {
+  unsigned VTBits = Op.getScalarValueSizeInBits();
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case X86ISD::SETCC_CARRY:
     // SETCC_CARRY sets the dest to ~0 for true or 0 for false.
-    return Op.getScalarValueSizeInBits();
+    return VTBits;
 
   case X86ISD::VSEXT: {
     SDValue Src = Op.getOperand(0);
-    EVT VT = Op.getValueType();
-    EVT SrcVT = Src.getValueType();
     unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
-    Tmp += VT.getScalarSizeInBits() - SrcVT.getScalarSizeInBits();
+    Tmp += VTBits - Src.getScalarValueSizeInBits();
     return Tmp;
+  }
+
+  case X86ISD::VSRAI: {
+    SDValue Src = Op.getOperand(0);
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
+    APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
+    ShiftVal += Tmp;
+    return ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
   }
 
   case X86ISD::PCMPGT:
@@ -26651,7 +26699,7 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   case X86ISD::VPCOM:
   case X86ISD::VPCOMU:
     // Vector compares return zero/all-bits result values.
-    return Op.getScalarValueSizeInBits();
+    return VTBits;
   }
 
   // Fallback case.
@@ -31050,13 +31098,14 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
   bool LogicalShift = X86ISD::VSHLI == Opcode || X86ISD::VSRLI == Opcode;
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
   assert(VT == N0.getValueType() && (NumBitsPerElt % 8) == 0 &&
          "Unexpected value type");
 
   // Out of range logical bit shifts are guaranteed to be zero.
   // Out of range arithmetic bit shifts splat the sign bit.
-  APInt ShiftVal = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+  APInt ShiftVal = cast<ConstantSDNode>(N1)->getAPIntValue();
   if (ShiftVal.zextOrTrunc(8).uge(NumBitsPerElt)) {
     if (LogicalShift)
       return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
@@ -31071,6 +31120,13 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
   // Shift zero -> zero.
   if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
+
+  // fold (VSRLI (VSRAI X, Y), 31) -> (VSRLI X, 31).
+  // This VSRLI only looks at the sign bit, which is unmodified by VSRAI.
+  // TODO - support other sra opcodes as needed.
+  if (Opcode == X86ISD::VSRLI && (ShiftVal + 1) == NumBitsPerElt &&
+      N0.getOpcode() == X86ISD::VSRAI)
+    return DAG.getNode(X86ISD::VSRLI, SDLoc(N), VT, N0.getOperand(0), N1);
 
   // We can decode 'whole byte' logical bit shifts as shuffles.
   if (LogicalShift && (ShiftVal.getZExtValue() % 8) == 0) {
@@ -31367,38 +31423,34 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// If this is a PCMPEQ or PCMPGT result that is bitwise-anded with 1 (this is
-/// the x86 lowering of a SETCC + ZEXT), replace the 'and' with a shift-right to
-/// eliminate loading the vector constant mask value. This relies on the fact
-/// that a PCMP always creates an all-ones or all-zeros bitmask per element.
-static SDValue combinePCMPAnd1(SDNode *N, SelectionDAG &DAG) {
+/// If this is a zero/all-bits result that is bitwise-anded with a low bits
+/// mask. (Mask == 1 for the x86 lowering of a SETCC + ZEXT), replace the 'and'
+/// with a shift-right to eliminate loading the vector constant mask value.
+static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
   SDValue Op1 = peekThroughBitcasts(N->getOperand(1));
-
-  // TODO: Use AssertSext to mark any nodes that have the property of producing
-  // all-ones or all-zeros. Then check for that node rather than particular
-  // opcodes.
-  if (Op0.getOpcode() != X86ISD::PCMPEQ && Op0.getOpcode() != X86ISD::PCMPGT)
-    return SDValue();
-
-  // The existence of the PCMP node guarantees that we have the required SSE2 or
-  // AVX2 for a shift of this vector type, but there is no vector shift by
-  // immediate for a vector with byte elements (PSRLB). 512-bit vectors use the
-  // masked compare nodes, so they should not make it here.
   EVT VT0 = Op0.getValueType();
   EVT VT1 = Op1.getValueType();
-  unsigned EltBitWidth = VT0.getScalarSizeInBits();
-  if (VT0 != VT1 || EltBitWidth == 8)
+
+  if (VT0 != VT1 || !VT0.isSimple() || !VT0.isInteger())
     return SDValue();
 
-  assert(VT0.getSizeInBits() == 128 || VT0.getSizeInBits() == 256);
-
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
+      !APIntOps::isMask(SplatVal))
+    return SDValue();
+
+  if (!SupportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
+    return SDValue();
+
+  unsigned EltBitWidth = VT0.getScalarSizeInBits();
+  if (EltBitWidth != DAG.ComputeNumSignBits(Op0))
     return SDValue();
 
   SDLoc DL(N);
-  SDValue ShAmt = DAG.getConstant(EltBitWidth - 1, DL, MVT::i8);
+  unsigned ShiftVal = SplatVal.countTrailingOnes();
+  SDValue ShAmt = DAG.getConstant(EltBitWidth - ShiftVal, DL, MVT::i8);
   SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT0, Op0, ShAmt);
   return DAG.getBitcast(N->getValueType(0), Shift);
 }
@@ -31418,7 +31470,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineANDXORWithAllOnesIntoANDNP(N, DAG))
     return R;
 
-  if (SDValue ShiftRight = combinePCMPAnd1(N, DAG))
+  if (SDValue ShiftRight = combineAndMaskToShift(N, DAG, Subtarget))
     return ShiftRight;
 
   EVT VT = N->getValueType(0);

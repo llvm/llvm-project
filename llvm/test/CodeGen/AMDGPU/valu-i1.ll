@@ -64,29 +64,100 @@ end:
   ret void
 }
 
-; SI-LABEL: @simple_test_v_if
+; SI-LABEL: {{^}}simple_test_v_if:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
+; SI: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
 
-; SI: BB{{[0-9]+_[0-9]+}}:
+; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
-; SI: s_endpgm
+; SI-NEXT: s_waitcnt
 
-; SI: BB1_2:
+; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: s_or_b64 exec, exec, [[BR_SREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_test_v_if(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %is.0 = icmp ne i32 %tid, 0
-  br i1 %is.0, label %store, label %exit
+  br i1 %is.0, label %then, label %exit
 
-store:
+then:
+  %gep = getelementptr i32, i32 addrspace(1)* %dst, i32 %tid
+  store i32 999, i32 addrspace(1)* %gep
+  br label %exit
+
+exit:
+  ret void
+}
+
+; FIXME: It would be better to endpgm in the then block.
+
+; SI-LABEL: {{^}}simple_test_v_if_ret_else_ret:
+; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
+; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
+; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
+; SI: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
+
+; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
+; SI: buffer_store_dword
+; SI-NEXT: s_waitcnt
+
+; SI-NEXT: {{^}}[[EXIT]]:
+; SI: s_or_b64 exec, exec, [[BR_SREG]]
+; SI: s_endpgm
+define amdgpu_kernel void @simple_test_v_if_ret_else_ret(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %is.0 = icmp ne i32 %tid, 0
+  br i1 %is.0, label %then, label %exit
+
+then:
   %gep = getelementptr i32, i32 addrspace(1)* %dst, i32 %tid
   store i32 999, i32 addrspace(1)* %gep
   ret void
 
 exit:
+  ret void
+}
+
+; Final block has more than a ret to execute. This was miscompiled
+; before function exit blocks were unified since the endpgm would
+; terminate the then wavefront before reaching the store.
+
+; SI-LABEL: {{^}}simple_test_v_if_ret_else_code_ret:
+; SI: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
+; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
+; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
+; SI: ; mask branch [[FLOW:BB[0-9]+_[0-9]+]]
+
+; SI-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %exit
+; SI: ds_write_b32
+; SI: s_waitcnt
+
+; SI-NEXT: {{^}}[[FLOW]]:
+; SI-NEXT: s_or_saveexec_b64
+; SI-NEXT: s_xor_b64 exec, exec
+; SI-NEXT: ; mask branch [[UNIFIED_RETURN:BB[0-9]+_[0-9]+]]
+
+; SI-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %then
+; SI: buffer_store_dword
+; SI-NEXT: s_waitcnt
+
+; SI-NEXT: {{^}}[[UNIFIED_RETURN]]: ; %UnifiedReturnBlock
+; SI: s_or_b64 exec, exec
+; SI: s_endpgm
+define amdgpu_kernel void @simple_test_v_if_ret_else_code_ret(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %is.0 = icmp ne i32 %tid, 0
+  br i1 %is.0, label %then, label %exit
+
+then:
+  %gep = getelementptr i32, i32 addrspace(1)* %dst, i32 %tid
+  store i32 999, i32 addrspace(1)* %gep
+  ret void
+
+exit:
+  store volatile i32 7, i32 addrspace(3)* undef
   ret void
 }
 

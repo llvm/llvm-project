@@ -13,6 +13,7 @@
 
 #include "X86LegalizerInfo.h"
 #include "X86Subtarget.h"
+#include "X86TargetMachine.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -25,7 +26,9 @@ using namespace TargetOpcode;
 #error "You shouldn't build this"
 #endif
 
-X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI) : Subtarget(STI) {
+X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
+                                   const X86TargetMachine &TM)
+    : Subtarget(STI), TM(TM) {
 
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
@@ -56,6 +59,9 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     // And everything's fine in addrspace 0.
     setAction({MemOp, 1, p0}, Legal);
   }
+
+  // Pointer-handling
+  setAction({G_FRAME_INDEX, p0}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfo64bit() {
@@ -63,7 +69,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT p0 = LLT::pointer(0, 64);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSize() * 8);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
@@ -80,6 +86,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     // And everything's fine in addrspace 0.
     setAction({MemOp, 1, p0}, Legal);
   }
+
+  // Pointer-handling
+  setAction({G_FRAME_INDEX, p0}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {

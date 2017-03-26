@@ -262,6 +262,14 @@ FunctionPass *createCFGSimplificationPass(
 
 //===----------------------------------------------------------------------===//
 //
+// LateCFGSimplification - Like CFGSimplification, but may also
+// convert switches to lookup tables.
+//
+FunctionPass *createLateCFGSimplificationPass(
+    int Threshold = -1, std::function<bool(const Function &)> Ftor = nullptr);
+
+//===----------------------------------------------------------------------===//
+//
 // FlattenCFG - flatten CFG, reduce number of conditional branches by using
 // parallel-and and parallel-or mode, etc...
 //

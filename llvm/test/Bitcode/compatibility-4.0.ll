@@ -1241,7 +1241,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #40
+  ; CHECK: call void @f.nobuiltin() #41
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1606,7 +1606,7 @@ normal:
 
 
 declare void @f.writeonly() writeonly
-; CHECK: declare void @f.writeonly() #39
+; CHECK: declare void @f.writeonly() #40
 
 ;; Constant Expressions
 
@@ -1654,8 +1654,9 @@ define i8** @constexpr() {
 ; CHECK: attributes #36 = { argmemonly nounwind readonly }
 ; CHECK: attributes #37 = { argmemonly nounwind }
 ; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { writeonly }
-; CHECK: attributes #40 = { builtin }
+; CHECK: attributes #39 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK: attributes #40 = { writeonly }
+; CHECK: attributes #41 = { builtin }
 
 ;; Metadata
 

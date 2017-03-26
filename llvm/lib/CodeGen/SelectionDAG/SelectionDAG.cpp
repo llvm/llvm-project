@@ -3162,7 +3162,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
       Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
       Op.getOpcode() == ISD::INTRINSIC_VOID) {
     unsigned NumBits = TLI->ComputeNumSignBitsForTargetNode(Op, *this, Depth);
-    if (NumBits > 1) FirstAnswer = std::max(FirstAnswer, NumBits);
+    if (NumBits > 1)
+      FirstAnswer = std::max(FirstAnswer, NumBits);
   }
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,

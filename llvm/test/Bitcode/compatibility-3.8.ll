@@ -1170,7 +1170,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #39
+  ; CHECK: call void @f.nobuiltin() #40
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1556,7 +1556,8 @@ normal:
 ; CHECK: attributes #36 = { argmemonly nounwind readonly }
 ; CHECK: attributes #37 = { argmemonly nounwind }
 ; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { builtin }
+; CHECK: attributes #39 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK: attributes #40 = { builtin }
 
 ;; Metadata
 

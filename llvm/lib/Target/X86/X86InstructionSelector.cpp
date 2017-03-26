@@ -159,6 +159,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
     return true;
   if (selectLoadStoreOp(I, MRI, MF))
     return true;
+  if (selectFrameIndex(I, MRI, MF))
+    return true;
 
   return selectImpl(I);
 }
@@ -389,3 +391,27 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
+bool X86InstructionSelector::selectFrameIndex(MachineInstr &I,
+                                              MachineRegisterInfo &MRI,
+                                              MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_FRAME_INDEX)
+    return false;
+
+  const unsigned DefReg = I.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DefReg);
+
+  // Use LEA to calculate frame index.
+  unsigned NewOpc;
+  if (Ty == LLT::pointer(0, 64))
+    NewOpc = X86::LEA64r;
+  else if (Ty == LLT::pointer(0, 32))
+    NewOpc = STI.isTarget64BitILP32() ? X86::LEA64_32r : X86::LEA32r;
+  else
+    llvm_unreachable("Can't select G_FRAME_INDEX, unsupported type.");
+
+  I.setDesc(TII.get(NewOpc));
+  MachineInstrBuilder MIB(MF, I);
+  addOffset(MIB, 0);
+
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}

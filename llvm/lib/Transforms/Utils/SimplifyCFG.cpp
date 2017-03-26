@@ -170,6 +170,8 @@ class SimplifyCFGOpt {
   unsigned BonusInstThreshold;
   AssumptionCache *AC;
   SmallPtrSetImpl<BasicBlock *> *LoopHeaders;
+  // See comments in SimplifyCFGOpt::SimplifySwitch.
+  bool LateSimplifyCFG;
   Value *isValueEqualityComparison(TerminatorInst *TI);
   BasicBlock *GetValueEqualityComparisonCases(
       TerminatorInst *TI, std::vector<ValueEqualityComparisonCase> &Cases);
@@ -193,9 +195,10 @@ class SimplifyCFGOpt {
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, const DataLayout &DL,
                  unsigned BonusInstThreshold, AssumptionCache *AC,
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders)
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders,
+                 bool LateSimplifyCFG)
       : TTI(TTI), DL(DL), BonusInstThreshold(BonusInstThreshold), AC(AC),
-        LoopHeaders(LoopHeaders) {}
+        LoopHeaders(LoopHeaders), LateSimplifyCFG(LateSimplifyCFG) {}
 
   bool run(BasicBlock *BB);
 };
@@ -4156,15 +4159,16 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
         }
       }
     } else if (auto *SI = dyn_cast<SwitchInst>(TI)) {
-      for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e;
-           ++i)
-        if (i.getCaseSuccessor() == BB) {
-          BB->removePredecessor(SI->getParent());
-          SI->removeCase(i);
-          --i;
-          --e;
-          Changed = true;
+      for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
+        if (i.getCaseSuccessor() != BB) {
+          ++i;
+          continue;
         }
+        BB->removePredecessor(SI->getParent());
+        i = SI->removeCase(i);
+        e = SI->case_end();
+        Changed = true;
+      }
     } else if (auto *II = dyn_cast<InvokeInst>(TI)) {
       if (II->getUnwindDest() == BB) {
         removeUnwindEdge(TI->getParent());
@@ -5561,7 +5565,12 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (ForwardSwitchConditionToPHI(SI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
-  if (SwitchToLookupTable(SI, Builder, DL, TTI))
+  // The conversion from switch to lookup tables results in difficult
+  // to analyze code and makes pruning branches much harder.
+  // This is a problem of the switch expression itself can still be
+  // restricted as a result of inlining or CVP. There only apply this
+  // transformation during late steps of the optimisation chain.
+  if (LateSimplifyCFG && SwitchToLookupTable(SI, Builder, DL, TTI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
   if (ReduceSwitchRange(SI, Builder, DL, TTI))
@@ -6020,8 +6029,9 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 ///
 bool llvm::SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        unsigned BonusInstThreshold, AssumptionCache *AC,
-                       SmallPtrSetImpl<BasicBlock *> *LoopHeaders) {
+                       SmallPtrSetImpl<BasicBlock *> *LoopHeaders,
+                       bool LateSimplifyCFG) {
   return SimplifyCFGOpt(TTI, BB->getModule()->getDataLayout(),
-                        BonusInstThreshold, AC, LoopHeaders)
+                        BonusInstThreshold, AC, LoopHeaders, LateSimplifyCFG)
       .run(BB);
 }

@@ -5955,13 +5955,17 @@ static bool IsOnlyUsedInZeroEqualityComparison(const Value *V) {
 }
 
 static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
-                             Type *LoadTy,
                              SelectionDAGBuilder &Builder) {
 
   // Check to see if this load can be trivially constant folded, e.g. if the
   // input is from a string literal.
   if (const Constant *LoadInput = dyn_cast<Constant>(PtrVal)) {
     // Cast pointer to the type we really want to load.
+    Type *LoadTy =
+        Type::getIntNTy(PtrVal->getContext(), LoadVT.getScalarSizeInBits());
+    if (LoadVT.isVector())
+      LoadTy = VectorType::get(LoadTy, LoadVT.getVectorNumElements());
+
     LoadInput = ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
                                          PointerType::getUnqual(LoadTy));
 
@@ -6039,57 +6043,64 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
   if (!CSize || !IsOnlyUsedInZeroEqualityComparison(&I))
     return false;
 
+  // If the target has a fast compare for the given size, it will return a
+  // preferred load type for that size. Require that the load VT is legal and
+  // that the target supports unaligned loads of that type. Otherwise, return
+  // INVALID.
+  auto hasFastLoadsAndCompare = [&](unsigned NumBits) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    MVT LVT = TLI.hasFastEqualityCompare(NumBits);
+    if (LVT != MVT::INVALID_SIMPLE_VALUE_TYPE) {
+      // TODO: Handle 5 byte compare as 4-byte + 1 byte.
+      // TODO: Handle 8 byte compare on x86-32 as two 32-bit loads.
+      // TODO: Check alignment of src and dest ptrs.
+      unsigned DstAS = LHS->getType()->getPointerAddressSpace();
+      unsigned SrcAS = RHS->getType()->getPointerAddressSpace();
+      if (!TLI.isTypeLegal(LVT) ||
+          !TLI.allowsMisalignedMemoryAccesses(LVT, SrcAS) ||
+          !TLI.allowsMisalignedMemoryAccesses(LVT, DstAS))
+        LVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+    }
+
+    return LVT;
+  };
+
+  // This turns into unaligned loads. We only do this if the target natively
+  // supports the MVT we'll be loading or if it is small enough (<= 4) that
+  // we'll only produce a small number of byte loads.
   MVT LoadVT;
-  Type *LoadTy;
   switch (CSize->getZExtValue()) {
   default:
     return false;
   case 2:
     LoadVT = MVT::i16;
-    LoadTy = Type::getInt16Ty(CSize->getContext());
     break;
   case 4:
     LoadVT = MVT::i32;
-    LoadTy = Type::getInt32Ty(CSize->getContext());
     break;
   case 8:
-    LoadVT = MVT::i64;
-    LoadTy = Type::getInt64Ty(CSize->getContext());
+    LoadVT = hasFastLoadsAndCompare(64);
     break;
-  /*
   case 16:
-    LoadVT = MVT::v4i32;
-    LoadTy = Type::getInt32Ty(CSize->getContext());
-    LoadTy = VectorType::get(LoadTy, 4);
+    LoadVT = hasFastLoadsAndCompare(128);
     break;
-  */
   }
 
-  // This turns into unaligned loads.  We only do this if the target natively
-  // supports the MVT we'll be loading or if it is small enough (<= 4) that
-  // we'll only produce a small number of byte loads.
+  if (LoadVT == MVT::INVALID_SIMPLE_VALUE_TYPE)
+    return false;
 
-  // Require that we can find a legal MVT, and only do this if the target
-  // supports unaligned loads of that type.  Expanding into byte loads would
-  // bloat the code.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (CSize->getZExtValue() > 4) {
-    unsigned DstAS = LHS->getType()->getPointerAddressSpace();
-    unsigned SrcAS = RHS->getType()->getPointerAddressSpace();
-    // TODO: Handle 5 byte compare as 4-byte + 1 byte.
-    // TODO: Handle 8 byte compare on x86-32 as two 32-bit loads.
-    // TODO: Check alignment of src and dest ptrs.
-    if (!TLI.isTypeLegal(LoadVT) ||
-        !TLI.allowsMisalignedMemoryAccesses(LoadVT, SrcAS) ||
-        !TLI.allowsMisalignedMemoryAccesses(LoadVT, DstAS))
-      return false;
+  SDValue LoadL = getMemCmpLoad(LHS, LoadVT, *this);
+  SDValue LoadR = getMemCmpLoad(RHS, LoadVT, *this);
+
+  // Bitcast to a wide integer type if the loads are vectors.
+  if (LoadVT.isVector()) {
+    EVT CmpVT = EVT::getIntegerVT(LHS->getContext(), LoadVT.getSizeInBits());
+    LoadL = DAG.getBitcast(CmpVT, LoadL);
+    LoadR = DAG.getBitcast(CmpVT, LoadR);
   }
 
-  SDValue LHSVal = getMemCmpLoad(LHS, LoadVT, LoadTy, *this);
-  SDValue RHSVal = getMemCmpLoad(RHS, LoadVT, LoadTy, *this);
-  SDValue SetCC =
-      DAG.getSetCC(getCurSDLoc(), MVT::i1, LHSVal, RHSVal, ISD::SETNE);
-  processIntegerCallValue(I, SetCC, false);
+  SDValue Cmp = DAG.getSetCC(getCurSDLoc(), MVT::i1, LoadL, LoadR, ISD::SETNE);
+  processIntegerCallValue(I, Cmp, false);
   return true;
 }
 

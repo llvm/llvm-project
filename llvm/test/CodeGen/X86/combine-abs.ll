@@ -84,7 +84,6 @@ define <8 x i32> @combine_v8i32_abs_pos(<8 x i32> %a) {
 ; CHECK-LABEL: combine_v8i32_abs_pos:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpsrld $1, %ymm0, %ymm0
-; CHECK-NEXT:    vpabsd %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = lshr <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %2 = call <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32> %1)

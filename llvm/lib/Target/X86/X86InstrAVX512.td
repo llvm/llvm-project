@@ -3194,20 +3194,22 @@ multiclass avx512_move_scalar<string asm, SDNode OpNode,
                                     (scalar_to_vector _.FRC:$src2))))],
              _.ExeDomain,IIC_SSE_MOV_S_RR>, EVEX_4V;
   def rrkz : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
-              (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
+              (ins _.KRCWM:$mask, _.RC:$src1, _.FRC:$src2),
               !strconcat(asm, "\t{$src2, $src1, $dst {${mask}} {z}|",
               "$dst {${mask}} {z}, $src1, $src2}"),
               [(set _.RC:$dst, (_.VT (X86selects _.KRCWM:$mask,
-                                      (_.VT (OpNode _.RC:$src1, _.RC:$src2)),
+                                      (_.VT (OpNode _.RC:$src1,
+                                            (scalar_to_vector _.FRC:$src2))),
                                       _.ImmAllZerosV)))],
               _.ExeDomain,IIC_SSE_MOV_S_RR>, EVEX_4V, EVEX_KZ;
   let Constraints = "$src0 = $dst"  in
   def rrk : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
-             (ins _.RC:$src0, _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
+             (ins _.RC:$src0, _.KRCWM:$mask, _.RC:$src1, _.FRC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst {${mask}}|",
              "$dst {${mask}}, $src1, $src2}"),
              [(set _.RC:$dst, (_.VT (X86selects _.KRCWM:$mask,
-                                     (_.VT (OpNode _.RC:$src1, _.RC:$src2)),
+                                     (_.VT (OpNode _.RC:$src1,
+                                           (scalar_to_vector _.FRC:$src2))),
                                      (_.VT _.RC:$src0))))],
              _.ExeDomain,IIC_SSE_MOV_S_RR>, EVEX_4V, EVEX_K;
   let canFoldAsLoad = 1, isReMaterializable = 1 in
@@ -3257,8 +3259,7 @@ def : Pat<(_.VT (OpNode _.RC:$src0,
           (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrk)
                                           (COPY_TO_REGCLASS _.FRC:$src2, _.RC),
                                           (COPY_TO_REGCLASS GR32:$mask, VK1WM),
-                                          (_.VT _.RC:$src0),
-                                          (COPY_TO_REGCLASS _.FRC:$src1, _.RC)),
+                                          (_.VT _.RC:$src0), _.FRC:$src1),
                             _.RC)>;
 
 def : Pat<(_.VT (OpNode _.RC:$src0,
@@ -3268,10 +3269,8 @@ def : Pat<(_.VT (OpNode _.RC:$src0,
                                                        (_.EltVT ZeroFP))))))),
           (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrkz)
                                           (COPY_TO_REGCLASS GR32:$mask, VK1WM),
-                                          (_.VT _.RC:$src0),
-                                          (COPY_TO_REGCLASS _.FRC:$src1, _.RC)),
+                                          (_.VT _.RC:$src0), _.FRC:$src1),
                             _.RC)>;
-
 }
 
 multiclass avx512_store_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,
@@ -3334,11 +3333,11 @@ defm : avx512_load_scalar_lowering<"VMOVSDZ", avx512vl_f64_info,
 
 def : Pat<(f32 (X86selects VK1WM:$mask, (f32 FR32X:$src1), (f32 FR32X:$src2))),
           (COPY_TO_REGCLASS (VMOVSSZrrk (COPY_TO_REGCLASS FR32X:$src2, VR128X),
-           VK1WM:$mask, (v4f32 (IMPLICIT_DEF)),(COPY_TO_REGCLASS FR32X:$src1, VR128X)), FR32X)>;
+           VK1WM:$mask, (v4f32 (IMPLICIT_DEF)), FR32X:$src1), FR32X)>;
 
 def : Pat<(f64 (X86selects VK1WM:$mask, (f64 FR64X:$src1), (f64 FR64X:$src2))),
           (COPY_TO_REGCLASS (VMOVSDZrrk (COPY_TO_REGCLASS FR64X:$src2, VR128X),
-           VK1WM:$mask, (v2f64 (IMPLICIT_DEF)), (COPY_TO_REGCLASS FR64X:$src1, VR128X)), FR64X)>;
+           VK1WM:$mask, (v2f64 (IMPLICIT_DEF)), FR64X:$src1), FR64X)>;
 
 def : Pat<(int_x86_avx512_mask_store_ss addr:$dst, VR128X:$src, GR8:$mask),
           (VMOVSSZmrk addr:$dst, (i1 (COPY_TO_REGCLASS GR8:$mask, VK1WM)),

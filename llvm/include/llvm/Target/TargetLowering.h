@@ -437,6 +437,15 @@ public:
     return false;
   }
 
+  /// Return the preferred operand type if the target has a quick way to compare
+  /// integer values of the given size. Assume that any legal integer type can
+  /// be compared efficiently. Targets may override this to allow illegal wide
+  /// types to return a vector type if there is support to compare that type.
+  virtual MVT hasFastEqualityCompare(unsigned NumBits) const {
+    MVT VT = MVT::getIntegerVT(NumBits);
+    return isTypeLegal(VT) ? VT : MVT::INVALID_SIMPLE_VALUE_TYPE;
+  }
+
   /// Return true if the target should transform:
   /// (X & Y) == Y ---> (~X & Y) == 0
   /// (X & Y) != Y ---> (~X & Y) != 0

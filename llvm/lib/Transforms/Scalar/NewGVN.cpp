@@ -1928,6 +1928,7 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
 // subject to very rare false negatives. It is only useful for
 // testing/debugging.
 void NewGVN::verifyMemoryCongruency() const {
+#ifndef NDEBUG
   // Anything equivalent in the memory access table should be in the same
   // congruence class.
 
@@ -1982,6 +1983,7 @@ void NewGVN::verifyMemoryCongruency() const {
              "All MemoryPhi arguments should be in the same class");
     }
   }
+#endif
 }
 
 // Verify that the sparse propagation we did actually found the maximal fixpoint
@@ -2167,10 +2169,8 @@ bool NewGVN::runGVN() {
 
   initializeCongruenceClasses(F);
   iterateTouchedInstructions();
-#ifndef NDEBUG
   verifyMemoryCongruency();
   verifyIterationSettled(F);
-#endif
 
   Changed |= eliminateInstructions(F);
 
