@@ -59,7 +59,7 @@ PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
       create = true;
       break;
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__)
     // Only accept "unknown" for the OS if the host is BSD and
     // it "unknown" wasn't specified (it was just returned because it
     // was NOT specified)

@@ -13,7 +13,7 @@
 /// dominance queries on the CFG, but is fully generic w.r.t. the underlying
 /// graph types.
 ///
-/// Unlike ADT/* graph algorithms, generic dominator tree has more reuiqrement
+/// Unlike ADT/* graph algorithms, generic dominator tree has more requirements
 /// on the graph's NodeRef. The NodeRef should be a pointer and, depending on
 /// the implementation, e.g. NodeRef->getParent() return the parent node.
 ///

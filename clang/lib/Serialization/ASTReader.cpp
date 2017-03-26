@@ -9586,33 +9586,13 @@ void ASTReader::diagnoseOdrViolations() {
         for (unsigned I = 0; I < FirstNumParameters; ++I) {
           const ParmVarDecl *FirstParam = FirstMethod->getParamDecl(I);
           const ParmVarDecl *SecondParam = SecondMethod->getParamDecl(I);
-
-          QualType FirstParamType = FirstParam->getType();
-          QualType SecondParamType = SecondParam->getType();
-          if (FirstParamType != SecondParamType) {
-            if (const DecayedType *ParamDecayedType =
-                    FirstParamType->getAs<DecayedType>()) {
-              ODRDiagError(FirstMethod->getLocation(),
-                           FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstName << (I + 1) << FirstParamType << true
-                  << ParamDecayedType->getOriginalType();
-            } else {
-              ODRDiagError(FirstMethod->getLocation(),
-                           FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstName << (I + 1) << FirstParamType << false;
-            }
-
-            if (const DecayedType *ParamDecayedType =
-                    SecondParamType->getAs<DecayedType>()) {
-              ODRDiagNote(SecondMethod->getLocation(),
-                          SecondMethod->getSourceRange(), MethodParameterType)
-                  << SecondName << (I + 1) << SecondParamType << true
-                  << ParamDecayedType->getOriginalType();
-            } else {
-              ODRDiagNote(SecondMethod->getLocation(),
-                          SecondMethod->getSourceRange(), MethodParameterType)
-                  << SecondName << (I + 1) << SecondParamType << false;
-            }
+          if (FirstParam->getType() != SecondParam->getType()) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(), MethodParameterType)
+                << FirstName << (I + 1) << FirstParam->getType();
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(), MethodParameterType)
+                << SecondName << (I + 1) << SecondParam->getType();
             ParameterMismatch = true;
             break;
           }

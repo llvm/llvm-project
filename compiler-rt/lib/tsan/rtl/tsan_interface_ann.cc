@@ -31,11 +31,10 @@ namespace __tsan {
 
 class ScopedAnnotation {
  public:
-  ScopedAnnotation(ThreadState *thr, const char *aname, const char *f, int l,
-                   uptr pc)
+  ScopedAnnotation(ThreadState *thr, const char *aname, uptr pc)
       : thr_(thr) {
     FuncEntry(thr_, pc);
-    DPrintf("#%d: annotation %s() %s:%d\n", thr_->tid, aname, f, l);
+    DPrintf("#%d: annotation %s()\n", thr_->tid, aname);
   }
 
   ~ScopedAnnotation() {
@@ -46,17 +45,19 @@ class ScopedAnnotation {
   ThreadState *const thr_;
 };
 
-#define SCOPED_ANNOTATION(typ) \
+#define SCOPED_ANNOTATION_RET(typ, ret) \
     if (!flags()->enable_annotations) \
-      return; \
+      return ret; \
     ThreadState *thr = cur_thread(); \
     const uptr caller_pc = (uptr)__builtin_return_address(0); \
     StatInc(thr, StatAnnotation); \
     StatInc(thr, Stat##typ); \
-    ScopedAnnotation sa(thr, __func__, f, l, caller_pc); \
+    ScopedAnnotation sa(thr, __func__, caller_pc); \
     const uptr pc = StackTrace::GetCurrentPc(); \
     (void)pc; \
 /**/
+
+#define SCOPED_ANNOTATION(typ) SCOPED_ANNOTATION_RET(typ, )
 
 static const int kMaxDescLen = 128;
 
@@ -252,12 +253,12 @@ void INTERFACE_ATTRIBUTE AnnotateCondVarWait(char *f, int l, uptr cv,
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockCreate(char *f, int l, uptr m) {
   SCOPED_ANNOTATION(AnnotateRWLockCreate);
-  MutexCreate(thr, pc, m, true, true, false);
+  MutexCreate(thr, pc, m, MutexFlagWriteReentrant);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockCreateStatic(char *f, int l, uptr m) {
   SCOPED_ANNOTATION(AnnotateRWLockCreateStatic);
-  MutexCreate(thr, pc, m, true, true, true);
+  MutexCreate(thr, pc, m, MutexFlagWriteReentrant | MutexFlagLinkerInit);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockDestroy(char *f, int l, uptr m) {
@@ -269,9 +270,9 @@ void INTERFACE_ATTRIBUTE AnnotateRWLockAcquired(char *f, int l, uptr m,
                                                 uptr is_w) {
   SCOPED_ANNOTATION(AnnotateRWLockAcquired);
   if (is_w)
-    MutexLock(thr, pc, m);
+    MutexPostLock(thr, pc, m, MutexFlagDoPreLockOnPostLock);
   else
-    MutexReadLock(thr, pc, m);
+    MutexPostReadLock(thr, pc, m, MutexFlagDoPreLockOnPostLock);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateRWLockReleased(char *f, int l, uptr m,
@@ -458,4 +459,95 @@ void INTERFACE_ATTRIBUTE
 AnnotateMemoryIsInitialized(char *f, int l, uptr mem, uptr sz) {}
 void INTERFACE_ATTRIBUTE
 AnnotateMemoryIsUninitialized(char *f, int l, uptr mem, uptr sz) {}
+
+// Note: the parameter is called flagz, because flags is already taken
+// by the global function that returns flags.
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_create(void *m, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_create);
+  MutexCreate(thr, pc, (uptr)m, flagz & MutexCreationFlagMask);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_destroy(void *m, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_destroy);
+  MutexDestroy(thr, pc, (uptr)m);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_pre_lock);
+  if (!(flagz & MutexFlagTryLock)) {
+    if (flagz & MutexFlagReadLock)
+      MutexPreReadLock(thr, pc, (uptr)m);
+    else
+      MutexPreLock(thr, pc, (uptr)m);
+  }
+  ThreadIgnoreBegin(thr, pc, false);
+  ThreadIgnoreSyncBegin(thr, pc, false);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_post_lock(void *m, unsigned flagz, int rec) {
+  SCOPED_ANNOTATION(__tsan_mutex_post_lock);
+  ThreadIgnoreSyncEnd(thr, pc);
+  ThreadIgnoreEnd(thr, pc);
+  if (!(flagz & MutexFlagTryLockFailed)) {
+    if (flagz & MutexFlagReadLock)
+      MutexPostReadLock(thr, pc, (uptr)m, flagz);
+    else
+      MutexPostLock(thr, pc, (uptr)m, flagz, rec);
+  }
+}
+
+INTERFACE_ATTRIBUTE
+int __tsan_mutex_pre_unlock(void *m, unsigned flagz) {
+  SCOPED_ANNOTATION_RET(__tsan_mutex_pre_unlock, 0);
+  int ret = 0;
+  if (flagz & MutexFlagReadLock) {
+    CHECK(!(flagz & MutexFlagRecursiveUnlock));
+    MutexReadUnlock(thr, pc, (uptr)m);
+  } else {
+    ret = MutexUnlock(thr, pc, (uptr)m, flagz);
+  }
+  ThreadIgnoreBegin(thr, pc, false);
+  ThreadIgnoreSyncBegin(thr, pc, false);
+  return ret;
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_post_unlock(void *m, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_post_unlock);
+  ThreadIgnoreSyncEnd(thr, pc);
+  ThreadIgnoreEnd(thr, pc);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_pre_signal(void *addr, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_pre_signal);
+  ThreadIgnoreBegin(thr, pc, false);
+  ThreadIgnoreSyncBegin(thr, pc, false);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_post_signal(void *addr, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_post_signal);
+  ThreadIgnoreSyncEnd(thr, pc);
+  ThreadIgnoreEnd(thr, pc);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_pre_divert(void *addr, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_pre_divert);
+  // Exit from ignore region started in __tsan_mutex_pre_lock/unlock/signal.
+  ThreadIgnoreSyncEnd(thr, pc);
+  ThreadIgnoreEnd(thr, pc);
+}
+
+INTERFACE_ATTRIBUTE
+void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
+  SCOPED_ANNOTATION(__tsan_mutex_post_divert);
+  ThreadIgnoreBegin(thr, pc, false);
+  ThreadIgnoreSyncBegin(thr, pc, false);
+}
 }  // extern "C"

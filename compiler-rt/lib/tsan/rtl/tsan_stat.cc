@@ -153,6 +153,16 @@ void StatOutput(u64 *stat) {
   name[StatAnnotatePublishMemoryRange]   = "  PublishMemoryRange              ";
   name[StatAnnotateUnpublishMemoryRange] = "  UnpublishMemoryRange            ";
   name[StatAnnotateThreadName]           = "  ThreadName                      ";
+  name[Stat__tsan_mutex_create]          = "  __tsan_mutex_create             ";
+  name[Stat__tsan_mutex_destroy]         = "  __tsan_mutex_destroy            ";
+  name[Stat__tsan_mutex_pre_lock]        = "  __tsan_mutex_pre_lock           ";
+  name[Stat__tsan_mutex_post_lock]       = "  __tsan_mutex_post_lock          ";
+  name[Stat__tsan_mutex_pre_unlock]      = "  __tsan_mutex_pre_unlock         ";
+  name[Stat__tsan_mutex_post_unlock]     = "  __tsan_mutex_post_unlock        ";
+  name[Stat__tsan_mutex_pre_signal]      = "  __tsan_mutex_pre_signal         ";
+  name[Stat__tsan_mutex_post_signal]     = "  __tsan_mutex_post_signal        ";
+  name[Stat__tsan_mutex_pre_divert]      = "  __tsan_mutex_pre_divert         ";
+  name[Stat__tsan_mutex_post_divert]     = "  __tsan_mutex_post_divert        ";
 
   name[StatMtxTotal]                     = "Contentionz                       ";
   name[StatMtxTrace]                     = "  Trace                           ";

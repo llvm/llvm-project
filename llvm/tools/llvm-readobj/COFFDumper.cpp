@@ -1439,12 +1439,18 @@ void COFFDumper::printCOFFImports() {
     StringRef Name;
     error(I.getName(Name));
     W.printString("Name", Name);
-    uint32_t Addr;
-    error(I.getImportLookupTableRVA(Addr));
-    W.printHex("ImportLookupTableRVA", Addr);
-    error(I.getImportAddressTableRVA(Addr));
-    W.printHex("ImportAddressTableRVA", Addr);
-    printImportedSymbols(I.imported_symbols());
+    uint32_t ILTAddr;
+    error(I.getImportLookupTableRVA(ILTAddr));
+    W.printHex("ImportLookupTableRVA", ILTAddr);
+    uint32_t IATAddr;
+    error(I.getImportAddressTableRVA(IATAddr));
+    W.printHex("ImportAddressTableRVA", IATAddr);
+    // The import lookup table can be missing with certain older linkers, so
+    // fall back to the import address table in that case.
+    if (ILTAddr)
+      printImportedSymbols(I.lookup_table_symbols());
+    else
+      printImportedSymbols(I.imported_symbols());
   }
 
   // Delay imports
