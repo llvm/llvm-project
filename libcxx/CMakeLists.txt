@@ -23,7 +23,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 4.0.0svn)
+  set(PACKAGE_VERSION 5.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -142,7 +142,7 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# On UNIX platforms other than Apple unless 'LIBCXX_ENABLE_STATIC_ABI_LIBRARY'
+# on UNIX platforms other than Apple unless 'LIBCXX_ENABLE_STATIC_ABI_LIBRARY'
 # is on. This option is also disabled when the ABI library is not specified
 # or is specified to be "none".
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
@@ -161,7 +161,7 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
 set(ENABLE_NEW_DELETE_DEFAULT ON)
 if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
 # FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
-# programs to due undefined references to new/delete in libc++abi so to work
+# programs due to undefined references to new/delete in libc++abi so to work
 # around this libc++abi currently defaults LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
 # to ON. Once the GCC bug has been worked around this option should be changed
 # back to OFF.
@@ -414,9 +414,9 @@ remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 # non-debug DLLs
 remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 
-# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEqDANTIC.
+# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
-# so they don't get transformed into -Wno and -errors respectivly.
+# so they don't get transformed into -Wno and -errors respectively.
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================

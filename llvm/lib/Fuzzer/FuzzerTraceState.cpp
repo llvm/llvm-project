@@ -90,6 +90,14 @@ static size_t InternalStrnlen(const char *S, size_t MaxLen) {
   return Len;
 }
 
+// Finds min of (strlen(S1), strlen(S2)).
+// Needed bacause one of these strings may actually be non-zero terminated.
+static size_t InternalStrnlen2(const char *S1, const char *S2) {
+  size_t Len = 0;
+  for (; S1[Len] && S2[Len]; Len++)  {}
+  return Len;
+}
+
 }  // namespace fuzzer
 
 using fuzzer::TS;
@@ -128,9 +136,7 @@ ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
                                    const char *s2, int result) {
   if (result == 0) return;  // No reason to mutate.
-  size_t Len1 = strlen(s1);
-  size_t Len2 = strlen(s2);
-  size_t N = std::min(Len1, Len2);
+  size_t N = fuzzer::InternalStrnlen2(s1, s2);
   if (N <= 1) return;  // Not interesting.
   fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, N, /*StopAtZero*/true);
 }

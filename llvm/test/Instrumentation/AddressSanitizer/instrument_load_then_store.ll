@@ -16,10 +16,10 @@ entry:
 ; OPT1: IncrementMe
 ; OPT1: __asan_report_
 ; OPT1-NOT: __asan_report_
-; OPT1: asan.module_ctor
+; OPT1: ret void
 
 ; Without optimizations we should see two calls to __asan_report_*
 ; OPT0: IncrementMe
 ; OPT0: __asan_report_
 ; OPT0: __asan_report_
-; OPT0: asan.module_ctor
+; OPT0: ret void

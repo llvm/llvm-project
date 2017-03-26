@@ -1733,32 +1733,37 @@ SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) con
 }
 
 // XXX - May require not supporting f32 denormals?
-SDValue AMDGPUTargetLowering::LowerFROUND32(SDValue Op, SelectionDAG &DAG) const {
+
+// Don't handle v2f16. The extra instructions to scalarize and repack around the
+// compare and vselect end up producing worse code than scalarizing the whole
+// operation.
+SDValue AMDGPUTargetLowering::LowerFROUND32_16(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
+  EVT VT = Op.getValueType();
 
-  SDValue T = DAG.getNode(ISD::FTRUNC, SL, MVT::f32, X);
+  SDValue T = DAG.getNode(ISD::FTRUNC, SL, VT, X);
 
   // TODO: Should this propagate fast-math-flags?
 
-  SDValue Diff = DAG.getNode(ISD::FSUB, SL, MVT::f32, X, T);
+  SDValue Diff = DAG.getNode(ISD::FSUB, SL, VT, X, T);
 
-  SDValue AbsDiff = DAG.getNode(ISD::FABS, SL, MVT::f32, Diff);
+  SDValue AbsDiff = DAG.getNode(ISD::FABS, SL, VT, Diff);
 
-  const SDValue Zero = DAG.getConstantFP(0.0, SL, MVT::f32);
-  const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
-  const SDValue Half = DAG.getConstantFP(0.5, SL, MVT::f32);
+  const SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
+  const SDValue One = DAG.getConstantFP(1.0, SL, VT);
+  const SDValue Half = DAG.getConstantFP(0.5, SL, VT);
 
-  SDValue SignOne = DAG.getNode(ISD::FCOPYSIGN, SL, MVT::f32, One, X);
+  SDValue SignOne = DAG.getNode(ISD::FCOPYSIGN, SL, VT, One, X);
 
   EVT SetCCVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
   SDValue Cmp = DAG.getSetCC(SL, SetCCVT, AbsDiff, Half, ISD::SETOGE);
 
-  SDValue Sel = DAG.getNode(ISD::SELECT, SL, MVT::f32, Cmp, SignOne, Zero);
+  SDValue Sel = DAG.getNode(ISD::SELECT, SL, VT, Cmp, SignOne, Zero);
 
-  return DAG.getNode(ISD::FADD, SL, MVT::f32, T, Sel);
+  return DAG.getNode(ISD::FADD, SL, VT, T, Sel);
 }
 
 SDValue AMDGPUTargetLowering::LowerFROUND64(SDValue Op, SelectionDAG &DAG) const {
@@ -1821,8 +1826,8 @@ SDValue AMDGPUTargetLowering::LowerFROUND64(SDValue Op, SelectionDAG &DAG) const
 SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::f32)
-    return LowerFROUND32(Op, DAG);
+  if (VT == MVT::f32 || VT == MVT::f16)
+    return LowerFROUND32_16(Op, DAG);
 
   if (VT == MVT::f64)
     return LowerFROUND64(Op, DAG);

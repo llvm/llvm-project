@@ -155,7 +155,7 @@ constexpr char Size[] = "Size";
 /// \brief Key for Kernel::Arg::Metadata::mAlign.
 constexpr char Align[] = "Align";
 /// \brief Key for Kernel::Arg::Metadata::mValueKind.
-constexpr char Kind[] = "Kind";
+constexpr char ValueKind[] = "ValueKind";
 /// \brief Key for Kernel::Arg::Metadata::mValueType.
 constexpr char ValueType[] = "ValueType";
 /// \brief Key for Kernel::Arg::Metadata::mPointeeAlign.

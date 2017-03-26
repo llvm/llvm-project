@@ -130,8 +130,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     }
 
     // Figure out which case it goes to.
-    for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
-         i != e; ++i) {
+    for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
       // Found case matching a constant operand?
       if (i.getCaseValue() == CI) {
         TheOnlyDest = i.getCaseSuccessor();
@@ -165,8 +164,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         }
         // Remove this entry.
         DefaultDest->removePredecessor(SI->getParent());
-        SI->removeCase(i);
-        --i; --e;
+        i = SI->removeCase(i);
+        e = SI->case_end();
         continue;
       }
 
@@ -174,6 +173,9 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // We do this by reseting "TheOnlyDest" to null when we find two non-equal
       // destinations.
       if (i.getCaseSuccessor() != TheOnlyDest) TheOnlyDest = nullptr;
+
+      // Increment this iterator as we haven't removed the case.
+      ++i;
     }
 
     if (CI && !TheOnlyDest) {

@@ -76,6 +76,7 @@ set(Tests
   AbsNegAndConstantTest
   AbsNegAndConstant64Test
   AccumulateAllocationsTest
+  BadStrcmpTest
   BogusInitializeTest
   BufferOverflowOnInput
   CallerCalleeTest

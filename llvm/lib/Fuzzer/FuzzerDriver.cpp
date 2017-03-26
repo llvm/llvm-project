@@ -278,6 +278,17 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
+static std::string GetDedupTokenFromFile(const std::string &Path) {
+  auto S = FileToString(Path);
+  auto Beg = S.find("DEDUP_TOKEN:");
+  if (Beg == std::string::npos)
+    return "";
+  auto End = S.find('\n', Beg);
+  if (End == std::string::npos)
+    return "";
+  return S.substr(Beg, End - Beg);
+}
+
 int MinimizeCrashInput(const std::vector<std::string> &Args,
                        const FuzzingOptions &Options) {
   if (Inputs->size() != 1) {
@@ -296,7 +307,10 @@ int MinimizeCrashInput(const std::vector<std::string> &Args,
            "INFO: defaulting to -max_total_time=600\n");
     BaseCmd += " -max_total_time=600";
   }
-  // BaseCmd += " >  /dev/null 2>&1 ";
+
+  auto LogFilePath = DirPlusFile(
+      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
+  auto LogFileRedirect = " > " + LogFilePath + " 2>&1 ";
 
   std::string CurrentFilePath = InputFilePath;
   while (true) {
@@ -304,7 +318,7 @@ int MinimizeCrashInput(const std::vector<std::string> &Args,
     Printf("CRASH_MIN: minimizing crash input: '%s' (%zd bytes)\n",
            CurrentFilePath.c_str(), U.size());
 
-    auto Cmd = BaseCmd + " " + CurrentFilePath;
+    auto Cmd = BaseCmd + " " + CurrentFilePath + LogFileRedirect;
 
     Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
     int ExitCode = ExecuteCommand(Cmd);
@@ -315,13 +329,19 @@ int MinimizeCrashInput(const std::vector<std::string> &Args,
     Printf("CRASH_MIN: '%s' (%zd bytes) caused a crash. Will try to minimize "
            "it further\n",
            CurrentFilePath.c_str(), U.size());
+    auto DedupToken1 = GetDedupTokenFromFile(LogFilePath);
+    if (!DedupToken1.empty())
+      Printf("CRASH_MIN: DedupToken1: %s\n", DedupToken1.c_str());
 
     std::string ArtifactPath =
-        Options.ArtifactPrefix + "minimized-from-" + Hash(U);
+        Flags.exact_artifact_path
+            ? Flags.exact_artifact_path
+            : Options.ArtifactPrefix + "minimized-from-" + Hash(U);
     Cmd += " -minimize_crash_internal_step=1 -exact_artifact_path=" +
         ArtifactPath;
     Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
     ExitCode = ExecuteCommand(Cmd);
+    CopyFileToErr(LogFilePath);
     if (ExitCode == 0) {
       if (Flags.exact_artifact_path) {
         CurrentFilePath = Flags.exact_artifact_path;
@@ -329,11 +349,26 @@ int MinimizeCrashInput(const std::vector<std::string> &Args,
       }
       Printf("CRASH_MIN: failed to minimize beyond %s (%d bytes), exiting\n",
              CurrentFilePath.c_str(), U.size());
-      return 0;
+      break;
     }
+    auto DedupToken2 = GetDedupTokenFromFile(LogFilePath);
+    if (!DedupToken2.empty())
+      Printf("CRASH_MIN: DedupToken2: %s\n", DedupToken2.c_str());
+
+    if (DedupToken1 != DedupToken2) {
+      if (Flags.exact_artifact_path) {
+        CurrentFilePath = Flags.exact_artifact_path;
+        WriteToFile(U, CurrentFilePath);
+      }
+      Printf("CRASH_MIN: mismatch in dedup tokens"
+             " (looks like a different bug). Won't minimize further\n");
+      break;
+    }
+
     CurrentFilePath = ArtifactPath;
-    Printf("\n\n\n\n\n\n*********************************\n");
+    Printf("*********************************\n");
   }
+  RemoveFile(LogFilePath);
   return 0;
 }
 

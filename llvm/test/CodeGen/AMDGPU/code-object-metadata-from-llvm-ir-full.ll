@@ -25,25 +25,25 @@
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          1
 ; CHECK-NEXT:       Align:         1
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      char
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_char(i8 %a)
@@ -58,25 +58,25 @@ define amdgpu_kernel void @test_char(i8 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     U16
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      ushort2
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_ushort2(<2 x i16> %a)
@@ -91,25 +91,25 @@ define amdgpu_kernel void @test_ushort2(<2 x i16> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          16
 ; CHECK-NEXT:       Align:         16
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int3
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_int3(<3 x i32> %a)
@@ -124,25 +124,25 @@ define amdgpu_kernel void @test_int3(<3 x i32> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          32
 ; CHECK-NEXT:       Align:         32
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     U64
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      ulong4
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_ulong4(<4 x i64> %a)
@@ -157,25 +157,25 @@ define amdgpu_kernel void @test_ulong4(<4 x i64> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          16
 ; CHECK-NEXT:       Align:         16
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     F16
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      half8
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_half8(<8 x half> %a)
@@ -190,25 +190,25 @@ define amdgpu_kernel void @test_half8(<8 x half> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          64
 ; CHECK-NEXT:       Align:         64
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     F32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      float16
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_float16(<16 x float> %a)
@@ -223,25 +223,25 @@ define amdgpu_kernel void @test_float16(<16 x float> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          128
 ; CHECK-NEXT:       Align:         128
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     F64
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      double16
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_double16(<16 x double> %a)
@@ -256,26 +256,26 @@ define amdgpu_kernel void @test_double16(<16 x double> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a)
@@ -290,26 +290,26 @@ define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Image
+; CHECK-NEXT:       ValueKind:     Image
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      image2d_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a)
@@ -324,25 +324,25 @@ define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          Sampler
+; CHECK-NEXT:       ValueKind:     Sampler
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      sampler_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_sampler(i32 %a)
@@ -357,26 +357,26 @@ define amdgpu_kernel void @test_sampler(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Queue
+; CHECK-NEXT:       ValueKind:     Queue
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      queue_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a)
@@ -391,26 +391,26 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Private
 ; CHECK-NEXT:       TypeName:      struct A
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_struct(%struct.A* byval %a)
@@ -425,25 +425,25 @@ define amdgpu_kernel void @test_struct(%struct.A* byval %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          16
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      i128
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_i128(i128 %a)
@@ -458,37 +458,37 @@ define amdgpu_kernel void @test_i128(i128 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I16
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      short2
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      char3
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
@@ -503,21 +503,21 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Constant
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       PointeeAlign:  4
 ; CHECK-NEXT:       AccQual:       Default
@@ -525,19 +525,19 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
@@ -554,7 +554,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
@@ -562,7 +562,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
@@ -571,7 +571,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Pipe
+; CHECK-NEXT:       ValueKind:     Pipe
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
@@ -579,19 +579,19 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       TypeName:      'int *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_type_qual(i32 addrspace(1)* %a,
@@ -608,40 +608,40 @@ define amdgpu_kernel void @test_type_qual(i32 addrspace(1)* %a,
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Image
+; CHECK-NEXT:       ValueKind:     Image
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       ReadOnly
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      image1d_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Image
+; CHECK-NEXT:       ValueKind:     Image
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       WriteOnly
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      image2d_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          Image
+; CHECK-NEXT:       ValueKind:     Image
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       ReadWrite
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      image3d_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_access_qual(%opencl.image1d_t addrspace(1)* %ro,
@@ -660,25 +660,25 @@ define amdgpu_kernel void @test_access_qual(%opencl.image1d_t addrspace(1)* %ro,
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_half(i32 %a)
@@ -695,25 +695,25 @@ define amdgpu_kernel void @test_vec_type_hint_half(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_float(i32 %a)
@@ -730,25 +730,25 @@ define amdgpu_kernel void @test_vec_type_hint_float(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_double(i32 %a)
@@ -765,25 +765,25 @@ define amdgpu_kernel void @test_vec_type_hint_double(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_char(i32 %a)
@@ -800,25 +800,25 @@ define amdgpu_kernel void @test_vec_type_hint_char(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_short(i32 %a)
@@ -835,25 +835,25 @@ define amdgpu_kernel void @test_vec_type_hint_short(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_long(i32 %a)
@@ -870,25 +870,25 @@ define amdgpu_kernel void @test_vec_type_hint_long(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      int
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a)
@@ -906,25 +906,25 @@ define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:              4
 ; CHECK-NEXT:       Align:             4
-; CHECK-NEXT:       Kind:              ByValue
+; CHECK-NEXT:       ValueKind:         ByValue
 ; CHECK-NEXT:       ValueType:         I32
 ; CHECK-NEXT:       AccQual:           Default
 ; CHECK-NEXT:       TypeName:          int
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:         HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:         I8
 ; CHECK-NEXT:       AddrSpaceQual:     Global
 define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a)
@@ -943,25 +943,25 @@ define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:              4
 ; CHECK-NEXT:       Align:             4
-; CHECK-NEXT:       Kind:              ByValue
+; CHECK-NEXT:       ValueKind:         ByValue
 ; CHECK-NEXT:       ValueType:         I32
 ; CHECK-NEXT:       AccQual:           Default
 ; CHECK-NEXT:       TypeName:          int
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:         HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:         I64
 ; CHECK-NEXT:     - Size:              8
 ; CHECK-NEXT:       Align:             8
-; CHECK-NEXT:       Kind:              HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:         HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:         I8
 ; CHECK-NEXT:       AddrSpaceQual:     Global
 define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
@@ -977,26 +977,26 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      'int **'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_arg_ptr_to_ptr(i32* addrspace(1)* %a)
@@ -1011,26 +1011,26 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32* addrspace(1)* %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Private
 ; CHECK-NEXT:       TypeName:      struct B
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B* byval %a)
@@ -1045,25 +1045,25 @@ define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B* byval %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          16
 ; CHECK-NEXT:       Align:         16
-; CHECK-NEXT:       Kind:          ByValue
+; CHECK-NEXT:       ValueKind:     ByValue
 ; CHECK-NEXT:       ValueType:     I32
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       TypeName:      'global int* __attribute__((ext_vector_type(2)))'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a)
@@ -1078,26 +1078,26 @@ define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a)
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     Struct
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      clk_event_t
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_arg_unknown_builtin_type(
@@ -1113,14 +1113,14 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          GlobalBuffer
+; CHECK-NEXT:       ValueKind:     GlobalBuffer
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NEXT:       TypeName:      'long *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  1
 ; CHECK-NEXT:       AccQual:       Default
@@ -1128,7 +1128,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  2
 ; CHECK-NEXT:       AccQual:       Default
@@ -1136,7 +1136,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char2 *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  4
 ; CHECK-NEXT:       AccQual:       Default
@@ -1144,7 +1144,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char3 *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  4
 ; CHECK-NEXT:       AccQual:       Default
@@ -1152,7 +1152,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char4 *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  8
 ; CHECK-NEXT:       AccQual:       Default
@@ -1160,7 +1160,7 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char8 *'
 ; CHECK-NEXT:     - Size:          4
 ; CHECK-NEXT:       Align:         4
-; CHECK-NEXT:       Kind:          DynamicSharedPointer
+; CHECK-NEXT:       ValueKind:     DynamicSharedPointer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       PointeeAlign:  16
 ; CHECK-NEXT:       AccQual:       Default
@@ -1168,19 +1168,19 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       TypeName:      'char16 *'
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
-; CHECK-NEXT:       Kind:          HiddenPrintfBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,

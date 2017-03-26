@@ -7,6 +7,12 @@
 declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
 declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
+; CHECK-LABEL: @test_constant_fold_rcp_f32_undef
+; CHECK-NEXT: ret float undef
+define float @test_constant_fold_rcp_f32_undef() nounwind {
+  %val = call float @llvm.amdgcn.rcp.f32(float undef) nounwind readnone
+  ret float %val
+}
 
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_1
 ; CHECK-NEXT: ret float 1.000000e+00
@@ -50,6 +56,18 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
   ret double %val
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.rsq
+; --------------------------------------------------------------------
+
+declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
+
+; CHECK-LABEL: @test_constant_fold_rsq_f32_undef
+; CHECK-NEXT: ret float undef
+define float @test_constant_fold_rsq_f32_undef() nounwind {
+  %val = call float @llvm.amdgcn.rsq.f32(float undef) nounwind readnone
+  ret float %val
+}
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.frexp.mant

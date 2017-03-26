@@ -815,6 +815,9 @@ namespace llvm {
 
     bool hasAndNotCompare(SDValue Y) const override;
 
+    /// Vector-sized comparisons are fast using PCMPEQ + PMOVMSK or PTEST.
+    MVT hasFastEqualityCompare(unsigned NumBits) const override;
+
     /// Return the value type to use for ISD::SETCC.
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;

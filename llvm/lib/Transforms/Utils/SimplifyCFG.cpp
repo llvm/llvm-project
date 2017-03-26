@@ -4156,15 +4156,16 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
         }
       }
     } else if (auto *SI = dyn_cast<SwitchInst>(TI)) {
-      for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e;
-           ++i)
-        if (i.getCaseSuccessor() == BB) {
-          BB->removePredecessor(SI->getParent());
-          SI->removeCase(i);
-          --i;
-          --e;
-          Changed = true;
+      for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
+        if (i.getCaseSuccessor() != BB) {
+          ++i;
+          continue;
         }
+        BB->removePredecessor(SI->getParent());
+        i = SI->removeCase(i);
+        e = SI->case_end();
+        Changed = true;
+      }
     } else if (auto *II = dyn_cast<InvokeInst>(TI)) {
       if (II->getUnwindDest() == BB) {
         removeUnwindEdge(TI->getParent());

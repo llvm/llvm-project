@@ -6,7 +6,8 @@ CHECK_EXACT: CRASH_MIN: failed to minimize beyond exact_minimized_path (3 bytes)
 RUN: rm not_minimal_crash minimized-from-* exact_minimized_path
 
 RUN: echo -n 'abcd*xyz' > not_minimal_crash
-RUN: LLVMFuzzer-SingleByteInputTest -minimize_crash=1 not_minimal_crash -artifact_prefix=./ZZZ- -exact_artifact_path=exact_minimized_path 2>&1 | FileCheck %s --check-prefix=MIN1
-MIN1: Test unit written to ./ZZZ-minimized-from-
+RUN: LLVMFuzzer-SingleByteInputTest -minimize_crash=1 not_minimal_crash -exact_artifact_path=exact_minimized_path 2>&1 | FileCheck %s --check-prefix=MIN1
+MIN1: Test unit written to exact_minimized_path
+MIN1: Test unit written to exact_minimized_path
 MIN1: INFO: The input is small enough, exiting
 MIN1: CRASH_MIN: failed to minimize beyond exact_minimized_path (1 bytes), exiting

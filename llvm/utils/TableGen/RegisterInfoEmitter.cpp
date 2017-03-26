@@ -1023,14 +1023,14 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
-    // Asserts to make sure values will fit in table assuming types from
-    // MCRegisterInfo.h
-    assert(RC.CopyCost >= -128 && RC.CopyCost <= 127 && "Copy cost too large.");
-
+    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
+    // Register size and spill size will become independent, but are not at
+    // the moment. For now use SpillSize as the register size.
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << RegClassStrings.get(RC.getName()) << ", "
        << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
        << RC.getQualifiedName() + "RegClassID" << ", "
+       << RC.SpillSize/8 << ", "
        << RC.CopyCost << ", "
        << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }

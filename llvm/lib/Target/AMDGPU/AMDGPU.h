@@ -123,6 +123,9 @@ extern char &SIDebuggerInsertNopsID;
 void initializeSIInsertWaitsPass(PassRegistry&);
 extern char &SIInsertWaitsID;
 
+void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
+extern char &AMDGPUUnifyDivergentExitNodesID;
+
 ImmutablePass *createAMDGPUAAWrapperPass();
 void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
 

@@ -929,12 +929,14 @@ RelExpr X86_64TargetInfo<ELFT>::adjustRelaxExpr(uint32_t Type,
     return RelExpr;
   const uint8_t Op = Data[-2];
   const uint8_t ModRm = Data[-1];
+
   // FIXME: When PIC is disabled and foo is defined locally in the
   // lower 32 bit address space, memory operand in mov can be converted into
   // immediate operand. Otherwise, mov must be changed to lea. We support only
   // latter relaxation at this moment.
   if (Op == 0x8b)
     return R_RELAX_GOT_PC;
+
   // Relax call and jmp.
   if (Op == 0xff && (ModRm == 0x15 || ModRm == 0x25))
     return R_RELAX_GOT_PC;
