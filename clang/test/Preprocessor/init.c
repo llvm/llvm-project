@@ -6747,6 +6747,10 @@
 // PPC-LINUX:#define __powerpc__ 1
 // PPC-LINUX:#define __ppc__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC32-LINUX %s
+//
+// PPC32-LINUX-NOT: _CALL_LINUX
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-apple-darwin8 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-DARWIN %s
 //
 // PPC-DARWIN:#define _ARCH_PPC 1
