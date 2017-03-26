@@ -3997,12 +3997,12 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   APInt Op0KnownZero(BitWidth, 0), Op0KnownOne(BitWidth, 0);
   APInt Op1KnownZero(BitWidth, 0), Op1KnownOne(BitWidth, 0);
 
-  if (SimplifyDemandedBits(I.getOperandUse(0),
+  if (SimplifyDemandedBits(&I, 0,
                            getDemandedBitsLHSMask(I, BitWidth, IsSignBit),
                            Op0KnownZero, Op0KnownOne, 0))
     return &I;
 
-  if (SimplifyDemandedBits(I.getOperandUse(1), APInt::getAllOnesValue(BitWidth),
+  if (SimplifyDemandedBits(&I, 1, APInt::getAllOnesValue(BitWidth),
                            Op1KnownZero, Op1KnownOne, 0))
     return &I;
 

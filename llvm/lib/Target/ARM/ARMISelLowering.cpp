@@ -9517,19 +9517,19 @@ static SDValue AddCombineTo64BitSMLAL16(SDNode *AddcNode, SDNode *AddeNode,
   // be sign extended somehow or SRA'd into 32-bit values
   // (addc (adde (mul 16bit, 16bit), lo), hi)
   SDValue Mul = AddcNode->getOperand(0);
-  SDValue Hi = AddcNode->getOperand(1);
+  SDValue Lo = AddcNode->getOperand(1);
   if (Mul.getOpcode() != ISD::MUL) {
-    Hi = AddcNode->getOperand(0);
+    Lo = AddcNode->getOperand(0);
     Mul = AddcNode->getOperand(1);
     if (Mul.getOpcode() != ISD::MUL)
       return SDValue();
   }
 
   SDValue SRA = AddeNode->getOperand(0);
-  SDValue Lo = AddeNode->getOperand(1);
+  SDValue Hi = AddeNode->getOperand(1);
   if (SRA.getOpcode() != ISD::SRA) {
     SRA = AddeNode->getOperand(1);
-    Lo = AddeNode->getOperand(0);
+    Hi = AddeNode->getOperand(0);
     if (SRA.getOpcode() != ISD::SRA)
       return SDValue();
   }

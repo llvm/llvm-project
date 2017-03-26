@@ -1022,7 +1022,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #36
+  ; CHECK: call void @f.nobuiltin() #37
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1246,7 +1246,8 @@ define void @misc.metadata() {
 ; CHECK: attributes #33 = { argmemonly nounwind readonly }
 ; CHECK: attributes #34 = { argmemonly nounwind }
 ; CHECK: attributes #35 = { nounwind readonly }
-; CHECK: attributes #36 = { builtin }
+; CHECK: attributes #36 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK: attributes #37 = { builtin }
 
 ;; Metadata
 

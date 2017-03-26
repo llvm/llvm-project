@@ -331,13 +331,13 @@ def int_get_dynamic_area_offset : Intrinsic<[llvm_anyint_ty]>;
 def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
                          GCCBuiltin<"__builtin_thread_pointer">;
 
-// IntrArgMemOnly is more pessimistic than strictly necessary for prefetch,
-// however it does conveniently prevent the prefetch from being reordered
-// with respect to nearby accesses to the same memory.
-def int_prefetch      : Intrinsic<[],
-                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty,
-                                   llvm_i32_ty],
-                                  [IntrArgMemOnly, NoCapture<0>]>;
+// IntrInaccessibleMemOrArgMemOnly is a little more pessimistic than strictly
+// necessary for prefetch, however it does conveniently prevent the prefetch
+// from being reordered overly much with respect to nearby access to the same
+// memory while not impeding optimization.
+def int_prefetch
+    : Intrinsic<[], [ llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ],
+                [ IntrInaccessibleMemOrArgMemOnly, ReadOnly<0>, NoCapture<0> ]>;
 def int_pcmarker      : Intrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;

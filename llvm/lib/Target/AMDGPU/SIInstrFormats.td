@@ -138,19 +138,19 @@ class InstSI <dag outs, dag ins, string asm = "",
   let AsmVariantName = AMDGPUAsmVariants.Default;
 }
 
-class PseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
-  : InstSI<outs, ins, "", pattern> {
+class PseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
+  : InstSI<outs, ins, asm, pattern> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }
 
-class SPseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
-  : PseudoInstSI<outs, ins, pattern> {
+class SPseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
+  : PseudoInstSI<outs, ins, pattern, asm> {
   let SALU = 1;
 }
 
-class VPseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
-  : PseudoInstSI<outs, ins, pattern> {
+class VPseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
+  : PseudoInstSI<outs, ins, pattern, asm> {
   let VALU = 1;
   let Uses = [EXEC];
 }

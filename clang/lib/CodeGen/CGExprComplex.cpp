@@ -110,6 +110,16 @@ public:
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *PE) {
     return Visit(PE->getReplacement());
   }
+  ComplexPairTy VisitCoawaitExpr(CoawaitExpr *S) {
+    return CGF.EmitCoawaitExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitCoyieldExpr(CoyieldExpr *S) {
+    return CGF.EmitCoyieldExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitUnaryCoawait(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+
 
   // l-values.
   ComplexPairTy VisitDeclRefExpr(DeclRefExpr *E) {

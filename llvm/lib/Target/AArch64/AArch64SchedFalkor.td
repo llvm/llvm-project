@@ -95,7 +95,7 @@ def : WriteRes<WriteFDiv,  [FalkorUnitVXVY, FalkorUnitVXVY]>
       { let Latency = 12; let NumMicroOps = 2; } // Fragent -1 / NoRSV +1
 def : WriteRes<WriteV,     [FalkorUnitVXVY]> { let Latency = 6; }
 def : WriteRes<WriteVLD,   [FalkorUnitLD]> { let Latency = 3; }
-def : WriteRes<WriteVST,   [FalkorUnitST]> { let Latency = 4; }
+def : WriteRes<WriteVST,   [FalkorUnitST]> { let Latency = 0; }
 
 def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
@@ -116,93 +116,8 @@ def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
 
-//===----------------------------------------------------------------------===//
-// Specialize the coarse model by associating instruction groups with the
-// subtarget-defined types. As the modeled is refined, this will override most
-// of the above SchedWriteRes and SchedAlias mappings.
-
+// Detailed Refinements
 // -----------------------------------------------------------------------------
-// Miscellaneous
-// -----------------------------------------------------------------------------
-
-def : InstRW<[WriteI], (instrs COPY)>;
-
-// -----------------------------------------------------------------------------
-// Vector Loads
-// -----------------------------------------------------------------------------
-def : InstRW<[WriteVLD], (instregex "LD1i(8|16|32|64)$")>;
-def : InstRW<[WriteVLD], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-
-def : InstRW<[WriteVLD], (instregex "LD2i(8|16|32|64)$")>;
-def : InstRW<[WriteVLD], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[WriteVLD], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
-
-def : InstRW<[WriteVLD], (instregex "LD3i(8|16|32|64)$")>;
-def : InstRW<[WriteVLD], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD3Threev(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[WriteVLD], (instregex "LD3Threev(2d)$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD3i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD3Threev(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD3Threev(2d)_POST$")>;
-
-def : InstRW<[WriteVLD], (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[WriteVLD], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLD], (instregex "LD4Fourv(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[WriteVLD], (instregex "LD4Fourv(2d)$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD4Fourv(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteVLD, WriteAdr], (instregex "LD4Fourv(2d)_POST$")>;
-
-// -----------------------------------------------------------------------------
-// Vector Stores
-// -----------------------------------------------------------------------------
-def : InstRW<[WriteVST], (instregex "ST1i(8|16|32|64)$")>;
-def : InstRW<[WriteVST], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVST], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVST], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVST], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST1i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-
-def : InstRW<[WriteVST], (instregex "ST2i(8|16|32|64)$")>;
-def : InstRW<[WriteVST], (instregex "ST2Twov(8b|4h|2s)$")>;
-def : InstRW<[WriteVST], (instregex "ST2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST2i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
-
-def : InstRW<[WriteVST], (instregex "ST3i(8|16|32|64)$")>;
-def : InstRW<[WriteVST], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[WriteVST], (instregex "ST3Threev(2d)$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST3i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST3Threev(2d)_POST$")>;
-
-def : InstRW<[WriteVST], (instregex "ST4i(8|16|32|64)$")>;
-def : InstRW<[WriteVST], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[WriteVST], (instregex "ST4Fourv(2d)$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteVST, WriteAdr], (instregex "ST4Fourv(2d)_POST$")>;
+include "AArch64SchedFalkorDetails.td"
 
 }
