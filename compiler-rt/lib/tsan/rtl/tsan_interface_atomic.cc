@@ -468,12 +468,14 @@ static morder convert_morder(morder mo) {
 }
 
 #define SCOPED_ATOMIC(func, ...) \
+    ThreadState *const thr = cur_thread(); \
+    if (thr->ignore_sync || thr->ignore_interceptors) { \
+      ProcessPendingSignals(thr); \
+      return NoTsanAtomic##func(__VA_ARGS__); \
+    } \
     const uptr callpc = (uptr)__builtin_return_address(0); \
     uptr pc = StackTrace::GetCurrentPc(); \
     mo = convert_morder(mo); \
-    ThreadState *const thr = cur_thread(); \
-    if (thr->ignore_interceptors) \
-      return NoTsanAtomic##func(__VA_ARGS__); \
     AtomicStatInc(thr, sizeof(*a), mo, StatAtomic##func); \
     ScopedAtomic sa(thr, callpc, a, mo, __func__); \
     return Atomic##func(thr, pc, __VA_ARGS__); \

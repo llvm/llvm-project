@@ -3093,18 +3093,18 @@ public:
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
 
-  template <class SwitchInstTy, class ConstantIntTy, class BasicBlockTy>
+  template <class SwitchInstT, class ConstantIntT, class BasicBlockT>
   class CaseIteratorT
       : public iterator_facade_base<
-            CaseIteratorT<SwitchInstTy, ConstantIntTy, BasicBlockTy>,
+            CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT>,
             std::random_access_iterator_tag,
-            CaseIteratorT<SwitchInstTy, ConstantIntTy, BasicBlockTy>> {
+            CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT>> {
   protected:
-    SwitchInstTy *SI;
+    SwitchInstT *SI;
     ptrdiff_t Index;
 
   public:
-    typedef CaseIteratorT<SwitchInstTy, ConstantIntTy, BasicBlockTy> Self;
+    typedef CaseIteratorT<SwitchInstT, ConstantIntT, BasicBlockT> Self;
 
     /// Default constructed iterator is in an invalid state until assigned to
     /// a case for a particular switch.
@@ -3112,14 +3112,14 @@ public:
 
     /// Initializes case iterator for given SwitchInst and for given
     /// case number.
-    CaseIteratorT(SwitchInstTy *SI, unsigned CaseNum) {
+    CaseIteratorT(SwitchInstT *SI, unsigned CaseNum) {
       this->SI = SI;
       Index = CaseNum;
     }
 
     /// Initializes case iterator for given SwitchInst and for given
     /// TerminatorInst's successor index.
-    static Self fromSuccessorIndex(SwitchInstTy *SI, unsigned SuccessorIndex) {
+    static Self fromSuccessorIndex(SwitchInstT *SI, unsigned SuccessorIndex) {
       assert(SuccessorIndex < SI->getNumSuccessors() &&
              "Successor index # out of range!");
       return SuccessorIndex != 0 ?
@@ -3128,15 +3128,16 @@ public:
     }
 
     /// Resolves case value for current case.
-    ConstantIntTy *getCaseValue() {
-      assert(Index < SI->getNumCases() && "Index out the number of cases.");
-      return reinterpret_cast<ConstantIntTy*>(SI->getOperand(2 + Index*2));
+    ConstantIntT *getCaseValue() {
+      assert((unsigned)Index < SI->getNumCases() &&
+             "Index out the number of cases.");
+      return reinterpret_cast<ConstantIntT *>(SI->getOperand(2 + Index * 2));
     }
 
     /// Resolves successor for current case.
-    BasicBlockTy *getCaseSuccessor() {
-      assert((Index < SI->getNumCases() ||
-              Index == DefaultPseudoIndex) &&
+    BasicBlockT *getCaseSuccessor() {
+      assert(((unsigned)Index < SI->getNumCases() ||
+              (unsigned)Index == DefaultPseudoIndex) &&
              "Index out the number of cases.");
       return SI->getSuccessor(getSuccessorIndex());
     }
@@ -3146,15 +3147,16 @@ public:
 
     /// Returns TerminatorInst's successor index for current case successor.
     unsigned getSuccessorIndex() const {
-      assert((Index == DefaultPseudoIndex || Index < SI->getNumCases()) &&
+      assert(((unsigned)Index == DefaultPseudoIndex ||
+              (unsigned)Index < SI->getNumCases()) &&
              "Index out the number of cases.");
-      return Index != DefaultPseudoIndex ? Index + 1 : 0;
+      return (unsigned)Index != DefaultPseudoIndex ? Index + 1 : 0;
     }
 
     Self &operator+=(ptrdiff_t N) {
       // Check index correctness after addition.
       // Note: Index == getNumCases() means end().
-      assert(Index + N >= 0 && Index + N <= SI->getNumCases() &&
+      assert(Index + N >= 0 && (unsigned)(Index + N) <= SI->getNumCases() &&
              "Index out the number of cases.");
       Index += N;
       return *this;
@@ -3162,7 +3164,7 @@ public:
     Self &operator-=(ptrdiff_t N) {
       // Check index correctness after subtraction.
       // Note: Index == getNumCases() means end().
-      assert(Index - N >= 0 && Index - N <= SI->getNumCases() &&
+      assert(Index - N >= 0 && (unsigned)(Index - N) <= SI->getNumCases() &&
              "Index out the number of cases.");
       Index -= N;
       return *this;
@@ -3191,7 +3193,8 @@ public:
 
     /// Sets the new value for current case.
     void setValue(ConstantInt *V) {
-      assert(Index < SI->getNumCases() && "Index out the number of cases.");
+      assert((unsigned)Index < SI->getNumCases() &&
+             "Index out the number of cases.");
       SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
     }
 

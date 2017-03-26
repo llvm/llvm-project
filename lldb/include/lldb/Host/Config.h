@@ -22,14 +22,17 @@
 
 #include "lldb/Host/linux/Config.h"
 
-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) ||                   \
-    defined(__OpenBSD__)
+#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 
 #include "lldb/Host/freebsd/Config.h"
 
 #elif defined(__NetBSD__)
 
 #include "lldb/Host/netbsd/Config.h"
+
+#elif defined(__OpenBSD__)
+
+#include "lldb/Host/openbsd/Config.h"
 
 #elif defined(__MINGW__) || defined(__MINGW32__)
 

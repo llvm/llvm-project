@@ -28,7 +28,8 @@
 #endif
 
 #if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) || defined(__NetBSD__)
+    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
+    defined(__NetBSD__) || defined(__OpenBSD__)
 #if !defined(__ANDROID__)
 #include <spawn.h>
 #endif
@@ -184,7 +185,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   delete info;
 
   int status = -1;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
 #define __WALL 0
 #endif
   const int options = __WALL;

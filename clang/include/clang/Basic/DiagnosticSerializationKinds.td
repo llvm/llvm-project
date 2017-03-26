@@ -148,7 +148,7 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "method %4 is %select{not const|const}5|"
   "method %4 is %select{not inline|inline}5|"
   "method %4 that has %5 parameter%s5|"
-  "method %4 with %ordinal5 parameter of type %6%select{| decayed from %8}7|"
+  "method %4 with %ordinal5 parameter of type %6|"
   "method %4 with %ordinal5 parameter named %6|"
   "method %4 with %ordinal5 parameter with %select{no |}6default argument|"
   "method %4 with %ordinal5 parameter with default argument}3">;
@@ -173,7 +173,7 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "method %2 is %select{not const|const}3|"
   "method %2 is %select{not inline|inline}3|"
   "method %2 that has %3 parameter%s3|"
-  "method %2 with %ordinal3 parameter of type %4%select{| decayed from %6}5|"
+  "method %2 with %ordinal3 parameter of type %4|"
   "method %2 with %ordinal3 parameter named %4|"
   "method %2 with %ordinal3 parameter with %select{no |}4default argument|"
   "method %2 with %ordinal3 parameter with different default argument}1">;

@@ -1653,7 +1653,7 @@ define <4 x float> @test_mm_set1_ps(float %a0) nounwind {
 define void @test_mm_setcsr(i32 %a0) nounwind {
 ; X32-LABEL: test_mm_setcsr:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
+; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    ldmxcsr (%eax)
 ; X32-NEXT:    retl
 ;
