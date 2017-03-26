@@ -179,12 +179,12 @@ define i1 @length16(i8* %x, i8* %y) nounwind {
 ;
 ; X64-LABEL: length16:
 ; X64:       # BB#0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $16, %edx
-; X64-NEXT:    callq memcmp
-; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    movdqu (%rsi), %xmm0
+; X64-NEXT:    movdqu (%rdi), %xmm1
+; X64-NEXT:    pcmpeqb %xmm0, %xmm1
+; X64-NEXT:    pmovmskb %xmm1, %eax
+; X64-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X64-NEXT:    setne %al
-; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16) nounwind
   %cmp = icmp ne i32 %call, 0
@@ -206,13 +206,11 @@ define i1 @length16_const(i8* %X, i32* nocapture %P) nounwind {
 ;
 ; X64-LABEL: length16_const:
 ; X64:       # BB#0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $.L.str, %esi
-; X64-NEXT:    movl $16, %edx
-; X64-NEXT:    callq memcmp
-; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    movdqu (%rdi), %xmm0
+; X64-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
+; X64-NEXT:    pmovmskb %xmm0, %eax
+; X64-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X64-NEXT:    sete %al
-; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 16) nounwind
   %c = icmp eq i32 %m, 0

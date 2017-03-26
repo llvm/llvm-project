@@ -283,7 +283,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     X86GISelActualAccessor *GISel = new X86GISelActualAccessor();
 
     GISel->CallLoweringInfo.reset(new X86CallLowering(*I->getTargetLowering()));
-    GISel->Legalizer.reset(new X86LegalizerInfo(*I));
+    GISel->Legalizer.reset(new X86LegalizerInfo(*I, *this));
 
     auto *RBI = new X86RegisterBankInfo(*I->getRegisterInfo());
     GISel->RegBankInfo.reset(RBI);
