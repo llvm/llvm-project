@@ -25,13 +25,18 @@
 #include <algorithm>
 using namespace llvm;
 
-static cl::opt<unsigned>
-AsmParserNum("asmparsernum", cl::init(0),
-             cl::desc("Make -gen-asm-parser emit assembly parser #N"));
+cl::OptionCategory AsmParserCat("Options for -gen-asm-parser");
+cl::OptionCategory AsmWriterCat("Options for -gen-asm-writer");
 
 static cl::opt<unsigned>
-AsmWriterNum("asmwriternum", cl::init(0),
-             cl::desc("Make -gen-asm-writer emit assembly writer #N"));
+    AsmParserNum("asmparsernum", cl::init(0),
+                 cl::desc("Make -gen-asm-parser emit assembly parser #N"),
+                 cl::cat(AsmParserCat));
+
+static cl::opt<unsigned>
+    AsmWriterNum("asmwriternum", cl::init(0),
+                 cl::desc("Make -gen-asm-writer emit assembly writer #N"),
+                 cl::cat(AsmWriterCat));
 
 /// getValueType - Return the MVT::SimpleValueType that the specified TableGen
 /// record corresponds to.
