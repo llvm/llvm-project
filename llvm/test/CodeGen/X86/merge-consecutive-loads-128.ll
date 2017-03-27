@@ -1065,13 +1065,13 @@ define <4 x float> @merge_4f32_f32_2345_volatile(float* %ptr) nounwind uwtable n
 ; X32-SSE1-LABEL: merge_4f32_f32_2345_volatile:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE1-DAG:    movss 8(%eax), %[[R0:xmm[0-3]]]  # [[R0]] = mem[0],zero,zero,zero
-; X32-SSE1-DAG:    movss 12(%eax), %[[R1:xmm[0-3]]] # [[R1]] = mem[0],zero,zero,zero
-; X32-SSE1-DAG:    movss 16(%eax), %[[R2:xmm[0-3]]] # [[R2]] = mem[0],zero,zero,zero
-; X32-SSE1-DAG:    movss 20(%eax), %[[R3:xmm[0-3]]] # [[R3]] = mem[0],zero,zero,zero
-; X32-SSE1-DAG:    unpcklps %[[R2]], %[[R0]] # [[R0]] = [[R0]][0],[[R2]][0],[[R0]][1],[[R2]][1]
-; X32-SSE1-DAG:    unpcklps %[[R3]], %[[R1]] # [[R1]] = [[R1]][0],[[R3]][0],[[R1]][1],[[R3]][1]
-; X32-SSE1-DAG:    unpcklps %[[R1]], %[[R0]] # [[R0]] = [[R0]][0],[[R1]][0],[[R0]][1],[[R1]][1]
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X32-SSE1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X32-SSE1-NEXT:    retl
 ;
 ; X32-SSE41-LABEL: merge_4f32_f32_2345_volatile:

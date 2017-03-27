@@ -140,7 +140,7 @@ StringRef GlobalValue::getSection() const {
   return cast<GlobalObject>(this)->getSection();
 }
 
-Comdat *GlobalValue::getComdat() {
+const Comdat *GlobalValue::getComdat() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
     if (const GlobalObject *GO = GA->getBaseObject())
@@ -230,7 +230,7 @@ bool GlobalValue::canIncreaseAlignment() const {
   return true;
 }
 
-GlobalObject *GlobalValue::getBaseObject() {
+const GlobalObject *GlobalValue::getBaseObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
   if (auto *GA = dyn_cast<GlobalAlias>(this))
