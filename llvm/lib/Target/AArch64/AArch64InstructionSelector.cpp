@@ -792,6 +792,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       }
     }
 
+    // If we haven't folded anything into our addressing mode yet, try to fold
+    // a frame index into the base+offset.
+    if (!Offset && PtrMI->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+      I.getOperand(1).ChangeToFrameIndex(PtrMI->getOperand(1).getIndex());
+
     I.addOperand(MachineOperand::CreateImm(Offset));
 
     // If we're storing a 0, use WZR/XZR.
