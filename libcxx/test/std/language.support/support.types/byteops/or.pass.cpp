@@ -12,8 +12,8 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // The following compilers don't like "std::byte b1{1}"
-// XFAIL: clang-3.5, clang-3.6, clang-3.7, clang-3.8
-// XFAIL: apple-clang-6, apple-clang-7, apple-clang-8.0
+// UNSUPPORTED: clang-3.5, clang-3.6, clang-3.7, clang-3.8
+// UNSUPPORTED: apple-clang-6, apple-clang-7, apple-clang-8.0
 
 // constexpr byte operator|(byte l, byte r) noexcept;
 
