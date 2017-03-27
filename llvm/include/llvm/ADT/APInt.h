@@ -706,7 +706,15 @@ public:
   /// Performs a bitwise AND operation on this APInt and RHS. RHS is
   /// logically zero-extended or truncated to match the bit-width of
   /// the LHS.
-  APInt &operator&=(uint64_t RHS);
+  APInt &operator&=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL &= RHS;
+      return *this;
+    }
+    pVal[0] &= RHS;
+    memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
+    return *this;
+  }
 
   /// \brief Bitwise OR assignment operator.
   ///
