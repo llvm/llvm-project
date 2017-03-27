@@ -11,6 +11,11 @@
   define void @store_zero_s64_gpr(i64* %addr) { ret void }
   define void @store_zero_s32_gpr(i32* %addr) { ret void }
 
+  define void @store_fi_s64_gpr() {
+    %ptr0 = alloca i64
+    ret void
+  }
+
   define void @store_gep_128_s64_gpr(i64* %addr) { ret void }
   define void @store_gep_512_s32_gpr(i32* %addr) { ret void }
   define void @store_gep_64_s16_gpr(i16* %addr) { ret void }
@@ -181,6 +186,34 @@ body:             |
     %1(s32) = G_CONSTANT i32 0
     G_STORE  %1, %0 :: (store 4 into %ir.addr)
 
+...
+
+---
+# CHECK-LABEL: name: store_fi_s64_gpr
+name:            store_fi_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+stack:
+  - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: STRXui %0, %stack.0.ptr0, 0 :: (store 8)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(p0) = G_FRAME_INDEX %stack.0.ptr0
+    G_STORE  %0, %1 :: (store 8)
 ...
 
 ---
