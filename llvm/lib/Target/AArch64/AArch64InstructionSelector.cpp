@@ -774,7 +774,25 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     I.setDesc(TII.get(NewOpc));
 
-    I.addOperand(MachineOperand::CreateImm(0));
+    uint64_t Offset = 0;
+    auto *PtrMI = MRI.getVRegDef(PtrReg);
+
+    // Try to fold a GEP into our unsigned immediate addressing mode.
+    if (PtrMI->getOpcode() == TargetOpcode::G_GEP) {
+      if (auto COff = getConstantVRegVal(PtrMI->getOperand(2).getReg(), MRI)) {
+        int64_t Imm = *COff;
+        const unsigned Size = MemTy.getSizeInBits() / 8;
+        const unsigned Scale = Log2_32(Size);
+        if ((Imm & (Size - 1)) == 0 && Imm >= 0 && Imm < (0x1000 << Scale)) {
+          unsigned Ptr2Reg = PtrMI->getOperand(1).getReg();
+          I.getOperand(1).setReg(Ptr2Reg);
+          PtrMI = MRI.getVRegDef(Ptr2Reg);
+          Offset = Imm / Size;
+        }
+      }
+    }
+
+    I.addOperand(MachineOperand::CreateImm(Offset));
 
     // If we're storing a 0, use WZR/XZR.
     if (auto CVal = getConstantVRegVal(ValReg, MRI)) {

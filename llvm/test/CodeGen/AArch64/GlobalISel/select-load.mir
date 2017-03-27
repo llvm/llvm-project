@@ -7,10 +7,22 @@
   define void @load_s32_gpr(i32* %addr) { ret void }
   define void @load_s16_gpr(i16* %addr) { ret void }
   define void @load_s8_gpr(i8* %addr) { ret void }
+
+  define void @load_gep_128_s64_gpr(i64* %addr) { ret void }
+  define void @load_gep_512_s32_gpr(i32* %addr) { ret void }
+  define void @load_gep_64_s16_gpr(i16* %addr) { ret void }
+  define void @load_gep_1_s8_gpr(i8* %addr) { ret void }
+
   define void @load_s64_fpr(i64* %addr) { ret void }
   define void @load_s32_fpr(i32* %addr) { ret void }
   define void @load_s16_fpr(i16* %addr) { ret void }
   define void @load_s8_fpr(i8* %addr) { ret void }
+
+  define void @load_gep_8_s64_fpr(i64* %addr) { ret void }
+  define void @load_gep_16_s32_fpr(i32* %addr) { ret void }
+  define void @load_gep_64_s16_fpr(i16* %addr) { ret void }
+  define void @load_gep_32_s8_fpr(i8* %addr) { ret void }
+
 ...
 
 ---
@@ -114,6 +126,134 @@ body:             |
 ...
 
 ---
+# CHECK-LABEL: name: load_gep_128_s64_gpr
+name:            load_gep_128_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRXui %0, 16 :: (load 8 from %ir.addr)
+# CHECK: %x0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 128
+    %2(p0) = G_GEP %0, %1
+    %3(s64) = G_LOAD %2 :: (load 8 from %ir.addr)
+    %x0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_512_s32_gpr
+name:            load_gep_512_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRWui %0, 128 :: (load 4 from %ir.addr)
+# CHECK: %w0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 512
+    %2(p0) = G_GEP %0, %1
+    %3(s32) = G_LOAD %2 :: (load 4 from %ir.addr)
+    %w0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_64_s16_gpr
+name:            load_gep_64_s16_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRHHui %0, 32 :: (load 2 from %ir.addr)
+# CHECK: %w0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 64
+    %2(p0) = G_GEP %0, %1
+    %3(s16) = G_LOAD %2 :: (load 2 from %ir.addr)
+    %w0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_1_s8_gpr
+name:            load_gep_1_s8_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRBBui %0, 1 :: (load 1 from %ir.addr)
+# CHECK: %w0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 1
+    %2(p0) = G_GEP %0, %1
+    %3(s8) = G_LOAD %2 :: (load 1 from %ir.addr)
+    %w0 = COPY %3
+...
+
+---
 # CHECK-LABEL: name: load_s64_fpr
 name:            load_s64_fpr
 legalized:       true
@@ -211,4 +351,132 @@ body:             |
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
     %b0 = COPY %1(s8)
+...
+
+---
+# CHECK-LABEL: name: load_gep_8_s64_fpr
+name:            load_gep_8_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRDui %0, 1 :: (load 8 from %ir.addr)
+# CHECK: %d0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 8
+    %2(p0) = G_GEP %0, %1
+    %3(s64) = G_LOAD %2 :: (load 8 from %ir.addr)
+    %d0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_16_s32_fpr
+name:            load_gep_16_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRSui %0, 4 :: (load 4 from %ir.addr)
+# CHECK: %s0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 16
+    %2(p0) = G_GEP %0, %1
+    %3(s32) = G_LOAD %2 :: (load 4 from %ir.addr)
+    %s0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_64_s16_fpr
+name:            load_gep_64_s16_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: fpr16 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRHui %0, 32 :: (load 2 from %ir.addr)
+# CHECK: %h0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 64
+    %2(p0) = G_GEP %0, %1
+    %3(s16) = G_LOAD %2 :: (load 2 from %ir.addr)
+    %h0 = COPY %3
+...
+
+---
+# CHECK-LABEL: name: load_gep_32_s8_fpr
+name:            load_gep_32_s8_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: fpr8 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %3 = LDRBui %0, 32 :: (load 1 from %ir.addr)
+# CHECK: %b0 = COPY %3
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 32
+    %2(p0) = G_GEP %0, %1
+    %3(s8) = G_LOAD %2 :: (load 1 from %ir.addr)
+    %b0 = COPY %3
 ...
