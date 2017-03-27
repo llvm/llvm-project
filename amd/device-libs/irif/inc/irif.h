@@ -83,6 +83,7 @@ extern __attribute__((const)) float __llvm_round_f32(float) __asm("llvm.round.f3
 extern __attribute__((const)) double __llvm_round_f64(double) __asm("llvm.round.f64");
 
 extern __attribute__((const)) int __llvm_bitreverse_i32(int) __asm("llvm.bitreverse.i32");
+extern __attribute__((const)) long __llvm_bitreverse_i64(long) __asm("llvm.bitreverse.i64");
 
 extern __attribute__((const)) int __llvm_ctpop_i32(int) __asm("llvm.ctpop.i32");
 extern __attribute__((const)) long __llvm_ctpop_i64(long) __asm("llvm.ctpop.i64");
