@@ -118,6 +118,15 @@ TEST(PointeeIteratorTest, SmartPointer) {
   EXPECT_EQ(End, I);
 }
 
+TEST(PointeeIteratorTest, Range) {
+  int A[] = {1, 2, 3, 4};
+  SmallVector<int *, 4> V{&A[0], &A[1], &A[2], &A[3]};
+
+  int I = 0;
+  for (int II : make_pointee_range(V))
+    EXPECT_EQ(A[I++], II);
+}
+
 TEST(FilterIteratorTest, Lambda) {
   auto IsOdd = [](int N) { return N % 2 == 1; };
   int A[] = {0, 1, 2, 3, 4, 5, 6};
@@ -209,6 +218,13 @@ TEST(PointerIterator, Const) {
   EXPECT_EQ(A + 2, std::next(*Begin, 2));
   EXPECT_EQ(A + 3, std::next(*Begin, 3));
   EXPECT_EQ(A + 4, std::next(*Begin, 4));
+}
+
+TEST(PointerIterator, Range) {
+  int A[] = {1, 2, 3, 4};
+  int I = 0;
+  for (int *P : make_pointer_range(A))
+    EXPECT_EQ(A + I++, P);
 }
 
 TEST(ZipIteratorTest, Basic) {
