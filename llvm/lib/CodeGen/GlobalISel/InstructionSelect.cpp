@@ -48,6 +48,29 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+/// Check whether an instruction \p MI is dead: it only defines dead virtual
+/// registers, and doesn't have other side effects.
+static bool isTriviallyDead(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI) {
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  if (!MI.isSafeToMove(/*AA=*/nullptr, SawStore))
+    return false;
+
+  // Instructions without side-effects are dead iff they only define dead vregs.
+  for (auto &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isDef())
+      continue;
+
+    unsigned Reg = MO.getReg();
+    // Keep Debug uses live: we don't want to have an effect on debug info.
+    if (TargetRegisterInfo::isPhysicalRegister(Reg) || !MRI.use_empty(Reg))
+      return false;
+  }
+  return true;
+}
+
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -118,6 +141,14 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         --MII;
 
       DEBUG(dbgs() << "Selecting: \n  " << MI);
+
+      // We could have folded this instruction away already, making it dead.
+      // If so, erase it.
+      if (isTriviallyDead(MI, MRI)) {
+        DEBUG(dbgs() << "Is dead; erasing.\n");
+        MI.eraseFromParent();
+        continue;
+      }
 
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's

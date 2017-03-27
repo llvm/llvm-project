@@ -34,6 +34,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s32) = G_BITCAST %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -58,6 +59,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s32) = G_BITCAST %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -82,6 +84,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s32) = G_BITCAST %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -106,6 +109,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s32) = G_BITCAST %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -130,6 +134,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s64) = G_BITCAST %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -154,6 +159,7 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s64) = G_BITCAST %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -177,6 +183,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s64) = G_BITCAST %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -201,4 +208,5 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s64) = G_BITCAST %0
+    %x0 = COPY %1(s64)
 ...

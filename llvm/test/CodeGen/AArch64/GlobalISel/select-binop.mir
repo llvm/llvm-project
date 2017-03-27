@@ -83,6 +83,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_ADD %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -112,6 +113,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_ADD %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -122,7 +124,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32sp }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr32sp }
 registers:
   - { id: 0, class: gpr }
@@ -139,6 +141,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = G_CONSTANT i32 1
     %2(s32) = G_ADD %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -149,7 +152,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64sp }
-# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr64sp }
 registers:
   - { id: 0, class: gpr }
@@ -166,6 +169,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = G_CONSTANT i32 1
     %2(s64) = G_ADD %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -176,7 +180,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32sp }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr32sp }
 registers:
   - { id: 0, class: gpr }
@@ -198,6 +202,7 @@ body:             |
 
   bb.1:
     %2(s32) = G_ADD %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -227,6 +232,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_SUB %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -256,6 +262,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_SUB %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -285,6 +292,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_OR %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -314,6 +322,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_OR %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -345,6 +354,7 @@ body:             |
       %0(<2 x s32>) = COPY %d0
       %1(<2 x s32>) = COPY %d1
       %2(<2 x s32>) = G_OR %0, %1
+      %d0 = COPY %2(<2 x s32>)
 ...
 
 ---
@@ -374,6 +384,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_AND %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -403,6 +414,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_AND %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -432,6 +444,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_SHL %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -461,6 +474,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_SHL %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -490,6 +504,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_LSHR %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -519,6 +534,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_LSHR %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -548,6 +564,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_ASHR %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -577,6 +594,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_ASHR %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -607,6 +625,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_MUL %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -636,6 +655,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_MUL %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -664,6 +684,8 @@ body:             |
     %1:gpr(s64) = COPY %x1
     %2:gpr(s64) = G_SMULH %0, %1
     %3:gpr(s64) = G_UMULH %0, %1
+    %x0 = COPY %2(s64)
+    %x0 = COPY %3(s64)
 ...
 
 ---
@@ -693,6 +715,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_SDIV %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -722,6 +745,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_SDIV %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -751,6 +775,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_UDIV %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -780,6 +805,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_UDIV %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -809,6 +835,7 @@ body:             |
     %0(s32) = COPY %s0
     %1(s32) = COPY %s1
     %2(s32) = G_FADD %0, %1
+    %s0 = COPY %2(s32)
 ...
 
 ---
@@ -837,6 +864,7 @@ body:             |
     %0(s64) = COPY %d0
     %1(s64) = COPY %d1
     %2(s64) = G_FADD %0, %1
+    %d0 = COPY %2(s64)
 ...
 
 ---
@@ -865,6 +893,7 @@ body:             |
     %0(s32) = COPY %s0
     %1(s32) = COPY %s1
     %2(s32) = G_FSUB %0, %1
+    %s0 = COPY %2(s32)
 ...
 
 ---
@@ -893,6 +922,7 @@ body:             |
     %0(s64) = COPY %d0
     %1(s64) = COPY %d1
     %2(s64) = G_FSUB %0, %1
+    %d0 = COPY %2(s64)
 ...
 
 ---
@@ -921,6 +951,7 @@ body:             |
     %0(s32) = COPY %s0
     %1(s32) = COPY %s1
     %2(s32) = G_FMUL %0, %1
+    %s0 = COPY %2(s32)
 ...
 
 ---
@@ -949,6 +980,7 @@ body:             |
     %0(s64) = COPY %d0
     %1(s64) = COPY %d1
     %2(s64) = G_FMUL %0, %1
+    %d0 = COPY %2(s64)
 ...
 
 ---
@@ -977,6 +1009,7 @@ body:             |
     %0(s32) = COPY %s0
     %1(s32) = COPY %s1
     %2(s32) = G_FDIV %0, %1
+    %s0 = COPY %2(s32)
 ...
 
 ---
@@ -1005,4 +1038,5 @@ body:             |
     %0(s64) = COPY %d0
     %1(s64) = COPY %d1
     %2(s64) = G_FDIV %0, %1
+    %d0 = COPY %2(s64)
 ...
