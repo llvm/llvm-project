@@ -52,18 +52,40 @@ define void @allocai64() {
 ; CHECK: body:
 ;
 ; ABI/constant lowering and IR-level entry basic block.
-; CHECK: {{bb.[0-9]+}} (%ir-block.{{[0-9]+}}):
+; CHECK: {{bb.[0-9]+}}.entry:
 ;
 ; Make sure we have one successor and only one.
-; CHECK-NEXT: successors: %[[END:bb.[0-9]+.end]](0x80000000)
+; CHECK-NEXT: successors: %[[BB2:bb.[0-9]+.bb2]](0x80000000)
 ;
 ; Check that we emit the correct branch.
-; CHECK: G_BR %[[END]]
+; CHECK: G_BR %[[BB2]]
 ;
 ; Check that end contains the return instruction.
+; CHECK: [[END:bb.[0-9]+.end]]:
+; CHECK-NEXT: RET_ReallyLR
+;
+; CHECK: {{bb.[0-9]+}}.bb2:
+; CHECK-NEXT: successors: %[[END]](0x80000000)
+; CHECK: G_BR %[[END]]
+define void @uncondbr() {
+entry:
+  br label %bb2
+end:
+  ret void
+bb2:
+  br label %end
+}
+
+; CHECK-LABEL: name: uncondbr_fallthrough
+; CHECK: body:
+; CHECK: {{bb.[0-9]+}}.entry:
+; CHECK-NEXT: successors: %[[END:bb.[0-9]+.end]](0x80000000)
+; We don't emit a branch here, as we can fallthrough to the successor.
+; CHECK-NOT: G_BR
 ; CHECK: [[END]]:
 ; CHECK-NEXT: RET_ReallyLR
-define void @uncondbr() {
+define void @uncondbr_fallthrough() {
+entry:
   br label %end
 end:
   ret void
@@ -140,7 +162,6 @@ false:
 ; CHECK: [[BB_CASE200]]:
 ; CHECK-NEXT: successors: %[[BB_RET]](0x80000000)
 ; CHECK: %[[regretc200:[0-9]+]](s32) = G_ADD %0, %[[reg2]]
-; CHECK: G_BR %[[BB_RET]]
 ;
 ; CHECK: [[BB_RET]]:
 ; CHECK-NEXT: %[[regret:[0-9]+]](s32) = PHI %[[regretdefault]](s32), %[[BB_DEFAULT]], %[[regretc100]](s32), %[[BB_CASE100]]
@@ -232,7 +253,7 @@ phi.block:
 ; CHECK: {{bb.[0-9]+.entry}}:
 ; Make sure we have one successor
 ; CHECK-NEXT: successors: %[[BB_L1:bb.[0-9]+.L1]](0x80000000)
-; CHECK: G_BR %[[BB_L1]]
+; CHECK-NOT: G_BR
 ;
 ; Check basic block L1 has 2 successors: BBL1 and BBL2
 ; CHECK: [[BB_L1]] (address-taken):
@@ -525,8 +546,8 @@ define void @unreachable(i32 %a) {
 ; CHECK-LABEL: name: constant_int
 ; CHECK: [[IN:%[0-9]+]](s32) = COPY %w0
 ; CHECK: [[ONE:%[0-9]+]](s32) = G_CONSTANT i32 1
-; CHECK: G_BR
 
+; CHECK: {{bb.[0-9]+}}.next:
 ; CHECK: [[SUM1:%[0-9]+]](s32) = G_ADD [[IN]], [[ONE]]
 ; CHECK: [[SUM2:%[0-9]+]](s32) = G_ADD [[IN]], [[ONE]]
 ; CHECK: [[RES:%[0-9]+]](s32) = G_ADD [[SUM1]], [[SUM2]]
@@ -1181,7 +1202,7 @@ define i8* @test_const_placement() {
 ; CHECK: bb.{{[0-9]+}} (%ir-block.{{[0-9]+}}):
 ; CHECK:   [[VAL_INT:%[0-9]+]](s32) = G_CONSTANT i32 42
 ; CHECK:   [[VAL:%[0-9]+]](p0) = G_INTTOPTR [[VAL_INT]](s32)
-; CHECK:   G_BR
+; CHECK: {{bb.[0-9]+}}.next:
   br label %next
 
 next:
