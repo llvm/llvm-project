@@ -448,6 +448,50 @@ static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
   }
 }
 
+bool AArch64InstructionSelector::selectCompareBranch(
+    MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
+
+  const unsigned CondReg = I.getOperand(0).getReg();
+  MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
+  MachineInstr *CCMI = MRI.getVRegDef(CondReg);
+  if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
+    return false;
+
+  unsigned LHS = CCMI->getOperand(2).getReg();
+  unsigned RHS = CCMI->getOperand(3).getReg();
+  if (!getConstantVRegVal(RHS, MRI))
+    std::swap(RHS, LHS);
+
+  const auto RHSImm = getConstantVRegVal(RHS, MRI);
+  if (!RHSImm || *RHSImm != 0)
+    return false;
+
+  const RegisterBank &RB = *RBI.getRegBank(LHS, MRI, TRI);
+  if (RB.getID() != AArch64::GPRRegBankID)
+    return false;
+
+  const auto Pred = (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
+  if (Pred != CmpInst::ICMP_NE && Pred != CmpInst::ICMP_EQ)
+    return false;
+
+  const unsigned CmpWidth = MRI.getType(LHS).getSizeInBits();
+  unsigned CBOpc = 0;
+  if (CmpWidth <= 32)
+    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZW : AArch64::CBNZW);
+  else if (CmpWidth == 64)
+    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZX : AArch64::CBNZX);
+  else
+    return false;
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(CBOpc))
+                 .addUse(LHS)
+                 .addMBB(DestMBB);
+
+  constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
   return false;
@@ -555,6 +599,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     const unsigned CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
+
+    if (selectCompareBranch(I, MF, MRI))
+      return true;
 
     auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::TBNZW))
                    .addUse(CondReg)
