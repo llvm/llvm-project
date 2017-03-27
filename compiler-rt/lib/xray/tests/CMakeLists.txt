@@ -49,7 +49,7 @@ macro(add_xray_unittest testname)
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
           -lpthread
           -L${COMPILER_RT_LIBRARY_OUTPUT_DIR} -lclang_rt.xray-${arch}
-          -latomic -ldl -lrt)
+          -ldl -lrt)
       endif()
       # FIXME: Figure out how to run even just the unit tests on APPLE.
     endforeach()

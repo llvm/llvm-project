@@ -554,11 +554,11 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
 // input section.
 template <class ELFT, class RelTy>
 static int64_t computeAddend(const RelTy &Rel, const uint8_t *Buf) {
-  int64_t A = getAddend<ELFT>(Rel);
   uint32_t Type = Rel.getType(Config->IsMips64EL);
+  int64_t A = RelTy::IsRela
+                  ? getAddend<ELFT>(Rel)
+                  : Target->getImplicitAddend(Buf + Rel.r_offset, Type);
 
-  if (!RelTy::IsRela)
-    A += Target->getImplicitAddend(Buf + Rel.r_offset, Type);
   if (Config->EMachine == EM_PPC64 && Config->Pic && Type == R_PPC64_TOC)
     A += getPPC64TocBase();
   return A;

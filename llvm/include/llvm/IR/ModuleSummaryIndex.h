@@ -233,12 +233,13 @@ public:
   void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
 
   const GlobalValueSummary &getAliasee() const {
-    return const_cast<AliasSummary *>(this)->getAliasee();
+    assert(AliaseeSummary && "Unexpected missing aliasee summary");
+    return *AliaseeSummary;
   }
 
   GlobalValueSummary &getAliasee() {
-    assert(AliaseeSummary && "Unexpected missing aliasee summary");
-    return *AliaseeSummary;
+    return const_cast<GlobalValueSummary &>(
+                         static_cast<const AliasSummary *>(this)->getAliasee());
   }
 };
 

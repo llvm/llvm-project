@@ -206,7 +206,8 @@ Function *Module::getFunction(StringRef Name) const {
 /// If AllowLocal is set to true, this function will return types that
 /// have an local. By default, these types are not returned.
 ///
-GlobalVariable *Module::getGlobalVariable(StringRef Name, bool AllowLocal) {
+GlobalVariable *Module::getGlobalVariable(StringRef Name,
+                                          bool AllowLocal) const {
   if (GlobalVariable *Result =
       dyn_cast_or_null<GlobalVariable>(getNamedValue(Name)))
     if (AllowLocal || !Result->hasLocalLinkage())
