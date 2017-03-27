@@ -771,10 +771,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     // Some intrinsics take metadata parameters. Reject them.
     if (isa<MetadataAsValue>(Arg))
       return false;
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg))
-      MIB.addImm(CI->getSExtValue());
-    else
-      MIB.addUse(getOrCreateVReg(*Arg));
+    MIB.addUse(getOrCreateVReg(*Arg));
   }
   return true;
 }
