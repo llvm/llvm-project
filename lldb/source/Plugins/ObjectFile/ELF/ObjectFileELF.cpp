@@ -52,6 +52,7 @@ namespace {
 const char *const LLDB_NT_OWNER_FREEBSD = "FreeBSD";
 const char *const LLDB_NT_OWNER_GNU = "GNU";
 const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
+const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
 const char *const LLDB_NT_OWNER_CSR = "csr";
 const char *const LLDB_NT_OWNER_ANDROID = "Android";
 const char *const LLDB_NT_OWNER_CORE = "CORE";
@@ -832,7 +833,7 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
     if (section_list) {
       if (!value_is_offset) {
         bool found_offset = false;
-        for (size_t i = 0, count = GetProgramHeaderCount(); i < count; ++i) {
+        for (size_t i = 1, count = GetProgramHeaderCount(); i <= count; ++i) {
           const elf::ELFProgramHeader *header = GetProgramHeaderByIndex(i);
           if (header == nullptr)
             continue;
@@ -1368,6 +1369,12 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
         log->Printf(
             "ObjectFileELF::%s detected NetBSD, min version constant %" PRIu32,
             __FUNCTION__, version_info);
+    }
+    // Process OpenBSD ELF notes.
+    else if (note.n_name == LLDB_NT_OWNER_OPENBSD) {
+      // Set the elf OS version to OpenBSD.  Also clear the vendor.
+      arch_spec.GetTriple().setOS(llvm::Triple::OSType::OpenBSD);
+      arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
     }
     // Process CSR kalimba notes
     else if ((note.n_type == LLDB_NT_GNU_ABI_TAG) &&
@@ -3349,7 +3356,7 @@ bool ObjectFileELF::GetArchitecture(ArchSpec &arch) {
     // headers
     // that might shed more light on the architecture
     if (ParseProgramHeaders()) {
-      for (size_t i = 0, count = GetProgramHeaderCount(); i < count; ++i) {
+      for (size_t i = 1, count = GetProgramHeaderCount(); i <= count; ++i) {
         const elf::ELFProgramHeader *header = GetProgramHeaderByIndex(i);
         if (header && header->p_type == PT_NOTE && header->p_offset != 0 &&
             header->p_filesz > 0) {

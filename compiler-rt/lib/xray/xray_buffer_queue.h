@@ -15,10 +15,9 @@
 #ifndef XRAY_BUFFER_QUEUE_H
 #define XRAY_BUFFER_QUEUE_H
 
-#include <atomic>
-#include <cstdint>
+#include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_mutex.h"
 #include <deque>
-#include <mutex>
 #include <unordered_set>
 #include <utility>
 
@@ -42,9 +41,9 @@ private:
   // We use a bool to indicate whether the Buffer has been used in this
   // freelist implementation.
   std::deque<std::tuple<Buffer, bool>> Buffers;
-  std::mutex Mutex;
+  __sanitizer::BlockingMutex Mutex;
   std::unordered_set<void *> OwnedBuffers;
-  std::atomic<bool> Finalizing;
+  __sanitizer::atomic_uint8_t Finalizing;
 
 public:
   enum class ErrorCode : unsigned {
@@ -94,7 +93,10 @@ public:
   ///   - ...
   ErrorCode releaseBuffer(Buffer &Buf);
 
-  bool finalizing() const { return Finalizing.load(std::memory_order_acquire); }
+  bool finalizing() const {
+    return __sanitizer::atomic_load(&Finalizing,
+                                    __sanitizer::memory_order_acquire);
+  }
 
   /// Sets the state of the BufferQueue to finalizing, which ensures that:
   ///
@@ -109,7 +111,7 @@ public:
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation.
   template <class F> void apply(F Fn) {
-    std::lock_guard<std::mutex> G(Mutex);
+    __sanitizer::BlockingMutexLock G(&Mutex);
     for (const auto &T : Buffers) {
       if (std::get<1>(T))
         Fn(std::get<0>(T));

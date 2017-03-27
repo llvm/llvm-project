@@ -23,7 +23,7 @@ using namespace __xray;
 using namespace __sanitizer;
 
 BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
-    : BufferSize(B), Buffers(N), Mutex(), OwnedBuffers(), Finalizing(false) {
+    : BufferSize(B), Buffers(N), Mutex(), OwnedBuffers(), Finalizing{0} {
   for (auto &T : Buffers) {
     void *Tmp = malloc(BufferSize);
     if (Tmp == nullptr) {
@@ -40,9 +40,9 @@ BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
 }
 
 BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
-  if (Finalizing.load(std::memory_order_acquire))
+  if (__sanitizer::atomic_load(&Finalizing, __sanitizer::memory_order_acquire))
     return ErrorCode::QueueFinalizing;
-  std::lock_guard<std::mutex> Guard(Mutex);
+  __sanitizer::BlockingMutexLock Guard(&Mutex);
   if (Buffers.empty())
     return ErrorCode::NotEnoughMemory;
   auto &T = Buffers.front();
@@ -57,7 +57,7 @@ BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
 BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
   if (OwnedBuffers.count(Buf.Buffer) == 0)
     return ErrorCode::UnrecognizedBuffer;
-  std::lock_guard<std::mutex> Guard(Mutex);
+  __sanitizer::BlockingMutexLock Guard(&Mutex);
 
   // Now that the buffer has been released, we mark it as "used".
   Buffers.emplace(Buffers.end(), Buf, true /* used */);
@@ -67,7 +67,8 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
 }
 
 BufferQueue::ErrorCode BufferQueue::finalize() {
-  if (Finalizing.exchange(true, std::memory_order_acq_rel))
+  if (__sanitizer::atomic_exchange(&Finalizing, 1,
+                                   __sanitizer::memory_order_acq_rel))
     return ErrorCode::QueueFinalizing;
   return ErrorCode::Ok;
 }

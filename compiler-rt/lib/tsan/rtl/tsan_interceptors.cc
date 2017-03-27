@@ -277,7 +277,7 @@ ScopedInterceptor::~ScopedInterceptor() {
 
 void ScopedInterceptor::EnableIgnores() {
   if (ignoring_) {
-    ThreadIgnoreBegin(thr_, pc_);
+    ThreadIgnoreBegin(thr_, pc_, false);
     if (in_ignored_lib_) {
       DCHECK(!thr_->in_ignored_lib);
       thr_->in_ignored_lib = true;
@@ -1025,7 +1025,7 @@ static void cond_mutex_unlock(CondMutexUnlockCtx *arg) {
   ThreadSignalContext *ctx = SigCtx(arg->thr);
   CHECK_EQ(atomic_load(&ctx->in_blocking_func, memory_order_relaxed), 1);
   atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
-  MutexLock(arg->thr, arg->pc, (uptr)arg->m);
+  MutexPostLock(arg->thr, arg->pc, (uptr)arg->m, MutexFlagDoPreLockOnPostLock);
   // Undo BlockingCall ctor effects.
   arg->thr->ignore_interceptors--;
   arg->si->~ScopedInterceptor();
@@ -1054,7 +1054,7 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
         fn, c, m, t, (void (*)(void *arg))cond_mutex_unlock, &arg);
   }
   if (res == errno_EOWNERDEAD) MutexRepair(thr, pc, (uptr)m);
-  MutexLock(thr, pc, (uptr)m);
+  MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);
   return res;
 }
 
@@ -1114,14 +1114,15 @@ TSAN_INTERCEPTOR(int, pthread_mutex_init, void *m, void *a) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_init, m, a);
   int res = REAL(pthread_mutex_init)(m, a);
   if (res == 0) {
-    bool recursive = false;
+    u32 flagz = 0;
     if (a) {
       int type = 0;
       if (REAL(pthread_mutexattr_gettype)(a, &type) == 0)
-        recursive = (type == PTHREAD_MUTEX_RECURSIVE
-            || type == PTHREAD_MUTEX_RECURSIVE_NP);
+        if (type == PTHREAD_MUTEX_RECURSIVE ||
+            type == PTHREAD_MUTEX_RECURSIVE_NP)
+          flagz |= MutexFlagWriteReentrant;
     }
-    MutexCreate(thr, pc, (uptr)m, false, recursive, false);
+    MutexCreate(thr, pc, (uptr)m, flagz);
   }
   return res;
 }
@@ -1141,7 +1142,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   if (res == EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == EOWNERDEAD)
-    MutexLock(thr, pc, (uptr)m, /*rec=*/1, /*try_lock=*/true);
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   return res;
 }
 
@@ -1150,7 +1151,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_timedlock, m, abstime);
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m);
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   }
   return res;
 }
@@ -1161,7 +1162,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_init, void *m, int pshared) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_init, m, pshared);
   int res = REAL(pthread_spin_init)(m, pshared);
   if (res == 0) {
-    MutexCreate(thr, pc, (uptr)m, false, false, false);
+    MutexCreate(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1177,9 +1178,10 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
   int res = REAL(pthread_spin_lock)(m);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m);
+    MutexPostLock(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1188,7 +1190,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_trylock, m);
   int res = REAL(pthread_spin_trylock)(m);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m, /*rec=*/1, /*try_lock=*/true);
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   }
   return res;
 }
@@ -1205,7 +1207,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_init, void *m, void *a) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_init, m, a);
   int res = REAL(pthread_rwlock_init)(m, a);
   if (res == 0) {
-    MutexCreate(thr, pc, (uptr)m, true, false, false);
+    MutexCreate(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1221,9 +1223,10 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_rdlock, m);
+  MutexPreReadLock(thr, pc, (uptr)m);
   int res = REAL(pthread_rwlock_rdlock)(m);
   if (res == 0) {
-    MutexReadLock(thr, pc, (uptr)m);
+    MutexPostReadLock(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1232,7 +1235,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_tryrdlock, m);
   int res = REAL(pthread_rwlock_tryrdlock)(m);
   if (res == 0) {
-    MutexReadLock(thr, pc, (uptr)m, /*try_lock=*/true);
+    MutexPostReadLock(thr, pc, (uptr)m, MutexFlagTryLock);
   }
   return res;
 }
@@ -1242,7 +1245,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedrdlock, m, abstime);
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
   if (res == 0) {
-    MutexReadLock(thr, pc, (uptr)m);
+    MutexPostReadLock(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1250,9 +1253,10 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
+  MutexPreLock(thr, pc, (uptr)m);
   int res = REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m);
+    MutexPostLock(thr, pc, (uptr)m);
   }
   return res;
 }
@@ -1261,7 +1265,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_trywrlock, m);
   int res = REAL(pthread_rwlock_trywrlock)(m);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m, /*rec=*/1, /*try_lock=*/true);
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   }
   return res;
 }
@@ -1271,7 +1275,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedwrlock, m, abstime);
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
   if (res == 0) {
-    MutexLock(thr, pc, (uptr)m);
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   }
   return res;
 }
@@ -2251,8 +2255,12 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_ON_EXIT(ctx) \
   OnExit(((TsanInterceptorContext *) ctx)->thr)
 
-#define COMMON_INTERCEPTOR_MUTEX_LOCK(ctx, m) \
-  MutexLock(((TsanInterceptorContext *)ctx)->thr, \
+#define COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m) \
+  MutexPreLock(((TsanInterceptorContext *)ctx)->thr, \
+            ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
+
+#define COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m) \
+  MutexPostLock(((TsanInterceptorContext *)ctx)->thr, \
             ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
 
 #define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m) \

@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <string>
 #include <sys/syscall.h>
@@ -91,12 +92,12 @@ static void writeTSCWrapMetadata(uint64_t TSC);
 /// walk backward through its buffer and erase trivial functions to avoid
 /// polluting the log and may use the buffer queue to obtain or release a
 /// buffer.
-static void
-processFunctionHook(int32_t FuncId, XRayEntryType Entry, uint64_t TSC,
-                    unsigned char CPU,
-                    int (*wall_clock_reader)(clockid_t, struct timespec *),
-                    const std::atomic<XRayLogInitStatus> &LoggingStatus,
-                    const std::shared_ptr<BufferQueue> &BQ);
+static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
+                                uint64_t TSC, unsigned char CPU,
+                                int (*wall_clock_reader)(clockid_t,
+                                                         struct timespec *),
+                                __sanitizer::atomic_sint32_t &LoggingStatus,
+                                const std::shared_ptr<BufferQueue> &BQ);
 
 //-----------------------------------------------------------------------------|
 // The rest of the file is implementation.                                     |
@@ -166,8 +167,9 @@ public:
 };
 
 static inline bool loggingInitialized(
-    const std::atomic<XRayLogInitStatus> &LoggingStatus) XRAY_NEVER_INSTRUMENT {
-  return LoggingStatus.load(std::memory_order_acquire) ==
+    const __sanitizer::atomic_sint32_t &LoggingStatus) XRAY_NEVER_INSTRUMENT {
+  return __sanitizer::atomic_load(&LoggingStatus,
+                                  __sanitizer::memory_order_acquire) ==
          XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
@@ -305,10 +307,11 @@ static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
 static inline void processFunctionHook(
     int32_t FuncId, XRayEntryType Entry, uint64_t TSC, unsigned char CPU,
     int (*wall_clock_reader)(clockid_t, struct timespec *),
-    const std::atomic<XRayLogInitStatus> &LoggingStatus,
+    __sanitizer::atomic_sint32_t &LoggingStatus,
     const std::shared_ptr<BufferQueue> &BQ) XRAY_NEVER_INSTRUMENT {
   // Bail out right away if logging is not initialized yet.
-  if (LoggingStatus.load(std::memory_order_acquire) !=
+  if (__sanitizer::atomic_load(&LoggingStatus,
+                               __sanitizer::memory_order_acquire) !=
       XRayLogInitStatus::XRAY_LOG_INITIALIZED)
     return;
 
@@ -352,7 +355,8 @@ static inline void processFunctionHook(
   if (Buffer.Buffer == nullptr) {
     auto EC = LocalBQ->getBuffer(Buffer);
     if (EC != BufferQueue::ErrorCode::Ok) {
-      auto LS = LoggingStatus.load(std::memory_order_acquire);
+      auto LS = __sanitizer::atomic_load(&LoggingStatus,
+                                         __sanitizer::memory_order_acquire);
       if (LS != XRayLogInitStatus::XRAY_LOG_FINALIZING &&
           LS != XRayLogInitStatus::XRAY_LOG_FINALIZED)
         Report("Failed to acquire a buffer; error=%s\n",

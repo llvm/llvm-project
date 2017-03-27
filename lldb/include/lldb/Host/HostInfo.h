@@ -51,6 +51,9 @@
 #elif defined(__NetBSD__)
 #include "lldb/Host/netbsd/HostInfoNetBSD.h"
 #define HOST_INFO_TYPE HostInfoNetBSD
+#elif defined(__OpenBSD__)
+#include "lldb/Host/openbsd/HostInfoOpenBSD.h"
+#define HOST_INFO_TYPE HostInfoOpenBSD
 #elif defined(__APPLE__)
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #define HOST_INFO_TYPE HostInfoMacOSX

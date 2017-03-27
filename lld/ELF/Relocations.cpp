@@ -237,9 +237,8 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
   return 0;
 }
 
-template <class RelTy>
-static uint32_t getMipsPairType(const RelTy *Rel, const SymbolBody &Sym) {
-  switch (Rel->getType(Config->IsMips64EL)) {
+static uint32_t getMipsPairType(uint32_t Type, const SymbolBody &Sym) {
+  switch (Type) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
@@ -251,37 +250,6 @@ static uint32_t getMipsPairType(const RelTy *Rel, const SymbolBody &Sym) {
   default:
     return R_MIPS_NONE;
   }
-}
-
-template <class RelTy>
-static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
-                                    SymbolBody &Sym, const RelTy *Rel,
-                                    const RelTy *End) {
-  uint32_t SymIndex = Rel->getSymbol(Config->IsMips64EL);
-  uint32_t Type = getMipsPairType(Rel, Sym);
-
-  // Some MIPS relocations use addend calculated from addend of the relocation
-  // itself and addend of paired relocation. ABI requires to compute such
-  // combined addend in case of REL relocation record format only.
-  // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela || Type == R_MIPS_NONE)
-    return 0;
-
-  for (const RelTy *RI = Rel; RI != End; ++RI) {
-    if (RI->getType(Config->IsMips64EL) != Type)
-      continue;
-    if (RI->getSymbol(Config->IsMips64EL) != SymIndex)
-      continue;
-
-    endianness E = Config->Endianness;
-    int32_t Hi = (read32(BufLoc, E) & 0xffff) << 16;
-    int32_t Lo = SignExtend32<16>(read32(Buf + RI->r_offset, E));
-    return Hi + Lo;
-  }
-
-  warn("can't find matching " + toString(Type) + " relocation for " +
-       toString(Rel->getType(Config->IsMips64EL)));
-  return 0;
 }
 
 // True if non-preemptable symbol always has the same value regardless of where
@@ -313,7 +281,7 @@ static bool isRelExpr(RelExpr Expr) {
 //
 // For instance, we know the offset from a relocation to its target at
 // link-time if the relocation is PC-relative and refers a
-// (non-interruptible) function in the same executable. This function
+// non-interposable function in the same executable. This function
 // will return true for such relocation.
 //
 // If this function returns false, that means we need to emit a
@@ -581,26 +549,62 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   return Expr;
 }
 
+// Returns an addend of a given relocation. If it is RELA, an addend
+// is in a relocation itself. If it is REL, we need to read it from an
+// input section.
 template <class ELFT, class RelTy>
-static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
-                             const uint8_t *SectionData, const RelTy *End,
-                             const RelTy &Rel, RelExpr Expr, SymbolBody &Body) {
+static int64_t computeAddend(const RelTy &Rel, const uint8_t *Buf) {
   uint32_t Type = Rel.getType(Config->IsMips64EL);
-  int64_t Addend = getAddend<ELFT>(Rel);
-  const uint8_t *BufLoc = SectionData + Rel.r_offset;
+  int64_t A = RelTy::IsRela
+                  ? getAddend<ELFT>(Rel)
+                  : Target->getImplicitAddend(Buf + Rel.r_offset, Type);
 
-  if (!RelTy::IsRela)
-    Addend += Target->getImplicitAddend(BufLoc, Type);
+  if (Config->EMachine == EM_PPC64 && Config->Pic && Type == R_PPC64_TOC)
+    A += getPPC64TocBase();
+  return A;
+}
 
-  if (Config->EMachine == EM_MIPS) {
-    Addend += findMipsPairedAddend(SectionData, BufLoc, Body, &Rel, End);
-    if (Expr == R_MIPS_GOTREL && Body.isLocal())
-      Addend += File.MipsGp0;
+// MIPS has an odd notion of "paired" relocations to calculate addends.
+// For example, if a relocation is of R_MIPS_HI16, there must be a
+// R_MIPS_LO16 relocation after that, and an addend is calculated using
+// the two relocations.
+template <class ELFT, class RelTy>
+static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
+                                 RelExpr Expr, SymbolBody &Body,
+                                 const RelTy *End) {
+  if (Expr == R_MIPS_GOTREL && Body.isLocal())
+    return Sec.getFile<ELFT>()->MipsGp0;
+
+  // The ABI says that the paired relocation is used only for REL.
+  // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+  if (RelTy::IsRela)
+    return 0;
+
+  uint32_t Type = Rel.getType(Config->IsMips64EL);
+  uint32_t PairTy = getMipsPairType(Type, Body);
+  if (PairTy == R_MIPS_NONE)
+    return 0;
+
+  const uint8_t *Buf = Sec.Data.data();
+  uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
+
+  // To make things worse, paired relocations might not be contiguous in
+  // the relocation table, so we need to do linear search. *sigh*
+  for (const RelTy *RI = &Rel; RI != End; ++RI) {
+    if (RI->getType(Config->IsMips64EL) != PairTy)
+      continue;
+    if (RI->getSymbol(Config->IsMips64EL) != SymIndex)
+      continue;
+
+    endianness E = Config->Endianness;
+    int32_t Hi = (read32(Buf + Rel.r_offset, E) & 0xffff) << 16;
+    int32_t Lo = SignExtend32<16>(read32(Buf + RI->r_offset, E));
+    return Hi + Lo;
   }
 
-  if (Config->Pic && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
-    Addend += getPPC64TocBase();
-  return Addend;
+  warn("can't find matching " + toString(PairTy) + " relocation for " +
+       toString(Type));
+  return 0;
 }
 
 template <class ELFT>
@@ -672,6 +676,9 @@ public:
     }
   }
 
+  // Translates offsets in input sections to offsets in output sections.
+  // Given offset must increase monotonically. We assume that P is
+  // sorted by InputOff.
   uint64_t get(uint64_t Off) {
     if (P.empty())
       return Off;
@@ -680,7 +687,11 @@ public:
       ++I;
     if (I == Size)
       return Off;
-    assert(P[I].InputOff <= Off && "Relocation not in any piece");
+
+    if (Off < P[I].InputOff) {
+      error("relocation not in any piece");
+      return -1;
+    }
 
     // Offset -1 means that the piece is dead (i.e. garbage collected).
     if (P[I].OutputOff == -1)
@@ -694,6 +705,41 @@ private:
   size_t Size;
 };
 } // namespace
+
+template <class ELFT, class GotPltSection>
+static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
+                        RelocationSection<ELFT> *Rel, uint32_t Type,
+                        SymbolBody &Sym, bool UseSymVA) {
+  Plt->addEntry<ELFT>(Sym);
+  GotPlt->addEntry(Sym);
+  Rel->addReloc({Type, GotPlt, Sym.getGotPltOffset(), UseSymVA, &Sym, 0});
+}
+
+template <class ELFT>
+static void addGotEntry(SymbolBody &Sym, bool Preemptible) {
+  In<ELFT>::Got->addEntry(Sym);
+
+  uint64_t Off = Sym.getGotOffset();
+  uint32_t DynType;
+  RelExpr Expr = R_ABS;
+
+  if (Sym.isTls()) {
+    DynType = Target->TlsGotRel;
+    Expr = R_TLS;
+  } else if (!Preemptible && Config->Pic && !isAbsolute(Sym)) {
+    DynType = Target->RelativeRel;
+  } else {
+    DynType = Target->GotRel;
+  }
+
+  bool Constant = !Preemptible && !(Config->Pic && !isAbsolute(Sym));
+  if (!Constant)
+    In<ELFT>::RelaDyn->addReloc(
+        {DynType, In<ELFT>::Got, Off, !Preemptible, &Sym, 0});
+
+  if (Constant || (!Config->IsRela && !Preemptible))
+    In<ELFT>::Got->Relocations.push_back({Expr, DynType, Off, 0, &Sym});
+}
 
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
@@ -712,7 +758,7 @@ template <class ELFT, class RelTy>
 static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   OffsetGetter GetOffset(Sec);
 
-  for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
+  for (auto I = Rels.begin(), End = Rels.end(); I != End; ++I) {
     const RelTy &Rel = *I;
     SymbolBody &Body = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
     uint32_t Type = Rel.getType(Config->IsMips64EL);
@@ -720,7 +766,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Config->MipsN32Abi) {
       uint32_t Processed;
       std::tie(Type, Processed) =
-          mergeMipsN32RelTypes(Type, Rel.r_offset, I + 1, E);
+          mergeMipsN32RelTypes(Type, Rel.r_offset, I + 1, End);
       I += Processed;
     }
 
@@ -754,8 +800,9 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
                        R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
       In<ELFT>::Got->HasGotOffRel = true;
 
-    int64_t Addend = computeAddend(*Sec.getFile<ELFT>(), Sec.Data.data(), E,
-                                   Rel, Expr, Body);
+    int64_t Addend = computeAddend<ELFT>(Rel, Sec.Data.data());
+    if (Config->EMachine == EM_MIPS)
+      Addend += computeMipsAddend<ELFT>(Rel, Sec, Expr, Body, End);
 
     if (unsigned Processed =
             handleTlsRelocation<ELFT>(Type, Body, Sec, Offset, Addend, Expr)) {
@@ -823,19 +870,12 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       if (Body.isInPlt())
         continue;
 
-      if (Body.isGnuIFunc() && !Preemptible) {
-        InX::Iplt->addEntry<ELFT>(Body);
-        In<ELFT>::IgotPlt->addEntry(Body);
-        In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
-                                      Body.getGotPltOffset(), !Preemptible,
-                                      &Body, 0});
-      } else {
-        InX::Plt->addEntry<ELFT>(Body);
-        In<ELFT>::GotPlt->addEntry(Body);
-        In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
-                                     Body.getGotPltOffset(), !Preemptible,
-                                     &Body, 0});
-      }
+      if (Body.isGnuIFunc() && !Preemptible)
+        addPltEntry(InX::Iplt, In<ELFT>::IgotPlt, In<ELFT>::RelaIplt,
+                    Target->IRelativeRel, Body, true);
+      else
+        addPltEntry(InX::Plt, In<ELFT>::GotPlt, In<ELFT>::RelaPlt,
+                    Target->PltRel, Body, !Preemptible);
       continue;
     }
 
@@ -855,28 +895,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         continue;
       }
 
-      if (Body.isInGot())
-        continue;
-
-      In<ELFT>::Got->addEntry(Body);
-      uint64_t Off = Body.getGotOffset();
-      uint32_t DynType;
-      RelExpr GotRE = R_ABS;
-      if (Body.isTls()) {
-        DynType = Target->TlsGotRel;
-        GotRE = R_TLS;
-      } else if (!Preemptible && Config->Pic && !isAbsolute(Body))
-        DynType = Target->RelativeRel;
-      else
-        DynType = Target->GotRel;
-
-      // FIXME: this logic is almost duplicated above.
-      bool Constant = !Preemptible && !(Config->Pic && !isAbsolute(Body));
-      if (!Constant)
-        In<ELFT>::RelaDyn->addReloc(
-            {DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
-      if (Constant || (!RelTy::IsRela && !Preemptible))
-        In<ELFT>::Got->Relocations.push_back({GotRE, DynType, Off, 0, &Body});
+      if (!Body.isInGot())
+        addGotEntry<ELFT>(Body, Preemptible);
       continue;
     }
   }

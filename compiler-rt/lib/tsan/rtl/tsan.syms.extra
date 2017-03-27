@@ -9,6 +9,16 @@ __tsan_java*
 __tsan_unaligned*
 __tsan_release
 __tsan_acquire
+__tsan_mutex_create
+__tsan_mutex_destroy
+__tsan_mutex_pre_lock
+__tsan_mutex_post_lock
+__tsan_mutex_pre_unlock
+__tsan_mutex_post_unlock
+__tsan_mutex_pre_signal
+__tsan_mutex_post_signal
+__tsan_mutex_pre_divert
+__tsan_mutex_post_divert
 __ubsan_*
 Annotate*
 WTFAnnotate*
