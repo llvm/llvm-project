@@ -449,6 +449,9 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   // The kext linker doesn't know how to deal with movw/movt.
   if (KernelOrKext || Args.hasArg(options::OPT_mno_movt))
     Features.push_back("+no-movt");
+
+  if (Args.hasArg(options::OPT_mno_neg_immediates))
+    Features.push_back("+no-neg-immediates");
 }
 
 const std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
