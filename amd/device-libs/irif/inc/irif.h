@@ -124,6 +124,7 @@ extern __attribute__((const)) int __llvm_ctlz_i32(int);
 extern __attribute__((const)) int __llvm_ctlz_i64(long);
 
 extern __attribute__((const)) int __llvm_cttz_i32(int);
+extern __attribute__((const)) int __llvm_cttz_i64(long);
 
 // Fence intrinsics
 extern void __llvm_fence_acq_wi(void);
