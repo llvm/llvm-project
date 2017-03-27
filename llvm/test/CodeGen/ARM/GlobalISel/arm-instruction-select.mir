@@ -134,7 +134,10 @@ body:             |
     ; CHECK: [[FIVREG:%[0-9]+]] = ADDri %fixed-stack.[[FRAME_INDEX]], 0, 14, _, _
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: {{%[0-9]+}} = LDRi12 [[FIVREG]], 0, 14, _
+    ; CHECK: [[LDVREG:%[0-9]+]] = LDRi12 [[FIVREG]], 0, 14, _
+
+    %r0 = COPY %1
+    ; CHECK: %r0 = COPY [[LDVREG]]
 
     BX_RET 14, _
     ; CHECK: BX_RET 14, _

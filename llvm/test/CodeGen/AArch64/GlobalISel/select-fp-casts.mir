@@ -49,6 +49,7 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s32) = G_FPTRUNC %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -73,6 +74,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s64) = G_FPEXT %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -97,6 +99,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s32) = G_SITOFP %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -121,6 +124,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s32) = G_SITOFP %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -145,6 +149,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s64) = G_SITOFP %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -169,6 +174,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s64) = G_SITOFP %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -193,6 +199,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s32) = G_UITOFP %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -217,6 +224,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s32) = G_UITOFP %0
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -241,6 +249,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s64) = G_UITOFP %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -265,6 +274,7 @@ body:             |
 
     %0(s64) = COPY %x0
     %1(s64) = G_UITOFP %0
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -289,6 +299,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s32) = G_FPTOSI %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -313,6 +324,7 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s32) = G_FPTOSI %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -337,6 +349,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s64) = G_FPTOSI %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -361,6 +374,7 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s64) = G_FPTOSI %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -385,6 +399,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s32) = G_FPTOUI %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -409,6 +424,7 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s32) = G_FPTOUI %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -433,6 +449,7 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s64) = G_FPTOUI %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -457,4 +474,5 @@ body:             |
 
     %0(s64) = COPY %d0
     %1(s64) = G_FPTOUI %0
+    %x0 = COPY %1(s64)
 ...

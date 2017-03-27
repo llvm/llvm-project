@@ -119,6 +119,14 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
       DEBUG(dbgs() << "Selecting: \n  " << MI);
 
+      // We could have folded this instruction away already, making it dead.
+      // If so, erase it.
+      if (isTriviallyDead(MI, MRI)) {
+        DEBUG(dbgs() << "Is dead; erasing.\n");
+        MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        continue;
+      }
+
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.
@@ -176,23 +184,4 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: Should we accurately track changes?
   return true;
-}
-
-bool InstructionSelector::isOperandImmEqual(
-    const MachineOperand &MO, int64_t Value,
-    const MachineRegisterInfo &MRI) const {
-  // TODO: We should also test isImm() and isCImm() too but this isn't required
-  //       until a DAGCombine equivalent is implemented.
-
-  if (MO.isReg()) {
-    MachineInstr *Def = MRI.getVRegDef(MO.getReg());
-    if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
-      return false;
-    assert(Def->getOperand(1).isCImm() &&
-           "G_CONSTANT values must be constants");
-    const ConstantInt &Imm = *Def->getOperand(1).getCImm();
-    return Imm.getBitWidth() <= 64 && Imm.getSExtValue() == Value;
-  }
-
-  return false;
 }

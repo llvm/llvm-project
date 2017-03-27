@@ -30,15 +30,17 @@ enum {
   CommentIndent = 30
 };
 
+cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
+
 // To reduce generated source code size.
-static cl::opt<bool>
-OmitComments("omit-comments", cl::desc("Do not generate comments"),
-             cl::init(false));
+static cl::opt<bool> OmitComments("omit-comments",
+                                  cl::desc("Do not generate comments"),
+                                  cl::init(false), cl::cat(DAGISelCat));
 
 static cl::opt<bool> InstrumentCoverage(
     "instrument-coverage",
     cl::desc("Generates tables to help identify patterns matched"),
-    cl::init(false));
+    cl::init(false), cl::cat(DAGISelCat));
 
 namespace {
 class MatcherTableEmitter {
