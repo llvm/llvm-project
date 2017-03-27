@@ -47,6 +47,27 @@ unsigned llvm::constrainOperandRegClass(
   return Reg;
 }
 
+bool llvm::isTriviallyDead(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI) {
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  if (!MI.isSafeToMove(/*AA=*/nullptr, SawStore))
+    return false;
+
+  // Instructions without side-effects are dead iff they only define dead vregs.
+  for (auto &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isDef())
+      continue;
+
+    unsigned Reg = MO.getReg();
+    // Keep Debug uses live: we don't want to have an effect on debug info.
+    if (TargetRegisterInfo::isPhysicalRegister(Reg) || !MRI.use_empty(Reg))
+      return false;
+  }
+  return true;
+}
+
 void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
