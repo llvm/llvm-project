@@ -171,9 +171,9 @@ protected:
   /// expression.  See PR21176 for more details.
   void addStackValue();
 
+  ~DwarfExpression() = default;
 public:
   DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
-  virtual ~DwarfExpression() {};
 
   /// This needs to be called last to commit any pending changes.
   void finalize();
@@ -211,7 +211,7 @@ public:
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
-class DebugLocDwarfExpression : public DwarfExpression {
+class DebugLocDwarfExpression final : public DwarfExpression {
   ByteStreamer &BS;
 
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
@@ -225,7 +225,7 @@ public:
 };
 
 /// DwarfExpression implementation for singular DW_AT_location.
-class DIEDwarfExpression : public DwarfExpression {
+class DIEDwarfExpression final : public DwarfExpression {
 const AsmPrinter &AP;
   DwarfUnit &DU;
   DIELoc &DIE;
