@@ -104,32 +104,36 @@ public:
   /// or nullptr it the function does not have a module.
   ///
   /// Note: this is undefined behavior if the block does not have a parent.
-  Module *getModule();
-  const Module *getModule() const {
-    return const_cast<BasicBlock *>(this)->getModule();
+  const Module *getModule() const;
+  Module *getModule() {
+    return const_cast<Module *>(
+                            static_cast<const BasicBlock *>(this)->getModule());
   }
 
   /// \brief Returns the terminator instruction if the block is well formed or
   /// null if the block is not well formed.
-  TerminatorInst *getTerminator() LLVM_READONLY;
-  const TerminatorInst *getTerminator() const {
-    return const_cast<BasicBlock *>(this)->getTerminator();
+  const TerminatorInst *getTerminator() const LLVM_READONLY;
+  TerminatorInst *getTerminator() {
+    return const_cast<TerminatorInst *>(
+                        static_cast<const BasicBlock *>(this)->getTerminator());
   }
 
   /// \brief Returns the call instruction calling @llvm.experimental.deoptimize
   /// prior to the terminating return instruction of this basic block, if such a
   /// call is present.  Otherwise, returns null.
-  CallInst *getTerminatingDeoptimizeCall();
-  const CallInst *getTerminatingDeoptimizeCall() const {
-    return const_cast<BasicBlock *>(this)->getTerminatingDeoptimizeCall();
+  const CallInst *getTerminatingDeoptimizeCall() const;
+  CallInst *getTerminatingDeoptimizeCall() {
+    return const_cast<CallInst *>(
+         static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
   }
 
   /// \brief Returns the call instruction marked 'musttail' prior to the
   /// terminating return instruction of this basic block, if such a call is
   /// present.  Otherwise, returns null.
-  CallInst *getTerminatingMustTailCall();
-  const CallInst *getTerminatingMustTailCall() const {
-    return const_cast<BasicBlock *>(this)->getTerminatingMustTailCall();
+  const CallInst *getTerminatingMustTailCall() const;
+  CallInst *getTerminatingMustTailCall() {
+    return const_cast<CallInst *>(
+           static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
 
   /// \brief Returns a pointer to the first instruction in this block that is
@@ -138,32 +142,36 @@ public:
   /// When adding instructions to the beginning of the basic block, they should
   /// be added before the returned value, not before the first instruction,
   /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  Instruction* getFirstNonPHI();
-  const Instruction* getFirstNonPHI() const {
-    return const_cast<BasicBlock*>(this)->getFirstNonPHI();
+  const Instruction* getFirstNonPHI() const;
+  Instruction* getFirstNonPHI() {
+    return const_cast<Instruction *>(
+                       static_cast<const BasicBlock *>(this)->getFirstNonPHI());
   }
 
   /// \brief Returns a pointer to the first instruction in this block that is not
   /// a PHINode or a debug intrinsic.
-  Instruction* getFirstNonPHIOrDbg();
-  const Instruction* getFirstNonPHIOrDbg() const {
-    return const_cast<BasicBlock*>(this)->getFirstNonPHIOrDbg();
+  const Instruction* getFirstNonPHIOrDbg() const;
+  Instruction* getFirstNonPHIOrDbg() {
+    return const_cast<Instruction *>(
+                  static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg());
   }
 
   /// \brief Returns a pointer to the first instruction in this block that is not
   /// a PHINode, a debug intrinsic, or a lifetime intrinsic.
-  Instruction* getFirstNonPHIOrDbgOrLifetime();
-  const Instruction* getFirstNonPHIOrDbgOrLifetime() const {
-    return const_cast<BasicBlock*>(this)->getFirstNonPHIOrDbgOrLifetime();
+  const Instruction* getFirstNonPHIOrDbgOrLifetime() const;
+  Instruction* getFirstNonPHIOrDbgOrLifetime() {
+    return const_cast<Instruction *>(
+        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime());
   }
 
   /// \brief Returns an iterator to the first instruction in this block that is
   /// suitable for inserting a non-PHI instruction.
   ///
   /// In particular, it skips all PHIs and LandingPad instructions.
-  iterator getFirstInsertionPt();
-  const_iterator getFirstInsertionPt() const {
-    return const_cast<BasicBlock*>(this)->getFirstInsertionPt();
+  const_iterator getFirstInsertionPt() const;
+  iterator getFirstInsertionPt() {
+    return static_cast<const BasicBlock *>(this)
+                                          ->getFirstInsertionPt().getNonConst();
   }
 
   /// \brief Unlink 'this' from the containing function, but do not delete it.
@@ -192,9 +200,10 @@ public:
 
   /// \brief Return the predecessor of this block if it has a single predecessor
   /// block. Otherwise return a null pointer.
-  BasicBlock *getSinglePredecessor();
-  const BasicBlock *getSinglePredecessor() const {
-    return const_cast<BasicBlock*>(this)->getSinglePredecessor();
+  const BasicBlock *getSinglePredecessor() const;
+  BasicBlock *getSinglePredecessor() {
+    return const_cast<BasicBlock *>(
+                 static_cast<const BasicBlock *>(this)->getSinglePredecessor());
   }
 
   /// \brief Return the predecessor of this block if it has a unique predecessor
@@ -203,27 +212,30 @@ public:
   /// Note that unique predecessor doesn't mean single edge, there can be
   /// multiple edges from the unique predecessor to this block (for example a
   /// switch statement with multiple cases having the same destination).
-  BasicBlock *getUniquePredecessor();
-  const BasicBlock *getUniquePredecessor() const {
-    return const_cast<BasicBlock*>(this)->getUniquePredecessor();
+  const BasicBlock *getUniquePredecessor() const;
+  BasicBlock *getUniquePredecessor() {
+    return const_cast<BasicBlock *>(
+                 static_cast<const BasicBlock *>(this)->getUniquePredecessor());
   }
 
   /// \brief Return the successor of this block if it has a single successor.
   /// Otherwise return a null pointer.
   ///
   /// This method is analogous to getSinglePredecessor above.
-  BasicBlock *getSingleSuccessor();
-  const BasicBlock *getSingleSuccessor() const {
-    return const_cast<BasicBlock*>(this)->getSingleSuccessor();
+  const BasicBlock *getSingleSuccessor() const;
+  BasicBlock *getSingleSuccessor() {
+    return const_cast<BasicBlock *>(
+                   static_cast<const BasicBlock *>(this)->getSingleSuccessor());
   }
 
   /// \brief Return the successor of this block if it has a unique successor.
   /// Otherwise return a null pointer.
   ///
   /// This method is analogous to getUniquePredecessor above.
-  BasicBlock *getUniqueSuccessor();
-  const BasicBlock *getUniqueSuccessor() const {
-    return const_cast<BasicBlock*>(this)->getUniqueSuccessor();
+  const BasicBlock *getUniqueSuccessor() const;
+  BasicBlock *getUniqueSuccessor() {
+    return const_cast<BasicBlock *>(
+                   static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
   }
 
   //===--------------------------------------------------------------------===//

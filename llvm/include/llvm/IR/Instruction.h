@@ -382,8 +382,11 @@ public:
   ///
   /// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
   ///
-  bool isAssociative() const;
-  static bool isAssociative(unsigned op);
+  bool isAssociative() const LLVM_READONLY;
+  static bool isAssociative(unsigned Opcode) {
+    return Opcode == And || Opcode == Or || Opcode == Xor ||
+           Opcode == Add || Opcode == Mul;
+  }
 
   /// Return true if the instruction is commutative:
   ///

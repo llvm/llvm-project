@@ -545,17 +545,6 @@ bool Instruction::mayThrow() const {
   return isa<ResumeInst>(this);
 }
 
-/// Return true if the instruction is associative:
-///
-///   Associative operators satisfy:  x op (y op z) === (x op y) op z
-///
-/// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
-///
-bool Instruction::isAssociative(unsigned Opcode) {
-  return Opcode == And || Opcode == Or || Opcode == Xor ||
-         Opcode == Add || Opcode == Mul;
-}
-
 bool Instruction::isAssociative() const {
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))
