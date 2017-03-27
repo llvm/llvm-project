@@ -775,6 +775,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(NewOpc));
 
     I.addOperand(MachineOperand::CreateImm(0));
+
+    // If we're storing a 0, use WZR/XZR.
+    if (auto CVal = getConstantVRegVal(ValReg, MRI)) {
+      if (*CVal == 0 && Opcode == TargetOpcode::G_STORE) {
+        if (I.getOpcode() == AArch64::STRWui)
+          I.getOperand(0).setReg(AArch64::WZR);
+        else if (I.getOpcode() == AArch64::STRXui)
+          I.getOperand(0).setReg(AArch64::XZR);
+      }
+    }
+
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
