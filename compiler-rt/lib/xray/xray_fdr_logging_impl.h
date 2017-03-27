@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <sys/syscall.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "sanitizer_common/sanitizer_common.h"
