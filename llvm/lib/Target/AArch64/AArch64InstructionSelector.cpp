@@ -754,10 +754,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
-#ifndef NDEBUG
-    // Sanity-check the pointer register.
     const unsigned PtrReg = I.getOperand(1).getReg();
+#ifndef NDEBUG
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
+    // Sanity-check the pointer register.
     assert(PtrRB.getID() == AArch64::GPRRegBankID &&
            "Load/Store pointer operand isn't a GPR");
     assert(MRI.getType(PtrReg).isPointer() &&
