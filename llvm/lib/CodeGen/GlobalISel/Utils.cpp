@@ -61,8 +61,8 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
       continue;
 
     unsigned Reg = MO.getReg();
-    // Keep Debug uses live: we don't want to have an effect on debug info.
-    if (TargetRegisterInfo::isPhysicalRegister(Reg) || !MRI.use_empty(Reg))
+    if (TargetRegisterInfo::isPhysicalRegister(Reg) ||
+        !MRI.use_nodbg_empty(Reg))
       return false;
   }
   return true;
