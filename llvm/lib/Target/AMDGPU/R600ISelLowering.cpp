@@ -557,7 +557,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     }
 
     case Intrinsic::r600_implicitarg_ptr: {
-      MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PARAM_I_ADDRESS);
+      MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUASI.PARAM_I_ADDRESS);
       uint32_t ByteOffset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
       return DAG.getConstant(ByteOffset, DL, PtrVT);
     }
@@ -707,12 +707,12 @@ SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
-  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+  if (GSD->getAddressSpace() != AMDGPUASI.CONSTANT_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
 
   const DataLayout &DL = DAG.getDataLayout();
   const GlobalValue *GV = GSD->getGlobal();
-  MVT ConstPtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+  MVT ConstPtrVT = getPointerTy(DL, AMDGPUASI.CONSTANT_ADDRESS);
 
   SDValue GA = DAG.getTargetGlobalAddress(GV, SDLoc(GSD), ConstPtrVT);
   return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, SDLoc(GSD), ConstPtrVT, GA);
@@ -869,7 +869,7 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
                                                    unsigned DwordOffset) const {
   unsigned ByteOffset = DwordOffset * 4;
   PointerType * PtrType = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                      AMDGPUAS::CONSTANT_BUFFER_0);
+                                      AMDGPUASI.CONSTANT_BUFFER_0);
 
   // We shouldn't be using an offset wider than 16-bits for implicit parameters.
   assert(isInt<16>(ByteOffset));
@@ -1107,7 +1107,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
   //TODO: Who creates the i8 stores?
   assert(Store->isTruncatingStore()
          || Store->getValue().getValueType() == MVT::i8);
-  assert(Store->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS);
+  assert(Store->getAddressSpace() == AMDGPUASI.PRIVATE_ADDRESS);
 
   SDValue Mask;
   if (Store->getMemoryVT() == MVT::i8) {
@@ -1205,9 +1205,10 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   // Neither LOCAL nor PRIVATE can do vectors at the moment
-  if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS) &&
+  if ((AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.PRIVATE_ADDRESS) &&
       VT.isVector()) {
-    if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && StoreNode->isTruncatingStore()) {
+    if ((AS == AMDGPUASI.PRIVATE_ADDRESS) &&
+         StoreNode->isTruncatingStore()) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
       // TODO: can the chain be replaced without creating a new store?
@@ -1230,7 +1231,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDValue DWordAddr = DAG.getNode(ISD::SRL, DL, PtrVT, Ptr,
                                   DAG.getConstant(2, DL, PtrVT));
 
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS) {
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
     // It is beneficial to create MSKOR here instead of combiner to avoid
     // artificial dependencies introduced by RMW
     if (StoreNode->isTruncatingStore()) {
@@ -1283,7 +1284,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // GLOBAL_ADDRESS has been handled above, LOCAL_ADDRESS allows all sizes
-  if (AS != AMDGPUAS::PRIVATE_ADDRESS)
+  if (AS != AMDGPUASI.PRIVATE_ADDRESS)
     return SDValue();
 
   if (MemVT.bitsLT(MVT::i32))
@@ -1302,39 +1303,39 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
 // return (512 + (kc_bank << 12)
 static int
-ConstantAddressBlock(unsigned AddressSpace) {
+ConstantAddressBlock(unsigned AddressSpace, AMDGPUAS AMDGPUASI) {
   switch (AddressSpace) {
-  case AMDGPUAS::CONSTANT_BUFFER_0:
+  case AMDGPUASI.CONSTANT_BUFFER_0:
     return 512;
-  case AMDGPUAS::CONSTANT_BUFFER_1:
+  case AMDGPUASI.CONSTANT_BUFFER_1:
     return 512 + 4096;
-  case AMDGPUAS::CONSTANT_BUFFER_2:
+  case AMDGPUASI.CONSTANT_BUFFER_2:
     return 512 + 4096 * 2;
-  case AMDGPUAS::CONSTANT_BUFFER_3:
+  case AMDGPUASI.CONSTANT_BUFFER_3:
     return 512 + 4096 * 3;
-  case AMDGPUAS::CONSTANT_BUFFER_4:
+  case AMDGPUASI.CONSTANT_BUFFER_4:
     return 512 + 4096 * 4;
-  case AMDGPUAS::CONSTANT_BUFFER_5:
+  case AMDGPUASI.CONSTANT_BUFFER_5:
     return 512 + 4096 * 5;
-  case AMDGPUAS::CONSTANT_BUFFER_6:
+  case AMDGPUASI.CONSTANT_BUFFER_6:
     return 512 + 4096 * 6;
-  case AMDGPUAS::CONSTANT_BUFFER_7:
+  case AMDGPUASI.CONSTANT_BUFFER_7:
     return 512 + 4096 * 7;
-  case AMDGPUAS::CONSTANT_BUFFER_8:
+  case AMDGPUASI.CONSTANT_BUFFER_8:
     return 512 + 4096 * 8;
-  case AMDGPUAS::CONSTANT_BUFFER_9:
+  case AMDGPUASI.CONSTANT_BUFFER_9:
     return 512 + 4096 * 9;
-  case AMDGPUAS::CONSTANT_BUFFER_10:
+  case AMDGPUASI.CONSTANT_BUFFER_10:
     return 512 + 4096 * 10;
-  case AMDGPUAS::CONSTANT_BUFFER_11:
+  case AMDGPUASI.CONSTANT_BUFFER_11:
     return 512 + 4096 * 11;
-  case AMDGPUAS::CONSTANT_BUFFER_12:
+  case AMDGPUASI.CONSTANT_BUFFER_12:
     return 512 + 4096 * 12;
-  case AMDGPUAS::CONSTANT_BUFFER_13:
+  case AMDGPUASI.CONSTANT_BUFFER_13:
     return 512 + 4096 * 13;
-  case AMDGPUAS::CONSTANT_BUFFER_14:
+  case AMDGPUASI.CONSTANT_BUFFER_14:
     return 512 + 4096 * 14;
-  case AMDGPUAS::CONSTANT_BUFFER_15:
+  case AMDGPUASI.CONSTANT_BUFFER_15:
     return 512 + 4096 * 15;
   default:
     return -1;
@@ -1402,7 +1403,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = LoadNode->getMemoryVT();
   ISD::LoadExtType ExtType = LoadNode->getExtensionType();
 
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS &&
+  if (AS == AMDGPUASI.PRIVATE_ADDRESS &&
       ExtType != ISD::NON_EXTLOAD && MemVT.bitsLT(MVT::i32)) {
     return lowerPrivateExtLoad(Op, DAG);
   }
@@ -1412,13 +1413,14 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = LoadNode->getChain();
   SDValue Ptr = LoadNode->getBasePtr();
 
-  if ((LoadNode->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
-      LoadNode->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) &&
+  if ((LoadNode->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS ||
+      LoadNode->getAddressSpace() == AMDGPUASI.PRIVATE_ADDRESS) &&
       VT.isVector()) {
       return scalarizeVectorLoad(LoadNode, DAG);
   }
 
-  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace());
+  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace(),
+      AMDGPUASI);
   if (ConstantBlock > -1 &&
       ((LoadNode->getExtensionType() == ISD::NON_EXTLOAD) ||
        (LoadNode->getExtensionType() == ISD::ZEXTLOAD))) {
@@ -1450,7 +1452,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
                       DAG.getConstant(4, DL, MVT::i32)),
                       DAG.getConstant(LoadNode->getAddressSpace() -
-                                      AMDGPUAS::CONSTANT_BUFFER_0, DL, MVT::i32)
+                                      AMDGPUASI.CONSTANT_BUFFER_0, DL, MVT::i32)
           );
     }
 
@@ -1486,7 +1488,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(MergedValues, DL);
   }
 
-  if (LoadNode->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS) {
+  if (LoadNode->getAddressSpace() != AMDGPUASI.PRIVATE_ADDRESS) {
     return SDValue();
   }
 
@@ -1563,7 +1565,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     }
 
     PointerType *PtrTy = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                          AMDGPUAS::CONSTANT_BUFFER_0);
+                                          AMDGPUASI.CONSTANT_BUFFER_0);
 
     // i64 isn't a legal type, so the register type used ends up as i32, which
     // isn't expected here. It attempts to create this sextload, but it ends up

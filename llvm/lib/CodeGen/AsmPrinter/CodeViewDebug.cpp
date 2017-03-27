@@ -947,10 +947,10 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 
       // Handle fragments.
       auto Fragment = DIExpr->getFragmentInfo();
-      if (DIExpr && Fragment) {
+      if (Fragment) {
         IsSubfield = true;
         StructOffset = Fragment->OffsetInBits / 8;
-      } else if (DIExpr && DIExpr->getNumElements() > 0) {
+      } else if (DIExpr->getNumElements() > 0) {
         continue; // Ignore unrecognized exprs.
       }
 

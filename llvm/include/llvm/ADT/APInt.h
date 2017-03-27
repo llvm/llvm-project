@@ -217,6 +217,9 @@ class LLVM_NODISCARD APInt {
   /// out-of-line slow case for setBits.
   void setBitsSlowCase(unsigned loBit, unsigned hiBit);
 
+  /// out-of-line slow case for flipAllBits.
+  void flipAllBitsSlowCase();
+
 public:
   /// \name Constructors
   /// @{
@@ -688,7 +691,15 @@ public:
   /// Performs a bitwise AND operation on this APInt and RHS. RHS is
   /// logically zero-extended or truncated to match the bit-width of
   /// the LHS.
-  APInt &operator&=(uint64_t RHS);
+  APInt &operator&=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL &= RHS;
+      return *this;
+    }
+    pVal[0] &= RHS;
+    memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
+    return *this;
+  }
 
   /// \brief Bitwise OR assignment operator.
   ///
@@ -1161,11 +1172,9 @@ public:
   void setAllBits() {
     if (isSingleWord())
       VAL = UINT64_MAX;
-    else {
+    else
       // Set all the bits in all the words.
-      for (unsigned i = 0; i < getNumWords(); ++i)
-        pVal[i] = UINT64_MAX;
-    }
+      memset(pVal, -1, getNumWords() * APINT_WORD_SIZE);
     // Clear the unused ones
     clearUnusedBits();
   }
@@ -1233,13 +1242,12 @@ public:
 
   /// \brief Toggle every bit to its opposite value.
   void flipAllBits() {
-    if (isSingleWord())
+    if (isSingleWord()) {
       VAL ^= UINT64_MAX;
-    else {
-      for (unsigned i = 0; i < getNumWords(); ++i)
-        pVal[i] ^= UINT64_MAX;
+      clearUnusedBits();
+    } else {
+      flipAllBitsSlowCase();
     }
-    clearUnusedBits();
   }
 
   /// \brief Toggles a given bit to its opposite value.

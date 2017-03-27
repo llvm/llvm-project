@@ -428,18 +428,6 @@ APInt& APInt::operator&=(const APInt& RHS) {
   return *this;
 }
 
-APInt &APInt::operator&=(uint64_t RHS) {
-  if (isSingleWord()) {
-    VAL &= RHS;
-    return *this;
-  }
-  pVal[0] &= RHS;
-  unsigned numWords = getNumWords();
-  for (unsigned i = 1; i < numWords; ++i)
-    pVal[i] = 0;
-  return *this;
-}
-
 APInt& APInt::operator|=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord()) {
@@ -581,6 +569,11 @@ void APInt::clearBit(unsigned bitPosition) {
 }
 
 /// @brief Toggle every bit to its opposite value.
+void APInt::flipAllBitsSlowCase() {
+  for (unsigned i = 0; i < getNumWords(); ++i)
+    pVal[i] ^= UINT64_MAX;
+  clearUnusedBits();
+}
 
 /// Toggle a given bit to its opposite value whose position is given
 /// as "bitPosition".

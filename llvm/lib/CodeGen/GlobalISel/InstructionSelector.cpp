@@ -68,21 +68,29 @@ bool InstructionSelector::constrainSelectedInstRegOperands(
   return true;
 }
 
+Optional<int64_t>
+InstructionSelector::getConstantVRegVal(unsigned VReg,
+                                        const MachineRegisterInfo &MRI) const {
+  MachineInstr *MI = MRI.getVRegDef(VReg);
+  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return None;
+
+  if (MI->getOperand(1).isImm())
+    return MI->getOperand(1).getImm();
+
+  if (MI->getOperand(1).isCImm() &&
+      MI->getOperand(1).getCImm()->getBitWidth() <= 64)
+    return MI->getOperand(1).getCImm()->getSExtValue();
+
+  return None;
+}
+
 bool InstructionSelector::isOperandImmEqual(
     const MachineOperand &MO, int64_t Value,
     const MachineRegisterInfo &MRI) const {
-  // TODO: We should also test isImm() and isCImm() too but this isn't required
-  //       until a DAGCombine equivalent is implemented.
 
-  if (MO.isReg()) {
-    MachineInstr *Def = MRI.getVRegDef(MO.getReg());
-    if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
-      return false;
-    assert(Def->getOperand(1).isCImm() &&
-           "G_CONSTANT values must be constants");
-    const ConstantInt &Imm = *Def->getOperand(1).getCImm();
-    return Imm.getBitWidth() <= 64 && Imm.getSExtValue() == Value;
-  }
-
+  if (MO.getReg())
+    if (auto VRegVal = getConstantVRegVal(MO.getReg(), MRI))
+      return *VRegVal == Value;
   return false;
 }

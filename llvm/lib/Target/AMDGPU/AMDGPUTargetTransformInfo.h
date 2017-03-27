@@ -110,7 +110,7 @@ public:
     if (IsGraphicsShader)
       return -1;
     return ST->hasFlatAddressSpace() ?
-      AMDGPUAS::FLAT_ADDRESS : AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
+      ST->getAMDGPUAS().FLAT_ADDRESS : ST->getAMDGPUAS().UNKNOWN_ADDRESS_SPACE;
   }
 
   unsigned getVectorSplitCost() { return 0; }

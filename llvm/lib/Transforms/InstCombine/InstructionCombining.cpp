@@ -908,7 +908,11 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
       // Beware of ConstantExpr:  it may eventually evaluate to getNullValue,
       // even if currently isNullValue gives false.
       Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i));
-      if (InC && !isa<ConstantExpr>(InC))
+      // For vector constants, we cannot use isNullValue to fold into
+      // FalseVInPred versus TrueVInPred. When we have individual nonzero
+      // elements in the vector, we will incorrectly fold InC to
+      // `TrueVInPred`.
+      if (InC && !isa<ConstantExpr>(InC) && !isa<VectorType>(InC->getType()))
         InV = InC->isNullValue() ? FalseVInPred : TrueVInPred;
       else
         InV = Builder->CreateSelect(PN->getIncomingValue(i),

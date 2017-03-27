@@ -8207,6 +8207,23 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
   return true;
 }
 
+// Check if the shuffle mask is suitable for the AVX vpunpcklwd or vpunpckhwd
+// instructions.
+static bool isUnpackWdShuffleMask(ArrayRef<int> Mask, MVT VT) {
+  if (VT != MVT::v8i32 && VT != MVT::v8f32)
+    return false;
+
+  SmallVector<int, 8> Unpcklwd;
+  createUnpackShuffleMask(MVT::v8i16, Unpcklwd, /* Lo = */ true,
+                          /* Unary = */ false);
+  SmallVector<int, 8> Unpckhwd;
+  createUnpackShuffleMask(MVT::v8i16, Unpckhwd, /* Lo = */ false,
+                          /* Unary = */ false);
+  bool IsUnpackwdMask = (isTargetShuffleEquivalent(Mask, Unpcklwd) ||
+                         isTargetShuffleEquivalent(Mask, Unpckhwd));
+  return IsUnpackwdMask;
+}
+
 /// \brief Get a 4-lane 8-bit shuffle immediate for a mask.
 ///
 /// This helper function produces an 8-bit shuffle immediate corresponding to
@@ -12740,6 +12757,14 @@ static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                V1, V2, DAG, Subtarget))
       return V;
 
+  // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
+  // since after split we get a more efficient code using vpunpcklwd and 
+  // vpunpckhwd instrs than vblend.
+  if (!Subtarget.hasAVX512() && isUnpackWdShuffleMask(Mask, MVT::v8f32))
+    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8f32, V1, V2,
+                                                     Mask, DAG))
+      return V;
+
   // If we have AVX2 then we always want to lower with a blend because at v8 we
   // can fully permute the elements.
   if (Subtarget.hasAVX2())
@@ -12770,6 +12795,14 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
           DL, MVT::v8i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
+
+  // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
+  // since after split we get a more efficient code than vblend by using
+  // vpunpcklwd and vpunpckhwd instrs.
+  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !Subtarget.hasAVX512())
+    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2,
+                                                     Mask, DAG))
+      return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i32, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))

@@ -136,7 +136,7 @@ multiclass FLAT_Atomic_Pseudo<
 class flat_binary_atomic_op<SDNode atomic_op> : PatFrag<
   (ops node:$ptr, node:$value),
   (atomic_op node:$ptr, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS;}]
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.FLAT_ADDRESS;}]
 >;
 
 def atomic_cmp_swap_flat : flat_binary_atomic_op<AMDGPUatomic_cmp_swap>;
@@ -284,16 +284,16 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
 class flat_ld <SDPatternOperator ld> : PatFrag<(ops node:$ptr),
                                                (ld node:$ptr), [{
   auto const AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS;
+  return AS == AMDGPUASI.FLAT_ADDRESS ||
+         AS == AMDGPUASI.GLOBAL_ADDRESS ||
+         AS == AMDGPUASI.CONSTANT_ADDRESS;
 }]>;
 
 class flat_st <SDPatternOperator st> : PatFrag<(ops node:$val, node:$ptr),
                                                (st node:$val, node:$ptr), [{
   auto const AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::GLOBAL_ADDRESS;
+  return AS == AMDGPUASI.FLAT_ADDRESS ||
+         AS == AMDGPUASI.GLOBAL_ADDRESS;
 }]>;
 
 def atomic_flat_load   : flat_ld <atomic_load>;

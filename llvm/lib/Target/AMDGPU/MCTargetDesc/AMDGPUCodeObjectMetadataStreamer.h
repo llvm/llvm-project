@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
 
+#include "AMDGPU.h"
 #include "AMDGPUCodeObjectMetadata.h"
 #include "AMDKernelCodeT.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,6 +37,7 @@ namespace CodeObject {
 class MetadataStreamer final {
 private:
   Metadata CodeObjectMetadata;
+  AMDGPUAS AMDGPUASI;
 
   void dump(StringRef YamlString) const;
 

@@ -33,7 +33,7 @@ using namespace llvm;
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
     const SISubtarget &STI, const AMDGPURegisterBankInfo &RBI)
     : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI) {}
+      TRI(*STI.getRegisterInfo()), RBI(RBI), AMDGPUASI(STI.getAMDGPUAS()) {}
 
 MachineOperand
 AMDGPUInstructionSelector::getSubOperand64(MachineOperand &MO,
@@ -291,7 +291,7 @@ bool AMDGPUInstructionSelector::selectSMRD(MachineInstr &I,
   if (!I.hasOneMemOperand())
     return false;
 
-  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS)
     return false;
 
   if (!isInstrUniform(I))

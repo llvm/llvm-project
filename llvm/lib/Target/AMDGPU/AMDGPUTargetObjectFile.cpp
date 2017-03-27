@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUTargetMachine.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPU.h"
 #include "llvm/MC/MCContext.h"
@@ -22,7 +23,8 @@ using namespace llvm;
 
 MCSection *AMDGPUTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GO) &&
+  auto AS = static_cast<const AMDGPUTargetMachine*>(&TM)->getAMDGPUAS();
+  if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GO, AS) &&
       AMDGPU::shouldEmitConstantsToTextSection(TM.getTargetTriple()))
     return TextSection;
 

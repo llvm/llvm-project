@@ -52,11 +52,13 @@ STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
 STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
+cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
+
 static cl::opt<bool> WarnOnSkippedPatterns(
     "warn-on-skipped-patterns",
     cl::desc("Explain why a pattern was skipped for inclusion "
              "in the GlobalISel selector"),
-    cl::init(false));
+    cl::init(false), cl::cat(GlobalISelEmitterCat));
 
 namespace {
 //===- Helper functions ---------------------------------------------------===//

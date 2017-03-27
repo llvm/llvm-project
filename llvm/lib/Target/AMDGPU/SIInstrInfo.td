@@ -107,7 +107,7 @@ def SIld_local : SDNode <"ISD::LOAD", SDTLoad,
 >;
 
 def si_ld_local : PatFrag <(ops node:$ptr), (SIld_local node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  return cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
 }]>;
 
 def si_load_local : PatFrag <(ops node:$ptr), (si_ld_local node:$ptr), [{
@@ -144,7 +144,7 @@ def SIst_local : SDNode <"ISD::STORE", SDTStore,
 
 def si_st_local : PatFrag <
   (ops node:$val, node:$ptr), (SIst_local node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  return cast<StoreSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
 }]>;
 
 def si_store_local : PatFrag <
@@ -658,6 +658,8 @@ def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
 def VOP3NoMods : ComplexPattern<untyped, 2, "SelectVOP3NoMods">;
 // VOP3Mods, but the input source is known to never be NaN.
 def VOP3Mods_nnan : ComplexPattern<fAny, 2, "SelectVOP3Mods_NNaN">;
+
+def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 def VOP3PMods0 : ComplexPattern<untyped, 3, "SelectVOP3PMods0">;

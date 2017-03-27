@@ -3747,7 +3747,7 @@ unsigned SIInstrInfo::isStackAccess(const MachineInstr &MI,
     return AMDGPU::NoRegister;
 
   assert(!MI.memoperands_empty() &&
-         (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS);
+         (*MI.memoperands_begin())->getAddrSpace() == AMDGPUASI.PRIVATE_ADDRESS);
 
   FrameIndex = Addr->getIndex();
   return getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
@@ -3854,7 +3854,7 @@ bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {
     return true;
 
   for (const MachineMemOperand *MMO : MI.memoperands()) {
-    if (MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS)
+    if (MMO->getAddrSpace() == AMDGPUASI.FLAT_ADDRESS)
       return true;
   }
   return false;

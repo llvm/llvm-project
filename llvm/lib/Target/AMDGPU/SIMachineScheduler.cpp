@@ -539,21 +539,30 @@ void SIScheduleBlock::addPred(SIScheduleBlock *Pred) {
   Preds.push_back(Pred);
 
   assert(none_of(Succs,
-                 [=](SIScheduleBlock *S) { return PredID == S->getID(); }) &&
+                 [=](std::pair<SIScheduleBlock*,
+                     SIScheduleBlockLinkKind> S) {
+                   return PredID == S.first->getID();
+                    }) &&
          "Loop in the Block Graph!");
 }
 
-void SIScheduleBlock::addSucc(SIScheduleBlock *Succ) {
+void SIScheduleBlock::addSucc(SIScheduleBlock *Succ,
+                              SIScheduleBlockLinkKind Kind) {
   unsigned SuccID = Succ->getID();
 
   // Check if not already predecessor.
-  for (SIScheduleBlock* S : Succs) {
-    if (SuccID == S->getID())
+  for (std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind> &S : Succs) {
+    if (SuccID == S.first->getID()) {
+      if (S.second == SIScheduleBlockLinkKind::NoData &&
+          Kind == SIScheduleBlockLinkKind::Data)
+        S.second = Kind;
       return;
+    }
   }
   if (Succ->isHighLatencyBlock())
     ++NumHighLatencySuccessors;
-  Succs.push_back(Succ);
+  Succs.push_back(std::make_pair(Succ, Kind));
+
   assert(none_of(Preds,
                  [=](SIScheduleBlock *P) { return SuccID == P->getID(); }) &&
          "Loop in the Block Graph!");
@@ -573,8 +582,10 @@ void SIScheduleBlock::printDebug(bool full) {
   }
 
   dbgs() << "\nSuccessors:\n";
-  for (SIScheduleBlock* S : Succs) {
-    S->printDebug(false);
+  for (std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind> S : Succs) {
+    if (S.second == SIScheduleBlockLinkKind::Data)
+      dbgs() << "(Data Dep) ";
+    S.first->printDebug(false);
   }
 
   if (Scheduled) {
@@ -835,6 +846,17 @@ void SIScheduleBlockCreator::colorEndsAccordingToDependencies() {
   unsigned DAGSize = DAG->SUnits.size();
   std::vector<int> PendingColoring = CurrentColoring;
 
+  assert(DAGSize >= 1 &&
+         CurrentBottomUpReservedDependencyColoring.size() == DAGSize &&
+         CurrentTopDownReservedDependencyColoring.size() == DAGSize);
+  // If there is no reserved block at all, do nothing. We don't want
+  // everything in one block.
+  if (*std::max_element(CurrentBottomUpReservedDependencyColoring.begin(),
+                        CurrentBottomUpReservedDependencyColoring.end()) == 0 &&
+      *std::max_element(CurrentTopDownReservedDependencyColoring.begin(),
+                        CurrentTopDownReservedDependencyColoring.end()) == 0)
+    return;
+
   for (unsigned SUNum : DAG->BottomUpIndex2SU) {
     SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
@@ -856,6 +878,9 @@ void SIScheduleBlockCreator::colorEndsAccordingToDependencies() {
         SUColors.insert(CurrentColoring[Succ->NodeNum]);
       SUColorsPending.insert(PendingColoring[Succ->NodeNum]);
     }
+    // If there is only one child/parent block, and that block
+    // is not among the ones we are removing in this path, then
+    // merge the instruction to that block
     if (SUColors.size() == 1 && SUColorsPending.size() == 1)
       PendingColoring[SU->NodeNum] = *SUColors.begin();
     else // TODO: Attribute new colors depending on color
@@ -1082,7 +1107,8 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
       if (SuccDep.isWeak() || Succ->NodeNum >= DAGSize)
         continue;
       if (Node2CurrentBlock[Succ->NodeNum] != SUID)
-        CurrentBlocks[SUID]->addSucc(CurrentBlocks[Node2CurrentBlock[Succ->NodeNum]]);
+        CurrentBlocks[SUID]->addSucc(CurrentBlocks[Node2CurrentBlock[Succ->NodeNum]],
+                                     SuccDep.isCtrl() ? NoData : Data);
     }
     for (SDep& PredDep : SU->Preds) {
       SUnit *Pred = PredDep.getSUnit();
@@ -1276,10 +1302,8 @@ void SIScheduleBlockCreator::fillStats() {
       Block->Height = 0;
     else {
       unsigned Height = 0;
-      for (SIScheduleBlock *Succ : Block->getSuccs()) {
-        if (Height < Succ->Height + 1)
-          Height = Succ->Height + 1;
-      }
+      for (const auto &Succ : Block->getSuccs())
+        Height = std::min(Height, Succ.first->Height + 1);
       Block->Height = Height;
     }
   }
@@ -1349,6 +1373,24 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
 
   std::set<unsigned> InRegs = DAG->getInRegs();
   addLiveRegs(InRegs);
+
+  // Increase LiveOutRegsNumUsages for blocks
+  // producing registers consumed in another
+  // scheduling region.
+  for (unsigned Reg : DAG->getOutRegs()) {
+    for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
+      // Do reverse traversal
+      int ID = BlocksStruct.TopDownIndex2Block[Blocks.size()-1-i];
+      SIScheduleBlock *Block = Blocks[ID];
+      const std::set<unsigned> &OutRegs = Block->getOutRegs();
+
+      if (OutRegs.find(Reg) == OutRegs.end())
+        continue;
+
+      ++LiveOutRegsNumUsages[ID][Reg];
+      break;
+    }
+  }
 
   // Fill LiveRegsConsumers for regs that were already
   // defined before scheduling.
@@ -1542,17 +1584,13 @@ void SIScheduleBlockScheduler::decreaseLiveRegs(SIScheduleBlock *Block,
 }
 
 void SIScheduleBlockScheduler::releaseBlockSuccs(SIScheduleBlock *Parent) {
-  for (SIScheduleBlock* Block : Parent->getSuccs()) {
-    --BlockNumPredsLeft[Block->getID()];
-    if (BlockNumPredsLeft[Block->getID()] == 0) {
-      ReadyBlocks.push_back(Block);
-    }
-    // TODO: Improve check. When the dependency between the high latency
-    // instructions and the instructions of the other blocks are WAR or WAW
-    // there will be no wait triggered. We would like these cases to not
-    // update LastPosHighLatencyParentScheduled.
-    if (Parent->isHighLatencyBlock())
-      LastPosHighLatencyParentScheduled[Block->getID()] = NumBlockScheduled;
+  for (const auto &Block : Parent->getSuccs()) {
+    if (--BlockNumPredsLeft[Block.first->getID()] == 0)
+      ReadyBlocks.push_back(Block.first);
+
+    if (Parent->isHighLatencyBlock() &&
+        Block.second == SIScheduleBlockLinkKind::Data)
+      LastPosHighLatencyParentScheduled[Block.first->getID()] = NumBlockScheduled;
   }
 }
 
