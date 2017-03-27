@@ -403,79 +403,6 @@ S8 s8;
 // expected-note@first.h:* {{but in 'FirstModule' found method 'A' is const}}
 #endif
 
-#if defined(FIRST)
-struct S9 {
-  void A(int x) {}
-  void A(int x, int y) {}
-};
-#elif defined(SECOND)
-struct S9 {
-  void A(int x, int y) {}
-  void A(int x) {}
-};
-#else
-S9 s9;
-// expected-error@second.h:* {{'Method::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' that has 2 parameters}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' that has 1 parameter}}
-#endif
-
-#if defined(FIRST)
-struct S10 {
-  void A(int x) {}
-  void A(float x) {}
-};
-#elif defined(SECOND)
-struct S10 {
-  void A(float x) {}
-  void A(int x) {}
-};
-#else
-S10 s10;
-// expected-error@second.h:* {{'Method::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'float'}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int'}}
-#endif
-
-#if defined(FIRST)
-struct S11 {
-  void A(int x) {}
-};
-#elif defined(SECOND)
-struct S11 {
-  void A(int y) {}
-};
-#else
-S11 s11;
-// expected-error@second.h:* {{'Method::S11' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter named 'y'}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter named 'x'}}
-#endif
-
-#if defined(FIRST)
-struct S12 {
-  void A(int x) {}
-};
-#elif defined(SECOND)
-struct S12 {
-  void A(int x = 1) {}
-};
-#else
-S12 s12;
-// expected-error@second.h:* {{'Method::S12' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter with default argument}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter with no default argument}}
-#endif
-
-#if defined(FIRST)
-struct S13 {
-  void A(int x = 1 + 0) {}
-};
-#elif defined(SECOND)
-struct S13 {
-  void A(int x = 1) {}
-};
-#else
-S13 s13;
-// expected-error@second.h:* {{'Method::S13' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter with default argument}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter with different default argument}}
-#endif
 }  // namespace Method
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
@@ -595,6 +522,7 @@ S3 s3;
 #endif
 }  // namespace Using
 
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
@@ -628,9 +556,6 @@ struct S {
 
   typedef int typedef_int;
   using using_int = int;
-
-  void method_one_arg(int x) {}
-  void method_one_arg_default_argument(int x = 5 + 5) {}
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -662,9 +587,6 @@ struct S {
 
   typedef int typedef_int;
   using using_int = int;
-
-  void method_one_arg(int x) {}
-  void method_one_arg_default_argument(int x = 5 + 5) {}
 };
 #else
 S *s;
@@ -701,9 +623,6 @@ struct T {
   typedef int typedef_int;
   using using_int = int;
 
-  void method_one_arg(int x) {}
-  void method_one_arg_default_argument(int x = 5 + 5) {}
-
   private:
 };
 #elif defined(SECOND)
@@ -736,9 +655,6 @@ struct T {
 
   typedef int typedef_int;
   using using_int = int;
-
-  void method_one_arg(int x) {}
-  void method_one_arg_default_argument(int x = 5 + 5) {}
 
   public:
 };

@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O1 --std=c++11 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 #include "custom_mutex.h"
 
 // Test that failed TryLock does not induce parasitic synchronization.

@@ -169,11 +169,6 @@ public:
     Inherited::VisitValueDecl(D);
   }
 
-  void VisitParmVarDecl(const ParmVarDecl *D) {
-    AddStmt(D->getDefaultArg());
-    Inherited::VisitParmVarDecl(D);
-  }
-
   void VisitAccessSpecDecl(const AccessSpecDecl *D) {
     ID.AddInteger(D->getAccess());
     Inherited::VisitAccessSpecDecl(D);
@@ -206,12 +201,6 @@ public:
     Hash.AddBoolean(D->isVirtualAsWritten());
     Hash.AddBoolean(D->isPure());
     Hash.AddBoolean(D->isDeletedAsWritten());
-
-    ID.AddInteger(D->param_size());
-
-    for (auto *Param : D->parameters()) {
-      Hash.AddSubDecl(Param);
-    }
 
     Inherited::VisitFunctionDecl(D);
   }
@@ -326,10 +315,6 @@ public:
     }
   }
 
-  void AddQualType(QualType T) {
-    Hash.AddQualType(T);
-  }
-
   void Visit(const Type *T) {
     ID.AddInteger(T->getTypeClass());
     Inherited::Visit(T);
@@ -340,50 +325,6 @@ public:
   void VisitBuiltinType(const BuiltinType *T) {
     ID.AddInteger(T->getKind());
     VisitType(T);
-  }
-
-  void VisitFunctionType(const FunctionType *T) {
-    AddQualType(T->getReturnType());
-    T->getExtInfo().Profile(ID);
-    Hash.AddBoolean(T->isConst());
-    Hash.AddBoolean(T->isVolatile());
-    Hash.AddBoolean(T->isRestrict());
-    VisitType(T);
-  }
-
-  void VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
-    VisitFunctionType(T);
-  }
-
-  void VisitFunctionProtoType(const FunctionProtoType *T) {
-    ID.AddInteger(T->getNumParams());
-    for (auto ParamType : T->getParamTypes())
-      AddQualType(ParamType);
-
-    const auto &epi = T->getExtProtoInfo();
-    ID.AddInteger(epi.Variadic);
-    ID.AddInteger(epi.TypeQuals);
-    ID.AddInteger(epi.RefQualifier);
-    ID.AddInteger(epi.ExceptionSpec.Type);
-
-    if (epi.ExceptionSpec.Type == EST_Dynamic) {
-      for (QualType Ex : epi.ExceptionSpec.Exceptions)
-        AddQualType(Ex);
-    } else if (epi.ExceptionSpec.Type == EST_ComputedNoexcept &&
-               epi.ExceptionSpec.NoexceptExpr) {
-      AddStmt(epi.ExceptionSpec.NoexceptExpr);
-    } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
-               epi.ExceptionSpec.Type == EST_Unevaluated) {
-      AddDecl(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
-    }
-    if (epi.ExtParameterInfos) {
-      for (unsigned i = 0; i != T->getNumParams(); ++i)
-        ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
-    }
-    epi.ExtInfo.Profile(ID);
-    Hash.AddBoolean(epi.HasTrailingReturn);
-
-    VisitFunctionType(T);
   }
 
   void VisitTypedefType(const TypedefType *T) {

@@ -113,23 +113,23 @@ void BasicBlock::moveAfter(BasicBlock *MovePos) {
       getIterator());
 }
 
-Module *BasicBlock::getModule() {
+const Module *BasicBlock::getModule() const {
   return getParent()->getParent();
 }
 
-TerminatorInst *BasicBlock::getTerminator() {
+const TerminatorInst *BasicBlock::getTerminator() const {
   if (InstList.empty()) return nullptr;
   return dyn_cast<TerminatorInst>(&InstList.back());
 }
 
-CallInst *BasicBlock::getTerminatingMustTailCall() {
+const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (InstList.empty())
     return nullptr;
-  ReturnInst *RI = dyn_cast<ReturnInst>(&InstList.back());
+  const ReturnInst *RI = dyn_cast<ReturnInst>(&InstList.back());
   if (!RI || RI == &InstList.front())
     return nullptr;
 
-  Instruction *Prev = RI->getPrevNode();
+  const Instruction *Prev = RI->getPrevNode();
   if (!Prev)
     return nullptr;
 
@@ -153,7 +153,7 @@ CallInst *BasicBlock::getTerminatingMustTailCall() {
   return nullptr;
 }
 
-CallInst *BasicBlock::getTerminatingDeoptimizeCall() {
+const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
   if (InstList.empty())
     return nullptr;
   auto *RI = dyn_cast<ReturnInst>(&InstList.back());
@@ -168,22 +168,22 @@ CallInst *BasicBlock::getTerminatingDeoptimizeCall() {
   return nullptr;
 }
 
-Instruction* BasicBlock::getFirstNonPHI() {
-  for (Instruction &I : *this)
+const Instruction* BasicBlock::getFirstNonPHI() const {
+  for (const Instruction &I : *this)
     if (!isa<PHINode>(I))
       return &I;
   return nullptr;
 }
 
-Instruction* BasicBlock::getFirstNonPHIOrDbg() {
-  for (Instruction &I : *this)
+const Instruction* BasicBlock::getFirstNonPHIOrDbg() const {
+  for (const Instruction &I : *this)
     if (!isa<PHINode>(I) && !isa<DbgInfoIntrinsic>(I))
       return &I;
   return nullptr;
 }
 
-Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() {
-  for (Instruction &I : *this) {
+const Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() const {
+  for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
 
@@ -197,12 +197,12 @@ Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() {
   return nullptr;
 }
 
-BasicBlock::iterator BasicBlock::getFirstInsertionPt() {
-  Instruction *FirstNonPHI = getFirstNonPHI();
+BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
+  const Instruction *FirstNonPHI = getFirstNonPHI();
   if (!FirstNonPHI)
     return end();
 
-  iterator InsertPt = FirstNonPHI->getIterator();
+  const_iterator InsertPt = FirstNonPHI->getIterator();
   if (InsertPt->isEHPad()) ++InsertPt;
   return InsertPt;
 }
@@ -214,10 +214,10 @@ void BasicBlock::dropAllReferences() {
 
 /// If this basic block has a single predecessor block,
 /// return the block, otherwise return a null pointer.
-BasicBlock *BasicBlock::getSinglePredecessor() {
-  pred_iterator PI = pred_begin(this), E = pred_end(this);
+const BasicBlock *BasicBlock::getSinglePredecessor() const {
+  const_pred_iterator PI = pred_begin(this), E = pred_end(this);
   if (PI == E) return nullptr;         // No preds.
-  BasicBlock *ThePred = *PI;
+  const BasicBlock *ThePred = *PI;
   ++PI;
   return (PI == E) ? ThePred : nullptr /*multiple preds*/;
 }
@@ -227,10 +227,10 @@ BasicBlock *BasicBlock::getSinglePredecessor() {
 /// Note that unique predecessor doesn't mean single edge, there can be
 /// multiple edges from the unique predecessor to this block (for example
 /// a switch statement with multiple cases having the same destination).
-BasicBlock *BasicBlock::getUniquePredecessor() {
-  pred_iterator PI = pred_begin(this), E = pred_end(this);
+const BasicBlock *BasicBlock::getUniquePredecessor() const {
+  const_pred_iterator PI = pred_begin(this), E = pred_end(this);
   if (PI == E) return nullptr; // No preds.
-  BasicBlock *PredBB = *PI;
+  const BasicBlock *PredBB = *PI;
   ++PI;
   for (;PI != E; ++PI) {
     if (*PI != PredBB)
@@ -241,18 +241,18 @@ BasicBlock *BasicBlock::getUniquePredecessor() {
   return PredBB;
 }
 
-BasicBlock *BasicBlock::getSingleSuccessor() {
-  succ_iterator SI = succ_begin(this), E = succ_end(this);
+const BasicBlock *BasicBlock::getSingleSuccessor() const {
+  succ_const_iterator SI = succ_begin(this), E = succ_end(this);
   if (SI == E) return nullptr; // no successors
-  BasicBlock *TheSucc = *SI;
+  const BasicBlock *TheSucc = *SI;
   ++SI;
   return (SI == E) ? TheSucc : nullptr /* multiple successors */;
 }
 
-BasicBlock *BasicBlock::getUniqueSuccessor() {
-  succ_iterator SI = succ_begin(this), E = succ_end(this);
+const BasicBlock *BasicBlock::getUniqueSuccessor() const {
+  succ_const_iterator SI = succ_begin(this), E = succ_end(this);
   if (SI == E) return nullptr; // No successors
-  BasicBlock *SuccBB = *SI;
+  const BasicBlock *SuccBB = *SI;
   ++SI;
   for (;SI != E; ++SI) {
     if (*SI != SuccBB)
@@ -429,9 +429,6 @@ bool BasicBlock::isLandingPad() const {
 }
 
 /// Return the landingpad instruction associated with the landing pad.
-LandingPadInst *BasicBlock::getLandingPadInst() {
-  return dyn_cast<LandingPadInst>(getFirstNonPHI());
-}
 const LandingPadInst *BasicBlock::getLandingPadInst() const {
   return dyn_cast<LandingPadInst>(getFirstNonPHI());
 }

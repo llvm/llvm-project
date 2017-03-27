@@ -344,20 +344,23 @@ public:
     return getGlobalVariable(Name, false);
   }
 
-  GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal) const {
-    return const_cast<Module *>(this)->getGlobalVariable(Name, AllowInternal);
-  }
+  GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal) const;
 
-  GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal = false);
+  GlobalVariable *getGlobalVariable(StringRef Name,
+                                    bool AllowInternal = false) {
+    return static_cast<const Module *>(this)->getGlobalVariable(Name,
+                                                                AllowInternal);
+  }
 
   /// Return the global variable in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
   /// name is not found.
-  GlobalVariable *getNamedGlobal(StringRef Name) {
+  const GlobalVariable *getNamedGlobal(StringRef Name) const {
     return getGlobalVariable(Name, true);
   }
-  const GlobalVariable *getNamedGlobal(StringRef Name) const {
-    return const_cast<Module *>(this)->getNamedGlobal(Name);
+  GlobalVariable *getNamedGlobal(StringRef Name) {
+    return const_cast<GlobalVariable *>(
+                       static_cast<const Module *>(this)->getNamedGlobal(Name));
   }
 
   /// Look up the specified global in the module symbol table.

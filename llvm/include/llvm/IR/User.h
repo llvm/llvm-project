@@ -122,7 +122,15 @@ protected:
   }
 
 private:
+  const Use *getHungOffOperands() const {
+    return *(reinterpret_cast<const Use *const *>(this) - 1);
+  }
+
   Use *&getHungOffOperands() { return *(reinterpret_cast<Use **>(this) - 1); }
+
+  const Use *getIntrusiveOperands() const {
+    return reinterpret_cast<const Use *>(this) - NumUserOperands;
+  }
 
   Use *getIntrusiveOperands() {
     return reinterpret_cast<Use *>(this) - NumUserOperands;
@@ -135,11 +143,11 @@ private:
   }
 
 public:
-  Use *getOperandList() {
+  const Use *getOperandList() const {
     return HasHungOffUses ? getHungOffOperands() : getIntrusiveOperands();
   }
-  const Use *getOperandList() const {
-    return const_cast<User *>(this)->getOperandList();
+  Use *getOperandList() {
+    return const_cast<Use *>(static_cast<const User *>(this)->getOperandList());
   }
 
   Value *getOperand(unsigned i) const {

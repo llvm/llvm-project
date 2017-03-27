@@ -68,14 +68,20 @@ public:
   /// Note: this is undefined behavior if the instruction does not have a
   /// parent, or the parent basic block does not have a parent function.
   const Module *getModule() const;
-  Module *getModule();
+  Module *getModule() {
+    return const_cast<Module *>(
+                           static_cast<const Instruction *>(this)->getModule());
+  }
 
   /// Return the function this instruction belongs to.
   ///
   /// Note: it is undefined behavior to call this on an instruction not
   /// currently inserted into a function.
   const Function *getFunction() const;
-  Function *getFunction();
+  Function *getFunction() {
+    return const_cast<Function *>(
+                         static_cast<const Instruction *>(this)->getFunction());
+  }
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -382,8 +388,11 @@ public:
   ///
   /// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
   ///
-  bool isAssociative() const;
-  static bool isAssociative(unsigned op);
+  bool isAssociative() const LLVM_READONLY;
+  static bool isAssociative(unsigned Opcode) {
+    return Opcode == And || Opcode == Or || Opcode == Xor ||
+           Opcode == Add || Opcode == Mul;
+  }
 
   /// Return true if the instruction is commutative:
   ///
