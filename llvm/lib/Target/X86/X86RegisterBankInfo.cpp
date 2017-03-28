@@ -105,6 +105,39 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const LLT &Ty, bool isFP) {
   return PMI_None;
 }
 
+void X86RegisterBankInfo::getInstrPartialMappingIdxs(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI, const bool isFP,
+    SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx) {
+
+  unsigned NumOperands = MI.getNumOperands();
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    auto &MO = MI.getOperand(Idx);
+    if (!MO.isReg())
+      OpRegBankIdx[Idx] = PMI_None;
+    else
+      OpRegBankIdx[Idx] = getPartialMappingIdx(MRI.getType(MO.getReg()), isFP);
+  }
+}
+
+bool X86RegisterBankInfo::getInstrValueMapping(
+    const MachineInstr &MI,
+    const SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx,
+    SmallVectorImpl<const ValueMapping *> &OpdsMapping) {
+
+  unsigned NumOperands = MI.getNumOperands();
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    if (!MI.getOperand(Idx).isReg())
+      continue;
+
+    auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
+    if (!Mapping->isValid())
+      return false;
+
+    OpdsMapping[Idx] = Mapping;
+  }
+  return true;
+}
+
 RegisterBankInfo::InstructionMapping
 X86RegisterBankInfo::getSameOperandsMapping(const MachineInstr &MI, bool isFP) {
   const MachineFunction &MF = *MI.getParent()->getParent();
@@ -151,33 +184,60 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   unsigned NumOperands = MI.getNumOperands();
-  unsigned Cost = 1; // set dafault cost
 
-  // Track the bank of each register.
+  // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
   SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
-  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
-    auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg())
-      continue;
-
-    // As a top-level guess, use NotFP mapping (all scalars in GPRs)
-    OpRegBankIdx[Idx] = getPartialMappingIdx(MRI.getType(MO.getReg()), false);
-  }
+  getInstrPartialMappingIdxs(MI, MRI, /* isFP */ false, OpRegBankIdx);
 
   // Finally construct the computed mapping.
-  RegisterBankInfo::InstructionMapping Mapping =
-      InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
-  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
-    if (MI.getOperand(Idx).isReg()) {
-      auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
-      if (!Mapping->isValid())
-        return InstructionMapping();
+  if (!getInstrValueMapping(MI, OpRegBankIdx, OpdsMapping))
+    return InstructionMapping();
 
-      OpdsMapping[Idx] = Mapping;
-    }
+  return InstructionMapping{DefaultMappingID, /* Cost */ 1,
+                            getOperandsMapping(OpdsMapping), NumOperands};
+}
+
+void X86RegisterBankInfo::applyMappingImpl(
+    const OperandsMapper &OpdMapper) const {
+  return applyDefaultMapping(OpdMapper);
+}
+
+RegisterBankInfo::InstructionMappings
+X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    // we going to try to map 32/64 bit to PMI_FP32/PMI_FP64
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    if (Size != 32 && Size != 64)
+      break;
+
+    unsigned NumOperands = MI.getNumOperands();
+
+    // Track the bank of each register, use FP mapping (all scalars in VEC)
+    SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
+
+    // Finally construct the computed mapping.
+    SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+    if (!getInstrValueMapping(MI, OpRegBankIdx, OpdsMapping))
+      break;
+
+    RegisterBankInfo::InstructionMapping Mapping = InstructionMapping{
+        /*ID*/ 1, /*Cost*/ 1, getOperandsMapping(OpdsMapping), NumOperands};
+    InstructionMappings AltMappings;
+    AltMappings.emplace_back(std::move(Mapping));
+    return AltMappings;
   }
-
-  Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-  return Mapping;
+  default:
+    break;
+  }
+  return RegisterBankInfo::getInstrAlternativeMappings(MI);
 }

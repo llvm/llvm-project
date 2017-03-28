@@ -49,11 +49,31 @@ private:
   static InstructionMapping getSameOperandsMapping(const MachineInstr &MI,
                                                    bool isFP);
 
+  /// Track the bank of each instruction operand(register)
+  /// \return An instruction PartialMappingIdxs.
+  static void
+  getInstrPartialMappingIdxs(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI, const bool isFP,
+                             SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx);
+
+  /// Construct the instruction ValueMapping from PartialMappingIdxs
+  /// \return true if mapping succeeded.
+  static bool
+  getInstrValueMapping(const MachineInstr &MI,
+                       const SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx,
+                       SmallVectorImpl<const ValueMapping *> &OpdsMapping);
+
 public:
   X86RegisterBankInfo(const TargetRegisterInfo &TRI);
 
   const RegisterBank &
   getRegBankFromRegClass(const TargetRegisterClass &RC) const override;
+
+  InstructionMappings
+  getInstrAlternativeMappings(const MachineInstr &MI) const override;
+
+  /// See RegisterBankInfo::applyMapping.
+  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 
   InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
 };

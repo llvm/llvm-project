@@ -912,7 +912,7 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
       // FalseVInPred versus TrueVInPred. When we have individual nonzero
       // elements in the vector, we will incorrectly fold InC to
       // `TrueVInPred`.
-      if (InC && !isa<ConstantExpr>(InC) && !isa<VectorType>(InC->getType()))
+      if (InC && !isa<ConstantExpr>(InC) && isa<ConstantInt>(InC))
         InV = InC->isNullValue() ? FalseVInPred : TrueVInPred;
       else
         InV = Builder->CreateSelect(PN->getIncomingValue(i),

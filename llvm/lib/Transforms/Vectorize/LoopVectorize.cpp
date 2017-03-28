@@ -2521,22 +2521,21 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
   // induction variable and step. Otherwise, derive these values from the
   // induction descriptor.
   if (!VectorizedIV || NeedsScalarIV) {
+    ScalarIV = Induction;
+    if (IV != OldInduction) {
+      ScalarIV = IV->getType()->isIntegerTy()
+                     ? Builder.CreateSExtOrTrunc(Induction, IV->getType())
+                     : Builder.CreateCast(Instruction::SIToFP, Induction,
+                                          IV->getType());
+      ScalarIV = ID.transform(Builder, ScalarIV, PSE.getSE(), DL);
+      ScalarIV->setName("offset.idx");
+    }
     if (Trunc) {
       auto *TruncType = cast<IntegerType>(Trunc->getType());
       assert(Step->getType()->isIntegerTy() &&
              "Truncation requires an integer step");
-      ScalarIV = Builder.CreateCast(Instruction::Trunc, Induction, TruncType);
+      ScalarIV = Builder.CreateTrunc(ScalarIV, TruncType);
       Step = Builder.CreateTrunc(Step, TruncType);
-    } else {
-      ScalarIV = Induction;
-      if (IV != OldInduction) {
-        ScalarIV = IV->getType()->isIntegerTy()
-                       ? Builder.CreateSExtOrTrunc(ScalarIV, IV->getType())
-                       : Builder.CreateCast(Instruction::SIToFP, Induction,
-                                            IV->getType());
-        ScalarIV = ID.transform(Builder, ScalarIV, PSE.getSE(), DL);
-        ScalarIV->setName("offset.idx");
-      }
     }
   }
 

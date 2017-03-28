@@ -146,7 +146,7 @@ public:
   MachORebaseEntry(Error *Err, const MachOObjectFile *O,
                    ArrayRef<uint8_t> opcodes, bool is64Bit);
 
-  uint32_t segmentIndex() const;
+  int32_t segmentIndex() const;
   uint64_t segmentOffset() const;
   StringRef typeName() const;
   StringRef segmentName() const;
@@ -161,19 +161,18 @@ private:
   friend class MachOObjectFile;
   void moveToFirst();
   void moveToEnd();
-  uint64_t readULEB128();
+  uint64_t readULEB128(const char **error);
 
   Error *E;
   const MachOObjectFile *O;
   ArrayRef<uint8_t> Opcodes;
   const uint8_t *Ptr;
   uint64_t SegmentOffset;
-  uint32_t SegmentIndex;
+  int32_t SegmentIndex;
   uint64_t RemainingLoopCount;
   uint64_t AdvanceAmount;
   uint8_t  RebaseType;
   uint8_t  PointerSize;
-  bool     Malformed;
   bool     Done;
 };
 typedef content_iterator<MachORebaseEntry> rebase_iterator;
@@ -231,7 +230,6 @@ private:
   uint8_t  BindType;
   uint8_t  PointerSize;
   Kind     TableKind;
-  bool     Malformed;
   bool     Done;
 };
 typedef content_iterator<MachOBindEntry> bind_iterator;
@@ -372,6 +370,22 @@ public:
   /// For use in MachOBindEntry::moveNext() to validate a MachOBindEntry for
   /// the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode.
   const char *BindEntryCheckCountAndSkip(uint32_t Count, uint32_t Skip,
+                                         uint8_t PointerSize, int32_t SegIndex,
+                                         uint64_t SegOffset) const {
+    return BindRebaseSectionTable->checkCountAndSkip(Count, Skip, PointerSize,
+                                                     SegIndex, SegOffset);
+  }
+
+  /// For use with a SegIndex,SegOffset pair in MachORebaseEntry::moveNext() to
+  /// validate a MachORebaseEntry.
+  const char *RebaseEntryCheckSegAndOffset(int32_t SegIndex, uint64_t SegOffset,
+                                           bool endInvalid) const {
+    return BindRebaseSectionTable->checkSegAndOffset(SegIndex, SegOffset,
+                                                     endInvalid);
+  }
+  /// For use in MachORebaseEntry::moveNext() to validate a MachORebaseEntry for
+  /// the REBASE_OPCODE_DO_*_TIMES* opcodes.
+  const char *RebaseEntryCheckCountAndSkip(uint32_t Count, uint32_t Skip,
                                          uint8_t PointerSize, int32_t SegIndex,
                                          uint64_t SegOffset) const {
     return BindRebaseSectionTable->checkCountAndSkip(Count, Skip, PointerSize,

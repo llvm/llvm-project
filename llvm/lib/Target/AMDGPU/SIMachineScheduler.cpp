@@ -662,11 +662,21 @@ void SIScheduleBlockCreator::colorHighLatenciesAlone() {
   }
 }
 
+static bool
+hasDataDependencyPred(const SUnit &SU, const SUnit &FromSU) {
+  for (const auto &PredDep : SU.Preds) {
+    if (PredDep.getSUnit() == &FromSU &&
+        PredDep.getKind() == llvm::SDep::Data)
+      return true;
+  }
+  return false;
+}
+
 void SIScheduleBlockCreator::colorHighLatenciesGroups() {
   unsigned DAGSize = DAG->SUnits.size();
   unsigned NumHighLatencies = 0;
   unsigned GroupSize;
-  unsigned Color = NextReservedID;
+  int Color = NextReservedID;
   unsigned Count = 0;
   std::set<unsigned> FormingGroup;
 
@@ -686,35 +696,102 @@ void SIScheduleBlockCreator::colorHighLatenciesGroups() {
   else
     GroupSize = 4;
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[i];
-    if (DAG->IsHighLatencySU[SU->NodeNum]) {
+  for (unsigned SUNum : DAG->TopDownIndex2SU) {
+    const SUnit &SU = DAG->SUnits[SUNum];
+    if (DAG->IsHighLatencySU[SU.NodeNum]) {
       unsigned CompatibleGroup = true;
-      unsigned ProposedColor = Color;
+      int ProposedColor = Color;
+      std::vector<int> AdditionalElements;
+
+      // We don't want to put in the same block
+      // two high latency instructions that depend
+      // on each other.
+      // One way would be to check canAddEdge
+      // in both directions, but that currently is not
+      // enough because there the high latency order is
+      // enforced (via links).
+      // Instead, look at the dependencies between the
+      // high latency instructions and deduce if it is
+      // a data dependency or not.
       for (unsigned j : FormingGroup) {
-        // TODO: Currently CompatibleGroup will always be false,
-        // because the graph enforces the load order. This
-        // can be fixed, but as keeping the load order is often
-        // good for performance that causes a performance hit (both
-        // the default scheduler and this scheduler).
-        // When this scheduler determines a good load order,
-        // this can be fixed.
-        if (!DAG->canAddEdge(SU, &DAG->SUnits[j]) ||
-            !DAG->canAddEdge(&DAG->SUnits[j], SU))
+        bool HasSubGraph;
+        std::vector<int> SubGraph;
+        // By construction (topological order), if SU and
+        // DAG->SUnits[j] are linked, DAG->SUnits[j] is neccessary
+        // in the parent graph of SU.
+#ifndef NDEBUG
+        SubGraph = DAG->GetTopo()->GetSubGraph(SU, DAG->SUnits[j],
+                                               HasSubGraph);
+        assert(!HasSubGraph);
+#endif
+        SubGraph = DAG->GetTopo()->GetSubGraph(DAG->SUnits[j], SU,
+                                               HasSubGraph);
+        if (!HasSubGraph)
+          continue; // No dependencies between each other
+        else if (SubGraph.size() > 5) {
+          // Too many elements would be required to be added to the block.
           CompatibleGroup = false;
+          break;
+        }
+        else {
+          // Check the type of dependency
+          for (unsigned k : SubGraph) {
+            // If in the path to join the two instructions,
+            // there is another high latency instruction,
+            // or instructions colored for another block
+            // abort the merge.
+            if (DAG->IsHighLatencySU[k] ||
+                (CurrentColoring[k] != ProposedColor &&
+                 CurrentColoring[k] != 0)) {
+              CompatibleGroup = false;
+              break;
+            }
+            // If one of the SU in the subgraph depends on the result of SU j,
+            // there'll be a data dependency.
+            if (hasDataDependencyPred(DAG->SUnits[k], DAG->SUnits[j])) {
+              CompatibleGroup = false;
+              break;
+            }
+          }
+          if (!CompatibleGroup)
+            break;
+          // Same check for the SU
+          if (hasDataDependencyPred(SU, DAG->SUnits[j])) {
+            CompatibleGroup = false;
+            break;
+          }
+          // Add all the required instructions to the block
+          // These cannot live in another block (because they
+          // depend (order dependency) on one of the
+          // instruction in the block, and are required for the
+          // high latency instruction we add.
+          AdditionalElements.insert(AdditionalElements.end(),
+                                    SubGraph.begin(), SubGraph.end());
+        }
       }
-      if (!CompatibleGroup || ++Count == GroupSize) {
+      if (CompatibleGroup) {
+        FormingGroup.insert(SU.NodeNum);
+        for (unsigned j : AdditionalElements)
+          CurrentColoring[j] = ProposedColor;
+        CurrentColoring[SU.NodeNum] = ProposedColor;
+        ++Count;
+      }
+      // Found one incompatible instruction,
+      // or has filled a big enough group.
+      // -> start a new one.
+      if (!CompatibleGroup) {
         FormingGroup.clear();
         Color = ++NextReservedID;
-        if (!CompatibleGroup) {
-          ProposedColor = Color;
-          FormingGroup.insert(SU->NodeNum);
-        }
+        ProposedColor = Color;
+        FormingGroup.insert(SU.NodeNum);
+        CurrentColoring[SU.NodeNum] = ProposedColor;
         Count = 0;
-      } else {
-        FormingGroup.insert(SU->NodeNum);
+      } else if (Count == GroupSize) {
+        FormingGroup.clear();
+        Color = ++NextReservedID;
+        ProposedColor = Color;
+        Count = 0;
       }
-      CurrentColoring[SU->NodeNum] = ProposedColor;
     }
   }
 }

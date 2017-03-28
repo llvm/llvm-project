@@ -464,13 +464,14 @@ public:
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
 
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
-    // We have to keep track of the mapping symbol state of any sections we
-    // use. Each one should start off as EMS_None, which is provided as the
-    // default constructor by DenseMap::lookup.
-    LastMappingSymbols[getPreviousSection().first] = LastEMS;
-    LastEMS = LastMappingSymbols.lookup(Section);
-
+    LastMappingSymbols[getPreviousSection().first] = std::move(LastEMSInfo);
     MCELFStreamer::ChangeSection(Section, Subsection);
+    auto LastMappingSymbol = LastMappingSymbols.find(Section);
+    if (LastMappingSymbol != LastMappingSymbols.end()) {
+      LastEMSInfo = std::move(LastMappingSymbol->second);
+      return;
+    }
+    LastEMSInfo.reset(new ElfMappingSymbolInfo(SMLoc(), nullptr, 0));
   }
 
   /// This function is the one used to emit instruction data into the ELF
@@ -532,6 +533,14 @@ public:
     MCELFStreamer::EmitBytes(Data);
   }
 
+  void FlushPendingMappingSymbol() {
+    if (!LastEMSInfo->hasInfo())
+      return;
+    ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
+    EmitMappingSymbol("$d", EMS->Loc, EMS->F, EMS->Offset);
+    EMS->resetInfo();
+  }
+
   /// This is one of the functions used to emit data into an ELF section, so the
   /// ARM streamer overrides it to add the appropriate mapping symbol ($d) if
   /// necessary.
@@ -573,22 +582,54 @@ private:
     EMS_Data
   };
 
+  struct ElfMappingSymbolInfo {
+    explicit ElfMappingSymbolInfo(SMLoc Loc, MCFragment *F, uint64_t O)
+        : Loc(Loc), F(F), Offset(O), State(EMS_None) {}
+    void resetInfo() {
+      F = nullptr;
+      Offset = 0;
+    }
+    bool hasInfo() { return F != nullptr; }
+    SMLoc Loc;
+    MCFragment *F;
+    uint64_t Offset;
+    ElfMappingSymbol State;
+  };
+
   void EmitDataMappingSymbol() {
-    if (LastEMS == EMS_Data) return;
+    if (LastEMSInfo->State == EMS_Data)
+      return;
+    else if (LastEMSInfo->State == EMS_None) {
+      // This is a tentative symbol, it won't really be emitted until it's
+      // actually needed.
+      ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
+      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+      if (!DF)
+        return;
+      EMS->Loc = SMLoc();
+      EMS->F = getCurrentFragment();
+      EMS->Offset = DF->getContents().size();
+      LastEMSInfo->State = EMS_Data;
+      return;
+    }
     EmitMappingSymbol("$d");
-    LastEMS = EMS_Data;
+    LastEMSInfo->State = EMS_Data;
   }
 
   void EmitThumbMappingSymbol() {
-    if (LastEMS == EMS_Thumb) return;
+    if (LastEMSInfo->State == EMS_Thumb)
+      return;
+    FlushPendingMappingSymbol();
     EmitMappingSymbol("$t");
-    LastEMS = EMS_Thumb;
+    LastEMSInfo->State = EMS_Thumb;
   }
 
   void EmitARMMappingSymbol() {
-    if (LastEMS == EMS_ARM) return;
+    if (LastEMSInfo->State == EMS_ARM)
+      return;
+    FlushPendingMappingSymbol();
     EmitMappingSymbol("$a");
-    LastEMS = EMS_ARM;
+    LastEMSInfo->State = EMS_ARM;
   }
 
   void EmitMappingSymbol(StringRef Name) {
@@ -599,6 +640,17 @@ private:
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);
+  }
+
+  void EmitMappingSymbol(StringRef Name, SMLoc Loc, MCFragment *F,
+                         uint64_t Offset) {
+    auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+        Name + "." + Twine(MappingSymbolCounter++)));
+    EmitLabel(Symbol, Loc, F);
+    Symbol->setType(ELF::STT_NOTYPE);
+    Symbol->setBinding(ELF::STB_LOCAL);
+    Symbol->setExternal(false);
+    Symbol->setOffset(Offset);
   }
 
   void EmitThumbFunc(MCSymbol *Func) override {
@@ -626,8 +678,10 @@ private:
   bool IsThumb;
   int64_t MappingSymbolCounter = 0;
 
-  DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
-  ElfMappingSymbol LastEMS = EMS_None;
+  DenseMap<const MCSection *, std::unique_ptr<ElfMappingSymbolInfo>>
+      LastMappingSymbols;
+
+  std::unique_ptr<ElfMappingSymbolInfo> LastEMSInfo;
 
   // ARM Exception Handling Frame Information
   MCSymbol *ExTab;

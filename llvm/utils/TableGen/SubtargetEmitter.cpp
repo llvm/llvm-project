@@ -917,6 +917,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
         SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
         SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
+        SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
+        SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
 
         // Create an entry for each ProcResource listed in WriteRes.
         RecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");

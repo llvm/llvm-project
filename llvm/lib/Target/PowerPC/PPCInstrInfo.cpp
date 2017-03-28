@@ -1836,8 +1836,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     PatchPointOpers Opers(&MI);
     return Opers.getNumPatchBytes();
   } else {
-    const MCInstrDesc &Desc = get(Opcode);
-    return Desc.getSize();
+    return get(Opcode).getSize();
   }
 }
 
