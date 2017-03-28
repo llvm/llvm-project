@@ -87,7 +87,7 @@ BinaryOperator *ASTMaker::makeAssignment(const Expr *LHS, const Expr *RHS,
                                          QualType Ty) {
  return new (C) BinaryOperator(const_cast<Expr*>(LHS), const_cast<Expr*>(RHS),
                                BO_Assign, Ty, VK_RValue,
-                               OK_Ordinary, SourceLocation(), false);
+                               OK_Ordinary, SourceLocation(), FPOptions());
 }
 
 BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
@@ -99,7 +99,7 @@ BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
                                 Op,
                                 C.getLogicalOperationType(),
                                 VK_RValue,
-                                OK_Ordinary, SourceLocation(), false);
+                                OK_Ordinary, SourceLocation(), FPOptions());
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
