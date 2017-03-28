@@ -402,36 +402,21 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
-APInt& APInt::operator&=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL &= RHS.VAL;
-    return *this;
-  }
+APInt& APInt::AndAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] &= RHS.pVal[i];
   return *this;
 }
 
-APInt& APInt::operator|=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL |= RHS.VAL;
-    return *this;
-  }
+APInt& APInt::OrAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] |= RHS.pVal[i];
   return *this;
 }
 
-APInt& APInt::operator^=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL ^= RHS.VAL;
-    return *this;
-  }
+APInt& APInt::XorAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] ^= RHS.pVal[i];
