@@ -44,9 +44,13 @@ static cl::opt<bool>
 DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
   cl::desc("Do not run the GVN load PRE pass"));
 
-static cl::opt<bool>
-DisableLTOVectorization("disable-lto-vectorization", cl::init(false),
-  cl::desc("Do not run loop or slp vectorization during LTO"));
+static cl::opt<bool> DisableLTOVectorization(
+    "disable-lto-vectorization", cl::init(false),
+    cl::desc("Do not run loop or slp vectorization during LTO"));
+
+static cl::opt<bool> EnableFreestanding(
+    "lto-freestanding", cl::init(false),
+    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
 
 #ifdef NDEBUG
 static bool VerifyByDefault = false;
@@ -159,6 +163,7 @@ static void lto_add_attrs(lto_code_gen_t cg) {
   if (OptLevel < '0' || OptLevel > '3')
     report_fatal_error("Optimization level must be between 0 and 3");
   CG->setOptLevel(OptLevel - '0');
+  CG->setFreestanding(EnableFreestanding);
 }
 
 extern const char* lto_get_version() {
@@ -464,6 +469,7 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
   CodeGen->setTargetOptions(InitTargetOptionsFromCodeGenFlags());
+  CodeGen->setFreestanding(EnableFreestanding);
 
   if (OptLevel.getNumOccurrences()) {
     if (OptLevel < '0' || OptLevel > '3')
