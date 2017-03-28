@@ -971,6 +971,8 @@ static FastMathFlags getDecodedFastMathFlags(unsigned Val) {
     FMF.setNoSignedZeros();
   if (0 != (Val & FastMathFlags::AllowReciprocal))
     FMF.setAllowReciprocal();
+  if (0 != (Val & FastMathFlags::AllowContract))
+    FMF.setAllowContract(true);
   return FMF;
 }
 

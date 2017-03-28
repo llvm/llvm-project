@@ -74,6 +74,18 @@ entry:
   ret float %e
 }
 
+; CHECK: @contract(
+define float @contract(float %x, float %y) {
+entry:
+; CHECK: %a = fsub contract float %x, %y
+  %a = fsub contract float %x, %y
+; CHECK: %b = fadd contract float %x, %y
+  %b = fadd contract float %x, %y
+; CHECK: %c = fmul contract float %a, %b
+  %c = fmul contract float %a, %b
+  ret float %c
+}
+
 ; CHECK: no_nan_inf
 define float @no_nan_inf(float %x, float %y) {
 entry:
