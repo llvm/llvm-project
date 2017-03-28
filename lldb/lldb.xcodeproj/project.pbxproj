@@ -735,6 +735,9 @@
 		4CD0BD0F134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */; };
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
+		4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */; };
+		4CE4EFB31E899A3400A80C06 /* RegisterContextOpenBSD_i386.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFAB1E899A1200A80C06 /* RegisterContextOpenBSD_i386.cpp */; };
+		4CE4EFB41E899A4000A80C06 /* RegisterContextOpenBSD_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFAD1E899A1200A80C06 /* RegisterContextOpenBSD_x86_64.cpp */; };
 		4CE4F673162C971A00F75CB3 /* SBExpressionOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CE4F672162C971A00F75CB3 /* SBExpressionOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CE4F675162C973F00F75CB3 /* SBExpressionOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4F674162C973F00F75CB3 /* SBExpressionOptions.cpp */; };
 		4CF3D80C15AF4DC800845BF3 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EDB919B414F6F10D008FF64B /* Security.framework */; };
@@ -2549,6 +2552,12 @@
 		4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectDynamicValue.cpp; path = source/Core/ValueObjectDynamicValue.cpp; sourceTree = "<group>"; };
 		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
 		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
+		4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformOpenBSD.cpp; sourceTree = "<group>"; };
+		4CE4EFA71E8999B000A80C06 /* PlatformOpenBSD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformOpenBSD.h; sourceTree = "<group>"; };
+		4CE4EFAB1E899A1200A80C06 /* RegisterContextOpenBSD_i386.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextOpenBSD_i386.cpp; path = Utility/RegisterContextOpenBSD_i386.cpp; sourceTree = "<group>"; };
+		4CE4EFAC1E899A1200A80C06 /* RegisterContextOpenBSD_i386.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextOpenBSD_i386.h; path = Utility/RegisterContextOpenBSD_i386.h; sourceTree = "<group>"; };
+		4CE4EFAD1E899A1200A80C06 /* RegisterContextOpenBSD_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextOpenBSD_x86_64.cpp; path = Utility/RegisterContextOpenBSD_x86_64.cpp; sourceTree = "<group>"; };
+		4CE4EFAE1E899A1200A80C06 /* RegisterContextOpenBSD_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextOpenBSD_x86_64.h; path = Utility/RegisterContextOpenBSD_x86_64.h; sourceTree = "<group>"; };
 		4CE4F672162C971A00F75CB3 /* SBExpressionOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBExpressionOptions.h; path = include/lldb/API/SBExpressionOptions.h; sourceTree = "<group>"; };
 		4CE4F674162C973F00F75CB3 /* SBExpressionOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBExpressionOptions.cpp; path = source/API/SBExpressionOptions.cpp; sourceTree = "<group>"; };
 		4CE4F676162CE1E100F75CB3 /* SBExpressionOptions.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBExpressionOptions.i; sourceTree = "<group>"; };
@@ -4575,6 +4584,10 @@
 				26E3EEF811A994E800FBADB6 /* RegisterContextMacOSXFrameBackchain.h */,
 				262D24E413FB8710002D1960 /* RegisterContextMemory.cpp */,
 				262D24E513FB8710002D1960 /* RegisterContextMemory.h */,
+				4CE4EFAB1E899A1200A80C06 /* RegisterContextOpenBSD_i386.cpp */,
+				4CE4EFAC1E899A1200A80C06 /* RegisterContextOpenBSD_i386.h */,
+				4CE4EFAD1E899A1200A80C06 /* RegisterContextOpenBSD_x86_64.cpp */,
+				4CE4EFAE1E899A1200A80C06 /* RegisterContextOpenBSD_x86_64.h */,
 				256CBDBE1ADD11C000BC6CDC /* RegisterContextPOSIX_arm.cpp */,
 				256CBDBF1ADD11C000BC6CDC /* RegisterContextPOSIX_arm.h */,
 				E7723D4A1AC4A944002BA082 /* RegisterContextPOSIX_arm64.cpp */,
@@ -5364,6 +5377,7 @@
 				2694E99F14FC0BBD0076DE67 /* Linux */,
 				26C5577F132575C8008FD8FE /* MacOSX */,
 				26EFB6151BFE8D3E00544801 /* NetBSD */,
+				4CE4EFA51E89998800A80C06 /* OpenBSD */,
 				9457596415349416005A9070 /* POSIX */,
 				490A36BA180F0E6F00BA31F8 /* Windows */,
 			);
@@ -5814,6 +5828,15 @@
 				4CCA644B13B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.h */,
 			);
 			path = AppleObjCRuntime;
+			sourceTree = "<group>";
+		};
+		4CE4EFA51E89998800A80C06 /* OpenBSD */ = {
+			isa = PBXGroup;
+			children = (
+				4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */,
+				4CE4EFA71E8999B000A80C06 /* PlatformOpenBSD.h */,
+			);
+			path = OpenBSD;
 			sourceTree = "<group>";
 		};
 		4CEE62F71145F1C70064CF93 /* GDB Remote */ = {
@@ -7223,6 +7246,7 @@
 				2689007813353E1A00698AC0 /* CFCMutableArray.cpp in Sources */,
 				9418EBCD1AA910910058B02E /* VectorType.cpp in Sources */,
 				4C4EB7811E6A4DCC002035C0 /* DumpDataExtractor.cpp in Sources */,
+				4CE4EFB31E899A3400A80C06 /* RegisterContextOpenBSD_i386.cpp in Sources */,
 				2689007913353E1A00698AC0 /* CFCMutableDictionary.cpp in Sources */,
 				2689007A13353E1A00698AC0 /* CFCMutableSet.cpp in Sources */,
 				26764C971E48F482008D3573 /* ConstString.cpp in Sources */,
@@ -7289,6 +7313,7 @@
 				3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */,
 				268900B513353E5000698AC0 /* StopInfoMachException.cpp in Sources */,
 				268900B613353E5000698AC0 /* UnwindMacOSXFrameBackchain.cpp in Sources */,
+				4CE4EFB41E899A4000A80C06 /* RegisterContextOpenBSD_x86_64.cpp in Sources */,
 				268900B713353E5F00698AC0 /* DWARFAbbreviationDeclaration.cpp in Sources */,
 				268900B813353E5F00698AC0 /* DWARFCompileUnit.cpp in Sources */,
 				268900B913353E5F00698AC0 /* DWARFDebugAbbrev.cpp in Sources */,
@@ -7448,6 +7473,7 @@
 				6D95DC011B9DC057000E318A /* HashedNameToDIE.cpp in Sources */,
 				2697A54D133A6305004E4240 /* PlatformDarwin.cpp in Sources */,
 				23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */,
+				4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */,
 				26651A18133BF9E0005B64B7 /* Opcode.cpp in Sources */,
 				3FDFED0B19B7C8DE009756A7 /* HostThreadMacOSX.mm in Sources */,
 				4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */,
