@@ -1,6 +1,4 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-// XFAIL: armhf-target-arch
-// This test fails for armhf (see pr32261)
 
 //===-- fixdfsivfp_test.c - Test __fixdfsivfp -----------------------------===//
 //

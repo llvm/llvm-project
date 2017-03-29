@@ -289,28 +289,28 @@ static int isSignedOp(ISD::CondCode Opcode) {
 }
 
 ISD::CondCode ISD::getSetCCOrOperation(ISD::CondCode Op1, ISD::CondCode Op2,
-                                       bool isInteger) {
-  if (isInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
+                                       bool IsInteger) {
+  if (IsInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
     // Cannot fold a signed integer setcc with an unsigned integer setcc.
     return ISD::SETCC_INVALID;
 
   unsigned Op = Op1 | Op2;  // Combine all of the condition bits.
 
-  // If the N and U bits get set then the resultant comparison DOES suddenly
-  // care about orderedness, and is true when ordered.
+  // If the N and U bits get set, then the resultant comparison DOES suddenly
+  // care about orderedness, and it is true when ordered.
   if (Op > ISD::SETTRUE2)
     Op &= ~16;     // Clear the U bit if the N bit is set.
 
   // Canonicalize illegal integer setcc's.
-  if (isInteger && Op == ISD::SETUNE)  // e.g. SETUGT | SETULT
+  if (IsInteger && Op == ISD::SETUNE)  // e.g. SETUGT | SETULT
     Op = ISD::SETNE;
 
   return ISD::CondCode(Op);
 }
 
 ISD::CondCode ISD::getSetCCAndOperation(ISD::CondCode Op1, ISD::CondCode Op2,
-                                        bool isInteger) {
-  if (isInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
+                                        bool IsInteger) {
+  if (IsInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
     // Cannot fold a signed setcc with an unsigned setcc.
     return ISD::SETCC_INVALID;
 
@@ -318,7 +318,7 @@ ISD::CondCode ISD::getSetCCAndOperation(ISD::CondCode Op1, ISD::CondCode Op2,
   ISD::CondCode Result = ISD::CondCode(Op1 & Op2);
 
   // Canonicalize illegal integer setcc's.
-  if (isInteger) {
+  if (IsInteger) {
     switch (Result) {
     default: break;
     case ISD::SETUO : Result = ISD::SETFALSE; break;  // SETUGT & SETULT

@@ -2512,7 +2512,8 @@ bool X86FastISel::X86SelectTrunc(const Instruction *I) {
   EVT DstVT = TLI.getValueType(DL, I->getType());
 
   // This code only handles truncation to byte.
-  if (DstVT != MVT::i8 && DstVT != MVT::i1)
+  // TODO: Support truncate to i1 with AVX512.
+  if (DstVT != MVT::i8 && (DstVT != MVT::i1 || Subtarget->hasAVX512()))
     return false;
   if (!TLI.isTypeLegal(SrcVT))
     return false;

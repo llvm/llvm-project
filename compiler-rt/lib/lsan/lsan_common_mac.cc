@@ -35,11 +35,11 @@ static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
 static void make_tls_key() { CHECK_EQ(pthread_key_create(&key, NULL), 0); }
 
-static thread_local_data_t *get_tls_val() {
+static thread_local_data_t *get_tls_val(bool alloc) {
   pthread_once(&key_once, make_tls_key);
 
   thread_local_data_t *ptr = (thread_local_data_t *)pthread_getspecific(key);
-  if (ptr == NULL) {
+  if (ptr == NULL && alloc) {
     ptr = (thread_local_data_t *)InternalAlloc(sizeof(*ptr));
     ptr->disable_counter = 0;
     ptr->current_thread_id = kInvalidTid;
@@ -50,23 +50,26 @@ static thread_local_data_t *get_tls_val() {
   return ptr;
 }
 
-bool DisabledInThisThread() { return get_tls_val()->disable_counter > 0; }
+bool DisabledInThisThread() {
+  thread_local_data_t *data = get_tls_val(false);
+  return data ? data->disable_counter > 0 : false;
+}
 
-void DisableInThisThread() { ++get_tls_val()->disable_counter; }
+void DisableInThisThread() { ++get_tls_val(true)->disable_counter; }
 
 void EnableInThisThread() {
-  int *disable_counter = &get_tls_val()->disable_counter;
+  int *disable_counter = &get_tls_val(true)->disable_counter;
   if (*disable_counter == 0) {
     DisableCounterUnderflow();
   }
   --*disable_counter;
 }
 
-u32 GetCurrentThread() { return get_tls_val()->current_thread_id; }
+u32 GetCurrentThread() { return get_tls_val(true)->current_thread_id; }
 
-void SetCurrentThread(u32 tid) { get_tls_val()->current_thread_id = tid; }
+void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
 
-AllocatorCache *GetAllocatorCache() { return &get_tls_val()->cache; }
+AllocatorCache *GetAllocatorCache() { return &get_tls_val(true)->cache; }
 
 void InitializePlatformSpecificModules() {
   CHECK(0 && "unimplemented");
