@@ -1494,6 +1494,22 @@ TEST(TypedefNameDeclMatcher, Match) {
                       typedefNameDecl(hasName("typedefNameDeclTest2"))));
 }
 
+TEST(TypeAliasTemplateDeclMatcher, Match) {
+  std::string Code = R"(
+    template <typename T>
+    class X { T t; };
+
+    template <typename T>
+    using typeAliasTemplateDecl = X<T>;
+
+    using typeAliasDecl = X<int>;
+  )";
+  EXPECT_TRUE(
+      matches(Code, typeAliasTemplateDecl(hasName("typeAliasTemplateDecl"))));
+  EXPECT_TRUE(
+      notMatches(Code, typeAliasTemplateDecl(hasName("typeAliasDecl"))));
+}
+
 TEST(ObjCMessageExprMatcher, SimpleExprs) {
   // don't find ObjCMessageExpr where none are present
   EXPECT_TRUE(notMatchesObjC("", objcMessageExpr(anything())));

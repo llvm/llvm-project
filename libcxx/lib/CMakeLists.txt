@@ -177,7 +177,7 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-# Add a object library that contains the compiled source files.
+# Add an object library that contains the compiled source files.
 add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 if(WIN32 AND NOT MINGW)
   target_compile_definitions(cxx_objects

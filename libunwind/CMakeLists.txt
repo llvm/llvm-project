@@ -122,6 +122,7 @@ option(LIBUNWIND_ENABLE_STATIC "Build libunwind as a static library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
 option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
+option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
 
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
@@ -303,3 +304,7 @@ if (NOT LIBUNWIND_CXX_INCLUDE_PATHS STREQUAL "")
 endif()
 
 add_subdirectory(src)
+
+if (LIBUNWIND_INCLUDE_DOCS)
+  add_subdirectory(docs)
+endif()

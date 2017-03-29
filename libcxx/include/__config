@@ -58,6 +58,10 @@
 // `pointer_safety` and `get_pointer_safety()` will no longer be available
 // in C++03.
 #define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
+// Define a key function for `bad_function_call` in the library, to centralize
+// its vtable and typeinfo to libc++ rather than having all other libraries
+// using that class define their own copies.
+#define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #elif _LIBCPP_ABI_VERSION == 1
 #if !defined(_WIN32)
 // Enable compiling copies of now inline methods into the dylib to support
