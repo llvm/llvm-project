@@ -8,6 +8,5 @@ add_clang_library(clangToolingRefactor
 
   LINK_LIBS
   clangBasic
-  clangFormat
   clangToolingCore
   )

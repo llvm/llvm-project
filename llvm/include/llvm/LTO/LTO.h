@@ -24,7 +24,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Linker/IRMover.h"
-#include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/thread.h"
@@ -152,6 +152,15 @@ public:
       skip();
     }
 
+    bool isUndefined() const {
+      return Flags & object::BasicSymbolRef::SF_Undefined;
+    }
+    bool isCommon() const { return Flags & object::BasicSymbolRef::SF_Common; }
+    bool isWeak() const { return Flags & object::BasicSymbolRef::SF_Weak; }
+    bool isIndirect() const {
+      return Flags & object::BasicSymbolRef::SF_Indirect;
+    }
+
     /// For COFF weak externals, returns the name of the symbol that is used
     /// as a fallback if the weak external remains undefined.
     std::string getCOFFWeakExternalFallback() const {
@@ -171,7 +180,6 @@ public:
     /// Returns the mangled name of the global.
     StringRef getName() const { return Name; }
 
-    uint32_t getFlags() const { return Flags; }
     GlobalValue::VisibilityTypes getVisibility() const {
       if (isGV())
         return getGV()->getVisibility();

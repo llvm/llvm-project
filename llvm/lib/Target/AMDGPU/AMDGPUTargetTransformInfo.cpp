@@ -34,6 +34,11 @@ static cl::opt<unsigned> UnrollThresholdPrivate(
   cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
   cl::init(2000), cl::Hidden);
 
+static cl::opt<unsigned> UnrollThresholdLocal(
+  "amdgpu-unroll-threshold-local",
+  cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
+  cl::init(1000), cl::Hidden);
+
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
                                             TTI::UnrollingPreferences &UP) {
   UP.Threshold = 300; // Twice the default.
@@ -44,50 +49,87 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
+  unsigned ThresholdPrivate = UnrollThresholdPrivate;
+  unsigned ThresholdLocal = UnrollThresholdLocal;
+  unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
+  AMDGPUAS ASST = ST->getAMDGPUAS();
   for (const BasicBlock *BB : L->getBlocks()) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
+    unsigned LocalGEPsSeen = 0;
+
     for (const Instruction &I : *BB) {
       const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I);
-      if (!GEP || GEP->getAddressSpace() != ST->getAMDGPUAS().PRIVATE_ADDRESS)
+      if (!GEP)
         continue;
 
-      const Value *Ptr = GEP->getPointerOperand();
-      const AllocaInst *Alloca =
-          dyn_cast<AllocaInst>(GetUnderlyingObject(Ptr, DL));
-      if (Alloca && Alloca->isStaticAlloca()) {
+      unsigned AS = GEP->getAddressSpace();
+      unsigned Threshold = 0;
+      if (AS == ASST.PRIVATE_ADDRESS)
+        Threshold = ThresholdPrivate;
+      else if (AS == ASST.LOCAL_ADDRESS)
+        Threshold = ThresholdLocal;
+      else
+        continue;
+
+      if (UP.Threshold >= Threshold)
+        continue;
+
+      if (AS == ASST.PRIVATE_ADDRESS) {
+        const Value *Ptr = GEP->getPointerOperand();
+        const AllocaInst *Alloca =
+            dyn_cast<AllocaInst>(GetUnderlyingObject(Ptr, DL));
+        if (!Alloca || !Alloca->isStaticAlloca())
+          continue;
         Type *Ty = Alloca->getAllocatedType();
         unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
         if (AllocaSize > MaxAlloca)
           continue;
+      } else if (AS == ASST.LOCAL_ADDRESS) {
+        LocalGEPsSeen++;
+        // Inhibit unroll for local memory if we have seen addressing not to
+        // a variable, most likely we will be unable to combine it.
+        // Do not unroll too deep inner loops for local memory to give a chance
+        // to unroll an outer loop for a more important reason.
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
+            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
+             !isa<Argument>(GEP->getPointerOperand())))
+          continue;
+      }
 
-        // Check if GEP depends on a value defined by this loop itself.
-        bool HasLoopDef = false;
-        for (const Value *Op : GEP->operands()) {
-          const Instruction *Inst = dyn_cast<Instruction>(Op);
-          if (!Inst || L->isLoopInvariant(Op))
-            continue;
-          if (any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
-               return SubLoop->contains(Inst); }))
-            continue;
-          HasLoopDef = true;
-          break;
-        }
-        if (!HasLoopDef)
+      // Check if GEP depends on a value defined by this loop itself.
+      bool HasLoopDef = false;
+      for (const Value *Op : GEP->operands()) {
+        const Instruction *Inst = dyn_cast<Instruction>(Op);
+        if (!Inst || L->isLoopInvariant(Op))
           continue;
 
-        // We want to do whatever we can to limit the number of alloca
-        // instructions that make it through to the code generator.  allocas
-        // require us to use indirect addressing, which is slow and prone to
-        // compiler bugs.  If this loop does an address calculation on an
-        // alloca ptr, then we want to use a higher than normal loop unroll
-        // threshold. This will give SROA a better chance to eliminate these
-        // allocas.
-        //
-        // Don't use the maximum allowed value here as it will make some
-        // programs way too big.
-        UP.Threshold = UnrollThresholdPrivate;
-        return;
+        if (any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
+             return SubLoop->contains(Inst); }))
+          continue;
+        HasLoopDef = true;
+        break;
       }
+      if (!HasLoopDef)
+        continue;
+
+      // We want to do whatever we can to limit the number of alloca
+      // instructions that make it through to the code generator.  allocas
+      // require us to use indirect addressing, which is slow and prone to
+      // compiler bugs.  If this loop does an address calculation on an
+      // alloca ptr, then we want to use a higher than normal loop unroll
+      // threshold. This will give SROA a better chance to eliminate these
+      // allocas.
+      //
+      // We also want to have more unrolling for local memory to let ds
+      // instructions with different offsets combine.
+      //
+      // Don't use the maximum allowed value here as it will make some
+      // programs way too big.
+      UP.Threshold = Threshold;
+      DEBUG(dbgs() << "Set unroll threshold " << Threshold << " for loop:\n"
+                   << *L << " due to " << *GEP << '\n');
+      if (UP.Threshold == MaxBoost)
+        return;
     }
   }
 }

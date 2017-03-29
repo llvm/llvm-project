@@ -21,7 +21,9 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -496,8 +498,6 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
                sys::path::filename(Obj->getSourceFileName()).str();
 
   for (auto &Sym : Obj->symbols()) {
-    uint32_t Symflags = Sym.getFlags();
-
     cf.syms.push_back(ld_plugin_symbol());
     ld_plugin_symbol &sym = cf.syms.back();
     sym.version = nullptr;
@@ -523,13 +523,13 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
       break;
     }
 
-    if (Symflags & object::BasicSymbolRef::SF_Undefined) {
+    if (Sym.isUndefined()) {
       sym.def = LDPK_UNDEF;
-      if (Symflags & object::BasicSymbolRef::SF_Weak)
+      if (Sym.isWeak())
         sym.def = LDPK_WEAKUNDEF;
-    } else if (Symflags & object::BasicSymbolRef::SF_Common)
+    } else if (Sym.isCommon())
       sym.def = LDPK_COMMON;
-    else if (Symflags & object::BasicSymbolRef::SF_Weak)
+    else if (Sym.isWeak())
       sym.def = LDPK_WEAKDEF;
     else
       sym.def = LDPK_DEF;

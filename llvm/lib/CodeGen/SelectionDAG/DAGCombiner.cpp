@@ -3173,82 +3173,78 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
 
 /// Try to make (and setcc (LL, LR), setcc (RL, RR)) more efficient.
 SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
-  SDValue LL, LR, RL, RR, CC0, CC1;
-  if (!isSetCCEquivalent(N0, LL, LR, CC0) ||
-      !isSetCCEquivalent(N1, RL, RR, CC1))
+  SDValue LL, LR, RL, RR, N0CC, N1CC;
+  if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
+      !isSetCCEquivalent(N1, RL, RR, N1CC))
     return SDValue();
 
-  ISD::CondCode Op0 = cast<CondCodeSDNode>(CC0)->get();
-  ISD::CondCode Op1 = cast<CondCodeSDNode>(CC1)->get();
+  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0CC)->get();
+  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   EVT VT = N1.getValueType();
+  assert(VT == N0.getValueType() && "Unexpected operand types for 'and'");
+  EVT LLVT = LL.getValueType();
+  EVT LRVT = LR.getValueType();
+  bool IsInteger = LLVT.isInteger();
 
-  if (LR == RR && isa<ConstantSDNode>(LR) && Op0 == Op1 &&
-      LL.getValueType().isInteger()) {
+  if (LR == RR && CC0 == CC1 && IsInteger) {
+    EVT CCVT = getSetCCResultType(LRVT);
     // fold (and (seteq X, 0), (seteq Y, 0)) -> (seteq (or X, Y), 0)
-    if (isNullConstant(LR) && Op1 == ISD::SETEQ) {
-      EVT CCVT = getSetCCResultType(LR.getValueType());
+    if (isNullConstant(LR) && CC1 == ISD::SETEQ) {
       if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-        SDValue ORNode =
-            DAG.getNode(ISD::OR, SDLoc(N0), LR.getValueType(), LL, RL);
-        AddToWorklist(ORNode.getNode());
-        return DAG.getSetCC(DL, VT, ORNode, LR, Op1);
+        SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), LRVT, LL, RL);
+        AddToWorklist(Or.getNode());
+        return DAG.getSetCC(DL, VT, Or, LR, CC1);
       }
     }
     if (isAllOnesConstant(LR)) {
       // fold (and (seteq X, -1), (seteq Y, -1)) -> (seteq (and X, Y), -1)
-      if (Op1 == ISD::SETEQ) {
-        EVT CCVT = getSetCCResultType(LR.getValueType());
+      if (CC1 == ISD::SETEQ) {
         if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue ANDNode =
-              DAG.getNode(ISD::AND, SDLoc(N0), LR.getValueType(), LL, RL);
-          AddToWorklist(ANDNode.getNode());
-          return DAG.getSetCC(DL, VT, ANDNode, LR, Op1);
+          SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), LRVT, LL, RL);
+          AddToWorklist(And.getNode());
+          return DAG.getSetCC(DL, VT, And, LR, CC1);
         }
       }
       // fold (and (setgt X, -1), (setgt Y, -1)) -> (setgt (or X, Y), -1)
-      if (Op1 == ISD::SETGT) {
-        EVT CCVT = getSetCCResultType(LR.getValueType());
+      if (CC1 == ISD::SETGT) {
         if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue ORNode =
-              DAG.getNode(ISD::OR, SDLoc(N0), LR.getValueType(), LL, RL);
-          AddToWorklist(ORNode.getNode());
-          return DAG.getSetCC(DL, VT, ORNode, LR, Op1);
+          SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), LRVT, LL, RL);
+          AddToWorklist(Or.getNode());
+          return DAG.getSetCC(DL, VT, Or, LR, CC1);
         }
       }
     }
   }
+
   // Simplify (and (setne X, 0), (setne X, -1)) -> (setuge (add X, 1), 2)
-  if (LL == RL && isa<ConstantSDNode>(LR) && isa<ConstantSDNode>(RR) &&
-      Op0 == Op1 && LL.getValueType().isInteger() && Op0 == ISD::SETNE &&
+  if (LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
-    EVT CCVT = getSetCCResultType(LL.getValueType());
+    EVT CCVT = getSetCCResultType(LLVT);
     if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
       SDLoc DL0(N0);
-      SDValue ADDNode = DAG.getNode(ISD::ADD, DL0, LL.getValueType(), LL,
-                                    DAG.getConstant(1, DL, LL.getValueType()));
-      AddToWorklist(ADDNode.getNode());
-      return DAG.getSetCC(DL, VT, ADDNode,
-                          DAG.getConstant(2, DL, LL.getValueType()),
+      SDValue Add =
+          DAG.getNode(ISD::ADD, DL0, LLVT, LL, DAG.getConstant(1, DL, LLVT));
+      AddToWorklist(Add.getNode());
+      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(2, DL, LLVT),
                           ISD::SETUGE);
     }
   }
-  // canonicalize equivalent to ll == rl
+
+  // Canonicalize equivalent operands to LL == RL.
   if (LL == RR && LR == RL) {
-    Op1 = ISD::getSetCCSwappedOperands(Op1);
+    CC1 = ISD::getSetCCSwappedOperands(CC1);
     std::swap(RL, RR);
   }
   if (LL == RL && LR == RR) {
-    bool isInteger = LL.getValueType().isInteger();
-    ISD::CondCode Result = ISD::getSetCCAndOperation(Op0, Op1, isInteger);
-    if (Result != ISD::SETCC_INVALID &&
+    ISD::CondCode NewCC = ISD::getSetCCAndOperation(CC0, CC1, IsInteger);
+    if (NewCC != ISD::SETCC_INVALID &&
         (!LegalOperations ||
-         (TLI.isCondCodeLegal(Result, LL.getSimpleValueType()) &&
-          TLI.isOperationLegal(ISD::SETCC, LL.getValueType())))) {
-      EVT CCVT = getSetCCResultType(LL.getValueType());
-      if (N0.getValueType() == CCVT ||
-          (!LegalOperations && N0.getValueType() == MVT::i1))
-        return DAG.getSetCC(DL, N0.getValueType(), LL, LR, Result);
+         (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
+          TLI.isOperationLegal(ISD::SETCC, LLVT)))) {
+      EVT CCVT = getSetCCResultType(LLVT);
+      if (VT == CCVT || (!LegalOperations && VT == MVT::i1))
+        return DAG.getSetCC(DL, VT, LL, LR, NewCC);
     }
   }
 

@@ -75,11 +75,11 @@ template <class ELFT> InputSection *elf::createCommonSection() {
                    [](const DefinedCommon *A, const DefinedCommon *B) {
                      return A->Alignment > B->Alignment;
                    });
-  BssSection *Ret = make<BssSection>("COMMON");
-  for (DefinedCommon *Sym : Syms)
-    Sym->Offset = Ret->reserveSpace(Sym->Alignment, Sym->Size);
 
-  return Ret;
+  BssSection *Sec = make<BssSection>("COMMON");
+  for (DefinedCommon *Sym : Syms)
+    Sym->Offset = Sec->reserveSpace(Sym->Size, Sym->Alignment);
+  return Sec;
 }
 
 // Returns an LLD version string.
@@ -367,11 +367,11 @@ void BuildIdSection::computeHash(
 BssSection::BssSection(StringRef Name)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
 
-size_t BssSection::reserveSpace(uint32_t Alignment, size_t Size) {
+size_t BssSection::reserveSpace(uint64_t Size, uint32_t Alignment) {
   if (OutSec)
     OutSec->updateAlignment(Alignment);
   this->Size = alignTo(this->Size, Alignment) + Size;
-  this->Alignment = std::max<uint32_t>(this->Alignment, Alignment);
+  this->Alignment = std::max(this->Alignment, Alignment);
   return this->Size - Size;
 }
 

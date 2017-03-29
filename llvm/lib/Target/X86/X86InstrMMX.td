@@ -647,4 +647,16 @@ def : Pat<(f64 (bitconvert (x86mmx VR64:$src))),
           (MMX_MOVQ2FR64rr VR64:$src)>;
 def : Pat<(x86mmx (bitconvert (f64 FR64:$src))),
           (MMX_MOVFR642Qrr FR64:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (int_x86_sse2_cvtps2dq VR128:$src))))),
+          (MMX_CVTPS2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (fp_to_sint (v4f32 VR128:$src)))))),
+          (MMX_CVTTPS2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
+          (MMX_CVTPD2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
+          (MMX_CVTTPD2PIirr VR128:$src)>;
 }
