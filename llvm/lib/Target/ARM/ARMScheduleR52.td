@@ -74,7 +74,7 @@ def : WriteRes<WriteCMPsr, [R52UnitALU]> { let Latency = 0; }
 
 // Div - may stall 0-9 cycles depending on input (i.e. WRI+(0-9)/2)
 def : WriteRes<WriteDIV, [R52UnitDiv]> {
-  let Latency = 8; let ResourceCycles = [8]; // not pipelined
+  let Latency = 8; let ResourceCycles = [8]; // non-pipelined
 }
 
 // Branches  - LR written in Late EX2
@@ -717,16 +717,19 @@ def R52WriteVLD2Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
   let ResourceCycles = [2];
+  let SingleIssue = 1;
 }
 def R52WriteVLD3Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 5;
   let ResourceCycles = [3];
+  let SingleIssue = 1;
 }
 def R52WriteVLD4Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 7;
   let ResourceCycles = [4];
+  let SingleIssue = 1;
 }
 def R52WriteVST1Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 5;

@@ -1018,11 +1018,13 @@ public:
 
   void cvtId(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3_2_mod(MCInst &Inst, const OperandVector &Operands);
+  void cvtVOP3_omod(MCInst &Inst, const OperandVector &Operands);
 
   void cvtVOP3Impl(MCInst &Inst,
                    const OperandVector &Operands,
                    OptionalImmIndexMap &OptionalIdx);
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands);
+  void cvtVOP3OMod(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3P(MCInst &Inst, const OperandVector &Operands);
 
   void cvtMIMG(MCInst &Inst, const OperandVector &Operands);
@@ -3678,6 +3680,15 @@ void AMDGPUAsmParser::cvtVOP3_2_mod(MCInst &Inst, const OperandVector &Operands)
   }
 }
 
+void AMDGPUAsmParser::cvtVOP3_omod(MCInst &Inst, const OperandVector &Operands) {
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if (TSFlags & SIInstrFlags::VOP3) {
+    cvtVOP3OMod(Inst, Operands);
+  } else {
+    cvtId(Inst, Operands);
+  }
+}
+
 static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
       // 1. This operand is input modifiers
   return Desc.OpInfo[OpNum].OperandType == AMDGPU::OPERAND_INPUT_MODS
@@ -3735,6 +3746,28 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
     ++it;
     Inst.insert(it, Inst.getOperand(0)); // src2 = dst
   }
+}
+
+void AMDGPUAsmParser::cvtVOP3OMod(MCInst &Inst, const OperandVector &Operands) {
+  OptionalImmIndexMap OptionalIdx;
+
+  unsigned I = 1;
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
+    ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
+  }
+
+  for (unsigned E = Operands.size(); I != E; ++I) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
+    if (Op.isMod()) {
+      OptionalIdx[Op.getImmTy()] = I;
+    } else {
+      Op.addRegOrImmOperands(Inst, 1);
+    }
+  }
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
 }
 
 void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {

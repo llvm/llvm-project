@@ -40,14 +40,17 @@ public:
   bool select(MachineInstr &I) const override;
 
 private:
+  /// tblgen-erated 'select' implementation, used as the initial selector for
+  /// the patterns that don't require complex C++.
+  bool selectImpl(MachineInstr &I) const;
+
   bool selectVaStartAAPCS(MachineInstr &I, MachineFunction &MF,
                           MachineRegisterInfo &MRI) const;
   bool selectVaStartDarwin(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
-  /// tblgen-erated 'select' implementation, used as the initial selector for
-  /// the patterns that don't require complex C++.
-  bool selectImpl(MachineInstr &I) const;
+  bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
+                           MachineRegisterInfo &MRI) const;
 
   bool selectArithImmed(MachineOperand &Root, MachineOperand &Result1,
                         MachineOperand &Result2) const;

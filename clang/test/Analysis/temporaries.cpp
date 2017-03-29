@@ -503,3 +503,30 @@ namespace PR32088 {
     });
   }
 }
+
+namespace CopyToTemporaryCorrectly {
+class Super {
+public:
+  void m() {
+    mImpl();
+  }
+  virtual void mImpl() = 0;
+};
+class Sub : public Super {
+public:
+  Sub(const int &p) : j(p) {}
+  virtual void mImpl() override {
+    // Used to be undefined pointer dereference because we didn't copy
+    // the subclass data (j) to the temporary object properly.
+    (void)(j + 1); // no-warning
+    if (j != 22) {
+      clang_analyzer_warnIfReached(); // no-warning
+    }
+  }
+  const int &j;
+};
+void run() {
+  int i = 22;
+  Sub(i).m();
+}
+}

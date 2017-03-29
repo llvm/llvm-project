@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 
+#include "AMDGPU.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 
 namespace llvm {
@@ -22,6 +23,7 @@ namespace llvm {
 class AMDGPUTargetLowering;
 
 class AMDGPUCallLowering: public CallLowering {
+  AMDGPUAS AMDGPUASI;
 
   unsigned lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
                              unsigned Offset) const;

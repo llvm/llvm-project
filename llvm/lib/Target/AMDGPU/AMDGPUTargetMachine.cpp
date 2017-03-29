@@ -240,6 +240,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
   : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
                       FS, Options, getEffectiveRelocModel(RM), CM, OptLevel),
     TLOF(createTLOF(getTargetTriple())) {
+  AS = AMDGPU::getAMDGPUAS(TT);
   initAsmInfo();
 }
 
@@ -809,3 +810,4 @@ void GCNPassConfig::addPreEmitPass() {
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new GCNPassConfig(this, PM);
 }
+

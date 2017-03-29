@@ -40,7 +40,7 @@ struct std::experimental::coroutine_traits<void, global_new_delete_tag> {
   };
 };
 
-// CHECK-LABEL: f0( 
+// CHECK-LABEL: f0(
 extern "C" void f0(global_new_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
@@ -65,7 +65,7 @@ struct std::experimental::coroutine_traits<void, promise_new_tag> {
   };
 };
 
-// CHECK-LABEL: f1( 
+// CHECK-LABEL: f1(
 extern "C" void f1(promise_new_tag ) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
@@ -90,7 +90,7 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
   };
 };
 
-// CHECK-LABEL: f2( 
+// CHECK-LABEL: f2(
 extern "C" void f2(promise_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
@@ -125,5 +125,32 @@ extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: %[[SIZE2:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* %[[MEM]], i64 %[[SIZE2]])
+  co_return;
+}
+
+struct promise_on_alloc_failure_tag {};
+
+template<>
+struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
+  struct promise_type {
+    int get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    static int get_return_object_on_allocation_failure() { return -1; }
+  };
+};
+
+// CHECK-LABEL: f4(
+extern "C" int f4(promise_on_alloc_failure_tag) {
+  // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: %[[MEM:.+]] = call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
+  // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
+
+  // CHECK: [[ERRBB]]:
+  // CHECK: %[[RETVAL:.+]] = call i32 @_ZNSt12experimental16coroutine_traitsIJi28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv(
+  // CHECK: ret i32 %[[RETVAL]]
   co_return;
 }

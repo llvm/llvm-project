@@ -118,3 +118,8 @@ void castsToBool() {
   extern float globalFloat;
   clang_analyzer_eval(globalFloat); // expected-warning{{UNKNOWN}}
 }
+
+void locAsIntegerCasts(void *p) {
+  int x = (int) p;
+  clang_analyzer_eval(++x < 10); // no-crash // expected-warning{{UNKNOWN}}
+}

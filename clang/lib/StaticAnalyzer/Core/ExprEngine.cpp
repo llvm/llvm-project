@@ -182,19 +182,25 @@ ProgramStateRef ExprEngine::getInitialState(const LocationContext *InitLoc) {
 ProgramStateRef
 ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
                                           const LocationContext *LC,
-                                          const Expr *Ex,
+                                          const Expr *InitWithAdjustments,
                                           const Expr *Result) {
-  SVal V = State->getSVal(Ex, LC);
+  // FIXME: This function is a hack that works around the quirky AST
+  // we're often having with respect to C++ temporaries. If only we modelled
+  // the actual execution order of statements properly in the CFG,
+  // all the hassle with adjustments would not be necessary,
+  // and perhaps the whole function would be removed.
+  SVal InitValWithAdjustments = State->getSVal(InitWithAdjustments, LC);
   if (!Result) {
     // If we don't have an explicit result expression, we're in "if needed"
     // mode. Only create a region if the current value is a NonLoc.
-    if (!V.getAs<NonLoc>())
+    if (!InitValWithAdjustments.getAs<NonLoc>())
       return State;
-    Result = Ex;
+    Result = InitWithAdjustments;
   } else {
     // We need to create a region no matter what. For sanity, make sure we don't
     // try to stuff a Loc into a non-pointer temporary region.
-    assert(!V.getAs<Loc>() || Loc::isLocType(Result->getType()) ||
+    assert(!InitValWithAdjustments.getAs<Loc>() ||
+           Loc::isLocType(Result->getType()) ||
            Result->getType()->isMemberPointerType());
   }
 
@@ -226,7 +232,8 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   SmallVector<const Expr *, 2> CommaLHSs;
   SmallVector<SubobjectAdjustment, 2> Adjustments;
 
-  const Expr *Init = Ex->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  const Expr *Init = InitWithAdjustments->skipRValueSubobjectAdjustments(
+      CommaLHSs, Adjustments);
 
   const TypedValueRegion *TR = nullptr;
   if (const MaterializeTemporaryExpr *MT =
@@ -241,6 +248,7 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
     TR = MRMgr.getCXXTempObjectRegion(Init, LC);
 
   SVal Reg = loc::MemRegionVal(TR);
+  SVal BaseReg = Reg;
 
   // Make the necessary adjustments to obtain the sub-object.
   for (auto I = Adjustments.rbegin(), E = Adjustments.rend(); I != E; ++I) {
@@ -254,19 +262,47 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
       break;
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
-      State->bindDefault(Reg, UnknownVal(), LC);
+      State = State->bindDefault(Reg, UnknownVal(), LC);
       return State;
     }
   }
 
-  // Try to recover some path sensitivity in case we couldn't compute the value.
-  if (V.isUnknown())
-    V = getSValBuilder().conjureSymbolVal(Result, LC, TR->getValueType(),
-                                          currBldrCtx->blockCount());
-  // Bind the value of the expression to the sub-object region, and then bind
-  // the sub-object region to our expression.
-  State = State->bindLoc(Reg, V, LC);
+  // What remains is to copy the value of the object to the new region.
+  // FIXME: In other words, what we should always do is copy value of the
+  // Init expression (which corresponds to the bigger object) to the whole
+  // temporary region TR. However, this value is often no longer present
+  // in the Environment. If it has disappeared, we instead invalidate TR.
+  // Still, what we can do is assign the value of expression Ex (which
+  // corresponds to the sub-object) to the TR's sub-region Reg. At least,
+  // values inside Reg would be correct.
+  SVal InitVal = State->getSVal(Init, LC);
+  if (InitVal.isUnknown()) {
+    InitVal = getSValBuilder().conjureSymbolVal(Result, LC, Init->getType(),
+                                                currBldrCtx->blockCount());
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+
+    // Then we'd need to take the value that certainly exists and bind it over.
+    if (InitValWithAdjustments.isUnknown()) {
+      // Try to recover some path sensitivity in case we couldn't
+      // compute the value.
+      InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
+          Result, LC, InitWithAdjustments->getType(),
+          currBldrCtx->blockCount());
+    }
+    State =
+        State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, LC, false);
+  } else {
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+  }
+
+  // The result expression would now point to the correct sub-region of the
+  // newly created temporary region. Do this last in order to getSVal of Init
+  // correctly in case (Result == Init).
   State = State->BindExpr(Result, LC, Reg);
+
+  // Notify checkers once for two bindLoc()s.
+  State = processRegionChange(State, TR, LC);
+
   return State;
 }
 

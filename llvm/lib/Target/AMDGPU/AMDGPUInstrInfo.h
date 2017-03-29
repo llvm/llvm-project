@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 
+#include "AMDGPU.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 
@@ -35,6 +36,8 @@ private:
   const AMDGPUSubtarget &ST;
 
   virtual void anchor();
+protected:
+  AMDGPUAS AMDGPUASI;
 
 public:
   explicit AMDGPUInstrInfo(const AMDGPUSubtarget &st);

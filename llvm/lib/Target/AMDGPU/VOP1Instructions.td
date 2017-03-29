@@ -85,10 +85,17 @@ class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
 }
 
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
-  list<dag> ret = !if(P.HasModifiers,
-    [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
-                                i32:$src0_modifiers, i1:$clamp, i32:$omod))))],
-    [(set P.DstVT:$vdst, (node P.Src0VT:$src0))]);
+  list<dag> ret =
+    !if(P.HasModifiers,
+        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0,
+                                              i32:$src0_modifiers,
+                                              i1:$clamp, i32:$omod))))],
+        !if(P.HasOMod,
+            [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
+                                                  i1:$clamp, i32:$omod))))],
+            [(set P.DstVT:$vdst, (node P.Src0VT:$src0))]
+        )
+    );
 }
 
 multiclass VOP1Inst <string opName, VOPProfile P,
@@ -97,6 +104,23 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
 }
+
+// Special profile for instructions which have clamp
+// and output modifiers (but have no input modifiers)
+class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
+  VOPProfile<[dstVt, srcVt, untyped, untyped]> {
+
+  let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
+  let Asm64 = "$vdst, $src0$clamp$omod";
+
+  let HasModifiers = 0;
+  let HasClamp = 1;
+  let HasOMod = 1;
+}
+
+def VOP1_F64_I32 : VOPProfileI2F <f64, i32>;
+def VOP1_F32_I32 : VOPProfileI2F <f32, i32>;
+def VOP1_F16_I16 : VOPProfileI2F <f16, i16>;
 
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
@@ -144,24 +168,24 @@ def V_READFIRSTLANE_B32 :
 
 let SchedRW = [WriteQuarterRate32] in {
 defm V_CVT_I32_F64 : VOP1Inst <"v_cvt_i32_f64", VOP_I32_F64, fp_to_sint>;
-defm V_CVT_F64_I32 : VOP1Inst <"v_cvt_f64_i32", VOP_F64_I32, sint_to_fp>;
-defm V_CVT_F32_I32 : VOP1Inst <"v_cvt_f32_i32", VOP_F32_I32, sint_to_fp>;
-defm V_CVT_F32_U32 : VOP1Inst <"v_cvt_f32_u32", VOP_F32_I32, uint_to_fp>;
+defm V_CVT_F64_I32 : VOP1Inst <"v_cvt_f64_i32", VOP1_F64_I32, sint_to_fp>;
+defm V_CVT_F32_I32 : VOP1Inst <"v_cvt_f32_i32", VOP1_F32_I32, sint_to_fp>;
+defm V_CVT_F32_U32 : VOP1Inst <"v_cvt_f32_u32", VOP1_F32_I32, uint_to_fp>;
 defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32, fp_to_uint>;
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32, fp_to_sint>;
 defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, fpround>;
 defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, fpextend>;
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
 defm V_CVT_FLR_I32_F32 : VOP1Inst <"v_cvt_flr_i32_f32", VOP_I32_F32, cvt_flr_i32_f32>;
-defm V_CVT_OFF_F32_I4 : VOP1Inst  <"v_cvt_off_f32_i4", VOP_F32_I32>;
+defm V_CVT_OFF_F32_I4 : VOP1Inst  <"v_cvt_off_f32_i4", VOP1_F32_I32>;
 defm V_CVT_F32_F64 : VOP1Inst <"v_cvt_f32_f64", VOP_F32_F64, fpround>;
 defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32, fpextend>;
-defm V_CVT_F32_UBYTE0 : VOP1Inst <"v_cvt_f32_ubyte0", VOP_F32_I32, AMDGPUcvt_f32_ubyte0>;
-defm V_CVT_F32_UBYTE1 : VOP1Inst <"v_cvt_f32_ubyte1", VOP_F32_I32, AMDGPUcvt_f32_ubyte1>;
-defm V_CVT_F32_UBYTE2 : VOP1Inst <"v_cvt_f32_ubyte2", VOP_F32_I32, AMDGPUcvt_f32_ubyte2>;
-defm V_CVT_F32_UBYTE3 : VOP1Inst <"v_cvt_f32_ubyte3", VOP_F32_I32, AMDGPUcvt_f32_ubyte3>;
+defm V_CVT_F32_UBYTE0 : VOP1Inst <"v_cvt_f32_ubyte0", VOP1_F32_I32, AMDGPUcvt_f32_ubyte0>;
+defm V_CVT_F32_UBYTE1 : VOP1Inst <"v_cvt_f32_ubyte1", VOP1_F32_I32, AMDGPUcvt_f32_ubyte1>;
+defm V_CVT_F32_UBYTE2 : VOP1Inst <"v_cvt_f32_ubyte2", VOP1_F32_I32, AMDGPUcvt_f32_ubyte2>;
+defm V_CVT_F32_UBYTE3 : VOP1Inst <"v_cvt_f32_ubyte3", VOP1_F32_I32, AMDGPUcvt_f32_ubyte3>;
 defm V_CVT_U32_F64 : VOP1Inst <"v_cvt_u32_f64", VOP_I32_F64, fp_to_uint>;
-defm V_CVT_F64_U32 : VOP1Inst <"v_cvt_f64_u32", VOP_F64_I32, uint_to_fp>;
+defm V_CVT_F64_U32 : VOP1Inst <"v_cvt_f64_u32", VOP1_F64_I32, uint_to_fp>;
 } // End SchedRW = [WriteQuarterRate32]
 
 defm V_FRACT_F32 : VOP1Inst <"v_fract_f32", VOP_F32_F32, AMDGPUfract>;
@@ -299,8 +323,8 @@ defm V_EXP_LEGACY_F32 : VOP1Inst <"v_exp_legacy_f32", VOP_F32_F32>;
 
 let SubtargetPredicate = isVI in {
 
-defm V_CVT_F16_U16 : VOP1Inst <"v_cvt_f16_u16", VOP_F16_I16, uint_to_fp>;
-defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP_F16_I16, sint_to_fp>;
+defm V_CVT_F16_U16 : VOP1Inst <"v_cvt_f16_u16", VOP1_F16_I16, uint_to_fp>;
+defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP1_F16_I16, sint_to_fp>;
 defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16, fp_to_uint>;
 defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16, fp_to_sint>;
 defm V_RCP_F16 : VOP1Inst <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;

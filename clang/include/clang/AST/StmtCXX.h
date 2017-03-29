@@ -309,6 +309,7 @@ class CoroutineBodyStmt final
     Allocate,      ///< Coroutine frame memory allocation.
     Deallocate,    ///< Coroutine frame memory deallocation.
     ReturnValue,   ///< Return value for thunk function.
+    ReturnStmtOnAllocFailure, ///< Return statement if allocation failed.
     FirstParamMove ///< First offset for move construction of parameter copies.
   };
   unsigned NumParams;
@@ -332,6 +333,7 @@ public:
     Expr *Allocate = nullptr;
     Expr *Deallocate = nullptr;
     Stmt *ReturnValue = nullptr;
+    Stmt *ReturnStmtOnAllocFailure = nullptr;
     ArrayRef<Stmt *> ParamMoves;
   };
 
@@ -378,6 +380,9 @@ public:
 
   Expr *getReturnValueInit() const {
     return cast_or_null<Expr>(getStoredStmts()[SubStmt::ReturnValue]);
+  }
+  Stmt *getReturnStmtOnAllocFailure() const {
+    return getStoredStmts()[SubStmt::ReturnStmtOnAllocFailure];
   }
   ArrayRef<Stmt const *> getParamMoves() const {
     return {getStoredStmts() + SubStmt::FirstParamMove, NumParams};

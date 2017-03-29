@@ -597,8 +597,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
-  switch (AS) {
-  case AMDGPUAS::GLOBAL_ADDRESS:
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
     if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
       // Assume the we will use FLAT for all global memory accesses
       // on VI.
@@ -613,8 +612,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     }
 
     return isLegalMUBUFAddressingMode(AM);
-
-  case AMDGPUAS::CONSTANT_ADDRESS:
+  } else if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -652,11 +650,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
     return false;
 
-  case AMDGPUAS::PRIVATE_ADDRESS:
+  } else if (AS == AMDGPUASI.PRIVATE_ADDRESS) {
     return isLegalMUBUFAddressingMode(AM);
-
-  case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS:
+  } else if (AS == AMDGPUASI.LOCAL_ADDRESS ||
+             AS == AMDGPUASI.REGION_ADDRESS) {
     // Basic, single offset DS instructions allow a 16-bit unsigned immediate
     // field.
     // XXX - If doing a 4-byte aligned 8-byte type access, we effectively have
@@ -671,17 +668,15 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
-
-  case AMDGPUAS::FLAT_ADDRESS:
-  case AMDGPUAS::UNKNOWN_ADDRESS_SPACE:
+  } else if (AS == AMDGPUASI.FLAT_ADDRESS ||
+             AS == AMDGPUASI.UNKNOWN_ADDRESS_SPACE) {
     // For an unknown address space, this usually means that this is for some
     // reason being used for pure arithmetic, and not based on some addressing
     // computation. We don't have instructions that compute pointers with any
     // addressing modes, so treat them as having no offset like flat
     // instructions.
     return isLegalFlatAddressingMode(AM);
-
-  default:
+  } else {
     llvm_unreachable("unhandled address space");
   }
 }
@@ -702,8 +697,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
     return false;
   }
 
-  if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      AddrSpace == AMDGPUAS::REGION_ADDRESS) {
+  if (AddrSpace == AMDGPUASI.LOCAL_ADDRESS ||
+      AddrSpace == AMDGPUASI.REGION_ADDRESS) {
     // ds_read/write_b64 require 8-byte alignment, but we can do a 4 byte
     // aligned, 8 byte access in a single operation using ds_read2/write2_b32
     // with adjacent offsets.
@@ -718,8 +713,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   // will access scratch.  If we had access to the IR function, then we
   // could determine if any private memory was used in the function.
   if (!Subtarget->hasUnalignedScratchAccess() &&
-      (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
-       AddrSpace == AMDGPUAS::FLAT_ADDRESS)) {
+      (AddrSpace == AMDGPUASI.PRIVATE_ADDRESS ||
+       AddrSpace == AMDGPUASI.FLAT_ADDRESS)) {
     return false;
   }
 
@@ -727,7 +722,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
     // If we have an uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
     if (IsFast) {
-      *IsFast = (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS) ?
+      *IsFast = (AddrSpace == AMDGPUASI.CONSTANT_ADDRESS) ?
         (Align % 4 == 0) : true;
     }
 
@@ -767,15 +762,16 @@ EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
   return MVT::Other;
 }
 
-static bool isFlatGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS;
+static bool isFlatGlobalAddrSpace(unsigned AS, AMDGPUAS AMDGPUASI) {
+  return AS == AMDGPUASI.GLOBAL_ADDRESS ||
+         AS == AMDGPUASI.FLAT_ADDRESS ||
+         AS == AMDGPUASI.CONSTANT_ADDRESS;
 }
 
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
-  return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
+  return isFlatGlobalAddrSpace(SrcAS, AMDGPUASI) &&
+         isFlatGlobalAddrSpace(DestAS, AMDGPUASI);
 }
 
 bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
@@ -789,7 +785,7 @@ bool SITargetLowering::isCheapAddrSpaceCast(unsigned SrcAS,
                                             unsigned DestAS) const {
   // Flat -> private/local is a simple truncate.
   // Flat -> global is no-op
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+  if (SrcAS == AMDGPUASI.FLAT_ADDRESS)
     return true;
 
   return isNoopAddrSpaceCast(SrcAS, DestAS);
@@ -850,7 +846,7 @@ SDValue SITargetLowering::LowerParameterPtr(SelectionDAG &DAG,
   unsigned InputPtrReg = TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
-  MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+  MVT PtrVT = getPointerTy(DL, AMDGPUASI.CONSTANT_ADDRESS);
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
                                        MRI.getLiveInVirtReg(InputPtrReg), PtrVT);
   return DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
@@ -863,7 +859,7 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                          const ISD::InputArg *Arg) const {
   const DataLayout &DL = DAG.getDataLayout();
   Type *Ty = MemVT.getTypeForEVT(*DAG.getContext());
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
+  PointerType *PtrTy = PointerType::get(Ty, AMDGPUASI.CONSTANT_ADDRESS);
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
 
   unsigned Align = DL.getABITypeAlignment(Ty);
@@ -1073,7 +1069,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       auto *ParamTy =
         dyn_cast<PointerType>(FType->getParamType(Ins[i].getOrigArgIndex()));
       if (Subtarget->getGeneration() == SISubtarget::SOUTHERN_ISLANDS &&
-          ParamTy && ParamTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          ParamTy && ParamTy->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS) {
         // On SI local pointers are just offsets into LDS, so they are always
         // less than 16-bits.  On CI and newer they could potentially be
         // real pointers, so we can't guarantee their size.
@@ -2206,13 +2202,13 @@ void SITargetLowering::createDebuggerPrologueStackObjects(
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
   const Triple &TT = getTargetMachine().getTargetTriple();
-  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+  return GV->getType()->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
 }
 
 bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
-  return (GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-              GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) &&
+  return (GV->getType()->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS ||
+              GV->getType()->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS) &&
          !shouldEmitFixup(GV) &&
          !getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
 }
@@ -2351,7 +2347,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
                                              SelectionDAG &DAG) const {
 
   if (Subtarget->hasApertureRegs()) { // Read from Aperture Registers directly.
-    unsigned RegNo = (AS == AMDGPUAS::LOCAL_ADDRESS) ? AMDGPU::SRC_SHARED_BASE :
+    unsigned RegNo = (AS == AMDGPUASI.LOCAL_ADDRESS) ? AMDGPU::SRC_SHARED_BASE :
                                                        AMDGPU::SRC_PRIVATE_BASE;
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass, RegNo, MVT::i32);
   }
@@ -2367,7 +2363,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.
-  uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
+  uint32_t StructOffset = (AS == AMDGPUASI.LOCAL_ADDRESS) ? 0x40 : 0x44;
 
   SDValue Ptr = DAG.getNode(ISD::ADD, SL, MVT::i64, QueuePtr,
                             DAG.getConstant(StructOffset, SL, MVT::i64));
@@ -2376,7 +2372,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
   // TODO: We should use the value from the IR intrinsic call, but it might not
   // be available and how do we get it?
   Value *V = UndefValue::get(PointerType::get(Type::getInt8Ty(*DAG.getContext()),
-                                              AMDGPUAS::CONSTANT_ADDRESS));
+                                              AMDGPUASI.CONSTANT_ADDRESS));
 
   MachinePointerInfo PtrInfo(V, StructOffset);
   return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr, PtrInfo,
@@ -2397,9 +2393,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
   // flat -> local/private
-  if (ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (ASC->getSrcAddressSpace() == AMDGPUASI.FLAT_ADDRESS) {
     unsigned DestAS = ASC->getDestAddressSpace();
-    if (DestAS == AMDGPUAS::LOCAL_ADDRESS || DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+
+    if (DestAS == AMDGPUASI.LOCAL_ADDRESS ||
+        DestAS == AMDGPUASI.PRIVATE_ADDRESS) {
       unsigned NullVal = TM.getNullPointerValue(DestAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
@@ -2411,9 +2409,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   }
 
   // local/private -> flat
-  if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (ASC->getDestAddressSpace() == AMDGPUASI.FLAT_ADDRESS) {
     unsigned SrcAS = ASC->getSrcAddressSpace();
-    if (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+
+    if (SrcAS == AMDGPUASI.LOCAL_ADDRESS ||
+        SrcAS == AMDGPUASI.PRIVATE_ADDRESS) {
       unsigned NullVal = TM.getNullPointerValue(SrcAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
 
@@ -2513,8 +2513,8 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   // We can fold offsets for anything that doesn't require a GOT relocation.
-  return (GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-              GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) &&
+  return (GA->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS ||
+              GA->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS) &&
          !shouldEmitGOTReloc(GA->getGlobal());
 }
 
@@ -2565,8 +2565,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
 
-  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS &&
-      GSD->getAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
+  if (GSD->getAddressSpace() != AMDGPUASI.CONSTANT_ADDRESS &&
+      GSD->getAddressSpace() != AMDGPUASI.GLOBAL_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
 
   SDLoc DL(GSD);
@@ -2583,7 +2583,7 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                             SIInstrInfo::MO_GOTPCREL32);
 
   Type *Ty = PtrVT.getTypeForEVT(*DAG.getContext());
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
+  PointerType *PtrTy = PointerType::get(Ty, AMDGPUASI.CONSTANT_ADDRESS);
   const DataLayout &DataLayout = DAG.getDataLayout();
   unsigned Align = DataLayout.getABITypeAlignment(PtrTy);
   // FIXME: Use a PseudoSourceValue once those can be assigned an address space.
@@ -3229,21 +3229,20 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   // If there is a possibilty that flat instruction access scratch memory
   // then we need to use the same legalization rules we use for private.
-  if (AS == AMDGPUAS::FLAT_ADDRESS)
+  if (AS == AMDGPUASI.FLAT_ADDRESS)
     AS = MFI->hasFlatScratchInit() ?
-         AMDGPUAS::PRIVATE_ADDRESS : AMDGPUAS::GLOBAL_ADDRESS;
+         AMDGPUASI.PRIVATE_ADDRESS : AMDGPUASI.GLOBAL_ADDRESS;
 
   unsigned NumElements = MemVT.getVectorNumElements();
-  switch (AS) {
-  case AMDGPUAS::CONSTANT_ADDRESS:
+  if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
     if (isMemOpUniform(Load))
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private
     // loads.
     //
-    LLVM_FALLTHROUGH;
-  case AMDGPUAS::GLOBAL_ADDRESS:
+  }
+  if (AS == AMDGPUASI.CONSTANT_ADDRESS || AS == AMDGPUASI.GLOBAL_ADDRESS) {
     if (Subtarget->getScalarizeGlobalBehavior() && isMemOpUniform(Load) &&
                   isMemOpHasNoClobberedMemOperand(Load))
       return SDValue();
@@ -3251,13 +3250,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // have the same legalization requirements as global and private
     // loads.
     //
-    LLVM_FALLTHROUGH;
-  case AMDGPUAS::FLAT_ADDRESS:
+  }
+  if (AS == AMDGPUASI.CONSTANT_ADDRESS || AS == AMDGPUASI.GLOBAL_ADDRESS ||
+      AS == AMDGPUASI.FLAT_ADDRESS) {
     if (NumElements > 4)
       return SplitVectorLoad(Op, DAG);
     // v4 loads are supported for private and global memory.
     return SDValue();
-  case AMDGPUAS::PRIVATE_ADDRESS:
+  }
+  if (AS == AMDGPUASI.PRIVATE_ADDRESS) {
     // Depending on the setting of the private_element_size field in the
     // resource descriptor, we can only make private accesses up to a certain
     // size.
@@ -3276,7 +3277,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     default:
       llvm_unreachable("unsupported private_element_size");
     }
-  case AMDGPUAS::LOCAL_ADDRESS:
+  } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
     if (NumElements > 2)
       return SplitVectorLoad(Op, DAG);
 
@@ -3285,9 +3286,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     // If properly aligned, if we split we might be able to use ds_read_b64.
     return SplitVectorLoad(Op, DAG);
-  default:
-    return SDValue();
   }
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -3656,18 +3656,17 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   // If there is a possibilty that flat instruction access scratch memory
   // then we need to use the same legalization rules we use for private.
-  if (AS == AMDGPUAS::FLAT_ADDRESS)
+  if (AS == AMDGPUASI.FLAT_ADDRESS)
     AS = MFI->hasFlatScratchInit() ?
-         AMDGPUAS::PRIVATE_ADDRESS : AMDGPUAS::GLOBAL_ADDRESS;
+         AMDGPUASI.PRIVATE_ADDRESS : AMDGPUASI.GLOBAL_ADDRESS;
 
   unsigned NumElements = VT.getVectorNumElements();
-  switch (AS) {
-  case AMDGPUAS::GLOBAL_ADDRESS:
-  case AMDGPUAS::FLAT_ADDRESS:
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS ||
+      AS == AMDGPUASI.FLAT_ADDRESS) {
     if (NumElements > 4)
       return SplitVectorStore(Op, DAG);
     return SDValue();
-  case AMDGPUAS::PRIVATE_ADDRESS: {
+  } else if (AS == AMDGPUASI.PRIVATE_ADDRESS) {
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4:
       return scalarizeVectorStore(Store, DAG);
@@ -3682,8 +3681,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     default:
       llvm_unreachable("unsupported private_element_size");
     }
-  }
-  case AMDGPUAS::LOCAL_ADDRESS: {
+  } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
     if (NumElements > 2)
       return SplitVectorStore(Op, DAG);
 
@@ -3692,8 +3690,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
     // If properly aligned, if we split we might be able to use ds_write_b64.
     return SplitVectorStore(Op, DAG);
-  }
-  default:
+  } else {
     llvm_unreachable("unhandled address space");
   }
 }
@@ -3724,7 +3721,7 @@ SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) co
   unsigned AS = AtomicNode->getAddressSpace();
 
   // No custom lowering required for local address space
-  if (!isFlatGlobalAddrSpace(AS))
+  if (!isFlatGlobalAddrSpace(AS, AMDGPUASI))
     return Op;
 
   // Non-local address space requires custom lowering for atomic compare
@@ -3781,26 +3778,26 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
 /// the immediate offsets of a memory instruction for the given address space.
 static bool canFoldOffset(unsigned OffsetSize, unsigned AS,
                           const SISubtarget &STI) {
-  switch (AS) {
-  case AMDGPUAS::GLOBAL_ADDRESS:
+  auto AMDGPUASI = STI.getAMDGPUAS();
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
     // MUBUF instructions a 12-bit offset in bytes.
     return isUInt<12>(OffsetSize);
-  case AMDGPUAS::CONSTANT_ADDRESS:
+  }
+  if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
     // SMRD instructions have an 8-bit offset in dwords on SI and
     // a 20-bit offset in bytes on VI.
     if (STI.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
       return isUInt<20>(OffsetSize);
     else
       return (OffsetSize % 4 == 0) && isUInt<8>(OffsetSize / 4);
-  case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS:
+  }
+  if (AS == AMDGPUASI.LOCAL_ADDRESS ||
+      AS == AMDGPUASI.REGION_ADDRESS) {
     // The single offset versions have a 16-bit offset in bytes.
     return isUInt<16>(OffsetSize);
-  case AMDGPUAS::PRIVATE_ADDRESS:
-  // Indirect register addressing does not use any offsets.
-  default:
-    return false;
   }
+  // Indirect register addressing does not use any offsets.
+  return false;
 }
 
 // (shl (add x, c1), c2) -> add (shl x, c2), (shl c1, c2)
@@ -3858,7 +3855,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
 
   // TODO: We could also do this for multiplies.
   unsigned AS = N->getAddressSpace();
-  if (Ptr.getOpcode() == ISD::SHL && AS != AMDGPUAS::PRIVATE_ADDRESS) {
+  if (Ptr.getOpcode() == ISD::SHL && AS != AMDGPUASI.PRIVATE_ADDRESS) {
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(), AS, DCI);
     if (NewPtr) {
       SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());

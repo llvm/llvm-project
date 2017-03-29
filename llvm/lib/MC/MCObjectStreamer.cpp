@@ -171,6 +171,16 @@ void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   }
 }
 
+void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc, MCFragment *F) {
+  MCStreamer::EmitLabel(Symbol, Loc);
+  getAssembler().registerSymbol(*Symbol);
+  auto *DF = dyn_cast_or_null<MCDataFragment>(F);
+  if (DF)
+    Symbol->setFragment(F);
+  else
+    PendingLabels.push_back(Symbol);
+}
+
 void MCObjectStreamer::EmitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
   if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
@@ -491,8 +501,8 @@ void MCObjectStreamer::EmitGPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(), 
-                                            Value, FK_GPRel_4));
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), Value, FK_GPRel_4));
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
@@ -501,8 +511,8 @@ void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(), 
-                                            Value, FK_GPRel_4));
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), Value, FK_GPRel_4));
   DF->getContents().resize(DF->getContents().size() + 8, 0);
 }
 
