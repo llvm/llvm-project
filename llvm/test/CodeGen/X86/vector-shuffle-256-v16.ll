@@ -718,7 +718,7 @@ define <16 x i16> @shuffle_v16i16_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_3
 ; AVX512VL-LABEL: shuffle_v16i16_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_31:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movw $-32768, %ax # imm = 0x8000
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm1, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 31>
@@ -743,7 +743,7 @@ define <16 x i16> @shuffle_v16i16_16_01_02_03_04_05_06_07_08_09_10_11_12_13_14_1
 ; AVX512VL-LABEL: shuffle_v16i16_16_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movw $1, %ax
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm1, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 16, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -768,7 +768,7 @@ define <16 x i16> @shuffle_v16i16_00_17_02_19_04_21_06_23_24_09_26_11_28_13_30_1
 ; AVX512VL-LABEL: shuffle_v16i16_00_17_02_19_04_21_06_23_24_09_26_11_28_13_30_15:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movw $21930, %ax # imm = 0x55AA
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm1, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
@@ -793,7 +793,7 @@ define <16 x i16> @shuffle_v16i16_16_01_18_03_20_05_22_07_08_25_10_27_12_29_14_3
 ; AVX512VL-LABEL: shuffle_v16i16_16_01_18_03_20_05_22_07_08_25_10_27_12_29_14_31:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movw $-21931, %ax # imm = 0xAA55
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm1, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>

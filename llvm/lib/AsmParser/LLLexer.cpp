@@ -549,6 +549,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(ninf);
   KEYWORD(nsz);
   KEYWORD(arcp);
+  KEYWORD(contract);
   KEYWORD(fast);
   KEYWORD(nuw);
   KEYWORD(nsw);

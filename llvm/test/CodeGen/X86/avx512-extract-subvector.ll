@@ -675,7 +675,7 @@ entry:
 define <4 x double> @test_mm512_mask_extractf64x4_pd(<4 x double> %__W, i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_mask_extractf64x4_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x4 $1, %zmm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -689,7 +689,7 @@ entry:
 define <4 x double> @test_mm512_maskz_extractf64x4_pd(i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_maskz_extractf64x4_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -703,7 +703,7 @@ entry:
 define <4 x float> @test_mm512_mask_extractf32x4_ps(<4 x float> %__W, i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_mask_extractf32x4_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x4 $1, %zmm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -719,7 +719,7 @@ entry:
 define <4 x float> @test_mm512_maskz_extractf32x4_ps(i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_maskz_extractf32x4_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x4 $1, %zmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -735,7 +735,7 @@ entry:
 define <2 x double> @test_mm256_mask_extractf64x2_pd(<2 x double> %__W, i8 %__U, <4 x double> %__A) {
 ; SKX-LABEL: test_mm256_mask_extractf64x2_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x2 $1, %ymm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -750,7 +750,7 @@ entry:
 define <2 x double> @test_mm256_maskz_extractf64x2_pd(i8 %__U, <4 x double> %__A) {
 ; SKX-LABEL: test_mm256_maskz_extractf64x2_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x2 $1, %ymm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -765,7 +765,7 @@ entry:
 define <2 x i64> @test_mm256_mask_extracti64x2_epi64(<2 x i64> %__W, i8 %__U, <4 x i64> %__A) {
 ; SKX-LABEL: test_mm256_mask_extracti64x2_epi64:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextracti64x2 $1, %ymm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -780,7 +780,7 @@ entry:
 define <2 x i64> @test_mm256_maskz_extracti64x2_epi64(i8 %__U, <4 x i64> %__A) {
 ; SKX-LABEL: test_mm256_maskz_extracti64x2_epi64:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextracti64x2 $1, %ymm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -795,7 +795,7 @@ entry:
 define <4 x float> @test_mm256_mask_extractf32x4_ps(<4 x float> %__W, i8 %__U, <8 x float> %__A) {
 ; SKX-LABEL: test_mm256_mask_extractf32x4_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x4 $1, %ymm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -810,7 +810,7 @@ entry:
 define <4 x float> @test_mm256_maskz_extractf32x4_ps(i8 %__U, <8 x float> %__A) {
 ; SKX-LABEL: test_mm256_maskz_extractf32x4_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x4 $1, %ymm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -825,7 +825,7 @@ entry:
 define <2 x i64> @test_mm256_mask_extracti32x4_epi32(<2 x i64> %__W, i8 %__U, <4 x i64> %__A) {
 ; SKX-LABEL: test_mm256_mask_extracti32x4_epi32:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextracti32x4 $1, %ymm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -843,7 +843,7 @@ entry:
 define <2 x i64> @test_mm256_maskz_extracti32x4_epi32(i8 %__U, <4 x i64> %__A) {
 ; SKX-LABEL: test_mm256_maskz_extracti32x4_epi32:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextracti32x4 $1, %ymm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -860,7 +860,7 @@ entry:
 define <8 x float> @test_mm512_mask_extractf32x8_ps(<8 x float> %__W, i8 %__U, <16 x float> %__A) {
 ; SKX-LABEL: test_mm512_mask_extractf32x8_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x8 $1, %zmm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -873,7 +873,7 @@ entry:
 define <8 x float> @test_mm512_maskz_extractf32x8_ps(i8 %__U, <16 x float> %__A) {
 ; SKX-LABEL: test_mm512_maskz_extractf32x8_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf32x8 $1, %zmm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -886,7 +886,7 @@ entry:
 define <2 x double> @test_mm512_mask_extractf64x2_pd(<2 x double> %__W, i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_mask_extractf64x2_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x2 $3, %zmm1, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -901,7 +901,7 @@ entry:
 define <2 x double> @test_mm512_maskz_extractf64x2_pd(i8 %__U, <8 x double> %__A) {
 ; SKX-LABEL: test_mm512_maskz_extractf64x2_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vextractf64x2 $3, %zmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

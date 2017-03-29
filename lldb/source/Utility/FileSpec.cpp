@@ -401,11 +401,36 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full,
                      bool remove_backups) {
+  static ConstString g_dot_string(".");
+  static ConstString g_dot_dot_string("..");
+
   // case sensitivity of equality test
   const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
+  
+  bool filenames_equal = ConstString::Equals(a.m_filename, 
+                                             b.m_filename, 
+                                             case_sensitive);
+
+  // The only way two FileSpecs can be equal if their filenames are
+  // unequal is if we are removing backups and one or the other filename
+  // is a backup string:
+
+  if (!filenames_equal && !remove_backups)
+      return false;
+
+  bool last_component_is_dot = ConstString::Equals(a.m_filename, g_dot_string) 
+                               || ConstString::Equals(a.m_filename, 
+                                                      g_dot_dot_string)
+                               || ConstString::Equals(b.m_filename, 
+                                                      g_dot_string)
+                               || ConstString::Equals(b.m_filename, 
+                                                      g_dot_dot_string);
+
+  if (!filenames_equal && !last_component_is_dot)
+    return false;
 
   if (!full && (a.GetDirectory().IsEmpty() || b.GetDirectory().IsEmpty()))
-    return ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
+    return filenames_equal;
 
   if (remove_backups == false)
     return a == b;

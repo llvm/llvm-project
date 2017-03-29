@@ -548,6 +548,87 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
   } while (!WorkList.empty());
 }
 
+std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
+                                                         const SUnit &TargetSU,
+                                                         bool &Success) {
+  std::vector<const SUnit*> WorkList;
+  int LowerBound = Node2Index[StartSU.NodeNum];
+  int UpperBound = Node2Index[TargetSU.NodeNum];
+  bool Found = false;
+  BitVector VisitedBack;
+  std::vector<int> Nodes;
+
+  if (LowerBound > UpperBound) {
+    Success = false;
+    return Nodes;
+  }
+
+  WorkList.reserve(SUnits.size());
+  Visited.reset();
+
+  // Starting from StartSU, visit all successors up
+  // to UpperBound.
+  WorkList.push_back(&StartSU);
+  do {
+    const SUnit *SU = WorkList.back();
+    WorkList.pop_back();
+    for (int I = SU->Succs.size()-1; I >= 0; --I) {
+      const SUnit *Succ = SU->Succs[I].getSUnit();
+      unsigned s = Succ->NodeNum;
+      // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
+      if (Succ->isBoundaryNode())
+        continue;
+      if (Node2Index[s] == UpperBound) {
+        Found = true;
+        continue;
+      }
+      // Visit successors if not already and in affected region.
+      if (!Visited.test(s) && Node2Index[s] < UpperBound) {
+        Visited.set(s);
+        WorkList.push_back(Succ);
+      }
+    }
+  } while (!WorkList.empty());
+
+  if (!Found) {
+    Success = false;
+    return Nodes;
+  }
+
+  WorkList.clear();
+  VisitedBack.resize(SUnits.size());
+  Found = false;
+
+  // Starting from TargetSU, visit all predecessors up
+  // to LowerBound. SUs that are visited by the two
+  // passes are added to Nodes.
+  WorkList.push_back(&TargetSU);
+  do {
+    const SUnit *SU = WorkList.back();
+    WorkList.pop_back();
+    for (int I = SU->Preds.size()-1; I >= 0; --I) {
+      const SUnit *Pred = SU->Preds[I].getSUnit();
+      unsigned s = Pred->NodeNum;
+      // Edges to non-SUnits are allowed but ignored (e.g. EntrySU).
+      if (Pred->isBoundaryNode())
+        continue;
+      if (Node2Index[s] == LowerBound) {
+        Found = true;
+        continue;
+      }
+      if (!VisitedBack.test(s) && Visited.test(s)) {
+        VisitedBack.set(s);
+        WorkList.push_back(Pred);
+        Nodes.push_back(s);
+      }
+    }
+  } while (!WorkList.empty());
+
+  assert(Found && "Error in SUnit Graph!");
+  Success = true;
+  return Nodes;
+}
+
 void ScheduleDAGTopologicalSort::Shift(BitVector& Visited, int LowerBound,
                                        int UpperBound) {
   std::vector<int> L;

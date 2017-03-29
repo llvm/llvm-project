@@ -107,8 +107,12 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
   let AsmMatchConverter =
     !if(!eq(VOP3Only,1),
-      !if(!and(P.IsPacked, isVOP3P), "cvtVOP3P", "cvtVOP3"),
-        !if(!eq(P.HasModifiers, 1), "cvtVOP3_2_mod", ""));
+        !if(!and(P.IsPacked, isVOP3P), "cvtVOP3P", "cvtVOP3"),
+        !if(!eq(P.HasModifiers, 1),
+            "cvtVOP3_2_mod",
+            !if(!eq(P.HasOMod, 1), "cvtVOP3OMod", "")
+        )
+    );
 
   VOPProfile Pfl = P;
 }

@@ -6069,20 +6069,20 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
   // supports the MVT we'll be loading or if it is small enough (<= 4) that
   // we'll only produce a small number of byte loads.
   MVT LoadVT;
-  switch (CSize->getZExtValue()) {
+  unsigned NumBitsToCompare = CSize->getZExtValue() * 8;
+  switch (NumBitsToCompare) {
   default:
     return false;
-  case 2:
+  case 16:
     LoadVT = MVT::i16;
     break;
-  case 4:
+  case 32:
     LoadVT = MVT::i32;
     break;
-  case 8:
-    LoadVT = hasFastLoadsAndCompare(64);
-    break;
-  case 16:
-    LoadVT = hasFastLoadsAndCompare(128);
+  case 64:
+  case 128:
+  case 256:
+    LoadVT = hasFastLoadsAndCompare(NumBitsToCompare);
     break;
   }
 

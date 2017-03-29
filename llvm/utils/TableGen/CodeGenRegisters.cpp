@@ -1668,7 +1668,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         });
 
@@ -1681,7 +1681,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         }
         dbgs() << "\nUnion sets:\n");
@@ -1727,7 +1727,7 @@ void CodeGenRegBank::computeRegUnitSets() {
         DEBUG(dbgs() << "UnitSet " << RegUnitSets.size()-1
               << " " << RegUnitSets.back().Name << ":";
               for (auto &U : RegUnitSets.back().Units)
-                dbgs() << " " << RegUnits[U].Roots[0]->getName();
+                printRegUnitName(U);
               dbgs() << "\n";);
       }
     }
@@ -1742,7 +1742,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         });
 
@@ -1763,8 +1763,8 @@ void CodeGenRegBank::computeRegUnitSets() {
       continue;
 
     DEBUG(dbgs() << "RC " << RC.getName() << " Units: \n";
-          for (auto &U : RCRegUnits)
-            dbgs() << RegUnits[U].getRoots()[0]->getName() << " ";
+          for (auto U : RCRegUnits)
+            printRegUnitName(U);
           dbgs() << "\n  UnitSetIDs:");
 
     // Find all supersets.
@@ -2169,4 +2169,11 @@ BitVector CodeGenRegBank::computeCoveredRegisters(ArrayRef<Record*> Regs) {
   for (unsigned i = 0, e = Set.size(); i != e; ++i)
     BV.set(Set[i]->EnumValue);
   return BV;
+}
+
+void CodeGenRegBank::printRegUnitName(unsigned Unit) const {
+  if (Unit < NumNativeRegUnits)
+    dbgs() << ' ' << RegUnits[Unit].Roots[0]->getName();
+  else
+    dbgs() << " #" << Unit;
 }

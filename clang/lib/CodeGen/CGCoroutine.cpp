@@ -229,7 +229,24 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   createCoroData(*this, CurCoro, CoroId);
   CurCoro.Data->SuspendBB = RetBB;
 
-  EmitScalarExpr(S.getAllocate());
+  auto *AllocateCall = EmitScalarExpr(S.getAllocate());
+
+  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
+  if (auto *RetOnAllocFailure = S.getReturnStmtOnAllocFailure()) {
+    auto *RetOnFailureBB = createBasicBlock("coro.ret.on.failure");
+    auto *InitBB = createBasicBlock("coro.init");
+
+    // See if allocation was successful.
+    auto *NullPtr = llvm::ConstantPointerNull::get(Int8PtrTy);
+    auto *Cond = Builder.CreateICmpNE(AllocateCall, NullPtr);
+    Builder.CreateCondBr(Cond, InitBB, RetOnFailureBB);
+
+    // If not, return OnAllocFailure object.
+    EmitBlock(RetOnFailureBB);
+    EmitStmt(RetOnAllocFailure);
+
+    EmitBlock(InitBB);
+  }
 
   // FIXME: Setup cleanup scopes.
 

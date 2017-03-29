@@ -2758,8 +2758,8 @@ iterator_range<export_iterator> MachOObjectFile::exports() const {
 MachORebaseEntry::MachORebaseEntry(Error *E, const MachOObjectFile *O,
                                    ArrayRef<uint8_t> Bytes, bool is64Bit)
     : E(E), O(O), Opcodes(Bytes), Ptr(Bytes.begin()), SegmentOffset(0),
-      SegmentIndex(0), RemainingLoopCount(0), AdvanceAmount(0), RebaseType(0),
-      PointerSize(is64Bit ? 8 : 4), Malformed(false), Done(false) {}
+      SegmentIndex(-1), RemainingLoopCount(0), AdvanceAmount(0), RebaseType(0),
+      PointerSize(is64Bit ? 8 : 4), Done(false) {}
 
 void MachORebaseEntry::moveToFirst() {
   Ptr = Opcodes.begin();
@@ -2773,22 +2773,31 @@ void MachORebaseEntry::moveToEnd() {
 }
 
 void MachORebaseEntry::moveNext() {
+  ErrorAsOutParameter ErrAsOutParam(E);
   // If in the middle of some loop, move to next rebasing in loop.
   SegmentOffset += AdvanceAmount;
   if (RemainingLoopCount) {
     --RemainingLoopCount;
     return;
   }
-  if (Ptr == Opcodes.end()) {
+  if (Ptr >= Opcodes.end()) {
+    if (Opcodes.begin() != Opcodes.end() && Done != true) {
+      *E = malformedError("missing REBASE_OPCODE_DONE at end of opcodes");
+      moveToEnd();
+      return;
+    }
     Done = true;
     return;
   }
   bool More = true;
-  while (More && !Malformed) {
+  while (More) {
     // Parse next opcode and set up next loop.
+    const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;
     uint8_t ImmValue = Byte & MachO::REBASE_IMMEDIATE_MASK;
     uint8_t Opcode = Byte & MachO::REBASE_OPCODE_MASK;
+    uint32_t Count, Skip;
+    const char *error = nullptr;
     switch (Opcode) {
     case MachO::REBASE_OPCODE_DONE:
       More = false;
@@ -2798,6 +2807,13 @@ void MachORebaseEntry::moveNext() {
       break;
     case MachO::REBASE_OPCODE_SET_TYPE_IMM:
       RebaseType = ImmValue;
+      if (RebaseType > MachO::REBASE_TYPE_TEXT_PCREL32) {
+          *E = malformedError("for REBASE_OPCODE_SET_TYPE_IMM bad bind type: " +
+               Twine((int)RebaseType) + " for opcode at: 0x" +
+               utohexstr(OpcodeStart - Opcodes.begin()));
+          moveToEnd();
+          return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_SET_TYPE_IMM: "
@@ -2805,7 +2821,23 @@ void MachORebaseEntry::moveNext() {
       break;
     case MachO::REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
       SegmentIndex = ImmValue;
-      SegmentOffset = readULEB128();
+      SegmentOffset = readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB: "
@@ -2814,22 +2846,80 @@ void MachORebaseEntry::moveNext() {
                        << "\n");
       break;
     case MachO::REBASE_OPCODE_ADD_ADDR_ULEB:
-      SegmentOffset += readULEB128();
+      SegmentOffset += readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_ADD_ADDR_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_ADD_ADDR_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       DEBUG_WITH_TYPE("mach-o-rebase",
                       llvm::dbgs() << "REBASE_OPCODE_ADD_ADDR_ULEB: "
                                    << format("SegmentOffset=0x%06X",
                                              SegmentOffset) << "\n");
       break;
     case MachO::REBASE_OPCODE_ADD_ADDR_IMM_SCALED:
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       SegmentOffset += ImmValue * PointerSize;
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              false);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED "
+             " (after adding immediate times the pointer size) " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       DEBUG_WITH_TYPE("mach-o-rebase",
                       llvm::dbgs() << "REBASE_OPCODE_ADD_ADDR_IMM_SCALED: "
                                    << format("SegmentOffset=0x%06X",
                                              SegmentOffset) << "\n");
       break;
     case MachO::REBASE_OPCODE_DO_REBASE_IMM_TIMES:
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_IMM_TIMES " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       AdvanceAmount = PointerSize;
-      RemainingLoopCount = ImmValue - 1;
+      Skip = 0;
+      Count = ImmValue;
+      if (ImmValue != 0)
+        RemainingLoopCount = ImmValue - 1;
+      else
+        RemainingLoopCount = 0;
+      error = O->RebaseEntryCheckCountAndSkip(Count, Skip, PointerSize,
+                                              SegmentIndex, SegmentOffset);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_IMM_TIMES "
+             + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+	return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_DO_REBASE_IMM_TIMES: "
@@ -2839,8 +2929,38 @@ void MachORebaseEntry::moveNext() {
                        << "\n");
       return;
     case MachO::REBASE_OPCODE_DO_REBASE_ULEB_TIMES:
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       AdvanceAmount = PointerSize;
-      RemainingLoopCount = readULEB128() - 1;
+      Skip = 0;
+      Count = readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      if (Count != 0)
+        RemainingLoopCount = Count - 1;
+      else
+        RemainingLoopCount = 0;
+      error = O->RebaseEntryCheckCountAndSkip(Count, Skip, PointerSize,
+                                              SegmentIndex, SegmentOffset);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES "
+             + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+	return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_DO_REBASE_ULEB_TIMES: "
@@ -2850,8 +2970,35 @@ void MachORebaseEntry::moveNext() {
                        << "\n");
       return;
     case MachO::REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB:
-      AdvanceAmount = readULEB128() + PointerSize;
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      Skip = readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB " +
+             Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      AdvanceAmount = Skip + PointerSize;
+      Count = 1;
       RemainingLoopCount = 0;
+      error = O->RebaseEntryCheckCountAndSkip(Count, Skip, PointerSize,
+                                              SegmentIndex, SegmentOffset);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB "
+             + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+	return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB: "
@@ -2861,8 +3008,46 @@ void MachORebaseEntry::moveNext() {
                        << "\n");
       return;
     case MachO::REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB:
-      RemainingLoopCount = readULEB128() - 1;
-      AdvanceAmount = readULEB128() + PointerSize;
+      error = O->RebaseEntryCheckSegAndOffset(SegmentIndex, SegmentOffset,
+                                              true);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_"
+             "ULEB " + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      Count = readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_"
+             "ULEB " + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      if (Count != 0)
+        RemainingLoopCount = Count - 1;
+      else
+        RemainingLoopCount = 0;
+      Skip = readULEB128(&error);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_"
+             "ULEB " + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
+      AdvanceAmount = Skip + PointerSize;
+
+      error = O->RebaseEntryCheckCountAndSkip(Count, Skip, PointerSize,
+                                              SegmentIndex, SegmentOffset);
+      if (error) {
+        *E = malformedError("for REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_"
+             "ULEB " + Twine(error) + " for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+	return;
+      }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
           llvm::dbgs() << "REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB: "
@@ -2872,23 +3057,25 @@ void MachORebaseEntry::moveNext() {
                        << "\n");
       return;
     default:
-      Malformed = true;
+      *E = malformedError("bad rebase info (bad opcode value 0x" +
+           utohexstr(Opcode) + " for opcode at: 0x" +
+           utohexstr(OpcodeStart - Opcodes.begin()));
+      moveToEnd();
+      return;
     }
   }
 }
 
-uint64_t MachORebaseEntry::readULEB128() {
+uint64_t MachORebaseEntry::readULEB128(const char **error) {
   unsigned Count;
-  uint64_t Result = decodeULEB128(Ptr, &Count);
+  uint64_t Result = decodeULEB128(Ptr, &Count, Opcodes.end(), error);
   Ptr += Count;
-  if (Ptr > Opcodes.end()) {
+  if (Ptr > Opcodes.end())
     Ptr = Opcodes.end();
-    Malformed = true;
-  }
   return Result;
 }
 
-uint32_t MachORebaseEntry::segmentIndex() const { return SegmentIndex; }
+int32_t MachORebaseEntry::segmentIndex() const { return SegmentIndex; }
 
 uint64_t MachORebaseEntry::segmentOffset() const { return SegmentOffset; }
 
@@ -2956,8 +3143,7 @@ MachOBindEntry::MachOBindEntry(Error *E, const MachOObjectFile *O,
     : E(E), O(O), Opcodes(Bytes), Ptr(Bytes.begin()), SegmentOffset(0),
       SegmentIndex(-1), LibraryOrdinalSet(false), Ordinal(0), Flags(0),
       Addend(0), RemainingLoopCount(0), AdvanceAmount(0), BindType(0),
-      PointerSize(is64Bit ? 8 : 4), TableKind(BK), Malformed(false),
-      Done(false) {}
+      PointerSize(is64Bit ? 8 : 4), TableKind(BK), Done(false) {}
 
 void MachOBindEntry::moveToFirst() {
   Ptr = Opcodes.begin();
@@ -2978,12 +3164,17 @@ void MachOBindEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  if (Ptr == Opcodes.end()) {
+  if (Ptr >= Opcodes.end()) {
+    if (Opcodes.begin() != Opcodes.end() && Done != true) {
+      *E = malformedError("missing BIND_OPCODE_DONE at end of opcodes");
+      moveToEnd();
+      return;
+    }
     Done = true;
     return;
   }
   bool More = true;
-  while (More && !Malformed) {
+  while (More) {
     // Parse next opcode and set up next loop.
     const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;
@@ -3008,11 +3199,17 @@ void MachOBindEntry::moveNext() {
           break;
       }
       More = false;
-      Done = true;
       moveToEnd();
       DEBUG_WITH_TYPE("mach-o-bind", llvm::dbgs() << "BIND_OPCODE_DONE\n");
       break;
     case MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_IMM:
+      if (TableKind == Kind::Weak) {
+        *E = malformedError("BIND_OPCODE_SET_DYLIB_ORDINAL_IMM not allowed in "
+             "weak bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       Ordinal = ImmValue;
       LibraryOrdinalSet = true;
       if (ImmValue > O->getLibraryCount()) {
@@ -3029,6 +3226,13 @@ void MachOBindEntry::moveNext() {
                        << "Ordinal=" << Ordinal << "\n");
       break;
     case MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB:
+      if (TableKind == Kind::Weak) {
+        *E = malformedError("BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB not allowed in "
+             "weak bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       Ordinal = readULEB128(&error);
       LibraryOrdinalSet = true;
       if (error) {
@@ -3052,6 +3256,13 @@ void MachOBindEntry::moveNext() {
                        << "Ordinal=" << Ordinal << "\n");
       break;
     case MachO::BIND_OPCODE_SET_DYLIB_SPECIAL_IMM:
+      if (TableKind == Kind::Weak) {
+        *E = malformedError("BIND_OPCODE_SET_DYLIB_SPECIAL_IMM not allowed in "
+             "weak bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       if (ImmValue) {
         SignExtended = MachO::BIND_OPCODE_MASK | ImmValue;
         Ordinal = SignExtended;
@@ -3118,8 +3329,6 @@ void MachOBindEntry::moveNext() {
         moveToEnd();
         return;
       }
-      if (TableKind == Kind::Lazy)
-        Malformed = true;
       DEBUG_WITH_TYPE(
           "mach-o-bind",
           llvm::dbgs() << "BIND_OPCODE_SET_ADDEND_SLEB: "
@@ -3202,6 +3411,13 @@ void MachOBindEntry::moveNext() {
                                              SegmentOffset) << "\n");
       return;
      case MachO::BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB:
+      if (TableKind == Kind::Lazy) {
+        *E = malformedError("BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB not allowed in "
+             "lazy bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       error = O->BindEntryCheckSegAndOffset(SegmentIndex, SegmentOffset, true);
       if (error) {
         *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB " +
@@ -3245,8 +3461,6 @@ void MachOBindEntry::moveNext() {
         return;
       }
       RemainingLoopCount = 0;
-      if (TableKind == Kind::Lazy)
-        Malformed = true;
       DEBUG_WITH_TYPE(
           "mach-o-bind",
           llvm::dbgs() << "BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB: "
@@ -3256,6 +3470,13 @@ void MachOBindEntry::moveNext() {
                        << "\n");
       return;
     case MachO::BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED:
+      if (TableKind == Kind::Lazy) {
+        *E = malformedError("BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED not "
+             "allowed in lazy bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       error = O->BindEntryCheckSegAndOffset(SegmentIndex, SegmentOffset, true);
       if (error) {
         *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED " +
@@ -3290,8 +3511,6 @@ void MachOBindEntry::moveNext() {
         moveToEnd();
         return;
       }
-      if (TableKind == Kind::Lazy)
-        Malformed = true;
       DEBUG_WITH_TYPE("mach-o-bind",
                       llvm::dbgs()
                       << "BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED: "
@@ -3299,6 +3518,13 @@ void MachOBindEntry::moveNext() {
                                              SegmentOffset) << "\n");
       return;
     case MachO::BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB:
+      if (TableKind == Kind::Lazy) {
+        *E = malformedError("BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB not "
+             "allowed in lazy bind table for opcode at: 0x" +
+             utohexstr(OpcodeStart - Opcodes.begin()));
+        moveToEnd();
+        return;
+      }
       Count = readULEB128(&error);
       if (Count != 0)
         RemainingLoopCount = Count - 1;
@@ -3351,8 +3577,6 @@ void MachOBindEntry::moveNext() {
         moveToEnd();
 	return;
       }
-      if (TableKind == Kind::Lazy)
-        Malformed = true;
       DEBUG_WITH_TYPE(
           "mach-o-bind",
           llvm::dbgs() << "BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB: "
@@ -3362,7 +3586,6 @@ void MachOBindEntry::moveNext() {
                        << "\n");
       return;
     default:
-      Malformed = true;
       *E = malformedError("bad bind info (bad opcode value 0x" +
            utohexstr(Opcode) + " for opcode at: 0x" +
            utohexstr(OpcodeStart - Opcodes.begin()));
@@ -3376,10 +3599,8 @@ uint64_t MachOBindEntry::readULEB128(const char **error) {
   unsigned Count;
   uint64_t Result = decodeULEB128(Ptr, &Count, Opcodes.end(), error);
   Ptr += Count;
-  if (Ptr > Opcodes.end()) {
+  if (Ptr > Opcodes.end())
     Ptr = Opcodes.end();
-    Malformed = true;
-  }
   return Result;
 }
 
@@ -3387,10 +3608,8 @@ int64_t MachOBindEntry::readSLEB128(const char **error) {
   unsigned Count;
   int64_t Result = decodeSLEB128(Ptr, &Count, Opcodes.end(), error);
   Ptr += Count;
-  if (Ptr > Opcodes.end()) {
+  if (Ptr > Opcodes.end())
     Ptr = Opcodes.end();
-    Malformed = true;
-  }
   return Result;
 }
 
@@ -3473,12 +3692,12 @@ BindRebaseSegInfo::BindRebaseSegInfo(const object::MachOObjectFile *Obj) {
 }
 
 // For use with a SegIndex,SegOffset pair in MachOBindEntry::moveNext() to
-// validate a MachOBindEntry.
+// validate a MachOBindEntry or MachORebaseEntry.
 const char * BindRebaseSegInfo::checkSegAndOffset(int32_t SegIndex,
                                                   uint64_t SegOffset,
                                                   bool endInvalid) {
   if (SegIndex == -1)
-    return "missing preceding BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB";
+    return "missing preceding *_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB";
   if (SegIndex >= MaxSegIndex)
     return "bad segIndex (too large)";
   for (const SectionInfo &SI : Sections) {
@@ -3496,12 +3715,14 @@ const char * BindRebaseSegInfo::checkSegAndOffset(int32_t SegIndex,
 }
 
 // For use in MachOBindEntry::moveNext() to validate a MachOBindEntry for
-// the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode.  The SegIndex
-// and SegOffset must have been already checked.
+// the BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB opcode and for use in
+// MachORebaseEntry::moveNext() to validate a MachORebaseEntry for
+// REBASE_OPCODE_DO_*_TIMES* opcodes.  The SegIndex and SegOffset must have
+// been already checked.
 const char * BindRebaseSegInfo::checkCountAndSkip(uint32_t Count, uint32_t Skip,
                                                   uint8_t PointerSize,
-                                                 int32_t SegIndex,
-                                                 uint64_t SegOffset) {
+                                                  int32_t SegIndex,
+                                                  uint64_t SegOffset) {
   const SectionInfo &SI = findSection(SegIndex, SegOffset);
   uint64_t addr = SI.SegmentStartAddress + SegOffset;
   if (addr >= SI.Address + SI.Size)
@@ -3509,8 +3730,15 @@ const char * BindRebaseSegInfo::checkCountAndSkip(uint32_t Count, uint32_t Skip,
   uint64_t i = 0;
   if (Count > 1)
     i = (Skip + PointerSize) * (Count - 1);
-  if (addr + i >= SI.Address + SI.Size)
-    return "bad count and skip, too large";
+  else if (Count == 1)
+    i = Skip + PointerSize;
+  if (addr + i >= SI.Address + SI.Size) {
+    // For rebase opcodes they can step from one section to another.
+    uint64_t TrailingSegOffset = (addr + i) - SI.SegmentStartAddress;
+    const char *error = checkSegAndOffset(SegIndex, TrailingSegOffset, false);
+    if (error)
+      return "bad count and skip, too large";
+  }
   return nullptr;
 }
 

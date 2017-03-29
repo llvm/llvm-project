@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_AMDGPUALIASANALYSIS_H
 #define LLVM_ANALYSIS_AMDGPUALIASANALYSIS_H
 
+#include "AMDGPU.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -25,11 +26,14 @@ class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
   friend AAResultBase<AMDGPUAAResult>;
 
   const DataLayout &DL;
+  AMDGPUAS AS;
 
 public:
-  explicit AMDGPUAAResult(const DataLayout &DL) : AAResultBase(), DL(DL) {}
+  explicit AMDGPUAAResult(const DataLayout &DL, Triple T) : AAResultBase(),
+    DL(DL), AS(AMDGPU::getAMDGPUAS(T)), ASAliasRules(AS) {}
   AMDGPUAAResult(AMDGPUAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL){}
+      : AAResultBase(std::move(Arg)), DL(Arg.DL), AS(Arg.AS),
+        ASAliasRules(Arg.ASAliasRules){}
 
   /// Handle invalidation events from the new pass manager.
   ///
@@ -42,6 +46,15 @@ public:
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
   bool PathAliases(const MDNode *A, const MDNode *B) const;
+
+  class ASAliasRulesTy {
+  public:
+    ASAliasRulesTy(AMDGPUAS AS_);
+    AliasResult getAliasResult(unsigned AS1, unsigned AS2) const;
+  private:
+    AMDGPUAS AS;
+    const AliasResult (*ASAliasRules)[6][6];
+  } ASAliasRules;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
@@ -53,7 +66,8 @@ public:
   typedef AMDGPUAAResult Result;
 
   AMDGPUAAResult run(Function &F, AnalysisManager<Function> &AM) {
-    return AMDGPUAAResult(F.getParent()->getDataLayout());
+    return AMDGPUAAResult(F.getParent()->getDataLayout(),
+        Triple(F.getParent()->getTargetTriple()));
   }
 };
 
@@ -72,7 +86,8 @@ public:
   const AMDGPUAAResult &getResult() const { return *Result; }
 
   bool doInitialization(Module &M) override {
-    Result.reset(new AMDGPUAAResult(M.getDataLayout()));
+    Result.reset(new AMDGPUAAResult(M.getDataLayout(),
+        Triple(M.getTargetTriple())));
     return false;
   }
   bool doFinalization(Module &M) override {

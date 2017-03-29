@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
+#include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
 #include "llvm/ADT/StringRef.h"
@@ -160,9 +161,9 @@ MCSection *getHSADataGlobalProgramSection(MCContext &Ctx);
 
 MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx);
 
-bool isGroupSegment(const GlobalValue *GV);
-bool isGlobalSegment(const GlobalValue *GV);
-bool isReadOnlySegment(const GlobalValue *GV);
+bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS);
+bool isGlobalSegment(const GlobalValue *GV, AMDGPUAS AS);
+bool isReadOnlySegment(const GlobalValue *GV, AMDGPUAS AS);
 
 /// \returns True if constants should be emitted to .text section for given
 /// target triple \p TT, false otherwise.

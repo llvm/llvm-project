@@ -48,7 +48,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
     const DataLayout &DL = BB->getModule()->getDataLayout();
     for (const Instruction &I : *BB) {
       const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I);
-      if (!GEP || GEP->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+      if (!GEP || GEP->getAddressSpace() != ST->getAMDGPUAS().PRIVATE_ADDRESS)
         continue;
 
       const Value *Ptr = GEP->getPointerOperand();
@@ -108,25 +108,24 @@ unsigned AMDGPUTTIImpl::getRegisterBitWidth(bool Vector) {
 }
 
 unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  switch (AddrSpace) {
-  case AMDGPUAS::GLOBAL_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS:
-  case AMDGPUAS::FLAT_ADDRESS:
+  AMDGPUAS AS = ST->getAMDGPUAS();
+  if (AddrSpace == AS.GLOBAL_ADDRESS ||
+      AddrSpace == AS.CONSTANT_ADDRESS ||
+      AddrSpace == AS.FLAT_ADDRESS)
     return 128;
-  case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS:
+  if (AddrSpace == AS.LOCAL_ADDRESS ||
+      AddrSpace == AS.REGION_ADDRESS)
     return 64;
-  case AMDGPUAS::PRIVATE_ADDRESS:
+  if (AddrSpace == AS.PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
-  default:
-    if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS &&
-        (AddrSpace == AMDGPUAS::PARAM_D_ADDRESS ||
-         AddrSpace == AMDGPUAS::PARAM_I_ADDRESS ||
-         (AddrSpace >= AMDGPUAS::CONSTANT_BUFFER_0 &&
-          AddrSpace <= AMDGPUAS::CONSTANT_BUFFER_15)))
-      return 128;
-    llvm_unreachable("unhandled address space");
-  }
+
+  if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS &&
+      (AddrSpace == AS.PARAM_D_ADDRESS ||
+      AddrSpace == AS.PARAM_I_ADDRESS ||
+      (AddrSpace >= AS.CONSTANT_BUFFER_0 &&
+      AddrSpace <= AS.CONSTANT_BUFFER_15)))
+    return 128;
+  llvm_unreachable("unhandled address space");
 }
 
 bool AMDGPUTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
@@ -135,7 +134,7 @@ bool AMDGPUTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
   // We allow vectorization of flat stores, even though we may need to decompose
   // them later if they may access private memory. We don't have enough context
   // here, and legalization can handle it.
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
+  if (AddrSpace == ST->getAMDGPUAS().PRIVATE_ADDRESS) {
     return (Alignment >= 4 || ST->hasUnalignedScratchAccess()) &&
       ChainSizeInBytes <= ST->getMaxPrivateElementSize();
   }
@@ -362,7 +361,7 @@ bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
-    return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+    return Load->getPointerAddressSpace() == ST->getAMDGPUAS().PRIVATE_ADDRESS;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each

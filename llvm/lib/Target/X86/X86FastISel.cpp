@@ -367,6 +367,10 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   switch (VT.getSimpleVT().SimpleTy) {
   default: return false;
   case MVT::i1:
+    // TODO: Support this properly.
+    if (Subtarget->hasAVX512())
+      return false;
+    LLVM_FALLTHROUGH;
   case MVT::i8:
     Opc = X86::MOV8rm;
     RC  = &X86::GR8RegClass;
@@ -540,11 +544,12 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
     // In case ValReg is a K register, COPY to a GPR
     if (MRI.getRegClass(ValReg) == &X86::VK1RegClass) {
       unsigned KValReg = ValReg;
-      ValReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
-                                                    : &X86::GR8_ABCD_LRegClass);
+      ValReg = createResultReg(&X86::GR32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), ValReg)
           .addReg(KValReg);
+      ValReg = fastEmitInst_extractsubreg(MVT::i8, ValReg, /*Kill=*/true,
+                                          X86::sub_8bit);
     }
     // Mask out all but lowest bit.
     unsigned AndResult = createResultReg(&X86::GR8RegClass);
@@ -1280,11 +1285,12 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
         // In case SrcReg is a K register, COPY to a GPR
         if (MRI.getRegClass(SrcReg) == &X86::VK1RegClass) {
           unsigned KSrcReg = SrcReg;
-          SrcReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
-                                                    : &X86::GR8_ABCD_LRegClass);
+          SrcReg = createResultReg(&X86::GR32RegClass);
           BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                   TII.get(TargetOpcode::COPY), SrcReg)
               .addReg(KSrcReg);
+          SrcReg = fastEmitInst_extractsubreg(MVT::i8, SrcReg, /*Kill=*/true,
+                                              X86::sub_8bit);
         }
         SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg, /*TODO: Kill=*/false);
         SrcVT = MVT::i8;
@@ -1580,11 +1586,12 @@ bool X86FastISel::X86SelectZExt(const Instruction *I) {
     // In case ResultReg is a K register, COPY to a GPR
     if (MRI.getRegClass(ResultReg) == &X86::VK1RegClass) {
       unsigned KResultReg = ResultReg;
-      ResultReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
-                                                    : &X86::GR8_ABCD_LRegClass);
+      ResultReg = createResultReg(&X86::GR32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), ResultReg)
           .addReg(KResultReg);
+      ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultReg, /*Kill=*/true,
+                                             X86::sub_8bit);
     }
 
     // Set the high bits to zero.
@@ -1768,11 +1775,12 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // In case OpReg is a K register, COPY to a GPR
   if (MRI.getRegClass(OpReg) == &X86::VK1RegClass) {
     unsigned KOpReg = OpReg;
-    OpReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
-                                                 : &X86::GR8_ABCD_LRegClass);
+    OpReg = createResultReg(&X86::GR32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), OpReg)
         .addReg(KOpReg);
+    OpReg = fastEmitInst_extractsubreg(MVT::i8, OpReg, /*Kill=*/true,
+                                       X86::sub_8bit);
   }
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
       .addReg(OpReg)
@@ -2113,11 +2121,12 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     // In case OpReg is a K register, COPY to a GPR
     if (MRI.getRegClass(CondReg) == &X86::VK1RegClass) {
       unsigned KCondReg = CondReg;
-      CondReg = createResultReg(Subtarget->is64Bit() ?
-                                &X86::GR8RegClass : &X86::GR8_ABCD_LRegClass);
+      CondReg = createResultReg(&X86::GR32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));
+      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Kill=*/true,
+                                           X86::sub_8bit);
     }
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
         .addReg(CondReg, getKillRegState(CondIsKill))
@@ -2327,11 +2336,12 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
     // In case OpReg is a K register, COPY to a GPR
     if (MRI.getRegClass(CondReg) == &X86::VK1RegClass) {
       unsigned KCondReg = CondReg;
-      CondReg = createResultReg(Subtarget->is64Bit() ?
-                                &X86::GR8RegClass : &X86::GR8_ABCD_LRegClass);
+      CondReg = createResultReg(&X86::GR32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));
+      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Kill=*/true,
+                                           X86::sub_8bit);
     }
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
         .addReg(CondReg, getKillRegState(CondIsKill))
@@ -3307,6 +3317,16 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
       // Handle zero-extension from i1 to i8, which is common.
       if (ArgVT == MVT::i1) {
+        // In case SrcReg is a K register, COPY to a GPR
+        if (MRI.getRegClass(ArgReg) == &X86::VK1RegClass) {
+          unsigned KArgReg = ArgReg;
+          ArgReg = createResultReg(&X86::GR32RegClass);
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                  TII.get(TargetOpcode::COPY), ArgReg)
+              .addReg(KArgReg);
+          ArgReg = fastEmitInst_extractsubreg(MVT::i8, ArgReg, /*Kill=*/true,
+                                              X86::sub_8bit);
+        }
         // Set the high bits to zero.
         ArgReg = fastEmitZExtFromI1(MVT::i8, ArgReg, /*TODO: Kill=*/false);
         ArgVT = MVT::i8;
@@ -3642,6 +3662,13 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
     switch (VT.SimpleTy) {
     default: llvm_unreachable("Unexpected value type");
     case MVT::i1:
+      if (Subtarget->hasAVX512()) {
+        // Need to copy to a VK1 register.
+        unsigned ResultReg = createResultReg(&X86::VK1RegClass);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                TII.get(TargetOpcode::COPY), ResultReg).addReg(SrcReg);
+        return ResultReg;
+      }
     case MVT::i8:
       return fastEmitInst_extractsubreg(MVT::i8, SrcReg, /*Kill=*/true,
                                         X86::sub_8bit);
@@ -3663,7 +3690,12 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   unsigned Opc = 0;
   switch (VT.SimpleTy) {
   default: llvm_unreachable("Unexpected value type");
-  case MVT::i1:  VT = MVT::i8;       LLVM_FALLTHROUGH;
+  case MVT::i1:
+    // TODO: Support this properly.
+    if (Subtarget->hasAVX512())
+      return 0;
+    VT = MVT::i8;
+    LLVM_FALLTHROUGH;
   case MVT::i8:  Opc = X86::MOV8ri;  break;
   case MVT::i16: Opc = X86::MOV16ri; break;
   case MVT::i32: Opc = X86::MOV32ri; break;

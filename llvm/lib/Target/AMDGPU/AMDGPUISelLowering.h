@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 
+#include "AMDGPU.h"
 #include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
@@ -34,6 +35,7 @@ private:
 
 protected:
   const AMDGPUSubtarget *Subtarget;
+  AMDGPUAS AMDGPUASI;
 
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -224,6 +226,10 @@ public:
   /// type of implicit parameter.
   uint32_t getImplicitParameterOffset(const AMDGPUMachineFunction *MFI,
                                       const ImplicitParameter Param) const;
+
+  AMDGPUAS getAMDGPUAS() const {
+    return AMDGPUASI;
+  }
 };
 
 namespace AMDGPUISD {

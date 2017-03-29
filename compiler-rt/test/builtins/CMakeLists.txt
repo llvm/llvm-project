@@ -13,6 +13,8 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
+#TODO: Add support for Apple.
+if (NOT APPLE)
 foreach(arch ${BUILTIN_SUPPORTED_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
@@ -25,6 +27,7 @@ foreach(arch ${BUILTIN_SUPPORTED_ARCH})
     )
   list(APPEND BUILTINS_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
 endforeach()
+endif()
 
 add_lit_testsuite(check-builtins "Running the Builtins tests"
   ${BUILTINS_TESTSUITES}

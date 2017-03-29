@@ -54,6 +54,11 @@ struct SISchedulerCandidate {
 class SIScheduleDAGMI;
 class SIScheduleBlockCreator;
 
+enum SIScheduleBlockLinkKind {
+  NoData,
+  Data
+};
+
 class SIScheduleBlock {
   SIScheduleDAGMI *DAG;
   SIScheduleBlockCreator *BC;
@@ -92,7 +97,8 @@ class SIScheduleBlock {
   unsigned ID;
 
   std::vector<SIScheduleBlock*> Preds;  // All blocks predecessors.
-  std::vector<SIScheduleBlock*> Succs;  // All blocks successors.
+  // All blocks successors, and the kind of link
+  std::vector<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>> Succs;
   unsigned NumHighLatencySuccessors = 0;
 
 public:
@@ -112,10 +118,11 @@ public:
 
   // Add block pred, which has instruction predecessor of SU.
   void addPred(SIScheduleBlock *Pred);
-  void addSucc(SIScheduleBlock *Succ);
+  void addSucc(SIScheduleBlock *Succ, SIScheduleBlockLinkKind Kind);
 
   const std::vector<SIScheduleBlock*>& getPreds() const { return Preds; }
-  const std::vector<SIScheduleBlock*>& getSuccs() const { return Succs; }
+  ArrayRef<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>>
+    getSuccs() const { return Succs; }
 
   unsigned Height;  // Maximum topdown path length to block without outputs
   unsigned Depth;   // Maximum bottomup path length to block without inputs
@@ -449,6 +456,7 @@ public:
   LiveIntervals *getLIS() { return LIS; }
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
+  ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
   SUnit& getEntrySU() { return EntrySU; }
   SUnit& getExitSU() { return ExitSU; }
 
@@ -466,6 +474,14 @@ public:
     }
     return InRegs;
   }
+
+  std::set<unsigned> getOutRegs() {
+    std::set<unsigned> OutRegs;
+    for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
+      OutRegs.insert(RegMaskPair.RegUnit);
+    }
+    return OutRegs;
+  };
 
   unsigned getVGPRSetID() const { return VGPRSetID; }
   unsigned getSGPRSetID() const { return SGPRSetID; }

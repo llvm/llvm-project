@@ -6309,8 +6309,6 @@ static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
 
   // SrcReg(MaskReg) -> DestReg(GR64)
   // SrcReg(MaskReg) -> DestReg(GR32)
-  // SrcReg(MaskReg) -> DestReg(GR16)
-  // SrcReg(MaskReg) -> DestReg(GR8)
 
   // All KMASK RegClasses hold the same k registers, can be tested against anyone.
   if (X86::VK16RegClass.contains(SrcReg)) {
@@ -6320,21 +6318,10 @@ static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
     }
     if (X86::GR32RegClass.contains(DestReg))
       return Subtarget.hasBWI() ? X86::KMOVDrk : X86::KMOVWrk;
-    if (X86::GR16RegClass.contains(DestReg)) {
-      DestReg = getX86SubSuperRegister(DestReg, 32);
-      return X86::KMOVWrk;
-    }
-    if (X86::GR8RegClass.contains(DestReg)) {
-      assert(!isHReg(DestReg) && "Cannot move between mask and h-reg");
-      DestReg = getX86SubSuperRegister(DestReg, 32);
-      return Subtarget.hasDQI() ? X86::KMOVBrk : X86::KMOVWrk;
-    }
   }
 
   // SrcReg(GR64) -> DestReg(MaskReg)
   // SrcReg(GR32) -> DestReg(MaskReg)
-  // SrcReg(GR16) -> DestReg(MaskReg)
-  // SrcReg(GR8)  -> DestReg(MaskReg)
 
   // All KMASK RegClasses hold the same k registers, can be tested against anyone.
   if (X86::VK16RegClass.contains(DestReg)) {
@@ -6344,15 +6331,6 @@ static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
     }
     if (X86::GR32RegClass.contains(SrcReg))
       return Subtarget.hasBWI() ? X86::KMOVDkr : X86::KMOVWkr;
-    if (X86::GR16RegClass.contains(SrcReg)) {
-      SrcReg = getX86SubSuperRegister(SrcReg, 32);
-      return X86::KMOVWkr;
-    }
-    if (X86::GR8RegClass.contains(SrcReg)) {
-      assert(!isHReg(SrcReg) && "Cannot move between mask and h-reg");
-      SrcReg = getX86SubSuperRegister(SrcReg, 32);
-      return Subtarget.hasDQI() ? X86::KMOVBkr : X86::KMOVWkr;
-    }
   }
 
 

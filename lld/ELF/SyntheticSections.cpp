@@ -1439,9 +1439,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 // safe bet is to specify -hash-style=both for backward compatibilty.
 template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
-    : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {
-  this->Entsize = ELFT::Is64Bits ? 0 : 4;
-}
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {}
 
 template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;

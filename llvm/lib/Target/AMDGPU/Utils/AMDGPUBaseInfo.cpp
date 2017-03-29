@@ -19,6 +19,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -354,16 +355,16 @@ MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx) {
                            ELF::SHF_AMDGPU_HSA_AGENT);
 }
 
-bool isGroupSegment(const GlobalValue *GV) {
-  return GV->getType()->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS) {
+  return GV->getType()->getAddressSpace() == AS.LOCAL_ADDRESS;
 }
 
-bool isGlobalSegment(const GlobalValue *GV) {
-  return GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+bool isGlobalSegment(const GlobalValue *GV, AMDGPUAS AS) {
+  return GV->getType()->getAddressSpace() == AS.GLOBAL_ADDRESS;
 }
 
-bool isReadOnlySegment(const GlobalValue *GV) {
-  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
+bool isReadOnlySegment(const GlobalValue *GV, AMDGPUAS AS) {
+  return GV->getType()->getAddressSpace() == AS.CONSTANT_ADDRESS;
 }
 
 bool shouldEmitConstantsToTextSection(const Triple &TT) {
@@ -736,6 +737,60 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
   return isSI(ST) || isCI(ST) ? isUInt<8>(EncodedOffset) :
                                 isUInt<20>(EncodedOffset);
 }
-
 } // end namespace AMDGPU
+
 } // end namespace llvm
+
+const unsigned AMDGPUAS::MAX_COMMON_ADDRESS;
+const unsigned AMDGPUAS::GLOBAL_ADDRESS;
+const unsigned AMDGPUAS::LOCAL_ADDRESS;
+const unsigned AMDGPUAS::PARAM_D_ADDRESS;
+const unsigned AMDGPUAS::PARAM_I_ADDRESS;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_0;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_1;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_2;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_3;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_4;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_5;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_6;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_7;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_8;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_9;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_10;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_11;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_12;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_13;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_14;
+const unsigned AMDGPUAS::CONSTANT_BUFFER_15;
+const unsigned AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
+
+namespace llvm {
+namespace AMDGPU {
+
+AMDGPUAS getAMDGPUAS(Triple T) {
+  auto Env = T.getEnvironmentName();
+  AMDGPUAS AS;
+  if (Env == "amdgiz" || Env == "amdgizcl") {
+    AS.FLAT_ADDRESS     = 0;
+    AS.CONSTANT_ADDRESS = 4;
+    AS.PRIVATE_ADDRESS  = 5;
+    AS.REGION_ADDRESS   = 2;
+  }
+  else {
+    AS.FLAT_ADDRESS     = 4;
+    AS.CONSTANT_ADDRESS = 2;
+    AS.PRIVATE_ADDRESS  = 0;
+    AS.REGION_ADDRESS   = 5;
+   }
+  return AS;
+}
+
+AMDGPUAS getAMDGPUAS(const TargetMachine &M) {
+  return getAMDGPUAS(M.getTargetTriple());
+}
+
+AMDGPUAS getAMDGPUAS(const Module &M) {
+  return getAMDGPUAS(Triple(M.getTargetTriple()));
+}
+} // namespace AMDGPU
+} // namespace llvm

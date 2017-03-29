@@ -7,7 +7,7 @@ define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vextractf64x2 $1, %zmm0, %xmm0
-; CHECK-NEXT:    kmovb %edi, %k0
+; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlb $7, %k0, %k1
 ; CHECK-NEXT:    kshiftrb $7, %k1, %k1
 ; CHECK-NEXT:    kshiftlb $6, %k0, %k0
@@ -38,7 +38,7 @@ define <8 x float>@test_int_x86_avx512_mask_vextractf32x8(<16 x float> %x0, <8 x
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf32x8:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm2
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm1, %ymm1
@@ -78,7 +78,7 @@ define <8 x double>@test_int_x86_avx512_mask_insertf64x2_512(<8 x double> %x0, <
 ; CHECK-LABEL: test_int_x86_avx512_mask_insertf64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm3
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
@@ -118,7 +118,7 @@ define <8 x i64>@test_int_x86_avx512_mask_inserti64x2_512(<8 x i64> %x0, <2 x i6
 ; CHECK-LABEL: test_int_x86_avx512_mask_inserti64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm3
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0

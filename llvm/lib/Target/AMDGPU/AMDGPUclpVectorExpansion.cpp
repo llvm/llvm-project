@@ -448,6 +448,7 @@ class AMDGPUclpVectorExpansion : public ModulePass {
   typedef StringMap<const a_builtinfunc *> an_expansionInfo_t;
   an_expansionInfo_t ExpansionInfo;
   std::unique_ptr<Module> TempModule;
+  AMDGPUAS AS;
 
   char getAddrSpaceCode(StringRef);
   std::string getNextFunctionName(StringRef, an_typedes_t, int, char);
@@ -555,12 +556,12 @@ char AMDGPUclpVectorExpansion::getAddrSpaceCode(StringRef CurFuncName) {
     size_t SeparatorPos = CurFuncName.rfind("AS");
     assert(SeparatorPos != StringRef::npos);
     AddrSpaceCode = CurFuncName[SeparatorPos + 2];
-    assert('0' <= AddrSpaceCode && AddrSpaceCode <= '4');
+    assert('0' <= AddrSpaceCode && AddrSpaceCode <= '5');
   }
   // make sure it's a pointer to private address space
   else {
     assert(CurFuncName.rfind('P') != StringRef::npos);
-    AddrSpaceCode = (AMDGPUAS::PRIVATE_ADDRESS + '0');
+    AddrSpaceCode = '0';
   }
   return AddrSpaceCode;
 } // AMDGPUclpVectorExpansion::getAddrSpaceCode
@@ -1045,6 +1046,7 @@ AMDGPUclpVectorExpansion::AMDGPUclpVectorExpansion()
 /// process an LLVM module to perform expand vector builtin calls
 ///
 bool AMDGPUclpVectorExpansion::runOnModule(Module &TheModule) {
+  AS = AMDGPU::getAMDGPUAS(TheModule);
   TempModule.reset(
       new Module("__opencllib_vectorexpansion", TheModule.getContext()));
   TempModule->setDataLayout(TheModule.getDataLayout());

@@ -91,6 +91,13 @@ public:
   /// \brief Maximum number of micro-ops that may be scheduled per cycle.
   unsigned getIssueWidth() const { return SchedModel.IssueWidth; }
 
+  /// \brief Return true if new group must begin.
+  bool mustBeginGroup(const MachineInstr *MI,
+                          const MCSchedClassDesc *SC = nullptr) const;
+  /// \brief Return true if current group must end.
+  bool mustEndGroup(const MachineInstr *MI,
+                          const MCSchedClassDesc *SC = nullptr) const;
+
   /// \brief Return the number of issue slots required for this MI.
   unsigned getNumMicroOps(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
@@ -175,6 +182,7 @@ public:
   unsigned computeInstrLatency(const MachineInstr *MI,
                                bool UseDefaultDefLatency = true) const;
   unsigned computeInstrLatency(unsigned Opcode) const;
+
 
   /// \brief Output dependency latency of a pair of defs of the same register.
   ///
