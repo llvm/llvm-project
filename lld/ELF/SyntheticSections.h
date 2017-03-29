@@ -162,11 +162,11 @@ public:
   BssSection(StringRef Name);
   void writeTo(uint8_t *) override {}
   bool empty() const override { return getSize() == 0; }
-  size_t reserveSpace(uint32_t Alignment, size_t Size);
+  size_t reserveSpace(size_t Size, uint32_t Alignment);
   size_t getSize() const override { return Size; }
 
 private:
-  size_t Size = 0;
+  uint64_t Size = 0;
 };
 
 class MipsGotSection final : public SyntheticSection {
