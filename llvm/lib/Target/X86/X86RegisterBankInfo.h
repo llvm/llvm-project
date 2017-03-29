@@ -50,7 +50,6 @@ private:
                                                    bool isFP);
 
   /// Track the bank of each instruction operand(register)
-  /// \return An instruction PartialMappingIdxs.
   static void
   getInstrPartialMappingIdxs(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI, const bool isFP,

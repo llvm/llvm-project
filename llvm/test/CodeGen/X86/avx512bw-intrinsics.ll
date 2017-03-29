@@ -2132,7 +2132,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512(<32 x i16>, <32 x i16>, <1
 define <16 x i32>@test_int_x86_avx512_mask_pmaddw_d_512(<32 x i16> %x0, <32 x i16> %x1, <16 x i32> %x2, i16 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_pmaddw_d_512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k1
 ; AVX512BW-NEXT:    vpmaddwd %zmm1, %zmm0, %zmm2 {%k1}
 ; AVX512BW-NEXT:    vpmaddwd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpaddd %zmm0, %zmm2, %zmm0

@@ -25,6 +25,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -575,7 +576,7 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     if (Sym.isGV()) {
       GlobalValue *GV = Sym.getGV();
       if (Res.Prevailing) {
-        if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+        if (Sym.isUndefined())
           continue;
         Keep.push_back(GV);
         switch (GV->getLinkage()) {
@@ -608,7 +609,7 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     // Common resolution: collect the maximum size/alignment over all commons.
     // We also record if we see an instance of a common as prevailing, so that
     // if none is prevailing we can ignore it later.
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Common) {
+    if (Sym.isCommon()) {
       // FIXME: We should figure out what to do about commons defined by asm.
       // For now they aren't reported correctly by ModuleSymbolTable.
       auto &CommonRes = RegularLTO.Commons[Sym.getGV()->getName()];

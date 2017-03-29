@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-internalize-symbols %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
 
 define i32 @callee(i32 %x) {
 entry:

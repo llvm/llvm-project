@@ -345,6 +345,9 @@ public:
   /// Determine whether the allow-reciprocal flag is set.
   bool hasAllowReciprocal() const;
 
+  /// Determine whether the allow-contract flag is set.
+  bool hasAllowContract() const;
+
   /// Convenience function for getting all the fast-math flags, which must be an
   /// operator which supports these flags. See LangRef.html for the meaning of
   /// these flags.

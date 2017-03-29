@@ -43,6 +43,11 @@ def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def UseAlternateSExtLoadCVTF32
     : Predicate<"Subtarget->useAlternateSExtLoadCVTF32Pattern()">;
 
+def UseNegativeImmediates
+    : Predicate<"false">, AssemblerPredicate<"!FeatureNoNegativeImmediates",
+                                             "NegativeImmediates">;
+
+
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
 //

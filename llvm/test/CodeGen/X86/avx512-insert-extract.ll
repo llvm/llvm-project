@@ -275,7 +275,7 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 ; SKX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftlw $11, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    je LBB10_2
@@ -317,7 +317,7 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX-NEXT:    kunpckbw %k0, %k1, %k0
 ; SKX-NEXT:    kshiftlw $15, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    cmoveq %rsi, %rdi
@@ -343,6 +343,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; KNL-NEXT:    kshiftlw $1, %k1, %k1
 ; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test13:
@@ -350,13 +351,14 @@ define i16 @test13(i32 %a, i32 %b) {
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    movw $-4, %ax
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    kshiftrw $1, %k1, %k1
 ; SKX-NEXT:    kshiftlw $1, %k1, %k1
 ; SKX-NEXT:    korw %k0, %k1, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %cmp_res = icmp ult i32 %a, %b
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %cmp_res, i32 0
@@ -382,7 +384,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; SKX-NEXT:    kshiftlb $3, %k0, %k0
 ; SKX-NEXT:    kshiftrb $7, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    cmoveq %rsi, %rdi
@@ -433,6 +435,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test16:
@@ -440,13 +443,14 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; SKX-NEXT:    movzbl (%rdi), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovd %eax, %k0
-; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    vpmovm2d %k1, %zmm0
 ; SKX-NEXT:    vpmovm2d %k0, %zmm1
 ; SKX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,3,4,5,6,7,8,9,16,11,12,13,14,15]
 ; SKX-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
 ; SKX-NEXT:    vpmovd2m %zmm2, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
@@ -470,6 +474,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test17:
@@ -477,13 +482,14 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; SKX-NEXT:    movzbl (%rdi), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovd %eax, %k0
-; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    vpmovm2q %k1, %zmm0
 ; SKX-NEXT:    vpmovm2q %k0, %zmm1
 ; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,8,5,6,7]
 ; SKX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; SKX-NEXT:    vpmovq2m %zmm2, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
@@ -1278,7 +1284,7 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    vpcmpltud %zmm2, %zmm0, %k1
 ; SKX-NEXT:    vpcmpltud %zmm3, %zmm1, %k2
 ; SKX-NEXT:    kunpckwd %k1, %k2, %k1
@@ -1336,6 +1342,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_iinsertelement_v4i1:
@@ -1343,14 +1350,15 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    vpcmpltud %xmm1, %xmm0, %k1
 ; SKX-NEXT:    vpmovm2d %k1, %xmm0
 ; SKX-NEXT:    vpmovm2d %k0, %xmm1
 ; SKX-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
 ; SKX-NEXT:    vpmovd2m %xmm0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %cmp_res_i1 = icmp ult i32 %a, %b
   %cmp_cmp_vec = icmp ult <4 x i32> %x, %y
@@ -1381,6 +1389,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_iinsertelement_v2i1:
@@ -1388,13 +1397,14 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovw %eax, %k0
+; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
 ; SKX-NEXT:    kshiftlw $1, %k1, %k1
 ; SKX-NEXT:    kshiftrw $1, %k1, %k1
 ; SKX-NEXT:    kshiftlw $1, %k0, %k0
 ; SKX-NEXT:    korw %k0, %k1, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %cmp_res_i1 = icmp ult i32 %a, %b
   %cmp_cmp_vec = icmp ult <2 x i64> %x, %y
@@ -1421,7 +1431,7 @@ define zeroext i8 @test_extractelement_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $15, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    cmpb $1, %al
 ; SKX-NEXT:    movb $3, %al
@@ -1451,7 +1461,7 @@ define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $15, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    cmpb $1, %al
 ; SKX-NEXT:    movb $3, %al
@@ -1481,7 +1491,7 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $12, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <4 x i32> %a, %b
@@ -1506,7 +1516,7 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 ; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k0
 ; SKX-NEXT:    kshiftld $29, %k0, %k0
 ; SKX-NEXT:    kshiftrd $31, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -1533,7 +1543,7 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    cmpb $1, %al
 ; SKX-NEXT:    movb $3, %al
@@ -1564,7 +1574,7 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    cmpb $1, %al
 ; SKX-NEXT:    movb $3, %al

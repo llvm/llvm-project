@@ -75,8 +75,8 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
   unsigned Stage;
 
   // Vecor of regions recorder for later rescheduling
-  SmallVector<std::pair<const MachineBasicBlock::iterator,
-                        const MachineBasicBlock::iterator>, 32> Regions;
+  SmallVector<std::pair<MachineBasicBlock::iterator,
+                        MachineBasicBlock::iterator>, 32> Regions;
 
   // Region live-ins.
   DenseMap<unsigned, LaneBitmask> LiveIns;
@@ -93,11 +93,6 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S);
-
-  void enterRegion(MachineBasicBlock *bb,
-                   MachineBasicBlock::iterator begin,
-                   MachineBasicBlock::iterator end,
-                   unsigned regioninstrs) override;
 
   void schedule() override;
 

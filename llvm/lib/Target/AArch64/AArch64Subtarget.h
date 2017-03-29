@@ -78,6 +78,10 @@ protected:
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
+
+  // NegativeImmediates - transform instructions with negative immediates
+  bool NegativeImmediates = true;
+
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;

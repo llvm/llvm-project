@@ -27,6 +27,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"

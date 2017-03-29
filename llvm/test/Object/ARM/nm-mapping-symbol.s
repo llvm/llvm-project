@@ -9,4 +9,3 @@
 
         .section        .foobar,"",%progbits
         .asciz  "foo"
-        nop

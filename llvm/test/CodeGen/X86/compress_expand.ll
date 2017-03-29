@@ -8,23 +8,37 @@ target triple = "x86_64-unknown-linux-gnu"
 
 
 define <16 x float> @test1(float* %base) {
-; ALL-LABEL: test1:
-; ALL:       # BB#0:
-; ALL-NEXT:    movw $-2049, %ax # imm = 0xF7FF
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
-; ALL-NEXT:    retq
+; SKX-LABEL: test1:
+; SKX:       # BB#0:
+; SKX-NEXT:    movw $-2049, %ax # imm = 0xF7FF
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test1:
+; KNL:       # BB#0:
+; KNL-NEXT:    movw $-2049, %ax # imm = 0xF7FF
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
   %res = call <16 x float> @llvm.masked.expandload.v16f32(float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
 define <16 x float> @test2(float* %base, <16 x float> %src0) {
-; ALL-LABEL: test2:
-; ALL:       # BB#0:
-; ALL-NEXT:    movw $30719, %ax # imm = 0x77FF
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
-; ALL-NEXT:    retq
+; SKX-LABEL: test2:
+; SKX:       # BB#0:
+; SKX-NEXT:    movw $30719, %ax # imm = 0x77FF
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test2:
+; KNL:       # BB#0:
+; KNL-NEXT:    movw $30719, %ax # imm = 0x77FF
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; KNL-NEXT:    retq
   %res = call <16 x float> @llvm.masked.expandload.v16f32(float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <16 x float> %src0)
   ret <16 x float>%res
 }
@@ -52,7 +66,7 @@ define <4 x float> @test4(float* %base, <4 x float> %src0) {
 ; SKX-LABEL: test4:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movb $7, %al
-; SKX-NEXT:    kmovb %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -72,7 +86,7 @@ define <2 x i64> @test5(i64* %base, <2 x i64> %src0) {
 ; SKX-LABEL: test5:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movb $2, %al
-; SKX-NEXT:    kmovb %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vpexpandq (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -97,7 +111,7 @@ define void @test6(float* %base, <16 x float> %V) {
 ; SKX-LABEL: test6:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movw $-2049, %ax # imm = 0xF7FF
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

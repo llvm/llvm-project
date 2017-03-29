@@ -1336,6 +1336,8 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= FastMathFlags::NoSignedZeros;
     if (FPMO->hasAllowReciprocal())
       Flags |= FastMathFlags::AllowReciprocal;
+    if (FPMO->hasAllowContract())
+      Flags |= FastMathFlags::AllowContract;
   }
 
   return Flags;

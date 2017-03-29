@@ -85,8 +85,8 @@ define <4 x i32>@test_int_x86_avx512_mask_vpconflict_d_128(<4 x i32> %x0, <4 x i
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpconflict_d_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpconflictd %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vpconflictd %xmm0, %xmm2 {%k1} {z}
+; CHECK-NEXT:    vpconflictd %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vpconflictd %xmm0, %xmm0
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
