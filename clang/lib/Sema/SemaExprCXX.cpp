@@ -3703,10 +3703,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       if (From->getType()->isObjCObjectPointerType() &&
           ToType->isObjCObjectPointerType())
         EmitRelatedResultTypeNote(From);
-    }
-    else if (getLangOpts().ObjCAutoRefCount &&
-             !CheckObjCARCUnavailableWeakConversion(ToType,
-                                                    From->getType())) {
+    } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
+               !CheckObjCARCUnavailableWeakConversion(ToType,
+                                                      From->getType())) {
       if (Action == AA_Initializing)
         Diag(From->getLocStart(),
              diag::err_arc_weak_unavailable_assign);
@@ -3729,8 +3728,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       (void) PrepareCastToObjCObjectPointer(E);
       From = E.get();
     }
-    if (getLangOpts().ObjCAutoRefCount)
-      CheckObjCARCConversion(SourceRange(), ToType, From, CCK);
+    if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
+      CheckObjCConversion(SourceRange(), ToType, From, CCK);
     From = ImpCastExprToType(From, ToType, Kind, VK_RValue, &BasePath, CCK)
              .get();
     break;

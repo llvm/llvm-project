@@ -1126,8 +1126,8 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
   if (!Getter)
     return;
   QualType T = Getter->parameters()[0]->getType();
-  S.CheckObjCARCConversion(Key->getSourceRange(), 
-                         T, Key, Sema::CCK_ImplicitConversion);
+  S.CheckObjCConversion(Key->getSourceRange(), T, Key,
+                        Sema::CCK_ImplicitConversion);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
