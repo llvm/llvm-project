@@ -2427,13 +2427,10 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         }
 
         // Parse the cast-expression that follows it next.
-        // isVectorLiteral = true will make sure we don't parse any
-        // Postfix expression yet
         // TODO: For cast expression with CastTy.
         Result = ParseCastExpression(/*isUnaryExpression=*/false,
                                      /*isAddressOfOperand=*/false,
-                                     /*isTypeCast=*/IsTypeCast,
-                                     /*isVectorLiteral=*/true);
+                                     /*isTypeCast=*/IsTypeCast);
         if (!Result.isInvalid()) {
           Result = Actions.ActOnCastExpr(getCurScope(), OpenLoc,
                                          DeclaratorInfo, CastTy, 

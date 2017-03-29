@@ -98,6 +98,9 @@ public:
                                     __sanitizer::memory_order_acquire);
   }
 
+  /// Returns the configured size of the buffers in the buffer queue.
+  size_t ConfiguredBufferSize() const { return BufferSize; }
+
   /// Sets the state of the BufferQueue to finalizing, which ensures that:
   ///
   ///   - All subsequent attempts to retrieve a Buffer will fail.

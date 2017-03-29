@@ -12,7 +12,7 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    # implicit-def: %EDI
 ; CHECK-NEXT:    movb %al, %dil
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    kmovd %k0, %edi
 ; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    andb $1, %al
@@ -35,8 +35,8 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    # implicit-def: %EDI
 ; CHECK-NEXT:    movb %al, %dil
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kmovw %k0, %edi
+; CHECK-NEXT:    kmovd %edi, %k0
+; CHECK-NEXT:    kmovd %k0, %edi
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    xorl %edi, %edi

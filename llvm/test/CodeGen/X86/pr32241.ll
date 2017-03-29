@@ -41,7 +41,7 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_4: # %lor.end5
 ; CHECK-NEXT:    kmovw {{[0-9]+}}(%esp), %k0 # 2-byte Reload
-; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movw %ax, %cx
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)

@@ -311,10 +311,24 @@ static inline void processFunctionHook(
     __sanitizer::atomic_sint32_t &LoggingStatus,
     const std::shared_ptr<BufferQueue> &BQ) XRAY_NEVER_INSTRUMENT {
   // Bail out right away if logging is not initialized yet.
-  if (__sanitizer::atomic_load(&LoggingStatus,
-                               __sanitizer::memory_order_acquire) !=
-      XRayLogInitStatus::XRAY_LOG_INITIALIZED)
+  // We should take the opportunity to release the buffer though.
+  auto Status = __sanitizer::atomic_load(&LoggingStatus,
+                                         __sanitizer::memory_order_acquire);
+  if (Status != XRayLogInitStatus::XRAY_LOG_INITIALIZED) {
+    if (RecordPtr != nullptr &&
+        (Status == XRayLogInitStatus::XRAY_LOG_FINALIZING ||
+         Status == XRayLogInitStatus::XRAY_LOG_FINALIZED)) {
+      writeEOBMetadata();
+      auto EC = BQ->releaseBuffer(Buffer);
+      if (EC != BufferQueue::ErrorCode::Ok) {
+        Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
+               BufferQueue::getErrorString(EC));
+        return;
+      }
+      RecordPtr = nullptr;
+    }
     return;
+  }
 
   // We use a thread_local variable to keep track of which CPUs we've already
   // run, and the TSC times for these CPUs. This allows us to stop repeating the

@@ -1448,7 +1448,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; SKX-LABEL: trunc_i32_to_i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    andl $1, %edi
-; SKX-NEXT:    kmovw %edi, %k0
+; SKX-NEXT:    kmovd %edi, %k0
 ; SKX-NEXT:    movw $-4, %ax
 ; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    kshiftrw $1, %k1, %k1
