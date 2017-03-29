@@ -48,4 +48,13 @@ XRayLogFlushStatus __xray_log_flushLog();
 
 } // extern "C"
 
+namespace __xray {
+// Options used by the LLVM XRay FDR implementation.
+struct FDRLoggingOptions {
+  bool ReportErrors = false;
+  int Fd = -1;
+};
+
+} // namespace __xray
+
 #endif // XRAY_XRAY_LOG_INTERFACE_H

@@ -931,4 +931,15 @@ define i32 addrspace(1)* @ascast_0_0_gep([128 x i32]* %p) nounwind {
   ret i32 addrspace(1)* %x
 }
 
+define <2 x i32*> @PR32414(i32** %ptr) {
+; CHECK-LABEL: @PR32414(
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** %ptr to i32*
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    ret <2 x i32*> [[TMP1]]
+;
+  %tmp0 = bitcast i32** %ptr to i32*
+  %tmp1 = getelementptr inbounds i32, i32* %tmp0, <2 x i64> <i64 0, i64 1>
+  ret <2 x i32*> %tmp1
+}
+
 ; CHECK: attributes [[NUW]] = { nounwind }

@@ -16,7 +16,7 @@ define void @_Z1av() {
 ; CHECK-NEXT:    # implicit-def: %EAX
 ; CHECK-NEXT:    movb %cl, %al
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k3
 ; CHECK-NEXT:    kshiftrw $15, %k3, %k3

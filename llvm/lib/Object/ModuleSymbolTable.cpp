@@ -43,12 +43,8 @@ void ModuleSymbolTable::addModule(Module *M) {
   else
     FirstMod = M;
 
-  for (Function &F : *M)
-    SymTab.push_back(&F);
-  for (GlobalVariable &GV : M->globals())
+  for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
-  for (GlobalAlias &GA : M->aliases())
-    SymTab.push_back(&GA);
 
   CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
     SymTab.push_back(new (AsmSymbols.Allocate()) AsmSymbol(Name, Flags));

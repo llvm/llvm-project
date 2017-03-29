@@ -2235,20 +2235,20 @@ let Predicates = [HasDQI] in {
 let Predicates = [HasAVX512, NoDQI] in {
   def : Pat<(store VK1:$src, addr:$dst),
             (MOV8mr addr:$dst,
-             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)),
-              sub_8bit))>;
+             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK1:$src, GR32)),
+              sub_8bit)))>;
   def : Pat<(store VK2:$src, addr:$dst),
             (MOV8mr addr:$dst,
-             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK2:$src, VK16)),
-              sub_8bit))>;
+             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK2:$src, GR32)),
+              sub_8bit)))>;
   def : Pat<(store VK4:$src, addr:$dst),
             (MOV8mr addr:$dst,
-             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK4:$src, VK16)),
-              sub_8bit))>;
+             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK4:$src, GR32)),
+              sub_8bit)))>;
   def : Pat<(store VK8:$src, addr:$dst),
             (MOV8mr addr:$dst,
-             (EXTRACT_SUBREG (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16)),
-              sub_8bit))>;
+             (i8 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK8:$src, GR32)),
+              sub_8bit)))>;
 
   def : Pat<(v8i1 (load addr:$src)),
             (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK8)>;
@@ -2279,44 +2279,41 @@ let Predicates = [HasBWI] in {
 
 let Predicates = [HasAVX512] in {
   def : Pat<(i1 (trunc (i64 GR64:$src))),
-            (COPY_TO_REGCLASS (KMOVWkr (AND32ri8 (EXTRACT_SUBREG $src, sub_32bit),
-                                        (i32 1))), VK1)>;
+            (COPY_TO_REGCLASS (AND32ri8 (EXTRACT_SUBREG $src, sub_32bit),
+                                        (i32 1)), VK1)>;
 
   def : Pat<(i1 (trunc (i32 GR32:$src))),
-            (COPY_TO_REGCLASS (KMOVWkr (AND32ri8 $src, (i32 1))), VK1)>;
+            (COPY_TO_REGCLASS (AND32ri8 $src, (i32 1)), VK1)>;
 
   def : Pat<(i1 (trunc (i32 (assertzext_i1 GR32:$src)))),
             (COPY_TO_REGCLASS GR32:$src, VK1)>;
 
   def : Pat<(i1 (trunc (i8 GR8:$src))),
        (COPY_TO_REGCLASS
-        (KMOVWkr (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
-                                          GR8:$src, sub_8bit), (i32 1))),
-       VK1)>;
+        (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                 GR8:$src, sub_8bit), (i32 1)), VK1)>;
 
   def : Pat<(i1 (trunc (i16 GR16:$src))),
        (COPY_TO_REGCLASS
-        (KMOVWkr (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
-                                          GR16:$src, sub_16bit), (i32 1))),
-       VK1)>;
+        (AND32ri8 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                 GR16:$src, sub_16bit), (i32 1)), VK1)>;
 
   def : Pat<(i32 (zext VK1:$src)),
-            (AND32ri8 (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), (i32 1))>;
+            (AND32ri8 (COPY_TO_REGCLASS VK1:$src, GR32), (i32 1))>;
 
   def : Pat<(i32 (anyext VK1:$src)),
             (COPY_TO_REGCLASS VK1:$src, GR32)>;
 
   def : Pat<(i8 (zext VK1:$src)),
             (EXTRACT_SUBREG
-             (AND32ri8 (KMOVWrk
-                        (COPY_TO_REGCLASS VK1:$src, VK16)), (i32 1)), sub_8bit)>;
+             (AND32ri8 (COPY_TO_REGCLASS VK1:$src, GR32), (i32 1)), sub_8bit)>;
 
   def : Pat<(i8 (anyext VK1:$src)),
             (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK1:$src, GR32)), sub_8bit)>;
 
   def : Pat<(i64 (zext VK1:$src)),
-            (AND64ri8 (SUBREG_TO_REG (i64 0),
-             (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), sub_32bit), (i64 1))>;
+            (SUBREG_TO_REG (i64 0),
+             (AND32ri8 (COPY_TO_REGCLASS VK1:$src, GR32), (i32 1)), sub_32bit)>;
 
   def : Pat<(i64 (anyext VK1:$src)),
             (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
@@ -2324,8 +2321,7 @@ let Predicates = [HasAVX512] in {
 
   def : Pat<(i16 (zext VK1:$src)),
             (EXTRACT_SUBREG
-             (AND32ri8 (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), (i32 1)),
-              sub_16bit)>;
+             (AND32ri8 (COPY_TO_REGCLASS VK1:$src, GR32), (i32 1)), sub_16bit)>;
 
   def : Pat<(i16 (anyext VK1:$src)),
             (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS VK1:$src, GR32)), sub_16bit)>;

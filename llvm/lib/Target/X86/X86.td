@@ -501,7 +501,6 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureFMA,
   FeatureLZCNT,
   FeatureMOVBE,
-  FeatureRTM,
   FeatureSlowIncDec
 ]>;
 
@@ -520,6 +519,7 @@ def : BroadwellProc<"broadwell">;
 
 def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureMPX,
+  FeatureRTM,
   FeatureXSAVEC,
   FeatureXSAVES,
   FeatureSGX,

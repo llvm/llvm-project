@@ -1163,7 +1163,7 @@ the `Command Guide <CommandGuide/index.html>`_.
 ``llc``
 
   ``llc`` is the LLVM backend compiler, which translates LLVM bitcode to a
-  native code assembly file or to C code (with the ``-march=c`` option).
+  native code assembly file.
 
 ``opt``
 

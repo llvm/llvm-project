@@ -6687,14 +6687,10 @@ InitializationSequence::Perform(Sema &S,
                                   /*IsInitializerList=*/false,
                                   ExtendingEntity->getDecl());
 
-      // If we're binding to an Objective-C object that has lifetime, we
-      // need cleanups. Likewise if we're extending this temporary to automatic
-      // storage duration -- we need to register its cleanup during the
-      // full-expression's cleanups.
-      if ((S.getLangOpts().ObjCAutoRefCount &&
-           MTE->getType()->isObjCLifetimeType()) ||
-          (MTE->getStorageDuration() == SD_Automatic &&
-           MTE->getType().isDestructedType()))
+      // If we're extending this temporary to automatic storage duration -- we
+      // need to register its cleanup during the full-expression's cleanups.
+      if (MTE->getStorageDuration() == SD_Automatic &&
+          MTE->getType().isDestructedType())
         S.Cleanup.setExprNeedsCleanups(true);
 
       CurInit = MTE;

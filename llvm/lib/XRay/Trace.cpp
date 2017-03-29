@@ -46,7 +46,7 @@ Error readBinaryFormatHeader(StringRef Data, XRayFileHeader &FileHeader) {
   FileHeader.ConstantTSC = Bitfield & 1uL;
   FileHeader.NonstopTSC = Bitfield & 1uL << 1;
   FileHeader.CycleFrequency = HeaderExtractor.getU64(&OffsetPtr);
-
+  std::memcpy(&FileHeader.FreeFormData, Data.bytes_begin() + OffsetPtr, 16);
   if (FileHeader.Version != 1)
     return make_error<StringError>(
         Twine("Unsupported XRay file version: ") + Twine(FileHeader.Version),
@@ -121,20 +121,40 @@ struct FDRState {
     NEW_BUFFER_RECORD_OR_EOF,
     WALLCLOCK_RECORD,
     NEW_CPU_ID_RECORD,
-    FUNCTION_SEQUENCE
+    FUNCTION_SEQUENCE,
+    SCAN_TO_END_OF_THREAD_BUF,
   };
   Token Expects;
+  // Each threads buffer may have trailing garbage to scan over, so we track our
+  // progress.
+  uint64_t CurrentBufferSize;
+  uint64_t CurrentBufferConsumed;
 };
+
+Twine fdrStateToTwine(const FDRState::Token &state) {
+  switch (state) {
+  case FDRState::Token::NEW_BUFFER_RECORD_OR_EOF:
+    return "NEW_BUFFER_RECORD_OR_EOF";
+  case FDRState::Token::WALLCLOCK_RECORD:
+    return "WALLCLOCK_RECORD";
+  case FDRState::Token::NEW_CPU_ID_RECORD:
+    return "NEW_CPU_ID_RECORD";
+  case FDRState::Token::FUNCTION_SEQUENCE:
+    return "FUNCTION_SEQUENCE";
+  case FDRState::Token::SCAN_TO_END_OF_THREAD_BUF:
+    return "SCAN_TO_END_OF_THREAD_BUF";
+  }
+  return "UNKNOWN";
+}
 
 /// State transition when a NewBufferRecord is encountered.
 Error processFDRNewBufferRecord(FDRState &State, uint8_t RecordFirstByte,
                                 DataExtractor &RecordExtractor) {
 
-  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF) {
+  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF)
     return make_error<StringError>(
         "Malformed log. Read New Buffer record kind out of sequence",
         std::make_error_code(std::errc::executable_format_error));
-  }
   uint32_t OffsetPtr = 1; // 1 byte into record.
   State.ThreadId = RecordExtractor.getU16(&OffsetPtr);
   State.Expects = FDRState::Token::WALLCLOCK_RECORD;
@@ -144,12 +164,11 @@ Error processFDRNewBufferRecord(FDRState &State, uint8_t RecordFirstByte,
 /// State transition when an EndOfBufferRecord is encountered.
 Error processFDREndOfBufferRecord(FDRState &State, uint8_t RecordFirstByte,
                                   DataExtractor &RecordExtractor) {
-  if (State.Expects == FDRState::Token::NEW_BUFFER_RECORD_OR_EOF) {
+  if (State.Expects == FDRState::Token::NEW_BUFFER_RECORD_OR_EOF)
     return make_error<StringError>(
         "Malformed log. Received EOB message without current buffer.",
         std::make_error_code(std::errc::executable_format_error));
-  }
-  State.Expects = FDRState::Token::NEW_BUFFER_RECORD_OR_EOF;
+  State.Expects = FDRState::Token::SCAN_TO_END_OF_THREAD_BUF;
   return Error::success();
 }
 
@@ -157,11 +176,10 @@ Error processFDREndOfBufferRecord(FDRState &State, uint8_t RecordFirstByte,
 Error processFDRNewCPUIdRecord(FDRState &State, uint8_t RecordFirstByte,
                                DataExtractor &RecordExtractor) {
   if (State.Expects != FDRState::Token::FUNCTION_SEQUENCE &&
-      State.Expects != FDRState::Token::NEW_CPU_ID_RECORD) {
+      State.Expects != FDRState::Token::NEW_CPU_ID_RECORD)
     return make_error<StringError>(
         "Malformed log. Read NewCPUId record kind out of sequence",
         std::make_error_code(std::errc::executable_format_error));
-  }
   uint32_t OffsetPtr = 1; // Read starting after the first byte.
   State.CPUId = RecordExtractor.getU16(&OffsetPtr);
   State.BaseTSC = RecordExtractor.getU64(&OffsetPtr);
@@ -172,11 +190,10 @@ Error processFDRNewCPUIdRecord(FDRState &State, uint8_t RecordFirstByte,
 /// State transition when a TSCWrapRecord (overflow detection) is encountered.
 Error processFDRTSCWrapRecord(FDRState &State, uint8_t RecordFirstByte,
                               DataExtractor &RecordExtractor) {
-  if (State.Expects != FDRState::Token::FUNCTION_SEQUENCE) {
+  if (State.Expects != FDRState::Token::FUNCTION_SEQUENCE)
     return make_error<StringError>(
         "Malformed log. Read TSCWrap record kind out of sequence",
         std::make_error_code(std::errc::executable_format_error));
-  }
   uint32_t OffsetPtr = 1; // Read starting after the first byte.
   State.BaseTSC = RecordExtractor.getU64(&OffsetPtr);
   return Error::success();
@@ -185,11 +202,10 @@ Error processFDRTSCWrapRecord(FDRState &State, uint8_t RecordFirstByte,
 /// State transition when a WallTimeMarkerRecord is encountered.
 Error processFDRWallTimeRecord(FDRState &State, uint8_t RecordFirstByte,
                                DataExtractor &RecordExtractor) {
-  if (State.Expects != FDRState::Token::WALLCLOCK_RECORD) {
+  if (State.Expects != FDRState::Token::WALLCLOCK_RECORD)
     return make_error<StringError>(
         "Malformed log. Read Wallclock record kind out of sequence",
         std::make_error_code(std::errc::executable_format_error));
-  }
   // We don't encode the wall time into any of the records.
   // XRayRecords are concerned with the TSC instead.
   State.Expects = FDRState::Token::NEW_CPU_ID_RECORD;
@@ -325,11 +341,12 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
 ///
 /// FDRLog: XRayFileHeader ThreadBuffer*
 /// XRayFileHeader: 32 bits to identify the log as FDR with machine metadata.
-/// ThreadBuffer: NewBuffer WallClockTime NewCPUId FunctionSequence EOB
+/// ThreadBuffer: BufSize NewBuffer WallClockTime NewCPUId FunctionSequence EOB
+/// BufSize: 8 byte unsigned integer indicating how large the buffer is.
 /// NewBuffer: 16 byte metadata record with Thread Id.
 /// WallClockTime: 16 byte metadata record with human readable time.
 /// NewCPUId: 16 byte metadata record with CPUId and a 64 bit TSC reading.
-/// EOB: 16 byte metadata record marking the end of a thread's sequence.
+/// EOB: 16 byte record in a thread buffer plus mem garbage to fill BufSize.
 /// FunctionSequence: NewCPUId | TSCWrap | FunctionRecord
 /// TSCWrap: 16 byte metadata record with a full 64 bit TSC reading.
 /// FunctionRecord: 8 byte record with FunctionId, entry/exit, and TSC delta.
@@ -341,7 +358,9 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
         std::make_error_code(std::errc::invalid_argument));
 
   // For an FDR log, there are records sized 16 and 8 bytes.
-  if (Data.size() - 32 == 0 || Data.size() % 8 != 0)
+  // There actually may be no records if no non-trivial functions are
+  // instrumented.
+  if (Data.size() % 8 != 0)
     return make_error<StringError>(
         "Invalid-sized XRay data.",
         std::make_error_code(std::errc::invalid_argument));
@@ -349,29 +368,58 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
   if (auto E = readBinaryFormatHeader(Data, FileHeader))
     return E;
 
-  FDRState State{0, 0, 0, FDRState::Token::NEW_BUFFER_RECORD_OR_EOF};
+  uint64_t BufferSize = 0;
+  {
+    StringRef ExtraDataRef(FileHeader.FreeFormData, 16);
+    DataExtractor ExtraDataExtractor(ExtraDataRef, true, 8);
+    uint32_t ExtraDataOffset = 0;
+    BufferSize = ExtraDataExtractor.getU64(&ExtraDataOffset);
+  }
+  FDRState State{0,          0, 0, FDRState::Token::NEW_BUFFER_RECORD_OR_EOF,
+                 BufferSize, 0};
   // RecordSize will tell the loop how far to seek ahead based on the record
   // type that we have just read.
   size_t RecordSize = 0;
   for (auto S = Data.drop_front(32); !S.empty(); S = S.drop_front(RecordSize)) {
     DataExtractor RecordExtractor(S, true, 8);
     uint32_t OffsetPtr = 0;
+    if (State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF) {
+      RecordSize = State.CurrentBufferSize - State.CurrentBufferConsumed;
+      if (S.size() < State.CurrentBufferSize - State.CurrentBufferConsumed) {
+        return make_error<StringError>(
+            Twine("Incomplete thread buffer. Expected ") +
+                Twine(State.CurrentBufferSize - State.CurrentBufferConsumed) +
+                " remaining bytes but found " + Twine(S.size()),
+            make_error_code(std::errc::invalid_argument));
+      }
+      State.CurrentBufferConsumed = 0;
+      State.Expects = FDRState::Token::NEW_BUFFER_RECORD_OR_EOF;
+      continue;
+    }
     uint8_t BitField = RecordExtractor.getU8(&OffsetPtr);
     bool isMetadataRecord = BitField & 0x01uL;
     if (isMetadataRecord) {
       RecordSize = 16;
       if (auto E = processFDRMetadataRecord(State, BitField, RecordExtractor))
         return E;
+      State.CurrentBufferConsumed += RecordSize;
     } else { // Process Function Record
       RecordSize = 8;
       if (auto E = processFDRFunctionRecord(State, BitField, RecordExtractor,
                                             Records))
         return E;
+      State.CurrentBufferConsumed += RecordSize;
     }
   }
-  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF)
+  // There are two conditions
+  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF &&
+      !(State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF &&
+        State.CurrentBufferSize == State.CurrentBufferConsumed))
     return make_error<StringError>(
-        "Encountered EOF without preceding End of Buffer record.",
+        Twine("Encountered EOF with unexpected state expectation ") +
+            fdrStateToTwine(State.Expects) +
+            ". Remaining expected bytes in thread buffer total " +
+            Twine(State.CurrentBufferSize - State.CurrentBufferConsumed),
         std::make_error_code(std::errc::executable_format_error));
 
   return Error::success();
