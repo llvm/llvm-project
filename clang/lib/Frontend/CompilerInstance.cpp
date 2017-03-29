@@ -483,6 +483,8 @@ void CompilerInstance::createPCHExternalASTSource(
       AllowPCHWithCompilerErrors, getPreprocessor(), getASTContext(),
       getPCHContainerReader(),
       getFrontendOpts().ModuleFileExtensions,
+      TheDependencyFileGenerator.get(),
+      DependencyCollectors,
       DeserializationListener,
       OwnDeserializationListener, Preamble,
       getFrontendOpts().UseGlobalModuleIndex);
@@ -493,6 +495,8 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
     const PCHContainerReader &PCHContainerRdr,
     ArrayRef<IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
+    DependencyFileGenerator *DependencyFile,
+    ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
@@ -510,6 +514,12 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   Reader->setDeserializationListener(
       static_cast<ASTDeserializationListener *>(DeserializationListener),
       /*TakeOwnership=*/OwnDeserializationListener);
+
+  if (DependencyFile)
+    DependencyFile->AttachToASTReader(*Reader);
+  for (auto &Listener : DependencyCollectors)
+    Listener->attachToASTReader(*Reader);
+
   switch (Reader->ReadAST(Path,
                           Preamble ? serialization::MK_Preamble
                                    : serialization::MK_PCH,
