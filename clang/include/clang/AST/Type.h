@@ -1020,6 +1020,9 @@ public:
     return getQualifiers().hasStrongOrWeakObjCLifetime();
   }
 
+  // true when Type is objc's weak and weak is enabled but ARC isn't.
+  bool isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const;
+
   enum DestructionKind {
     DK_none,
     DK_cxx_destructor,
