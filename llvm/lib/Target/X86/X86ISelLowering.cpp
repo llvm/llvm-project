@@ -435,7 +435,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ExternalSymbol  , VT, Custom);
     setOperationAction(ISD::BlockAddress    , VT, Custom);
   }
-  // 64-bit addm sub, shl, sra, srl (iff 32-bit x86)
+
+  // 64-bit shl, sra, srl (iff 32-bit x86)
   for (auto VT : { MVT::i32, MVT::i64 }) {
     if (VT == MVT::i64 && !Subtarget.is64Bit())
       continue;
@@ -2532,7 +2533,7 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   // Convert the i32 type into v32i1 type
   Hi = DAG.getBitcast(MVT::v32i1, ArgValueHi);
 
-  // Concantenate the two values together
+  // Concatenate the two values together
   return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
 }
 
@@ -2993,7 +2994,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
             "Currently the only custom case is when we split v64i1 to 2 regs");
 
         // v64i1 values, in regcall calling convention, that are
-        // compiled to 32 bit arch, are splited up into two registers.
+        // compiled to 32 bit arch, are split up into two registers.
         ArgValue =
             getv64i1Argument(VA, ArgLocs[++I], Chain, DAG, dl, Subtarget);
       } else {
@@ -8877,7 +8878,7 @@ static SDValue lowerVectorShuffleAsBlendAndPermute(const SDLoc &DL, MVT VT,
   return DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), PermuteMask);
 }
 
-/// \brief Generic routine to decompose a shuffle and blend into indepndent
+/// \brief Generic routine to decompose a shuffle and blend into independent
 /// blends and permutes.
 ///
 /// This matches the extremely common pattern for handling combined
@@ -12838,9 +12839,10 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
   // since after split we get a more efficient code than vblend by using
   // vpunpcklwd and vpunpckhwd instrs.
-  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !Subtarget.hasAVX512())
-    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2,
-                                                     Mask, DAG))
+  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !V2.isUndef() &&
+      !Subtarget.hasAVX512())
+    if (SDValue V =
+            lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2, Mask, DAG))
       return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i32, V1, V2, Mask,
@@ -14037,10 +14039,10 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (!isa<ConstantSDNode>(Idx)) {
     // Its more profitable to go through memory (1 cycles throughput)
     // than using VMOVD + VPERMV/PSHUFB sequence ( 2/3 cycles throughput)
-    // IACA tool was used to get performace estimation
+    // IACA tool was used to get performance estimation
     // (https://software.intel.com/en-us/articles/intel-architecture-code-analyzer)
     //
-    // exmample : extractelement <16 x i8> %a, i32 %i
+    // example : extractelement <16 x i8> %a, i32 %i
     //
     // Block Throughput: 3.00 Cycles
     // Throughput Bottleneck: Port5

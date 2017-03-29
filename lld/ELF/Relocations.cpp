@@ -686,10 +686,8 @@ public:
     if (I == Size)
       return Off;
 
-    if (Off < P[I].InputOff) {
-      error("relocation not in any piece");
-      return -1;
-    }
+    // P must be contiguous, so there must be no holes in between.
+    assert(P[I].InputOff <= Off && "Relocation not in any piece");
 
     // Offset -1 means that the piece is dead (i.e. garbage collected).
     if (P[I].OutputOff == -1)

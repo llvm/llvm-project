@@ -72,7 +72,7 @@ ifeq (1,$(USE_LIBCPP))
 
 	ARCH_LDFLAGS += \
 		-L$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH) \
-		-l$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++.a
+		$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++.a
 else
 	ARCH_CFLAGS += \
 		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include \

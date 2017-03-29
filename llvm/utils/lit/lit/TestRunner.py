@@ -142,7 +142,7 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
     return (finalExitCode, timeoutInfo)
 
-def expand_glob_expressions(cmd, args):
+def expand_glob_expressions(args):
     result = [args[0]]
     for arg in args[1:]:
         if isinstance(arg, GlobItem):
@@ -383,7 +383,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     args[i] = f.name
 
         # Expand all glob expressions
-        args = expand_glob_expressions(j, args)
+        args = expand_glob_expressions(args)
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.

@@ -846,6 +846,12 @@ uint64_t MipsGotSection::getGp() const {
   return ElfSym::MipsGp->getVA(0);
 }
 
+static uint64_t readUint(uint8_t *Buf) {
+  if (Config->Is64)
+    return read64(Buf, Config->Endianness);
+  return read32(Buf, Config->Endianness);
+}
+
 static void writeUint(uint8_t *Buf, uint64_t Val) {
   if (Config->Is64)
     write64(Buf, Val, Config->Endianness);
@@ -1439,7 +1445,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 // safe bet is to specify -hash-style=both for backward compatibilty.
 template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
-    : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {}
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, Config->Wordsize, ".gnu.hash") {
+}
 
 template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
@@ -1449,26 +1456,27 @@ template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   if (Symbols.empty())
     MaskWords = 1;
   else
-    MaskWords = NextPowerOf2((Symbols.size() - 1) / sizeof(uintX_t));
+    MaskWords = NextPowerOf2((Symbols.size() - 1) / Config->Wordsize);
 
-  Size = 16;                           // Header
-  Size += sizeof(uintX_t) * MaskWords; // Bloom filter
-  Size += NBuckets * 4;                // Hash buckets
-  Size += Symbols.size() * 4;          // Hash values
+  Size = 16;                            // Header
+  Size += Config->Wordsize * MaskWords; // Bloom filter
+  Size += NBuckets * 4;                 // Hash buckets
+  Size += Symbols.size() * 4;           // Hash values
 }
 
-template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
+template <class ELFT>
+void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   // Write a header.
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, NBuckets);
-  write32<E>(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size());
-  write32<E>(Buf + 8, MaskWords);
-  write32<E>(Buf + 12, getShift2());
+  write32(Buf, NBuckets, Config->Endianness);
+  write32(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size(),
+          Config->Endianness);
+  write32(Buf + 8, MaskWords, Config->Endianness);
+  write32(Buf + 12, getShift2(), Config->Endianness);
   Buf += 16;
 
   // Write a bloom filter and a hash table.
   writeBloomFilter(Buf);
-  Buf += sizeof(uintX_t) * MaskWords;
+  Buf += Config->Wordsize * MaskWords;
   writeHashTable(Buf);
 }
 
@@ -1481,22 +1489,18 @@ template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 //     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
-  typedef typename ELFT::Off Elf_Off;
-  const unsigned C = sizeof(uintX_t) * 8;
-
-  auto *Filter = reinterpret_cast<Elf_Off *>(Buf);
+  const unsigned C = Config->Wordsize * 8;
   for (const Entry &Sym : Symbols) {
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
-    Filter[I] |= uintX_t(1) << (Sym.Hash % C);
-    Filter[I] |= uintX_t(1) << ((Sym.Hash >> getShift2()) % C);
+    uint64_t Val = readUint(Buf + I * Config->Wordsize);
+    Val |= uint64_t(1) << (Sym.Hash % C);
+    Val |= uint64_t(1) << ((Sym.Hash >> getShift2()) % C);
+    writeUint(Buf + I * Config->Wordsize, Val);
   }
 }
 
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
-  // A 32-bit integer type in the target endianness.
-  typedef typename ELFT::Word Elf_Word;
-
   // Group symbols by hash value.
   std::vector<std::vector<Entry>> Syms(NBuckets);
   for (const Entry &Ent : Symbols)
@@ -1504,22 +1508,22 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
 
   // Write hash buckets. Hash buckets contain indices in the following
   // hash value table.
-  Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
+  uint32_t *Buckets = reinterpret_cast<uint32_t *>(Buf);
   for (size_t I = 0; I < NBuckets; ++I)
     if (!Syms[I].empty())
-      Buckets[I] = Syms[I][0].Body->DynsymIndex;
+      write32(Buckets + I, Syms[I][0].Body->DynsymIndex, Config->Endianness);
 
   // Write a hash value table. It represents a sequence of chains that
   // share the same hash modulo value. The last element of each chain
   // is terminated by LSB 1.
-  Elf_Word *Values = Buckets + NBuckets;
+  uint32_t *Values = Buckets + NBuckets;
   size_t I = 0;
   for (std::vector<Entry> &Vec : Syms) {
     if (Vec.empty())
       continue;
     for (const Entry &Ent : makeArrayRef(Vec).drop_back())
-      Values[I++] = Ent.Hash & ~1;
-    Values[I++] = Vec.back().Hash | 1;
+      write32(Values + I++, Ent.Hash & ~1, Config->Endianness);
+    write32(Values + I++, Vec.back().Hash | 1, Config->Endianness);
   }
 }
 

@@ -617,6 +617,32 @@ public:
     return global_objects().end();
   }
 
+  typedef concat_iterator<GlobalValue, iterator, global_iterator,
+                          alias_iterator, ifunc_iterator>
+      global_value_iterator;
+  typedef concat_iterator<const GlobalValue, const_iterator,
+                          const_global_iterator, const_alias_iterator,
+                          const_ifunc_iterator>
+      const_global_value_iterator;
+
+  iterator_range<global_value_iterator> global_values() {
+    return concat<GlobalValue>(functions(), globals(), aliases(), ifuncs());
+  }
+  iterator_range<const_global_value_iterator> global_values() const {
+    return concat<const GlobalValue>(functions(), globals(), aliases(),
+                                     ifuncs());
+  }
+
+  global_value_iterator global_value_begin() { return global_values().begin(); }
+  global_value_iterator global_value_end() { return global_values().end(); }
+
+  const_global_value_iterator global_value_begin() const {
+    return global_values().begin();
+  }
+  const_global_value_iterator global_value_end() const {
+    return global_values().end();
+  }
+
   /// @}
   /// @name Named Metadata Iteration
   /// @{

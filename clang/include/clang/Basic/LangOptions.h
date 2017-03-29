@@ -170,6 +170,11 @@ public:
   /// \brief Is this a libc/libm function that is no longer recognized as a
   /// builtin because a -fno-builtin-* option has been specified?
   bool isNoBuiltinFunc(StringRef Name) const;
+
+  /// \brief True if any ObjC types may have non-trivial lifetime qualifiers.
+  bool allowsNonTrivialObjCLifetimeQualifiers() const {
+    return ObjCAutoRefCount || ObjCWeak;
+  }
 };
 
 /// \brief Floating point control options

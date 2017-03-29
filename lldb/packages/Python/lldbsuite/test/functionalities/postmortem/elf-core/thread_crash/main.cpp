@@ -9,7 +9,7 @@
 
 // This test verifies the correct handling of child thread exits.
 
-#include <atomic>
+#include "pseudo_barrier.h"
 #include <thread>
 #include <csignal>
 
