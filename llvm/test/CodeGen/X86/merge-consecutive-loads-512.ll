@@ -136,13 +136,21 @@ define <8 x double> @merge_8f64_f64_12zzuuzz(double* %ptr) nounwind uwtable noin
 }
 
 define <8 x double> @merge_8f64_f64_1u3u5zu8(double* %ptr) nounwind uwtable noinline ssp {
-; ALL-LABEL: merge_8f64_f64_1u3u5zu8:
-; ALL:       # BB#0:
-; ALL-NEXT:    movb $32, %al
-; ALL-NEXT:    kmovw %eax, %k0
-; ALL-NEXT:    knotw %k0, %k1
-; ALL-NEXT:    vmovupd 8(%rdi), %zmm0 {%k1} {z}
-; ALL-NEXT:    retq
+; AVX512F-LABEL: merge_8f64_f64_1u3u5zu8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    movb $32, %al
+; AVX512F-NEXT:    kmovw %eax, %k0
+; AVX512F-NEXT:    knotw %k0, %k1
+; AVX512F-NEXT:    vmovupd 8(%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: merge_8f64_f64_1u3u5zu8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    movb $32, %al
+; AVX512BW-NEXT:    kmovd %eax, %k0
+; AVX512BW-NEXT:    knotw %k0, %k1
+; AVX512BW-NEXT:    vmovupd 8(%rdi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8f64_f64_1u3u5zu8:
 ; X32-AVX512F:       # BB#0:
@@ -223,13 +231,21 @@ define <8 x i64> @merge_8i64_i64_56zz9uzz(i64* %ptr) nounwind uwtable noinline s
 }
 
 define <8 x i64> @merge_8i64_i64_1u3u5zu8(i64* %ptr) nounwind uwtable noinline ssp {
-; ALL-LABEL: merge_8i64_i64_1u3u5zu8:
-; ALL:       # BB#0:
-; ALL-NEXT:    movb $32, %al
-; ALL-NEXT:    kmovw %eax, %k0
-; ALL-NEXT:    knotw %k0, %k1
-; ALL-NEXT:    vmovdqu64 8(%rdi), %zmm0 {%k1} {z}
-; ALL-NEXT:    retq
+; AVX512F-LABEL: merge_8i64_i64_1u3u5zu8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    movb $32, %al
+; AVX512F-NEXT:    kmovw %eax, %k0
+; AVX512F-NEXT:    knotw %k0, %k1
+; AVX512F-NEXT:    vmovdqu64 8(%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: merge_8i64_i64_1u3u5zu8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    movb $32, %al
+; AVX512BW-NEXT:    kmovd %eax, %k0
+; AVX512BW-NEXT:    knotw %k0, %k1
+; AVX512BW-NEXT:    vmovdqu64 8(%rdi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8i64_i64_1u3u5zu8:
 ; X32-AVX512F:       # BB#0:
@@ -446,13 +462,21 @@ define <16 x i32> @merge_16i32_i32_0uu3uuuuuuuuCuEF(i32* %ptr) nounwind uwtable 
 }
 
 define <16 x i32> @merge_16i32_i32_0uu3zzuuuuuzCuEF(i32* %ptr) nounwind uwtable noinline ssp {
-; ALL-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
-; ALL:       # BB#0:
-; ALL-NEXT:    movw $8240, %ax # imm = 0x2030
-; ALL-NEXT:    kmovw %eax, %k0
-; ALL-NEXT:    knotw %k0, %k1
-; ALL-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
-; ALL-NEXT:    retq
+; AVX512F-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    movw $8240, %ax # imm = 0x2030
+; AVX512F-NEXT:    kmovw %eax, %k0
+; AVX512F-NEXT:    knotw %k0, %k1
+; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    movw $8240, %ax # imm = 0x2030
+; AVX512BW-NEXT:    kmovd %eax, %k0
+; AVX512BW-NEXT:    knotw %k0, %k1
+; AVX512BW-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
 ; X32-AVX512F:       # BB#0:

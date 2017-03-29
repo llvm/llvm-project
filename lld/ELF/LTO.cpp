@@ -125,9 +125,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing =
-        !(ObjSym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
-        B->File == &F;
+    R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
 
     R.VisibleToRegularObj =
         Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());

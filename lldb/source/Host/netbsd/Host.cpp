@@ -1,5 +1,4 @@
-//===-- source/Host/netbsd/Host.cpp ------------------------------*- C++
-//-*-===//
+//===-- source/Host/netbsd/Host.cpp -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,7 +14,6 @@
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
-#include <sys/user.h>
 
 #include <limits.h>
 

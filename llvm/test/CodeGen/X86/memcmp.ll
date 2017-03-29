@@ -249,15 +249,25 @@ define i1 @length32(i8* %x, i8* %y) nounwind {
 ; X32-NEXT:    sete %al
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: length32:
-; X64:       # BB#0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $32, %edx
-; X64-NEXT:    callq memcmp
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    sete %al
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
+; SSE2-LABEL: length32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    movl $32, %edx
+; SSE2-NEXT:    callq memcmp
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: length32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vpcmpeqb (%rsi), %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    cmpl $-1, %eax
+; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 32) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -276,16 +286,26 @@ define i1 @length32_const(i8* %X, i32* nocapture %P) nounwind {
 ; X32-NEXT:    setne %al
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: length32_const:
-; X64:       # BB#0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl $.L.str, %esi
-; X64-NEXT:    movl $32, %edx
-; X64-NEXT:    callq memcmp
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    setne %al
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
+; SSE2-LABEL: length32_const:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    movl $.L.str, %esi
+; SSE2-NEXT:    movl $32, %edx
+; SSE2-NEXT:    callq memcmp
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: length32_const:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    cmpl $-1, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 32) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c

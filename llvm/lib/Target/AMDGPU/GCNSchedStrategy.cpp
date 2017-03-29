@@ -321,16 +321,6 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
   DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
 }
 
-void GCNScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
-                                       MachineBasicBlock::iterator begin,
-                                       MachineBasicBlock::iterator end,
-                                       unsigned regioninstrs) {
-  ScheduleDAGMILive::enterRegion(bb, begin, end, regioninstrs);
-
-  if (Stage == 0)
-    Regions.push_back(std::make_pair(begin, end));
-}
-
 void GCNScheduleDAGMILive::schedule() {
   std::vector<MachineInstr*> Unsched;
   Unsched.reserve(NumRegionInstrs);
@@ -345,6 +335,9 @@ void GCNScheduleDAGMILive::schedule() {
   }
 
   ScheduleDAGMILive::schedule();
+  if (Stage == 0)
+    Regions.push_back(std::make_pair(RegionBegin, RegionEnd));
+
   if (!LIS)
     return;
 
@@ -405,6 +398,8 @@ void GCNScheduleDAGMILive::schedule() {
     DEBUG(dbgs() << "Scheduling " << *MI);
   }
   RegionBegin = Unsched.front()->getIterator();
+  if (Stage == 0)
+    Regions.back() = std::make_pair(RegionBegin, RegionEnd);
 
   placeDebugValues();
 }

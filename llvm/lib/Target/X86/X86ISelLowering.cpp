@@ -4646,8 +4646,12 @@ MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
   if (NumBits == 128 && isTypeLegal(MVT::v16i8))
     return MVT::v16i8;
 
+  // VPMOVMSKB can handle this.
+  if (NumBits == 256 && isTypeLegal(MVT::v32i8))
+    return MVT::v32i8;
+
   // TODO: Allow 64-bit type for 32-bit target.
-  // TODO: 256- and 512-bit types should be allowed, but make sure that those
+  // TODO: 512-bit types should be allowed, but make sure that those
   // cases are handled in combineVectorSizedSetCCEquality().
 
   return MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -27140,43 +27144,62 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to combine to X86ISD::BLENDI.
-  // TODO - add 16i16 support (requires lane duplication).
-  if (NumMaskElts <= 8 && ((Subtarget.hasSSE41() && MaskVT.is128BitVector()) ||
-                           (Subtarget.hasAVX() && MaskVT.is256BitVector()))) {
+  if ((NumMaskElts <= 8 && ((Subtarget.hasSSE41() && MaskVT.is128BitVector()) ||
+                            (Subtarget.hasAVX() && MaskVT.is256BitVector()))) ||
+      (MaskVT == MVT::v16i16 && Subtarget.hasAVX2())) {
     uint64_t BlendMask = 0;
     bool ForceV1Zero = false, ForceV2Zero = false;
     SmallVector<int, 8> TargetMask(Mask.begin(), Mask.end());
     if (matchVectorShuffleAsBlend(V1, V2, TargetMask, ForceV1Zero, ForceV2Zero,
                                   BlendMask)) {
-      // Determine a type compatible with X86ISD::BLENDI.
-      ShuffleVT = MaskVT;
-      if (Subtarget.hasAVX2()) {
-        if (ShuffleVT == MVT::v4i64)
-          ShuffleVT = MVT::v8i32;
-        else if (ShuffleVT == MVT::v2i64)
-          ShuffleVT = MVT::v4i32;
+      if (MaskVT == MVT::v16i16) {
+        // We can only use v16i16 PBLENDW if the lanes are repeated.
+        SmallVector<int, 8> RepeatedMask;
+        if (isRepeatedTargetShuffleMask(128, MaskVT, TargetMask,
+                                        RepeatedMask)) {
+          assert(RepeatedMask.size() == 8 &&
+                 "Repeated mask size doesn't match!");
+          PermuteImm = 0;
+          for (int i = 0; i < 8; ++i)
+            if (RepeatedMask[i] >= 8)
+              PermuteImm |= 1 << i;
+          V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
+          V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
+          Shuffle = X86ISD::BLENDI;
+          ShuffleVT = MaskVT;
+          return true;
+        }
       } else {
-        if (ShuffleVT == MVT::v2i64 || ShuffleVT == MVT::v4i32)
-          ShuffleVT = MVT::v8i16;
-        else if (ShuffleVT == MVT::v4i64)
-          ShuffleVT = MVT::v4f64;
-        else if (ShuffleVT == MVT::v8i32)
-          ShuffleVT = MVT::v8f32;
+        // Determine a type compatible with X86ISD::BLENDI.
+        ShuffleVT = MaskVT;
+        if (Subtarget.hasAVX2()) {
+          if (ShuffleVT == MVT::v4i64)
+            ShuffleVT = MVT::v8i32;
+          else if (ShuffleVT == MVT::v2i64)
+            ShuffleVT = MVT::v4i32;
+        } else {
+          if (ShuffleVT == MVT::v2i64 || ShuffleVT == MVT::v4i32)
+            ShuffleVT = MVT::v8i16;
+          else if (ShuffleVT == MVT::v4i64)
+            ShuffleVT = MVT::v4f64;
+          else if (ShuffleVT == MVT::v8i32)
+            ShuffleVT = MVT::v8f32;
+        }
+
+        if (!ShuffleVT.isFloatingPoint()) {
+          int Scale = EltSizeInBits / ShuffleVT.getScalarSizeInBits();
+          BlendMask =
+              scaleVectorShuffleBlendMask(BlendMask, NumMaskElts, Scale);
+          ShuffleVT = MVT::getIntegerVT(EltSizeInBits / Scale);
+          ShuffleVT = MVT::getVectorVT(ShuffleVT, NumMaskElts * Scale);
+        }
+
+        V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
+        V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
+        PermuteImm = (unsigned)BlendMask;
+        Shuffle = X86ISD::BLENDI;
+        return true;
       }
-
-      V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
-      V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
-
-      if (!ShuffleVT.isFloatingPoint()) {
-        int Scale = EltSizeInBits / ShuffleVT.getScalarSizeInBits();
-        BlendMask = scaleVectorShuffleBlendMask(BlendMask, NumMaskElts, Scale);
-        ShuffleVT = MVT::getIntegerVT(EltSizeInBits / Scale);
-        ShuffleVT = MVT::getVectorVT(ShuffleVT, NumMaskElts * Scale);
-      }
-
-      PermuteImm = (unsigned)BlendMask;
-      Shuffle = X86ISD::BLENDI;
-      return true;
     }
   }
 
@@ -28919,15 +28942,24 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = N0.getValueType();
 
-  // Detect bitcasts between i32 to x86mmx low word. Since MMX types are
-  // special and don't usually play with other vector types, it's better to
-  // handle them early to be sure we emit efficient code by avoiding
-  // store-load conversions.
+  // Since MMX types are special and don't usually play with other vector types,
+  // it's better to handle them early to be sure we emit efficient code by
+  // avoiding store-load conversions.
+
+  // Detect bitcasts between i32 to x86mmx low word.
   if (VT == MVT::x86mmx && N0.getOpcode() == ISD::BUILD_VECTOR &&
       SrcVT == MVT::v2i32 && isNullConstant(N0.getOperand(1))) {
     SDValue N00 = N0->getOperand(0);
     if (N00.getValueType() == MVT::i32)
       return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
+  }
+
+  // Detect bitcasts between v2i64/v2f64 extraction to x86mmx.
+  if (VT == MVT::x86mmx && N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isNullConstant(N0.getOperand(1))) {
+    SDValue N00 = N0->getOperand(0);
+    if (N00.getValueType().is128BitVector())
+      return DAG.getNode(X86ISD::MOVDQ2Q, SDLoc(N00), VT, N00);
   }
 
   // Convert a bitcasted integer logic operation that has one bitcasted

@@ -53,7 +53,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32
 define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpermi2d (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2p
@@ -66,7 +66,7 @@ declare <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64>, <8 x do
 define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <8 x double> %x1, double* %x2ptr, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_pd_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %esi, %k1
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpermi2pd (%rdi){1to8}, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2s = load double, double* %x2ptr
@@ -81,7 +81,7 @@ declare <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32>, <16 x 
 define <16 x float>@test_int_x86_avx512_maskz_vpermt2var_ps_512(<16 x i32> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_ps_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3)
@@ -94,7 +94,7 @@ declare <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64>, <8 x i64>, 
 define <8 x i64>@test_int_x86_avx512_maskz_vpermt2var_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_q_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpermi2q %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3)
@@ -128,7 +128,7 @@ declare <4 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.128(<4 x i32>, <4 x i32>, 
 define <4 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpermi2d %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i8 %x3)
@@ -138,7 +138,7 @@ define <4 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_128(<4 x i32> %x0, <4 x 
 define <4 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_128_broadcast(<4 x i32> %x0, <4 x i32> %x1, i32* %x2ptr, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_128_broadcast:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %esi, %k1
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpermi2d (%rdi){1to4}, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2s = load i32, i32* %x2ptr
@@ -164,7 +164,7 @@ declare <8 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.256(<8 x i32>, <8 x i32>, 
 define <8 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %edi, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpermi2d %ymm2, %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i8 %x3)
@@ -296,7 +296,7 @@ declare <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8>, <16 x i8>,
 define <16 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpermi2b %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
@@ -306,7 +306,7 @@ define <16 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_128(<16 x i8> %x0, <16 
 define <16 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_128_load(<16 x i8> %x0, <16 x i8> %x1, <16 x i8>* %x2p, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_128_load:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpermi2b (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i8>, <16 x i8>* %x2p

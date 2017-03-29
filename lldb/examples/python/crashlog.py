@@ -259,7 +259,11 @@ class CrashLog(symbolication.Symbolicator):
                     self.dsymForUUIDBinary, uuid_str)
                 s = commands.getoutput(dsym_for_uuid_command)
                 if s:
-                    plist_root = plistlib.readPlistFromString(s)
+                    try:
+                        plist_root = plistlib.readPlistFromString(s)
+                    except:
+                        print("Got exception: ", sys.exc_value, " handling dsymForUUID output: \n", s) 
+                        raise
                     if plist_root:
                         plist = plist_root[uuid_str]
                         if plist:

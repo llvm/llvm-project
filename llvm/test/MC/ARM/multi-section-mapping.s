@@ -29,6 +29,7 @@
 
 @ CHECK: 00000000 .text 00000000 $a
 @ CHECK-NEXT: 00000000 .wibble 00000000 $a
+@ CHECK-NEXT: 00000000 .starts_data 00000000 $d
 @ CHECK-NEXT: 00000000 .starts_thumb 00000000 $t
 @ CHECK-NOT: ${{[adt]}}
 

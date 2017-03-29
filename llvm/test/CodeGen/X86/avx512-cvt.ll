@@ -547,34 +547,70 @@ define <8 x double> @sitof64(<8 x i32> %a) {
   ret <8 x double> %b
 }
 define <8 x double> @sitof64_mask(<8 x double> %a, <8 x i32> %b, i8 %c) nounwind {
-; NODQ-LABEL: sitof64_mask:
-; NODQ:       ## BB#0:
-; NODQ-NEXT:    kmovw %edi, %k1
-; NODQ-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
-; NODQ-NEXT:    retq
+; KNL-LABEL: sitof64_mask:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
 ;
-; DQ-LABEL: sitof64_mask:
-; DQ:       ## BB#0:
-; DQ-NEXT:    kmovb %edi, %k1
-; DQ-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
-; DQ-NEXT:    retq
+; VLBW-LABEL: sitof64_mask:
+; VLBW:       ## BB#0:
+; VLBW-NEXT:    kmovd %edi, %k1
+; VLBW-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: sitof64_mask:
+; VLNOBW:       ## BB#0:
+; VLNOBW-NEXT:    kmovw %edi, %k1
+; VLNOBW-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
+; VLNOBW-NEXT:    retq
+;
+; AVX512DQ-LABEL: sitof64_mask:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k1
+; AVX512DQ-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: sitof64_mask:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vcvtdq2pd %ymm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    retq
   %1 = bitcast i8 %c to <8 x i1>
   %2 = sitofp <8 x i32> %b to <8 x double>
   %3 = select <8 x i1> %1, <8 x double> %2, <8 x double> %a
   ret <8 x double> %3
 }
 define <8 x double> @sitof64_maskz(<8 x i32> %a, i8 %b) nounwind {
-; NODQ-LABEL: sitof64_maskz:
-; NODQ:       ## BB#0:
-; NODQ-NEXT:    kmovw %edi, %k1
-; NODQ-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
-; NODQ-NEXT:    retq
+; KNL-LABEL: sitof64_maskz:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
 ;
-; DQ-LABEL: sitof64_maskz:
-; DQ:       ## BB#0:
-; DQ-NEXT:    kmovb %edi, %k1
-; DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
-; DQ-NEXT:    retq
+; VLBW-LABEL: sitof64_maskz:
+; VLBW:       ## BB#0:
+; VLBW-NEXT:    kmovd %edi, %k1
+; VLBW-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: sitof64_maskz:
+; VLNOBW:       ## BB#0:
+; VLNOBW-NEXT:    kmovw %edi, %k1
+; VLNOBW-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
+; VLNOBW-NEXT:    retq
+;
+; AVX512DQ-LABEL: sitof64_maskz:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k1
+; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: sitof64_maskz:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vcvtdq2pd %ymm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
   %1 = bitcast i8 %b to <8 x i1>
   %2 = sitofp <8 x i32> %a to <8 x double>
   %3 = select <8 x i1> %1, <8 x double> %2, <8 x double> zeroinitializer
@@ -859,34 +895,70 @@ define <16 x double> @uitof64(<16 x i32> %a) nounwind {
   ret <16 x double> %b
 }
 define <8 x double> @uitof64_mask(<8 x double> %a, <8 x i32> %b, i8 %c) nounwind {
-; NODQ-LABEL: uitof64_mask:
-; NODQ:       ## BB#0:
-; NODQ-NEXT:    kmovw %edi, %k1
-; NODQ-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
-; NODQ-NEXT:    retq
+; KNL-LABEL: uitof64_mask:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
 ;
-; DQ-LABEL: uitof64_mask:
-; DQ:       ## BB#0:
-; DQ-NEXT:    kmovb %edi, %k1
-; DQ-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
-; DQ-NEXT:    retq
+; VLBW-LABEL: uitof64_mask:
+; VLBW:       ## BB#0:
+; VLBW-NEXT:    kmovd %edi, %k1
+; VLBW-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: uitof64_mask:
+; VLNOBW:       ## BB#0:
+; VLNOBW-NEXT:    kmovw %edi, %k1
+; VLNOBW-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
+; VLNOBW-NEXT:    retq
+;
+; AVX512DQ-LABEL: uitof64_mask:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k1
+; AVX512DQ-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: uitof64_mask:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vcvtudq2pd %ymm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    retq
   %1 = bitcast i8 %c to <8 x i1>
   %2 = uitofp <8 x i32> %b to <8 x double>
   %3 = select <8 x i1> %1, <8 x double> %2, <8 x double> %a
   ret <8 x double> %3
 }
 define <8 x double> @uitof64_maskz(<8 x i32> %a, i8 %b) nounwind {
-; NODQ-LABEL: uitof64_maskz:
-; NODQ:       ## BB#0:
-; NODQ-NEXT:    kmovw %edi, %k1
-; NODQ-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
-; NODQ-NEXT:    retq
+; KNL-LABEL: uitof64_maskz:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
 ;
-; DQ-LABEL: uitof64_maskz:
-; DQ:       ## BB#0:
-; DQ-NEXT:    kmovb %edi, %k1
-; DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
-; DQ-NEXT:    retq
+; VLBW-LABEL: uitof64_maskz:
+; VLBW:       ## BB#0:
+; VLBW-NEXT:    kmovd %edi, %k1
+; VLBW-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: uitof64_maskz:
+; VLNOBW:       ## BB#0:
+; VLNOBW-NEXT:    kmovw %edi, %k1
+; VLNOBW-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
+; VLNOBW-NEXT:    retq
+;
+; AVX512DQ-LABEL: uitof64_maskz:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k1
+; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: uitof64_maskz:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vcvtudq2pd %ymm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
   %1 = bitcast i8 %b to <8 x i1>
   %2 = uitofp <8 x i32> %a to <8 x double>
   %3 = select <8 x i1> %1, <8 x double> %2, <8 x double> zeroinitializer

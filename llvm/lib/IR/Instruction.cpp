@@ -204,6 +204,11 @@ bool Instruction::hasAllowReciprocal() const {
   return cast<FPMathOperator>(this)->hasAllowReciprocal();
 }
 
+bool Instruction::hasAllowContract() const {
+  assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
+  return cast<FPMathOperator>(this)->hasAllowContract();
+}
+
 FastMathFlags Instruction::getFastMathFlags() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->getFastMathFlags();

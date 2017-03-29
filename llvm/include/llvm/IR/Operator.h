@@ -172,12 +172,15 @@ private:
   FastMathFlags(unsigned F) : Flags(F) { }
 
 public:
+  /// This is how the bits are used in Value::SubclassOptionalData so they
+  /// should fit there too.
   enum {
     UnsafeAlgebra   = (1 << 0),
     NoNaNs          = (1 << 1),
     NoInfs          = (1 << 2),
     NoSignedZeros   = (1 << 3),
-    AllowReciprocal = (1 << 4)
+    AllowReciprocal = (1 << 4),
+    AllowContract   = (1 << 5)
   };
 
   FastMathFlags() = default;
@@ -193,6 +196,7 @@ public:
   bool noInfs() const          { return 0 != (Flags & NoInfs); }
   bool noSignedZeros() const   { return 0 != (Flags & NoSignedZeros); }
   bool allowReciprocal() const { return 0 != (Flags & AllowReciprocal); }
+  bool allowContract() const { return 0 != (Flags & AllowContract); }
   bool unsafeAlgebra() const   { return 0 != (Flags & UnsafeAlgebra); }
 
   /// Flag setters
@@ -200,12 +204,16 @@ public:
   void setNoInfs()          { Flags |= NoInfs; }
   void setNoSignedZeros()   { Flags |= NoSignedZeros; }
   void setAllowReciprocal() { Flags |= AllowReciprocal; }
+  void setAllowContract(bool B) {
+    Flags = (Flags & ~AllowContract) | B * AllowContract;
+  }
   void setUnsafeAlgebra() {
     Flags |= UnsafeAlgebra;
     setNoNaNs();
     setNoInfs();
     setNoSignedZeros();
     setAllowReciprocal();
+    setAllowContract(true);
   }
 
   void operator&=(const FastMathFlags &OtherFlags) {
@@ -257,6 +265,12 @@ private:
       (B * FastMathFlags::AllowReciprocal);
   }
 
+  void setHasAllowContract(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~FastMathFlags::AllowContract) |
+        (B * FastMathFlags::AllowContract);
+  }
+
   /// Convenience function for setting multiple fast-math flags.
   /// FMF is a mask of the bits to set.
   void setFastMathFlags(FastMathFlags FMF) {
@@ -298,6 +312,12 @@ public:
   /// reciprocal instead of division, aka the 'R' fast-math property.
   bool hasAllowReciprocal() const {
     return (SubclassOptionalData & FastMathFlags::AllowReciprocal) != 0;
+  }
+
+  /// Test whether this operation is permitted to
+  /// be floating-point contracted.
+  bool hasAllowContract() const {
+    return (SubclassOptionalData & FastMathFlags::AllowContract) != 0;
   }
 
   /// Convenience function for getting all the fast-math flags

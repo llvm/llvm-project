@@ -350,13 +350,15 @@ private:
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
   bool VectorReduction : 1;
+  bool AllowContract : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
       : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false),
         UnsafeAlgebra(false), NoNaNs(false), NoInfs(false),
-        NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false) {}
+        NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
+        AllowContract(false) {}
 
   // These are mutators for each flag.
   void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
@@ -368,6 +370,7 @@ public:
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
   void setAllowReciprocal(bool b) { AllowReciprocal = b; }
   void setVectorReduction(bool b) { VectorReduction = b; }
+  void setAllowContract(bool b) { AllowContract = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -379,6 +382,7 @@ public:
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
   bool hasVectorReduction() const { return VectorReduction; }
+  bool hasAllowContract() const { return AllowContract; }
 
   /// Clear any flags in this flag set that aren't also set in Flags.
   void intersectWith(const SDNodeFlags *Flags) {
@@ -390,6 +394,8 @@ public:
     NoInfs &= Flags->NoInfs;
     NoSignedZeros &= Flags->NoSignedZeros;
     AllowReciprocal &= Flags->AllowReciprocal;
+    VectorReduction &= Flags->VectorReduction;
+    AllowContract &= Flags->AllowContract;
   }
 };
 

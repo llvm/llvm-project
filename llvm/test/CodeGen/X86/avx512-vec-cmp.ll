@@ -166,6 +166,7 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; KNL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; KNL-NEXT:    kunpckbw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
@@ -173,7 +174,8 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; SKX-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
 ; SKX-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckbw %k0, %k1, %k0
-; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %res = icmp eq <16 x i64> %a, %b

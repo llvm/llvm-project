@@ -74,12 +74,14 @@ define <32 x i8> @combine_pshufb_vpermps(<8 x float> %a) {
 define <32 x i8> @combine_and_pshufb(<32 x i8> %a0) {
 ; X32-LABEL: combine_and_pshufb:
 ; X32:       # BB#0:
-; X32-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_and_pshufb:
 ; X64:       # BB#0:
-; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
 ; X64-NEXT:    retq
   %1 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 32, i32 32, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
@@ -89,12 +91,14 @@ define <32 x i8> @combine_and_pshufb(<32 x i8> %a0) {
 define <32 x i8> @combine_pshufb_and(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_and:
 ; X32:       # BB#0:
-; X32-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_and:
 ; X64:       # BB#0:
-; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
 ; X64-NEXT:    retq
   %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
   %2 = shufflevector <32 x i8> %1, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 32, i32 32, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

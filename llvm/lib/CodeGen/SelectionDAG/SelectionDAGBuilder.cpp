@@ -84,10 +84,6 @@ LimitFPPrecision("limit-float-precision",
                  cl::location(LimitFloatPrecision),
                  cl::init(0));
 
-static cl::opt<bool>
-EnableFMFInDAG("enable-fmf-dag", cl::init(true), cl::Hidden,
-                cl::desc("Enable fast-math-flags for DAG nodes"));
-
 /// Minimum jump table density for normal functions.
 static cl::opt<unsigned>
 JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
@@ -2586,13 +2582,13 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   Flags.setNoSignedWrap(nsw);
   Flags.setNoUnsignedWrap(nuw);
   Flags.setVectorReduction(vec_redux);
-  if (EnableFMFInDAG) {
-    Flags.setAllowReciprocal(FMF.allowReciprocal());
-    Flags.setNoInfs(FMF.noInfs());
-    Flags.setNoNaNs(FMF.noNaNs());
-    Flags.setNoSignedZeros(FMF.noSignedZeros());
-    Flags.setUnsafeAlgebra(FMF.unsafeAlgebra());
-  }
+  Flags.setAllowReciprocal(FMF.allowReciprocal());
+  Flags.setAllowContract(FMF.allowContract());
+  Flags.setNoInfs(FMF.noInfs());
+  Flags.setNoNaNs(FMF.noNaNs());
+  Flags.setNoSignedZeros(FMF.noSignedZeros());
+  Flags.setUnsafeAlgebra(FMF.unsafeAlgebra());
+
   SDValue BinNodeValue = DAG.getNode(OpCode, getCurSDLoc(), Op1.getValueType(),
                                      Op1, Op2, &Flags);
   setValue(&I, BinNodeValue);
@@ -6069,20 +6065,20 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
   // supports the MVT we'll be loading or if it is small enough (<= 4) that
   // we'll only produce a small number of byte loads.
   MVT LoadVT;
-  switch (CSize->getZExtValue()) {
+  unsigned NumBitsToCompare = CSize->getZExtValue() * 8;
+  switch (NumBitsToCompare) {
   default:
     return false;
-  case 2:
+  case 16:
     LoadVT = MVT::i16;
     break;
-  case 4:
+  case 32:
     LoadVT = MVT::i32;
     break;
-  case 8:
-    LoadVT = hasFastLoadsAndCompare(64);
-    break;
-  case 16:
-    LoadVT = hasFastLoadsAndCompare(128);
+  case 64:
+  case 128:
+  case 256:
+    LoadVT = hasFastLoadsAndCompare(NumBitsToCompare);
     break;
   }
 

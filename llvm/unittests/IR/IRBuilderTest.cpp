@@ -207,7 +207,26 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   EXPECT_TRUE(FCmp->hasAllowReciprocal());
 
   Builder.clearFastMathFlags();
- 
+
+  // Test FP-contract
+  FC = Builder.CreateFAdd(F, F);
+  ASSERT_TRUE(isa<Instruction>(FC));
+  FAdd = cast<Instruction>(FC);
+  EXPECT_FALSE(FAdd->hasAllowContract());
+
+  FMF.clear();
+  FMF.setAllowContract(true);
+  Builder.setFastMathFlags(FMF);
+
+  FC = Builder.CreateFAdd(F, F);
+  EXPECT_TRUE(Builder.getFastMathFlags().any());
+  EXPECT_TRUE(Builder.getFastMathFlags().AllowContract);
+  ASSERT_TRUE(isa<Instruction>(FC));
+  FAdd = cast<Instruction>(FC);
+  EXPECT_TRUE(FAdd->hasAllowContract());
+
+  Builder.clearFastMathFlags();
+
   // Test a call with FMF.
   auto CalleeTy = FunctionType::get(Type::getFloatTy(Ctx),
                                     /*isVarArg=*/false);

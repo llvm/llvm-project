@@ -383,7 +383,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_00_00_00_00_00_00_00_18_00_00_
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
 ; AVX512VL-NEXT:    movw $1, %ax
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
 ; AVX512VL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; AVX512VL-NEXT:    retq
@@ -414,7 +414,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_00_00_00_00_00_00_19_00_00_00_
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
 ; AVX512VL-NEXT:    movw $1, %ax
-; AVX512VL-NEXT:    kmovw %eax, %k1
+; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
 ; AVX512VL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; AVX512VL-NEXT:    retq
