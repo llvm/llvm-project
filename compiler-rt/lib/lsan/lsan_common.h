@@ -30,11 +30,13 @@
 // To enable LeakSanitizer on new architecture, one need to implement
 // internal_clone function as well as (probably) adjust TLS machinery for
 // new architecture inside sanitizer library.
-#if (SANITIZER_LINUX && !SANITIZER_ANDROID || CAN_SANITIZE_LEAKS_MAC) \
-     && (SANITIZER_WORDSIZE == 64) && (defined(__x86_64__) \
-     ||  defined(__mips64) ||  defined(__aarch64__))
+#if (SANITIZER_LINUX && !SANITIZER_ANDROID) && (SANITIZER_WORDSIZE == 64) && \
+    (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__))
 #define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_LINUX && !SANITIZER_ANDROID && defined(__i386__)
+#define CAN_SANITIZE_LEAKS 1
+#elif CAN_SANITIZE_LEAKS_MAC && (defined(__x86_64__) ||  defined(__mips64) || \
+      defined(__aarch64__) || defined(__i386__))
 #define CAN_SANITIZE_LEAKS 1
 #else
 #define CAN_SANITIZE_LEAKS 0

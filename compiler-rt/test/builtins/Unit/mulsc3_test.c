@@ -1,4 +1,6 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// XFAIL: armhf-target-arch
+// See pr32261
 //===-- mulsc3_test.c - Test __mulsc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

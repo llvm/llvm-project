@@ -12,7 +12,8 @@ set(SANITIZER_HEADERS
   sanitizer/tsan_interface_atomic.h)
 
 set(XRAY_HEADERS
-  xray/xray_interface.h)
+  xray/xray_interface.h
+  xray/xray_log_interface.h)
 
 set(COMPILER_RT_HEADERS
   ${SANITIZER_HEADERS}
