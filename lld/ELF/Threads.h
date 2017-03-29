@@ -15,7 +15,7 @@
 //
 // That said, we don't want to do "too clever" things using threads.
 // Complex multi-threaded algorithms are sometimes extremely hard to
-// justify the correctness and can easily mess up the entire design.
+// reason about and can easily mess up the entire design.
 //
 // Fortunately, when a linker links large programs (when the link time is
 // most critical), it spends most of the time to work on massive number of
@@ -34,7 +34,7 @@
 // instead of std::for_each (or a plain for loop). Because tasks are
 // completely independent from each other, we can run them in parallel
 // without any coordination between them. That's very easy to understand
-// and justify.
+// and reason about.
 //
 // For the cases such as the latter, we can use parallel algorithms to
 // deal with massive data. We have to write code for a tailored algorithm
@@ -69,14 +69,15 @@ namespace lld {
 namespace elf {
 
 template <class IterTy, class FuncTy>
-void forEach(IterTy Begin, IterTy End, FuncTy Fn) {
+void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
   if (Config->Threads)
     parallel_for_each(Begin, End, Fn);
   else
     std::for_each(Begin, End, Fn);
 }
 
-inline void forLoop(size_t Begin, size_t End, std::function<void(size_t)> Fn) {
+inline void parallelFor(size_t Begin, size_t End,
+                        std::function<void(size_t)> Fn) {
   if (Config->Threads) {
     parallel_for(Begin, End, Fn);
   } else {

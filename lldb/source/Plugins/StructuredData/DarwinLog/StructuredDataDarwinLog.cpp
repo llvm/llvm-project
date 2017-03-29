@@ -19,6 +19,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -746,8 +747,8 @@ private:
 
   int MatchAttributeIndex(llvm::StringRef attribute_name) const {
     for (const auto &Item : llvm::enumerate(s_filter_attributes)) {
-      if (attribute_name == Item.Value)
-        return Item.Index;
+      if (attribute_name == Item.value())
+        return Item.index();
     }
 
     // We didn't match anything.

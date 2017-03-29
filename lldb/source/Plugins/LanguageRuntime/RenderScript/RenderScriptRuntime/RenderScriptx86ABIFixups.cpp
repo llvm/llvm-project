@@ -248,7 +248,7 @@ bool fixupRSAllocationStructByValCalls(llvm::Module &module) {
     rs_functions.insert(call_inst->getCalledFunction());
 
     // get the function attributes
-    llvm::AttributeSet call_attribs = call_inst->getAttributes();
+    llvm::AttributeList call_attribs = call_inst->getAttributes();
 
     // iterate over the argument attributes
     for (size_t i = 1; i <= call_attribs.getNumSlots(); ++i) {
@@ -261,16 +261,12 @@ bool fixupRSAllocationStructByValCalls(llvm::Module &module) {
     }
   }
 
-  llvm::AttributeSet attr_byval =
-      llvm::AttributeSet::get(module.getContext(), 1u, llvm::Attribute::ByVal);
-
   // for all called function decls
   for (auto func : rs_functions) {
     // inspect all of the arguments in the call
-    llvm::SymbolTableList<llvm::Argument> &arg_list = func->getArgumentList();
-    for (auto &arg : arg_list) {
+    for (auto &arg : func->args()) {
       if (arg.hasByValAttr()) {
-        arg.removeAttr(attr_byval);
+        arg.removeAttr(llvm::Attribute::ByVal);
         changed = true;
       }
     }

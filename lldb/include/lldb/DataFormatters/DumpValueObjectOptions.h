@@ -27,7 +27,7 @@ namespace lldb_private {
 class DumpValueObjectOptions {
 public:
   struct PointerDepth {
-    enum class Mode { Always, Formatters, Default, Never } m_mode;
+    enum class Mode { Always, Default, Never } m_mode;
     uint32_t m_count;
 
     PointerDepth operator--() const {
@@ -37,9 +37,6 @@ public:
     }
 
     bool CanAllowExpansion() const;
-
-    bool CanAllowExpansion(bool is_root, TypeSummaryImpl *entry,
-                           ValueObject *valobj, const std::string &summary);
   };
 
   struct PointerAsArraySettings {

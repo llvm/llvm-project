@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 
 using namespace lldb_private;
 
@@ -164,6 +164,7 @@ TEST(FileSpecTest, EqualDotsWindows) {
       {R"(C:/bar/baz)", R"(C:\foo\..\bar\baz)"},
       {R"(C:\bar)", R"(C:\foo\..\bar)"},
       {R"(C:\foo\bar)", R"(C:\foo\.\bar)"},
+      {R"(C:\foo\bar)", R"(C:\foo\bar\.)"},
   };
 
   for(const auto &test: tests) {
@@ -187,6 +188,7 @@ TEST(FileSpecTest, EqualDotsPosix) {
       {R"(/bar/baz)", R"(/foo/../bar/baz)"},
       {R"(/bar)", R"(/foo/../bar)"},
       {R"(/foo/bar)", R"(/foo/./bar)"},
+      {R"(/foo/bar)", R"(/foo/bar/.)"},
   };
 
   for(const auto &test: tests) {

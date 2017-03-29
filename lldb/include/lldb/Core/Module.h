@@ -14,13 +14,10 @@
 
 // Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Utility/UUID.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/SwiftASTContext.h"
-#include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
 
 // Other libraries and framework includes
@@ -893,6 +890,7 @@ public:
   TypeSystem *GetTypeSystemForLanguageImpl(lldb::LanguageType language);
 #else
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language);
+  TypeSystem *GetTypeSystemForLanguageNoCreate(lldb::LanguageType language);
 #endif
 
   // Special error functions that can do printf style formatting that will
@@ -1063,8 +1061,6 @@ public:
   };
 
 protected:
-  SwiftASTContext *GetSwiftASTContextNoCreate();
-
   //------------------------------------------------------------------
   // Member Variables
   //------------------------------------------------------------------

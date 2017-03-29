@@ -26,7 +26,7 @@
 // These optimizations include:
 //
 //  - Tiling of the innermost tilable bands
-//  - Prevectorization - The coice of a possible outer loop that is strip-mined
+//  - Prevectorization - The choice of a possible outer loop that is strip-mined
 //                       to the innermost level to enable inner-loop
 //                       vectorization.
 //  - Some optimizations for spatial locality are also planned.
@@ -36,7 +36,7 @@
 //
 // Polyhedral AST generation is more than scanning polyhedra
 // Tobias Grosser, Sven Verdoolaege, Albert Cohen
-// ACM Transations on Programming Languages and Systems (TOPLAS),
+// ACM Transactions on Programming Languages and Systems (TOPLAS),
 // 37(4), July 2015
 // http://www.grosser.es/#pub-polyhedral-AST-generation
 //
@@ -433,6 +433,34 @@ ScheduleTreeOptimizer::applyRegisterTiling(__isl_take isl_schedule_node *Node,
   return Node;
 }
 
+namespace {
+bool isSimpleInnermostBand(const isl::schedule_node &Node) {
+  assert(isl_schedule_node_get_type(Node.keep()) == isl_schedule_node_band);
+  assert(isl_schedule_node_n_children(Node.keep()) == 1);
+
+  auto ChildType = isl_schedule_node_get_type(Node.child(0).keep());
+
+  if (ChildType == isl_schedule_node_leaf)
+    return true;
+
+  if (ChildType != isl_schedule_node_sequence)
+    return false;
+
+  auto Sequence = Node.child(0);
+
+  for (int c = 0, nc = isl_schedule_node_n_children(Sequence.keep()); c < nc;
+       ++c) {
+    auto Child = Sequence.child(c);
+    if (isl_schedule_node_get_type(Child.keep()) != isl_schedule_node_filter)
+      return false;
+    if (isl_schedule_node_get_type(Child.child(0).keep()) !=
+        isl_schedule_node_leaf)
+      return false;
+  }
+  return true;
+}
+} // namespace
+
 bool ScheduleTreeOptimizer::isTileableBandNode(
     __isl_keep isl_schedule_node *Node) {
   if (isl_schedule_node_get_type(Node) != isl_schedule_node_band)
@@ -451,14 +479,8 @@ bool ScheduleTreeOptimizer::isTileableBandNode(
   if (Dims <= 1)
     return false;
 
-  auto Child = isl_schedule_node_get_child(Node, 0);
-  auto Type = isl_schedule_node_get_type(Child);
-  isl_schedule_node_free(Child);
-
-  if (Type != isl_schedule_node_leaf)
-    return false;
-
-  return true;
+  auto ManagedNode = isl::manage(isl_schedule_node_copy(Node));
+  return isSimpleInnermostBand(ManagedNode);
 }
 
 __isl_give isl_schedule_node *
@@ -1226,10 +1248,26 @@ isolateAndUnrollMatMulInnerLoops(__isl_take isl_schedule_node *Node,
   return Node;
 }
 
+/// Mark @p BasePtr with "Inter iteration alias-free" mark node.
+///
+/// @param Node The child of the mark node to be inserted.
+/// @param BasePtr The pointer to be marked.
+/// @return The modified isl_schedule_node.
+static isl_schedule_node *markInterIterationAliasFree(isl_schedule_node *Node,
+                                                      llvm::Value *BasePtr) {
+  if (!BasePtr)
+    return Node;
+
+  auto *Ctx = isl_schedule_node_get_ctx(Node);
+  auto *Id = isl_id_alloc(Ctx, "Inter iteration alias-free", BasePtr);
+  return isl_schedule_node_child(isl_schedule_node_insert_mark(Node, Id), 0);
+}
+
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
     __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI,
     MatMulInfoTy &MMI) {
   assert(TTI && "The target transform info should be provided.");
+  Node = markInterIterationAliasFree(Node, MMI.WriteToC->getLatestBaseAddr());
   int DimOutNum = isl_schedule_node_band_n_member(Node);
   assert(DimOutNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "

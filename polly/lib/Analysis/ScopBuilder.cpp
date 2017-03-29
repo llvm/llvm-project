@@ -112,11 +112,12 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   }
 }
 
-bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, Loop *L) {
+bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
   Value *Address = Inst.getPointerOperand();
-  const SCEV *AccessFunction = SE.getSCEVAtScope(Address, L);
+  const SCEV *AccessFunction =
+      SE.getSCEVAtScope(Address, LI.getLoopFor(Inst->getParent()));
   const SCEVUnknown *BasePointer =
       dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFunction));
   enum MemoryAccess::AccessType AccType =
@@ -158,7 +159,7 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, Loop *L) {
 
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
 
-  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, scop->getBoxedLoops());
+  Loop *SurroundingLoop = Stmt->getSurroundingLoop();
   for (auto *Subscript : Subscripts) {
     InvariantLoadsSetTy AccessILS;
     if (!isAffineExpr(&scop->getRegion(), SurroundingLoop, Subscript, SE,
@@ -184,7 +185,7 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, Loop *L) {
   return true;
 }
 
-bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, Loop *L) {
+bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, ScopStmt *Stmt) {
   if (!PollyDelinearize)
     return false;
 
@@ -195,7 +196,8 @@ bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, Loop *L) {
   enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
-  const SCEV *AccessFunction = SE.getSCEVAtScope(Address, L);
+  const SCEV *AccessFunction =
+      SE.getSCEVAtScope(Address, LI.getLoopFor(Inst->getParent()));
   const SCEVUnknown *BasePointer =
       dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFunction));
 
@@ -227,12 +229,13 @@ bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, Loop *L) {
   return true;
 }
 
-bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
+bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   auto *MemIntr = dyn_cast_or_null<MemIntrinsic>(Inst);
 
   if (MemIntr == nullptr)
     return false;
 
+  auto *L = LI.getLoopFor(Inst->getParent());
   auto *LengthVal = SE.getSCEVAtScope(MemIntr->getLength(), L);
   assert(LengthVal);
 
@@ -240,7 +243,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
   InvariantLoadsSetTy AccessILS;
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
 
-  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, scop->getBoxedLoops());
+  Loop *SurroundingLoop = Stmt->getSurroundingLoop();
   bool LengthIsAffine = isAffineExpr(&scop->getRegion(), SurroundingLoop,
                                      LengthVal, SE, &AccessILS);
   for (LoadInst *LInst : AccessILS)
@@ -295,7 +298,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
   return true;
 }
 
-bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
+bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   auto *CI = dyn_cast_or_null<CallInst>(Inst);
 
   if (CI == nullptr)
@@ -324,6 +327,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
   // Fall through
   case FMRB_OnlyAccessesArgumentPointees:
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
+    Loop *L = LI.getLoopFor(Inst->getParent());
     for (const auto &Arg : CI->arg_operands()) {
       if (!Arg->getType()->isPointerTy())
         continue;
@@ -342,14 +346,15 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
   return true;
 }
 
-void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, Loop *L) {
+void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
   Value *Address = Inst.getPointerOperand();
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
   enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
-  const SCEV *AccessFunction = SE.getSCEVAtScope(Address, L);
+  const SCEV *AccessFunction =
+      SE.getSCEVAtScope(Address, LI.getLoopFor(Inst->getParent()));
   const SCEVUnknown *BasePointer =
       dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFunction));
 
@@ -359,15 +364,16 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, Loop *L) {
   // Check if the access depends on a loop contained in a non-affine subregion.
   bool isVariantInNonAffineLoop = false;
   SetVector<const Loop *> Loops;
-  auto &BoxedLoops = scop->getBoxedLoops();
   findLoops(AccessFunction, Loops);
   for (const Loop *L : Loops)
-    if (BoxedLoops.count(L))
+    if (Stmt->contains(L)) {
       isVariantInNonAffineLoop = true;
+      break;
+    }
 
   InvariantLoadsSetTy AccessILS;
 
-  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, BoxedLoops);
+  Loop *SurroundingLoop = Stmt->getSurroundingLoop();
   bool IsAffine = !isVariantInNonAffineLoop &&
                   isAffineExpr(&scop->getRegion(), SurroundingLoop,
                                AccessFunction, SE, &AccessILS);
@@ -384,21 +390,21 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, Loop *L) {
                  {AccessFunction}, {nullptr}, Val);
 }
 
-void ScopBuilder::buildMemoryAccess(MemAccInst Inst, Loop *L) {
+void ScopBuilder::buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt) {
 
-  if (buildAccessMemIntrinsic(Inst, L))
+  if (buildAccessMemIntrinsic(Inst, Stmt))
     return;
 
-  if (buildAccessCallInst(Inst, L))
+  if (buildAccessCallInst(Inst, Stmt))
     return;
 
-  if (buildAccessMultiDimFixed(Inst, L))
+  if (buildAccessMultiDimFixed(Inst, Stmt))
     return;
 
-  if (buildAccessMultiDimParam(Inst, L))
+  if (buildAccessMultiDimParam(Inst, Stmt))
     return;
 
-  buildAccessSingleDim(Inst, L);
+  buildAccessSingleDim(Inst, Stmt);
 }
 
 void ScopBuilder::buildAccessFunctions(Region &SR) {
@@ -419,15 +425,21 @@ void ScopBuilder::buildAccessFunctions(Region &SR) {
 void ScopBuilder::buildStmts(Region &SR) {
 
   if (scop->isNonAffineSubRegion(&SR)) {
-    scop->addScopStmt(&SR);
+    Loop *SurroundingLoop = LI.getLoopFor(SR.getEntry());
+    auto &BoxedLoops = scop->getBoxedLoops();
+    while (BoxedLoops.count(SurroundingLoop))
+      SurroundingLoop = SurroundingLoop->getParentLoop();
+    scop->addScopStmt(&SR, SurroundingLoop);
     return;
   }
 
   for (auto I = SR.element_begin(), E = SR.element_end(); I != E; ++I)
     if (I->isSubRegion())
       buildStmts(*I->getNodeAs<Region>());
-    else
-      scop->addScopStmt(I->getNodeAs<BasicBlock>());
+    else {
+      Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
+      scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop);
+    }
 }
 
 void ScopBuilder::buildAccessFunctions(BasicBlock &BB,
@@ -438,7 +450,7 @@ void ScopBuilder::buildAccessFunctions(BasicBlock &BB,
   if (isErrorBlock(BB, scop->getRegion(), LI, DT) && !IsExitBlock)
     return;
 
-  Loop *L = LI.getLoopFor(&BB);
+  ScopStmt *Stmt = scop->getStmtFor(&BB);
 
   for (Instruction &Inst : BB) {
     PHINode *PHI = dyn_cast<PHINode>(&Inst);
@@ -449,8 +461,10 @@ void ScopBuilder::buildAccessFunctions(BasicBlock &BB,
     if (!PHI && IsExitBlock)
       break;
 
-    if (auto MemInst = MemAccInst::dyn_cast(Inst))
-      buildMemoryAccess(MemInst, L);
+    if (auto MemInst = MemAccInst::dyn_cast(Inst)) {
+      assert(Stmt && "Cannot build access function in non-existing statement");
+      buildMemoryAccess(MemInst, Stmt);
+    }
 
     if (isIgnoredIntrinsic(&Inst))
       continue;
@@ -635,7 +649,7 @@ void ScopBuilder::addPHIReadAccess(PHINode *PHI) {
                   ArrayRef<const SCEV *>(), MemoryKind::PHI);
 }
 
-void ScopBuilder::buildScop(Region &R) {
+void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R)));
 
   buildStmts(R);
@@ -659,12 +673,12 @@ void ScopBuilder::buildScop(Region &R) {
       addArrayAccess(MemAccInst(GlobalRead), MemoryAccess::READ, BP,
                      BP->getType(), false, {AF}, {nullptr}, GlobalRead);
 
-  scop->init(AA, DT, LI);
+  scop->init(AA, AC, DT, LI);
 }
 
-ScopBuilder::ScopBuilder(Region *R, AliasAnalysis &AA, const DataLayout &DL,
-                         DominatorTree &DT, LoopInfo &LI, ScopDetection &SD,
-                         ScalarEvolution &SE)
+ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
+                         const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
+                         ScopDetection &SD, ScalarEvolution &SE)
     : AA(AA), DL(DL), DT(DT), LI(LI), SD(SD), SE(SE) {
 
   Function *F = R->getEntry()->getParent();
@@ -674,7 +688,7 @@ ScopBuilder::ScopBuilder(Region *R, AliasAnalysis &AA, const DataLayout &DL,
   std::string Msg = "SCoP begins here.";
   emitOptimizationRemarkAnalysis(F->getContext(), DEBUG_TYPE, *F, Beg, Msg);
 
-  buildScop(*R);
+  buildScop(*R, AC);
 
   DEBUG(scop->print(dbgs()));
 

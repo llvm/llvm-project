@@ -11,7 +11,7 @@
 #define liblldb_SourceManager_h_
 
 // Project includes
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 
 // Other libraries and framework includes

@@ -17,7 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "PlatformDarwin.h"
-#include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "llvm/Support/FileSystem.h"
 

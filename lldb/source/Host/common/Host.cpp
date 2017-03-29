@@ -28,7 +28,8 @@
 #endif
 
 #if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) || defined(__NetBSD__)
+    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
+    defined(__NetBSD__) || defined(__OpenBSD__)
 #if !defined(__ANDROID__)
 #include <spawn.h>
 #endif
@@ -50,8 +51,6 @@
 // Project includes
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
@@ -65,6 +64,7 @@
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
@@ -185,7 +185,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   delete info;
 
   int status = -1;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
 #define __WALL 0
 #endif
   const int options = __WALL;
@@ -598,8 +598,7 @@ Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     }
   }
 
-  if (FileSystem::GetFileExists(output_file_spec))
-    FileSystem::Unlink(output_file_spec);
+  llvm::sys::fs::remove(output_file_spec.GetPath());
   return error;
 }
 

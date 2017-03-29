@@ -17,7 +17,22 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
+static const IfStmt *getPrecedingIf(const SourceManager &SM,
+                                    ASTContext *Context, const IfStmt *If) {
+  auto parents = Context->getParents(*If);
+  if (parents.size() != 1)
+    return nullptr;
+  if (const auto *PrecedingIf = parents[0].get<IfStmt>()) {
+    SourceLocation PreviousElseLoc = PrecedingIf->getElseLoc();
+    if (SM.getExpansionLineNumber(PreviousElseLoc) ==
+        SM.getExpansionLineNumber(If->getIfLoc()))
+      return PrecedingIf;
+  }
+  return nullptr;
+}
+
 void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
+                                                   ASTContext *Context,
                                                    const IfStmt *If) {
   SourceLocation IfLoc = If->getIfLoc();
   SourceLocation ElseLoc = If->getElseLoc();
@@ -28,6 +43,11 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
   if (SM.getExpansionLineNumber(If->getThen()->getLocEnd()) ==
       SM.getExpansionLineNumber(ElseLoc))
     return;
+
+  // Find location of first 'if' in a 'if else if' chain.
+  for (auto PrecedingIf = getPrecedingIf(SM, Context, If); PrecedingIf;
+       PrecedingIf = getPrecedingIf(SM, Context, PrecedingIf))
+    IfLoc = PrecedingIf->getIfLoc();
 
   if (SM.getExpansionColumnNumber(IfLoc) !=
       SM.getExpansionColumnNumber(ElseLoc))
@@ -92,7 +112,7 @@ void MisleadingIndentationCheck::registerMatchers(MatchFinder *Finder) {
 
 void MisleadingIndentationCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *If = Result.Nodes.getNodeAs<IfStmt>("if"))
-    danglingElseCheck(*Result.SourceManager, If);
+    danglingElseCheck(*Result.SourceManager, Result.Context, If);
 
   if (const auto *CStmt = Result.Nodes.getNodeAs<CompoundStmt>("compound"))
     missingBracesCheck(*Result.SourceManager, CStmt);

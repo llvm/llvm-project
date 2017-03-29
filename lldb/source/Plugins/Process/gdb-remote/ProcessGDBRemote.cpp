@@ -39,7 +39,6 @@
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PseudoTerminal.h"
@@ -65,6 +64,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 
 // Project includes

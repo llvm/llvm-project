@@ -83,7 +83,7 @@ public:
   void sortCtorsDtors();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void finalize();
-  template <class ELFT> void assignOffsets();
+  void assignOffsets();
   std::vector<InputSection *> Sections;
 
   // Location in the output buffer.
@@ -95,8 +95,6 @@ public:
 // until Writer is initialized.
 struct Out {
   static uint8_t First;
-  static OutputSection *Bss;
-  static OutputSection *BssRelRo;
   static OutputSection *Opd;
   static uint8_t *OpdBuf;
   static PhdrEntry *TlsPhdr;
@@ -136,7 +134,6 @@ public:
   OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
   ~OutputSectionFactory();
 
-  template <class ELFT>
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
@@ -144,11 +141,7 @@ private:
   std::vector<OutputSection *> &OutputSections;
 };
 
-template <class ELFT> uint64_t getHeaderSize() {
-  if (Config->OFormatBinary)
-    return 0;
-  return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
-}
+uint64_t getHeaderSize();
 
 } // namespace elf
 } // namespace lld

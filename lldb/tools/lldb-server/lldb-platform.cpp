@@ -31,12 +31,11 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerPlatform.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -102,29 +101,30 @@ static void display_usage(const char *progname, const char *subcommand) {
 static Error save_socket_id_to_file(const std::string &socket_id,
                                     const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
-  auto error = FileSystem::MakeDirectory(temp_file_spec,
-                                         eFilePermissionsDirectoryDefault);
+  Error error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Error("Failed to create directory %s: %s",
                  temp_file_spec.GetCString(), error.AsCString());
 
-  llvm::SmallString<PATH_MAX> temp_file_path;
+  llvm::SmallString<64> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");
-  auto err_code = llvm::sys::fs::createUniqueFile(temp_file_spec.GetCString(),
+  int FD;
+  auto err_code = llvm::sys::fs::createUniqueFile(temp_file_spec.GetPath(), FD,
                                                   temp_file_path);
   if (err_code)
     return Error("Failed to create temp file: %s", err_code.message().c_str());
 
-  llvm::FileRemover tmp_file_remover(temp_file_path.c_str());
+  llvm::FileRemover tmp_file_remover(temp_file_path);
 
   {
-    std::ofstream temp_file(temp_file_path.c_str(), std::ios::out);
-    if (!temp_file.is_open())
-      return Error("Failed to open temp file %s", temp_file_path.c_str());
+    llvm::raw_fd_ostream temp_file(FD, true);
     temp_file << socket_id;
+    temp_file.close();
+    if (temp_file.has_error())
+      return Error("Failed to write to port file.");
   }
 
-  err_code = llvm::sys::fs::rename(temp_file_path.c_str(), file_spec.GetPath());
+  err_code = llvm::sys::fs::rename(temp_file_path, file_spec.GetPath());
   if (err_code)
     return Error("Failed to rename file %s to %s: %s", temp_file_path.c_str(),
                  file_spec.GetPath().c_str(), err_code.message().c_str());

@@ -11,13 +11,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
-# MISSING: failed to open /no/such/file
+# MISSING: cannot open output file /no/such/file
 
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:
+# HELP: : supported targets:{{.*}} elf
 
 # RUN: ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
-# VERSION: LLD
+# VERSION: LLD {{.*}} (compatible with GNU linkers)
 
 # RUN: not ld.lld -v 2>&1 | FileCheck -check-prefix=VERSION %s
 
@@ -48,11 +49,11 @@
 
 ## "--output=foo" is equivalent to "-o foo".
 # RUN: not ld.lld %t --output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR7 %s
-# ERR7: failed to open /no/such/file
+# ERR7: cannot open output file /no/such/file
 
 ## "-output=foo" is equivalent to "-o utput=foo".
 # RUN: not ld.lld %t -output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR8 %s
-# ERR8: failed to open utput=/no/such/file
+# ERR8: cannot open output file utput=/no/such/file
 
 .globl _start
 _start:

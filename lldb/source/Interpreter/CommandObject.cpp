@@ -24,9 +24,9 @@
 // FIXME: Make a separate file for the completers.
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/Target/Language.h"
 
@@ -977,10 +977,10 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.Value.ref.empty() && entry.Value.ref.front() == '`') {
+      if (!entry.value().ref.empty() && entry.value().ref.front() == '`') {
         cmd_args.ReplaceArgumentAtIndex(
-            entry.Index,
-            m_interpreter.ProcessEmbeddedScriptCommands(entry.Value.c_str()));
+            entry.index(),
+            m_interpreter.ProcessEmbeddedScriptCommands(entry.value().c_str()));
       }
     }
 

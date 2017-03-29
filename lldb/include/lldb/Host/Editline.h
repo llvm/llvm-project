@@ -43,7 +43,8 @@
 // will only be
 // used in cases where this is true.  This is a compile time dependecy, for now
 // selected per target Platform
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__OpenBSD__)
 #define LLDB_EDITLINE_USE_WCHAR 1
 #include <codecvt>
 #else
@@ -64,8 +65,8 @@
 #include <vector>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Predicate.h"
+#include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
 namespace line_editor {

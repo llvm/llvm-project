@@ -21,12 +21,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 // Project includes
-#include "lldb/Host/OptionParser.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
+
+struct Option;
 
 typedef std::vector<std::tuple<std::string, int, std::string>> OptionArgVector;
 typedef std::shared_ptr<OptionArgVector> OptionArgVectorSP;

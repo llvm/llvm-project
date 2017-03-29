@@ -27,7 +27,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -41,6 +40,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UUID.h"
@@ -5313,6 +5313,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     std::vector<std::string> rpath_paths;
     std::vector<std::string> rpath_relative_paths;
+    std::vector<std::string> at_exec_relative_paths;
     const bool resolve_path = false; // Don't resolve the dependent file paths
                                      // since they may not reside on this system
     uint32_t i;
@@ -5338,6 +5339,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
             if (path[0] == '@') {
               if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
                 rpath_relative_paths.push_back(path + strlen("@rpath"));
+              else if (strncmp(path, "@executable_path", 
+                       strlen("@executable_path")) == 0)
+                at_exec_relative_paths.push_back(path 
+                                                 + strlen("@executable_path"));
             } else {
               FileSpec file_spec(path, resolve_path);
               if (files.AppendIfUnique(file_spec))
@@ -5353,10 +5358,11 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       offset = cmd_offset + load_cmd.cmdsize;
     }
 
+    FileSpec this_file_spec(m_file);
+    this_file_spec.ResolvePath();
+    
     if (!rpath_paths.empty()) {
       // Fixup all LC_RPATH values to be absolute paths
-      FileSpec this_file_spec(m_file);
-      this_file_spec.ResolvePath();
       std::string loader_path("@loader_path");
       std::string executable_path("@executable_path");
       for (auto &rpath : rpath_paths) {
@@ -5383,6 +5389,23 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
             count++;
             break;
           }
+        }
+      }
+    }
+
+    // We may have @executable_paths but no RPATHS.  Figure those out here.
+    // Only do this if this object file is the executable.  We have no way to
+    // get back to the actual executable otherwise, so we won't get the right
+    // path.
+    if (!at_exec_relative_paths.empty() && CalculateType() == eTypeExecutable) {
+      FileSpec exec_dir = this_file_spec.CopyByRemovingLastPathComponent();
+      for (const auto &at_exec_relative_path : at_exec_relative_paths) {
+        FileSpec file_spec = 
+            exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
+        file_spec = file_spec.GetNormalizedPath();
+        if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
+          count++;
+          break;
         }
       }
     }

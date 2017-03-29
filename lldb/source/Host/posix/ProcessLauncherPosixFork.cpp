@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
 #include <limits.h>
@@ -93,9 +93,8 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
 static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
                                               const ProcessLaunchInfo &info) {
   // First, make sure we disable all logging. If we are logging to stdout, our
-  // logs can be
-  // mistaken for inferior output.
-  Log::DisableAllLogChannels(nullptr);
+  // logs can be mistaken for inferior output.
+  Log::DisableAllLogChannels();
 
   // Do not inherit setgid powers.
   if (setgid(getgid()) != 0)

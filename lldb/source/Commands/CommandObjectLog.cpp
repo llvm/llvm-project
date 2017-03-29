@@ -16,8 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -28,6 +27,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -170,9 +170,14 @@ protected:
       m_options.log_file.GetPath(log_file, sizeof(log_file));
     else
       log_file[0] = '\0';
+
+    std::string error;
+    llvm::raw_string_ostream error_stream(error);
     bool success = m_interpreter.GetDebugger().EnableLog(
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        result.GetErrorStream());
+        error_stream);
+    result.GetErrorStream() << error_stream.str();
+
     if (success)
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     else
@@ -229,12 +234,15 @@ protected:
     const std::string channel = args[0].ref;
     args.Shift(); // Shift off the channel
     if (channel == "all") {
-      Log::DisableAllLogChannels(&result.GetErrorStream());
+      Log::DisableAllLogChannels();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
+      std::string error;
+      llvm::raw_string_ostream error_stream(error);
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
-                                 result.GetErrorStream()))
+                                 error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      result.GetErrorStream() << error_stream.str();
     }
     return result.Succeeded();
   }
@@ -269,17 +277,20 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
+    std::string output;
+    llvm::raw_string_ostream output_stream(output);
     if (args.empty()) {
-      Log::ListAllLogChannels(&result.GetOutputStream());
+      Log::ListAllLogChannels(output_stream);
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       bool success = true;
       for (const auto &entry : args.entries())
-        success = success && Log::ListChannelCategories(
-                                 entry.ref, result.GetOutputStream());
+        success =
+            success && Log::ListChannelCategories(entry.ref, output_stream);
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }
+    result.GetOutputStream() << output_stream.str();
     return result.Succeeded();
   }
 };

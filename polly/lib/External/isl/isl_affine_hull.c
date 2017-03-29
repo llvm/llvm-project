@@ -1202,7 +1202,7 @@ __isl_give isl_basic_map *isl_map_affine_hull(__isl_take isl_map *map)
 	map = isl_map_local_affine_hull(map);
 	map = isl_map_remove_empty_parts(map);
 	map = isl_map_remove_unknown_divs(map);
-	map = isl_map_align_divs(map);
+	map = isl_map_align_divs_internal(map);
 
 	if (!map)
 		return NULL;

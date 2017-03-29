@@ -16,9 +16,10 @@
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Debug.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Host/linux/Support.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
 #include "NativeThreadLinux.h"
@@ -97,6 +98,11 @@ public:
                            lldb::addr_t &load_addr) override;
 
   NativeThreadLinuxSP GetThreadByID(lldb::tid_t id);
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  GetAuxvData() const override {
+    return getProcFile(GetID(), "auxv");
+  }
 
   // ---------------------------------------------------------------------
   // Interface used by NativeRegisterContext-derived classes.

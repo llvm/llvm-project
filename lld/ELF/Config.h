@@ -13,8 +13,10 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/Endian.h"
 
 #include <vector>
 
@@ -72,6 +74,7 @@ struct VersionDefinition {
 struct Configuration {
   InputFile *FirstElf = nullptr;
   uint8_t OSABI = 0;
+  llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
@@ -96,6 +99,7 @@ struct Configuration {
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
+  bool ArchiveWithoutSymbolsSeen = false;
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
@@ -138,6 +142,7 @@ struct Configuration {
   bool ZExecstack;
   bool ZNocopyreloc;
   bool ZNodelete;
+  bool ZNodlopen;
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
@@ -162,6 +167,36 @@ struct Configuration {
   unsigned Optimize;
   unsigned ThinLTOJobs;
 
+  // The following config options do not directly correspond to any
+  // particualr command line options.
+
+  // True if we need to pass through relocations in input files to the
+  // output file. Usually false because we consume relocations.
+  bool CopyRelocs;
+
+  // True if the target is ELF64. False if ELF32.
+  bool Is64;
+
+  // True if the target is little-endian. False if big-endian.
+  bool IsLE;
+
+  // endianness::little if IsLE is true. endianness::big otherwise.
+  llvm::support::endianness Endianness;
+
+  // True if the target is the little-endian MIPS64.
+  //
+  // The reason why we have this variable only for the MIPS is because
+  // we use this often.  Some ELF headers for MIPS64EL are in a
+  // mixed-endian (which is horrible and I'd say that's a serious spec
+  // bug), and we need to know whether we are reading MIPS ELF files or
+  // not in various places.
+  //
+  // (Note that MIPS64EL is not a typo for MIPS64LE. This is the official
+  // name whatever that means. A fun hypothesis is that "EL" is short for
+  // little-endian written in the little-endian order, but I don't know
+  // if that's true.)
+  bool IsMips64EL;
+
   // The ELF spec defines two types of relocation table entries, RELA and
   // REL. RELA is a triplet of (offset, info, addend) while REL is a
   // tuple of (offset, info). Addends for REL are implicit and read from
@@ -173,37 +208,16 @@ struct Configuration {
   // been easier to write code to process relocations, but it's too late
   // to change the spec.)
   //
-  // Each ABI defines its relocation type. This function returns that.
-  // As far as we know, all 64-bit ABIs are using RELA. A few 32-bit ABIs
-  // are using RELA too.
-  bool isRela() const {
-    bool is64 = (EKind == ELF64LEKind || EKind == ELF64BEKind);
-    bool isX32Abi = (EKind == ELF32LEKind && EMachine == llvm::ELF::EM_X86_64);
-    return is64 || isX32Abi || MipsN32Abi;
-  }
+  // Each ABI defines its relocation type. IsRela is true if target
+  // uses RELA. As far as we know, all 64-bit ABIs are using RELA. A
+  // few 32-bit ABIs are using RELA too.
+  bool IsRela;
 
-  // Returns true if we need to pass through relocations in input
-  // files to the output file. Usually false because we consume
-  // relocations.
-  bool copyRelocs() const { return Relocatable || EmitRelocs; }
+  // True if we are creating position-independent code.
+  bool Pic;
 
-  // Returns true if we are creating position-independent code.
-  bool pic() const { return Pie || Shared; }
-
-  // Returns true if the target is the little-endian MIPS64. The reason
-  // why we have this function only for the MIPS is because we use this
-  // function often. Some ELF headers for MIPS64EL are in a mixed-endian
-  // (which is horrible and I'd say that's a serious spec bug), and we
-  // need to know whether we are reading MIPS ELF files or not in various
-  // places.
-  //
-  // (Note that MIPS64EL is not a typo for MIPS64LE. This is the official
-  // name whatever that means. A fun hypothesis is that "EL" is short for
-  // little-endian written in the little-endian order, but I don't know
-  // if that's true.)
-  bool isMips64EL() const {
-    return EMachine == llvm::ELF::EM_MIPS && EKind == ELF64LEKind;
-  }
+  // 4 for ELF32, 8 for ELF64.
+  int Wordsize;
 };
 
 // The only instance of Configuration struct.

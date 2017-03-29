@@ -26,10 +26,10 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -40,6 +40,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -696,8 +697,7 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
     namespace fs = llvm::sys::fs;
     switch (fs::get_file_type(src.GetPath(), false)) {
     case fs::file_type::directory_file: {
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       uint32_t permissions = src.GetPermissions();
       if (permissions == 0)
         permissions = eFilePermissionsDirectoryDefault;
@@ -716,14 +716,12 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
     } break;
 
     case fs::file_type::regular_file:
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       error = PutFile(src, fixed_dst);
       break;
 
     case fs::file_type::symlink_file: {
-      if (GetFileExists(fixed_dst))
-        Unlink(fixed_dst);
+      llvm::sys::fs::remove(fixed_dst.GetPath());
       FileSpec src_resolved;
       error = FileSystem::Readlink(src, src_resolved);
       if (error.Success())
@@ -761,7 +759,7 @@ bool Platform::SetWorkingDirectory(const FileSpec &file_spec) {
 
 Error Platform::MakeDirectory(const FileSpec &file_spec, uint32_t permissions) {
   if (IsHost())
-    return FileSystem::MakeDirectory(file_spec, permissions);
+    return llvm::sys::fs::create_directory(file_spec.GetPath(), permissions);
   else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
@@ -773,9 +771,12 @@ Error Platform::MakeDirectory(const FileSpec &file_spec, uint32_t permissions) {
 
 Error Platform::GetFilePermissions(const FileSpec &file_spec,
                                    uint32_t &file_permissions) {
-  if (IsHost())
-    return FileSystem::GetFilePermissions(file_spec, file_permissions);
-  else {
+  if (IsHost()) {
+    auto Value = llvm::sys::fs::getPermissions(file_spec.GetPath());
+    if (Value)
+      file_permissions = Value.get();
+    return Error(Value.getError());
+  } else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
                                    GetPluginName().GetCString(),
@@ -786,9 +787,10 @@ Error Platform::GetFilePermissions(const FileSpec &file_spec,
 
 Error Platform::SetFilePermissions(const FileSpec &file_spec,
                                    uint32_t file_permissions) {
-  if (IsHost())
-    return FileSystem::SetFilePermissions(file_spec, file_permissions);
-  else {
+  if (IsHost()) {
+    auto Perms = static_cast<llvm::sys::fs::perms>(file_permissions);
+    return llvm::sys::fs::setPermissions(file_spec.GetPath(), Perms);
+  } else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
                                    GetPluginName().GetCString(),
@@ -1342,10 +1344,13 @@ lldb_private::Error Platform::RunShellCommand(
 
 bool Platform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                             uint64_t &high) {
-  if (IsHost())
-    return FileSystem::CalculateMD5(file_spec, low, high);
-  else
+  if (!IsHost())
     return false;
+  auto Result = llvm::sys::fs::md5_contents(file_spec.GetPath());
+  if (!Result)
+    return false;
+  std::tie(high, low) = Result->words();
+  return true;
 }
 
 void Platform::SetLocalCacheDirectory(const char *local) {
@@ -1641,8 +1646,9 @@ Error Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
                                     const FileSpec &dst_file_spec) {
   Error error;
 
-  std::ofstream dst(dst_file_spec.GetPath(), std::ios::out | std::ios::binary);
-  if (!dst.is_open()) {
+  std::error_code EC;
+  llvm::raw_fd_ostream dst(dst_file_spec.GetPath(), EC, llvm::sys::fs::F_None);
+  if (EC) {
     error.SetErrorStringWithFormat("unable to open destination file: %s",
                                    dst_file_spec.GetPath().c_str());
     return error;

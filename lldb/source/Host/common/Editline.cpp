@@ -11,17 +11,17 @@
 #include <iostream>
 #include <limits.h>
 
-#include "lldb/Core/StringList.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
 
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 using namespace lldb_private;
@@ -178,9 +178,7 @@ private:
     if (m_path.empty() && m_history && !m_prefix.empty()) {
       FileSpec parent_path{"~/.lldb", true};
       char history_path[PATH_MAX];
-      if (FileSystem::MakeDirectory(parent_path,
-                                    lldb::eFilePermissionsDirectoryDefault)
-              .Success()) {
+      if (!llvm::sys::fs::create_directory(parent_path.GetPath())) {
         snprintf(history_path, sizeof(history_path), "~/.lldb/%s-history",
                  m_prefix.c_str());
       } else {

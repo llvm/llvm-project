@@ -23,9 +23,7 @@
 ; AST:       Stmt_for_body6(c0, c1, c2);
 
 ; IR:      %polly.par.userContext = alloca { i64, i64 }
-; IR:      %[[R0:[0-9a-z.]+]] = bitcast { i64, i64 }* %polly.par.userContext to i8*
-; IR-NEXT: call void @llvm.lifetime.start(i64 16, i8* %[[R0]])
-; IR-NEXT: %[[R1:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext, i32 0, i32 0
+; IR: %[[R1:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext, i32 0, i32 0
 ; IR-NEXT: store i64 %n, i64* %[[R1]]
 ; IR-NEXT: %[[R2:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext, i32 0, i32 1
 ; IR-NEXT: store i64 %polly.indvar, i64* %[[R2]]

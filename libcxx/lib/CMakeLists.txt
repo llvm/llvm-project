@@ -32,6 +32,10 @@ endif()
 add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH
                   "${CMAKE_LIBRARY_PATH_FLAG}${LIBCXX_CXX_ABI_LIBRARY_PATH}")
 
+
+if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
+  find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
+endif()
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
@@ -62,12 +66,7 @@ if (APPLE AND LLVM_USE_SANITIZER)
     message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
   endif()
   if (LIBFILE)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=lib OUTPUT_VARIABLE LIBDIR RESULT_VARIABLE Result)
-    if (NOT ${Result} EQUAL "0")
-      message(FATAL "Failed to find library resource directory")
-    endif()
-    string(STRIP "${LIBDIR}" LIBDIR)
-    set(LIBDIR "${LIBDIR}/darwin/")
+    find_compiler_rt_dir(LIBDIR)
     if (NOT IS_DIRECTORY "${LIBDIR}")
       message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
     endif()
@@ -178,7 +177,7 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-# Add a object library that contains the compiled source files.
+# Add an object library that contains the compiled source files.
 add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 if(WIN32 AND NOT MINGW)
   target_compile_definitions(cxx_objects

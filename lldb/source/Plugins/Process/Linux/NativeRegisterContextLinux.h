@@ -10,10 +10,10 @@
 #ifndef lldb_NativeRegisterContextLinux_h
 #define lldb_NativeRegisterContextLinux_h
 
-#include "lldb/Host/common/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private {
 namespace process_linux {

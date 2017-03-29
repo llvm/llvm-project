@@ -13,9 +13,9 @@
 // Project includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 
 // Other libraries and framework includes
 #include "llvm/Support/Chrono.h"

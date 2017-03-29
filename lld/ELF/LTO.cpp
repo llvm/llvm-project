@@ -73,7 +73,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
   Conf.Options.RelaxELFRelocations = true;
 
-  Conf.RelocModel = Config->pic() ? Reloc::PIC_ : Reloc::Static;
+  Conf.RelocModel = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   Conf.CodeModel = GetCodeModelFromCMModel();
   Conf.DisableVerify = Config->DisableVerify;
   Conf.DiagHandler = diagnosticHandler;
@@ -125,9 +125,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing =
-        !(ObjSym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
-        B->File == &F;
+    R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
 
     R.VisibleToRegularObj =
         Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
@@ -150,10 +148,11 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   // specified, configure LTO to use it as the cache directory.
   lto::NativeObjectCache Cache;
   if (!Config->ThinLTOCacheDir.empty())
-    Cache = check(lto::localCache(
-        Config->ThinLTOCacheDir, [&](size_t Task, StringRef Path) {
-          Files[Task] = check(MemoryBuffer::getFile(Path));
-        }));
+    Cache = check(
+        lto::localCache(Config->ThinLTOCacheDir,
+                        [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+                          Files[Task] = std::move(MB);
+                        }));
 
   checkError(LTOObj->run(
       [&](size_t Task) {
@@ -161,6 +160,9 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
             llvm::make_unique<raw_svector_ostream>(Buff[Task]));
       },
       Cache));
+
+  if (!Config->ThinLTOCacheDir.empty())
+    pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
 
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())

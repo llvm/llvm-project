@@ -1,5 +1,4 @@
-//===-- SBDeclaration.cpp -----------------------------------------*- C++
-//-*-===//
+//===-- SBDeclaration.cpp ----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,6 +9,7 @@
 
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"

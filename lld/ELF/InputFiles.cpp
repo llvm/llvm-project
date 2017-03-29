@@ -80,9 +80,8 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
   ObjectInfo ObjInfo;
   DWARFContextInMemory Dwarf(*Obj, &ObjInfo);
   DwarfLine.reset(new DWARFDebugLine(&Dwarf.getLineSection().Relocs));
-  DataExtractor LineData(Dwarf.getLineSection().Data,
-                         ELFT::TargetEndianness == support::little,
-                         ELFT::Is64Bits ? 8 : 4);
+  DataExtractor LineData(Dwarf.getLineSection().Data, Config->IsLE,
+                         Config->Wordsize);
 
   // The second parameter is offset in .debug_line section
   // for compilation unit (CU) of interest. We have only one
@@ -272,34 +271,35 @@ void elf::ObjectFile<ELFT>::initializeSections(
   ArrayRef<Elf_Shdr> ObjSections = check(this->getObj().sections());
   const ELFFile<ELFT> &Obj = this->getObj();
   uint64_t Size = ObjSections.size();
-  Sections.resize(Size);
+  this->Sections.resize(Size);
   unsigned I = -1;
   StringRef SectionStringTable = check(Obj.getSectionStringTable(ObjSections));
   for (const Elf_Shdr &Sec : ObjSections) {
     ++I;
-    if (Sections[I] == &InputSection::Discarded)
+    if (this->Sections[I] == &InputSection::Discarded)
       continue;
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((Sec.sh_flags & SHF_EXCLUDE) && !Config->Relocatable) {
-      Sections[I] = &InputSection::Discarded;
+      this->Sections[I] = &InputSection::Discarded;
       continue;
     }
 
     switch (Sec.sh_type) {
     case SHT_GROUP:
-      Sections[I] = &InputSection::Discarded;
-      if (ComdatGroups.insert(CachedHashStringRef(
-                                  getShtGroupSignature(ObjSections, Sec)))
+      this->Sections[I] = &InputSection::Discarded;
+      if (ComdatGroups
+              .insert(
+                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
               .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
-          fatal(toString(this) + ": invalid section index in group: " +
-                Twine(SecIndex));
-        Sections[SecIndex] = &InputSection::Discarded;
+          fatal(toString(this) +
+                ": invalid section index in group: " + Twine(SecIndex));
+        this->Sections[SecIndex] = &InputSection::Discarded;
       }
       break;
     case SHT_SYMTAB:
@@ -312,16 +312,17 @@ void elf::ObjectFile<ELFT>::initializeSections(
     case SHT_NULL:
       break;
     default:
-      Sections[I] = createInputSection(Sec, SectionStringTable);
+      this->Sections[I] = createInputSection(Sec, SectionStringTable);
     }
 
     // .ARM.exidx sections have a reverse dependency on the InputSection they
     // have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
     if (Sec.sh_flags & SHF_LINK_ORDER) {
-      if (Sec.sh_link >= Sections.size())
+      if (Sec.sh_link >= this->Sections.size())
         fatal(toString(this) + ": invalid sh_link index: " +
               Twine(Sec.sh_link));
-      Sections[Sec.sh_link]->DependentSections.push_back(Sections[I]);
+      this->Sections[Sec.sh_link]->DependentSections.push_back(
+          this->Sections[I]);
     }
   }
 }
@@ -329,9 +330,9 @@ void elf::ObjectFile<ELFT>::initializeSections(
 template <class ELFT>
 InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
-  if (Idx >= Sections.size())
+  if (Idx >= this->Sections.size())
     fatal(toString(this) + ": invalid relocated section index: " + Twine(Idx));
-  InputSectionBase *Target = Sections[Idx];
+  InputSectionBase *Target = this->Sections[Idx];
 
   // Strictly speaking, a relocation section must be included in the
   // group of the section it relocates. However, LLVM 3.3 and earlier
@@ -471,9 +472,9 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
 template <class ELFT>
 InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
-  if (Index >= Sections.size())
+  if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase *S = Sections[Index];
+  InputSectionBase *S = this->Sections[Index];
 
   // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
   // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
@@ -556,8 +557,12 @@ template <class ELFT> void ArchiveFile::parse() {
                MB.getBufferIdentifier() + ": failed to parse archive");
 
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &Sym : File->symbols())
+  for (const Archive::Symbol &Sym : File->symbols()) {
     Symtab<ELFT>::X->addLazyArchive(this, Sym);
+  }
+
+  if (File->symbols().begin() == File->symbols().end())
+    Config->ArchiveWithoutSymbolsSeen = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -764,7 +769,8 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
+BitcodeFile::BitcodeFile(MemoryBufferRef MB, uint64_t OffsetInArchive)
+    : InputFile(BitcodeKind, MB), OffsetInArchive(OffsetInArchive) {
   EKind = getBitcodeELFKind(MB);
   EMachine = getBitcodeMachineKind(MB);
 }
@@ -786,8 +792,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                    const lto::InputFile::Symbol &ObjSym,
                                    BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
-  uint32_t Flags = ObjSym.getFlags();
-  uint32_t Binding = (Flags & BasicSymbolRef::SF_Weak) ? STB_WEAK : STB_GLOBAL;
+  uint32_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
 
   uint8_t Type = ObjSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
@@ -799,12 +804,12 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                          Visibility, Type, CanOmitFromDynSym,
                                          F);
 
-  if (Flags & BasicSymbolRef::SF_Undefined)
+  if (ObjSym.isUndefined())
     return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
                                          Visibility, Type, CanOmitFromDynSym,
                                          F);
 
-  if (Flags & BasicSymbolRef::SF_Common)
+  if (ObjSym.isCommon())
     return Symtab<ELFT>::X->addCommon(NameRef, ObjSym.getCommonSize(),
                                       ObjSym.getCommonAlignment(), Binding,
                                       Visibility, STT_OBJECT, F);
@@ -902,10 +907,9 @@ static bool isBitcode(MemoryBufferRef MB) {
 
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F =
-      isBitcode(MB) ? make<BitcodeFile>(MB) : createELFFile<ObjectFile>(MB);
+  InputFile *F = isBitcode(MB) ? make<BitcodeFile>(MB, OffsetInArchive)
+                               : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
-  F->OffsetInArchive = OffsetInArchive;
   return F;
 }
 
@@ -951,7 +955,7 @@ std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
   std::unique_ptr<lto::InputFile> Obj = check(lto::InputFile::create(this->MB));
   std::vector<StringRef> V;
   for (const lto::InputFile::Symbol &Sym : Obj->symbols())
-    if (!(Sym.getFlags() & BasicSymbolRef::SF_Undefined))
+    if (!Sym.isUndefined())
       V.push_back(Saver.save(Sym.getName()));
   return V;
 }

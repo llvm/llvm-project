@@ -55,7 +55,7 @@ template <class ELFT>
 static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rel &Rel) {
   return Target->getImplicitAddend(Sec.Data.begin() + Rel.r_offset,
-                                   Rel.getType(Config->isMips64EL()));
+                                   Rel.getType(Config->IsMips64EL));
 }
 
 template <class ELFT>
@@ -175,9 +175,6 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
   case SHT_PREINIT_ARRAY:
     return true;
   default:
-    if (Sec->Flags & SHF_LINK_ORDER)
-      return false;
-
     if (!(Sec->Flags & SHF_ALLOC))
       return true;
 
@@ -247,7 +244,9 @@ template <class ELFT> void elf::markLive() {
     // referred by .eh_frame here.
     if (auto *EH = dyn_cast_or_null<EhInputSection>(Sec))
       scanEhFrameSection<ELFT>(*EH, Enqueue);
-    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
+    if (Sec->Flags & SHF_LINK_ORDER)
+      continue;
+    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))
       Enqueue({Sec, 0});
     else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);

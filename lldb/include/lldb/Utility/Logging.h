@@ -10,10 +10,7 @@
 #ifndef LLDB_UTILITY_LOGGING_H
 #define LLDB_UTILITY_LOGGING_H
 
-// Project includes
-#include "lldb/lldb-private.h"
-// Other libraries and framework includes
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 //----------------------------------------------------------------------
 // Log Bits specific to logging in lldb
@@ -55,6 +52,8 @@
    LIBLLDB_LOG_COMMANDS)
 
 namespace lldb_private {
+
+class Log;
 
 void LogIfAnyCategoriesSet(uint32_t mask, const char *format, ...);
 

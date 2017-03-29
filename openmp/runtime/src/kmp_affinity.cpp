@@ -4197,6 +4197,7 @@ __kmp_affinity_uninitialize(void)
         __kmp_affin_fullMask = NULL;
     }
     __kmp_affinity_num_masks = 0;
+    __kmp_affinity_type = affinity_default;
 # if OMP_40_ENABLED
     __kmp_affinity_num_places = 0;
 # endif

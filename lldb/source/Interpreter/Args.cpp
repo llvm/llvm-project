@@ -12,15 +12,12 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -632,9 +629,7 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
           add = str[0] == '+';
 
           if (regex_match.GetMatchAtIndex(s, 3, str)) {
-            offset = StringConvert::ToUInt64(str.c_str(), 0, 0, &success);
-
-            if (success) {
+            if (!llvm::StringRef(str).getAsInteger(0, offset)) {
               Error error;
               addr = StringToAddress(exe_ctx, name.c_str(),
                                      LLDB_INVALID_ADDRESS, &error);
@@ -931,12 +926,12 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
   // Check each arg to see if it matches the env var name.
   for (auto arg : llvm::enumerate(m_entries)) {
     llvm::StringRef name, value;
-    std::tie(name, value) = arg.Value.ref.split('=');
+    std::tie(name, value) = arg.value().ref.split('=');
     if (name != env_var_name)
       continue;
 
     if (argument_index)
-      *argument_index = arg.Index;
+      *argument_index = arg.index();
     return true;
   }
 
@@ -954,9 +949,9 @@ size_t Args::FindArgumentIndexForOption(Option *long_options,
              long_options[long_options_index].definition->long_option);
 
   for (auto entry : llvm::enumerate(m_entries)) {
-    if (entry.Value.ref.startswith(short_buffer) ||
-        entry.Value.ref.startswith(long_buffer))
-      return entry.Index;
+    if (entry.value().ref.startswith(short_buffer) ||
+        entry.value().ref.startswith(long_buffer))
+      return entry.index();
   }
 
   return size_t(-1);

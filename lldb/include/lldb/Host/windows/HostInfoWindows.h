@@ -10,8 +10,8 @@
 #ifndef lldb_Host_windows_HostInfoWindows_h_
 #define lldb_Host_windows_HostInfoWindows_h_
 
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfoBase.h"
+#include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
 

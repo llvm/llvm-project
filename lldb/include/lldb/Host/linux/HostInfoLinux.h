@@ -10,8 +10,8 @@
 #ifndef lldb_Host_linux_HostInfoLinux_h_
 #define lldb_Host_linux_HostInfoLinux_h_
 
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/posix/HostInfoPosix.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -29,7 +29,6 @@ private:
 
 public:
   static void Initialize();
-  static uint32_t GetMaxThreadNameLength();
 
   static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
   static bool GetOSBuildString(std::string &s);

@@ -426,24 +426,5 @@ llvm::BasicBlock *getUseBlock(llvm::Use &U);
 std::tuple<std::vector<const llvm::SCEV *>, std::vector<int>>
 getIndexExpressionsFromGEP(llvm::GetElementPtrInst *GEP,
                            llvm::ScalarEvolution &SE);
-
-// If the loop is nonaffine/boxed, return the first non-boxed surrounding loop
-// for Polly. If the loop is affine, return the loop itself.
-//
-// @param L             Pointer to the Loop object to analyze.
-// @param LI            Reference to the LoopInfo.
-// @param Boxed Loops   Set of Boxed Loops we get from the SCoP.
-llvm::Loop *getFirstNonBoxedLoopFor(llvm::Loop *L, llvm::LoopInfo &LI,
-                                    const BoxedLoopsSetTy &BoxedLoops);
-
-// If the Basic Block belongs to a loop that is nonaffine/boxed, return the
-// first non-boxed surrounding loop for Polly. If the loop is affine, return
-// the loop itself.
-//
-// @param BB            Pointer to the Basic Block to analyze.
-// @param LI            Reference to the LoopInfo.
-// @param Boxed Loops   Set of Boxed Loops we get from the SCoP.
-llvm::Loop *getFirstNonBoxedLoopFor(llvm::BasicBlock *BB, llvm::LoopInfo &LI,
-                                    const BoxedLoopsSetTy &BoxedLoops);
 } // namespace polly
 #endif

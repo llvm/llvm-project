@@ -9,7 +9,7 @@
 
 #include "lldb/API/SBStringList.h"
 
-#include "lldb/Core/StringList.h"
+#include "lldb/Utility/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;

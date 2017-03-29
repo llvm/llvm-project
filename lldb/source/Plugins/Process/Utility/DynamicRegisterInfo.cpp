@@ -281,6 +281,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       // Swap "dwarf_opcode_string" over into "opcode_extractor"
       opcode_extractor.GetStringRef().swap(dwarf_opcode_string);
       uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
+      UNUSED_IF_ASSERT_DISABLED(ret_val);
       assert(ret_val == reg_info.dynamic_size_dwarf_len);
 
       for (j = 0; j < reg_info.dynamic_size_dwarf_len; ++j)

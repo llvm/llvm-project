@@ -74,16 +74,17 @@ public:
   StringRef getName() const { return MB.getBufferIdentifier(); }
   MemoryBufferRef MB;
 
+  // Returns sections. It is a runtime error to call this function
+  // on files that don't have the notion of sections.
+  ArrayRef<InputSectionBase *> getSections() const {
+    assert(FileKind == ObjectKind || FileKind == BinaryKind);
+    return Sections;
+  }
+
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
   StringRef ArchiveName;
-
-  // If this file is in an archive, the member contains the offset of
-  // the file in the archive. Otherwise, it's just zero. We store this
-  // field so that we can pass it to lib/LTO in order to disambiguate
-  // between objects.
-  uint64_t OffsetInArchive;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -93,6 +94,8 @@ public:
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
+
+  std::vector<InputSectionBase *> Sections;
 
 private:
   const Kind FileKind;
@@ -155,7 +158,6 @@ public:
   explicit ObjectFile(MemoryBufferRef M);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
-  ArrayRef<InputSectionBase *> getSections() const { return Sections; }
   InputSectionBase *getSection(const Elf_Sym &Sym) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
@@ -166,7 +168,7 @@ public:
 
   template <typename RelT>
   SymbolBody &getRelocTargetSym(const RelT &Rel) const {
-    uint32_t SymIndex = Rel.getSymbol(Config->isMips64EL());
+    uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
     return getSymbolBody(SymIndex);
   }
 
@@ -195,9 +197,6 @@ private:
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);
-
-  // List of all sections defined by this file.
-  std::vector<InputSectionBase *> Sections;
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
@@ -255,12 +254,18 @@ private:
 
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef M);
+  BitcodeFile(MemoryBufferRef M, uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   template <class ELFT>
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   std::unique_ptr<llvm::lto::InputFile> Obj;
+
+  // If this file is in an archive, the member contains the offset of
+  // the file in the archive. Otherwise, it's just zero. We store this
+  // field so that we can pass it to lib/LTO in order to disambiguate
+  // between objects.
+  uint64_t OffsetInArchive;
 
 private:
   std::vector<Symbol *> Symbols;
@@ -320,10 +325,6 @@ public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
   template <class ELFT> void parse();
-  ArrayRef<InputSectionBase *> getSections() const { return Sections; }
-
-private:
-  std::vector<InputSectionBase *> Sections;
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",

@@ -49,7 +49,6 @@
 #define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-#define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 // Don't use a nullptr_t simulation type in C++03 instead using C++11 nullptr
 // provided under the alternate keyword __nullptr, which changes the mangling
 // of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
@@ -59,6 +58,10 @@
 // `pointer_safety` and `get_pointer_safety()` will no longer be available
 // in C++03.
 #define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
+// Define a key function for `bad_function_call` in the library, to centralize
+// its vtable and typeinfo to libc++ rather than having all other libraries
+// using that class define their own copies.
+#define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #elif _LIBCPP_ABI_VERSION == 1
 #if !defined(_WIN32)
 // Enable compiling copies of now inline methods into the dylib to support
@@ -1073,7 +1076,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
 # define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
 # define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+# define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
 #endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
+
+#if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201611
+# define _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#endif
 
 #endif // __cplusplus
 

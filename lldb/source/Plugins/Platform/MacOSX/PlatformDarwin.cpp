@@ -25,10 +25,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -225,8 +223,7 @@ static lldb_private::Error
 MakeCacheFolderForFile(const FileSpec &module_cache_spec) {
   FileSpec module_cache_folder =
       module_cache_spec.CopyByRemovingLastPathComponent();
-  return FileSystem::MakeDirectory(module_cache_folder,
-                                   eFilePermissionsDirectoryDefault);
+  return llvm::sys::fs::create_directory(module_cache_folder.GetPath());
 }
 
 static lldb_private::Error
@@ -298,11 +295,14 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
         // get the local and remote MD5 and compare
         if (m_remote_platform_sp) {
           // when going over the *slow* GDB remote transfer mechanism we first
-          // check
-          // the hashes of the files - and only do the actual transfer if they
-          // differ
+          // check the hashes of the files - and only do the actual transfer if
+          // they differ
           uint64_t high_local, high_remote, low_local, low_remote;
-          FileSystem::CalculateMD5(module_cache_spec, low_local, high_local);
+          auto MD5 = llvm::sys::fs::md5_contents(module_cache_spec.GetPath());
+          if (!MD5)
+            return Error(MD5.getError());
+          std::tie(high_local, low_local) = MD5->words();
+
           m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec(),
                                              low_remote, high_remote);
           if (low_local != low_remote || high_local != high_remote) {

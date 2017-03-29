@@ -43,6 +43,10 @@ void NoexceptMoveConstructorCheck::check(
     }
 
     const auto *ProtoType = Decl->getType()->getAs<FunctionProtoType>();
+
+    if (isUnresolvedExceptionSpec(ProtoType->getExceptionSpecType()))
+      return;
+
     switch (ProtoType->getNoexceptSpec(*Result.Context)) {
       case FunctionProtoType::NR_NoNoexcept:
         diag(Decl->getLocation(), "move %0s should be marked noexcept")

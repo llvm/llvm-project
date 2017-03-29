@@ -53,7 +53,6 @@ add_lldb_library(lldbSymbol
     clangBasic
     clangFrontend
     lldbCore
-    lldbDataFormatters
     lldbExpression
     lldbHost
     lldbTarget

@@ -31,8 +31,6 @@ using namespace lld;
 using namespace lld::elf;
 
 uint8_t Out::First;
-OutputSection *Out::Bss;
-OutputSection *Out::BssRelRo;
 OutputSection *Out::Opd;
 uint8_t *Out::OpdBuf;
 PhdrEntry *Out::TlsPhdr;
@@ -71,14 +69,13 @@ OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
                   /*Info*/ 0,
                   /*Link*/ 0) {}
 
-template <typename ELFT>
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
   // Synthetic doesn't have link order dependecy, stable_sort will keep it last
   if (A->kind() == InputSectionBase::Synthetic ||
       B->kind() == InputSectionBase::Synthetic)
     return false;
-  auto *LA = cast<InputSection>(A->template getLinkOrderDep<ELFT>());
-  auto *LB = cast<InputSection>(B->template getLinkOrderDep<ELFT>());
+  auto *LA = cast<InputSection>(A->getLinkOrderDep());
+  auto *LB = cast<InputSection>(B->getLinkOrderDep());
   OutputSection *AOut = LA->OutSec;
   OutputSection *BOut = LB->OutSec;
   if (AOut != BOut)
@@ -88,19 +85,19 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
 
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
-    std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
-    assignOffsets<ELFT>();
+    std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
+    assignOffsets();
 
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = this->Sections.front()->template getLinkOrderDep<ELFT>())
+    if (auto *D = this->Sections.front()->getLinkOrderDep())
       this->Link = D->OutSec->SectionIndex;
   }
 
   uint32_t Type = this->Type;
-  if (!Config->copyRelocs() || (Type != SHT_RELA && Type != SHT_REL))
+  if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
   InputSection *First = Sections[0];
@@ -110,7 +107,7 @@ template <class ELFT> void OutputSection::finalize() {
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
-  InputSectionBase *S = First->getRelocatedSection<ELFT>();
+  InputSectionBase *S = First->getRelocatedSection();
   this->Info = S->OutSec->SectionIndex;
 }
 
@@ -133,7 +130,7 @@ void OutputSection::addSection(InputSectionBase *C) {
 
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
-template <class ELFT> void OutputSection::assignOffsets() {
+void OutputSection::assignOffsets() {
   uint64_t Off = 0;
   for (InputSection *S : Sections) {
     Off = alignTo(Off, S->Alignment);
@@ -238,23 +235,21 @@ void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
 
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
-  if (uint32_t Filler = Script<ELFT>::X->getFiller(this->Name))
+  if (uint32_t Filler = Script->getFiller(this->Name))
     fill(Buf, this->Size, Filler);
 
-  auto Fn = [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); };
-  forEach(Sections.begin(), Sections.end(), Fn);
+  parallelForEach(Sections.begin(), Sections.end(),
+                  [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); });
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script<ELFT>::X->writeDataBytes(this->Name, Buf);
+  Script->writeDataBytes(this->Name, Buf);
 }
 
-template <class ELFT>
-static typename ELFT::uint getOutFlags(InputSectionBase *S) {
+static uint64_t getOutFlags(InputSectionBase *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
-template <class ELFT>
 static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   //  The ELF spec just says
   // ----------------------------------------------------------------
@@ -299,12 +294,10 @@ static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   // Given the above issues, we instead merge sections by name and error on
   // incompatible types and flags.
 
-  typedef typename ELFT::uint uintX_t;
-
   uint32_t Alignment = 0;
-  uintX_t Flags = 0;
+  uint64_t Flags = 0;
   if (Config->Relocatable && (C->Flags & SHF_MERGE)) {
-    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
+    Alignment = std::max<uint64_t>(C->Alignment, C->Entsize);
     Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
   }
 
@@ -331,23 +324,22 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
-template <class ELFT> static void reportDiscarded(InputSectionBase *IS) {
+static void reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +
-          IS->getFile<ELFT>()->getName());
+          IS->File->getName());
 }
 
-template <class ELFT>
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
   if (!IS->Live) {
-    reportDiscarded<ELFT>(IS);
+    reportDiscarded(IS);
     return;
   }
 
-  SectionKey Key = createKey<ELFT>(IS, OutsecName);
-  uint64_t Flags = getOutFlags<ELFT>(IS);
+  SectionKey Key = createKey(IS, OutsecName);
+  uint64_t Flags = getOutFlags(IS);
   OutputSection *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
@@ -362,12 +354,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     }
     Sec->Flags |= Flags;
   } else {
-    uint32_t Type = IS->Type;
-    if (IS->kind() == InputSectionBase::EHFrame) {
-      In<ELFT>::EhFrame->addSection(IS);
-      return;
-    }
-    Sec = make<OutputSection>(Key.Name, Type, Flags);
+    Sec = make<OutputSection>(Key.Name, IS->Type, Flags);
     OutputSections.push_back(Sec);
   }
 
@@ -394,6 +381,12 @@ bool DenseMapInfo<SectionKey>::isEqual(const SectionKey &LHS,
          LHS.Flags == RHS.Flags && LHS.Alignment == RHS.Alignment;
 }
 
+uint64_t elf::getHeaderSize() {
+  if (Config->OFormatBinary)
+    return 0;
+  return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
+}
+
 namespace lld {
 namespace elf {
 
@@ -401,11 +394,6 @@ template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64BE>(ELF64BE::Shdr *Shdr);
-
-template void OutputSection::assignOffsets<ELF32LE>();
-template void OutputSection::assignOffsets<ELF32BE>();
-template void OutputSection::assignOffsets<ELF64LE>();
-template void OutputSection::assignOffsets<ELF64BE>();
 
 template void OutputSection::finalize<ELF32LE>();
 template void OutputSection::finalize<ELF32BE>();
@@ -417,13 +405,5 @@ template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);
 
-template void OutputSectionFactory::addInputSec<ELF32LE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF32BE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF64LE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF64BE>(InputSectionBase *,
-                                                         StringRef);
 }
 }

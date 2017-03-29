@@ -90,7 +90,7 @@ static pthread_mutexattr_t __kmp_suspend_mutex_attr;
 static kmp_cond_align_t    __kmp_wait_cv;
 static kmp_mutex_align_t   __kmp_wait_mx;
 
-double __kmp_ticks_per_nsec;
+kmp_uint64 __kmp_ticks_per_msec = 1000000;
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -2157,7 +2157,7 @@ __kmp_now_nsec()
 }
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-/* Measure clock tick per nanosecond */
+/* Measure clock ticks per millisecond */
 void
 __kmp_initialize_system_tick()
 {
@@ -2166,7 +2166,7 @@ __kmp_initialize_system_tick()
     kmp_uint64 goal = __kmp_hardware_timestamp() + delay;
     kmp_uint64 now;
     while ((now = __kmp_hardware_timestamp()) < goal);
-    __kmp_ticks_per_nsec = 1.0 * (delay + (now - goal)) / (__kmp_now_nsec() - nsec);
+    __kmp_ticks_per_msec = (kmp_uint64)(1e6 * (delay + (now - goal)) / (__kmp_now_nsec() - nsec));
 }
 #endif
 
