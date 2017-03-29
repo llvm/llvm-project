@@ -63,6 +63,10 @@ static cl::opt<bool> DisableLTOVectorization(
     "disable-lto-vectorization", cl::init(false),
     cl::desc("Do not run loop or slp vectorization during LTO"));
 
+static cl::opt<bool> EnableFreestanding(
+    "lto-freestanding", cl::init(false),
+    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
+
 static cl::opt<bool> UseDiagnosticHandler(
     "use-diagnostic-handler", cl::init(false),
     cl::desc("Use a diagnostic handler to test the handler interface"));
@@ -433,6 +437,7 @@ public:
     ThinGenerator.setCodePICModel(getRelocModel());
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
+    ThinGenerator.setFreestanding(EnableFreestanding);
 
     // Add all the exported symbols to the table of symbols to preserve.
     for (unsigned i = 0; i < ExportedSymbols.size(); ++i)
@@ -809,6 +814,7 @@ int main(int argc, char **argv) {
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
 
   CodeGen.setCodePICModel(getRelocModel());
+  CodeGen.setFreestanding(EnableFreestanding);
 
   CodeGen.setDebugInfo(LTO_DEBUG_MODEL_DWARF);
   CodeGen.setTargetOptions(Options);
