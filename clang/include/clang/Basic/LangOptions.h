@@ -88,6 +88,12 @@ public:
     MSVC2015 = 19
   };
 
+  enum FPContractModeKind {
+    FPC_Off,        // Form fused FP ops only where result will not be affected.
+    FPC_On,         // Form fused FP ops according to FP_CONTRACT rules.
+    FPC_Fast        // Aggressively fuse FP ops (E.g. FMA).
+  };
+
 public:
   /// \brief Set of enabled sanitizers.
   SanitizerSet Sanitize;
@@ -175,22 +181,35 @@ public:
 /// \brief Floating point control options
 class FPOptions {
 public:
-  FPOptions() : fp_contract(0) {}
+  FPOptions() : fp_contract(LangOptions::FPC_Off) {}
 
-  explicit FPOptions(unsigned I) : fp_contract(I) {}
+  // Used for serializing.
+  explicit FPOptions(unsigned I)
+      : fp_contract(static_cast<LangOptions::FPContractModeKind>(I)) {}
 
   explicit FPOptions(const LangOptions &LangOpts)
-      : fp_contract(LangOpts.DefaultFPContract) {}
+      : fp_contract(LangOpts.getDefaultFPContractMode()) {}
 
-  void setFPContractable(bool V) { fp_contract = V; }
-  bool isFPContractable() const { return fp_contract; }
+  bool allowFPContractWithinStatement() const {
+    return fp_contract == LangOptions::FPC_On;
+  }
+  bool allowFPContractAcrossStatement() const {
+    return fp_contract == LangOptions::FPC_Fast;
+  }
+  void setAllowFPContractWithinStatement() {
+    fp_contract = LangOptions::FPC_On;
+  }
+  void setAllowFPContractAcrossStatement() {
+    fp_contract = LangOptions::FPC_Fast;
+  }
+  void setDisallowFPContract() { fp_contract = LangOptions::FPC_Off; }
 
   /// Used to serialize this.
   unsigned getInt() const { return fp_contract; }
 
 private:
   /// Adjust BinaryOperator::FPFeatures to match the bit-field size of this.
-  unsigned fp_contract : 1;
+  LangOptions::FPContractModeKind fp_contract : 2;
 };
 
 /// \brief Describes the kind of translation unit being processed.
