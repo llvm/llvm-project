@@ -35,8 +35,9 @@ void __xray_set_log_impl(XRayLogImpl Impl) XRAY_NEVER_INSTRUMENT {
   *GlobalXRayImpl = Impl;
 }
 
-XRayLogInitStatus __xray_init(size_t BufferSize, size_t MaxBuffers, void *Args,
-                              size_t ArgsSize) XRAY_NEVER_INSTRUMENT {
+XRayLogInitStatus __xray_log_init(size_t BufferSize, size_t MaxBuffers,
+                                  void *Args,
+                                  size_t ArgsSize) XRAY_NEVER_INSTRUMENT {
   __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
   if (!GlobalXRayImpl)
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;

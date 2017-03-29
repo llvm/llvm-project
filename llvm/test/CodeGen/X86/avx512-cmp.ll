@@ -158,26 +158,47 @@ B:
 }
 
 define i32 @test10(i64 %b, i64 %c, i1 %d) {
-; ALL-LABEL: test10:
-; ALL:       ## BB#0:
-; ALL-NEXT:    andl $1, %edx
-; ALL-NEXT:    kmovw %edx, %k0
-; ALL-NEXT:    cmpq %rsi, %rdi
-; ALL-NEXT:    sete %al
-; ALL-NEXT:    andl $1, %eax
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    korw %k1, %k0, %k1
-; ALL-NEXT:    kxorw %k1, %k0, %k0
-; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    andl $1, %eax
-; ALL-NEXT:    testb %al, %al
-; ALL-NEXT:    je LBB8_1
-; ALL-NEXT:  ## BB#2: ## %if.end.i
-; ALL-NEXT:    movl $6, %eax
-; ALL-NEXT:    retq
-; ALL-NEXT:  LBB8_1: ## %if.then.i
-; ALL-NEXT:    movl $5, %eax
-; ALL-NEXT:    retq
+; KNL-LABEL: test10:
+; KNL:       ## BB#0:
+; KNL-NEXT:    andl $1, %edx
+; KNL-NEXT:    kmovw %edx, %k0
+; KNL-NEXT:    cmpq %rsi, %rdi
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    korw %k1, %k0, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    testb %al, %al
+; KNL-NEXT:    je LBB8_1
+; KNL-NEXT:  ## BB#2: ## %if.end.i
+; KNL-NEXT:    movl $6, %eax
+; KNL-NEXT:    retq
+; KNL-NEXT:  LBB8_1: ## %if.then.i
+; KNL-NEXT:    movl $5, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test10:
+; SKX:       ## BB#0:
+; SKX-NEXT:    andl $1, %edx
+; SKX-NEXT:    kmovd %edx, %k0
+; SKX-NEXT:    cmpq %rsi, %rdi
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    korw %k1, %k0, %k1
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    testb %al, %al
+; SKX-NEXT:    je LBB8_1
+; SKX-NEXT:  ## BB#2: ## %if.end.i
+; SKX-NEXT:    movl $6, %eax
+; SKX-NEXT:    retq
+; SKX-NEXT:  LBB8_1: ## %if.then.i
+; SKX-NEXT:    movl $5, %eax
+; SKX-NEXT:    retq
 
   %cmp8.i = icmp eq i64 %b, %c
   %or1 = or i1 %d, %cmp8.i

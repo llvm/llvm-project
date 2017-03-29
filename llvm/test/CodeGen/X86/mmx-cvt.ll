@@ -281,6 +281,40 @@ define <4 x float> @sitofp_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    paddd %mm0, %mm0
+; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    retq
+  %2 = bitcast <1 x i64>* %0 to x86_mmx*
+  %3 = load x86_mmx, x86_mmx* %2, align 8
+  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
+  %5 = bitcast x86_mmx %4 to <2 x i32>
+  %6 = shufflevector <2 x i32> %5, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %7 = sitofp <4 x i32> %6 to <4 x float>
+  ret <4 x float> %7
+}
+
+define <4 x float> @cvt_v2i32_v2f32(<1 x i64>*) nounwind {
+; X86-LABEL: cvt_v2i32_v2f32:
+; X86:       # BB#0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm0
+; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: cvt_v2i32_v2f32:
+; X64:       # BB#0:
+; X64-NEXT:    movq (%rdi), %mm0
+; X64-NEXT:    paddd %mm0, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    movd %rax, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0

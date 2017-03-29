@@ -93,8 +93,6 @@ bool readValueFromFile(const char *Filename,
 }
 
 int getLogFD() XRAY_NEVER_INSTRUMENT {
-  // FIXME: Figure out how to make this less stderr-dependent.
-  SetPrintfAndReportCallback(printToStdErr);
   // Open a temporary file once for the log.
   static char TmpFilename[256] = {};
   static char TmpWildcardPattern[] = "XXXXXX";
@@ -119,8 +117,7 @@ int getLogFD() XRAY_NEVER_INSTRUMENT {
            TmpFilename);
     return -1;
   }
-  if (Verbosity())
-    fprintf(stderr, "XRay: Log file in '%s'\n", TmpFilename);
+  Report("XRay: Log file in '%s'\n", TmpFilename);
 
   return Fd;
 }

@@ -42,6 +42,11 @@ struct XRayFileHeader {
   /// counter (TSC) values. Useful for estimating the amount of time that
   /// elapsed between two TSCs on some platforms.
   uint64_t CycleFrequency = 0;
+
+  // This is different depending on the type of xray record. The naive format
+  // stores a Wallclock timespec. FDR logging stores the size of a thread
+  // buffer.
+  char FreeFormData[16];
 };
 
 /// Determines the supported types of records that could be seen in XRay traces.

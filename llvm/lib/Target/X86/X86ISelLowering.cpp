@@ -12838,9 +12838,10 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
   // since after split we get a more efficient code than vblend by using
   // vpunpcklwd and vpunpckhwd instrs.
-  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !Subtarget.hasAVX512())
-    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2,
-                                                     Mask, DAG))
+  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !V2.isUndef() &&
+      !Subtarget.hasAVX512())
+    if (SDValue V =
+            lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2, Mask, DAG))
       return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i32, V1, V2, Mask,

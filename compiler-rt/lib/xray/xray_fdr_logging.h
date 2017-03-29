@@ -26,14 +26,6 @@
 // default mode of always writing fixed-size records.
 
 namespace __xray {
-
-// Options used by the FDR implementation.
-struct FDRLoggingOptions {
-  bool ReportErrors = false;
-  int Fd = -1;
-};
-
-// Flight Data Recorder mode implementation interfaces.
 XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
                                  void *Options, size_t OptionsSize);
 XRayLogInitStatus fdrLoggingFinalize();
