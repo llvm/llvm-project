@@ -11,20 +11,17 @@
 __global char *
 __printf_alloc(uint bytes)
 {
-    __global char *ptr = (__global char *)((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[3];
+    __global char *ptr = (__global char *)(((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[3]);
 
     uint size = ((__global uint *)ptr)[1];
-    uint offset = __llvm_ld_atomic_a1_x_dev_i32((__global uint *)ptr);
+    uint offset = atomic_load_explicit((__global atomic_uint *)ptr, memory_order_relaxed, memory_scope_device);
 
     for (;;) {
         if (OFFSET + offset + bytes > size)
             return NULL;
 
-        uint tmp = __llvm_cmpxchg_a1_x_x_dev_i32((__global uint *)ptr, offset, offset + bytes);
-        if (tmp == offset)
+        if (atomic_compare_exchange_strong_explicit((__global atomic_uint *)ptr, &offset, offset+bytes, memory_order_relaxed, memory_order_relaxed, memory_scope_device))
             break;
-
-        offset = tmp;
     }
 
     return ptr + OFFSET + offset;
