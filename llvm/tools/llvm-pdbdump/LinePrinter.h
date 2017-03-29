@@ -89,6 +89,7 @@ public:
 private:
   void applyColor(PDB_ColorItem C);
   raw_ostream &OS;
+  bool UseColor;
 };
 }
 }

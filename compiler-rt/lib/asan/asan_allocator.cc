@@ -800,8 +800,12 @@ void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
   if (!p)
     return instance.Allocate(size, 8, stack, FROM_MALLOC, true);
   if (size == 0) {
-    instance.Deallocate(p, 0, stack, FROM_MALLOC);
-    return nullptr;
+    if (flags()->allocator_frees_and_returns_null_on_realloc_zero) {
+      instance.Deallocate(p, 0, stack, FROM_MALLOC);
+      return nullptr;
+    }
+    // Allocate a size of 1 if we shouldn't free() on Realloc to 0
+    size = 1;
   }
   return instance.Reallocate(p, size, stack);
 }

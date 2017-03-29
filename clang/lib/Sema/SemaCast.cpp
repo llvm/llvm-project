@@ -120,12 +120,12 @@ namespace {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
 
-    void checkObjCARCConversion(Sema::CheckedConversionKind CCK) {
-      assert(Self.getLangOpts().ObjCAutoRefCount);
+    void checkObjCConversion(Sema::CheckedConversionKind CCK) {
+      assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.CheckObjCARCConversion(OpRange, DestType, src, CCK) ==
-            Sema::ACR_unbridged)
+      if (Self.CheckObjCConversion(OpRange, DestType, src, CCK) ==
+          Sema::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
     }
@@ -871,8 +871,8 @@ void CastOperation::CheckReinterpretCast() {
     }
     SrcExpr = ExprError();
   } else if (tcr == TC_Success) {
-    if (Self.getLangOpts().ObjCAutoRefCount)
-      checkObjCARCConversion(Sema::CCK_OtherCast);
+    if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
+      checkObjCConversion(Sema::CCK_OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
   }
 }
@@ -935,8 +935,8 @@ void CastOperation::CheckStaticCast() {
   } else if (tcr == TC_Success) {
     if (Kind == CK_BitCast)
       checkCastAlign();
-    if (Self.getLangOpts().ObjCAutoRefCount)
-      checkObjCARCConversion(Sema::CCK_OtherCast);
+    if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
+      checkObjCConversion(Sema::CCK_OtherCast);
   } else if (Kind == CK_BitCast) {
     checkCastAlign();
   }
@@ -2272,8 +2272,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     }
   }
 
-  if (Self.getLangOpts().ObjCAutoRefCount && tcr == TC_Success)
-    checkObjCARCConversion(CCK);
+  if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
+      tcr == TC_Success)
+    checkObjCConversion(CCK);
 
   if (tcr != TC_Success && msg != 0) {
     if (SrcExpr.get()->getType() == Self.Context.OverloadTy) {
@@ -2539,12 +2540,13 @@ void CastOperation::CheckCStyleCast() {
   }
 
   // ARC imposes extra restrictions on casts.
-  if (Self.getLangOpts().ObjCAutoRefCount) {
-    checkObjCARCConversion(Sema::CCK_CStyleCast);
+  if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers()) {
+    checkObjCConversion(Sema::CCK_CStyleCast);
     if (SrcExpr.isInvalid())
       return;
-    
-    if (const PointerType *CastPtr = DestType->getAs<PointerType>()) {
+
+    const PointerType *CastPtr = DestType->getAs<PointerType>();
+    if (Self.getLangOpts().ObjCAutoRefCount && CastPtr) {
       if (const PointerType *ExprPtr = SrcType->getAs<PointerType>()) {
         Qualifiers CastQuals = CastPtr->getPointeeType().getQualifiers();
         Qualifiers ExprQuals = ExprPtr->getPointeeType().getQualifiers();

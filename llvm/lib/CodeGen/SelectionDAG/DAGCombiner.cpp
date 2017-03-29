@@ -3178,57 +3178,58 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
       !isSetCCEquivalent(N1, RL, RR, N1CC))
     return SDValue();
 
+  assert(N0.getValueType() == N1.getValueType() &&
+         "Unexpected operand types for 'and' op");
+  assert(LL.getValueType() == LR.getValueType() &&
+         RL.getValueType() == RR.getValueType() &&
+         "Unexpected operand types for setcc");
+
+  // If we're here post-legalization or the 'and' is not i1, the 'and' type must
+  // match a setcc result type. Also, all folds require new operations on the
+  // left and right operands, so those types must match.
+  EVT VT = N0.getValueType();
+  EVT OpVT = LL.getValueType();
+  if (LegalOperations || VT != MVT::i1)
+    if (VT != getSetCCResultType(OpVT))
+      return SDValue();
+  if (OpVT != RL.getValueType())
+    return SDValue();
+
   ISD::CondCode CC0 = cast<CondCodeSDNode>(N0CC)->get();
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
-  EVT VT = N1.getValueType();
-  assert(VT == N0.getValueType() && "Unexpected operand types for 'and'");
-  EVT LLVT = LL.getValueType();
-  EVT LRVT = LR.getValueType();
-  bool IsInteger = LLVT.isInteger();
-
+  bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    EVT CCVT = getSetCCResultType(LRVT);
-    // fold (and (seteq X, 0), (seteq Y, 0)) -> (seteq (or X, Y), 0)
+    // (and (seteq X, 0), (seteq Y, 0)) --> (seteq (or X, Y), 0)
     if (isNullConstant(LR) && CC1 == ISD::SETEQ) {
-      if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-        SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), LRVT, LL, RL);
-        AddToWorklist(Or.getNode());
-        return DAG.getSetCC(DL, VT, Or, LR, CC1);
-      }
+      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
+      AddToWorklist(Or.getNode());
+      return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
-    if (isAllOnesConstant(LR)) {
-      // fold (and (seteq X, -1), (seteq Y, -1)) -> (seteq (and X, Y), -1)
-      if (CC1 == ISD::SETEQ) {
-        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), LRVT, LL, RL);
-          AddToWorklist(And.getNode());
-          return DAG.getSetCC(DL, VT, And, LR, CC1);
-        }
-      }
-      // fold (and (setgt X, -1), (setgt Y, -1)) -> (setgt (or X, Y), -1)
-      if (CC1 == ISD::SETGT) {
-        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), LRVT, LL, RL);
-          AddToWorklist(Or.getNode());
-          return DAG.getSetCC(DL, VT, Or, LR, CC1);
-        }
-      }
+
+    // (and (seteq X, -1), (seteq Y, -1)) --> (seteq (and X, Y), -1)
+    if (isAllOnesConstant(LR) && CC1 == ISD::SETEQ) {
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
+      AddToWorklist(And.getNode());
+      return DAG.getSetCC(DL, VT, And, LR, CC1);
+    }
+
+    // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
+    if (isAllOnesConstant(LR) && CC1 == ISD::SETGT) {
+      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
+      AddToWorklist(Or.getNode());
+      return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
   }
 
-  // Simplify (and (setne X, 0), (setne X, -1)) -> (setuge (add X, 1), 2)
+  // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
   if (LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
-    EVT CCVT = getSetCCResultType(LLVT);
-    if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-      SDLoc DL0(N0);
-      SDValue Add =
-          DAG.getNode(ISD::ADD, DL0, LLVT, LL, DAG.getConstant(1, DL, LLVT));
-      AddToWorklist(Add.getNode());
-      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(2, DL, LLVT),
-                          ISD::SETUGE);
-    }
+    SDValue One = DAG.getConstant(1, DL, OpVT);
+    SDValue Two = DAG.getConstant(2, DL, OpVT);
+    SDValue Add = DAG.getNode(ISD::ADD, SDLoc(N0), OpVT, LL, One);
+    AddToWorklist(Add.getNode());
+    return DAG.getSetCC(DL, VT, Add, Two, ISD::SETUGE);
   }
 
   // Canonicalize equivalent operands to LL == RL.
@@ -3236,16 +3237,15 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
     CC1 = ISD::getSetCCSwappedOperands(CC1);
     std::swap(RL, RR);
   }
+
+  // (and (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
   if (LL == RL && LR == RR) {
     ISD::CondCode NewCC = ISD::getSetCCAndOperation(CC0, CC1, IsInteger);
     if (NewCC != ISD::SETCC_INVALID &&
         (!LegalOperations ||
          (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
-          TLI.isOperationLegal(ISD::SETCC, LLVT)))) {
-      EVT CCVT = getSetCCResultType(LLVT);
-      if (VT == CCVT || (!LegalOperations && VT == MVT::i1))
-        return DAG.getSetCC(DL, VT, LL, LR, NewCC);
-    }
+          TLI.isOperationLegal(ISD::SETCC, OpVT))))
+      return DAG.getSetCC(DL, VT, LL, LR, NewCC);
   }
 
   return SDValue();
@@ -4665,10 +4665,9 @@ const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
 
     if (LHS->isConstantZero())
       return RHS;
-    else if (RHS->isConstantZero())
+    if (RHS->isConstantZero())
       return LHS;
-    else
-      return None;
+    return None;
   }
   case ISD::SHL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -4698,8 +4697,7 @@ const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
       return Op.getOpcode() == ISD::ZERO_EXTEND
                  ? Optional<ByteProvider>(ByteProvider::getConstantZero())
                  : None;
-    else
-      return calculateByteProvider(NarrowOp, Index, Depth + 1);
+    return calculateByteProvider(NarrowOp, Index, Depth + 1);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
@@ -4718,8 +4716,7 @@ const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
       return L->getExtensionType() == ISD::ZEXTLOAD
                  ? Optional<ByteProvider>(ByteProvider::getConstantZero())
                  : None;
-    else
-      return ByteProvider::getMemory(L, Index);
+    return ByteProvider::getMemory(L, Index);
   }
   }
 

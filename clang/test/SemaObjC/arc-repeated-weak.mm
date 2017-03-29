@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime-has-weak -fobjc-arc -fblocks -Wno-objc-root-class -std=c++11 -Warc-repeated-use-of-weak -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime-has-weak -fobjc-weak -fblocks -Wno-objc-root-class -std=c++11 -Warc-repeated-use-of-weak -verify %s
 
 @interface Test {
 @public
@@ -445,8 +446,8 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
 @class NSString;
 @interface NSBundle
 +(NSBundle *)foo;
-@property (class) NSBundle *foo2;
-@property NSString *prop;
+@property (class, strong) NSBundle *foo2;
+@property (strong) NSString *prop;
 @property(weak) NSString *weakProp;
 @end
 
@@ -473,5 +474,8 @@ enum E {
 };
 
 void foo1() {
-  INTFPtrTy tmp = (INTFPtrTy)e1; // expected-error{{cast of 'E' to 'INTFPtrTy' (aka 'INTF *') is disallowed with ARC}}
+  INTFPtrTy tmp = (INTFPtrTy)e1;
+#if __has_feature(objc_arc)
+// expected-error@-2{{cast of 'E' to 'INTFPtrTy' (aka 'INTF *') is disallowed with ARC}}
+#endif
 }

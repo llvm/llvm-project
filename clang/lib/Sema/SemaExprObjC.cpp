@@ -3100,7 +3100,9 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
     // In ARC, check for message sends which are likely to introduce
     // retain cycles.
     checkRetainCycles(Result);
+  }
 
+  if (getLangOpts().ObjCWeak) {
     if (!isImplicit && Method) {
       if (const ObjCPropertyDecl *Prop = Method->findPropertyDecl()) {
         bool IsWeak =
@@ -4106,11 +4108,10 @@ Sema::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
 }
 
 Sema::ARCConversionResult
-Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
-                             Expr *&castExpr, CheckedConversionKind CCK,
-                             bool Diagnose,
-                             bool DiagnoseCFAudited,
-                             BinaryOperatorKind Opc) {
+Sema::CheckObjCConversion(SourceRange castRange, QualType castType,
+                          Expr *&castExpr, CheckedConversionKind CCK,
+                          bool Diagnose, bool DiagnoseCFAudited,
+                          BinaryOperatorKind Opc) {
   QualType castExprType = castExpr->getType();
 
   // For the purposes of the classification, we assume reference types
@@ -4150,7 +4151,12 @@ Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
     }
     return ACR_okay;
   }
-  
+
+  // The life-time qualifier cast check above is all we need for ObjCWeak.
+  // ObjCAutoRefCount has more restrictions on what is legal.
+  if (!getLangOpts().ObjCAutoRefCount)
+    return ACR_okay;
+
   if (isAnyCLike(exprACTC) && isAnyCLike(castACTC)) return ACR_okay;
 
   // Allow all of these types to be cast to integer types (but not

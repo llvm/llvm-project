@@ -1655,13 +1655,13 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
+  // We do not handle pointer-vector geps here.
+  if (GEP.getType()->isVectorTy())
+    return nullptr;
+
   // Handle gep(bitcast x) and gep(gep x, 0, 0, 0).
   Value *StrippedPtr = PtrOp->stripPointerCasts();
-  PointerType *StrippedPtrTy = dyn_cast<PointerType>(StrippedPtr->getType());
-
-  // We do not handle pointer-vector geps here.
-  if (!StrippedPtrTy)
-    return nullptr;
+  PointerType *StrippedPtrTy = cast<PointerType>(StrippedPtr->getType());
 
   if (StrippedPtr != PtrOp) {
     bool HasZeroPointerIndex = false;

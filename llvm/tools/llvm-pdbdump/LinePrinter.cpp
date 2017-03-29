@@ -83,12 +83,16 @@ bool LinePrinter::IsCompilandExcluded(llvm::StringRef CompilandName) {
                         ExcludeCompilandFilters);
 }
 
-WithColor::WithColor(LinePrinter &P, PDB_ColorItem C) : OS(P.OS) {
-  if (P.hasColor())
+WithColor::WithColor(LinePrinter &P, PDB_ColorItem C)
+    : OS(P.OS), UseColor(P.hasColor()) {
+  if (UseColor)
     applyColor(C);
 }
 
-WithColor::~WithColor() { OS.resetColor(); }
+WithColor::~WithColor() {
+  if (UseColor)
+    OS.resetColor();
+}
 
 void WithColor::applyColor(PDB_ColorItem C) {
   switch (C) {
