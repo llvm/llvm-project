@@ -871,7 +871,7 @@ void CastOperation::CheckReinterpretCast() {
     }
     SrcExpr = ExprError();
   } else if (tcr == TC_Success) {
-    if (Self.getLangOpts().ObjCAutoRefCount)
+    if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
       checkObjCConversion(Sema::CCK_OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
   }
@@ -935,7 +935,7 @@ void CastOperation::CheckStaticCast() {
   } else if (tcr == TC_Success) {
     if (Kind == CK_BitCast)
       checkCastAlign();
-    if (Self.getLangOpts().ObjCAutoRefCount)
+    if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
       checkObjCConversion(Sema::CCK_OtherCast);
   } else if (Kind == CK_BitCast) {
     checkCastAlign();
