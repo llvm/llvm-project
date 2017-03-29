@@ -37,6 +37,17 @@ struct Test1 {
   }
 };
 
+struct Foo {
+  void foo() const;
+  static void foo(bool);
+};
+
+struct Bar {
+  void foo(bool param) {
+    Foo::foo(  );// unresolved member expression with an implicit base
+  }
+};
+
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:29:6 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
   // CHECK-CC1: Base1 : Base1::
   // CHECK-CC1: member1 : [#int#][#Base1::#]member1
@@ -52,3 +63,6 @@ struct Test1 {
 
 // Make sure this doesn't crash
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:36:7 %s -verify
+
+// Make sure this also doesn't crash
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:47:14 %s

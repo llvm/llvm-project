@@ -2284,7 +2284,7 @@ __kmp_join_call(ident_t *loc, int gtid
 #endif
 
 #if KMP_DEBUG
-    if ( __kmp_tasking_mode != tskm_immediate_exec ) {
+    if (__kmp_tasking_mode != tskm_immediate_exec && !exit_teams) {
         KA_TRACE( 20, ( "__kmp_join_call: T#%d, old team = %p old task_team = %p, th_task_team = %p\n",
                          __kmp_gtid_from_thread( master_th ), team,
                          team->t.t_task_team[master_th->th.th_task_state], master_th->th.th_task_team) );

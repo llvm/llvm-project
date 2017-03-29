@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -886,6 +887,13 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
             .addImm(0);
 
     transferImpOps(MI, MIB1, MIB2);
+    MI.eraseFromParent();
+    return true;
+  }
+  case AArch64::MOVbaseTLS: {
+    unsigned DstReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MRS), DstReg)
+        .addImm(AArch64SysReg::TPIDR_EL0);
     MI.eraseFromParent();
     return true;
   }

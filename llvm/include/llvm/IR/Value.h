@@ -476,27 +476,30 @@ public:
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripPointerCasts();
-  const Value *stripPointerCasts() const {
-    return const_cast<Value*>(this)->stripPointerCasts();
+  const Value *stripPointerCasts() const;
+  Value *stripPointerCasts() {
+    return const_cast<Value *>(
+                         static_cast<const Value *>(this)->stripPointerCasts());
   }
 
   /// \brief Strip off pointer casts and all-zero GEPs.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripPointerCastsNoFollowAliases();
-  const Value *stripPointerCastsNoFollowAliases() const {
-    return const_cast<Value*>(this)->stripPointerCastsNoFollowAliases();
+  const Value *stripPointerCastsNoFollowAliases() const;
+  Value *stripPointerCastsNoFollowAliases() {
+    return const_cast<Value *>(
+          static_cast<const Value *>(this)->stripPointerCastsNoFollowAliases());
   }
 
   /// \brief Strip off pointer casts and all-constant inbounds GEPs.
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripInBoundsConstantOffsets();
-  const Value *stripInBoundsConstantOffsets() const {
-    return const_cast<Value*>(this)->stripInBoundsConstantOffsets();
+  const Value *stripInBoundsConstantOffsets() const;
+  Value *stripInBoundsConstantOffsets() {
+    return const_cast<Value *>(
+              static_cast<const Value *>(this)->stripInBoundsConstantOffsets());
   }
 
   /// \brief Accumulate offsets from \a stripInBoundsConstantOffsets().
@@ -506,21 +509,22 @@ public:
   /// correct bitwidth for an offset of this pointer type.
   ///
   /// If this is called on a non-pointer value, it returns 'this'.
-  Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                   APInt &Offset);
   const Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                         APInt &Offset) const {
-    return const_cast<Value *>(this)
-        ->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+                                                         APInt &Offset) const;
+  Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
+                                                   APInt &Offset) {
+    return const_cast<Value *>(static_cast<const Value *>(this)
+        ->stripAndAccumulateInBoundsConstantOffsets(DL, Offset));
   }
 
   /// \brief Strip off pointer casts and inbounds GEPs.
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripInBoundsOffsets();
-  const Value *stripInBoundsOffsets() const {
-    return const_cast<Value*>(this)->stripInBoundsOffsets();
+  const Value *stripInBoundsOffsets() const;
+  Value *stripInBoundsOffsets() {
+    return const_cast<Value *>(
+                      static_cast<const Value *>(this)->stripInBoundsOffsets());
   }
 
   /// \brief Returns the number of bytes known to be dereferenceable for the
@@ -543,11 +547,12 @@ public:
   /// the PHI node corresponding to PredBB.  If not, return ourself.  This is
   /// useful if you want to know the value something has in a predecessor
   /// block.
-  Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB);
-
   const Value *DoPHITranslation(const BasicBlock *CurBB,
-                                const BasicBlock *PredBB) const{
-    return const_cast<Value*>(this)->DoPHITranslation(CurBB, PredBB);
+                                const BasicBlock *PredBB) const;
+
+  Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB) {
+    return const_cast<Value *>(
+             static_cast<const Value *>(this)->DoPHITranslation(CurBB, PredBB));
   }
 
   /// \brief The maximum alignment for instructions.

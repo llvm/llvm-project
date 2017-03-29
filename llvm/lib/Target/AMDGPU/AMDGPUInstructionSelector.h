@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
+#include "AMDGPU.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,7 +36,6 @@ public:
                             const AMDGPURegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) const override;
-
 private:
   struct GEPInfo {
     const MachineInstr &GEP;
@@ -59,6 +59,8 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
+protected:
+  AMDGPUAS AMDGPUASI;
 };
 
 } // End llvm namespace.

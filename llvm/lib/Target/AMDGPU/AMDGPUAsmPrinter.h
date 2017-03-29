@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
 #include "AMDKernelCodeT.h"
+#include "AMDGPU.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include <cstddef>
@@ -150,6 +151,7 @@ public:
 protected:
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
+  AMDGPUAS AMDGPUASI;
 };
 
 } // end namespace llvm

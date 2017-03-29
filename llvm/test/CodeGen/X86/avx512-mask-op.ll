@@ -6,12 +6,37 @@
 
 
 define i16 @mask16(i16 %x) {
-; CHECK-LABEL: mask16:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    knotw %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: mask16:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: mask16:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    knotw %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: mask16:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    knotw %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: mask16:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    knotw %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512DQ-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <16 x i1> %m1 to i16
@@ -19,12 +44,33 @@ define i16 @mask16(i16 %x) {
 }
 
 define i32 @mask16_zext(i16 %x) {
-; CHECK-LABEL: mask16_zext:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    knotw %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: mask16_zext:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: mask16_zext:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    knotw %k0, %k0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: mask16_zext:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    knotw %k0, %k0
+; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: mask16_zext:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    knotw %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %m2 = bitcast <16 x i1> %m1 to i16
@@ -38,27 +84,31 @@ define i8 @mask8(i8 %x) {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
+; SKX-NEXT:    kmovd %edi, %k0
 ; SKX-NEXT:    knotb %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask8:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
+; AVX512BW-NEXT:    kmovd %edi, %k0
 ; AVX512BW-NEXT:    knotw %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: mask8:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
+; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    knotb %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -77,22 +127,22 @@ define i32 @mask8_zext(i8 %x) {
 ;
 ; SKX-LABEL: mask8_zext:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
+; SKX-NEXT:    kmovd %edi, %k0
 ; SKX-NEXT:    knotb %k0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask8_zext:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
+; AVX512BW-NEXT:    kmovd %edi, %k0
 ; AVX512BW-NEXT:    knotw %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movzbl %al, %eax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: mask8_zext:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
+; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    knotb %k0, %k0
 ; AVX512DQ-NEXT:    kmovb %k0, %eax
 ; AVX512DQ-NEXT:    retq
@@ -177,15 +227,49 @@ define i16 @mand16(i16 %x, i16 %y) {
 }
 
 define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
-; CHECK-LABEL: mand16_mem:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw (%rdi), %k0
-; CHECK-NEXT:    kmovw (%rsi), %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k2
-; CHECK-NEXT:    kxorw %k1, %k0, %k0
-; CHECK-NEXT:    korw %k0, %k2, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: mand16_mem:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw (%rdi), %k0
+; KNL-NEXT:    kmovw (%rsi), %k1
+; KNL-NEXT:    kandw %k1, %k0, %k2
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    korw %k0, %k2, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: mand16_mem:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovw (%rdi), %k0
+; SKX-NEXT:    kmovw (%rsi), %k1
+; SKX-NEXT:    kandw %k1, %k0, %k2
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    korw %k0, %k2, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: mand16_mem:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovw (%rdi), %k0
+; AVX512BW-NEXT:    kmovw (%rsi), %k1
+; AVX512BW-NEXT:    kandw %k1, %k0, %k2
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
+; AVX512BW-NEXT:    korw %k0, %k2, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: mand16_mem:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw (%rdi), %k0
+; AVX512DQ-NEXT:    kmovw (%rsi), %k1
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k2
+; AVX512DQ-NEXT:    kxorw %k1, %k0, %k0
+; AVX512DQ-NEXT:    korw %k0, %k2, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512DQ-NEXT:    retq
   %ma = load <16 x i1>, <16 x i1>* %x
   %mb = load <16 x i1>, <16 x i1>* %y
   %mc = and <16 x i1> %ma, %mb
@@ -201,27 +285,31 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kshiftrw $8, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuf_test1:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovw %edi, %k0
+; SKX-NEXT:    kmovd %edi, %k0
 ; SKX-NEXT:    kshiftrw $8, %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuf_test1:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
+; AVX512BW-NEXT:    kmovd %edi, %k0
 ; AVX512BW-NEXT:    kshiftrw $8, %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: shuf_test1:
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    kshiftrw $8, %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -526,7 +614,7 @@ define void @test7(<8 x i1> %mask)  {
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0
 ; SKX-NEXT:    movb $85, %al
-; SKX-NEXT:    kmovb %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    korb %k1, %k0, %k0
 ; SKX-NEXT:    ktestb %k0, %k0
 ; SKX-NEXT:    retq
@@ -536,9 +624,9 @@ define void @test7(<8 x i1> %mask)  {
 ; AVX512BW-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpmovw2m %zmm0, %k0
 ; AVX512BW-NEXT:    movb $85, %al
-; AVX512BW-NEXT:    kmovw %eax, %k1
+; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    korw %k1, %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -549,7 +637,7 @@ define void @test7(<8 x i1> %mask)  {
 ; AVX512DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512DQ-NEXT:    movb $85, %al
-; AVX512DQ-NEXT:    kmovb %eax, %k1
+; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    korb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    ktestb %k0, %k0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -799,7 +887,7 @@ define <16 x i1> @test15(i32 %x, i32 %y)  {
 ; SKX-NEXT:    movw $21845, %ax ## imm = 0x5555
 ; SKX-NEXT:    movw $1, %cx
 ; SKX-NEXT:    cmovgw %ax, %cx
-; SKX-NEXT:    kmovw %ecx, %k0
+; SKX-NEXT:    kmovd %ecx, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0
 ; SKX-NEXT:    retq
 ;
@@ -809,7 +897,7 @@ define <16 x i1> @test15(i32 %x, i32 %y)  {
 ; AVX512BW-NEXT:    movw $21845, %ax ## imm = 0x5555
 ; AVX512BW-NEXT:    movw $1, %cx
 ; AVX512BW-NEXT:    cmovgw %ax, %cx
-; AVX512BW-NEXT:    kmovw %ecx, %k0
+; AVX512BW-NEXT:    kmovd %ecx, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512BW-NEXT:    vzeroupper
@@ -1099,8 +1187,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; SKX-LABEL: test18:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
-; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    kshiftlw $7, %k1, %k2
 ; SKX-NEXT:    kshiftrw $15, %k2, %k2
 ; SKX-NEXT:    kshiftlw $6, %k1, %k1
@@ -1120,8 +1208,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; AVX512BW-LABEL: test18:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k1
-; AVX512BW-NEXT:    kmovw %esi, %k2
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    kmovd %esi, %k2
 ; AVX512BW-NEXT:    kshiftlw $7, %k2, %k0
 ; AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512BW-NEXT:    kshiftlw $6, %k2, %k2
@@ -1143,7 +1231,7 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; AVX512DQ-LABEL: test18:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
+; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    kmovw %esi, %k1
 ; AVX512DQ-NEXT:    kshiftlw $7, %k1, %k2
 ; AVX512DQ-NEXT:    kshiftrw $15, %k2, %k2
@@ -1708,7 +1796,7 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; AVX512BW-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
 ; AVX512BW-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    je LBB41_2
 ; AVX512BW-NEXT:  ## BB#1: ## %L1
@@ -3564,7 +3652,7 @@ define i32 @test_bitcast_v8i1_zext(<16 x i32> %a) {
 ; AVX512BW:       ## BB#0:
 ; AVX512BW-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movzbl %al, %eax
 ; AVX512BW-NEXT:    addl %eax, %eax
 ; AVX512BW-NEXT:    vzeroupper
@@ -3629,13 +3717,41 @@ define i32 @test_bitcast_v16i1_zext(<16 x i32> %a) {
 }
 
 define i16 @test_v16i1_add(i16 %x, i16 %y) {
-; CHECK-LABEL: test_v16i1_add:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kxorw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: test_v16i1_add:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v16i1_add:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v16i1_add:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_v16i1_add:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kxorw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512DQ-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
   %m2 = add <16 x i1> %m0,  %m1
@@ -3644,13 +3760,41 @@ define i16 @test_v16i1_add(i16 %x, i16 %y) {
 }
 
 define i16 @test_v16i1_sub(i16 %x, i16 %y) {
-; CHECK-LABEL: test_v16i1_sub:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kxorw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: test_v16i1_sub:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v16i1_sub:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kxorw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v16i1_sub:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_v16i1_sub:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kxorw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512DQ-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
   %m2 = sub <16 x i1> %m0,  %m1
@@ -3659,13 +3803,41 @@ define i16 @test_v16i1_sub(i16 %x, i16 %y) {
 }
 
 define i16 @test_v16i1_mul(i16 %x, i16 %y) {
-; CHECK-LABEL: test_v16i1_mul:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: test_v16i1_mul:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v16i1_mul:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kandw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v16i1_mul:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kandw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_v16i1_mul:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512DQ-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
   %m2 = mul <16 x i1> %m0,  %m1
@@ -3680,30 +3852,34 @@ define i8 @test_v8i1_add(i8 %x, i8 %y) {
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kxorw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_v8i1_add:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
-; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    kxorb %k1, %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v8i1_add:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
-; AVX512BW-NEXT:    kmovw %esi, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
 ; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_v8i1_add:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
-; AVX512DQ-NEXT:    kmovb %esi, %k1
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
 ; AVX512DQ-NEXT:    kxorb %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>
@@ -3719,30 +3895,34 @@ define i8 @test_v8i1_sub(i8 %x, i8 %y) {
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kxorw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_v8i1_sub:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
-; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    kxorb %k1, %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v8i1_sub:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
-; AVX512BW-NEXT:    kmovw %esi, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
 ; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_v8i1_sub:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
-; AVX512DQ-NEXT:    kmovb %esi, %k1
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
 ; AVX512DQ-NEXT:    kxorb %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>
@@ -3758,30 +3938,34 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_v8i1_mul:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    kmovb %edi, %k0
-; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    kandb %k1, %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v8i1_mul:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    kmovw %edi, %k0
-; AVX512BW-NEXT:    kmovw %esi, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
-; AVX512BW-NEXT:    kmovw %k0, %eax
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_v8i1_mul:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    kmovb %edi, %k0
-; AVX512DQ-NEXT:    kmovb %esi, %k1
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
 ; AVX512DQ-NEXT:    kandb %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovb %k0, %eax
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>

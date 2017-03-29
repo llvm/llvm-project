@@ -429,9 +429,6 @@ bool BasicBlock::isLandingPad() const {
 }
 
 /// Return the landingpad instruction associated with the landing pad.
-LandingPadInst *BasicBlock::getLandingPadInst() {
-  return dyn_cast<LandingPadInst>(getFirstNonPHI());
-}
 const LandingPadInst *BasicBlock::getLandingPadInst() const {
   return dyn_cast<LandingPadInst>(getFirstNonPHI());
 }

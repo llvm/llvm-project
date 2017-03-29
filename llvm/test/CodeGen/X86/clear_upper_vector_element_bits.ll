@@ -103,7 +103,6 @@ define <4 x i32> @_clearupper4xi32a(<4 x i32>) nounwind {
   ret <4 x i32> %v3
 }
 
-; FIXME: Missed vpblendw on AVX2 target
 define <8 x i32> @_clearupper8xi32a(<8 x i32>) nounwind {
 ; SSE-LABEL: _clearupper8xi32a:
 ; SSE:       # BB#0:
@@ -119,8 +118,8 @@ define <8 x i32> @_clearupper8xi32a(<8 x i32>) nounwind {
 ;
 ; AVX2-LABEL: _clearupper8xi32a:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
-; AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
 ; AVX2-NEXT:    retq
   %x0 = extractelement <8 x i32> %0, i32 0
   %x1 = extractelement <8 x i32> %0, i32 1

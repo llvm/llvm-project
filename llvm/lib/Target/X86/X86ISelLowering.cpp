@@ -4646,8 +4646,12 @@ MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
   if (NumBits == 128 && isTypeLegal(MVT::v16i8))
     return MVT::v16i8;
 
+  // VPMOVMSKB can handle this.
+  if (NumBits == 256 && isTypeLegal(MVT::v32i8))
+    return MVT::v32i8;
+
   // TODO: Allow 64-bit type for 32-bit target.
-  // TODO: 256- and 512-bit types should be allowed, but make sure that those
+  // TODO: 512-bit types should be allowed, but make sure that those
   // cases are handled in combineVectorSizedSetCCEquality().
 
   return MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -8207,6 +8211,41 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
   return true;
 }
 
+// Merges a general DAG shuffle mask and zeroable bit mask into a target shuffle
+// mask.
+static SmallVector<int, 64> createTargetShuffleMask(ArrayRef<int> Mask,
+                                                    const APInt &Zeroable) {
+  int NumElts = Mask.size();
+  assert(NumElts == (int)Zeroable.getBitWidth() && "Mismatch mask sizes");
+
+  SmallVector<int, 64> TargetMask(NumElts, SM_SentinelUndef);
+  for (int i = 0; i != NumElts; ++i) {
+    int M = Mask[i];
+    if (M == SM_SentinelUndef)
+      continue;
+    assert(0 <= M && M < (2 * NumElts) && "Out of range shuffle index");
+    TargetMask[i] = (Zeroable[i] ? SM_SentinelZero : M);
+  }
+  return TargetMask;
+}
+
+// Check if the shuffle mask is suitable for the AVX vpunpcklwd or vpunpckhwd
+// instructions.
+static bool isUnpackWdShuffleMask(ArrayRef<int> Mask, MVT VT) {
+  if (VT != MVT::v8i32 && VT != MVT::v8f32)
+    return false;
+
+  SmallVector<int, 8> Unpcklwd;
+  createUnpackShuffleMask(MVT::v8i16, Unpcklwd, /* Lo = */ true,
+                          /* Unary = */ false);
+  SmallVector<int, 8> Unpckhwd;
+  createUnpackShuffleMask(MVT::v8i16, Unpckhwd, /* Lo = */ false,
+                          /* Unary = */ false);
+  bool IsUnpackwdMask = (isTargetShuffleEquivalent(Mask, Unpcklwd) ||
+                         isTargetShuffleEquivalent(Mask, Unpckhwd));
+  return IsUnpackwdMask;
+}
+
 /// \brief Get a 4-lane 8-bit shuffle immediate for a mask.
 ///
 /// This helper function produces an 8-bit shuffle immediate corresponding to
@@ -8609,6 +8648,58 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG);
 
+static bool matchVectorShuffleAsBlend(SDValue V1, SDValue V2,
+                                      MutableArrayRef<int> TargetMask,
+                                      bool &ForceV1Zero, bool &ForceV2Zero,
+                                      uint64_t &BlendMask) {
+  bool V1IsZeroOrUndef =
+      V1.isUndef() || ISD::isBuildVectorAllZeros(V1.getNode());
+  bool V2IsZeroOrUndef =
+      V2.isUndef() || ISD::isBuildVectorAllZeros(V2.getNode());
+
+  BlendMask = 0;
+  ForceV1Zero = false, ForceV2Zero = false;
+  assert(TargetMask.size() <= 64 && "Shuffle mask too big for blend mask");
+
+  // Attempt to generate the binary blend mask. If an input is zero then
+  // we can use any lane.
+  // TODO: generalize the zero matching to any scalar like isShuffleEquivalent.
+  for (int i = 0, Size = TargetMask.size(); i < Size; ++i) {
+    int M = TargetMask[i];
+    if (M == SM_SentinelUndef)
+      continue;
+    if (M == i)
+      continue;
+    if (M == i + Size) {
+      BlendMask |= 1ull << i;
+      continue;
+    }
+    if (M == SM_SentinelZero) {
+      if (V1IsZeroOrUndef) {
+        ForceV1Zero = true;
+        TargetMask[i] = i;
+        continue;
+      }
+      if (V2IsZeroOrUndef) {
+        ForceV2Zero = true;
+        BlendMask |= 1ull << i;
+        TargetMask[i] = i + Size;
+        continue;
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
+uint64_t scaleVectorShuffleBlendMask(uint64_t BlendMask, int Size, int Scale) {
+  uint64_t ScaledMask = 0;
+  for (int i = 0; i != Size; ++i)
+    if (BlendMask & (1ull << i))
+      ScaledMask |= ((1ull << Scale) - 1) << (i * Scale);
+  return ScaledMask;
+};
+
 /// \brief Try to emit a blend instruction for a shuffle.
 ///
 /// This doesn't do any checks for the availability of instructions for blending
@@ -8620,54 +8711,19 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                          const APInt &Zeroable,
                                          const X86Subtarget &Subtarget,
                                          SelectionDAG &DAG) {
-  bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
-  bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
-  SmallVector<int, 8> Mask(Original.begin(), Original.end());
-  bool ForceV1Zero = false, ForceV2Zero = false;
+  SmallVector<int, 64> Mask = createTargetShuffleMask(Original, Zeroable);
 
-  // Attempt to generate the binary blend mask. If an input is zero then
-  // we can use any lane.
-  // TODO: generalize the zero matching to any scalar like isShuffleEquivalent.
   uint64_t BlendMask = 0;
-  for (int i = 0, Size = Mask.size(); i < Size; ++i) {
-    int M = Mask[i];
-    if (M < 0)
-      continue;
-    if (M == i)
-      continue;
-    if (M == i + Size) {
-      BlendMask |= 1ull << i;
-      continue;
-    }
-    if (Zeroable[i]) {
-      if (V1IsZero) {
-        ForceV1Zero = true;
-        Mask[i] = i;
-        continue;
-      }
-      if (V2IsZero) {
-        ForceV2Zero = true;
-        BlendMask |= 1ull << i;
-        Mask[i] = i + Size;
-        continue;
-      }
-    }
-    return SDValue(); // Shuffled input!
-  }
+  bool ForceV1Zero = false, ForceV2Zero = false;
+  if (!matchVectorShuffleAsBlend(V1, V2, Mask, ForceV1Zero, ForceV2Zero,
+                                 BlendMask))
+    return SDValue();
 
   // Create a REAL zero vector - ISD::isBuildVectorAllZeros allows UNDEFs.
   if (ForceV1Zero)
     V1 = getZeroVector(VT, Subtarget, DAG, DL);
   if (ForceV2Zero)
     V2 = getZeroVector(VT, Subtarget, DAG, DL);
-
-  auto ScaleBlendMask = [](uint64_t BlendMask, int Size, int Scale) {
-    uint64_t ScaledMask = 0;
-    for (int i = 0; i != Size; ++i)
-      if (BlendMask & (1ull << i))
-        ScaledMask |= ((1ull << Scale) - 1) << (i * Scale);
-    return ScaledMask;
-  };
 
   switch (VT.SimpleTy) {
   case MVT::v2f64:
@@ -8688,7 +8744,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     if (Subtarget.hasAVX2()) {
       // Scale the blend by the number of 32-bit dwords per element.
       int Scale =  VT.getScalarSizeInBits() / 32;
-      BlendMask = ScaleBlendMask(BlendMask, Mask.size(), Scale);
+      BlendMask = scaleVectorShuffleBlendMask(BlendMask, Mask.size(), Scale);
       MVT BlendVT = VT.getSizeInBits() > 128 ? MVT::v8i32 : MVT::v4i32;
       V1 = DAG.getBitcast(BlendVT, V1);
       V2 = DAG.getBitcast(BlendVT, V2);
@@ -8701,7 +8757,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     // For integer shuffles we need to expand the mask and cast the inputs to
     // v8i16s prior to blending.
     int Scale = 8 / VT.getVectorNumElements();
-    BlendMask = ScaleBlendMask(BlendMask, Mask.size(), Scale);
+    BlendMask = scaleVectorShuffleBlendMask(BlendMask, Mask.size(), Scale);
     V1 = DAG.getBitcast(MVT::v8i16, V1);
     V2 = DAG.getBitcast(MVT::v8i16, V2);
     return DAG.getBitcast(VT,
@@ -12740,6 +12796,14 @@ static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                V1, V2, DAG, Subtarget))
       return V;
 
+  // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
+  // since after split we get a more efficient code using vpunpcklwd and
+  // vpunpckhwd instrs than vblend.
+  if (!Subtarget.hasAVX512() && isUnpackWdShuffleMask(Mask, MVT::v8f32))
+    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8f32, V1, V2,
+                                                     Mask, DAG))
+      return V;
+
   // If we have AVX2 then we always want to lower with a blend because at v8 we
   // can fully permute the elements.
   if (Subtarget.hasAVX2())
@@ -12770,6 +12834,14 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
           DL, MVT::v8i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
+
+  // For non-AVX512 if the Mask is of 16bit elements in lane then try to split
+  // since after split we get a more efficient code than vblend by using
+  // vpunpcklwd and vpunpckhwd instrs.
+  if (isUnpackWdShuffleMask(Mask, MVT::v8i32) && !Subtarget.hasAVX512())
+    if (SDValue V = lowerVectorShuffleAsSplitOrBlend(DL, MVT::v8i32, V1, V2,
+                                                     Mask, DAG))
+      return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i32, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))
@@ -27072,65 +27144,60 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to combine to X86ISD::BLENDI.
-  if (NumMaskElts <= 8 && ((Subtarget.hasSSE41() && MaskVT.is128BitVector()) ||
-                           (Subtarget.hasAVX() && MaskVT.is256BitVector()))) {
-    // Determine a type compatible with X86ISD::BLENDI.
-    // TODO - add 16i16 support (requires lane duplication).
-    MVT BlendVT = MaskVT;
-    if (Subtarget.hasAVX2()) {
-      if (BlendVT == MVT::v4i64)
-        BlendVT = MVT::v8i32;
-      else if (BlendVT == MVT::v2i64)
-        BlendVT = MVT::v4i32;
-    } else {
-      if (BlendVT == MVT::v2i64 || BlendVT == MVT::v4i32)
-        BlendVT = MVT::v8i16;
-      else if (BlendVT == MVT::v4i64)
-        BlendVT = MVT::v4f64;
-      else if (BlendVT == MVT::v8i32)
-        BlendVT = MVT::v8f32;
-    }
-
-    unsigned BlendSize = BlendVT.getVectorNumElements();
-    unsigned MaskRatio = BlendSize / NumMaskElts;
-
-    // Can we blend with zero?
-    if (isSequentialOrUndefOrZeroInRange(Mask, /*Pos*/ 0, /*Size*/ NumMaskElts,
-                                         /*Low*/ 0) &&
-        NumMaskElts <= BlendVT.getVectorNumElements()) {
-      PermuteImm = 0;
-      for (unsigned i = 0; i != BlendSize; ++i)
-        if (Mask[i / MaskRatio] < 0)
-          PermuteImm |= 1u << i;
-
-      V2 = getZeroVector(BlendVT, Subtarget, DAG, DL);
-      Shuffle = X86ISD::BLENDI;
-      ShuffleVT = BlendVT;
-      return true;
-    }
-
-    // Attempt to match as a binary blend.
-    if (NumMaskElts <= BlendVT.getVectorNumElements()) {
-      bool MatchBlend = true;
-      for (int i = 0; i != (int)NumMaskElts; ++i) {
-        int M = Mask[i];
-        if (M == SM_SentinelUndef)
-          continue;
-        if ((M == SM_SentinelZero) ||
-            ((M != i) && (M != (i + (int)NumMaskElts)))) {
-          MatchBlend = false;
-          break;
+  if ((NumMaskElts <= 8 && ((Subtarget.hasSSE41() && MaskVT.is128BitVector()) ||
+                            (Subtarget.hasAVX() && MaskVT.is256BitVector()))) ||
+      (MaskVT == MVT::v16i16 && Subtarget.hasAVX2())) {
+    uint64_t BlendMask = 0;
+    bool ForceV1Zero = false, ForceV2Zero = false;
+    SmallVector<int, 8> TargetMask(Mask.begin(), Mask.end());
+    if (matchVectorShuffleAsBlend(V1, V2, TargetMask, ForceV1Zero, ForceV2Zero,
+                                  BlendMask)) {
+      if (MaskVT == MVT::v16i16) {
+        // We can only use v16i16 PBLENDW if the lanes are repeated.
+        SmallVector<int, 8> RepeatedMask;
+        if (isRepeatedTargetShuffleMask(128, MaskVT, TargetMask,
+                                        RepeatedMask)) {
+          assert(RepeatedMask.size() == 8 &&
+                 "Repeated mask size doesn't match!");
+          PermuteImm = 0;
+          for (int i = 0; i < 8; ++i)
+            if (RepeatedMask[i] >= 8)
+              PermuteImm |= 1 << i;
+          V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
+          V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
+          Shuffle = X86ISD::BLENDI;
+          ShuffleVT = MaskVT;
+          return true;
         }
-      }
+      } else {
+        // Determine a type compatible with X86ISD::BLENDI.
+        ShuffleVT = MaskVT;
+        if (Subtarget.hasAVX2()) {
+          if (ShuffleVT == MVT::v4i64)
+            ShuffleVT = MVT::v8i32;
+          else if (ShuffleVT == MVT::v2i64)
+            ShuffleVT = MVT::v4i32;
+        } else {
+          if (ShuffleVT == MVT::v2i64 || ShuffleVT == MVT::v4i32)
+            ShuffleVT = MVT::v8i16;
+          else if (ShuffleVT == MVT::v4i64)
+            ShuffleVT = MVT::v4f64;
+          else if (ShuffleVT == MVT::v8i32)
+            ShuffleVT = MVT::v8f32;
+        }
 
-      if (MatchBlend) {
-        PermuteImm = 0;
-        for (unsigned i = 0; i != BlendSize; ++i)
-          if ((int)NumMaskElts <= Mask[i / MaskRatio])
-            PermuteImm |= 1u << i;
+        if (!ShuffleVT.isFloatingPoint()) {
+          int Scale = EltSizeInBits / ShuffleVT.getScalarSizeInBits();
+          BlendMask =
+              scaleVectorShuffleBlendMask(BlendMask, NumMaskElts, Scale);
+          ShuffleVT = MVT::getIntegerVT(EltSizeInBits / Scale);
+          ShuffleVT = MVT::getVectorVT(ShuffleVT, NumMaskElts * Scale);
+        }
 
+        V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
+        V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
+        PermuteImm = (unsigned)BlendMask;
         Shuffle = X86ISD::BLENDI;
-        ShuffleVT = BlendVT;
         return true;
       }
     }
@@ -27236,7 +27303,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // here, we're not going to remove the operands we find.
   bool UnaryShuffle = (Inputs.size() == 1);
   SDValue V1 = peekThroughBitcasts(Inputs[0]);
-  SDValue V2 = (UnaryShuffle ? V1 : peekThroughBitcasts(Inputs[1]));
+  SDValue V2 = (UnaryShuffle ? DAG.getUNDEF(V1.getValueType())
+                             : peekThroughBitcasts(Inputs[1]));
 
   MVT VT1 = V1.getSimpleValueType();
   MVT VT2 = V2.getSimpleValueType();

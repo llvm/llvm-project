@@ -95,6 +95,13 @@ static cl::opt<bool> InternalizeSymbols(
   cl::init(false),
   cl::Hidden);
 
+// Option to inline all early.
+static cl::opt<bool> EarlyInlineAll(
+  "amdgpu-early-inline-all",
+  cl::desc("Inline all functions early"),
+  cl::init(false),
+  cl::Hidden);
+
 static cl::opt<bool> EnableSDWAPeephole(
   "amdgpu-sdwa-peephole",
   cl::desc("Enable SDWA peepholer"),
@@ -240,6 +247,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
   : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
                       FS, Options, getEffectiveRelocModel(RM), CM, OptLevel),
     TLOF(createTLOF(getTargetTriple())) {
+  AS = AMDGPU::getAMDGPUAS(TT);
   initAsmInfo();
 }
 
@@ -272,12 +280,14 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   bool Internalize = InternalizeSymbols &&
                      (getOptLevel() > CodeGenOpt::None) &&
                      (getTargetTriple().getArch() == Triple::amdgcn);
+  bool EarlyInline = EarlyInlineAll &&
+                     (getOptLevel() > CodeGenOpt::None);
   bool AMDGPUAA = EnableAMDGPUAliasAnalysis && getOptLevel() > CodeGenOpt::None;
 
   Builder.addExtension(
     PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [Internalize, AMDGPUAA](const PassManagerBuilder &,
-                            legacy::PassManagerBase &PM) {
+    [Internalize, EarlyInline, AMDGPUAA](const PassManagerBuilder &,
+                                         legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
@@ -303,8 +313,9 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
           return !GV.use_empty();
         }));
         PM.add(createGlobalDCEPass());
-        PM.add(createAMDGPUAlwaysInlinePass());
       }
+      if (EarlyInline)
+        PM.add(createAMDGPUAlwaysInlinePass());
   });
 
   Builder.addExtension(
@@ -809,3 +820,4 @@ void GCNPassConfig::addPreEmitPass() {
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new GCNPassConfig(this, PM);
 }
+

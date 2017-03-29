@@ -152,12 +152,13 @@ public:
   /// hanging off of the globals.
   void removeDeadConstantUsers() const;
 
-  Constant *stripPointerCasts() {
+  const Constant *stripPointerCasts() const {
     return cast<Constant>(Value::stripPointerCasts());
   }
 
-  const Constant *stripPointerCasts() const {
-    return const_cast<Constant*>(this)->stripPointerCasts();
+  Constant *stripPointerCasts() {
+    return const_cast<Constant*>(
+                      static_cast<const Constant *>(this)->stripPointerCasts());
   }
 };
 

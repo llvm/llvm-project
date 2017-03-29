@@ -735,6 +735,10 @@ namespace llvm {
     // LaneMask is contained in CoveringLanes will be completely covered by
     // another sub-register with the same or larger lane mask.
     LaneBitmask CoveringLanes;
+
+    // Helper function for printing debug information. Handles artificial
+    // (non-native) reg units.
+    void printRegUnitName(unsigned Unit) const;
   };
 
 } // end namespace llvm

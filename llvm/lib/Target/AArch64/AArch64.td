@@ -118,6 +118,14 @@ def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
 def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
     "Use the reciprocal square root approximation">;
+
+def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
+                                        "NegativeImmediates", "false",
+                                        "Convert immediates and instructions "
+                                        "to their negated or complemented "
+                                        "equivalent when the immediate does "
+                                        "not fit in the encoding.">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

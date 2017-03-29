@@ -715,6 +715,14 @@ class TargetRegisterInfo;
     /// Creates the initial topological ordering from the DAG to be scheduled.
     void InitDAGTopologicalSorting();
 
+    /// Returns an array of SUs that are both in the successor
+    /// subtree of StartSU and in the predecessor subtree of TargetSU.
+    /// StartSU and TargetSU are not in the array.
+    /// Success is false if TargetSU is not in the successor subtree of
+    /// StartSU, else it is true.
+    std::vector<int> GetSubGraph(const SUnit &StartSU, const SUnit &TargetSU,
+                                 bool &Success);
+
     /// Checks if \p SU is reachable from \p TargetSU.
     bool IsReachable(const SUnit *SU, const SUnit *TargetSU);
 

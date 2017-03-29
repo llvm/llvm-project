@@ -362,6 +362,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
                              resultTy);
         case nonloc::ConcreteIntKind: {
           // Transform the integer into a location and compare.
+          // FIXME: This only makes sense for comparisons. If we want to, say,
+          // add 1 to a LocAsInteger, we'd better unpack the Loc and add to it,
+          // then pack it back into a LocAsInteger.
           llvm::APSInt i = rhs.castAs<nonloc::ConcreteInt>().getValue();
           BasicVals.getAPSIntType(Context.VoidPtrTy).apply(i);
           return evalBinOpLL(state, op, lhsL, makeLoc(i), resultTy);
@@ -942,6 +945,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
     rhs = convertToArrayIndex(rhs).castAs<NonLoc>();
     SVal index = UnknownVal();
     const MemRegion *superR = nullptr;
+    // We need to know the type of the pointer in order to add an integer to it.
+    // Depending on the type, different amount of bytes is added.
     QualType elementType;
 
     if (const ElementRegion *elemReg = dyn_cast<ElementRegion>(region)) {
@@ -955,6 +960,10 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       assert(op == BO_Add || op == BO_Sub);
       index = (op == BO_Add) ? rhs : evalMinus(rhs);
       superR = region;
+      // TODO: Is this actually reliable? Maybe improving our MemRegion
+      // hierarchy to provide typed regions for all non-void pointers would be
+      // better. For instance, we cannot extend this towards LocAsInteger
+      // operations, where result type of the expression is integer.
       if (resultTy->isAnyPointerType())
         elementType = resultTy->getPointeeType();
     }

@@ -68,14 +68,20 @@ public:
   /// Note: this is undefined behavior if the instruction does not have a
   /// parent, or the parent basic block does not have a parent function.
   const Module *getModule() const;
-  Module *getModule();
+  Module *getModule() {
+    return const_cast<Module *>(
+                           static_cast<const Instruction *>(this)->getModule());
+  }
 
   /// Return the function this instruction belongs to.
   ///
   /// Note: it is undefined behavior to call this on an instruction not
   /// currently inserted into a function.
   const Function *getFunction() const;
-  Function *getFunction();
+  Function *getFunction() {
+    return const_cast<Function *>(
+                         static_cast<const Instruction *>(this)->getFunction());
+  }
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -338,6 +344,9 @@ public:
 
   /// Determine whether the allow-reciprocal flag is set.
   bool hasAllowReciprocal() const;
+
+  /// Determine whether the allow-contract flag is set.
+  bool hasAllowContract() const;
 
   /// Convenience function for getting all the fast-math flags, which must be an
   /// operator which supports these flags. See LangRef.html for the meaning of

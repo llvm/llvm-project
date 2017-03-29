@@ -46,9 +46,6 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 // getOrInsertFunction returns a bitcast.
 Function *checkSanitizerInterfaceFunction(Constant *FuncOrBitcast);
 
-Function *declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                       ArrayRef<Type *> InitArgTypes);
-
 /// \brief Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions

@@ -339,8 +339,8 @@ void ImportFile::parse() {
 }
 
 void BitcodeFile::parse() {
-  Obj = check(lto::InputFile::create(
-      MemoryBufferRef(MB.getBuffer(), Saver.save(MB.getBufferIdentifier()))));
+  Obj = check(lto::InputFile::create(MemoryBufferRef(
+      MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols()) {
     StringRef SymName = Saver.save(ObjSym.getName());
     auto Flags = ObjSym.getFlags();

@@ -228,7 +228,7 @@ define <4 x double> @test_mm256_mask_andnot_pd(<4 x double> %__W, i8 zeroext %__
 ;
 ; SKX-LABEL: test_mm256_mask_andnot_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnpd %ymm2, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -252,7 +252,7 @@ define <4 x double> @test_mm256_maskz_andnot_pd(i8 zeroext %__U, <4 x double> %_
 ;
 ; SKX-LABEL: test_mm256_maskz_andnot_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -276,7 +276,7 @@ define <2 x double> @test_mm_mask_andnot_pd(<2 x double> %__W, i8 zeroext %__U, 
 ;
 ; SKX-LABEL: test_mm_mask_andnot_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnpd %xmm2, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -300,7 +300,7 @@ define <2 x double> @test_mm_maskz_andnot_pd(i8 zeroext %__U, <2 x double> %__A,
 ;
 ; SKX-LABEL: test_mm_maskz_andnot_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnpd %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -324,7 +324,7 @@ define <8 x float> @test_mm256_mask_andnot_ps(<8 x float> %__W, i8 zeroext %__U,
 ;
 ; SKX-LABEL: test_mm256_mask_andnot_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnps %ymm2, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -347,7 +347,7 @@ define <8 x float> @test_mm256_maskz_andnot_ps(i8 zeroext %__U, <8 x float> %__A
 ;
 ; SKX-LABEL: test_mm256_maskz_andnot_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnps %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -370,7 +370,7 @@ define <4 x float> @test_mm_mask_andnot_ps(<4 x float> %__W, i8 zeroext %__U, <4
 ;
 ; SKX-LABEL: test_mm_mask_andnot_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnps %xmm2, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -394,7 +394,7 @@ define <4 x float> @test_mm_maskz_andnot_ps(i8 zeroext %__U, <4 x float> %__A, <
 ;
 ; SKX-LABEL: test_mm_maskz_andnot_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandnps %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -418,7 +418,7 @@ define <4 x double> @test_mm256_mask_and_pd(<4 x double> %__W, i8 zeroext %__U, 
 ;
 ; SKX-LABEL: test_mm256_mask_and_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandpd %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -441,7 +441,7 @@ define <4 x double> @test_mm256_maskz_and_pd(i8 zeroext %__U, <4 x double> %__A,
 ;
 ; SKX-LABEL: test_mm256_maskz_and_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandpd %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -464,7 +464,7 @@ define <2 x double> @test_mm_mask_and_pd(<2 x double> %__W, i8 zeroext %__U, <2 
 ;
 ; SKX-LABEL: test_mm_mask_and_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandpd %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -487,7 +487,7 @@ define <2 x double> @test_mm_maskz_and_pd(i8 zeroext %__U, <2 x double> %__A, <2
 ;
 ; SKX-LABEL: test_mm_maskz_and_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandpd %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -510,7 +510,7 @@ define <8 x float> @test_mm256_mask_and_ps(<8 x float> %__W, i8 zeroext %__U, <8
 ;
 ; SKX-LABEL: test_mm256_mask_and_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandps %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -532,7 +532,7 @@ define <8 x float> @test_mm256_maskz_and_ps(i8 zeroext %__U, <8 x float> %__A, <
 ;
 ; SKX-LABEL: test_mm256_maskz_and_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandps %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -554,7 +554,7 @@ define <4 x float> @test_mm_mask_and_ps(<4 x float> %__W, i8 zeroext %__U, <4 x 
 ;
 ; SKX-LABEL: test_mm_mask_and_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandps %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -577,7 +577,7 @@ define <4 x float> @test_mm_maskz_and_ps(i8 zeroext %__U, <4 x float> %__A, <4 x
 ;
 ; SKX-LABEL: test_mm_maskz_and_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vandps %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -600,7 +600,7 @@ define <4 x double> @test_mm256_mask_xor_pd(<4 x double> %__W, i8 zeroext %__U, 
 ;
 ; SKX-LABEL: test_mm256_mask_xor_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorpd %ymm2, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -623,7 +623,7 @@ define <4 x double> @test_mm256_maskz_xor_pd(i8 zeroext %__U, <4 x double> %__A,
 ;
 ; SKX-LABEL: test_mm256_maskz_xor_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -646,7 +646,7 @@ define <2 x double> @test_mm_mask_xor_pd(<2 x double> %__W, i8 zeroext %__U, <2 
 ;
 ; SKX-LABEL: test_mm_mask_xor_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorpd %xmm2, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -669,7 +669,7 @@ define <2 x double> @test_mm_maskz_xor_pd(i8 zeroext %__U, <2 x double> %__A, <2
 ;
 ; SKX-LABEL: test_mm_maskz_xor_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorpd %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -692,7 +692,7 @@ define <8 x float> @test_mm256_mask_xor_ps(<8 x float> %__W, i8 zeroext %__U, <8
 ;
 ; SKX-LABEL: test_mm256_mask_xor_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorps %ymm2, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -714,7 +714,7 @@ define <8 x float> @test_mm256_maskz_xor_ps(i8 zeroext %__U, <8 x float> %__A, <
 ;
 ; SKX-LABEL: test_mm256_maskz_xor_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorps %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -736,7 +736,7 @@ define <4 x float> @test_mm_mask_xor_ps(<4 x float> %__W, i8 zeroext %__U, <4 x 
 ;
 ; SKX-LABEL: test_mm_mask_xor_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorps %xmm2, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -759,7 +759,7 @@ define <4 x float> @test_mm_maskz_xor_ps(i8 zeroext %__U, <4 x float> %__A, <4 x
 ;
 ; SKX-LABEL: test_mm_maskz_xor_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorps %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -782,7 +782,7 @@ define <4 x double> @test_mm256_mask_or_pd(<4 x double> %__W, i8 zeroext %__U, <
 ;
 ; SKX-LABEL: test_mm256_mask_or_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorpd %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -805,7 +805,7 @@ define <4 x double> @test_mm256_maskz_or_pd(i8 zeroext %__U, <4 x double> %__A, 
 ;
 ; SKX-LABEL: test_mm256_maskz_or_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorpd %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -828,7 +828,7 @@ define <2 x double> @test_mm_mask_or_pd(<2 x double> %__W, i8 zeroext %__U, <2 x
 ;
 ; SKX-LABEL: test_mm_mask_or_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorpd %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -851,7 +851,7 @@ define <2 x double> @test_mm_maskz_or_pd(i8 zeroext %__U, <2 x double> %__A, <2 
 ;
 ; SKX-LABEL: test_mm_maskz_or_pd:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorpd %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -874,7 +874,7 @@ define <8 x float> @test_mm256_mask_or_ps(<8 x float> %__W, i8 zeroext %__U, <8 
 ;
 ; SKX-LABEL: test_mm256_mask_or_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorps %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -896,7 +896,7 @@ define <8 x float> @test_mm256_maskz_or_ps(i8 zeroext %__U, <8 x float> %__A, <8
 ;
 ; SKX-LABEL: test_mm256_maskz_or_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorps %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:
@@ -918,7 +918,7 @@ define <4 x float> @test_mm_mask_or_ps(<4 x float> %__W, i8 zeroext %__U, <4 x f
 ;
 ; SKX-LABEL: test_mm_mask_or_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorps %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 entry:
@@ -941,7 +941,7 @@ define <4 x float> @test_mm_maskz_or_ps(i8 zeroext %__U, <4 x float> %__A, <4 x 
 ;
 ; SKX-LABEL: test_mm_maskz_or_ps:
 ; SKX:       ## BB#0: ## %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vorps %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
 entry:

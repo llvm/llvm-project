@@ -60,12 +60,6 @@ const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
 
-Module *Instruction::getModule() {
-  return getParent()->getModule();
-}
-
-Function *Instruction::getFunction() { return getParent()->getParent(); }
-
 const Function *Instruction::getFunction() const {
   return getParent()->getParent();
 }
@@ -208,6 +202,11 @@ bool Instruction::hasNoSignedZeros() const {
 bool Instruction::hasAllowReciprocal() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasAllowReciprocal();
+}
+
+bool Instruction::hasAllowContract() const {
+  assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
+  return cast<FPMathOperator>(this)->hasAllowContract();
 }
 
 FastMathFlags Instruction::getFastMathFlags() const {

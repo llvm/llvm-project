@@ -157,6 +157,7 @@ protected:
 
   InstrItineraryData InstrItins;
   SelectionDAGTargetInfo TSInfo;
+  AMDGPUAS AS;
 
 public:
   AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -212,6 +213,10 @@ public:
 
   unsigned getMaxPrivateElementSize() const {
     return MaxPrivateElementSize;
+  }
+
+  AMDGPUAS getAMDGPUAS() const {
+    return AS;
   }
 
   bool has16BitInsts() const {

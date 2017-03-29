@@ -448,6 +448,50 @@ static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
   }
 }
 
+bool AArch64InstructionSelector::selectCompareBranch(
+    MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
+
+  const unsigned CondReg = I.getOperand(0).getReg();
+  MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
+  MachineInstr *CCMI = MRI.getVRegDef(CondReg);
+  if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
+    return false;
+
+  unsigned LHS = CCMI->getOperand(2).getReg();
+  unsigned RHS = CCMI->getOperand(3).getReg();
+  if (!getConstantVRegVal(RHS, MRI))
+    std::swap(RHS, LHS);
+
+  const auto RHSImm = getConstantVRegVal(RHS, MRI);
+  if (!RHSImm || *RHSImm != 0)
+    return false;
+
+  const RegisterBank &RB = *RBI.getRegBank(LHS, MRI, TRI);
+  if (RB.getID() != AArch64::GPRRegBankID)
+    return false;
+
+  const auto Pred = (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
+  if (Pred != CmpInst::ICMP_NE && Pred != CmpInst::ICMP_EQ)
+    return false;
+
+  const unsigned CmpWidth = MRI.getType(LHS).getSizeInBits();
+  unsigned CBOpc = 0;
+  if (CmpWidth <= 32)
+    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZW : AArch64::CBNZW);
+  else if (CmpWidth == 64)
+    CBOpc = (Pred == CmpInst::ICMP_EQ ? AArch64::CBZX : AArch64::CBNZX);
+  else
+    return false;
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(CBOpc))
+                 .addUse(LHS)
+                 .addMBB(DestMBB);
+
+  constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
   return false;
@@ -555,6 +599,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     const unsigned CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
+
+    if (selectCompareBranch(I, MF, MRI))
+      return true;
 
     auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::TBNZW))
                    .addUse(CondReg)
@@ -707,10 +754,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
-#ifndef NDEBUG
-    // Sanity-check the pointer register.
     const unsigned PtrReg = I.getOperand(1).getReg();
+#ifndef NDEBUG
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
+    // Sanity-check the pointer register.
     assert(PtrRB.getID() == AArch64::GPRRegBankID &&
            "Load/Store pointer operand isn't a GPR");
     assert(MRI.getType(PtrReg).isPointer() &&
@@ -727,7 +774,41 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     I.setDesc(TII.get(NewOpc));
 
-    I.addOperand(MachineOperand::CreateImm(0));
+    uint64_t Offset = 0;
+    auto *PtrMI = MRI.getVRegDef(PtrReg);
+
+    // Try to fold a GEP into our unsigned immediate addressing mode.
+    if (PtrMI->getOpcode() == TargetOpcode::G_GEP) {
+      if (auto COff = getConstantVRegVal(PtrMI->getOperand(2).getReg(), MRI)) {
+        int64_t Imm = *COff;
+        const unsigned Size = MemTy.getSizeInBits() / 8;
+        const unsigned Scale = Log2_32(Size);
+        if ((Imm & (Size - 1)) == 0 && Imm >= 0 && Imm < (0x1000 << Scale)) {
+          unsigned Ptr2Reg = PtrMI->getOperand(1).getReg();
+          I.getOperand(1).setReg(Ptr2Reg);
+          PtrMI = MRI.getVRegDef(Ptr2Reg);
+          Offset = Imm / Size;
+        }
+      }
+    }
+
+    // If we haven't folded anything into our addressing mode yet, try to fold
+    // a frame index into the base+offset.
+    if (!Offset && PtrMI->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+      I.getOperand(1).ChangeToFrameIndex(PtrMI->getOperand(1).getIndex());
+
+    I.addOperand(MachineOperand::CreateImm(Offset));
+
+    // If we're storing a 0, use WZR/XZR.
+    if (auto CVal = getConstantVRegVal(ValReg, MRI)) {
+      if (*CVal == 0 && Opcode == TargetOpcode::G_STORE) {
+        if (I.getOpcode() == AArch64::STRWui)
+          I.getOperand(0).setReg(AArch64::WZR);
+        else if (I.getOpcode() == AArch64::STRXui)
+          I.getOperand(0).setReg(AArch64::XZR);
+      }
+    }
+
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 

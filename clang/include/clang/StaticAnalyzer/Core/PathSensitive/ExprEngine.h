@@ -621,16 +621,16 @@ private:
   void performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
                           const CallEvent &Call);
 
-  /// If the value of the given expression is a NonLoc, copy it into a new
-  /// temporary object region, and replace the value of the expression with
-  /// that.
+  /// If the value of the given expression \p InitWithAdjustments is a NonLoc,
+  /// copy it into a new temporary object region, and replace the value of the
+  /// expression with that.
   ///
-  /// If \p ResultE is provided, the new region will be bound to this expression
-  /// instead of \p E.
+  /// If \p Result is provided, the new region will be bound to this expression
+  /// instead of \p InitWithAdjustments.
   ProgramStateRef createTemporaryRegionIfNeeded(ProgramStateRef State,
                                                 const LocationContext *LC,
-                                                const Expr *E,
-                                                const Expr *ResultE = nullptr);
+                                                const Expr *InitWithAdjustments,
+                                                const Expr *Result = nullptr);
 
   /// For a DeclStmt or CXXInitCtorInitializer, walk backward in the current CFG
   /// block to find the constructor expression that directly constructed into

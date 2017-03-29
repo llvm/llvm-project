@@ -193,6 +193,10 @@ namespace llvm {
         case lltok::kw_ninf: FMF.setNoInfs();          Lex.Lex(); continue;
         case lltok::kw_nsz:  FMF.setNoSignedZeros();   Lex.Lex(); continue;
         case lltok::kw_arcp: FMF.setAllowReciprocal(); Lex.Lex(); continue;
+        case lltok::kw_contract:
+          FMF.setAllowContract(true);
+          Lex.Lex();
+          continue;
         default: return FMF;
         }
       return FMF;

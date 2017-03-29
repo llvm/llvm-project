@@ -202,6 +202,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
   // specified.
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  auto AMDGPUASI = ST.getAMDGPUAS();
   if (ST.debuggerEmitPrologue())
     emitDebuggerPrologue(MF, MBB);
 
@@ -340,7 +341,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
         PointerType *PtrTy =
           PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
-                           AMDGPUAS::CONSTANT_ADDRESS);
+                           AMDGPUASI.CONSTANT_ADDRESS);
         MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
         auto MMO = MF.getMachineMemOperand(PtrInfo,
                                            MachineMemOperand::MOLoad |

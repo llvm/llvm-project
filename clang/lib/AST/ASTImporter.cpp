@@ -6074,7 +6074,7 @@ Expr *ASTNodeImporter::VisitBinaryOperator(BinaryOperator *E) {
                                                       T, E->getValueKind(),
                                                       E->getObjectKind(),
                                            Importer.Import(E->getOperatorLoc()),
-                                                      E->isFPContractable());
+                                                      E->getFPFeatures());
 }
 
 Expr *ASTNodeImporter::VisitConditionalOperator(ConditionalOperator *E) {
@@ -6224,7 +6224,7 @@ Expr *ASTNodeImporter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
                                                E->getObjectKind(),
                                                CompLHSType, CompResultType,
                                            Importer.Import(E->getOperatorLoc()),
-                                               E->isFPContractable());
+                                               E->getFPFeatures());
 }
 
 bool ASTNodeImporter::ImportCastPath(CastExpr *CE, CXXCastPath &Path) {

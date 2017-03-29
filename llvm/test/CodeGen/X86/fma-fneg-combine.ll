@@ -165,7 +165,7 @@ declare <4 x float> @llvm.x86.avx512.mask3.vfmadd.ss(<4 x float>, <4 x float>, <
 define <8 x double> @test12(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
 ; SKX-LABEL: test12:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vfmadd132pd %zmm1, %zmm2, %zmm0 {%k1}
 ; SKX-NEXT:    vxorpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
@@ -199,7 +199,7 @@ entry:
 define <16 x float> @test14(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
 ; SKX-LABEL: test14:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vfnmsub132ps {ru-sae}, %zmm1, %zmm2, %zmm0 {%k1}
 ; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
@@ -219,7 +219,7 @@ entry:
 define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask)  {
 ; SKX-LABEL: test15:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm3
 ; SKX-NEXT:    vfnmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
 ; SKX-NEXT:    vmovaps %zmm1, %zmm3 {%k1}

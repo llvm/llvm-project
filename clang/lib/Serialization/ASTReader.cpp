@@ -7378,7 +7378,7 @@ void ASTReader::InitializeSema(Sema &S) {
   // FIXME: What happens if these are changed by a module import?
   if (!FPPragmaOptions.empty()) {
     assert(FPPragmaOptions.size() == 1 && "Wrong number of FP_PRAGMA_OPTIONS");
-    SemaObj->FPFeatures.fp_contract = FPPragmaOptions[0];
+    SemaObj->FPFeatures = FPOptions(FPPragmaOptions[0]);
   }
 
   SemaObj->OpenCLFeatures.copy(OpenCLExtensions);

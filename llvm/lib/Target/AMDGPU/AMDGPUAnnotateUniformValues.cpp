@@ -37,6 +37,7 @@ class AMDGPUAnnotateUniformValues : public FunctionPass,
   LoopInfo *LI;
   DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isKernelFunc;
+  AMDGPUAS AMDGPUASI;
 
 public:
   static char ID;
@@ -130,8 +131,8 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
   if (!DA->isUniform(Ptr))
     return;
-  auto isGlobalLoad = [](LoadInst &Load)->bool {
-    return Load.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+  auto isGlobalLoad = [&](LoadInst &Load)->bool {
+    return Load.getPointerAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
   };
   // We're tracking up to the Function boundaries
   // We cannot go beyond because of FunctionPass restrictions
@@ -166,6 +167,7 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
 }
 
 bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
+  AMDGPUASI = AMDGPU::getAMDGPUAS(M);
   return false;
 }
 

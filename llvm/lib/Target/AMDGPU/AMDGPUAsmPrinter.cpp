@@ -17,6 +17,7 @@
 //
 
 #include "AMDGPUAsmPrinter.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -92,7 +93,9 @@ extern "C" void LLVMInitializeAMDGPUAsmPrinter() {
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
-  : AsmPrinter(TM, std::move(Streamer)) {}
+  : AsmPrinter(TM, std::move(Streamer)) {
+    AMDGPUASI = static_cast<AMDGPUTargetMachine*>(&TM)->getAMDGPUAS();
+  }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
   return "AMDGPU Assembly Printer";
@@ -174,7 +177,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   // Group segment variables aren't emitted in HSA.
-  if (AMDGPU::isGroupSegment(GV))
+  if (AMDGPU::isGroupSegment(GV, AMDGPUASI))
     return;
 
   AsmPrinter::EmitGlobalVariable(GV);

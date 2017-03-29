@@ -226,9 +226,9 @@ def S_MEMREALTIME   : SM_Time_Pseudo <"s_memrealtime", int_amdgcn_s_memrealtime>
 def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
   auto Ld = cast<LoadSDNode>(N);
   return Ld->getAlignment() >= 4  &&
-    ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+    ((Ld->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N)) ||
-    (Subtarget->getScalarizeGlobalBehavior() && Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+    (Subtarget->getScalarizeGlobalBehavior() && Ld->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N) &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)));
 }]>;

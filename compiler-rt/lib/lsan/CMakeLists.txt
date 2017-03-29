@@ -11,6 +11,7 @@ set(LSAN_COMMON_SOURCES
 set(LSAN_SOURCES
   lsan.cc
   lsan_allocator.cc
+  lsan_linux.cc
   lsan_interceptors.cc
   lsan_preinit.cc
   lsan_thread.cc)

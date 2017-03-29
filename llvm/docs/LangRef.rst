@@ -2194,6 +2194,10 @@ otherwise unsafe floating point transformations.
    Allow Reciprocal - Allow optimizations to use the reciprocal of an
    argument rather than perform division.
 
+``contract``
+   Allow floating-point contraction (e.g. fusing a multiply followed by an
+   addition into a fused multiply-and-add).
+
 ``fast``
    Fast - Allow algebraically equivalent transformations that may
    dramatically change results in floating point (e.g. reassociate). This

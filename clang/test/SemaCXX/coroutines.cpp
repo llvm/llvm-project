@@ -634,3 +634,21 @@ float badly_specialized_coro_handle() { // expected-error {{std::experimental::c
   //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
+
+struct promise_on_alloc_failure_tag {};
+
+template<>
+struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
+  struct promise_type {
+    int get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    int get_return_object_on_allocation_failure(); // expected-error{{'promise_type': 'get_return_object_on_allocation_failure()' must be a static member function}}
+    void unhandled_exception();
+  };
+};
+
+extern "C" int f(promise_on_alloc_failure_tag) {
+  co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
+}

@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_ITERATOR_H
 #define LLVM_ADT_ITERATOR_H
 
+#include "llvm/ADT/iterator_range.h"
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
@@ -290,6 +291,15 @@ struct pointee_iterator
   T &operator*() const { return **this->I; }
 };
 
+template <typename RangeT, typename WrappedIteratorT =
+                               decltype(std::begin(std::declval<RangeT>()))>
+iterator_range<pointee_iterator<WrappedIteratorT>>
+make_pointee_range(RangeT &&Range) {
+  using PointeeIteratorT = pointee_iterator<WrappedIteratorT>;
+  return make_range(PointeeIteratorT(std::begin(std::forward<RangeT>(Range))),
+                    PointeeIteratorT(std::end(std::forward<RangeT>(Range))));
+}
+
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
@@ -306,6 +316,15 @@ public:
   T &operator*() { return Ptr = &*this->I; }
   const T &operator*() const { return Ptr = &*this->I; }
 };
+
+template <typename RangeT, typename WrappedIteratorT =
+                               decltype(std::begin(std::declval<RangeT>()))>
+iterator_range<pointer_iterator<WrappedIteratorT>>
+make_pointer_range(RangeT &&Range) {
+  using PointerIteratorT = pointer_iterator<WrappedIteratorT>;
+  return make_range(PointerIteratorT(std::begin(std::forward<RangeT>(Range))),
+                    PointerIteratorT(std::end(std::forward<RangeT>(Range))));
+}
 
 } // end namespace llvm
 

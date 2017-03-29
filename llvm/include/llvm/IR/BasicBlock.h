@@ -337,8 +337,11 @@ public:
   bool isLandingPad() const;
 
   /// \brief Return the landingpad instruction associated with the landing pad.
-  LandingPadInst *getLandingPadInst();
   const LandingPadInst *getLandingPadInst() const;
+  LandingPadInst *getLandingPadInst() {
+    return const_cast<LandingPadInst *>(
+                    static_cast<const BasicBlock *>(this)->getLandingPadInst());
+  }
 
 private:
   /// \brief Increment the internal refcount of the number of BlockAddresses

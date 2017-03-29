@@ -1,5 +1,4 @@
 RUN: not LLVMFuzzer-OutOfMemoryTest -rss_limit_mb=300 2>&1 | FileCheck %s
-XFAIL: darwin
 
 CHECK: ERROR: libFuzzer: out-of-memory (used: {{.*}}; limit: 300Mb)
 CHECK: Test unit written to ./oom-

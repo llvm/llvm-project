@@ -211,9 +211,10 @@ public:
   }
 
   bool hasComdat() const { return getComdat() != nullptr; }
-  Comdat *getComdat();
-  const Comdat *getComdat() const {
-    return const_cast<GlobalValue *>(this)->getComdat();
+  const Comdat *getComdat() const;
+  Comdat *getComdat() {
+    return const_cast<Comdat *>(
+                           static_cast<const GlobalValue *>(this)->getComdat());
   }
 
   VisibilityTypes getVisibility() const { return VisibilityTypes(Visibility); }
@@ -514,10 +515,11 @@ public:
   // increased.
   bool canIncreaseAlignment() const;
 
-  const GlobalObject *getBaseObject() const {
-    return const_cast<GlobalValue *>(this)->getBaseObject();
+  const GlobalObject *getBaseObject() const;
+  GlobalObject *getBaseObject() {
+    return const_cast<GlobalObject *>(
+                       static_cast<const GlobalValue *>(this)->getBaseObject());
   }
-  GlobalObject *getBaseObject();
 
   /// Returns whether this is a reference to an absolute symbol.
   bool isAbsoluteSymbolRef() const;

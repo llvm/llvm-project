@@ -437,17 +437,17 @@ enum PointerStripKind {
 };
 
 template <PointerStripKind StripKind>
-static Value *stripPointerCastsAndOffsets(Value *V) {
+static const Value *stripPointerCastsAndOffsets(const Value *V) {
   if (!V->getType()->isPointerTy())
     return V;
 
   // Even though we don't look through PHI nodes, we could be called on an
   // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<Value *, 4> Visited;
+  SmallPtrSet<const Value *, 4> Visited;
 
   Visited.insert(V);
   do {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndicesAndAliases:
       case PSK_ZeroIndices:
@@ -467,13 +467,13 @@ static Value *stripPointerCastsAndOffsets(Value *V) {
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
-    } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
+    } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (StripKind == PSK_ZeroIndices || GA->isInterposable())
         return V;
       V = GA->getAliasee();
     } else {
-      if (auto CS = CallSite(V))
-        if (Value *RV = CS.getReturnedArgOperand()) {
+      if (auto CS = ImmutableCallSite(V))
+        if (const Value *RV = CS.getReturnedArgOperand()) {
           V = RV;
           continue;
         }
@@ -487,20 +487,21 @@ static Value *stripPointerCastsAndOffsets(Value *V) {
 }
 } // end anonymous namespace
 
-Value *Value::stripPointerCasts() {
+const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliases>(this);
 }
 
-Value *Value::stripPointerCastsNoFollowAliases() {
+const Value *Value::stripPointerCastsNoFollowAliases() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
 }
 
-Value *Value::stripInBoundsConstantOffsets() {
+const Value *Value::stripInBoundsConstantOffsets() const {
   return stripPointerCastsAndOffsets<PSK_InBoundsConstantIndices>(this);
 }
 
-Value *Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                        APInt &Offset) {
+const Value *
+Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
+                                                 APInt &Offset) const {
   if (!getType()->isPointerTy())
     return this;
 
@@ -510,11 +511,11 @@ Value *Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
 
   // Even though we don't look through PHI nodes, we could be called on an
   // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<Value *, 4> Visited;
+  SmallPtrSet<const Value *, 4> Visited;
   Visited.insert(this);
-  Value *V = this;
+  const Value *V = this;
   do {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       if (!GEP->isInBounds())
         return V;
       APInt GEPOffset(Offset);
@@ -524,11 +525,11 @@ Value *Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       V = cast<Operator>(V)->getOperand(0);
-    } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
+    } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       V = GA->getAliasee();
     } else {
-      if (auto CS = CallSite(V))
-        if (Value *RV = CS.getReturnedArgOperand()) {
+      if (auto CS = ImmutableCallSite(V))
+        if (const Value *RV = CS.getReturnedArgOperand()) {
           V = RV;
           continue;
         }
@@ -541,7 +542,7 @@ Value *Value::stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
   return V;
 }
 
-Value *Value::stripInBoundsOffsets() {
+const Value *Value::stripInBoundsOffsets() const {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this);
 }
 
@@ -643,9 +644,9 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
   return Align;
 }
 
-Value *Value::DoPHITranslation(const BasicBlock *CurBB,
-                               const BasicBlock *PredBB) {
-  PHINode *PN = dyn_cast<PHINode>(this);
+const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
+                                     const BasicBlock *PredBB) const {
+  auto *PN = dyn_cast<PHINode>(this);
   if (PN && PN->getParent() == CurBB)
     return PN->getIncomingValueForBlock(PredBB);
   return this;

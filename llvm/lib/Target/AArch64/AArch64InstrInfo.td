@@ -43,6 +43,11 @@ def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def UseAlternateSExtLoadCVTF32
     : Predicate<"Subtarget->useAlternateSExtLoadCVTF32Pattern()">;
 
+def UseNegativeImmediates
+    : Predicate<"false">, AssemblerPredicate<"!FeatureNoNegativeImmediates",
+                                             "NegativeImmediates">;
+
+
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
 //
@@ -426,8 +431,10 @@ def MSRpstateImm1 : MSRpstateImm0_1;
 def MSRpstateImm4 : MSRpstateImm0_15;
 
 // The thread pointer (on Linux, at least, where this has been implemented) is
-// TPIDR_EL0.
-def : Pat<(AArch64threadpointer), (MRS 0xde82)>;
+// TPIDR_EL0.  Add pseudo op so we can mark it as not having any side effects.
+let hasSideEffects = 0 in
+def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
+                       [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[]>;
 
 // The cycle counter PMC register is PMCCNTR_EL0.
 let Predicates = [HasPerfMon] in

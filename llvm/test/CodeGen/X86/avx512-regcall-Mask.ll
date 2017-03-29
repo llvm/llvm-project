@@ -251,9 +251,9 @@ entry:
 }
 
 ; CHECK-LABEL:  test_argv16i1:
-; CHECK:        kmovw    %edx, %k{{[0-9]+}}
-; CHECK:        kmovw    %ecx, %k{{[0-9]+}}
-; CHECK:        kmovw    %eax, %k{{[0-9]+}}
+; CHECK:        kmovd    %edx, %k{{[0-9]+}}
+; CHECK:        kmovd    %ecx, %k{{[0-9]+}}
+; CHECK:        kmovd    %eax, %k{{[0-9]+}}
 ; CHECK:        ret{{l|q}}
 
 ; Test regcall when receiving arguments of v16i1 type
@@ -301,9 +301,9 @@ entry:
 }
 
 ; CHECK-LABEL:  test_argv8i1:
-; CHECK:        kmovw    %edx, %k{{[0-9]+}}
-; CHECK:        kmovw    %ecx, %k{{[0-9]+}}
-; CHECK:        kmovw    %eax, %k{{[0-9]+}}
+; CHECK:        kmovd    %edx, %k{{[0-9]+}}
+; CHECK:        kmovd    %ecx, %k{{[0-9]+}}
+; CHECK:        kmovd    %eax, %k{{[0-9]+}}
 ; CHECK:        ret{{l|q}}
 
 ; Test regcall when receiving arguments of v8i1 type
@@ -339,7 +339,7 @@ define x86_regcallcc <8 x i1> @test_retv8i1()  {
 
 ; CHECK-LABEL: caller_retv8i1:
 ; CHECK:       call{{l|q}}   {{_*}}test_retv8i1
-; CHECK:       kmovw %eax, %k{{[0-9]+}}
+; CHECK:       kmovd %eax, %k{{[0-9]+}}
 ; CHECK:       ret{{l|q}}
 
 ; Test regcall when processing result of v8i1 type

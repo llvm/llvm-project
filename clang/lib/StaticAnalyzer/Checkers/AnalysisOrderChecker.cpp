@@ -24,14 +24,27 @@ using namespace ento;
 
 namespace {
 
-class AnalysisOrderChecker : public Checker< check::PreStmt<CastExpr>,
-                                             check::PostStmt<CastExpr>,
-                                             check::PreStmt<ArraySubscriptExpr>,
-                                             check::PostStmt<ArraySubscriptExpr>> {
-  bool isCallbackEnabled(CheckerContext &C, StringRef CallbackName) const {
-    AnalyzerOptions &Opts = C.getAnalysisManager().getAnalyzerOptions();
+class AnalysisOrderChecker
+    : public Checker<check::PreStmt<CastExpr>,
+                     check::PostStmt<CastExpr>,
+                     check::PreStmt<ArraySubscriptExpr>,
+                     check::PostStmt<ArraySubscriptExpr>,
+                     check::Bind,
+                     check::RegionChanges> {
+  bool isCallbackEnabled(AnalyzerOptions &Opts, StringRef CallbackName) const {
     return Opts.getBooleanOption("*", false, this) ||
         Opts.getBooleanOption(CallbackName, false, this);
+  }
+
+  bool isCallbackEnabled(CheckerContext &C, StringRef CallbackName) const {
+    AnalyzerOptions &Opts = C.getAnalysisManager().getAnalyzerOptions();
+    return isCallbackEnabled(Opts, CallbackName);
+  }
+
+  bool isCallbackEnabled(ProgramStateRef State, StringRef CallbackName) const {
+    AnalyzerOptions &Opts = State->getStateManager().getOwningEngine()
+                                 ->getAnalysisManager().getAnalyzerOptions();
+    return isCallbackEnabled(Opts, CallbackName);
   }
 
 public:
@@ -47,17 +60,35 @@ public:
                    << ")\n";
   }
 
-  void checkPreStmt(const ArraySubscriptExpr *SubExpr, CheckerContext &C) const {
+  void checkPreStmt(const ArraySubscriptExpr *SubExpr,
+                    CheckerContext &C) const {
     if (isCallbackEnabled(C, "PreStmtArraySubscriptExpr"))
       llvm::errs() << "PreStmt<ArraySubscriptExpr>\n";
   }
 
-  void checkPostStmt(const ArraySubscriptExpr *SubExpr, CheckerContext &C) const {
+  void checkPostStmt(const ArraySubscriptExpr *SubExpr,
+                     CheckerContext &C) const {
     if (isCallbackEnabled(C, "PostStmtArraySubscriptExpr"))
       llvm::errs() << "PostStmt<ArraySubscriptExpr>\n";
   }
+
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "Bind"))
+      llvm::errs() << "Bind\n";
+  }
+
+  ProgramStateRef
+  checkRegionChanges(ProgramStateRef State,
+                     const InvalidatedSymbols *Invalidated,
+                     ArrayRef<const MemRegion *> ExplicitRegions,
+                     ArrayRef<const MemRegion *> Regions,
+                     const LocationContext *LCtx, const CallEvent *Call) const {
+    if (isCallbackEnabled(State, "RegionChanges"))
+      llvm::errs() << "RegionChanges\n";
+    return State;
+  }
 };
-}
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // Registration.

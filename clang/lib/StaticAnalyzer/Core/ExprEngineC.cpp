@@ -1054,7 +1054,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     // Conjure a new symbol if necessary to recover precision.
     if (Result.isUnknown()){
       DefinedOrUnknownSVal SymVal =
-        svalBuilder.conjureSymbolVal(nullptr, Ex, LCtx,
+        svalBuilder.conjureSymbolVal(nullptr, U, LCtx,
                                      currBldrCtx->blockCount());
       Result = SymVal;
 
