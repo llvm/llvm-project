@@ -69,12 +69,6 @@ public:
     LocalExecTLSModel
   };
 
-  enum FPContractModeKind {
-    FPC_Off,        // Form fused FP ops only where result will not be affected.
-    FPC_On,         // Form fused FP ops according to FP_CONTRACT rules.
-    FPC_Fast        // Aggressively fuse FP ops (E.g. FMA).
-  };
-
   enum StructReturnConventionKind {
     SRCK_Default,  // No special option was passed.
     SRCK_OnStack,  // Small structs on the stack (-fpcc-struct-return).
@@ -224,7 +218,7 @@ public:
   /// flag.
   std::shared_ptr<llvm::Regex> OptimizationRemarkAnalysisPattern;
 
-  /// Set of files definining the rules for the symbol rewriting.
+  /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be

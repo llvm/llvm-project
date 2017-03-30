@@ -14,6 +14,7 @@
 #define LLVM_TOOLS_OBJ2YAML_OBJ2YAML_H
 
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
@@ -23,6 +24,8 @@ std::error_code elf2yaml(llvm::raw_ostream &Out,
                          const llvm::object::ObjectFile &Obj);
 std::error_code macho2yaml(llvm::raw_ostream &Out,
                            const llvm::object::Binary &Obj);
+std::error_code wasm2yaml(llvm::raw_ostream &Out,
+                          const llvm::object::WasmObjectFile &Obj);
 
 // Forward decls for dwarf2yaml
 namespace llvm {

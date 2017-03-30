@@ -20,6 +20,6 @@ int main(int argc, char **argv) {
   __asan_poison_memory_region ((char *)&s2[2], 2);
   r = strcasestr(s1, s2);
   assert(r == 0);
-  // CHECK:'s2' <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK:'s2'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
   return 0;
 }

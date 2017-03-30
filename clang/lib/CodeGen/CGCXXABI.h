@@ -392,7 +392,7 @@ public:
   isVirtualOffsetNeededForVTableField(CodeGenFunction &CGF,
                                       CodeGenFunction::VPtr Vptr) = 0;
 
-  /// Checks if ABI requires to initilize vptrs for given dynamic class.
+  /// Checks if ABI requires to initialize vptrs for given dynamic class.
   virtual bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) = 0;
 
   /// Get the address point of the vtable for the given base subobject.

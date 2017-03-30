@@ -591,7 +591,7 @@ struct FunCloner {
         break;
       }
       case LLVMPHI: {
-        // We need to agressively set things here because of loops.
+        // We need to aggressively set things here because of loops.
         VMap[Src] = Dst = LLVMBuildPhi(Builder, CloneType(Src), Name);
 
         SmallVector<LLVMValueRef, 8> Values;

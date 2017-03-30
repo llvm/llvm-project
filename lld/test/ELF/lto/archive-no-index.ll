@@ -22,10 +22,10 @@
 ; RUN: not ld.lld -emain -m elf_x86_64 %t.o -o %t %T/archive-no-index/libfoo.a \
 ; RUN:     2>&1 | FileCheck --check-prefix=NO-NOTE %s
 
-; NOTE: undefined symbol 'f'
+; NOTE: undefined symbol: f
 ; NOTE: archive listed no symbols
 
-; NO-NOTE: undefined symbol 'f'
+; NO-NOTE: undefined symbol: f
 ; NO-NOTE-NOT: archive listed no symbols
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

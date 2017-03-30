@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
   // CHECK: READ of size 4 at 0x{{.*}} thread T0
   // CHECK:   #0 0x{{.*}} in main
   // CHECK:      {{.*}}use-after-scope-inlined.cc:[[@LINE-4]]
-  // CHECK: Address 0x{{.*}} is located in stack of thread T0 at offset
-  // CHECK:      [[OFFSET:[^ ]*]] in frame
-  // CHECK: main
-  // CHECK:   {{\[}}[[OFFSET]], {{.*}}) 'x.i:[[@LINE-15]]'
+  // CHECK: Address 0x{{.*}} is located in stack of thread T0 at offset [[OFFSET:[^ ]*]] in frame
+  // CHECK:      {{.*}} in main
+  // CHECK:   This frame has
+  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x.i' (line [[@LINE-15]])
 }

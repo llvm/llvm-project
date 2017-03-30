@@ -8,7 +8,7 @@
 // Check that we die after reaching different reports number threshold.
 // RUN: rm -f %t1.log
 // RUN: %env_asan_opts=halt_on_error=false not %run %t 1 >> %t1.log 2>&1
-// RUN: [ $(grep -c 'ERROR: AddressSanitizer: stack-buffer-overflow' %t1.log) -eq 25 ]
+// RUN: grep 'ERROR: AddressSanitizer: stack-buffer-overflow' %t1.log | count 25
 //
 // Check suppress_equal_pcs=true behavior is equal to default one.
 // RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=true %run %t 2>&1 | FileCheck %s
@@ -16,7 +16,7 @@
 // Check suppress_equal_pcs=false behavior isn't equal to default one.
 // RUN: rm -f %t2.log
 // RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t >> %t2.log 2>&1
-// RUN: [ $(grep -c 'ERROR: AddressSanitizer: stack-buffer-overflow' %t2.log) -eq 30 ]
+// RUN: grep 'ERROR: AddressSanitizer: stack-buffer-overflow' %t2.log | count 30
 
 #define ACCESS_ARRAY_FIVE_ELEMENTS(array, i)     \
   array[i] = i;                                  \

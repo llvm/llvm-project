@@ -44,13 +44,13 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  /// Semicolon-seperated list of fully qualified names of memory allocation
+  /// Semicolon-separated list of fully qualified names of memory allocation
   /// functions the check warns about. Defaults to `::malloc;::calloc`.
   const std::string AllocList;
-  /// Semicolon-seperated list of fully qualified names of memory reallocation 
+  /// Semicolon-separated list of fully qualified names of memory reallocation
   /// functions the check warns about. Defaults to `::realloc`.
   const std::string ReallocList;
-  /// Semicolon-seperated list of fully qualified names of memory deallocation 
+  /// Semicolon-separated list of fully qualified names of memory deallocation
   /// functions the check warns about. Defaults to `::free`.
   const std::string DeallocList;
 };

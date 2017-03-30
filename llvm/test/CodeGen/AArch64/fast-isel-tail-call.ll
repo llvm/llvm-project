@@ -1,4 +1,5 @@
-; RUN: llc -fast-isel -fast-isel-verbose -mtriple arm64-- < %s 2> %t | FileCheck %s
+; RUN: llc -fast-isel -pass-remarks-missed=isel -pass-remarks-missed=isel \
+; RUN:     -mtriple arm64-- < %s 2> %t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix MISSED
 
 %struct = type { [4 x i32] }
@@ -10,7 +11,7 @@ declare %struct @external()
 
 ; Here, the %struct extractvalue should fail FastISel.
 
-; MISSED: FastISel miss:   %tmp1 = extractvalue %struct %tmp0, 0
+; MISSED: FastISel missed:   %tmp1 = extractvalue %struct %tmp0, 0
 
 ; CHECK-LABEL: test:
 ; CHECK: b external

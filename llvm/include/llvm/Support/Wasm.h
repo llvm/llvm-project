@@ -30,11 +30,83 @@ struct WasmObjectHeader {
   uint32_t Version;
 };
 
-struct WasmSection {
-  uint32_t Type;             // Section type (See below)
-  uint32_t Offset;           // Offset with in the file
-  StringRef Name;            // Section name (User-defined sections only)
-  ArrayRef<uint8_t> Content; // Section content
+struct WasmSignature {
+  std::vector<int32_t> ParamTypes;
+  int32_t ReturnType;
+};
+
+struct WasmImport {
+  StringRef Module;
+  StringRef Field;
+  uint32_t Kind;
+  union {
+    uint32_t SigIndex;
+    int32_t GlobalType;
+  };
+  bool GlobalMutable;
+};
+
+struct WasmExport {
+  StringRef Name;
+  uint32_t Kind;
+  uint32_t Index;
+};
+
+struct WasmLimits {
+  uint32_t Flags;
+  uint32_t Initial;
+  uint32_t Maximum;
+};
+
+struct WasmTable {
+  int32_t ElemType;
+  WasmLimits Limits;
+};
+
+struct WasmInitExpr {
+  uint8_t Opcode;
+  union {
+    int32_t Int32;
+    int64_t Int64;
+    int32_t Float32;
+    int64_t Float64;
+    uint32_t Global;
+  } Value;
+};
+
+struct WasmGlobal {
+  int32_t Type;
+  bool Mutable;
+  WasmInitExpr InitExpr;
+};
+
+struct WasmLocalDecl {
+  int32_t Type;
+  uint32_t Count;
+};
+
+struct WasmFunction {
+  std::vector<WasmLocalDecl> Locals;
+  ArrayRef<uint8_t> Body;
+};
+
+struct WasmDataSegment {
+  uint32_t Index;
+  WasmInitExpr Offset;
+  ArrayRef<uint8_t> Content;
+};
+
+struct WasmElemSegment {
+  uint32_t TableIndex;
+  WasmInitExpr Offset;
+  std::vector<uint32_t> Functions;
+};
+
+struct WasmRelocation {
+  uint32_t Type;         // The type of the relocation.
+  int32_t Index;         // Index into function to global index space.
+  uint64_t Offset;       // Offset from the start of the section.
+  uint64_t Addend;       // A value to add to the symbol.
 };
 
 enum : unsigned {
@@ -86,6 +158,10 @@ enum : unsigned {
   WASM_NAMES_LOCAL       = 0x2,
 };
 
+enum : unsigned {
+  WASM_LIMITS_FLAG_HAS_MAX = 0x1,
+};
+
 // Subset of types that a value can have
 enum class ValType {
   I32 = WASM_TYPE_I32,
@@ -99,6 +175,8 @@ enum class ValType {
 enum : unsigned {
 #include "WasmRelocs/WebAssembly.def"
 };
+
+#undef WASM_RELOC
 
 } // end namespace wasm
 } // end namespace llvm

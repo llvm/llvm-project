@@ -10,10 +10,10 @@
 // RUN:   -ffp-contract=fast -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefix ENABLED %s
 
-// Explicit -ffp-contract=on -- fusing by front-end (disabled).
+// Explicit -ffp-contract=on -- fusing by front-end.
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -ffp-contract=on -disable-llvm-passes -o - %s \
-// RUN:   | FileCheck -check-prefix DISABLED %s
+// RUN:   | FileCheck -check-prefix ENABLED %s
 
 // Explicit -ffp-contract=off should disable instruction fusing.
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \

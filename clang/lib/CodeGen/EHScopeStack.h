@@ -202,7 +202,7 @@ public:
     template <std::size_t... Is>
     T restore(CodeGenFunction &CGF, llvm::index_sequence<Is...>) {
       // It's important that the restores are emitted in order. The braced init
-      // list guarentees that.
+      // list guarantees that.
       return T{DominatingValue<As>::restore(CGF, std::get<Is>(Saved))...};
     }
 

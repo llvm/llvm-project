@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            EXPORT
+    Exports:         
+      - Name:            foo
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            bar
+        Kind:            FUNCTION
+        Index:           1
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            EXPORT
+# CHECK:     Exports:         
+# CHECK:       - Name:            foo
+# CHECK:         Kind:            FUNCTION
+# CHECK:         Index:           0
+# CHECK:       - Name:            bar
+# CHECK:         Kind:            FUNCTION
+# CHECK:         Index:           1
+# CHECK: ...

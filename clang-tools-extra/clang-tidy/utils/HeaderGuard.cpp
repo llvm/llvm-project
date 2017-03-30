@@ -76,7 +76,7 @@ public:
 
       // We use clang's header guard detection. This has the advantage of also
       // emitting a warning for cases where a pseudo header guard is found but
-      // preceeded by something blocking the header guard optimization.
+      // preceded by something blocking the header guard optimization.
       if (!MI->isUsedForHeaderGuard())
         continue;
 

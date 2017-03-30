@@ -266,7 +266,7 @@ static bool isSafeForCXXConstantCapture(QualType type) {
 static llvm::Constant *tryCaptureAsConstant(CodeGenModule &CGM,
                                             CodeGenFunction *CGF,
                                             const VarDecl *var) {
-  // Return if this is a function paramter. We shouldn't try to
+  // Return if this is a function parameter. We shouldn't try to
   // rematerialize default arguments of function parameters.
   if (isa<ParmVarDecl>(var))
     return nullptr;

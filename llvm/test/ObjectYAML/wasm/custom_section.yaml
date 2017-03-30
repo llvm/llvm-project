@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            foo
+    Payload:         03666F6F0401020304
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:  - Type:            CUSTOM
+# CHECK:    Name:            foo
+# CHECK:    Payload:         03666F6F0401020304
+# CHECK: ...

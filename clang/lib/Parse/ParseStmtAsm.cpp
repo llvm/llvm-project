@@ -452,7 +452,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
         // We're no longer in a comment.
         InAsmComment = false;
         if (isAsm) {
-          // If this is a new __asm {} block we want to process it seperately
+          // If this is a new __asm {} block we want to process it separately
           // from the single-line __asm statements
           if (PP.LookAhead(0).is(tok::l_brace))
             break;

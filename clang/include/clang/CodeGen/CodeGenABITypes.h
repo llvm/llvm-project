@@ -16,7 +16,7 @@
 //
 // It allows other clients, like LLDB, to determine the LLVM types that are
 // actually used in function calls, which makes it possible to then determine
-// the acutal ABI locations (e.g. registers, stack locations, etc.) that
+// the actual ABI locations (e.g. registers, stack locations, etc.) that
 // these parameters are stored in.
 //
 //===----------------------------------------------------------------------===//

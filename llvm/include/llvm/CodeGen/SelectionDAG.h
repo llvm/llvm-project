@@ -36,6 +36,7 @@ namespace llvm {
 class MachineConstantPoolValue;
 class MachineFunction;
 class MDNode;
+class OptimizationRemarkEmitter;
 class SDDbgValue;
 class TargetLowering;
 class SelectionDAGTargetInfo;
@@ -170,6 +171,10 @@ class SelectionDAG {
   MachineFunction *MF;
   LLVMContext *Context;
   CodeGenOpt::Level OptLevel;
+
+  /// The function-level optimization remark emitter.  Used to emit remarks
+  /// whenever manipulating the DAG.
+  OptimizationRemarkEmitter *ORE;
 
   /// The starting token.
   SDNode EntryNode;
@@ -318,7 +323,7 @@ public:
   ~SelectionDAG();
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
-  void init(MachineFunction &mf);
+  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE);
 
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
@@ -331,6 +336,7 @@ public:
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   LLVMContext *getContext() const {return Context; }
+  OptimizationRemarkEmitter &getORE() const { return *ORE; }
 
   /// Pop up a GraphViz/gv window with the DAG rendered using 'dot'.
   void viewGraph(const std::string &Title);

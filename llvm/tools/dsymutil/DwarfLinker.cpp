@@ -363,7 +363,7 @@ private:
   Optional<PatchLocation> UnitRangeAttribute;
   /// @}
 
-  /// \brief Location attributes that need to be transfered from th
+  /// \brief Location attributes that need to be transferred from the
   /// original debug_loc section to the liked one. They are stored
   /// along with the PC offset that is to be applied to their
   /// function's address.
@@ -1084,7 +1084,7 @@ void DwarfStreamer::emitCIE(StringRef CIEBytes) {
 
 /// \brief Emit a FDE into the debug_frame section. \p FDEBytes
 /// contains the FDE data without the length, CIE offset and address
-/// which will be replaced with the paramter values.
+/// which will be replaced with the parameter values.
 void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
                             uint32_t Address, StringRef FDEBytes) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
@@ -3071,7 +3071,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   if (LineTable.Prologue.Version != 2 ||
       LineTable.Prologue.DefaultIsStmt != DWARF2_LINE_DEFAULT_IS_STMT ||
       LineTable.Prologue.OpcodeBase > 13)
-    reportWarning("line table paramters mismatch. Cannot emit.");
+    reportWarning("line table parameters mismatch. Cannot emit.");
   else {
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;

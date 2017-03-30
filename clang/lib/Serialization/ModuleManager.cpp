@@ -244,7 +244,7 @@ void ModuleManager::removeModules(
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
     //
-    // The PCMCache tracks whether the module was succesfully loaded in another
+    // The PCMCache tracks whether the module was successfully loaded in another
     // thread/context; in that case, it won't need to be rebuilt (and we can't
     // safely invalidate it anyway).
     if (LoadedSuccessfully.count(&*victim) == 0 &&

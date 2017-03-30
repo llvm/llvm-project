@@ -987,7 +987,7 @@ void StringLiteral::outputString(raw_ostream &OS) const {
 void StringLiteral::setString(const ASTContext &C, StringRef Str,
                               StringKind Kind, bool IsPascal) {
   //FIXME: we assume that the string data comes from a target that uses the same
-  // code unit size and endianess for the type of string.
+  // code unit size and endianness for the type of string.
   this->Kind = Kind;
   this->IsPascal = IsPascal;
   

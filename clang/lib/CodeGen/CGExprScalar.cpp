@@ -2672,12 +2672,7 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
          "Only fadd/fsub can be the root of an fmuladd.");
 
   // Check whether this op is marked as fusable.
-  if (!op.FPFeatures.isFPContractable())
-    return nullptr;
-
-  // Check whether -ffp-contract=on. (If -ffp-contract=off/fast, fusing is
-  // either disabled, or handled entirely by the LLVM backend).
-  if (CGF.CGM.getCodeGenOpts().getFPContractMode() != CodeGenOptions::FPC_On)
+  if (!op.FPFeatures.allowFPContractWithinStatement())
     return nullptr;
 
   // We have a potentially fusable op. Look for a mul on one of the operands.

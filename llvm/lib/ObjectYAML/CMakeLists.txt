@@ -6,5 +6,6 @@ add_llvm_library(LLVMObjectYAML
   ELFYAML.cpp
   MachOYAML.cpp
   ObjectYAML.cpp
+  WasmYAML.cpp
   YAML.cpp
   )

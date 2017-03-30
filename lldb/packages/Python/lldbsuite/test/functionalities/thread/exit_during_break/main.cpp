@@ -13,7 +13,7 @@
 // breakpoint is hit.  The test case should be flexible enough to treat that
 // as success.
 
-#include <atomic>
+#include "pseudo_barrier.h"
 #include <chrono>
 #include <thread>
 

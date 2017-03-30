@@ -146,7 +146,7 @@ public:
   }
 
   // TODO: consider whether this constructor should be restricted to take
-  // as input a const IndentifierInfo* (instead of Name),
+  // as input a const IdentifierInfo* (instead of Name),
   // forcing other cases towards the constructor taking a DNInfo.
   LookupResult(Sema &SemaRef, DeclarationName Name,
                SourceLocation NameLoc, Sema::LookupNameKind LookupKind,

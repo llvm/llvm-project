@@ -30,6 +30,6 @@ int test_function() {
 //
 // CHECK: [[ADDR]] is located in stack of thread T0 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT: test_function{{.*}}\dll_poison_unpoison.cc
-// CHECK: 'buffer' <== Memory access at offset [[OFFSET]] is inside this variable
+// CHECK: 'buffer'{{.*}} <== Memory access at offset [[OFFSET]] is inside this variable
   return 0;
 }

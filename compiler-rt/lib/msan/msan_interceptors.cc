@@ -123,14 +123,6 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
 #define CHECK_UNPOISONED_STRING(x, n)                           \
     CHECK_UNPOISONED_STRING_OF_LEN((x), internal_strlen(x), (n))
 
-INTERCEPTOR(SIZE_T, fread, void *ptr, SIZE_T size, SIZE_T nmemb, void *file) {
-  ENSURE_MSAN_INITED();
-  SIZE_T res = REAL(fread)(ptr, size, nmemb, file);
-  if (res > 0)
-    __msan_unpoison(ptr, res *size);
-  return res;
-}
-
 #if !SANITIZER_FREEBSD
 INTERCEPTOR(SIZE_T, fread_unlocked, void *ptr, SIZE_T size, SIZE_T nmemb,
             void *file) {

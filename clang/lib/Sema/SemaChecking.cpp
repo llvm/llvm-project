@@ -315,7 +315,7 @@ static bool SemaOpenCLBuiltinKernelWorkGroupSize(Sema &S, CallExpr *TheCall) {
   return checkOpenCLBlockArgs(S, BlockArg);
 }
 
-/// Diagnose integer type and any valid implicit convertion to it.
+/// Diagnose integer type and any valid implicit conversion to it.
 static bool checkOpenCLEnqueueIntType(Sema &S, Expr *E,
                                       const QualType &IntType);
 

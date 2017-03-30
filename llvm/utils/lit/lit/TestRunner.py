@@ -142,13 +142,15 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
     return (finalExitCode, timeoutInfo)
 
+def expand_glob(arg):
+    if isinstance(arg, GlobItem):
+        return arg.resolve()
+    return [arg]
+
 def expand_glob_expressions(args):
     result = [args[0]]
     for arg in args[1:]:
-        if isinstance(arg, GlobItem):
-            result.extend(arg.resolve())
-        else:
-            result.append(arg)
+        result.extend(expand_glob(arg))
     return result
 
 def quote_windows_command(seq):
@@ -250,7 +252,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if os.path.isabs(newdir):
             shenv.cwd = newdir
         else:
-            shenv.cwd = os.path.join(shenv.cwd, newdir)
+            shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
         # The cd builtin always succeeds. If the directory does not exist, the
         # following Popen calls will fail instead.
         return 0
@@ -323,15 +325,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 if r[2] is None:
                     redir_filename = None
-                    if kAvoidDevNull and r[0] == '/dev/null':
+                    name = expand_glob(r[0])
+                    if len(name) != 1:
+                       raise InternalShellError(j,"Unsupported: glob in redirect expanded to multiple files")
+                    name = name[0]
+                    if kAvoidDevNull and name == '/dev/null':
                         r[2] = tempfile.TemporaryFile(mode=r[1])
-                    elif kIsWindows and r[0] == '/dev/tty':
+                    elif kIsWindows and name == '/dev/tty':
                         # Simulate /dev/tty on Windows.
                         # "CON" is a special filename for the console.
                         r[2] = open("CON", r[1])
                     else:
                         # Make sure relative paths are relative to the cwd.
-                        redir_filename = os.path.join(cmd_shenv.cwd, r[0])
+                        redir_filename = os.path.join(cmd_shenv.cwd, name)
                         r[2] = open(redir_filename, r[1])
                     # Workaround a Win32 and/or subprocess bug when appending.
                     #

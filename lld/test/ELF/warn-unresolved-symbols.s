@@ -31,10 +31,17 @@
 # RUN: ld.lld -shared %t1.o -o %t10.so --warn-unresolved-symbols 2>&1 | \
 # RUN:  FileCheck -allow-empty -check-prefix=NOWARN %s
 
-# ERRUND: error: {{.*}}:(.text+0x1): undefined symbol 'undef'
-# WARNUND: warning: {{.*}}:(.text+0x1): undefined symbol 'undef'
-# NOERR-NOT: error: {{.*}}:(.text+0x1): undefined symbol 'undef'
-# NOWARN-NOT: warning: {{.*}}:(.text+0x1): undefined symbol 'undef'
+# ERRUND: error: undefined symbol: undef
+# ERRUND: >>> referenced by {{.*}}:(.text+0x1)
+
+# WARNUND: warning: undefined symbol: undef
+# WARNUND: >>> referenced by {{.*}}:(.text+0x1)
+
+# NOERR-NOT: error: undefined symbol: undef
+# NOERR-NOT: >>> referenced by {{.*}}:(.text+0x1)
+
+# NOWARN-NOT: warning: undefined symbol: undef
+# NOWARN-NOT: >>> referenced by {{.*}}:(.text+0x1)
 
 .globl _start
 _start:

@@ -22,6 +22,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Path.h"
 #include <mutex>
 
 using namespace llvm;
@@ -29,6 +30,7 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
+using namespace llvm::sys;
 
 using namespace lld;
 using namespace lld::elf;
@@ -213,6 +215,62 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
   // If there's no symbol, print out the offset in the section.
   return (SrcFile + ":(" + Name + "+0x" + utohexstr(Offset) + ")").str();
+}
+
+// Returns a source location string. This function is intended to be
+// used for constructing an error message. The returned message looks
+// like this:
+//
+//   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
+//
+// Returns an empty string if there's no way to get line info.
+template <class ELFT> std::string InputSectionBase::getSrcMsg(uint64_t Offset) {
+  // Synthetic sections don't have input files.
+  elf::ObjectFile<ELFT> *File = getFile<ELFT>();
+  if (!File)
+    return "";
+
+  Optional<DILineInfo> Info = File->getDILineInfo(this, Offset);
+
+  // File->SourceFile contains STT_FILE symbol, and that is a last resort.
+  if (!Info)
+    return File->SourceFile;
+
+  std::string Path = Info->FileName;
+  std::string Filename = path::filename(Path);
+  std::string Lineno = ":" + std::to_string(Info->Line);
+  if (Filename == Path)
+    return Filename + Lineno;
+  return Filename + Lineno + " (" + Path + Lineno + ")";
+}
+
+// Returns a filename string along with an optional section name. This
+// function is intended to be used for constructing an error
+// message. The returned message looks like this:
+//
+//   path/to/foo.o:(function bar)
+//
+// or
+//
+//   path/to/foo.o:(function bar) in archive path/to/bar.a
+template <class ELFT> std::string InputSectionBase::getObjMsg(uint64_t Off) {
+  // Synthetic sections don't have input files.
+  elf::ObjectFile<ELFT> *File = getFile<ELFT>();
+  std::string Filename = File ? File->getName() : "(internal)";
+
+  std::string Archive;
+  if (!File->ArchiveName.empty())
+    Archive = (" in archive " + File->ArchiveName).str();
+
+  // Find a symbol that encloses a given location.
+  for (SymbolBody *B : getFile<ELFT>()->getSymbols())
+    if (auto *D = dyn_cast<DefinedRegular>(B))
+      if (D->Section == this && D->Value <= Off && Off < D->Value + D->Size)
+        return Filename + ":(" + toString(*D) + ")" + Archive;
+
+  // If there's no symbol, print out the offset in the section.
+  return (Filename + ":(" + Name + "+0x" + utohexstr(Off) + ")" + Archive)
+      .str();
 }
 
 InputSectionBase InputSectionBase::Discarded;
@@ -832,6 +890,16 @@ template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
+
+template std::string InputSectionBase::getSrcMsg<ELF32LE>(uint64_t);
+template std::string InputSectionBase::getSrcMsg<ELF32BE>(uint64_t);
+template std::string InputSectionBase::getSrcMsg<ELF64LE>(uint64_t);
+template std::string InputSectionBase::getSrcMsg<ELF64BE>(uint64_t);
+
+template std::string InputSectionBase::getObjMsg<ELF32LE>(uint64_t);
+template std::string InputSectionBase::getObjMsg<ELF32BE>(uint64_t);
+template std::string InputSectionBase::getObjMsg<ELF64LE>(uint64_t);
+template std::string InputSectionBase::getObjMsg<ELF64BE>(uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);

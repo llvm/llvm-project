@@ -1,4 +1,4 @@
-//===- MachineFunctionInitalizer.h - machine function initializer ---------===//
+//===- MachineFunctionInitializer.h - machine function initializer ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

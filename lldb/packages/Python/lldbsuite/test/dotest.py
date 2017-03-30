@@ -1061,6 +1061,29 @@ def checkCompiler():
     configuration.compiler = cmd_output.split('\n')[0]
     print("'xcrun -find %s' returning %s" % (c, configuration.compiler))
 
+def canRunLibcxxTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+
+    if lldbplatformutil.target_is_android() or lldbplatformutil.platformIsDarwin():
+        return True, "libc++ always present"
+
+    if platform == "linux":
+        if not os.path.isdir("/usr/include/c++/v1"):
+            return False, "Unable to find libc++ installation"
+        return True, "Headers found, let's hope they work"
+
+    return False, "Don't know how to build with libc++ on %s" % platform
+
+def checkLibcxxSupport():
+    result, reason = canRunLibcxxTests()
+    if result:
+        return # libc++ supported
+    if "libc++" in configuration.categoriesList:
+        return # libc++ category explicitly requested, let it run.
+    print("Libc++ tests will not be run because: " + reason)
+    configuration.skipCategories.append("libc++")
 
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
@@ -1163,6 +1186,8 @@ def run_suite():
         configuration.lldb_platform_url = None
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+
+    checkLibcxxSupport()
 
     # Don't do debugserver tests on everything except OS X.
     configuration.dont_do_debugserver_test = "linux" in target_platform or "freebsd" in target_platform or "windows" in target_platform

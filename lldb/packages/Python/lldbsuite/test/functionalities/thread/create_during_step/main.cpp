@@ -10,7 +10,7 @@
 // This test is intended to create a situation in which one thread will be
 // created while the debugger is stepping in another thread.
 
-#include <atomic>
+#include "pseudo_barrier.h"
 #include <thread>
 
 #define do_nothing()

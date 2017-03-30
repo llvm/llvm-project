@@ -88,7 +88,6 @@ static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
 /// Tag the @p Relation domain with @p TagId
 static __isl_give isl_map *tag(__isl_take isl_map *Relation,
                                __isl_take isl_id *TagId) {
-
   isl_space *Space = isl_map_get_space(Relation);
   Space = isl_space_drop_dims(Space, isl_dim_out, 0,
                               isl_map_dim(Relation, isl_dim_out));

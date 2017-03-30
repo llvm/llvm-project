@@ -3623,7 +3623,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
               m_Intrinsic<Intrinsic::experimental_guard>(m_Value(NextCond)))) {
       Value *CurrCond = II->getArgOperand(0);
 
-      // Remove a guard that it is immediately preceeded by an identical guard.
+      // Remove a guard that it is immediately preceded by an identical guard.
       if (CurrCond == NextCond)
         return eraseInstFromFunction(*NextInst);
 

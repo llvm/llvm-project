@@ -117,8 +117,18 @@
 // RUN: %clang -### -c -gline-tables-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_NO %s
 //
-// RUN: %clang -### -c -grecord-gcc-switches -gno-record-gcc-switches \
-// RUN:        -gstrict-dwarf -gno-strict-dwarf %s 2>&1 \
+// RUN: %clang -### -c -grecord-gcc-switches %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD %s
+// RUN: %clang -### -c -gno-record-gcc-switches %s 2>&1 \
+//             | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-gcc-switches -gno-record-gcc-switches %s 2>&1 \
+//             | FileCheck -check-prefix=GNO_RECORD %s/
+// RUN: %clang -### -c -grecord-gcc-switches -o - %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD_O %s
+// RUN: %clang -### -c -O3 -ffunction-sections -grecord-gcc-switches %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD_OPT %s
+//
+// RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GIGNORE %s
 //
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GOPT %s
@@ -193,6 +203,17 @@
 // This tests asserts that "-gline-tables-only" "-g0" disables debug info.
 // GLTO_NO: "-cc1"
 // GLTO_NO-NOT: -debug-info-kind=
+//
+// GRECORD: "-dwarf-debug-flags"
+// GRECORD: -### -c -grecord-gcc-switches
+//
+// GNO_RECORD-NOT: "-dwarf-debug-flags"
+// GNO_RECORD-NOT: -### -c -grecord-gcc-switches
+//
+// GRECORD_O: "-dwarf-debug-flags"
+// GRECORD_O: -### -c -grecord-gcc-switches -o -
+//
+// GRECORD_OPT: -### -c -O3 -ffunction-sections -grecord-gcc-switches
 //
 // GIGNORE-NOT: "argument unused during compilation"
 //
