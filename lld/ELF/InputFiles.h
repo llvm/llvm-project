@@ -30,6 +30,7 @@
 namespace llvm {
 class DWARFDebugLine;
 class TarWriter;
+struct DILineInfo;
 namespace lto {
 class InputFile;
 }
@@ -175,6 +176,7 @@ public:
   // Returns source line information for a given offset.
   // If no information is available, returns "".
   std::string getLineInfo(InputSectionBase *S, uint64_t Offset);
+  llvm::Optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
 
   // MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support

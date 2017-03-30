@@ -163,6 +163,8 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
+  template <class ELFT> std::string getSrcMsg(uint64_t Offset);
+  template <class ELFT> std::string getObjMsg(uint64_t Offset);
 
   template <class ELFT> void relocate(uint8_t *Buf, uint8_t *BufEnd);
 

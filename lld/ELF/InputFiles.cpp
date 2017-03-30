@@ -92,15 +92,15 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
-                                               uint64_t Offset) {
+Optional<DILineInfo> elf::ObjectFile<ELFT>::getDILineInfo(InputSectionBase *S,
+                                                          uint64_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
 
   // The offset to CU is 0.
   const DWARFDebugLine::LineTable *Tbl = DwarfLine->getLineTable(0);
   if (!Tbl)
-    return "";
+    return None;
 
   // Use fake address calcuated by adding section file offset and offset in
   // section. See comments for ObjectInfo class.
@@ -109,8 +109,18 @@ std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
       S->getOffsetInFile() + Offset, nullptr,
       DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info);
   if (Info.Line == 0)
-    return "";
-  return Info.FileName + ":" + std::to_string(Info.Line);
+    return None;
+  return Info;
+}
+
+// Returns source line information for a given offset
+// using DWARF debug info.
+template <class ELFT>
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
+                                               uint64_t Offset) {
+  if (Optional<DILineInfo> Info = getDILineInfo(S, Offset))
+    return Info->FileName + ":" + std::to_string(Info->Line);
+  return "";
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".

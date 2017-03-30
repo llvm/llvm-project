@@ -616,14 +616,20 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return;
 
-  std::string Msg = S.getLocation<ELFT>(Offset) + ": undefined symbol '" +
-                    toString(Sym) + "'";
+  std::string Msg =
+      "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
+
+  std::string Src = S.getSrcMsg<ELFT>(Offset);
+  if (!Src.empty())
+    Msg += Src + "\n>>>               ";
+  Msg += S.getObjMsg<ELFT>(Offset);
 
   if (Config->UnresolvedSymbols == UnresolvedPolicy::WarnAll ||
       (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal)) {
     warn(Msg);
   } else {
     error(Msg);
+
     if (Config->ArchiveWithoutSymbolsSeen) {
       message("At least one archive listed no symbols in its index."
               " This can happen when creating archives with a version"

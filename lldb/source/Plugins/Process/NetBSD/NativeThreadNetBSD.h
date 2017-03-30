@@ -51,8 +51,11 @@ private:
 
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
   void SetStoppedByBreakpoint();
+  void SetStoppedByTrace();
+  void SetStoppedByExec();
   void SetStopped();
   void SetRunning();
+  void SetStepping();
 
   // ---------------------------------------------------------------------
   // Member Variables
