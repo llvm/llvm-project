@@ -302,6 +302,8 @@ bool SBListener::HandleBroadcastEvent(const SBEvent &event) {
   return false;
 }
 
+lldb::ListenerSP SBListener::GetSP() { return m_opaque_sp; }
+
 Listener *SBListener::operator->() const { return m_opaque_sp.get(); }
 
 Listener *SBListener::get() const { return m_opaque_sp.get(); }
