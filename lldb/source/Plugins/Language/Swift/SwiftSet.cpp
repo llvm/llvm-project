@@ -16,6 +16,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 #include "swift/AST/ASTContext.h"
 #include "llvm/ADT/StringRef.h"
@@ -134,7 +135,7 @@ lldb::ValueObjectSP SwiftSetNativeBufferHandler::GetElementAtIndex(size_t idx) {
 }
 
 ConstString SwiftSetNativeBufferHandler::GetMangledStorageTypeName() {
-  static ConstString g_name("_TtCs22_NativeSetStorageOwner");
+  static ConstString g_name(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22_NativeSetStorageOwner"));
   return g_name;
 }
 

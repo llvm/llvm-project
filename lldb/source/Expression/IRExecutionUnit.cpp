@@ -26,6 +26,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -1252,9 +1253,11 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
         const lldb::addr_t function_offset = function_addr - section_addr;
         llvm::GlobalValue::LinkageTypes linkage = function.getLinkage();
         llvm::StringRef function_name_ref = function.getName();
-        Symbol symbol(++symbol_id, function_name_ref.str().c_str(),
-                      function_name_ref.startswith("_T") ||
-                          function_name_ref.startswith("_Z"), // name_is_mangled
+        std::string function_name = function_name_ref.str();
+        bool is_mangled = SwiftLanguageRuntime::IsSwiftMangledName(function_name.c_str())
+                          || function_name_ref.startswith("_Z");
+        Symbol symbol(++symbol_id, function_name.c_str(),
+                      is_mangled,
                       lldb::eSymbolTypeCode,
                       linkage ==
                           llvm::GlobalValue::ExternalLinkage, //  external
@@ -1291,9 +1294,11 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
             section_sp ? section_sp->GetFileAddress() : 0;
         const lldb::addr_t global_offset = global_addr - section_addr;
         llvm::StringRef global_name_ref = global_var.getName();
+        std::string global_name = global_name_ref.str();
+        bool is_mangled = SwiftLanguageRuntime::IsSwiftMangledName(global_name.c_str())
+                          || global_name_ref.startswith("_Z");
         Symbol symbol(++symbol_id, global_name_ref.str().c_str(),
-                      global_name_ref.startswith("_T") ||
-                          global_name_ref.startswith("_Z"), // name_is_mangled
+                      is_mangled,
                       lldb::eSymbolTypeData,
                       global_var.hasExternalLinkage(), // is_external
                       false,                           // is_debug,

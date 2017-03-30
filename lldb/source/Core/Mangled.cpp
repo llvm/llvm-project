@@ -126,7 +126,7 @@ get_demangled_name_without_arguments(ConstString mangled,
         g_most_recent_mangled_to_name_sans_args.second = result;
         return g_most_recent_mangled_to_name_sans_args.second;
       }
-    } else if (demangled_name_cstr[0] == '_' && demangled_name_cstr[1] == 'T') {
+    } else if (SwiftLanguageRuntime::IsSwiftMangledName(demangled_name_cstr)) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
@@ -364,8 +364,8 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
                SwiftLanguageRuntime::IsSwiftMangledName(mangled_name)) {
       if (log)
         log->Printf("demangle swift: %s", mangled_name);
-      std::string demangled(swift::Demangle::demangleSymbolAsString(
-          mangled_name, strlen(mangled_name)));
+      std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
+          mangled_name));
       if (!demangled.empty()) {
         m_demangled.SetCStringWithMangledCounterpart(demangled.c_str(),
                                                      m_mangled);
@@ -402,17 +402,8 @@ Mangled::GetDisplayDemangledName(lldb::LanguageType language) const {
               demangled)
             break;
 
-          std::function<std::string(const ConstString &)> demangler_call =
-              [](const ConstString &mangled) -> std::string {
-
-            swift::Demangle::DemangleOptions options(
-                swift::Demangle::DemangleOptions::
-                    SimplifiedUIDemangleOptions());
-            return swift::Demangle::demangleSymbolAsString(
-                mangled.GetCString(), mangled.GetLength(), options);
-          };
-
-          std::string demangled_std = demangler_call(m_mangled);
+          std::string demangled_std 
+              = SwiftLanguageRuntime::DemangleSymbolAsString(m_mangled, true);
           if (!demangled_std.empty()) {
             demangled.SetCString(demangled_std.c_str());
             display_cache->Insert(mangled, demangled);

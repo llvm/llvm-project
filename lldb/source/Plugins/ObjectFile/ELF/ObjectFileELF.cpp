@@ -23,6 +23,7 @@
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
@@ -2436,8 +2437,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         mangled.SetDemangledName(ConstString((demangled_name + suffix).str()));
     }
 
-    if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'T' &&
-        symbol_name[2] == 'M' && symbol_name[3] != 0)
+    if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name))
       symbol_type = eSymbolTypeMetadata;
 
     // In ELF all symbol should have a valid size but it is not true for some

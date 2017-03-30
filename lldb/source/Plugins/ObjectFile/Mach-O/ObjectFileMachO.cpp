@@ -35,6 +35,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
@@ -3033,13 +3034,6 @@ size_t ObjectFileMachO::ParseSymtab() {
                           // all the GSYM & global symbols that have the
                           // same address.
 
-                          if (symbol_name && symbol_name[0] == '_' &&
-                              symbol_name[1] == '_' && symbol_name[2] == 'T' &&
-                              symbol_name[3] == 'M' && symbol_name[4] == 'd') {
-                            add_nlist = false;
-                            break;
-                          }
-
                           is_gsym = true;
                           sym[sym_idx].SetExternal(true);
 
@@ -3896,14 +3890,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                                   sym[sym_idx].Clear();
                                   continue;
                                 } else {
-                                  if (symbol_name && symbol_name[0] == '_' &&
-                                      symbol_name[1] == 'T') {
-                                    if (symbol_name[2] == 'W' &&
-                                        symbol_name[3] == 'v' &&
-                                        symbol_name[4] == 'd') {
+                                  if (SwiftLanguageRuntime::IsSwiftSymbol(symbol_name) {
+                                    if (SwiftLanguageRuntime::IsIvarOffset(symbol_name) {
                                       type = eSymbolTypeIVarOffset;
-                                    } else if (symbol_name[2] == 'M' &&
-                                               symbol_name[3] != 0) {
+                                    } else if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name) {
                                       type = eSymbolTypeMetadata;
                                     }
                                   }
@@ -4050,9 +4040,8 @@ size_t ObjectFileMachO::ParseSymtab() {
             // correctly.  To do this right, we should coalesce all the GSYM &
             // global symbols that have the
             // same address.
-            if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == '_' &&
-                symbol_name[2] == 'T' && symbol_name[3] == 'M' &&
-                symbol_name[4] == 'd') {
+            if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == '_'
+                && SwiftLanguageRuntime::IsMetadataSymbol(symbol_name+1)) {
               add_nlist = false;
               break;
             }
@@ -4830,12 +4819,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                     // symbol table
                     sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 |
                                                nlist.n_desc);
-
-                    if (gsym_name[0] == '_' && gsym_name[1] == 'T') {
-                      if (gsym_name[2] == 'W' && gsym_name[3] == 'v' &&
-                          gsym_name[4] == 'd') {
+                    if (SwiftLanguageRuntime::IsSwiftMangledName(gsym_name)) {
+                      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(gsym_name)) {
                         sym[GSYM_sym_idx].SetType(eSymbolTypeIVarOffset);
-                      } else if (gsym_name[2] == 'M' && gsym_name[3] != 0) {
+                      } else if (SwiftLanguageRuntime::IsMetadataSymbol(gsym_name)) {
                         sym[GSYM_sym_idx].SetType(eSymbolTypeMetadata);
                       }
                     }
@@ -4843,12 +4830,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                     sym[sym_idx].Clear();
                     continue;
                   } else {
-                    if (symbol_name && symbol_name[0] == '_' &&
-                        symbol_name[1] == 'T') {
-                      if (symbol_name[2] == 'W' && symbol_name[3] == 'v' &&
-                          symbol_name[4] == 'd') {
+                    if (SwiftLanguageRuntime::IsSwiftMangledName(symbol_name)) { 
+                      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(symbol_name)) {
                         type = eSymbolTypeIVarOffset;
-                      } else if (symbol_name[2] == 'M' && symbol_name[3] != 0) {
+                      } else if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name)) {
                         type = eSymbolTypeMetadata;
                       }
                     }

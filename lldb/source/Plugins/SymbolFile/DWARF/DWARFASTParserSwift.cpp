@@ -27,6 +27,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -84,7 +85,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (!mangled_name && name) {
-    if (name.GetStringRef().startswith("_T"))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString()))
       mangled_name = name;
     else {
       const char *type_name_cstr = name.GetCString();
@@ -119,7 +120,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
   if (!compiler_type && name) {
     if (name.GetStringRef().startswith("$swift.") ||
-        name.GetStringRef().startswith("_TtBp")) {
+        name.GetStringRef().startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtBp").c_str())) {  // This is the RawPointerType, need to figure out its name from the AST.
       swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
       if (swift_ast_ctx)
         compiler_type =
@@ -151,7 +152,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     if (!compiler_type || !compiler_type.IsFunctionType()) {
       // Make sure we at least have some function type. The mangling for the
       // "top_level_code"
-      // is currently returning "_TtT_" which is not a function type...
+      // is currently returning the emptyTupleType (originally "_TtT_") which is not a function type...
       compiler_type = m_ast.GetVoidFunctionType();
     }
     break;
@@ -167,7 +168,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   // cache this type
-  if (type_sp && mangled_name && mangled_name.GetStringRef().startswith("_T"))
+  if (type_sp && mangled_name
+      && SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
     m_ast.SetCachedType(mangled_name, type_sp);
 
   return type_sp;

@@ -14,7 +14,7 @@ Tests catching thrown errors in using the language breakpoint
 """
 import lldb
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import swiftTest
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -24,6 +24,7 @@ class TestSwiftErrorBreakpoint(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @decorators.skipIfLinux  # <rdar://problem/30909618>
     @swiftTest
     def test_swift_error_no_pattern(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
