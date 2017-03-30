@@ -410,7 +410,7 @@ void MachException::Data::Dump() const {
 #define EXC_MASK_RESOURCE (1 << EXC_RESOURCE)
 #endif
 
-#define LLDB_EXC_MASK (EXC_MASK_ALL & ~EXC_MASK_RESOURCE)
+#define LLDB_EXC_MASK (EXC_MASK_ALL & ~EXC_MASK_RESOURCE & ~EXC_MASK_SYSCALL)
 
 kern_return_t MachException::PortInfo::Save(task_t task) {
   DNBLogThreadedIf(LOG_EXCEPTIONS | LOG_VERBOSE,

@@ -12,7 +12,7 @@
 // the breakpoint in the second thread will be hit while the breakpoint handler
 // in the first thread is trying to stop all threads.
 
-#include <atomic>
+#include "pseudo_barrier.h"
 #include <thread>
 
 pseudo_barrier_t g_barrier;

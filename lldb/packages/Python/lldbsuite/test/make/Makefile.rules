@@ -202,7 +202,7 @@ else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 endif
 
-CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(ARCH_CFLAGS)
+CFLAGS += -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR) $(ARCH_CFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
@@ -324,23 +324,21 @@ ifeq (1,$(USE_LIBSTDCPP))
 endif
 
 ifeq (1,$(USE_LIBCPP))
-	# Clang requires an extra flag: -stdlib=libstdc++
-	ifneq (,$(findstring clang,$(CC)))
-		CXXFLAGS += -DLLDB_USING_LIBCPP
-		ifeq "$(OS)" "Linux"
-			# This is the default install location on Ubuntu 14.04
-			ifneq ($(wildcard /usr/include/c++/v1/.),)
-				CXXFLAGS += -stdlib=libc++
-				LDFLAGS += -stdlib=libc++
-				CXXFLAGS += -I/usr/include/c++/v1
-			endif
-		else ifeq "$(OS)" "Android"
-			# Nothing to do, this is already handled in
-			# Android.rules.
-		else
+	CXXFLAGS += -DLLDB_USING_LIBCPP
+	ifeq "$(OS)" "Linux"
+		ifneq (,$(findstring clang,$(CC)))
 			CXXFLAGS += -stdlib=libc++
 			LDFLAGS += -stdlib=libc++
+		else
+			CXXFLAGS += -isystem /usr/include/c++/v1
+			LDFLAGS += -lc++
 		endif
+	else ifeq "$(OS)" "Android"
+		# Nothing to do, this is already handled in
+		# Android.rules.
+	else
+		CXXFLAGS += -stdlib=libc++
+		LDFLAGS += -stdlib=libc++
 	endif
 endif
 

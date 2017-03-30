@@ -162,7 +162,7 @@ public:
   BssSection(StringRef Name);
   void writeTo(uint8_t *) override {}
   bool empty() const override { return getSize() == 0; }
-  size_t reserveSpace(size_t Size, uint32_t Alignment);
+  size_t reserveSpace(uint64_t Size, uint32_t Alignment);
   size_t getSize() const override { return Size; }
 
 private:
@@ -433,8 +433,6 @@ private:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 template <class ELFT>
 class GnuHashTableSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
   GnuHashTableSection();
   void finalizeContents() override;
@@ -446,7 +444,7 @@ public:
   void addSymbols(std::vector<SymbolTableEntry> &Symbols);
 
 private:
-  size_t getShift2() const { return ELFT::Is64Bits ? 6 : 5; }
+  size_t getShift2() const { return Config->Is64 ? 6 : 5; }
 
   void writeBloomFilter(uint8_t *Buf);
   void writeHashTable(uint8_t *Buf);
