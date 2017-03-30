@@ -370,12 +370,6 @@ TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language)
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 
-SwiftASTContext *Module::GetSwiftASTContextNoCreate() {
-  return llvm::dyn_cast_or_null<SwiftASTContext>(
-      m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
-                                                 false));
-}
-
 void Module::ParseAllDebugSymbols() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   size_t num_comp_units = GetNumCompileUnits();
@@ -1604,7 +1598,9 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Error &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
-    if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+    if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
+            m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
+                                                       false)))
       swift_ast->SetTriple(new_arch.GetTriple().str().c_str());
     return true;
   }
@@ -1705,7 +1701,9 @@ Module::CreateJITModule(const lldb::ObjectFileJITDelegateSP &delegate_sp) {
 }
 
 void Module::ClearModuleDependentCaches() {
-  if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+  if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
+          m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
+                                                     false)))
     swift_ast->ClearModuleDependentCaches();
 }
 
