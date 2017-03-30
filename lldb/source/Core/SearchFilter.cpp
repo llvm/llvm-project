@@ -14,9 +14,9 @@
 // Project includes
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
