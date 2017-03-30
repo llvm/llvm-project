@@ -10,6 +10,7 @@
 // This test is intended to create a situation in which one thread will exit
 // while the debugger is stepping in another thread.
 
+#include "pseudo_barrier.h"
 #include <thread>
 
 #define do_nothing()

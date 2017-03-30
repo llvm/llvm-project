@@ -14643,6 +14643,12 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
 
+  // A shuffle of a splat is always the splat itself:
+  // shuffle (splat-shuffle), undef, M --> splat-shuffle
+  if (auto *N0Shuf = dyn_cast<ShuffleVectorSDNode>(N0))
+    if (N1.isUndef() && N0Shuf->isSplat())
+      return N0;
+
   // If it is a splat, check if the argument vector is another splat or a
   // build_vector.
   if (SVN->isSplat() && SVN->getSplatIndex() < (int)NumElts) {

@@ -39,6 +39,7 @@
 #include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -475,6 +476,10 @@ private:
   /// entities should not be instrumented.
   std::unique_ptr<SanitizerBlacklist> SanitizerBL;
 
+  /// \breif Function filtering mehcanism to determine whether a given function
+  /// should be imbued with the XRay "always" or "never" attributes.
+  std::unique_ptr<XRayFunctionFilter> XRayFilter;
+
   /// \brief The allocator used to create AST objects.
   ///
   /// AST objects are never destructed; rather, all memory associated with the
@@ -655,6 +660,10 @@ public:
 
   const SanitizerBlacklist &getSanitizerBlacklist() const {
     return *SanitizerBL;
+  }
+
+  const XRayFunctionFilter &getXRayFilter() const {
+    return *XRayFilter;
   }
 
   DiagnosticsEngine &getDiagnostics() const;

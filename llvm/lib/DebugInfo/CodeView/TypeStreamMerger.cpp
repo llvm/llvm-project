@@ -126,8 +126,11 @@ private:
   FieldListRecordBuilder FieldListBuilder;
   TypeServerHandler *Handler;
 
-  bool IsInFieldList = false;
+#ifndef NDEBUG
+  /// Track the size of the index map in visitTypeBegin so we can check it in
+  /// visitTypeEnd.
   size_t BeginIndexMapSize = 0;
+#endif
 
   /// Map from source type index to destination type index. Indexed by source
   /// type index minus 0x1000.
@@ -137,26 +140,19 @@ private:
 } // end anonymous namespace
 
 Error TypeStreamMerger::visitTypeBegin(CVRecord<TypeLeafKind> &Rec) {
-  if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
-    assert(!IsInFieldList);
-    IsInFieldList = true;
-    FieldListBuilder.begin();
-  } else
-    BeginIndexMapSize = IndexMap.size();
+#ifndef NDEBUG
+  BeginIndexMapSize = IndexMap.size();
+#endif
   return Error::success();
 }
 
 Error TypeStreamMerger::visitTypeEnd(CVRecord<TypeLeafKind> &Rec) {
-  if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
-    TypeIndex Index = FieldListBuilder.end();
-    IndexMap.push_back(Index);
-    IsInFieldList = false;
-  }
+  assert(IndexMap.size() == BeginIndexMapSize + 1 &&
+         "visitKnownRecord should add one index map entry");
   return Error::success();
 }
 
 Error TypeStreamMerger::visitMemberEnd(CVMemberRecord &Rec) {
-  assert(IndexMap.size() == BeginIndexMapSize + 1);
   return Error::success();
 }
 
@@ -322,9 +318,12 @@ Error TypeStreamMerger::visitKnownRecord(CVType &,
 
 Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
   // Visit the members inside the field list.
+  FieldListBuilder.begin();
   CVTypeVisitor Visitor(*this);
   if (auto EC = Visitor.visitFieldListMemberStream(R.Data))
     return EC;
+  TypeIndex Index = FieldListBuilder.end();
+  IndexMap.push_back(Index);
   return Error::success();
 }
 

@@ -58,6 +58,7 @@ add_clang_library(clangDriver
   ToolChains/WebAssembly.cpp
   ToolChains/XCore.cpp
   Types.cpp
+  XRayArgs.cpp
 
   DEPENDS
   ClangDriverOptions

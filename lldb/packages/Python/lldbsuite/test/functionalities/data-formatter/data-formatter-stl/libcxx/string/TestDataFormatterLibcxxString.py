@@ -23,9 +23,10 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
+        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
+        self.namespace = 'std::__' + ns + '1'
 
-    @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -35,9 +36,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self, "main.cpp", self.line, num_expected_locations=-1)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -58,17 +56,18 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
+        ns = self.namespace
         self.expect(
             "frame variable",
             substrs=[
-                '(std::__1::wstring) s = L"hello world! מזל טוב!"',
-                '(std::__1::wstring) S = L"!!!!"',
+                '(%s::wstring) s = L"hello world! מזל טוב!"'%ns,
+                '(%s::wstring) S = L"!!!!"'%ns,
                 '(const wchar_t *) mazeltov = 0x',
                 'L"מזל טוב"',
-                '(std::__1::string) q = "hello world"',
-                '(std::__1::string) Q = "quite a long std::strin with lots of info inside it"',
-                '(std::__1::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"',
-                '(std::__1::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'])
+                '(%s::string) q = "hello world"'%ns,
+                '(%s::string) Q = "quite a long std::strin with lots of info inside it"'%ns,
+                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"'%ns,
+                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'%ns])
 
         self.runCmd("n")
 
@@ -91,11 +90,11 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
-                '(std::__1::wstring) s = L"hello world! מזל טוב!"',
-                '(std::__1::wstring) S = L"!!!!!"',
+                '(%s::wstring) s = L"hello world! מזל טוב!"'%ns,
+                '(%s::wstring) S = L"!!!!!"'%ns,
                 '(const wchar_t *) mazeltov = 0x',
                 'L"מזל טוב"',
-                '(std::__1::string) q = "hello world"',
-                '(std::__1::string) Q = "quite a long std::strin with lots of info inside it"',
-                '(std::__1::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"',
-                '(std::__1::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'])
+                '(%s::string) q = "hello world"'%ns,
+                '(%s::string) Q = "quite a long std::strin with lots of info inside it"'%ns,
+                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"'%ns,
+                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'%ns])

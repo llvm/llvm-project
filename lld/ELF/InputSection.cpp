@@ -819,59 +819,47 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
   return Piece.OutputOff + Addend;
 }
 
-template InputSection::InputSection(elf::ObjectFile<ELF32LE> *F,
-                                    const ELF32LE::Shdr *Header,
-                                    StringRef Name);
-template InputSection::InputSection(elf::ObjectFile<ELF32BE> *F,
-                                    const ELF32BE::Shdr *Header,
-                                    StringRef Name);
-template InputSection::InputSection(elf::ObjectFile<ELF64LE> *F,
-                                    const ELF64LE::Shdr *Header,
-                                    StringRef Name);
-template InputSection::InputSection(elf::ObjectFile<ELF64BE> *F,
-                                    const ELF64BE::Shdr *Header,
-                                    StringRef Name);
+template InputSection::InputSection(elf::ObjectFile<ELF32LE> *,
+                                    const ELF32LE::Shdr *, StringRef);
+template InputSection::InputSection(elf::ObjectFile<ELF32BE> *,
+                                    const ELF32BE::Shdr *, StringRef);
+template InputSection::InputSection(elf::ObjectFile<ELF64LE> *,
+                                    const ELF64LE::Shdr *, StringRef);
+template InputSection::InputSection(elf::ObjectFile<ELF64BE> *,
+                                    const ELF64BE::Shdr *, StringRef);
 
-template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t Offset);
-template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t Offset);
-template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t Offset);
-template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t Offset);
+template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t);
+template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
+template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
+template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
 
-template void InputSection::writeTo<ELF32LE>(uint8_t *Buf);
-template void InputSection::writeTo<ELF32BE>(uint8_t *Buf);
-template void InputSection::writeTo<ELF64LE>(uint8_t *Buf);
-template void InputSection::writeTo<ELF64BE>(uint8_t *Buf);
+template void InputSection::writeTo<ELF32LE>(uint8_t *);
+template void InputSection::writeTo<ELF32BE>(uint8_t *);
+template void InputSection::writeTo<ELF64LE>(uint8_t *);
+template void InputSection::writeTo<ELF64BE>(uint8_t *);
 
 template elf::ObjectFile<ELF32LE> *InputSectionBase::getFile<ELF32LE>() const;
 template elf::ObjectFile<ELF32BE> *InputSectionBase::getFile<ELF32BE>() const;
 template elf::ObjectFile<ELF64LE> *InputSectionBase::getFile<ELF64LE>() const;
 template elf::ObjectFile<ELF64BE> *InputSectionBase::getFile<ELF64BE>() const;
 
-template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF32LE> *F,
-                                              const ELF32LE::Shdr *Header,
-                                              StringRef Name);
-template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF32BE> *F,
-                                              const ELF32BE::Shdr *Header,
-                                              StringRef Name);
-template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF64LE> *F,
-                                              const ELF64LE::Shdr *Header,
-                                              StringRef Name);
-template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF64BE> *F,
-                                              const ELF64BE::Shdr *Header,
-                                              StringRef Name);
+template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF32LE> *,
+                                              const ELF32LE::Shdr *, StringRef);
+template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF32BE> *,
+                                              const ELF32BE::Shdr *, StringRef);
+template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF64LE> *,
+                                              const ELF64LE::Shdr *, StringRef);
+template MergeInputSection::MergeInputSection(elf::ObjectFile<ELF64BE> *,
+                                              const ELF64BE::Shdr *, StringRef);
 
-template EhInputSection::EhInputSection(elf::ObjectFile<ELF32LE> *F,
-                                        const ELF32LE::Shdr *Header,
-                                        StringRef Name);
-template EhInputSection::EhInputSection(elf::ObjectFile<ELF32BE> *F,
-                                        const ELF32BE::Shdr *Header,
-                                        StringRef Name);
-template EhInputSection::EhInputSection(elf::ObjectFile<ELF64LE> *F,
-                                        const ELF64LE::Shdr *Header,
-                                        StringRef Name);
-template EhInputSection::EhInputSection(elf::ObjectFile<ELF64BE> *F,
-                                        const ELF64BE::Shdr *Header,
-                                        StringRef Name);
+template EhInputSection::EhInputSection(elf::ObjectFile<ELF32LE> *,
+                                        const ELF32LE::Shdr *, StringRef);
+template EhInputSection::EhInputSection(elf::ObjectFile<ELF32BE> *,
+                                        const ELF32BE::Shdr *, StringRef);
+template EhInputSection::EhInputSection(elf::ObjectFile<ELF64LE> *,
+                                        const ELF64LE::Shdr *, StringRef);
+template EhInputSection::EhInputSection(elf::ObjectFile<ELF64BE> *,
+                                        const ELF64BE::Shdr *, StringRef);
 
 template void EhInputSection::split<ELF32LE>();
 template void EhInputSection::split<ELF32BE>();
