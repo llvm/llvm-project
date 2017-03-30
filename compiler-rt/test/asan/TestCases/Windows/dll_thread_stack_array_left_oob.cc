@@ -16,7 +16,7 @@ DWORD WINAPI thread_proc(void *context) {
 // CHECK: Address [[ADDR]] is located in stack of thread T1 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT:  thread_proc{{.*}}dll_thread_stack_array_left_oob.cc
 //
-// CHECK: 'stack_buffer' <== Memory access at offset [[OFFSET]] underflows this variable
+// CHECK: 'stack_buffer'{{.*}} <== Memory access at offset [[OFFSET]] underflows this variable
 
   return 0;
 }

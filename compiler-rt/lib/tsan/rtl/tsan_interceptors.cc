@@ -1648,24 +1648,6 @@ TSAN_INTERCEPTOR(void*, tmpfile64, int fake) {
 #define TSAN_MAYBE_INTERCEPT_TMPFILE64
 #endif
 
-TSAN_INTERCEPTOR(uptr, fread, void *ptr, uptr size, uptr nmemb, void *f) {
-  // libc file streams can call user-supplied functions, see fopencookie.
-  {
-    SCOPED_TSAN_INTERCEPTOR(fread, ptr, size, nmemb, f);
-    MemoryAccessRange(thr, pc, (uptr)ptr, size * nmemb, true);
-  }
-  return REAL(fread)(ptr, size, nmemb, f);
-}
-
-TSAN_INTERCEPTOR(uptr, fwrite, const void *p, uptr size, uptr nmemb, void *f) {
-  // libc file streams can call user-supplied functions, see fopencookie.
-  {
-    SCOPED_TSAN_INTERCEPTOR(fwrite, p, size, nmemb, f);
-    MemoryAccessRange(thr, pc, (uptr)p, size * nmemb, false);
-  }
-  return REAL(fwrite)(p, size, nmemb, f);
-}
-
 static void FlushStreams() {
   // Flushing all the streams here may freeze the process if a child thread is
   // performing file stream operations at the same time.

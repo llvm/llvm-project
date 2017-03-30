@@ -3502,6 +3502,21 @@ TEST(MemorySanitizer, getgroups) {
     EXPECT_NOT_POISONED(gids[i]);
 }
 
+TEST(MemorySanitizer, getgroups_zero) {
+  gid_t group;
+  int n = getgroups(0, &group);
+  ASSERT_GE(n, 0);
+}
+
+TEST(MemorySanitizer, getgroups_negative) {
+  gid_t group;
+  int n = getgroups(-1, 0);
+  ASSERT_EQ(-1, n);
+
+  n = getgroups(-1, 0);
+  ASSERT_EQ(-1, n);
+}
+
 TEST(MemorySanitizer, wordexp) {
   wordexp_t w;
   int res = wordexp("a b c", &w, 0);
