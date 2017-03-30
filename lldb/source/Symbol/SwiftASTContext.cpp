@@ -23,7 +23,7 @@
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/IRGenOptions.h"
-#include "swift/AST/Mangle.h"
+#include "swift/AST/ASTMangler.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/Type.h"
@@ -61,6 +61,7 @@
 #include "swift/../../lib/IRGen/FixedTypeInfo.h"
 #include "swift/../../lib/IRGen/GenEnum.h"
 #include "swift/../../lib/IRGen/GenHeap.h"
+#include "swift/../../lib/IRGen/IRGenMangler.h"
 #include "swift/../../lib/IRGen/IRGenModule.h"
 #include "swift/../../lib/IRGen/Linking.h"
 #include "swift/../../lib/IRGen/TypeInfo.h"
@@ -80,10 +81,10 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Expression/DiagnosticManager.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -93,6 +94,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 
@@ -4026,9 +4028,8 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
   bool has_archetypes = swift_type->hasArchetype();
 
   if (!has_archetypes) {
-    swift::Mangle::Mangler mangler(true);
-    mangler.mangleTypeForDebugger(swift_type, nullptr);
-    std::string s = mangler.finalize();
+    swift::Mangle::ASTMangler mangler(true);
+    std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr, nullptr);
 
     if (!s.empty()) {
       ConstString mangled_cs(s.c_str());
@@ -7551,9 +7552,8 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
       }
 
       if (the_value_decl) {
-        swift::Mangle::Mangler mangler;
-        mangler.mangleFieldOffsetFull(the_value_decl, false);
-        std::string buffer = mangler.finalize();
+        swift::irgen::IRGenMangler mangler;
+        std::string buffer = mangler.mangleFieldOffsetFull(the_value_decl, false);
 
         StreamString symbol_name;
         symbol_name.Printf("%s", buffer.c_str());
