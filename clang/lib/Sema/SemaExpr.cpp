@@ -9340,7 +9340,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     //   If both operands are pointers, [...] bring them to their composite
     //   pointer type.
     if ((int)LHSType->isPointerType() + (int)RHSType->isPointerType() >=
-        (IsRelational ? 2 : 1)) {
+            (IsRelational ? 2 : 1) &&
+        (!LangOpts.ObjCAutoRefCount ||
+         !(LHSType->isObjCObjectPointerType() ||
+           RHSType->isObjCObjectPointerType()))) {
       if (convertPointersToCompositeType(*this, Loc, LHS, RHS))
         return QualType();
       else
