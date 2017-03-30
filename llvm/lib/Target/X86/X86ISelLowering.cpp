@@ -3664,7 +3664,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (VA.isRegLoc()) {
         if (VA.needsCustom()) {
           assert((CallConv == CallingConv::X86_RegCall) &&
-                 "Expecting custome case only in regcall calling convention");
+                 "Expecting custom case only in regcall calling convention");
           // This means that we are in special case where one argument was
           // passed through two register locations - Skip the next location
           ++I;
@@ -9362,7 +9362,7 @@ static SDValue lowerVectorShuffleWithSSE4A(const SDLoc &DL, MVT VT, SDValue V1,
 /// Given a specific number of elements, element bit width, and extension
 /// stride, produce either a zero or any extension based on the available
 /// features of the subtarget. The extended elements are consecutive and
-/// begin and can start from an offseted element index in the input; to
+/// begin and can start from an offsetted element index in the input; to
 /// avoid excess shuffling the offset must either being in the bottom lane
 /// or at the start of a higher lane. All extended elements must be from
 /// the same lane.
@@ -9402,7 +9402,7 @@ static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
   // Found a valid zext mask! Try various lowering strategies based on the
   // input type and available ISA extensions.
   if (Subtarget.hasSSE41()) {
-    // Not worth offseting 128-bit vectors if scale == 2, a pattern using
+    // Not worth offsetting 128-bit vectors if scale == 2, a pattern using
     // PUNPCK will catch this in a later shuffle match.
     if (Offset && Scale == 2 && VT.is128BitVector())
       return SDValue();
@@ -10736,7 +10736,7 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // We implement this with SHUFPS because it can blend from two vectors.
   // Because we're going to eventually use SHUFPS, we use SHUFPS even to build
-  // up the inputs, bypassing domain shift penalties that we would encur if we
+  // up the inputs, bypassing domain shift penalties that we would incur if we
   // directly used PSHUFD on Nehalem and older. For newer chips, this isn't
   // relevant.
   SDValue CastV1 = DAG.getBitcast(MVT::v4f32, V1);
@@ -10767,7 +10767,7 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   assert(VT.getVectorElementType() == MVT::i16 && "Bad input type!");
   MVT PSHUFDVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() / 2);
 
-  assert(Mask.size() == 8 && "Shuffle mask length doen't match!");
+  assert(Mask.size() == 8 && "Shuffle mask length doesn't match!");
   MutableArrayRef<int> LoMask = Mask.slice(0, 4);
   MutableArrayRef<int> HiMask = Mask.slice(4, 4);
 
@@ -11573,7 +11573,7 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
             PostDupI16Shuffle[i / 2] = MappedMask;
           else
             assert(PostDupI16Shuffle[i / 2] == MappedMask &&
-                   "Conflicting entrties in the original shuffle!");
+                   "Conflicting entries in the original shuffle!");
         }
       return DAG.getBitcast(
           MVT::v16i8,
@@ -14450,7 +14450,7 @@ unsigned X86TargetLowering::getGlobalWrapperKind(const GlobalValue *GV) const {
 }
 
 // ConstantPool, JumpTable, GlobalAddress, and ExternalSymbol are lowered as
-// their target countpart wrapped in the X86ISD::Wrapper node. Suppose N is
+// their target counterpart wrapped in the X86ISD::Wrapper node. Suppose N is
 // one of the above mentioned nodes. It has to be wrapped because otherwise
 // Select(N) returns N. So the raw TargetGlobalAddress nodes, etc. can only
 // be used to form addressing mode. These wrapped nodes will be selected
@@ -14826,7 +14826,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
       Subtarget.isTargetWindowsItanium() ||
       Subtarget.isTargetWindowsGNU()) {
     // Just use the implicit TLS architecture
-    // Need to generate someting similar to:
+    // Need to generate something similar to:
     //   mov     rdx, qword [gs:abs 58H]; Load pointer to ThreadLocalStorage
     //                                  ; from TEB
     //   mov     ecx, dword [rel _tls_index]: Load index (from C runtime)
@@ -15907,7 +15907,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if ((VT == MVT::v8i16) && (InVT == MVT::v8i32)) {
-    // On AVX2, v8i32 -> v8i16 becomed PSHUFB.
+    // On AVX2, v8i32 -> v8i16 becomes PSHUFB.
     if (Subtarget.hasInt256()) {
       In = DAG.getBitcast(MVT::v32i8, In);
 
@@ -16727,7 +16727,7 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
 }
 
 /// If we have at least two divisions that use the same divisor, convert to
-/// multplication by a reciprocal. This may need to be adjusted for a given
+/// multiplication by a reciprocal. This may need to be adjusted for a given
 /// CPU if a division's cost is not at least twice the cost of a multiplication.
 /// This is because we still need one division to calculate the reciprocal and
 /// then we need two multiplies by that reciprocal as replacements for the
@@ -22965,7 +22965,7 @@ static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, const SDLoc &DL,
   // index into a in-register pre-computed pop count table. We then split up the
   // input vector in two new ones: (1) a vector with only the shifted-right
   // higher nibbles for each byte and (2) a vector with the lower nibbles (and
-  // masked out higher ones) for each byte. PSHUB is used separately with both
+  // masked out higher ones) for each byte. PSHUFB is used separately with both
   // to index the in-register table. Next, both are added and the result is a
   // i8 vector where each element contains the pop count for input byte.
   //
@@ -23582,7 +23582,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   // Mask element has to be i1.
   MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
   assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
-         "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
+         "We handle 4x32, 4x64 and 2x64 vectors only in this case");
 
   MVT WideMaskVT = MVT::getVectorVT(MaskEltTy, NumEltsInWideVec);
 
@@ -23638,7 +23638,7 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   // Mask element has to be i1.
   MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
   assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
-         "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
+         "We handle 4x32, 4x64 and 2x64 vectors only in this case");
 
   MVT WideMaskVT = MVT::getVectorVT(MaskEltTy, NumEltsInWideVec);
 
@@ -23698,7 +23698,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     Mask = ExtendToType(Mask, ExtMaskVT, DAG, true);
     Mask = DAG.getNode(ISD::TRUNCATE, dl, MaskBitVT, Mask);
 
-    // The pass-thru value
+    // The pass-through value
     MVT NewVT = MVT::getVectorVT(VT.getScalarType(), NumElts);
     Src0 = ExtendToType(Src0, NewVT, DAG);
 
@@ -25391,7 +25391,7 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
   //
   //   (CMOV (CMOV F, T, cc1), T, cc2)
   //
-  // to two successives branches.  For that, we look for another CMOV as the
+  // to two successive branches.  For that, we look for another CMOV as the
   // following instruction.
   //
   // Without this, we would add a PHI between the two jumps, which ends up

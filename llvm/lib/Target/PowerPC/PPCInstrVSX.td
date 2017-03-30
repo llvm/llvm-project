@@ -2198,7 +2198,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   } // UseVSXReg = 1
 
   // Pattern for matching Vector HP -> Vector SP intrinsic. Defined as a
-  // seperate pattern so that it can convert the input register class from
+  // separate pattern so that it can convert the input register class from
   // VRRC(v8i16) to VSRC.
   def : Pat<(v4f32 (int_ppc_vsx_xvcvhpsp v8i16:$A)),
             (v4f32 (XVCVHPSP (COPY_TO_REGCLASS $A, VSRC)))>;

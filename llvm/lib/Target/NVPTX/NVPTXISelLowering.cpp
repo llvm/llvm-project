@@ -1556,7 +1556,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         }
         ++OIdx;
       }
-      assert(StoreOperands.empty() && "Unfinished paramter store.");
+      assert(StoreOperands.empty() && "Unfinished parameter store.");
       if (VTs.size() > 0)
         --OIdx;
       ++paramCount;

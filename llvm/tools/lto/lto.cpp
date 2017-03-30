@@ -272,7 +272,7 @@ lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
 
-  // Create a local context. Ownership will be transfered to LTOModule.
+  // Create a local context. Ownership will be transferred to LTOModule.
   std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
   Context->setDiagnosticHandler(diagnosticHandler, nullptr, true);
 

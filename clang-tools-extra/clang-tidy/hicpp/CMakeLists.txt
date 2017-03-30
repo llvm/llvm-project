@@ -10,5 +10,10 @@ add_clang_library(clangTidyHICPPModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyCppCoreGuidelinesModule
+  clangTidyGoogleModule
+  clangTidyMiscModule
+  clangTidyModernizeModule
+  clangTidyReadabilityModule
   clangTidyUtils
   )

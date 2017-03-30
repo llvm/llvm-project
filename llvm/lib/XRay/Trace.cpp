@@ -332,7 +332,7 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
 /// The following is an attempt to document the grammar of the format, which is
 /// parsed by this function for little-endian machines. Since the format makes
 /// use of BitFields, when we support big-Endian architectures, we will need to
-/// adjust not only the endianess parameter to llvm's RecordExtractor, but also
+/// adjust not only the endianness parameter to llvm's RecordExtractor, but also
 /// the bit twiddling logic, which is consistent with the little-endian
 /// convention that BitFields within a struct will first be packed into the
 /// least significant bits the address they belong to.
