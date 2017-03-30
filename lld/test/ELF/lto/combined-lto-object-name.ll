@@ -11,4 +11,6 @@ define void @_start() {
   ret void
 }
 
-; CHECK: error: ld-temp.o:(function _start): undefined symbol 'foo'
+; CHECK: error: undefined symbol: foo
+; CHECK: >>> referenced by ld-temp.o
+; CHECK:                   {{.*}}:(_start)

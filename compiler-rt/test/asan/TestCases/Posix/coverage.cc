@@ -2,15 +2,15 @@
 // RUN: %clangxx_asan -fsanitize-coverage=func %s %ld_flags_rpath_exe -o %t
 // RUN: rm -rf %T/coverage && mkdir -p %T/coverage && cd %T/coverage
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1         | FileCheck %s --check-prefix=CHECK-main
-// RUN: %sancov print `ls coverage.*sancov | grep -v '.so'` 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV1
+// RUN: %sancov print coverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV1
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t foo 2>&1     | FileCheck %s --check-prefix=CHECK-foo
-// RUN: %sancov print `ls coverage.*sancov | grep -v '.so'` 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
+// RUN: %sancov print coverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t bar 2>&1     | FileCheck %s --check-prefix=CHECK-bar
-// RUN: %sancov print `ls *coverage.*sancov | grep -v '.so'` 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
+// RUN: %sancov print coverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t foo bar 2>&1 | FileCheck %s --check-prefix=CHECK-foo-bar
-// RUN: %sancov print `ls *coverage.*sancov | grep -v '.so'` 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
-// RUN: %sancov print `ls *coverage.*sancov | grep '.so'` 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV1
-// RUN: %sancov merge `ls *coverage.*sancov | grep -v '.so'` > merged-cov
+// RUN: %sancov print coverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
+// RUN: %sancov print libcoverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV1
+// RUN: %sancov merge coverage.*sancov > merged-cov
 // RUN: %sancov print merged-cov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4    2>&1 | FileCheck %s --check-prefix=CHECK-report
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4 5  2>&1 | FileCheck %s --check-prefix=CHECK-segv

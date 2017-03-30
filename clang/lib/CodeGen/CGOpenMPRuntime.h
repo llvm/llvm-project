@@ -1034,7 +1034,7 @@ public:
   virtual bool emitTargetGlobalVariable(GlobalDecl GD);
 
   /// \brief Emit the global \a GD if it is meaningful for the target. Returns
-  /// if it was emitted succesfully.
+  /// if it was emitted successfully.
   /// \param GD Global to scan.
   virtual bool emitTargetGlobal(GlobalDecl GD);
 

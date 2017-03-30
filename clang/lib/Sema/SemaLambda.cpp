@@ -763,7 +763,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   // call-operator.
   Result = ActOnFinishFullExpr(Init, Loc, /*DiscardedValue*/ false,
                                /*IsConstexpr*/ false,
-                               /*IsLambdaInitCaptureInitalizer*/ true);
+                               /*IsLambdaInitCaptureInitializer*/ true);
   if (Result.isInvalid())
     return QualType();
 

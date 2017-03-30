@@ -95,6 +95,18 @@ void InitializeFlags() {
   RegisterCommonFlags(&ubsan_parser);
 #endif
 
+  if (SANITIZER_MAC) {
+    // Support macOS MallocScribble and MallocPreScribble:
+    // <https://developer.apple.com/library/content/documentation/Performance/
+    // Conceptual/ManagingMemory/Articles/MallocDebug.html>
+    if (GetEnv("MallocScribble")) {
+      f->max_free_fill_size = 0x1000;
+    }
+    if (GetEnv("MallocPreScribble")) {
+      f->malloc_fill_byte = 0xaa;
+    }
+  }
+
   // Override from ASan compile definition.
   const char *asan_compile_def = MaybeUseAsanDefaultOptionsCompileDefinition();
   asan_parser.ParseString(asan_compile_def);

@@ -3719,7 +3719,7 @@ CatchTypeInfo
 MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
                                               QualType CatchHandlerType) {
   // TypeDescriptors for exceptions never have qualified pointer types,
-  // qualifiers are stored seperately in order to support qualification
+  // qualifiers are stored separately in order to support qualification
   // conversions.
   bool IsConst, IsVolatile, IsUnaligned;
   Type =

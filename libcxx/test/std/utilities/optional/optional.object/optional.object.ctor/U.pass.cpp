@@ -35,6 +35,11 @@ struct ExplicitThrow
     constexpr explicit ExplicitThrow(int x) { if (x != -1) TEST_THROW(6);}
 };
 
+struct ImplicitAny {
+  template <class U>
+  constexpr ImplicitAny(U&&) {}
+};
+
 
 template <class To, class From>
 constexpr bool implicit_conversion(optional<To>&& opt, const From& v)
@@ -79,6 +84,15 @@ void test_implicit()
         using T = TestTypes::TestType;
         assert(implicit_conversion<T>(3, T(3)));
     }
+  {
+    using O = optional<ImplicitAny>;
+    static_assert(!test_convertible<O, std::in_place_t>(), "");
+    static_assert(!test_convertible<O, std::in_place_t&>(), "");
+    static_assert(!test_convertible<O, const std::in_place_t&>(), "");
+    static_assert(!test_convertible<O, std::in_place_t&&>(), "");
+    static_assert(!test_convertible<O, const std::in_place_t&&>(), "");
+
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         try {

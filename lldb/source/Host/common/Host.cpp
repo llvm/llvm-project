@@ -679,7 +679,7 @@ Error Host::LaunchProcessPosixSpawn(const char *exe_path,
   sigemptyset(&no_signals);
   sigfillset(&all_signals);
   ::posix_spawnattr_setsigmask(&attr, &no_signals);
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ::posix_spawnattr_setsigdefault(&attr, &no_signals);
 #else
   ::posix_spawnattr_setsigdefault(&attr, &all_signals);

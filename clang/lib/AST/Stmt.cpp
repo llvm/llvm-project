@@ -1083,7 +1083,7 @@ CapturedStmt *CapturedStmt::CreateDeserialized(const ASTContext &Context,
 }
 
 Stmt::child_range CapturedStmt::children() {
-  // Children are captured field initilizers.
+  // Children are captured field initializers.
   return child_range(getStoredStmts(), getStoredStmts() + NumCaptures);
 }
 

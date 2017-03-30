@@ -328,7 +328,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createGlobalDCEPass());
       }
       if (EarlyInline)
-        PM.add(createAMDGPUAlwaysInlinePass());
+        PM.add(createAMDGPUAlwaysInlinePass(false));
   });
 
   Builder.addExtension(

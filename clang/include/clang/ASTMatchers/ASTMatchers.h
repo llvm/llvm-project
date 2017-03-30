@@ -2595,7 +2595,7 @@ AST_MATCHER_P(CXXMemberCallExpr, on, internal::Matcher<Expr>,
 /// \brief Matches on the receiver of an ObjectiveC Message expression.
 ///
 /// Example
-/// matcher = objCMessageExpr(hasRecieverType(asString("UIWebView *")));
+/// matcher = objCMessageExpr(hasReceiverType(asString("UIWebView *")));
 /// matches the [webView ...] message invocation.
 /// \code
 ///   NSString *webViewJavaScript = ...

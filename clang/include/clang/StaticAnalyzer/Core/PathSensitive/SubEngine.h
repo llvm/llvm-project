@@ -83,7 +83,7 @@ public:
                                              const CFGBlock *DstF) = 0;
 
   /// Called by CoreEngine.  Used to processing branching behavior
-  /// at static initalizers.
+  /// at static initializers.
   virtual void processStaticInitializer(const DeclStmt *DS,
                                         NodeBuilderContext& BuilderCtx,
                                         ExplodedNode *Pred,

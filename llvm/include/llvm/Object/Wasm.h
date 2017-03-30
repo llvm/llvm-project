@@ -29,20 +29,63 @@
 namespace llvm {
 namespace object {
 
+class WasmSymbol {
+public:
+  enum class SymbolType {
+    FUNCTION_IMPORT,
+    FUNCTION_EXPORT,
+    GLOBAL_IMPORT,
+    GLOBAL_EXPORT,
+    DEBUG_FUNCTION_NAME,
+  };
+
+  WasmSymbol(StringRef Name, SymbolType Type) : Name(Name), Type(Type) {}
+
+  StringRef Name;
+  SymbolType Type;
+};
+
+class WasmSection {
+public:
+  WasmSection() : Type(0), Offset(0) {}
+
+  uint32_t Type; // Section type (See below)
+  uint32_t Offset; // Offset with in the file
+  StringRef Name; // Section name (User-defined sections only)
+  ArrayRef<uint8_t> Content; // Section content
+  std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
+};
+
 class WasmObjectFile : public ObjectFile {
 public:
   WasmObjectFile(MemoryBufferRef Object, Error &Err);
 
   const wasm::WasmObjectHeader &getHeader() const;
-  const wasm::WasmSection *getWasmSection(const SectionRef &Section) const;
+  const WasmSymbol &getWasmSymbol(DataRefImpl Symb) const;
+  const WasmSection &getWasmSection(const SectionRef &Section) const;
+  const wasm::WasmRelocation &getWasmRelocation(const RelocationRef& Ref) const;
 
   static bool classof(const Binary *v) { return v->isWasm(); }
 
+  const std::vector<wasm::WasmSignature>& types() const { return Signatures; }
+  const std::vector<uint32_t>& functionTypes() const { return FunctionTypes; }
+  const std::vector<wasm::WasmImport>& imports() const { return Imports; }
+  const std::vector<wasm::WasmTable>& tables() const { return Tables; }
+  const std::vector<wasm::WasmLimits>& memories() const { return Memories; }
+  const std::vector<wasm::WasmGlobal>& globals() const { return Globals; }
+  const std::vector<wasm::WasmExport>& exports() const { return Exports; }
+  const std::vector<wasm::WasmElemSegment>& elements() const {
+    return ElemSegments;
+  }
+  const std::vector<wasm::WasmDataSegment>& dataSegments() const {
+    return DataSegments;
+  }
+  const std::vector<wasm::WasmFunction>& functions() const { return Functions; }
+  const ArrayRef<uint8_t>& code() const { return CodeSection; }
+  uint32_t startFunction() const { return StartFunction; }
+
 protected:
   void moveSymbolNext(DataRefImpl &Symb) const override;
-
-  std::error_code printSymbolName(raw_ostream &OS,
-                                  DataRefImpl Symb) const override;
 
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
 
@@ -75,7 +118,6 @@ protected:
   bool isSectionBitcode(DataRefImpl Sec) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
-  section_iterator getRelocatedSection(DataRefImpl Sec) const override;
 
   // Overrides from RelocationRef.
   void moveRelocationNext(DataRefImpl &Rel) const override;
@@ -94,12 +136,50 @@ protected:
   bool isRelocatableObject() const override;
 
 private:
+  const WasmSection &getWasmSection(DataRefImpl Ref) const;
+  const wasm::WasmRelocation &getWasmRelocation(DataRefImpl Ref) const;
+
+  WasmSection* findCustomSectionByName(StringRef Name);
+  WasmSection* findSectionByType(uint32_t Type);
+
   const uint8_t *getPtr(size_t Offset) const;
-  Error parseCustomSection(wasm::WasmSection &Sec, const uint8_t *Ptr,
-                           size_t Length);
+  Error parseSection(WasmSection &Sec);
+  Error parseCustomSection(WasmSection &Sec, const uint8_t *Ptr,
+                           const uint8_t *End);
+
+  // Standard section types
+  Error parseTypeSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseImportSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseFunctionSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseTableSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseMemorySection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseGlobalSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseExportSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseStartSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseElemSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseCodeSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseDataSection(const uint8_t *Ptr, const uint8_t *End);
+
+  // Custom section types
+  Error parseNameSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseRelocSection(StringRef Name, const uint8_t *Ptr,
+                          const uint8_t *End);
 
   wasm::WasmObjectHeader Header;
-  std::vector<wasm::WasmSection> Sections;
+  std::vector<WasmSection> Sections;
+  std::vector<wasm::WasmSignature> Signatures;
+  std::vector<uint32_t> FunctionTypes;
+  std::vector<wasm::WasmTable> Tables;
+  std::vector<wasm::WasmLimits> Memories;
+  std::vector<wasm::WasmGlobal> Globals;
+  std::vector<wasm::WasmImport> Imports;
+  std::vector<wasm::WasmExport> Exports;
+  std::vector<wasm::WasmElemSegment> ElemSegments;
+  std::vector<wasm::WasmDataSegment> DataSegments;
+  std::vector<WasmSymbol> Symbols;
+  std::vector<wasm::WasmFunction> Functions;
+  ArrayRef<uint8_t> CodeSection;
+  uint32_t StartFunction;
 };
 
 } // end namespace object

@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            GLOBAL
+    Globals:         
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           -5
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:  - Type:            GLOBAL
+# CHECK:    Globals:         
+# CHECK:      - Type:        I32
+# CHECK:        Mutable:     false
+# CHECK:        InitExpr:
+# CHECK:          Opcode:          I64_CONST
+# CHECK:          Value:           -5
+# CHECK: ...

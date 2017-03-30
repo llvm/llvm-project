@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:         
+      - Module:          foo
+        Field:           bar
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          fiz
+        Field:           baz
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   false
+  - Type:            FUNCTION
+    FunctionTypes:
+      - 0
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            IMPORT
+# CHECK:     Imports:         
+# CHECK:       - Module:          foo
+# CHECK:         Field:           bar
+# CHECK:         Kind:            FUNCTION
+# CHECK:         SigIndex:        0
+# CHECK:       - Module:          fiz
+# CHECK:         Field:           baz
+# CHECK:         Kind:            GLOBAL
+# CHECK:         GlobalType:      I32
+# CHECK:         GlobalMutable:   false
+# CHECK: ...

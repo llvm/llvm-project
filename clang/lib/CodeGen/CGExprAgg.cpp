@@ -1274,7 +1274,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
       // Store the initializer into the field.
       EmitInitializationToLValue(E->getInit(curInitIndex++), LV);
     } else {
-      // We're out of initalizers; default-initialize to null
+      // We're out of initializers; default-initialize to null
       EmitNullInitializationToLValue(LV);
     }
 

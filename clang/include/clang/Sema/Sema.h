@@ -4984,7 +4984,7 @@ public:
                             ArrayRef<TypeSourceInfo *> Args,
                             SourceLocation RParenLoc);
 
-  /// ActOnArrayTypeTrait - Parsed one of the bianry type trait support
+  /// ActOnArrayTypeTrait - Parsed one of the binary type trait support
   /// pseudo-functions.
   ExprResult ActOnArrayTypeTrait(ArrayTypeTrait ATT,
                                  SourceLocation KWLoc,

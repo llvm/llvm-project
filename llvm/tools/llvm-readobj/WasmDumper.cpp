@@ -55,14 +55,14 @@ public:
   void printSections() override {
     ListScope Group(W, "Sections");
     for (const SectionRef &Section : Obj->sections()) {
-      const wasm::WasmSection *WasmSec = Obj->getWasmSection(Section);
+      const WasmSection &WasmSec = Obj->getWasmSection(Section);
       DictScope SectionD(W, "Section");
-      const char *Type = wasmSectionTypeToString(WasmSec->Type);
-      W.printHex("Type", Type, WasmSec->Type);
-      W.printNumber("Size", (uint64_t)WasmSec->Content.size());
-      W.printNumber("Offset", WasmSec->Offset);
-      if (WasmSec->Type == wasm::WASM_SEC_CUSTOM) {
-        W.printString("Name", WasmSec->Name);
+      const char *Type = wasmSectionTypeToString(WasmSec.Type);
+      W.printHex("Type", Type, WasmSec.Type);
+      W.printNumber("Size", (uint64_t)WasmSec.Content.size());
+      W.printNumber("Offset", WasmSec.Offset);
+      if (WasmSec.Type == wasm::WASM_SEC_CUSTOM) {
+        W.printString("Name", WasmSec.Name);
       }
     }
   }

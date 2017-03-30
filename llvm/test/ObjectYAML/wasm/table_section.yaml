@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TABLE
+    Tables:         
+      - ElemType:        ANYFUNC
+        Limits:
+          Flags:           0x00000001
+          Initial:         0x00000010
+          Maximum:         0x00000011
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:  - Type:            TABLE
+# CHECK:    Tables:         
+# CHECK:      - ElemType:        ANYFUNC
+# CHECK:        Limits:
+# CHECK:          Flags:           0x00000001
+# CHECK:          Initial:         0x00000010
+# CHECK:          Maximum:         0x00000011
+# CHECK: ...
