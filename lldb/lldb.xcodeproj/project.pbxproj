@@ -3391,6 +3391,7 @@
 				2321F9331BDD326500BA9A93 /* unittests */,
 				236102941CF389BE00B8E0B9 /* cmake */,
 				23CB14E21D66CA2200EDDDE1 /* Frameworks */,
+				4C76F9201E8DBA9000D85097 /* Recovered References */,
 			);
 			name = lldb;
 			sourceTree = "<group>";
@@ -6052,6 +6053,15 @@
 				4984BA0E1B978C3E008658D4 /* ClangExpressionVariable.cpp */,
 			);
 			name = Clang;
+			sourceTree = "<group>";
+		};
+		4C76F9201E8DBA9000D85097 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				239D38091D70FB9900D8E937 /* FileSpec.cpp */,
+				94164A5D1B828D9A00DCA4B6 /* CompilerType.cpp */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 		4CC7C64B1D5298AB0076FF94 /* OCaml */ = {
