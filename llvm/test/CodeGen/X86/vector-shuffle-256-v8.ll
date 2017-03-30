@@ -2072,6 +2072,21 @@ define <8 x i32> @shuffle_v8i32_5555uuuu(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %shuffle
 }
 
+; PR32453
+define <8 x i32> @shuffle_v8i32_uuuuuu7u(<8 x i32> %a, <8 x i32> %b) nounwind {
+; AVX1-LABEL: shuffle_v8i32_uuuuuu7u:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v8i32_uuuuuu7u:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,1,3,3,4,5,7,7]
+; AVX2OR512VL-NEXT:    retq
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef>
+  ret <8 x i32> %shuffle
+}
+
 define <8 x float> @splat_mem_v8f32_2(float* %p) {
 ; ALL-LABEL: splat_mem_v8f32_2:
 ; ALL:       # BB#0:

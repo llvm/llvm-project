@@ -149,8 +149,7 @@ namespace llvm {
       WrapperRIP,
 
       /// Copies a 64-bit value from the low word of an XMM vector
-      /// to an MMX vector.  If you think this is too close to the previous
-      /// mnemonic, so do I; blame Intel.
+      /// to an MMX vector.
       MOVDQ2Q,
 
       /// Copies a 32-bit value from the low word of a MMX

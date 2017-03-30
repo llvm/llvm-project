@@ -287,6 +287,17 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
 }
 
+// Best-effort support for -fsanitize-coverage=trace-pc, which is available
+// in both Clang and GCC.
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+void __sanitizer_cov_trace_pc() {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+  uintptr_t Idx = PC & (((uintptr_t)1 << fuzzer::TracePC::kTracePcBits) - 1);
+  __sancov_trace_pc_pcs[Idx] = PC;
+  __sancov_trace_pc_guard_8bit_counters[Idx]++;
+}
+
 ATTRIBUTE_INTERFACE
 void __sanitizer_cov_trace_pc_guard_init(uint32_t *Start, uint32_t *Stop) {
   fuzzer::TPC.HandleInit(Start, Stop);

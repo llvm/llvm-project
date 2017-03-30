@@ -3555,13 +3555,11 @@ SDValue AMDGPUTargetLowering::getRecipEstimate(SDValue Operand,
 }
 
 void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
-  const SDValue Op,
-  APInt &KnownZero,
-  APInt &KnownOne,
-  const SelectionDAG &DAG,
-  unsigned Depth) const {
+    const SDValue Op, APInt &KnownZero, APInt &KnownOne,
+    const SelectionDAG &DAG, unsigned Depth) const {
 
-  KnownZero = KnownOne = APInt(KnownOne.getBitWidth(), 0); // Don't know anything.
+  unsigned BitWidth = KnownZero.getBitWidth();
+  KnownZero = KnownOne = APInt(BitWidth, 0); // Don't know anything.
 
   APInt KnownZero2;
   APInt KnownOne2;
@@ -3582,17 +3580,14 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     if (!CWidth)
       return;
 
-    unsigned BitWidth = 32;
     uint32_t Width = CWidth->getZExtValue() & 0x1f;
 
     if (Opc == AMDGPUISD::BFE_U32)
-      KnownZero = APInt::getHighBitsSet(BitWidth, BitWidth - Width);
+      KnownZero = APInt::getHighBitsSet(32, 32 - Width);
 
     break;
   }
   case AMDGPUISD::FP_TO_FP16: {
-    unsigned BitWidth = KnownZero.getBitWidth();
-
     // High bits are zero.
     KnownZero = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
     break;
@@ -3601,9 +3596,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
 }
 
 unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
-  SDValue Op,
-  const SelectionDAG &DAG,
-  unsigned Depth) const {
+    SDValue Op, const SelectionDAG &DAG, unsigned Depth) const {
   switch (Op.getOpcode()) {
   case AMDGPUISD::BFE_I32: {
     ConstantSDNode *Width = dyn_cast<ConstantSDNode>(Op.getOperand(2));

@@ -1,0 +1,11 @@
+; Test that the native PDB reader gets the PDB summary correct.
+; RUN: llvm-pdbdump pretty -native -color-output=false %p/../Inputs/empty.pdb \
+; RUN:   | FileCheck -check-prefix=EMPTY %s
+
+; Reference output was generated with the DIA reader to ensure that the
+; `-native` option produces identical output.
+
+; EMPTY:  Size: 102400 bytes
+; EMPTY:  Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY:  Age: 1
+; EMPTY:  Attributes: HasPrivateSymbols

@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_HOST_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__)
 #include <endian.h>
@@ -75,6 +76,13 @@ constexpr bool IsBigEndianHost = false;
   /// from thread::hardware_concurrency(), which includes hyperthreads).
   /// Returns -1 if unknown for the current host system.
   int getHostNumPhysicalCores();
+
+  namespace detail {
+  /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
+  StringRef getHostCPUNameForPowerPC(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUNameForARM(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUNameForS390x(const StringRef &ProcCpuinfoContent);
+  }
 }
 }
 

@@ -48,6 +48,8 @@ struct TableOfRecentCompares {
 class TracePC {
  public:
   static const size_t kNumPCs = 1 << 21;
+  // How many bits of PC are used from __sanitizer_cov_trace_pc.
+  static const size_t kTracePcBits = 18;
 
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
@@ -81,7 +83,9 @@ class TracePC {
 
   void PrintNewPCs();
   void InitializePrintNewPCs();
-  size_t GetNumPCs() const { return Min(kNumPCs, NumGuards + 1); }
+  size_t GetNumPCs() const {
+    return NumGuards == 0 ? (1 << kTracePcBits) : Min(kNumPCs, NumGuards + 1);
+  }
   uintptr_t GetPC(size_t Idx) {
     assert(Idx < GetNumPCs());
     return PCs()[Idx];

@@ -423,7 +423,14 @@ DwarfDebug::constructDwarfCompileUnit(const DICompileUnit *DIUnit) {
     Asm->OutStreamer->getContext().setMCLineTableCompilationDir(
         NewCU.getUniqueID(), CompilationDir);
 
-  NewCU.addString(Die, dwarf::DW_AT_producer, DIUnit->getProducer());
+  StringRef Producer = DIUnit->getProducer();
+  StringRef Flags = DIUnit->getFlags();
+  if (!Flags.empty()) {
+    std::string ProducerWithFlags = Producer.str() + " " + Flags.str();
+    NewCU.addString(Die, dwarf::DW_AT_producer, ProducerWithFlags);
+  } else
+    NewCU.addString(Die, dwarf::DW_AT_producer, Producer);
+
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
