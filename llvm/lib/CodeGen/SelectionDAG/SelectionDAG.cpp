@@ -871,11 +871,13 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
   DbgInfo = new SDDbgInfo();
 }
 
-void SelectionDAG::init(MachineFunction &mf) {
-  MF = &mf;
+void SelectionDAG::init(MachineFunction &NewMF,
+                        OptimizationRemarkEmitter &NewORE) {
+  MF = &NewMF;
+  ORE = &NewORE;
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
-  Context = &mf.getFunction()->getContext();
+  Context = &MF->getFunction()->getContext();
 }
 
 SelectionDAG::~SelectionDAG() {

@@ -351,6 +351,7 @@ namespace {
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
     SDValue foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
+    SDValue foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                           const SDLoc &DL, bool foldBooleans = true);
 
@@ -3173,6 +3174,7 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
 
 /// Try to make (and setcc (LL, LR), setcc (RL, RR)) more efficient.
 SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
+  // FIXME: This should be refactored with foldOrOfSetCCs.
   SDValue LL, LR, RL, RR, N0CC, N1CC;
   if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
       !isSetCCEquivalent(N1, RL, RR, N1CC))
@@ -3969,64 +3971,83 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
                      DAG.getNode(ISD::SRL, DL, VT, BSwap, ShAmt));
 }
 
-/// This contains all DAGCombine rules which reduce two values combined by
-/// an Or operation to a single value \see visitANDLike().
-SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *LocReference) {
-  EVT VT = N1.getValueType();
-  // fold (or x, undef) -> -1
-  if (!LegalOperations && (N0.isUndef() || N1.isUndef()))
-    return DAG.getAllOnesConstant(SDLoc(LocReference), VT);
 
-  // fold (or (setcc x), (setcc y)) -> (setcc (or x, y))
-  SDValue LL, LR, RL, RR, CC0, CC1;
-  if (isSetCCEquivalent(N0, LL, LR, CC0) && isSetCCEquivalent(N1, RL, RR, CC1)){
-    ISD::CondCode Op0 = cast<CondCodeSDNode>(CC0)->get();
-    ISD::CondCode Op1 = cast<CondCodeSDNode>(CC1)->get();
+/// Try to make (or setcc (LL, LR), setcc (RL, RR)) more efficient.
+SDValue DAGCombiner::foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
+  // FIXME: This should be refactored with foldAndOfSetCCs.
+  SDValue LL, LR, RL, RR, N0CC, N1CC;
+  if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
+      !isSetCCEquivalent(N1, RL, RR, N1CC))
+    return SDValue();
 
-    if (LR == RR && Op0 == Op1 && LL.getValueType().isInteger()) {
-      // fold (or (setne X, 0), (setne Y, 0)) -> (setne (or X, Y), 0)
-      // fold (or (setlt X, 0), (setlt Y, 0)) -> (setne (or X, Y), 0)
-      if (isNullConstant(LR) && (Op1 == ISD::SETNE || Op1 == ISD::SETLT)) {
-        EVT CCVT = getSetCCResultType(LR.getValueType());
-        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(LR),
-                                       LR.getValueType(), LL, RL);
-          AddToWorklist(ORNode.getNode());
-          return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
-        }
-      }
-      // fold (or (setne X, -1), (setne Y, -1)) -> (setne (and X, Y), -1)
-      // fold (or (setgt X, -1), (setgt Y  -1)) -> (setgt (and X, Y), -1)
-      if (isAllOnesConstant(LR) && (Op1 == ISD::SETNE || Op1 == ISD::SETGT)) {
-        EVT CCVT = getSetCCResultType(LR.getValueType());
-        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
-          SDValue ANDNode = DAG.getNode(ISD::AND, SDLoc(LR),
-                                        LR.getValueType(), LL, RL);
-          AddToWorklist(ANDNode.getNode());
-          return DAG.getSetCC(SDLoc(LocReference), VT, ANDNode, LR, Op1);
-        }
-      }
+  assert(N0.getValueType() == N1.getValueType() &&
+         "Unexpected operand types for 'or' op");
+  assert(LL.getValueType() == LR.getValueType() &&
+         RL.getValueType() == RR.getValueType() &&
+         "Unexpected operand types for setcc");
+
+  // If we're here post-legalization or the 'or' is not i1, the 'or' type must
+  // match a setcc result type. Also, all folds require new operations on the
+  // left and right operands, so those types must match.
+  EVT VT = N0.getValueType();
+  EVT OpVT = LL.getValueType();
+  if (LegalOperations || VT != MVT::i1)
+    if (VT != getSetCCResultType(OpVT))
+      return SDValue();
+  if (OpVT != RL.getValueType())
+    return SDValue();
+
+  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0CC)->get();
+  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
+  bool IsInteger = OpVT.isInteger();
+  if (LR == RR && CC0 == CC1 && IsInteger) {
+    // (or (setne X, 0), (setne Y, 0)) --> (setne (or X, Y), 0)
+    // (or (setlt X, 0), (setlt Y, 0)) --> (setne (or X, Y), 0)
+    if (isNullConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETLT)) {
+      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
+      AddToWorklist(Or.getNode());
+      return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
-    // canonicalize equivalent to ll == rl
-    if (LL == RR && LR == RL) {
-      Op1 = ISD::getSetCCSwappedOperands(Op1);
-      std::swap(RL, RR);
-    }
-    if (LL == RL && LR == RR) {
-      bool isInteger = LL.getValueType().isInteger();
-      ISD::CondCode Result = ISD::getSetCCOrOperation(Op0, Op1, isInteger);
-      if (Result != ISD::SETCC_INVALID &&
-          (!LegalOperations ||
-           (TLI.isCondCodeLegal(Result, LL.getSimpleValueType()) &&
-            TLI.isOperationLegal(ISD::SETCC, LL.getValueType())))) {
-        EVT CCVT = getSetCCResultType(LL.getValueType());
-        if (N0.getValueType() == CCVT ||
-            (!LegalOperations && N0.getValueType() == MVT::i1))
-          return DAG.getSetCC(SDLoc(LocReference), N0.getValueType(),
-                              LL, LR, Result);
-      }
+    // (or (setne X, -1), (setne Y, -1)) --> (setne (and X, Y), -1)
+    // (or (setgt X, -1), (setgt Y  -1)) --> (setgt (and X, Y), -1)
+    if (isAllOnesConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETGT)) {
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
+      AddToWorklist(And.getNode());
+      return DAG.getSetCC(DL, VT, And, LR, CC1);
     }
   }
+
+  // Canonicalize equivalent operands to LL == RL.
+  if (LL == RR && LR == RL) {
+    CC1 = ISD::getSetCCSwappedOperands(CC1);
+    std::swap(RL, RR);
+  }
+
+  // (or (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
+  if (LL == RL && LR == RR) {
+    ISD::CondCode NewCC = ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
+    if (NewCC != ISD::SETCC_INVALID &&
+        (!LegalOperations ||
+         (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
+          TLI.isOperationLegal(ISD::SETCC, OpVT))))
+      return DAG.getSetCC(DL, VT, LL, LR, NewCC);
+  }
+
+  return SDValue();
+}
+
+/// This contains all DAGCombine rules which reduce two values combined by
+/// an Or operation to a single value \see visitANDLike().
+SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
+  EVT VT = N1.getValueType();
+  SDLoc DL(N);
+
+  // fold (or x, undef) -> -1
+  if (!LegalOperations && (N0.isUndef() || N1.isUndef()))
+    return DAG.getAllOnesConstant(DL, VT);
+
+  if (SDValue V = foldOrOfSetCCs(N0, N1, DL))
+    return V;
 
   // (or (and X, C1), (and Y, C2))  -> (and (or X, Y), C3) if possible.
   if (N0.getOpcode() == ISD::AND && N1.getOpcode() == ISD::AND &&
@@ -4047,7 +4068,6 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *LocReference) {
             DAG.MaskedValueIsZero(N1.getOperand(0), LHSMask&~RHSMask)) {
           SDValue X = DAG.getNode(ISD::OR, SDLoc(N0), VT,
                                   N0.getOperand(0), N1.getOperand(0));
-          SDLoc DL(LocReference);
           return DAG.getNode(ISD::AND, DL, VT, X,
                              DAG.getConstant(LHSMask | RHSMask, DL, VT));
         }
@@ -4063,7 +4083,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *LocReference) {
       (N0.getNode()->hasOneUse() || N1.getNode()->hasOneUse())) {
     SDValue X = DAG.getNode(ISD::OR, SDLoc(N0), VT,
                             N0.getOperand(1), N1.getOperand(1));
-    return DAG.getNode(ISD::AND, SDLoc(LocReference), VT, N0.getOperand(0), X);
+    return DAG.getNode(ISD::AND, DL, VT, N0.getOperand(0), X);
   }
 
   return SDValue();

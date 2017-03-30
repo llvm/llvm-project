@@ -703,7 +703,7 @@ private:
 
   /// \brief Mapping from global preprocessing entity IDs to the module in
   /// which the preprocessed entity resides along with the offset that should be
-  /// added to the global preprocessing entitiy ID to produce a local ID.
+  /// added to the global preprocessing entity ID to produce a local ID.
   GlobalPreprocessedEntityMapType GlobalPreprocessedEntityMap;
 
   /// \name CodeGen-relevant special data

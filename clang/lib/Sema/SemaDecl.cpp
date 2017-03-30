@@ -9504,7 +9504,7 @@ namespace {
       InitFieldIndex.pop_back();
     }
 
-    // Returns true if MemberExpr is checked and no futher checking is needed.
+    // Returns true if MemberExpr is checked and no further checking is needed.
     // Returns false if additional checking is required.
     bool CheckInitListMemberExpr(MemberExpr *E, bool CheckReference) {
       llvm::SmallVector<FieldDecl*, 4> Fields;
@@ -10232,7 +10232,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C++11 [class.static.data]p3:
     //   If a non-volatile non-inline const static data member is of integral
     //   or enumeration type, its declaration in the class definition can
-    //   specify a brace-or-equal-initializer in which every initalizer-clause
+    //   specify a brace-or-equal-initializer in which every initializer-clause
     //   that is an assignment-expression is a constant expression. A static
     //   data member of literal type can be declared in the class definition
     //   with the constexpr specifier; if so, its declaration shall specify a

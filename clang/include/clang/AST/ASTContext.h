@@ -476,7 +476,7 @@ private:
   /// entities should not be instrumented.
   std::unique_ptr<SanitizerBlacklist> SanitizerBL;
 
-  /// \breif Function filtering mehcanism to determine whether a given function
+  /// \brief Function filtering mehcanism to determine whether a given function
   /// should be imbued with the XRay "always" or "never" attributes.
   std::unique_ptr<XRayFunctionFilter> XRayFilter;
 

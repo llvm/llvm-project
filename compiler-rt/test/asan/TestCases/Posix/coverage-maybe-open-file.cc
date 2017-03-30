@@ -6,7 +6,7 @@
 // RUN: mkdir -p %T/coverage-maybe-open-file && cd %T/coverage-maybe-open-file
 // RUN: %env_asan_opts=coverage=1 %run %t | FileCheck %s --check-prefix=CHECK-success
 // RUN: %env_asan_opts=coverage=0 %run %t | FileCheck %s --check-prefix=CHECK-fail
-// RUN: [ "$(cat test.sancov.packed)" == "test" ]
+// RUN: FileCheck %s <  test.sancov.packed -implicit-check-not={{.}} --check-prefix=CHECK-test
 // RUN: cd .. && rm -rf %T/coverage-maybe-open-file
 
 #include <stdio.h>
@@ -30,3 +30,4 @@ int main(int argc, char **argv) {
 
 // CHECK-success: SUCCESS
 // CHECK-fail: FAIL
+// CHECK-test: {{^}}test{{$}}

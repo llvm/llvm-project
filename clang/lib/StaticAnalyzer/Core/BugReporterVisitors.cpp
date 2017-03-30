@@ -1027,7 +1027,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
       R = LVState->getSVal(Inner, LVNode->getLocationContext()).getAsRegion();
 
       // If this is a C++ reference to a null pointer, we are tracking the
-      // pointer. In additon, we should find the store at which the reference
+      // pointer. In addition, we should find the store at which the reference
       // got initialized.
       if (const MemRegion *RR = getLocationRegionIfReference(Inner, N)) {
         if (Optional<KnownSVal> KV = LVal.getAs<KnownSVal>())
@@ -1290,7 +1290,7 @@ std::shared_ptr<PathDiagnosticPiece> ConditionBRVisitor::VisitTerminator(
     break;
   case Stmt::BinaryOperatorClass:
     // When we encounter a logical operator (&& or ||) as a CFG terminator,
-    // then the condition is actually its LHS; otheriwse, we'd encounter
+    // then the condition is actually its LHS; otherwise, we'd encounter
     // the parent, such as if-statement, as a terminator.
     const auto *BO = cast<BinaryOperator>(Term);
     assert(BO->isLogicalOp() &&
@@ -1659,7 +1659,7 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
 
       // The analyzer issues a false use-after-free when std::list::pop_front
       // or std::list::pop_back are called multiple times because we cannot
-      // reason about the internal invariants of the datastructure.
+      // reason about the internal invariants of the data structure.
       if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
         const CXXRecordDecl *CD = MD->getParent();
         if (CD->getName() == "list") {
@@ -1690,7 +1690,7 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
         // and
         //   std::u16string s; s += u'a';
         // because we cannot reason about the internal invariants of the
-        // datastructure.
+        // data structure.
         if (CD->getName() == "basic_string") {
           BR.markInvalid(getTag(), nullptr);
           return nullptr;

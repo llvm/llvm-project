@@ -237,7 +237,7 @@ public:
                                      const CFGBlock *DstF) override;
 
   /// Called by CoreEngine.  Used to processing branching behavior
-  /// at static initalizers.
+  /// at static initializers.
   void processStaticInitializer(const DeclStmt *DS,
                                 NodeBuilderContext& BuilderCtx,
                                 ExplodedNode *Pred,
