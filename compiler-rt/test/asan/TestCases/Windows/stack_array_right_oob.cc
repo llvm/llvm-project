@@ -12,5 +12,5 @@ int main() {
 // CHECK-NEXT: {{#0 .* main .*stack_array_right_oob.cc}}:[[@LINE-3]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT: {{#0 .* main .*stack_array_right_oob.cc}}
-// CHECK: 'buffer' <== Memory access at offset [[OFFSET]] overflows this variable
+// CHECK: 'buffer'{{.*}} <== Memory access at offset [[OFFSET]] overflows this variable
 }

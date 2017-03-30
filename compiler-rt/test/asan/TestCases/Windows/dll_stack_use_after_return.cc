@@ -22,7 +22,7 @@ int test_function() {
 //
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT: #0 {{.*}} foo{{.*}}dll_stack_use_after_return.cc
-// CHECK: 'stack_buffer' <== Memory access at offset [[OFFSET]] is inside this variable
+// CHECK: 'stack_buffer'{{.*}} <== Memory access at offset [[OFFSET]] is inside this variable
   return 0;
 }
 
