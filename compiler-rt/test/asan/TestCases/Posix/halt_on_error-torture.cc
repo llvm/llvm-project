@@ -5,7 +5,7 @@
 // RUN: rm -f 1.txt
 // RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 1 10 >>1.txt 2>&1
 // RUN: FileCheck %s < 1.txt
-// RUN: [ $(grep -c 'ERROR: AddressSanitizer: use-after-poison' 1.txt) -eq 10 ]
+// RUN: grep 'ERROR: AddressSanitizer: use-after-poison' 1.txt | count 10
 // RUN: FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
 //
 // Collisions are unlikely but still possible so we need the ||.

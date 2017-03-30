@@ -1092,7 +1092,7 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
 
 class AtomicChangeTest : public ::testing::Test {
   protected:
-    void setUp() {
+    void SetUp() override {
       DefaultFileID = Context.createInMemoryFile("input.cpp", DefaultCode);
       DefaultLoc = Context.Sources.getLocForStartOfFile(DefaultFileID)
                        .getLocWithOffset(20);
@@ -1107,7 +1107,6 @@ class AtomicChangeTest : public ::testing::Test {
 };
 
 TEST_F(AtomicChangeTest, AtomicChangeToYAML) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err =
       Change.insert(Context.Sources, DefaultLoc, "aa", /*InsertAfter=*/false);
@@ -1140,7 +1139,6 @@ TEST_F(AtomicChangeTest, AtomicChangeToYAML) {
 }
 
 TEST_F(AtomicChangeTest, YAMLToAtomicChange) {
-  setUp();
   std::string YamlContent = "---\n"
                             "Key:             'input.cpp:20'\n"
                             "FilePath:        input.cpp\n"
@@ -1187,14 +1185,12 @@ TEST_F(AtomicChangeTest, YAMLToAtomicChange) {
 }
 
 TEST_F(AtomicChangeTest, CheckKeyAndKeyFile) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   EXPECT_EQ("input.cpp:20", Change.getKey());
   EXPECT_EQ("input.cpp", Change.getFilePath());
 }
 
 TEST_F(AtomicChangeTest, Replace) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err = Change.replace(Context.Sources, DefaultLoc, 2, "aa");
   ASSERT_TRUE(!Err);
@@ -1209,8 +1205,18 @@ TEST_F(AtomicChangeTest, Replace) {
   EXPECT_EQ(Change.getReplacements().size(), 1u);
 }
 
+TEST_F(AtomicChangeTest, ReplaceWithRange) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  SourceLocation End = DefaultLoc.getLocWithOffset(20);
+  llvm::Error Err = Change.replace(
+      Context.Sources, CharSourceRange::getCharRange(DefaultLoc, End), "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 20, "aa"));
+}
+
 TEST_F(AtomicChangeTest, InsertBefore) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "aa");
   ASSERT_TRUE(!Err);
@@ -1225,7 +1231,6 @@ TEST_F(AtomicChangeTest, InsertBefore) {
 }
 
 TEST_F(AtomicChangeTest, InsertAfter) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "aa");
   ASSERT_TRUE(!Err);
@@ -1240,7 +1245,6 @@ TEST_F(AtomicChangeTest, InsertAfter) {
 }
 
 TEST_F(AtomicChangeTest, InsertBeforeWithInvalidLocation) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err =
       Change.insert(Context.Sources, DefaultLoc, "a", /*InsertAfter=*/false);
@@ -1254,11 +1258,9 @@ TEST_F(AtomicChangeTest, InsertBeforeWithInvalidLocation) {
       std::move(Err), replacement_error::wrong_file_path,
       Replacement(Context.Sources, DefaultLoc, 0, "a"),
       Replacement(Context.Sources, SourceLocation(), 0, "a")));
-
 }
 
 TEST_F(AtomicChangeTest, InsertBeforeToWrongFile) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err =
       Change.insert(Context.Sources, DefaultLoc, "a", /*InsertAfter=*/false);
@@ -1276,7 +1278,6 @@ TEST_F(AtomicChangeTest, InsertBeforeToWrongFile) {
 }
 
 TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
-  setUp();
   AtomicChange Change(Context.Sources, DefaultLoc);
   llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "a");
   ASSERT_TRUE(!Err);

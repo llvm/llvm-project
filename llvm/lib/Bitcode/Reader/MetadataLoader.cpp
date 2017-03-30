@@ -1495,7 +1495,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasAlignment = Record[0] & 2;
     // 2nd field used to be an artificial tag, either DW_TAG_auto_variable or
     // DW_TAG_arg_variable, if we have alignment flag encoded it means, that
-    // this is newer version of record which doesn't have artifical tag.
+    // this is newer version of record which doesn't have artificial tag.
     bool HasTag = !HasAlignment && Record.size() > 8;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7 + HasTag]);
     uint32_t AlignInBits = 0;

@@ -70,6 +70,12 @@ public:
   /// \brief Returns the error message or an empty string if it does not exist.
   const std::string &getError() const { return Error; }
 
+  /// \brief Adds a replacement that replaces the given Range with
+  /// ReplacementText.
+  /// \returns An llvm::Error carrying ReplacementError on error.
+  llvm::Error replace(const SourceManager &SM, const CharSourceRange &Range,
+                      llvm::StringRef ReplacementText);
+
   /// \brief Adds a replacement that replaces range [Loc, Loc+Length) with
   /// \p Text.
   /// \returns An llvm::Error carrying ReplacementError on error.

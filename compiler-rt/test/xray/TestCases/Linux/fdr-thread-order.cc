@@ -2,6 +2,8 @@
 // RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false xray_logfile_base=fdr-thread-order. xray_fdr_log=true verbosity=1" %run %t 2>&1 | FileCheck %s
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t "`ls fdr-thread-order.* | head -1`" | FileCheck %s --check-prefix TRACE
 // RUN: rm fdr-thread-order.*
+// FIXME: Make llvm-xray work on non-x86_64 as well.
+// REQUIRES: x86_64-linux
 #include "xray/xray_log_interface.h"
 #include <thread>
 #include <cassert>

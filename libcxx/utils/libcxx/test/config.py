@@ -273,12 +273,16 @@ class Configuration(object):
         # the locally built one; the former mode is useful for testing ABI
         # compatibility between the current headers and a shipping dynamic
         # library.
-        self.use_system_cxx_lib = self.get_lit_bool('use_system_cxx_lib')
-        if self.use_system_cxx_lib is None:
-            # Default to testing against the locally built libc++ library.
+        # Default to testing against the locally built libc++ library.
+        self.use_system_cxx_lib = self.get_lit_conf('use_system_cxx_lib')
+        if self.use_system_cxx_lib == 'true':
+            self.use_system_cxx_lib = True
+        elif self.use_system_cxx_lib == 'false':
             self.use_system_cxx_lib = False
-            self.lit_config.note(
-                "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
+        elif self.use_system_cxx_lib:
+            assert os.path.isdir(self.use_system_cxx_lib)
+        self.lit_config.note(
+            "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
     def configure_cxx_stdlib_under_test(self):
         self.cxx_stdlib_under_test = self.get_lit_conf(
@@ -686,6 +690,13 @@ class Configuration(object):
                                             self.cxx_runtime_root]
                 elif self.is_windows and self.link_shared:
                     self.add_path(self.exec_env, self.cxx_runtime_root)
+        elif os.path.isdir(str(self.use_system_cxx_lib)):
+            self.cxx.link_flags += ['-L' + self.use_system_cxx_lib]
+            if not self.is_windows:
+                self.cxx.link_flags += ['-Wl,-rpath,' +
+                                        self.use_system_cxx_lib]
+            if self.is_windows and self.link_shared:
+                self.add_path(self.cxx.compile_env, self.use_system_cxx_lib)
 
     def configure_link_flags_abi_library_path(self):
         # Configure ABI library paths.

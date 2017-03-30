@@ -36,7 +36,7 @@
 ///
 /// A) A previous pass has created a compact branch directly.
 /// B) Transforming a delay slot branch into compact branch. This case can be
-///    difficult to process as lookahead for hazards is insufficent, as
+///    difficult to process as lookahead for hazards is insufficient, as
 ///    backwards delay slot fillling can also produce hazards in previously
 ///    processed instuctions.
 ///

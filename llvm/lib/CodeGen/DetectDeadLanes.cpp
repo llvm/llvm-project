@@ -441,7 +441,7 @@ LaneBitmask DetectDeadLanes::determineInitialUsedLanes(unsigned Reg) {
           const TargetRegisterClass *DstRC = MRI->getRegClass(DefReg);
           CrossCopy = isCrossCopy(*MRI, UseMI, DstRC, MO);
           if (CrossCopy)
-            DEBUG(dbgs() << "Copy accross incompatible classes: " << UseMI);
+            DEBUG(dbgs() << "Copy across incompatible classes: " << UseMI);
         }
 
         if (!CrossCopy)

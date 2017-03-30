@@ -1002,21 +1002,21 @@ private:
   void gatherNodeEquivs();
   const CodeGenInstruction *findNodeEquiv(Record *N) const;
 
-  Expected<bool> importRulePredicates(RuleMatcher &M,
-                                      ArrayRef<Init *> Predicates) const;
+  Error importRulePredicates(RuleMatcher &M, ArrayRef<Init *> Predicates) const;
   Expected<InstructionMatcher &>
-  importSelDAGMatcher(InstructionMatcher &InsnMatcher,
-                      const TreePatternNode *Src) const;
-  Expected<bool> importChildMatcher(InstructionMatcher &InsnMatcher,
-                                    TreePatternNode *SrcChild, unsigned OpIdx,
-                                    unsigned &TempOpIdx) const;
-  Expected<BuildMIAction &>
-  importInstructionRenderer(RuleMatcher &M, const TreePatternNode *Dst,
-                            const InstructionMatcher &InsnMatcher) const;
-  Expected<bool> importExplicitUseRenderer(
-      BuildMIAction &DstMIBuilder, TreePatternNode *DstChild,
-      const InstructionMatcher &InsnMatcher, unsigned &TempOpIdx) const;
-  Expected<bool>
+  createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
+                               const TreePatternNode *Src) const;
+  Error importChildMatcher(InstructionMatcher &InsnMatcher,
+                           TreePatternNode *SrcChild, unsigned OpIdx,
+                           unsigned &TempOpIdx) const;
+  Expected<BuildMIAction &> createAndImportInstructionRenderer(
+      RuleMatcher &M, const TreePatternNode *Dst,
+      const InstructionMatcher &InsnMatcher) const;
+  Error importExplicitUseRenderer(BuildMIAction &DstMIBuilder,
+                                  TreePatternNode *DstChild,
+                                  const InstructionMatcher &InsnMatcher,
+                                  unsigned &TempOpIdx) const;
+  Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
 
@@ -1054,17 +1054,16 @@ static Error failedImport(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
 
-Expected<bool>
+Error
 GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
                                         ArrayRef<Init *> Predicates) const {
   if (!Predicates.empty())
     return failedImport("Pattern has a predicate");
-  return true;
+  return Error::success();
 }
 
-Expected<InstructionMatcher &>
-GlobalISelEmitter::importSelDAGMatcher(InstructionMatcher &InsnMatcher,
-                                       const TreePatternNode *Src) const {
+Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
+    InstructionMatcher &InsnMatcher, const TreePatternNode *Src) const {
   // Start with the defined operands (i.e., the results of the root operator).
   if (Src->getExtTypes().size() > 1)
     return failedImport("Src pattern has multiple results");
@@ -1095,18 +1094,17 @@ GlobalISelEmitter::importSelDAGMatcher(InstructionMatcher &InsnMatcher,
   // Match the used operands (i.e. the children of the operator).
   for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
     if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i), OpIdx++,
-                                        TempOpIdx)
-                         .takeError())
+                                        TempOpIdx))
       return std::move(Error);
   }
 
   return InsnMatcher;
 }
 
-Expected<bool>
-GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
-                                      TreePatternNode *SrcChild, unsigned OpIdx,
-                                      unsigned &TempOpIdx) const {
+Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
+                                            TreePatternNode *SrcChild,
+                                            unsigned OpIdx,
+                                            unsigned &TempOpIdx) const {
   OperandMatcher &OM = InsnMatcher.addOperand(OpIdx, SrcChild->getName());
 
   if (SrcChild->hasAnyPredicate())
@@ -1122,7 +1120,7 @@ GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
       auto &ChildSDNI = CGP.getSDNodeInfo(SrcChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
         OM.addPredicate<MBBOperandMatcher>();
-        return true;
+        return Error::success();
       }
     }
 
@@ -1137,7 +1135,7 @@ GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild->getLeafValue())) {
     OM.addPredicate<IntOperandMatcher>(ChildInt->getValue());
-    return true;
+    return Error::success();
   }
 
   // Check for def's like register classes or ComplexPattern's.
@@ -1148,7 +1146,7 @@ GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
     if (ChildRec->isSubClassOf("RegisterClass")) {
       OM.addPredicate<RegisterBankOperandMatcher>(
           Target.getRegisterClass(ChildRec));
-      return true;
+      return Error::success();
     }
 
     // Check for ComplexPattern's.
@@ -1161,7 +1159,7 @@ GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
       const auto &Predicate = OM.addPredicate<ComplexPatternOperandMatcher>(
           *ComplexPattern->second, TempOpIdx);
       TempOpIdx += Predicate.countTemporaryOperands();
-      return true;
+      return Error::success();
     }
 
     return failedImport(
@@ -1171,7 +1169,7 @@ GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
   return failedImport("Src pattern child is an unsupported kind");
 }
 
-Expected<bool> GlobalISelEmitter::importExplicitUseRenderer(
+Error GlobalISelEmitter::importExplicitUseRenderer(
     BuildMIAction &DstMIBuilder, TreePatternNode *DstChild,
     const InstructionMatcher &InsnMatcher, unsigned &TempOpIdx) const {
   // The only non-leaf child we accept is 'bb': it's an operator because
@@ -1182,7 +1180,7 @@ Expected<bool> GlobalISelEmitter::importExplicitUseRenderer(
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
         DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher,
                                                DstChild->getName());
-        return true;
+        return Error::success();
       }
     }
     return failedImport("Dst pattern child isn't a leaf node or an MBB");
@@ -1205,12 +1203,12 @@ Expected<bool> GlobalISelEmitter::importExplicitUseRenderer(
 
     if (ChildRec->isSubClassOf("Register")) {
       DstMIBuilder.addRenderer<AddRegisterRenderer>(ChildRec);
-      return true;
+      return Error::success();
     }
 
     if (ChildRec->isSubClassOf("RegisterClass")) {
       DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher, DstChild->getName());
-      return true;
+      return Error::success();
     }
 
     if (ChildRec->isSubClassOf("ComplexPattern")) {
@@ -1229,7 +1227,7 @@ Expected<bool> GlobalISelEmitter::importExplicitUseRenderer(
       }
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
           *ComplexPattern->second, RenderedOperands);
-      return true;
+      return Error::success();
     }
 
     return failedImport(
@@ -1239,7 +1237,7 @@ Expected<bool> GlobalISelEmitter::importExplicitUseRenderer(
   return failedImport("Dst pattern child is an unsupported kind");
 }
 
-Expected<BuildMIAction &> GlobalISelEmitter::importInstructionRenderer(
+Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, const TreePatternNode *Dst,
     const InstructionMatcher &InsnMatcher) const {
   Record *DstOp = Dst->getOperator();
@@ -1259,20 +1257,19 @@ Expected<BuildMIAction &> GlobalISelEmitter::importInstructionRenderer(
   unsigned TempOpIdx = 0;
   for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {
     if (auto Error = importExplicitUseRenderer(DstMIBuilder, Dst->getChild(i),
-                                               InsnMatcher, TempOpIdx)
-                         .takeError())
+                                               InsnMatcher, TempOpIdx))
       return std::move(Error);
   }
 
   return DstMIBuilder;
 }
 
-Expected<bool> GlobalISelEmitter::importImplicitDefRenderers(
+Error GlobalISelEmitter::importImplicitDefRenderers(
     BuildMIAction &DstMIBuilder,
     const std::vector<Record *> &ImplicitDefs) const {
   if (!ImplicitDefs.empty())
     return failedImport("Pattern defines a physical register");
-  return true;
+  return Error::success();
 }
 
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
@@ -1280,8 +1277,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   RuleMatcher M;
   M.addAction<DebugCommentAction>(P);
 
-  if (auto Error =
-          importRulePredicates(M, P.getPredicates()->getValues()).takeError())
+  if (auto Error = importRulePredicates(M, P.getPredicates()->getValues()))
     return std::move(Error);
 
   // Next, analyze the pattern operators.
@@ -1303,7 +1299,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return failedImport("Src pattern results and dst MI defs are different");
 
   InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher();
-  auto InsnMatcherOrError = importSelDAGMatcher(InsnMatcherTemp, Src);
+  auto InsnMatcherOrError = createAndImportSelDAGMatcher(InsnMatcherTemp, Src);
   if (auto Error = InsnMatcherOrError.takeError())
     return std::move(Error);
   InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
@@ -1326,15 +1322,15 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     ++OpIdx;
   }
 
-  auto DstMIBuilderOrError = importInstructionRenderer(M, Dst, InsnMatcher);
+  auto DstMIBuilderOrError =
+      createAndImportInstructionRenderer(M, Dst, InsnMatcher);
   if (auto Error = DstMIBuilderOrError.takeError())
     return std::move(Error);
   BuildMIAction &DstMIBuilder = DstMIBuilderOrError.get();
 
   // Render the implicit defs.
   // These are only added to the root of the result.
-  if (auto Error =
-          importImplicitDefRenderers(DstMIBuilder, P.getDstRegs()).takeError())
+  if (auto Error = importImplicitDefRenderers(DstMIBuilder, P.getDstRegs()))
     return std::move(Error);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.

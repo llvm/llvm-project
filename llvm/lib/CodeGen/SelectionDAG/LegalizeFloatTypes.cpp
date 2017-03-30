@@ -1052,15 +1052,15 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
 void DAGTypeLegalizer::ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo,
                                                  SDValue &Hi) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  assert(NVT.getSizeInBits() == integerPartWidth &&
+  assert(NVT.getSizeInBits() == 64 &&
          "Do not know how to expand this float constant!");
   APInt C = cast<ConstantFPSDNode>(N)->getValueAPF().bitcastToAPInt();
   SDLoc dl(N);
   Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(integerPartWidth, C.getRawData()[1])),
+                                 APInt(64, C.getRawData()[1])),
                          dl, NVT);
   Hi = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 APInt(integerPartWidth, C.getRawData()[0])),
+                                 APInt(64, C.getRawData()[0])),
                          dl, NVT);
 }
 
