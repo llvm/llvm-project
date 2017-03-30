@@ -249,7 +249,7 @@ bool ExpressionSourceCode::SaveExpressionTextToTempFile(
       }
     }
     if (!success)
-      FileSystem::Unlink(FileSpec(expr_source_path, true));
+      llvm::sys::fs::remove(expr_source_path);
   }
   if (!success)
     expr_source_path.clear();
