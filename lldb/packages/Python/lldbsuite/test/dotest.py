@@ -1318,32 +1318,6 @@ def run_suite():
         tbl = str.maketrans(' ', '-')
     configPostfix = configString.translate(tbl)
 
-    if configuration.compilers is None and "compilers" in config:
-        configuration.compilers = config["compilers"]
-
-    #
-    # Add some intervention here to sanity check that the compilers requested are sane.
-    # If found not to be an executable program, the invalid one is dropped
-    # from the list.
-    for i in range(len(configuration.compilers)):
-        c = configuration.compilers[i]
-        if which(c):
-            continue
-        else:
-            if sys.platform.startswith("darwin"):
-                pipe = subprocess.Popen(
-                    ['xcrun', '-find', c], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                cmd_output = pipe.stdout.read()
-                if cmd_output:
-                    if "not found" in cmd_output:
-                        print("dropping %s from the compilers used" % c)
-                        configuration.compilers.remove(i)
-                    else:
-                        configuration.compilers[i] = cmd_output.split('\n')[0]
-                        print(
-                            "'xcrun -find %s' returning %s" %
-                            (c, configuration.compilers[i]))
-
     # Output the configuration.
     if not configuration.parsable:
         sys.stderr.write("\nConfiguration: " + configString + "\n")
