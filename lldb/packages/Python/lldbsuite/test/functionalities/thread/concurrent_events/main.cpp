@@ -13,7 +13,7 @@
 // the main thread (before any worker threads are spawned) and modify variables
 // which control the number of threads that are spawned for each action.
 
-#include <atomic>
+#include "pseudo_barrier.h"
 #include <vector>
 using namespace std;
 
