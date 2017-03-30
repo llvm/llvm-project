@@ -27,5 +27,5 @@ int main() {
 // CHECK-NEXT:  main {{.*}}intercept_memcpy.cc:[[@LINE-5]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame
 // CHECK-NEXT:   #0 {{.*}} main
-// CHECK: 'buff2' <== Memory access at offset {{.*}} overflows this variable
+// CHECK: 'buff2'{{.*}} <== Memory access at offset {{.*}} overflows this variable
 }

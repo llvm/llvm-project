@@ -962,6 +962,15 @@ def fxray_instruction_threshold_ :
   JoinedOrSeparate<["-"], "fxray-instruction-threshold">,
   Group<f_Group>, Flags<[CC1Option]>;
 
+def fxray_always_instrument :
+  JoinedOrSeparate<["-"], "fxray-always-instrument=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Filename defining the whitelist for imbuing the 'always instrument' XRay attribute.">;
+def fxray_never_instrument :
+  JoinedOrSeparate<["-"], "fxray-never-instrument=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.">;
+
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;

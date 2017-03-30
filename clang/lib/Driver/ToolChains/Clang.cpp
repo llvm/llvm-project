@@ -27,6 +27,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
@@ -2728,7 +2729,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     DwarfVersion = getToolChain().GetDefaultDwarfVersion();
   }
 
-  // We ignore flags -gstrict-dwarf and -grecord-gcc-switches for now.
+  // We ignore flag -gstrict-dwarf for now.
+  // And we handle flag -grecord-gcc-switches later with DwarfDebugFlags.
   Args.ClaimAllArgs(options::OPT_g_flags_Group);
 
   // Column info is included by default for everything except PS4 and CodeView.
@@ -2816,37 +2818,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-unique-section-names");
 
   Args.AddAllArgs(CmdArgs, options::OPT_finstrument_functions);
-
-  if (Args.hasFlag(options::OPT_fxray_instrument,
-                   options::OPT_fnoxray_instrument, false)) {
-    const char *const XRayInstrumentOption = "-fxray-instrument";
-    if (Triple.getOS() == llvm::Triple::Linux)
-      switch (Triple.getArch()) {
-      case llvm::Triple::x86_64:
-      case llvm::Triple::arm:
-      case llvm::Triple::aarch64:
-      case llvm::Triple::ppc64le:
-      case llvm::Triple::mips:
-      case llvm::Triple::mipsel:
-      case llvm::Triple::mips64:
-      case llvm::Triple::mips64el:
-        // Supported.
-        break;
-      default:
-        D.Diag(diag::err_drv_clang_unsupported)
-            << (std::string(XRayInstrumentOption) + " on " + Triple.str());
-      }
-    else
-      D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on non-Linux target OS");
-    CmdArgs.push_back(XRayInstrumentOption);
-    if (const Arg *A =
-            Args.getLastArg(options::OPT_fxray_instruction_threshold_,
-                            options::OPT_fxray_instruction_threshold_EQ)) {
-      CmdArgs.push_back("-fxray-instruction-threshold");
-      CmdArgs.push_back(A->getValue());
-    }
-  }
 
   addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
 
@@ -3236,6 +3207,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const SanitizerArgs &Sanitize = getToolChain().getSanitizerArgs();
   Sanitize.addArgs(getToolChain(), Args, CmdArgs, InputType);
+
+  const XRayArgs &XRay = getToolChain().getXRayArgs();
+  XRay.addArgs(getToolChain(), Args, CmdArgs, InputType);
 
   if (getToolChain().SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_pg);
@@ -4321,7 +4295,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Optionally embed the -cc1 level arguments into the debug info, for build
   // analysis.
-  if (getToolChain().UseDwarfDebugFlags()) {
+  // Also record command line arguments into the debug info if
+  // -grecord-gcc-switches options is set on.
+  // By default, -gno-record-gcc-switches is set on and no recording.
+  if (getToolChain().UseDwarfDebugFlags() ||
+      Args.hasFlag(options::OPT_grecord_gcc_switches,
+                   options::OPT_gno_record_gcc_switches, false)) {
     ArgStringList OriginalArgs;
     for (const auto &Arg : Args)
       Arg->render(Args, OriginalArgs);

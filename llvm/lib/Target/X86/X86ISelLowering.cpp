@@ -8699,7 +8699,7 @@ uint64_t scaleVectorShuffleBlendMask(uint64_t BlendMask, int Size, int Scale) {
     if (BlendMask & (1ull << i))
       ScaledMask |= ((1ull << Scale) - 1) << (i * Scale);
   return ScaledMask;
-};
+}
 
 /// \brief Try to emit a blend instruction for a shuffle.
 ///

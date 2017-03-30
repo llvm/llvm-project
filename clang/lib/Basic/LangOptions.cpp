@@ -33,6 +33,8 @@ void LangOptions::resetNonModularOptions() {
   // sanitizer options (this affects __has_feature(address_sanitizer) etc).
   Sanitize.clear();
   SanitizerBlacklistFiles.clear();
+  XRayAlwaysInstrumentFiles.clear();
+  XRayNeverInstrumentFiles.clear();
 
   CurrentModule.clear();
   IsHeaderFile = false;

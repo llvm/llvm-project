@@ -1,6 +1,6 @@
-// RUN: %clangxx_xray -std=c++11 %s -o %t
+// RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false xray_logfile_base=fdr-logging-test- xray_fdr_log=true verbosity=1" %run %t 2>&1 | FileCheck %s
-// FIXME: %llvm_xray convert -instr_map=%t "`ls fdr-logging-test-* | head -1`" | FileCheck %s --check-prefix TRACE
+// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t "`ls fdr-logging-test-* | head -1`" | FileCheck %s --check-prefix TRACE
 // RUN: rm fdr-logging-test-*
 
 #include "xray/xray_log_interface.h"
@@ -59,4 +59,22 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// TRACE: { function }
+
+
+// Check that we're able to see two threads, each entering and exiting fA().
+// TRACE-DAG: - { type: 0, func-id: [[FIDA:[0-9]+]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }
+//
+// Do the same as above for fC()
+// TRACE-DAG: - { type: 0, func-id: [[FIDC:[0-9]+]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }
+
+// Do the same as above for fB()
+// TRACE-DAG: - { type: 0, func-id: [[FIDB:[0-9]+]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }

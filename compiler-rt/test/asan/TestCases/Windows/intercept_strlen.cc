@@ -22,6 +22,6 @@ int main() {
 // CHECK-NEXT: main {{.*}}intercept_strlen.cc:[[@LINE-5]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame
 // CHECK-NEXT: main {{.*}}intercept_strlen.cc
-// CHECK: 'str' <== Memory access at offset {{.*}} overflows this variable
+// CHECK: 'str'{{.*}} <== Memory access at offset {{.*}} overflows this variable
   return len < 6;
 }

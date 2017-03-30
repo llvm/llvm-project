@@ -71,9 +71,9 @@ void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
 
 AllocatorCache *GetAllocatorCache() { return &get_tls_val(true)->cache; }
 
-void InitializePlatformSpecificModules() {
-  CHECK(0 && "unimplemented");
-}
+// Required on Linux for initialization of TLS behavior, but should not be
+// required on Darwin.
+void InitializePlatformSpecificModules() {}
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {

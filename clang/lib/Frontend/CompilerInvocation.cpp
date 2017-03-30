@@ -816,18 +816,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
-    StringRef Val = A->getValue();
-    if (Val == "fast")
-      Opts.setFPContractMode(CodeGenOptions::FPC_Fast);
-    else if (Val == "on")
-      Opts.setFPContractMode(CodeGenOptions::FPC_On);
-    else if (Val == "off")
-      Opts.setFPContractMode(CodeGenOptions::FPC_Off);
-    else
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
-  }
-
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     if (Val == "ieee")
@@ -1647,7 +1635,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.AltiVec = 0;
     Opts.ZVector = 0;
     Opts.LaxVectorConversions = 0;
-    Opts.DefaultFPContract = 1;
+    Opts.setDefaultFPContractMode(LangOptions::FPC_On);
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
     // Include default header file for OpenCL.
@@ -1658,6 +1646,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
 
   Opts.CUDA = IK == IK_CUDA || IK == IK_PreprocessedCuda ||
               LangStd == LangStandard::lang_cuda;
+  if (Opts.CUDA)
+    // Set default FP_CONTRACT to FAST.
+    Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
 
   Opts.RenderScript = IK == IK_RenderScript;
   if (Opts.RenderScript) {
@@ -2282,6 +2273,18 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                       Args.hasArg(OPT_cl_fast_relaxed_math);
 
+  if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
+    StringRef Val = A->getValue();
+    if (Val == "fast")
+      Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
+    else if (Val == "on")
+      Opts.setDefaultFPContractMode(LangOptions::FPC_On);
+    else if (Val == "off")
+      Opts.setDefaultFPContractMode(LangOptions::FPC_Off);
+    else
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+  }
+
   Opts.RetainCommentsFromSystemHeaders =
       Args.hasArg(OPT_fretain_comments_from_system_headers);
 
@@ -2304,6 +2307,14 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeAddressFieldPadding =
       getLastArgIntValue(Args, OPT_fsanitize_address_field_padding, 0, Diags);
   Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
+
+  // -fxray-{always,never}-instrument= filenames.
+  Opts.XRayInstrument =
+      Args.hasFlag(OPT_fxray_instrument, OPT_fnoxray_instrument, false);
+  Opts.XRayAlwaysInstrumentFiles =
+      Args.getAllArgValues(OPT_fxray_always_instrument);
+  Opts.XRayNeverInstrumentFiles =
+      Args.getAllArgValues(OPT_fxray_never_instrument);
 }
 
 static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
@@ -2536,10 +2547,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     // triple used for host compilation.
     if (LangOpts.CUDAIsDevice)
       Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
-
-    // Set default FP_CONTRACT to FAST.
-    if (!Args.hasArg(OPT_ffp_contract))
-      Res.getCodeGenOpts().setFPContractMode(CodeGenOptions::FPC_Fast);
   }
 
   // FIXME: Override value name discarding when asan or msan is used because the

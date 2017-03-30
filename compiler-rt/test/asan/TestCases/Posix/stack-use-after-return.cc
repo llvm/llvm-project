@@ -53,11 +53,11 @@ void Func2(char *x) {
   // CHECK: WRITE of size 1 {{.*}} thread T0
   // CHECK:     #0{{.*}}Func2{{.*}}stack-use-after-return.cc:[[@LINE-2]]
   // CHECK: is located in stack of thread T0 at offset
-  // CHECK: 'local' <== Memory access at offset {{16|32}} is inside this variable
+  // CHECK: 'local'{{.*}} <== Memory access at offset {{16|32}} is inside this variable
   // THREAD: WRITE of size 1 {{.*}} thread T{{[1-9]}}
   // THREAD:     #0{{.*}}Func2{{.*}}stack-use-after-return.cc:[[@LINE-6]]
   // THREAD: is located in stack of thread T{{[1-9]}} at offset
-  // THREAD: 'local' <== Memory access at offset {{16|32}} is inside this variable
+  // THREAD: 'local'{{.*}} <== Memory access at offset {{16|32}} is inside this variable
   // CHECK-20: T0: FakeStack created:{{.*}} stack_size_log: 20
   // CHECK-24: T0: FakeStack created:{{.*}} stack_size_log: 24
 }
