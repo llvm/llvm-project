@@ -60,8 +60,8 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 static bool refersToGotEntry(RelExpr Expr) {
   return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
@@ -904,7 +904,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   }
 }
 
-template <class ELFT> void scanRelocations(InputSectionBase &S) {
+template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
   if (S.AreRelocsRela)
     scanRelocs<ELFT>(S, S.relas<ELFT>());
   else
@@ -955,7 +955,7 @@ static void mergeThunks(OutputSection *OS,
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
 template <class ELFT>
-bool createThunks(ArrayRef<OutputSection *> OutputSections) {
+bool elf::createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Track Symbols that already have a Thunk
   DenseMap<SymbolBody *, Thunk *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
@@ -1039,14 +1039,12 @@ bool createThunks(ArrayRef<OutputSection *> OutputSections) {
   return !ThunkSections.empty();
 }
 
-template void scanRelocations<ELF32LE>(InputSectionBase &);
-template void scanRelocations<ELF32BE>(InputSectionBase &);
-template void scanRelocations<ELF64LE>(InputSectionBase &);
-template void scanRelocations<ELF64BE>(InputSectionBase &);
+template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
+template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
+template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
+template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
 
-template bool createThunks<ELF32LE>(ArrayRef<OutputSection *>);
-template bool createThunks<ELF32BE>(ArrayRef<OutputSection *>);
-template bool createThunks<ELF64LE>(ArrayRef<OutputSection *>);
-template bool createThunks<ELF64BE>(ArrayRef<OutputSection *>);
-}
-}
+template bool elf::createThunks<ELF32LE>(ArrayRef<OutputSection *>);
+template bool elf::createThunks<ELF32BE>(ArrayRef<OutputSection *>);
+template bool elf::createThunks<ELF64LE>(ArrayRef<OutputSection *>);
+template bool elf::createThunks<ELF64BE>(ArrayRef<OutputSection *>);

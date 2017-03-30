@@ -87,6 +87,10 @@ public:
   // string for creating error messages.
   StringRef ArchiveName;
 
+  // Filename used for logging. It is either in the form of "foo.o" or
+  // "bar.a(foo.o)".
+  std::string LogName;
+
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
   ELFKind EKind = ELFNoneKind;
@@ -94,8 +98,7 @@ public:
   uint8_t OSABI = 0;
 
 protected:
-  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
-
+  InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
 
 private:
