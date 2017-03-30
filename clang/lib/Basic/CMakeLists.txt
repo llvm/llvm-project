@@ -91,6 +91,7 @@ add_clang_library(clangBasic
   VersionTuple.cpp
   VirtualFileSystem.cpp
   Warnings.cpp
+  XRayLists.cpp
   ${version_inc}
   )
 

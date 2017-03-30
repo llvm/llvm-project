@@ -1489,6 +1489,30 @@ bool CodeGenModule::isInSanitizerBlacklist(llvm::GlobalVariable *GV,
   return false;
 }
 
+bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
+                                   StringRef Category) const {
+  if (!LangOpts.XRayInstrument)
+    return false;
+  const auto &XRayFilter = getContext().getXRayFilter();
+  using ImbueAttr = XRayFunctionFilter::ImbueAttribute;
+  auto Attr = XRayFunctionFilter::ImbueAttribute::NONE;
+  if (Loc.isValid())
+    Attr = XRayFilter.shouldImbueLocation(Loc, Category);
+  if (Attr == ImbueAttr::NONE)
+    Attr = XRayFilter.shouldImbueFunction(Fn->getName());
+  switch (Attr) {
+  case ImbueAttr::NONE:
+    return false;
+  case ImbueAttr::ALWAYS:
+    Fn->addFnAttr("function-instrument", "xray-always");
+    break;
+  case ImbueAttr::NEVER:
+    Fn->addFnAttr("function-instrument", "xray-never");
+    break;
+  }
+  return true;
+}
+
 bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
   // Never defer when EmitAllDecls is specified.
   if (LangOpts.EmitAllDecls)

@@ -150,7 +150,11 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
       "/usr/lib/libSystem.B.dylib")
   else()
-    if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
+    if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+        # We can't use the "-reexported_symbols_list" when we build the
+        # new/delete operators as part of the dylib: the linker would fail.
+        set(OSX_RE_EXPORT_LINE "-Wl,-reexport_library,${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib")
+	elseif (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
       list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
       if (NOT OSX_HAS_ARMV7 EQUAL -1)
         set(OSX_RE_EXPORT_LINE

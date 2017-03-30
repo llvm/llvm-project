@@ -433,8 +433,6 @@ private:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 template <class ELFT>
 class GnuHashTableSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
   GnuHashTableSection();
   void finalizeContents() override;
@@ -446,7 +444,7 @@ public:
   void addSymbols(std::vector<SymbolTableEntry> &Symbols);
 
 private:
-  size_t getShift2() const { return ELFT::Is64Bits ? 6 : 5; }
+  size_t getShift2() const { return Config->Is64 ? 6 : 5; }
 
   void writeBloomFilter(uint8_t *Buf);
   void writeHashTable(uint8_t *Buf);

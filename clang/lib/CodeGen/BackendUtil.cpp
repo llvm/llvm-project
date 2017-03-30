@@ -561,14 +561,14 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
           .Default(llvm::FloatABI::Default);
 
   // Set FP fusion mode.
-  switch (CodeGenOpts.getFPContractMode()) {
-  case CodeGenOptions::FPC_Off:
+  switch (LangOpts.getDefaultFPContractMode()) {
+  case LangOptions::FPC_Off:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Strict;
     break;
-  case CodeGenOptions::FPC_On:
+  case LangOptions::FPC_On:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
-  case CodeGenOptions::FPC_Fast:
+  case LangOptions::FPC_Fast:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     break;
   }

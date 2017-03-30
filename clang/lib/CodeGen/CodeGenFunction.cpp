@@ -786,9 +786,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
                       llvm::utostr(LogArgs->getArgumentCount()));
       }
     } else {
-      Fn->addFnAttr(
-          "xray-instruction-threshold",
-          llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
+      if (!CGM.imbueXRayAttrs(Fn, Loc))
+        Fn->addFnAttr(
+            "xray-instruction-threshold",
+            llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
     }
   }
 

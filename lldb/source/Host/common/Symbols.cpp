@@ -212,8 +212,13 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     debug_file_search_paths.AppendIfUnique(FileSpec(".", true));
 
 #ifndef LLVM_ON_WIN32
+#if defined(__NetBSD__)
+    // Add /usr/libdata/debug directory.
+    debug_file_search_paths.AppendIfUnique(FileSpec("/usr/libdata/debug", true));
+#else
     // Add /usr/lib/debug directory.
     debug_file_search_paths.AppendIfUnique(FileSpec("/usr/lib/debug", true));
+#endif
 #endif // LLVM_ON_WIN32
 
     std::string uuid_str;

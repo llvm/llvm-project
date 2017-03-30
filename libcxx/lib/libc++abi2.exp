@@ -209,14 +209,14 @@ __ZNSt20bad_array_new_lengthC2Ev
 __ZNSt20bad_array_new_lengthD0Ev
 __ZNSt20bad_array_new_lengthD2Ev
 __ZSt10unexpectedv
-# __ZdaPv
-# __ZdlPv
-# __ZdlPvRKSt9nothrow_t
-# __Znam
-# __ZdaPvRKSt9nothrow_t
-# __Znwm
-# __ZnwmRKSt9nothrow_t
-# __ZnamRKSt9nothrow_t
+__ZdaPv
+__ZdlPv
+__ZdlPvRKSt9nothrow_t
+__Znam
+__ZdaPvRKSt9nothrow_t
+__Znwm
+__ZnwmRKSt9nothrow_t
+__ZnamRKSt9nothrow_t
 __ZTISt10bad_typeid
 __ZTISt8bad_cast
 ___cxa_bad_typeid

@@ -722,9 +722,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     ASTContext &Context = getASTContext();
     QualType T = Context.getBaseElementType(Field->getType());
     if (T->isObjCRetainableType() || T.isObjCGCStrong()) {
-      if (!Context.getLangOpts().ObjCAutoRefCount) {
-        setHasObjectMember(true);
-      } else if (T.getObjCLifetime() != Qualifiers::OCL_ExplicitNone) {
+      if (T.hasNonTrivialObjCLifetime()) {
         // Objective-C Automatic Reference Counting:
         //   If a class has a non-static data member of Objective-C pointer
         //   type (or array thereof), it is a non-POD type and its
@@ -736,6 +734,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         Data.PlainOldData = false;
         Data.HasTrivialSpecialMembers = 0;
         Data.HasIrrelevantDestructor = false;
+      } else if (!Context.getLangOpts().ObjCAutoRefCount) {
+        setHasObjectMember(true);
       }
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;

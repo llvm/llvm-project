@@ -1496,7 +1496,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       }
     }
     bool warn = true;
-    if (S.getLangOpts().ObjCAutoRefCount) {
+    if (S.getLangOpts().ObjCWeak) {
       Expr *BaseExp = BaseExpr.get()->IgnoreParenImpCasts();
       if (UnaryOperator *UO = dyn_cast<UnaryOperator>(BaseExp))
         if (UO->getOpcode() == UO_Deref)
@@ -1523,11 +1523,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         IV, IV->getUsageType(BaseType), MemberLoc, OpLoc, BaseExpr.get(),
         IsArrow);
 
-    if (S.getLangOpts().ObjCAutoRefCount) {
-      if (IV->getType().getObjCLifetime() == Qualifiers::OCL_Weak) {
-        if (!S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, MemberLoc))
-          S.recordUseOfEvaluatedWeak(Result);
-      }
+    if (IV->getType().getObjCLifetime() == Qualifiers::OCL_Weak) {
+      if (!S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, MemberLoc))
+        S.recordUseOfEvaluatedWeak(Result);
     }
 
     return Result;
