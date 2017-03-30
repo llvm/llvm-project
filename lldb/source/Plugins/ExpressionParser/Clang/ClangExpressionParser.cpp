@@ -73,6 +73,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -826,15 +827,15 @@ lldb_private::Error ClangExpressionParser::PrepareForExecution(
   }
 
   for (llvm::Function &function : *llvm_module_ap.get()) {
-    llvm::AttributeSet attributes = function.getAttributes();
+    llvm::AttributeList attributes = function.getAttributes();
     llvm::AttrBuilder attributes_to_remove;
 
     attributes_to_remove.addAttribute("target-cpu");
 
     function.setAttributes(attributes.removeAttributes(
-        function.getContext(), llvm::AttributeSet::FunctionIndex,
-        llvm::AttributeSet::get(function.getContext(),
-                                llvm::AttributeSet::FunctionIndex,
+        function.getContext(), llvm::AttributeList::FunctionIndex,
+        llvm::AttributeList::get(function.getContext(),
+                                llvm::AttributeList::FunctionIndex,
                                 attributes_to_remove)));
   }
 
