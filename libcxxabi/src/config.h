@@ -14,6 +14,4 @@
 #ifndef LIBCXXABI_CONFIG_H
 #define LIBCXXABI_CONFIG_H
 
-#include <unistd.h>
-
 #endif // LIBCXXABI_CONFIG_H

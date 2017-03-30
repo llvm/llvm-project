@@ -34,6 +34,5 @@ add_lldb_library(lldbExpression
   LINK_COMPONENTS
     Core
     ExecutionEngine
-    RuntimeDyld
     Support
   )

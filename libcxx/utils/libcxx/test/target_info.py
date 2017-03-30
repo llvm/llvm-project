@@ -142,6 +142,8 @@ class DarwinLocalTI(DefaultTargetInfo):
         library_paths = []
         # Configure the library path for libc++
         if self.full_config.use_system_cxx_lib:
+            if (os.path.isdir(str(self.full_config.use_system_cxx_lib))):
+                library_paths += [self.full_config.use_system_cxx_lib]
             pass
         elif self.full_config.cxx_runtime_root:
             library_paths += [self.full_config.cxx_runtime_root]

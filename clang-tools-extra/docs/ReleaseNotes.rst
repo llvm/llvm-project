@@ -76,10 +76,10 @@ Improvements to clang-tidy
 
   Finds functions that have more then `ParameterThreshold` parameters and emits a warning.
 
-- New `safety-no-assembler
-  <http://clang.llvm.org/extra/clang-tidy/checks/safety-no-assembler.html>`_ check
+- New `hicpp` module
 
-  Finds uses of inline assembler.
+  Adds checks that implement the `High Integrity C++ Coding Standard <http://www.codingstandard.com/section/index/>`_ and other safety
+  standards. Many checks are aliased to other modules.
 
 - New `modernize-return-braced-init-list
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-return-braced-init-list.html>`_ check
