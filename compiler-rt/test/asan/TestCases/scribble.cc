@@ -50,7 +50,7 @@ int main() {
   // CHECK-NOSCRIBBLE: class name: MyClass
   // CHECK-SCRIBBLE: isa = {{0x5555555555555555|0x55555555}}
 
-  printf("okthxbai!\n");
+  fprintf(stderr, "okthxbai!\n");
   // CHECK-SCRIBBLE: okthxbai!
   // CHECK-NOSCRIBBLE: okthxbai!
 }
