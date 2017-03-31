@@ -2975,6 +2975,11 @@ ValueObjectSP ValueObject::Dereference(Error &error) {
           child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
           language_flags);
     }
+  } else if (HasSyntheticValue()) {
+    m_deref_valobj =
+        GetSyntheticValue()
+            ->GetChildMemberWithName(ConstString("$$dereference$$"), true)
+            .get();
   }
 
   if (m_deref_valobj) {
