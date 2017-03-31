@@ -574,6 +574,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Parse command line options.
   opt::InputArgList Args = Parser.parseLINK(ArgsArr.slice(1));
 
+  // Parse and evaluate -mllvm options.
+  std::vector<const char *> V;
+  V.push_back("lld-link (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    V.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(V.size(), V.data());
+
   // Handle /help
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);

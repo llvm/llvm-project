@@ -56,6 +56,18 @@ void NativeThreadNetBSD::SetStoppedByBreakpoint() {
   m_stop_info.details.signal.signo = SIGTRAP;
 }
 
+void NativeThreadNetBSD::SetStoppedByTrace() {
+  SetStopped();
+  m_stop_info.reason = StopReason::eStopReasonTrace;
+  m_stop_info.details.signal.signo = SIGTRAP;
+}
+
+void NativeThreadNetBSD::SetStoppedByExec() {
+  SetStopped();
+  m_stop_info.reason = StopReason::eStopReasonExec;
+  m_stop_info.details.signal.signo = SIGTRAP;
+}
+
 void NativeThreadNetBSD::SetStopped() {
   const StateType new_state = StateType::eStateStopped;
   m_state = new_state;
@@ -64,6 +76,11 @@ void NativeThreadNetBSD::SetStopped() {
 
 void NativeThreadNetBSD::SetRunning() {
   m_state = StateType::eStateRunning;
+  m_stop_info.reason = StopReason::eStopReasonNone;
+}
+
+void NativeThreadNetBSD::SetStepping() {
+  m_state = StateType::eStateStepping;
   m_stop_info.reason = StopReason::eStopReasonNone;
 }
 

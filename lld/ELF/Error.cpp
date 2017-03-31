@@ -33,6 +33,18 @@ StringRef elf::Argv0;
 // but outs() or errs() are not thread-safe. We protect them using a mutex.
 static std::mutex Mu;
 
+// Prints "\n" or does nothing, depending on Msg contents of
+// the previous call of this function.
+static void newline(const Twine &Msg) {
+  // True if the previous error message contained "\n".
+  // We want to separate multi-line error messages with a newline.
+  static bool Flag;
+
+  if (Flag)
+    *ErrorOS << "\n";
+  Flag = (StringRef(Msg.str()).find('\n') != StringRef::npos);
+}
+
 static void print(StringRef S, raw_ostream::Colors C) {
   *ErrorOS << Argv0 + ": ";
   if (Config->ColorDiagnostics) {
@@ -62,13 +74,16 @@ void elf::warn(const Twine &Msg) {
     error(Msg);
     return;
   }
+
   std::lock_guard<std::mutex> Lock(Mu);
+  newline(Msg);
   print("warning: ", raw_ostream::MAGENTA);
   *ErrorOS << Msg << "\n";
 }
 
 void elf::error(const Twine &Msg) {
   std::lock_guard<std::mutex> Lock(Mu);
+  newline(Msg);
 
   if (Config->ErrorLimit == 0 || ErrorCount < Config->ErrorLimit) {
     print("error: ", raw_ostream::RED);
@@ -96,8 +111,6 @@ void elf::exitLld(int Val) {
 }
 
 void elf::fatal(const Twine &Msg) {
-  std::lock_guard<std::mutex> Lock(Mu);
-  print("error: ", raw_ostream::RED);
-  *ErrorOS << Msg << "\n";
+  error(Msg);
   exitLld(1);
 }

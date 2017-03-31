@@ -9,7 +9,8 @@
 // Should not link because of undefined symbol _bar
 // RUN: not ld.lld -o %t/r %t/m.o 2>&1 \
 // RUN:     | FileCheck --check-prefix=UNDEFINED %s
-// UNDEFINED: error: {{.*}}:(.text+0x1): undefined symbol '_bar'
+// UNDEFINED: error: undefined symbol: _bar
+// UNDEFINED: >>> referenced by {{.*}}:(.text+0x1)
 
 // We need to be sure that there is no suitable library in the /lib directory
 // RUN: not ld.lld -o %t/r %t/m.o -L/lib -l:libls.a 2>&1 \

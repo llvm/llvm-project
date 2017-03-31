@@ -880,6 +880,7 @@
 		9AC70390117675270086C050 /* SBInstructionList.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AC7038F117675270086C050 /* SBInstructionList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703AF117675410086C050 /* SBInstruction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703AE117675410086C050 /* SBInstruction.cpp */; };
 		9AC703B1117675490086C050 /* SBInstructionList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703B0117675490086C050 /* SBInstructionList.cpp */; };
+		9AD9449F1E8DB26C004796ED /* RegisterContextNetBSD_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AD9449B1E8DB267004796ED /* RegisterContextNetBSD_x86_64.cpp */; };
 		A36FF33C17D8E94600244D40 /* OptionParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A36FF33B17D8E94600244D40 /* OptionParser.cpp */; };
 		AE44FB301BB07EB20033EB62 /* GoUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */; };
 		AE44FB311BB07EB80033EB62 /* GoLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2A1BB07DD80033EB62 /* GoLexer.cpp */; };
@@ -2851,6 +2852,8 @@
 		9AC7038F117675270086C050 /* SBInstructionList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInstructionList.h; path = include/lldb/API/SBInstructionList.h; sourceTree = "<group>"; };
 		9AC703AE117675410086C050 /* SBInstruction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInstruction.cpp; path = source/API/SBInstruction.cpp; sourceTree = "<group>"; };
 		9AC703B0117675490086C050 /* SBInstructionList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInstructionList.cpp; path = source/API/SBInstructionList.cpp; sourceTree = "<group>"; };
+		9AD9449B1E8DB267004796ED /* RegisterContextNetBSD_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextNetBSD_x86_64.cpp; path = Utility/RegisterContextNetBSD_x86_64.cpp; sourceTree = "<group>"; };
+		9AD9449C1E8DB267004796ED /* RegisterContextNetBSD_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextNetBSD_x86_64.h; path = Utility/RegisterContextNetBSD_x86_64.h; sourceTree = "<group>"; };
 		9AF16A9C11402D5B007A7B3F /* SBBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBBreakpoint.cpp; path = source/API/SBBreakpoint.cpp; sourceTree = "<group>"; };
 		9AF16A9E11402D69007A7B3F /* SBBreakpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBBreakpoint.h; path = include/lldb/API/SBBreakpoint.h; sourceTree = "<group>"; };
 		9AF16CC611408686007A7B3F /* SBBreakpointLocation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBBreakpointLocation.h; path = include/lldb/API/SBBreakpointLocation.h; sourceTree = "<group>"; };
@@ -4517,6 +4520,8 @@
 		26B4666E11A2080F00CF6220 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				9AD9449B1E8DB267004796ED /* RegisterContextNetBSD_x86_64.cpp */,
+				9AD9449C1E8DB267004796ED /* RegisterContextNetBSD_x86_64.h */,
 				23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */,
 				23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */,
 				B287E63E12EFAE2C00C9BEFE /* ARMDefines.h */,
@@ -7354,6 +7359,7 @@
 				268900D013353E6F00698AC0 /* Block.cpp in Sources */,
 				268900D113353E6F00698AC0 /* ClangASTContext.cpp in Sources */,
 				265192C61BA8E905002F08F6 /* CompilerDecl.cpp in Sources */,
+				9AD9449F1E8DB26C004796ED /* RegisterContextNetBSD_x86_64.cpp in Sources */,
 				268900D213353E6F00698AC0 /* CompilerType.cpp in Sources */,
 				945261C11B9A11FC00BF138D /* LibCxxInitializerList.cpp in Sources */,
 				268900D313353E6F00698AC0 /* ClangExternalASTSourceCallbacks.cpp in Sources */,
