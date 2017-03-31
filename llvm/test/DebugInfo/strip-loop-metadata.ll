@@ -18,6 +18,7 @@ return:
 }
 
 declare void @_Z3barv()
+declare i1 @_Z3bazv()
 
 ; CHECK-LABEL: _Z5test2v
 ; CHECK: br {{.*}} !llvm.loop [[LOOP:![0-9]+]]
@@ -34,13 +35,21 @@ return:
 }
 
 ; CHECK-LABEL: _Z5test3v
-; CHECK: br {{.*}} !llvm.loop [[LOOP2:![0-9]+]]
 define void @_Z5test3v() !dbg !22 {
 entry:
   br label %while.body, !dbg !23
 
 while.body:
+  %c = call i1 @_Z3bazv()
+  br i1 %c, label %if, label %then
+
+if:
   call void @_Z3barv(), !dbg !24
+; CHECK: br {{.*}} !llvm.loop [[LOOP2:![0-9]+]]
+  br label %while.body, !dbg !25, !llvm.loop !26
+
+then:
+; CHECK: br {{.*}} !llvm.loop [[LOOP2]]
   br label %while.body, !dbg !25, !llvm.loop !26
 
 return:
