@@ -4261,7 +4261,7 @@ void RewriteObjC::RewriteByRefVar(VarDecl *ND) {
     }
     ByrefType += "};\n";
     unsigned nameSize = Name.size();
-    // for block or function pointer declaration. Name is aleady
+    // for block or function pointer declaration. Name is already
     // part of the declaration.
     if (Ty->isBlockPointerType() || Ty->isFunctionPointerType())
       nameSize = 1;

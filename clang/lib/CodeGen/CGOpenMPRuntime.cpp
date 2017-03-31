@@ -2974,7 +2974,7 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
   // Create the offloading info metadata node.
   llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("omp_offload.info");
 
-  // Auxiliar methods to create metadata values and strings.
+  // Auxiliary methods to create metadata values and strings.
   auto getMDInt = [&](unsigned v) {
     return llvm::ConstantAsMetadata::get(
         llvm::ConstantInt::get(llvm::Type::getInt32Ty(C), v));
@@ -3577,7 +3577,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
                                     SharedRefLValue.getAddress(), Type);
           } else {
             // Initialize firstprivate array using element-by-element
-            // intialization.
+            // initialization.
             CGF.EmitOMPAggregateAssign(
                 PrivateLValue.getAddress(), SharedRefLValue.getAddress(), Type,
                 [&CGF, Elem, Init, &CapturesInfo](Address DestElement,

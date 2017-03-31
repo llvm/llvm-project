@@ -467,7 +467,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       // If only one of these is a local function declaration, then they are
       // declared in different scopes, even though isDeclInScope may think
       // they're in the same scope. (If both are local, the scope check is
-      // sufficent, and if neither is local, then they are in the same scope.)
+      // sufficient, and if neither is local, then they are in the same scope.)
       continue;
     }
 
@@ -5452,7 +5452,7 @@ static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
         // Synthesize and instantiate non-trivial implicit methods, explicitly
         // defaulted methods, and the copy and move assignment operators. The
         // latter are exported even if they are trivial, because the address of
-        // an operator can be taken and should compare equal accross libraries.
+        // an operator can be taken and should compare equal across libraries.
         DiagnosticErrorTrap Trap(S.Diags);
         S.MarkFunctionReferenced(Class->getLocation(), MD);
         if (Trap.hasErrorOccurred()) {

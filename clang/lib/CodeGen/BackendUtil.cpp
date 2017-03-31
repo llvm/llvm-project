@@ -294,6 +294,139 @@ static void addSymbolRewriterPass(const CodeGenOptions &Opts,
   MPM->add(createRewriteSymbolsPass(DL));
 }
 
+static CodeGenOpt::Level getCGOptLevel(const CodeGenOptions &CodeGenOpts) {
+  switch (CodeGenOpts.OptimizationLevel) {
+  default:
+    llvm_unreachable("Invalid optimization level!");
+  case 0:
+    return CodeGenOpt::None;
+  case 1:
+    return CodeGenOpt::Less;
+  case 2:
+    return CodeGenOpt::Default; // O2/Os/Oz
+  case 3:
+    return CodeGenOpt::Aggressive;
+  }
+}
+
+static llvm::CodeModel::Model getCodeModel(const CodeGenOptions &CodeGenOpts) {
+  unsigned CodeModel =
+      llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
+      .Case("small", llvm::CodeModel::Small)
+      .Case("kernel", llvm::CodeModel::Kernel)
+      .Case("medium", llvm::CodeModel::Medium)
+      .Case("large", llvm::CodeModel::Large)
+      .Case("default", llvm::CodeModel::Default)
+      .Default(~0u);
+  assert(CodeModel != ~0u && "invalid code model!");
+  return static_cast<llvm::CodeModel::Model>(CodeModel);
+}
+
+static llvm::Reloc::Model getRelocModel(const CodeGenOptions &CodeGenOpts) {
+  // Keep this synced with the equivalent code in tools/driver/cc1as_main.cpp.
+  llvm::Optional<llvm::Reloc::Model> RM;
+  RM = llvm::StringSwitch<llvm::Reloc::Model>(CodeGenOpts.RelocationModel)
+      .Case("static", llvm::Reloc::Static)
+      .Case("pic", llvm::Reloc::PIC_)
+      .Case("ropi", llvm::Reloc::ROPI)
+      .Case("rwpi", llvm::Reloc::RWPI)
+      .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+      .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC);
+  assert(RM.hasValue() && "invalid PIC model!");
+  return *RM;
+}
+
+static TargetMachine::CodeGenFileType getCodeGenFileType(BackendAction Action) {
+  if (Action == Backend_EmitObj)
+    return TargetMachine::CGFT_ObjectFile;
+  else if (Action == Backend_EmitMCNull)
+    return TargetMachine::CGFT_Null;
+  else {
+    assert(Action == Backend_EmitAssembly && "Invalid action!");
+    return TargetMachine::CGFT_AssemblyFile;
+  }
+}
+
+static void initTargetOptions(llvm::TargetOptions &Options,
+                              const CodeGenOptions &CodeGenOpts,
+                              const clang::TargetOptions &TargetOpts,
+                              const LangOptions &LangOpts,
+                              const HeaderSearchOptions &HSOpts) {
+  Options.ThreadModel =
+      llvm::StringSwitch<llvm::ThreadModel::Model>(CodeGenOpts.ThreadModel)
+          .Case("posix", llvm::ThreadModel::POSIX)
+          .Case("single", llvm::ThreadModel::Single);
+
+  // Set float ABI type.
+  assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
+          CodeGenOpts.FloatABI == "hard" || CodeGenOpts.FloatABI.empty()) &&
+         "Invalid Floating Point ABI!");
+  Options.FloatABIType =
+      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
+          .Case("soft", llvm::FloatABI::Soft)
+          .Case("softfp", llvm::FloatABI::Soft)
+          .Case("hard", llvm::FloatABI::Hard)
+          .Default(llvm::FloatABI::Default);
+
+  // Set FP fusion mode.
+  switch (LangOpts.getDefaultFPContractMode()) {
+  case LangOptions::FPC_Off:
+    Options.AllowFPOpFusion = llvm::FPOpFusion::Strict;
+    break;
+  case LangOptions::FPC_On:
+    Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
+    break;
+  case LangOptions::FPC_Fast:
+    Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+    break;
+  }
+
+  Options.UseInitArray = CodeGenOpts.UseInitArray;
+  Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
+  Options.CompressDebugSections = CodeGenOpts.CompressDebugSections;
+  Options.RelaxELFRelocations = CodeGenOpts.RelaxELFRelocations;
+
+  // Set EABI version.
+  Options.EABIVersion = llvm::StringSwitch<llvm::EABI>(TargetOpts.EABIVersion)
+                            .Case("4", llvm::EABI::EABI4)
+                            .Case("5", llvm::EABI::EABI5)
+                            .Case("gnu", llvm::EABI::GNU)
+                            .Default(llvm::EABI::Default);
+
+  if (LangOpts.SjLjExceptions)
+    Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
+
+  Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
+  Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;
+  Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
+  Options.UnsafeFPMath = CodeGenOpts.UnsafeFPMath;
+  Options.StackAlignmentOverride = CodeGenOpts.StackAlignment;
+  Options.FunctionSections = CodeGenOpts.FunctionSections;
+  Options.DataSections = CodeGenOpts.DataSections;
+  Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
+  Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
+  Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
+
+  Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
+  Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
+  Options.MCOptions.MCUseDwarfDirectory = !CodeGenOpts.NoDwarfDirectoryAsm;
+  Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
+  Options.MCOptions.MCIncrementalLinkerCompatible =
+      CodeGenOpts.IncrementalLinkerCompatible;
+  Options.MCOptions.MCPIECopyRelocations = CodeGenOpts.PIECopyRelocations;
+  Options.MCOptions.MCFatalWarnings = CodeGenOpts.FatalWarnings;
+  Options.MCOptions.AsmVerbose = CodeGenOpts.AsmVerbose;
+  Options.MCOptions.PreserveAsmComments = CodeGenOpts.PreserveAsmComments;
+  Options.MCOptions.ABIName = TargetOpts.ABI;
+  for (const auto &Entry : HSOpts.UserEntries)
+    if (!Entry.IsFramework &&
+        (Entry.Group == frontend::IncludeDirGroup::Quoted ||
+         Entry.Group == frontend::IncludeDirGroup::Angled ||
+         Entry.Group == frontend::IncludeDirGroup::System))
+      Options.MCOptions.IASSearchPaths.push_back(
+          Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
+}
+
 void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                                       legacy::FunctionPassManager &FPM) {
   // Handle disabling of all LLVM passes, where we want to preserve the
@@ -499,125 +632,14 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   }
 
-  unsigned CodeModel =
-    llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
-      .Case("small", llvm::CodeModel::Small)
-      .Case("kernel", llvm::CodeModel::Kernel)
-      .Case("medium", llvm::CodeModel::Medium)
-      .Case("large", llvm::CodeModel::Large)
-      .Case("default", llvm::CodeModel::Default)
-      .Default(~0u);
-  assert(CodeModel != ~0u && "invalid code model!");
-  llvm::CodeModel::Model CM = static_cast<llvm::CodeModel::Model>(CodeModel);
-
+  llvm::CodeModel::Model CM  = getCodeModel(CodeGenOpts);
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
-
-  // Keep this synced with the equivalent code in tools/driver/cc1as_main.cpp.
-  llvm::Optional<llvm::Reloc::Model> RM;
-  RM = llvm::StringSwitch<llvm::Reloc::Model>(CodeGenOpts.RelocationModel)
-           .Case("static", llvm::Reloc::Static)
-           .Case("pic", llvm::Reloc::PIC_)
-           .Case("ropi", llvm::Reloc::ROPI)
-           .Case("rwpi", llvm::Reloc::RWPI)
-           .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
-           .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC);
-  assert(RM.hasValue() && "invalid PIC model!");
-
-  CodeGenOpt::Level OptLevel;
-  switch (CodeGenOpts.OptimizationLevel) {
-  default:
-    llvm_unreachable("Invalid optimization level!");
-  case 0:
-    OptLevel = CodeGenOpt::None;
-    break;
-  case 1:
-    OptLevel = CodeGenOpt::Less;
-    break;
-  case 2:
-    OptLevel = CodeGenOpt::Default;
-    break; // O2/Os/Oz
-  case 3:
-    OptLevel = CodeGenOpt::Aggressive;
-    break;
-  }
+  llvm::Reloc::Model RM = getRelocModel(CodeGenOpts);
+  CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
 
   llvm::TargetOptions Options;
-
-  Options.ThreadModel =
-    llvm::StringSwitch<llvm::ThreadModel::Model>(CodeGenOpts.ThreadModel)
-      .Case("posix", llvm::ThreadModel::POSIX)
-      .Case("single", llvm::ThreadModel::Single);
-
-  // Set float ABI type.
-  assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
-          CodeGenOpts.FloatABI == "hard" || CodeGenOpts.FloatABI.empty()) &&
-         "Invalid Floating Point ABI!");
-  Options.FloatABIType =
-      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
-          .Case("soft", llvm::FloatABI::Soft)
-          .Case("softfp", llvm::FloatABI::Soft)
-          .Case("hard", llvm::FloatABI::Hard)
-          .Default(llvm::FloatABI::Default);
-
-  // Set FP fusion mode.
-  switch (LangOpts.getDefaultFPContractMode()) {
-  case LangOptions::FPC_Off:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Strict;
-    break;
-  case LangOptions::FPC_On:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-    break;
-  case LangOptions::FPC_Fast:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-    break;
-  }
-
-  Options.UseInitArray = CodeGenOpts.UseInitArray;
-  Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
-  Options.CompressDebugSections = CodeGenOpts.CompressDebugSections;
-  Options.RelaxELFRelocations = CodeGenOpts.RelaxELFRelocations;
-
-  // Set EABI version.
-  Options.EABIVersion = llvm::StringSwitch<llvm::EABI>(TargetOpts.EABIVersion)
-                            .Case("4", llvm::EABI::EABI4)
-                            .Case("5", llvm::EABI::EABI5)
-                            .Case("gnu", llvm::EABI::GNU)
-                            .Default(llvm::EABI::Default);
-
-  if (LangOpts.SjLjExceptions)
-    Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-
-  Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
-  Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;
-  Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = CodeGenOpts.UnsafeFPMath;
-  Options.StackAlignmentOverride = CodeGenOpts.StackAlignment;
-  Options.FunctionSections = CodeGenOpts.FunctionSections;
-  Options.DataSections = CodeGenOpts.DataSections;
-  Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
-  Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
-  Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
-
-  Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
-  Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
-  Options.MCOptions.MCUseDwarfDirectory = !CodeGenOpts.NoDwarfDirectoryAsm;
-  Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
-  Options.MCOptions.MCIncrementalLinkerCompatible =
-      CodeGenOpts.IncrementalLinkerCompatible;
-  Options.MCOptions.MCPIECopyRelocations = CodeGenOpts.PIECopyRelocations;
-  Options.MCOptions.MCFatalWarnings = CodeGenOpts.FatalWarnings;
-  Options.MCOptions.AsmVerbose = CodeGenOpts.AsmVerbose;
-  Options.MCOptions.PreserveAsmComments = CodeGenOpts.PreserveAsmComments;
-  Options.MCOptions.ABIName = TargetOpts.ABI;
-  for (const auto &Entry : HSOpts.UserEntries)
-    if (!Entry.IsFramework &&
-        (Entry.Group == frontend::IncludeDirGroup::Quoted ||
-         Entry.Group == frontend::IncludeDirGroup::Angled ||
-         Entry.Group == frontend::IncludeDirGroup::System))
-      Options.MCOptions.IASSearchPaths.push_back(
-          Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
-
+  initTargetOptions(Options, CodeGenOpts, TargetOpts, LangOpts, HSOpts);
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
 }
@@ -633,13 +655,7 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
 
   // Normal mode, emit a .s or .o file by running the code generator. Note,
   // this also adds codegenerator level optimization passes.
-  TargetMachine::CodeGenFileType CGFT = TargetMachine::CGFT_AssemblyFile;
-  if (Action == Backend_EmitObj)
-    CGFT = TargetMachine::CGFT_ObjectFile;
-  else if (Action == Backend_EmitMCNull)
-    CGFT = TargetMachine::CGFT_Null;
-  else
-    assert(Action == Backend_EmitAssembly && "Invalid action!");
+  TargetMachine::CodeGenFileType CGFT = getCodeGenFileType(Action);
 
   // Add ObjC ARC final-cleanup optimizations. This is done as part of the
   // "codegen" passes so that it isn't run multiple times when there is
@@ -916,8 +932,13 @@ Expected<BitcodeModule> clang::FindThinLTOModule(MemoryBufferRef MBRef) {
 }
 
 static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
+                              const HeaderSearchOptions &HeaderOpts,
+                              const CodeGenOptions &CGOpts,
+                              const clang::TargetOptions &TOpts,
+                              const LangOptions &LOpts,
                               std::unique_ptr<raw_pwrite_stream> OS,
-                              std::string SampleProfile) {
+                              std::string SampleProfile,
+                              BackendAction Action) {
   StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -968,6 +989,13 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
     return llvm::make_unique<lto::NativeObjectStream>(std::move(OS));
   };
   lto::Config Conf;
+  Conf.CPU = TOpts.CPU;
+  Conf.CodeModel = getCodeModel(CGOpts);
+  Conf.MAttrs = TOpts.Features;
+  Conf.RelocModel = getRelocModel(CGOpts);
+  Conf.CGOptLevel = getCGOptLevel(CGOpts);
+  Conf.CGFileType = getCodeGenFileType(Action);
+  initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
   if (Error E = thinBackend(
           Conf, 0, AddStream, *M, *CombinedIndex, ImportList,
@@ -1004,8 +1032,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
     // of an error).
     bool DoThinLTOBackend = CombinedIndex != nullptr;
     if (DoThinLTOBackend) {
-      runThinLTOBackend(CombinedIndex.get(), M, std::move(OS),
-                        CGOpts.SampleProfileFile);
+      runThinLTOBackend(CombinedIndex.get(), M, HeaderOpts, CGOpts, TOpts,
+                        LOpts, std::move(OS), CGOpts.SampleProfileFile, Action);
       return;
     }
   }

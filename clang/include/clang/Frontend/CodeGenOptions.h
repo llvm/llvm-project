@@ -218,7 +218,7 @@ public:
   /// flag.
   std::shared_ptr<llvm::Regex> OptimizationRemarkAnalysisPattern;
 
-  /// Set of files definining the rules for the symbol rewriting.
+  /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be

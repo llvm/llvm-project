@@ -22,7 +22,7 @@ void world() {}
 // FUNC_SECT: section .rodata,
 // FUNC_SECT: hello:
 
-// DATA_SECT-NOT: section
+// DATA_SECT-NOT: .section
 // DATA_SECT: world:
 // DATA_SECT: .section .rodata.hello,
 // DATA_SECT: hello:

@@ -5025,7 +5025,7 @@ public:
                             ArrayRef<TypeSourceInfo *> Args,
                             SourceLocation RParenLoc);
 
-  /// ActOnArrayTypeTrait - Parsed one of the bianry type trait support
+  /// ActOnArrayTypeTrait - Parsed one of the binary type trait support
   /// pseudo-functions.
   ExprResult ActOnArrayTypeTrait(ArrayTypeTrait ATT,
                                  SourceLocation KWLoc,
@@ -8222,6 +8222,11 @@ public:
   /// declaration.
   void AddAssumeAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E, Expr *OE,
                             unsigned SpellingListIndex);
+
+  /// AddAllocAlignAttr - Adds an alloc_align attribute to a particular
+  /// declaration.
+  void AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
+                         unsigned SpellingListIndex);
 
   /// AddAlignValueAttr - Adds an align_value attribute to a particular
   /// declaration.

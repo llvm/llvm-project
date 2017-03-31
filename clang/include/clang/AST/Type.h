@@ -2079,7 +2079,7 @@ public:
     : Type(Builtin, QualType(), /*Dependent=*/(K == Dependent),
            /*InstantiationDependent=*/(K == Dependent),
            /*VariablyModified=*/false,
-           /*Unexpanded paramter pack=*/false) {
+           /*Unexpanded parameter pack=*/false) {
     BuiltinTypeBits.Kind = K;
   }
 
