@@ -37,12 +37,23 @@ public:
 protected:
   virtual Error ReadGPR();
   virtual Error WriteGPR();
+
+  virtual Error ReadFPR();
+  virtual Error WriteFPR();
+
   virtual void *GetGPRBuffer() { return nullptr; }
   virtual size_t GetGPRSize() {
     return GetRegisterInfoInterface().GetGPRSize();
   }
+
+  virtual void *GetFPRBuffer() { return nullptr; }
+  virtual size_t GetFPRSize() { return 0; }
+
   virtual Error DoReadGPR(void *buf);
   virtual Error DoWriteGPR(void *buf);
+
+  virtual Error DoReadFPR(void *buf);
+  virtual Error DoWriteFPR(void *buf);
 
   virtual NativeProcessNetBSD &GetProcess();
   virtual ::pid_t GetProcessPid();

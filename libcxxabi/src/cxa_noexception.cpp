@@ -13,7 +13,6 @@
 
 // Support functions for the no-exceptions libc++ library
 
-#include "config.h"
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate

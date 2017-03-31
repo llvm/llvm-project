@@ -281,6 +281,12 @@ TSAN_INTERCEPTOR(void, xpc_connection_send_message_with_reply,
   (connection, message, replyq, new_handler);
 }
 
+TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
+  SCOPED_TSAN_INTERCEPTOR(xpc_connection_cancel, connection);
+  Release(thr, pc, (uptr)connection);
+  REAL(xpc_connection_cancel)(connection);
+}
+
 // On macOS, libc++ is always linked dynamically, so intercepting works the
 // usual way.
 #define STDCXX_INTERCEPTOR TSAN_INTERCEPTOR
