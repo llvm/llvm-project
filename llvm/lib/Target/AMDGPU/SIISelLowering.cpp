@@ -519,15 +519,18 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           unsigned IntrID) const {
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_dec: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align = 0;
-    Info.vol = false;
+
+    const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
+    Info.vol = !Vol || !Vol->isNullValue();
     Info.readMem = true;
     Info.writeMem = true;
     return true;
+  }
   default:
     return false;
   }

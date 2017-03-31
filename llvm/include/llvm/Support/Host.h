@@ -77,11 +77,11 @@ constexpr bool IsBigEndianHost = false;
   /// Returns -1 if unknown for the current host system.
   int getHostNumPhysicalCores();
 
-  namespace detail {
-  /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
-  StringRef getHostCPUNameForPowerPC(const StringRef &ProcCpuinfoContent);
-  StringRef getHostCPUNameForARM(const StringRef &ProcCpuinfoContent);
-  StringRef getHostCPUNameForS390x(const StringRef &ProcCpuinfoContent);
+  /// helper functions to extract HostCPUName from /proc/cpuinfo on linux.
+  namespace LinuxReadCpuInfo {
+  StringRef getHostCPUName_powerpc(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUName_arm(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUName_s390x(const StringRef &ProcCpuinfoContent);
   }
 }
 }

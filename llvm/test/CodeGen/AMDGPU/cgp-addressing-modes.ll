@@ -626,7 +626,7 @@ done:
 ; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
 ; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
 ; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2)
+; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2, i32 0, i32 0, i1 false)
 define amdgpu_kernel void @test_sink_local_small_offset_atomic_inc_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
@@ -636,7 +636,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %in.gep, i32 2)
+  %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %in.gep, i32 2, i32 0, i32 0, i1 false)
   br label %endif
 
 endif:
@@ -652,7 +652,7 @@ done:
 ; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
 ; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
 ; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2)
+; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2, i32 0, i32 0, i1 false)
 define amdgpu_kernel void @test_sink_local_small_offset_atomic_dec_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
@@ -662,7 +662,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %in.gep, i32 2)
+  %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %in.gep, i32 2, i32 0, i32 0, i1 false)
   br label %endif
 
 endif:
@@ -675,8 +675,8 @@ done:
 }
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32) #2
-declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #2
+declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
+declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

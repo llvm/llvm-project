@@ -531,7 +531,7 @@ WASM-NEXT:     Offset: 75
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 44
+WASM-NEXT:     Size: 60
 WASM-NEXT:     Offset: 119
 WASM-NEXT:     Name: name
 WASM-NEXT:   }

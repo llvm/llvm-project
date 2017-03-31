@@ -66,16 +66,19 @@ Revision        : 0000
 Serial          : 0000000000000000
 )";
 
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM(CortexA9ProcCpuinfo),
+  EXPECT_EQ(sys::LinuxReadCpuInfo::getHostCPUName_arm(CortexA9ProcCpuinfo),
             "cortex-a9");
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
-                                              "CPU part        : 0xc0f"),
-            "cortex-a15");
+  EXPECT_EQ(
+      sys::LinuxReadCpuInfo::getHostCPUName_arm("CPU implementer : 0x41\n"
+                                                "CPU part        : 0xc0f"),
+      "cortex-a15");
   // Verify that both CPU implementer and CPU part are checked:
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
-                                              "CPU part        : 0xc0f"),
-            "generic");
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
-                                              "CPU part        : 0x06f"),
-            "krait");
+  EXPECT_EQ(
+      sys::LinuxReadCpuInfo::getHostCPUName_arm("CPU implementer : 0x40\n"
+                                                "CPU part        : 0xc0f"),
+      "generic");
+  EXPECT_EQ(
+      sys::LinuxReadCpuInfo::getHostCPUName_arm("CPU implementer : 0x51\n"
+                                                "CPU part        : 0x06f"),
+      "krait");
 }

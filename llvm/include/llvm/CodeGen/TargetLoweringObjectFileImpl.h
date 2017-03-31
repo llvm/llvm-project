@@ -187,9 +187,6 @@ public:
                                        const TargetMachine &TM) const override;
 };
 
-void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                  const Triple &TT, Mangler &Mangler);
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H

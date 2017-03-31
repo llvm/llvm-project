@@ -1252,7 +1252,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
     // (add (sext x), (sext y)) --> (sext (add int x, y))
     if (SExtInst *RHSConv = dyn_cast<SExtInst>(RHS)) {
-      // Only do this if x/y have the same type, if at last one of them has a
+      // Only do this if x/y have the same type, if at least one of them has a
       // single use (so we don't increase the number of sexts), and if the
       // integer add will not overflow.
       if (LHSConv->getOperand(0)->getType() ==
@@ -1289,7 +1289,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
     // (add (zext x), (zext y)) --> (zext (add int x, y))
     if (auto *RHSConv = dyn_cast<ZExtInst>(RHS)) {
-      // Only do this if x/y have the same type, if at last one of them has a
+      // Only do this if x/y have the same type, if at least one of them has a
       // single use (so we don't increase the number of zexts), and if the
       // integer add will not overflow.
       if (LHSConv->getOperand(0)->getType() ==
@@ -1417,7 +1417,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
     if (SIToFPInst *RHSConv = dyn_cast<SIToFPInst>(RHS)) {
       Value *RHSIntVal = RHSConv->getOperand(0);
 
-      // Only do this if x/y have the same type, if at last one of them has a
+      // Only do this if x/y have the same type, if at least one of them has a
       // single use (so we don't increase the number of int->fp conversions),
       // and if the integer add will not overflow.
       if (LHSIntVal->getType() == RHSIntVal->getType() &&

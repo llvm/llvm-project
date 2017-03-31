@@ -20,6 +20,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <memory>
 
 namespace llvm {
   class FastISel;
@@ -29,6 +30,7 @@ namespace llvm {
   class MachineBasicBlock;
   class MachineFunction;
   class MachineInstr;
+  class OptimizationRemarkEmitter;
   class TargetLowering;
   class TargetLibraryInfo;
   class FunctionLoweringInfo;
@@ -55,6 +57,10 @@ public:
   const TargetLowering *TLI;
   bool FastISelFailed;
   SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
+
+  /// Current optimization remark emitter.
+  /// Used to report things like combines and FastISel failures.
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   static char ID;
 

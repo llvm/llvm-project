@@ -259,7 +259,7 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
 
 template <typename U>
 void GraphRenderer::getStats(U begin, U end, GraphRenderer::TimeStat &S) {
-  assert(begin != end);
+  if (begin == end) return;
   std::ptrdiff_t MedianOff = S.Count / 2;
   std::nth_element(begin, begin + MedianOff, end);
   S.Median = *(begin + MedianOff);
@@ -287,9 +287,7 @@ void GraphRenderer::calculateEdgeStatistics() {
   for (auto &E : G.edges()) {
     auto &A = E.second;
     assert(!A.Timings.empty());
-    assert((A.Timings[0] > 0));
     getStats(A.Timings.begin(), A.Timings.end(), A.S);
-    assert(A.S.Sum > 0);
     updateMaxStats(A.S, G.GraphEdgeMax);
   }
 }
@@ -297,15 +295,12 @@ void GraphRenderer::calculateEdgeStatistics() {
 void GraphRenderer::calculateVertexStatistics() {
   std::vector<uint64_t> TempTimings;
   for (auto &V : G.vertices()) {
-    assert((V.first == 0 || G[V.first].S.Sum != 0) &&
-           "Every non-root vertex should have at least one call");
     if (V.first != 0) {
       for (auto &E : G.inEdges(V.first)) {
         auto &A = E.second;
         TempTimings.insert(TempTimings.end(), A.Timings.begin(),
                            A.Timings.end());
       }
-      assert(!TempTimings.empty() && TempTimings[0] > 0);
       getStats(TempTimings.begin(), TempTimings.end(), G[V.first].S);
       updateMaxStats(G[V.first].S, G.GraphVertexMax);
       TempTimings.clear();

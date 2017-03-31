@@ -57,6 +57,8 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
         return yaml2coff(*Doc.Coff, Out);
       if (Doc.MachO || Doc.FatMachO)
         return yaml2macho(Doc, Out);
+      if (Doc.Wasm)
+        return yaml2wasm(*Doc.Wasm, Out);
       errs() << "yaml2obj: Unknown document type!\n";
       return 1;
     }

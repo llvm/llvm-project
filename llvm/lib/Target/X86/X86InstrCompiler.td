@@ -772,11 +772,11 @@ defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b",
 // the pseudo. The argument feeding EBX is ebx_input.
 //
 // The additional argument, $ebx_save, is a temporary register used to
-// save the value of RBX accross the actual instruction.
+// save the value of RBX across the actual instruction.
 //
 // To make sure the register assigned to $ebx_save does not interfere with
 // the definition of the actual instruction, we use a definition $dst which
-// is tied to $rbx_save. That way, the live-range of $rbx_save spans accross
+// is tied to $rbx_save. That way, the live-range of $rbx_save spans across
 // the instruction and we are sure we will have a valid register to restore
 // the value of RBX.
 let Defs = [EAX, EDX, EBX, EFLAGS], Uses = [EAX, ECX, EDX],

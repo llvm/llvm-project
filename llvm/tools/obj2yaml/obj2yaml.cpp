@@ -24,6 +24,8 @@ static std::error_code dumpObject(const ObjectFile &Obj) {
     return coff2yaml(outs(), cast<COFFObjectFile>(Obj));
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
+  if (Obj.isWasm())
+    return wasm2yaml(outs(), cast<WasmObjectFile>(Obj));
 
   return obj2yaml_error::unsupported_obj_file_format;
 }

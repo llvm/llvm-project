@@ -98,7 +98,7 @@ extern char &AMDGPUPromoteAllocaID;
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
                                   CodeGenOpt::Level OptLevel);
-ModulePass *createAMDGPUAlwaysInlinePass();
+ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 ModulePass *createAMDGPUOpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
 

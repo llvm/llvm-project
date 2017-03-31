@@ -230,9 +230,15 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
   Module *M = II->getParent()->getParent()->getParent();
 
   switch (II->getIntrinsicID()) {
-  case Intrinsic::objectsize:
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec: {
+  case Intrinsic::amdgcn_atomic_dec:{
+    const ConstantInt *IsVolatile = dyn_cast<ConstantInt>(II->getArgOperand(4));
+    if (!IsVolatile || !IsVolatile->isNullValue())
+      return false;
+
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::objectsize: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
     Function *NewDecl =

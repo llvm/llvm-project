@@ -19,8 +19,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   x = __builtin_bswap64(x);
   y = __builtin_bswap32(y);
   z = __builtin_bswap16(z);
+  const bool k32bit = sizeof(void*) == 4;
 
-  if (x == 0x46555A5A5A5A5546ULL &&
+  if ((k32bit || x == 0x46555A5A5A5A5546ULL) &&
       z == 0x4F4B &&
       y == 0x66757A7A &&
       true

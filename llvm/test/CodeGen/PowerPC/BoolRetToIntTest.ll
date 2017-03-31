@@ -31,14 +31,14 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond
-; CHECK: [[PHI:%.+]] = phi i64 [ 1, %for.body ], [ 0, %for.cond ]
+; CHECK: [[PHI:%.+]] = phi i32 [ 1, %for.body ], [ 0, %for.cond ]
   %cleanup.dest.slot.0.ph = phi i1 [ true, %for.body ], [ false, %for.cond ]
   br label %cleanup
 
 cleanup:                                          ; preds = %cleanup.loopexit, %entry
-; CHECK: = phi i64 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
+; CHECK: = phi i32 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
   %cleanup.dest.slot.0 = phi i1 [ false, %entry ], [ %cleanup.dest.slot.0.ph, %cleanup.loopexit ]
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   ret i1 %cleanup.dest.slot.0
 }
@@ -78,14 +78,14 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond
-; CHECK: [[PHI:%.+]] = phi i64 [ 1, %for.body ], [ 0, %for.cond ]
+; CHECK: [[PHI:%.+]] = phi i32 [ 1, %for.body ], [ 0, %for.cond ]
   %cleanup.dest.slot.0.ph = phi i1 [ true, %for.body ], [ false, %for.cond ]
   br label %cleanup
 
 cleanup:                                          ; preds = %cleanup.loopexit, %entry
-; CHECK: = phi i64 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
+; CHECK: = phi i32 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
   %cleanup.dest.slot.0 = phi i1 [ false, %entry ], [ %cleanup.dest.slot.0.ph, %cleanup.loopexit ]
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: call void %cont(i1 [[REG]]
   tail call void %cont(i1 %cleanup.dest.slot.0)
   ret void
@@ -112,17 +112,17 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %call, label %cleanup.loopexit, label %for.cond
 
 cleanup.loopexit:                                 ; preds = %for.body, %for.cond
-; CHECK: [[PHI:%.+]] = phi i64 [ 1, %for.body ], [ 0, %for.cond ]
+; CHECK: [[PHI:%.+]] = phi i32 [ 1, %for.body ], [ 0, %for.cond ]
   %cleanup.dest.slot.0.ph = phi i1 [ true, %for.body ], [ false, %for.cond ]
   br label %cleanup
 
 cleanup:                                          ; preds = %cleanup.loopexit, %entry
-; CHECK: = phi i64 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
+; CHECK: = phi i32 [ 0, %entry ], [ [[PHI]], %cleanup.loopexit ]
   %cleanup.dest.slot.0 = phi i1 [ false, %entry ], [ %cleanup.dest.slot.0.ph, %cleanup.loopexit ]
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: call void %cont(i1 [[REG]]
   tail call void %cont(i1 %cleanup.dest.slot.0)
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   ret i1 %cleanup.dest.slot.0
 }
@@ -136,7 +136,7 @@ foo:
   br label %cleanup
 
 cleanup:
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   %result = phi i1 [ false, %foo ], [ %operand, %entry ]
   ret i1 %result
@@ -186,7 +186,7 @@ foo:
 
 ; CHECK-LABEL: cleanup
 cleanup:
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   %result = phi i1 [ %bar, %foo], [ %operand, %entry ]
   ret i1 %result
@@ -198,8 +198,8 @@ declare zeroext i1 @return_i1()
 define zeroext i1 @call_test() {
 ; CHECK: [[REG:%.+]] = call i1
   %result = call i1 @return_i1()
-; CHECK: [[REG:%.+]] = zext i1 {{%.+}} to i64
-; CHECK: [[REG:%.+]] = trunc i64 {{%.+}} to i1
+; CHECK: [[REG:%.+]] = zext i1 {{%.+}} to i32
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   ret i1 %result
 }

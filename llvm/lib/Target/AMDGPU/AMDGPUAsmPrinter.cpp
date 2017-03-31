@@ -164,7 +164,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
-  if (MFI->isKernel() && STM.isAmdCodeObjectV2(*MF)) {
+  if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(*MF)) {
     SmallString<128> SymbolName;
     getNameWithPrefix(SymbolName, MF->getFunction()),
     getTargetStreamer().EmitAMDGPUSymbolType(
