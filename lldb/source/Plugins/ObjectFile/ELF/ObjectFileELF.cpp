@@ -288,10 +288,26 @@ static uint32_t kalimbaVariantFromElfFlags(const elf::elf_word e_flags) {
   return kal_arch_variant;
 }
 
-static uint32_t mipsVariantFromElfFlags(const elf::elf_word e_flags,
-                                        uint32_t endian) {
-  const uint32_t mips_arch = e_flags & llvm::ELF::EF_MIPS_ARCH;
+static uint32_t mipsVariantFromElfFlags (const elf::ELFHeader &header) {
+  const uint32_t mips_arch = header.e_flags & llvm::ELF::EF_MIPS_ARCH;
+  uint32_t endian = header.e_ident[EI_DATA];
   uint32_t arch_variant = ArchSpec::eMIPSSubType_unknown;
+  uint32_t fileclass = header.e_ident[EI_CLASS];
+
+  // If there aren't any elf flags available (e.g core elf file) then return default 
+  // 32 or 64 bit arch (without any architecture revision) based on object file's class.
+  if (header.e_type == ET_CORE) {
+    switch (fileclass) {
+    case llvm::ELF::ELFCLASS32:
+      return (endian == ELFDATA2LSB) ? ArchSpec::eMIPSSubType_mips32el
+                                     : ArchSpec::eMIPSSubType_mips32;
+    case llvm::ELF::ELFCLASS64:
+      return (endian == ELFDATA2LSB) ? ArchSpec::eMIPSSubType_mips64el
+                                     : ArchSpec::eMIPSSubType_mips64;
+    default:
+      return arch_variant;
+    }
+  }
 
   switch (mips_arch) {
   case llvm::ELF::EF_MIPS_ARCH_1:
@@ -326,7 +342,7 @@ static uint32_t mipsVariantFromElfFlags(const elf::elf_word e_flags,
 
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
-    return mipsVariantFromElfFlags(header.e_flags, header.e_ident[EI_DATA]);
+    return mipsVariantFromElfFlags(header);
 
   return llvm::ELF::EM_CSR_KALIMBA == header.e_machine
              ? kalimbaVariantFromElfFlags(header.e_flags)
@@ -1349,6 +1365,10 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
         }
         break;
       }
+      if (arch_spec.IsMIPS() &&
+          arch_spec.GetTriple().getOS() == llvm::Triple::OSType::UnknownOS)
+        // The note.n_name == LLDB_NT_OWNER_GNU is valid for Linux platform
+        arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
     }
     // Process NetBSD ELF notes.
     else if ((note.n_name == LLDB_NT_OWNER_NETBSD) &&
@@ -1450,6 +1470,12 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             break;
           }
         }
+        if (arch_spec.IsMIPS() &&
+            arch_spec.GetTriple().getOS() == llvm::Triple::OSType::UnknownOS)
+          // In case of MIPSR6, the LLDB_NT_OWNER_GNU note is missing
+          // for some cases (e.g. compile with -nostdlib)
+          // Hence set OS to Linux
+          arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux); 
       }
     }
 

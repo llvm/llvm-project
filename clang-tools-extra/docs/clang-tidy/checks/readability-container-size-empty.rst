@@ -18,7 +18,7 @@ the future.
 The check issues warning if a container has ``size()`` and ``empty()`` methods
 matching following signatures:
 
-code-block:: c++
+.. code-block:: c++
 
   size_type size() const;
   bool empty() const;

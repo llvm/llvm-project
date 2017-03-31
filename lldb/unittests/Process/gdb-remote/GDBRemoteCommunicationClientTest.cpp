@@ -13,6 +13,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -330,4 +331,42 @@ TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
 
   HandlePacket(server, "QPassSignals:", "OK");
   EXPECT_TRUE(result.get().Success());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  const lldb::addr_t addr = 0xa000;
+  MemoryRegionInfo region_info;
+  std::future<Error> result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  // name is: /foo/bar.so
+  HandlePacket(server,
+      "qMemoryRegionInfo:a000",
+      "start:a000;size:2000;permissions:rx;name:2f666f6f2f6261722e736f;");
+  EXPECT_TRUE(result.get().Success());
+
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  const lldb::addr_t addr = 0x4000;
+  MemoryRegionInfo region_info;
+  std::future<Error> result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:4000", "start:4000;size:0000;");
+  EXPECT_FALSE(result.get().Success());
 }

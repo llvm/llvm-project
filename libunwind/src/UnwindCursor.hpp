@@ -38,7 +38,7 @@
 
 namespace libunwind {
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 /// Cache of recently found FDEs.
 template <typename A>
 class _LIBUNWIND_HIDDEN DwarfFDECache {
@@ -180,12 +180,12 @@ void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
   }
   _LIBUNWIND_LOG_NON_ZERO(::pthread_rwlock_unlock(&_lock));
 }
-#endif // _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 
 #define arrayoffsetof(type, index, field) ((size_t)(&((type *)0)[index].field))
 
-#if _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A> class UnwindSectionHeader {
 public:
   UnwindSectionHeader(A &addressSpace, typename A::pint_t addr)
@@ -373,7 +373,7 @@ private:
   A                   &_addressSpace;
   typename A::pint_t   _addr;
 };
-#endif // _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
 class _LIBUNWIND_HIDDEN AbstractUnwindCursor {
 public:
@@ -446,7 +446,7 @@ public:
 
 private:
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
   bool getInfoFromEHABISection(pint_t pc, const UnwindInfoSections &sects);
 
   int stepWithEHABI() {
@@ -464,7 +464,7 @@ private:
   }
 #endif
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
                                             uint32_t fdeSectionOffsetHint=0);
   int stepWithDwarfFDE() {
@@ -475,11 +475,11 @@ private:
   }
 #endif
 
-#if _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
   bool getInfoFromCompactEncodingSection(pint_t pc,
                                             const UnwindInfoSections &sects);
   int stepWithCompactEncoding() {
-  #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+  #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
       return stepWithDwarfFDE();
   #endif
@@ -557,9 +557,9 @@ private:
     return false;
   }
 #endif
-#endif // _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   compact_unwind_encoding_t dwarfEncoding() const {
     R dummy;
     return dwarfEncoding(dummy);
@@ -594,7 +594,7 @@ private:
     return 0;
   }
 #endif
-#endif // _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 
   A               &_addressSpace;
@@ -672,7 +672,7 @@ template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
   return _isSignalFrame;
 }
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 struct EHABIIndexEntry {
   uint32_t functionOffset;
   uint32_t data;
@@ -868,7 +868,7 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 }
 #endif
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
                                                 const UnwindInfoSections &sects,
@@ -884,7 +884,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
                                     sects.dwarf_section + fdeSectionOffsetHint,
                                     &fdeInfo, &cieInfo);
   }
-#if _LIBUNWIND_SUPPORT_DWARF_INDEX
+#if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   if (!foundFDE && (sects.dwarf_index_section != 0)) {
     foundFDE = EHHeaderParser<A>::findFDE(
         _addressSpace, pc, sects.dwarf_index_section,
@@ -927,7 +927,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
       // Add to cache (to make next lookup faster) if we had no hint
       // and there was no index.
       if (!foundInCache && (fdeSectionOffsetHint == 0)) {
-  #if _LIBUNWIND_SUPPORT_DWARF_INDEX
+  #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
         if (sects.dwarf_index_section == 0)
   #endif
         DwarfFDECache<A>::add(sects.dso_base, fdeInfo.pcStart, fdeInfo.pcEnd,
@@ -939,10 +939,10 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
   //_LIBUNWIND_DEBUG_LOG("can't find/use FDE for pc=0x%llX", (uint64_t)pc);
   return false;
 }
-#endif // _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 
-#if _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
                                               const UnwindInfoSections &sects) {
@@ -1196,13 +1196,13 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
   _info.extra = sects.dso_base;
   return true;
 }
-#endif // _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
 
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   pint_t pc = (pint_t)this->getReg(UNW_REG_IP);
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
   // Remove the thumb bit so the IP represents the actual instruction address.
   // This matches the behaviour of _Unwind_GetIP on arm.
   pc &= (pint_t)~0x1;
@@ -1219,11 +1219,11 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
   if (_addressSpace.findUnwindSections(pc, sects)) {
-#if _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
     // If there is a compact unwind encoding table, look there first.
     if (sects.compact_unwind_section != 0) {
       if (this->getInfoFromCompactEncodingSection(pc, sects)) {
-  #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+  #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
         // Found info in table, done unless encoding says to use dwarf.
         uint32_t dwarfOffset;
         if ((sects.dwarf_section != 0) && compactSaysUseDwarf(&dwarfOffset)) {
@@ -1240,9 +1240,9 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
         return;
       }
     }
-#endif // _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     // If there is dwarf unwind info, look there next.
     if (sects.dwarf_section != 0) {
       if (this->getInfoFromDwarfSection(pc, sects)) {
@@ -1252,14 +1252,14 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     }
 #endif
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
     // If there is ARM EHABI unwind info, look there next.
     if (sects.arm_section != 0 && this->getInfoFromEHABISection(pc, sects))
       return;
 #endif
   }
 
-#if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   // There is no static unwind info for this pc. Look to see if an FDE was
   // dynamically registered for it.
   pint_t cachedFDE = DwarfFDECache<A>::findFDE(0, pc);
@@ -1318,7 +1318,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
       }
     }
   }
-#endif // #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
   // no unwind info, flag that we can't reliably unwind
   _unwindInfoMissing = true;
@@ -1332,11 +1332,11 @@ int UnwindCursor<A, R>::step() {
 
   // Use unwinding info to modify register set as if function returned.
   int result;
-#if _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+#if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
   result = this->stepWithCompactEncoding();
-#elif _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   result = this->stepWithDwarfFDE();
-#elif _LIBUNWIND_ARM_EHABI
+#elif defined(_LIBUNWIND_ARM_EHABI)
   result = this->stepWithEHABI();
 #else
   #error Need _LIBUNWIND_SUPPORT_COMPACT_UNWIND or \
