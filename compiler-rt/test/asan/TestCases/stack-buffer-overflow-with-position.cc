@@ -30,15 +30,15 @@ int main(int argc, char **argv) {
   // make sure BBB and CCC are not removed;
   return *(short*)(p) + BBB[argc % 2] + CCC[argc % 2];
 }
-// CHECK-m2: 'AAA' <== {{.*}}underflows this variable
-// CHECK-m1: 'AAA' <== {{.*}}partially underflows this variable
-// CHECK-9:  'AAA' <== {{.*}}partially overflows this variable
-// CHECK-10: 'AAA' <== {{.*}}overflows this variable
-// CHECK-30: 'BBB' <== {{.*}}underflows this variable
-// CHECK-31: 'BBB' <== {{.*}}partially underflows this variable
-// CHECK-41: 'BBB' <== {{.*}}partially overflows this variable
-// CHECK-42: 'BBB' <== {{.*}}overflows this variable
-// CHECK-62: 'CCC' <== {{.*}}underflows this variable
-// CHECK-63: 'CCC' <== {{.*}}partially underflows this variable
-// CHECK-73: 'CCC' <== {{.*}}partially overflows this variable
-// CHECK-74: 'CCC' <== {{.*}}overflows this variable
+// CHECK-m2: 'AAA'{{.*}} <== {{.*}}underflows this variable
+// CHECK-m1: 'AAA'{{.*}} <== {{.*}}partially underflows this variable
+// CHECK-9:  'AAA'{{.*}} <== {{.*}}partially overflows this variable
+// CHECK-10: 'AAA'{{.*}} <== {{.*}}overflows this variable
+// CHECK-30: 'BBB'{{.*}} <== {{.*}}underflows this variable
+// CHECK-31: 'BBB'{{.*}} <== {{.*}}partially underflows this variable
+// CHECK-41: 'BBB'{{.*}} <== {{.*}}partially overflows this variable
+// CHECK-42: 'BBB'{{.*}} <== {{.*}}overflows this variable
+// CHECK-62: 'CCC'{{.*}} <== {{.*}}underflows this variable
+// CHECK-63: 'CCC'{{.*}} <== {{.*}}partially underflows this variable
+// CHECK-73: 'CCC'{{.*}} <== {{.*}}partially overflows this variable
+// CHECK-74: 'CCC'{{.*}} <== {{.*}}overflows this variable

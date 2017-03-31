@@ -252,6 +252,9 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
     str.append("%c", var.name_pos[i]);
   }
   str.append("'");
+  if (var.line > 0) {
+    str.append(" (line %d)", var.line);
+  }
   if (pos_descr) {
     Decorator d;
     // FIXME: we may want to also print the size of the access here,
