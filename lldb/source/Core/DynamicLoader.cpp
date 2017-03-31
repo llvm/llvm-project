@@ -189,7 +189,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
     MemoryRegionInfo memory_info;
     Error error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
     if (error.Success() && memory_info.GetMapped() &&
-        memory_info.GetRange().GetRangeBase() == base_addr) {
+        memory_info.GetRange().GetRangeBase() == base_addr && 
+        !(memory_info.GetName().IsEmpty())) {
       ModuleSpec new_module_spec(
           FileSpec(memory_info.GetName().AsCString(), false),
           target.GetArchitecture());
