@@ -19,6 +19,10 @@ public:
 
   size_t GetGPRSize() const override;
 
+  const lldb_private::RegisterSet *GetRegisterSet(size_t set) const;
+
+  size_t GetRegisterSetCount() const;
+
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
   uint32_t GetRegisterCount() const override;

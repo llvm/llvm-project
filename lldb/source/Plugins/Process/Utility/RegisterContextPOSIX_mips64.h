@@ -16,7 +16,6 @@
 // Project includes
 #include "RegisterContext_mips.h"
 #include "RegisterInfoInterface.h"
-#include "lldb-mips-freebsd-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -26,6 +25,14 @@ class ProcessMonitor;
 
 class RegisterContextPOSIX_mips64 : public lldb_private::RegisterContext {
 public:
+
+  enum Register_count{
+      gpr_registers_count = 0,
+      fpr_registers_count,
+      msa_registers_count,
+      register_set_count
+  };
+
   RegisterContextPOSIX_mips64(
       lldb_private::Thread &thread, uint32_t concrete_frame_idx,
       lldb_private::RegisterInfoInterface *register_info);
@@ -56,8 +63,8 @@ public:
                                                uint32_t num) override;
 
 protected:
-  uint64_t
-      m_gpr_mips64[k_num_gpr_registers_mips64]; // general purpose registers.
+  uint32_t m_num_registers;
+  uint8_t m_registers_count[register_set_count];
   std::unique_ptr<lldb_private::RegisterInfoInterface>
       m_register_info_ap; // Register Info Interface (FreeBSD or Linux)
 

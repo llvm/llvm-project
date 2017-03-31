@@ -65,18 +65,7 @@ struct ELFLinuxPrStatus {
   // 32 bit - hardcoded because we are reusing the struct, but some of the
   // members are smaller -
   // so the layout is not the same
-  static size_t GetSize(lldb_private::ArchSpec &arch) {
-    switch (arch.GetCore()) {
-    case lldb_private::ArchSpec::eCore_s390x_generic:
-    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-      return sizeof(ELFLinuxPrStatus);
-    case lldb_private::ArchSpec::eCore_x86_32_i386:
-    case lldb_private::ArchSpec::eCore_x86_32_i486:
-      return 72;
-    default:
-      return 0;
-    }
-  }
+  static size_t GetSize(lldb_private::ArchSpec &arch);
 };
 
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
@@ -97,18 +86,7 @@ struct ELFLinuxSigInfo {
   // 32 bit - hardcoded because we are reusing the struct, but some of the
   // members are smaller -
   // so the layout is not the same
-  static size_t GetSize(const lldb_private::ArchSpec &arch) {
-    switch (arch.GetCore()) {
-    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-      return sizeof(ELFLinuxSigInfo);
-    case lldb_private::ArchSpec::eCore_s390x_generic:
-    case lldb_private::ArchSpec::eCore_x86_32_i386:
-    case lldb_private::ArchSpec::eCore_x86_32_i486:
-      return 12;
-    default:
-      return 0;
-    }
-  }
+  static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
 static_assert(sizeof(ELFLinuxSigInfo) == 12,
@@ -143,18 +121,7 @@ struct ELFLinuxPrPsInfo {
   // 32 bit - hardcoded because we are reusing the struct, but some of the
   // members are smaller -
   // so the layout is not the same
-  static size_t GetSize(lldb_private::ArchSpec &arch) {
-    switch (arch.GetCore()) {
-    case lldb_private::ArchSpec::eCore_s390x_generic:
-    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-      return sizeof(ELFLinuxPrPsInfo);
-    case lldb_private::ArchSpec::eCore_x86_32_i386:
-    case lldb_private::ArchSpec::eCore_x86_32_i486:
-      return 124;
-    default:
-      return 0;
-    }
-  }
+  static size_t GetSize(lldb_private::ArchSpec &arch);
 };
 
 static_assert(sizeof(ELFLinuxPrPsInfo) == 136,

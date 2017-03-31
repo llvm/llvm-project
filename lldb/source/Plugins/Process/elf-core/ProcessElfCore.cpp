@@ -214,9 +214,12 @@ Error ProcessElfCore::DoLoadCore() {
   // Even if the architecture is set in the target, we need to override
   // it to match the core file which is always single arch.
   ArchSpec arch(m_core_module_sp->GetArchitecture());
-  if (arch.IsValid())
-    GetTarget().SetArchitecture(arch);
 
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
+  target_arch.MergeFrom(core_arch);
+  GetTarget().SetArchitecture(target_arch);
+ 
   SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
   // Ensure we found at least one thread that was stopped on a signal.
@@ -369,6 +372,10 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   size_t zero_fill_size = 0; // Padding
   lldb::addr_t bytes_left =
       0; // Number of bytes available in the core file from the given address
+
+  // Don't proceed if core file doesn't contain the actual data for this address range.
+  if (file_start == file_end)
+    return 0;
 
   // Figure out how many on-disk bytes remain in this segment
   // starting at the given offset
@@ -652,6 +659,8 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         // The result from FXSAVE is in NT_PRXFPREG for i386 core files
         if (arch.GetCore() == ArchSpec::eCore_x86_64_x86_64)
           thread_data->fpregset = note_data;
+        else if(arch.IsMIPS())
+          thread_data->fpregset = note_data;
         break;
       case NT_PRPSINFO:
         have_prpsinfo = true;
@@ -719,6 +728,12 @@ ArchSpec ProcessElfCore::GetArchitecture() {
       (ObjectFileELF *)(m_core_module_sp->GetObjectFile());
   ArchSpec arch;
   core_file->GetArchitecture(arch);
+
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  
+  if (target_arch.IsMIPS())
+    return target_arch;
+
   return arch;
 }
 

@@ -22,6 +22,10 @@ public:
 
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
+  const lldb_private::RegisterSet *GetRegisterSet(size_t set) const;
+
+  size_t GetRegisterSetCount() const;
+
   uint32_t GetRegisterCount() const override;
 
   uint32_t GetUserRegisterCount() const override;
