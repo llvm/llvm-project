@@ -265,6 +265,22 @@ module diag_pragma {
   header "diag_pragma.h"
 }
 
+module pragma_pack_set {
+  header "pragma_pack_set.h"
+}
+
+module pragma_pack_push {
+  header "pragma_pack_push.h"
+}
+
+module pragma_pack_empty {
+  header "empty.h"
+}
+
+module pragma_pack_reset_push {
+  header "pragma_pack_reset_push.h"
+}
+
 module dummy {
   header "dummy.h"
 }
