@@ -15,13 +15,13 @@
 // Error prints out an error message and increment a global variable
 // ErrorCount to record the fact that we met an error condition. It does
 // not exit, so it is safe for a lld-as-a-library use case. It is generally
-// useful because it can report more than one errors in a single run.
+// useful because it can report more than one error in a single run.
 //
 // Warn doesn't do anything but printing out a given message.
 //
 // It is not recommended to use llvm::outs() or llvm::errs() directly
 // in LLD because they are not thread-safe. The functions declared in
-// this file are thread-safe, so you want to use them instead.
+// this file are mutually excluded, so you want to use them instead.
 //
 //===----------------------------------------------------------------------===//
 

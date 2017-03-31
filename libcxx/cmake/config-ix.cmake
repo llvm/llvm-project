@@ -35,6 +35,11 @@ if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
   elseif (LIBCXX_HAS_GCC_S_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
   endif ()
+  if (MINGW)
+    # Mingw64 requires quite a few "C" runtime libraries in order for basic
+    # programs to link successfully with -nodefaultlibs.
+    list(APPEND CMAKE_REQUIRED_LIBRARIES mingw32 gcc gcc_eh mingwex msvcrt gcc)
+  endif()
   if (CMAKE_C_FLAGS MATCHES -fsanitize OR CMAKE_CXX_FLAGS MATCHES -fsanitize)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
   endif ()

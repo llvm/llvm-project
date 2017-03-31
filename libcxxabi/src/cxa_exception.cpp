@@ -11,7 +11,6 @@
 //  
 //===----------------------------------------------------------------------===//
 
-#include "config.h"
 #include "cxxabi.h"
 
 #include <exception>        // for std::terminate
