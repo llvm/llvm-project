@@ -127,7 +127,7 @@ struct BufStruct {
 UtilityFunction *AppleObjCRuntimeV1::CreateObjectChecker(const char *name) {
   std::unique_ptr<BufStruct> buf(new BufStruct);
 
-  assert(snprintf(&buf->contents[0], sizeof(buf->contents),
+  int strformatsize = snprintf(&buf->contents[0], sizeof(buf->contents),
                   "struct __objc_class                                         "
                   "           \n"
                   "{                                                           "
@@ -169,7 +169,8 @@ UtilityFunction *AppleObjCRuntimeV1::CreateObjectChecker(const char *name) {
                   "           \n"
                   "}                                                           "
                   "           \n",
-                  name) < (int)sizeof(buf->contents));
+                  name);
+  assert(strformatsize < (int)sizeof(buf->contents));
 
   Error error;
   return GetTargetRef().GetUtilityFunctionForLanguage(
