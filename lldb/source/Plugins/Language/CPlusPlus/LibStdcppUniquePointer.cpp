@@ -70,19 +70,19 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   std::unique_ptr<SyntheticChildrenFrontEnd> tuple_frontend(
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
 
-  m_ptr_obj = tuple_frontend->GetChildAtIndex(0);
-  if (m_ptr_obj)
-    m_ptr_obj->SetName(ConstString("pointer"));
+  ValueObjectSP ptr_obj = tuple_frontend->GetChildAtIndex(0);
+  if (ptr_obj)
+    m_ptr_obj = ptr_obj->Clone(ConstString("pointer"));
 
-  m_del_obj = tuple_frontend->GetChildAtIndex(1);
-  if (m_del_obj)
-    m_del_obj->SetName(ConstString("deleter"));
+  ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
+  if (del_obj)
+    m_del_obj = del_obj->Clone(ConstString("deleter"));
 
   if (m_ptr_obj) {
     Error error;
-    m_obj_obj = m_ptr_obj->Dereference(error);
+    ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
     if (error.Success()) {
-      m_obj_obj->SetName(ConstString("object"));
+      m_obj_obj = obj_obj->Clone(ConstString("object"));
     }
   }
 

@@ -3048,6 +3048,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   return ValueObjectCast::Create(*this, GetName(), compiler_type);
 }
 
+lldb::ValueObjectSP ValueObject::Clone(const ConstString &new_name) {
+  return ValueObjectCast::Create(*this, new_name, GetCompilerType());
+}
+
 ValueObjectSP ValueObject::CastPointerType(const char *name,
                                            CompilerType &compiler_type) {
   ValueObjectSP valobj_sp;

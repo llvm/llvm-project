@@ -406,7 +406,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
       if (child0_sp && child0_sp->GetName() == g___cc)
-        potential_child_sp = child0_sp;
+        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     case 2: {
@@ -414,11 +414,10 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
       auto child1_sp = potential_child_sp->GetChildAtIndex(1, true);
       if (child0_sp && child0_sp->GetName() == g___cc && child1_sp &&
           child1_sp->GetName() == g___nc)
-        potential_child_sp = child0_sp;
+        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     }
-    potential_child_sp->SetName(ConstString(name.GetString()));
   }
   m_iterators[idx] = iterator;
   return potential_child_sp;
