@@ -12,14 +12,12 @@
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
     !defined(__ARM_DWARF_EH__)
-#define _LIBUNWIND_ARM_EHABI 1
-#else
-#define _LIBUNWIND_ARM_EHABI 0
+#define _LIBUNWIND_ARM_EHABI
 #endif
 
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY)
 # if defined(__i386__)
-#  define _LIBUNWIND_TARGET_I386 1
+#  define _LIBUNWIND_TARGET_I386
 #  define _LIBUNWIND_CONTEXT_SIZE 8
 #  define _LIBUNWIND_CURSOR_SIZE 19
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER 9
@@ -57,7 +55,7 @@
 #  error "Unsupported architecture."
 # endif
 #else // !_LIBUNWIND_IS_NATIVE_ONLY
-# define _LIBUNWIND_TARGET_I386 1
+# define _LIBUNWIND_TARGET_I386
 # define _LIBUNWIND_TARGET_X86_64 1
 # define _LIBUNWIND_TARGET_PPC 1
 # define _LIBUNWIND_TARGET_AARCH64 1
