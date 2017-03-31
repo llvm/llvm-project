@@ -63,8 +63,14 @@ ASAN_FLAG(
     int, max_malloc_fill_size, 0x1000,  // By default, fill only the first 4K.
     "ASan allocator flag. max_malloc_fill_size is the maximal amount of "
     "bytes that will be filled with malloc_fill_byte on malloc.")
+ASAN_FLAG(
+    int, max_free_fill_size, 0,
+    "ASan allocator flag. max_free_fill_size is the maximal amount of "
+    "bytes that will be filled with free_fill_byte during free.")
 ASAN_FLAG(int, malloc_fill_byte, 0xbe,
           "Value used to fill the newly allocated memory.")
+ASAN_FLAG(int, free_fill_byte, 0x55,
+          "Value used to fill deallocated memory.")
 ASAN_FLAG(bool, allow_user_poisoning, true,
           "If set, user may manually mark memory regions as poisoned or "
           "unpoisoned.")
