@@ -3,6 +3,7 @@
 // RUN: env MallocScribble=1 MallocPreScribble=1 %run %t 2>&1 | FileCheck --check-prefix=CHECK-SCRIBBLE %s
 // RUN: %env_asan_opts=max_free_fill_size=4096 %run %t 2>&1 | FileCheck --check-prefix=CHECK-SCRIBBLE %s
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
