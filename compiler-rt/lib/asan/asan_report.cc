@@ -88,7 +88,8 @@ bool ParseFrameDescription(const char *frame_descr,
   char *p;
   // This string is created by the compiler and has the following form:
   // "n alloc_1 alloc_2 ... alloc_n"
-  // where alloc_i looks like "offset size len ObjectName".
+  // where alloc_i looks like "offset size len ObjectName"
+  // or                       "offset size len ObjectName:line".
   uptr n_objects = (uptr)internal_simple_strtoll(frame_descr, &p, 10);
   if (n_objects == 0)
     return false;
@@ -101,7 +102,14 @@ bool ParseFrameDescription(const char *frame_descr,
       return false;
     }
     p++;
-    StackVarDescr var = {beg, size, p, len};
+    char *colon_pos = internal_strchr(p, ':');
+    uptr line = 0;
+    uptr name_len = len;
+    if (colon_pos != nullptr && colon_pos < p + len) {
+      name_len = colon_pos - p;
+      line = (uptr)internal_simple_strtoll(colon_pos + 1, nullptr, 10);
+    }
+    StackVarDescr var = {beg, size, p, name_len, line};
     vars->push_back(var);
     p += len;
   }
