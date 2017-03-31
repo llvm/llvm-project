@@ -48,7 +48,7 @@ int main() {
 
   my_object->print_my_class_name();
   // CHECK-NOSCRIBBLE: class name: MyClass
-  // CHECK-SCRIBBLE: isa = {{0x5555555555555555|0x55555555}}
+  // CHECK-SCRIBBLE: isa = {{(0x)?}}{{5555555555555555|55555555}}
 
   fprintf(stderr, "okthxbai!\n");
   // CHECK-SCRIBBLE: okthxbai!
