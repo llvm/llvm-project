@@ -1314,7 +1314,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
       target_arch, plugin_name, flavor, exe_ctx, pc_range, prefer_file_cache);
 
-  if (!disassembler_sp->GetInstructionList().GetSize()) {
+  if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
   }
 
