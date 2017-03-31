@@ -2185,12 +2185,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   DiagnosePropertyAccessorMismatch(property, GetterMethod,
                                    property->getLocation());
 
-  if (SetterMethod) {
-    ObjCPropertyDecl::PropertyAttributeKind CAttr =
-      property->getPropertyAttributes();
-    if ((!(CAttr & ObjCPropertyDecl::OBJC_PR_readonly)) &&
-        Context.getCanonicalType(SetterMethod->getReturnType()) !=
-            Context.VoidTy)
+  if (!property->isReadOnly() && SetterMethod) {
+    if (Context.getCanonicalType(SetterMethod->getReturnType()) !=
+        Context.VoidTy)
       Diag(SetterMethod->getLocation(), diag::err_setter_type_void);
     if (SetterMethod->param_size() != 1 ||
         !Context.hasSameUnqualifiedType(
