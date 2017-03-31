@@ -307,6 +307,11 @@ if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
   libomp_error_say("Static libraries requested but not available on Windows")
 endif()
 
+if(LIBOMP_USE_ITT_NOTIFY AND NOT LIBOMP_ENABLE_SHARED)
+  message(STATUS "ITT Notify not supported for static libraries - forcing ITT Notify off")
+  set(LIBOMP_USE_ITT_NOTIFY FALSE)
+endif()
+
 # OMPT-support
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")

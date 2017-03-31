@@ -9,10 +9,32 @@
 
 #include "RegisterContextFreeBSD_mips64.h"
 #include "RegisterContextPOSIX_mips64.h"
+#include "lldb-mips-freebsd-register-enums.h"
 #include <vector>
 
 using namespace lldb_private;
 using namespace lldb;
+
+static const uint32_t g_gpr_regnums[] = {
+    gpr_zero_mips64,  gpr_r1_mips64,    gpr_r2_mips64,    gpr_r3_mips64,
+    gpr_r4_mips64,    gpr_r5_mips64,    gpr_r6_mips64,    gpr_r7_mips64,
+    gpr_r8_mips64,    gpr_r9_mips64,    gpr_r10_mips64,   gpr_r11_mips64,
+    gpr_r12_mips64,   gpr_r13_mips64,   gpr_r14_mips64,   gpr_r15_mips64,
+    gpr_r16_mips64,   gpr_r17_mips64,   gpr_r18_mips64,   gpr_r19_mips64,
+    gpr_r20_mips64,   gpr_r21_mips64,   gpr_r22_mips64,   gpr_r23_mips64,
+    gpr_r24_mips64,   gpr_r25_mips64,   gpr_r26_mips64,   gpr_r27_mips64,
+    gpr_gp_mips64,    gpr_sp_mips64,    gpr_r30_mips64,   gpr_ra_mips64,
+    gpr_sr_mips64,    gpr_mullo_mips64, gpr_mulhi_mips64, gpr_badvaddr_mips64,
+    gpr_cause_mips64, gpr_pc_mips64,    gpr_ic_mips64,    gpr_dummy_mips64};
+
+// Number of register sets provided by this context.
+constexpr size_t k_num_register_sets = 1;
+
+static const RegisterSet g_reg_sets_mips64[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr", k_num_gpr_registers_mips64,
+     g_gpr_regnums},
+};
+
 
 // http://svnweb.freebsd.org/base/head/sys/mips/include/regnum.h
 typedef struct _GPR {
@@ -72,6 +94,19 @@ RegisterContextFreeBSD_mips64::RegisterContextFreeBSD_mips64(
 
 size_t RegisterContextFreeBSD_mips64::GetGPRSize() const {
   return sizeof(GPR_freebsd_mips);
+}
+
+const RegisterSet *
+RegisterContextFreeBSD_mips64::GetRegisterSet(size_t set) const {
+   // Check if RegisterSet is available
+   if (set < k_num_register_sets)
+     return &g_reg_sets_mips64[set];
+   return nullptr;
+}
+
+size_t
+RegisterContextFreeBSD_mips64::GetRegisterSetCount() const {
+  return k_num_register_sets;
 }
 
 const RegisterInfo *RegisterContextFreeBSD_mips64::GetRegisterInfo() const {

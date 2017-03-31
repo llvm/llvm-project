@@ -1003,11 +1003,7 @@ bool elf::createThunks(ArrayRef<OutputSection *> OutputSections) {
   // We separate the creation of ThunkSections from the insertion of the
   // ThunkSections back into the OutputSection as ThunkSections are not always
   // inserted into the same OutputSection as the caller.
-  for (OutputSection *Base : OutputSections) {
-    auto *OS = dyn_cast<OutputSection>(Base);
-    if (OS == nullptr)
-      continue;
-
+  for (OutputSection *OS : OutputSections) {
     ThunkSection *OSTS = nullptr;
     for (InputSection *IS : OS->Sections) {
       for (Relocation &Rel : IS->Relocations) {
