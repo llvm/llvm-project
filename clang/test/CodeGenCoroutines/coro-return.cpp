@@ -1,25 +1,18 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++1z -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
-namespace std {
-namespace experimental {
-template <typename... T>
-struct coroutine_traits;
+namespace std::experimental {
+template <typename... T> struct coroutine_traits;
 
-template <class Promise = void>
-struct coroutine_handle {
+template <class Promise = void> struct coroutine_handle {
   coroutine_handle() = default;
   static coroutine_handle from_address(void *) { return {}; }
 };
-
-template <>
-struct coroutine_handle<void> {
+template <> struct coroutine_handle<void> {
   static coroutine_handle from_address(void *) { return {}; }
   coroutine_handle() = default;
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) {}
 };
-
-}
 }
 
 struct suspend_always {
@@ -28,8 +21,7 @@ struct suspend_always {
   void await_resume();
 };
 
-template<>
-struct std::experimental::coroutine_traits<void> {
+template <> struct std::experimental::coroutine_traits<void> {
   struct promise_type {
     void get_return_object();
     suspend_always initial_suspend();

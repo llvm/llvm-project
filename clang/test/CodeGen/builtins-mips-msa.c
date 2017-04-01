@@ -526,6 +526,8 @@ void test(void) {
   v2i64_r = __msa_ld_d(&v2i64_a, 96); // CHECK: call <2  x i64> @llvm.mips.ld.d(
 
   v16i8_r = __msa_ldi_b(3); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
+  v16i8_r = __msa_ldi_b(-128); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
+  v16i8_r = __msa_ldi_b(255); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
   v8i16_r = __msa_ldi_h(3); // CHECK: call <8  x i16> @llvm.mips.ldi.h(
   v4i32_r = __msa_ldi_w(3); // CHECK: call <4  x i32> @llvm.mips.ldi.w(
   v2i64_r = __msa_ldi_d(3); // CHECK: call <2  x i64> @llvm.mips.ldi.d(

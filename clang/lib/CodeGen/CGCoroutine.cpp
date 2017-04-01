@@ -215,6 +215,24 @@ void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
   EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
 }
 
+namespace {
+// Make sure to call coro.delete on scope exit.
+struct CallCoroDelete final : public EHScopeStack::Cleanup {
+  Stmt *Deallocate;
+
+  // TODO: Wrap deallocate in if(coro.free(...)) Deallocate.
+  void Emit(CodeGenFunction &CGF, Flags) override {
+    // Note: That deallocation will be emitted twice: once for a normal exit and
+    // once for exceptional exit. This usage is safe because Deallocate does not
+    // contain any declarations. The SubStmtBuilder::makeNewAndDeleteExpr()
+    // builds a single call to a deallocation function which is safe to emit
+    // multiple times.
+    CGF.EmitStmt(Deallocate);
+  }
+  explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
+};
+}
+
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
@@ -248,26 +266,28 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitBlock(InitBB);
   }
 
-  // FIXME: Setup cleanup scopes.
-
-  EmitStmt(S.getPromiseDeclStmt());
-
   CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
-  CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
+  {
+    CodeGenFunction::RunCleanupsScope ResumeScope(*this);
+    EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
 
-  // FIXME: Emit initial suspend and more before the body.
+    EmitStmt(S.getPromiseDeclStmt());
 
-  CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
-  EmitStmt(S.getBody());
+    CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
 
-  // See if we need to generate final suspend.
-  const bool CanFallthrough = Builder.GetInsertBlock();
-  const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
-  if (CanFallthrough || HasCoreturns) {
-    EmitBlock(FinalBB);
-    // FIXME: Emit final suspend.
+    // FIXME: Emit initial suspend and more before the body.
+
+    CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
+    EmitStmt(S.getBody());
+
+    // See if we need to generate final suspend.
+    const bool CanFallthrough = Builder.GetInsertBlock();
+    const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
+    if (CanFallthrough || HasCoreturns) {
+      EmitBlock(FinalBB);
+      // FIXME: Emit final suspend.
+    }
   }
-  EmitStmt(S.getDeallocate());
 
   EmitBlock(RetBB);
 

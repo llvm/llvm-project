@@ -606,8 +606,10 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     // Calculate the next separator index ahead of time
     ValueObjectSP child_valobj_sp;
     const char separator_type = var_expr[0];
+    bool expr_is_ptr = false;
     switch (separator_type) {
     case '-':
+      expr_is_ptr = true;
       if (var_expr.size() >= 2 && var_expr[1] != '>')
         return ValueObjectSP();
 
@@ -624,11 +626,32 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           return ValueObjectSP();
         }
       }
+
+      // If we have a non pointer type with a sythetic value then lets check if
+      // we have an sythetic dereference specified.
+      if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
+        Error deref_error;
+        if (valobj_sp->GetCompilerType().IsReferenceType()) {
+          valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
+          if (error.Fail()) {
+            error.SetErrorStringWithFormatv(
+                "Failed to dereference reference type: %s", deref_error);
+            return ValueObjectSP();
+          }
+        }
+
+        valobj_sp = valobj_sp->Dereference(deref_error);
+        if (error.Fail()) {
+          error.SetErrorStringWithFormatv(
+              "Failed to dereference sythetic value: %s", deref_error);
+          return ValueObjectSP();
+        }
+        expr_is_ptr = false;
+      }
+
       var_expr = var_expr.drop_front(); // Remove the '-'
       LLVM_FALLTHROUGH;
     case '.': {
-      const bool expr_is_ptr = var_expr[0] == '>';
-
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
       separator_idx = var_expr.find_first_of(".-[");
       ConstString child_name(var_expr.substr(0, var_expr.find_first_of(".-[")));
@@ -1291,7 +1314,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
       target_arch, plugin_name, flavor, exe_ctx, pc_range, prefer_file_cache);
 
-  if (!disassembler_sp->GetInstructionList().GetSize()) {
+  if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
   }
 

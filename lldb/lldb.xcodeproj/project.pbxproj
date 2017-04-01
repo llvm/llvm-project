@@ -864,6 +864,7 @@
 		966C6B7A18E6A56A0093F5EC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
 		966C6B7C18E6A56A0093F5EC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
 		9694FA711B32AA64005EBB16 /* ABISysV_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9694FA6F1B32AA64005EBB16 /* ABISysV_mips.cpp */; };
+		9A0FDEA71E8EF5110086B2F5 /* RegisterContextLinux_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */; };
 		9A19A6AF1163BBB200E0D453 /* SBValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A19A6A51163BB7E00E0D453 /* SBValue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9A19A6B01163BBB300E0D453 /* SBValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A19A6AD1163BB9800E0D453 /* SBValue.cpp */; };
 		9A22A161135E30370024DDC3 /* EmulateInstructionARM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A22A15D135E30370024DDC3 /* EmulateInstructionARM.cpp */; };
@@ -2795,6 +2796,13 @@
 		966C6B7818E6A56A0093F5EC /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = /usr/lib/libz.dylib; sourceTree = "<absolute>"; };
 		9694FA6F1B32AA64005EBB16 /* ABISysV_mips.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABISysV_mips.cpp; path = "SysV-mips/ABISysV_mips.cpp"; sourceTree = "<group>"; };
 		9694FA701B32AA64005EBB16 /* ABISysV_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABISysV_mips.h; path = "SysV-mips/ABISysV_mips.h"; sourceTree = "<group>"; };
+		9A0FDE951E8EF5010086B2F5 /* RegisterContext_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContext_mips.h; path = Utility/RegisterContext_mips.h; sourceTree = "<group>"; };
+		9A0FDE961E8EF5010086B2F5 /* RegisterContext_s390x.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContext_s390x.h; path = Utility/RegisterContext_s390x.h; sourceTree = "<group>"; };
+		9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextLinux_mips.cpp; path = Utility/RegisterContextLinux_mips.cpp; sourceTree = "<group>"; };
+		9A0FDE981E8EF5010086B2F5 /* RegisterContextLinux_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextLinux_mips.h; path = Utility/RegisterContextLinux_mips.h; sourceTree = "<group>"; };
+		9A0FDE991E8EF5010086B2F5 /* RegisterInfos_arm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_arm.h; path = Utility/RegisterInfos_arm.h; sourceTree = "<group>"; };
+		9A0FDE9A1E8EF5010086B2F5 /* RegisterInfos_arm64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_arm64.h; path = Utility/RegisterInfos_arm64.h; sourceTree = "<group>"; };
+		9A0FDE9B1E8EF5010086B2F5 /* RegisterInfos_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_mips.h; path = Utility/RegisterInfos_mips.h; sourceTree = "<group>"; };
 		9A19A6A51163BB7E00E0D453 /* SBValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBValue.h; path = include/lldb/API/SBValue.h; sourceTree = "<group>"; };
 		9A19A6AD1163BB9800E0D453 /* SBValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBValue.cpp; path = source/API/SBValue.cpp; sourceTree = "<group>"; };
 		9A22A15D135E30370024DDC3 /* EmulateInstructionARM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EmulateInstructionARM.cpp; sourceTree = "<group>"; };
@@ -4520,6 +4528,13 @@
 		26B4666E11A2080F00CF6220 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				9A0FDE951E8EF5010086B2F5 /* RegisterContext_mips.h */,
+				9A0FDE961E8EF5010086B2F5 /* RegisterContext_s390x.h */,
+				9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */,
+				9A0FDE981E8EF5010086B2F5 /* RegisterContextLinux_mips.h */,
+				9A0FDE991E8EF5010086B2F5 /* RegisterInfos_arm.h */,
+				9A0FDE9A1E8EF5010086B2F5 /* RegisterInfos_arm64.h */,
+				9A0FDE9B1E8EF5010086B2F5 /* RegisterInfos_mips.h */,
 				9AD9449B1E8DB267004796ED /* RegisterContextNetBSD_x86_64.cpp */,
 				9AD9449C1E8DB267004796ED /* RegisterContextNetBSD_x86_64.h */,
 				23F403471926C8D50046DC9B /* NativeRegisterContextRegisterInfo.h */,
@@ -7246,6 +7261,7 @@
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
 				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
+				9A0FDEA71E8EF5110086B2F5 /* RegisterContextLinux_mips.cpp in Sources */,
 				94BA8B70176F97CE005A91B5 /* CommandHistory.cpp in Sources */,
 				2689007713353E1A00698AC0 /* CFCData.cpp in Sources */,
 				2689007813353E1A00698AC0 /* CFCMutableArray.cpp in Sources */,

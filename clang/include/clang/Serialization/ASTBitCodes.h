@@ -604,6 +604,9 @@ namespace clang {
       OPENCL_EXTENSION_DECLS = 59,
 
       MODULAR_CODEGEN_DECLS = 60,
+
+      /// \brief Record code for \#pragma pack options.
+      PACK_PRAGMA_OPTIONS = 61,
     };
 
     /// \brief Record types used within a source manager block.

@@ -610,11 +610,6 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
 
       argBaseTypeNames.push_back(llvm::MDString::get(Context, baseTypeName));
 
-      // Get argument type qualifiers:
-      if (ty.isConstQualified())
-        typeQuals = "const";
-      if (ty.isVolatileQualified())
-        typeQuals += typeQuals.empty() ? "volatile" : " volatile";
       if (isPipe)
         typeQuals = "pipe";
     }

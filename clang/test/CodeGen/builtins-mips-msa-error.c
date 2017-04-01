@@ -119,7 +119,7 @@ void test(void) {
   v4i32_r = __msa_ld_w(&v4i32_a, 512);               // expected-error {{argument should be a value from -512 to 511}}
   v2i64_r = __msa_ld_d(&v2i64_a, 512);               // expected-error {{argument should be a value from -512 to 511}}
 
-  v16i8_r = __msa_ldi_b(512);                        // expected-error {{argument should be a value from -512 to 511}}
+  v16i8_r = __msa_ldi_b(256);                        // expected-error {{argument should be a value from -128 to 255}}
   v8i16_r = __msa_ldi_h(512);                        // expected-error {{argument should be a value from -512 to 511}}
   v4i32_r = __msa_ldi_w(512);                        // expected-error {{argument should be a value from -512 to 511}}
   v2i64_r = __msa_ldi_d(512);                        // expected-error {{argument should be a value from -512 to 511}}
@@ -310,7 +310,7 @@ void test(void) {
   v4i32_r = __msa_ld_w(&v4i32_a, -513);              // expected-error {{argument should be a value from -512 to 511}}
   v2i64_r = __msa_ld_d(&v2i64_a, -513);              // expected-error {{argument should be a value from -512 to 511}}
 
-  v16i8_r = __msa_ldi_b(-513);                       // expected-error {{argument should be a value from -512 to 511}}
+  v16i8_r = __msa_ldi_b(-129);                       // expected-error {{argument should be a value from -128 to 255}}
   v8i16_r = __msa_ldi_h(-513);                       // expected-error {{argument should be a value from -512 to 511}}
   v4i32_r = __msa_ldi_w(-513);                       // expected-error {{argument should be a value from -512 to 511}}
   v2i64_r = __msa_ldi_d(-513);                       // expected-error {{argument should be a value from -512 to 511}}

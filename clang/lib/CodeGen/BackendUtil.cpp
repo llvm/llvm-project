@@ -994,9 +994,30 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = getRelocModel(CGOpts);
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
-  Conf.CGFileType = getCodeGenFileType(Action);
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
+  switch (Action) {
+  case Backend_EmitNothing:
+    Conf.PreCodeGenModuleHook = [](size_t Task, const Module &Mod) {
+      return false;
+    };
+    break;
+  case Backend_EmitLL:
+    Conf.PreCodeGenModuleHook = [&](size_t Task, const Module &Mod) {
+      M->print(*OS, nullptr, CGOpts.EmitLLVMUseLists);
+      return false;
+    };
+    break;
+  case Backend_EmitBC:
+    Conf.PreCodeGenModuleHook = [&](size_t Task, const Module &Mod) {
+      WriteBitcodeToFile(M, *OS, CGOpts.EmitLLVMUseLists);
+      return false;
+    };
+    break;
+  default:
+    Conf.CGFileType = getCodeGenFileType(Action);
+    break;
+  }
   if (Error E = thinBackend(
           Conf, 0, AddStream, *M, *CombinedIndex, ImportList,
           ModuleToDefinedGVSummaries[M->getModuleIdentifier()], ModuleMap)) {

@@ -737,9 +737,10 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // OpenBSD-specific defaults for PIE
   if (Triple.getOS() == llvm::Triple::OpenBSD) {
     switch (ToolChain.getArch()) {
+    case llvm::Triple::arm:
+    case llvm::Triple::aarch64:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
-    case llvm::Triple::sparcel:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       IsPICLevelTwo = false; // "-fpie"
@@ -747,6 +748,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
 
     case llvm::Triple::ppc:
     case llvm::Triple::sparc:
+    case llvm::Triple::sparcel:
     case llvm::Triple::sparcv9:
       IsPICLevelTwo = true; // "-fPIE"
       break;
