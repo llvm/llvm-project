@@ -2509,7 +2509,7 @@ void SwingSchedulerDAG::generateExistingPhis(
     MachineBasicBlock *KernelBB, SMSchedule &Schedule, ValueMapTy *VRMap,
     InstrMapTy &InstrMap, unsigned LastStageNum, unsigned CurStageNum,
     bool IsLast) {
-  // Compute the stage number for the inital value of the Phi, which
+  // Compute the stage number for the initial value of the Phi, which
   // comes from the prolog. The prolog to use depends on to which kernel/
   // epilog that we're adding the Phi.
   unsigned PrologStage = 0;

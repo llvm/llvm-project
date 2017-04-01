@@ -40,9 +40,8 @@ define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
 ; VI: flat_load_ushort [[HI:v[0-9]+]]
 ; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
 ; VI-DAG: v_and_b32_e32 [[FABS_LO:v[0-9]+]], [[MASK]], [[LO]]
-; VI-DAG: v_and_b32_e32 [[FABS_LO:v[0-9]+]], [[MASK]], [[HI]]
+; VI-DAG: v_and_b32_e32 [[FABS_HI:v[0-9]+]], [[MASK]], [[HI]]
 ; VI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
-; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xffff,
 ; VI: v_or_b32
 ; VI: flat_store_dword
 

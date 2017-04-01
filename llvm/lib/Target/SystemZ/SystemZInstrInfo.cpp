@@ -679,6 +679,12 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     else {
       Opc = SystemZ::LOCR;
       MRI.constrainRegClass(DstReg, &SystemZ::GR32BitRegClass);
+      unsigned TReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+      unsigned FReg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+      BuildMI(MBB, I, DL, get(TargetOpcode::COPY), TReg).addReg(TrueReg);
+      BuildMI(MBB, I, DL, get(TargetOpcode::COPY), FReg).addReg(FalseReg);
+      TrueReg = TReg;
+      FalseReg = FReg;
     }
   } else if (SystemZ::GR64BitRegClass.hasSubClassEq(RC))
     Opc = SystemZ::LOCGR;

@@ -142,15 +142,15 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
     return (finalExitCode, timeoutInfo)
 
-def expand_glob(arg):
+def expand_glob(arg, cwd):
     if isinstance(arg, GlobItem):
-        return arg.resolve()
+        return arg.resolve(cwd)
     return [arg]
 
-def expand_glob_expressions(args):
+def expand_glob_expressions(args, cwd):
     result = [args[0]]
     for arg in args[1:]:
-        result.extend(expand_glob(arg))
+        result.extend(expand_glob(arg, cwd))
     return result
 
 def quote_windows_command(seq):
@@ -325,7 +325,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 if r[2] is None:
                     redir_filename = None
-                    name = expand_glob(r[0])
+                    name = expand_glob(r[0], cmd_shenv.cwd)
                     if len(name) != 1:
                        raise InternalShellError(j,"Unsupported: glob in redirect expanded to multiple files")
                     name = name[0]
@@ -389,7 +389,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     args[i] = f.name
 
         # Expand all glob expressions
-        args = expand_glob_expressions(args)
+        args = expand_glob_expressions(args, cmd_shenv.cwd)
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.
@@ -706,11 +706,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend([('%%', '#_MARKER_#')])
     substitutions.extend(test.config.substitutions)
+    tmpName = tmpBase + '.tmp'
+    baseName = os.path.basename(tmpBase)
     substitutions.extend([('%s', sourcepath),
                           ('%S', sourcedir),
                           ('%p', sourcedir),
                           ('%{pathsep}', os.pathsep),
-                          ('%t', tmpBase + '.tmp'),
+                          ('%t', tmpName),
+                          ('%basename_t', baseName),
                           ('%T', tmpDir),
                           ('#_MARKER_#', '%')])
 

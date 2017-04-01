@@ -1740,44 +1740,20 @@ IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   return fs;
 }
 
-/* Normalized llvm frem (C fmod).
-   This is not currently correct in all cases.  */
+/* Normalized llvm frem (C fmod). */
 IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
   opStatus fs;
   fs = modSpecials(rhs);
 
-  if (isFiniteNonZero() && rhs.isFiniteNonZero()) {
-    IEEEFloat V = *this;
-    unsigned int origSign = sign;
-
-    fs = V.divide(rhs, rmNearestTiesToEven);
-    if (fs == opDivByZero)
-      return fs;
-
-    int parts = partCount();
-    integerPart *x = new integerPart[parts];
-    bool ignored;
-    fs = V.convertToInteger(makeMutableArrayRef(x, parts),
-                            parts * integerPartWidth, true, rmTowardZero,
-                            &ignored);
-    if (fs == opInvalidOp) {
-      delete[] x;
-      return fs;
-    }
-
-    fs = V.convertFromZeroExtendedInteger(x, parts * integerPartWidth, true,
-                                          rmNearestTiesToEven);
-    assert(fs==opOK);   // should always work
-
-    fs = V.multiply(rhs, rmNearestTiesToEven);
-    assert(fs==opOK || fs==opInexact);   // should not overflow or underflow
-
+  while (isFiniteNonZero() && rhs.isFiniteNonZero() &&
+         compareAbsoluteValue(rhs) != cmpLessThan) {
+    IEEEFloat V = scalbn(rhs, ilogb(*this) - ilogb(rhs), rmNearestTiesToEven);
+    if (compareAbsoluteValue(V) == cmpLessThan)
+      V = scalbn(V, -1, rmNearestTiesToEven);
+    V.sign = sign;
+  
     fs = subtract(V, rmNearestTiesToEven);
-    assert(fs==opOK || fs==opInexact);   // likewise
-
-    if (isZero())
-      sign = origSign;    // IEEE754 requires this
-    delete[] x;
+    assert(fs==opOK);
   }
   return fs;
 }

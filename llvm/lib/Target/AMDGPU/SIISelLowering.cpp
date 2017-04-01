@@ -475,6 +475,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::FCANONICALIZE);
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
+  setTargetDAGCombine(ISD::ZERO_EXTEND);
 
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
@@ -4058,6 +4059,42 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   return SDValue();
 }
 
+static bool fp16SrcZerosHighBits(unsigned Opc) {
+  switch (Opc) {
+  case ISD::SELECT:
+  case ISD::EXTRACT_VECTOR_ELT:
+    return false;
+  default:
+    return true;
+  }
+}
+
+SDValue SITargetLowering::performZeroExtendCombine(SDNode *N,
+                                                   DAGCombinerInfo &DCI) const {
+  if (!Subtarget->has16BitInsts() ||
+      DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32)
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  if (Src.getValueType() != MVT::i16)
+    return SDValue();
+
+  // (i32 zext (i16 (bitcast f16:$src))) -> fp16_zext $src
+  // FIXME: It is not universally true that the high bits are zeroed on gfx9.
+  if (Src.getOpcode() == ISD::BITCAST) {
+    SDValue BCSrc = Src.getOperand(0);
+    if (BCSrc.getValueType() == MVT::f16 &&
+        fp16SrcZerosHighBits(BCSrc.getOpcode()))
+      return DCI.DAG.getNode(AMDGPUISD::FP16_ZEXT, SDLoc(N), VT, BCSrc);
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performClassCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -4594,6 +4631,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performOrCombine(N, DCI);
   case ISD::XOR:
     return performXorCombine(N, DCI);
+  case ISD::ZERO_EXTEND:
+    return performZeroExtendCombine(N, DCI);
   case AMDGPUISD::FP_CLASS:
     return performClassCombine(N, DCI);
   case ISD::FCANONICALIZE:

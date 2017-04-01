@@ -81,6 +81,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performZeroExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFCanonicalizeCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 

@@ -429,17 +429,9 @@ private:
 
 template <typename T>
 static bool equalsLoadStoreHelper(const T &LHS, const Expression &RHS) {
-  if ((!isa<LoadExpression>(RHS) && !isa<StoreExpression>(RHS)) ||
-      !LHS.BasicExpression::equals(RHS)) {
+  if (!isa<LoadExpression>(RHS) && !isa<StoreExpression>(RHS))
     return false;
-  } else if (const auto *L = dyn_cast<LoadExpression>(&RHS)) {
-    if (LHS.getDefiningAccess() != L->getDefiningAccess())
-      return false;
-  } else if (const auto *S = dyn_cast<StoreExpression>(&RHS)) {
-    if (LHS.getDefiningAccess() != S->getDefiningAccess())
-      return false;
-  }
-  return true;
+  return LHS.MemoryExpression::equals(RHS);
 }
 
 bool LoadExpression::equals(const Expression &Other) const {
@@ -447,13 +439,13 @@ bool LoadExpression::equals(const Expression &Other) const {
 }
 
 bool StoreExpression::equals(const Expression &Other) const {
-  bool Result = equalsLoadStoreHelper(*this, Other);
+  if (!equalsLoadStoreHelper(*this, Other))
+    return false;
   // Make sure that store vs store includes the value operand.
-  if (Result)
-    if (const auto *S = dyn_cast<StoreExpression>(&Other))
-      if (getStoredValue() != S->getStoredValue())
-        return false;
-  return Result;
+  if (const auto *S = dyn_cast<StoreExpression>(&Other))
+    if (getStoredValue() != S->getStoredValue())
+      return false;
+  return true;
 }
 
 #ifndef NDEBUG
@@ -1899,28 +1891,32 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
                                     const MemoryAccess *Second) const {
   if (First == Second)
     return true;
-
-  if (auto *FirstDef = dyn_cast<MemoryUseOrDef>(First)) {
-    auto *DefAccess = FirstDef->getDefiningAccess();
-    return singleReachablePHIPath(DefAccess, Second);
-  } else {
-    auto *MP = cast<MemoryPhi>(First);
-    auto ReachableOperandPred = [&](const Use &U) {
-      return ReachableEdges.count({MP->getIncomingBlock(U), MP->getBlock()});
-    };
-    auto FilteredPhiArgs =
-        make_filter_range(MP->operands(), ReachableOperandPred);
-    SmallVector<const Value *, 32> OperandList;
-    std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
-              std::back_inserter(OperandList));
-    bool Okay = OperandList.size() == 1;
-    if (!Okay)
-      Okay = std::equal(OperandList.begin(), OperandList.end(),
-                        OperandList.begin());
-    if (Okay)
-      return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+  if (MSSA->isLiveOnEntryDef(First))
     return false;
+  const auto *EndDef = First;
+  for (auto *ChainDef : def_chain(First)) {
+    if (ChainDef == Second)
+      return true;
+    if (MSSA->isLiveOnEntryDef(ChainDef))
+      return false;
+    EndDef = ChainDef;
   }
+  auto *MP = cast<MemoryPhi>(EndDef);
+  auto ReachableOperandPred = [&](const Use &U) {
+    return ReachableEdges.count({MP->getIncomingBlock(U), MP->getBlock()});
+  };
+  auto FilteredPhiArgs =
+      make_filter_range(MP->operands(), ReachableOperandPred);
+  SmallVector<const Value *, 32> OperandList;
+  std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
+            std::back_inserter(OperandList));
+  bool Okay = OperandList.size() == 1;
+  if (!Okay)
+    Okay =
+        std::equal(OperandList.begin(), OperandList.end(), OperandList.begin());
+  if (Okay)
+    return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+  return false;
 }
 
 // Verify the that the memory equivalence table makes sense relative to the
@@ -2211,7 +2207,9 @@ struct NewGVN::ValueDFS {
   int DFSOut = 0;
   int LocalNum = 0;
   // Only one of Def and U will be set.
-  Value *Def = nullptr;
+  // The bool in the Def tells us whether the Def is the stored value of a
+  // store.
+  PointerIntPair<Value *, 1, bool> Def;
   Use *U = nullptr;
   bool operator<(const ValueDFS &Other) const {
     // It's not enough that any given field be less than - we have sets
@@ -2278,12 +2276,19 @@ void NewGVN::convertClassToDFSOrdered(
     DomTreeNode *DomNode = DT->getNode(BB);
     VDDef.DFSIn = DomNode->getDFSNumIn();
     VDDef.DFSOut = DomNode->getDFSNumOut();
-    // If it's a store, use the leader of the value operand.
+    // If it's a store, use the leader of the value operand, if it's always
+    // available, or the value operand.  TODO: We could do dominance checks to
+    // find a dominating leader, but not worth it ATM.
     if (auto *SI = dyn_cast<StoreInst>(D)) {
       auto Leader = lookupOperandLeader(SI->getValueOperand());
-      VDDef.Def = alwaysAvailable(Leader) ? Leader : SI->getValueOperand();
+      if (alwaysAvailable(Leader)) {
+        VDDef.Def.setPointer(Leader);
+      } else {
+        VDDef.Def.setPointer(SI->getValueOperand());
+        VDDef.Def.setInt(true);
+      }
     } else {
-      VDDef.Def = D;
+      VDDef.Def.setPointer(D);
     }
     assert(isa<Instruction>(D) &&
            "The dense set member should always be an instruction");
@@ -2348,7 +2353,7 @@ void NewGVN::convertClassToLoadsAndStores(
     DomTreeNode *DomNode = DT->getNode(BB);
     VD.DFSIn = DomNode->getDFSNumIn();
     VD.DFSOut = DomNode->getDFSNumOut();
-    VD.Def = D;
+    VD.Def.setPointer(D);
 
     // If it's an instruction, use the real local dfs number.
     if (auto *I = dyn_cast<Instruction>(D))
@@ -2595,7 +2600,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
         for (auto &VD : DFSOrderedSet) {
           int MemberDFSIn = VD.DFSIn;
           int MemberDFSOut = VD.DFSOut;
-          Value *Def = VD.Def;
+          Value *Def = VD.Def.getPointer();
+          bool FromStore = VD.Def.getInt();
           Use *U = VD.U;
           // We ignore void things because we can't get a value from them.
           if (Def && Def->getType()->isVoidTy())
@@ -2648,9 +2654,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
             // equivalent to something else. For these things, we can just mark
             // it all dead.  Note that this is different from the "ProbablyDead"
             // set, which may not be dominated by anything, and thus, are only
-            // easy to prove dead if they are also side-effect free.
+            // easy to prove dead if they are also side-effect free. Note that
+            // because stores are put in terms of the stored value, we skip
+            // stored values here. If the stored value is really dead, it will
+            // still be marked for deletion when we process it in its own class.
             if (!EliminationStack.empty() && Def != EliminationStack.back() &&
-                isa<Instruction>(Def))
+                isa<Instruction>(Def) && !FromStore)
               markInstructionForDeletion(cast<Instruction>(Def));
             continue;
           }
@@ -2733,7 +2742,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
       for (auto &VD : PossibleDeadStores) {
         int MemberDFSIn = VD.DFSIn;
         int MemberDFSOut = VD.DFSOut;
-        Instruction *Member = cast<Instruction>(VD.Def);
+        Instruction *Member = cast<Instruction>(VD.Def.getPointer());
         if (EliminationStack.empty() ||
             !EliminationStack.isInScope(MemberDFSIn, MemberDFSOut)) {
           // Sync to our current scope.

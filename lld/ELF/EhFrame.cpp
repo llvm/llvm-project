@@ -44,8 +44,8 @@ public:
 
 private:
   template <class P> void failOn(const P *Loc, const Twine &Msg) {
-    fatal(IS->getLocation<ELFT>((const uint8_t *)Loc - IS->Data.data()) + ": " +
-          Msg);
+    fatal("corrupted .eh_frame: " + Msg + "\n>>> defined in " +
+          IS->getObjMsg<ELFT>((const uint8_t *)Loc - IS->Data.data()));
   }
 
   uint8_t readByte();

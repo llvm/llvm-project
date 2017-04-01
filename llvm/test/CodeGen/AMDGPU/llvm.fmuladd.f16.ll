@@ -115,24 +115,25 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[C_F32_1]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_LO:[0-9]+]], v[[C_F32_0]]
 ; SI:  v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
+; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
 
 ; VI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; VI: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; VI: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
 
 
-; FIXME: and should be unnecessary
-; VI-FLUSH: v_mac_f16_e32 v[[C_V2_F16]], v[[B_V2_F16]], v[[A_V2_F16]]
 ; VI-FLUSH: v_mac_f16_e32 v[[C_F16_1]], v[[B_F16_1]], v[[A_F16_1]]
-; VI-FLUSH: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[C_V2_F16]]
 ; VI-FLUSH: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[C_F16_1]]
+; VI-FLUSH: v_mac_f16_e32 v[[C_V2_F16]], v[[B_V2_F16]], v[[A_V2_F16]]
+; VI-FLUSH-NOT: v_and_b32
+; VI-FLUSH: v_or_b32_e32 v[[R_V2_F16:[0-9]+]],  v[[R_F16_HI]], v[[C_V2_F16]]
 
 ; VI-DENORM-DAG: v_fma_f16 v[[RES0:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]], v[[C_V2_F16]]
 ; VI-DENORM-DAG: v_fma_f16 v[[RES1:[0-9]+]], v[[A_F16_1]], v[[B_F16_1]], v[[C_F16_1]]
-; VI-DENORM: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[RES0]]
-; VI-DENORM: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[RES1]]
+; VI-DENORM-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[RES1]]
+; VI-DENORM-NOT: v_and_b32
+; VI-DENORM: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[RES0]]
 
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmuladd_v2f16(

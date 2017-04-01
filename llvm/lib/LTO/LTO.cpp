@@ -971,7 +971,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
           // IRName will be defined if we have seen the prevailing copy of
           // this value. If not, no need to preserve any ThinLTO copies.
           !Res.second.IRName.empty())
-        GUIDPreservedSymbols.insert(GlobalValue::getGUID(Res.second.IRName));
+        GUIDPreservedSymbols.insert(GlobalValue::getGUID(
+            GlobalValue::getRealLinkageName(Res.second.IRName)));
     }
 
     auto DeadSymbols =
@@ -990,10 +991,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       // partition (and we can't get the GUID).
       if (Res.second.IRName.empty())
         continue;
-      auto GUID = GlobalValue::getGUID(Res.second.IRName);
+      auto GUID = GlobalValue::getGUID(
+          GlobalValue::getRealLinkageName(Res.second.IRName));
       // Mark exported unless index-based analysis determined it to be dead.
       if (!DeadSymbols.count(GUID))
-        ExportedGUIDs.insert(GlobalValue::getGUID(Res.second.IRName));
+        ExportedGUIDs.insert(GUID);
     }
 
     auto isPrevailing = [&](GlobalValue::GUID GUID,

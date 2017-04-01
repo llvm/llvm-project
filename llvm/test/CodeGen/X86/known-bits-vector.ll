@@ -23,18 +23,14 @@ define i32 @knownbits_mask_extract_sext(<8 x i16> %a0) nounwind {
 define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    pushl %eax
 ; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
-; X32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstps {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    vmovd %xmm0, %eax
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vmovss %xmm0, (%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    popl %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_extract_uitofp:
@@ -42,7 +38,7 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2ssq %rax, %xmm2, %xmm0
+; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; X64-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 65535, i64 -1>
   %2 = extractelement <2 x i64> %1, i32 0

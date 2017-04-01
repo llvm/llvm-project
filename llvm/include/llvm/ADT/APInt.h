@@ -627,13 +627,7 @@ public:
   ///
   /// \returns true if *this is zero, false otherwise.
   bool operator!() const {
-    if (isSingleWord())
-      return !VAL;
-
-    for (unsigned i = 0; i != getNumWords(); ++i)
-      if (pVal[i])
-        return false;
-    return true;
+    return *this == 0;
   }
 
   /// @}
@@ -1918,14 +1912,6 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
-/// \brief Check if the specified APInt has a N-bits unsigned integer value.
-inline bool isIntN(unsigned N, const APInt &APIVal) { return APIVal.isIntN(N); }
-
-/// \brief Check if the specified APInt has a N-bits signed integer value.
-inline bool isSignedIntN(unsigned N, const APInt &APIVal) {
-  return APIVal.isSignedIntN(N);
-}
-
 /// \returns true if the argument APInt value is a sequence of ones starting at
 /// the least significant bit with the remainder zero.
 inline bool isMask(unsigned numBits, const APInt &APIVal) {
@@ -1942,15 +1928,9 @@ inline bool isMask(const APInt &Value) {
 
 /// \brief Return true if the argument APInt value contains a sequence of ones
 /// with the remainder zero.
-inline bool isShiftedMask(unsigned numBits, const APInt &APIVal) {
-  return isMask(numBits, (APIVal - APInt(numBits, 1)) | APIVal);
+inline bool isShiftedMask(const APInt &APIVal) {
+  return (APIVal != 0) && isMask((APIVal - 1) | APIVal);
 }
-
-/// \brief Returns a byte-swapped representation of the specified APInt Value.
-inline APInt byteSwap(const APInt &APIVal) { return APIVal.byteSwap(); }
-
-/// \brief Returns the floor log base 2 of the specified APInt value.
-inline unsigned logBase2(const APInt &APIVal) { return APIVal.logBase2(); }
 
 /// \brief Compute GCD of two APInt values.
 ///
@@ -1997,52 +1977,6 @@ APInt RoundDoubleToAPInt(double Double, unsigned width);
 inline APInt RoundFloatToAPInt(float Float, unsigned width) {
   return RoundDoubleToAPInt(double(Float), width);
 }
-
-/// \brief Arithmetic right-shift function.
-///
-/// Arithmetic right-shift the APInt by shiftAmt.
-inline APInt ashr(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.ashr(shiftAmt);
-}
-
-/// \brief Logical right-shift function.
-///
-/// Logical right-shift the APInt by shiftAmt.
-inline APInt lshr(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.lshr(shiftAmt);
-}
-
-/// \brief Left-shift function.
-///
-/// Left-shift the APInt by shiftAmt.
-inline APInt shl(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.shl(shiftAmt);
-}
-
-/// \brief Signed division function for APInt.
-///
-/// Signed divide APInt LHS by APInt RHS.
-inline APInt sdiv(const APInt &LHS, const APInt &RHS) { return LHS.sdiv(RHS); }
-
-/// \brief Unsigned division function for APInt.
-///
-/// Unsigned divide APInt LHS by APInt RHS.
-inline APInt udiv(const APInt &LHS, const APInt &RHS) { return LHS.udiv(RHS); }
-
-/// \brief Function for signed remainder operation.
-///
-/// Signed remainder operation on APInt.
-inline APInt srem(const APInt &LHS, const APInt &RHS) { return LHS.srem(RHS); }
-
-/// \brief Function for unsigned remainder operation.
-///
-/// Unsigned remainder operation on APInt.
-inline APInt urem(const APInt &LHS, const APInt &RHS) { return LHS.urem(RHS); }
-
-/// \brief Function for multiplication operation.
-///
-/// Performs multiplication on APInt values.
-inline APInt mul(const APInt &LHS, const APInt &RHS) { return LHS * RHS; }
 
 } // End of APIntOps namespace
 

@@ -2884,7 +2884,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   StringTable.EmitString(OS);
   OS << ";\n\n";
 
-  // Emit the static match table; unused classes get initalized to 0 which is
+  // Emit the static match table; unused classes get initialized to 0 which is
   // guaranteed to be InvalidMatchClass.
   //
   // FIXME: We can reduce the size of this table very easily. First, we change

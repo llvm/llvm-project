@@ -20433,9 +20433,9 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   case PREFETCH: {
     SDValue Hint = Op.getOperand(6);
     unsigned HintVal = cast<ConstantSDNode>(Hint)->getZExtValue();
-    assert((HintVal == 1 || HintVal == 2) &&
-           "Wrong prefetch hint in intrinsic: should be 1 or 2");
-    unsigned Opcode = (HintVal != 1 ? IntrData->Opc1 : IntrData->Opc0);
+    assert((HintVal == 2 || HintVal == 3) &&
+           "Wrong prefetch hint in intrinsic: should be 2 or 3");
+    unsigned Opcode = (HintVal == 2 ? IntrData->Opc1 : IntrData->Opc0);
     SDValue Chain = Op.getOperand(0);
     SDValue Mask  = Op.getOperand(2);
     SDValue Index = Op.getOperand(3);
@@ -26661,6 +26661,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       APInt &KnownZero,
                                                       APInt &KnownOne,
+                                                      const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
   unsigned BitWidth = KnownZero.getBitWidth();
@@ -26744,7 +26745,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 }
 
 unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
-    SDValue Op, const SelectionDAG &DAG, unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
   unsigned VTBits = Op.getScalarValueSizeInBits();
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {

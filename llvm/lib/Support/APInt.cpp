@@ -724,13 +724,14 @@ bool APInt::isSplat(unsigned SplatSizeInBits) const {
 
 /// This function returns the high "numBits" bits of this APInt.
 APInt APInt::getHiBits(unsigned numBits) const {
-  return APIntOps::lshr(*this, BitWidth - numBits);
+  return this->lshr(BitWidth - numBits);
 }
 
 /// This function returns the low "numBits" bits of this APInt.
 APInt APInt::getLoBits(unsigned numBits) const {
-  return APIntOps::lshr(APIntOps::shl(*this, BitWidth - numBits),
-                        BitWidth - numBits);
+  APInt Result(getLowBitsSet(BitWidth, numBits));
+  Result &= *this;
+  return Result;
 }
 
 unsigned APInt::countLeadingZerosSlowCase() const {
@@ -880,7 +881,7 @@ APInt llvm::APIntOps::GreatestCommonDivisor(const APInt& API1,
   APInt A = API1, B = API2;
   while (!!B) {
     APInt T = B;
-    B = APIntOps::urem(A, B);
+    B = A.urem(B);
     A = T;
   }
   return A;

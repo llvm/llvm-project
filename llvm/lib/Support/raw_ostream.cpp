@@ -465,8 +465,7 @@ void format_object_base::home() {
 static int getFD(StringRef Filename, std::error_code &EC,
                  sys::fs::OpenFlags Flags) {
   // Handle "-" as stdout. Note that when we do this, we consider ourself
-  // the owner of stdout. This means that we can do things like close the
-  // file descriptor when we're done and set the "binary" flag globally.
+  // the owner of stdout and may set the "binary" flag globally based on Flags.
   if (Filename == "-") {
     EC = std::error_code();
     // If user requested binary then put stdout into binary mode if

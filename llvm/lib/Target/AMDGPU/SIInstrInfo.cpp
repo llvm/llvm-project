@@ -1488,6 +1488,27 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 }
 
+bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::V_MOV_B32_e64:
+  case AMDGPU::V_MOV_B64_PSEUDO: {
+    // If there are additional implicit register operands, this may be used for
+    // register indexing so the source register operand isn't simply copied.
+    unsigned NumOps = MI.getDesc().getNumOperands() +
+      MI.getDesc().getNumImplicitUses();
+
+    return MI.getNumOperands() == NumOps;
+  }
+  case AMDGPU::S_MOV_B32:
+  case AMDGPU::S_MOV_B64:
+  case AMDGPU::COPY:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void removeModOperands(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   int Src0ModIdx = AMDGPU::getNamedOperandIdx(Opc,

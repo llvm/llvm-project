@@ -2365,7 +2365,7 @@ template <class ELFT> void ELFDumper<ELFT>::printAMDGPUCodeObjectMetadata() {
   }
   ArrayRef<uint8_t> Sec = unwrapOrError(Obj->getSectionContents(Shdr));
 
-  const uint32_t RuntimeMDNoteType = 10;
+  const uint32_t CodeObjectMetadataNoteType = 10;
   for (auto I = reinterpret_cast<const Elf_Word *>(&Sec[0]),
        E = I + Sec.size()/4; I != E;) {
     uint32_t NameSZ = I[0];
@@ -2379,7 +2379,7 @@ template <class ELFT> void ELFDumper<ELFT>::printAMDGPUCodeObjectMetadata() {
       I += alignTo<4>(NameSZ)/4;
     }
 
-    if (Name == "AMD" && Type == RuntimeMDNoteType) {
+    if (Name == "AMD" && Type == CodeObjectMetadataNoteType) {
       StringRef Desc(reinterpret_cast<const char *>(I), DescSZ);
       W.printString(Desc);
     }

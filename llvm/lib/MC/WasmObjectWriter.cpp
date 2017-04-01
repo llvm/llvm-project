@@ -660,7 +660,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         unsigned n;
         G.InitialValue = decodeSLEB128(p, &n);
         G.ImportIndex = 0;
-        if (n > end - p)
+        if ((ptrdiff_t)n > end - p)
           report_fatal_error("global initial value must be valid SLEB128");
         p += n;
       }

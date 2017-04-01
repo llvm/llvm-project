@@ -377,7 +377,9 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
   sys::fs::perms Mode = ModeOrErr.get();
 
   int FD;
-  failIfError(sys::fs::openFileForWrite(Name, FD, sys::fs::F_None, Mode), Name);
+  failIfError(sys::fs::openFileForWrite(sys::path::filename(Name), FD,
+                                        sys::fs::F_None, Mode),
+              Name);
 
   {
     raw_fd_ostream file(FD, false);

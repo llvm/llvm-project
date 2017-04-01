@@ -19,7 +19,6 @@
 #include "WindowsSupport.h"
 
 namespace llvm {
-using namespace sys;
 
 // Windows has slim read-writer lock support on Vista and higher, so we
 // will attempt to load the APIs.  If they exist, we will use them, and
@@ -73,7 +72,7 @@ static bool loadSRW() {
   return sHasSRW;
 }
 
-RWMutexImpl::RWMutexImpl() {
+sys::RWMutexImpl::RWMutexImpl() {
   if (loadSRW()) {
     data_ = calloc(1, sizeof(SRWLOCK));
     fpInitializeSRWLock(static_cast<PSRWLOCK>(data_));
@@ -83,14 +82,14 @@ RWMutexImpl::RWMutexImpl() {
   }
 }
 
-RWMutexImpl::~RWMutexImpl() {
+sys::RWMutexImpl::~RWMutexImpl() {
   if (!sHasSRW)
     DeleteCriticalSection(static_cast<LPCRITICAL_SECTION>(data_));
   // Nothing to do in the case of slim reader/writers except free the memory.
   free(data_);
 }
 
-bool RWMutexImpl::reader_acquire() {
+bool sys::RWMutexImpl::reader_acquire() {
   if (sHasSRW) {
     fpAcquireSRWLockShared(static_cast<PSRWLOCK>(data_));
   } else {
@@ -99,7 +98,7 @@ bool RWMutexImpl::reader_acquire() {
   return true;
 }
 
-bool RWMutexImpl::reader_release() {
+bool sys::RWMutexImpl::reader_release() {
   if (sHasSRW) {
     fpReleaseSRWLockShared(static_cast<PSRWLOCK>(data_));
   } else {
@@ -108,7 +107,7 @@ bool RWMutexImpl::reader_release() {
   return true;
 }
 
-bool RWMutexImpl::writer_acquire() {
+bool sys::RWMutexImpl::writer_acquire() {
   if (sHasSRW) {
     fpAcquireSRWLockExclusive(static_cast<PSRWLOCK>(data_));
   } else {
@@ -117,7 +116,7 @@ bool RWMutexImpl::writer_acquire() {
   return true;
 }
 
-bool RWMutexImpl::writer_release() {
+bool sys::RWMutexImpl::writer_release() {
   if (sHasSRW) {
     fpReleaseSRWLockExclusive(static_cast<PSRWLOCK>(data_));
   } else {
