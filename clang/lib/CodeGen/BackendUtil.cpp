@@ -323,7 +323,8 @@ static llvm::CodeModel::Model getCodeModel(const CodeGenOptions &CodeGenOpts) {
 }
 
 static llvm::Reloc::Model getRelocModel(const CodeGenOptions &CodeGenOpts) {
-  // Keep this synced with the equivalent code in tools/driver/cc1as_main.cpp.
+  // Keep this synced with the equivalent code in
+  // lib/Frontend/CompilerInvocation.cpp
   llvm::Optional<llvm::Reloc::Model> RM;
   RM = llvm::StringSwitch<llvm::Reloc::Model>(CodeGenOpts.RelocationModel)
       .Case("static", llvm::Reloc::Static)

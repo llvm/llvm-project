@@ -701,8 +701,8 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
     //   end of the template-parameter-list rather than a greater-than
     //   operator.
     GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
-    EnterExpressionEvaluationContext ConstantEvaluated(Actions,
-                                                       Sema::ConstantEvaluated);
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
     DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
     if (DefaultArg.isInvalid())
@@ -1275,7 +1275,8 @@ bool Parser::IsTemplateArgumentList(unsigned Skip) {
 bool
 Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs) {
   // Template argument lists are constant-evaluation contexts.
-  EnterExpressionEvaluationContext EvalContext(Actions,Sema::ConstantEvaluated);
+  EnterExpressionEvaluationContext EvalContext(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ColonProtectionRAIIObject ColonProtection(*this, false);
 
   do {

@@ -180,8 +180,8 @@ static const EHPersonality &getObjCXXPersonality(const llvm::Triple &T,
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the C++ personality just to avoid returning null.
   case ObjCRuntime::GCC:
-  case ObjCRuntime::ObjFW: // XXX: this will change soon
-    return EHPersonality::GNU_ObjC;
+  case ObjCRuntime::ObjFW:
+    return getObjCPersonality(T, L);
   case ObjCRuntime::GNUstep:
     return EHPersonality::GNU_ObjCXX;
   }
