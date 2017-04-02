@@ -3201,22 +3201,17 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    // All bits set?
-    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && isAllOnesConstant(LR);
-    // All sign bits clear?
-    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    bool IsZero = isNullConstantOrNullSplatConstant(LR);
+    bool IsNeg1 = isAllOnesConstantOrAllOnesSplatConstant(LR);
+
     // All bits clear?
-    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && isNullConstant(LR);
-    // All sign bits set?
-    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
-    // Any bits clear?
-    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && isAllOnesConstant(LR);
-    // Any sign bits clear?
-    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && IsZero;
+    // All sign bits clear?
+    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && IsNeg1;
     // Any bits set?
-    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && isNullConstant(LR);
+    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && IsZero;
     // Any sign bits set?
-    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
+    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && IsZero;
 
     // (and (seteq X,  0), (seteq Y,  0)) --> (seteq (or X, Y),  0)
     // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
@@ -3227,6 +3222,15 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
       AddToWorklist(Or.getNode());
       return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
+
+    // All bits set?
+    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && IsNeg1;
+    // All sign bits set?
+    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && IsZero;
+    // Any bits clear?
+    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && IsNeg1;
+    // Any sign bits clear?
+    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && IsNeg1;
 
     // (and (seteq X, -1), (seteq Y, -1)) --> (seteq (and X, Y), -1)
     // (and (setlt X,  0), (setlt Y,  0)) --> (setlt (and X, Y),  0)

@@ -246,6 +246,16 @@ public:
     return MA->getValueID() == MemoryUseVal || MA->getValueID() == MemoryDefVal;
   }
 
+  // Sadly, these have to be public because they are needed in some of the iterators.
+  virtual bool isOptimized() const = 0;
+  virtual MemoryAccess *getOptimized() const = 0;
+  virtual void setOptimized(MemoryAccess *) = 0;
+
+  /// \brief Reset the ID of what this MemoryUse was optimized to, causing it to
+  /// be rewalked by the walker if necessary.
+  /// This really should only be called by tests.
+  virtual void resetOptimized() = 0;
+
 protected:
   friend class MemorySSA;
   friend class MemorySSAUpdater;
@@ -254,8 +264,12 @@ protected:
       : MemoryAccess(C, Vty, BB, 1), MemoryInst(MI) {
     setDefiningAccess(DMA);
   }
-
-  void setDefiningAccess(MemoryAccess *DMA) { setOperand(0, DMA); }
+  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
+    setOperand(0, DMA);
+    if (!Optimized)
+      return;
+    setOptimized(DMA);
+  }
 
 private:
   Instruction *MemoryInst;
@@ -288,20 +302,18 @@ public:
 
   void print(raw_ostream &OS) const override;
 
-  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
-    if (Optimized)
-      OptimizedID = DMA->getID();
-    MemoryUseOrDef::setDefiningAccess(DMA);
+  virtual void setOptimized(MemoryAccess *DMA) override {
+    OptimizedID = DMA->getID();
   }
 
-  bool isOptimized() const {
+  virtual bool isOptimized() const override {
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }
 
-  /// \brief Reset the ID of what this MemoryUse was optimized to, causing it to
-  /// be rewalked by the walker if necessary.
-  /// This really should only be called by tests.
-  void resetOptimized() { OptimizedID = INVALID_MEMORYACCESS_ID; }
+  virtual MemoryAccess *getOptimized() const override {
+    return getDefiningAccess();
+  }
+  virtual void resetOptimized() override { OptimizedID = INVALID_MEMORYACCESS_ID; }
 
 protected:
   friend class MemorySSA;
@@ -333,7 +345,8 @@ public:
 
   MemoryDef(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB,
             unsigned Ver)
-      : MemoryUseOrDef(C, DMA, MemoryDefVal, MI, BB), ID(Ver) {}
+      : MemoryUseOrDef(C, DMA, MemoryDefVal, MI, BB), ID(Ver),
+        Optimized(nullptr), OptimizedID(INVALID_MEMORYACCESS_ID) {}
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
@@ -342,6 +355,17 @@ public:
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
   }
+
+  virtual void setOptimized(MemoryAccess *MA) override {
+    Optimized = MA;
+    OptimizedID = getDefiningAccess()->getID();
+  }
+  virtual MemoryAccess *getOptimized() const override { return Optimized; }
+  virtual bool isOptimized() const override {
+    return getOptimized() && OptimizedID == getDefiningAccess()->getID();
+  }
+  virtual void resetOptimized() override { OptimizedID = INVALID_MEMORYACCESS_ID; }
+
 
   void print(raw_ostream &OS) const override;
 
@@ -352,6 +376,8 @@ protected:
 
 private:
   const unsigned ID;
+  MemoryAccess *Optimized;
+  unsigned int OptimizedID;
 };
 
 template <>
@@ -1075,10 +1101,15 @@ struct def_chain_iterator
 
   def_chain_iterator &operator++() {
     // N.B. liveOnEntry has a null defining access.
-    if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
-      MA = MUD->getDefiningAccess();
-    else
+    if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
+      if (MUD->isOptimized())
+        MA = MUD->getOptimized();
+      else
+        MA = MUD->getDefiningAccess();
+    } else {
       MA = nullptr;
+    }
+
     return *this;
   }
 
@@ -1092,7 +1123,7 @@ template <class T>
 inline iterator_range<def_chain_iterator<T>>
 def_chain(T MA, MemoryAccess *UpTo = nullptr) {
 #ifdef EXPENSIVE_CHECKS
-  assert((!UpTo || find(def_chain(MA), UpTo) != def_chain_iterator()) &&
+  assert((!UpTo || find(def_chain(MA), UpTo) != def_chain_iterator<T>()) &&
          "UpTo isn't in the def chain!");
 #endif
   return make_range(def_chain_iterator<T>(MA), def_chain_iterator<T>(UpTo));

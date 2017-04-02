@@ -1937,8 +1937,8 @@ inline bool isShiftedMask(const APInt &APIVal) {
 /// This function returns the greatest common divisor of the two APInt values
 /// using Euclid's algorithm.
 ///
-/// \returns the greatest common divisor of Val1 and Val2
-APInt GreatestCommonDivisor(const APInt &Val1, const APInt &Val2);
+/// \returns the greatest common divisor of \param A and \param B.
+APInt GreatestCommonDivisor(APInt A, APInt B);
 
 /// \brief Converts the given APInt to a double value.
 ///

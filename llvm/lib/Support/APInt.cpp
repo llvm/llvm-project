@@ -226,21 +226,6 @@ APInt& APInt::operator--() {
   return clearUnusedBits();
 }
 
-/// This function adds the integer array x to the integer array Y and
-/// places the result in dest.
-/// @returns the carry out from the addition
-/// @brief General addition of 64-bit integer arrays
-static bool add(uint64_t *dest, const uint64_t *x, const uint64_t *y,
-                unsigned len) {
-  bool carry = false;
-  for (unsigned i = 0; i< len; ++i) {
-    uint64_t limit = std::min(x[i],y[i]); // must come first in case dest == x
-    dest[i] = x[i] + y[i] + carry;
-    carry = dest[i] < limit || (carry && dest[i] == limit);
-  }
-  return carry;
-}
-
 /// Adds the RHS APint to this APInt.
 /// @returns this, after addition of RHS.
 /// @brief Addition assignment operator.
@@ -248,9 +233,8 @@ APInt& APInt::operator+=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
     VAL += RHS.VAL;
-  else {
-    add(pVal, pVal, RHS.pVal, getNumWords());
-  }
+  else
+    tcAdd(pVal, RHS.pVal, 0, getNumWords());
   return clearUnusedBits();
 }
 
@@ -262,20 +246,6 @@ APInt& APInt::operator+=(uint64_t RHS) {
   return clearUnusedBits();
 }
 
-/// Subtracts the integer array y from the integer array x
-/// @returns returns the borrow out.
-/// @brief Generalized subtraction of 64-bit integer arrays.
-static bool sub(uint64_t *dest, const uint64_t *x, const uint64_t *y,
-                unsigned len) {
-  bool borrow = false;
-  for (unsigned i = 0; i < len; ++i) {
-    uint64_t x_tmp = borrow ? x[i] - 1 : x[i];
-    borrow = y[i] > x_tmp || (borrow && x[i] == 0);
-    dest[i] = x_tmp - y[i];
-  }
-  return borrow;
-}
-
 /// Subtracts the RHS APInt from this APInt
 /// @returns this, after subtraction
 /// @brief Subtraction assignment operator.
@@ -284,7 +254,7 @@ APInt& APInt::operator-=(const APInt& RHS) {
   if (isSingleWord())
     VAL -= RHS.VAL;
   else
-    sub(pVal, pVal, RHS.pVal, getNumWords());
+    tcSubtract(pVal, RHS.pVal, 0, getNumWords());
   return clearUnusedBits();
 }
 
@@ -407,23 +377,17 @@ APInt& APInt::operator*=(const APInt& RHS) {
 }
 
 APInt& APInt::AndAssignSlowCase(const APInt& RHS) {
-  unsigned numWords = getNumWords();
-  for (unsigned i = 0; i < numWords; ++i)
-    pVal[i] &= RHS.pVal[i];
+  tcAnd(pVal, RHS.pVal, getNumWords());
   return *this;
 }
 
 APInt& APInt::OrAssignSlowCase(const APInt& RHS) {
-  unsigned numWords = getNumWords();
-  for (unsigned i = 0; i < numWords; ++i)
-    pVal[i] |= RHS.pVal[i];
+  tcOr(pVal, RHS.pVal, getNumWords());
   return *this;
 }
 
 APInt& APInt::XorAssignSlowCase(const APInt& RHS) {
-  unsigned numWords = getNumWords();
-  for (unsigned i = 0; i < numWords; ++i)
-    pVal[i] ^= RHS.pVal[i];
+  tcXor(pVal, RHS.pVal, getNumWords());
   return *this;
 }
 
@@ -545,8 +509,7 @@ void APInt::clearBit(unsigned bitPosition) {
 
 /// @brief Toggle every bit to its opposite value.
 void APInt::flipAllBitsSlowCase() {
-  for (unsigned i = 0; i < getNumWords(); ++i)
-    pVal[i] ^= UINT64_MAX;
+  tcComplement(pVal, getNumWords());
   clearUnusedBits();
 }
 
@@ -876,13 +839,11 @@ APInt APInt::reverseBits() const {
   return Reversed;
 }
 
-APInt llvm::APIntOps::GreatestCommonDivisor(const APInt& API1,
-                                            const APInt& API2) {
-  APInt A = API1, B = API2;
+APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   while (!!B) {
-    APInt T = B;
-    B = A.urem(B);
-    A = T;
+    APInt R = A.urem(B);
+    A = std::move(B);
+    B = std::move(R);
   }
   return A;
 }
@@ -2177,9 +2138,8 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
   // Figure out if we can shift instead of multiply
   unsigned shift = (radix == 16 ? 4 : radix == 8 ? 3 : radix == 2 ? 1 : 0);
 
-  // Set up an APInt for the digit to add outside the loop so we don't
+  // Set up an APInt for the radix multiplier outside the loop so we don't
   // constantly construct/destruct it.
-  APInt apdigit(getBitWidth(), 0);
   APInt apradix(getBitWidth(), radix);
 
   // Enter digit traversal loop
@@ -2196,11 +2156,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
     }
 
     // Add in the digit we just interpreted
-    if (apdigit.isSingleWord())
-      apdigit.VAL = digit;
-    else
-      apdigit.pVal[0] = digit;
-    *this += apdigit;
+    *this += digit;
   }
   // If its negative, put it in two's complement form
   if (isNeg) {
@@ -2299,7 +2255,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
 
   // For the 2, 8 and 16 bit cases, we can just shift instead of divide
   // because the number of bits per digit (1, 3 and 4 respectively) divides
-  // equaly.  We just shift until the value is zero.
+  // equally.  We just shift until the value is zero.
   if (Radix == 2 || Radix == 8 || Radix == 16) {
     // Just shift tmp right for each digit width until it becomes zero
     unsigned ShiftAmt = (Radix == 16 ? 4 : (Radix == 8 ? 3 : 1));
@@ -2503,9 +2459,7 @@ integerPart APInt::tcAdd(integerPart *dst, const integerPart *rhs,
   assert(c <= 1);
 
   for (unsigned i = 0; i < parts; i++) {
-    integerPart l;
-
-    l = dst[i];
+    integerPart l = dst[i];
     if (c) {
       dst[i] += rhs[i] + 1;
       c = (dst[i] <= l);
@@ -2525,9 +2479,7 @@ integerPart APInt::tcSubtract(integerPart *dst, const integerPart *rhs,
   assert(c <= 1);
 
   for (unsigned i = 0; i < parts; i++) {
-    integerPart l;
-
-    l = dst[i];
+    integerPart l = dst[i];
     if (c) {
       dst[i] -= rhs[i] + 1;
       c = (dst[i] >= l);
@@ -2824,15 +2776,12 @@ void APInt::tcComplement(integerPart *dst, unsigned parts) {
 int APInt::tcCompare(const integerPart *lhs, const integerPart *rhs,
                      unsigned parts) {
   while (parts) {
-      parts--;
-      if (lhs[parts] == rhs[parts])
-        continue;
+    parts--;
+    if (lhs[parts] == rhs[parts])
+      continue;
 
-      if (lhs[parts] > rhs[parts])
-        return 1;
-      else
-        return -1;
-    }
+    return (lhs[parts] > rhs[parts]) ? 1 : -1;
+  }
 
   return 0;
 }

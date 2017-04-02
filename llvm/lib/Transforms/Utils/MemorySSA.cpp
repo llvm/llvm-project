@@ -2181,9 +2181,9 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   // If this is an already optimized use or def, return the optimized result.
   // Note: Currently, we do not store the optimized def result because we'd need
   // a separate field, since we can't use it as the defining access.
-  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-    if (MU->isOptimized())
-      return MU->getDefiningAccess();
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+    if (MUD->isOptimized())
+      return MUD->getOptimized();
 
   const Instruction *I = StartingAccess->getMemoryInst();
   UpwardsMemoryQuery Q(I, StartingAccess);
@@ -2199,8 +2199,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
     Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
-    if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-      MU->setDefiningAccess(LiveOnEntry, true);
+    if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+      MUD->setDefiningAccess(LiveOnEntry, true);
     return LiveOnEntry;
   }
 
@@ -2217,8 +2217,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   DEBUG(dbgs() << *DefiningAccess << "\n");
   DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
   DEBUG(dbgs() << *Result << "\n");
-  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-    MU->setDefiningAccess(Result, true);
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+    MUD->setDefiningAccess(Result, true);
 
   return Result;
 }
