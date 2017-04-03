@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_SEMA_TREETRANSFORM_H
 #define LLVM_CLANG_LIB_SEMA_TREETRANSFORM_H
 
+#include "CoroutineStmtBuilder.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -6851,13 +6852,9 @@ TreeTransform<Derived>::TransformMSAsmStmt(MSAsmStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
-  // The coroutine body should be re-formed by the caller if necessary.
-  // FIXME: The coroutine body is always rebuilt by ActOnFinishFunctionBody
-  CoroutineBodyStmt::CtorArgs BodyArgs;
-
   auto *ScopeInfo = SemaRef.getCurFunction();
   auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
-  assert(ScopeInfo && !ScopeInfo->CoroutinePromise &&
+  assert(FD && ScopeInfo && !ScopeInfo->CoroutinePromise &&
          ScopeInfo->NeedsCoroutineSuspends &&
          ScopeInfo->CoroutineSuspends.first == nullptr &&
          ScopeInfo->CoroutineSuspends.second == nullptr &&
@@ -6869,17 +6866,11 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
 
   // The new CoroutinePromise object needs to be built and put into the current
   // FunctionScopeInfo before any transformations or rebuilding occurs.
-  auto *Promise = S->getPromiseDecl();
-  auto *NewPromise = SemaRef.buildCoroutinePromise(FD->getLocation());
-  if (!NewPromise)
+  auto *Promise = SemaRef.buildCoroutinePromise(FD->getLocation());
+  if (!Promise)
     return StmtError();
-  getDerived().transformedLocalDecl(Promise, NewPromise);
-  ScopeInfo->CoroutinePromise = NewPromise;
-  StmtResult PromiseStmt = SemaRef.ActOnDeclStmt(
-          SemaRef.ConvertDeclToDeclGroup(NewPromise),
-          FD->getLocation(), FD->getLocation());
-  assert(!PromiseStmt.isInvalid());
-  BodyArgs.Promise = PromiseStmt.get();
+  getDerived().transformedLocalDecl(S->getPromiseDecl(), Promise);
+  ScopeInfo->CoroutinePromise = Promise;
 
   // Transform the implicit coroutine statements we built during the initial
   // parse.
@@ -6892,52 +6883,68 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
     return StmtError();
   ScopeInfo->setCoroutineSuspends(InitSuspend.get(), FinalSuspend.get());
   assert(isa<Expr>(InitSuspend.get()) && isa<Expr>(FinalSuspend.get()));
-  BodyArgs.InitialSuspend = cast<Expr>(InitSuspend.get());
-  BodyArgs.FinalSuspend = cast<Expr>(FinalSuspend.get());
 
   StmtResult BodyRes = getDerived().TransformStmt(S->getBody());
   if (BodyRes.isInvalid())
     return StmtError();
-  BodyArgs.Body = BodyRes.get();
 
-  if (S->getFallthroughHandler()) {
-    StmtResult Res = getDerived().TransformStmt(S->getFallthroughHandler());
-    if (Res.isInvalid())
+  CoroutineStmtBuilder Builder(SemaRef, *FD, *ScopeInfo, BodyRes.get());
+  if (Builder.isInvalid())
+    return StmtError();
+
+  Expr *ReturnObject = S->getReturnValueInit();
+  assert(ReturnObject && "the return object is expected to be valid");
+  ExprResult Res = getDerived().TransformInitializer(ReturnObject,
+                                                     /*NoCopyInit*/ false);
+  if (Res.isInvalid())
+    return StmtError();
+  Builder.ReturnValue = Res.get();
+
+  if (S->hasDependentPromiseType()) {
+    assert(!Promise->getType()->isDependentType() &&
+           "the promise type must no longer be dependent");
+    assert(!S->getFallthroughHandler() && !S->getExceptionHandler() &&
+           !S->getReturnStmtOnAllocFailure() && !S->getDeallocate() &&
+           "these nodes should not have been built yet");
+    if (!Builder.buildDependentStatements())
       return StmtError();
-    BodyArgs.OnFallthrough = Res.get();
-  }
+  } else {
+    if (auto *OnFallthrough = S->getFallthroughHandler()) {
+      StmtResult Res = getDerived().TransformStmt(OnFallthrough);
+      if (Res.isInvalid())
+        return StmtError();
+      Builder.OnFallthrough = Res.get();
+    }
 
-  if (S->getExceptionHandler()) {
-    StmtResult Res = getDerived().TransformStmt(S->getExceptionHandler());
-    if (Res.isInvalid())
-      return StmtError();
-    BodyArgs.OnException = Res.get();
-  }
+    if (auto *OnException = S->getExceptionHandler()) {
+      StmtResult Res = getDerived().TransformStmt(OnException);
+      if (Res.isInvalid())
+        return StmtError();
+      Builder.OnException = Res.get();
+    }
 
-  // Transform any additional statements we may have already built
-  if (S->getAllocate() && S->getDeallocate()) {
+    if (auto *OnAllocFailure = S->getReturnStmtOnAllocFailure()) {
+      StmtResult Res = getDerived().TransformStmt(OnAllocFailure);
+      if (Res.isInvalid())
+        return StmtError();
+      Builder.ReturnStmtOnAllocFailure = Res.get();
+    }
+
+    // Transform any additional statements we may have already built
+    assert(S->getAllocate() && S->getDeallocate() &&
+           "allocation and deallocation calls must already be built");
     ExprResult AllocRes = getDerived().TransformExpr(S->getAllocate());
     if (AllocRes.isInvalid())
       return StmtError();
-    BodyArgs.Allocate = AllocRes.get();
+    Builder.Allocate = AllocRes.get();
 
     ExprResult DeallocRes = getDerived().TransformExpr(S->getDeallocate());
     if (DeallocRes.isInvalid())
       return StmtError();
-    BodyArgs.Deallocate = DeallocRes.get();
+    Builder.Deallocate = DeallocRes.get();
   }
 
-  Expr *ReturnObject = S->getReturnValueInit();
-  if (ReturnObject) {
-    ExprResult Res = getDerived().TransformInitializer(ReturnObject,
-            /*NoCopyInit*/false);
-    if (Res.isInvalid())
-      return StmtError();
-    BodyArgs.ReturnValue = Res.get();
-  }
-
-  // Do a partial rebuild of the coroutine body and stash it in the ScopeInfo
-  return getDerived().RebuildCoroutineBodyStmt(BodyArgs);
+  return getDerived().RebuildCoroutineBodyStmt(Builder);
 }
 
 template<typename Derived>

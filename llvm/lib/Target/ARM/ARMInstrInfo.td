@@ -441,7 +441,16 @@ def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
 //
 
 // Immediate operands with a shared generic asm render method.
-class ImmAsmOperand : AsmOperandClass { let RenderMethod = "addImmOperands"; }
+class ImmAsmOperand<int Low, int High> : AsmOperandClass {
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
+  let DiagnosticType = "ImmRange" # Low # "_" # High;
+}
+
+class ImmAsmOperandMinusOne<int Low, int High> : AsmOperandClass {
+  let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
+  let DiagnosticType = "ImmRange" # Low # "_" # High;
+}
 
 // Operands that are part of a memory addressing mode.
 class MemOperand : Operand<i32> { let OperandType = "OPERAND_MEMORY"; }
@@ -663,35 +672,45 @@ def arm_i32imm : PatLeaf<(imm), [{
 }]>;
 
 /// imm0_1 predicate - Immediate in the range [0,1].
-def Imm0_1AsmOperand: ImmAsmOperand { let Name = "Imm0_1"; }
+def Imm0_1AsmOperand: ImmAsmOperand<0,1> { let Name = "Imm0_1"; }
 def imm0_1 : Operand<i32> { let ParserMatchClass = Imm0_1AsmOperand; }
 
 /// imm0_3 predicate - Immediate in the range [0,3].
-def Imm0_3AsmOperand: ImmAsmOperand { let Name = "Imm0_3"; }
+def Imm0_3AsmOperand: ImmAsmOperand<0,3> { let Name = "Imm0_3"; }
 def imm0_3 : Operand<i32> { let ParserMatchClass = Imm0_3AsmOperand; }
 
 /// imm0_7 predicate - Immediate in the range [0,7].
-def Imm0_7AsmOperand: ImmAsmOperand { let Name = "Imm0_7"; }
+def Imm0_7AsmOperand: ImmAsmOperand<0,7> {
+  let Name = "Imm0_7";
+}
 def imm0_7 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 8;
 }]> {
   let ParserMatchClass = Imm0_7AsmOperand;
 }
 
+/// imm8_255 predicate - Immediate in the range [8,255].
+def Imm8_255AsmOperand: ImmAsmOperand<8,255> { let Name = "Imm8_255"; }
+def imm8_255 : Operand<i32>, ImmLeaf<i32, [{
+  return Imm >= 8 && Imm < 256;
+}]> {
+  let ParserMatchClass = Imm8_255AsmOperand;
+}
+
 /// imm8 predicate - Immediate is exactly 8.
-def Imm8AsmOperand: ImmAsmOperand { let Name = "Imm8"; }
+def Imm8AsmOperand: ImmAsmOperand<8,8> { let Name = "Imm8"; }
 def imm8 : Operand<i32>, ImmLeaf<i32, [{ return Imm == 8; }]> {
   let ParserMatchClass = Imm8AsmOperand;
 }
 
 /// imm16 predicate - Immediate is exactly 16.
-def Imm16AsmOperand: ImmAsmOperand { let Name = "Imm16"; }
+def Imm16AsmOperand: ImmAsmOperand<16,16> { let Name = "Imm16"; }
 def imm16 : Operand<i32>, ImmLeaf<i32, [{ return Imm == 16; }]> {
   let ParserMatchClass = Imm16AsmOperand;
 }
 
 /// imm32 predicate - Immediate is exactly 32.
-def Imm32AsmOperand: ImmAsmOperand { let Name = "Imm32"; }
+def Imm32AsmOperand: ImmAsmOperand<32,32> { let Name = "Imm32"; }
 def imm32 : Operand<i32>, ImmLeaf<i32, [{ return Imm == 32; }]> {
   let ParserMatchClass = Imm32AsmOperand;
 }
@@ -699,25 +718,25 @@ def imm32 : Operand<i32>, ImmLeaf<i32, [{ return Imm == 32; }]> {
 def imm8_or_16 : ImmLeaf<i32, [{ return Imm == 8 || Imm == 16;}]>;
 
 /// imm1_7 predicate - Immediate in the range [1,7].
-def Imm1_7AsmOperand: ImmAsmOperand { let Name = "Imm1_7"; }
+def Imm1_7AsmOperand: ImmAsmOperand<1,7> { let Name = "Imm1_7"; }
 def imm1_7 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm < 8; }]> {
   let ParserMatchClass = Imm1_7AsmOperand;
 }
 
 /// imm1_15 predicate - Immediate in the range [1,15].
-def Imm1_15AsmOperand: ImmAsmOperand { let Name = "Imm1_15"; }
+def Imm1_15AsmOperand: ImmAsmOperand<1,15> { let Name = "Imm1_15"; }
 def imm1_15 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm < 16; }]> {
   let ParserMatchClass = Imm1_15AsmOperand;
 }
 
 /// imm1_31 predicate - Immediate in the range [1,31].
-def Imm1_31AsmOperand: ImmAsmOperand { let Name = "Imm1_31"; }
+def Imm1_31AsmOperand: ImmAsmOperand<1,31> { let Name = "Imm1_31"; }
 def imm1_31 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm < 32; }]> {
   let ParserMatchClass = Imm1_31AsmOperand;
 }
 
 /// imm0_15 predicate - Immediate in the range [0,15].
-def Imm0_15AsmOperand: ImmAsmOperand {
+def Imm0_15AsmOperand: ImmAsmOperand<0,15> {
   let Name = "Imm0_15";
   let DiagnosticType = "ImmRange0_15";
 }
@@ -728,7 +747,7 @@ def imm0_15 : Operand<i32>, ImmLeaf<i32, [{
 }
 
 /// imm0_31 predicate - True if the 32-bit immediate is in the range [0,31].
-def Imm0_31AsmOperand: ImmAsmOperand { let Name = "Imm0_31"; }
+def Imm0_31AsmOperand: ImmAsmOperand<0,31> { let Name = "Imm0_31"; }
 def imm0_31 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 32;
 }]> {
@@ -736,15 +755,15 @@ def imm0_31 : Operand<i32>, ImmLeaf<i32, [{
 }
 
 /// imm0_32 predicate - True if the 32-bit immediate is in the range [0,32].
-def Imm0_32AsmOperand: ImmAsmOperand { let Name = "Imm0_32"; }
+def Imm0_32AsmOperand: ImmAsmOperand<0,32> { let Name = "Imm0_32"; }
 def imm0_32 : Operand<i32>, ImmLeaf<i32, [{
-  return Imm >= 0 && Imm < 32;
+  return Imm >= 0 && Imm < 33;
 }]> {
   let ParserMatchClass = Imm0_32AsmOperand;
 }
 
 /// imm0_63 predicate - True if the 32-bit immediate is in the range [0,63].
-def Imm0_63AsmOperand: ImmAsmOperand { let Name = "Imm0_63"; }
+def Imm0_63AsmOperand: ImmAsmOperand<0,63> { let Name = "Imm0_63"; }
 def imm0_63 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 64;
 }]> {
@@ -752,7 +771,7 @@ def imm0_63 : Operand<i32>, ImmLeaf<i32, [{
 }
 
 /// imm0_239 predicate - Immediate in the range [0,239].
-def Imm0_239AsmOperand : ImmAsmOperand {
+def Imm0_239AsmOperand : ImmAsmOperand<0,239> {
   let Name = "Imm0_239";
   let DiagnosticType = "ImmRange0_239";
 }
@@ -761,13 +780,13 @@ def imm0_239 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 240; }]> {
 }
 
 /// imm0_255 predicate - Immediate in the range [0,255].
-def Imm0_255AsmOperand : ImmAsmOperand { let Name = "Imm0_255"; }
+def Imm0_255AsmOperand : ImmAsmOperand<0,255> { let Name = "Imm0_255"; }
 def imm0_255 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255AsmOperand;
 }
 
-/// imm0_65535 - An immediate is in the range [0.65535].
-def Imm0_65535AsmOperand: ImmAsmOperand { let Name = "Imm0_65535"; }
+/// imm0_65535 - An immediate is in the range [0,65535].
+def Imm0_65535AsmOperand: ImmAsmOperand<0,65535> { let Name = "Imm0_65535"; }
 def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 65536;
 }]> {
@@ -785,19 +804,23 @@ def imm0_65535_neg : Operand<i32>, ImmLeaf<i32, [{
 // FIXME: This really needs a Thumb version separate from the ARM version.
 // While the range is the same, and can thus use the same match class,
 // the encoding is different so it should have a different encoder method.
-def Imm0_65535ExprAsmOperand: ImmAsmOperand { let Name = "Imm0_65535Expr"; }
+def Imm0_65535ExprAsmOperand: AsmOperandClass {
+  let Name = "Imm0_65535Expr";
+  let RenderMethod = "addImmOperands";
+}
+
 def imm0_65535_expr : Operand<i32> {
   let EncoderMethod = "getHiLo16ImmOpValue";
   let ParserMatchClass = Imm0_65535ExprAsmOperand;
 }
 
-def Imm256_65535ExprAsmOperand: ImmAsmOperand { let Name = "Imm256_65535Expr"; }
+def Imm256_65535ExprAsmOperand: ImmAsmOperand<256,65535> { let Name = "Imm256_65535Expr"; }
 def imm256_65535_expr : Operand<i32> {
   let ParserMatchClass = Imm256_65535ExprAsmOperand;
 }
 
 /// imm24b - True if the 32-bit immediate is encodable in 24 bits.
-def Imm24bitAsmOperand: ImmAsmOperand { let Name = "Imm24bit"; }
+def Imm24bitAsmOperand: ImmAsmOperand<0,0xffffff> { let Name = "Imm24bit"; }
 def imm24b : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm <= 0xffffff;
 }]> {
@@ -826,7 +849,9 @@ def imm1_32_XFORM: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant((int)N->getZExtValue() - 1, SDLoc(N),
                                    MVT::i32);
 }]>;
-def Imm1_32AsmOperand: AsmOperandClass { let Name = "Imm1_32"; }
+def Imm1_32AsmOperand: ImmAsmOperandMinusOne<1,32> {
+  let Name = "Imm1_32";
+}
 def imm1_32 : Operand<i32>, PatLeaf<(imm), [{
    uint64_t Imm = N->getZExtValue();
    return Imm > 0 && Imm <= 32;
@@ -840,7 +865,7 @@ def imm1_16_XFORM: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant((int)N->getZExtValue() - 1, SDLoc(N),
                                    MVT::i32);
 }]>;
-def Imm1_16AsmOperand: AsmOperandClass { let Name = "Imm1_16"; }
+def Imm1_16AsmOperand: ImmAsmOperandMinusOne<1,16> { let Name = "Imm1_16"; }
 def imm1_16 : Operand<i32>, PatLeaf<(imm), [{ return Imm > 0 && Imm <= 16; }],
     imm1_16_XFORM> {
   let PrintMethod = "printImmPlusOneOperand";

@@ -146,6 +146,10 @@ static const EnumEntry<uint8_t> FunctionOptionEnum[] = {
     ENUM_ENTRY(FunctionOptions, ConstructorWithVirtualBases),
 };
 
+static const EnumEntry<uint16_t> LabelTypeEnum[] = {
+    ENUM_ENTRY(LabelType, Near), ENUM_ENTRY(LabelType, Far),
+};
+
 #undef ENUM_ENTRY
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {
@@ -545,5 +549,10 @@ Error TypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
 Error TypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
                                         ListContinuationRecord &Cont) {
   printTypeIndex("ContinuationIndex", Cont.getContinuationIndex());
+  return Error::success();
+}
+
+Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &LR) {
+  W->printEnum("Mode", uint16_t(LR.Mode), makeArrayRef(LabelTypeEnum));
   return Error::success();
 }

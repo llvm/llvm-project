@@ -420,6 +420,36 @@ public:
   /// width without remainder.
   bool isSplat(unsigned SplatSizeInBits) const;
 
+  /// \returns true if this APInt value is a sequence of \param numBits ones
+  /// starting at the least significant bit with the remainder zero.
+  bool isMask(unsigned numBits) const {
+    assert(numBits != 0 && "numBits must be non-zero");
+    assert(numBits <= BitWidth && "numBits out of range");
+    if (isSingleWord())
+      return VAL == (UINT64_MAX >> (APINT_BITS_PER_WORD - numBits));
+    unsigned Ones = countTrailingOnes();
+    return (numBits == Ones) && ((Ones + countLeadingZeros()) == BitWidth);
+  }
+
+  /// \returns true if this APInt is a non-empty sequence of ones starting at
+  /// the least significant bit with the remainder zero.
+  /// Ex. isMask(0x0000FFFFU) == true.
+  bool isMask() const {
+    if (isSingleWord())
+      return isMask_64(VAL);
+    unsigned Ones = countTrailingOnes();
+    return (Ones > 0) && ((Ones + countLeadingZeros()) == BitWidth);
+  }
+
+  /// \brief Return true if this APInt value contains a sequence of ones with
+  /// the remainder zero.
+  bool isShiftedMask() const {
+    if (isSingleWord())
+      return isShiftedMask_64(VAL);
+    unsigned Ones = countPopulation();
+    return (Ones + countTrailingZeros() + countLeadingZeros()) == BitWidth;
+  }
+
   /// @}
   /// \name Value Generators
   /// @{
@@ -1905,26 +1935,6 @@ inline const APInt &umin(const APInt &A, const APInt &B) {
 /// \brief Determine the larger of two APInts considered to be unsigned.
 inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
-}
-
-/// \returns true if the argument APInt value is a sequence of ones starting at
-/// the least significant bit with the remainder zero.
-inline bool isMask(unsigned numBits, const APInt &APIVal) {
-  return numBits <= APIVal.getBitWidth() &&
-         APIVal == APInt::getLowBitsSet(APIVal.getBitWidth(), numBits);
-}
-
-/// \returns true if the argument is a non-empty sequence of ones starting at
-/// the least significant bit with the remainder zero (32 bit version).
-/// Ex. isMask(0x0000FFFFU) == true.
-inline bool isMask(const APInt &Value) {
-  return (Value != 0) && ((Value + 1) & Value) == 0;
-}
-
-/// \brief Return true if the argument APInt value contains a sequence of ones
-/// with the remainder zero.
-inline bool isShiftedMask(const APInt &APIVal) {
-  return (APIVal != 0) && isMask((APIVal - 1) | APIVal);
 }
 
 /// \brief Compute GCD of two APInt values.

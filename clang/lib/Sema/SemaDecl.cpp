@@ -5530,6 +5530,10 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
 NamedDecl*
 Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
                            LookupResult &Previous, bool &Redeclaration) {
+
+  // Find the shadowed declaration before filtering for scope.
+  NamedDecl *ShadowedDecl = getShadowedDeclaration(NewTD, Previous);
+
   // Merge the decl with the existing one if appropriate. If the decl is
   // in an outer scope, it isn't the same thing.
   FilterLookupForScope(Previous, DC, S, /*ConsiderLinkage*/false,
@@ -5539,6 +5543,9 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
     Redeclaration = true;
     MergeTypedefNameDecl(S, NewTD, Previous);
   }
+
+  if (ShadowedDecl && !Redeclaration)
+    CheckShadow(NewTD, ShadowedDecl, Previous);
 
   // If this is the C FILE type, notify the AST context.
   if (IdentifierInfo *II = NewTD->getIdentifier())
@@ -6671,13 +6678,25 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 }
 
 /// Enum describing the %select options in diag::warn_decl_shadow.
-enum ShadowedDeclKind { SDK_Local, SDK_Global, SDK_StaticMember, SDK_Field };
+enum ShadowedDeclKind {
+  SDK_Local,
+  SDK_Global,
+  SDK_StaticMember,
+  SDK_Field,
+  SDK_Typedef,
+  SDK_Using
+};
 
 /// Determine what kind of declaration we're shadowing.
 static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
                                                 const DeclContext *OldDC) {
-  if (isa<RecordDecl>(OldDC))
+  if (isa<TypeAliasDecl>(ShadowedDecl))
+    return SDK_Using;
+  else if (isa<TypedefDecl>(ShadowedDecl))
+    return SDK_Typedef;
+  else if (isa<RecordDecl>(OldDC))
     return isa<FieldDecl>(ShadowedDecl) ? SDK_Field : SDK_StaticMember;
+
   return OldDC->isFileContext() ? SDK_Global : SDK_Local;
 }
 
@@ -6692,26 +6711,42 @@ static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
   return SourceLocation();
 }
 
+static bool shouldWarnIfShadowedDecl(const DiagnosticsEngine &Diags,
+                                     const LookupResult &R) {
+  // Only diagnose if we're shadowing an unambiguous field or variable.
+  if (R.getResultKind() != LookupResult::Found)
+    return false;
+
+  // Return false if warning is ignored.
+  return !Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc());
+}
+
 /// \brief Return the declaration shadowed by the given variable \p D, or null
 /// if it doesn't shadow any declaration or shadowing warnings are disabled.
 NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
                                         const LookupResult &R) {
-  // Return if warning is ignored.
-  if (Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc()))
+  if (!shouldWarnIfShadowedDecl(Diags, R))
     return nullptr;
 
   // Don't diagnose declarations at file scope.
   if (D->hasGlobalStorage())
     return nullptr;
 
-  // Only diagnose if we're shadowing an unambiguous field or variable.
-  if (R.getResultKind() != LookupResult::Found)
-    return nullptr;
-
   NamedDecl *ShadowedDecl = R.getFoundDecl();
   return isa<VarDecl>(ShadowedDecl) || isa<FieldDecl>(ShadowedDecl)
              ? ShadowedDecl
              : nullptr;
+}
+
+/// \brief Return the declaration shadowed by the given typedef \p D, or null
+/// if it doesn't shadow any declaration or shadowing warnings are disabled.
+NamedDecl *Sema::getShadowedDeclaration(const TypedefNameDecl *D,
+                                        const LookupResult &R) {
+  if (!shouldWarnIfShadowedDecl(Diags, R))
+    return nullptr;
+
+  NamedDecl *ShadowedDecl = R.getFoundDecl();
+  return isa<TypedefNameDecl>(ShadowedDecl) ? ShadowedDecl : nullptr;
 }
 
 /// \brief Diagnose variable or built-in function shadowing.  Implements
@@ -6723,7 +6758,7 @@ NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
 /// \param ShadowedDecl the declaration that is shadowed by the given variable
 /// \param R the lookup of the name
 ///
-void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
+void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
                        const LookupResult &R) {
   DeclContext *NewDC = D->getDeclContext();
 
@@ -6735,13 +6770,13 @@ void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
 
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
-    if (isa<CXXConstructorDecl>(NewDC) && isa<ParmVarDecl>(D)) {
-      // Remember that this was shadowed so we can either warn about its
-      // modification or its existence depending on warning settings.
-      D = D->getCanonicalDecl();
-      ShadowingDecls.insert({D, FD});
-      return;
-    }
+    if (isa<CXXConstructorDecl>(NewDC))
+      if (const auto PVD = dyn_cast<ParmVarDecl>(D)) {
+        // Remember that this was shadowed so we can either warn about its
+        // modification or its existence depending on warning settings.
+        ShadowingDecls.insert({PVD->getCanonicalDecl(), FD});
+        return;
+      }
   }
 
   if (VarDecl *shadowedVar = dyn_cast<VarDecl>(ShadowedDecl))
@@ -6759,7 +6794,8 @@ void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
 
   unsigned WarningDiag = diag::warn_decl_shadow;
   SourceLocation CaptureLoc;
-  if (isa<VarDecl>(ShadowedDecl) && NewDC && isa<CXXMethodDecl>(NewDC)) {
+  if (isa<VarDecl>(D) && isa<VarDecl>(ShadowedDecl) && NewDC &&
+      isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
         if (RD->getLambdaCaptureDefault() == LCD_None) {
@@ -6773,7 +6809,8 @@ void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
           // Remember that this was shadowed so we can avoid the warning if the
           // shadowed decl isn't captured and the warning settings allow it.
           cast<LambdaScopeInfo>(getCurFunction())
-              ->ShadowingDecls.push_back({D, cast<VarDecl>(ShadowedDecl)});
+              ->ShadowingDecls.push_back(
+                  {cast<VarDecl>(D), cast<VarDecl>(ShadowedDecl)});
           return;
         }
       }

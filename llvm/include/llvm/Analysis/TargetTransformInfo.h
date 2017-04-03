@@ -526,6 +526,12 @@ public:
   /// \return The width of the largest scalar or vector register type.
   unsigned getRegisterBitWidth(bool Vector) const;
 
+  /// \return True if it should be considered for address type promotion.
+  /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
+  /// profitable without finding other extensions fed by the same input.
+  bool shouldConsiderAddressTypePromotion(
+      const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const;
+
   /// \return The size of a cache line in bytes.
   unsigned getCacheLineSize() const;
 
@@ -800,6 +806,8 @@ public:
                             Type *Ty) = 0;
   virtual unsigned getNumberOfRegisters(bool Vector) = 0;
   virtual unsigned getRegisterBitWidth(bool Vector) = 0;
+  virtual bool shouldConsiderAddressTypePromotion(
+      const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() = 0;
   virtual unsigned getPrefetchDistance() = 0;
   virtual unsigned getMinPrefetchStride() = 0;
@@ -1026,7 +1034,11 @@ public:
   unsigned getRegisterBitWidth(bool Vector) override {
     return Impl.getRegisterBitWidth(Vector);
   }
-
+  bool shouldConsiderAddressTypePromotion(
+      const Instruction &I, bool &AllowPromotionWithoutCommonHeader) override {
+    return Impl.shouldConsiderAddressTypePromotion(
+        I, AllowPromotionWithoutCommonHeader);
+  }
   unsigned getCacheLineSize() override {
     return Impl.getCacheLineSize();
   }

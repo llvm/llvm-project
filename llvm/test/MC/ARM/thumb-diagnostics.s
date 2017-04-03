@@ -28,7 +28,7 @@
 
 @ Out of range immediates for ASR instruction.
         asrs r2, r3, #33
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,32]
 @ CHECK-ERRORS:         asrs r2, r3, #33
 @ CHECK-ERRORS:                      ^
 
@@ -51,7 +51,7 @@ error: invalid operand for instruction
 @CHECK-ERRORS-V8: error: instruction requires: arm-mode
 @CHECK-ERRORS-V8:         hlt #64
 @CHECK-ERRORS-V8:              ^
-@CHECK-ERRORS: error: invalid operand for instruction
+@CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
 @CHECK-ERRORS:              ^
 
@@ -153,10 +153,10 @@ error: invalid operand for instruction
 @ Out of range immediates for LSL instruction.
         lsls r4, r5, #-1
         lsls r4, r5, #32
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,31]
 @ CHECK-ERRORS:         lsls r4, r5, #-1
 @ CHECK-ERRORS:                      ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,31]
 @ CHECK-ERRORS:         lsls r4, r5, #32
 @ CHECK-ERRORS:                      ^
 
@@ -184,7 +184,7 @@ error: invalid operand for instruction
 @ Out of range immediate for SVC instruction.
         svc #-1
         svc #256
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,0xffffff]
 @ CHECK-ERRORS:         svc #-1
 @ CHECK-ERRORS:             ^
 @ CHECK-ERRORS: error: instruction requires: arm-mode

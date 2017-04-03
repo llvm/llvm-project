@@ -701,3 +701,24 @@ define i1 @test48(i64 %x, i1 %b) {
   %3 = or i1 %1, %.b
   ret i1 %3
 }
+
+define i32 @test49(i1 %C) {
+; CHECK-LABEL: @test49(
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], i32 1019, i32 123
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %A = select i1 %C, i32 1000, i32 10
+  %V = or i32 %A, 123
+  ret i32 %V
+}
+
+define <2 x i32> @test49vec(i1 %C) {
+; CHECK-LABEL: @test49vec(
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 896, i32 896>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = or <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+  %V = or <2 x i32> %A, <i32 123, i32 123>
+  ret <2 x i32> %V
+}

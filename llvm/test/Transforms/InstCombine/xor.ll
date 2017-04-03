@@ -352,3 +352,24 @@ define i32 @test28(i32 %indvar) {
   %t214 = xor i32 %t7, -2147483648
   ret i32 %t214
 }
+
+define i32 @test29(i1 %C) {
+; CHECK-LABEL: @test29(
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], i32 915, i32 113
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %A = select i1 %C, i32 1000, i32 10
+  %V = xor i32 %A, 123
+  ret i32 %V
+}
+
+define <2 x i32> @test29vec(i1 %C) {
+; CHECK-LABEL: @test29vec(
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+; CHECK-NEXT:    [[V:%.*]] = xor <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+  %V = xor <2 x i32> %A, <i32 123, i32 123>
+  ret <2 x i32> %V
+}

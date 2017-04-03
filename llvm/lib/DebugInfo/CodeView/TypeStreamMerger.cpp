@@ -301,6 +301,10 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, TypeServer2Record &R) {
   return writeRecord(R, true);
 }
 
+Error TypeStreamMerger::visitKnownRecord(CVType &, LabelRecord &R) {
+  return writeRecord(R, true);
+}
+
 Error TypeStreamMerger::visitKnownRecord(CVType &, VFTableRecord &R) {
   bool Success = true;
   Success &= remapIndex(R.CompleteClass);

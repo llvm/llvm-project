@@ -1661,7 +1661,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       Changed = true;
       DidPruneOps = true;
       unsigned OrigOpNumber = 0;
-      while (Ops[OrigOpNumber].getNode() != Op && OrigOpNumber < Ops.size())
+      while (OrigOpNumber < Ops.size() && Ops[OrigOpNumber].getNode() != Op)
         OrigOpNumber++;
       assert((OrigOpNumber != Ops.size()) &&
              "expected to find TokenFactor Operand");
@@ -3337,7 +3337,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
         unsigned MaskBits = AndMask.countTrailingOnes();
         EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), Size / 2);
 
-        if (APIntOps::isMask(AndMask) &&
+        if (AndMask.isMask() &&
             // Required bits must not span the two halves of the integer and
             // must fit in the half size type.
             (ShiftBits + MaskBits <= Size / 2) &&
@@ -3377,7 +3377,7 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
                                    bool &NarrowLoad) {
   uint32_t ActiveBits = AndC->getAPIntValue().getActiveBits();
 
-  if (ActiveBits == 0 || !APIntOps::isMask(ActiveBits, AndC->getAPIntValue()))
+  if (ActiveBits == 0 || !AndC->getAPIntValue().isMask(ActiveBits))
     return false;
 
   ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
@@ -4179,7 +4179,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   if (SDValue ROR = ReassociateOps(ISD::OR, SDLoc(N), N0, N1))
     return ROR;
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
-  // iff (c1 & c2) == 0.
+  // iff (c1 & c2) != 0.
   if (N1C && N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse() &&
              isa<ConstantSDNode>(N0.getOperand(1))) {
     ConstantSDNode *C1 = cast<ConstantSDNode>(N0.getOperand(1));
@@ -14632,12 +14632,6 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     if (Changed)
       return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
-
-  // A shuffle of a splat is always the splat itself:
-  // shuffle (splat-shuffle), undef, M --> splat-shuffle
-  if (auto *N0Shuf = dyn_cast<ShuffleVectorSDNode>(N0))
-    if (N1.isUndef() && N0Shuf->isSplat())
-      return N0;
 
   // If it is a splat, check if the argument vector is another splat or a
   // build_vector.

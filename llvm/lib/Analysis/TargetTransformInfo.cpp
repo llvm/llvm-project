@@ -269,6 +269,12 @@ unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
   return TTIImpl->getRegisterBitWidth(Vector);
 }
 
+bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {
+  return TTIImpl->shouldConsiderAddressTypePromotion(
+      I, AllowPromotionWithoutCommonHeader);
+}
+
 unsigned TargetTransformInfo::getCacheLineSize() const {
   return TTIImpl->getCacheLineSize();
 }

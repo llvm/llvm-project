@@ -43,6 +43,7 @@ add_polly_library(Polly
   CodeGen/Utils.cpp
   CodeGen/RuntimeDebugBuilder.cpp
   CodeGen/CodegenCleanup.cpp
+  CodeGen/PerfMonitor.cpp
   ${GPGPU_CODEGEN_FILES}
   Exchange/JSONExporter.cpp
   Support/GICHelper.cpp

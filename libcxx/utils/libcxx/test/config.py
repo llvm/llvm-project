@@ -813,6 +813,7 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
         self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
         self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
+        self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.
