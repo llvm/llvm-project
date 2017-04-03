@@ -224,7 +224,7 @@ void OutputSection::sortCtorsDtors() {
 
 // Fill [Buf, Buf + Size) with Filler. Filler is written in big
 // endian order. This is used for linker script "=fillexp" command.
-void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
+static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
   uint8_t V[4];
   write32be(V, Filler);
   size_t I = 0;
