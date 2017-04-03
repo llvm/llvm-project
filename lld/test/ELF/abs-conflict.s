@@ -13,4 +13,6 @@ foo = 0x123
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %t2.s -o %t2.o
 // RUN: not ld.lld %t.o %t2.o -o %t.so -shared 2>&1 | FileCheck --check-prefix=DUP %s
 
-// DUP: duplicate symbol 'foo'
+// DUP:      duplicate symbol: foo
+// DUP-NEXT: >>> defined in {{.*}}.o
+// DUP-NEXT: >>> defined in (internal)

@@ -2935,8 +2935,8 @@ bool InstCombiner::run() {
         Result->takeName(I);
 
         // Push the new instruction and any users onto the worklist.
-        Worklist.Add(Result);
         Worklist.AddUsersToWorkList(*Result);
+        Worklist.Add(Result);
 
         // Insert the new instruction into the basic block...
         BasicBlock *InstParent = I->getParent();
@@ -2959,8 +2959,8 @@ bool InstCombiner::run() {
         if (isInstructionTriviallyDead(I, &TLI)) {
           eraseInstFromFunction(*I);
         } else {
-          Worklist.Add(I);
           Worklist.AddUsersToWorkList(*I);
+          Worklist.Add(I);
         }
       }
       MadeIRChange = true;

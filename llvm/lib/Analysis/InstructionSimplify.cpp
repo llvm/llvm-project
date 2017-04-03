@@ -565,10 +565,8 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
   // add nsw/nuw (xor Y, signbit), signbit --> Y
   // The no-wrapping add guarantees that the top bit will be set by the add.
   // Therefore, the xor must be clearing the already set sign bit of Y.
-  Constant *SignBit =
-      ConstantInt::get(Ty, APInt::getSignBit(Ty->getScalarSizeInBits()));
-  if ((isNSW || isNUW) && match(Op1, m_Specific(SignBit)) &&
-      match(Op0, m_Xor(m_Value(Y), m_Specific(SignBit))))
+  if ((isNSW || isNUW) && match(Op1, m_SignBit()) &&
+      match(Op0, m_Xor(m_Value(Y), m_SignBit())))
     return Y;
 
   /// i1 add -> xor.
@@ -703,7 +701,7 @@ static Value *SimplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
     APInt KnownZero(BitWidth, 0);
     APInt KnownOne(BitWidth, 0);
     computeKnownBits(Op1, KnownZero, KnownOne, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-    if (KnownZero == ~APInt::getSignBit(BitWidth)) {
+    if (KnownZero.isMaxSignedValue()) {
       // Op1 is either 0 or the minimum signed value. If the sub is NSW, then
       // Op1 must be 0 because negating the minimum signed value is undefined.
       if (isNSW)

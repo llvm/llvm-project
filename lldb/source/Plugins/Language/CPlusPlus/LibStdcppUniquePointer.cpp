@@ -70,19 +70,19 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   std::unique_ptr<SyntheticChildrenFrontEnd> tuple_frontend(
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
 
-  m_ptr_obj = tuple_frontend->GetChildAtIndex(0);
-  if (m_ptr_obj)
-    m_ptr_obj->SetName(ConstString("pointer"));
+  ValueObjectSP ptr_obj = tuple_frontend->GetChildAtIndex(0);
+  if (ptr_obj)
+    m_ptr_obj = ptr_obj->Clone(ConstString("pointer"));
 
-  m_del_obj = tuple_frontend->GetChildAtIndex(1);
-  if (m_del_obj)
-    m_del_obj->SetName(ConstString("deleter"));
+  ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
+  if (del_obj)
+    m_del_obj = del_obj->Clone(ConstString("deleter"));
 
   if (m_ptr_obj) {
     Error error;
-    m_obj_obj = m_ptr_obj->Dereference(error);
+    ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
     if (error.Success()) {
-      m_obj_obj->SetName(ConstString("object"));
+      m_obj_obj = obj_obj->Clone(ConstString("object"));
     }
   }
 
@@ -94,29 +94,28 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 lldb::ValueObjectSP
 LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   if (idx == 0)
-    return m_obj_obj;
+    return m_ptr_obj;
   if (idx == 1)
     return m_del_obj;
   if (idx == 2)
-    return m_ptr_obj;
+    return m_obj_obj;
   return lldb::ValueObjectSP();
 }
 
 size_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   if (m_del_obj)
     return 2;
-  if (m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
-    return 1;
-  return 0;
+  return 1;
 }
 
 size_t LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
     const ConstString &name) {
-  if (name == ConstString("obj") || name == ConstString("object"))
+  if (name == ConstString("ptr") || name == ConstString("pointer"))
     return 0;
   if (name == ConstString("del") || name == ConstString("deleter"))
     return 1;
-  if (name == ConstString("ptr") || name == ConstString("pointer"))
+  if (name == ConstString("obj") || name == ConstString("object") ||
+      name == ConstString("$$dereference$$"))
     return 2;
   return UINT32_MAX;
 }

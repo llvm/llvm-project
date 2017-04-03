@@ -465,7 +465,7 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
           EC == object::object_error::bitcode_section_not_found)
         *claimed = 0;
       else
-        message(LDPL_ERROR,
+        message(LDPL_FATAL,
                 "LLVM gold plugin has failed to create LTO module: %s",
                 EI.message().c_str());
     });
@@ -536,7 +536,7 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
 
     sym.size = 0;
     sym.comdat_key = nullptr;
-    int CI = check(Sym.getComdatIndex());
+    int CI = Sym.getComdatIndex();
     if (CI != -1) {
       StringRef C = Obj->getComdatTable()[CI];
       sym.comdat_key = strdup(C.str().c_str());

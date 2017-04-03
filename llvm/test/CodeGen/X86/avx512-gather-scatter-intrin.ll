@@ -285,9 +285,9 @@ define void @prefetch(<8 x i64> %ind, i8* %base) {
 ; CHECK-NEXT:    vscatterpf1qps (%rdi,%zmm0,2) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.x86.avx512.gatherpf.qps.512(i8 -1, <8 x i64> %ind, i8* %base, i32 4, i32 1)
+  call void @llvm.x86.avx512.gatherpf.qps.512(i8 -1, <8 x i64> %ind, i8* %base, i32 4, i32 3)
   call void @llvm.x86.avx512.gatherpf.qps.512(i8 0, <8 x i64> %ind, i8* %base, i32 4, i32 2)
-  call void @llvm.x86.avx512.scatterpf.qps.512(i8 1, <8 x i64> %ind, i8* %base, i32 2, i32 1)
+  call void @llvm.x86.avx512.scatterpf.qps.512(i8 1, <8 x i64> %ind, i8* %base, i32 2, i32 3)
   call void @llvm.x86.avx512.scatterpf.qps.512(i8 120, <8 x i64> %ind, i8* %base, i32 2, i32 2)
   ret void
 }

@@ -3298,6 +3298,28 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       }
       ForceCUDAHostDeviceDepth = Record[0];
       break;
+
+    case PACK_PRAGMA_OPTIONS: {
+      if (Record.size() < 3) {
+        Error("invalid pragma pack record");
+        return Failure;
+      }
+      PragmaPackCurrentValue = Record[0];
+      PragmaPackCurrentLocation = ReadSourceLocation(F, Record[1]);
+      unsigned NumStackEntries = Record[2];
+      unsigned Idx = 3;
+      // Reset the stack when importing a new module.
+      PragmaPackStack.clear();
+      for (unsigned I = 0; I < NumStackEntries; ++I) {
+        PragmaPackStackEntry Entry;
+        Entry.Value = Record[Idx++];
+        Entry.Location = ReadSourceLocation(F, Record[Idx++]);
+        PragmaPackStrings.push_back(ReadString(Record, Idx));
+        Entry.SlotLabel = PragmaPackStrings.back();
+        PragmaPackStack.push_back(Entry);
+      }
+      break;
+    }
     }
   }
 }
@@ -7419,6 +7441,34 @@ void ASTReader::UpdateSema() {
         PointersToMembersPragmaLocation);
   }
   SemaObj->ForceCUDAHostDeviceDepth = ForceCUDAHostDeviceDepth;
+
+  if (PragmaPackCurrentValue) {
+    // The bottom of the stack might have a default value. It must be adjusted
+    // to the current value to ensure that the packing state is preserved after
+    // popping entries that were included/imported from a PCH/module.
+    bool DropFirst = false;
+    if (!PragmaPackStack.empty() &&
+        PragmaPackStack.front().Location.isInvalid()) {
+      assert(PragmaPackStack.front().Value == SemaObj->PackStack.DefaultValue &&
+             "Expected a default alignment value");
+      SemaObj->PackStack.Stack.emplace_back(
+          PragmaPackStack.front().SlotLabel, SemaObj->PackStack.CurrentValue,
+          SemaObj->PackStack.CurrentPragmaLocation);
+      DropFirst = true;
+    }
+    for (const auto &Entry :
+         llvm::makeArrayRef(PragmaPackStack).drop_front(DropFirst ? 1 : 0))
+      SemaObj->PackStack.Stack.emplace_back(Entry.SlotLabel, Entry.Value,
+                                            Entry.Location);
+    if (PragmaPackCurrentLocation.isInvalid()) {
+      assert(*PragmaPackCurrentValue == SemaObj->PackStack.DefaultValue &&
+             "Expected a default alignment value");
+      // Keep the current values.
+    } else {
+      SemaObj->PackStack.CurrentValue = *PragmaPackCurrentValue;
+      SemaObj->PackStack.CurrentPragmaLocation = PragmaPackCurrentLocation;
+    }
+  }
 }
 
 IdentifierInfo *ASTReader::get(StringRef Name) {

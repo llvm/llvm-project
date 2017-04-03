@@ -18,7 +18,6 @@
 #include <typeinfo>
 
 #include "__cxxabi_config.h"
-#include "config.h"
 #include "cxa_exception.hpp"
 #include "cxa_handlers.hpp"
 #include "private_typeinfo.h"

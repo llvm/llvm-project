@@ -407,11 +407,11 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
 
   ExecuteCallback(Data, Size);
 
-  size_t Res = 0;
-  if (size_t NumFeatures = TPC.CollectFeatures([&](size_t Feature) -> bool {
-        return Corpus.AddFeature(Feature, Size, Options.Shrink);
-      }))
-    Res = NumFeatures;
+  size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
+  TPC.CollectFeatures([&](size_t Feature) {
+    Corpus.AddFeature(Feature, Size, Options.Shrink);
+  });
+  size_t NumUpdatesAfter = Corpus.NumFeatureUpdates();
 
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
@@ -424,7 +424,7 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
     Printf("Slowest unit: %zd s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
   }
-  return Res;
+  return NumUpdatesAfter - NumUpdatesBefore;
 }
 
 size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {

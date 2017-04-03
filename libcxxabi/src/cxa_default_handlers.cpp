@@ -14,7 +14,6 @@
 #include <exception>
 #include <cstdlib>
 #include "abort_message.h"
-#include "config.h" // For __sync_swap
 #include "cxxabi.h"
 #include "cxa_handlers.hpp"
 #include "cxa_exception.hpp"

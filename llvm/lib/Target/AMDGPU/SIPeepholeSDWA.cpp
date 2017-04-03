@@ -51,6 +51,8 @@ private:
 
   std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
 
+  Optional<int64_t> foldToImm(const MachineOperand &Op) const;
+
 public:
   static char ID;
 
@@ -375,6 +377,33 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   return true;
 }
 
+Optional<int64_t> SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
+  if (Op.isImm()) {
+    return Op.getImm();
+  }
+
+  // If this is not immediate then it can be copy of immediate value, e.g.:
+  // %vreg1<def> = S_MOV_B32 255;
+  if (Op.isReg()) {
+    for (const MachineOperand &Def : MRI->def_operands(Op.getReg())) {
+      if (!isSameReg(Op, Def))
+        continue;
+
+      const MachineInstr *DefInst = Def.getParent();
+      if (!TII->isFoldableCopy(*DefInst) || !isSameBB(Op.getParent(), DefInst))
+        return None;
+
+      const MachineOperand &Copied = DefInst->getOperand(1);
+      if (!Copied.isImm())
+        return None;
+
+      return Copied.getImm();
+    }
+  }
+
+  return None;
+}
+
 void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB) {
     unsigned Opcode = MI.getOpcode();
@@ -391,11 +420,11 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
       // from: v_lshlrev_b32_e32 v1, 16/24, v0
       // to SDWA dst:v1 dst_sel:WORD_1/BYTE_3 dst_unused:UNUSED_PAD
       MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-      if (!Src0->isImm())
+      auto Imm = foldToImm(*Src0);
+      if (!Imm)
         break;
 
-      int64_t Imm = Src0->getImm();
-      if (Imm != 16 && Imm != 24)
+      if (*Imm != 16 && *Imm != 24)
         break;
 
       MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
@@ -406,13 +435,13 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
 
       if (Opcode == AMDGPU::V_LSHLREV_B32_e32) {
         auto SDWADst = make_unique<SDWADstOperand>(
-            Dst, Src1, Imm == 16 ? WORD_1 : BYTE_3, UNUSED_PAD);
+            Dst, Src1, *Imm == 16 ? WORD_1 : BYTE_3, UNUSED_PAD);
         DEBUG(dbgs() << "Match: " << MI << "To: " << *SDWADst << '\n');
         SDWAOperands[&MI] = std::move(SDWADst);
         ++NumSDWAPatternsFound;
       } else {
         auto SDWASrc = make_unique<SDWASrcOperand>(
-            Src1, Dst, Imm == 16 ? WORD_1 : BYTE_3, false, false,
+            Src1, Dst, *Imm == 16 ? WORD_1 : BYTE_3, false, false,
             Opcode == AMDGPU::V_LSHRREV_B32_e32 ? false : true);
         DEBUG(dbgs() << "Match: " << MI << "To: " << *SDWASrc << '\n');
         SDWAOperands[&MI] = std::move(SDWASrc);
@@ -433,7 +462,8 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
       // from: v_lshlrev_b16_e32 v1, 8, v0
       // to SDWA dst:v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD
       MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-      if (!Src0->isImm() || Src0->getImm() != 8)
+      auto Imm = foldToImm(*Src0);
+      if (!Imm || *Imm != 8)
         break;
 
       MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
@@ -477,30 +507,30 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
       // 24     | 8     | BYTE_3
 
       MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-      if (!Src1->isImm())
+      auto Offset = foldToImm(*Src1);
+      if (!Offset)
         break;
-      int64_t Offset = Src1->getImm();
 
       MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-      if (!Src2->isImm())
+      auto Width = foldToImm(*Src2);
+      if (!Width)
         break;
-      int64_t Width = Src2->getImm();
 
       SdwaSel SrcSel = DWORD;
 
-      if (Offset == 0 && Width == 8)
+      if (*Offset == 0 && *Width == 8)
         SrcSel = BYTE_0;
-      else if (Offset == 0 && Width == 16)
+      else if (*Offset == 0 && *Width == 16)
         SrcSel = WORD_0;
-      else if (Offset == 0 && Width == 32)
+      else if (*Offset == 0 && *Width == 32)
         SrcSel = DWORD;
-      else if (Offset == 8 && Width == 8)
+      else if (*Offset == 8 && *Width == 8)
         SrcSel = BYTE_1;
-      else if (Offset == 16 && Width == 8)
+      else if (*Offset == 16 && *Width == 8)
         SrcSel = BYTE_2;
-      else if (Offset == 16 && Width == 16)
+      else if (*Offset == 16 && *Width == 16)
         SrcSel = WORD_1;
-      else if (Offset == 24 && Width == 8)
+      else if (*Offset == 24 && *Width == 8)
         SrcSel = BYTE_3;
       else
         break;
@@ -526,11 +556,11 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
       // to SDWA src:v0 src_sel:WORD_0/BYTE_0
 
       MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-      if (!Src0->isImm())
+      auto Imm = foldToImm(*Src0);
+      if (!Imm)
         break;
 
-      int64_t Imm = Src0->getImm();
-      if (Imm != 0x0000ffff && Imm != 0x000000ff)
+      if (*Imm != 0x0000ffff && *Imm != 0x000000ff)
         break;
 
       MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
@@ -541,7 +571,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
         break;
 
       auto SDWASrc = make_unique<SDWASrcOperand>(
-          Src1, Dst, Imm == 0x0000ffff ? WORD_0 : BYTE_0);
+          Src1, Dst, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
       DEBUG(dbgs() << "Match: " << MI << "To: " << *SDWASrc << '\n');
       SDWAOperands[&MI] = std::move(SDWASrc);
       ++NumSDWAPatternsFound;

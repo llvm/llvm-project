@@ -34,7 +34,7 @@ struct TableOfRecentCompares {
     T A, B;
   };
   ATTRIBUTE_NO_SANITIZE_ALL
-  void Insert(size_t Idx, T Arg1, T Arg2) {
+  void Insert(size_t Idx, const T &Arg1, const T &Arg2) {
     Idx = Idx % kSize;
     Table[Idx].A = Arg1;
     Table[Idx].B = Arg2;
@@ -58,7 +58,7 @@ class TracePC {
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
-  template <class Callback> size_t CollectFeatures(Callback CB) const;
+  template <class Callback> void CollectFeatures(Callback CB) const;
 
   void ResetMaps() {
     ValueProfileMap.Reset();
@@ -129,8 +129,7 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
 template <class Callback>  // bool Callback(size_t Feature)
 ATTRIBUTE_NO_SANITIZE_ALL
 __attribute__((noinline))
-size_t TracePC::CollectFeatures(Callback HandleFeature) const {
-  size_t Res = 0;
+void TracePC::CollectFeatures(Callback HandleFeature) const {
   uint8_t *Counters = this->Counters();
   size_t N = GetNumPCs();
   auto Handle8bitCounter = [&](size_t Idx, uint8_t Counter) {
@@ -143,8 +142,7 @@ size_t TracePC::CollectFeatures(Callback HandleFeature) const {
     else if (Counter >= 4) Bit = 3;
     else if (Counter >= 3) Bit = 2;
     else if (Counter >= 2) Bit = 1;
-    if (HandleFeature(Idx * 8 + Bit))
-      Res++;
+    HandleFeature(Idx * 8 + Bit);
   };
 
   ForEachNonZeroByte(Counters, Counters + N, 0, Handle8bitCounter);
@@ -153,10 +151,8 @@ size_t TracePC::CollectFeatures(Callback HandleFeature) const {
 
   if (UseValueProfile)
     ValueProfileMap.ForEach([&](size_t Idx) {
-      if (HandleFeature(N * 8 + Idx))
-        Res++;
+      HandleFeature(N * 8 + Idx);
     });
-  return Res;
 }
 
 extern TracePC TPC;

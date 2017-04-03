@@ -64,7 +64,7 @@ static std::unique_ptr<llvm::MemoryBuffer>
   return std::move(*Text);
 }
 
-StringRef sys::LinuxReadCpuInfo::getHostCPUName_powerpc(
+StringRef sys::detail::getHostCPUNameForPowerPC(
     const StringRef &ProcCpuinfoContent) {
   // Access to the Processor Version Register (PVR) on PowerPC is privileged,
   // and so we must use an operating-system interface to determine the current
@@ -144,7 +144,7 @@ StringRef sys::LinuxReadCpuInfo::getHostCPUName_powerpc(
       .Default(generic);
 }
 
-StringRef sys::LinuxReadCpuInfo::getHostCPUName_arm(
+StringRef sys::detail::getHostCPUNameForARM(
     const StringRef &ProcCpuinfoContent) {
   // The cpuid register on arm is not accessible from user space. On Linux,
   // it is exposed through the /proc/cpuinfo file.
@@ -195,7 +195,7 @@ StringRef sys::LinuxReadCpuInfo::getHostCPUName_arm(
   return "generic";
 }
 
-StringRef sys::LinuxReadCpuInfo::getHostCPUName_s390x(
+StringRef sys::detail::getHostCPUNameForS390x(
     const StringRef &ProcCpuinfoContent) {
   // STIDP is a privileged operation, so use /proc/cpuinfo instead.
 
@@ -1197,19 +1197,19 @@ StringRef sys::getHostCPUName() {
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   const StringRef& Content = P ? P->getBuffer() : "";
-  return LinuxReadCpuInfo::getHostCPUName_powerpc(Content);
+  return detail::getHostCPUNameForPowerPC(Content);
 }
 #elif defined(__linux__) && defined(__arm__)
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   const StringRef& Content = P ? P->getBuffer() : "";
-  return LinuxReadCpuInfo::getHostCPUName_arm(Content);
+  return detail::getHostCPUNameForARM(Content);
 }
 #elif defined(__linux__) && defined(__s390x__)
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   const StringRef& Content = P ? P->getBuffer() : "";
-  return LinuxReadCpuInfo::getHostCPUName_s390x(Content);
+  return detail::getHostCPUNameForS390x(Content);
 }
 #else
 StringRef sys::getHostCPUName() { return "generic"; }

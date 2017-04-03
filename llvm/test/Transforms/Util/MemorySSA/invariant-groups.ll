@@ -19,7 +19,7 @@ define i32 @foo(i32* %a) {
   %a8 = call i8* @llvm.invariant.group.barrier(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
-; This have to be MemoryUse(1), because we can't skip the barrier based on
+; This have to be MemoryUse(2), because we can't skip the barrier based on
 ; invariant.group.
 ; CHECK: MemoryUse(2)
 ; CHECK-NEXT: %2 = load i32

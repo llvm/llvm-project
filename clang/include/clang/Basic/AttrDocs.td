@@ -244,6 +244,36 @@ An example of how to use ``alloc_size``
   }];
 }
 
+def AllocAlignDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use ``__attribute__((alloc_align(<alignment>))`` on a function
+declaration to specify that the return value of the function (which must be a
+pointer type) is at least as aligned as the value of the indicated parameter. The 
+parameter is given by its index in the list of formal parameters; the first
+parameter has index 1 unless the function is a C++ non-static member function,
+in which case the first parameter has index 2 to account for the implicit ``this``
+parameter.
+
+.. code-block:: c++
+
+  // The returned pointer has the alignment specified by the first parameter.
+  void *a(size_t align) __attribute__((alloc_align(1)));
+
+  // The returned pointer has the alignment specified by the second parameter.
+  void *b(void *v, size_t align) __attribute__((alloc_align(2)));
+
+  // The returned pointer has the alignment specified by the second visible
+  // parameter, however it must be adjusted for the implicit 'this' parameter.
+  void *Foo::b(void *v, size_t align) __attribute__((alloc_align(3)));
+
+Note that this attribute merely informs the compiler that a function always
+returns a sufficiently aligned pointer. It does not cause the compiler to 
+emit code to enforce that alignment.  The behavior is undefined if the returned
+poitner is not sufficiently aligned.
+  }];
+}
+
 def EnableIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

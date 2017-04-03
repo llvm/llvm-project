@@ -112,7 +112,7 @@ std::size_t countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return detail::TrailingZerosCounter<T, sizeof(T)>::count(Val, ZB);
+  return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
 
 namespace detail {
@@ -181,7 +181,7 @@ std::size_t countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
+  return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
 
 /// \brief Get the index of the first set bit starting from the least

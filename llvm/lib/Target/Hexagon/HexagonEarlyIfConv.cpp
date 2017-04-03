@@ -546,7 +546,7 @@ bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
   if (FP.FalseB) {
     FS = std::distance(FP.FalseB->begin(), FP.FalseB->getFirstTerminator());
     if (FS < HEXAGON_PACKET_SIZE)
-      Spare += HEXAGON_PACKET_SIZE-TS;
+      Spare += HEXAGON_PACKET_SIZE-FS;
   }
   unsigned TotalIn = TS+FS;
   DEBUG(dbgs() << "Total number of instructions to be predicated/speculated: "

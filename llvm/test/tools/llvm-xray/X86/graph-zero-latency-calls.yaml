@@ -1,0 +1,20 @@
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml | FileCheck %s
+
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 2601000000
+records:
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 111, kind: function-enter, tsc: 10002 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 111, kind: function-exit, tsc: 10002 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
+...
+
+#CHECK:     digraph xray {
+#CHECK-DAG:   F0 -> F1 [{{.*}}];
+#CHECK-DAG:   F1 -> F2 [{{.*}}];
+#CHECK-DAG: }

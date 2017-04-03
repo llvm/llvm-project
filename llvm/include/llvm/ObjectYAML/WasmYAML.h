@@ -108,6 +108,7 @@ struct Signature {
 
 struct Section {
   Section(SectionType SecType) : Type(SecType) {}
+  virtual ~Section();
 
   SectionType Type;
   std::vector<Relocation> Relocations;

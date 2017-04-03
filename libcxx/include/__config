@@ -348,7 +348,6 @@ typedef __char32_t char32_t;
 
 #if __has_feature(objc_arc_weak)
 #define _LIBCPP_HAS_OBJC_ARC_WEAK
-#define _LIBCPP_HAS_NO_STRONG_ENUMS
 #endif
 
 #if !(__has_feature(cxx_constexpr))

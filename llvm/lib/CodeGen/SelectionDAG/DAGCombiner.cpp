@@ -350,8 +350,8 @@ namespace {
                              bool NotExtCompare = false);
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
-    SDValue foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
-    SDValue foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
+    SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
+                              const SDLoc &DL);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                           const SDLoc &DL, bool foldBooleans = true);
 
@@ -3172,23 +3172,23 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
   return SDValue();
 }
 
-/// Try to make (and setcc (LL, LR), setcc (RL, RR)) more efficient.
-SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
-  // FIXME: This should be refactored with foldOrOfSetCCs.
+/// Try to make (and/or setcc (LL, LR), setcc (RL, RR)) more efficient.
+SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
+                                       const SDLoc &DL) {
   SDValue LL, LR, RL, RR, N0CC, N1CC;
   if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
       !isSetCCEquivalent(N1, RL, RR, N1CC))
     return SDValue();
 
   assert(N0.getValueType() == N1.getValueType() &&
-         "Unexpected operand types for 'and' op");
+         "Unexpected operand types for bitwise logic op");
   assert(LL.getValueType() == LR.getValueType() &&
          RL.getValueType() == RR.getValueType() &&
          "Unexpected operand types for setcc");
 
-  // If we're here post-legalization or the 'and' is not i1, the 'and' type must
-  // match a setcc result type. Also, all folds require new operations on the
-  // left and right operands, so those types must match.
+  // If we're here post-legalization or the logic op type is not i1, the logic
+  // op type must match a setcc result type. Also, all folds require new
+  // operations on the left and right operands, so those types must match.
   EVT VT = N0.getValueType();
   EVT OpVT = LL.getValueType();
   if (LegalOperations || VT != MVT::i1)
@@ -3201,30 +3201,47 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    // (and (seteq X, 0), (seteq Y, 0)) --> (seteq (or X, Y), 0)
-    if (isNullConstant(LR) && CC1 == ISD::SETEQ) {
+    // All bits set?
+    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && isAllOnesConstant(LR);
+    // All sign bits clear?
+    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    // All bits clear?
+    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && isNullConstant(LR);
+    // All sign bits set?
+    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
+    // Any bits clear?
+    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && isAllOnesConstant(LR);
+    // Any sign bits clear?
+    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    // Any bits set?
+    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && isNullConstant(LR);
+    // Any sign bits set?
+    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
+
+    // (and (seteq X,  0), (seteq Y,  0)) --> (seteq (or X, Y),  0)
+    // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
+    // (or  (setne X,  0), (setne Y,  0)) --> (setne (or X, Y),  0)
+    // (or  (setlt X,  0), (setlt Y,  0)) --> (setlt (or X, Y),  0)
+    if (AndEqZero || AndGtNeg1 || OrNeZero || OrLtZero) {
       SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
       AddToWorklist(Or.getNode());
       return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
 
     // (and (seteq X, -1), (seteq Y, -1)) --> (seteq (and X, Y), -1)
-    if (isAllOnesConstant(LR) && CC1 == ISD::SETEQ) {
+    // (and (setlt X,  0), (setlt Y,  0)) --> (setlt (and X, Y),  0)
+    // (or  (setne X, -1), (setne Y, -1)) --> (setne (and X, Y), -1)
+    // (or  (setgt X, -1), (setgt Y  -1)) --> (setgt (and X, Y), -1)
+    if (AndEqNeg1 || AndLtZero || OrNeNeg1 || OrGtNeg1) {
       SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
       AddToWorklist(And.getNode());
       return DAG.getSetCC(DL, VT, And, LR, CC1);
     }
-
-    // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
-    if (isAllOnesConstant(LR) && CC1 == ISD::SETGT) {
-      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(Or.getNode());
-      return DAG.getSetCC(DL, VT, Or, LR, CC1);
-    }
   }
 
+  // TODO: What is the 'or' equivalent of this fold?
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
-  if (LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
+  if (IsAnd && LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
     SDValue One = DAG.getConstant(1, DL, OpVT);
@@ -3241,8 +3258,10 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
   }
 
   // (and (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
+  // (or  (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
   if (LL == RL && LR == RR) {
-    ISD::CondCode NewCC = ISD::getSetCCAndOperation(CC0, CC1, IsInteger);
+    ISD::CondCode NewCC = IsAnd ? ISD::getSetCCAndOperation(CC0, CC1, IsInteger)
+                                : ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
     if (NewCC != ISD::SETCC_INVALID &&
         (!LegalOperations ||
          (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
@@ -3265,7 +3284,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
 
-  if (SDValue V = foldAndOfSetCCs(N0, N1, DL))
+  if (SDValue V = foldLogicOfSetCCs(true, N0, N1, DL))
     return V;
 
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
@@ -3971,71 +3990,6 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
                      DAG.getNode(ISD::SRL, DL, VT, BSwap, ShAmt));
 }
 
-
-/// Try to make (or setcc (LL, LR), setcc (RL, RR)) more efficient.
-SDValue DAGCombiner::foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
-  // FIXME: This should be refactored with foldAndOfSetCCs.
-  SDValue LL, LR, RL, RR, N0CC, N1CC;
-  if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
-      !isSetCCEquivalent(N1, RL, RR, N1CC))
-    return SDValue();
-
-  assert(N0.getValueType() == N1.getValueType() &&
-         "Unexpected operand types for 'or' op");
-  assert(LL.getValueType() == LR.getValueType() &&
-         RL.getValueType() == RR.getValueType() &&
-         "Unexpected operand types for setcc");
-
-  // If we're here post-legalization or the 'or' is not i1, the 'or' type must
-  // match a setcc result type. Also, all folds require new operations on the
-  // left and right operands, so those types must match.
-  EVT VT = N0.getValueType();
-  EVT OpVT = LL.getValueType();
-  if (LegalOperations || VT != MVT::i1)
-    if (VT != getSetCCResultType(OpVT))
-      return SDValue();
-  if (OpVT != RL.getValueType())
-    return SDValue();
-
-  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0CC)->get();
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
-  bool IsInteger = OpVT.isInteger();
-  if (LR == RR && CC0 == CC1 && IsInteger) {
-    // (or (setne X, 0), (setne Y, 0)) --> (setne (or X, Y), 0)
-    // (or (setlt X, 0), (setlt Y, 0)) --> (setne (or X, Y), 0)
-    if (isNullConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETLT)) {
-      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(Or.getNode());
-      return DAG.getSetCC(DL, VT, Or, LR, CC1);
-    }
-    // (or (setne X, -1), (setne Y, -1)) --> (setne (and X, Y), -1)
-    // (or (setgt X, -1), (setgt Y  -1)) --> (setgt (and X, Y), -1)
-    if (isAllOnesConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETGT)) {
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(And.getNode());
-      return DAG.getSetCC(DL, VT, And, LR, CC1);
-    }
-  }
-
-  // Canonicalize equivalent operands to LL == RL.
-  if (LL == RR && LR == RL) {
-    CC1 = ISD::getSetCCSwappedOperands(CC1);
-    std::swap(RL, RR);
-  }
-
-  // (or (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
-  if (LL == RL && LR == RR) {
-    ISD::CondCode NewCC = ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
-    if (NewCC != ISD::SETCC_INVALID &&
-        (!LegalOperations ||
-         (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
-          TLI.isOperationLegal(ISD::SETCC, OpVT))))
-      return DAG.getSetCC(DL, VT, LL, LR, NewCC);
-  }
-
-  return SDValue();
-}
-
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an Or operation to a single value \see visitANDLike().
 SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
@@ -4046,7 +4000,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
   if (!LegalOperations && (N0.isUndef() || N1.isUndef()))
     return DAG.getAllOnesConstant(DL, VT);
 
-  if (SDValue V = foldOrOfSetCCs(N0, N1, DL))
+  if (SDValue V = foldLogicOfSetCCs(false, N0, N1, DL))
     return V;
 
   // (or (and X, C1), (and Y, C2))  -> (and (or X, Y), C3) if possible.

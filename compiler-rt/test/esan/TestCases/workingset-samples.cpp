@@ -8,7 +8,6 @@
 #include <sys/mman.h>
 
 const int size = 0x1 << 25; // 523288 cache lines
-const int iters = 6;
 
 int main(int argc, char **argv) {
   char *buf = (char *)mmap(0, size, PROT_READ | PROT_WRITE,

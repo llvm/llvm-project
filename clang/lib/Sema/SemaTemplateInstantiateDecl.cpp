@@ -168,6 +168,16 @@ static void instantiateDependentAlignValueAttr(
                         Aligned->getSpellingListIndex());
 }
 
+static void instantiateDependentAllocAlignAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AllocAlignAttr *Align, Decl *New) {
+  Expr *Param = IntegerLiteral::Create(
+      S.getASTContext(), llvm::APInt(64, Align->getParamIndex()),
+      S.getASTContext().UnsignedLongLongTy, Align->getLocation());
+  S.AddAllocAlignAttr(Align->getLocation(), New, Param,
+                      Align->getSpellingListIndex());
+}
+
 static Expr *instantiateDependentFunctionAttrCondition(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const Attr *A, Expr *OldCond, const Decl *Tmpl, FunctionDecl *New) {
@@ -379,6 +389,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       instantiateDependentAlignValueAttr(*this, TemplateArgs, AlignValue, New);
       continue;
     }
+
+    if (const auto *AllocAlign = dyn_cast<AllocAlignAttr>(TmplAttr)) {
+      instantiateDependentAllocAlignAttr(*this, TemplateArgs, AllocAlign, New);
+      continue;
+    }
+
 
     if (const auto *EnableIf = dyn_cast<EnableIfAttr>(TmplAttr)) {
       instantiateDependentEnableIfAttr(*this, TemplateArgs, EnableIf, Tmpl,

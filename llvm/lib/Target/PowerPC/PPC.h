@@ -44,7 +44,7 @@ namespace llvm {
   FunctionPass *createPPCQPXLoadSplatPass();
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM);
   FunctionPass *createPPCTLSDynamicCallPass();
-  FunctionPass *createPPCBoolRetToIntPass(PPCTargetMachine *TM);
+  FunctionPass *createPPCBoolRetToIntPass();
   FunctionPass *createPPCExpandISELPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP, bool isDarwin);

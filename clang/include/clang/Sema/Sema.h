@@ -8176,6 +8176,11 @@ public:
   void AddAssumeAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E, Expr *OE,
                             unsigned SpellingListIndex);
 
+  /// AddAllocAlignAttr - Adds an alloc_align attribute to a particular
+  /// declaration.
+  void AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
+                         unsigned SpellingListIndex);
+
   /// AddAlignValueAttr - Adds an align_value attribute to a particular
   /// declaration.
   void AddAlignValueAttr(SourceRange AttrRange, Decl *D, Expr *E,

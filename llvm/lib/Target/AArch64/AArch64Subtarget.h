@@ -69,6 +69,7 @@ protected:
   bool HasPerfMon = false;
   bool HasFullFP16 = false;
   bool HasSPE = false;
+  bool HasLSLFast = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -232,6 +233,7 @@ public:
   bool hasPerfMon() const { return HasPerfMon; }
   bool hasFullFP16() const { return HasFullFP16; }
   bool hasSPE() const { return HasSPE; }
+  bool hasLSLFast() const { return HasLSLFast; }
 
   bool isLittleEndian() const { return IsLittle; }
 

@@ -609,6 +609,7 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   case WasmSymbol::SymbolType::GLOBAL_EXPORT:
     return object::SymbolRef::SF_Global;
   }
+  llvm_unreachable("Unknown WasmSymbol::SymbolType");
 }
 
 basic_symbol_iterator WasmObjectFile::symbol_begin() const {

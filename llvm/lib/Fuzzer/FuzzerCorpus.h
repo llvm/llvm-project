@@ -133,7 +133,7 @@ class InputCorpus {
       Printf("EVICTED %zd\n", Idx);
   }
 
-  bool AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
+  void AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
     assert(NewSize);
     Idx = Idx % kFeatureSetSize;
     uint32_t OldSize = GetFeature(Idx);
@@ -148,17 +148,17 @@ class InputCorpus {
       } else {
         NumAddedFeatures++;
       }
+      NumUpdatedFeatures++;
       if (FeatureDebug)
         Printf("ADD FEATURE %zd sz %d\n", Idx, NewSize);
       SmallestElementPerFeature[Idx] = Inputs.size();
       InputSizesPerFeature[Idx] = NewSize;
       CountingFeatures = true;
-      return true;
     }
-    return false;
   }
 
   size_t NumFeatures() const { return NumAddedFeatures; }
+  size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
 
   void ResetFeatureSet() {
     assert(Inputs.empty());
@@ -212,6 +212,7 @@ private:
 
   bool CountingFeatures = false;
   size_t NumAddedFeatures = 0;
+  size_t NumUpdatedFeatures = 0;
   uint32_t InputSizesPerFeature[kFeatureSetSize];
   uint32_t SmallestElementPerFeature[kFeatureSetSize];
 

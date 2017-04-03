@@ -818,7 +818,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
   uint8_t Visibility = mapVisibility(ObjSym.getVisibility());
   bool CanOmitFromDynSym = ObjSym.canBeOmittedFromSymbolTable();
 
-  int C = check(ObjSym.getComdatIndex(), F->LogName);
+  int C = ObjSym.getComdatIndex();
   if (C != -1 && !KeptComdats[C])
     return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
                                          Visibility, Type, CanOmitFromDynSym,
@@ -855,10 +855,8 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   Obj = check(lto::InputFile::create(MBRef), this->LogName);
 
   std::vector<bool> KeptComdats;
-  for (StringRef S : Obj->getComdatTable()) {
-    StringRef N = Saver.save(S);
-    KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(N)).second);
-  }
+  for (StringRef S : Obj->getComdatTable())
+    KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));

@@ -1226,8 +1226,22 @@ func (b Builder) InsertWithName(instr Value, name string) {
 func (b Builder) Dispose() { C.LLVMDisposeBuilder(b.C) }
 
 // Metadata
+type DebugLoc struct {
+	Line, Col      uint
+	Scope          Metadata
+	InlinedAt      Metadata
+}
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
 	C.LLVMSetCurrentDebugLocation2(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
+}
+// Get current debug location. Please do not call this function until setting debug location with SetCurrentDebugLocation()
+func (b Builder) GetCurrentDebugLocation() (loc DebugLoc) {
+	md := C.LLVMGetCurrentDebugLocation2(b.C)
+	loc.Line = uint(md.Line)
+	loc.Col = uint(md.Col)
+	loc.Scope = Metadata{C: md.Scope}
+	loc.InlinedAt = Metadata{C: md.InlinedAt}
+	return
 }
 func (b Builder) SetInstDebugLocation(v Value) { C.LLVMSetInstDebugLocation(b.C, v.C) }
 func (b Builder) InsertDeclare(module Module, storage Value, md Value) Value {

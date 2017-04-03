@@ -48,9 +48,14 @@ class GlobItem:
 
         return (self.pattern == other.pattern)
 
-    def resolve(self):
+    def resolve(self, cwd):
         import glob
-        results = glob.glob(self.pattern)
+        import os
+        if os.path.isabs(self.pattern):
+           abspath = self.pattern
+        else:
+            abspath = os.path.join(cwd, self.pattern)
+        results = glob.glob(abspath)
         return [self.pattern] if len(results) == 0 else results
 
 class Pipeline:

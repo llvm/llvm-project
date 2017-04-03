@@ -721,7 +721,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentFunctions = Args.hasArg(OPT_finstrument_functions);
   Opts.XRayInstrumentFunctions = Args.hasArg(OPT_fxray_instrument);
   Opts.XRayInstructionThreshold =
-      getLastArgIntValue(Args, OPT_fxray_instruction_threshold_, 200, Diags);
+      getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.EmitOpenCLArgMetadata = Args.hasArg(OPT_cl_kernel_arg_info);
@@ -2308,9 +2308,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fsanitize_address_field_padding, 0, Diags);
   Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
 
-  // -fxray-{always,never}-instrument= filenames.
+  // -fxray-instrument
   Opts.XRayInstrument =
       Args.hasFlag(OPT_fxray_instrument, OPT_fnoxray_instrument, false);
+
+  // -fxray-{always,never}-instrument= filenames.
   Opts.XRayAlwaysInstrumentFiles =
       Args.getAllArgValues(OPT_fxray_always_instrument);
   Opts.XRayNeverInstrumentFiles =

@@ -309,7 +309,7 @@ Value *InstCombiner::insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
 static bool isRunOfOnes(ConstantInt *Val, uint32_t &MB, uint32_t &ME) {
   const APInt& V = Val->getValue();
   uint32_t BitWidth = Val->getType()->getBitWidth();
-  if (!APIntOps::isShiftedMask(BitWidth, V)) return false;
+  if (!APIntOps::isShiftedMask(V)) return false;
 
   // look for the first zero bit after the run of ones
   MB = BitWidth - ((V - 1) ^ V).countLeadingZeros();

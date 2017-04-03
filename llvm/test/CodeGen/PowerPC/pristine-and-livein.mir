@@ -1,0 +1,330 @@
+# RUN: llc -run-pass=post-RA-sched %s -o - | FileCheck %s
+
+# CHECK: callee-saved-register: '[[REG:%x[0-9]+]]'
+# CHECK: callee-saved-register: '{{%x[0-9]+}}'
+# CHECK-NOT: [[REG]] = LI8 0
+# CHECK: STD killed [[REG]],
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "bugpoint-output-4d91ae2.bc"
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le--linux-gnu"
+  
+  ; Function Attrs: norecurse nounwind readonly
+  define i64 @adler32_z(i64 %adler, i8* readonly %buf, i64 %len) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i64 %adler, 16
+    %and = and i64 %shr, 65535
+    %and1 = and i64 %adler, 65535
+    br i1 undef, label %if.then, label %if.end15
+  
+  if.then:                                          ; preds = %entry
+    %add5 = add nsw i64 %and1, %and
+    %sub9 = add nsw i64 %add5, 281474976645135
+    %shl = shl i64 %add5, 16
+    %or = or i64 %shl, %and1
+    br label %cleanup
+  
+  if.end15:                                         ; preds = %entry
+    br i1 undef, label %while.cond.preheader, label %while.cond30.preheader
+  
+  while.cond30.preheader:                           ; preds = %if.end15
+    br i1 undef, label %while.body33.preheader, label %while.body109.preheader
+  
+  while.body33.preheader:                           ; preds = %while.cond30.preheader
+    br label %while.body33
+  
+  while.cond.preheader:                             ; preds = %if.end15
+    %sub25 = add i64 %and1, -65521
+    %rem = urem i64 %and, 65521
+    %shl27 = shl nuw nsw i64 %rem, 16
+    %or28 = or i64 %shl27, %and1
+    br label %cleanup
+  
+  while.body33:                                     ; preds = %do.end, %while.body33.preheader
+    %indvar = phi i64 [ %indvar.next, %do.end ], [ 0, %while.body33.preheader ]
+    %sum2.2385 = phi i64 [ %rem102, %do.end ], [ %and, %while.body33.preheader ]
+    %len.addr.1384 = phi i64 [ %sub34, %do.end ], [ %len, %while.body33.preheader ]
+    %buf.addr.1383 = phi i8* [ %scevgep390, %do.end ], [ %buf, %while.body33.preheader ]
+    %adler.addr.3382 = phi i64 [ %rem101, %do.end ], [ %and1, %while.body33.preheader ]
+    %0 = mul i64 %indvar, 5552
+    %1 = add i64 %0, -13
+    %scevgep2 = getelementptr i8, i8* %buf, i64 %1
+    %sub34 = add i64 %len.addr.1384, -5552
+    call void @llvm.ppc.mtctr.i64(i64 347)
+    br label %do.body
+  
+  do.body:                                          ; preds = %do.body, %while.body33
+    %adler.addr.4 = phi i64 [ %adler.addr.3382, %while.body33 ], [ %add49, %do.body ]
+    %sum2.3 = phi i64 [ %sum2.2385, %while.body33 ], [ %add98, %do.body ]
+    %tmp15.phi = phi i8* [ %scevgep2, %while.body33 ], [ %tmp15.inc, %do.body ]
+    %tmp15.inc = getelementptr i8, i8* %tmp15.phi, i64 16
+    %add38 = add i64 %adler.addr.4, %sum2.3
+    %add42 = add i64 %add38, %adler.addr.4
+    %add46 = add i64 %add42, %adler.addr.4
+    %tmp15 = load i8, i8* %tmp15.inc, align 1, !tbaa !1
+    %conv48 = zext i8 %tmp15 to i64
+    %add49 = add i64 %adler.addr.4, %conv48
+    %add50 = add i64 %add46, %add49
+    %add54 = add i64 %add50, %add49
+    %add58 = add i64 %add54, %add49
+    %add62 = add i64 %add58, %add49
+    %add66 = add i64 %add62, %add49
+    %add70 = add i64 %add66, %add49
+    %add74 = add i64 %add70, %add49
+    %add78 = add i64 %add74, %add49
+    %add82 = add i64 %add78, %add49
+    %add86 = add i64 %add82, %add49
+    %add90 = add i64 %add86, %add49
+    %add94 = add i64 %add90, %add49
+    %add98 = add i64 %add94, %add49
+    %2 = call i1 @llvm.ppc.is.decremented.ctr.nonzero()
+    br i1 %2, label %do.body, label %do.end
+  
+  do.end:                                           ; preds = %do.body
+    %scevgep390 = getelementptr i8, i8* %buf.addr.1383, i64 5552
+    %rem101 = urem i64 %add49, 65521
+    %rem102 = urem i64 %add98, 65521
+    %cmp31 = icmp ugt i64 %sub34, 5551
+    %indvar.next = add i64 %indvar, 1
+    br i1 %cmp31, label %while.body33, label %while.end103
+  
+  while.end103:                                     ; preds = %do.end
+    br i1 undef, label %if.end188, label %while.body109.preheader
+  
+  while.body109.preheader:                          ; preds = %while.end103, %while.cond30.preheader
+    %buf.addr.1.lcssa394400 = phi i8* [ %buf, %while.cond30.preheader ], [ %scevgep390, %while.end103 ]
+    %arrayidx151 = getelementptr inbounds i8, i8* %buf.addr.1.lcssa394400, i64 10
+    %tmp45 = load i8, i8* %arrayidx151, align 1, !tbaa !1
+    %conv152 = zext i8 %tmp45 to i64
+    br label %while.body109
+  
+  while.body109:                                    ; preds = %while.body109, %while.body109.preheader
+    %adler.addr.5373 = phi i64 [ %add153, %while.body109 ], [ undef, %while.body109.preheader ]
+    %add153 = add i64 %adler.addr.5373, %conv152
+    br label %while.body109
+  
+  if.end188:                                        ; preds = %while.end103
+    %shl189 = shl nuw nsw i64 %rem102, 16
+    %or190 = or i64 %shl189, %rem101
+    br label %cleanup
+  
+  cleanup:                                          ; preds = %if.end188, %while.cond.preheader, %if.then
+    %retval.0 = phi i64 [ %or, %if.then ], [ %or28, %while.cond.preheader ], [ %or190, %if.end188 ]
+    ret i64 %retval.0
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.ppc.mtctr.i64(i64) #1
+  
+  ; Function Attrs: nounwind
+  declare i1 @llvm.ppc.is.decremented.ctr.nonzero() #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx,-power9-vector,-qpx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind }
+  
+  !llvm.ident = !{!0}
+  
+  !0 = !{!"clang version 5.0.0 "}
+  !1 = !{!2, !2, i64 0}
+  !2 = !{!"omnipotent char", !3, i64 0}
+  !3 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            adler32_z
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%x3' }
+  - { reg: '%x4' }
+  - { reg: '%x5' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%x30' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '%x29' }
+  - { id: 2, offset: -8, size: 8, alignment: 8, isImmutable: true, isAliased: false }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.if.then(0x40000000), %bb.3.if.end15(0x40000000)
+    liveins: %x3, %x4, %x5, %x29, %x30
+  
+    %x6 = RLWINM8 %x3, 16, 16, 31
+    %x3 = RLDICL killed %x3, 0, 48
+    BC undef %cr5lt, %bb.3.if.end15
+  
+  bb.1.if.then:
+    successors: %bb.2.if.then(0x80000000)
+    liveins: %x3, %x6, %x29, %x30
+  
+    %x4 = ADD8 %x3, killed %x6
+  
+  bb.2.if.then:
+    liveins: %lr8, %rm, %x3, %x4
+  
+    %x4 = RLDICR killed %x4, 16, 47
+    %x3 = OR8 killed %x4, killed %x3
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+  
+  bb.3.if.end15:
+    successors: %bb.6.while.cond.preheader(0x40000000), %bb.4.while.cond30.preheader(0x40000000)
+    liveins: %x3, %x4, %x5, %x6, %x29, %x30
+  
+    BC undef %cr5lt, %bb.6.while.cond.preheader
+  
+  bb.4.while.cond30.preheader:
+    successors: %bb.7.while.body33.preheader(0x40000000), %bb.5(0x40000000)
+    liveins: %x3, %x4, %x5, %x6, %x29, %x30
+  
+    BCn undef %cr5lt, %bb.7.while.body33.preheader
+  
+  bb.5:
+    successors: %bb.12.while.body109.preheader(0x80000000)
+    liveins: %x4, %x29, %x30
+  
+    %x7 = OR8 %x4, killed %x4
+    B %bb.12.while.body109.preheader
+  
+  bb.6.while.cond.preheader:
+    successors: %bb.2.if.then(0x80000000)
+    liveins: %x3, %x6, %x29, %x30
+  
+    %x4 = LIS8 15
+    %x4 = ORI8 killed %x4, 225
+    %x4 = RLDICR killed %x4, 32, 31
+    %x4 = ORIS8 killed %x4, 3375
+    %x4 = ORI8 killed %x4, 50637
+    %x4 = MULHDU %x6, killed %x4
+    %x5 = SUBF8 %x4, %x6
+    %x5 = RLDICL killed %x5, 63, 1
+    %x4 = ADD8 killed %x5, killed %x4
+    %x5 = LI8 0
+    %x4 = RLDICL killed %x4, 49, 15
+    %x5 = ORI8 killed %x5, 65521
+    %x4 = MULLD killed %x4, killed %x5
+    %x4 = SUBF8 killed %x4, killed %x6
+    B %bb.2.if.then
+  
+  bb.7.while.body33.preheader:
+    successors: %bb.8.while.body33(0x80000000)
+    liveins: %x3, %x4, %x5, %x6, %x29, %x30
+  
+    STD killed %x29, -24, %x1 :: (store 8 into %fixed-stack.1)
+    STD killed %x30, -16, %x1 :: (store 8 into %fixed-stack.0, align 16)
+    %x7 = LIS8 15
+    %x7 = ORI8 killed %x7, 225
+    %x7 = RLDICR killed %x7, 32, 31
+    %x8 = LI8 0
+    %x7 = ORIS8 killed %x7, 3375
+    %x9 = LI8 347
+    %x10 = ORI8 killed %x7, 50637
+    %x11 = ORI8 %x8, 65521
+    %x7 = OR8 %x4, %x4
+  
+  bb.8.while.body33:
+    successors: %bb.9.do.body(0x80000000)
+    liveins: %x3, %x4, %x5, %x6, %x7, %x8, %x9, %x10, %x11
+  
+    %x12 = MULLI8 %x8, 5552
+    %x12 = ADD8 %x4, killed %x12
+    %x12 = ADDI8 killed %x12, -13
+    %x5 = ADDI8 killed %x5, -5552
+    MTCTR8loop %x9, implicit-def dead %ctr8
+  
+  bb.9.do.body:
+    successors: %bb.9.do.body(0x7c000000), %bb.10.do.end(0x04000000)
+    liveins: %x3, %x4, %x5, %x6, %x7, %x8, %x9, %x10, %x11, %x12
+  
+    %x0, %x12 = LBZU8 16, killed %x12 :: (load 1 from %ir.tmp15.inc, !tbaa !1)
+    %x6 = ADD8 %x3, killed %x6
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x3 = ADD8 killed %x3, killed %x0
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    %x6 = ADD8 killed %x6, %x3
+    BDNZ8 %bb.9.do.body, implicit-def %ctr8, implicit %ctr8
+  
+  bb.10.do.end:
+    successors: %bb.8.while.body33(0x7c000000), %bb.11.while.end103(0x04000000)
+    liveins: %x3, %x4, %x5, %x6, %x7, %x8, %x9, %x10, %x11
+  
+    %x12 = MULHDU %x3, %x10
+    %x0 = MULHDU %x6, %x10
+    %x30 = SUBF8 %x12, %x3
+    %x29 = SUBF8 %x0, %x6
+    %x30 = RLDICL killed %x30, 63, 1
+    %x29 = RLDICL killed %x29, 63, 1
+    %x12 = ADD8 killed %x30, killed %x12
+    %x0 = ADD8 killed %x29, killed %x0
+    %cr0 = CMPLDI %x5, 5551
+    %x12 = RLDICL killed %x12, 49, 15
+    %x0 = RLDICL killed %x0, 49, 15
+    %x12 = MULLD killed %x12, %x11
+    %x0 = MULLD killed %x0, %x11
+    %x7 = ADDI8 killed %x7, 5552
+    %x3 = SUBF8 killed %x12, killed %x3
+    %x6 = SUBF8 killed %x0, killed %x6
+    %x8 = ADDI8 killed %x8, 1
+    BCC 44, killed %cr0, %bb.8.while.body33
+  
+  bb.11.while.end103:
+    successors: %bb.14.if.end188(0x40000000), %bb.12.while.body109.preheader(0x40000000)
+    liveins: %x3, %x6, %x7
+  
+    %x30 = LD -16, %x1 :: (load 8 from %fixed-stack.0, align 16)
+    %x29 = LD -24, %x1 :: (load 8 from %fixed-stack.1)
+    BC undef %cr5lt, %bb.14.if.end188
+  
+  bb.12.while.body109.preheader:
+    successors: %bb.13.while.body109(0x80000000)
+    liveins: %x7, %x29, %x30
+  
+    %x3 = LBZ8 10, killed %x7 :: (load 1 from %ir.arrayidx151, !tbaa !1)
+    %x4 = IMPLICIT_DEF
+  
+  bb.13.while.body109:
+    successors: %bb.13.while.body109(0x80000000)
+    liveins: %x3, %x4, %x29, %x30
+  
+    %x4 = ADD8 killed %x4, %x3
+    B %bb.13.while.body109
+  
+  bb.14.if.end188:
+    liveins: %x3, %x6, %x29, %x30
+  
+    %x4 = RLDICR killed %x6, 16, 47
+    %x3 = OR8 killed %x4, killed %x3
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+
+...

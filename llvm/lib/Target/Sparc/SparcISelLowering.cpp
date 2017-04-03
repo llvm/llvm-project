@@ -1877,6 +1877,7 @@ void SparcTargetLowering::computeKnownBitsForTargetNode
                                 (const SDValue Op,
                                  APInt &KnownZero,
                                  APInt &KnownOne,
+                                 const APInt &DemandedElts,
                                  const SelectionDAG &DAG,
                                  unsigned Depth) const {
   APInt KnownZero2, KnownOne2;

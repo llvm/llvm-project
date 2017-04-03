@@ -204,14 +204,12 @@ public:
     if (idx >= CalculateNumChildren())
       return lldb::ValueObjectSP();
     auto offset = idx * m_child_type.GetByteSize(nullptr);
-    ValueObjectSP child_sp(
-        m_backend.GetSyntheticChildAtOffset(offset, m_child_type, true));
-    if (!child_sp)
-      return child_sp;
-
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    child_sp->SetName(ConstString(idx_name.GetString()));
+    ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(
+        offset, m_child_type, true, ConstString(idx_name.GetString())));
+    if (!child_sp)
+      return child_sp;
 
     child_sp->SetFormat(m_item_format);
 

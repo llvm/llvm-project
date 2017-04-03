@@ -1337,17 +1337,26 @@ bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
     return false;
 
   auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
-  if (!ProfDataName || !ProfDataName->getString().equals("branch_weights"))
+  if (!ProfDataName)
     return false;
 
-  TotalVal = 0;
-  for (unsigned i = 1; i < ProfileData->getNumOperands(); i++) {
-    auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i));
-    if (!V)
-      return false;
-    TotalVal += V->getValue().getZExtValue();
+  if (ProfDataName->getString().equals("branch_weights")) {
+    TotalVal = 0;
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i++) {
+      auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i));
+      if (!V)
+        return false;
+      TotalVal += V->getValue().getZExtValue();
+    }
+    return true;
+  } else if (ProfDataName->getString().equals("VP") &&
+             ProfileData->getNumOperands() > 3) {
+    TotalVal = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2))
+                   ->getValue()
+                   .getZExtValue();
+    return true;
   }
-  return true;
+  return false;
 }
 
 void Instruction::clearMetadataHashEntries() {

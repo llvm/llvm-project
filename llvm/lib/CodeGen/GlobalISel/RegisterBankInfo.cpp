@@ -126,15 +126,26 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
   return &RC;
 }
 
+/// Check whether or not \p MI should be treated like a copy
+/// for the mappings.
+/// Copy like instruction are special for mapping because
+/// they don't have actual register constraints. Moreover,
+/// they sometimes have register classes assigned and we can
+/// just use that instead of failing to provide a generic mapping.
+static bool isCopyLike(const MachineInstr &MI) {
+  return MI.isCopy() || MI.isPHI() ||
+         MI.getOpcode() == TargetOpcode::REG_SEQUENCE;
+}
+
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // For copies we want to walk over the operands and try to find one
   // that has a register bank since the instruction itself will not get
   // us any constraint.
-  bool isCopyLike = MI.isCopy() || MI.isPHI();
+  bool IsCopyLike = isCopyLike(MI);
   // For copy like instruction, only the mapping of the definition
   // is important. The rest is not constrained.
-  unsigned NumOperandsForMapping = isCopyLike ? 1 : MI.getNumOperands();
+  unsigned NumOperandsForMapping = IsCopyLike ? 1 : MI.getNumOperands();
 
   RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
                                                /*OperandsMapping*/ nullptr,
@@ -168,7 +179,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     // For copy-like instruction, we want to reuse the register bank
     // that is already set on Reg, if any, since those instructions do
     // not have any constraints.
-    const RegisterBank *CurRegBank = isCopyLike ? AltRegBank : nullptr;
+    const RegisterBank *CurRegBank = IsCopyLike ? AltRegBank : nullptr;
     if (!CurRegBank) {
       // If this is a target specific instruction, we can deduce
       // the register bank from the encoding constraints.
@@ -177,7 +188,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         // All our attempts failed, give up.
         CompleteMapping = false;
 
-        if (!isCopyLike)
+        if (!IsCopyLike)
           // MI does not carry enough information to guess the mapping.
           return InstructionMapping();
         continue;
@@ -185,7 +196,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     }
     const ValueMapping *ValMapping =
         &getValueMapping(0, getSizeInBits(Reg, MRI, TRI), *CurRegBank);
-    if (isCopyLike) {
+    if (IsCopyLike) {
       OperandsMapping[0] = ValMapping;
       CompleteMapping = true;
       break;
@@ -193,7 +204,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     OperandsMapping[OpIdx] = ValMapping;
   }
 
-  if (isCopyLike && !CompleteMapping)
+  if (IsCopyLike && !CompleteMapping)
     // No way to deduce the type from what we have.
     return InstructionMapping();
 
@@ -492,8 +503,7 @@ bool RegisterBankInfo::InstructionMapping::verify(
   // Check that all the register operands are properly mapped.
   // Check the constructor invariant.
   // For PHI, we only care about mapping the definition.
-  assert(NumOperands ==
-             ((MI.isCopy() || MI.isPHI()) ? 1 : MI.getNumOperands()) &&
+  assert(NumOperands == (isCopyLike(MI) ? 1 : MI.getNumOperands()) &&
          "NumOperands must match, see constructor");
   assert(MI.getParent() && MI.getParent()->getParent() &&
          "MI must be connected to a MachineFunction");

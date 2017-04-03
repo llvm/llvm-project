@@ -1225,6 +1225,14 @@ def AssumeAligned : InheritableAttr {
   let Documentation = [AssumeAlignedDocs];
 }
 
+def AllocAlign : InheritableAttr {
+  let Spellings = [GCC<"alloc_align">];
+  let Subjects = SubjectList<[HasFunctionProto], WarnDiag,
+                             "ExpectedFunctionWithProtoType">;
+  let Args = [IntArgument<"ParamIndex">];
+  let Documentation = [AllocAlignDocs];
+}
+
 def NoReturn : InheritableAttr {
   let Spellings = [GCC<"noreturn">, Declspec<"noreturn">];
   // FIXME: Does GCC allow this on the function instead?

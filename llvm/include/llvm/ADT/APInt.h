@@ -1918,14 +1918,6 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
-/// \brief Check if the specified APInt has a N-bits unsigned integer value.
-inline bool isIntN(unsigned N, const APInt &APIVal) { return APIVal.isIntN(N); }
-
-/// \brief Check if the specified APInt has a N-bits signed integer value.
-inline bool isSignedIntN(unsigned N, const APInt &APIVal) {
-  return APIVal.isSignedIntN(N);
-}
-
 /// \returns true if the argument APInt value is a sequence of ones starting at
 /// the least significant bit with the remainder zero.
 inline bool isMask(unsigned numBits, const APInt &APIVal) {
@@ -1942,15 +1934,9 @@ inline bool isMask(const APInt &Value) {
 
 /// \brief Return true if the argument APInt value contains a sequence of ones
 /// with the remainder zero.
-inline bool isShiftedMask(unsigned numBits, const APInt &APIVal) {
-  return isMask(numBits, (APIVal - APInt(numBits, 1)) | APIVal);
+inline bool isShiftedMask(const APInt &APIVal) {
+  return (APIVal != 0) && isMask((APIVal - 1) | APIVal);
 }
-
-/// \brief Returns a byte-swapped representation of the specified APInt Value.
-inline APInt byteSwap(const APInt &APIVal) { return APIVal.byteSwap(); }
-
-/// \brief Returns the floor log base 2 of the specified APInt value.
-inline unsigned logBase2(const APInt &APIVal) { return APIVal.logBase2(); }
 
 /// \brief Compute GCD of two APInt values.
 ///
@@ -1996,27 +1982,6 @@ APInt RoundDoubleToAPInt(double Double, unsigned width);
 /// Converts a float value into an APInt value.
 inline APInt RoundFloatToAPInt(float Float, unsigned width) {
   return RoundDoubleToAPInt(double(Float), width);
-}
-
-/// \brief Arithmetic right-shift function.
-///
-/// Arithmetic right-shift the APInt by shiftAmt.
-inline APInt ashr(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.ashr(shiftAmt);
-}
-
-/// \brief Logical right-shift function.
-///
-/// Logical right-shift the APInt by shiftAmt.
-inline APInt lshr(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.lshr(shiftAmt);
-}
-
-/// \brief Left-shift function.
-///
-/// Left-shift the APInt by shiftAmt.
-inline APInt shl(const APInt &LHS, unsigned shiftAmt) {
-  return LHS.shl(shiftAmt);
 }
 
 /// \brief Signed division function for APInt.

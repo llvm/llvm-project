@@ -1575,6 +1575,31 @@ TEST(APIntTest, isMask) {
   }
 }
 
+TEST(APIntTest, isShiftedMask) {
+  EXPECT_FALSE(APIntOps::isShiftedMask(APInt(32, 0x01010101)));
+  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xf0000000)));
+  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xffff0000)));
+  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xff << 1)));
+
+  for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
+    EXPECT_FALSE(APIntOps::isShiftedMask(APInt(N, 0)));
+
+    APInt One(N, 1);
+    for (int I = 1; I < N; ++I) {
+      APInt MaskVal = One.shl(I) - 1;
+      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+    }
+    for (int I = 1; I < N - 1; ++I) {
+      APInt MaskVal = One.shl(I);
+      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+    }
+    for (int I = 1; I < N; ++I) {
+      APInt MaskVal = APInt::getHighBitsSet(N, I);
+      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+    }
+  }
+}
+
 #if defined(__clang__)
 // Disable the pragma warning from versions of Clang without -Wself-move
 #pragma clang diagnostic push
@@ -1932,4 +1957,22 @@ TEST(APIntTest, setAllBits) {
   EXPECT_EQ(0u, i128.countTrailingZeros());
   EXPECT_EQ(128u, i128.countTrailingOnes());
   EXPECT_EQ(128u, i128.countPopulation());
+}
+
+TEST(APIntTest, getLoBits) {
+  APInt i32(32, 0xfa);
+  i32.setHighBits(1);
+  EXPECT_EQ(0xa, i32.getLoBits(4));
+  APInt i128(128, 0xfa);
+  i128.setHighBits(1);
+  EXPECT_EQ(0xa, i128.getLoBits(4));
+}
+
+TEST(APIntTest, getHiBits) {
+  APInt i32(32, 0xfa);
+  i32.setHighBits(2);
+  EXPECT_EQ(0xc, i32.getHiBits(4));
+  APInt i128(128, 0xfa);
+  i128.setHighBits(2);
+  EXPECT_EQ(0xc, i128.getHiBits(4));
 }
