@@ -89,7 +89,6 @@ typedef int bla1, bla2, bla3;
 #define CODE typedef int INT
 
 CODE;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: #define CODE typedef int INT
 // CHECK-FIXES: CODE;
 
@@ -102,7 +101,6 @@ typedef Foo Bar;
 
 #define TYPEDEF typedef
 TYPEDEF Foo Bak;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: #define TYPEDEF typedef
 // CHECK-FIXES: TYPEDEF Foo Bak;
 
@@ -148,3 +146,18 @@ struct Q2 { int c; } typedef S3;
 struct { int d; } typedef S4;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: struct { int d; } typedef S4;
+
+namespace my_space {
+  class my_cclass {};
+  typedef my_cclass FuncType;
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using FuncType = my_cclass;
+}
+
+#define lol 4
+typedef unsigned Map[lol]; 
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+
+typedef void (*fun_type)();
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using fun_type = void (*)();
