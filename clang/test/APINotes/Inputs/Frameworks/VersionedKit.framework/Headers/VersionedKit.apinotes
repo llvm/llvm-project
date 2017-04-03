@@ -1,6 +1,7 @@
 Name: VersionedKit
 Classes:
   - Name: TestProperties
+    SwiftObjCMembers: true
     Properties:
       - Name: accessorsOnly
         PropertyKind:    Instance
@@ -22,6 +23,7 @@ SwiftVersions:
       - Name: TestGenericDUMP
         SwiftImportAsNonGeneric: true
       - Name: TestProperties
+        SwiftObjCMembers: false
         Properties:
           - Name: accessorsOnlyInVersion3
             PropertyKind:    Instance

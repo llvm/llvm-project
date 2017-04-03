@@ -217,6 +217,7 @@ namespace {
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
     Optional<bool> SwiftImportAsNonGeneric;
+    Optional<bool> SwiftObjCMembers;
     MethodsSeq Methods;
     PropertiesSeq Properties;
   };
@@ -447,6 +448,7 @@ namespace llvm {
         io.mapOptional("SwiftBridge",           c.SwiftBridge);
         io.mapOptional("NSErrorDomain",         c.NSErrorDomain);
         io.mapOptional("SwiftImportAsNonGeneric", c.SwiftImportAsNonGeneric);
+        io.mapOptional("SwiftObjCMembers",      c.SwiftObjCMembers);
         io.mapOptional("Methods",               c.Methods);
         io.mapOptional("Properties",            c.Properties);
       }
@@ -756,6 +758,8 @@ namespace {
         cInfo.setDefaultNullability(*DefaultNullability);
       if (cl.SwiftImportAsNonGeneric)
         cInfo.setSwiftImportAsNonGeneric(*cl.SwiftImportAsNonGeneric);
+      if (cl.SwiftObjCMembers)
+        cInfo.setSwiftObjCMembers(*cl.SwiftObjCMembers);
 
       ContextID clID = Writer->addObjCContext(cl.Name, isClass, cInfo,
                                               swiftVersion);
@@ -1106,6 +1110,7 @@ namespace {
 
       handleCommonType(record, info);
       record.SwiftImportAsNonGeneric = info.getSwiftImportAsNonGeneric();
+      record.SwiftObjCMembers = info.getSwiftObjCMembers();
 
       if (info.getDefaultNullability()) {
         record.AuditedForNullability = true;
