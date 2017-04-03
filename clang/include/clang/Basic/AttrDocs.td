@@ -2449,6 +2449,13 @@ The ``swift_bridge`` attribute indicates that the type to which the attribute ap
   }];
 }
 
+def SwiftObjCMembersDocs : Documentation {
+  let Category = SwiftDocs;
+  let Content = [{
+The ``swift_objc_members`` attribute maps to the Swift ``@objcMembers`` attribute, which indicates that Swift members of this class, its subclasses, and all of the extensions thereof, will implicitly be exposed back to Objective-C.
+  }];
+}
+
 def SwiftErrorDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_error";

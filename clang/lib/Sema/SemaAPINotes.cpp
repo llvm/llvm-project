@@ -610,6 +610,13 @@ static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
     });
   }
 
+    if (auto objcMembers = info.getSwiftObjCMembers()) {
+    handleAPINotedAttribute<SwiftObjCMembersAttr>(S, D, *objcMembers,
+                                                         metadata, [&] {
+      return SwiftObjCMembersAttr::CreateImplicit(S.Context);
+    });
+  }
+
   // Handle information common to Objective-C classes and protocols.
   ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), info,
                   metadata);

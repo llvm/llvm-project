@@ -54,3 +54,8 @@
 // CHECK-VERSIONED: void privateFunc();
 
 // CHECK-VERSIONED: typedef double MyDoubleWrapper;
+
+// CHECK-UNVERSIONED: __attribute__((swift_objc_members)
+// CHECK-UNVERSIONED-NEXT: @interface TestProperties
+// CHECK-VERSIONED-NOT: __attribute__((swift_objc_members)
+// CHECK-VERSIONED: @interface TestProperties
