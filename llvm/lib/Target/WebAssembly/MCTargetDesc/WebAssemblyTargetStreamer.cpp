@@ -25,7 +25,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Wasm.h"
 using namespace llvm;
 
 WebAssemblyTargetStreamer::WebAssemblyTargetStreamer(MCStreamer &S)
@@ -88,11 +87,29 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
   }
 }
 
-void WebAssemblyTargetAsmStreamer::emitGlobal(ArrayRef<MVT> Types) {
-  if (!Types.empty()) {
+void WebAssemblyTargetAsmStreamer::emitGlobal(
+    ArrayRef<wasm::Global> Globals) {
+  if (!Globals.empty()) {
     OS << "\t.globalvar  \t";
-    PrintTypes(OS, Types);
+
+    bool First = true;
+    for (const wasm::Global &G : Globals) {
+      if (First)
+        First = false;
+      else
+        OS << ", ";
+      OS << WebAssembly::TypeToString(G.Type);
+      if (!G.InitialModule.empty())
+        OS << '=' << G.InitialModule << ':' << G.InitialName;
+      else
+        OS << '=' << G.InitialValue;
+    }
+    OS << '\n';
   }
+}
+
+void WebAssemblyTargetAsmStreamer::emitStackPointer(uint32_t Index) {
+  OS << "\t.stack_pointer\t" << Index << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
@@ -135,8 +152,14 @@ void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
     emitValueType(WebAssembly::toValType(Type));
 }
 
-void WebAssemblyTargetELFStreamer::emitGlobal(ArrayRef<MVT> Types) {
+void WebAssemblyTargetELFStreamer::emitGlobal(
+    ArrayRef<wasm::Global> Globals) {
   llvm_unreachable(".globalvar encoding not yet implemented");
+}
+
+void WebAssemblyTargetELFStreamer::emitStackPointer(
+    uint32_t Index) {
+  llvm_unreachable(".stack_pointer encoding not yet implemented");
 }
 
 void WebAssemblyTargetELFStreamer::emitEndFunc() {
@@ -190,15 +213,36 @@ void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
   }
 }
 
-void WebAssemblyTargetWasmStreamer::emitGlobal(ArrayRef<MVT> Types) {
+void WebAssemblyTargetWasmStreamer::emitGlobal(
+    ArrayRef<wasm::Global> Globals) {
   // Encode the globals use by the funciton into the special .global_variables
   // section. This will later be decoded and turned into contents for the
   // Globals Section.
   Streamer.PushSection();
   Streamer.SwitchSection(Streamer.getContext()
                                  .getWasmSection(".global_variables", 0, 0));
-  for (MVT Ty : Types)
-    Streamer.EmitIntValue(int64_t(WebAssembly::toValType(Ty)), 1);
+  for (const wasm::Global &G : Globals) {
+    Streamer.EmitIntValue(int32_t(G.Type), 1);
+    Streamer.EmitIntValue(G.Mutable, 1);
+    if (G.InitialModule.empty()) {
+      Streamer.EmitIntValue(0, 1); // indicate that we have an int value
+      Streamer.EmitSLEB128IntValue(0);
+    } else {
+      Streamer.EmitIntValue(1, 1); // indicate that we have a module import
+      Streamer.EmitBytes(G.InitialModule);
+      Streamer.EmitIntValue(0, 1); // nul-terminate
+      Streamer.EmitBytes(G.InitialName);
+      Streamer.EmitIntValue(0, 1); // nul-terminate
+    }
+  }
+  Streamer.PopSection();
+}
+
+void WebAssemblyTargetWasmStreamer::emitStackPointer(uint32_t Index) {
+  Streamer.PushSection();
+  Streamer.SwitchSection(Streamer.getContext()
+                                 .getWasmSection(".stack_pointer", 0, 0));
+  Streamer.EmitIntValue(Index, 4);
   Streamer.PopSection();
 }
 

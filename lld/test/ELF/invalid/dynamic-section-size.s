@@ -1,4 +1,4 @@
 ## dynamic-section-sh_size.elf has incorrect sh_size of dynamic section.
 # RUN: not ld.lld %p/Inputs/dynamic-section-sh_size.elf -o %t2 2>&1 | \
 # RUN:   FileCheck %s
-# CHECK: getSectionContentsAsArray failed: invalid sh_entsize
+# CHECK: error: {{.*}}: invalid sh_entsize

@@ -14,6 +14,7 @@
 #include "IRBindings.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -69,6 +70,18 @@ void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,
   unwrap(Bref)->SetCurrentDebugLocation(
       DebugLoc::get(Line, Col, Scope ? unwrap<MDNode>(Scope) : nullptr,
                     InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
+}
+
+LLVMDebugLocMetadata LLVMGetCurrentDebugLocation2(LLVMBuilderRef Bref) {
+  const auto& Loc = unwrap(Bref)->getCurrentDebugLocation();
+  const auto* InlinedAt = Loc.getInlinedAt();
+  const LLVMDebugLocMetadata md{
+    Loc.getLine(),
+    Loc.getCol(),
+    wrap(Loc.getScope()),
+    InlinedAt == nullptr ? nullptr : wrap(InlinedAt->getRawInlinedAt()),
+  };
+  return md;
 }
 
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {

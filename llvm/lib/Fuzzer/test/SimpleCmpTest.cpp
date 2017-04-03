@@ -26,12 +26,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   memcpy(&y, Data + 8, 8);  // 16
   memcpy(&z, Data + 16, sizeof(z));  // 20
   memcpy(&a, Data + 20, sizeof(a));  // 22
+  const bool k32bit = sizeof(void*) == 4;
 
-  if (x > 1234567890 && PrintOnce(__LINE__) &&
-      x < 1234567895 && PrintOnce(__LINE__) &&
+  if ((k32bit || x > 1234567890) && PrintOnce(__LINE__) &&
+      (k32bit || x < 1234567895) && PrintOnce(__LINE__) &&
       a == 0x4242 && PrintOnce(__LINE__) &&
-      y >= 987654321 && PrintOnce(__LINE__) &&
-      y <= 987654325 && PrintOnce(__LINE__) &&
+      (k32bit || y >= 987654321) && PrintOnce(__LINE__) &&
+      (k32bit || y <= 987654325) && PrintOnce(__LINE__) &&
       z < -10000 && PrintOnce(__LINE__) &&
       z >= -10005 && PrintOnce(__LINE__) &&
       z != -10003 && PrintOnce(__LINE__) &&

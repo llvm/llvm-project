@@ -34,7 +34,7 @@ class SanitizerArgs {
   bool CfiCrossDso = false;
   int AsanFieldPadding = 0;
   bool AsanSharedRuntime = false;
-  bool AsanUseAfterScope = false;
+  bool AsanUseAfterScope = true;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
   bool Stats = false;

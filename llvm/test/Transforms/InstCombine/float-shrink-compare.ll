@@ -119,7 +119,7 @@ define i32 @test5(float %x, float %y) nounwind uwtable {
   %cmp.ext = zext i1 %cmp to i32
   ret i32 %cmp.ext
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT: %rint = call float @llvm.nearbyint.f32(float %x)
+; CHECK-NEXT: %rint = call float @llvm.rint.f32(float %x)
 ; CHECK-NEXT: fcmp oeq float %rint, %y
 }
 
@@ -276,7 +276,7 @@ define i32 @test12(float %x, float %y) nounwind uwtable {
   %cmp.ext = zext i1 %cmp to i32
   ret i32 %cmp.ext
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT: %rint = call float @llvm.nearbyint.f32(float %x)
+; CHECK-NEXT: %rint = call float @llvm.rint.f32(float %x)
 ; CHECK-NEXT: fcmp oeq float %rint, %y
 }
 

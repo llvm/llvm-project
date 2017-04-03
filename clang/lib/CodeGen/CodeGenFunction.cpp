@@ -45,14 +45,14 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
   if (CGOpts.DisableLifetimeMarkers)
     return false;
 
-  // Asan uses markers for use-after-scope checks.
-  if (CGOpts.SanitizeAddressUseAfterScope)
-    return true;
-
   // Disable lifetime markers in msan builds.
   // FIXME: Remove this when msan works with lifetime markers.
   if (LangOpts.Sanitize.has(SanitizerKind::Memory))
     return false;
+
+  // Asan uses markers for use-after-scope checks.
+  if (CGOpts.SanitizeAddressUseAfterScope)
+    return true;
 
   // For now, only in optimized builds.
   return CGOpts.OptimizationLevel != 0;
@@ -610,11 +610,6 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
 
       argBaseTypeNames.push_back(llvm::MDString::get(Context, baseTypeName));
 
-      // Get argument type qualifiers:
-      if (ty.isConstQualified())
-        typeQuals = "const";
-      if (ty.isVolatileQualified())
-        typeQuals += typeQuals.empty() ? "volatile" : " volatile";
       if (isPipe)
         typeQuals = "pipe";
     }

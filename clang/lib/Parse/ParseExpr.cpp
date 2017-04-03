@@ -198,8 +198,8 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   //   An expression is potentially evaluated unless it appears where an
   //   integral constant expression is required (see 5.19) [...].
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
-  EnterExpressionEvaluationContext ConstantEvaluated(Actions,
-                                               Sema::ConstantEvaluated);
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
   ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
@@ -1313,7 +1313,8 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     // C++11 [expr.unary.noexcept]p1:
     //   The noexcept operator determines whether the evaluation of its operand,
     //   which is an unevaluated operand, can throw an exception.
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult Result = ParseExpression();
 
     T.consumeClose();
@@ -1882,9 +1883,10 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     
     if (!Name)
       return ExprError();
-    
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated,
-                                                 Sema::ReuseLambdaContextDecl);
+
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+        Sema::ReuseLambdaContextDecl);
 
     return Actions.ActOnSizeofParameterPackExpr(getCurScope(),
                                                 OpTok.getLocation(), 
@@ -1895,8 +1897,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   if (OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
 
-  EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated,
-                                               Sema::ReuseLambdaContextDecl);
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
 
   bool isCastExpr;
   ParsedType CastTy;
@@ -2569,7 +2572,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
   {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
     ControllingExpr =
         Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
     if (ControllingExpr.isInvalid()) {

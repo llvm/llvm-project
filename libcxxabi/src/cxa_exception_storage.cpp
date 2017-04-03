@@ -13,7 +13,6 @@
 
 #include "cxa_exception.hpp"
 
-#include "config.h"
 #include <__threading_support>
 
 #if defined(_LIBCXXABI_HAS_NO_THREADS)

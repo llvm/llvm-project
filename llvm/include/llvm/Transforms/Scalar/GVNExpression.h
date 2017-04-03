@@ -43,11 +43,13 @@ enum ExpressionType {
   ET_Unknown,
   ET_BasicStart,
   ET_Basic,
-  ET_Call,
   ET_AggregateValue,
   ET_Phi,
+  ET_MemoryStart,
+  ET_Call,
   ET_Load,
   ET_Store,
+  ET_MemoryEnd,
   ET_BasicEnd
 };
 
@@ -72,8 +74,6 @@ public:
     if (getOpcode() == getEmptyKey() || getOpcode() == getTombstoneKey())
       return true;
     // Compare the expression type for anything but load and store.
-    // For load and store we set the opcode to zero.
-    // This is needed for load coercion.
     if (getExpressionType() != ET_Load && getExpressionType() != ET_Store &&
         getExpressionType() != Other.getExpressionType())
       return false;
@@ -87,9 +87,8 @@ public:
   void setOpcode(unsigned opcode) { Opcode = opcode; }
   ExpressionType getExpressionType() const { return EType; }
 
-  virtual hash_code getHashValue() const {
-    return hash_combine(getExpressionType(), getOpcode());
-  }
+  // We deliberately leave the expression type out of the hash value.
+  virtual hash_code getHashValue() const { return getOpcode(); }
 
   //
   // Debugging support
@@ -106,7 +105,10 @@ public:
     OS << "}";
   }
 
-  void dump() const { print(dbgs()); }
+  LLVM_DUMP_METHOD void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Expression &E) {
@@ -200,7 +202,7 @@ public:
   }
 
   hash_code getHashValue() const override {
-    return hash_combine(getExpressionType(), getOpcode(), ValueType,
+    return hash_combine(this->Expression::getHashValue(), ValueType,
                         hash_combine_range(op_begin(), op_end()));
   }
 
@@ -241,14 +243,46 @@ public:
   op_inserter &operator++(int) { return *this; }
 };
 
-class CallExpression final : public BasicExpression {
+class MemoryExpression : public BasicExpression {
 private:
-  CallInst *Call;
-  MemoryAccess *DefiningAccess;
+  const MemoryAccess *MemoryLeader;
 
 public:
-  CallExpression(unsigned NumOperands, CallInst *C, MemoryAccess *DA)
-      : BasicExpression(NumOperands, ET_Call), Call(C), DefiningAccess(DA) {}
+  MemoryExpression(unsigned NumOperands, enum ExpressionType EType,
+                   const MemoryAccess *MemoryLeader)
+      : BasicExpression(NumOperands, EType), MemoryLeader(MemoryLeader){};
+
+  MemoryExpression() = delete;
+  MemoryExpression(const MemoryExpression &) = delete;
+  MemoryExpression &operator=(const MemoryExpression &) = delete;
+  static bool classof(const Expression *EB) {
+    return EB->getExpressionType() > ET_MemoryStart &&
+           EB->getExpressionType() < ET_MemoryEnd;
+  }
+  hash_code getHashValue() const override {
+    return hash_combine(this->BasicExpression::getHashValue(), MemoryLeader);
+  }
+
+  bool equals(const Expression &Other) const override {
+    if (!this->BasicExpression::equals(Other))
+      return false;
+    const MemoryExpression &OtherMCE = cast<MemoryExpression>(Other);
+
+    return MemoryLeader == OtherMCE.MemoryLeader;
+  }
+
+  const MemoryAccess *getMemoryLeader() const { return MemoryLeader; }
+  void setMemoryLeader(const MemoryAccess *ML) { MemoryLeader = ML; }
+};
+
+class CallExpression final : public MemoryExpression {
+private:
+  CallInst *Call;
+
+public:
+  CallExpression(unsigned NumOperands, CallInst *C,
+                 const MemoryAccess *MemoryLeader)
+      : MemoryExpression(NumOperands, ET_Call, MemoryLeader), Call(C) {}
   CallExpression() = delete;
   CallExpression(const CallExpression &) = delete;
   CallExpression &operator=(const CallExpression &) = delete;
@@ -258,17 +292,6 @@ public:
     return EB->getExpressionType() == ET_Call;
   }
 
-  bool equals(const Expression &Other) const override {
-    if (!this->BasicExpression::equals(Other))
-      return false;
-    const auto &OE = cast<CallExpression>(Other);
-    return DefiningAccess == OE.DefiningAccess;
-  }
-
-  hash_code getHashValue() const override {
-    return hash_combine(this->BasicExpression::getHashValue(), DefiningAccess);
-  }
-
   //
   // Debugging support
   //
@@ -276,22 +299,23 @@ public:
     if (PrintEType)
       OS << "ExpressionTypeCall, ";
     this->BasicExpression::printInternal(OS, false);
-    OS << " represents call at " << Call;
+    OS << " represents call at ";
+    Call->printAsOperand(OS);
   }
 };
 
-class LoadExpression final : public BasicExpression {
+class LoadExpression final : public MemoryExpression {
 private:
   LoadInst *Load;
-  MemoryAccess *DefiningAccess;
   unsigned Alignment;
 
 public:
-  LoadExpression(unsigned NumOperands, LoadInst *L, MemoryAccess *DA)
-      : LoadExpression(ET_Load, NumOperands, L, DA) {}
+  LoadExpression(unsigned NumOperands, LoadInst *L,
+                 const MemoryAccess *MemoryLeader)
+      : LoadExpression(ET_Load, NumOperands, L, MemoryLeader) {}
   LoadExpression(enum ExpressionType EType, unsigned NumOperands, LoadInst *L,
-                 MemoryAccess *DA)
-      : BasicExpression(NumOperands, EType), Load(L), DefiningAccess(DA) {
+                 const MemoryAccess *MemoryLeader)
+      : MemoryExpression(NumOperands, EType, MemoryLeader), Load(L) {
     Alignment = L ? L->getAlignment() : 0;
   }
   LoadExpression() = delete;
@@ -306,17 +330,10 @@ public:
   LoadInst *getLoadInst() const { return Load; }
   void setLoadInst(LoadInst *L) { Load = L; }
 
-  MemoryAccess *getDefiningAccess() const { return DefiningAccess; }
-  void setDefiningAccess(MemoryAccess *MA) { DefiningAccess = MA; }
   unsigned getAlignment() const { return Alignment; }
   void setAlignment(unsigned Align) { Alignment = Align; }
 
   bool equals(const Expression &Other) const override;
-
-  hash_code getHashValue() const override {
-    return hash_combine(getOpcode(), getType(), DefiningAccess,
-                        hash_combine_range(op_begin(), op_end()));
-  }
 
   //
   // Debugging support
@@ -325,22 +342,22 @@ public:
     if (PrintEType)
       OS << "ExpressionTypeLoad, ";
     this->BasicExpression::printInternal(OS, false);
-    OS << " represents Load at " << Load;
-    OS << " with DefiningAccess " << *DefiningAccess;
+    OS << " represents Load at ";
+    Load->printAsOperand(OS);
+    OS << " with MemoryLeader " << *getMemoryLeader();
   }
 };
 
-class StoreExpression final : public BasicExpression {
+class StoreExpression final : public MemoryExpression {
 private:
   StoreInst *Store;
   Value *StoredValue;
-  MemoryAccess *DefiningAccess;
 
 public:
   StoreExpression(unsigned NumOperands, StoreInst *S, Value *StoredValue,
-                  MemoryAccess *DA)
-      : BasicExpression(NumOperands, ET_Store), Store(S),
-        StoredValue(StoredValue), DefiningAccess(DA) {}
+                  const MemoryAccess *MemoryLeader)
+      : MemoryExpression(NumOperands, ET_Store, MemoryLeader), Store(S),
+        StoredValue(StoredValue) {}
   StoreExpression() = delete;
   StoreExpression(const StoreExpression &) = delete;
   StoreExpression &operator=(const StoreExpression &) = delete;
@@ -351,27 +368,18 @@ public:
   }
 
   StoreInst *getStoreInst() const { return Store; }
-  MemoryAccess *getDefiningAccess() const { return DefiningAccess; }
   Value *getStoredValue() const { return StoredValue; }
 
   bool equals(const Expression &Other) const override;
 
-  hash_code getHashValue() const override {
-    // This deliberately does not include the stored value we compare it as part
-    // of equals, and only against other stores.
-    return hash_combine(getOpcode(), getType(), DefiningAccess,
-                        hash_combine_range(op_begin(), op_end()));
-  }
-
-  //
   // Debugging support
   //
   void printInternal(raw_ostream &OS, bool PrintEType) const override {
     if (PrintEType)
       OS << "ExpressionTypeStore, ";
     this->BasicExpression::printInternal(OS, false);
-    OS << " represents Store at " << Store;
-    OS << " with DefiningAccess " << *DefiningAccess;
+    OS << " represents Store  " << *Store;
+    OS << " with MemoryLeader " << *getMemoryLeader();
   }
 };
 
@@ -527,8 +535,8 @@ public:
   }
 
   hash_code getHashValue() const override {
-    return hash_combine(getExpressionType(), VariableValue->getType(),
-                        VariableValue);
+    return hash_combine(this->Expression::getHashValue(),
+                        VariableValue->getType(), VariableValue);
   }
 
   //
@@ -566,8 +574,8 @@ public:
   }
 
   hash_code getHashValue() const override {
-    return hash_combine(getExpressionType(), ConstantValue->getType(),
-                        ConstantValue);
+    return hash_combine(this->Expression::getHashValue(),
+                        ConstantValue->getType(), ConstantValue);
   }
 
   //
@@ -604,7 +612,7 @@ public:
   }
 
   hash_code getHashValue() const override {
-    return hash_combine(getExpressionType(), Inst);
+    return hash_combine(this->Expression::getHashValue(), Inst);
   }
 
   //

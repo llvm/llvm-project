@@ -222,6 +222,8 @@ public:
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
+  bool isFoldableCopy(const MachineInstr &MI) const;
+
   bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
                      MachineRegisterInfo *MRI) const final;
 

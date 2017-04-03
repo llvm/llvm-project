@@ -5888,7 +5888,8 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     return;
 
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   // Add this candidate
   OverloadCandidate &Candidate =
@@ -6411,7 +6412,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     return;
 
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   // Add this candidate
   OverloadCandidate &Candidate =
@@ -6667,7 +6669,8 @@ bool Sema::CheckNonDependentConversions(
       CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
 
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   // For a method call, check the 'this' conversion here too. DR1391 doesn't
   // require that, but this check should never result in a hard error, and
@@ -6775,7 +6778,8 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
     return;
 
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   // Add this candidate
   OverloadCandidate &Candidate = CandidateSet.addCandidate(1);
@@ -6966,7 +6970,8 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
     return;
 
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   OverloadCandidate &Candidate = CandidateSet.addCandidate(Args.size() + 1);
   Candidate.FoundDecl = FoundDecl;
@@ -7124,7 +7129,8 @@ void Sema::AddBuiltinCandidate(QualType ResultTy, QualType *ParamTys,
                                bool IsAssignmentOperator,
                                unsigned NumContextualBoolArguments) {
   // Overload resolution is always an unevaluated context.
-  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
 
   // Add this candidate
   OverloadCandidate &Candidate = CandidateSet.addCandidate(Args.size());

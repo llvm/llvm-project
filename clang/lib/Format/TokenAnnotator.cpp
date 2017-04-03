@@ -311,13 +311,13 @@ private:
     // In C++, this can happen either in array of templates (foo<int>[10])
     // or when array is a nested template type (unique_ptr<type1<type2>[]>).
     bool CppArrayTemplates =
-        Style.IsCpp() && Parent &&
+        Style.isCpp() && Parent &&
         Parent->is(TT_TemplateCloser) &&
         (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
          Contexts.back().InTemplateArgument);
 
     bool StartsObjCMethodExpr =
-        !CppArrayTemplates && Style.IsCpp() &&
+        !CppArrayTemplates && Style.isCpp() &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNot(tok::l_brace) &&
         (!Parent ||
@@ -435,7 +435,7 @@ private:
         if (CurrentToken->isOneOf(tok::colon, tok::l_brace)) {
           FormatToken *Previous = CurrentToken->getPreviousNonComment();
           if (((CurrentToken->is(tok::colon) &&
-                (!Contexts.back().ColonIsDictLiteral || !Style.IsCpp())) ||
+                (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
                Style.Language == FormatStyle::LK_Proto) &&
               (Previous->Tok.getIdentifierInfo() ||
                Previous->is(tok::string_literal)))
@@ -1220,7 +1220,7 @@ private:
   /// \brief Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
     // C-style casts are only used in C++ and Java.
-    if (!Style.IsCpp() && Style.Language != FormatStyle::LK_Java)
+    if (!Style.isCpp() && Style.Language != FormatStyle::LK_Java)
       return false;
 
     // Empty parens aren't casts and there are no casts at the end of the line.
@@ -2233,7 +2233,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   const FormatToken &Left = *Right.Previous;
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
-  if (Style.IsCpp()) {
+  if (Style.isCpp()) {
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
   } else if (Style.Language == FormatStyle::LK_Proto) {

@@ -170,6 +170,11 @@ enum class ValType {
   F64 = WASM_TYPE_F64,
 };
 
+// Linking metadata kinds.
+enum : unsigned {
+  WASM_STACK_POINTER = 0x1,
+};
+
 #define WASM_RELOC(name, value) name = value,
 
 enum : unsigned {
@@ -177,6 +182,19 @@ enum : unsigned {
 };
 
 #undef WASM_RELOC
+
+struct Global {
+  ValType Type;
+  bool Mutable;
+
+  // The initial value for this global is either the value of an imported
+  // global, in which case InitialModule and InitialName specify the global
+  // import, or a value, in which case InitialModule is empty and InitialValue
+  // holds the value.
+  StringRef InitialModule;
+  StringRef InitialName;
+  uint64_t InitialValue;
+};
 
 } // end namespace wasm
 } // end namespace llvm

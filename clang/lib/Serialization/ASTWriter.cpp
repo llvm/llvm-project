@@ -4170,6 +4170,20 @@ void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS, Record);
 }
 
+/// \brief Write the state of 'pragma pack' at the end of the module.
+void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
+  RecordData Record;
+  Record.push_back(SemaRef.PackStack.CurrentValue);
+  AddSourceLocation(SemaRef.PackStack.CurrentPragmaLocation, Record);
+  Record.push_back(SemaRef.PackStack.Stack.size());
+  for (const auto &StackEntry : SemaRef.PackStack.Stack) {
+    Record.push_back(StackEntry.Value);
+    AddSourceLocation(StackEntry.PragmaLocation, Record);
+    AddString(StackEntry.StackSlotLabel, Record);
+  }
+  Stream.EmitRecord(PACK_PRAGMA_OPTIONS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -4860,6 +4874,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     WriteMSStructPragmaOptions(SemaRef);
     WriteMSPointersToMembersPragmaOptions(SemaRef);
   }
+  WritePackPragmaOptions(SemaRef);
 
   // Some simple statistics
   RecordData::value_type Record[] = {

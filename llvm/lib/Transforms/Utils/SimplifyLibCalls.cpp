@@ -2160,8 +2160,9 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     case LibFunc_round:
       return replaceUnaryCall(CI, Builder, Intrinsic::round);
     case LibFunc_nearbyint:
-    case LibFunc_rint:
       return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+    case LibFunc_rint:
+      return replaceUnaryCall(CI, Builder, Intrinsic::rint);
     case LibFunc_trunc:
       return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
     case LibFunc_acos:

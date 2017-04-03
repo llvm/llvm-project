@@ -451,8 +451,8 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
 
     while (!MA->use_empty()) {
       Use &U = *MA->use_begin();
-      if (MemoryUse *MU = dyn_cast<MemoryUse>(U.getUser()))
-        MU->resetOptimized();
+      if (auto *MUD = dyn_cast<MemoryUseOrDef>(U.getUser()))
+        MUD->resetOptimized();
       U.set(NewDefTarget);
     }
   }

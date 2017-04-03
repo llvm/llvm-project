@@ -963,7 +963,7 @@ struct FormatStyle {
     /// Should be used for TableGen code.
     LK_TableGen
   };
-  bool IsCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
+  bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
 
   /// \brief Language, this format style is targeted at.
   LanguageKind Language;

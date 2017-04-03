@@ -60,10 +60,10 @@ public:
       if (AggregateString[i] != '\\')
         continue;
 
-      assert(i+1 < AggregateString.size() && "Incomplete escape sequence!");
-      if (isdigit(AggregateString[i+1])) {
-        assert(isdigit(AggregateString[i+2]) && 
-               isdigit(AggregateString[i+3]) &&
+      assert(i + 1 < AggregateString.size() && "Incomplete escape sequence!");
+      if (isdigit(AggregateString[i + 1])) {
+        assert(isdigit(AggregateString[i + 2]) &&
+               isdigit(AggregateString[i + 3]) &&
                "Expected 3 digit octal escape!");
         O << AggregateString[++i];
         O << AggregateString[++i];

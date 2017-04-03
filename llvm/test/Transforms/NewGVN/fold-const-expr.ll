@@ -1,4 +1,3 @@
-; XFAIL: *
 ; GVN failed to do constant expression folding and expanded
 ; them unfolded in many places, producing exponentially large const
 ; expressions. As a result, the compilation never fisished.

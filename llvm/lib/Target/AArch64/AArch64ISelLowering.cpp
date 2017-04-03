@@ -792,7 +792,7 @@ EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
 /// KnownZero/KnownOne bitsets.
 void AArch64TargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, APInt &KnownZero, APInt &KnownOne,
-    const SelectionDAG &DAG, unsigned Depth) const {
+    const APInt &DemandedElts, const SelectionDAG &DAG, unsigned Depth) const {
   switch (Op.getOpcode()) {
   default:
     break;

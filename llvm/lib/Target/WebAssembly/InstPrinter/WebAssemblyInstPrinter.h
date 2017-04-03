@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 
@@ -50,6 +51,7 @@ public:
 namespace WebAssembly {
 
 const char *TypeToString(MVT Ty);
+const char *TypeToString(wasm::ValType Type);
 
 } // end namespace WebAssembly
 

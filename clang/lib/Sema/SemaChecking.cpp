@@ -1640,7 +1640,7 @@ bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Mips::BI__builtin_msa_sldi_d: i = 2; l = 0; u = 1; break;
   // Memory offsets and immediate loads.
   // These intrinsics take a signed 10 bit immediate.
-  case Mips::BI__builtin_msa_ldi_b: i = 0; l = -128; u = 127; break;
+  case Mips::BI__builtin_msa_ldi_b: i = 0; l = -128; u = 255; break;
   case Mips::BI__builtin_msa_ldi_h:
   case Mips::BI__builtin_msa_ldi_w:
   case Mips::BI__builtin_msa_ldi_d: i = 0; l = -512; u = 511; break;
@@ -2308,7 +2308,7 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_scatterpfdps:
   case X86::BI__builtin_ia32_scatterpfqpd:
   case X86::BI__builtin_ia32_scatterpfqps:
-    i = 4; l = 1; u = 2;
+    i = 4; l = 2; u = 3;
     break;
   case X86::BI__builtin_ia32_pcmpestrm128:
   case X86::BI__builtin_ia32_pcmpestri128:
@@ -7453,7 +7453,7 @@ CheckReturnStackAddr(Sema &S, Expr *RetValExp, QualType lhsType,
   if (!stackE)
     return; // Nothing suspicious was found.
 
-  // Parameters are initalized in the calling scope, so taking the address
+  // Parameters are initialized in the calling scope, so taking the address
   // of a parameter reference doesn't need a warning.
   for (auto *DRE : refVars)
     if (isa<ParmVarDecl>(DRE->getDecl()))

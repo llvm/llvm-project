@@ -2631,10 +2631,10 @@ private:
     void init(const char*);
 };
 
-template<> void moneypunct_byname<char, false>::init(const char*);
-template<> void moneypunct_byname<char, true>::init(const char*);
-template<> void moneypunct_byname<wchar_t, false>::init(const char*);
-template<> void moneypunct_byname<wchar_t, true>::init(const char*);
+template<> _LIBCPP_FUNC_VIS void moneypunct_byname<char, false>::init(const char*);
+template<> _LIBCPP_FUNC_VIS void moneypunct_byname<char, true>::init(const char*);
+template<> _LIBCPP_FUNC_VIS void moneypunct_byname<wchar_t, false>::init(const char*);
+template<> _LIBCPP_FUNC_VIS void moneypunct_byname<wchar_t, true>::init(const char*);
 
 _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, false>)
 _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, true>)

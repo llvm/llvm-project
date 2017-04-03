@@ -3192,6 +3192,70 @@ TEST(APFloatTest, frexp) {
   EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
 }
 
+TEST(APFloatTest, mod) {
+  {
+    APFloat f1(APFloat::IEEEdouble(), "1.5");
+    APFloat f2(APFloat::IEEEdouble(), "1.0");
+    APFloat expected(APFloat::IEEEdouble(), "0.5");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0.5");
+    APFloat f2(APFloat::IEEEdouble(), "1.0");
+    APFloat expected(APFloat::IEEEdouble(), "0.5");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0x1.3333333333333p-2"); // 0.3
+    APFloat f2(APFloat::IEEEdouble(), "0x1.47ae147ae147bp-7"); // 0.01
+    APFloat expected(APFloat::IEEEdouble(),
+                     "0x1.47ae147ae1471p-7"); // 0.009999999999999983
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0x1p64"); // 1.8446744073709552e19
+    APFloat f2(APFloat::IEEEdouble(), "1.5");
+    APFloat expected(APFloat::IEEEdouble(), "1.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0x1p1000");
+    APFloat f2(APFloat::IEEEdouble(), "0x1p-1000");
+    APFloat expected(APFloat::IEEEdouble(), "0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0.0");
+    APFloat f2(APFloat::IEEEdouble(), "1.0");
+    APFloat expected(APFloat::IEEEdouble(), "0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "1.0");
+    APFloat f2(APFloat::IEEEdouble(), "0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opInvalidOp);
+    EXPECT_TRUE(f1.isNaN());
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "0.0");
+    APFloat f2(APFloat::IEEEdouble(), "0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opInvalidOp);
+    EXPECT_TRUE(f1.isNaN());
+  }
+  {
+    APFloat f1 = APFloat::getInf(APFloat::IEEEdouble(), false);
+    APFloat f2(APFloat::IEEEdouble(), "1.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opInvalidOp);
+    EXPECT_TRUE(f1.isNaN());
+  }
+}
+
 TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
   using DataType = std::tuple<uint64_t, uint64_t, uint64_t, uint64_t,
                               APFloat::fltCategory, APFloat::roundingMode>;

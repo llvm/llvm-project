@@ -38,7 +38,9 @@ public:
   /// .local
   virtual void emitLocal(ArrayRef<MVT> Types) = 0;
   /// .globalvar
-  virtual void emitGlobal(ArrayRef<MVT> Types) = 0;
+  virtual void emitGlobal(ArrayRef<wasm::Global> Globals) = 0;
+  /// .stack_pointer
+  virtual void emitStackPointer(uint32_t Index) = 0;
   /// .endfunc
   virtual void emitEndFunc() = 0;
   /// .functype
@@ -66,7 +68,8 @@ public:
   void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
-  void emitGlobal(ArrayRef<MVT> Types) override;
+  void emitGlobal(ArrayRef<wasm::Global> Globals) override;
+  void emitStackPointer(uint32_t Index) override;
   void emitEndFunc() override;
   void emitIndirectFunctionType(StringRef name,
                                 SmallVectorImpl<MVT> &Params,
@@ -83,7 +86,8 @@ public:
   void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
-  void emitGlobal(ArrayRef<MVT> Types) override;
+  void emitGlobal(ArrayRef<wasm::Global> Globals) override;
+  void emitStackPointer(uint32_t Index) override;
   void emitEndFunc() override;
   void emitIndirectFunctionType(StringRef name,
                                 SmallVectorImpl<MVT> &Params,
@@ -100,7 +104,8 @@ public:
   void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
-  void emitGlobal(ArrayRef<MVT> Types) override;
+  void emitGlobal(ArrayRef<wasm::Global> Globals) override;
+  void emitStackPointer(uint32_t Index) override;
   void emitEndFunc() override;
   void emitIndirectFunctionType(StringRef name,
                                 SmallVectorImpl<MVT> &Params,

@@ -1323,6 +1323,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                    APInt &KnownZero,
                                                    APInt &KnownOne,
+                                                   const APInt &DemandedElts,
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
@@ -1337,6 +1338,7 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 /// This method can be implemented by targets that want to expose additional
 /// information about sign bits to the DAG Combiner.
 unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
+                                                         const APInt &,
                                                          const SelectionDAG &,
                                                          unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||

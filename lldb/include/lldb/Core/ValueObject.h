@@ -553,6 +553,9 @@ public:
 
   lldb::ValueObjectSP GetSP() { return m_manager->GetSharedPointer(this); }
 
+  // Change the name of the current ValueObject. Should *not* be used from a
+  // synthetic child provider as it would change the name of the non synthetic
+  // child as well.
   void SetName(const ConstString &name);
 
   virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
@@ -600,6 +603,12 @@ public:
   virtual lldb::ValueObjectSP CreateConstantValue(const ConstString &name);
 
   virtual lldb::ValueObjectSP Dereference(Error &error);
+
+  // Creates a copy of the ValueObject with a new name and setting the current
+  // ValueObject as its parent. It should be used when we want to change the
+  // name of a ValueObject without modifying the actual ValueObject itself
+  // (e.g. sythetic child provider).
+  virtual lldb::ValueObjectSP Clone(const ConstString &new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Error &error);
 

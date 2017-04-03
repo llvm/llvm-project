@@ -126,6 +126,9 @@ def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "equivalent when the immediate does "
                                         "not fit in the encoding.">;
 
+def FeatureLSLFast : SubtargetFeature<
+    "lsl-fast", "HasLSLFast", "true",
+    "CPU has a fastpath logical shift of up to 3 places">;
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -279,7 +282,8 @@ def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    FeaturePerfMon,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
-                                   FeatureZCZeroing
+                                   FeatureZCZeroing,
+                                   FeatureLSLFast
                                    ]>;
 
 def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
@@ -293,7 +297,8 @@ def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureRDM,
-                                   FeatureZCZeroing
+                                   FeatureZCZeroing,
+                                   FeatureLSLFast
                                    ]>;
 
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",

@@ -612,25 +612,6 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   return true;
 }
 
-bool llvm::canBeOmittedFromSymbolTable(const GlobalValue *GV) {
-  if (!GV->hasLinkOnceODRLinkage())
-    return false;
-
-  // We assume that anyone who sets global unnamed_addr on a non-constant knows
-  // what they're doing.
-  if (GV->hasGlobalUnnamedAddr())
-    return true;
-
-  // If it is a non constant variable, it needs to be uniqued across shared
-  // objects.
-  if (const GlobalVariable *Var = dyn_cast<GlobalVariable>(GV)) {
-    if (!Var->isConstant())
-      return false;
-  }
-
-  return GV->hasAtLeastLocalUnnamedAddr();
-}
-
 static void collectFuncletMembers(
     DenseMap<const MachineBasicBlock *, int> &FuncletMembership, int Funclet,
     const MachineBasicBlock *MBB) {

@@ -139,27 +139,6 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
   return new SIFoldOperands();
 }
 
-static bool isFoldableCopy(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case AMDGPU::V_MOV_B32_e32:
-  case AMDGPU::V_MOV_B32_e64:
-  case AMDGPU::V_MOV_B64_PSEUDO: {
-    // If there are additional implicit register operands, this may be used for
-    // register indexing so the source register operand isn't simply copied.
-    unsigned NumOps = MI.getDesc().getNumOperands() +
-      MI.getDesc().getNumImplicitUses();
-
-    return MI.getNumOperands() == NumOps;
-  }
-  case AMDGPU::S_MOV_B32:
-  case AMDGPU::S_MOV_B64:
-  case AMDGPU::COPY:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static bool updateOperand(FoldCandidate &Fold,
                           const TargetRegisterInfo &TRI) {
   MachineInstr *MI = Fold.UseMI;
@@ -936,7 +915,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
 
       tryFoldInst(TII, &MI);
 
-      if (!isFoldableCopy(MI)) {
+      if (!TII->isFoldableCopy(MI)) {
         if (IsIEEEMode || !tryFoldOMod(MI))
           tryFoldClamp(MI);
         continue;

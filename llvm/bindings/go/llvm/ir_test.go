@@ -95,3 +95,42 @@ func TestAttributes(t *testing.T) {
 		testAttribute(t, name)
 	}
 }
+
+func TestDebugLoc(t *testing.T) {
+	mod := NewModule("")
+	defer mod.Dispose()
+
+	ctx := mod.Context()
+
+	b := ctx.NewBuilder()
+	defer b.Dispose()
+
+	d := NewDIBuilder(mod)
+	defer func() {
+		d.Destroy()
+	}()
+	file := d.CreateFile("dummy_file", "dummy_dir")
+	voidInfo := d.CreateBasicType(DIBasicType{Name: "void"})
+	typeInfo := d.CreateSubroutineType(DISubroutineType{file, []Metadata{voidInfo}})
+	scope := d.CreateFunction(file, DIFunction{
+		Name:         "foo",
+		LinkageName:  "foo",
+		Line:         10,
+		ScopeLine:    10,
+		Type:         typeInfo,
+		File:         file,
+		IsDefinition: true,
+	})
+
+	b.SetCurrentDebugLocation(10, 20, scope, Metadata{})
+	loc := b.GetCurrentDebugLocation()
+	if loc.Line != 10 {
+		t.Errorf("Got line %d, though wanted 10", loc.Line)
+	}
+	if loc.Col != 20 {
+		t.Errorf("Got column %d, though wanted 20", loc.Col)
+	}
+	if loc.Scope.C != scope.C {
+		t.Errorf("Got metadata %v as scope, though wanted %v", loc.Scope.C, scope.C)
+	}
+}

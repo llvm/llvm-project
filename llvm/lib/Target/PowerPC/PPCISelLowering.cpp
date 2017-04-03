@@ -12017,6 +12017,7 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       APInt &KnownZero,
                                                       APInt &KnownOne,
+                                                      const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
   KnownZero = KnownOne = APInt(KnownZero.getBitWidth(), 0);

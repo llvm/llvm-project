@@ -1050,7 +1050,8 @@ void Sema::StartOpenMPDSABlock(OpenMPDirectiveKind DKind,
                                const DeclarationNameInfo &DirName,
                                Scope *CurScope, SourceLocation Loc) {
   DSAStack->push(DKind, DirName, CurScope, Loc);
-  PushExpressionEvaluationContext(PotentiallyEvaluated);
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
 void Sema::StartOpenMPClause(OpenMPClauseKind K) {
@@ -10907,7 +10908,8 @@ void Sema::ActOnOpenMPDeclareReductionCombinerStart(Scope *S, Decl *D) {
   else
     CurContext = DRD;
 
-  PushExpressionEvaluationContext(PotentiallyEvaluated);
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 
   QualType ReductionType = DRD->getType();
   // Create 'T* omp_parm;T omp_in;'. All references to 'omp_in' will
@@ -10961,7 +10963,8 @@ void Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
   else
     CurContext = DRD;
 
-  PushExpressionEvaluationContext(PotentiallyEvaluated);
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 
   QualType ReductionType = DRD->getType();
   // Create 'T* omp_parm;T omp_priv;'. All references to 'omp_priv' will

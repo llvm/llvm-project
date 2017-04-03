@@ -192,7 +192,16 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     auto &MMIW = MF.getMMI().getObjFileInfo<MachineModuleInfoWasm>();
     if (!MMIW.hasStackPointerGlobal()) {
       MMIW.setStackPointerGlobal(MMIW.getGlobals().size());
-      MMIW.addGlobal(MVT::i32);
+
+      // Create the stack-pointer global. For now, just use the
+      // Emscripten/Binaryen ABI names.
+      wasm::Global G;
+      G.Type = wasm::ValType::I32;
+      G.Mutable = true;
+      G.InitialValue = 0;
+      G.InitialModule = "env";
+      G.InitialName = "STACKTOP";
+      MMIW.addGlobal(G);
     }
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::GET_GLOBAL_I32), SPReg)
         .addImm(MMIW.getStackPointerGlobal());

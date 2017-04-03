@@ -167,8 +167,8 @@ protected:
     const void *const *P = find_imp(Ptr);
     if (P == EndPointer())
       return false;
-    
-    const void ** Loc = const_cast<const void **>(P);
+
+    const void **Loc = const_cast<const void **>(P);
     assert(*Loc == Ptr && "broken find!");
     *Loc = getTombstoneMarker();
     NumTombstones++;
@@ -194,7 +194,7 @@ protected:
       return Bucket;
     return EndPointer();
   }
-  
+
 private:
   bool isSmall() const { return CurArray == SmallArray; }
 

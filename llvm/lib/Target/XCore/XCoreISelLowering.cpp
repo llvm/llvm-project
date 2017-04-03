@@ -1824,6 +1824,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
 void XCoreTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                         APInt &KnownZero,
                                                         APInt &KnownOne,
+                                                        const APInt &DemandedElts,
                                                         const SelectionDAG &DAG,
                                                         unsigned Depth) const {
   KnownZero = KnownOne = APInt(KnownZero.getBitWidth(), 0);

@@ -12,7 +12,7 @@
 
 #include "Unwind-EHABI.h"
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -987,4 +987,4 @@ __gnu_unwind_frame(_Unwind_Exception *exception_object,
   return _URC_OK;
 }
 
-#endif  // _LIBUNWIND_ARM_EHABI
+#endif  // defined(_LIBUNWIND_ARM_EHABI)

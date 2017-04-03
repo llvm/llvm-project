@@ -100,7 +100,7 @@ static int8_t readVarint7(const uint8_t *&Ptr) {
 
 static uint8_t readVaruint7(const uint8_t *&Ptr) {
   uint64_t result = readULEB128(Ptr);
-  assert(result <= VARUINT7_MAX && result >= 0);
+  assert(result <= VARUINT7_MAX);
   return result;
 }
 
@@ -112,7 +112,7 @@ static int32_t readVarint32(const uint8_t *&Ptr) {
 
 static uint32_t readVaruint32(const uint8_t *&Ptr) {
   uint64_t result = readULEB128(Ptr);
-  assert(result <= UINT32_MAX && result >= 0);
+  assert(result <= UINT32_MAX);
   return result;
 }
 
@@ -458,11 +458,8 @@ Error WasmObjectFile::parseGlobalSection(const uint8_t *Ptr, const uint8_t *End)
     wasm::WasmGlobal Global;
     Global.Type = readVarint7(Ptr);
     Global.Mutable = readVaruint1(Ptr);
-    size_t offset = Ptr - getPtr(0);
-    if (Error Err = readInitExpr(Global.InitExpr, Ptr)) {
-      offset = Ptr - getPtr(0);
+    if (Error Err = readInitExpr(Global.InitExpr, Ptr))
       return Err;
-    }
     Globals.push_back(Global);
   }
   if (Ptr != End)
@@ -609,6 +606,7 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   case WasmSymbol::SymbolType::GLOBAL_EXPORT:
     return object::SymbolRef::SF_Global;
   }
+  llvm_unreachable("Unknown WasmSymbol::SymbolType");
 }
 
 basic_symbol_iterator WasmObjectFile::symbol_begin() const {
@@ -812,7 +810,7 @@ SubtargetFeatures WasmObjectFile::getFeatures() const {
 bool WasmObjectFile::isRelocatableObject() const { return false; }
 
 const WasmSection &WasmObjectFile::getWasmSection(DataRefImpl Ref) const {
-  assert(Ref.d.a >= 0 && Ref.d.a < Sections.size());
+  assert(Ref.d.a < Sections.size());
   return Sections[Ref.d.a];
 }
 
@@ -828,8 +826,8 @@ WasmObjectFile::getWasmRelocation(const RelocationRef &Ref) const {
 
 const wasm::WasmRelocation &
 WasmObjectFile::getWasmRelocation(DataRefImpl Ref) const {
-  assert(Ref.d.a >= 0 && Ref.d.a < Sections.size());
+  assert(Ref.d.a < Sections.size());
   const WasmSection& Sec = Sections[Ref.d.a];
-  assert(Ref.d.b >= 0 && Ref.d.b < Sec.Relocations.size());
+  assert(Ref.d.b < Sec.Relocations.size());
   return Sec.Relocations[Ref.d.b];
 }

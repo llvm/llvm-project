@@ -8,15 +8,15 @@
 // RUN: %env_asan_opts=coverage=1:coverage_dir=%T/coverage-missing %run %t
 // RUN: %sancov print *.sancov > main.txt
 // RUN: rm *.sancov
-// RUN: [ $(cat main.txt | wc -l) == 1 ]
+// RUN: count 1 < main.txt
 // RUN: %env_asan_opts=coverage=1:coverage_dir=%T/coverage-missing %run %t x
 // RUN: %sancov print *.sancov > foo.txt
 // RUN: rm *.sancov
-// RUN: [ $(cat foo.txt | wc -l) == 3 ]
+// RUN: count 3 < foo.txt
 // RUN: %env_asan_opts=coverage=1:coverage_dir=%T/coverage-missing %run %t x x
 // RUN: %sancov print *.sancov > bar.txt
 // RUN: rm *.sancov
-// RUN: [ $(cat bar.txt | wc -l) == 4 ]
+// RUN: count 4 < bar.txt
 // RUN: %sancov missing %t < foo.txt > foo-missing.txt
 // RUN: sort main.txt foo-missing.txt -o foo-missing-with-main.txt
 // The "missing from foo" set may contain a few bogus PCs from the sanitizer
@@ -35,11 +35,11 @@
 // RUN: %env_asan_opts=coverage=1:coverage_dir=%T/coverage-missing %run %t x
 // RUN: %sancov print $LIBNAME.*.sancov > foo.txt
 // RUN: rm *.sancov
-// RUN: [ $(cat foo.txt | wc -l) == 2 ]
+// RUN: count 2 < foo.txt
 // RUN: %env_asan_opts=coverage=1:coverage_dir=%T/coverage-missing %run %t x x
 // RUN: %sancov print $LIBNAME.*.sancov > bar.txt
 // RUN: rm *.sancov
-// RUN: [ $(cat bar.txt | wc -l) == 3 ]
+// RUN: count 3 < bar.txt
 // RUN: %sancov missing %dynamiclib < foo.txt > foo-missing.txt
 // RUN: ( diff bar.txt foo-missing.txt || true ) | not grep "^<"
 

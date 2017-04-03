@@ -238,7 +238,7 @@ public:
   bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
-  
+
   /// \brief Compute This := This u S, return whether 'This' changed.
   /// TODO: We should be able to use set_union from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.

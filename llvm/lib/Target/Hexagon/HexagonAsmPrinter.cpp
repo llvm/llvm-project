@@ -611,13 +611,9 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   if (MI->isBundle()) {
     const MachineBasicBlock* MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
-    unsigned IgnoreCount = 0;
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (MII->getOpcode() == TargetOpcode::DBG_VALUE ||
-          MII->getOpcode() == TargetOpcode::IMPLICIT_DEF)
-        ++IgnoreCount;
-      else
+      if (!MII->isDebugValue() && !MII->isImplicitDef())
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
   }
   else

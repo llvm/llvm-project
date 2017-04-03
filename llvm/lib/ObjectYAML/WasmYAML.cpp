@@ -17,6 +17,15 @@
 #include "llvm/Support/MipsABIFlags.h"
 
 namespace llvm {
+
+namespace WasmYAML {
+
+// Declared here rather than in the header to comply with:
+// http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers
+Section::~Section() {}
+
+} // end namespace WasmYAML
+
 namespace yaml {
 
 void MappingTraits<WasmYAML::FileHeader>::mapping(

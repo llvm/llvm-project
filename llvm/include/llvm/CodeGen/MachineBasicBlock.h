@@ -455,10 +455,19 @@ public:
   /// other block.
   bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
 
-  /// Return true if the block can implicitly transfer control to the block
-  /// after it by falling off the end of it.  This should return false if it can
-  /// reach the block after it, but it uses an explicit branch to do so (e.g., a
-  /// table jump).  True is a conservative answer.
+
+  /// Return the fallthrough block if the block can implicitly
+  /// transfer control to the block after it by falling off the end of
+  /// it.  This should return null if it can reach the block after
+  /// it, but it uses an explicit branch to do so (e.g., a table
+  /// jump).  Non-null return  is a conservative answer.
+  MachineBasicBlock *getFallThrough();
+
+  /// Return true if the block can implicitly transfer control to the
+  /// block after it by falling off the end of it.  This should return
+  /// false if it can reach the block after it, but it uses an
+  /// explicit branch to do so (e.g., a table jump).  True is a
+  /// conservative answer.
   bool canFallThrough();
 
   /// Returns a pointer to the first instruction in this block that is not a
