@@ -17,7 +17,6 @@
 ; Function Attrs: nounwind readnone uwtable
 define i32 @simpleFunction(i32 %a) #0 {
 entry:
-  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -55,7 +54,6 @@ define i32 @ColdFunction(i32 %a) #1 {
 ; DEFAULT-LABEL: @ColdFunction
 ; DEFAULT: ret
 entry:
-  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -93,7 +91,6 @@ define i32 @ColdFunction2(i32 %a) #1 {
 ; DEFAULT-LABEL: @ColdFunction2
 ; DEFAULT: ret
 entry:
-  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -199,6 +196,5 @@ entry:
   ret i32 %add
 }
 
-declare void @extern()
 attributes #0 = { nounwind readnone uwtable }
 attributes #1 = { nounwind cold readnone uwtable }
