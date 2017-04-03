@@ -1509,6 +1509,12 @@ def SwiftBridge : Attr {
   let Documentation = [SwiftBridgeDocs];
 }
 
+def SwiftObjCMembers : Attr {
+  let Spellings = [GNU<"swift_objc_members">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Documentation = [SwiftObjCMembersDocs];
+}
+
 def SwiftError : InheritableAttr {
   let Spellings = [GCC<"swift_error">];
   let Args = [EnumArgument<"Convention", "ConventionKind",
