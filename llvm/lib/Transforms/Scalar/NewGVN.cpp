@@ -83,12 +83,14 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/VNCoercion.h"
 #include <unordered_map>
 #include <utility>
 #include <vector>
 using namespace llvm;
 using namespace PatternMatch;
 using namespace llvm::GVNExpression;
+using namespace llvm::VNCoercion;
 #define DEBUG_TYPE "newgvn"
 
 STATISTIC(NumGVNInstrDeleted, "Number of instructions deleted");
@@ -359,6 +361,8 @@ private:
   const Expression *checkSimplificationResults(Expression *, Instruction *,
                                                Value *);
   const Expression *performSymbolicEvaluation(Value *);
+  const Expression *performSymbolicLoadCoercion(Type *, Value *, LoadInst *,
+                                                Instruction *, MemoryAccess *);
   const Expression *performSymbolicLoadEvaluation(Instruction *);
   const Expression *performSymbolicStoreEvaluation(Instruction *);
   const Expression *performSymbolicCallEvaluation(Instruction *);
@@ -429,17 +433,9 @@ private:
 
 template <typename T>
 static bool equalsLoadStoreHelper(const T &LHS, const Expression &RHS) {
-  if ((!isa<LoadExpression>(RHS) && !isa<StoreExpression>(RHS)) ||
-      !LHS.BasicExpression::equals(RHS)) {
+  if (!isa<LoadExpression>(RHS) && !isa<StoreExpression>(RHS))
     return false;
-  } else if (const auto *L = dyn_cast<LoadExpression>(&RHS)) {
-    if (LHS.getDefiningAccess() != L->getDefiningAccess())
-      return false;
-  } else if (const auto *S = dyn_cast<StoreExpression>(&RHS)) {
-    if (LHS.getDefiningAccess() != S->getDefiningAccess())
-      return false;
-  }
-  return true;
+  return LHS.MemoryExpression::equals(RHS);
 }
 
 bool LoadExpression::equals(const Expression &Other) const {
@@ -447,13 +443,13 @@ bool LoadExpression::equals(const Expression &Other) const {
 }
 
 bool StoreExpression::equals(const Expression &Other) const {
-  bool Result = equalsLoadStoreHelper(*this, Other);
+  if (!equalsLoadStoreHelper(*this, Other))
+    return false;
   // Make sure that store vs store includes the value operand.
-  if (Result)
-    if (const auto *S = dyn_cast<StoreExpression>(&Other))
-      if (getStoredValue() != S->getStoredValue())
-        return false;
-  return Result;
+  if (const auto *S = dyn_cast<StoreExpression>(&Other))
+    if (getStoredValue() != S->getStoredValue())
+      return false;
+  return true;
 }
 
 #ifndef NDEBUG
@@ -875,6 +871,86 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {
   return createStoreExpression(SI, StoreAccess);
 }
 
+// See if we can extract the value of a loaded pointer from a load, a store, or
+// a memory instruction.
+const Expression *
+NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
+                                    LoadInst *LI, Instruction *DepInst,
+                                    MemoryAccess *DefiningAccess) {
+  assert((!LI || LI->isSimple()) && "Not a simple load");
+  if (auto *DepSI = dyn_cast<StoreInst>(DepInst)) {
+    // Can't forward from non-atomic to atomic without violating memory model.
+    // Also don't need to coerce if they are the same type, we will just
+    // propogate..
+    if (LI->isAtomic() > DepSI->isAtomic() ||
+        LoadType == DepSI->getValueOperand()->getType())
+      return nullptr;
+    int Offset = analyzeLoadFromClobberingStore(LoadType, LoadPtr, DepSI, DL);
+    if (Offset >= 0) {
+      if (auto *C = dyn_cast<Constant>(
+              lookupOperandLeader(DepSI->getValueOperand()))) {
+        DEBUG(dbgs() << "Coercing load from store " << *DepSI << " to constant "
+                     << *C << "\n");
+        return createConstantExpression(
+            getConstantStoreValueForLoad(C, Offset, LoadType, DL));
+      }
+    }
+
+  } else if (LoadInst *DepLI = dyn_cast<LoadInst>(DepInst)) {
+    // Can't forward from non-atomic to atomic without violating memory model.
+    if (LI->isAtomic() > DepLI->isAtomic())
+      return nullptr;
+    int Offset = analyzeLoadFromClobberingLoad(LoadType, LoadPtr, DepLI, DL);
+    if (Offset >= 0) {
+      // We can coerce a constant load into a load
+      if (auto *C = dyn_cast<Constant>(lookupOperandLeader(DepLI)))
+        if (auto *PossibleConstant =
+                getConstantLoadValueForLoad(C, Offset, LoadType, DL)) {
+          DEBUG(dbgs() << "Coercing load from load " << *LI << " to constant "
+                       << *PossibleConstant << "\n");
+          return createConstantExpression(PossibleConstant);
+        }
+    }
+
+  } else if (MemIntrinsic *DepMI = dyn_cast<MemIntrinsic>(DepInst)) {
+    int Offset = analyzeLoadFromClobberingMemInst(LoadType, LoadPtr, DepMI, DL);
+    if (Offset >= 0) {
+      if (auto *PossibleConstant =
+              getConstantMemInstValueForLoad(DepMI, Offset, LoadType, DL)) {
+        DEBUG(dbgs() << "Coercing load from meminst " << *DepMI
+                     << " to constant " << *PossibleConstant << "\n");
+        return createConstantExpression(PossibleConstant);
+      }
+    }
+  }
+
+  // All of the below are only true if the loaded pointer is produced
+  // by the dependent instruction.
+  if (LoadPtr != lookupOperandLeader(DepInst) &&
+      !AA->isMustAlias(LoadPtr, DepInst))
+    return nullptr;
+  // If this load really doesn't depend on anything, then we must be loading an
+  // undef value.  This can happen when loading for a fresh allocation with no
+  // intervening stores, for example.  Note that this is only true in the case
+  // that the result of the allocation is pointer equal to the load ptr.
+  if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI)) {
+    return createConstantExpression(UndefValue::get(LoadType));
+  }
+  // If this load occurs either right after a lifetime begin,
+  // then the loaded value is undefined.
+  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      return createConstantExpression(UndefValue::get(LoadType));
+  }
+  // If this load follows a calloc (which zero initializes memory),
+  // then the loaded value is zero
+  else if (isCallocLikeFn(DepInst, TLI)) {
+    return createConstantExpression(Constant::getNullValue(LoadType));
+  }
+
+  return nullptr;
+}
+
 const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) {
   auto *LI = cast<LoadInst>(I);
 
@@ -896,11 +972,19 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) {
       // If the defining instruction is not reachable, replace with undef.
       if (!ReachableBlocks.count(DefiningInst->getParent()))
         return createConstantExpression(UndefValue::get(LI->getType()));
+      // This will handle stores and memory insts.  We only do if it the
+      // defining access has a different type, or it is a pointer produced by
+      // certain memory operations that cause the memory to have a fixed value
+      // (IE things like calloc).
+      const Expression *CoercionResult = performSymbolicLoadCoercion(
+          LI->getType(), LoadAddressLeader, LI, DefiningInst, DefiningAccess);
+      if (CoercionResult)
+        return CoercionResult;
     }
   }
 
   const Expression *E =
-      createLoadExpression(LI->getType(), LI->getPointerOperand(), LI,
+      createLoadExpression(LI->getType(), LoadAddressLeader, LI,
                            lookupMemoryAccessEquiv(DefiningAccess));
   return E;
 }
@@ -1899,28 +1983,32 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
                                     const MemoryAccess *Second) const {
   if (First == Second)
     return true;
-
-  if (auto *FirstDef = dyn_cast<MemoryUseOrDef>(First)) {
-    auto *DefAccess = FirstDef->getDefiningAccess();
-    return singleReachablePHIPath(DefAccess, Second);
-  } else {
-    auto *MP = cast<MemoryPhi>(First);
-    auto ReachableOperandPred = [&](const Use &U) {
-      return ReachableEdges.count({MP->getIncomingBlock(U), MP->getBlock()});
-    };
-    auto FilteredPhiArgs =
-        make_filter_range(MP->operands(), ReachableOperandPred);
-    SmallVector<const Value *, 32> OperandList;
-    std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
-              std::back_inserter(OperandList));
-    bool Okay = OperandList.size() == 1;
-    if (!Okay)
-      Okay = std::equal(OperandList.begin(), OperandList.end(),
-                        OperandList.begin());
-    if (Okay)
-      return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+  if (MSSA->isLiveOnEntryDef(First))
     return false;
+  const auto *EndDef = First;
+  for (auto *ChainDef : def_chain(First)) {
+    if (ChainDef == Second)
+      return true;
+    if (MSSA->isLiveOnEntryDef(ChainDef))
+      return false;
+    EndDef = ChainDef;
   }
+  auto *MP = cast<MemoryPhi>(EndDef);
+  auto ReachableOperandPred = [&](const Use &U) {
+    return ReachableEdges.count({MP->getIncomingBlock(U), MP->getBlock()});
+  };
+  auto FilteredPhiArgs =
+      make_filter_range(MP->operands(), ReachableOperandPred);
+  SmallVector<const Value *, 32> OperandList;
+  std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
+            std::back_inserter(OperandList));
+  bool Okay = OperandList.size() == 1;
+  if (!Okay)
+    Okay =
+        std::equal(OperandList.begin(), OperandList.end(), OperandList.begin());
+  if (Okay)
+    return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+  return false;
 }
 
 // Verify the that the memory equivalence table makes sense relative to the
@@ -2211,7 +2299,9 @@ struct NewGVN::ValueDFS {
   int DFSOut = 0;
   int LocalNum = 0;
   // Only one of Def and U will be set.
-  Value *Def = nullptr;
+  // The bool in the Def tells us whether the Def is the stored value of a
+  // store.
+  PointerIntPair<Value *, 1, bool> Def;
   Use *U = nullptr;
   bool operator<(const ValueDFS &Other) const {
     // It's not enough that any given field be less than - we have sets
@@ -2278,12 +2368,19 @@ void NewGVN::convertClassToDFSOrdered(
     DomTreeNode *DomNode = DT->getNode(BB);
     VDDef.DFSIn = DomNode->getDFSNumIn();
     VDDef.DFSOut = DomNode->getDFSNumOut();
-    // If it's a store, use the leader of the value operand.
+    // If it's a store, use the leader of the value operand, if it's always
+    // available, or the value operand.  TODO: We could do dominance checks to
+    // find a dominating leader, but not worth it ATM.
     if (auto *SI = dyn_cast<StoreInst>(D)) {
       auto Leader = lookupOperandLeader(SI->getValueOperand());
-      VDDef.Def = alwaysAvailable(Leader) ? Leader : SI->getValueOperand();
+      if (alwaysAvailable(Leader)) {
+        VDDef.Def.setPointer(Leader);
+      } else {
+        VDDef.Def.setPointer(SI->getValueOperand());
+        VDDef.Def.setInt(true);
+      }
     } else {
-      VDDef.Def = D;
+      VDDef.Def.setPointer(D);
     }
     assert(isa<Instruction>(D) &&
            "The dense set member should always be an instruction");
@@ -2348,7 +2445,7 @@ void NewGVN::convertClassToLoadsAndStores(
     DomTreeNode *DomNode = DT->getNode(BB);
     VD.DFSIn = DomNode->getDFSNumIn();
     VD.DFSOut = DomNode->getDFSNumOut();
-    VD.Def = D;
+    VD.Def.setPointer(D);
 
     // If it's an instruction, use the real local dfs number.
     if (auto *I = dyn_cast<Instruction>(D))
@@ -2595,7 +2692,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
         for (auto &VD : DFSOrderedSet) {
           int MemberDFSIn = VD.DFSIn;
           int MemberDFSOut = VD.DFSOut;
-          Value *Def = VD.Def;
+          Value *Def = VD.Def.getPointer();
+          bool FromStore = VD.Def.getInt();
           Use *U = VD.U;
           // We ignore void things because we can't get a value from them.
           if (Def && Def->getType()->isVoidTy())
@@ -2648,9 +2746,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
             // equivalent to something else. For these things, we can just mark
             // it all dead.  Note that this is different from the "ProbablyDead"
             // set, which may not be dominated by anything, and thus, are only
-            // easy to prove dead if they are also side-effect free.
+            // easy to prove dead if they are also side-effect free. Note that
+            // because stores are put in terms of the stored value, we skip
+            // stored values here. If the stored value is really dead, it will
+            // still be marked for deletion when we process it in its own class.
             if (!EliminationStack.empty() && Def != EliminationStack.back() &&
-                isa<Instruction>(Def))
+                isa<Instruction>(Def) && !FromStore)
               markInstructionForDeletion(cast<Instruction>(Def));
             continue;
           }
@@ -2733,7 +2834,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
       for (auto &VD : PossibleDeadStores) {
         int MemberDFSIn = VD.DFSIn;
         int MemberDFSOut = VD.DFSOut;
-        Instruction *Member = cast<Instruction>(VD.Def);
+        Instruction *Member = cast<Instruction>(VD.Def.getPointer());
         if (EliminationStack.empty() ||
             !EliminationStack.isInScope(MemberDFSIn, MemberDFSOut)) {
           // Sync to our current scope.

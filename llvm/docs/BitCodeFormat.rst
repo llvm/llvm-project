@@ -839,16 +839,6 @@ fields are
 * *unnamed_addr*: If present, an encoding of the
   :ref:`unnamed_addr<bcunnamedaddr>` attribute of this alias
 
-MODULE_CODE_PURGEVALS Record
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``[PURGEVALS, numvals]``
-
-The ``PURGEVALS`` record (code 10) resets the module-level value list to the
-size given by the single operand value. Module-level value list items are added
-by ``GLOBALVAR``, ``FUNCTION``, and ``ALIAS`` records.  After a ``PURGEVALS``
-record is seen, new value indices will start from the given *numvals* value.
-
 .. _MODULE_CODE_GCNAME:
 
 MODULE_CODE_GCNAME Record

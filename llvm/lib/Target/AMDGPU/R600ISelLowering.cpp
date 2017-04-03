@@ -226,6 +226,10 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Expand);
   setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Expand);
 
+  // We need to custom lower some of the intrinsics
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
   setSchedulingPreference(Sched::Source);
 
   setTargetDAGCombine(ISD::FP_ROUND);
@@ -495,8 +499,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
                          cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
-    switch(IntrinsicID) {
-    default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
+    switch (IntrinsicID) {
     case AMDGPUIntrinsic::r600_tex:
     case AMDGPUIntrinsic::r600_texc: {
       unsigned TextureOp;
@@ -604,6 +607,8 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
 
     case Intrinsic::r600_recipsqrt_clamped:
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
+    default:
+      return Op;
     }
 
     // break out of case ISD::INTRINSIC_WO_CHAIN in switch(Op.getOpcode())

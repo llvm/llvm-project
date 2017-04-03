@@ -3292,10 +3292,6 @@ __isl_give isl_qpolynomial *isl_qpolynomial_move_dims(
 	unsigned g_src_pos;
 	int *reordering;
 
-	if (n == 0)
-		return qp;
-
-	qp = isl_qpolynomial_cow(qp);
 	if (!qp)
 		return NULL;
 
@@ -3307,6 +3303,15 @@ __isl_give isl_qpolynomial *isl_qpolynomial_move_dims(
 		dst_type = isl_dim_set;
 	if (src_type == isl_dim_in)
 		src_type = isl_dim_set;
+
+	if (n == 0 &&
+	    !isl_space_is_named_or_nested(qp->dim, src_type) &&
+	    !isl_space_is_named_or_nested(qp->dim, dst_type))
+		return qp;
+
+	qp = isl_qpolynomial_cow(qp);
+	if (!qp)
+		return NULL;
 
 	isl_assert(qp->dim->ctx, src_pos + n <= isl_space_dim(qp->dim, src_type),
 		goto error);

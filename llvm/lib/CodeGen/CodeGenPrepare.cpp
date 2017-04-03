@@ -4905,7 +4905,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   //
   // Also avoid hoisting if we didn't see any ands with the exact DemandBits
   // mask, since these are the only ands that will be removed by isel.
-  if (ActiveBits <= 1 || !APIntOps::isMask(ActiveBits, DemandBits) ||
+  if (ActiveBits <= 1 || !DemandBits.isMask(ActiveBits) ||
       WidestAndBits != DemandBits)
     return false;
 

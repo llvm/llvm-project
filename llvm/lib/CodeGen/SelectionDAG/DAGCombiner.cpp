@@ -1661,7 +1661,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       Changed = true;
       DidPruneOps = true;
       unsigned OrigOpNumber = 0;
-      while (Ops[OrigOpNumber].getNode() != Op && OrigOpNumber < Ops.size())
+      while (OrigOpNumber < Ops.size() && Ops[OrigOpNumber].getNode() != Op)
         OrigOpNumber++;
       assert((OrigOpNumber != Ops.size()) &&
              "expected to find TokenFactor Operand");
@@ -3201,22 +3201,17 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    // All bits set?
-    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && isAllOnesConstant(LR);
-    // All sign bits clear?
-    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    bool IsZero = isNullConstantOrNullSplatConstant(LR);
+    bool IsNeg1 = isAllOnesConstantOrAllOnesSplatConstant(LR);
+
     // All bits clear?
-    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && isNullConstant(LR);
-    // All sign bits set?
-    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
-    // Any bits clear?
-    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && isAllOnesConstant(LR);
-    // Any sign bits clear?
-    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && isAllOnesConstant(LR);
+    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && IsZero;
+    // All sign bits clear?
+    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && IsNeg1;
     // Any bits set?
-    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && isNullConstant(LR);
+    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && IsZero;
     // Any sign bits set?
-    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && isNullConstant(LR);
+    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && IsZero;
 
     // (and (seteq X,  0), (seteq Y,  0)) --> (seteq (or X, Y),  0)
     // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
@@ -3227,6 +3222,15 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
       AddToWorklist(Or.getNode());
       return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
+
+    // All bits set?
+    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && IsNeg1;
+    // All sign bits set?
+    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && IsZero;
+    // Any bits clear?
+    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && IsNeg1;
+    // Any sign bits clear?
+    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && IsNeg1;
 
     // (and (seteq X, -1), (seteq Y, -1)) --> (seteq (and X, Y), -1)
     // (and (setlt X,  0), (setlt Y,  0)) --> (setlt (and X, Y),  0)
@@ -3333,7 +3337,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
         unsigned MaskBits = AndMask.countTrailingOnes();
         EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), Size / 2);
 
-        if (APIntOps::isMask(AndMask) &&
+        if (AndMask.isMask() &&
             // Required bits must not span the two halves of the integer and
             // must fit in the half size type.
             (ShiftBits + MaskBits <= Size / 2) &&
@@ -3373,7 +3377,7 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
                                    bool &NarrowLoad) {
   uint32_t ActiveBits = AndC->getAPIntValue().getActiveBits();
 
-  if (ActiveBits == 0 || !APIntOps::isMask(ActiveBits, AndC->getAPIntValue()))
+  if (ActiveBits == 0 || !AndC->getAPIntValue().isMask(ActiveBits))
     return false;
 
   ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
@@ -4082,7 +4086,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       bool ZeroN10 = ISD::isBuildVectorAllZeros(N1.getOperand(0).getNode());
       bool ZeroN11 = ISD::isBuildVectorAllZeros(N1.getOperand(1).getNode());
       // Ensure both shuffles have a zero input.
-      if ((ZeroN00 || ZeroN01) && (ZeroN10 || ZeroN11)) {
+      if ((ZeroN00 != ZeroN01) && (ZeroN10 != ZeroN11)) {
         assert((!ZeroN00 || !ZeroN01) && "Both inputs zero!");
         assert((!ZeroN10 || !ZeroN11) && "Both inputs zero!");
         const ShuffleVectorSDNode *SV0 = cast<ShuffleVectorSDNode>(N0);
@@ -14628,12 +14632,6 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     if (Changed)
       return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
-
-  // A shuffle of a splat is always the splat itself:
-  // shuffle (splat-shuffle), undef, M --> splat-shuffle
-  if (auto *N0Shuf = dyn_cast<ShuffleVectorSDNode>(N0))
-    if (N1.isUndef() && N0Shuf->isSplat())
-      return N0;
 
   // If it is a splat, check if the argument vector is another splat or a
   // build_vector.

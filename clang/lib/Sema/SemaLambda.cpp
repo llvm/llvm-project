@@ -1127,7 +1127,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(PotentiallyEvaluated);  
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
@@ -1605,9 +1606,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // C++11 [expr.prim.lambda]p2:
     //   A lambda-expression shall not appear in an unevaluated operand
     //   (Clause 5).
-    case Unevaluated:
-    case UnevaluatedList:
-    case UnevaluatedAbstract:
+    case ExpressionEvaluationContext::Unevaluated:
+    case ExpressionEvaluationContext::UnevaluatedList:
+    case ExpressionEvaluationContext::UnevaluatedAbstract:
     // C++1y [expr.const]p2:
     //   A conditional-expression e is a core constant expression unless the
     //   evaluation of e, following the rules of the abstract machine, would
@@ -1617,16 +1618,16 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // where this should be allowed.  We should probably fix this when DR1607 is
     // ratified, it lays out the exact set of conditions where we shouldn't
     // allow a lambda-expression.
-    case ConstantEvaluated:
+    case ExpressionEvaluationContext::ConstantEvaluated:
       // We don't actually diagnose this case immediately, because we
       // could be within a context where we might find out later that
       // the expression is potentially evaluated (e.g., for typeid).
       ExprEvalContexts.back().Lambdas.push_back(Lambda);
       break;
 
-    case DiscardedStatement:
-    case PotentiallyEvaluated:
-    case PotentiallyEvaluatedIfUsed:
+    case ExpressionEvaluationContext::DiscardedStatement:
+    case ExpressionEvaluationContext::PotentiallyEvaluated:
+    case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       break;
     }
   }

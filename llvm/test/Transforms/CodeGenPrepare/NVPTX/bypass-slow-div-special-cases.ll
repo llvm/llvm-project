@@ -93,3 +93,124 @@ define void @Test_special_case(i32 %a, i64 %b, i64* %retptr) {
   store i64 %res, i64* %retptr
   ret void
 }
+
+
+; Do not bypass a division if one of the operands looks like a hash value.
+define void @Test_dont_bypass_xor(i64 %a, i64 %b, i64 %l, i64* %retptr) {
+; CHECK-LABEL: @Test_dont_bypass_xor(
+; CHECK-NEXT:    [[C:%.*]] = xor i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = udiv i64 [[C]], [[L:%.*]]
+; CHECK-NEXT:    store i64 [[RES]], i64* [[RETPTR:%.*]]
+; CHECK-NEXT:    ret void
+;
+  %c = xor i64 %a, %b
+  %res = udiv i64 %c, %l
+  store i64 %res, i64* %retptr
+  ret void
+}
+
+define void @Test_dont_bypass_phi_xor(i64 %a, i64 %b, i64 %l, i64* %retptr) {
+; CHECK-LABEL: @Test_dont_bypass_phi_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[MERGE:%.*]], label [[XORPATH:%.*]]
+; CHECK:       xorpath:
+; CHECK-NEXT:    [[C:%.*]] = xor i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[E:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[C]], [[XORPATH]] ]
+; CHECK-NEXT:    [[RES:%.*]] = sdiv i64 [[E]], [[L:%.*]]
+; CHECK-NEXT:    store i64 [[RES]], i64* [[RETPTR:%.*]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp eq i64 %b, 0
+  br i1 %cmp, label %merge, label %xorpath
+
+xorpath:
+  %c = xor i64 %a, %b
+  br label %merge
+
+merge:
+  %e = phi i64 [ undef, %entry ], [ %c, %xorpath ]
+  %res = sdiv i64 %e, %l
+  store i64 %res, i64* %retptr
+  ret void
+}
+
+define void @Test_dont_bypass_mul_long_const(i64 %a, i64 %l, i64* %retptr) {
+; CHECK-LABEL: @Test_dont_bypass_mul_long_const(
+; CHECK-NEXT:    [[C:%.*]] = mul i64 [[A:%.*]], 5229553307
+; CHECK-NEXT:    [[RES:%.*]] = urem i64 [[C]], [[L:%.*]]
+; CHECK-NEXT:    store i64 [[RES]], i64* [[RETPTR:%.*]]
+; CHECK-NEXT:    ret void
+;
+  %c = mul i64 %a, 5229553307 ; the constant doesn't fit 32 bits
+  %res = urem i64 %c, %l
+  store i64 %res, i64* %retptr
+  ret void
+}
+
+define void @Test_bypass_phi_mul_const(i64 %a, i64 %b, i64* %retptr) {
+; CHECK-LABEL: @Test_bypass_phi_mul_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_MUL:%.*]] = mul nsw i64 [[A:%.*]], 34806414968801
+; CHECK-NEXT:    [[P:%.*]] = icmp sgt i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[P]], label [[BRANCH:%.*]], label [[MERGE:%.*]]
+; CHECK:       branch:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[LHS:%.*]] = phi i64 [ 42, [[BRANCH]] ], [ [[A_MUL]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[LHS]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -4294967296
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP8:%.*]]
+; CHECK:         [[TMP4:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[LHS]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    br label [[TMP10:%.*]]
+; CHECK:         [[TMP9:%.*]] = sdiv i64 [[LHS]], [[B]]
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:         [[TMP11:%.*]] = phi i64 [ [[TMP7]], [[TMP3]] ], [ [[TMP9]], [[TMP8]] ]
+; CHECK-NEXT:    store i64 [[TMP11]], i64* [[RETPTR:%.*]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.mul = mul nsw i64 %a, 34806414968801
+  %p = icmp sgt i64 %a, %b
+  br i1 %p, label %branch, label %merge
+
+branch:
+  br label %merge
+
+merge:
+  %lhs = phi i64 [ 42, %branch ], [ %a.mul, %entry ]
+  %res = sdiv i64 %lhs, %b
+  store i64 %res, i64* %retptr
+  ret void
+}
+
+define void @Test_bypass_mul_short_const(i64 %a, i64 %l, i64* %retptr) {
+; CHECK-LABEL: @Test_bypass_mul_short_const(
+; CHECK-NEXT:    [[C:%.*]] = mul i64 [[A:%.*]], -42
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[C]], [[L:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -4294967296
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP9:%.*]]
+; CHECK:         [[TMP5:%.*]] = trunc i64 [[L]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[C]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = urem i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    br label [[TMP11:%.*]]
+; CHECK:         [[TMP10:%.*]] = urem i64 [[C]], [[L]]
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:         [[TMP12:%.*]] = phi i64 [ [[TMP8]], [[TMP4]] ], [ [[TMP10]], [[TMP9]] ]
+; CHECK-NEXT:    store i64 [[TMP12]], i64* [[RETPTR:%.*]]
+; CHECK-NEXT:    ret void
+;
+  %c = mul i64 %a, -42
+  %res = urem i64 %c, %l
+  store i64 %res, i64* %retptr
+  ret void
+}

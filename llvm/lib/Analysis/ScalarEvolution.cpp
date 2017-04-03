@@ -5321,7 +5321,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
                 // If C is a low-bits mask, the zero extend is serving to
                 // mask off the high bits. Complement the operand and
                 // re-apply the zext.
-                if (APIntOps::isMask(Z0TySize, CI->getValue()))
+                if (CI->getValue().isMask(Z0TySize))
                   return getZeroExtendExpr(getNotSCEV(Z0), UTy);
 
                 // If C is a single bit, it may be in the sign-bit position
@@ -7221,7 +7221,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     // Convert from chrec coefficients to polynomial coefficients AX^2+BX+C
     // The B coefficient is M-N/2
     APInt B(M);
-    B -= sdiv(N,Two);
+    B -= N.sdiv(Two);
 
     // The A coefficient is N/2
     APInt A(N.sdiv(Two));

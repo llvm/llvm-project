@@ -343,7 +343,7 @@
 ///   int k;
 ///   long long l;
 /// };
-/// LLVM_PACKED_END 
+/// LLVM_PACKED_END
 #ifdef _MSC_VER
 # define LLVM_PACKED(d) __pragma(pack(push, 1)) d __pragma(pack(pop))
 # define LLVM_PACKED_START __pragma(pack(push, 1))
@@ -464,7 +464,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_PRETTY_FUNCTION __FUNCSIG__
 #elif defined(__GNUC__) || defined(__clang__)
 #define LLVM_PRETTY_FUNCTION __PRETTY_FUNCTION__
-#else 
+#else
 #define LLVM_PRETTY_FUNCTION __func__
 #endif
 

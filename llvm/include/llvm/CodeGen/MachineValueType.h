@@ -23,14 +23,13 @@ namespace llvm {
 
   class Type;
 
-  /// MVT - Machine Value Type. Every type that is supported natively by some
+  /// Machine Value Type. Every type that is supported natively by some
   /// processor targeted by LLVM occurs here. This means that any legal value
   /// type can be represented by an MVT.
 class MVT {
   public:
     enum SimpleValueType : int8_t {
-      // INVALID_SIMPLE_VALUE_TYPE - Simple value types less than zero are
-      // considered extended value types.
+      // Simple value types less than zero are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = -1,
 
       // If you change this numbering, you must change the values in
@@ -141,37 +140,37 @@ class MVT {
       // This value must be a multiple of 32.
       MAX_ALLOWED_VALUETYPE = 96,
 
-      // Token - A value of type llvm::TokenTy
+      // A value of type llvm::TokenTy
       token          = 120,
 
-      // Metadata - This is MDNode or MDString.
+      // This is MDNode or MDString.
       Metadata       = 121,
 
-      // iPTRAny - An int value the size of the pointer of the current
+      // An int value the size of the pointer of the current
       // target to any address space. This must only be used internal to
       // tblgen. Other than for overloading, we treat iPTRAny the same as iPTR.
       iPTRAny        = 122,
 
-      // vAny - A vector with any length and element size. This is used
+      // A vector with any length and element size. This is used
       // for intrinsics that have overloadings based on vector types.
       // This is only for tblgen's consumption!
       vAny           = 123,
 
-      // fAny - Any floating-point or vector floating-point value. This is used
+      // Any floating-point or vector floating-point value. This is used
       // for intrinsics that have overloadings based on floating-point types.
       // This is only for tblgen's consumption!
       fAny           = 124,
 
-      // iAny - An integer or vector integer value of any bit width. This is
+      // An integer or vector integer value of any bit width. This is
       // used for intrinsics that have overloadings based on integer bit widths.
       // This is only for tblgen's consumption!
       iAny           = 125,
 
-      // iPTR - An int value the size of the pointer of the current
+      // An int value the size of the pointer of the current
       // target.  This should only be used internal to tblgen!
       iPTR           = 126,
 
-      // Any - Any type. This is used for intrinsics that have overloadings.
+      // Any type. This is used for intrinsics that have overloadings.
       // This is only for tblgen's consumption!
       Any            = 127
     };
@@ -188,13 +187,13 @@ class MVT {
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
-    /// isValid - Return true if this is a valid simple valuetype.
+    /// Return true if this is a valid simple valuetype.
     bool isValid() const {
       return (SimpleTy >= MVT::FIRST_VALUETYPE &&
               SimpleTy < MVT::LAST_VALUETYPE);
     }
 
-    /// isFloatingPoint - Return true if this is a FP, or a vector FP type.
+    /// Return true if this is a FP or a vector FP type.
     bool isFloatingPoint() const {
       return ((SimpleTy >= MVT::FIRST_FP_VALUETYPE &&
                SimpleTy <= MVT::LAST_FP_VALUETYPE) ||
@@ -202,7 +201,7 @@ class MVT {
                SimpleTy <= MVT::LAST_FP_VECTOR_VALUETYPE));
     }
 
-    /// isInteger - Return true if this is an integer, or a vector integer type.
+    /// Return true if this is an integer or a vector integer type.
     bool isInteger() const {
       return ((SimpleTy >= MVT::FIRST_INTEGER_VALUETYPE &&
                SimpleTy <= MVT::LAST_INTEGER_VALUETYPE) ||
@@ -210,33 +209,32 @@ class MVT {
                SimpleTy <= MVT::LAST_INTEGER_VECTOR_VALUETYPE));
     }
 
-    /// isScalarInteger - Return true if this is an integer, not including
-    /// vectors.
+    /// Return true if this is an integer, not including vectors.
     bool isScalarInteger() const {
       return (SimpleTy >= MVT::FIRST_INTEGER_VALUETYPE &&
               SimpleTy <= MVT::LAST_INTEGER_VALUETYPE);
     }
 
-    /// isVector - Return true if this is a vector value type.
+    /// Return true if this is a vector value type.
     bool isVector() const {
       return (SimpleTy >= MVT::FIRST_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_VECTOR_VALUETYPE);
     }
 
-    /// is16BitVector - Return true if this is a 16-bit vector type.
+    /// Return true if this is a 16-bit vector type.
     bool is16BitVector() const {
       return (SimpleTy == MVT::v2i8  || SimpleTy == MVT::v1i16 ||
               SimpleTy == MVT::v16i1);
     }
 
-    /// is32BitVector - Return true if this is a 32-bit vector type.
+    /// Return true if this is a 32-bit vector type.
     bool is32BitVector() const {
       return (SimpleTy == MVT::v32i1 || SimpleTy == MVT::v4i8  ||
               SimpleTy == MVT::v2i16 || SimpleTy == MVT::v1i32 ||
               SimpleTy == MVT::v2f16 || SimpleTy == MVT::v1f32);
     }
 
-    /// is64BitVector - Return true if this is a 64-bit vector type.
+    /// Return true if this is a 64-bit vector type.
     bool is64BitVector() const {
       return (SimpleTy == MVT::v64i1 || SimpleTy == MVT::v8i8  ||
               SimpleTy == MVT::v4i16 || SimpleTy == MVT::v2i32 ||
@@ -244,7 +242,7 @@ class MVT {
               SimpleTy == MVT::v2f32 || SimpleTy == MVT::v1f64);
     }
 
-    /// is128BitVector - Return true if this is a 128-bit vector type.
+    /// Return true if this is a 128-bit vector type.
     bool is128BitVector() const {
       return (SimpleTy == MVT::v16i8  || SimpleTy == MVT::v8i16 ||
               SimpleTy == MVT::v4i32  || SimpleTy == MVT::v2i64 ||
@@ -252,14 +250,14 @@ class MVT {
               SimpleTy == MVT::v4f32  || SimpleTy == MVT::v2f64);
     }
 
-    /// is256BitVector - Return true if this is a 256-bit vector type.
+    /// Return true if this is a 256-bit vector type.
     bool is256BitVector() const {
       return (SimpleTy == MVT::v8f32 || SimpleTy == MVT::v4f64  ||
               SimpleTy == MVT::v32i8 || SimpleTy == MVT::v16i16 ||
               SimpleTy == MVT::v8i32 || SimpleTy == MVT::v4i64);
     }
 
-    /// is512BitVector - Return true if this is a 512-bit vector type.
+    /// Return true if this is a 512-bit vector type.
     bool is512BitVector() const {
       return (SimpleTy == MVT::v16f32 || SimpleTy == MVT::v8f64  ||
               SimpleTy == MVT::v512i1 || SimpleTy == MVT::v64i8  ||
@@ -267,34 +265,34 @@ class MVT {
               SimpleTy == MVT::v8i64);
     }
 
-    /// is1024BitVector - Return true if this is a 1024-bit vector type.
+    /// Return true if this is a 1024-bit vector type.
     bool is1024BitVector() const {
       return (SimpleTy == MVT::v1024i1 || SimpleTy == MVT::v128i8 ||
               SimpleTy == MVT::v64i16  || SimpleTy == MVT::v32i32 ||
               SimpleTy == MVT::v16i64);
     }
 
-    /// is2048BitVector - Return true if this is a 1024-bit vector type.
+    /// Return true if this is a 1024-bit vector type.
     bool is2048BitVector() const {
       return (SimpleTy == MVT::v256i8 || SimpleTy == MVT::v128i16 ||
               SimpleTy == MVT::v64i32 || SimpleTy == MVT::v32i64);
     }
 
-    /// isOverloaded - Return true if this is an overloaded type for TableGen.
+    /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       return (SimpleTy==MVT::Any  ||
               SimpleTy==MVT::iAny || SimpleTy==MVT::fAny ||
               SimpleTy==MVT::vAny || SimpleTy==MVT::iPTRAny);
     }
 
-    /// isPow2VectorType - Returns true if the given vector is a power of 2.
+    /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
       unsigned NElts = getVectorNumElements();
       return !(NElts & (NElts - 1));
     }
 
-    /// getPow2VectorType - Widens the length of the given vector MVT up to
-    /// the nearest power of 2 and returns that type.
+    /// Widens the length of the given vector MVT up to the nearest power of 2
+    /// and returns that type.
     MVT getPow2VectorType() const {
       if (isPow2VectorType())
         return *this;
@@ -304,8 +302,7 @@ class MVT {
       return MVT::getVectorVT(getVectorElementType(), Pow2NElts);
     }
 
-    /// getScalarType - If this is a vector type, return the element type,
-    /// otherwise return this.
+    /// If this is a vector, return the element type, otherwise return this.
     MVT getScalarType() const {
       return isVector() ? getVectorElementType() : *this;
     }
@@ -516,14 +513,14 @@ class MVT {
       return getScalarType().getSizeInBits();
     }
 
-    /// getStoreSize - Return the number of bytes overwritten by a store
-    /// of the specified value type.
+    /// Return the number of bytes overwritten by a store of the specified value
+    /// type.
     unsigned getStoreSize() const {
       return (getSizeInBits() + 7) / 8;
     }
 
-    /// getStoreSizeInBits - Return the number of bits overwritten by a store
-    /// of the specified value type.
+    /// Return the number of bits overwritten by a store of the specified value
+    /// type.
     unsigned getStoreSizeInBits() const {
       return getStoreSize() * 8;
     }

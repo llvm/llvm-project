@@ -375,42 +375,6 @@ public:
   }
 };
 
-/// Walks the defining uses of MemoryDefs. Stops after we hit something that has
-/// no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when comparing
-/// against a null def_chain_iterator, this will compare equal only after
-/// walking said Phi/liveOnEntry.
-struct def_chain_iterator
-    : public iterator_facade_base<def_chain_iterator, std::forward_iterator_tag,
-                                  MemoryAccess *> {
-  def_chain_iterator() : MA(nullptr) {}
-  def_chain_iterator(MemoryAccess *MA) : MA(MA) {}
-
-  MemoryAccess *operator*() const { return MA; }
-
-  def_chain_iterator &operator++() {
-    // N.B. liveOnEntry has a null defining access.
-    if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
-      MA = MUD->getDefiningAccess();
-    else
-      MA = nullptr;
-    return *this;
-  }
-
-  bool operator==(const def_chain_iterator &O) const { return MA == O.MA; }
-
-private:
-  MemoryAccess *MA;
-};
-
-static iterator_range<def_chain_iterator>
-def_chain(MemoryAccess *MA, MemoryAccess *UpTo = nullptr) {
-#ifdef EXPENSIVE_CHECKS
-  assert((!UpTo || find(def_chain(MA), UpTo) != def_chain_iterator()) &&
-         "UpTo isn't in the def chain!");
-#endif
-  return make_range(def_chain_iterator(MA), def_chain_iterator(UpTo));
-}
-
 /// Verifies that `Start` is clobbered by `ClobberAt`, and that nothing
 /// inbetween `Start` and `ClobberAt` can clobbers `Start`.
 ///
@@ -519,7 +483,6 @@ class ClobberWalker {
   // Phi optimization bookkeeping
   SmallVector<DefPath, 32> Paths;
   DenseSet<ConstMemoryAccessPair> VisitedPhis;
-  DenseMap<const BasicBlock *, MemoryAccess *> WalkTargetCache;
 
   void setUseCache(bool Use) { UseCache = Use; }
   bool shouldIgnoreCache() const {
@@ -539,7 +502,8 @@ class ClobberWalker {
     WC.insert(What, To, Loc, Query->IsCall);
   }
 
-  MemoryAccess *lookupCache(const MemoryAccess *MA, const MemoryLocation &Loc) {
+  MemoryAccess *lookupCache(const MemoryAccess *MA,
+                            const MemoryLocation &Loc) const {
     return shouldIgnoreCache() ? nullptr : WC.lookup(MA, Loc, Query->IsCall);
   }
 
@@ -557,46 +521,17 @@ class ClobberWalker {
   }
 
   /// Find the nearest def or phi that `From` can legally be optimized to.
-  ///
-  /// FIXME: Deduplicate this with MSSA::findDominatingDef. Ideally, MSSA should
-  /// keep track of this information for us, and allow us O(1) lookups of this
-  /// info.
-  MemoryAccess *getWalkTarget(const MemoryPhi *From) {
+  const MemoryAccess *getWalkTarget(const MemoryPhi *From) const {
     assert(From->getNumOperands() && "Phi with no operands?");
 
     BasicBlock *BB = From->getBlock();
-    auto At = WalkTargetCache.find(BB);
-    if (At != WalkTargetCache.end())
-      return At->second;
-
-    SmallVector<const BasicBlock *, 8> ToCache;
-    ToCache.push_back(BB);
-
     MemoryAccess *Result = MSSA.getLiveOnEntryDef();
     DomTreeNode *Node = DT.getNode(BB);
     while ((Node = Node->getIDom())) {
-      auto At = WalkTargetCache.find(BB);
-      if (At != WalkTargetCache.end()) {
-        Result = At->second;
-        break;
-      }
-
-      auto *Accesses = MSSA.getBlockAccesses(Node->getBlock());
-      if (Accesses) {
-        auto Iter = find_if(reverse(*Accesses), [](const MemoryAccess &MA) {
-          return !isa<MemoryUse>(MA);
-        });
-        if (Iter != Accesses->rend()) {
-          Result = const_cast<MemoryAccess *>(&*Iter);
-          break;
-        }
-      }
-
-      ToCache.push_back(Node->getBlock());
+      auto *Defs = MSSA.getBlockDefs(Node->getBlock());
+      if (Defs)
+        return &*Defs->rbegin();
     }
-
-    for (const BasicBlock *BB : ToCache)
-      WalkTargetCache.insert({BB, Result});
     return Result;
   }
 
@@ -614,8 +549,9 @@ class ClobberWalker {
   /// StopAt.
   ///
   /// This does not test for whether StopAt is a clobber
-  UpwardsWalkResult walkToPhiOrClobber(DefPath &Desc,
-                                       MemoryAccess *StopAt = nullptr) {
+  UpwardsWalkResult
+  walkToPhiOrClobber(DefPath &Desc,
+                     const MemoryAccess *StopAt = nullptr) const {
     assert(!isa<MemoryUse>(Desc.Last) && "Uses don't exist in my world");
 
     for (MemoryAccess *Current : def_chain(Desc.Last)) {
@@ -666,7 +602,7 @@ class ClobberWalker {
   /// If this returns None, NewPaused is a vector of searches that terminated
   /// at StopWhere. Otherwise, NewPaused is left in an unspecified state.
   Optional<TerminatedPath>
-  getBlockingAccess(MemoryAccess *StopWhere,
+  getBlockingAccess(const MemoryAccess *StopWhere,
                     SmallVectorImpl<ListIndex> &PausedSearches,
                     SmallVectorImpl<ListIndex> &NewPaused,
                     SmallVectorImpl<TerminatedPath> &Terminated) {
@@ -830,7 +766,7 @@ class ClobberWalker {
       assert(!MSSA.isLiveOnEntryDef(Current) &&
              "liveOnEntry wasn't treated as a clobber?");
 
-      MemoryAccess *Target = getWalkTarget(Current);
+      const auto *Target = getWalkTarget(Current);
       // If a TerminatedPath doesn't dominate Target, then it wasn't a legal
       // optimization for the prior phi.
       assert(all_of(TerminatedPaths, [&](const TerminatedPath &P) {
@@ -908,7 +844,7 @@ class ClobberWalker {
         // If we couldn't find the dominating phi/liveOnEntry in the above loop,
         // do it now.
         if (!DefChainEnd)
-          for (MemoryAccess *MA : def_chain(Target))
+          for (auto *MA : def_chain(const_cast<MemoryAccess *>(Target)))
             DefChainEnd = MA;
 
         // If any of the terminated paths don't dominate the phi we'll try to
@@ -991,7 +927,7 @@ public:
                 WalkerCache &WC)
       : MSSA(MSSA), AA(AA), DT(DT), WC(WC), UseCache(true) {}
 
-  void reset() { WalkTargetCache.clear(); }
+  void reset() {}
 
   /// Finds the nearest clobber for the given query, optimizing phis if
   /// possible.
@@ -1104,10 +1040,7 @@ public:
   /// answer a clobber query.
   void setAutoResetWalker(bool AutoReset) { AutoResetWalker = AutoReset; }
 
-  /// Drop the walker's persistent data structures. At the moment, this means
-  /// "drop the walker's cache of BasicBlocks ->
-  /// earliest-MemoryAccess-we-can-optimize-to". This is necessary if we're
-  /// going to have DT updates, if we remove MemoryAccesses, etc.
+  /// Drop the walker's persistent data structures.
   void resetClobberWalker() { Walker.reset(); }
 
   void verify(const MemorySSA *MSSA) override {
@@ -2248,9 +2181,9 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   // If this is an already optimized use or def, return the optimized result.
   // Note: Currently, we do not store the optimized def result because we'd need
   // a separate field, since we can't use it as the defining access.
-  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-    if (MU->isOptimized())
-      return MU->getDefiningAccess();
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+    if (MUD->isOptimized())
+      return MUD->getOptimized();
 
   const Instruction *I = StartingAccess->getMemoryInst();
   UpwardsMemoryQuery Q(I, StartingAccess);
@@ -2266,8 +2199,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
     Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
-    if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-      MU->setDefiningAccess(LiveOnEntry, true);
+    if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+      MUD->setDefiningAccess(LiveOnEntry, true);
     return LiveOnEntry;
   }
 
@@ -2284,8 +2217,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   DEBUG(dbgs() << *DefiningAccess << "\n");
   DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
   DEBUG(dbgs() << *Result << "\n");
-  if (MemoryUse *MU = dyn_cast<MemoryUse>(StartingAccess))
-    MU->setDefiningAccess(Result, true);
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
+    MUD->setDefiningAccess(Result, true);
 
   return Result;
 }

@@ -313,6 +313,115 @@ return:
   ret i32 192
 }
 
+define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: all_bits_clear_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %P, zeroinitializer
+  %b = icmp eq <4 x i32> %Q, zeroinitializer
+  %c = and <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: all_sign_bits_clear_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp sgt <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = icmp sgt <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = and <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: all_bits_set_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp eq <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = icmp eq <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = and <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: all_sign_bits_set_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp slt <4 x i32> %P, zeroinitializer
+  %b = icmp slt <4 x i32> %Q, zeroinitializer
+  %c = and <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: any_bits_set_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp ne <4 x i32> %P, zeroinitializer
+  %b = icmp ne <4 x i32> %Q, zeroinitializer
+  %c = or <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: any_sign_bits_set_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp slt <4 x i32> %P, zeroinitializer
+  %b = icmp slt <4 x i32> %Q, zeroinitializer
+  %c = or <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: any_bits_clear_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp ne <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = icmp ne <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = or <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
+define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
+; CHECK-LABEL: any_sign_bits_clear_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = icmp sgt <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = icmp sgt <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = or <4 x i1> %a, %b
+  ret <4 x i1> %c
+}
+
 define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
 ; CHECK:       # BB#0:
