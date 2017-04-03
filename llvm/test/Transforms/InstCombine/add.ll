@@ -244,6 +244,17 @@ define i32 @test19(i1 %C) {
   ret i32 %V
 }
 
+define <2 x i32> @test19vec(i1 %C) {
+; CHECK-LABEL: @test19vec(
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+  %V = add <2 x i32> %A, <i32 123, i32 123>
+  ret <2 x i32> %V
+}
+
 ; This is an InstSimplify fold, but test it here to make sure that
 ; InstCombine does not prevent the fold.
 ; With NSW, add of sign bit -> or of sign bit.

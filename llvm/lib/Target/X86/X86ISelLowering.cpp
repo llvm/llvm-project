@@ -2791,6 +2791,11 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     // Offset of last argument need to be set to -4/-8 bytes.
     // Where offset of the first argument out of two, should be set to 0 bytes.
     Offset = (Subtarget.is64Bit() ? 8 : 4) * ((i + 1) % Ins.size() - 1);
+    if (Subtarget.is64Bit() && Ins.size() == 2) {
+      // The stack pointer needs to be realigned for 64 bit handlers with error
+      // code, so the argument offset changes by 8 bytes.
+      Offset += 8;
+    }
   }
 
   // FIXME: For now, all byval parameter objects are marked mutable. This can be
@@ -3248,8 +3253,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
                        MF.getTarget().Options.GuaranteedTailCallOpt)) {
     FuncInfo->setBytesToPopOnReturn(StackSize); // Callee pops everything.
   } else if (CallConv == CallingConv::X86_INTR && Ins.size() == 2) {
-    // X86 interrupts must pop the error code if present
-    FuncInfo->setBytesToPopOnReturn(Is64Bit ? 8 : 4);
+    // X86 interrupts must pop the error code (and the alignment padding) if
+    // present.
+    FuncInfo->setBytesToPopOnReturn(Is64Bit ? 16 : 4);
   } else {
     FuncInfo->setBytesToPopOnReturn(0); // Callee pops nothing.
     // If this is an sret function, the return should pop the hidden pointer.
@@ -31532,7 +31538,7 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
 
   APInt SplatVal;
   if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
-      !APIntOps::isMask(SplatVal))
+      !SplatVal.isMask())
     return SDValue();
 
   if (!SupportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
@@ -32127,7 +32133,7 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
   if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C)) {
     // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
     // the element size of the destination type.
-    return APIntOps::isMask(VT.getScalarSizeInBits(), C) ? In.getOperand(0) :
+    return C.isMask(VT.getScalarSizeInBits()) ? In.getOperand(0) :
       SDValue();
   }
   return SDValue();

@@ -121,6 +121,10 @@ public:
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
                                  unsigned AddressSpace);
 
+  bool
+  shouldConsiderAddressTypePromotion(const Instruction &I,
+                                     bool &AllowPromotionWithoutCommonHeader);
+
   unsigned getCacheLineSize();
 
   unsigned getPrefetchDistance();

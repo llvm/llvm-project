@@ -118,7 +118,7 @@ EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
 static cl::opt<bool>
     EnableAddressTypePromotion("aarch64-enable-type-promotion", cl::Hidden,
                                cl::desc("Enable the type promotion pass"),
-                               cl::init(true));
+                               cl::init(false));
 
 static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,

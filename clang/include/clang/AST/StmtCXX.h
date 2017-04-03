@@ -344,6 +344,10 @@ private:
 public:
   static CoroutineBodyStmt *Create(const ASTContext &C, CtorArgs const &Args);
 
+  bool hasDependentPromiseType() const {
+    return getPromiseDecl()->getType()->isDependentType();
+  }
+
   /// \brief Retrieve the body of the coroutine as written. This will be either
   /// a CompoundStmt or a TryStmt.
   Stmt *getBody() const {

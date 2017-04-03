@@ -19,7 +19,7 @@ undefined:
 
 	udf.w #65536
 
-@ CHECK: error: invalid operand for instruction
+@ CHECK: error: immediate operand must be in the range [0,65535]
 @ CHECK: 	udf.w #65536
 @ CHECK: 	      ^
 

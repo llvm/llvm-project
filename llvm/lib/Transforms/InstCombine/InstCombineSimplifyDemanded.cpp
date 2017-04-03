@@ -1558,7 +1558,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       break;
     case Intrinsic::amdgcn_buffer_load:
     case Intrinsic::amdgcn_buffer_load_format: {
-      if (VWidth == 1 || !APIntOps::isMask(DemandedElts))
+      if (VWidth == 1 || !DemandedElts.isMask())
         return nullptr;
 
       // TODO: Handle 3 vectors when supported in code gen.

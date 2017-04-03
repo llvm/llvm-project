@@ -76,7 +76,11 @@ def t2_so_imm_notSext16_XFORM : SDNodeXForm<imm, [{
 // t2_so_imm - Match a 32-bit immediate operand, which is an
 // 8-bit immediate rotated by an arbitrary number of bits, or an 8-bit
 // immediate splatted into multiple bytes of the word.
-def t2_so_imm_asmoperand : ImmAsmOperand { let Name = "T2SOImm"; }
+def t2_so_imm_asmoperand : AsmOperandClass {
+  let Name = "T2SOImm";
+  let RenderMethod = "addImmOperands";
+
+}
 def t2_so_imm : Operand<i32>, ImmLeaf<i32, [{
     return ARM_AM::getT2SOImmVal(Imm) != -1;
   }]> {
@@ -116,8 +120,8 @@ def t2_so_imm_neg : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = t2_so_imm_neg_asmoperand;
 }
 
-/// imm0_4095 predicate - True if the 32-bit immediate is in the range [0.4095].
-def imm0_4095_asmoperand: ImmAsmOperand { let Name = "Imm0_4095"; }
+/// imm0_4095 predicate - True if the 32-bit immediate is in the range [0,4095].
+def imm0_4095_asmoperand: ImmAsmOperand<0,4095> { let Name = "Imm0_4095"; }
 def imm0_4095 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 4096;
 }]> {

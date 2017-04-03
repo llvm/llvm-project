@@ -534,6 +534,12 @@ coro<bad_promise_6> bad_implicit_return() { // expected-error {{'bad_promise_6' 
   co_await a;
 }
 
+template <class T>
+coro<T> bad_implicit_return_dependent(T) { // expected-error {{'bad_promise_6' declares both 'return_value' and 'return_void'}}
+  co_await a;
+}
+template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6); // expected-note {{in instantiation}}
+
 struct bad_promise_7 {
   coro<bad_promise_7> get_return_object();
   suspend_always initial_suspend();
@@ -544,6 +550,12 @@ coro<bad_promise_7> no_unhandled_exception() { // expected-error {{'bad_promise_
   co_await a;
 }
 
+template <class T>
+coro<T> no_unhandled_exception_dependent(T) { // expected-error {{'bad_promise_7' is required to declare the member 'unhandled_exception()'}}
+  co_await a;
+}
+template coro<bad_promise_7> no_unhandled_exception_dependent(bad_promise_7); // expected-note {{in instantiation}}
+
 struct bad_promise_base {
 private:
   void return_void();
@@ -552,9 +564,9 @@ struct bad_promise_8 : bad_promise_base {
   coro<bad_promise_8> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
-  void unhandled_exception() __attribute__((unavailable)); // expected-note {{made unavailable}}
-  void unhandled_exception() const;                        // expected-note {{candidate}}
-  void unhandled_exception(void *) const;                  // expected-note {{requires 1 argument, but 0 were provided}}
+  void unhandled_exception() __attribute__((unavailable)); // expected-note 2 {{made unavailable}}
+  void unhandled_exception() const;                        // expected-note 2 {{candidate}}
+  void unhandled_exception(void *) const;                  // expected-note 2 {{requires 1 argument, but 0 were provided}}
 };
 coro<bad_promise_8> calls_unhandled_exception() {
   // expected-error@-1 {{call to unavailable member function 'unhandled_exception'}}
@@ -562,6 +574,13 @@ coro<bad_promise_8> calls_unhandled_exception() {
   // the call to unhandled_exception has already failed.
   co_await a;
 }
+
+template <class T>
+coro<T> calls_unhandled_exception_dependent(T) {
+  // expected-error@-1 {{call to unavailable member function 'unhandled_exception'}}
+  co_await a;
+}
+template coro<bad_promise_8> calls_unhandled_exception_dependent(bad_promise_8); // expected-note {{in instantiation}}
 
 struct bad_promise_9 {
   coro<bad_promise_9> get_return_object();
@@ -652,3 +671,26 @@ struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
 extern "C" int f(promise_on_alloc_failure_tag) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
+
+struct bad_promise_11 {
+  coro<bad_promise_11> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void unhandled_exception();
+  void return_void();
+
+private:
+  static coro<bad_promise_11> get_return_object_on_allocation_failure(); // expected-note 2 {{declared private here}}
+};
+coro<bad_promise_11> private_alloc_failure_handler() {
+  // expected-error@-1 {{'get_return_object_on_allocation_failure' is a private member of 'bad_promise_11'}}
+  co_return; // FIXME: Add a "declared coroutine here" note.
+}
+
+template <class T>
+coro<T> dependent_private_alloc_failure_handler(T) {
+  // expected-error@-1 {{'get_return_object_on_allocation_failure' is a private member of 'bad_promise_11'}}
+  co_return; // FIXME: Add a "declared coroutine here" note.
+}
+template coro<bad_promise_11> dependent_private_alloc_failure_handler(bad_promise_11);
+// expected-note@-1 {{requested here}}

@@ -1221,10 +1221,6 @@ static Optional<unsigned> findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // If the field looks like this:
     // struct { ... } A;
     QualType FieldType = F->getType();
-    // In case of nested structs.
-    while (const auto *ElabType = dyn_cast<ElaboratedType>(FieldType)) {
-      FieldType = ElabType->getNamedType();
-    }
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
       const RecordDecl *RecDecl = RecType->getDecl();
       if (RecDecl->getDeclContext() == Owner &&
@@ -3024,8 +3020,9 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       }
       
       if (RecordDecl *FoundRecord = dyn_cast<RecordDecl>(Found)) {
-        if (!SearchName) {
-          // If both unnamed structs/unions are in a record context, make sure
+        if (D->isAnonymousStructOrUnion() && 
+            FoundRecord->isAnonymousStructOrUnion()) {
+          // If both anonymous structs/unions are in a record context, make sure
           // they occur in the same location in the context records.
           if (Optional<unsigned> Index1
               = findUntaggedStructOrUnionIndex(D)) {

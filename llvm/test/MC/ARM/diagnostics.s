@@ -93,17 +93,19 @@
         @ Out of range 16-bit immediate on BKPT
         bkpt #65536
 
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
+@ CHECK-ERRORS:         bkpt #65536
+@ CHECK-ERRORS:              ^
 
         @ Out of range immediates for v8 HLT instruction.
         hlt #65536
         hlt #-1
-@CHECK-ERRORS: error: invalid operand for instruction
+@CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
 @CHECK-ERRORS:         hlt #65536
-@CHECK-ERRORS:              ^
-@CHECK-ERRORS: error: invalid operand for instruction
+@CHECK-ERRORS:             ^
+@CHECK-ERRORS: error: immediate operand must be in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
-@CHECK-ERRORS:              ^
+@CHECK-ERRORS:             ^
 
         @ Illegal condition code for v8 HLT instruction.
         hlteq #2
@@ -123,10 +125,14 @@
         cdp2  p7, #2, c1, c1, c1, #8
         cdp2  p7, #1, c1, c1, c1, #8
 
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
 
         @ Out of range immediates for DBG
         dbg #-1
@@ -136,6 +142,7 @@
 @ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
 @  Double-check that we're synced up with the right diagnostics.
 @ CHECK-ERRORS: dbg #16
+@ CHECK-ERRORS:     ^
 
         @ Out of range immediate for MCR/MCR2/MCRR/MCRR2
         mcr  p7, #8, r5, c1, c1, #4
@@ -144,10 +151,10 @@
         mcr2  p7, #1, r5, c1, c1, #8
         mcrr  p7, #16, r5, r4, c1
         mcrr2  p7, #16, r5, r4, c1
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
 @ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V8: error: invalid operand for instruction
@@ -161,16 +168,20 @@
         @ Out of range immediate for MOV
         movw r9, 0x10000
 @ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS:        movw r9, 0x10000
+@ CHECK-ERRORS:                 ^
 
         @ Invalid 's' bit usage for MOVW
         movs r6, #0xffff
         movwseq r9, #0xffff
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,255]
 @ CHECK-ERRORS: error: instruction 'movw' can not set flags, but 's' suffix specified
 
         @ Out of range immediate for MOVT
         movt r9, 0x10000
 @ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS:        movt r9, 0x10000
+@ CHECK-ERRORS:                 ^
 
         @ Out of range immediates for MRC/MRC2/MRRC/MRRC2
         mrc  p14, #8, r1, c1, c2, #4
@@ -179,10 +190,10 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
 @ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V8: error: invalid operand for instruction
@@ -242,10 +253,10 @@
         ssat    r8, #1, r10, lsl fred
         ssat    r8, #1, r10, lsl #fred
 
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #0, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #33, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
 @ CHECK-ERRORS: error: 'lsr' shift amount must be in range [0,31]
@@ -274,10 +285,10 @@
 	ssat16	r2, #0, r7
 	ssat16	r3, #17, r5
 
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r2, #0, r7
 @ CHECK-ERRORS: 	      	    ^
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r3, #17, r5
 @ CHECK-ERRORS: 	      	    ^
 
@@ -292,7 +303,7 @@
 
         @ Out of range immediate on SVC
         svc #0x1000000
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,0xffffff]
 @ CHECK-ERRORS:   svc #0x1000000
 @ CHECK-ERRORS:       ^
 
@@ -407,7 +418,7 @@
 
         @ Bad CPS instruction format.
         cps f,#1
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,31]
 @ CHECK-ERRORS:         cps f,#1
 @ CHECK-ERRORS:               ^
 
