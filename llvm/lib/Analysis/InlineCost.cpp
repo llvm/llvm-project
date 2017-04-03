@@ -1252,7 +1252,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
       Cost -= InlineConstants::InstrCost;
     }
   }
-  
+
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically.
   bool OnlyOneCallAndLocalLinkage =

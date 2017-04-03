@@ -4,7 +4,7 @@ target datalayout = "p:32:32-p1:64:64-p2:16:16-n16:32:64"
 
 define i32 @outer1() {
 ; CHECK-LABEL: @outer1(
-; CHECK-NOT: call i32
+; CHECK-NOT: call
 ; CHECK: ret i32
 
   %ptr = alloca i32
@@ -98,6 +98,4 @@ define i32 @inttoptr_cost_smaller_ptr_user(i32 %begin, i32 %end) {
   %x = call i32 @inttoptr_cost_smaller_ptr(i32 %begin, i32 %end, i32 9)
   ret i32 %x
 }
-
-declare void @extern()
 
