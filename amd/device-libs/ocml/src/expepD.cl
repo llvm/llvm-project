@@ -10,26 +10,11 @@
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-CONSTATTR double
-#if defined COMPILING_EXP2
-MATH_MANGLE(exp2)(double x)
-#elif defined COMPILING_EXP10
-MATH_MANGLE(exp10)(double x)
-#else
-MATH_MANGLE(exp)(double x)
-#endif
+INLINEATTR CONSTATTR double
+MATH_PRIVATE(expep)(double2 x)
 {
-#if defined(COMPILING_EXP2)
-    double dn = BUILTIN_RINT_F64(x);
-    double2 t = mul(x - dn, con(0x1.62e42fefa39efp-1, 0x1.abc9e3b39803fp-56));
-#elif defined(COMPILING_EXP10)
-    double dn = BUILTIN_RINT_F64(x * 0x1.a934f0979a371p+1);
-    double2 t = fsub(sub(mul(x, con(0x1.26bb1bbb55516p+1, -0x1.f48ad494ea3e9p-53)),
-                         dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278ece6p-42);
-#else
-    double dn = BUILTIN_RINT_F64(x * 0x1.71547652b82fep+0);
-    double2 t = fsub(sub(x, dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278ece6p-42);
-#endif
+    double dn = BUILTIN_RINT_F64(x.hi * 0x1.71547652b82fep+0);
+    double2 t = fsub(fsub(sub(x, dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278e000p-42), dn*0x1.9cc01f97b57a0p-83);
 
     double th = t.hi;
     double p = MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, 
@@ -51,11 +36,8 @@ MATH_MANGLE(exp)(double x)
         z *= n < -1022 ? ss : sn;
     }
 
-    if (!FINITE_ONLY_OPT()) {
-        z = x > 1024.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
-    }
-
-    z = x < -1075.0 ? 0.0 : z;
+    z = x.hi > 710.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+    z = x.hi < -745.0 ? 0.0 : z;
 
     return z;
 }
