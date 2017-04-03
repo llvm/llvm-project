@@ -38,7 +38,7 @@ private:
   raw_ostream &OS;
 
 public:
-  StringMatcher(StringRef strVariableName, 
+  StringMatcher(StringRef strVariableName,
                 const std::vector<StringPair> &matches, raw_ostream &os)
     : StrVariableName(strVariableName), Matches(matches), OS(os) {}
 

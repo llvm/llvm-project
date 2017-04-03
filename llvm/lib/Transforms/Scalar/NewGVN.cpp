@@ -83,12 +83,14 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/VNCoercion.h"
 #include <unordered_map>
 #include <utility>
 #include <vector>
 using namespace llvm;
 using namespace PatternMatch;
 using namespace llvm::GVNExpression;
+using namespace llvm::VNCoercion;
 #define DEBUG_TYPE "newgvn"
 
 STATISTIC(NumGVNInstrDeleted, "Number of instructions deleted");
@@ -359,6 +361,8 @@ private:
   const Expression *checkSimplificationResults(Expression *, Instruction *,
                                                Value *);
   const Expression *performSymbolicEvaluation(Value *);
+  const Expression *performSymbolicLoadCoercion(Type *, Value *, LoadInst *,
+                                                Instruction *, MemoryAccess *);
   const Expression *performSymbolicLoadEvaluation(Instruction *);
   const Expression *performSymbolicStoreEvaluation(Instruction *);
   const Expression *performSymbolicCallEvaluation(Instruction *);
@@ -867,6 +871,86 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {
   return createStoreExpression(SI, StoreAccess);
 }
 
+// See if we can extract the value of a loaded pointer from a load, a store, or
+// a memory instruction.
+const Expression *
+NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
+                                    LoadInst *LI, Instruction *DepInst,
+                                    MemoryAccess *DefiningAccess) {
+  assert((!LI || LI->isSimple()) && "Not a simple load");
+  if (auto *DepSI = dyn_cast<StoreInst>(DepInst)) {
+    // Can't forward from non-atomic to atomic without violating memory model.
+    // Also don't need to coerce if they are the same type, we will just
+    // propogate..
+    if (LI->isAtomic() > DepSI->isAtomic() ||
+        LoadType == DepSI->getValueOperand()->getType())
+      return nullptr;
+    int Offset = analyzeLoadFromClobberingStore(LoadType, LoadPtr, DepSI, DL);
+    if (Offset >= 0) {
+      if (auto *C = dyn_cast<Constant>(
+              lookupOperandLeader(DepSI->getValueOperand()))) {
+        DEBUG(dbgs() << "Coercing load from store " << *DepSI << " to constant "
+                     << *C << "\n");
+        return createConstantExpression(
+            getConstantStoreValueForLoad(C, Offset, LoadType, DL));
+      }
+    }
+
+  } else if (LoadInst *DepLI = dyn_cast<LoadInst>(DepInst)) {
+    // Can't forward from non-atomic to atomic without violating memory model.
+    if (LI->isAtomic() > DepLI->isAtomic())
+      return nullptr;
+    int Offset = analyzeLoadFromClobberingLoad(LoadType, LoadPtr, DepLI, DL);
+    if (Offset >= 0) {
+      // We can coerce a constant load into a load
+      if (auto *C = dyn_cast<Constant>(lookupOperandLeader(DepLI)))
+        if (auto *PossibleConstant =
+                getConstantLoadValueForLoad(C, Offset, LoadType, DL)) {
+          DEBUG(dbgs() << "Coercing load from load " << *LI << " to constant "
+                       << *PossibleConstant << "\n");
+          return createConstantExpression(PossibleConstant);
+        }
+    }
+
+  } else if (MemIntrinsic *DepMI = dyn_cast<MemIntrinsic>(DepInst)) {
+    int Offset = analyzeLoadFromClobberingMemInst(LoadType, LoadPtr, DepMI, DL);
+    if (Offset >= 0) {
+      if (auto *PossibleConstant =
+              getConstantMemInstValueForLoad(DepMI, Offset, LoadType, DL)) {
+        DEBUG(dbgs() << "Coercing load from meminst " << *DepMI
+                     << " to constant " << *PossibleConstant << "\n");
+        return createConstantExpression(PossibleConstant);
+      }
+    }
+  }
+
+  // All of the below are only true if the loaded pointer is produced
+  // by the dependent instruction.
+  if (LoadPtr != lookupOperandLeader(DepInst) &&
+      !AA->isMustAlias(LoadPtr, DepInst))
+    return nullptr;
+  // If this load really doesn't depend on anything, then we must be loading an
+  // undef value.  This can happen when loading for a fresh allocation with no
+  // intervening stores, for example.  Note that this is only true in the case
+  // that the result of the allocation is pointer equal to the load ptr.
+  if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI)) {
+    return createConstantExpression(UndefValue::get(LoadType));
+  }
+  // If this load occurs either right after a lifetime begin,
+  // then the loaded value is undefined.
+  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      return createConstantExpression(UndefValue::get(LoadType));
+  }
+  // If this load follows a calloc (which zero initializes memory),
+  // then the loaded value is zero
+  else if (isCallocLikeFn(DepInst, TLI)) {
+    return createConstantExpression(Constant::getNullValue(LoadType));
+  }
+
+  return nullptr;
+}
+
 const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) {
   auto *LI = cast<LoadInst>(I);
 
@@ -888,11 +972,19 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) {
       // If the defining instruction is not reachable, replace with undef.
       if (!ReachableBlocks.count(DefiningInst->getParent()))
         return createConstantExpression(UndefValue::get(LI->getType()));
+      // This will handle stores and memory insts.  We only do if it the
+      // defining access has a different type, or it is a pointer produced by
+      // certain memory operations that cause the memory to have a fixed value
+      // (IE things like calloc).
+      const Expression *CoercionResult = performSymbolicLoadCoercion(
+          LI->getType(), LoadAddressLeader, LI, DefiningInst, DefiningAccess);
+      if (CoercionResult)
+        return CoercionResult;
     }
   }
 
   const Expression *E =
-      createLoadExpression(LI->getType(), LI->getPointerOperand(), LI,
+      createLoadExpression(LI->getType(), LoadAddressLeader, LI,
                            lookupMemoryAccessEquiv(DefiningAccess));
   return E;
 }

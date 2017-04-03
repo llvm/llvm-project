@@ -967,7 +967,7 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
   return replaceInstUsesWith(I, NewPN);
 }
 
-Instruction *InstCombiner::foldOpWithConstantIntoOperand(Instruction &I) {
+Instruction *InstCombiner::foldOpWithConstantIntoOperand(BinaryOperator &I) {
   assert(isa<Constant>(I.getOperand(1)) && "Unexpected operand type");
 
   if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {

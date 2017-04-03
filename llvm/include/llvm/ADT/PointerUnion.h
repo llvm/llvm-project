@@ -31,7 +31,7 @@ template <typename T> struct PointerUnionTypeSelectorReturn {
 /// Get a type based on whether two types are the same or not.
 ///
 /// For:
-/// 
+///
 /// \code
 ///   typedef typename PointerUnionTypeSelector<T1, T2, EQ, NE>::Return Ret;
 /// \endcode

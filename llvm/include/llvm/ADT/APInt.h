@@ -32,14 +32,6 @@ class raw_ostream;
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
 
-// An unsigned host type used as a single part of a multi-part
-// bignum.
-typedef uint64_t integerPart;
-
-const unsigned int host_char_bit = 8;
-const unsigned int integerPartWidth =
-    host_char_bit * static_cast<unsigned int>(sizeof(integerPart));
-
 class APInt;
 
 inline APInt operator-(APInt);
@@ -75,6 +67,18 @@ inline APInt operator-(APInt);
 ///     uses in its IR. This simplifies its use for LLVM.
 ///
 class LLVM_NODISCARD APInt {
+public:
+  typedef uint64_t WordType;
+
+  /// This enum is used to hold the constants we needed for APInt.
+  enum : unsigned {
+    /// Byte size of a word.
+    APINT_WORD_SIZE = sizeof(WordType),
+    /// Bits in a word.
+    APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
+  };
+
+private:
   unsigned BitWidth; ///< The number of bits in this APInt.
 
   /// This union is used to store the integer value. When the
@@ -82,15 +86,6 @@ class LLVM_NODISCARD APInt {
   union {
     uint64_t VAL;   ///< Used to store the <= 64 bits integer value.
     uint64_t *pVal; ///< Used to store the >64 bits integer value.
-  };
-
-  /// This enum is used to hold the constants we needed for APInt.
-  enum {
-    /// Bits in a word
-    APINT_BITS_PER_WORD =
-        static_cast<unsigned int>(sizeof(uint64_t)) * CHAR_BIT,
-    /// Byte size of a word
-    APINT_WORD_SIZE = static_cast<unsigned int>(sizeof(uint64_t))
   };
 
   friend struct DenseMapAPIntKeyInfo;
@@ -1637,46 +1632,46 @@ public:
 
   /// Sets the least significant part of a bignum to the input value, and zeroes
   /// out higher parts.
-  static void tcSet(integerPart *, integerPart, unsigned);
+  static void tcSet(WordType *, WordType, unsigned);
 
   /// Assign one bignum to another.
-  static void tcAssign(integerPart *, const integerPart *, unsigned);
+  static void tcAssign(WordType *, const WordType *, unsigned);
 
   /// Returns true if a bignum is zero, false otherwise.
-  static bool tcIsZero(const integerPart *, unsigned);
+  static bool tcIsZero(const WordType *, unsigned);
 
   /// Extract the given bit of a bignum; returns 0 or 1.  Zero-based.
-  static int tcExtractBit(const integerPart *, unsigned bit);
+  static int tcExtractBit(const WordType *, unsigned bit);
 
   /// Copy the bit vector of width srcBITS from SRC, starting at bit srcLSB, to
   /// DST, of dstCOUNT parts, such that the bit srcLSB becomes the least
   /// significant bit of DST.  All high bits above srcBITS in DST are
   /// zero-filled.
-  static void tcExtract(integerPart *, unsigned dstCount,
-                        const integerPart *, unsigned srcBits,
+  static void tcExtract(WordType *, unsigned dstCount,
+                        const WordType *, unsigned srcBits,
                         unsigned srcLSB);
 
   /// Set the given bit of a bignum.  Zero-based.
-  static void tcSetBit(integerPart *, unsigned bit);
+  static void tcSetBit(WordType *, unsigned bit);
 
   /// Clear the given bit of a bignum.  Zero-based.
-  static void tcClearBit(integerPart *, unsigned bit);
+  static void tcClearBit(WordType *, unsigned bit);
 
   /// Returns the bit number of the least or most significant set bit of a
   /// number.  If the input number has no bits set -1U is returned.
-  static unsigned tcLSB(const integerPart *, unsigned n);
-  static unsigned tcMSB(const integerPart *parts, unsigned n);
+  static unsigned tcLSB(const WordType *, unsigned n);
+  static unsigned tcMSB(const WordType *parts, unsigned n);
 
   /// Negate a bignum in-place.
-  static void tcNegate(integerPart *, unsigned);
+  static void tcNegate(WordType *, unsigned);
 
   /// DST += RHS + CARRY where CARRY is zero or one.  Returns the carry flag.
-  static integerPart tcAdd(integerPart *, const integerPart *,
-                           integerPart carry, unsigned);
+  static WordType tcAdd(WordType *, const WordType *,
+                        WordType carry, unsigned);
 
   /// DST -= RHS + CARRY where CARRY is zero or one. Returns the carry flag.
-  static integerPart tcSubtract(integerPart *, const integerPart *,
-                                integerPart carry, unsigned);
+  static WordType tcSubtract(WordType *, const WordType *,
+                             WordType carry, unsigned);
 
   /// DST += SRC * MULTIPLIER + PART   if add is true
   /// DST  = SRC * MULTIPLIER + PART   if add is false
@@ -1688,8 +1683,8 @@ public:
   /// Otherwise DST is filled with the least significant DSTPARTS parts of the
   /// result, and if all of the omitted higher parts were zero return zero,
   /// otherwise overflow occurred and return one.
-  static int tcMultiplyPart(integerPart *dst, const integerPart *src,
-                            integerPart multiplier, integerPart carry,
+  static int tcMultiplyPart(WordType *dst, const WordType *src,
+                            WordType multiplier, WordType carry,
                             unsigned srcParts, unsigned dstParts,
                             bool add);
 
@@ -1697,14 +1692,14 @@ public:
   /// filled with the least significant parts of the result.  Returns one if
   /// overflow occurred, otherwise zero.  DST must be disjoint from both
   /// operands.
-  static int tcMultiply(integerPart *, const integerPart *, const integerPart *,
+  static int tcMultiply(WordType *, const WordType *, const WordType *,
                         unsigned);
 
   /// DST = LHS * RHS, where DST has width the sum of the widths of the
   /// operands.  No overflow occurs.  DST must be disjoint from both
   /// operands. Returns the number of parts required to hold the result.
-  static unsigned tcFullMultiply(integerPart *, const integerPart *,
-                                 const integerPart *, unsigned, unsigned);
+  static unsigned tcFullMultiply(WordType *, const WordType *,
+                                 const WordType *, unsigned, unsigned);
 
   /// If RHS is zero LHS and REMAINDER are left unchanged, return one.
   /// Otherwise set LHS to LHS / RHS with the fractional part discarded, set
@@ -1715,35 +1710,35 @@ public:
   /// SCRATCH is a bignum of the same size as the operands and result for use by
   /// the routine; its contents need not be initialized and are destroyed.  LHS,
   /// REMAINDER and SCRATCH must be distinct.
-  static int tcDivide(integerPart *lhs, const integerPart *rhs,
-                      integerPart *remainder, integerPart *scratch,
+  static int tcDivide(WordType *lhs, const WordType *rhs,
+                      WordType *remainder, WordType *scratch,
                       unsigned parts);
 
   /// Shift a bignum left COUNT bits.  Shifted in bits are zero.  There are no
   /// restrictions on COUNT.
-  static void tcShiftLeft(integerPart *, unsigned parts, unsigned count);
+  static void tcShiftLeft(WordType *, unsigned parts, unsigned count);
 
   /// Shift a bignum right COUNT bits.  Shifted in bits are zero.  There are no
   /// restrictions on COUNT.
-  static void tcShiftRight(integerPart *, unsigned parts, unsigned count);
+  static void tcShiftRight(WordType *, unsigned parts, unsigned count);
 
   /// The obvious AND, OR and XOR and complement operations.
-  static void tcAnd(integerPart *, const integerPart *, unsigned);
-  static void tcOr(integerPart *, const integerPart *, unsigned);
-  static void tcXor(integerPart *, const integerPart *, unsigned);
-  static void tcComplement(integerPart *, unsigned);
+  static void tcAnd(WordType *, const WordType *, unsigned);
+  static void tcOr(WordType *, const WordType *, unsigned);
+  static void tcXor(WordType *, const WordType *, unsigned);
+  static void tcComplement(WordType *, unsigned);
 
   /// Comparison (unsigned) of two bignums.
-  static int tcCompare(const integerPart *, const integerPart *, unsigned);
+  static int tcCompare(const WordType *, const WordType *, unsigned);
 
   /// Increment a bignum in-place.  Return the carry flag.
-  static integerPart tcIncrement(integerPart *, unsigned);
+  static WordType tcIncrement(WordType *, unsigned);
 
   /// Decrement a bignum in-place.  Return the borrow flag.
-  static integerPart tcDecrement(integerPart *, unsigned);
+  static WordType tcDecrement(WordType *, unsigned);
 
   /// Set the least significant BITS and clear the rest.
-  static void tcSetLeastSignificantBits(integerPart *, unsigned, unsigned bits);
+  static void tcSetLeastSignificantBits(WordType *, unsigned, unsigned bits);
 
   /// \brief debug method
   void dump() const;
@@ -1937,7 +1932,7 @@ inline bool isShiftedMask(const APInt &APIVal) {
 /// This function returns the greatest common divisor of the two APInt values
 /// using Euclid's algorithm.
 ///
-/// \returns the greatest common divisor of \param A and \param B.
+/// \returns the greatest common divisor of A and B.
 APInt GreatestCommonDivisor(APInt A, APInt B);
 
 /// \brief Converts the given APInt to a double value.

@@ -565,13 +565,13 @@ TEST(APIntTest, binaryOpsWithRawIntegers) {
 
   // Multiword check.
   uint64_t N = 0xEB6EB136591CBA21ULL;
-  integerPart E2[4] = {
+  APInt::WordType E2[4] = {
     N,
     0x7B9358BD6A33F10AULL,
     0x7E7FFA5EADD8846ULL,
     0x305F341CA00B613DULL
   };
-  APInt A2(integerPartWidth*4, E2);
+  APInt A2(APInt::APINT_BITS_PER_WORD*4, E2);
 
   EXPECT_EQ(A2 & N, N);
   EXPECT_EQ(A2 & 0, 0);
@@ -1377,63 +1377,63 @@ TEST(APIntTest, tcDecrement) {
 
   // No out borrow.
   {
-    integerPart singleWord = ~integerPart(0) << (integerPartWidth - 1);
-    integerPart carry = APInt::tcDecrement(&singleWord, 1);
-    EXPECT_EQ(carry, integerPart(0));
-    EXPECT_EQ(singleWord, ~integerPart(0) >> 1);
+    APInt::WordType singleWord = ~APInt::WordType(0) << (APInt::APINT_BITS_PER_WORD - 1);
+    APInt::WordType carry = APInt::tcDecrement(&singleWord, 1);
+    EXPECT_EQ(carry, APInt::WordType(0));
+    EXPECT_EQ(singleWord, ~APInt::WordType(0) >> 1);
   }
 
   // With out borrow.
   {
-    integerPart singleWord = 0;
-    integerPart carry = APInt::tcDecrement(&singleWord, 1);
-    EXPECT_EQ(carry, integerPart(1));
-    EXPECT_EQ(singleWord, ~integerPart(0));
+    APInt::WordType singleWord = 0;
+    APInt::WordType carry = APInt::tcDecrement(&singleWord, 1);
+    EXPECT_EQ(carry, APInt::WordType(1));
+    EXPECT_EQ(singleWord, ~APInt::WordType(0));
   }
 
   // Test multiword decrement.
 
   // No across word borrow, no out borrow.
   {
-    integerPart test[4] = {0x1, 0x1, 0x1, 0x1};
-    integerPart expected[4] = {0x0, 0x1, 0x1, 0x1};
+    APInt::WordType test[4] = {0x1, 0x1, 0x1, 0x1};
+    APInt::WordType expected[4] = {0x0, 0x1, 0x1, 0x1};
     APInt::tcDecrement(test, 4);
     EXPECT_EQ(APInt::tcCompare(test, expected, 4), 0);
   }
 
   // 1 across word borrow, no out borrow.
   {
-    integerPart test[4] = {0x0, 0xF, 0x1, 0x1};
-    integerPart expected[4] = {~integerPart(0), 0xE, 0x1, 0x1};
-    integerPart carry = APInt::tcDecrement(test, 4);
-    EXPECT_EQ(carry, integerPart(0));
+    APInt::WordType test[4] = {0x0, 0xF, 0x1, 0x1};
+    APInt::WordType expected[4] = {~APInt::WordType(0), 0xE, 0x1, 0x1};
+    APInt::WordType carry = APInt::tcDecrement(test, 4);
+    EXPECT_EQ(carry, APInt::WordType(0));
     EXPECT_EQ(APInt::tcCompare(test, expected, 4), 0);
   }
 
   // 2 across word borrow, no out borrow.
   {
-    integerPart test[4] = {0x0, 0x0, 0xC, 0x1};
-    integerPart expected[4] = {~integerPart(0), ~integerPart(0), 0xB, 0x1};
-    integerPart carry = APInt::tcDecrement(test, 4);
-    EXPECT_EQ(carry, integerPart(0));
+    APInt::WordType test[4] = {0x0, 0x0, 0xC, 0x1};
+    APInt::WordType expected[4] = {~APInt::WordType(0), ~APInt::WordType(0), 0xB, 0x1};
+    APInt::WordType carry = APInt::tcDecrement(test, 4);
+    EXPECT_EQ(carry, APInt::WordType(0));
     EXPECT_EQ(APInt::tcCompare(test, expected, 4), 0);
   }
 
   // 3 across word borrow, no out borrow.
   {
-    integerPart test[4] = {0x0, 0x0, 0x0, 0x1};
-    integerPart expected[4] = {~integerPart(0), ~integerPart(0), ~integerPart(0), 0x0};
-    integerPart carry = APInt::tcDecrement(test, 4);
-    EXPECT_EQ(carry, integerPart(0));
+    APInt::WordType test[4] = {0x0, 0x0, 0x0, 0x1};
+    APInt::WordType expected[4] = {~APInt::WordType(0), ~APInt::WordType(0), ~APInt::WordType(0), 0x0};
+    APInt::WordType carry = APInt::tcDecrement(test, 4);
+    EXPECT_EQ(carry, APInt::WordType(0));
     EXPECT_EQ(APInt::tcCompare(test, expected, 4), 0);
   }
 
   // 3 across word borrow, with out borrow.
   {
-    integerPart test[4] = {0x0, 0x0, 0x0, 0x0};
-    integerPart expected[4] = {~integerPart(0), ~integerPart(0), ~integerPart(0), ~integerPart(0)};
-    integerPart carry = APInt::tcDecrement(test, 4);
-    EXPECT_EQ(carry, integerPart(1));
+    APInt::WordType test[4] = {0x0, 0x0, 0x0, 0x0};
+    APInt::WordType expected[4] = {~APInt::WordType(0), ~APInt::WordType(0), ~APInt::WordType(0), ~APInt::WordType(0)};
+    APInt::WordType carry = APInt::tcDecrement(test, 4);
+    EXPECT_EQ(carry, APInt::WordType(1));
     EXPECT_EQ(APInt::tcCompare(test, expected, 4), 0);
   }
 }
@@ -1448,17 +1448,17 @@ TEST(APIntTest, arrayAccess) {
   }
 
   // Multiword check.
-  integerPart E2[4] = {
+  APInt::WordType E2[4] = {
     0xEB6EB136591CBA21ULL,
     0x7B9358BD6A33F10AULL,
     0x7E7FFA5EADD8846ULL,
     0x305F341CA00B613DULL
   };
-  APInt A2(integerPartWidth*4, E2);
+  APInt A2(APInt::APINT_BITS_PER_WORD*4, E2);
   for (unsigned i = 0; i < 4; ++i) {
-    for (unsigned j = 0; j < integerPartWidth; ++j) {
+    for (unsigned j = 0; j < APInt::APINT_BITS_PER_WORD; ++j) {
       EXPECT_EQ(bool(E2[i] & (1ULL << j)),
-                A2[i*integerPartWidth + j]);
+                A2[i*APInt::APINT_BITS_PER_WORD + j]);
     }
   }
 }
@@ -1492,18 +1492,18 @@ TEST(APIntTest, nearestLogBase2) {
   // Multiple word check.
 
   // Test round up.
-  integerPart I4[4] = {0x0, 0xF, 0x18, 0x0};
-  APInt A4(integerPartWidth*4, I4);
+  APInt::WordType I4[4] = {0x0, 0xF, 0x18, 0x0};
+  APInt A4(APInt::APINT_BITS_PER_WORD*4, I4);
   EXPECT_EQ(A4.nearestLogBase2(), A4.ceilLogBase2());
 
   // Test round down.
-  integerPart I5[4] = {0x0, 0xF, 0x10, 0x0};
-  APInt A5(integerPartWidth*4, I5);
+  APInt::WordType I5[4] = {0x0, 0xF, 0x10, 0x0};
+  APInt A5(APInt::APINT_BITS_PER_WORD*4, I5);
   EXPECT_EQ(A5.nearestLogBase2(), A5.logBase2());
 
   // Test ties round up.
   uint64_t I6[4] = {0x0, 0x0, 0x0, 0x18};
-  APInt A6(integerPartWidth*4, I6);
+  APInt A6(APInt::APINT_BITS_PER_WORD*4, I6);
   EXPECT_EQ(A6.nearestLogBase2(), A6.ceilLogBase2());
 
   // Test BitWidth == 1 special cases.

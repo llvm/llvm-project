@@ -37,6 +37,10 @@
 
 using namespace llvm;
 
+// TODO: Remove these and use APInt qualified types directly.
+typedef APInt::WordType integerPart;
+const unsigned int integerPartWidth = APInt::APINT_BITS_PER_WORD;
+
 /// A macro used to combine two fcCategory enums into one key which can be used
 /// in a switch statement to classify how the interaction of two APFloat's
 /// categories affects an operation.

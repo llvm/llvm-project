@@ -1970,6 +1970,44 @@ static int test_coalesce_special2(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that calling isl_set_coalesce does not leave other sets
+ * that may share some information with the input to isl_set_coalesce
+ * in an inconsistent state.
+ * In particular, older versions of isl would modify all copies
+ * of the basic sets in the isl_set_coalesce input in a way
+ * that could leave them in an inconsistent state.
+ * The result of printing any other set containing one of these
+ * basic sets would then result in an invalid set description.
+ */
+static int test_coalesce_special3(isl_ctx *ctx)
+{
+	const char *str;
+	char *s;
+	isl_set *set1, *set2;
+	isl_printer *p;
+
+	set1 = isl_set_read_from_str(ctx, "{ [0, 0, 0] }");
+	str = "{ [a, b, a + b] : a >= 0 and b >= 0 and 0 < a + b }";
+	set2 = isl_set_read_from_str(ctx, str);
+	set1 = isl_set_union(set1, isl_set_copy(set2));
+	set1 = isl_set_coalesce(set1);
+	isl_set_free(set1);
+
+	p = isl_printer_to_str(ctx);
+	p = isl_printer_print_set(p, set2);
+	isl_set_free(set2);
+	s = isl_printer_get_str(p);
+	isl_printer_free(p);
+	set1 = isl_set_read_from_str(ctx, s);
+	free(s);
+	isl_set_free(set1);
+
+	if (!set1)
+		return -1;
+
+	return 0;
+}
+
 /* Test the functionality of isl_set_coalesce.
  * That is, check that the output is always equal to the input
  * and in some cases that the result consists of a single disjunct.
@@ -1990,6 +2028,8 @@ static int test_coalesce(struct isl_ctx *ctx)
 	if (test_coalesce_special(ctx) < 0)
 		return -1;
 	if (test_coalesce_special2(ctx) < 0)
+		return -1;
+	if (test_coalesce_special3(ctx) < 0)
 		return -1;
 
 	return 0;

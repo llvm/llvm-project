@@ -142,7 +142,7 @@ unsigned parseArchVersion(StringRef Arch);
 
 } // namespace ARM
 
-// FIXME:This should be made into class design,to avoid dupplication. 
+// FIXME:This should be made into class design,to avoid dupplication.
 namespace AArch64 {
 
 // Arch names.
