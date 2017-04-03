@@ -600,6 +600,9 @@ namespace clang {
 
       /// \brief Record code for declarations associated with OpenCL extensions.
       OPENCL_EXTENSION_DECLS = 59,
+
+      /// \brief Record code for \#pragma pack options.
+      PACK_PRAGMA_OPTIONS = 61,
     };
 
     /// \brief Record types used within a source manager block.
