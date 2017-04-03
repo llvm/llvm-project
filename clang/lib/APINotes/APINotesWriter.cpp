@@ -587,6 +587,10 @@ namespace {
       if (auto swiftImportAsNonGeneric = info.getSwiftImportAsNonGeneric()) {
         payload |= (0x01 << 1) | swiftImportAsNonGeneric.getValue();
       }
+      payload <<= 2;
+      if (auto swiftObjCMembers = info.getSwiftObjCMembers()) {
+        payload |= (0x01 << 1) | swiftObjCMembers.getValue();
+      }
       payload <<= 3;
       if (auto nullable = info.getDefaultNullability()) {
         payload |= (0x01 << 2) | static_cast<uint8_t>(*nullable);

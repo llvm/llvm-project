@@ -215,6 +215,9 @@ class ObjCContextInfo : public CommonTypeInfo {
   unsigned SwiftImportAsNonGenericSpecified : 1;
   unsigned SwiftImportAsNonGeneric : 1;
 
+  unsigned SwiftObjCMembersSpecified : 1;
+  unsigned SwiftObjCMembers : 1;
+
 public:
   ObjCContextInfo()
     : CommonTypeInfo(),
@@ -222,7 +225,9 @@ public:
       DefaultNullability(0),
       HasDesignatedInits(0),
       SwiftImportAsNonGenericSpecified(false),
-      SwiftImportAsNonGeneric(false)
+      SwiftImportAsNonGeneric(false),
+      SwiftObjCMembersSpecified(false),
+      SwiftObjCMembers(false)
   { }
 
   /// Determine the default nullability for properties and methods of this
@@ -260,6 +265,16 @@ public:
     }
   }
 
+  Optional<bool> getSwiftObjCMembers() const {
+    if (SwiftObjCMembersSpecified)
+      return SwiftObjCMembers;
+    return None;
+  }
+  void setSwiftObjCMembers(Optional<bool> value) {
+    SwiftObjCMembersSpecified = value.hasValue();
+    SwiftObjCMembers = value.hasValue() ? *value : false;
+  }
+
   /// Strip off any information within the class information structure that is
   /// module-local, such as 'audited' flags.
   void stripModuleLocalInfo() {
@@ -271,7 +286,9 @@ public:
     return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
            lhs.getDefaultNullability() == rhs.getDefaultNullability() &&
            lhs.HasDesignatedInits == rhs.HasDesignatedInits &&
-           lhs.getSwiftImportAsNonGeneric() == rhs.getSwiftImportAsNonGeneric();
+           lhs.getSwiftImportAsNonGeneric() ==
+             rhs.getSwiftImportAsNonGeneric() &&
+           lhs.getSwiftObjCMembers() == rhs.getSwiftObjCMembers();
   }
 
   friend bool operator!=(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
@@ -294,6 +311,11 @@ public:
         rhs.SwiftImportAsNonGenericSpecified) {
       lhs.SwiftImportAsNonGenericSpecified = true;
       lhs.SwiftImportAsNonGeneric = rhs.SwiftImportAsNonGeneric;
+    }
+
+    if (!lhs.SwiftObjCMembersSpecified && rhs.SwiftObjCMembersSpecified) {
+      lhs.SwiftObjCMembersSpecified = true;
+      lhs.SwiftObjCMembers = rhs.SwiftObjCMembers;
     }
 
     lhs.HasDesignatedInits |= rhs.HasDesignatedInits;
