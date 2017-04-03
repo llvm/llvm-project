@@ -1,13 +1,9 @@
-; RUN: opt < %s -S -inline -inline-threshold=30 | FileCheck %s
-; RUN: opt < %s -S -passes='cgscc(inline)' -inline-threshold=30 | FileCheck %s
+; RUN: opt < %s -S -inline -inline-threshold=20 | FileCheck %s
+; RUN: opt < %s -S -passes='cgscc(inline)' -inline-threshold=20 | FileCheck %s
 ; Check that we don't drop FastMathFlag when estimating inlining profitability.
 ;
 ; In this test we should inline 'foo'  to 'boo', because it'll fold to a
 ; constant.
-;
-; NOTE: changed inline-threshold from 20 to 30. The current inline heuristic,
-; unlike upstream, does not take into account the overhead of a call/instruction
-; in order to handle code size regressions.
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

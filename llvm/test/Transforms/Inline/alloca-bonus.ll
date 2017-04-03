@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -inline < %s -S -o - -inline-threshold=8 | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' < %s -S -o - -inline-threshold=8 | FileCheck %s
 
@@ -154,7 +153,6 @@ if.then:
   %E = bitcast i32* %ptr to i8*
   %F = select i1 false, i32* %ptr, i32* @glbl
   call void @llvm.lifetime.start(i64 0, i8* %E)
-  call void @extern()
   ret void
 
 exit:
