@@ -1338,15 +1338,15 @@ private:
                  __align_it<sizeof(value_type) < __alignment ?
                             __alignment/sizeof(value_type) : 1 > (__s+1)) - 1;}
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline
     void __init(const value_type* __s, size_type __sz, size_type __reserve);
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline
     void __init(const value_type* __s, size_type __sz);
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline
     void __init(size_type __n, value_type __c);
 
     template <class _InputIterator>
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline
     typename enable_if
     <
         __is_exactly_input_iterator<_InputIterator>::value,
@@ -1355,7 +1355,7 @@ private:
     __init(_InputIterator __first, _InputIterator __last);
 
     template <class _ForwardIterator>
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline
     typename enable_if
     <
         __is_forward_iterator<_ForwardIterator>::value,
