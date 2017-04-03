@@ -215,6 +215,7 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
                                        ValueType Value) {
   if (Action == PSK_Reset) {
     CurrentValue = DefaultValue;
+    CurrentPragmaLocation = PragmaLocation;
     return;
   }
   if (Action & PSK_Push)
