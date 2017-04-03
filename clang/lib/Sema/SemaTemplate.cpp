@@ -4054,8 +4054,8 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
-  EnterExpressionEvaluationContext ConstantEvaluated(SemaRef,
-                                                     Sema::ConstantEvaluated);
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   return SemaRef.SubstExpr(Param->getDefaultArgument(), TemplateArgLists);
 }
 
@@ -5753,8 +5753,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
   // The initialization of the parameter from the argument is
   // a constant-evaluated context.
-  EnterExpressionEvaluationContext ConstantEvaluated(*this,
-                                                     Sema::ConstantEvaluated);
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   if (getLangOpts().CPlusPlus1z) {
     // C++1z [temp.arg.nontype]p1:
@@ -5810,7 +5810,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a temporary object
       // -- a string literal
       // -- the result of a typeid expression, or
-      // -- a predefind __func__ variable
+      // -- a predefined __func__ variable
       if (auto *E = Value.getLValueBase().dyn_cast<const Expr*>()) {
         if (isa<CXXUuidofExpr>(E)) {
           Converted = TemplateArgument(const_cast<Expr*>(E));

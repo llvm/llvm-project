@@ -623,8 +623,9 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
   Info.clear();
 
   if (IsUnevaluatedContext)
-    PushExpressionEvaluationContext(UnevaluatedAbstract,
-                                    ReuseLambdaContextDecl);
+    PushExpressionEvaluationContext(
+        ExpressionEvaluationContext::UnevaluatedAbstract,
+        ReuseLambdaContextDecl);
 
   ExprResult Result = ActOnIdExpression(getCurScope(), SS, TemplateKWLoc, Id,
                                         /*trailing lparen*/ false,

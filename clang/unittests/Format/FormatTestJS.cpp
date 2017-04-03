@@ -167,6 +167,8 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
 TEST_F(FormatTestJS, CppKeywords) {
   // Make sure we don't mess stuff up because of C++ keywords.
   verifyFormat("return operator && (aa);");
+  // .. or QT ones.
+  verifyFormat("slots: Slot[];");
 }
 
 TEST_F(FormatTestJS, ES6DestructuringAssignment) {

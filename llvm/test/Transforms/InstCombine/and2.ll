@@ -122,3 +122,66 @@ define i64 @test10(i64 %x) {
   ret i64 %add
 }
 
+; The add in this test is unnecessary because the LSBs of the RHS are 0 and we only consume those bits.
+define i32 @test11(i32 %a, i32 %b) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 128
+; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    ret i32 [[W]]
+;
+  %x = shl i32 %a, 8
+  %y = add i32 %x, %b
+  %z = and i32 %y, 128
+  %w = mul i32 %z, %x ; to keep the shift from being removed
+  ret i32 %w
+}
+
+; The add in this test is unnecessary because the LSBs of the RHS are 0 and we only consume those bits.
+define i32 @test12(i32 %a, i32 %b) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 128
+; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    ret i32 [[W]]
+;
+  %x = shl i32 %a, 8
+  %y = add i32 %b, %x
+  %z = and i32 %y, 128
+  %w = mul i32 %z, %x ; to keep the shift from being removed
+  ret i32 %w
+}
+
+; The sub in this test is unnecessary because the LSBs of the RHS are 0 and we only consume those bits.
+define i32 @test13(i32 %a, i32 %b) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[Y:%.*]] = sub i32 [[B:%.*]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 128
+; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    ret i32 [[W]]
+;
+  %x = shl i32 %a, 8
+  %y = sub i32 %b, %x
+  %z = and i32 %y, 128
+  %w = mul i32 %z, %x ; to keep the shift from being removed
+  ret i32 %w
+}
+
+; The sub in this test cannot be removed because we need to keep the negation of %b
+define i32 @test14(i32 %a, i32 %b) {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[Y:%.*]] = sub i32 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 128
+; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    ret i32 [[W]]
+;
+  %x = shl i32 %a, 8
+  %y = sub i32 %x, %b
+  %z = and i32 %y, 128
+  %w = mul i32 %z, %x ; to keep the shift from being removed
+  ret i32 %w
+}

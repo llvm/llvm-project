@@ -350,8 +350,8 @@ namespace {
                              bool NotExtCompare = false);
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
-    SDValue foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
-    SDValue foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL);
+    SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
+                              const SDLoc &DL);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                           const SDLoc &DL, bool foldBooleans = true);
 
@@ -3172,23 +3172,23 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
   return SDValue();
 }
 
-/// Try to make (and setcc (LL, LR), setcc (RL, RR)) more efficient.
-SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
-  // FIXME: This should be refactored with foldOrOfSetCCs.
+/// Try to make (and/or setcc (LL, LR), setcc (RL, RR)) more efficient.
+SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
+                                       const SDLoc &DL) {
   SDValue LL, LR, RL, RR, N0CC, N1CC;
   if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
       !isSetCCEquivalent(N1, RL, RR, N1CC))
     return SDValue();
 
   assert(N0.getValueType() == N1.getValueType() &&
-         "Unexpected operand types for 'and' op");
+         "Unexpected operand types for bitwise logic op");
   assert(LL.getValueType() == LR.getValueType() &&
          RL.getValueType() == RR.getValueType() &&
          "Unexpected operand types for setcc");
 
-  // If we're here post-legalization or the 'and' is not i1, the 'and' type must
-  // match a setcc result type. Also, all folds require new operations on the
-  // left and right operands, so those types must match.
+  // If we're here post-legalization or the logic op type is not i1, the logic
+  // op type must match a setcc result type. Also, all folds require new
+  // operations on the left and right operands, so those types must match.
   EVT VT = N0.getValueType();
   EVT OpVT = LL.getValueType();
   if (LegalOperations || VT != MVT::i1)
@@ -3201,30 +3201,51 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    // (and (seteq X, 0), (seteq Y, 0)) --> (seteq (or X, Y), 0)
-    if (isNullConstant(LR) && CC1 == ISD::SETEQ) {
+    bool IsZero = isNullConstantOrNullSplatConstant(LR);
+    bool IsNeg1 = isAllOnesConstantOrAllOnesSplatConstant(LR);
+
+    // All bits clear?
+    bool AndEqZero = IsAnd && CC1 == ISD::SETEQ && IsZero;
+    // All sign bits clear?
+    bool AndGtNeg1 = IsAnd && CC1 == ISD::SETGT && IsNeg1;
+    // Any bits set?
+    bool OrNeZero = !IsAnd && CC1 == ISD::SETNE && IsZero;
+    // Any sign bits set?
+    bool OrLtZero = !IsAnd && CC1 == ISD::SETLT && IsZero;
+
+    // (and (seteq X,  0), (seteq Y,  0)) --> (seteq (or X, Y),  0)
+    // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
+    // (or  (setne X,  0), (setne Y,  0)) --> (setne (or X, Y),  0)
+    // (or  (setlt X,  0), (setlt Y,  0)) --> (setlt (or X, Y),  0)
+    if (AndEqZero || AndGtNeg1 || OrNeZero || OrLtZero) {
       SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
       AddToWorklist(Or.getNode());
       return DAG.getSetCC(DL, VT, Or, LR, CC1);
     }
 
+    // All bits set?
+    bool AndEqNeg1 = IsAnd && CC1 == ISD::SETEQ && IsNeg1;
+    // All sign bits set?
+    bool AndLtZero = IsAnd && CC1 == ISD::SETLT && IsZero;
+    // Any bits clear?
+    bool OrNeNeg1 = !IsAnd && CC1 == ISD::SETNE && IsNeg1;
+    // Any sign bits clear?
+    bool OrGtNeg1 = !IsAnd && CC1 == ISD::SETGT && IsNeg1;
+
     // (and (seteq X, -1), (seteq Y, -1)) --> (seteq (and X, Y), -1)
-    if (isAllOnesConstant(LR) && CC1 == ISD::SETEQ) {
+    // (and (setlt X,  0), (setlt Y,  0)) --> (setlt (and X, Y),  0)
+    // (or  (setne X, -1), (setne Y, -1)) --> (setne (and X, Y), -1)
+    // (or  (setgt X, -1), (setgt Y  -1)) --> (setgt (and X, Y), -1)
+    if (AndEqNeg1 || AndLtZero || OrNeNeg1 || OrGtNeg1) {
       SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
       AddToWorklist(And.getNode());
       return DAG.getSetCC(DL, VT, And, LR, CC1);
     }
-
-    // (and (setgt X, -1), (setgt Y, -1)) --> (setgt (or X, Y), -1)
-    if (isAllOnesConstant(LR) && CC1 == ISD::SETGT) {
-      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(Or.getNode());
-      return DAG.getSetCC(DL, VT, Or, LR, CC1);
-    }
   }
 
+  // TODO: What is the 'or' equivalent of this fold?
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
-  if (LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
+  if (IsAnd && LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
     SDValue One = DAG.getConstant(1, DL, OpVT);
@@ -3241,8 +3262,10 @@ SDValue DAGCombiner::foldAndOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
   }
 
   // (and (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
+  // (or  (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
   if (LL == RL && LR == RR) {
-    ISD::CondCode NewCC = ISD::getSetCCAndOperation(CC0, CC1, IsInteger);
+    ISD::CondCode NewCC = IsAnd ? ISD::getSetCCAndOperation(CC0, CC1, IsInteger)
+                                : ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
     if (NewCC != ISD::SETCC_INVALID &&
         (!LegalOperations ||
          (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
@@ -3265,7 +3288,7 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
 
-  if (SDValue V = foldAndOfSetCCs(N0, N1, DL))
+  if (SDValue V = foldLogicOfSetCCs(true, N0, N1, DL))
     return V;
 
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
@@ -3971,71 +3994,6 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
                      DAG.getNode(ISD::SRL, DL, VT, BSwap, ShAmt));
 }
 
-
-/// Try to make (or setcc (LL, LR), setcc (RL, RR)) more efficient.
-SDValue DAGCombiner::foldOrOfSetCCs(SDValue N0, SDValue N1, const SDLoc &DL) {
-  // FIXME: This should be refactored with foldAndOfSetCCs.
-  SDValue LL, LR, RL, RR, N0CC, N1CC;
-  if (!isSetCCEquivalent(N0, LL, LR, N0CC) ||
-      !isSetCCEquivalent(N1, RL, RR, N1CC))
-    return SDValue();
-
-  assert(N0.getValueType() == N1.getValueType() &&
-         "Unexpected operand types for 'or' op");
-  assert(LL.getValueType() == LR.getValueType() &&
-         RL.getValueType() == RR.getValueType() &&
-         "Unexpected operand types for setcc");
-
-  // If we're here post-legalization or the 'or' is not i1, the 'or' type must
-  // match a setcc result type. Also, all folds require new operations on the
-  // left and right operands, so those types must match.
-  EVT VT = N0.getValueType();
-  EVT OpVT = LL.getValueType();
-  if (LegalOperations || VT != MVT::i1)
-    if (VT != getSetCCResultType(OpVT))
-      return SDValue();
-  if (OpVT != RL.getValueType())
-    return SDValue();
-
-  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0CC)->get();
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
-  bool IsInteger = OpVT.isInteger();
-  if (LR == RR && CC0 == CC1 && IsInteger) {
-    // (or (setne X, 0), (setne Y, 0)) --> (setne (or X, Y), 0)
-    // (or (setlt X, 0), (setlt Y, 0)) --> (setne (or X, Y), 0)
-    if (isNullConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETLT)) {
-      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(Or.getNode());
-      return DAG.getSetCC(DL, VT, Or, LR, CC1);
-    }
-    // (or (setne X, -1), (setne Y, -1)) --> (setne (and X, Y), -1)
-    // (or (setgt X, -1), (setgt Y  -1)) --> (setgt (and X, Y), -1)
-    if (isAllOnesConstant(LR) && (CC1 == ISD::SETNE || CC1 == ISD::SETGT)) {
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL, RL);
-      AddToWorklist(And.getNode());
-      return DAG.getSetCC(DL, VT, And, LR, CC1);
-    }
-  }
-
-  // Canonicalize equivalent operands to LL == RL.
-  if (LL == RR && LR == RL) {
-    CC1 = ISD::getSetCCSwappedOperands(CC1);
-    std::swap(RL, RR);
-  }
-
-  // (or (setcc X, Y, CC0), (setcc X, Y, CC1)) --> (setcc X, Y, NewCC)
-  if (LL == RL && LR == RR) {
-    ISD::CondCode NewCC = ISD::getSetCCOrOperation(CC0, CC1, IsInteger);
-    if (NewCC != ISD::SETCC_INVALID &&
-        (!LegalOperations ||
-         (TLI.isCondCodeLegal(NewCC, LL.getSimpleValueType()) &&
-          TLI.isOperationLegal(ISD::SETCC, OpVT))))
-      return DAG.getSetCC(DL, VT, LL, LR, NewCC);
-  }
-
-  return SDValue();
-}
-
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an Or operation to a single value \see visitANDLike().
 SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
@@ -4046,7 +4004,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
   if (!LegalOperations && (N0.isUndef() || N1.isUndef()))
     return DAG.getAllOnesConstant(DL, VT);
 
-  if (SDValue V = foldOrOfSetCCs(N0, N1, DL))
+  if (SDValue V = foldLogicOfSetCCs(false, N0, N1, DL))
     return V;
 
   // (or (and X, C1), (and Y, C2))  -> (and (or X, Y), C3) if possible.
@@ -4128,7 +4086,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       bool ZeroN10 = ISD::isBuildVectorAllZeros(N1.getOperand(0).getNode());
       bool ZeroN11 = ISD::isBuildVectorAllZeros(N1.getOperand(1).getNode());
       // Ensure both shuffles have a zero input.
-      if ((ZeroN00 || ZeroN01) && (ZeroN10 || ZeroN11)) {
+      if ((ZeroN00 != ZeroN01) && (ZeroN10 != ZeroN11)) {
         assert((!ZeroN00 || !ZeroN01) && "Both inputs zero!");
         assert((!ZeroN10 || !ZeroN11) && "Both inputs zero!");
         const ShuffleVectorSDNode *SV0 = cast<ShuffleVectorSDNode>(N0);
@@ -8720,6 +8678,11 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
+static bool isContractable(SDNode *N) {
+  SDNodeFlags F = cast<BinaryWithFlagsSDNode>(N)->Flags;
+  return F.hasAllowContract() || F.hasUnsafeAlgebra();
+}
+
 /// Try to perform FMA combining on a given FADD node.
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDValue N0 = N->getOperand(0);
@@ -8728,24 +8691,27 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDLoc SL(N);
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
 
   // Floating-point multiply-add with intermediate rounding.
   bool HasFMAD = (LegalOperations && TLI.isOperationLegal(ISD::FMAD, VT));
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      AllowFusion && TLI.isFMAFasterThanFMulAndFAdd(VT) &&
+      TLI.isFMAFasterThanFMulAndFAdd(VT) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
+  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+                              Options.UnsafeFPMath || HasFMAD);
+  // If the addition is not contractable, do not combine.
+  if (!AllowFusionGlobally && !isContractable(N))
+    return SDValue();
+
   const SelectionDAGTargetInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
-  ;
-  if (AllowFusion && STI && STI->generateFMAsInMachineCombiner(OptLevel))
+  if (STI && STI->generateFMAsInMachineCombiner(OptLevel))
     return SDValue();
 
   // Always prefer FMAD to FMA for precision.
@@ -8753,35 +8719,39 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
   bool LookThroughFPExt = TLI.isFPExtFree(VT);
 
+  // Is the node an FMUL and contractable either due to global flags or
+  // SDNodeFlags.
+  auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
+    if (N.getOpcode() != ISD::FMUL)
+      return false;
+    return AllowFusionGlobally || isContractable(N.getNode());
+  };
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && N0.getOpcode() == ISD::FMUL &&
-      N1.getOpcode() == ISD::FMUL) {
+  if (Aggressive && isContractableFMUL(N0) && isContractableFMUL(N1)) {
     if (N0.getNode()->use_size() > N1.getNode()->use_size())
       std::swap(N0, N1);
   }
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
-  if (N0.getOpcode() == ISD::FMUL &&
-      (Aggressive || N0->hasOneUse())) {
+  if (isContractableFMUL(N0) && (Aggressive || N0->hasOneUse())) {
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        N0.getOperand(0), N0.getOperand(1), N1);
   }
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
   // Note: Commutes FADD operands.
-  if (N1.getOpcode() == ISD::FMUL &&
-      (Aggressive || N1->hasOneUse())) {
+  if (isContractableFMUL(N1) && (Aggressive || N1->hasOneUse())) {
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        N1.getOperand(0), N1.getOperand(1), N0);
   }
 
   // Look through FP_EXTEND nodes to do more combining.
-  if (AllowFusion && LookThroughFPExt) {
+  if (LookThroughFPExt) {
     // fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
     if (N0.getOpcode() == ISD::FP_EXTEND) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N00))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                        N00.getOperand(0)),
@@ -8793,7 +8763,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     // Note: Commutes FADD operands.
     if (N1.getOpcode() == ISD::FP_EXTEND) {
       SDValue N10 = N1.getOperand(0);
-      if (N10.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N10))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                        N10.getOperand(0)),
@@ -8834,7 +8804,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
                                      N0));
     }
 
-    if (AllowFusion && LookThroughFPExt) {
+    if (/*AllowFusion &&*/ LookThroughFPExt) {
       // fold (fadd (fma x, y, (fpext (fmul u, v))), z)
       //   -> (fma x, y, (fma (fpext u), (fpext v), z))
       auto FoldFAddFMAFPExtFMul = [&] (
@@ -8849,7 +8819,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N02 = N0.getOperand(2);
         if (N02.getOpcode() == ISD::FP_EXTEND) {
           SDValue N020 = N02.getOperand(0);
-          if (N020.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N020))
             return FoldFAddFMAFPExtFMul(N0.getOperand(0), N0.getOperand(1),
                                         N020.getOperand(0), N020.getOperand(1),
                                         N1);
@@ -8875,7 +8845,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N00 = N0.getOperand(0);
         if (N00.getOpcode() == PreferredFusedOpcode) {
           SDValue N002 = N00.getOperand(2);
-          if (N002.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N002))
             return FoldFAddFPExtFMAFMul(N00.getOperand(0), N00.getOperand(1),
                                         N002.getOperand(0), N002.getOperand(1),
                                         N1);
@@ -8888,7 +8858,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N12 = N1.getOperand(2);
         if (N12.getOpcode() == ISD::FP_EXTEND) {
           SDValue N120 = N12.getOperand(0);
-          if (N120.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N120))
             return FoldFAddFMAFPExtFMul(N1.getOperand(0), N1.getOperand(1),
                                         N120.getOperand(0), N120.getOperand(1),
                                         N0);
@@ -8904,7 +8874,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N10 = N1.getOperand(0);
         if (N10.getOpcode() == PreferredFusedOpcode) {
           SDValue N102 = N10.getOperand(2);
-          if (N102.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N102))
             return FoldFAddFPExtFMAFMul(N10.getOperand(0), N10.getOperand(1),
                                         N102.getOperand(0), N102.getOperand(1),
                                         N0);

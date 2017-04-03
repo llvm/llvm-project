@@ -122,8 +122,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   // Tell diagnostics how to render things from the AST library.
   Diags.SetArgToStringFn(&FormatASTNodeDiagnosticArgument, &Context);
 
-  ExprEvalContexts.emplace_back(PotentiallyEvaluated, 0, CleanupInfo{}, nullptr,
-                                false);
+  ExprEvalContexts.emplace_back(
+      ExpressionEvaluationContext::PotentiallyEvaluated, 0, CleanupInfo{},
+      nullptr, false);
 
   FunctionScopes.push_back(new FunctionScopeInfo(Diags));
 

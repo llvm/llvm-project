@@ -792,7 +792,7 @@ EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
 /// KnownZero/KnownOne bitsets.
 void AArch64TargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, APInt &KnownZero, APInt &KnownOne,
-    const SelectionDAG &DAG, unsigned Depth) const {
+    const APInt &DemandedElts, const SelectionDAG &DAG, unsigned Depth) const {
   switch (Op.getOpcode()) {
   default:
     break;
@@ -2231,19 +2231,13 @@ static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
 }
 
 static bool isSignExtended(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::SIGN_EXTEND)
-    return true;
-  if (isExtendedBUILD_VECTOR(N, DAG, true))
-    return true;
-  return false;
+  return N->getOpcode() == ISD::SIGN_EXTEND ||
+         isExtendedBUILD_VECTOR(N, DAG, true);
 }
 
 static bool isZeroExtended(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::ZERO_EXTEND)
-    return true;
-  if (isExtendedBUILD_VECTOR(N, DAG, false))
-    return true;
-  return false;
+  return N->getOpcode() == ISD::ZERO_EXTEND ||
+         isExtendedBUILD_VECTOR(N, DAG, false);
 }
 
 static bool isAddSubSExt(SDNode *N, SelectionDAG &DAG) {
@@ -3679,7 +3673,7 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                                      SelectionDAG &DAG) const {
   if (Subtarget->isTargetDarwin())
     return LowerDarwinGlobalTLSAddress(Op, DAG);
-  else if (Subtarget->isTargetELF())
+  if (Subtarget->isTargetELF())
     return LowerELFGlobalTLSAddress(Op, DAG);
 
   llvm_unreachable("Unexpected platform trying to use TLS");

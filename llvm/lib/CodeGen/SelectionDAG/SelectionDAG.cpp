@@ -1996,8 +1996,6 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 /// them in the KnownZero/KnownOne bitsets. The DemandedElts argument allows
 /// us to only collect the known bits that are shared by the requested vector
 /// elements.
-/// TODO: We only support DemandedElts on a few opcodes so far, the remainder
-/// should be added when they become necessary.
 void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
                                     APInt &KnownOne, const APInt &DemandedElts,
                                     unsigned Depth) const {
@@ -2814,7 +2812,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
     // Allow the target to implement this method for its nodes.
-    TLI->computeKnownBitsForTargetNode(Op, KnownZero, KnownOne, *this, Depth);
+    TLI->computeKnownBitsForTargetNode(Op, KnownZero, KnownOne, DemandedElts,
+                                       *this, Depth);
     break;
   }
 
@@ -2900,6 +2899,15 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
 
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isVector()
+                           ? APInt::getAllOnesValue(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return ComputeNumSignBits(Op, DemandedElts, Depth);
+}
+
+unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
+                                          unsigned Depth) const {
+  EVT VT = Op.getValueType();
   assert(VT.isInteger() && "Invalid VT!");
   unsigned VTBits = VT.getScalarSizeInBits();
   unsigned Tmp, Tmp2;
@@ -2907,6 +2915,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
 
   if (Depth == 6)
     return 1;  // Limit search depth.
+
+  if (!DemandedElts)
+    return 1;  // No demanded elts, better to assume we don't know anything.
 
   switch (Op.getOpcode()) {
   default: break;
@@ -2925,6 +2936,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   case ISD::BUILD_VECTOR:
     Tmp = VTBits;
     for (unsigned i = 0, e = Op.getNumOperands(); (i < e) && (Tmp > 1); ++i) {
+      if (!DemandedElts[i])
+        continue;
+
       SDValue SrcOp = Op.getOperand(i);
       Tmp2 = ComputeNumSignBits(Op.getOperand(i), Depth + 1);
 
@@ -2953,7 +2967,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     return std::max(Tmp, Tmp2);
 
   case ISD::SRA:
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     // SRA X, C   -> adds C sign bits.
     if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
       APInt ShiftVal = C->getAPIntValue();
@@ -3116,19 +3130,63 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     // result. Otherwise it gives either negative or > bitwidth result
     return std::max(std::min(KnownSign - rIndex * BitWidth, BitWidth), 0);
   }
+  case ISD::INSERT_VECTOR_ELT: {
+    SDValue InVec = Op.getOperand(0);
+    SDValue InVal = Op.getOperand(1);
+    SDValue EltNo = Op.getOperand(2);
+    unsigned NumElts = InVec.getValueType().getVectorNumElements();
+
+    ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
+      // If we know the element index, split the demand between the
+      // source vector and the inserted element.
+      unsigned EltIdx = CEltNo->getZExtValue();
+
+      // If we demand the inserted element then get its sign bits.
+      Tmp = UINT_MAX;
+      if (DemandedElts[EltIdx])
+        Tmp = ComputeNumSignBits(InVal, Depth + 1);
+
+      // If we demand the source vector then get its sign bits, and determine
+      // the minimum.
+      APInt VectorElts = DemandedElts;
+      VectorElts.clearBit(EltIdx);
+      if (!!VectorElts) {
+        Tmp2 = ComputeNumSignBits(InVec, VectorElts, Depth + 1);
+        Tmp = std::min(Tmp, Tmp2);
+      }
+    } else {
+      // Unknown element index, so ignore DemandedElts and demand them all.
+      Tmp = ComputeNumSignBits(InVec, Depth + 1);
+      Tmp2 = ComputeNumSignBits(InVal, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
+    return Tmp;
+  }
   case ISD::EXTRACT_VECTOR_ELT: {
-    // At the moment we keep this simple and skip tracking the specific
-    // element. This way we get the lowest common denominator for all elements
-    // of the vector.
-    // TODO: get information for given vector element
+    SDValue InVec = Op.getOperand(0);
+    SDValue EltNo = Op.getOperand(1);
+    EVT VecVT = InVec.getValueType();
     const unsigned BitWidth = Op.getValueSizeInBits();
     const unsigned EltBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+
     // If BitWidth > EltBitWidth the value is anyext:ed, and we do not know
     // anything about sign bits. But if the sizes match we can derive knowledge
     // about sign bits from the vector operand.
-    if (BitWidth == EltBitWidth)
-      return ComputeNumSignBits(Op.getOperand(0), Depth+1);
-    break;
+    if (BitWidth != EltBitWidth)
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnesValue(NumSrcElts);
+    ConstantSDNode *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    return ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
   case ISD::EXTRACT_SUBVECTOR:
     return ComputeNumSignBits(Op.getOperand(0), Depth + 1);
@@ -3163,7 +3221,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
       Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
       Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
       Op.getOpcode() == ISD::INTRINSIC_VOID) {
-    unsigned NumBits = TLI->ComputeNumSignBitsForTargetNode(Op, *this, Depth);
+    unsigned NumBits =
+        TLI->ComputeNumSignBitsForTargetNode(Op, DemandedElts, *this, Depth);
     if (NumBits > 1)
       FirstAnswer = std::max(FirstAnswer, NumBits);
   }
@@ -3171,7 +3230,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   APInt KnownZero, KnownOne;
-  computeKnownBits(Op, KnownZero, KnownOne, Depth);
+  computeKnownBits(Op, KnownZero, KnownOne, DemandedElts, Depth);
 
   APInt Mask;
   if (KnownZero.isNegative()) {        // sign bit is 0

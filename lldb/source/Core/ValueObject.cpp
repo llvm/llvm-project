@@ -2889,6 +2889,11 @@ ValueObjectSP ValueObject::Dereference(Error &error) {
           child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
           language_flags);
     }
+  } else if (HasSyntheticValue()) {
+    m_deref_valobj =
+        GetSyntheticValue()
+            ->GetChildMemberWithName(ConstString("$$dereference$$"), true)
+            .get();
   }
 
   if (m_deref_valobj) {
@@ -2955,6 +2960,10 @@ ValueObjectSP ValueObject::AddressOf(Error &error) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   return ValueObjectCast::Create(*this, GetName(), compiler_type);
+}
+
+lldb::ValueObjectSP ValueObject::Clone(const ConstString &new_name) {
+  return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 
 ValueObjectSP ValueObject::CastPointerType(const char *name,

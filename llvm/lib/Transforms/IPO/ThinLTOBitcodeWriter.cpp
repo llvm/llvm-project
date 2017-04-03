@@ -46,23 +46,14 @@ namespace {
 std::string getModuleId(Module *M) {
   MD5 Md5;
   bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
+  for (auto &GV : M->global_values()) {
     if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
         !GV.hasExternalLinkage())
-      return;
+      continue;
     ExportsSymbols = true;
     Md5.update(GV.getName());
     Md5.update(ArrayRef<uint8_t>{0});
-  };
-
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
+  }
 
   if (!ExportsSymbols)
     return "";
@@ -78,13 +69,13 @@ std::string getModuleId(Module *M) {
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
-  auto PromoteInternal = [&](GlobalValue &ExportGV) {
+  for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
-      return;
+      continue;
 
     GlobalValue *ImportGV = ImportM.getNamedValue(ExportGV.getName());
     if (!ImportGV || ImportGV->use_empty())
-      return;
+      continue;
 
     std::string NewName = (ExportGV.getName() + ModuleId).str();
 
@@ -94,16 +85,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
 
     ImportGV->setName(NewName);
     ImportGV->setVisibility(GlobalValue::HiddenVisibility);
-  };
-
-  for (auto &F : ExportM)
-    PromoteInternal(F);
-  for (auto &GV : ExportM.globals())
-    PromoteInternal(GV);
-  for (auto &GA : ExportM.aliases())
-    PromoteInternal(GA);
-  for (auto &IF : ExportM.ifuncs())
-    PromoteInternal(IF);
+  }
 }
 
 // Promote all internal (i.e. distinct) type ids used by the module by replacing

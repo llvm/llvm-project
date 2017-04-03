@@ -24,7 +24,6 @@
 #endif
 
 namespace llvm {
-using namespace sys;
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only Win32 specific code
@@ -51,8 +50,9 @@ ELM_Callback(PCSTR ModuleName, DWORD64 ModuleBase,
   return TRUE;
 }
 
-DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
-                                                   std::string *errMsg) {
+sys::DynamicLibrary
+sys::DynamicLibrary::getPermanentLibrary(const char *filename,
+                                         std::string *errMsg) {
   SmartScopedLock<true> lock(*SymbolsMutex);
 
   if (!filename) {
@@ -92,8 +92,8 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
   return DynamicLibrary(a_handle);
 }
 
-DynamicLibrary DynamicLibrary::addPermanentLibrary(void *handle,
-                                                   std::string *errMsg) {
+sys::DynamicLibrary
+sys::DynamicLibrary::addPermanentLibrary(void *handle, std::string *errMsg) {
   SmartScopedLock<true> lock(*SymbolsMutex);
   // If we've already loaded this library, tell the caller.
   if (!OpenedHandles->insert((HMODULE)handle).second) {
@@ -129,7 +129,7 @@ DynamicLibrary DynamicLibrary::addPermanentLibrary(void *handle,
 #undef INLINE_DEF_SYMBOL1
 #undef INLINE_DEF_SYMBOL2
 
-void* DynamicLibrary::SearchForAddressOfSymbol(const char* symbolName) {
+void *sys::DynamicLibrary::SearchForAddressOfSymbol(const char *symbolName) {
   SmartScopedLock<true> Lock(*SymbolsMutex);
 
   // First check symbols added via AddSymbol().
@@ -177,7 +177,7 @@ void* DynamicLibrary::SearchForAddressOfSymbol(const char* symbolName) {
   return 0;
 }
 
-void *DynamicLibrary::getAddressOfSymbol(const char *symbolName) {
+void *sys::DynamicLibrary::getAddressOfSymbol(const char *symbolName) {
   if (!isValid())
     return NULL;
   if (Data == &OpenedHandles)

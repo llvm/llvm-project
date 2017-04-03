@@ -1431,7 +1431,8 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
   // Decay and strip qualifiers for the controlling expression type, and handle
   // placeholder type replacement. See committee discussion from WG14 DR423.
   {
-    EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+    EnterExpressionEvaluationContext Unevaluated(
+        *this, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult R = DefaultFunctionArrayLvalueConversion(ControllingExpr);
     if (R.isInvalid())
       return ExprError();
@@ -4555,8 +4556,8 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
   if (Param->hasUninstantiatedDefaultArg()) {
     Expr *UninstExpr = Param->getUninstantiatedDefaultArg();
 
-    EnterExpressionEvaluationContext EvalContext(*this, PotentiallyEvaluated,
-                                                 Param);
+    EnterExpressionEvaluationContext EvalContext(
+        *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
 
     // Instantiate the expression.
     MultiLevelTemplateArgumentList MutiLevelArgList
@@ -12250,7 +12251,8 @@ void Sema::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
 
   // Enter a new evaluation context to insulate the block from any
   // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(PotentiallyEvaluated);  
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
 void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
@@ -13143,7 +13145,7 @@ void Sema::PopExpressionEvaluationContext() {
   unsigned NumTypos = Rec.NumTypos;
 
   if (!Rec.Lambdas.empty()) {
-    if (Rec.isUnevaluated() || Rec.Context == ConstantEvaluated) {
+    if (Rec.isUnevaluated() || Rec.isConstantEvaluated()) {
       unsigned D;
       if (Rec.isUnevaluated()) {
         // C++11 [expr.prim.lambda]p2:
@@ -13164,7 +13166,7 @@ void Sema::PopExpressionEvaluationContext() {
       // are part of function-signatures.  Be mindful that P0315 (Lambdas in
       // unevaluated contexts) might lift some of these restrictions in a 
       // future version.
-      if (Rec.Context != ConstantEvaluated || !getLangOpts().CPlusPlus1z)
+      if (!Rec.isConstantEvaluated() || !getLangOpts().CPlusPlus1z)
         for (const auto *L : Rec.Lambdas)
           Diag(L->getLocStart(), D);
     } else {
@@ -13181,7 +13183,7 @@ void Sema::PopExpressionEvaluationContext() {
   // temporaries that we may have created as part of the evaluation of
   // the expression in that context: they aren't relevant because they
   // will never be constructed.
-  if (Rec.isUnevaluated() || Rec.Context == ConstantEvaluated) {
+  if (Rec.isUnevaluated() || Rec.isConstantEvaluated()) {
     ExprCleanupObjects.erase(ExprCleanupObjects.begin() + Rec.NumCleanupObjects,
                              ExprCleanupObjects.end());
     Cleanup = Rec.ParentCleanup;
@@ -13223,19 +13225,19 @@ ExprResult Sema::HandleExprEvaluationContextForTypeof(Expr *E) {
 /// captured by C++'s idea of an "unevaluated context".
 static bool isEvaluatableContext(Sema &SemaRef) {
   switch (SemaRef.ExprEvalContexts.back().Context) {
-    case Sema::Unevaluated:
-    case Sema::UnevaluatedAbstract:
-    case Sema::DiscardedStatement:
+    case Sema::ExpressionEvaluationContext::Unevaluated:
+    case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
+    case Sema::ExpressionEvaluationContext::DiscardedStatement:
       // Expressions in this context are never evaluated.
       return false;
 
-    case Sema::UnevaluatedList:
-    case Sema::ConstantEvaluated:
-    case Sema::PotentiallyEvaluated:
+    case Sema::ExpressionEvaluationContext::UnevaluatedList:
+    case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
       // Expressions in this context could be evaluated.
       return true;
 
-    case Sema::PotentiallyEvaluatedIfUsed:
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       // Referenced declarations will only be used if the construct in the
       // containing expression is used, at which point we'll be given another
       // turn to mark them.
@@ -13253,17 +13255,17 @@ static bool isOdrUseContext(Sema &SemaRef, bool SkipDependentUses = true) {
     return false;
 
   switch (SemaRef.ExprEvalContexts.back().Context) {
-    case Sema::Unevaluated:
-    case Sema::UnevaluatedList:
-    case Sema::UnevaluatedAbstract:
-    case Sema::DiscardedStatement:
+    case Sema::ExpressionEvaluationContext::Unevaluated:
+    case Sema::ExpressionEvaluationContext::UnevaluatedList:
+    case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
+    case Sema::ExpressionEvaluationContext::DiscardedStatement:
       return false;
 
-    case Sema::ConstantEvaluated:
-    case Sema::PotentiallyEvaluated:
+    case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
       return true;
 
-    case Sema::PotentiallyEvaluatedIfUsed:
+    case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       return false;
   }
   llvm_unreachable("Invalid context");
@@ -13718,7 +13720,8 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
 
         // Enter a new evaluation context to insulate the copy
         // full-expression.
-        EnterExpressionEvaluationContext scope(S, S.PotentiallyEvaluated);
+        EnterExpressionEvaluationContext scope(
+            S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
         // According to the blocks spec, the capture of a variable from
         // the stack requires a const copy constructor.  This is not true
@@ -14469,7 +14472,8 @@ bool MarkReferencedDecls::TraverseTemplateArgument(
     const TemplateArgument &Arg) {
   {
     // A non-type template argument is a constant-evaluated context.
-    EnterExpressionEvaluationContext Evaluated(S, Sema::ConstantEvaluated);
+    EnterExpressionEvaluationContext Evaluated(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     if (Arg.getKind() == TemplateArgument::Declaration) {
       if (Decl *D = Arg.getAsDecl())
         S.MarkAnyDeclReferenced(Loc, D, true);
@@ -14589,19 +14593,19 @@ void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
 bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   switch (ExprEvalContexts.back().Context) {
-  case Unevaluated:
-  case UnevaluatedList:
-  case UnevaluatedAbstract:
-  case DiscardedStatement:
+  case ExpressionEvaluationContext::Unevaluated:
+  case ExpressionEvaluationContext::UnevaluatedList:
+  case ExpressionEvaluationContext::UnevaluatedAbstract:
+  case ExpressionEvaluationContext::DiscardedStatement:
     // The argument will never be evaluated, so don't complain.
     break;
 
-  case ConstantEvaluated:
+  case ExpressionEvaluationContext::ConstantEvaluated:
     // Relevant diagnostics should be produced by constant evaluation.
     break;
 
-  case PotentiallyEvaluated:
-  case PotentiallyEvaluatedIfUsed:
+  case ExpressionEvaluationContext::PotentiallyEvaluated:
+  case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
     if (Statement && getCurFunctionOrMethodDecl()) {
       FunctionScopes.back()->PossiblyUnreachableDiags.
         push_back(sema::PossiblyUnreachableDiag(PD, Loc, Statement));

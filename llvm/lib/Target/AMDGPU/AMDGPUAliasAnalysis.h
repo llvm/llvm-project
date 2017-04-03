@@ -30,7 +30,7 @@ class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
 
 public:
   explicit AMDGPUAAResult(const DataLayout &DL, Triple T) : AAResultBase(),
-    DL(DL), AS(AMDGPU::getAMDGPUAS(T)), ASAliasRules(AS) {}
+    DL(DL), AS(AMDGPU::getAMDGPUAS(T)), ASAliasRules(AS, T.getArch()) {}
   AMDGPUAAResult(AMDGPUAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL), AS(Arg.AS),
         ASAliasRules(Arg.ASAliasRules){}
@@ -49,9 +49,10 @@ private:
 
   class ASAliasRulesTy {
   public:
-    ASAliasRulesTy(AMDGPUAS AS_);
+    ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Arch_);
     AliasResult getAliasResult(unsigned AS1, unsigned AS2) const;
   private:
+    Triple::ArchType Arch;
     AMDGPUAS AS;
     const AliasResult (*ASAliasRules)[6][6];
   } ASAliasRules;

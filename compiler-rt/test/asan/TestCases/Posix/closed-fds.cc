@@ -2,7 +2,8 @@
 // symbolizer still works.
 
 // RUN: rm -f %t.log.*
-// RUN: %clangxx_asan -O0 %s -o %t 2>&1 && %env_asan_opts=log_path='"%t.log"':verbosity=2 not %run %t 2>&1
+// RUN: %clangxx_asan -O0 %s -o %t
+// RUN: %env_asan_opts=log_path='"%t.log"':verbosity=2 not %run %t
 // RUN: FileCheck %s --check-prefix=CHECK-FILE < %t.log.*
 
 // FIXME: copy %t.log back from the device and re-enable on Android.

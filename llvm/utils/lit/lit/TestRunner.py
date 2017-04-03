@@ -142,13 +142,15 @@ def executeShCmd(cmd, shenv, results, timeout=0):
 
     return (finalExitCode, timeoutInfo)
 
-def expand_glob_expressions(args):
+def expand_glob(arg, cwd):
+    if isinstance(arg, GlobItem):
+        return arg.resolve(cwd)
+    return [arg]
+
+def expand_glob_expressions(args, cwd):
     result = [args[0]]
     for arg in args[1:]:
-        if isinstance(arg, GlobItem):
-            result.extend(arg.resolve())
-        else:
-            result.append(arg)
+        result.extend(expand_glob(arg, cwd))
     return result
 
 def quote_windows_command(seq):
@@ -250,7 +252,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if os.path.isabs(newdir):
             shenv.cwd = newdir
         else:
-            shenv.cwd = os.path.join(shenv.cwd, newdir)
+            shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
         # The cd builtin always succeeds. If the directory does not exist, the
         # following Popen calls will fail instead.
         return 0
@@ -323,15 +325,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 if r[2] is None:
                     redir_filename = None
-                    if kAvoidDevNull and r[0] == '/dev/null':
+                    name = expand_glob(r[0], cmd_shenv.cwd)
+                    if len(name) != 1:
+                       raise InternalShellError(j,"Unsupported: glob in redirect expanded to multiple files")
+                    name = name[0]
+                    if kAvoidDevNull and name == '/dev/null':
                         r[2] = tempfile.TemporaryFile(mode=r[1])
-                    elif kIsWindows and r[0] == '/dev/tty':
+                    elif kIsWindows and name == '/dev/tty':
                         # Simulate /dev/tty on Windows.
                         # "CON" is a special filename for the console.
                         r[2] = open("CON", r[1])
                     else:
                         # Make sure relative paths are relative to the cwd.
-                        redir_filename = os.path.join(cmd_shenv.cwd, r[0])
+                        redir_filename = os.path.join(cmd_shenv.cwd, name)
                         r[2] = open(redir_filename, r[1])
                     # Workaround a Win32 and/or subprocess bug when appending.
                     #
@@ -383,7 +389,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     args[i] = f.name
 
         # Expand all glob expressions
-        args = expand_glob_expressions(args)
+        args = expand_glob_expressions(args, cmd_shenv.cwd)
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.
@@ -700,11 +706,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend([('%%', '#_MARKER_#')])
     substitutions.extend(test.config.substitutions)
+    tmpName = tmpBase + '.tmp'
+    baseName = os.path.basename(tmpBase)
     substitutions.extend([('%s', sourcepath),
                           ('%S', sourcedir),
                           ('%p', sourcedir),
                           ('%{pathsep}', os.pathsep),
-                          ('%t', tmpBase + '.tmp'),
+                          ('%t', tmpName),
+                          ('%basename_t', baseName),
                           ('%T', tmpDir),
                           ('#_MARKER_#', '%')])
 

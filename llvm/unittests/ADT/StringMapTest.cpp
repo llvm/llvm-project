@@ -454,7 +454,7 @@ TEST(StringMapCustomTest, InitialSizeTest) {
       Map.insert(std::pair<std::string, CountCtorCopyAndMove>(
           std::piecewise_construct, std::forward_as_tuple(Twine(i).str()),
           std::forward_as_tuple(i)));
-    // After the inital move, the map will move the Elts in the Entry.
+    // After the initial move, the map will move the Elts in the Entry.
     EXPECT_EQ((unsigned)Size * 2, CountCtorCopyAndMove::Move);
     // We copy once the pair from the Elts vector
     EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);

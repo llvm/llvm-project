@@ -135,7 +135,7 @@ private:
         }
       }
       this->Visited.completed(Node);
-      
+
       // Oops, ran out of successors... go up a level on the stack.
       VisitStack.pop_back();
     } while (!VisitStack.empty());

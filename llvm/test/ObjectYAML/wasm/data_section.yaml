@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            MEMORY
+    Memories:
+      - Initial:         0x00000003
+  - Type:            DATA
+    Segments:
+      - Index:           0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           4
+        Content:         '10001000'
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            DATA
+# CHECK:     Segments:
+# CHECK:       - Index:           0
+# CHECK:         Offset:
+# CHECK:           Opcode:          I32_CONST
+# CHECK:           Value:           4
+# CHECK:         Content:         '10001000'
+# CHECK: ...

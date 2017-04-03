@@ -1,4 +1,4 @@
-//===-- RecordStreamer.cpp - Record asm definde and used symbols ----------===//
+//===-- RecordStreamer.cpp - Record asm defined and used symbols ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

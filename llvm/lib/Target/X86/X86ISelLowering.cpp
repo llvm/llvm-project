@@ -20433,9 +20433,9 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   case PREFETCH: {
     SDValue Hint = Op.getOperand(6);
     unsigned HintVal = cast<ConstantSDNode>(Hint)->getZExtValue();
-    assert((HintVal == 1 || HintVal == 2) &&
-           "Wrong prefetch hint in intrinsic: should be 1 or 2");
-    unsigned Opcode = (HintVal != 1 ? IntrData->Opc1 : IntrData->Opc0);
+    assert((HintVal == 2 || HintVal == 3) &&
+           "Wrong prefetch hint in intrinsic: should be 2 or 3");
+    unsigned Opcode = (HintVal == 2 ? IntrData->Opc1 : IntrData->Opc0);
     SDValue Chain = Op.getOperand(0);
     SDValue Mask  = Op.getOperand(2);
     SDValue Index = Op.getOperand(3);
@@ -26661,6 +26661,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       APInt &KnownZero,
                                                       APInt &KnownOne,
+                                                      const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
   unsigned BitWidth = KnownZero.getBitWidth();
@@ -26744,7 +26745,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 }
 
 unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
-    SDValue Op, const SelectionDAG &DAG, unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
   unsigned VTBits = Op.getScalarValueSizeInBits();
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
@@ -28956,12 +28958,25 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
   }
 
-  // Detect bitcasts between v2i64/v2f64 extraction to x86mmx.
-  if (VT == MVT::x86mmx && N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+  // Detect bitcasts between element or subvector extraction to x86mmx.
+  if (VT == MVT::x86mmx &&
+      (N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+       N0.getOpcode() == ISD::EXTRACT_SUBVECTOR) &&
       isNullConstant(N0.getOperand(1))) {
     SDValue N00 = N0->getOperand(0);
     if (N00.getValueType().is128BitVector())
-      return DAG.getNode(X86ISD::MOVDQ2Q, SDLoc(N00), VT, N00);
+      return DAG.getNode(X86ISD::MOVDQ2Q, SDLoc(N00), VT,
+                         DAG.getBitcast(MVT::v2i64, N00));
+  }
+
+  // Detect bitcasts from FP_TO_SINT to x86mmx.
+  if (VT == MVT::x86mmx && SrcVT == MVT::v2i32 &&
+      N0.getOpcode() == ISD::FP_TO_SINT) {
+    SDLoc DL(N0);
+    SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
+                              DAG.getUNDEF(MVT::v2i32));
+    return DAG.getNode(X86ISD::MOVDQ2Q, DL, VT,
+                       DAG.getBitcast(MVT::v2i64, Res));
   }
 
   // Convert a bitcasted integer logic operation that has one bitcasted

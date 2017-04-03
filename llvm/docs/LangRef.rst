@@ -7200,7 +7200,7 @@ Overview:
 The '``alloca``' instruction allocates memory on the stack frame of the
 currently executing function, to be automatically released when this
 function returns to its caller. The object is always allocated in the
-generic address space (address space zero).
+default address space (address space zero).
 
 Arguments:
 """"""""""
@@ -9795,7 +9795,7 @@ Semantics:
       compile-time-known constant value.
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
-      must match the target's generic address space's (address space 0) pointer type.
+      must match the target's default address space's (address space 0) pointer type.
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

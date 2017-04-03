@@ -9,7 +9,6 @@
 
 #include "fallback_malloc.h"
 
-#include "config.h"
 #include <__threading_support>
 
 #include <cstdlib> // for malloc, calloc, free

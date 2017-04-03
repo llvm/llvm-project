@@ -133,20 +133,20 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   IMAKind AbstractInstanceResult = IMA_Static; // happens to be 'false'
   assert(!AbstractInstanceResult);
   switch (SemaRef.ExprEvalContexts.back().Context) {
-  case Sema::Unevaluated:
-  case Sema::UnevaluatedList:
+  case Sema::ExpressionEvaluationContext::Unevaluated:
+  case Sema::ExpressionEvaluationContext::UnevaluatedList:
     if (isField && SemaRef.getLangOpts().CPlusPlus11)
       AbstractInstanceResult = IMA_Field_Uneval_Context;
     break;
 
-  case Sema::UnevaluatedAbstract:
+  case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
     AbstractInstanceResult = IMA_Abstract;
     break;
 
-  case Sema::DiscardedStatement:
-  case Sema::ConstantEvaluated:
-  case Sema::PotentiallyEvaluated:
-  case Sema::PotentiallyEvaluatedIfUsed:
+  case Sema::ExpressionEvaluationContext::DiscardedStatement:
+  case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+  case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
+  case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
     break;
   }
 

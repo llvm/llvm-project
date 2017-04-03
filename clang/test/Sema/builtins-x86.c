@@ -80,6 +80,6 @@ __m512i _mm512_mask_prefetch_i32gather_ps(__m512i index, __mmask16 mask, int con
 }
 
 __m512 _mm512_mask_prefetch_i32gather_ps_2(__m512i index, __mmask16 mask, int const *addr) {
-  return __builtin_ia32_gatherpfdps(mask, index, addr, 1, 3); // expected-error {{argument should be a value from 1 to 2}}
+  return __builtin_ia32_gatherpfdps(mask, index, addr, 1, 1); // expected-error {{argument should be a value from 2 to 3}}
 }
 

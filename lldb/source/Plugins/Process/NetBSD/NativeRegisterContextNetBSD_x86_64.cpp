@@ -154,6 +154,9 @@ int NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
   case GPRegSet:
     ReadGPR();
     return 0;
+  case FPRegSet:
+    ReadFPR();
+    return 0;
   default:
     break;
   }
@@ -163,6 +166,9 @@ int NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
     WriteGPR();
+    return 0;
+  case FPRegSet:
+    WriteFPR();
     return 0;
   default:
     break;

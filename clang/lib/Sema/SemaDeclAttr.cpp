@@ -218,21 +218,45 @@ static bool checkAttributeAtMostNumArgs(Sema &S, const AttributeList &Attr,
                                    std::greater<unsigned>());
 }
 
+/// \brief A helper function to provide Attribute Location for the Attr types
+/// AND the AttributeList.
+template <typename AttrInfo>
+static typename std::enable_if<std::is_base_of<clang::Attr, AttrInfo>::value,
+                               SourceLocation>::type
+getAttrLoc(const AttrInfo &Attr) {
+  return Attr.getLocation();
+}
+static SourceLocation getAttrLoc(const clang::AttributeList &Attr) {
+  return Attr.getLoc();
+}
+
+/// \brief A helper function to provide Attribute Name for the Attr types
+/// AND the AttributeList.
+template <typename AttrInfo>
+static typename std::enable_if<std::is_base_of<clang::Attr, AttrInfo>::value,
+                               const AttrInfo *>::type
+getAttrName(const AttrInfo &Attr) {
+  return &Attr;
+}
+const IdentifierInfo *getAttrName(const clang::AttributeList &Attr) {
+  return Attr.getName();
+}
+
 /// \brief If Expr is a valid integer constant, get the value of the integer
 /// expression and return success or failure. May output an error.
-static bool checkUInt32Argument(Sema &S, const AttributeList &Attr,
-                                const Expr *Expr, uint32_t &Val,
-                                unsigned Idx = UINT_MAX) {
+template<typename AttrInfo>
+static bool checkUInt32Argument(Sema &S, const AttrInfo& Attr, const Expr *Expr,
+                                uint32_t &Val, unsigned Idx = UINT_MAX) {
   llvm::APSInt I(32);
   if (Expr->isTypeDependent() || Expr->isValueDependent() ||
       !Expr->isIntegerConstantExpr(I, S.Context)) {
     if (Idx != UINT_MAX)
-      S.Diag(Attr.getLoc(), diag::err_attribute_argument_n_type)
-        << Attr.getName() << Idx << AANT_ArgumentIntegerConstant
+      S.Diag(getAttrLoc(Attr), diag::err_attribute_argument_n_type)
+        << getAttrName(Attr) << Idx << AANT_ArgumentIntegerConstant
         << Expr->getSourceRange();
     else
-      S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-        << Attr.getName() << AANT_ArgumentIntegerConstant
+      S.Diag(getAttrLoc(Attr), diag::err_attribute_argument_type)
+        << getAttrName(Attr) << AANT_ArgumentIntegerConstant
         << Expr->getSourceRange();
     return false;
   }
@@ -250,9 +274,9 @@ static bool checkUInt32Argument(Sema &S, const AttributeList &Attr,
 /// \brief Wrapper around checkUInt32Argument, with an extra check to be sure
 /// that the result will fit into a regular (signed) int. All args have the same
 /// purpose as they do in checkUInt32Argument.
-static bool checkPositiveIntArgument(Sema &S, const AttributeList &Attr,
-                                     const Expr *Expr, int &Val,
-                                     unsigned Idx = UINT_MAX) {
+template<typename AttrInfo>
+static bool checkPositiveIntArgument(Sema &S, const AttrInfo& Attr, const Expr *Expr,
+                                     int &Val, unsigned Idx = UINT_MAX) {
   uint32_t UVal;
   if (!checkUInt32Argument(S, Attr, Expr, UVal, Idx))
     return false;
@@ -287,11 +311,10 @@ static bool checkAttrMutualExclusion(Sema &S, Decl *D, SourceRange Range,
 /// instance method D.  May output an error.
 ///
 /// \returns true if IdxExpr is a valid index.
-static bool checkFunctionOrMethodParameterIndex(Sema &S, const Decl *D,
-                                                const AttributeList &Attr,
-                                                unsigned AttrArgNum,
-                                                const Expr *IdxExpr,
-                                                uint64_t &Idx) {
+template <typename AttrInfo>
+static bool checkFunctionOrMethodParameterIndex(
+    Sema &S, const Decl *D, const AttrInfo& Attr,
+    unsigned AttrArgNum, const Expr *IdxExpr, uint64_t &Idx) {
   assert(isFunctionOrMethodOrBlock(D));
 
   // In C++ the implicit 'this' function parameter also counts.
@@ -305,24 +328,24 @@ static bool checkFunctionOrMethodParameterIndex(Sema &S, const Decl *D,
   llvm::APSInt IdxInt;
   if (IdxExpr->isTypeDependent() || IdxExpr->isValueDependent() ||
       !IdxExpr->isIntegerConstantExpr(IdxInt, S.Context)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_n_type)
-      << Attr.getName() << AttrArgNum << AANT_ArgumentIntegerConstant
+    S.Diag(getAttrLoc(Attr), diag::err_attribute_argument_n_type)
+      << getAttrName(Attr) << AttrArgNum << AANT_ArgumentIntegerConstant
       << IdxExpr->getSourceRange();
     return false;
   }
 
   Idx = IdxInt.getLimitedValue();
   if (Idx < 1 || (!IV && Idx > NumParams)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_out_of_bounds)
-      << Attr.getName() << AttrArgNum << IdxExpr->getSourceRange();
+    S.Diag(getAttrLoc(Attr), diag::err_attribute_argument_out_of_bounds)
+      << getAttrName(Attr) << AttrArgNum << IdxExpr->getSourceRange();
     return false;
   }
   Idx--; // Convert to zero-based.
   if (HasImplicitThisParam) {
     if (Idx == 0) {
-      S.Diag(Attr.getLoc(),
+      S.Diag(getAttrLoc(Attr),
              diag::err_attribute_invalid_implicit_this_argument)
-        << Attr.getName() << IdxExpr->getSourceRange();
+        << getAttrName(Attr) << IdxExpr->getSourceRange();
       return false;
     }
     --Idx;
@@ -753,29 +776,46 @@ static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
                                      Attr.getAttributeSpellingListIndex()));
 }
 
-/// \brief Checks to be sure that the given parameter number is inbounds, and is
-/// an some integral type. Will emit appropriate diagnostics if this returns
+/// \brief Checks to be sure that the given parameter number is in bounds, and is
+/// an integral type. Will emit appropriate diagnostics if this returns
 /// false.
+///
+/// FuncParamNo is expected to be from the user, so is base-1. AttrArgNo is used
+/// to actually retrieve the argument, so it's base-0.
+template <typename AttrInfo>
+static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
+                                    const AttrInfo &Attr, Expr *AttrArg,
+                                    unsigned FuncParamNo, unsigned AttrArgNo,
+                                    bool AllowDependentType = false) {
+  uint64_t Idx;
+  if (!checkFunctionOrMethodParameterIndex(S, FD, Attr, FuncParamNo, AttrArg,
+                                           Idx))
+    return false;
+
+  const ParmVarDecl *Param = FD->getParamDecl(Idx);
+  if (AllowDependentType && Param->getType()->isDependentType())
+    return true;
+  if (!Param->getType()->isIntegerType() && !Param->getType()->isCharType()) {
+    SourceLocation SrcLoc = AttrArg->getLocStart();
+    S.Diag(SrcLoc, diag::err_attribute_integers_only)
+        << getAttrName(Attr) << Param->getSourceRange();
+    return false;
+  }
+  return true;
+}
+
+/// \brief Checks to be sure that the given parameter number is in bounds, and is
+/// an integral type. Will emit appropriate diagnostics if this returns false.
 ///
 /// FuncParamNo is expected to be from the user, so is base-1. AttrArgNo is used
 /// to actually retrieve the argument, so it's base-0.
 static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
                                     const AttributeList &Attr,
-                                    unsigned FuncParamNo, unsigned AttrArgNo) {
+                                    unsigned FuncParamNo, unsigned AttrArgNo,
+                                    bool AllowDependentType = false) {
   assert(Attr.isArgExpr(AttrArgNo) && "Expected expression argument");
-  uint64_t Idx;
-  if (!checkFunctionOrMethodParameterIndex(S, FD, Attr, FuncParamNo,
-                                           Attr.getArgAsExpr(AttrArgNo), Idx))
-    return false;
-
-  const ParmVarDecl *Param = FD->getParamDecl(Idx);
-  if (!Param->getType()->isIntegerType() && !Param->getType()->isCharType()) {
-    SourceLocation SrcLoc = Attr.getArgAsExpr(AttrArgNo)->getLocStart();
-    S.Diag(SrcLoc, diag::err_attribute_integers_only)
-        << Attr.getName() << Param->getSourceRange();
-    return false;
-  }
-  return true;
+  return checkParamIsIntegerType(S, FD, Attr, Attr.getArgAsExpr(AttrArgNo),
+                                 FuncParamNo, AttrArgNo, AllowDependentType);
 }
 
 static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
@@ -1484,6 +1524,12 @@ static void handleAssumeAlignedAttr(Sema &S, Decl *D,
                          Attr.getAttributeSpellingListIndex());
 }
 
+static void handleAllocAlignAttr(Sema &S, Decl *D,
+                                   const AttributeList &Attr) {
+  S.AddAllocAlignAttr(Attr.getRange(), D, Attr.getArgAsExpr(0),
+                      Attr.getAttributeSpellingListIndex());
+}
+
 void Sema::AddAssumeAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
                                 Expr *OE, unsigned SpellingListIndex) {
   QualType ResultType = getFunctionOrMethodResultType(D);
@@ -1533,6 +1579,44 @@ void Sema::AddAssumeAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
 
   D->addAttr(::new (Context)
             AssumeAlignedAttr(AttrRange, Context, E, OE, SpellingListIndex));
+}
+
+void Sema::AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
+                             unsigned SpellingListIndex) {
+  QualType ResultType = getFunctionOrMethodResultType(D);
+
+  AllocAlignAttr TmpAttr(AttrRange, Context, 0, SpellingListIndex);
+  SourceLocation AttrLoc = AttrRange.getBegin();
+
+  if (!ResultType->isDependentType() &&
+      !isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
+    Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
+        << &TmpAttr << AttrRange << getFunctionOrMethodResultSourceRange(D);
+    return;
+  }
+
+  uint64_t IndexVal;
+  const auto *FuncDecl = cast<FunctionDecl>(D);
+  if (!checkFunctionOrMethodParameterIndex(*this, FuncDecl, TmpAttr,
+                                           /*AttrArgNo=*/1, ParamExpr,
+                                           IndexVal))
+    return;
+
+  QualType Ty = getFunctionOrMethodParamType(D, IndexVal);
+  if (!Ty->isDependentType() && !Ty->isIntegralType(Context)) {
+    Diag(ParamExpr->getLocStart(), diag::err_attribute_integers_only)
+        << &TmpAttr << FuncDecl->getParamDecl(IndexVal)->getSourceRange();
+    return;
+  }
+
+  // We cannot use the Idx returned from checkFunctionOrMethodParameterIndex
+  // because that has corrected for the implicit this parameter, and is zero-
+  // based.  The attribute expects what the user wrote explicitly.
+  llvm::APSInt Val;
+  ParamExpr->EvaluateAsInt(Val, Context);
+
+  D->addAttr(::new (Context) AllocAlignAttr(
+      AttrRange, Context, Val.getZExtValue(), SpellingListIndex));
 }
 
 /// Normalize the attribute, __foo__ becomes foo.
@@ -5956,6 +6040,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_AssumeAligned:
     handleAssumeAlignedAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AllocAlign:
+    handleAllocAlignAttr(S, D, Attr);
     break;
   case AttributeList::AT_Overloadable:
     handleSimpleAttribute<OverloadableAttr>(S, D, Attr);

@@ -206,13 +206,6 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
   return {Sym, IsNew};
 }
 
-// Construct a string in the form of "Sym in File1 and File2".
-// Used to construct an error message.
-static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
-  return "'" + toString(*Existing) + "' in " + toString(Existing->File) +
-         " and " + toString(NewFile);
-}
-
 // Find an existing symbol or create and insert a new one, then apply the given
 // attributes.
 template <class ELFT>
@@ -226,13 +219,19 @@ SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
 
   // Merge in the new symbol's visibility.
   S->Visibility = getMinVisibility(S->Visibility, Visibility);
+
   if (!CanOmitFromDynSym && (Config->Shared || Config->ExportDynamic))
     S->ExportDynamic = true;
+
   if (IsUsedInRegularObj)
     S->IsUsedInRegularObj = true;
+
   if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
-      ((Type == STT_TLS) != S->body()->isTls()))
-    error("TLS attribute mismatch for symbol " + conflictMsg(S->body(), File));
+      ((Type == STT_TLS) != S->body()->isTls())) {
+    error("TLS attribute mismatch: " + toString(*S->body()) +
+          "\n>>> defined in " + toString(S->body()->File) +
+          "\n>>> defined in " + toString(File));
+  }
 
   return {S, WasInserted};
 }
@@ -349,32 +348,49 @@ Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
   return S;
 }
 
-static void print(const Twine &Msg) {
+static void warnOrError(const Twine &Msg) {
   if (Config->AllowMultipleDefinition)
     warn(Msg);
   else
     error(Msg);
 }
 
-static void reportDuplicate(SymbolBody *Existing, InputFile *NewFile) {
-  print("duplicate symbol " + conflictMsg(Existing, NewFile));
+static void reportDuplicate(SymbolBody *Sym, InputFile *NewFile) {
+  warnOrError("duplicate symbol: " + toString(*Sym) +
+              "\n>>> defined in " + toString(Sym->File) +
+              "\n>>> defined in " + toString(NewFile));
 }
 
 template <class ELFT>
-static void reportDuplicate(SymbolBody *Existing, InputSectionBase *ErrSec,
+static void reportDuplicate(SymbolBody *Sym, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
-  DefinedRegular *D = dyn_cast<DefinedRegular>(Existing);
+  DefinedRegular *D = dyn_cast<DefinedRegular>(Sym);
   if (!D || !D->Section || !ErrSec) {
-    reportDuplicate(Existing, ErrSec ? ErrSec->getFile<ELFT>() : nullptr);
+    reportDuplicate(Sym, ErrSec ? ErrSec->getFile<ELFT>() : nullptr);
     return;
   }
 
-  std::string OldLoc =
-      cast<InputSectionBase>(D->Section)->template getLocation<ELFT>(D->Value);
-  std::string NewLoc = ErrSec->getLocation<ELFT>(ErrOffset);
+  // Construct and print an error message in the form of:
+  //
+  //   ld.lld: error: duplicate symbol: foo
+  //   >>> defined at bar.c:30
+  //   >>>            bar.o (/home/alice/src/bar.o)
+  //   >>> defined at baz.c:563
+  //   >>>            baz.o in archive libbaz.a
+  auto *Sec1 = cast<InputSectionBase>(D->Section);
+  std::string Src1 = Sec1->getSrcMsg<ELFT>(D->Value);
+  std::string Obj1 = Sec1->getObjMsg<ELFT>(D->Value);
+  std::string Src2 = ErrSec->getSrcMsg<ELFT>(ErrOffset);
+  std::string Obj2 = ErrSec->getObjMsg<ELFT>(ErrOffset);
 
-  print(NewLoc + ": duplicate symbol '" + toString(*Existing) + "'");
-  print(OldLoc + ": previous definition was here");
+  std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
+  if (!Src1.empty())
+    Msg += Src1 + "\n>>>            ";
+  Msg += Obj1 + "\n>>> defined at ";
+  if (!Src2.empty())
+    Msg += Src2 + "\n>>>            ";
+  Msg += Obj2;
+  warnOrError(Msg);
 }
 
 template <typename ELFT>

@@ -838,7 +838,7 @@ protected:
 
     /// Describes the kind of default argument for this parameter. By default
     /// this is none. If this is normal, then the default argument is stored in
-    /// the \c VarDecl initializer expression unless we were unble to parse
+    /// the \c VarDecl initializer expression unless we were unable to parse
     /// (even an invalid) expression for the default argument.
     unsigned DefaultArgKind : 2;
 

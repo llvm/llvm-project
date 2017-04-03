@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 class MCSymbol;
@@ -79,9 +80,10 @@ public:
 /// MachineModuleInfoWasm - This is a MachineModuleInfoImpl implementation
 /// for Wasm targets.
 class MachineModuleInfoWasm : public MachineModuleInfoImpl {
-  /// GVStubs - These stubs are used to materialize global addresses in PIC
-  /// mode.
-  std::vector<MVT> Globals;
+  /// WebAssembly global variables defined by CodeGen.
+  std::vector<wasm::Global> Globals;
+
+  /// The WebAssembly global variable which is the stack pointer.
   unsigned StackPointerGlobal;
 
   virtual void anchor(); // Out of line virtual method.
@@ -89,8 +91,8 @@ public:
   MachineModuleInfoWasm(const MachineModuleInfo &)
     : StackPointerGlobal(-1U) {}
 
-  void addGlobal(MVT VT) { Globals.push_back(VT); }
-  const std::vector<MVT> &getGlobals() const { return Globals; }
+  void addGlobal(const wasm::Global &G) { Globals.push_back(G); }
+  const std::vector<wasm::Global> &getGlobals() const { return Globals; }
 
   bool hasStackPointerGlobal() const {
     return StackPointerGlobal != -1U;

@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown -cl-kernel-arg-info | FileCheck %s -check-prefix ARGINFO
 
 kernel void foo(__global int * restrict X, const int Y, 
-                volatile int anotherArg, __constant float * restrict Z) {
+                volatile int anotherArg, __constant float * restrict Z,
+                __global volatile int * V, __global const int * C) {
   *X = Y + anotherArg;
 }
 // CHECK: define spir_kernel void @foo{{[^!]+}}
@@ -60,11 +61,11 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 // CHECK-NOT: !kernel_arg_name
 // ARGINFO: !kernel_arg_name ![[MD54:[0-9]+]]
 
-// CHECK: ![[MD11]] = !{i32 1, i32 0, i32 0, i32 2}
-// CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none"}
-// CHECK: ![[MD13]] = !{!"int*", !"int", !"int", !"float*"}
-// CHECK: ![[MD14]] = !{!"restrict", !"const", !"volatile", !"restrict const"}
-// ARGINFO: ![[MD15]] = !{!"X", !"Y", !"anotherArg", !"Z"}
+// CHECK: ![[MD11]] = !{i32 1, i32 0, i32 0, i32 2, i32 1, i32 1}
+// CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none"}
+// CHECK: ![[MD13]] = !{!"int*", !"int", !"int", !"float*", !"int*", !"int*"}
+// CHECK: ![[MD14]] = !{!"restrict", !"", !"", !"restrict const", !"volatile", !"const"}
+// ARGINFO: ![[MD15]] = !{!"X", !"Y", !"anotherArg", !"Z", !"V", !"C"}
 // CHECK: ![[MD21]] = !{i32 1, i32 1, i32 1, i32 1}
 // CHECK: ![[MD22]] = !{!"read_only", !"read_only", !"write_only", !"read_write"}
 // CHECK: ![[MD23]] = !{!"image1d_t", !"image2d_t", !"image2d_array_t", !"image1d_t"}

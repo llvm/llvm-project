@@ -35,6 +35,9 @@ using namespace llvm;
 STATISTIC(NumElimIdentity, "Number of IV identities eliminated");
 STATISTIC(NumElimOperand,  "Number of IV operands folded into a use");
 STATISTIC(NumElimRem     , "Number of IV remainder operations eliminated");
+STATISTIC(
+    NumSimplifiedSDiv,
+    "Number of IV signed division operations converted to unsigned division");
 STATISTIC(NumElimCmp     , "Number of IV comparisons eliminated");
 
 namespace {
@@ -75,6 +78,7 @@ namespace {
     void eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand);
     void eliminateIVRemainder(BinaryOperator *Rem, Value *IVOperand,
                               bool IsSigned);
+    bool eliminateSDiv(BinaryOperator *SDiv);
     bool strengthenOverflowingOperation(BinaryOperator *OBO, Value *IVOperand);
   };
 }
@@ -265,6 +269,33 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
   Changed = true;
 }
 
+bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
+  // Get the SCEVs for the ICmp operands.
+  auto *N = SE->getSCEV(SDiv->getOperand(0));
+  auto *D = SE->getSCEV(SDiv->getOperand(1));
+
+  // Simplify unnecessary loops away.
+  const Loop *L = LI->getLoopFor(SDiv->getParent());
+  N = SE->getSCEVAtScope(N, L);
+  D = SE->getSCEVAtScope(D, L);
+
+  // Replace sdiv by udiv if both of the operands are non-negative
+  if (SE->isKnownNonNegative(N) && SE->isKnownNonNegative(D)) {
+    auto *UDiv = BinaryOperator::Create(
+        BinaryOperator::UDiv, SDiv->getOperand(0), SDiv->getOperand(1),
+        SDiv->getName() + ".udiv", SDiv);
+    UDiv->setIsExact(SDiv->isExact());
+    SDiv->replaceAllUsesWith(UDiv);
+    DEBUG(dbgs() << "INDVARS: Simplified sdiv: " << *SDiv << '\n');
+    ++NumSimplifiedSDiv;
+    Changed = true;
+    DeadInsts.push_back(SDiv);
+    return true;
+  }
+
+  return false;
+}
+
 /// SimplifyIVUsers helper for eliminating useless
 /// remainder operations operating on an induction variable.
 void SimplifyIndvar::eliminateIVRemainder(BinaryOperator *Rem,
@@ -426,12 +457,15 @@ bool SimplifyIndvar::eliminateIVUser(Instruction *UseInst,
     eliminateIVComparison(ICmp, IVOperand);
     return true;
   }
-  if (BinaryOperator *Rem = dyn_cast<BinaryOperator>(UseInst)) {
-    bool IsSigned = Rem->getOpcode() == Instruction::SRem;
-    if (IsSigned || Rem->getOpcode() == Instruction::URem) {
-      eliminateIVRemainder(Rem, IVOperand, IsSigned);
+  if (BinaryOperator *Bin = dyn_cast<BinaryOperator>(UseInst)) {
+    bool IsSRem = Bin->getOpcode() == Instruction::SRem;
+    if (IsSRem || Bin->getOpcode() == Instruction::URem) {
+      eliminateIVRemainder(Bin, IVOperand, IsSRem);
       return true;
     }
+
+    if (Bin->getOpcode() == Instruction::SDiv)
+      return eliminateSDiv(Bin);
   }
 
   if (auto *CI = dyn_cast<CallInst>(UseInst))

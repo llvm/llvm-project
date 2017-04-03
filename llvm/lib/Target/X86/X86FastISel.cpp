@@ -3525,6 +3525,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     CCValAssign &VA = RVLocs[i];
     EVT CopyVT = VA.getValVT();
     unsigned CopyReg = ResultReg + i;
+    unsigned SrcReg = VA.getLocReg();
 
     // If this is x86-64, and we disabled SSE, we can't return FP values
     if ((CopyVT == MVT::f32 || CopyVT == MVT::f64) &&
@@ -3532,9 +3533,19 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       report_fatal_error("SSE register return with SSE disabled");
     }
 
+    // If the return value is an i1 and AVX-512 is enabled, we need
+    // to do a fixup to make the copy legal.
+    if (CopyVT == MVT::i1 && SrcReg == X86::AL && Subtarget->hasAVX512()) {
+      // Need to copy to a GR32 first.
+      // TODO: MOVZX isn't great here. We don't care about the upper bits.
+      SrcReg = createResultReg(&X86::GR32RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(X86::MOVZX32rr8), SrcReg).addReg(X86::AL);
+    }
+
     // If we prefer to use the value in xmm registers, copy it out as f80 and
     // use a truncate to move it from fp stack reg to xmm reg.
-    if ((VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1) &&
+    if ((SrcReg == X86::FP0 || SrcReg == X86::FP1) &&
         isScalarFPTypeInSSEReg(VA.getValVT())) {
       CopyVT = MVT::f80;
       CopyReg = createResultReg(&X86::RFP80RegClass);
@@ -3542,7 +3553,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
     // Copy out the result.
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::COPY), CopyReg).addReg(VA.getLocReg());
+            TII.get(TargetOpcode::COPY), CopyReg).addReg(SrcReg);
     InRegs.push_back(VA.getLocReg());
 
     // Round the f80 to the right size, which also moves it to the appropriate

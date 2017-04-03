@@ -96,9 +96,10 @@ typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
 
-struct ScopedDoingMyOwnMemmem {
-  ScopedDoingMyOwnMemmem();
-  ~ScopedDoingMyOwnMemmem();
+struct ScopedDoingMyOwnMemOrStr {
+  ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr++; }
+  ~ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr--; }
+  static int DoingMyOwnMemOrStr;
 };
 
 inline uint8_t  Bswap(uint8_t x)  { return x; }

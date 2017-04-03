@@ -1068,6 +1068,7 @@ def function (valobj,internal_dict):<br/>
 <sup>[2]</sup> This method is optional (starting with SVN rev166495/LLDB-175). While implementing it in terms of <code>num_children</code> is acceptable, implementors are encouraged to look for optimized coding alternatives whenever reasonable.
 <br/>
 <sup>[3]</sup> This method is optional (starting with SVN revision 219330). The SBValue you return here will most likely be a numeric type (int, float, ...) as its value bytes will be used as-if they were the value of the root SBValue proper. As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and just define get_value as other methods are defaulted in the superclass as returning default no-children responses.
+<p>If a synthetic child provider supplies a special child named <code>$$dereference$$</code> then it will be used when evaluating <code>opertaor*</code> and <code>operator-&gt;</code> in the <code>frame variable</code> command and related SB API functions.</p>
 		<p>For examples of how synthetic children are created, you are encouraged to look at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/synthetic/">examples/synthetic</a> in the LLDB trunk. Please, be aware that the code in those files (except bitfield/)
 			is legacy code and is not maintained.
 			You may especially want to begin looking at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/synthetic/bitfield">this example</a> to get

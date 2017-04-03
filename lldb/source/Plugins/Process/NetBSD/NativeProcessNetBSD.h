@@ -131,6 +131,8 @@ private:
   void SigchldHandler();
 
   ::pid_t Attach(lldb::pid_t pid, Error &error);
+
+  Error ReinitializeThreads();
 };
 
 } // namespace process_netbsd

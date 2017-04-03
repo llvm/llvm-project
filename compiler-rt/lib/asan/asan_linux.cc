@@ -111,7 +111,7 @@ static void ReportIncompatibleRT() {
 }
 
 void AsanCheckDynamicRTPrereqs() {
-  if (!ASAN_DYNAMIC)
+  if (!ASAN_DYNAMIC || !flags()->verify_asan_link_order)
     return;
 
   // Ensure that dynamic RT is the first DSO in the list

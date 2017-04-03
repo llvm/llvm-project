@@ -23,6 +23,10 @@ namespace ELFYAML {
 struct Object;
 }
 
+namespace WasmYAML {
+struct Object;
+}
+
 namespace yaml {
 class Input;
 struct YamlObjectFile;
@@ -32,5 +36,6 @@ struct YamlObjectFile;
 int yaml2coff(llvm::COFFYAML::Object &Doc, llvm::raw_ostream &Out);
 int yaml2elf(llvm::ELFYAML::Object &Doc, llvm::raw_ostream &Out);
 int yaml2macho(llvm::yaml::YamlObjectFile &Doc, llvm::raw_ostream &Out);
+int yaml2wasm(llvm::WasmYAML::Object &Doc, llvm::raw_ostream &Out);
 
 #endif

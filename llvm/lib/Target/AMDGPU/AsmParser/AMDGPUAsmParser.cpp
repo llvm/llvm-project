@@ -1018,7 +1018,6 @@ public:
 
   void cvtId(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3_2_mod(MCInst &Inst, const OperandVector &Operands);
-  void cvtVOP3_omod(MCInst &Inst, const OperandVector &Operands);
 
   void cvtVOP3Impl(MCInst &Inst,
                    const OperandVector &Operands,
@@ -3675,15 +3674,6 @@ void AMDGPUAsmParser::cvtVOP3_2_mod(MCInst &Inst, const OperandVector &Operands)
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
   if (TSFlags & SIInstrFlags::VOP3) {
     cvtVOP3(Inst, Operands);
-  } else {
-    cvtId(Inst, Operands);
-  }
-}
-
-void AMDGPUAsmParser::cvtVOP3_omod(MCInst &Inst, const OperandVector &Operands) {
-  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-  if (TSFlags & SIInstrFlags::VOP3) {
-    cvtVOP3OMod(Inst, Operands);
   } else {
     cvtId(Inst, Operands);
   }

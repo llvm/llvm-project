@@ -66,25 +66,6 @@ struct isl_basic_set *isl_basic_set_implicit_equalities(
 		isl_basic_map_implicit_equalities(bset_to_bmap(bset)));
 }
 
-struct isl_map *isl_map_implicit_equalities(struct isl_map *map)
-{
-	int i;
-
-	if (!map)
-		return map;
-
-	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_implicit_equalities(map->p[i]);
-		if (!map->p[i])
-			goto error;
-	}
-
-	return map;
-error:
-	isl_map_free(map);
-	return NULL;
-}
-
 /* Make eq[row][col] of both bmaps equal so we can add the row
  * add the column to the common matrix.
  * Note that because of the echelon form, the columns of row row

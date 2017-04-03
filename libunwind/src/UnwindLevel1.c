@@ -30,7 +30,7 @@
 #include "unwind.h"
 #include "config.h"
 
-#if !_LIBUNWIND_ARM_EHABI
+#if !defined(_LIBUNWIND_ARM_EHABI)
 
 static _Unwind_Reason_Code
 unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *exception_object) {
@@ -503,4 +503,4 @@ _LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
   unw_set_reg(cursor, UNW_REG_IP, value);
 }
 
-#endif // !_LIBUNWIND_ARM_EHABI
+#endif // !defined(_LIBUNWIND_ARM_EHABI)

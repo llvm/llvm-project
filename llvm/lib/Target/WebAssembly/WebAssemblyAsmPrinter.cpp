@@ -97,6 +97,8 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   if (!TM.getTargetTriple().isOSBinFormatELF()) {
     MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
     getTargetStreamer()->emitGlobal(MMIW.getGlobals());
+    if (MMIW.hasStackPointerGlobal())
+      getTargetStreamer()->emitStackPointer(MMIW.getStackPointerGlobal());
   }
 }
 

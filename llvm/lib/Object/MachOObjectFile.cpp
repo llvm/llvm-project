@@ -2780,12 +2780,10 @@ void MachORebaseEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  if (Ptr >= Opcodes.end()) {
-    if (Opcodes.begin() != Opcodes.end() && Done != true) {
-      *E = malformedError("missing REBASE_OPCODE_DONE at end of opcodes");
-      moveToEnd();
-      return;
-    }
+  // REBASE_OPCODE_DONE is only used for padding if we are not aligned to
+  // pointer size. Therefore it is possible to reach the end without ever having
+  // seen REBASE_OPCODE_DONE.
+  if (Ptr == Opcodes.end()) {
     Done = true;
     return;
   }
@@ -3164,12 +3162,10 @@ void MachOBindEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  if (Ptr >= Opcodes.end()) {
-    if (Opcodes.begin() != Opcodes.end() && Done != true) {
-      *E = malformedError("missing BIND_OPCODE_DONE at end of opcodes");
-      moveToEnd();
-      return;
-    }
+  // BIND_OPCODE_DONE is only used for padding if we are not aligned to
+  // pointer size. Therefore it is possible to reach the end without ever having
+  // seen BIND_OPCODE_DONE.
+  if (Ptr == Opcodes.end()) {
     Done = true;
     return;
   }
