@@ -60,7 +60,7 @@ enum isl_lp_result isl_tab_solve_lp(struct isl_basic_map *bmap, int maximize,
  * If opt_denom is NULL, then *opt is rounded up (or down)
  * to the nearest integer.
  * The return value reflects the nature of the result (empty, unbounded,
- * minmimal or maximal value returned in *opt).
+ * minimal or maximal value returned in *opt).
  */
 enum isl_lp_result isl_basic_map_solve_lp(struct isl_basic_map *bmap, int max,
 				      isl_int *f, isl_int d, isl_int *opt,
