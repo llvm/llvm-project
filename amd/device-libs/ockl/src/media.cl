@@ -23,21 +23,13 @@ OCKL_MANGLE_U32(bfm)(uint w, uint s)
 CATTR int
 OCKL_MANGLE_I32(bfe)(int a, uint s, uint w)
 {
-    // TODO check that ths results in v_bfe_i32
-    s &= 0x1fU;
-    w &= 0x1fU;
-    int r0 = a >> s;
-    int r1 = (a << (32 - s - w)) >> (32 - w);
-    int r = s + w < 32 ? r1 : r0;
-    return w == 0 ? (int)0 : r;
+    return __llvm_amdgcn_sbfe_i32(a, s, w);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(bfe)(uint a, uint s, uint w)
 {
-    // TODO check that this results in v_bfe_u32
-    uint m = (1U << w) - 1U;
-    return (a >> s) & m;
+    return __llvm_amdgcn_ubfe_i32(a, s, w);
 }
 
 CATTR uint
