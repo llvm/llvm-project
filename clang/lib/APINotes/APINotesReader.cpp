@@ -256,6 +256,10 @@ namespace {
       payload >>= 3;
 
       if (payload & (1 << 1))
+        info.setSwiftObjCMembers(payload & 1);
+      payload >>= 2;
+
+      if (payload & (1 << 1))
         info.setSwiftImportAsNonGeneric(payload & 1);
 
       return info;
