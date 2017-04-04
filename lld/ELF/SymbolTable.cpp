@@ -251,9 +251,13 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, bool IsLocal,
                                         InputFile *File) {
   Symbol *S;
   bool WasInserted;
+  uint8_t Visibility = getVisibility(StOther);
   std::tie(S, WasInserted) =
-      insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, File);
-  if (WasInserted) {
+      insert(Name, Type, Visibility, CanOmitFromDynSym, File);
+  // An undefined symbol with non default visibility must be satisfied
+  // in the same DSO.
+  if (WasInserted ||
+      (isa<SharedSymbol>(S->body()) && Visibility != STV_DEFAULT)) {
     S->Binding = Binding;
     replaceBody<Undefined>(S, Name, IsLocal, StOther, Type, File);
     return S;
@@ -428,7 +432,11 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *File, StringRef Name,
   if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
 
-  if (WasInserted || isa<Undefined>(S->body())) {
+  SymbolBody *Body = S->body();
+  // An undefined symbol with non default visibility must be satisfied
+  // in the same DSO.
+  if (WasInserted ||
+      (isa<Undefined>(Body) && Body->getVisibility() == STV_DEFAULT)) {
     replaceBody<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(), &Sym,
                               Verdef);
     if (!S->isWeak())

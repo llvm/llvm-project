@@ -498,7 +498,7 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   // omit the GuardBB in front of the loop.
   bool UseGuardBB =
       !SE.isKnownPredicate(Predicate, SE.getSCEV(ValueLB), SE.getSCEV(ValueUB));
-  IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, P, LI, DT, ExitBlock,
+  IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, LI, DT, ExitBlock,
                   Predicate, &Annotator, Parallel, UseGuardBB);
   IDToValue[IteratorID] = IV;
 
@@ -625,7 +625,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   }
 
   ValueMapT NewValues;
-  ParallelLoopGenerator ParallelLoopGen(Builder, P, LI, DT, DL);
+  ParallelLoopGenerator ParallelLoopGen(Builder, LI, DT, DL);
 
   IV = ParallelLoopGen.createParallelLoop(ValueLB, ValueUB, ValueInc,
                                           SubtreeValues, NewValues, &LoopBody);

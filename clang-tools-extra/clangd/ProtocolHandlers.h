@@ -36,7 +36,8 @@ struct InitializeHandler : Handler {
           "documentFormattingProvider": true,
           "documentRangeFormattingProvider": true,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
-          "codeActionProvider": true
+          "codeActionProvider": true,
+          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]}
         }}})");
   }
 };
@@ -111,6 +112,16 @@ struct CodeActionHandler : Handler {
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 
 private:
+  ASTManager &AST;
+};
+
+struct CompletionHandler : Handler {
+  CompletionHandler(JSONOutput &Output, ASTManager &AST)
+      : Handler(Output), AST(AST) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
+
+ private:
   ASTManager &AST;
 };
 

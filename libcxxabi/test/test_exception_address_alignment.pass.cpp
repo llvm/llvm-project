@@ -15,8 +15,8 @@
 // working around this failure.
 // XFAIL: darwin && libcxxabi-has-system-unwinder
 
-// Test that the address of the exception object is properly aligned to the
-// largest supported alignment for the system.
+// Test that the address of the exception object is properly aligned as required
+// by the relevant ABI
 
 #include <cstdint>
 #include <cassert>
@@ -24,7 +24,16 @@
 #include <unwind.h>
 
 struct __attribute__((aligned)) AlignedType {};
-static_assert(alignof(AlignedType) == alignof(_Unwind_Exception),
+
+// EHABI  : 8-byte aligned
+// Itanium: Largest supported alignment for the system
+#if defined(_LIBUNWIND_ARM_EHABI)
+#  define EXPECTED_ALIGNMENT 8
+#else
+#  define EXPECTED_ALIGNMENT alignof(AlignedType)
+#endif
+
+static_assert(alignof(_Unwind_Exception) == EXPECTED_ALIGNMENT,
   "_Unwind_Exception is incorrectly aligned. This test is expected to fail");
 
 struct MinAligned {  };
@@ -35,7 +44,7 @@ int main() {
     try {
       throw MinAligned{};
     } catch (MinAligned const& ref) {
-      assert(reinterpret_cast<uintptr_t>(&ref) % alignof(AlignedType) == 0);
+      assert(reinterpret_cast<uintptr_t>(&ref) % EXPECTED_ALIGNMENT == 0);
     }
   }
 }

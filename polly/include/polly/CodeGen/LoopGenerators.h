@@ -50,9 +50,8 @@ using namespace llvm;
 ///
 /// @return Value*    The newly created induction variable for this loop.
 Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
-                  PollyIRBuilder &Builder, Pass *P, LoopInfo &LI,
-                  DominatorTree &DT, BasicBlock *&ExitBlock,
-                  ICmpInst::Predicate Predicate,
+                  PollyIRBuilder &Builder, LoopInfo &LI, DominatorTree &DT,
+                  BasicBlock *&ExitBlock, ICmpInst::Predicate Predicate,
                   ScopAnnotator *Annotator = NULL, bool Parallel = false,
                   bool UseGuard = true);
 
@@ -99,9 +98,9 @@ Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
 class ParallelLoopGenerator {
 public:
   /// Create a parallel loop generator for the current function.
-  ParallelLoopGenerator(PollyIRBuilder &Builder, Pass *P, LoopInfo &LI,
+  ParallelLoopGenerator(PollyIRBuilder &Builder, LoopInfo &LI,
                         DominatorTree &DT, const DataLayout &DL)
-      : Builder(Builder), P(P), LI(LI), DT(DT),
+      : Builder(Builder), LI(LI), DT(DT),
         LongType(
             Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()) {}
@@ -130,9 +129,6 @@ public:
 private:
   /// The IR builder we use to create instructions.
   PollyIRBuilder &Builder;
-
-  /// A pass pointer to update analysis information.
-  Pass *P;
 
   /// The loop info of the current function we need to update.
   LoopInfo &LI;

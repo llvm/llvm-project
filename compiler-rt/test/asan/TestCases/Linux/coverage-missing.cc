@@ -22,13 +22,15 @@
 // The "missing from foo" set may contain a few bogus PCs from the sanitizer
 // runtime, but it must include the entire "bar" code path as a subset. Sorted
 // lists can be tested for set inclusion with diff + grep.
-// RUN: ( diff bar.txt foo-missing-with-main.txt || true ) | not grep "^<"
+// RUN: diff bar.txt foo-missing-with-main.txt > %t.log || true
+// RUN: not grep "^<" %t.log
 
 // Second case: coverage from DSO.
 // cd %T
 // RUN: %clangxx_asan -fsanitize-coverage=func %s -o %dynamiclib -DFOOBAR -shared -fPIC
 // RUN: %clangxx_asan -fsanitize-coverage=func %s %dynamiclib -o %t -DMAIN
 // RUN: export LIBNAME=`basename %dynamiclib`
+// RUN: cd ..
 // RUN: rm -rf %T/coverage-missing
 // RUN: mkdir -p %T/coverage-missing
 // RUN: cd %T/coverage-missing
@@ -41,7 +43,8 @@
 // RUN: rm *.sancov
 // RUN: count 3 < bar.txt
 // RUN: %sancov missing %dynamiclib < foo.txt > foo-missing.txt
-// RUN: ( diff bar.txt foo-missing.txt || true ) | not grep "^<"
+// RUN: diff bar.txt foo-missing.txt > %t.log || true
+// RUN: not grep "^<" %t.log
 
 // REQUIRES: x86-target-arch
 // XFAIL: android

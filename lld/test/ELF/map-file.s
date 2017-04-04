@@ -59,4 +59,4 @@ local:
 
 // RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -Map=/ 2>&1 \
 // RUN:  | FileCheck -check-prefix=FAIL %s
-// FAIL: cannot open /
+// FAIL: cannot open map file /
