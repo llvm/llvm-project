@@ -28,7 +28,6 @@ let TargetPrefix = "SI", isTarget = 1 in {
   >;
 
   def int_SI_load_const : Intrinsic <[llvm_float_ty], [llvm_anyint_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_SI_vs_load_input : Intrinsic <[llvm_v4f32_ty], [llvm_anyint_ty, llvm_i16_ty, llvm_i32_ty], [IntrNoMem]> ;
 
   // Fully-flexible TBUFFER_STORE_FORMAT_* except for the ADDR64 bit, which is not exposed
   def int_SI_tbuffer_store : Intrinsic <

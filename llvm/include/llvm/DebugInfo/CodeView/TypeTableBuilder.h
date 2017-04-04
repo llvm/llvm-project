@@ -121,6 +121,12 @@ public:
     }
     return Index;
   }
+
+  /// Stop building the record.
+  void reset() {
+    if (auto EC = TempSerializer.visitTypeEnd(Type))
+      consumeError(std::move(EC));
+  }
 };
 
 } // end namespace codeview

@@ -437,8 +437,8 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 
 ; PR32401 - https://bugs.llvm.org/show_bug.cgi?id=32401
 
-define zeroext i1 @cmpeq_logical(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
-; CHECK-LABEL: cmpeq_logical:
+define zeroext i1 @and_eq(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
+; CHECK-LABEL: and_eq:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    sete %sil
@@ -450,5 +450,35 @@ define zeroext i1 @cmpeq_logical(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
   %cmp2 = icmp eq i8 %c, %d
   %and = and i1 %cmp1, %cmp2
   ret i1 %and
+}
+
+define zeroext i1 @or_ne(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
+; CHECK-LABEL: or_ne:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpb %sil, %dil
+; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    cmpb %cl, %dl
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    orb %sil, %al
+; CHECK-NEXT:    retq
+  %cmp1 = icmp ne i8 %a, %b
+  %cmp2 = icmp ne i8 %c, %d
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+; This should not be transformed because vector compares + bitwise logic are faster.
+
+define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) nounwind {
+; CHECK-LABEL: and_eq_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp1 = icmp eq <4 x i32> %a, %b
+  %cmp2 = icmp eq <4 x i32> %c, %d
+  %and = and <4 x i1> %cmp1, %cmp2
+  ret <4 x i1> %and
 }
 

@@ -64,6 +64,8 @@ public:
       : DestIdStream(DestIdStream), DestTypeStream(DestTypeStream),
         FieldListBuilder(DestTypeStream), Handler(Handler) {}
 
+  static const TypeIndex Untranslated;
+
 /// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(CVType &CVR, Name##Record &Record) override;
@@ -82,42 +84,53 @@ public:
   Error mergeStream(const CVTypeArray &Types);
 
 private:
+  void addMapping(TypeIndex Idx);
+
   bool remapIndex(TypeIndex &Idx);
+
+  size_t slotForIndex(TypeIndex Idx) const {
+    assert(!Idx.isSimple() && "simple type indices have no slots");
+    return Idx.getIndex() - TypeIndex::FirstNonSimpleIndex;
+  }
+
+  Error errorCorruptRecord() const {
+    return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
+  }
 
   template <typename RecordType>
   Error writeRecord(RecordType &R, bool RemapSuccess) {
-    if (!RemapSuccess) {
-      LastError = joinErrors(
-          std::move(*LastError),
-          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
-    }
-    IndexMap.push_back(DestTypeStream.writeKnownType(R));
+    TypeIndex DestIdx = Untranslated;
+    if (RemapSuccess)
+      DestIdx = DestTypeStream.writeKnownType(R);
+    addMapping(DestIdx);
     return Error::success();
   }
 
   template <typename RecordType>
   Error writeIdRecord(RecordType &R, bool RemapSuccess) {
-    if (!RemapSuccess) {
-      LastError = joinErrors(
-          std::move(*LastError),
-          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
-    }
-    IndexMap.push_back(DestIdStream.writeKnownType(R));
+    TypeIndex DestIdx = Untranslated;
+    if (RemapSuccess)
+      DestIdx = DestIdStream.writeKnownType(R);
+    addMapping(DestIdx);
     return Error::success();
   }
 
   template <typename RecordType>
   Error writeMember(RecordType &R, bool RemapSuccess) {
-    if (!RemapSuccess) {
-      LastError = joinErrors(
-          std::move(*LastError),
-          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
-    }
-    FieldListBuilder.writeMemberType(R);
+    if (RemapSuccess)
+      FieldListBuilder.writeMemberType(R);
+    else
+      HadUntranslatedMember = true;
     return Error::success();
   }
 
   Optional<Error> LastError;
+
+  bool IsSecondPass = false;
+
+  bool HadUntranslatedMember = false;
+
+  unsigned NumBadIndices = 0;
 
   BumpPtrAllocator Allocator;
 
@@ -126,11 +139,7 @@ private:
   FieldListRecordBuilder FieldListBuilder;
   TypeServerHandler *Handler;
 
-#ifndef NDEBUG
-  /// Track the size of the index map in visitTypeBegin so we can check it in
-  /// visitTypeEnd.
-  size_t BeginIndexMapSize = 0;
-#endif
+  TypeIndex CurIndex{TypeIndex::FirstNonSimpleIndex};
 
   /// Map from source type index to destination type index. Indexed by source
   /// type index minus 0x1000.
@@ -139,16 +148,17 @@ private:
 
 } // end anonymous namespace
 
+const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
+
 Error TypeStreamMerger::visitTypeBegin(CVRecord<TypeLeafKind> &Rec) {
-#ifndef NDEBUG
-  BeginIndexMapSize = IndexMap.size();
-#endif
   return Error::success();
 }
 
 Error TypeStreamMerger::visitTypeEnd(CVRecord<TypeLeafKind> &Rec) {
-  assert(IndexMap.size() == BeginIndexMapSize + 1 &&
-         "visitKnownRecord should add one index map entry");
+  CurIndex = TypeIndex(CurIndex.getIndex() + 1);
+  if (!IsSecondPass)
+    assert(IndexMap.size() == slotForIndex(CurIndex) &&
+           "visitKnownRecord should add one index map entry");
   return Error::success();
 }
 
@@ -156,19 +166,44 @@ Error TypeStreamMerger::visitMemberEnd(CVMemberRecord &Rec) {
   return Error::success();
 }
 
+void TypeStreamMerger::addMapping(TypeIndex Idx) {
+  if (!IsSecondPass) {
+    assert(IndexMap.size() == slotForIndex(CurIndex) &&
+           "visitKnownRecord should add one index map entry");
+    IndexMap.push_back(Idx);
+  } else {
+    assert(slotForIndex(CurIndex) < IndexMap.size());
+    IndexMap[slotForIndex(CurIndex)] = Idx;
+  }
+}
+
 bool TypeStreamMerger::remapIndex(TypeIndex &Idx) {
   // Simple types are unchanged.
   if (Idx.isSimple())
     return true;
-  unsigned MapPos = Idx.getIndex() - TypeIndex::FirstNonSimpleIndex;
-  if (MapPos < IndexMap.size()) {
+
+  // Check if this type index refers to a record we've already translated
+  // successfully. If it refers to a type later in the stream or a record we
+  // had to defer, defer it until later pass.
+  unsigned MapPos = slotForIndex(Idx);
+  if (MapPos < IndexMap.size() && IndexMap[MapPos] != Untranslated) {
     Idx = IndexMap[MapPos];
     return true;
   }
 
+  // If this is the second pass and this index isn't in the map, then it points
+  // outside the current type stream, and this is a corrupt record.
+  if (IsSecondPass && MapPos >= IndexMap.size()) {
+    // FIXME: Print a more useful error. We can give the current record and the
+    // index that we think its pointing to.
+    LastError = joinErrors(std::move(*LastError), errorCorruptRecord());
+  }
+
+  ++NumBadIndices;
+
   // This type index is invalid. Remap this to "not translated by cvpack",
   // and return failure.
-  Idx = TypeIndex(SimpleTypeKind::NotTranslated, SimpleTypeMode::Direct);
+  Idx = Untranslated;
   return false;
 }
 
@@ -248,11 +283,13 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, MemberFunctionRecord &R) {
   return writeRecord(R, Success);
 }
 
-Error TypeStreamMerger::visitKnownRecord(CVType &, ArgListRecord &R) {
+Error TypeStreamMerger::visitKnownRecord(CVType &Type, ArgListRecord &R) {
   bool Success = true;
   for (TypeIndex &Arg : R.ArgIndices)
     Success &= remapIndex(Arg);
-  return writeRecord(R, Success);
+  if (auto EC = writeRecord(R, Success))
+    return EC;
+  return Error::success();
 }
 
 Error TypeStreamMerger::visitKnownRecord(CVType &, PointerRecord &R) {
@@ -322,12 +359,20 @@ Error TypeStreamMerger::visitKnownRecord(CVType &,
 
 Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
   // Visit the members inside the field list.
+  HadUntranslatedMember = false;
   FieldListBuilder.begin();
   CVTypeVisitor Visitor(*this);
   if (auto EC = Visitor.visitFieldListMemberStream(R.Data))
     return EC;
-  TypeIndex Index = FieldListBuilder.end();
-  IndexMap.push_back(Index);
+
+  // Write the record if we translated all field list members.
+  TypeIndex DestIdx = Untranslated;
+  if (!HadUntranslatedMember)
+    DestIdx = FieldListBuilder.end();
+  else
+    FieldListBuilder.reset();
+  addMapping(DestIdx);
+
   return Error::success();
 }
 
@@ -389,9 +434,8 @@ Error TypeStreamMerger::visitKnownMember(CVMemberRecord &,
 
 Error TypeStreamMerger::visitUnknownType(CVType &Rec) {
   // We failed to translate a type. Translate this index as "not translated".
-  IndexMap.push_back(
-      TypeIndex(SimpleTypeKind::NotTranslated, SimpleTypeMode::Direct));
-  return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
+  addMapping(TypeIndex(SimpleTypeKind::NotTranslated));
+  return errorCorruptRecord();
 }
 
 Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
@@ -409,6 +453,30 @@ Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
 
   if (auto EC = Visitor.visitTypeStream(Types))
     return EC;
+
+  // If we found bad indices but no other errors, try doing another pass and see
+  // if we can resolve the indices that weren't in the map on the first pass.
+  // This may require multiple passes, but we should always make progress. MASM
+  // is the only known CodeView producer that makes type streams that aren't
+  // topologically sorted. The standard library contains MASM-produced objects,
+  // so this is important to handle correctly, but we don't have to be too
+  // efficient. MASM type streams are usually very small.
+  while (!*LastError && NumBadIndices > 0) {
+    unsigned BadIndicesRemaining = NumBadIndices;
+    IsSecondPass = true;
+    NumBadIndices = 0;
+    CurIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex);
+    if (auto EC = Visitor.visitTypeStream(Types))
+      return EC;
+
+    assert(NumBadIndices <= BadIndicesRemaining &&
+           "second pass found more bad indices");
+    if (!*LastError && NumBadIndices == BadIndicesRemaining) {
+      return llvm::make_error<CodeViewError>(
+          cv_error_code::corrupt_record, "input type graph contains cycles");
+    }
+  }
+
   IndexMap.clear();
 
   Error Ret = std::move(*LastError);
