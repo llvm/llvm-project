@@ -993,6 +993,10 @@ struct Header {
 
 } // end namespace RawInstrProf
 
+// Parse MemOP Size range option.
+void getMemOPSizeRangeFromOption(std::string Str, int64_t &RangeStart,
+                                 int64_t &RangeLast);
+
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_INSTRPROF_H

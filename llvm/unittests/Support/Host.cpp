@@ -79,3 +79,38 @@ Serial          : 0000000000000000
                                               "CPU part        : 0x06f"),
             "krait");
 }
+
+TEST(getLinuxHostCPUName, AArch64) {
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd03"),
+            "cortex-a53");
+  // Verify that both CPU implementer and CPU part are checked:
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
+                                              "CPU part        : 0xd03"),
+            "generic");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
+                                              "CPU part        : 0x201"),
+            "kryo");
+
+  // MSM8992/4 weirdness
+  StringRef MSM8992ProcCpuInfo = R"(
+Processor       : AArch64 Processor rev 3 (aarch64)
+processor       : 0
+processor       : 1
+processor       : 2
+processor       : 3
+processor       : 4
+processor       : 5
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+CPU revision    : 3
+
+Hardware        : Qualcomm Technologies, Inc MSM8992
+)";
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(MSM8992ProcCpuInfo),
+            "cortex-a53");
+}

@@ -5,44 +5,20 @@ Content-Length: 125
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 
-Content-Length: 208
+Content-Length: 211
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"#include <vector>\nint main() {\n  std::vector<int> v;\n  v.\n}\n"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":4}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
 # The order of results returned by ASTUnit CodeComplete seems to be
 # nondeterministic, so we check regardless of order.
 #
 # CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"assign"}
-# CHECK-DAG: {"label":"at"}
-# CHECK-DAG: {"label":"back"}
-# CHECK-DAG: {"label":"begin"}
-# CHECK-DAG: {"label":"capacity"}
-# CHECK-DAG: {"label":"clear"}
-# CHECK-DAG: {"label":"data"}
-# CHECK-DAG: {"label":"empty"}
-# CHECK-DAG: {"label":"end"}
-# CHECK-DAG: {"label":"erase"}
-# CHECK-DAG: {"label":"front"}
-# CHECK-DAG: {"label":"get_allocator"}
-# CHECK-DAG: {"label":"insert"}
-# CHECK-DAG: {"label":"max_size"}
-# CHECK-DAG: {"label":"operator="}
-# CHECK-DAG: {"label":"operator[]"}
-# CHECK-DAG: {"label":"pop_back"}
-# CHECK-DAG: {"label":"push_back"}
-# CHECK-DAG: {"label":"rbegin"}
-# CHECK-DAG: {"label":"rend"}
-# CHECK-DAG: {"label":"reserve"}
-# CHECK-DAG: {"label":"resize"}
-# CHECK-DAG: {"label":"size"}
-# CHECK-DAG: {"label":"swap"}
-# CHECK-DAG: {"label":"vector"}
-# CHECK-DAG: {"label":"~_Vector_base"}
-# CHECK-DAG: {"label":"~vector"}
+# CHECK-DAG: {"label":"a"}
+# CHECK-DAG: {"label":"bb"}
+# CHECK-DAG: {"label":"ccc"}
 # CHECK: ]}
 Content-Length: 44
 

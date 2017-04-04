@@ -60,7 +60,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
                                                          IsReadOnly);
     }
   private:
-    bool DebugSeen;
+    bool &DebugSeen;
   };
 
   RTDyldObjectLinkingLayer<> ObjLayer;
@@ -75,6 +75,10 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   GV->setSection(".debug_str");
 
+
+  // Initialize the native target in case this is the first unit test
+  // to try to build a TM.
+  OrcNativeTarget::initialize();
   std::unique_ptr<TargetMachine> TM(
     EngineBuilder().selectTarget(Triple(M->getTargetTriple()), "", "",
                                  SmallVector<std::string, 1>()));
@@ -99,6 +103,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   {
     // Test with ProcessAllSections = false (the default).
     auto H = ObjLayer.addObjectSet(Objs, &SMMW, &*Resolver);
+    ObjLayer.emitAndFinalize(H);
     EXPECT_EQ(DebugSectionSeen, false)
       << "Unexpected debug info section";
     ObjLayer.removeObjectSet(H);
@@ -108,6 +113,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
     // Test with ProcessAllSections = true.
     ObjLayer.setProcessAllSections(true);
     auto H = ObjLayer.addObjectSet(Objs, &SMMW, &*Resolver);
+    ObjLayer.emitAndFinalize(H);
     EXPECT_EQ(DebugSectionSeen, true)
       << "Expected debug info section not seen";
     ObjLayer.removeObjectSet(H);

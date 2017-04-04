@@ -34,8 +34,8 @@ main_body:
   %tmp22 = call i32 @llvm.SI.buffer.load.dword.i32.v2i32(<16 x i8> %tmp10, <2 x i32> zeroinitializer, i32 1234, i32 65535, i32 1, i32 1, i32 1, i32 1, i32 0)
   %tmp23 = bitcast i32 %tmp22 to float
 
-  call void @llvm.SI.export(i32 15, i32 0, i32 1, i32 12, i32 0, float %tmp13, float %tmp15, float %tmp17, float %tmp19)
-  call void @llvm.SI.export(i32 15, i32 0, i32 1, i32 12, i32 0, float %tmp21, float %tmp23, float %tmp23, float %tmp23)
+  call void @llvm.amdgcn.exp.f32(i32 15, i32 12, float %tmp13, float %tmp15, float %tmp17, float %tmp19, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 15, i32 12, float %tmp21, float %tmp23, float %tmp23, float %tmp23, i1 true, i1 false)
   ret void
 }
 
@@ -45,9 +45,10 @@ declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i3
 ; Function Attrs: nounwind readonly
 declare i32 @llvm.SI.buffer.load.dword.i32.v2i32(<16 x i8>, <2 x i32>, i32, i32, i32, i32, i32, i32, i32) #0
 
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 
 attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind inaccessiblememonly }
 
 !0 = !{!"const", !1, i32 1}
 !1 = !{!"tbaa root"}

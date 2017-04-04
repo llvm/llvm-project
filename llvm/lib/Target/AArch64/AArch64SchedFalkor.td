@@ -42,7 +42,11 @@ let SchedModel = FalkorModel in {
   def FalkorUnitVX   : ProcResource<1>; // Vector X-pipe
   def FalkorUnitVY   : ProcResource<1>; // Vector Y-pipe
 
+  def FalkorUnitGTOV : ProcResource<1>; // Scalar to Vector
+  def FalkorUnitVTOG : ProcResource<1>; // Vector to Scalar
+
   // Define the resource groups.
+  def FalkorUnitXY   : ProcResGroup<[FalkorUnitX, FalkorUnitY]>;
   def FalkorUnitXYZ  : ProcResGroup<[FalkorUnitX, FalkorUnitY, FalkorUnitZ]>;
   def FalkorUnitXYZB : ProcResGroup<[FalkorUnitX, FalkorUnitY, FalkorUnitZ,
                                      FalkorUnitB]>;
@@ -78,7 +82,7 @@ def : WriteRes<WriteLD,    [FalkorUnitLD]> { let Latency = 3; }
 def : WriteRes<WriteST,    [FalkorUnitLD, FalkorUnitST, FalkorUnitSD]>
       { let Latency = 3; let NumMicroOps = 3; }
 def : WriteRes<WriteSTP,   [FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 3; let NumMicroOps = 2; }
+      { let Latency = 0; let NumMicroOps = 2; }
 def : WriteRes<WriteAdr,   [FalkorUnitXYZ]> { let Latency = 5; }
 def : WriteRes<WriteLDIdx, [FalkorUnitLD]> { let Latency = 5; }
 def : WriteRes<WriteSTIdx, [FalkorUnitLD, FalkorUnitST, FalkorUnitSD]>
@@ -95,7 +99,8 @@ def : WriteRes<WriteFDiv,  [FalkorUnitVXVY, FalkorUnitVXVY]>
       { let Latency = 12; let NumMicroOps = 2; } // Fragent -1 / NoRSV +1
 def : WriteRes<WriteV,     [FalkorUnitVXVY]> { let Latency = 6; }
 def : WriteRes<WriteVLD,   [FalkorUnitLD]> { let Latency = 3; }
-def : WriteRes<WriteVST,   [FalkorUnitST]> { let Latency = 0; }
+def : WriteRes<WriteVST,   [FalkorUnitST, FalkorUnitVSD]>
+      { let Latency = 0; let NumMicroOps = 2; }
 
 def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }

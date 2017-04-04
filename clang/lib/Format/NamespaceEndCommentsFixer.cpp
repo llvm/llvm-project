@@ -133,7 +133,7 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     // Detect "(inline)? namespace" in the beginning of a line.
     if (NamespaceTok->is(tok::kw_inline))
       NamespaceTok = NamespaceTok->getNextNonComment();
-    if (NamespaceTok->isNot(tok::kw_namespace))
+    if (!NamespaceTok || NamespaceTok->isNot(tok::kw_namespace))
       continue;
     FormatToken *RBraceTok = EndLine->First;
     if (RBraceTok->Finalized)

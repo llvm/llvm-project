@@ -458,7 +458,7 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
 
   // MachO still uses GOT for large code-model accesses, but ELF requires
   // movz/movk sequences, which FastISel doesn't handle yet.
-  if (TM.getCodeModel() != CodeModel::Small && !Subtarget->isTargetMachO())
+  if (!Subtarget->useSmallAddressing() && !Subtarget->isTargetMachO())
     return 0;
 
   unsigned char OpFlags = Subtarget->ClassifyGlobalReference(GV, TM);
@@ -3147,8 +3147,8 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     return false;
 
   CodeModel::Model CM = TM.getCodeModel();
-  // Only support the small and large code model.
-  if (CM != CodeModel::Small && CM != CodeModel::Large)
+  // Only support the small-addressing and large code models.
+  if (CM != CodeModel::Large && !Subtarget->useSmallAddressing())
     return false;
 
   // FIXME: Add large code model support for ELF.
@@ -3199,7 +3199,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Issue the call.
   MachineInstrBuilder MIB;
-  if (CM == CodeModel::Small) {
+  if (Subtarget->useSmallAddressing()) {
     const MCInstrDesc &II = TII.get(Addr.getReg() ? AArch64::BLR : AArch64::BL);
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II);
     if (Symbol)

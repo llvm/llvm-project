@@ -1543,15 +1543,15 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
 
 __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // CHECK-LABEL: @test_mm512_movm_epi8
-  // CHECK:  %2 = bitcast i64 %1 to <64 x i1>
-  // CHECK:  %vpmovm2.i = sext <64 x i1> %2 to <64 x i8>
+  // CHECK:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
+  // CHECK:  %vpmovm2.i = sext <64 x i1> %{{.*}} to <64 x i8>
   return _mm512_movm_epi8(__A); 
 }
 
 __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CHECK-LABEL: @test_mm512_movm_epi16
-  // CHECK:  %2 = bitcast i32 %1 to <32 x i1>
-  // CHECK:  %vpmovm2.i = sext <32 x i1> %2 to <32 x i16>
+  // CHECK:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
+  // CHECK:  %vpmovm2.i = sext <32 x i1> %{{.*}} to <32 x i16>
   return _mm512_movm_epi16(__A); 
 }
 

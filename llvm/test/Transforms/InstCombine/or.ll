@@ -714,11 +714,86 @@ define i32 @test49(i1 %C) {
 
 define <2 x i32> @test49vec(i1 %C) {
 ; CHECK-LABEL: @test49vec(
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 896, i32 896>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[V:%.*]] = or <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1019, i32 1019>, <2 x i32> <i32 123, i32 123>
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
   %V = or <2 x i32> %A, <i32 123, i32 123>
   ret <2 x i32> %V
+}
+
+define <2 x i32> @test49vec2(i1 %C) {
+; CHECK-LABEL: @test49vec2(
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1019, i32 2509>, <2 x i32> <i32 123, i32 351>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 2500>, <2 x i32> <i32 10, i32 30>
+  %V = or <2 x i32> %A, <i32 123, i32 333>
+  ret <2 x i32> %V
+}
+
+define i32 @test50(i1 %which) {
+; CHECK-LABEL: @test50(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 1019, [[ENTRY:%.*]] ], [ 123, [[DELAY]] ]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi i32 [ 1000, %entry ], [ 10, %delay ]
+  %value = or i32 %A, 123
+  ret i32 %value
+}
+
+define <2 x i32> @test50vec(i1 %which) {
+; CHECK-LABEL: @test50vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1019, i32 1019>, [[ENTRY:%.*]] ], [ <i32 123, i32 123>, [[DELAY]] ]
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi <2 x i32> [ <i32 1000, i32 1000>, %entry ], [ <i32 10, i32 10>, %delay ]
+  %value = or <2 x i32> %A, <i32 123, i32 123>
+  ret <2 x i32> %value
+}
+
+define <2 x i32> @test50vec2(i1 %which) {
+; CHECK-LABEL: @test50vec2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1019, i32 2509>, [[ENTRY:%.*]] ], [ <i32 123, i32 351>, [[DELAY]] ]
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi <2 x i32> [ <i32 1000, i32 2500>, %entry ], [ <i32 10, i32 30>, %delay ]
+  %value = or <2 x i32> %A, <i32 123, i32 333>
+  ret <2 x i32> %value
 }
