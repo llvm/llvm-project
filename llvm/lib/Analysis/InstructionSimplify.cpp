@@ -4081,6 +4081,50 @@ Value *llvm::SimplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                             RecursionLimit);
 }
 
+static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
+                                        Type *RetTy, const Query &Q,
+                                        unsigned MaxRecurse) {
+  unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
+  unsigned InVecNumElts = Op0->getType()->getVectorNumElements();
+
+  auto *Op0Const = dyn_cast<Constant>(Op0);
+  auto *Op1Const = dyn_cast<Constant>(Op1);
+
+  // If all operands are constant, constant fold the shuffle.
+  if (Op0Const && Op1Const)
+    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
+
+  // If only one of the operands is constant, constant fold the shuffle if the
+  // mask does not select elements from the variable operand.
+  bool MaskSelects0 = false, MaskSelects1 = false;
+  for (unsigned i = 0; i != MaskNumElts; ++i) {
+    int Idx = ShuffleVectorInst::getMaskValue(Mask, i);
+    if (Idx == -1)
+      continue;
+    if ((unsigned)Idx < InVecNumElts)
+      MaskSelects0 = true;
+    else
+      MaskSelects1 = true;
+  }
+  if (!MaskSelects0 && Op1Const)
+    return ConstantFoldShuffleVectorInstruction(UndefValue::get(Op0->getType()),
+                                                Op1Const, Mask);
+  if (!MaskSelects1 && Op0Const)
+    return ConstantFoldShuffleVectorInstruction(
+        Op0Const, UndefValue::get(Op0->getType()), Mask);
+
+  return nullptr;
+}
+
+/// Given operands for a ShuffleVectorInst, fold the result or return null.
+Value *llvm::SimplifyShuffleVectorInst(
+    Value *Op0, Value *Op1, Constant *Mask, Type *RetTy,
+    const DataLayout &DL, const TargetLibraryInfo *TLI, const DominatorTree *DT,
+    AssumptionCache *AC, const Instruction *CxtI) {
+  return ::SimplifyShuffleVectorInst(
+      Op0, Op1, Mask, RetTy, Query(DL, TLI, DT, AC, CxtI), RecursionLimit);
+}
+
 //=== Helper functions for higher up the class hierarchy.
 
 /// Given operands for a BinaryOperator, see if we can fold the result.
@@ -4567,6 +4611,13 @@ Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
     auto *EEI = cast<ExtractElementInst>(I);
     Result = SimplifyExtractElementInst(
         EEI->getVectorOperand(), EEI->getIndexOperand(), DL, TLI, DT, AC, I);
+    break;
+  }
+  case Instruction::ShuffleVector: {
+    auto *SVI = cast<ShuffleVectorInst>(I);
+    Result = SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
+                                       SVI->getMask(), SVI->getType(), DL, TLI,
+                                       DT, AC, I);
     break;
   }
   case Instruction::PHI:

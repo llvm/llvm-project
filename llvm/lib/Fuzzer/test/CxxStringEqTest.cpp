@@ -17,6 +17,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   Sink = Str == "123456";   // Try to confuse the fuzzer
   if (Eq) {
     std::cout << "BINGO; Found the target, exiting\n";
+    std::cout.flush();
     abort();
   }
   return 0;

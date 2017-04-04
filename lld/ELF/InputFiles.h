@@ -87,15 +87,14 @@ public:
   // string for creating error messages.
   StringRef ArchiveName;
 
-  // Filename used for logging. It is either in the form of "foo.o" or
-  // "bar.a(foo.o)".
-  std::string LogName;
-
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint8_t OSABI = 0;
+
+  // Cache for toString(). Only toString() should use this member.
+  mutable std::string ToStringCache;
 
 protected:
   InputFile(Kind K, MemoryBufferRef M);

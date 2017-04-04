@@ -92,9 +92,6 @@ enum ModuleCodes {
   // ALIAS: [alias type, aliasee val#, linkage, visibility]
   MODULE_CODE_ALIAS_OLD = 9,
 
-  // MODULE_CODE_PURGEVALS: [numvals]
-  MODULE_CODE_PURGEVALS = 10,
-
   MODULE_CODE_GCNAME = 11, // GCNAME: [strchr x N]
   MODULE_CODE_COMDAT = 12, // COMDAT: [selection_kind, name]
 

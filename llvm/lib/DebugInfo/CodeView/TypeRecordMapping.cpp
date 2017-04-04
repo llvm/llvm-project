@@ -380,6 +380,11 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
   return Error::success();
 }
 
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR, LabelRecord &Record) {
+  error(IO.mapEnum(Record.Mode));
+  return Error::success();
+}
+
 Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
                                           BaseClassRecord &Record) {
   error(IO.mapInteger(Record.Attrs.Attrs));

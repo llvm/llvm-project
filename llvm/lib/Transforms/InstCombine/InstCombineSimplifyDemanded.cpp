@@ -235,7 +235,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // operands.  This allows visitTruncInst (for example) to simplify the
   // operand of a trunc without duplicating all the logic below.
   if (Depth == 0 && !V->hasOneUse())
-    DemandedMask = APInt::getAllOnesValue(BitWidth);
+    DemandedMask.setAllBits();
 
   switch (I->getOpcode()) {
   default:
@@ -1558,7 +1558,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       break;
     case Intrinsic::amdgcn_buffer_load:
     case Intrinsic::amdgcn_buffer_load_format: {
-      if (VWidth == 1 || !APIntOps::isMask(DemandedElts))
+      if (VWidth == 1 || !DemandedElts.isMask())
         return nullptr;
 
       // TODO: Handle 3 vectors when supported in code gen.

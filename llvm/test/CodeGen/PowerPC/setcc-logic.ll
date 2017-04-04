@@ -413,3 +413,65 @@ define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
   ret <4 x i1> %c
 }
 
+define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
+; CHECK-LABEL: ne_neg1_and_ne_zero:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    addi 3, 3, 1
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    li 12, 1
+; CHECK-NEXT:    cmpldi 3, 1
+; CHECK-NEXT:    isel 3, 12, 4, 1
+; CHECK-NEXT:    blr
+  %cmp1 = icmp ne i64 %x, -1
+  %cmp2 = icmp ne i64 %x, 0
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+; PR32401 - https://bugs.llvm.org/show_bug.cgi?id=32401
+
+define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
+; CHECK-LABEL: and_eq:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpw 0, 3, 4
+; CHECK-NEXT:    cmpw 1, 5, 6
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 2, 6
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %cmp1 = icmp eq i16 %a, %b
+  %cmp2 = icmp eq i16 %c, %d
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: or_ne:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpw 0, 3, 4
+; CHECK-NEXT:    cmpw 1, 5, 6
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crand 20, 6, 2
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %cmp1 = icmp ne i32 %a, %b
+  %cmp2 = icmp ne i32 %c, %d
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+; This should not be transformed because vector compares + bitwise logic are faster.
+
+define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-LABEL: and_eq_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vcmpequw 2, 2, 3
+; CHECK-NEXT:    vcmpequw 19, 4, 5
+; CHECK-NEXT:    xxland 34, 34, 51
+; CHECK-NEXT:    blr
+  %cmp1 = icmp eq <4 x i32> %a, %b
+  %cmp2 = icmp eq <4 x i32> %c, %d
+  %and = and <4 x i1> %cmp1, %cmp2
+  ret <4 x i1> %and
+}
+

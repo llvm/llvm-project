@@ -138,7 +138,7 @@ struct FunctionSummaryYaml {
 } // End yaml namespace
 } // End llvm namespace
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint64_t)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint64_t)
 
 namespace llvm {
 namespace yaml {

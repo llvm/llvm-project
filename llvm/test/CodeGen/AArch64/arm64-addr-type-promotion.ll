@@ -10,14 +10,17 @@ define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; CHECK: fullGtU
 ; CHECK: adrp [[PAGE:x[0-9]+]], _block@GOTPAGE
 ; CHECK: ldr [[ADDR:x[0-9]+]], {{\[}}[[PAGE]], _block@GOTPAGEOFF]
+; CHECK: sxtw [[I1:x[0-9]+]], w0
+; CHECK: sxtw [[I2:x[0-9]+]], w1
 ; CHECK-NEXT: ldr [[BLOCKBASE:x[0-9]+]], {{\[}}[[ADDR]]]
-; CHECK-NEXT: ldrb [[BLOCKVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE]],  w0, sxtw]
-; CHECK-NEXT: ldrb [[BLOCKVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE]], w1, sxtw]
+; CHECK-NEXT: ldrb [[BLOCKVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE]], [[I1]]]
+; CHECK-NEXT: ldrb [[BLOCKVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE]], [[I2]]]
+
 ; CHECK-NEXT: cmp [[BLOCKVAL1]], [[BLOCKVAL2]]
 ; CHECK-NEXT: b.ne
 ; Next BB
-; CHECK: add [[BLOCKBASE2:x[0-9]+]], [[BLOCKBASE]], w1, sxtw
-; CHECK-NEXT: add [[BLOCKBASE1:x[0-9]+]], [[BLOCKBASE]], w0, sxtw
+; CHECK: add [[BLOCKBASE2:x[0-9]+]], [[BLOCKBASE]], [[I2]]
+; CHECK-NEXT: add [[BLOCKBASE1:x[0-9]+]], [[BLOCKBASE]], [[I1]]
 ; CHECK-NEXT: ldrb [[LOADEDVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE1]], #1]
 ; CHECK-NEXT: ldrb [[LOADEDVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE2]], #1]
 ; CHECK-NEXT: cmp [[LOADEDVAL1]], [[LOADEDVAL2]]

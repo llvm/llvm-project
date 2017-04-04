@@ -1559,43 +1559,44 @@ TEST(APIntTest, IsSplat) {
 }
 
 TEST(APIntTest, isMask) {
-  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0x01010101)));
-  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xf0000000)));
-  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xffff0000)));
-  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xff << 1)));
+  EXPECT_FALSE(APInt(32, 0x01010101).isMask());
+  EXPECT_FALSE(APInt(32, 0xf0000000).isMask());
+  EXPECT_FALSE(APInt(32, 0xffff0000).isMask());
+  EXPECT_FALSE(APInt(32, 0xff << 1).isMask());
 
   for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
-    EXPECT_FALSE(APIntOps::isMask(APInt(N, 0)));
+    EXPECT_FALSE(APInt(N, 0).isMask());
 
     APInt One(N, 1);
     for (int I = 1; I <= N; ++I) {
       APInt MaskVal = One.shl(I) - 1;
-      EXPECT_TRUE(APIntOps::isMask(MaskVal));
+      EXPECT_TRUE(MaskVal.isMask());
+      EXPECT_TRUE(MaskVal.isMask(I));
     }
   }
 }
 
 TEST(APIntTest, isShiftedMask) {
-  EXPECT_FALSE(APIntOps::isShiftedMask(APInt(32, 0x01010101)));
-  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xf0000000)));
-  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xffff0000)));
-  EXPECT_TRUE(APIntOps::isShiftedMask(APInt(32, 0xff << 1)));
+  EXPECT_FALSE(APInt(32, 0x01010101).isShiftedMask());
+  EXPECT_TRUE(APInt(32, 0xf0000000).isShiftedMask());
+  EXPECT_TRUE(APInt(32, 0xffff0000).isShiftedMask());
+  EXPECT_TRUE(APInt(32, 0xff << 1).isShiftedMask());
 
   for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
-    EXPECT_FALSE(APIntOps::isShiftedMask(APInt(N, 0)));
+    EXPECT_FALSE(APInt(N, 0).isShiftedMask());
 
     APInt One(N, 1);
     for (int I = 1; I < N; ++I) {
       APInt MaskVal = One.shl(I) - 1;
-      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+      EXPECT_TRUE(MaskVal.isShiftedMask());
     }
     for (int I = 1; I < N - 1; ++I) {
       APInt MaskVal = One.shl(I);
-      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+      EXPECT_TRUE(MaskVal.isShiftedMask());
     }
     for (int I = 1; I < N; ++I) {
       APInt MaskVal = APInt::getHighBitsSet(N, I);
-      EXPECT_TRUE(APIntOps::isShiftedMask(MaskVal));
+      EXPECT_TRUE(MaskVal.isShiftedMask());
     }
   }
 }

@@ -436,13 +436,13 @@ static void yamlToPdb(StringRef Path) {
   const auto &Tpi = YamlObj.TpiStream.getValueOr(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
   for (const auto &R : Tpi.Records)
-    TpiBuilder.addTypeRecord(R.Record);
+    TpiBuilder.addTypeRecord(R.Record.data(), R.Record.Hash);
 
   const auto &Ipi = YamlObj.IpiStream.getValueOr(DefaultTpiStream);
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records)
-    IpiBuilder.addTypeRecord(R.Record);
+    TpiBuilder.addTypeRecord(R.Record.data(), R.Record.Hash);
 
   ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }

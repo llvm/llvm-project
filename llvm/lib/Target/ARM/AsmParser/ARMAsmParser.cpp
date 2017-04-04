@@ -915,40 +915,37 @@ public:
     int Val = ARM_AM::getFP32Imm(APInt(32, CE->getValue()));
     return Val != -1;
   }
-  bool isFBits16() const {
+
+  template<int64_t N, int64_t M>
+  bool isImmediate() const {
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
-    return Value >= 0 && Value <= 16;
+    return Value >= N && Value <= M;
+  }
+  template<int64_t N, int64_t M>
+  bool isImmediateS4() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    int64_t Value = CE->getValue();
+    return ((Value & 3) == 0) && Value >= N && Value <= M;
+  }
+  bool isFBits16() const {
+    return isImmediate<0, 17>();
   }
   bool isFBits32() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 1 && Value <= 32;
+    return isImmediate<1, 33>();
   }
   bool isImm8s4() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= -1020 && Value <= 1020;
+    return isImmediateS4<-1020, 1020>();
   }
   bool isImm0_1020s4() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= 0 && Value <= 1020;
+    return isImmediateS4<0, 1020>();
   }
   bool isImm0_508s4() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= 0 && Value <= 508;
+    return isImmediateS4<0, 508>();
   }
   bool isImm0_508s4Neg() const {
     if (!isImm()) return false;
@@ -958,27 +955,6 @@ public:
     // explicitly exclude zero. we want that to use the normal 0_508 version.
     return ((Value & 3) == 0) && Value > 0 && Value <= 508;
   }
-  bool isImm0_239() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 240;
-  }
-  bool isImm0_255() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 256;
-  }
-  bool isImm0_4095() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 4096;
-  }
   bool isImm0_4095Neg() const {
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
@@ -986,145 +962,17 @@ public:
     int64_t Value = -CE->getValue();
     return Value > 0 && Value < 4096;
   }
-  bool isImm0_1() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 2;
-  }
-  bool isImm0_3() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 4;
-  }
   bool isImm0_7() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 8;
-  }
-  bool isImm0_15() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 16;
-  }
-  bool isImm0_31() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 32;
-  }
-  bool isImm0_63() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 64;
-  }
-  bool isImm8() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value == 8;
-  }
-  bool isImm16() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value == 16;
-  }
-  bool isImm32() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value == 32;
-  }
-  bool isShrImm8() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value <= 8;
-  }
-  bool isShrImm16() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value <= 16;
-  }
-  bool isShrImm32() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value <= 32;
-  }
-  bool isShrImm64() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value <= 64;
-  }
-  bool isImm1_7() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 8;
-  }
-  bool isImm1_15() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 16;
-  }
-  bool isImm1_31() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 32;
+    return isImmediate<0, 7>();
   }
   bool isImm1_16() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 17;
+    return isImmediate<1, 16>();
   }
   bool isImm1_32() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 33;
+    return isImmediate<1, 32>();
   }
-  bool isImm0_32() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 33;
-  }
-  bool isImm0_65535() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 65536;
+  bool isImm8_255() const {
+    return isImmediate<8, 255>();
   }
   bool isImm256_65535Expr() const {
     if (!isImm()) return false;
@@ -1145,32 +993,16 @@ public:
     return Value >= 0 && Value < 65536;
   }
   bool isImm24bit() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value <= 0xffffff;
+    return isImmediate<0, 0xffffff + 1>();
   }
   bool isImmThumbSR() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value < 33;
+    return isImmediate<1, 33>();
   }
   bool isPKHLSLImm() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value >= 0 && Value < 32;
+    return isImmediate<0, 32>();
   }
   bool isPKHASRImm() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    int64_t Value = CE->getValue();
-    return Value > 0 && Value <= 32;
+    return isImmediate<0, 33>();
   }
   bool isAdrLabel() const {
     // If we have an immediate that's not a constant, treat it as a label
@@ -9158,6 +8990,13 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MatchResult = MatchInstruction(Operands, Inst, ErrorInfo, MatchingInlineAsm,
                                  PendConditionalInstruction, Out);
 
+  SMLoc ErrorLoc;
+  if (ErrorInfo < Operands.size()) {
+    ErrorLoc = ((ARMOperand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+  }
+
   switch (MatchResult) {
   case Match_Success:
     // Context sensitive operand constraints aren't handled by the matcher,
@@ -9247,16 +9086,52 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "instruction variant requires ARMv8 or later");
   case Match_RequiresFlagSetting:
     return Error(IDLoc, "no flag-preserving variant of this instruction available");
-  case Match_ImmRange0_15: {
-    SMLoc ErrorLoc = ((ARMOperand &)*Operands[ErrorInfo]).getStartLoc();
-    if (ErrorLoc == SMLoc()) ErrorLoc = IDLoc;
+  case Match_ImmRange0_1:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,1]");
+  case Match_ImmRange0_3:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,3]");
+  case Match_ImmRange0_7:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,7]");
+  case Match_ImmRange0_15:
     return Error(ErrorLoc, "immediate operand must be in the range [0,15]");
-  }
-  case Match_ImmRange0_239: {
-    SMLoc ErrorLoc = ((ARMOperand &)*Operands[ErrorInfo]).getStartLoc();
-    if (ErrorLoc == SMLoc()) ErrorLoc = IDLoc;
+  case Match_ImmRange0_31:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,31]");
+  case Match_ImmRange0_32:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,32]");
+  case Match_ImmRange0_63:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,63]");
+  case Match_ImmRange0_239:
     return Error(ErrorLoc, "immediate operand must be in the range [0,239]");
-  }
+  case Match_ImmRange0_255:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,255]");
+  case Match_ImmRange0_4095:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,4095]");
+  case Match_ImmRange0_65535:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,65535]");
+  case Match_ImmRange1_7:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,7]");
+  case Match_ImmRange1_8:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,8]");
+  case Match_ImmRange1_15:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,15]");
+  case Match_ImmRange1_16:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,16]");
+  case Match_ImmRange1_31:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,31]");
+  case Match_ImmRange1_32:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,32]");
+  case Match_ImmRange1_64:
+    return Error(ErrorLoc, "immediate operand must be in the range [1,64]");
+  case Match_ImmRange8_8:
+    return Error(ErrorLoc, "immediate operand must be 8.");
+  case Match_ImmRange16_16:
+    return Error(ErrorLoc, "immediate operand must be 16.");
+  case Match_ImmRange32_32:
+    return Error(ErrorLoc, "immediate operand must be 32.");
+  case Match_ImmRange256_65535:
+    return Error(ErrorLoc, "immediate operand must be in the range [255,65535]");
+  case Match_ImmRange0_16777215:
+    return Error(ErrorLoc, "immediate operand must be in the range [0,0xffffff]");
   case Match_AlignedMemoryRequiresNone:
   case Match_DupAlignedMemoryRequiresNone:
   case Match_AlignedMemoryRequires16:

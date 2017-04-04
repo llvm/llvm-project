@@ -71,11 +71,6 @@ def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
 def SIbuffer_load_format : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
-def SIload_input : SDNode<"AMDGPUISD::LOAD_INPUT",
-  SDTypeProfile<1, 3, [SDTCisVT<0, v4f32>, SDTCisVT<1, v4i32>, SDTCisVT<2, i16>,
-                       SDTCisVT<3, i32>]>
->;
-
 class SDSample<string opcode> : SDNode <opcode,
   SDTypeProfile<1, 4, [SDTCisVT<0, v4f32>, SDTCisVT<2, v8i32>,
                        SDTCisVT<3, v4i32>, SDTCisVT<4, i32>]>

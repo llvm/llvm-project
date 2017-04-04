@@ -407,6 +407,149 @@ define amdgpu_kernel void @simplify_demanded_bfe_sdiv(i32 addrspace(1)* %out, i3
   ret void
 }
 
+; GCN-LABEL: {{^}}bfe_0_width:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_0_width(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 8, i32 0)
+  store i32 %bfe, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_8_bfe_8:
+; GCN: v_bfe_i32
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_8_bfe_8(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 8)
+  %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 8)
+  store i32 %bfe1, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_8_bfe_16:
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_8_bfe_16(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 8)
+  %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 16)
+  store i32 %bfe1, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; This really should be folded into 1
+; GCN-LABEL: {{^}}bfe_16_bfe_8:
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_16_bfe_8(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
+  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 16)
+  %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 8)
+  store i32 %bfe1, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Make sure there isn't a redundant BFE
+; GCN-LABEL: {{^}}sext_in_reg_i8_to_i32_bfe:
+; GCN: s_sext_i32_i8 s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @sext_in_reg_i8_to_i32_bfe(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+  %c = add i32 %a, %b ; add to prevent folding into extload
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %c, i32 0, i32 8)
+  %shl = shl i32 %bfe, 24
+  %ashr = ashr i32 %shl, 24
+  store i32 %ashr, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sext_in_reg_i8_to_i32_bfe_wrong:
+define amdgpu_kernel void @sext_in_reg_i8_to_i32_bfe_wrong(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+  %c = add i32 %a, %b ; add to prevent folding into extload
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %c, i32 8, i32 0)
+  %shl = shl i32 %bfe, 24
+  %ashr = ashr i32 %shl, 24
+  store i32 %ashr, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sextload_i8_to_i32_bfe:
+; GCN: buffer_load_sbyte
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @sextload_i8_to_i32_bfe(i32 addrspace(1)* %out, i8 addrspace(1)* %ptr) #0 {
+  %load = load i8, i8 addrspace(1)* %ptr, align 1
+  %sext = sext i8 %load to i32
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %sext, i32 0, i32 8)
+  %shl = shl i32 %bfe, 24
+  %ashr = ashr i32 %shl, 24
+  store i32 %ashr, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN: .text
+; GCN-LABEL: {{^}}sextload_i8_to_i32_bfe_0:{{.*$}}
+; GCN-NOT: {{[^@]}}bfe
+; GCN: s_endpgm
+define amdgpu_kernel void @sextload_i8_to_i32_bfe_0(i32 addrspace(1)* %out, i8 addrspace(1)* %ptr) #0 {
+  %load = load i8, i8 addrspace(1)* %ptr, align 1
+  %sext = sext i8 %load to i32
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %sext, i32 8, i32 0)
+  %shl = shl i32 %bfe, 24
+  %ashr = ashr i32 %shl, 24
+  store i32 %ashr, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sext_in_reg_i1_bfe_offset_0:
+; GCN-NOT: shr
+; GCN-NOT: shl
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 1
+; GCN: s_endpgm
+define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_0(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  %x = load i32, i32 addrspace(1)* %in, align 4
+  %shl = shl i32 %x, 31
+  %shr = ashr i32 %shl, 31
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 0, i32 1)
+  store i32 %bfe, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sext_in_reg_i1_bfe_offset_1:
+; GCN: buffer_load_dword
+; GCN-NOT: shl
+; GCN-NOT: shr
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 1
+; GCN: s_endpgm
+define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  %x = load i32, i32 addrspace(1)* %in, align 4
+  %shl = shl i32 %x, 30
+  %shr = ashr i32 %shl, 30
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 1, i32 1)
+  store i32 %bfe, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sext_in_reg_i2_bfe_offset_1:
+; GCN: buffer_load_dword
+; GCN-NOT: v_lshl
+; GCN-NOT: v_ashr
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 2
+; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 2
+; GCN: s_endpgm
+define amdgpu_kernel void @sext_in_reg_i2_bfe_offset_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+  %x = load i32, i32 addrspace(1)* %in, align 4
+  %shl = shl i32 %x, 30
+  %shr = ashr i32 %shl, 30
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 1, i32 2)
+  store i32 %bfe, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.sbfe.i32(i32, i32, i32) #1
 
 attributes #0 = { nounwind }

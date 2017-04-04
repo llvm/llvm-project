@@ -6,6 +6,7 @@ import (
 	"debug/macho"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -138,6 +139,22 @@ func ninja_logs(path string) map[string]float64 {
 	return m
 }
 
+func filesizes(root string) map[string]float64 {
+	m := make(map[string]float64)
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info.Mode().IsRegular() {
+			m[path[len(root):]] = float64(info.Size())
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return m
+}
+
 func main() {
 	var cmp func(string) map[string]float64
 	switch os.Args[1] {
@@ -159,6 +176,9 @@ func main() {
 
 	case "ninja_logs":
 		cmp = ninja_logs
+
+	case "filesizes":
+		cmp = filesizes
 	}
 
 	syms1 := cmp(os.Args[2])

@@ -537,7 +537,7 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ; VEX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; VEX-NEXT:    vcvttsd2si %xmm0, %rax
 ; VEX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; VEX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; VEX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: fptoui_4f64_to_2i32:

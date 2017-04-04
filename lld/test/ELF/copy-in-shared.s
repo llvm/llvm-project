@@ -4,7 +4,8 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t2.o
 // RUN: not ld.lld %t2.o %t1.so -o %t2.so -shared 2>&1 | FileCheck %s
 
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol: foo
+// CHECK: >>> defined in {{.*}}.so
+// CHECK: >>> referenced by {{.*}}.o:(.text+0x0)
 
 .quad foo
-
-// CHECK: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_X86_64_64 against symbol 'foo' defined in {{.*}}.so
