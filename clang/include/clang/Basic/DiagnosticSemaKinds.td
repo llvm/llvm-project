@@ -369,7 +369,9 @@ def warn_decl_shadow :
           "local variable|"
           "variable in %2|"
           "static data member of %2|"
-          "field of %2}1">,
+          "field of %2|"
+          "typedef in %2|"
+          "type alias in %2}1">,
   InGroup<Shadow>, DefaultIgnore;
 def warn_decl_shadow_uncaptured_local :
   Warning<warn_decl_shadow.Text>,
