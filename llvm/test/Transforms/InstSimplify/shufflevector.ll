@@ -3,10 +3,26 @@
 
 define <4 x i32> @const_folding(<4 x i32> %x) {
 ; CHECK-LABEL: @const_folding(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> zeroinitializer, <4 x i32> <i32 5, i32 4, i32 5, i32 4>
-; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> zeroinitializer, <4 x i32> <i32 5, i32 4, i32 5, i32 4>
+  ret <4 x i32> %shuf
+}
+
+define <4 x i32> @const_folding1(<4 x i32> %x) {
+; CHECK-LABEL: @const_folding1(
+; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+;
+  %shuf = shufflevector <4 x i32> <i32 5, i32 4, i32 5, i32 4>, <4 x i32> %x, <4 x i32> zeroinitializer
+  ret <4 x i32> %shuf
+}
+
+define <4 x i32> @const_folding_negative(<3 x i32> %x) {
+; CHECK-LABEL: @const_folding_negative(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i32> [[X:%.*]], <3 x i32> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 5, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+;
+  %shuf = shufflevector <3 x i32> %x, <3 x i32> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 5, i32 4>
   ret <4 x i32> %shuf
 }
 
@@ -23,8 +39,7 @@ define <4 x i32> @splat_operand(<4 x i32> %x) {
 
 define <4 x i32> @undef_mask(<4 x i32> %x) {
 ; CHECK-LABEL: @undef_mask(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> undef
-; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+; CHECK-NEXT:    ret <4 x i32> undef
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> undef
   ret <4 x i32> %shuf
@@ -59,8 +74,7 @@ define <4 x i32> @pseudo_identity_mask(<4 x i32> %x) {
 
 define <4 x i32> @const_operand(<4 x i32> %x) {
 ; CHECK-LABEL: @const_operand(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> <i32 42, i32 43, i32 44, i32 45>, <4 x i32> [[X:%.*]], <4 x i32> <i32 0, i32 3, i32 2, i32 1>
-; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+; CHECK-NEXT:    ret <4 x i32> <i32 42, i32 45, i32 44, i32 43>
 ;
   %shuf = shufflevector <4 x i32> <i32 42, i32 43, i32 44, i32 45>, <4 x i32> %x, <4 x i32> <i32 0, i32 3, i32 2, i32 1>
   ret <4 x i32> %shuf

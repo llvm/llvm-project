@@ -37,7 +37,8 @@ bb:
   %tmp15 = getelementptr [16 x <16 x i8>], [16 x <16 x i8>] addrspace(2)* %arg4, i64 0, i64 0
   %tmp16 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp15, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
-  %tmp18 = call <4 x float> @llvm.SI.vs.load.input(<16 x i8> %tmp16, i32 0, i32 %tmp17)
+  %tmp16.cast = bitcast <16 x i8> %tmp16 to <4 x i32>
+  %tmp18 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i1 false, i1 false)
   %tmp19 = extractelement <4 x float> %tmp18, i32 0
   %tmp20 = extractelement <4 x float> %tmp18, i32 1
   %tmp21 = extractelement <4 x float> %tmp18, i32 2
@@ -488,10 +489,11 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 declare float @llvm.SI.load.const(<16 x i8>, i32) #1
-declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

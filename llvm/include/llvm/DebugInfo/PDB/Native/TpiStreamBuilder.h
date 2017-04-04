@@ -53,7 +53,7 @@ public:
   TpiStreamBuilder &operator=(const TpiStreamBuilder &) = delete;
 
   void setVersionHeader(PdbRaw_TpiVer Version);
-  void addTypeRecord(const codeview::CVType &Record);
+  void addTypeRecord(ArrayRef<uint8_t> Type, Optional<uint32_t> Hash);
 
   Error finalizeMsfLayout();
 
@@ -68,9 +68,11 @@ private:
   msf::MSFBuilder &Msf;
   BumpPtrAllocator &Allocator;
 
+  size_t TypeRecordBytes = 0;
+
   Optional<PdbRaw_TpiVer> VerHeader;
-  std::vector<codeview::CVType> TypeRecords;
-  BinaryItemStream<codeview::CVType> TypeRecordStream;
+  std::vector<ArrayRef<uint8_t>> TypeRecords;
+  std::vector<uint32_t> TypeHashes;
   uint32_t HashStreamIndex = kInvalidStreamIndex;
   std::unique_ptr<BinaryByteStream> HashValueStream;
 

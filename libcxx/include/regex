@@ -3957,7 +3957,6 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [= ... =]
-    typedef typename _Traits::string_type string_type;
     string_type __collate_name =
         __traits_.lookup_collatename(__first, __temp);
     if (__collate_name.empty())

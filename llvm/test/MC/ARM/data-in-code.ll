@@ -60,23 +60,6 @@ exit:
 ;; ARM-NEXT:     Other:
 ;; ARM-NEXT:     Section: [[MIXED_SECT]]
 
-;; ARM:        Symbol {
-;; ARM:          Name: $d
-;; ARM-NEXT:     Value: 0x0
-;; ARM-NEXT:     Size: 0
-;; ARM-NEXT:     Binding: Local (0x0)
-;; ARM-NEXT:     Type: None (0x0)
-;; ARM-NEXT:     Other: 0
-;; ARM-NEXT:     Section: .ARM.exidx
-;; ARM-NEXT:   }
-
-;; ARM:        Symbol {
-;; ARM:          Name: $d
-;; ARM-NEXT:     Value: 0
-;; ARM-NEXT:     Size: 0
-;; ARM-NEXT:     Binding: Local
-;; ARM-NEXT:     Type: None
-
 ;; ARM-NOT:     ${{[atd]}}
 
 ;; TMB:        Symbol {

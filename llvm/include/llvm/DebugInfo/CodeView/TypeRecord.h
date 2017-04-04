@@ -199,6 +199,16 @@ public:
   int32_t ThisPointerAdjustment;
 };
 
+// LF_LABEL
+class LabelRecord : public TypeRecord {
+public:
+  explicit LabelRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
+  LabelRecord(LabelType Mode) : TypeRecord(TypeRecordKind::Label), Mode(Mode) {}
+
+  LabelType Mode;
+};
+
 // LF_MFUNC_ID
 class MemberFuncIdRecord : public TypeRecord {
 public:
