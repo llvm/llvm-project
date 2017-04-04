@@ -305,6 +305,13 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       PersistentExpressionState *persistent_state =
           m_target.GetPersistentExpressionStateForLanguage(GetLanguage());
 
+      if (!persistent_state)
+      {
+        error_sp->PutCString("error getting the expression "
+                             "context for the REPL.\n");
+        io_handler.SetIsDone(true);
+        return;
+      }
       const size_t var_count_before = persistent_state->GetSize();
 
       const char *expr_prefix = nullptr;
@@ -526,7 +533,7 @@ Error REPL::RunLoop() {
 
   if (!error.Success())
     return error;
-
+    
   Debugger &debugger = m_target.GetDebugger();
 
   lldb::IOHandlerSP io_handler_sp(GetIOHandler());
