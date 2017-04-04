@@ -1509,6 +1509,12 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::FCANONICALIZE:
       Res = SplitVecOp_UnaryOp(N);
       break;
+
+    case ISD::ANY_EXTEND_VECTOR_INREG:
+    case ISD::SIGN_EXTEND_VECTOR_INREG:
+    case ISD::ZERO_EXTEND_VECTOR_INREG:
+      Res = SplitVecOp_ExtVecInRegOp(N);
+      break;
     }
   }
 
@@ -1668,6 +1674,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   StackPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
   return DAG.getExtLoad(ISD::EXTLOAD, dl, N->getValueType(0), Store, StackPtr,
                         MachinePointerInfo(), EltVT);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_ExtVecInRegOp(SDNode *N) {
+  SDValue Lo, Hi;
+
+  // *_EXTEND_VECTOR_INREG only reference the lower half of the input, so
+  // splitting the result has the same effect as splitting the input operand.
+  SplitVecRes_ExtVecInRegOp(N, Lo, Hi);
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), N->getValueType(0), Lo, Hi);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_MGATHER(MaskedGatherSDNode *MGT,

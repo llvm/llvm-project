@@ -299,6 +299,10 @@ Error TypeDatabaseVisitor::visitKnownRecord(CVType &CVR, BuildInfoRecord &BI) {
   return Error::success();
 }
 
+Error TypeDatabaseVisitor::visitKnownRecord(CVType &CVR, LabelRecord &R) {
+  return Error::success();
+}
+
 Error TypeDatabaseVisitor::visitKnownMember(CVMemberRecord &CVR,
                                             VFPtrRecord &VFP) {
   return Error::success();

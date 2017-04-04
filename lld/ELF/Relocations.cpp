@@ -63,6 +63,22 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+// Construct a message in the following format.
+//
+// >>> defined in /home/alice/src/foo.o
+// >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
+// >>>               /home/alice/src/bar.o:(.text+0x1)
+template <class ELFT>
+static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
+                               uint64_t Off) {
+  std::string Msg =
+      "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
+  std::string Src = S.getSrcMsg<ELFT>(Off);
+  if (!Src.empty())
+    Msg += Src + "\n>>>               ";
+  return Msg + S.getObjMsg<ELFT>(Off);
+}
+
 static bool refersToGotEntry(RelExpr Expr) {
   return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
                         R_MIPS_GOT_OFF32, R_MIPS_TLSGD, R_MIPS_TLSLD,
@@ -331,9 +347,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
     return true;
 
-  error(S.getLocation<ELFT>(RelOff) + ": relocation " + toString(Type) +
-        " cannot refer to absolute symbol '" + toString(Body) +
-        "' defined in " + toString(Body.File));
+  error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
+        toString(Body) + getLocation<ELFT>(S, Body, RelOff));
   return true;
 }
 
@@ -489,17 +504,16 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    error(S.getLocation<ELFT>(RelOff) + ": can't create dynamic relocation " +
-          toString(Type) + " against " +
+    error("can't create dynamic relocation " + toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol in readonly segment"
-                                  : "symbol '" + toString(Body) + "'") +
-          " defined in " + toString(Body.File));
+                                  : "symbol: " + toString(Body)) +
+          getLocation<ELFT>(S, Body, RelOff));
     return Expr;
   }
 
   if (Body.getVisibility() != STV_DEFAULT) {
-    error(S.getLocation<ELFT>(RelOff) + ": cannot preempt symbol '" +
-          toString(Body) + "' defined in " + toString(Body.File));
+    error("cannot preempt symbol: " + toString(Body) +
+          getLocation<ELFT>(S, Body, RelOff));
     return Expr;
   }
 
@@ -508,9 +522,10 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
     auto *B = cast<SharedSymbol>(&Body);
     if (!B->NeedsCopy) {
       if (Config->ZNocopyreloc)
-        error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
-              toString(Type) + " against symbol '" + toString(*B) +
-              "'; recompile with -fPIC or remove '-z nocopyreloc'");
+        error("unresolvable relocation " + toString(Type) +
+              " against symbol '" + toString(*B) +
+              "'; recompile with -fPIC or remove '-z nocopyreloc'" +
+              getLocation<ELFT>(S, Body, RelOff));
 
       addCopyRelSymbol<ELFT>(B);
     }
@@ -543,7 +558,7 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   }
 
   error("symbol '" + toString(Body) + "' defined in " + toString(Body.File) +
-        " is missing type");
+        " has no type");
   return Expr;
 }
 
@@ -820,8 +835,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        error(Sec.getLocation<ELFT>(Offset) + ": relocation " + toString(Type) +
-              " cannot be used against shared object; recompile with -fPIC.");
+        error("relocation " + toString(Type) +
+              " cannot be used against shared object; recompile with -fPIC" +
+              getLocation<ELFT>(Sec, Body, Offset));
+
       In<ELFT>::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Body, Addend});
 

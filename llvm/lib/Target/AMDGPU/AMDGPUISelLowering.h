@@ -332,7 +332,6 @@ enum NodeType : unsigned {
   CONST_ADDRESS,
   REGISTER_LOAD,
   REGISTER_STORE,
-  LOAD_INPUT,
   SAMPLE,
   SAMPLEB,
   SAMPLED,

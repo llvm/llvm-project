@@ -23,6 +23,7 @@
 #define LIBLLDB_LOG_WATCHPOINTS (1u << 6)
 #define LIBLLDB_LOG_STEP (1u << 7)
 #define LIBLLDB_LOG_EXPRESSIONS (1u << 8)
+#define LIBLLDB_LOG_TEMPORARY (1u << 9)
 #define LIBLLDB_LOG_STATE (1u << 10)
 #define LIBLLDB_LOG_OBJECT (1u << 11)
 #define LIBLLDB_LOG_COMMUNICATION (1u << 12)

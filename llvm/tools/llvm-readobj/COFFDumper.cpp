@@ -1088,10 +1088,8 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVIDs,
         error(object_error::parse_failed);
       }
 
-      if (auto EC = mergeTypeStreams(CVIDs, CVTypes, nullptr, Types)) {
-        consumeError(std::move(EC));
-        return error(object_error::parse_failed);
-      }
+      if (auto EC = mergeTypeStreams(CVIDs, CVTypes, nullptr, Types))
+        return error(std::move(EC));
     }
   }
 }
@@ -1575,7 +1573,7 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
     if (auto EC = CVTD.dump(
             {TypeBuf.str().bytes_begin(), TypeBuf.str().bytes_end()}, TDV)) {
       Writer.flush();
-      error(llvm::errorToErrorCode(std::move(EC)));
+      error(std::move(EC));
     }
   }
 
@@ -1595,7 +1593,7 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
     if (auto EC = CVTD.dump(
             {IDBuf.str().bytes_begin(), IDBuf.str().bytes_end()}, TDV)) {
       Writer.flush();
-      error(llvm::errorToErrorCode(std::move(EC)));
+      error(std::move(EC));
     }
   }
 }

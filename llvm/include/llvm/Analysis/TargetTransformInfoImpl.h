@@ -303,6 +303,13 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
+  bool
+  shouldConsiderAddressTypePromotion(const Instruction &I,
+                                     bool &AllowPromotionWithoutCommonHeader) {
+    AllowPromotionWithoutCommonHeader = false;
+    return false;
+  }
+
   unsigned getCacheLineSize() { return 0; }
 
   unsigned getPrefetchDistance() { return 0; }

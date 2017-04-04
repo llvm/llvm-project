@@ -31,4 +31,6 @@
 // RELATIVE: SYMBOL TABLE:
 // RELATIVE: 00001004         .text           00000000 patatino
 
-// ABS: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_ARM_TARGET1 against symbol 'patatino' defined in {{.*}}.o
+// ABS: can't create dynamic relocation R_ARM_TARGET1 against symbol: patatino
+// ABS: >>> defined in {{.*}}.o
+// ABS: >>> referenced by {{.*}}.o:(.text+0x0)
