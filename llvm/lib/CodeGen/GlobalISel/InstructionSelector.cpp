@@ -94,3 +94,8 @@ bool InstructionSelector::isOperandImmEqual(
       return *VRegVal == Value;
   return false;
 }
+
+bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI) const {
+  return !MI.mayLoadOrStore() && !MI.hasUnmodeledSideEffects() &&
+         MI.implicit_operands().begin() == MI.implicit_operands().end();
+}

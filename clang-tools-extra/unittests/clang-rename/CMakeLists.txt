@@ -12,7 +12,7 @@ include_directories(
 include_directories(${CLANG_SOURCE_DIR})
 
 add_extra_unittest(ClangRenameTests
-  ClangRenameTests.cpp
+  RenameClassTest.cpp
   )
 
 target_link_libraries(ClangRenameTests

@@ -929,13 +929,15 @@ __mmask16 test_mm512_movepi32_mask(__m512i __A) {
 
 __m512i test_mm512_movm_epi32(__mmask16 __A) {
   // CHECK-LABEL: @test_mm512_movm_epi32
-  // CHECK: @llvm.x86.avx512.cvtmask2d.512
+  // CHECK: %2 = bitcast i16 %1 to <16 x i1>
+  // CHECK: %vpmovm2.i = sext <16 x i1> %2 to <16 x i32>
   return _mm512_movm_epi32(__A); 
 }
 
 __m512i test_mm512_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: @test_mm512_movm_epi64
-  // CHECK: @llvm.x86.avx512.cvtmask2q.512
+  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
+  // CHECK: %vpmovm2.i = sext <8 x i1> %2 to <8 x i64>
   return _mm512_movm_epi64(__A); 
 }
 

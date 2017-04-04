@@ -178,3 +178,25 @@ void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
       R"(, "result": [)" + Commands +
       R"(]})");
 }
+
+void CompletionHandler::handleMethod(llvm::yaml::MappingNode *Params,
+                                     StringRef ID) {
+  auto TDPP = TextDocumentPositionParams::parse(Params);
+  if (!TDPP) {
+    Output.log("Failed to decode TextDocumentPositionParams!\n");
+    return;
+  }
+
+  auto Items = AST.codeComplete(TDPP->textDocument.uri, TDPP->position.line,
+                                TDPP->position.character);
+  std::string Completions;
+  for (const auto &Item : Items) {
+    Completions += CompletionItem::unparse(Item);
+    Completions += ",";
+  }
+  if (!Completions.empty())
+    Completions.pop_back();
+  writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(,"result":[)" + Completions + R"(]})");
+}

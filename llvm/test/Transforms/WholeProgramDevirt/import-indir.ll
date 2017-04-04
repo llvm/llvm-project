@@ -19,16 +19,12 @@
 ; SUMMARY-NEXT:        - VFunc:
 ; SUMMARY-NEXT:            GUID:            123
 ; SUMMARY-NEXT:            Offset:          4
-; SUMMARY-NEXT:          Args:
-; SUMMARY-NEXT:            - 12
-; SUMMARY-NEXT:            - 24
+; SUMMARY-NEXT:          Args: [ 12, 24 ]
 ; SUMMARY-NEXT:      TypeCheckedLoadConstVCalls:
 ; SUMMARY-NEXT:        - VFunc:
 ; SUMMARY-NEXT:            GUID:            456
 ; SUMMARY-NEXT:            Offset:          8
-; SUMMARY-NEXT:          Args:
-; SUMMARY-NEXT:            - 24
-; SUMMARY-NEXT:            - 12
+; SUMMARY-NEXT:          Args: [ 24, 12 ]
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:
 ; SUMMARY-NEXT:     TTRes:

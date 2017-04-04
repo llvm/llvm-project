@@ -25,6 +25,8 @@ class GINodeEquiv<Instruction i, SDNode node> {
   SDNode Node = node;
 }
 
+def : GINodeEquiv<G_ZEXT, zext>;
+def : GINodeEquiv<G_SEXT, sext>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;

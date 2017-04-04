@@ -42,6 +42,28 @@ private:
   bool PrintLocations;
 };
 
+/// Rename all symbols identified by the given USRs.
+class QualifiedRenamingAction {
+public:
+  QualifiedRenamingAction(
+      const std::vector<std::string> &NewNames,
+      const std::vector<std::vector<std::string>> &USRList,
+      std::map<std::string, tooling::Replacements> &FileToReplaces)
+      : NewNames(NewNames), USRList(USRList), FileToReplaces(FileToReplaces) {}
+
+  std::unique_ptr<ASTConsumer> newASTConsumer();
+
+private:
+  /// New symbol names.
+  const std::vector<std::string> &NewNames;
+
+  /// A list of USRs. Each element represents USRs of a symbol being renamed.
+  const std::vector<std::vector<std::string>> &USRList;
+
+  /// A file path to replacements map.
+  std::map<std::string, tooling::Replacements> &FileToReplaces;
+};
+
 } // namespace rename
 } // namespace clang
 

@@ -143,11 +143,11 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
 /// @see GPUNodeBuilder::createUser
 class GPUNodeBuilder : public IslNodeBuilder {
 public:
-  GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
+  GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
                  DominatorTree &DT, Scop &S, BasicBlock *StartBlock,
                  gpu_prog *Prog)
-      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S, StartBlock),
+      : IslNodeBuilder(Builder, Annotator, DL, LI, SE, DT, S, StartBlock),
         Prog(Prog) {
     getExprBuilder().setIDToSAI(&IDToSAI);
   }
@@ -1543,7 +1543,6 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
   BasicBlock *PrevBlock = Builder.GetInsertBlock();
   auto EntryBlock = BasicBlock::Create(Builder.getContext(), "entry", FN);
 
-  DominatorTree &DT = P->getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   DT.addNewBlock(EntryBlock, PrevBlock);
 
   Builder.SetInsertPoint(EntryBlock);
@@ -2403,9 +2402,9 @@ public:
     // which may introduce scalar dependences that prevent us from correctly
     // code generating this scop.
     BasicBlock *StartBlock =
-        executeScopConditionally(*S, this, Builder.getTrue());
+        executeScopConditionally(*S, Builder.getTrue(), *DT, *RI, *LI);
 
-    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, *S,
+    GPUNodeBuilder NodeBuilder(Builder, Annotator, *DL, *LI, *SE, *DT, *S,
                                StartBlock, Prog);
 
     // TODO: Handle LICM

@@ -84,9 +84,51 @@ private:
   bool PrintLocations;
 };
 
+// A renamer to rename symbols which are identified by a give USRList to
+// new name.
+//
+// FIXME: Merge with the above RenamingASTConsumer.
+class USRSymbolRenamer: public ASTConsumer {
+public:
+  USRSymbolRenamer(const std::vector<std::string> &NewNames,
+                   const std::vector<std::vector<std::string>> &USRList,
+                   std::map<std::string, tooling::Replacements> &FileToReplaces)
+      : NewNames(NewNames), USRList(USRList), FileToReplaces(FileToReplaces) {
+    assert(USRList.size() == NewNames.size());
+  }
+
+  void HandleTranslationUnit(ASTContext &Context) override {
+    for (unsigned I = 0; I < NewNames.size(); ++I) {
+      // FIXME: Apply AtomicChanges directly once the refactoring APIs are
+      // ready.
+      auto AtomicChanges = createRenameAtomicChanges(
+          USRList[I], NewNames[I], Context.getTranslationUnitDecl());
+      for (const auto AtomicChange : AtomicChanges) {
+        for (const auto &Replace : AtomicChange.getReplacements()) {
+          llvm::Error Err = FileToReplaces[Replace.getFilePath()].add(Replace);
+          if (Err) {
+            llvm::errs() << "Renaming failed in " << Replace.getFilePath()
+                         << "! " << llvm::toString(std::move(Err)) << "\n";
+          }
+      }
+      }
+    }
+  }
+
+private:
+  const std::vector<std::string> &NewNames;
+  const std::vector<std::vector<std::string>> &USRList;
+  std::map<std::string, tooling::Replacements> &FileToReplaces;
+};
+
 std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
   return llvm::make_unique<RenamingASTConsumer>(NewNames, PrevNames, USRList,
                                                 FileToReplaces, PrintLocations);
+}
+
+std::unique_ptr<ASTConsumer> QualifiedRenamingAction::newASTConsumer() {
+  return llvm::make_unique<USRSymbolRenamer>(
+      NewNames, USRList, FileToReplaces);
 }
 
 } // namespace rename

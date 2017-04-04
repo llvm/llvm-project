@@ -183,7 +183,6 @@ int main()
 #endif
 #if TEST_STD_VER > 11
     {
-    typedef std::pair<const int, double> V;
     typedef std::multimap<int, double, std::less<>> M;
 
     typedef std::pair<M::iterator, M::iterator> R;

@@ -2521,25 +2521,29 @@ __mmask32 test_mm256_movepi8_mask(__m256i __A) {
 
 __m128i test_mm_movm_epi8(__mmask16 __A) {
   // CHECK-LABEL: @test_mm_movm_epi8
-  // CHECK: @llvm.x86.avx512.cvtmask2b.128
+  // CHECK: %2 = bitcast i16 %1 to <16 x i1>
+  // CHECK: %vpmovm2.i = sext <16 x i1> %2 to <16 x i8>
   return _mm_movm_epi8(__A); 
 }
 
 __m256i test_mm256_movm_epi8(__mmask32 __A) {
   // CHECK-LABEL: @test_mm256_movm_epi8
-  // CHECK: @llvm.x86.avx512.cvtmask2b.256
+  // CHECK: %2 = bitcast i32 %1 to <32 x i1>
+  // CHECK: %vpmovm2.i = sext <32 x i1> %2 to <32 x i8>
   return _mm256_movm_epi8(__A); 
 }
 
 __m128i test_mm_movm_epi16(__mmask8 __A) {
   // CHECK-LABEL: @test_mm_movm_epi16
-  // CHECK: @llvm.x86.avx512.cvtmask2w.128
+  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
+  // CHECK: %vpmovm2.i = sext <8 x i1> %2 to <8 x i16>
   return _mm_movm_epi16(__A); 
 }
 
 __m256i test_mm256_movm_epi16(__mmask16 __A) {
   // CHECK-LABEL: @test_mm256_movm_epi16
-  // CHECK: @llvm.x86.avx512.cvtmask2w.256
+  // CHECK: %2 = bitcast i16 %1 to <16 x i1>
+  // CHECK: %vpmovm2.i = sext <16 x i1> %2 to <16 x i16>
   return _mm256_movm_epi16(__A); 
 }
 

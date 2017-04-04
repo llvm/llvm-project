@@ -840,42 +840,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     // operands to use appropriate classes.
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
-  case TargetOpcode::G_MUL: {
-    // Reject the various things we don't support yet.
-    if (unsupportedBinOp(I, RBI, MRI, TRI))
-      return false;
-
-    const unsigned DefReg = I.getOperand(0).getReg();
-    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-    if (RB.getID() != AArch64::GPRRegBankID) {
-      DEBUG(dbgs() << "G_MUL on bank: " << RB << ", expected: GPR\n");
-      return false;
-    }
-
-    unsigned ZeroReg;
-    unsigned NewOpc;
-    if (Ty.isScalar() && Ty.getSizeInBits() <= 32) {
-      NewOpc = AArch64::MADDWrrr;
-      ZeroReg = AArch64::WZR;
-    } else if (Ty == LLT::scalar(64)) {
-      NewOpc = AArch64::MADDXrrr;
-      ZeroReg = AArch64::XZR;
-    } else {
-      DEBUG(dbgs() << "G_MUL has type: " << Ty << ", expected: "
-                   << LLT::scalar(32) << " or " << LLT::scalar(64) << '\n');
-      return false;
-    }
-
-    I.setDesc(TII.get(NewOpc));
-
-    I.addOperand(MachineOperand::CreateReg(ZeroReg, /*isDef=*/false));
-
-    // Now that we selected an opcode, we need to constrain the register
-    // operands to use appropriate classes.
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:

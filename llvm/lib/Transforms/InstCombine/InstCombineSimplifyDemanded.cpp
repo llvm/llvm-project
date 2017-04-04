@@ -235,7 +235,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // operands.  This allows visitTruncInst (for example) to simplify the
   // operand of a trunc without duplicating all the logic below.
   if (Depth == 0 && !V->hasOneUse())
-    DemandedMask = APInt::getAllOnesValue(BitWidth);
+    DemandedMask.setAllBits();
 
   switch (I->getOpcode()) {
   default:
