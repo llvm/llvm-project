@@ -13,7 +13,5 @@ Sections:
 # CHECK:   Version:           0x00000001
 # CHECK: Sections:
 # CHECK:   - Type:            FUNCTION
-# CHECK:     FunctionTypes:   
-# CHECK:       - 1
-# CHECK:       - 0
+# CHECK:     FunctionTypes: [ 1, 0 ]
 # CHECK: ...

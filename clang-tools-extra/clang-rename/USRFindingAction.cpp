@@ -104,6 +104,10 @@ private:
   void addUSRsOfCtorDtors(const CXXRecordDecl *RecordDecl) {
     RecordDecl = RecordDecl->getDefinition();
 
+    // Skip if the CXXRecordDecl doesn't have definition.
+    if (!RecordDecl)
+      return;
+
     for (const auto *CtorDecl : RecordDecl->ctors())
       USRSet.insert(getUSRForDecl(CtorDecl));
 
