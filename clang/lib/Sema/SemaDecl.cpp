@@ -2154,7 +2154,9 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
   // -Wtypedef-redefinition.  If either the original or the redefinition is
   // in a system header, don't emit this for compatibility with GCC.
   if (getDiagnostics().getSuppressSystemWarnings() &&
-      (Context.getSourceManager().isInSystemHeader(Old->getLocation()) ||
+      // Some standard types are defined implicitly in Clang (e.g. OpenCL).
+      (Old->isImplicit() ||
+       Context.getSourceManager().isInSystemHeader(Old->getLocation()) ||
        Context.getSourceManager().isInSystemHeader(New->getLocation())))
     return;
 

@@ -147,9 +147,9 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
-  // The small code mode's direct accesses use ADRP, which cannot necessarily
-  // produce the value 0 (if the code is above 4GB).
-  if (TM.getCodeModel() == CodeModel::Small && GV->hasExternalWeakLinkage())
+  // The small code model's direct accesses use ADRP, which cannot
+  // necessarily produce the value 0 (if the code is above 4GB).
+  if (useSmallAddressing() && GV->hasExternalWeakLinkage())
     return AArch64II::MO_GOT;
 
   return AArch64II::MO_NO_FLAG;

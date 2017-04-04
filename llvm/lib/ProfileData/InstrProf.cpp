@@ -936,4 +936,25 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   return true;
 }
 
+// Parse the value profile options.
+void getMemOPSizeRangeFromOption(std::string MemOPSizeRange,
+                                 int64_t &RangeStart, int64_t &RangeLast) {
+  static const int64_t DefaultMemOPSizeRangeStart = 0;
+  static const int64_t DefaultMemOPSizeRangeLast = 8;
+  RangeStart = DefaultMemOPSizeRangeStart;
+  RangeLast = DefaultMemOPSizeRangeLast;
+
+  if (!MemOPSizeRange.empty()) {
+    auto Pos = MemOPSizeRange.find(":");
+    if (Pos != std::string::npos) {
+      if (Pos > 0)
+        RangeStart = atoi(MemOPSizeRange.substr(0, Pos).c_str());
+      if (Pos < MemOPSizeRange.size() - 1)
+        RangeLast = atoi(MemOPSizeRange.substr(Pos + 1).c_str());
+    } else
+      RangeLast = atoi(MemOPSizeRange.c_str());
+  }
+  assert(RangeLast >= RangeStart);
+}
+
 } // end namespace llvm

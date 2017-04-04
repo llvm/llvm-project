@@ -865,31 +865,31 @@ __mmask8 test_mm256_movepi32_mask(__m256i __A) {
 
 __m128i test_mm_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: @test_mm_movm_epi32
-  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
-  // CHECK: %extract.i = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: %extract.i = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: %vpmovm2.i = sext <4 x i1> %extract.i to <4 x i32>
   return _mm_movm_epi32(__A); 
 }
 
 __m256i test_mm256_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: @test_mm256_movm_epi32
-  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
-  // CHECK: %vpmovm2.i = sext <8 x i1> %2 to <8 x i32>
+  // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: %vpmovm2.i = sext <8 x i1> %{{.*}} to <8 x i32>
   return _mm256_movm_epi32(__A); 
 }
 
 __m128i test_mm_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: @test_mm_movm_epi64
-  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
-  // CHECK: %extract.i = shufflevector <8 x i1> %2, <8 x i1> %2, <2 x i32> <i32 0, i32 1>
+  // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: %extract.i = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: %vpmovm2.i = sext <2 x i1> %extract.i to <2 x i64>
   return _mm_movm_epi64(__A); 
 }
 
 __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: @test_mm256_movm_epi64
-  // CHECK: %2 = bitcast i8 %1 to <8 x i1>
-  // CHECK: %extract.i = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: %extract.i = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: %vpmovm2.i = sext <4 x i1> %extract.i to <4 x i64>
   return _mm256_movm_epi64(__A); 
 }

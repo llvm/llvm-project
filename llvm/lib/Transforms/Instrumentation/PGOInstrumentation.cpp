@@ -1038,21 +1038,6 @@ void PGOUseFunc::populateCounters() {
   DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
 
-static void setProfMetadata(Module *M, Instruction *TI,
-                            ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount) {
-  MDBuilder MDB(M->getContext());
-  assert(MaxCount > 0 && "Bad max count");
-  uint64_t Scale = calculateCountScale(MaxCount);
-  SmallVector<unsigned, 4> Weights;
-  for (const auto &ECI : EdgeCounts)
-    Weights.push_back(scaleBranchCount(ECI, Scale));
-
-  DEBUG(dbgs() << "Weight is: ";
-        for (const auto &W : Weights) { dbgs() << W << " "; }
-        dbgs() << "\n";);
-  TI->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
-}
-
 // Assign the scaled count values to the BB with multiple out edges.
 void PGOUseFunc::setBranchWeights() {
   // Generate MD_prof metadata for every branch instruction.
@@ -1426,6 +1411,21 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
 }
 
 namespace llvm {
+void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                     uint64_t MaxCount) {
+  MDBuilder MDB(M->getContext());
+  assert(MaxCount > 0 && "Bad max count");
+  uint64_t Scale = calculateCountScale(MaxCount);
+  SmallVector<unsigned, 4> Weights;
+  for (const auto &ECI : EdgeCounts)
+    Weights.push_back(scaleBranchCount(ECI, Scale));
+
+  DEBUG(dbgs() << "Weight is: ";
+        for (const auto &W : Weights) { dbgs() << W << " "; }
+        dbgs() << "\n";);
+  TI->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+}
+
 template <> struct GraphTraits<PGOUseFunc *> {
   typedef const BasicBlock *NodeRef;
   typedef succ_const_iterator ChildIteratorType;

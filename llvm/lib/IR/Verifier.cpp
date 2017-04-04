@@ -2006,6 +2006,18 @@ void Verifier::visitFunction(const Function &F) {
   default:
   case CallingConv::C:
     break;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    Assert(F.getReturnType()->isVoidTy(),
+           "Calling convention requires void return type", &F);
+    LLVM_FALLTHROUGH;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+    Assert(!F.hasStructRetAttr(),
+           "Calling convention does not allow sret", &F);
+    LLVM_FALLTHROUGH;
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::Intel_OCL_BI:

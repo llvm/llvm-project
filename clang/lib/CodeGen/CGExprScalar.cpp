@@ -3593,8 +3593,12 @@ Value *ScalarExprEmitter::VisitAsTypeExpr(AsTypeExpr *E) {
   // vector to get a vec4, then a bitcast if the target type is different.
   if (NumElementsSrc == 3 && NumElementsDst != 3) {
     Src = ConvertVec3AndVec4(Builder, CGF, Src, 4);
-    Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
-                                       DstTy);
+
+    if (!CGF.CGM.getCodeGenOpts().PreserveVec3Type) {
+      Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
+                                         DstTy);
+    }
+
     Src->setName("astype");
     return Src;
   }
@@ -3603,9 +3607,12 @@ Value *ScalarExprEmitter::VisitAsTypeExpr(AsTypeExpr *E) {
   // to vec4 if the original type is not vec4, then a shuffle vector to
   // get a vec3.
   if (NumElementsSrc != 3 && NumElementsDst == 3) {
-    auto Vec4Ty = llvm::VectorType::get(DstTy->getVectorElementType(), 4);
-    Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
-                                       Vec4Ty);
+    if (!CGF.CGM.getCodeGenOpts().PreserveVec3Type) {
+      auto Vec4Ty = llvm::VectorType::get(DstTy->getVectorElementType(), 4);
+      Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(), Src,
+                                         Vec4Ty);
+    }
+
     Src = ConvertVec3AndVec4(Builder, CGF, Src, 3);
     Src->setName("astype");
     return Src;

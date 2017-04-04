@@ -717,6 +717,7 @@ private:
   std::unique_ptr<X86Operand>
   ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
   std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start, SMLoc End);
+  bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM);
   bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
   std::unique_ptr<X86Operand>
   ParseIntelBracExpression(unsigned SegReg, SMLoc Start, int64_t ImmDisp,
@@ -1298,6 +1299,30 @@ RewriteIntelBracExpression(SmallVectorImpl<AsmRewrite> &AsmRewrites,
   }
 }
 
+// Some binary bitwise operators have a named synonymous
+// Query a candidate string for being such a named operator
+// and if so - invoke the appropriate handler
+bool X86AsmParser::ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM) {
+  // A named operator should be either lower or upper case, but not a mix
+  if (Name.compare(Name.lower()) && Name.compare(Name.upper()))
+    return false;
+  if (Name.equals_lower("not"))
+    SM.onNot();
+  else if (Name.equals_lower("or"))
+    SM.onOr();
+  else if (Name.equals_lower("shl"))
+    SM.onLShift();
+  else if (Name.equals_lower("shr"))
+    SM.onRShift();
+  else if (Name.equals_lower("xor"))
+    SM.onXor();
+  else if (Name.equals_lower("and"))
+    SM.onAnd();
+  else
+    return false;
+  return true;
+}
+
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -1339,6 +1364,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       UpdateLocLex = false;
       if (TK != AsmToken::String && !ParseRegister(TmpReg, IdentLoc, End)) {
         SM.onRegister(TmpReg);
+      } else if (ParseIntelNamedOperator(Identifier, SM)) {
+        UpdateLocLex = true;
       } else if (!isParsingInlineAsm()) {
         if (getParser().parsePrimaryExpr(Val, End))
           return Error(Tok.getLoc(), "Unexpected identifier!");

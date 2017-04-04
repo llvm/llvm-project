@@ -118,7 +118,7 @@ public:
 
   static OperandPlaceholder
   CreateMatchReference(InstructionMatcher *InsnMatcher,
-                       const StringRef InsnVarName, const StringRef SymbolicName) {
+                       StringRef InsnVarName, StringRef SymbolicName) {
     OperandPlaceholder Result(OP_MatchReference);
     Result.MatchReference.InsnMatcher = InsnMatcher;
     Result.MatchReference.InsnVarName = InsnVarName;
@@ -281,7 +281,7 @@ public:
   /// InstructionOperandMatcher is the only subclass that can return non-null
   /// for this.
   virtual Optional<const OperandMatcher *>
-  getOptionalOperand(const StringRef SymbolicName) const {
+  getOptionalOperand(StringRef SymbolicName) const {
     assert(!SymbolicName.empty() && "Cannot lookup unnamed operand");
     return None;
   }
@@ -438,7 +438,7 @@ public:
   }
   unsigned getOperandIndex() const { return OpIdx; }
 
-  std::string getOperandExpr(const StringRef InsnVarName) const {
+  std::string getOperandExpr(StringRef InsnVarName) const {
     return (InsnVarName + ".getOperand(" + llvm::to_string(OpIdx) + ")").str();
   }
 
@@ -467,7 +467,7 @@ public:
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicate and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            const StringRef InsnVarName) const {
+                            StringRef InsnVarName) const {
     OS << "(/* ";
     if (SymbolicName.empty())
       OS << "Operand " << OpIdx;
@@ -632,7 +632,7 @@ public:
     return None;
   }
 
-  const OperandMatcher &getOperand(const StringRef SymbolicName) const {
+  const OperandMatcher &getOperand(StringRef SymbolicName) const {
     Optional<const OperandMatcher *>OM = getOptionalOperand(SymbolicName);
     if (OM.hasValue())
       return *OM.getValue();
@@ -1011,9 +1011,14 @@ StringRef RuleMatcher::getInsnVarName(const InstructionMatcher &InsnMatcher) con
 
 /// Emit a C++ initializer_list containing references to every matched instruction.
 void RuleMatcher::emitCxxCapturedInsnList(raw_ostream &OS) {
-  OS << "{";
+  SmallVector<StringRef, 2> Names;
   for (const auto &Pair : InsnVariableNames)
-    OS << "&" << Pair.second << ", ";
+    Names.push_back(Pair.second);
+  std::sort(Names.begin(), Names.end());
+
+  OS << "{";
+  for (const auto &Name : Names)
+    OS << "&" << Name << ", ";
   OS << "}";
 }
 

@@ -1372,6 +1372,9 @@ __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
 
         KMP_MB();
     }
+#if OMP_40_ENABLED
+    KMP_CHECK_UPDATE(serial_team->t.t_cancel_request, cancel_noreq);
+#endif
 
     if ( __kmp_env_consistency_check )
         __kmp_push_parallel( global_tid, NULL );

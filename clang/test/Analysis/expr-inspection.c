@@ -19,4 +19,4 @@ void foo(int x) {
 
 // CHECK: Expressions:
 // CHECK-NEXT: clang_analyzer_printState : &code{clang_analyzer_printState}
-// CHECK-NEXT: Ranges are empty.
+// CHECK-NEXT: {{(Ranges are empty.)|(Constraints:[[:space:]]*$)}}

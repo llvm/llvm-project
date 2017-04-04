@@ -88,6 +88,7 @@ ModulePass *
 createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
 ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
                                                      bool SamplePGO = false);
+FunctionPass *createPGOMemOPSizeOptLegacyPass();
 
 // Helper function to check if it is legal to promote indirect call \p Inst
 // to a direct call of function \p F. Stores the reason in \p Reason.

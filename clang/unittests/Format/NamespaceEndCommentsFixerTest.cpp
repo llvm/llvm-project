@@ -582,6 +582,21 @@ TEST_F(NamespaceEndCommentsFixerTest,
                                     "} // namespace\n"
                                     "}"));
 }
+
+TEST_F(NamespaceEndCommentsFixerTest, HandlesInlineAtEndOfLine_PR32438) {
+  EXPECT_EQ("template <int> struct a {};\n"
+            "struct a<bool{}> b() {\n"
+            "}\n"
+            "#define c inline\n"
+            "void d() {\n"
+            "}\n",
+            fixNamespaceEndComments("template <int> struct a {};\n"
+                                    "struct a<bool{}> b() {\n"
+                                    "}\n"
+                                    "#define c inline\n"
+                                    "void d() {\n"
+                                    "}\n"));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang

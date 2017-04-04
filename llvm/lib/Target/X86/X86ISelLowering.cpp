@@ -29328,14 +29328,14 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   SDValue Root = matchBinOpReduction(Extract, ISD::ADD);
 
   // The operand is expected to be zero extended from i8
-  // (verified in detectZextAbsDiff). 
-  // In order to convert to i64 and above, additional any/zero/sign 
+  // (verified in detectZextAbsDiff).
+  // In order to convert to i64 and above, additional any/zero/sign
   // extend is expected.
   // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend 
+  // Also the sign extend is basically zero extend
   // (extends the sign bit which is zero).
   // So it is correct to skip the sign/zero extend instruction.
-  if (Root && (Root.getOpcode() == ISD::SIGN_EXTEND || 
+  if (Root && (Root.getOpcode() == ISD::SIGN_EXTEND ||
 	  Root.getOpcode() == ISD::ZERO_EXTEND ||
 	  Root.getOpcode() == ISD::ANY_EXTEND))
     Root = Root.getOperand(0);
@@ -29765,18 +29765,6 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
     unsigned ShAmt = TrueC->getAPIntValue().logBase2();
     return DAG.getNode(ISD::SHL, DL, LHS.getValueType(), Cond,
                        DAG.getConstant(ShAmt, DL, MVT::i8));
-  }
-
-  // Optimize Cond ? cst+1 : cst -> zext(setcc(C)+cst.
-  if (FalseC->getAPIntValue() + 1 == TrueC->getAPIntValue()) {
-    if (NeedsCondInvert) // Invert the condition if needed.
-      Cond = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
-                         DAG.getConstant(1, DL, Cond.getValueType()));
-
-    // Zero extend the condition if needed.
-    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, FalseC->getValueType(0), Cond);
-    return DAG.getNode(ISD::ADD, DL, Cond.getValueType(), Cond,
-                       SDValue(FalseC, 0));
   }
 
   // Optimize cases that will turn into an LEA instruction.  This requires

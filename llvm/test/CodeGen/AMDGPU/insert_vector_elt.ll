@@ -78,7 +78,7 @@ define amdgpu_kernel void @insertelement_v3f32_3(<3 x float> addrspace(1)* %out,
 define amdgpu_ps <4 x float> @insertelement_to_sgpr() nounwind {
   %tmp = load <4 x i32>, <4 x i32> addrspace(2)* undef
   %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
-  %tmp2 = call <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> %tmp1, i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.v4f32.v2f32.v8i32(<2 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 1, i1 false, i1 false, i1 false, i1 false, i1 true)
   ret <4 x float> %tmp2
 }
 
@@ -438,10 +438,13 @@ define amdgpu_kernel void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)
 ; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm
 ; GCN: ScratchSize: 128
-define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %a, i32 %b) nounwind {
+define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %a, i32 %b) #0 {
   %vecins = insertelement <8 x double> %a, double 8.0, i32 %b
   store <8 x double> %vecins, <8 x double> addrspace(1)* %out, align 16
   ret void
 }
 
-declare <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) nounwind readnone
+declare <4 x float> @llvm.amdgcn.image.gather4.lz.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
