@@ -406,7 +406,7 @@ private:
 
   // Get the closest ancester which is a declaration of a given AST node.
   template <typename ASTNodeType>
-  const Decl *getClosestAncestorDecl(ASTNodeType Node) {
+  const Decl *getClosestAncestorDecl(const ASTNodeType &Node) {
     auto Parents = Context.getParents(Node);
     // FIXME: figure out how to handle it when there are multiple parents.
     if (Parents.size() != 1)

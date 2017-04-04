@@ -1212,6 +1212,13 @@ __kmp_barrier(enum barrier_type bt, int gtid, int is_split, size_t reduce_size,
             team->t.t_bar[bt].b_team_arrived += 1;
 #endif
 
+#if OMP_40_ENABLED
+      // Reset cancellation flag for worksharing constructs
+      if(team->t.t_cancel_request == cancel_loop ||
+         team->t.t_cancel_request == cancel_sections ) {
+        team->t.t_cancel_request = cancel_noreq;
+      }
+#endif
 #if USE_ITT_BUILD
             /* TODO: In case of split reduction barrier, master thread may send acquired event early,
                before the final summation into the shared variable is done (final summation can be a

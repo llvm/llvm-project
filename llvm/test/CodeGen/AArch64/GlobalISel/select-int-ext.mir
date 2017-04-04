@@ -3,21 +3,23 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @anyext_s64_s32() { ret void }
-  define void @anyext_s32_s8() { ret void }
+  define void @anyext_s64_from_s32() { ret void }
+  define void @anyext_s32_from_s8() { ret void }
 
-  define void @zext_s64_s32() { ret void }
-  define void @zext_s32_s8() { ret void }
-  define void @zext_s16_s8() { ret void }
+  define void @zext_s64_from_s32() { ret void }
+  define void @zext_s32_from_s16() { ret void }
+  define void @zext_s32_from_s8() { ret void }
+  define void @zext_s16_from_s8() { ret void }
 
-  define void @sext_s64_s32() { ret void }
-  define void @sext_s32_s8() { ret void }
-  define void @sext_s16_s8() { ret void }
+  define void @sext_s64_from_s32() { ret void }
+  define void @sext_s32_from_s16() { ret void }
+  define void @sext_s32_from_s8() { ret void }
+  define void @sext_s16_from_s8() { ret void }
 ...
 
 ---
-# CHECK-LABEL: name: anyext_s64_s32
-name:            anyext_s64_s32
+# CHECK-LABEL: name: anyext_s64_from_s32
+name:            anyext_s64_from_s32
 legalized:       true
 regBankSelected: true
 
@@ -43,8 +45,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: anyext_s32_s8
-name:            anyext_s32_s8
+# CHECK-LABEL: name: anyext_s32_from_s8
+name:            anyext_s32_from_s8
 legalized:       true
 regBankSelected: true
 
@@ -68,8 +70,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: zext_s64_s32
-name:            zext_s64_s32
+# CHECK-LABEL: name: zext_s64_from_s32
+name:            zext_s64_from_s32
 legalized:       true
 regBankSelected: true
 
@@ -95,8 +97,33 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: zext_s32_s8
-name:            zext_s32_s8
+# CHECK-LABEL: name: zext_s32_from_s16
+name:            zext_s32_from_s16
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = UBFMWri %0, 0, 15
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s16) = COPY %w0
+    %1(s32) = G_ZEXT %0
+    %w0 = COPY %1
+...
+
+---
+# CHECK-LABEL: name: zext_s32_from_s8
+name:            zext_s32_from_s8
 legalized:       true
 regBankSelected: true
 
@@ -120,8 +147,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: zext_s16_s8
-name:            zext_s16_s8
+# CHECK-LABEL: name: zext_s16_from_s8
+name:            zext_s16_from_s8
 legalized:       true
 regBankSelected: true
 
@@ -145,8 +172,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: sext_s64_s32
-name:            sext_s64_s32
+# CHECK-LABEL: name: sext_s64_from_s32
+name:            sext_s64_from_s32
 legalized:       true
 regBankSelected: true
 
@@ -172,8 +199,33 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: sext_s32_s8
-name:            sext_s32_s8
+# CHECK-LABEL: name: sext_s32_from_s16
+name:            sext_s32_from_s16
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SBFMWri %0, 0, 15
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s16) = COPY %w0
+    %1(s32) = G_SEXT %0
+    %w0 = COPY %1
+...
+
+---
+# CHECK-LABEL: name: sext_s32_from_s8
+name:            sext_s32_from_s8
 legalized:       true
 regBankSelected: true
 
@@ -197,8 +249,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: sext_s16_s8
-name:            sext_s16_s8
+# CHECK-LABEL: name: sext_s16_from_s8
+name:            sext_s16_from_s8
 legalized:       true
 regBankSelected: true
 

@@ -472,30 +472,6 @@ define i8@test_int_x86_avx512_cvtq2mask_512(<8 x i64> %x0) {
   ret i8 %res
 }
 
-declare <16 x i32> @llvm.x86.avx512.cvtmask2d.512(i16)
-
-define <16 x i32>@test_int_x86_avx512_cvtmask2d_512(i16 %x0) {
-; CHECK-LABEL: test_int_x86_avx512_cvtmask2d_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    vpmovm2d %k0, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.cvtmask2d.512(i16 %x0)
-  ret <16 x i32> %res
-}
-
-declare <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8)
-
-define <8 x i64>@test_int_x86_avx512_cvtmask2q_512(i8 %x0) {
-; CHECK-LABEL: test_int_x86_avx512_cvtmask2q_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    vpmovm2q %k0, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8 %x0)
-  ret <8 x i64> %res
-}
-
 declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float>, <16 x float>, i16)
 
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0, <16 x float> %x2, i16 %mask) {

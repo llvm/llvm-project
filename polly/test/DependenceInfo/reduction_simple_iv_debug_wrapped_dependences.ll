@@ -10,7 +10,7 @@
 ; CHECK-NEXT:     RAW dependences:
 ; CHECK-NEXT:         { [Stmt_for_cond[i0] -> MemRef_sum[0{{\]\]}} -> [Stmt_for_cond[1 + i0] -> MemRef_sum[0{{\]\]}} : 0 <= i0 <= 99 }
 ; CHECK-NEXT:     WAR dependences:
-; CHECK-NEXT:         {  }
+; CHECK-NEXT:         { [Stmt_for_cond[i0] -> MemRef_sum[0{{\]\]}} -> [Stmt_for_cond[1 + i0] -> MemRef_sum[0{{\]\]}} : 0 <= i0 <= 99 }
 ; CHECK-NEXT:     WAW dependences:
 ; CHECK-NEXT:         { [Stmt_for_cond[i0] -> MemRef_sum[0{{\]\]}} -> [Stmt_for_cond[1 + i0] -> MemRef_sum[0{{\]\]}} : 0 <= i0 <= 99 }
 ; CHECK-NEXT:     Reduction dependences:

@@ -17,8 +17,9 @@ entry:
 ; CHECK: mul i32
 ; CHECK-NOT: call i32
 
-define amdgpu_kernel i32 @caller(i32 %x) {
+define amdgpu_kernel void @caller(i32 %x) {
 entry:
   %res = call i32 @callee(i32 %x)
-  ret i32 %res
+  store volatile i32 %res, i32 addrspace(1)* undef
+  ret void
 }

@@ -47,5 +47,15 @@ private:
   bool SamplePGO;
 };
 
+/// The profile size based optimization pass for memory intrinsics.
+class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
+public:
+  PGOMemOPSizeOpt() {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                     uint64_t MaxCount);
+
 } // End llvm namespace
 #endif

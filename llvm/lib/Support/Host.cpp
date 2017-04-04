@@ -149,18 +149,28 @@ StringRef sys::detail::getHostCPUNameForARM(
   // The cpuid register on arm is not accessible from user space. On Linux,
   // it is exposed through the /proc/cpuinfo file.
 
-  // Read 1024 bytes from /proc/cpuinfo, which should contain the CPU part line
+  // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
   // in all cases.
   SmallVector<StringRef, 32> Lines;
   ProcCpuinfoContent.split(Lines, "\n");
 
   // Look for the CPU implementer line.
   StringRef Implementer;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
+  StringRef Hardware;
+  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
     if (Lines[I].startswith("CPU implementer"))
       Implementer = Lines[I].substr(15).ltrim("\t :");
+    if (Lines[I].startswith("Hardware"))
+      Hardware = Lines[I].substr(8).ltrim("\t :");
+  }
 
-  if (Implementer == "0x41") // ARM Ltd.
+  if (Implementer == "0x41") { // ARM Ltd.
+    // MSM8992/8994 may give cpu part for the core that the kernel is running on,
+    // which is undeterministic and wrong. Always return cortex-a53 for these SoC.
+    if (Hardware.endswith("MSM8994") || Hardware.endswith("MSM8996"))
+      return "cortex-a53";
+
+
     // Look for the CPU part line.
     for (unsigned I = 0, E = Lines.size(); I != E; ++I)
       if (Lines[I].startswith("CPU part"))
@@ -179,6 +189,22 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0xc20", "cortex-m0")
             .Case("0xc23", "cortex-m3")
             .Case("0xc24", "cortex-m4")
+            .Case("0xd03", "cortex-a53")
+            .Case("0xd07", "cortex-a57")
+            .Case("0xd08", "cortex-a72")
+            .Case("0xd09", "cortex-a73")
+            .Default("generic");
+  }
+
+  if (Implementer == "0x50") // Applied Micro Circuits Corporation (APM).
+    // Look for the CPU part line.
+    for (unsigned I = 0, E = Lines.size(); I != E; ++I)
+      if (Lines[I].startswith("CPU part"))
+        // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
+        // values correspond to the "Part number" in the CP15/c0 register. The
+        // contents are specified in the various processor manuals.
+        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
+            .Case("0x000", "xgene1")
             .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
@@ -190,6 +216,8 @@ StringRef sys::detail::getHostCPUNameForARM(
         // contents are specified in the various processor manuals.
         return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
             .Case("0x06f", "krait") // APQ8064
+            .Case("0x201", "kryo")
+            .Case("0x205", "kryo")
             .Default("generic");
 
   return "generic";
@@ -1199,7 +1227,7 @@ StringRef sys::getHostCPUName() {
   const StringRef& Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForPowerPC(Content);
 }
-#elif defined(__linux__) && defined(__arm__)
+#elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   const StringRef& Content = P ? P->getBuffer() : "";

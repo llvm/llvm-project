@@ -1,5 +1,12 @@
 set(LLVM_LINK_COMPONENTS support)
 
+# Link Z3 if the user wants to build it.
+if(CLANG_ANALYZER_WITH_Z3)
+  set(Z3_LINK_FILES ${Z3_LIBRARIES})
+else()
+  set(Z3_LINK_FILES "")
+endif()
+
 add_clang_library(clangStaticAnalyzerCore
   APSIntType.cpp
   AnalysisManager.cpp
@@ -43,6 +50,7 @@ add_clang_library(clangStaticAnalyzerCore
   Store.cpp
   SubEngine.cpp
   SymbolManager.cpp
+  Z3ConstraintManager.cpp
 
   LINK_LIBS
   clangAST
@@ -50,4 +58,12 @@ add_clang_library(clangStaticAnalyzerCore
   clangBasic
   clangLex
   clangRewrite
+  ${Z3_LINK_FILES}
   )
+
+if(CLANG_ANALYZER_WITH_Z3)
+  target_include_directories(clangStaticAnalyzerCore SYSTEM
+    PRIVATE
+    ${Z3_INCLUDE_DIR}
+    )
+endif()
