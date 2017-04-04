@@ -781,12 +781,6 @@ static bool containsOnlyMatrMultAcc(__isl_keep isl_map *PartialSchedule,
 ///         and false, otherwise.
 static bool containsOnlyMatMulDep(__isl_keep isl_map *Schedule,
                                   const Dependences *D, int &Pos) {
-  auto *WAR = D->getDependences(Dependences::TYPE_WAR);
-  if (!isl_union_map_is_empty(WAR)) {
-    isl_union_map_free(WAR);
-    return false;
-  }
-  isl_union_map_free(WAR);
   auto *Dep = D->getDependences(Dependences::TYPE_RAW);
   auto *Red = D->getDependences(Dependences::TYPE_RED);
   if (Red)

@@ -860,10 +860,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (Config->OutputFile.empty())
     Config->OutputFile = "a.out";
 
-  // Fail early if the output file is not writable. If a user has a long link,
-  // e.g. due to a large LTO link, they do not wish to run it and find that it
-  // failed because there was a mistake in their command-line.
-  if (!isFileWritable(Config->OutputFile))
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  if (!isFileWritable(Config->OutputFile, "output file"))
+    return;
+  if (!isFileWritable(Config->MapFile, "map file"))
     return;
 
   // Use default entry point name if no name was given via the command

@@ -3870,34 +3870,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_cvtq2mask_512 : GCCBuiltin<"__builtin_ia32_cvtq2mask512">,
               Intrinsic<[llvm_i8_ty], [llvm_v8i64_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_cvtmask2b_128 : GCCBuiltin<"__builtin_ia32_cvtmask2b128">,
-              Intrinsic<[llvm_v16i8_ty], [llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2b_256 : GCCBuiltin<"__builtin_ia32_cvtmask2b256">,
-              Intrinsic<[llvm_v32i8_ty], [llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2b_512 : GCCBuiltin<"__builtin_ia32_cvtmask2b512">,
-              Intrinsic<[llvm_v64i8_ty], [llvm_i64_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_cvtmask2w_128 : GCCBuiltin<"__builtin_ia32_cvtmask2w128">,
-              Intrinsic<[llvm_v8i16_ty], [llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2w_256 : GCCBuiltin<"__builtin_ia32_cvtmask2w256">,
-              Intrinsic<[llvm_v16i16_ty], [llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2w_512 : GCCBuiltin<"__builtin_ia32_cvtmask2w512">,
-              Intrinsic<[llvm_v32i16_ty], [llvm_i32_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_cvtmask2d_128 : GCCBuiltin<"__builtin_ia32_cvtmask2d128">,
-              Intrinsic<[llvm_v4i32_ty], [llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2d_256 : GCCBuiltin<"__builtin_ia32_cvtmask2d256">,
-              Intrinsic<[llvm_v8i32_ty], [llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2d_512 : GCCBuiltin<"__builtin_ia32_cvtmask2d512">,
-              Intrinsic<[llvm_v16i32_ty], [llvm_i16_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_cvtmask2q_128 : GCCBuiltin<"__builtin_ia32_cvtmask2q128">,
-              Intrinsic<[llvm_v2i64_ty], [llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2q_256 : GCCBuiltin<"__builtin_ia32_cvtmask2q256">,
-              Intrinsic<[llvm_v4i64_ty], [llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtmask2q_512 : GCCBuiltin<"__builtin_ia32_cvtmask2q512">,
-              Intrinsic<[llvm_v8i64_ty], [llvm_i8_ty], [IntrNoMem]>;
-
 }
 
 // Pack ops.

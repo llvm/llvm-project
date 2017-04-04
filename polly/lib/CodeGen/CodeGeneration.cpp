@@ -145,10 +145,10 @@ public:
     // which may introduce scalar dependences that prevent us from correctly
     // code generating this scop.
     BasicBlock *StartBlock =
-        executeScopConditionally(S, this, Builder.getTrue());
+        executeScopConditionally(S, Builder.getTrue(), *DT, *RI, *LI);
     auto *SplitBlock = StartBlock->getSinglePredecessor();
 
-    IslNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, S,
+    IslNodeBuilder NodeBuilder(Builder, Annotator, *DL, *LI, *SE, *DT, S,
                                StartBlock);
 
     if (PerfMonitoring) {

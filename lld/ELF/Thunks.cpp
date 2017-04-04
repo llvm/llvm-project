@@ -50,27 +50,27 @@ namespace {
 
 // Specific ARM Thunk implementations. The naming convention is:
 // Source State, TargetState, Target Requirement, ABS or PI, Range
-template <class ELFT> class ARMToThumbV7ABSLongThunk final : public Thunk {
+template <class ELFT> class ARMV7ABSLongThunk final : public Thunk {
 public:
-  ARMToThumbV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
 };
 
-template <class ELFT> class ARMToThumbV7PILongThunk final : public Thunk {
+template <class ELFT> class ARMV7PILongThunk final : public Thunk {
 public:
-  ARMToThumbV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
 };
 
-template <class ELFT> class ThumbToARMV7ABSLongThunk final : public Thunk {
+template <class ELFT> class ThumbV7ABSLongThunk final : public Thunk {
 public:
-  ThumbToARMV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {
+  ThumbV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {
     this->alignment = 2;
   }
 
@@ -79,9 +79,9 @@ public:
   void addSymbols(ThunkSection &IS) override;
 };
 
-template <class ELFT> class ThumbToARMV7PILongThunk final : public Thunk {
+template <class ELFT> class ThumbV7PILongThunk final : public Thunk {
 public:
-  ThumbToARMV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {
+  ThumbV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {
     this->alignment = 2;
   }
 
@@ -110,8 +110,7 @@ static uint64_t getARMThunkDestVA(const SymbolBody &S) {
 }
 
 template <class ELFT>
-void ARMToThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
-                                             ThunkSection &IS) const {
+void ARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0x00, 0xc0, 0x00, 0xe3, // movw         ip,:lower16:S
       0x00, 0xc0, 0x40, 0xe3, // movt         ip,:upper16:S
@@ -124,16 +123,15 @@ void ARMToThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 }
 
 template <class ELFT>
-void ARMToThumbV7ABSLongThunk<ELFT>::addSymbols(ThunkSection &IS) {
+void ARMV7ABSLongThunk<ELFT>::addSymbols(ThunkSection &IS) {
   this->ThunkSym = addSyntheticLocal<ELFT>(
-      Saver.save("__ARMToThumbv7ABSLongThunk_" + this->Destination.getName()),
+      Saver.save("__ARMv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
   addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
-void ThumbToARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
-                                             ThunkSection &IS) const {
+void ThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0x40, 0xf2, 0x00, 0x0c, // movw         ip, :lower16:S
       0xc0, 0xf2, 0x00, 0x0c, // movt         ip, :upper16:S
@@ -146,16 +144,15 @@ void ThumbToARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 }
 
 template <class ELFT>
-void ThumbToARMV7ABSLongThunk<ELFT>::addSymbols(ThunkSection &IS) {
+void ThumbV7ABSLongThunk<ELFT>::addSymbols(ThunkSection &IS) {
   this->ThunkSym = addSyntheticLocal<ELFT>(
-      Saver.save("__ThumbToARMv7ABSLongThunk_" + this->Destination.getName()),
+      Saver.save("__Thumbv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
   addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
-void ARMToThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
-                                            ThunkSection &IS) const {
+void ARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0xf0, 0xcf, 0x0f, 0xe3, // P:  movw ip,:lower16:S - (P + (L1-P) +8)
       0x00, 0xc0, 0x40, 0xe3, //     movt ip,:upper16:S - (P + (L1-P+4) +8)
@@ -170,16 +167,15 @@ void ARMToThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 }
 
 template <class ELFT>
-void ARMToThumbV7PILongThunk<ELFT>::addSymbols(ThunkSection &IS) {
+void ARMV7PILongThunk<ELFT>::addSymbols(ThunkSection &IS) {
   this->ThunkSym = addSyntheticLocal<ELFT>(
-      Saver.save("__ARMToThumbV7PILongThunk_" + this->Destination.getName()),
-      STT_FUNC, this->Offset, size(), &IS);
+      Saver.save("__ARMV7PILongThunk_" + this->Destination.getName()), STT_FUNC,
+      this->Offset, size(), &IS);
   addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
-void ThumbToARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
-                                            ThunkSection &IS) const {
+void ThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0x4f, 0xf6, 0xf4, 0x7c, // P:  movw ip,:lower16:S - (P + (L1-P) + 4)
       0xc0, 0xf2, 0x00, 0x0c, //     movt ip,:upper16:S - (P + (L1-P+4) + 4)
@@ -194,9 +190,9 @@ void ThumbToARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 }
 
 template <class ELFT>
-void ThumbToARMV7PILongThunk<ELFT>::addSymbols(ThunkSection &IS) {
+void ThumbV7PILongThunk<ELFT>::addSymbols(ThunkSection &IS) {
   this->ThunkSym = addSyntheticLocal<ELFT>(
-      Saver.save("__ThumbToARMV7PILongThunk_" + this->Destination.getName()),
+      Saver.save("__ThumbV7PILongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
   addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
@@ -232,8 +228,7 @@ Thunk::Thunk(const SymbolBody &D) : Destination(D), Offset(0) {}
 Thunk::~Thunk() = default;
 
 // Creates a thunk for Thumb-ARM interworking.
-template <class ELFT>
-static Thunk *addThunkArm(uint32_t Reloc, SymbolBody &S) {
+template <class ELFT> static Thunk *addThunkArm(uint32_t Reloc, SymbolBody &S) {
   // ARM relocations need ARM to Thumb interworking Thunks.
   // Thumb relocations need Thumb to ARM relocations.
   // Use position independent Thunks if we require position independent code.
@@ -242,13 +237,13 @@ static Thunk *addThunkArm(uint32_t Reloc, SymbolBody &S) {
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
     if (Config->Pic)
-      return make<ARMToThumbV7PILongThunk<ELFT>>(S);
-    return make<ARMToThumbV7ABSLongThunk<ELFT>>(S);
+      return make<ARMV7PILongThunk<ELFT>>(S);
+    return make<ARMV7ABSLongThunk<ELFT>>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
     if (Config->Pic)
-      return make<ThumbToARMV7PILongThunk<ELFT>>(S);
-    return make<ThumbToARMV7ABSLongThunk<ELFT>>(S);
+      return make<ThumbV7PILongThunk<ELFT>>(S);
+    return make<ThumbV7ABSLongThunk<ELFT>>(S);
   }
   fatal("unrecognized relocation type");
 }

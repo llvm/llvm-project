@@ -1867,6 +1867,54 @@ define <4 x i64>@test_int_x86_avx512_mask_pmovsxd_q_256(<4 x i32> %x0, <4 x i64>
   ret <4 x i64> %res4
 }
 
+
+declare <16 x i8> @llvm.x86.avx512.cvtmask2b.128(i16)
+
+define <16 x i8>@test_int_x86_avx512_cvtmask2b_128(i16 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2b_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0 ## encoding: [0xc5,0xfb,0x92,0xc7]
+; CHECK-NEXT:    vpmovm2b %k0, %xmm0 ## encoding: [0x62,0xf2,0x7e,0x08,0x28,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i8> @llvm.x86.avx512.cvtmask2b.128(i16 %x0)
+  ret <16 x i8> %res
+}
+
+declare <32 x i8> @llvm.x86.avx512.cvtmask2b.256(i32)
+
+define <32 x i8>@test_int_x86_avx512_cvtmask2b_256(i32 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0 ## encoding: [0xc5,0xfb,0x92,0xc7]
+; CHECK-NEXT:    vpmovm2b %k0, %ymm0 ## encoding: [0x62,0xf2,0x7e,0x28,0x28,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <32 x i8> @llvm.x86.avx512.cvtmask2b.256(i32 %x0)
+  ret <32 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.avx512.cvtmask2w.128(i8)
+
+define <8 x i16>@test_int_x86_avx512_cvtmask2w_128(i8 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2w_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0 ## encoding: [0xc5,0xfb,0x92,0xc7]
+; CHECK-NEXT:    vpmovm2w %k0, %xmm0 ## encoding: [0x62,0xf2,0xfe,0x08,0x28,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.avx512.cvtmask2w.128(i8 %x0)
+  ret <8 x i16> %res
+}
+
+declare <16 x i16> @llvm.x86.avx512.cvtmask2w.256(i16)
+
+define <16 x i16>@test_int_x86_avx512_cvtmask2w_256(i16 %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtmask2w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0 ## encoding: [0xc5,0xfb,0x92,0xc7]
+; CHECK-NEXT:    vpmovm2w %k0, %ymm0 ## encoding: [0x62,0xf2,0xfe,0x28,0x28,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i16> @llvm.x86.avx512.cvtmask2w.256(i16 %x0)
+  ret <16 x i16> %res
+}
 define <8 x i16> @test_mask_packs_epi32_rr_128(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_mask_packs_epi32_rr_128:
 ; CHECK:       ## BB#0:

@@ -18,11 +18,25 @@
 
 #include "clang/AST/AST.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Refactoring/AtomicChange.h"
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace rename {
+
+/// Create atomic changes for renaming all symbol references which are
+/// identified by the USRs set to a given new name.
+///
+/// \param USRs: The set containing USRs of a particular old symbol.
+/// \param NewName: The new name to replace old symbol name.
+/// \param TranslationUnitDecl: The translation unit declaration.
+///
+/// \return Atomic changes for renaming.
+std::vector<tooling::AtomicChange>
+createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
+                          llvm::StringRef NewName, Decl *TranslationUnitDecl);
 
 // FIXME: make this an AST matcher. Wouldn't that be awesome??? I agree!
 std::vector<SourceLocation>

@@ -502,19 +502,7 @@ DWARF:
       LineBase:        251
       LineRange:       14
       OpcodeBase:      13
-      StandardOpcodeLengths: 
-        - 0
-        - 1
-        - 1
-        - 1
-        - 1
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-        - 0
-        - 1
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
       IncludeDirs:     
       Files:           
         - Name:            hello_world.c
@@ -556,19 +544,7 @@ DWARF:
 #CHECK:       LineBase:        251
 #CHECK:       LineRange:       14
 #CHECK:       OpcodeBase:      13
-#CHECK:       StandardOpcodeLengths: 
-#CHECK:         - 0
-#CHECK:         - 1
-#CHECK:         - 1
-#CHECK:         - 1
-#CHECK:         - 1
-#CHECK:         - 0
-#CHECK:         - 0
-#CHECK:         - 0
-#CHECK:         - 1
-#CHECK:         - 0
-#CHECK:         - 0
-#CHECK:         - 1
+#CHECK:       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
 #CHECK:       IncludeDirs:     
 #CHECK:       Files:           
 #CHECK:         - Name:            hello_world.c

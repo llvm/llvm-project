@@ -234,6 +234,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "xop.vpcmov" || // Added in 3.8
       Name == "xop.vpcmov.256" || // Added in 5.0
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
+      Name.startswith("avx512.cvtmask2") || // Added in 5.0
       (Name.startswith("xop.vpcom") && // Added in 3.2
        F->arg_size() == 2))
     return true;
@@ -798,6 +799,15 @@ static Value* upgradeMaskedMove(IRBuilder<> &Builder, CallInst &CI) {
   Value* Extract2 = Builder.CreateExtractElement(Src, (uint64_t)0);
   Value* Select = Builder.CreateSelect(Cmp, Extract1, Extract2);
   return Builder.CreateInsertElement(A, Select, (uint64_t)0);
+}
+
+
+static Value* UpgradeMaskToInt(IRBuilder<> &Builder, CallInst &CI) {
+  Value* Op = CI.getArgOperand(0);
+  Type* ReturnOp = CI.getType();
+  unsigned NumElts = CI.getType()->getVectorNumElements();
+  Value *Mask = getX86MaskVec(Builder, Op, NumElts);
+  return Builder.CreateSExt(Mask, ReturnOp, "vpmovm2");
 }
 
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
@@ -1836,6 +1846,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeX86MaskedShift(Builder, *CI, IID);
     } else if (IsX86 && Name.startswith("avx512.mask.move.s")) {
       Rep = upgradeMaskedMove(Builder, *CI);
+    } else if (IsX86 && Name.startswith("avx512.cvtmask2")) {
+      Rep = UpgradeMaskToInt(Builder, *CI);
     } else if (IsX86 && Name.startswith("avx512.mask.vpermilvar.")) {
       Intrinsic::ID IID;
       if (Name.endswith("ps.128"))

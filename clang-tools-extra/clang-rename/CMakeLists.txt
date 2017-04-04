@@ -13,6 +13,7 @@ add_clang_library(clangRename
   clangIndex
   clangLex
   clangToolingCore
+  clangToolingRefactor
   )
 
 add_subdirectory(tool)

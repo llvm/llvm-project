@@ -130,7 +130,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-aes");
     Features.push_back("-pclmul");
     Features.push_back("-rtm");
-    Features.push_back("-hle");
     Features.push_back("-fsgsbase");
   }
 

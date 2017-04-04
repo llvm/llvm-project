@@ -16,15 +16,15 @@ sym1:
 
 // CHECK: Disassembly of section .text:
 // CHECK-NEXT: sym1:
-// CHECK-NEXT: 1000: 00 f0 02 b8 b.w #4 <__ThumbToARMV7PILongThunk_elsewhere>
-// CHECK-NEXT: 1004: 00 f0 06 b8 b.w #12 <__ThumbToARMV7PILongThunk_weakref>
-// CHECK: __ThumbToARMV7PILongThunk_elsewhere:
+// CHECK-NEXT: 1000: 00 f0 02 b8 b.w #4 <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT: 1004: 00 f0 06 b8 b.w #12 <__ThumbV7PILongThunk_weakref>
+// CHECK: __ThumbV7PILongThunk_elsewhere:
 // CHECK-NEXT:     1008:       40 f2 20 0c     movw    r12, #32
 // CHECK-NEXT:     100c:       c0 f2 00 0c     movt    r12, #0
 // CHECK-NEXT:     1010:       fc 44   add     r12, pc
 // CHECK-NEXT:     1012:       60 47   bx      r12
 
-// CHECK: __ThumbToARMV7PILongThunk_weakref:
+// CHECK: __ThumbV7PILongThunk_weakref:
 // CHECK-NEXT:     1014:       40 f2 24 0c     movw    r12, #36
 // CHECK-NEXT:     1018:       c0 f2 00 0c     movt    r12, #0
 // CHECK-NEXT:     101c:       fc 44   add     r12, pc

@@ -70,9 +70,9 @@ void elf::unlinkAsync(StringRef Path) {
 // FileOutputBuffer doesn't touch a desitnation file until commit()
 // is called. We use that class without calling commit() to predict
 // if the given file is writable.
-bool elf::isFileWritable(StringRef Path) {
+bool elf::isFileWritable(StringRef Path, StringRef Desc) {
   if (auto EC = FileOutputBuffer::create(Path, 1).getError()) {
-    error("cannot open output file " + Path + ": " + EC.message());
+    error("cannot open " + Desc + " " + Path + ": " + EC.message());
     return false;
   }
   return true;
