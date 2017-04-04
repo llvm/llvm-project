@@ -155,8 +155,8 @@ static cl::opt<bool> PollyIgnoreParamBounds(
 
 static cl::opt<bool> PollyPreciseFoldAccesses(
     "polly-precise-fold-accesses",
-    cl::desc("Fold memory accesses to modele more possible delinearizations "
-             "(do not scale well)"),
+    cl::desc("Fold memory accesses to model more possible delinearizations "
+             "(does not scale well)"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 //===----------------------------------------------------------------------===//
 

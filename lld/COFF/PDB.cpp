@@ -83,33 +83,22 @@ static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
 }
 
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
-                        codeview::TypeTableBuilder &TypeTable,
-                        std::vector<uint8_t> &Data) {
+                        codeview::TypeTableBuilder &TypeTable) {
   // Start the TPI or IPI stream header.
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
   // Flatten the in memory type table.
-  // FIXME: Avoid this copy.
   TypeTable.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Rec) {
-    Data.insert(Data.end(), Rec.begin(), Rec.end());
+    // FIXME: Hash types.
+    TpiBuilder.addTypeRecord(Rec, None);
   });
-
-  BinaryByteStream Stream(Data, support::little);
-  codeview::CVTypeArray Records;
-  BinaryStreamReader Reader(Stream);
-  if (auto EC = Reader.readArray(Records, Reader.getLength()))
-    fatal(EC, "Reader.readArray failed");
-  for (const codeview::CVType &Rec : Records)
-    TpiBuilder.addTypeRecord(Rec);
 }
 
 // Merge .debug$T sections into IpiData and TpiData.
 static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
-                        std::vector<uint8_t> &TpiData,
-                        std::vector<uint8_t> &IpiData) {
+                        codeview::TypeTableBuilder &TypeTable,
+                        codeview::TypeTableBuilder &IDTable) {
   // Visit all .debug$T sections to add them to Builder.
-  codeview::TypeTableBuilder IDTable(BAlloc);
-  codeview::TypeTableBuilder TypeTable(BAlloc);
   for (ObjectFile *File : Symtab->ObjectFiles) {
     ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
     if (Data.empty())
@@ -132,10 +121,10 @@ static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
   }
 
   // Construct TPI stream contents.
-  addTypeInfo(Builder.getTpiBuilder(), TypeTable, TpiData);
+  addTypeInfo(Builder.getTpiBuilder(), TypeTable);
 
   // Construct IPI stream contents.
-  addTypeInfo(Builder.getIpiBuilder(), IDTable, IpiData);
+  addTypeInfo(Builder.getIpiBuilder(), IDTable);
 }
 
 static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
@@ -213,9 +202,9 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   auto &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
 
-  std::vector<uint8_t> TpiData;
-  std::vector<uint8_t> IpiData;
-  mergeDebugT(Symtab, Builder, TpiData, IpiData);
+  codeview::TypeTableBuilder TypeTable(BAlloc);
+  codeview::TypeTableBuilder IDTable(BAlloc);
+  mergeDebugT(Symtab, Builder, TypeTable, IDTable);
 
   // Add Section Contributions.
   std::vector<pdb::SectionContrib> Contribs =

@@ -1091,7 +1091,18 @@ class _LIBCPP_TYPE_VIS path::iterator
 {
 public:
     typedef bidirectional_iterator_tag iterator_category;
+
+    // FIXME: As of 3/April/2017 Clang warns on `value_type` shadowing the
+    // definition in path. Clang should be fixed and this should be removed.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+#endif
     typedef path                       value_type;
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
     typedef std::ptrdiff_t             difference_type;
     typedef const path*                pointer;
     typedef const path&                reference;
