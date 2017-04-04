@@ -80,5 +80,6 @@ void foo(int i) {
   {
     [[ ]] // expected-error {{an attribute list cannot appear here}}
 #pragma STDC FP_CONTRACT ON // expected-error {{can only appear at file scope or at the start of a compound statement}}
+#pragma clang fp contract(fast) // expected-error {{can only appear at file scope or at the start of a compound statement}}
   }
 }

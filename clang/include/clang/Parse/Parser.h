@@ -183,6 +183,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> LoopHintHandler;
   std::unique_ptr<PragmaHandler> UnrollHintHandler;
   std::unique_ptr<PragmaHandler> NoUnrollHintHandler;
+  std::unique_ptr<PragmaHandler> FPHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -547,6 +548,10 @@ private:
   /// \brief Handle the annotation token produced for
   /// #pragma STDC FP_CONTRACT...
   void HandlePragmaFPContract();
+
+  /// \brief Handle the annotation token produced for
+  /// #pragma clang fp ...
+  void HandlePragmaFP();
 
   /// \brief Handle the annotation token produced for
   /// #pragma OPENCL EXTENSION...
