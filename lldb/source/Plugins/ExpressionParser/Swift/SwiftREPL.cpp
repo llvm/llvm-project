@@ -64,6 +64,15 @@ lldb::REPLSP SwiftREPL::CreateInstance(Error &err, lldb::LanguageType language,
       return lldb::REPLSP();
     }
 
+    // Check that we can get a type system, or we aren't going anywhere:
+    TypeSystem *type_system =
+      target->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeSwift, 
+                                              true, repl_options);
+    if (!type_system) {
+      err.SetErrorString("Could not construct an expression "
+                         "context for the REPL.\n");
+      return lldb::REPLSP();
+    }
     // Sanity checks succeeded.  Go ahead.
     SwiftREPL *repl = new SwiftREPL(*target);
     REPLSP repl_sp(repl);
@@ -152,15 +161,30 @@ lldb::REPLSP SwiftREPL::CreateInstance(Error &err, lldb::LanguageType language,
                       if (thread_sp) {
                         thread_sp->SetSelectedFrameByIndex(0);
 
+                        REPLSP repl_sp(new SwiftREPL(*target_sp));
+                        ((SwiftREPL *)repl_sp.get())
+                            ->SetCompilerOptions(repl_options);
+                        target_sp->SetREPL(lldb::eLanguageTypeSwift, repl_sp);
+                        
+                        // Check that we can get a type system, or we aren't 
+                        // going anywhere.  Remember to pass in the repl_options
+                        // in case they set up framework paths we need, etc.
+                        TypeSystem *type_system =
+                        target_sp->GetScratchTypeSystemForLanguage(nullptr, 
+                                                              eLanguageTypeSwift, 
+                                                              true,
+                                                              repl_options);
+                        if (!type_system) {
+                          err.SetErrorString("Could not construct an expression"
+                                             " context for the REPL.\n");
+                          return lldb::REPLSP();
+                        }
+
                         std::string swift_full_version(
                             swift::version::getSwiftFullVersion());
                         printf("Welcome to %s. Type :help for assistance.\n",
                                swift_full_version.c_str());
 
-                        REPLSP repl_sp(new SwiftREPL(*target_sp));
-                        ((SwiftREPL *)repl_sp.get())
-                            ->SetCompilerOptions(repl_options);
-                        target_sp->SetREPL(lldb::eLanguageTypeSwift, repl_sp);
                         return repl_sp;
                       }
                     } else {
