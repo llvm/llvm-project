@@ -226,7 +226,11 @@ static ATTR T2
 mul(T2 a, T b)
 {
     T2 p = mul(a.hi, b);
-    p.lo += a.lo * b;
+    if (USE_FMA) {
+        p.lo = FMA(a.lo, b, p.lo);
+    } else {
+        p.lo += a.lo * b;
+    }
     return nrm(p);
 }
 
@@ -234,7 +238,11 @@ static ATTR T2
 omul(T2 a, T b)
 {
     T2 p = mul(a.hi, b);
-    p.lo += a.lo * b;
+    if (USE_FMA) {
+        p.lo = FMA(a.lo, b, p.lo);
+    } else {
+        p.lo += a.lo * b;
+    }
     return onrm(p);
 }
 
@@ -242,7 +250,11 @@ static ATTR T2
 mul(T a, T2 b)
 {
     T2 p = mul(a, b.hi);
-    p.lo += a * b.lo;
+    if (USE_FMA) {
+        p.lo = FMA(a, b.lo, p.lo);
+    } else {
+        p.lo += a * b.lo;
+    }
     return nrm(p);
 }
 
@@ -250,7 +262,11 @@ static ATTR T2
 omul(T a, T2 b)
 {
     T2 p = mul(a, b.hi);
-    p.lo += a * b.lo;
+    if (USE_FMA) {
+        p.lo = FMA(a, b.lo, p.lo);
+    } else {
+        p.lo += a * b.lo;
+    }
     return onrm(p);
 }
 
