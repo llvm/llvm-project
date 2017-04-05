@@ -394,6 +394,7 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(Instruction *Release,
 
   DEBUG(llvm::dbgs() << "        New Store Strong: " << *StoreStrong << "\n");
 
+  if (&*Iter == Retain) ++Iter;
   if (&*Iter == Store) ++Iter;
   Store->eraseFromParent();
   Release->eraseFromParent();
