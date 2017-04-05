@@ -132,14 +132,20 @@ static bool isExpandedFromConfigurationMacro(const Stmt *S,
   // so that we can refine it later.
   SourceLocation L = S->getLocStart();
   if (L.isMacroID()) {
+    SourceManager &SM = PP.getSourceManager();
     if (IgnoreYES_NO) {
       // The Objective-C constant 'YES' and 'NO'
       // are defined as macros.  Do not treat them
       // as configuration values.
-      SourceManager &SM = PP.getSourceManager();
       SourceLocation TopL = getTopMostMacro(L, SM);
       StringRef MacroName = PP.getImmediateMacroName(TopL);
       if (MacroName == "YES" || MacroName == "NO")
+        return false;
+    } else if (!PP.getLangOpts().CPlusPlus) {
+      // Do not treat C 'false' and 'true' macros as configuration values.
+      SourceLocation TopL = getTopMostMacro(L, SM);
+      StringRef MacroName = PP.getImmediateMacroName(TopL);
+      if (MacroName == "false" || MacroName == "true")
         return false;
     }
     return true;
