@@ -84,6 +84,13 @@ class Configuration(LibcxxConfiguration):
                                   % libcxxabi_headers)
         self.cxx.compile_flags += ['-I' + libcxxabi_headers]
 
+        libunwind_headers = self.get_lit_conf('libunwind_headers', None)
+        if self.get_lit_bool('llvm_unwinder', False) and libunwind_headers:
+            if not os.path.isdir(libunwind_headers):
+                self.lit_config.fatal("libunwind_headers='%s' is not a directory."
+                                      % libunwind_headers)
+            self.cxx.compile_flags += ['-I' + libunwind_headers]
+
     def configure_compile_flags_exceptions(self):
         pass
 

@@ -30,19 +30,19 @@
 
 namespace clang {
 namespace clang_rename {
-namespace {
+namespace test {
 
 struct Case {
   std::string Before;
   std::string After;
+  std::string OldName;
+  std::string NewName;
 };
 
 class ClangRenameTest : public testing::Test,
                         public testing::WithParamInterface<Case> {
 protected:
-  void AppendToHeader(StringRef Code) {
-    HeaderContent += Code.str();
-  }
+  void AppendToHeader(StringRef Code) { HeaderContent += Code.str(); }
 
   std::string runClangRenameOnCode(llvm::StringRef Code,
                                    llvm::StringRef OldName,
@@ -68,11 +68,10 @@ protected:
 
     const std::vector<std::vector<std::string>> &USRList =
         FindingAction.getUSRList();
-    const std::vector<std::string> &PrevNames = FindingAction.getUSRSpellings();
     std::vector<std::string> NewNames = {NewName};
     std::map<std::string, tooling::Replacements> FileToReplacements;
-    rename::RenamingAction RenameAction(NewNames, PrevNames, USRList,
-                                        FileToReplacements);
+    rename::QualifiedRenamingAction RenameAction(NewNames, USRList,
+                                                 FileToReplacements);
     auto RenameActionFactory = tooling::newFrontendActionFactory(&RenameAction);
     if (!tooling::runToolOnCodeWithArgs(
             RenameActionFactory->create(), NewCode, {"-std=c++11"}, CCName,
@@ -108,46 +107,6 @@ protected:
   std::string CCName = "input.cc";
 };
 
-class RenameClassTest : public ClangRenameTest {
- public:
-  RenameClassTest() {
-    AppendToHeader("\nclass Foo {};\n");
-  }
-};
-
-INSTANTIATE_TEST_CASE_P(
-    RenameTests, RenameClassTest,
-    testing::ValuesIn(std::vector<Case>({
-      {"Foo f;", "Bar f;"},
-      {"void f(Foo f) {}", "void f(Bar f) {}"},
-      {"void f(Foo *f) {}", "void f(Bar *f) {}"},
-      {"Foo f() { return Foo(); }", "Bar f() { return Bar(); }"},
-    })));
-
-TEST_P(RenameClassTest, RenameClasses) {
-  auto Param = GetParam();
-  std::string OldName = "Foo";
-  std::string NewName = "Bar";
-  std::string Actual = runClangRenameOnCode(Param.Before, OldName, NewName);
-  CompareSnippets(Param.After, Actual);
-}
-
-class RenameFunctionTest : public ClangRenameTest {};
-
-INSTANTIATE_TEST_CASE_P(
-    RenameTests, RenameFunctionTest,
-    testing::ValuesIn(std::vector<Case>({
-      {"void func1() {}", "void func2() {}"},
-    })));
-
-TEST_P(RenameFunctionTest, RenameFunctions) {
-  auto Param = GetParam();
-  std::string OldName = "func1";
-  std::string NewName = "func2";
-  std::string Actual = runClangRenameOnCode(Param.Before, OldName, NewName);
-  CompareSnippets(Param.After, Actual);
-}
-
-} // anonymous namespace
+} // namespace test
 } // namespace clang_rename
 } // namesdpace clang

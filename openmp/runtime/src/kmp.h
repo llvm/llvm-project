@@ -38,7 +38,8 @@
 #ifdef BUILD_TIED_TASK_STACK
 #define TASK_STACK_EMPTY         0  // entries when the stack is empty
 
-#define TASK_STACK_BLOCK_BITS    5  // Used to define TASK_STACK_SIZE and TASK_STACK_MASK
+// Used to define TASK_STACK_SIZE and TASK_STACK_MASK
+#define TASK_STACK_BLOCK_BITS    5
 #define TASK_STACK_BLOCK_SIZE    ( 1 << TASK_STACK_BLOCK_BITS ) // Number of entries in each task stack array
 #define TASK_STACK_INDEX_MASK    ( TASK_STACK_BLOCK_SIZE - 1 )  // Mask for determining index into stack block
 #endif // BUILD_TIED_TASK_STACK

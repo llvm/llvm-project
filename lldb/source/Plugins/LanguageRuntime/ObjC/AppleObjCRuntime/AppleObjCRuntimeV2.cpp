@@ -1395,8 +1395,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
   arguments.GetValueAtIndex(0)->GetScalar() = hash_table.GetTableLoadAddress();
   arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
   arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
-  arguments.GetValueAtIndex(3)->GetScalar() =
-      (GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) == nullptr ? 0 : 1);
+  
+  // Only dump the runtime classes from the expression evaluation if the
+  // log is verbose:
+  Log *type_log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  bool dump_log = type_log && type_log->GetVerbose();
+  
+  arguments.GetValueAtIndex(3)->GetScalar() = dump_log ? 1 : 0;
 
   bool success = false;
 
@@ -1639,8 +1644,12 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
   arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
   arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
   arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
-  arguments.GetValueAtIndex(3)->GetScalar() =
-      (GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) == nullptr ? 0 : 1);
+  // Only dump the runtime classes from the expression evaluation if the
+  // log is verbose:
+  Log *type_log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  bool dump_log = type_log && type_log->GetVerbose();
+  
+  arguments.GetValueAtIndex(3)->GetScalar() = dump_log ? 1 : 0;
 
   bool success = false;
 

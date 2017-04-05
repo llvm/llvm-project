@@ -12,6 +12,7 @@ target_link_libraries(clangd
   clangBasic
   clangFormat
   clangFrontend
+  clangSema
   clangTooling
   clangToolingCore
   LLVMSupport

@@ -11,7 +11,7 @@
 #define liblldb_RegisterContextPOSIXProcessMonitor_mips64_H_
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_mips64.h"
-#include "Plugin/Process/Utility/lldb-mips-freebsd-register-enums.h"
+#include "Plugins/Process/Utility/lldb-mips-freebsd-register-enums.h"
 #include "RegisterContextPOSIX.h"
 
 class RegisterContextPOSIXProcessMonitor_mips64
