@@ -3370,7 +3370,8 @@ static std::string getFreeBSDNoteTypeName(const uint32_t NT) {
 
 template <typename ELFT>
 static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
-                         ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words) {
+                         ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words,
+                         size_t Size) {
   switch (NoteType) {
   default:
     return;
@@ -3393,16 +3394,14 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
   }
   case ELF::NT_GNU_BUILD_ID: {
     OS << "    Build ID: ";
-    ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()),
-                         Words.size() * 4);
+    ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()), Size);
     for (const auto &B : ID)
       OS << format_hex_no_prefix(B, 2);
     break;
   }
   case ELF::NT_GNU_GOLD_VERSION:
     OS << "    Version: "
-       << StringRef(reinterpret_cast<const char *>(Words.data()),
-                    Words.size() * 4);
+       << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
     break;
   }
 
@@ -3446,7 +3445,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
 
       if (Name == "GNU") {
         OS << getGNUNoteTypeName(Type) << '\n';
-        printGNUNote<ELFT>(OS, Type, Descriptor);
+        printGNUNote<ELFT>(OS, Type, Descriptor, DescriptorSize);
       } else if (Name == "FreeBSD") {
         OS << getFreeBSDNoteTypeName(Type) << '\n';
       } else {

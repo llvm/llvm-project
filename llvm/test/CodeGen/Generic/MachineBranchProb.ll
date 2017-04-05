@@ -1,8 +1,5 @@
 ; RUN: llc < %s -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
 
-; ARM & AArch64 run an extra SimplifyCFG which disrupts this test.
-; UNSUPPORTED: arm,aarch64
-
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
 ; XFAIL: hexagon

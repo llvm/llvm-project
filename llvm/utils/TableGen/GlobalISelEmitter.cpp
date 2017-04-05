@@ -332,26 +332,31 @@ public:
 /// Generates code to check that an operand is a particular target constant.
 class ComplexPatternOperandMatcher : public OperandPredicateMatcher {
 protected:
+  const OperandMatcher &Operand;
   const Record &TheDef;
-  /// The index of the first temporary operand to allocate to this
-  /// ComplexPattern.
-  unsigned BaseTemporaryID;
 
   unsigned getNumOperands() const {
     return TheDef.getValueAsDag("Operands")->getNumArgs();
   }
 
+  unsigned getAllocatedTemporariesBaseID() const;
+
 public:
-  ComplexPatternOperandMatcher(const Record &TheDef, unsigned BaseTemporaryID)
-      : OperandPredicateMatcher(OPM_ComplexPattern), TheDef(TheDef),
-        BaseTemporaryID(BaseTemporaryID) {}
+  ComplexPatternOperandMatcher(const OperandMatcher &Operand,
+                               const Record &TheDef)
+      : OperandPredicateMatcher(OPM_ComplexPattern), Operand(Operand),
+        TheDef(TheDef) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_ComplexPattern;
+  }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
                             StringRef OperandExpr) const override {
     OS << TheDef.getValueAsString("MatcherFn") << "(" << OperandExpr;
     for (unsigned I = 0; I < getNumOperands(); ++I) {
       OS << ", ";
-      OperandPlaceholder::CreateTemporary(BaseTemporaryID + I)
+      OperandPlaceholder::CreateTemporary(getAllocatedTemporariesBaseID() + I)
           .emitCxxValueExpr(OS);
     }
     OS << ")";
@@ -425,10 +430,17 @@ protected:
   unsigned OpIdx;
   std::string SymbolicName;
 
+  /// The index of the first temporary variable allocated to this operand. The
+  /// number of allocated temporaries can be found with
+  /// countTemporaryOperands().
+  unsigned AllocatedTemporariesBaseID;
+
 public:
   OperandMatcher(InstructionMatcher &Insn, unsigned OpIdx,
-                 const std::string &SymbolicName)
-      : Insn(Insn), OpIdx(OpIdx), SymbolicName(SymbolicName) {}
+                 const std::string &SymbolicName,
+                 unsigned AllocatedTemporariesBaseID)
+      : Insn(Insn), OpIdx(OpIdx), SymbolicName(SymbolicName),
+        AllocatedTemporariesBaseID(AllocatedTemporariesBaseID) {}
 
   bool hasSymbolicName() const { return !SymbolicName.empty(); }
   const StringRef getSymbolicName() const { return SymbolicName; }
@@ -509,7 +521,15 @@ public:
           return A + Predicate->countTemporaryOperands();
         });
   }
+
+  unsigned getAllocatedTemporariesBaseID() const {
+    return AllocatedTemporariesBaseID;
+  }
 };
+
+unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {
+  return Operand.getAllocatedTemporariesBaseID();
+}
 
 /// Generates code to check a predicate on an instruction.
 ///
@@ -598,7 +618,7 @@ public:
 class InstructionMatcher
     : public PredicateListMatcher<InstructionPredicateMatcher> {
 protected:
-  typedef std::vector<OperandMatcher> OperandVec;
+  typedef std::vector<std::unique_ptr<OperandMatcher>> OperandVec;
 
   /// The operands to match. All rendered operands must be present even if the
   /// condition is always true.
@@ -606,18 +626,20 @@ protected:
 
 public:
   /// Add an operand to the matcher.
-  OperandMatcher &addOperand(unsigned OpIdx, const std::string &SymbolicName) {
-    Operands.emplace_back(*this, OpIdx, SymbolicName);
-    return Operands.back();
+  OperandMatcher &addOperand(unsigned OpIdx, const std::string &SymbolicName,
+                             unsigned AllocatedTemporariesBaseID) {
+    Operands.emplace_back(new OperandMatcher(*this, OpIdx, SymbolicName,
+                                             AllocatedTemporariesBaseID));
+    return *Operands.back();
   }
 
   OperandMatcher &getOperand(unsigned OpIdx) {
     auto I = std::find_if(Operands.begin(), Operands.end(),
-                          [&OpIdx](const OperandMatcher &X) {
-                            return X.getOperandIndex() == OpIdx;
+                          [&OpIdx](const std::unique_ptr<OperandMatcher> &X) {
+                            return X->getOperandIndex() == OpIdx;
                           });
     if (I != Operands.end())
-      return *I;
+      return **I;
     llvm_unreachable("Failed to lookup operand");
   }
 
@@ -625,7 +647,7 @@ public:
   getOptionalOperand(StringRef SymbolicName) const {
     assert(!SymbolicName.empty() && "Cannot lookup unnamed operand");
     for (const auto &Operand : Operands) {
-      const auto &OM = Operand.getOptionalOperand(SymbolicName);
+      const auto &OM = Operand->getOptionalOperand(SymbolicName);
       if (OM.hasValue())
         return OM.getValue();
     }
@@ -657,7 +679,7 @@ public:
     OS << "if (" << Expr << ".getNumOperands() < " << getNumOperands() << ")\n"
        << "  return false;\n";
     for (const auto &Operand : Operands) {
-      Operand.emitCxxCaptureStmts(OS, Rule, Operand.getOperandExpr(Expr));
+      Operand->emitCxxCaptureStmts(OS, Rule, Operand->getOperandExpr(Expr));
     }
   }
 
@@ -668,7 +690,7 @@ public:
     emitCxxPredicateListExpr(OS, Rule, InsnVarName);
     for (const auto &Operand : Operands) {
       OS << " &&\n(";
-      Operand.emitCxxPredicateExpr(OS, Rule, InsnVarName);
+      Operand->emitCxxPredicateExpr(OS, Rule, InsnVarName);
       OS << ")";
     }
   }
@@ -691,9 +713,9 @@ public:
     }
 
     for (const auto &Operand : zip(Operands, B.Operands)) {
-      if (std::get<0>(Operand).isHigherPriorityThan(std::get<1>(Operand)))
+      if (std::get<0>(Operand)->isHigherPriorityThan(*std::get<1>(Operand)))
         return true;
-      if (std::get<1>(Operand).isHigherPriorityThan(std::get<0>(Operand)))
+      if (std::get<1>(Operand)->isHigherPriorityThan(*std::get<0>(Operand)))
         return false;
     }
 
@@ -709,10 +731,11 @@ public:
                                   &Predicate) {
                              return A + Predicate->countTemporaryOperands();
                            }) +
-           std::accumulate(Operands.begin(), Operands.end(), 0,
-                           [](unsigned A, const OperandMatcher &Operand) {
-                             return A + Operand.countTemporaryOperands();
-                           });
+           std::accumulate(
+               Operands.begin(), Operands.end(), 0,
+               [](unsigned A, const std::unique_ptr<OperandMatcher> &Operand) {
+                 return A + Operand->countTemporaryOperands();
+               });
   }
 };
 
@@ -1174,8 +1197,7 @@ private:
       const InstructionMatcher &InsnMatcher) const;
   Error importExplicitUseRenderer(BuildMIAction &DstMIBuilder,
                                   TreePatternNode *DstChild,
-                                  const InstructionMatcher &InsnMatcher,
-                                  unsigned &TempOpIdx) const;
+                                  const InstructionMatcher &InsnMatcher) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
@@ -1237,6 +1259,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
 
   unsigned OpIdx = 0;
+  unsigned TempOpIdx = 0;
   for (const EEVT::TypeSet &Ty : Src->getExtTypes()) {
     auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
 
@@ -1246,11 +1269,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 
     // Results don't have a name unless they are the root node. The caller will
     // set the name if appropriate.
-    OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "");
+    OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
     OM.addPredicate<LLTOperandMatcher>(*OpTyOrNone);
   }
 
-  unsigned TempOpIdx = 0;
   // Match the used operands (i.e. the children of the operator).
   for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
     if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i), OpIdx++,
@@ -1265,7 +1287,8 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
                                             TreePatternNode *SrcChild,
                                             unsigned OpIdx,
                                             unsigned &TempOpIdx) const {
-  OperandMatcher &OM = InsnMatcher.addOperand(OpIdx, SrcChild->getName());
+  OperandMatcher &OM =
+      InsnMatcher.addOperand(OpIdx, SrcChild->getName(), TempOpIdx);
 
   if (SrcChild->hasAnyPredicate())
     return failedImport("Src pattern child has predicate");
@@ -1328,7 +1351,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
             "SelectionDAG ComplexPattern not mapped to GlobalISel");
 
       const auto &Predicate = OM.addPredicate<ComplexPatternOperandMatcher>(
-          *ComplexPattern->second, TempOpIdx);
+          OM, *ComplexPattern->second);
       TempOpIdx += Predicate.countTemporaryOperands();
       return Error::success();
     }
@@ -1342,7 +1365,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 
 Error GlobalISelEmitter::importExplicitUseRenderer(
     BuildMIAction &DstMIBuilder, TreePatternNode *DstChild,
-    const InstructionMatcher &InsnMatcher, unsigned &TempOpIdx) const {
+    const InstructionMatcher &InsnMatcher) const {
   // The only non-leaf child we accept is 'bb': it's an operator because
   // BasicBlockSDNode isn't inline, but in MI it's just another operand.
   if (!DstChild->isLeaf()) {
@@ -1389,13 +1412,10 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
             "SelectionDAG ComplexPattern not mapped to GlobalISel");
 
       SmallVector<OperandPlaceholder, 2> RenderedOperands;
-      for (unsigned I = 0;
-           I <
-           InsnMatcher.getOperand(DstChild->getName()).countTemporaryOperands();
-           ++I) {
-        RenderedOperands.push_back(OperandPlaceholder::CreateTemporary(I));
-        TempOpIdx++;
-      }
+      const OperandMatcher &OM = InsnMatcher.getOperand(DstChild->getName());
+      for (unsigned I = 0; I < OM.countTemporaryOperands(); ++I)
+        RenderedOperands.push_back(OperandPlaceholder::CreateTemporary(
+            OM.getAllocatedTemporariesBaseID() + I));
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
           *ComplexPattern->second, RenderedOperands);
       return Error::success();
@@ -1425,10 +1445,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   }
 
   // Render the explicit uses.
-  unsigned TempOpIdx = 0;
   for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {
     if (auto Error = importExplicitUseRenderer(DstMIBuilder, Dst->getChild(i),
-                                               InsnMatcher, TempOpIdx))
+                                               InsnMatcher))
       return std::move(Error);
   }
 

@@ -2792,8 +2792,9 @@ SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
   // but we need this case for bitcasts that are created during lowering
   // and which are then lowered themselves.
   if (auto *LoadN = dyn_cast<LoadSDNode>(In))
-    return DAG.getLoad(ResVT, DL, LoadN->getChain(), LoadN->getBasePtr(),
-                       LoadN->getMemOperand());
+    if (ISD::isNormalLoad(LoadN))
+      return DAG.getLoad(ResVT, DL, LoadN->getChain(), LoadN->getBasePtr(),
+                         LoadN->getMemOperand());
 
   if (InVT == MVT::i32 && ResVT == MVT::f32) {
     SDValue In64;

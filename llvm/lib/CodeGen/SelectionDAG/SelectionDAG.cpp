@@ -4188,29 +4188,29 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(EVT.bitsLE(VT) && "Not extending!");
     if (EVT == VT) return N1;  // Not actually extending
 
-    auto SignExtendInReg = [&](APInt Val) {
+    auto SignExtendInReg = [&](APInt Val, llvm::EVT ConstantVT) {
       unsigned FromBits = EVT.getScalarSizeInBits();
       Val <<= Val.getBitWidth() - FromBits;
       Val = Val.ashr(Val.getBitWidth() - FromBits);
-      return getConstant(Val, DL, VT.getScalarType());
+      return getConstant(Val, DL, ConstantVT);
     };
 
     if (N1C) {
       const APInt &Val = N1C->getAPIntValue();
-      return SignExtendInReg(Val);
+      return SignExtendInReg(Val, VT);
     }
     if (ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       SmallVector<SDValue, 8> Ops;
+      llvm::EVT OpVT = N1.getOperand(0).getValueType();
       for (int i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
         SDValue Op = N1.getOperand(i);
         if (Op.isUndef()) {
-          Ops.push_back(getUNDEF(VT.getScalarType()));
+          Ops.push_back(getUNDEF(OpVT));
           continue;
         }
         if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
           APInt Val = C->getAPIntValue();
-          Val = Val.zextOrTrunc(VT.getScalarSizeInBits());
-          Ops.push_back(SignExtendInReg(Val));
+          Ops.push_back(SignExtendInReg(Val, OpVT));
           continue;
         }
         break;

@@ -50,71 +50,82 @@ INSTANTIATE_TEST_CASE_P(
     RenameClassTests, RenameClassTest,
     testing::ValuesIn(std::vector<Case>({
         // basic classes
-        {"a::Foo f;", "b::Bar f;"},
-        {"void f(a::Foo f) {}", "void f(b::Bar f) {}"},
-        {"void f(a::Foo *f) {}", "void f(b::Bar *f) {}"},
-        {"a::Foo f() { return a::Foo(); }", "b::Bar f() { return b::Bar(); }"},
+        {"a::Foo f;", "b::Bar f;", "", ""},
+        {"void f(a::Foo f) {}", "void f(b::Bar f) {}", "", ""},
+        {"void f(a::Foo *f) {}", "void f(b::Bar *f) {}", "", ""},
+        {"a::Foo f() { return a::Foo(); }", "b::Bar f() { return b::Bar(); }",
+         "", ""},
         {"namespace a {a::Foo f() { return Foo(); }}",
-         "namespace a {b::Bar f() { return b::Bar(); }}"},
-        {"void f(const a::Foo& a1) {}", "void f(const b::Bar& a1) {}"},
-        {"void f(const a::Foo* a1) {}", "void f(const b::Bar* a1) {}"},
+         "namespace a {b::Bar f() { return b::Bar(); }}", "", ""},
+        {"void f(const a::Foo& a1) {}", "void f(const b::Bar& a1) {}", "", ""},
+        {"void f(const a::Foo* a1) {}", "void f(const b::Bar* a1) {}", "", ""},
         {"namespace a { void f(Foo a1) {} }",
-         "namespace a { void f(b::Bar a1) {} }"},
-        {"void f(MACRO(a::Foo) a1) {}", "void f(MACRO(b::Bar) a1) {}"},
-        {"void f(MACRO(a::Foo a1)) {}", "void f(MACRO(b::Bar a1)) {}"},
-        {"a::Foo::Nested ns;", "b::Bar::Nested ns;"},
-        {"auto t = a::Foo::Constant;", "auto t = b::Bar::Constant;"},
+         "namespace a { void f(b::Bar a1) {} }", "", ""},
+        {"void f(MACRO(a::Foo) a1) {}", "void f(MACRO(b::Bar) a1) {}", "", ""},
+        {"void f(MACRO(a::Foo a1)) {}", "void f(MACRO(b::Bar a1)) {}", "", ""},
+        {"a::Foo::Nested ns;", "b::Bar::Nested ns;", "", ""},
+        {"auto t = a::Foo::Constant;", "auto t = b::Bar::Constant;", "", ""},
         {"a::Foo::Nested ns;", "a::Foo::Nested2 ns;", "a::Foo::Nested",
          "a::Foo::Nested2"},
 
         // use namespace and typedefs
-        {"using a::Foo; Foo gA;", "using b::Bar; b::Bar gA;"},
-        {"using a::Foo; void f(Foo gA) {}", "using b::Bar; void f(Bar gA) {}"},
+        {"using a::Foo; Foo gA;", "using b::Bar; b::Bar gA;", "", ""},
+        {"using a::Foo; void f(Foo gA) {}", "using b::Bar; void f(Bar gA) {}",
+         "", ""},
         {"using a::Foo; namespace x { Foo gA; }",
-         "using b::Bar; namespace x { Bar gA; }"},
+         "using b::Bar; namespace x { Bar gA; }", "", ""},
         {"struct S { using T = a::Foo; T a_; };",
-         "struct S { using T = b::Bar; T a_; };"},
-        {"using T = a::Foo; T gA;", "using T = b::Bar; T gA;"},
-        {"typedef a::Foo T; T gA;", "typedef b::Bar T; T gA;"},
-        {"typedef MACRO(a::Foo) T; T gA;", "typedef MACRO(b::Bar) T; T gA;"},
+         "struct S { using T = b::Bar; T a_; };", "", ""},
+        {"using T = a::Foo; T gA;", "using T = b::Bar; T gA;", "", ""},
+        {"typedef a::Foo T; T gA;", "typedef b::Bar T; T gA;", "", ""},
+        {"typedef MACRO(a::Foo) T; T gA;", "typedef MACRO(b::Bar) T; T gA;", "",
+         ""},
 
         // struct members and other oddities
-        {"struct S : public a::Foo {};", "struct S : public b::Bar {};"},
+        {"struct S : public a::Foo {};", "struct S : public b::Bar {};", "",
+         ""},
         {"struct F { void f(a::Foo a1) {} };",
-         "struct F { void f(b::Bar a1) {} };"},
-        {"struct F { a::Foo a_; };", "struct F { b::Bar a_; };"},
-        {"struct F { ptr<a::Foo> a_; };", "struct F { ptr<b::Bar> a_; };"},
+         "struct F { void f(b::Bar a1) {} };", "", ""},
+        {"struct F { a::Foo a_; };", "struct F { b::Bar a_; };", "", ""},
+        {"struct F { ptr<a::Foo> a_; };", "struct F { ptr<b::Bar> a_; };", "",
+         ""},
 
-        {"void f() { a::Foo::Nested ne; }", "void f() { b::Bar::Nested ne; }"},
-        {"void f() { a::Goo::Nested ne; }", "void f() { a::Goo::Nested ne; }"},
+        {"void f() { a::Foo::Nested ne; }", "void f() { b::Bar::Nested ne; }",
+         "", ""},
+        {"void f() { a::Goo::Nested ne; }", "void f() { a::Goo::Nested ne; }",
+         "", ""},
         {"void f() { a::Foo::Nested::NestedEnum e; }",
-         "void f() { b::Bar::Nested::NestedEnum e; }"},
+         "void f() { b::Bar::Nested::NestedEnum e; }", "", ""},
         {"void f() { auto e = a::Foo::Nested::NestedEnum::E1; }",
-         "void f() { auto e = b::Bar::Nested::NestedEnum::E1; }"},
+         "void f() { auto e = b::Bar::Nested::NestedEnum::E1; }", "", ""},
         {"void f() { auto e = a::Foo::Nested::E1; }",
-         "void f() { auto e = b::Bar::Nested::E1; }"},
+         "void f() { auto e = b::Bar::Nested::E1; }", "", ""},
 
         // templates
         {"template <typename T> struct Foo { T t; };\n"
          "void f() { Foo<a::Foo> foo; }",
          "template <typename T> struct Foo { T t; };\n"
-         "void f() { Foo<b::Bar> foo; }"},
+         "void f() { Foo<b::Bar> foo; }",
+         "", ""},
         {"template <typename T> struct Foo { a::Foo a; };",
-         "template <typename T> struct Foo { b::Bar a; };"},
+         "template <typename T> struct Foo { b::Bar a; };", "", ""},
         {"template <typename T> void f(T t) {}\n"
          "void g() { f<a::Foo>(a::Foo()); }",
          "template <typename T> void f(T t) {}\n"
-         "void g() { f<b::Bar>(b::Bar()); }"},
+         "void g() { f<b::Bar>(b::Bar()); }",
+         "", ""},
         {"template <typename T> int f() { return 1; }\n"
          "template <> int f<a::Foo>() { return 2; }\n"
          "int g() { return f<a::Foo>(); }",
          "template <typename T> int f() { return 1; }\n"
          "template <> int f<b::Bar>() { return 2; }\n"
-         "int g() { return f<b::Bar>(); }"},
+         "int g() { return f<b::Bar>(); }",
+         "", ""},
         {"struct Foo { template <typename T> T foo(); };\n"
          "void g() { Foo f;  auto a = f.template foo<a::Foo>(); }",
          "struct Foo { template <typename T> T foo(); };\n"
-         "void g() { Foo f;  auto a = f.template foo<b::Bar>(); }"},
+         "void g() { Foo f;  auto a = f.template foo<b::Bar>(); }",
+         "", ""},
 
         // The following two templates are distilled from regressions found in
         // unique_ptr<> and type_traits.h
@@ -127,7 +138,8 @@ INSTANTIATE_TEST_CASE_P(
          "      typedef T type;\n"
          "      type Baz();\n"
          "    };\n"
-         "    outer<b::Bar> g_A;"},
+         "    outer<b::Bar> g_A;",
+         "", ""},
         {"template <typename T> struct nested { typedef T type; };\n"
          "template <typename T> struct outer { typename nested<T>::type Foo(); "
          "};\n"
@@ -135,44 +147,48 @@ INSTANTIATE_TEST_CASE_P(
          "template <typename T> struct nested { typedef T type; };\n"
          "template <typename T> struct outer { typename nested<T>::type Foo(); "
          "};\n"
-         "outer<b::Bar> g_A;"},
+         "outer<b::Bar> g_A;",
+         "", ""},
 
         // macros
         {"#define FOO(T, t) T t\n"
          "void f() { FOO(a::Foo, a1); FOO(a::Foo, a2); }",
          "#define FOO(T, t) T t\n"
-         "void f() { FOO(b::Bar, a1); FOO(b::Bar, a2); }"},
+         "void f() { FOO(b::Bar, a1); FOO(b::Bar, a2); }",
+         "", ""},
         {"#define FOO(n) a::Foo n\n"
          " void f() { FOO(a1); FOO(a2); }",
          "#define FOO(n) b::Bar n\n"
-         " void f() { FOO(a1); FOO(a2); }"},
+         " void f() { FOO(a1); FOO(a2); }",
+         "", ""},
 
         // Pointer to member functions
-        {"auto gA = &a::Foo::func;", "auto gA = &b::Bar::func;"},
+        {"auto gA = &a::Foo::func;", "auto gA = &b::Bar::func;", "", ""},
         {"using a::Foo; auto gA = &Foo::func;",
-         "using b::Bar; auto gA = &b::Bar::func;"},
+         "using b::Bar; auto gA = &b::Bar::func;", "", ""},
         {"using a::Foo; namespace x { auto gA = &Foo::func; }",
-         "using b::Bar; namespace x { auto gA = &Bar::func; }"},
+         "using b::Bar; namespace x { auto gA = &Bar::func; }", "", ""},
         {"typedef a::Foo T; auto gA = &T::func;",
-         "typedef b::Bar T; auto gA = &T::func;"},
-        {"auto gA = &MACRO(a::Foo)::func;", "auto gA = &MACRO(b::Bar)::func;"},
+         "typedef b::Bar T; auto gA = &T::func;", "", ""},
+        {"auto gA = &MACRO(a::Foo)::func;", "auto gA = &MACRO(b::Bar)::func;",
+         "", ""},
 
         // Short match inside a namespace
         {"namespace a { void f(Foo a1) {} }",
-         "namespace a { void f(b::Bar a1) {} }"},
+         "namespace a { void f(b::Bar a1) {} }", "", ""},
 
         // Correct match.
         {"using a::Foo; struct F { ptr<Foo> a_; };",
-         "using b::Bar; struct F { ptr<Bar> a_; };"},
+         "using b::Bar; struct F { ptr<Bar> a_; };", "", ""},
 
         // avoid false positives
-        {"void f(b::Foo a) {}", "void f(b::Foo a) {}"},
-        {"namespace b { void f(Foo a) {} }",
-         "namespace b { void f(Foo a) {} }"},
+        {"void f(b::Foo a) {}", "void f(b::Foo a) {}", "", ""},
+        {"namespace b { void f(Foo a) {} }", "namespace b { void f(Foo a) {} }",
+         "", ""},
 
         // friends, everyone needs friends.
         {"class Foo { int i; friend class a::Foo; };",
-         "class Foo { int i; friend class b::Bar; };"},
+         "class Foo { int i; friend class b::Bar; };", "", ""},
     })));
 
 TEST_P(RenameClassTest, RenameClasses) {

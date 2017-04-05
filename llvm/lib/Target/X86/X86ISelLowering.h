@@ -814,6 +814,10 @@ namespace llvm {
 
     bool hasAndNotCompare(SDValue Y) const override;
 
+    bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+      return VT.isScalarInteger();
+    }
+
     /// Vector-sized comparisons are fast using PCMPEQ + PMOVMSK or PTEST.
     MVT hasFastEqualityCompare(unsigned NumBits) const override;
 

@@ -913,17 +913,19 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "SIZEOF_HEADERS")
     return [=] { return elf::getHeaderSize(); };
 
+  // Tok is the dot.
+  if (Tok == ".")
+    return [=] { return Script->getSymbolValue(Location, Tok); };
+
   // Tok is a literal number.
   uint64_t V;
   if (readInteger(Tok, V))
     return [=] { return V; };
 
   // Tok is a symbol name.
-  if (Tok != ".") {
-    if (!isValidCIdentifier(Tok))
-      setError("malformed number: " + Tok);
-    Script->Opt.UndefinedSymbols.push_back(Tok);
-  }
+  if (!isValidCIdentifier(Tok))
+    setError("malformed number: " + Tok);
+  Script->Opt.ReferencedSymbols.push_back(Tok);
   return [=] { return Script->getSymbolValue(Location, Tok); };
 }
 

@@ -18,11 +18,56 @@ class I<dag OOps, dag IOps, list<dag> Pat>
   let Pattern = Pat;
 }
 
+def complex : Operand<i32>, ComplexPattern<i32, 2, "SelectComplexPattern", []> {
+  let MIOperandInfo = (ops i32imm, i32imm);
+}
+def gi_complex :
+    GIComplexOperandMatcher<s32, (ops i32imm, i32imm), "selectComplexPattern">,
+    GIComplexPatternEquiv<complex>;
+
 //===- Test the function definition boilerplate. --------------------------===//
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
 // CHECK: MachineFunction &MF = *I.getParent()->getParent();
 // CHECK: const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+//===- Test a pattern with multiple ComplexPattern operands. --------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 4)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_SELECT) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (selectComplexPattern(MI0.getOperand(2), TempOp0, TempOp1)))) &&
+// CHECK-NEXT:        ((/* src3 */ (MRI.getType(MI0.getOperand(3).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (selectComplexPattern(MI0.getOperand(3), TempOp2, TempOp3))))) {
+// CHECK-NEXT:          // (select:i32 GPR32:i32:$src1, complex:i32:$src2, complex:i32:$src3) => (INSN2:i32 GPR32:i32:$src1, complex:i32:$src3, complex:i32:$src2)
+// CHECK-NEXT:          MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::INSN2));
+// CHECK-NEXT:          MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:          MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:          MIB.add(TempOp2);
+// CHECK-NEXT:          MIB.add(TempOp3);
+// CHECK-NEXT:          MIB.add(TempOp0);
+// CHECK-NEXT:          MIB.add(TempOp1);
+// CHECK-NEXT:          for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:            for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:              MIB.addMemOperand(MMO);
+// CHECK-NEXT:          I.eraseFromParent();
+// CHECK-NEXT:          MachineInstr &NewI = *MIB;
+// CHECK-NEXT:          constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:          return true;
+// CHECK-NEXT:        }
+
+def : GINodeEquiv<G_SELECT, select>;
+def INSN2 : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2, complex:$src3), []>;
+def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
+          (INSN2 GPR32:$src1, complex:$src3, complex:$src2)>;
 
 //===- Test a simple pattern with regclass operands. ----------------------===//
 
@@ -165,6 +210,38 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 
 def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
              [(set GPR32:$dst, (mul GPR32:$src1, GPR32:$src2))]>;
+
+//===- Test a pattern with ComplexPattern operands. -----------------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_SUB) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (selectComplexPattern(MI0.getOperand(2), TempOp0, TempOp1))))) {
+// CHECK-NEXT:          // (sub:i32 GPR32:i32:$src1, complex:i32:$src2) => (INSN1:i32 GPR32:i32:$src1, complex:i32:$src2)
+// CHECK-NEXT:          MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::INSN1));
+// CHECK-NEXT:          MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:          MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:          MIB.add(TempOp0);
+// CHECK-NEXT:          MIB.add(TempOp1);
+// CHECK-NEXT:          for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:            for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:              MIB.addMemOperand(MMO);
+// CHECK-NEXT:          I.eraseFromParent();
+// CHECK-NEXT:          MachineInstr &NewI = *MIB;
+// CHECK-NEXT:          constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:          return true;
+// CHECK-NEXT:        }
+
+def INSN1 : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
+def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 
 //===- Test a simple pattern with constant immediate operands. ------------===//
 //

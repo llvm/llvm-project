@@ -515,6 +515,10 @@ class InstrItineraryData;
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 
+    bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+      return VT.isScalarInteger();
+    }
+
     bool supportSwiftError() const override {
       return true;
     }
