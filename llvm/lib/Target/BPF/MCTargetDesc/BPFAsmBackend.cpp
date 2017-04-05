@@ -28,7 +28,7 @@ public:
   ~BPFAsmBackend() override = default;
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
@@ -62,8 +62,8 @@ bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 }
 
 void BPFAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value,
-                               bool IsPCRel) const {
+                               unsigned DataSize, uint64_t Value, bool IsPCRel,
+                               MCContext &Ctx) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
     assert(Value == 0);
   } else if (Fixup.getKind() == FK_Data_4 || Fixup.getKind() == FK_Data_8) {

@@ -36,13 +36,12 @@ define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
 ; CI: v_or_b32_e32
 
-; VI: flat_load_ushort [[LO:v[0-9]+]]
 ; VI: flat_load_ushort [[HI:v[0-9]+]]
+; VI: flat_load_ushort [[LO:v[0-9]+]]
 ; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
-; VI-DAG: v_and_b32_e32 [[FABS_LO:v[0-9]+]], [[MASK]], [[LO]]
-; VI-DAG: v_and_b32_e32 [[FABS_HI:v[0-9]+]], [[MASK]], [[HI]]
-; VI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
-; VI: v_or_b32
+; VI-DAG: v_and_b32_e32 [[FABS_LO:v[0-9]+]], [[MASK]], [[HI]]
+; VI-DAG: v_and_b32_sdwa [[FABS_HI:v[0-9]+]], [[MASK]], [[LO]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, [[FABS_HI]], [[FABS_LO]]
 ; VI: flat_store_dword
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
@@ -61,10 +60,12 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
 
 ; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
-; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
-; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
-; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
-; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, [[MASK]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, [[MASK]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI:     v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 ; GCN: flat_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {

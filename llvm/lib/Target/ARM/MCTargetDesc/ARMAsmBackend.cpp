@@ -357,13 +357,13 @@ static uint32_t joinHalfWords(uint32_t FirstHalf, uint32_t SecondHalf,
 }
 
 unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                         bool IsPCRel, MCContext *Ctx,
+                                         bool IsPCRel, MCContext &Ctx,
                                          bool IsLittleEndian,
                                          bool IsResolved) const {
   unsigned Kind = Fixup.getKind();
   switch (Kind) {
   default:
-    if (Ctx) Ctx->reportError(Fixup.getLoc(), "bad relocation fixup type");
+    Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
     return 0;
   case FK_Data_1:
   case FK_Data_2:
@@ -413,8 +413,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Value = -Value;
       isAdd = false;
     }
-    if (Ctx && Value >= 4096) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if (Value >= 4096) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     Value |= isAdd << 23;
@@ -434,8 +434,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Value = -Value;
       opc = 2; // 0b0010
     }
-    if (Ctx && ARM_AM::getSOImmVal(Value) == -1) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if (ARM_AM::getSOImmVal(Value) == -1) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     // Encode the immediate and shift the opcode into place.
@@ -542,8 +542,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     //
     // Note that the halfwords are stored high first, low second; so we need
     // to transpose the fixup value here to map properly.
-    if (Ctx && Value % 4 != 0) {
-      Ctx->reportError(Fixup.getLoc(), "misaligned ARM call destination");
+    if (Value % 4 != 0) {
+      Ctx.reportError(Fixup.getLoc(), "misaligned ARM call destination");
       return 0;
     }
 
@@ -569,10 +569,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_arm_thumb_cp:
     // On CPUs supporting Thumb2, this will be relaxed to an ldr.w, otherwise we
     // could have an error on our hands.
-    if (Ctx && !STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
-        Ctx->reportError(Fixup.getLoc(), FixupDiagnostic);
+        Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
         return 0;
       }
     }
@@ -582,8 +582,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // CB instructions can only branch to offsets in [4, 126] in multiples of 2
     // so ensure that the raw value LSB is zero and it lies in [2, 130].
     // An offset of 2 will be relaxed to a NOP.
-    if (Ctx && ((int64_t)Value < 2 || Value > 0x82 || Value & 1)) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if ((int64_t)Value < 2 || Value > 0x82 || Value & 1) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     // Offset by 4 and don't encode the lower bit, which is always 0.
@@ -593,21 +593,21 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (Ctx && !STI->getFeatureBits()[ARM::FeatureThumb2] &&
-               !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
+        !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
-        Ctx->reportError(Fixup.getLoc(), FixupDiagnostic);
+        Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
         return 0;
       }
     }
     return ((Value - 4) >> 1) & 0x7ff;
   case ARM::fixup_arm_thumb_bcc:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (Ctx && !STI->getFeatureBits()[ARM::FeatureThumb2]) {
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
-        Ctx->reportError(Fixup.getLoc(), FixupDiagnostic);
+        Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
         return 0;
       }
     }
@@ -621,8 +621,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       isAdd = false;
     }
     // The value has the low 4 bits encoded in [3:0] and the high 4 in [11:8].
-    if (Ctx && Value >= 256) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if (Value >= 256) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     Value = (Value & 0xf) | ((Value & 0xf0) << 4);
@@ -642,8 +642,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     }
     // These values don't encode the low two bits since they're always zero.
     Value >>= 2;
-    if (Ctx && Value >= 256) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if (Value >= 256) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     Value |= isAdd << 23;
@@ -668,13 +668,13 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       isAdd = false;
     }
     // These values don't encode the low bit since it's always zero.
-    if (Ctx && (Value & 1)) {
-      Ctx->reportError(Fixup.getLoc(), "invalid value for this fixup");
+    if (Value & 1) {
+      Ctx.reportError(Fixup.getLoc(), "invalid value for this fixup");
       return 0;
     }
     Value >>= 1;
-    if (Ctx && Value >= 256) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    if (Value >= 256) {
+      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
       return 0;
     }
     Value |= isAdd << 23;
@@ -688,8 +688,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
   case ARM::fixup_arm_mod_imm:
     Value = ARM_AM::getSOImmVal(Value);
-    if (Ctx && Value >> 12) {
-      Ctx->reportError(Fixup.getLoc(), "out of range immediate fixup value");
+    if (Value >> 12) {
+      Ctx.reportError(Fixup.getLoc(), "out of range immediate fixup value");
       return 0;
     }
     return Value;
@@ -738,12 +738,6 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
             (unsigned)Fixup.getKind() == ARM::fixup_arm_uncondbl ||
             (unsigned)Fixup.getKind() == ARM::fixup_arm_condbl))
     IsResolved = false;
-
-  // Try to get the encoded value for the fixup as-if we're mapping it into
-  // the instruction. This allows adjustFixupValue() to issue a diagnostic
-  // if the value is invalid.
-  (void)adjustFixupValue(Fixup, Value, false, &Asm.getContext(),
-                         IsLittleEndian, IsResolved);
 }
 
 /// getFixupKindNumBytes - The number of bytes the fixup may change.
@@ -847,11 +841,10 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
 }
 
 void ARMAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value,
-                               bool IsPCRel) const {
+                               unsigned DataSize, uint64_t Value, bool IsPCRel,
+                               MCContext &Ctx) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  Value =
-      adjustFixupValue(Fixup, Value, IsPCRel, nullptr, IsLittleEndian, true);
+  Value = adjustFixupValue(Fixup, Value, IsPCRel, Ctx, IsLittleEndian, true);
   if (!Value)
     return; // Doesn't change encoding.
 

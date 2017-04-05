@@ -46,11 +46,11 @@ public:
                          bool &IsResolved) override;
 
   unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, bool IsPCRel,
-                            MCContext *Ctx, bool IsLittleEndian,
+                            MCContext &Ctx, bool IsLittleEndian,
                             bool IsResolved) const;
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   unsigned getRelaxedOpcode(unsigned Op) const;
 

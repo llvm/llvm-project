@@ -89,7 +89,7 @@ and 6 after which the coroutine will be destroyed.
 
 The LLVM IR for this coroutine looks like this:
 
-.. code-block:: none
+.. code-block:: llvm
 
   define i8* @f(i32 %n) {
   entry:
@@ -156,7 +156,7 @@ We also store addresses of the resume and destroy functions so that the
 when its identity cannot be determined statically at compile time. For our 
 example, the coroutine frame will be:
 
-.. code-block:: text
+.. code-block:: llvm
 
   %f.frame = type { void (%f.frame*)*, void (%f.frame*)*, i32 }
 
@@ -164,7 +164,7 @@ After resume and destroy parts are outlined, function `f` will contain only the
 code responsible for creation and initialization of the coroutine frame and 
 execution of the coroutine until a suspend point is reached:
 
-.. code-block:: none
+.. code-block:: llvm
 
   define i8* @f(i32 %n) {
   entry:
@@ -224,7 +224,7 @@ In the entry block, we will call `coro.alloc`_ intrinsic that will return `true`
 when dynamic allocation is required, and `false` if dynamic allocation is 
 elided.
 
-.. code-block:: none
+.. code-block:: llvm
 
   entry:
     %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
@@ -242,7 +242,7 @@ In the cleanup block, we will make freeing the coroutine frame conditional on
 `coro.free`_ intrinsic. If allocation is elided, `coro.free`_ returns `null`
 thus skipping the deallocation code:
 
-.. code-block:: text
+.. code-block:: llvm
 
   cleanup:
     %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
@@ -286,7 +286,7 @@ Let's consider the coroutine that has more than one suspend point:
 Matching LLVM code would look like (with the rest of the code remaining the same
 as the code in the previous section):
 
-.. code-block:: text
+.. code-block:: llvm
 
   loop:
     %n.addr = phi i32 [ %n, %entry ], [ %inc, %loop.resume ]
@@ -383,17 +383,17 @@ point when coroutine should be ready for resumption (namely, when a resume index
 should be stored in the coroutine frame, so that it can be resumed at the 
 correct resume point):
 
-.. code-block:: text
+.. code-block:: llvm
 
   if.true:
     %save1 = call token @llvm.coro.save(i8* %hdl)
-    call void async_op1(i8* %hdl)
+    call void @async_op1(i8* %hdl)
     %suspend1 = call i1 @llvm.coro.suspend(token %save1, i1 false)
     switch i8 %suspend1, label %suspend [i8 0, label %resume1
                                          i8 1, label %cleanup]
   if.false:
     %save2 = call token @llvm.coro.save(i8* %hdl)
-    call void async_op2(i8* %hdl)
+    call void @async_op2(i8* %hdl)
     %suspend2 = call i1 @llvm.coro.suspend(token %save2, i1 false)
     switch i8 %suspend1, label %suspend [i8 0, label %resume2
                                          i8 1, label %cleanup]
@@ -411,7 +411,7 @@ be used to communicate with the coroutine. This distinguished alloca is called
 The following coroutine designates a 32 bit integer `promise` and uses it to
 store the current value produced by a coroutine.
 
-.. code-block:: text
+.. code-block:: llvm
 
   define i8* @f(i32 %n) {
   entry:
@@ -692,7 +692,7 @@ a coroutine user are responsible to makes sure there is no data races.
 Example:
 """"""""
 
-.. code-block:: text
+.. code-block:: llvm
 
   define i8* @f(i32 %n) {
   entry:
@@ -812,7 +812,7 @@ pointer that was returned by prior `coro.begin` call.
 Example (custom deallocation function):
 """""""""""""""""""""""""""""""""""""""
 
-.. code-block:: text
+.. code-block:: llvm
 
   cleanup:
     %mem = call i8* @llvm.coro.free(token %id, i8* %frame)
@@ -827,7 +827,7 @@ Example (custom deallocation function):
 Example (standard deallocation functions):
 """"""""""""""""""""""""""""""""""""""""""
 
-.. code-block:: text
+.. code-block:: llvm
 
   cleanup:
     %mem = call i8* @llvm.coro.free(token %id, i8* %frame)
@@ -864,7 +864,7 @@ when possible.
 Example:
 """"""""
 
-.. code-block:: text
+.. code-block:: llvm
 
   entry:
     %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
@@ -1017,7 +1017,7 @@ code that is only needed during initial invocation of the coroutine.
 For Windows Exception handling model, a frontend should attach a funclet bundle
 referring to an enclosing cleanuppad as follows:
 
-.. code-block:: text
+.. code-block:: llvm
 
     ehcleanup: 
       %tok = cleanuppad within none []
@@ -1074,7 +1074,7 @@ basic blocks.
 Example (normal suspend point):
 """""""""""""""""""""""""""""""
 
-.. code-block:: text
+.. code-block:: llvm
 
     %0 = call i8 @llvm.coro.suspend(token none, i1 false)
     switch i8 %0, label %suspend [i8 0, label %resume
@@ -1083,7 +1083,7 @@ Example (normal suspend point):
 Example (final suspend point):
 """"""""""""""""""""""""""""""
 
-.. code-block:: text
+.. code-block:: llvm
 
   while.end:
     %s.final = call i8 @llvm.coro.suspend(token none, i1 true)
@@ -1144,10 +1144,10 @@ In such a case, a coroutine should be ready for resumption prior to a call to
 a different thread possibly prior to `async_op` call returning control back
 to the coroutine:
 
-.. code-block:: text
+.. code-block:: llvm
 
     %save1 = call token @llvm.coro.save(i8* %hdl)
-    call void async_op1(i8* %hdl)
+    call void @async_op1(i8* %hdl)
     %suspend1 = call i1 @llvm.coro.suspend(token %save1, i1 false)
     switch i8 %suspend1, label %suspend [i8 0, label %resume1
                                          i8 1, label %cleanup]

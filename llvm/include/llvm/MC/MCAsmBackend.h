@@ -71,9 +71,11 @@ public:
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
-  /// appropriate.
+  /// appropriate. Errors (such as an out of range fixup value) should be
+  /// reported via \p Ctx.
   virtual void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                          uint64_t Value, bool IsPCRel) const = 0;
+                          uint64_t Value, bool IsPCRel,
+                          MCContext &Ctx) const = 0;
 
   /// @}
 

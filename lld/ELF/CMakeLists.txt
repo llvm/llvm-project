@@ -24,6 +24,7 @@ add_lld_library(lldELF
   OutputSections.cpp
   Relocations.cpp
   ScriptLexer.cpp
+  ScriptParser.cpp
   Strings.cpp
   SymbolTable.cpp
   Symbols.cpp

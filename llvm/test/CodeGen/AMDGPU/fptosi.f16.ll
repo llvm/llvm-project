@@ -52,16 +52,25 @@ entry:
 
 ; GCN-LABEL: {{^}}fptosi_v2f16_to_v2i16
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; GCN: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
-; GCN: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
-; GCN: v_cvt_i32_f32_e32 v[[R_I16_0:[0-9]+]], v[[A_F32_0]]
-; GCN: v_cvt_i32_f32_e32 v[[R_I16_1:[0-9]+]], v[[A_F32_1]]
-; GCN: v_and_b32_e32 v[[R_I16_LO:[0-9]+]], 0xffff, v[[R_I16_0]]
-; GCN: v_lshlrev_b32_e32 v[[R_I16_HI:[0-9]+]], 16, v[[R_I16_1]]
-; GCN: v_or_b32_e32 v[[R_V2_I16:[0-9]+]], v[[R_I16_HI]], v[[R_I16_LO]]
+
+; SI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
+; SI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
+; SI: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
+; SI: v_cvt_i32_f32_e32 v[[R_I16_0:[0-9]+]], v[[A_F32_0]]
+; SI: v_cvt_i32_f32_e32 v[[R_I16_1:[0-9]+]], v[[A_F32_1]]
+; SI: v_and_b32_e32 v[[R_I16_LO:[0-9]+]], 0xffff, v[[R_I16_0]]
+; SI: v_lshlrev_b32_e32 v[[R_I16_HI:[0-9]+]], 16, v[[R_I16_1]]
+; SI: v_or_b32_e32 v[[R_V2_I16:[0-9]+]], v[[R_I16_HI]], v[[R_I16_LO]]
+
+; VI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
+; VI: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI: v_cvt_i32_f32_e32 v[[R_I16_0:[0-9]+]], v[[A_F32_0]]
+; VI: v_cvt_i32_f32_sdwa v[[R_I16_1:[0-9]+]], v[[A_F32_1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; VI: v_or_b32_sdwa v[[R_V2_I16:[0-9]+]], v[[R_I16_1]], v[[R_I16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+
 ; GCN: buffer_store_dword v[[R_V2_I16]]
 ; GCN: s_endpgm
+
 define amdgpu_kernel void @fptosi_v2f16_to_v2i16(
     <2 x i16> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) {
@@ -75,7 +84,8 @@ entry:
 ; GCN-LABEL: {{^}}fptosi_v2f16_to_v2i32
 ; GCN: buffer_load_dword
 ; GCN: v_cvt_f32_f16_e32
-; GCN: v_cvt_f32_f16_e32
+; SI: v_cvt_f32_f16_e32
+; VI: v_cvt_f32_f16_sdwa
 ; GCN: v_cvt_i32_f32_e32
 ; GCN: v_cvt_i32_f32_e32
 ; GCN: buffer_store_dwordx2
@@ -96,7 +106,8 @@ entry:
 ; GCN-LABEL: {{^}}fptosi_v2f16_to_v2i64
 ; GCN: buffer_load_dword
 ; GCN: v_cvt_f32_f16_e32
-; GCN: v_cvt_f32_f16_e32
+; SI: v_cvt_f32_f16_e32
+; VI: v_cvt_f32_f16_sdwa
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptosi_v2f16_to_v2i64(
     <2 x i64> addrspace(1)* %r,
