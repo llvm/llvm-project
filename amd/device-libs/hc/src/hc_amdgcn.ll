@@ -207,20 +207,17 @@ define i32 @get_group_segment_size() #0 {
   ret i32 %2
 }
 
-define i8 addrspace(4)* @get_group_segment_base_pointer() #0 {
+define i8 addrspace(3)* @get_group_segment_base_pointer() #0 {
   ; XXX For some reason getreg may return strange values for LDS_BASE
   ; temporary fix as 0 for now
 
   ;%1 = call i32 @llvm.amdgcn.s.getreg(i32 14342) #0
-  %1 = add i32 0, 0
-  %2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
+  ;%2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
+  ;%3 = inttoptr i32 %2 to i8 addrspace(3)*
+  ;ret i8 addrspace(3)* %3
 
-  ; make it a pointer to LDS first...
-  %3 = inttoptr i32 %2 to i8 addrspace(3)*
-
-  ; then convert to generic address space
-  %4 = addrspacecast i8 addrspace(3)* %3 to i8 addrspace(4)*
-  ret i8 addrspace(4)* %4
+  %1 = inttoptr i32 0 to i8 addrspace(3)*
+  ret i8 addrspace(3)* %1
 }
 
 define i32 @get_static_group_segment_size() #1 {
@@ -228,12 +225,12 @@ define i32 @get_static_group_segment_size() #1 {
   ret i32 %ret
 }
 
-define i8 addrspace(4)* @get_dynamic_group_segment_base_pointer() #0 {
-  %1 = tail call i8 addrspace(4)* @get_group_segment_base_pointer() #0
+define i8 addrspace(3)* @get_dynamic_group_segment_base_pointer() #0 {
+  %1 = tail call i8 addrspace(3)* @get_group_segment_base_pointer() #0
   %2 = tail call i32 @get_static_group_segment_size() #1
   %3 = zext i32 %2 to i64
-  %4 = getelementptr inbounds i8, i8 addrspace(4)* %1, i64 %3
-  ret i8 addrspace(4)* %4
+  %4 = getelementptr inbounds i8, i8 addrspace(3)* %1, i64 %3
+  ret i8 addrspace(3)* %4
 }
 
 declare i32 @llvm.amdgcn.s.getreg(i32) #0
