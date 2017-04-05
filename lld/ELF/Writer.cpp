@@ -846,6 +846,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __ehdr_start is the location of ELF file headers.
   addOptionalRegular<ELFT>("__ehdr_start", Out::ElfHeader, 0, STV_HIDDEN);
 
+  // __bss_start is the location of .bss section.
+  ElfSym::Bss =
+      addOptionalRegular<ELFT>("__bss_start", Out::ElfHeader, 0, STV_DEFAULT);
+
   auto Define = [](StringRef S, DefinedRegular *&Sym1, DefinedRegular *&Sym2) {
     Sym1 = addOptionalRegular<ELFT>(S, Out::ElfHeader, 0, STV_DEFAULT);
     assert(S.startswith("_"));
@@ -1176,7 +1180,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // we need to assign addresses so that we can tell if jump instructions
     // are out of range. This will need to turn into a loop that converges
     // when no more Thunks are added
-    if (createThunks<ELFT>(OutputSections))
+    ThunkCreator<ELFT> TC;
+    if (TC.createThunks(OutputSections))
       applySynthetic({In<ELFT>::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
@@ -1674,6 +1679,9 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
     Set(ElfSym::Etext, ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
   if (LastRW)
     Set(ElfSym::Edata, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
+
+  if (ElfSym::Bss)
+    ElfSym::Bss->Section = findSection(".bss");
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.

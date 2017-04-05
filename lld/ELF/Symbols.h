@@ -302,6 +302,9 @@ public:
 // Some linker-generated symbols need to be created as
 // DefinedRegular symbols.
 struct ElfSym {
+  // The content for __bss_start symbol.
+  static DefinedRegular *Bss;
+
   // The content for _etext and etext symbols.
   static DefinedRegular *Etext;
   static DefinedRegular *Etext2;

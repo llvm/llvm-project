@@ -105,7 +105,7 @@ static cl::opt<bool> EarlyInlineAll(
 static cl::opt<bool> EnableSDWAPeephole(
   "amdgpu-sdwa-peephole",
   cl::desc("Enable SDWA peepholer"),
-  cl::init(false));
+  cl::init(true));
 
 // Enable address space based alias analysis
 static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,

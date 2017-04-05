@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SIVI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global,+fp64-fp16-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX9-DENORM %s
 ; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global,-fp64-fp16-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX9-FLUSH %s
 
@@ -37,10 +37,14 @@ entry:
 ; GCN-LABEL: {{^}}fptrunc_v2f32_to_v2f16:
 ; GCN:     buffer_load_dwordx2 v{{\[}}[[A_F32_0:[0-9]+]]:[[A_F32_1:[0-9]+]]{{\]}}
 ; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[A_F32_0]]
-; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
-; SIVI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
-; SIVI:     v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
+; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
+; SI-DAG:  v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
+; SI:      v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
+; VI-DAG: v_cvt_f16_f32_sdwa v[[R_F16_1:[0-9]+]], v[[A_F32_1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; VI:     v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], v[[R_F16_0]]
+
+; GFX9-DAG:   v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
 ; GFX9-FLUSH: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[R_F16_0]]
 ; GFX9-FLUSH: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], 16, v[[R_F16_LO]]
 
@@ -48,6 +52,7 @@ entry:
 
 ; GCN:     buffer_store_dword v[[R_V2_F16]]
 ; GCN:     s_endpgm
+
 define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x float> addrspace(1)* %a) {
@@ -63,17 +68,19 @@ entry:
 ; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_0:[0-9]+]], v{{\[}}[[A_F64_0]]:{{[0-9]+}}{{\]}}
 ; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_1:[0-9]+]], v{{\[}}{{[0-9]+}}:[[A_F64_3]]{{\]}}
 ; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[A_F32_0]]
-; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
 
-; SIVI: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
+; VI: v_cvt_f16_f32_sdwa v[[R_F16_HI:[0-9]+]], v[[A_F32_1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+
 ; SIVI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
+; GFX9-DAG: v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
 ; GFX9-FLUSH: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[R_F16_0]]
 ; GFX9-FLUSH: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], 16, v[[R_F16_LO]]
 
 ; GFX9-DENORM: v_pack_b32_f16 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_1]]
 
 ; GCN: buffer_store_dword v[[R_V2_F16]]
+
 define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x double> addrspace(1)* %a) {

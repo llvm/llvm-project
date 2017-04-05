@@ -28,6 +28,7 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+DefinedRegular *ElfSym::Bss;
 DefinedRegular *ElfSym::Etext;
 DefinedRegular *ElfSym::Etext2;
 DefinedRegular *ElfSym::Edata;
