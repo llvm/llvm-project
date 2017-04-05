@@ -1939,7 +1939,10 @@ expandBounds(const RuntimePointerChecking::CheckingPtrGroup *CG, Loop *TheLoop,
     Value *NewPtr = (Inst && TheLoop->contains(Inst))
                         ? Exp.expandCodeFor(Sc, PtrArithTy, Loc)
                         : Ptr;
-    return {NewPtr, NewPtr};
+    // We must return a half-open range, which means incrementing Sc.
+    const SCEV *ScPlusOne = SE->getAddExpr(Sc, SE->getOne(PtrArithTy));
+    Value *NewPtrPlusOne = Exp.expandCodeFor(ScPlusOne, PtrArithTy, Loc);
+    return {NewPtr, NewPtrPlusOne};
   } else {
     Value *Start = nullptr, *End = nullptr;
     DEBUG(dbgs() << "LAA: Adding RT check for range:\n");

@@ -402,7 +402,8 @@ public:
   /// data fragment, at the offset specified by the fixup and following the
   /// fixup kind as appropriate.
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t FixupValue, bool IsPCRel) const override {
+                  uint64_t FixupValue, bool IsPCRel,
+                  MCContext &Ctx) const override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.

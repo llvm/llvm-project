@@ -54,4 +54,8 @@ kernel void foo(sampler_t smp_par) {
   fnc4smp(smp_par);
   // CHECK: [[SAMP:%[0-9]+]] = load %opencl.sampler_t addrspace(2)*, %opencl.sampler_t addrspace(2)** [[smp_par_ptr]]
   // CHECK: call spir_func void @fnc4smp(%opencl.sampler_t addrspace(2)* [[SAMP]])
+
+  fnc4smp(5);
+  // CHECK: [[SAMP:%[0-9]+]] = call %opencl.sampler_t addrspace(2)* @__translate_sampler_initializer(i32 5)
+  // CHECK: call spir_func void @fnc4smp(%opencl.sampler_t addrspace(2)* [[SAMP]])
 }

@@ -6,6 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains a recursive-descendent parser for linker scripts.
+// Parsed results are stored to Config and Script global objects.
+//
+//===----------------------------------------------------------------------===//
 
 #include "ScriptParser.h"
 #include "Config.h"
@@ -80,7 +85,8 @@ private:
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readProvideOrAssignment(StringRef Tok);
   void readSort();
-  Expr readAssert();
+  AssertCommand *readAssert();
+  Expr readAssertExpr();
 
   uint64_t readMemoryAssignment(StringRef, StringRef, StringRef);
   std::pair<uint32_t, uint32_t> readMemoryAttributes();
@@ -142,14 +148,6 @@ static ExprValue div(ExprValue A, ExprValue B) {
   return 0;
 }
 
-static ExprValue leftShift(ExprValue A, ExprValue B) {
-  return A.getValue() << B.getValue();
-}
-
-static ExprValue rightShift(ExprValue A, ExprValue B) {
-  return A.getValue() >> B.getValue();
-}
-
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
@@ -209,7 +207,7 @@ void ScriptParser::readLinkerScript() {
       continue;
 
     if (Tok == "ASSERT") {
-      Script->Opt.Commands.push_back(make<AssertCommand>(readAssert()));
+      Script->Opt.Commands.push_back(readAssert());
     } else if (Tok == "ENTRY") {
       readEntry();
     } else if (Tok == "EXTERN") {
@@ -298,11 +296,10 @@ void ScriptParser::readExtern() {
 void ScriptParser::readGroup() {
   expect("(");
   while (!Error && !consume(")")) {
-    StringRef Tok = next();
-    if (Tok == "AS_NEEDED")
+    if (consume("AS_NEEDED"))
       readAsNeeded();
     else
-      addFile(unquote(Tok));
+      addFile(unquote(next()));
   }
 }
 
@@ -345,13 +342,9 @@ void ScriptParser::readOutputFormat() {
   // Error checking only for now.
   expect("(");
   skip();
-  StringRef Tok = next();
-  if (Tok == ")")
+  if (consume(")"))
     return;
-  if (Tok != ",") {
-    setError("unexpected token: " + Tok);
-    return;
-  }
+  expect(",");
   skip();
   expect(",");
   skip();
@@ -361,31 +354,24 @@ void ScriptParser::readOutputFormat() {
 void ScriptParser::readPhdrs() {
   expect("{");
   while (!Error && !consume("}")) {
-    StringRef Tok = next();
     Script->Opt.PhdrsCommands.push_back(
-        {Tok, PT_NULL, false, false, UINT_MAX, nullptr});
-    PhdrsCommand &PhdrCmd = Script->Opt.PhdrsCommands.back();
+        {next(), PT_NULL, false, false, UINT_MAX, nullptr});
 
+    PhdrsCommand &PhdrCmd = Script->Opt.PhdrsCommands.back();
     PhdrCmd.Type = readPhdrType();
-    do {
-      Tok = next();
-      if (Tok == ";")
-        break;
-      if (Tok == "FILEHDR")
+
+    while (!Error && !consume(";")) {
+      if (consume("FILEHDR"))
         PhdrCmd.HasFilehdr = true;
-      else if (Tok == "PHDRS")
+      else if (consume("PHDRS"))
         PhdrCmd.HasPhdrs = true;
-      else if (Tok == "AT")
+      else if (consume("AT"))
         PhdrCmd.LMAExpr = readParenExpr();
-      else if (Tok == "FLAGS") {
-        expect("(");
-        // Passing 0 for the value of dot is a bit of a hack. It means that
-        // we accept expressions like ".|1".
-        PhdrCmd.Flags = readExpr()().getValue();
-        expect(")");
-      } else
-        setError("unexpected header attribute: " + Tok);
-    } while (!Error);
+      else if (consume("FLAGS"))
+        PhdrCmd.Flags = readParenExpr()().getValue();
+      else
+        setError("unexpected header attribute: " + next());
+    }
   }
 }
 
@@ -399,6 +385,7 @@ void ScriptParser::readSearchDir() {
 
 void ScriptParser::readSections() {
   Script->Opt.HasSections = true;
+
   // -no-rosegment is used to avoid placing read only non-executable sections in
   // their own segment. We do the same if SECTIONS command is present in linker
   // script. See comment for computeFlags().
@@ -410,7 +397,7 @@ void ScriptParser::readSections() {
     BaseCommand *Cmd = readProvideOrAssignment(Tok);
     if (!Cmd) {
       if (Tok == "ASSERT")
-        Cmd = make<AssertCommand>(readAssert());
+        Cmd = readAssert();
       else
         Cmd = readOutputSectionDescription(Tok);
     }
@@ -541,12 +528,17 @@ void ScriptParser::readSort() {
   expect(")");
 }
 
-Expr ScriptParser::readAssert() {
+AssertCommand *ScriptParser::readAssert() {
+  return make<AssertCommand>(readAssertExpr());
+}
+
+Expr ScriptParser::readAssertExpr() {
   expect("(");
   Expr E = readExpr();
   expect(",");
   StringRef Msg = unquote(next());
   expect(")");
+
   return [=] {
     if (!E().getValue())
       error(Msg);
@@ -572,7 +564,7 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   Cmd->Location = getCurrentLocation();
 
   // Read an address expression.
-  // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html#Output-Section-Address
+  // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
   if (peek() != ":")
     Cmd->AddrExpr = readExpr();
 
@@ -596,12 +588,12 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     StringRef Tok = next();
     if (Tok == ";") {
       // Empty commands are allowed. Do nothing here.
-    } else if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok)) {
-      Cmd->Commands.push_back(Assignment);
+    } else if (SymbolAssignment *Assign = readProvideOrAssignment(Tok)) {
+      Cmd->Commands.push_back(Assign);
     } else if (BytesDataCommand *Data = readBytesDataCommand(Tok)) {
       Cmd->Commands.push_back(Data);
     } else if (Tok == "ASSERT") {
-      Cmd->Commands.push_back(make<AssertCommand>(readAssert()));
+      Cmd->Commands.push_back(readAssert());
       expect(";");
     } else if (Tok == "CONSTRUCTORS") {
       // CONSTRUCTORS is a keyword to make the linker recognize C++ ctors/dtors
@@ -698,19 +690,18 @@ Expr ScriptParser::readExpr() {
 }
 
 static Expr combine(StringRef Op, Expr L, Expr R) {
-  if (Op == "*")
-    return [=] { return mul(L(), R()); };
-  if (Op == "/") {
-    return [=] { return div(L(), R()); };
-  }
   if (Op == "+")
     return [=] { return add(L(), R()); };
   if (Op == "-")
     return [=] { return sub(L(), R()); };
+  if (Op == "*")
+    return [=] { return mul(L(), R()); };
+  if (Op == "/")
+    return [=] { return div(L(), R()); };
   if (Op == "<<")
-    return [=] { return leftShift(L(), R()); };
+    return [=] { return L().getValue() << R().getValue(); };
   if (Op == ">>")
-    return [=] { return rightShift(L(), R()); };
+    return [=] { return L().getValue() >> R().getValue(); };
   if (Op == "<")
     return [=] { return L().getValue() < R().getValue(); };
   if (Op == ">")
@@ -803,7 +794,7 @@ static bool readInteger(StringRef Tok, uint64_t &Result) {
 }
 
 BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
-  int Size = StringSwitch<unsigned>(Tok)
+  int Size = StringSwitch<int>(Tok)
                  .Case("BYTE", 1)
                  .Case("SHORT", 2)
                  .Case("LONG", 4)
@@ -857,20 +848,19 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ALIGN") {
     expect("(");
     Expr E = readExpr();
-    if (consume(",")) {
-      Expr E2 = readExpr();
-      expect(")");
-      return [=] { return alignTo(E().getValue(), E2().getValue()); };
-    }
+    if (consume(")"))
+      return [=] { return alignTo(Script->getDot(), E().getValue()); };
+    expect(",");
+    Expr E2 = readExpr();
     expect(")");
-    return [=] { return alignTo(Script->getDot(), E().getValue()); };
+    return [=] { return alignTo(E().getValue(), E2().getValue()); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
     return [=] { return Script->getOutputSection(Location, Name)->Alignment; };
   }
   if (Tok == "ASSERT")
-    return readAssert();
+    return readAssertExpr();
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
     return [=] { return getConstant(Name); };
@@ -1100,7 +1090,7 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
 
 uint64_t ScriptParser::readMemoryAssignment(StringRef S1, StringRef S2,
                                             StringRef S3) {
-  if (!(consume(S1) || consume(S2) || consume(S3))) {
+  if (!consume(S1) && !consume(S2) && !consume(S3)) {
     setError("expected one of: " + S1 + ", " + S2 + ", or " + S3);
     return 0;
   }

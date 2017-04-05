@@ -8,12 +8,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %Partials.215 = type { [2 x %Dual.213] }
 
 ; Function Attrs: sspreq
-define void @"julia_axpy!_65480"(%Dual.212*) {
+define void @"julia_axpy!_65480"(%Dual.212*, %Dual.212* %other) {
 top:
   br label %if24
 
 ; CHECK-NOT: %bc = bitcast i64* %v2.sroa.0.0..sroa_cast
-; CHECK: %bound0
+; CHECK: %bound0 = icmp ult i8* %[[x:[a-z0-9]+]], %[[y:[a-z0-9]+]]
+; CHECK-NOT: %bound1 = icmp ult i8* %[[y]], %[[x]]
 
 if24:                                             ; preds = %if24, %top
   %"#temp#1.sroa.3.02" = phi i64 [ undef, %top ], [ %2, %if24 ]
@@ -24,7 +25,7 @@ if24:                                             ; preds = %if24, %top
   %v2.sroa.0.0..sroa_cast = bitcast %Dual.212* %0 to i64*
   %v2.sroa.0.0.copyload = load i64, i64* %v2.sroa.0.0..sroa_cast, align 1
   %3 = add i64 %"#temp#1.sroa.0.01", -1
-  %4 = getelementptr inbounds %Dual.212, %Dual.212* undef, i64 %3, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
+  %4 = getelementptr inbounds %Dual.212, %Dual.212* %other, i64 0, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
   %5 = bitcast double* %4 to i64*
   store i64 undef, i64* %5, align 8
   %notlhs27 = icmp eq i64 %2, undef

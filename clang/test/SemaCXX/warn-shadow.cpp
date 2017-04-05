@@ -87,6 +87,16 @@ class A {
   }
 };
 
+struct path {
+  using value_type = char;
+  typedef char value_type2;
+  struct iterator {
+    using value_type = path; // no warning
+    typedef path value_type2; // no warning
+  };
+};
+
+
 // TODO: this should warn, <rdar://problem/5018057>
 class B : A {
   int data;

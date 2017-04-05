@@ -33,7 +33,7 @@ public:
   ~RISCVAsmBackend() override {}
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
@@ -71,7 +71,7 @@ bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 
 void RISCVAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                  unsigned DataSize, uint64_t Value,
-                                 bool IsPCRel) const {
+                                 bool IsPCRel, MCContext &Ctx) const {
   return;
 }
 
