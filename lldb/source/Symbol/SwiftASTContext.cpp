@@ -40,6 +40,7 @@
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
+#include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
@@ -63,7 +64,6 @@
 #include "swift/../../lib/IRGen/GenHeap.h"
 #include "swift/../../lib/IRGen/IRGenMangler.h"
 #include "swift/../../lib/IRGen/IRGenModule.h"
-#include "swift/../../lib/IRGen/Linking.h"
 #include "swift/../../lib/IRGen/TypeInfo.h"
 #include "swift/../../lib/IRGen/IRGenMangler.h"
 
