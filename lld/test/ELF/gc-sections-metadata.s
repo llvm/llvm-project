@@ -23,11 +23,11 @@ _start:
 .section .foo2,"a"
 .quad 0
 
-.section bar1,"am",@progbits,.foo1
+.section bar1,"ao",@progbits,.foo1
 .quad .zed1
 .quad .foo1
 
-.section bar2,"am",@progbits,.foo2
+.section bar2,"ao",@progbits,.foo2
 .quad .zed2
 .quad .foo2
 

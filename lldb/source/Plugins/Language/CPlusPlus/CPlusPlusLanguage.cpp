@@ -21,6 +21,7 @@
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Threading.h"
 
 // Project includes
 #include "lldb/Core/PluginManager.h"
@@ -35,7 +36,6 @@
 #include "lldb/Utility/RegularExpression.h"
 
 #include "BlockPointer.h"
-#include "CPlusPlusNameParser.h"
 #include "CxxStringTypes.h"
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
@@ -85,14 +85,15 @@ void CPlusPlusLanguage::MethodName::Clear() {
   m_context = llvm::StringRef();
   m_arguments = llvm::StringRef();
   m_qualifiers = llvm::StringRef();
+  m_type = eTypeInvalid;
   m_parsed = false;
   m_parse_error = false;
 }
 
-static bool ReverseFindMatchingChars(const llvm::StringRef &s,
-                                     const llvm::StringRef &left_right_chars,
-                                     size_t &left_pos, size_t &right_pos,
-                                     size_t pos = llvm::StringRef::npos) {
+bool ReverseFindMatchingChars(const llvm::StringRef &s,
+                              const llvm::StringRef &left_right_chars,
+                              size_t &left_pos, size_t &right_pos,
+                              size_t pos = llvm::StringRef::npos) {
   assert(left_right_chars.size() == 2);
   left_pos = llvm::StringRef::npos;
   const char left_char = left_right_chars[0];
@@ -118,9 +119,10 @@ static bool ReverseFindMatchingChars(const llvm::StringRef &s,
   return false;
 }
 
-static bool IsTrivialBasename(const llvm::StringRef &basename) {
-  // Check that the basename matches with the following regular expression
-  // "^~?([A-Za-z_][A-Za-z_0-9]*)$"
+static bool IsValidBasename(const llvm::StringRef &basename) {
+  // Check that the basename matches with the following regular expression or is
+  // an operator name:
+  // "^~?([A-Za-z_][A-Za-z_0-9]*)(<.*>)?$"
   // We are using a hand written implementation because it is significantly more
   // efficient then
   // using the general purpose regular expression library.
@@ -147,69 +149,100 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   if (idx == basename.size())
     return true;
 
-  return false;
-}
+  // Check for basename with template arguments
+  // TODO: Improve the quality of the validation with validating the template
+  // arguments
+  if (basename[idx] == '<' && basename.back() == '>')
+    return true;
 
-bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
-  // This method tries to parse simple method definitions
-  // which are presumably most comman in user programs.
-  // Definitions that can be parsed by this function don't have return types
-  // and templates in the name.
-  // A::B::C::fun(std::vector<T> &) const
-  size_t arg_start, arg_end;
-  llvm::StringRef full(m_full.GetCString());
-  llvm::StringRef parens("()", 2);
-  if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
-    m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
-    if (arg_end + 1 < full.size())
-      m_qualifiers = full.substr(arg_end + 1).ltrim();
+  // Check if the basename is a vaild C++ operator name
+  if (!basename.startswith("operator"))
+    return false;
 
-    if (arg_start == 0)
-      return false;
-    size_t basename_end = arg_start;
-    size_t context_start = 0;
-    size_t context_end = full.rfind(':', basename_end);
-    if (context_end == llvm::StringRef::npos)
-      m_basename = full.substr(0, basename_end);
-    else {
-      if (context_start < context_end)
-        m_context = full.substr(context_start, context_end - 1 - context_start);
-      const size_t basename_begin = context_end + 1;
-      m_basename = full.substr(basename_begin, basename_end - basename_begin);
-    }
-
-    if (IsTrivialBasename(m_basename)) {
-      return true;
-    } else {
-      // The C++ basename doesn't match our regular expressions so this can't
-      // be a valid C++ method, clear everything out and indicate an error
-      m_context = llvm::StringRef();
-      m_basename = llvm::StringRef();
-      m_arguments = llvm::StringRef();
-      m_qualifiers = llvm::StringRef();
-      return false;
-    }
-  }
-  return false;
+  static RegularExpression g_operator_regex(
+      llvm::StringRef("^(operator)( "
+                      "?)([A-Za-z_][A-Za-z_0-9]*|\\(\\)|"
+                      "\\[\\]|[\\^<>=!\\/"
+                      "*+-]+)(<.*>)?(\\[\\])?$"));
+  std::string basename_str(basename.str());
+  return g_operator_regex.Execute(basename_str, nullptr);
 }
 
 void CPlusPlusLanguage::MethodName::Parse() {
   if (!m_parsed && m_full) {
-    if (TrySimplifiedParse()) {
-      m_parse_error = false;
-    } else {
-      CPlusPlusNameParser parser(m_full.GetStringRef());
-      if (auto function = parser.ParseAsFunctionDefinition()) {
-        m_basename = function.getValue().name.basename;
-        m_context = function.getValue().name.context;
-        m_arguments = function.getValue().arguments;
-        m_qualifiers = function.getValue().qualifiers;
-        m_parse_error = false;
+    //        ConstString mangled;
+    //        m_full.GetMangledCounterpart(mangled);
+    //        printf ("\n   parsing = '%s'\n", m_full.GetCString());
+    //        if (mangled)
+    //            printf ("   mangled = '%s'\n", mangled.GetCString());
+    m_parse_error = false;
+    m_parsed = true;
+    llvm::StringRef full(m_full.GetCString());
+
+    size_t arg_start, arg_end;
+    llvm::StringRef parens("()", 2);
+    if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
+      m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
+      if (arg_end + 1 < full.size())
+        m_qualifiers = full.substr(arg_end + 1);
+      if (arg_start > 0) {
+        size_t basename_end = arg_start;
+        size_t context_start = 0;
+        size_t context_end = llvm::StringRef::npos;
+        if (basename_end > 0 && full[basename_end - 1] == '>') {
+          // TODO: handle template junk...
+          // Templated function
+          size_t template_start, template_end;
+          llvm::StringRef lt_gt("<>", 2);
+          if (ReverseFindMatchingChars(full, lt_gt, template_start,
+                                       template_end, basename_end)) {
+            // Check for templated functions that include return type like:
+            // 'void foo<Int>()'
+            context_start = full.rfind(' ', template_start);
+            if (context_start == llvm::StringRef::npos)
+              context_start = 0;
+            else
+              ++context_start;
+
+            context_end = full.rfind(':', template_start);
+            if (context_end == llvm::StringRef::npos ||
+                context_end < context_start)
+              context_end = context_start;
+          } else {
+            context_end = full.rfind(':', basename_end);
+          }
+        } else if (context_end == llvm::StringRef::npos) {
+          context_end = full.rfind(':', basename_end);
+        }
+
+        if (context_end == llvm::StringRef::npos)
+          m_basename = full.substr(0, basename_end);
+        else {
+          if (context_start < context_end)
+            m_context =
+                full.substr(context_start, context_end - 1 - context_start);
+          const size_t basename_begin = context_end + 1;
+          m_basename =
+              full.substr(basename_begin, basename_end - basename_begin);
+        }
+        m_type = eTypeUnknownMethod;
       } else {
         m_parse_error = true;
+        return;
       }
+
+      if (!IsValidBasename(m_basename)) {
+        // The C++ basename doesn't match our regular expressions so this can't
+        // be a valid C++ method, clear everything out and indicate an error
+        m_context = llvm::StringRef();
+        m_basename = llvm::StringRef();
+        m_arguments = llvm::StringRef();
+        m_qualifiers = llvm::StringRef();
+        m_parse_error = true;
+      }
+    } else {
+      m_parse_error = true;
     }
-    m_parsed = true;
   }
 }
 
@@ -240,13 +273,14 @@ llvm::StringRef CPlusPlusLanguage::MethodName::GetQualifiers() {
 std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
   if (!m_parsed)
     Parse();
-  if (m_context.empty())
-    return m_basename;
+  if (m_basename.empty() || m_context.empty())
+    return std::string();
 
   std::string res;
   res += m_context;
   res += "::";
   res += m_basename;
+
   return res;
 }
 
@@ -262,10 +296,13 @@ bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
     const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
-  CPlusPlusNameParser parser(name);
-  if (auto full_name = parser.ParseAsFullName()) {
-    identifier = full_name.getValue().basename;
-    context = full_name.getValue().context;
+  static RegularExpression g_basename_regex(llvm::StringRef(
+      "^(([A-Za-z_][A-Za-z_0-9]*::)*)(~?[A-Za-z_~][A-Za-z_0-9]*)$"));
+  RegularExpression::Match match(4);
+  if (g_basename_regex.Execute(llvm::StringRef::withNullAsEmpty(name),
+                               &match)) {
+    match.GetMatchAtIndex(name, 1, context);
+    match.GetMatchAtIndex(name, 3, identifier);
     return true;
   }
   return false;

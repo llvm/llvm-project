@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
       llvm::make_unique<TextDocumentFormattingHandler>(Out, Store));
   Dispatcher.registerHandler("textDocument/codeAction",
                              llvm::make_unique<CodeActionHandler>(Out, AST));
+  Dispatcher.registerHandler("textDocument/completion",
+                             llvm::make_unique<CompletionHandler>(Out, AST));
 
   while (std::cin.good()) {
     // A Language Server Protocol message starts with a HTTP header, delimited

@@ -36,7 +36,13 @@ public:
 
   void onDocumentAdd(StringRef Uri) override;
   // FIXME: Implement onDocumentRemove
-  // FIXME: Implement codeComplete
+
+  /// Get code completions at a specified \p Line and \p Column in \p File.
+  ///
+  /// This function is thread-safe and returns completion items that own the
+  /// data they contain.
+  std::vector<CompletionItem> codeComplete(StringRef File, unsigned Line,
+                                           unsigned Column);
 
   /// Get the fixes associated with a certain diagnostic as replacements.
   ///
@@ -59,7 +65,7 @@ private:
   /// database is cached for subsequent accesses.
   clang::tooling::CompilationDatabase *
   getOrCreateCompilationDatabaseForFile(StringRef Uri);
-  // Craetes a new ASTUnit for the document at Uri.
+  // Creates a new ASTUnit for the document at Uri.
   // FIXME: This calls chdir internally, which is thread unsafe.
   std::unique_ptr<clang::ASTUnit>
   createASTUnitForFile(StringRef Uri, const DocumentStore &Docs);
@@ -68,7 +74,17 @@ private:
   void parseFileAndPublishDiagnostics(StringRef File);
 
   /// Clang objects.
+
+  /// A map from Uri-s to ASTUnit-s. Guarded by \c ASTLock. ASTUnit-s are used
+  /// for generating diagnostics and fix-it-s asynchronously by the worker
+  /// thread and synchronously for code completion.
+  ///
+  /// TODO(krasimir): code completion should always have priority over parsing
+  /// for diagnostics.
   llvm::StringMap<std::unique_ptr<clang::ASTUnit>> ASTs;
+  /// A lock for access to the map \c ASTs.
+  std::mutex ASTLock;
+
   llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
   std::shared_ptr<clang::PCHContainerOperations> PCHs;

@@ -60,7 +60,7 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
 
 class IslNodeBuilder {
 public:
-  IslNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
+  IslNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
                  DominatorTree &DT, Scop &S, BasicBlock *StartBlock)
       : S(S), Builder(Builder), Annotator(Annotator),
@@ -68,7 +68,7 @@ public:
                     StartBlock),
         BlockGen(Builder, LI, SE, DT, ScalarMap, EscapeMap, ValueMap,
                  &ExprBuilder, StartBlock),
-        RegionGen(BlockGen), P(P), DL(DL), LI(LI), SE(SE), DT(DT),
+        RegionGen(BlockGen), DL(DL), LI(LI), SE(SE), DT(DT),
         StartBlock(StartBlock) {}
 
   virtual ~IslNodeBuilder() = default;
@@ -138,7 +138,6 @@ protected:
   /// The generator used to copy a non-affine region.
   RegionGenerator RegionGen;
 
-  Pass *const P;
   const DataLayout &DL;
   LoopInfo &LI;
   ScalarEvolution &SE;

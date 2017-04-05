@@ -233,6 +233,113 @@ struct CodeActionParams {
   parse(llvm::yaml::MappingNode *Params);
 };
 
+struct TextDocumentPositionParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+
+  /// The position inside the text document.
+  Position position;
+
+  static llvm::Optional<TextDocumentPositionParams>
+  parse(llvm::yaml::MappingNode *Params);
+};
+
+/// The kind of a completion entry.
+enum class CompletionItemKind {
+  Missing = 0,
+  Text = 1,
+  Method = 2,
+  Function = 3,
+  Constructor = 4,
+  Field = 5,
+  Variable = 6,
+  Class = 7,
+  Interface = 8,
+  Module = 9,
+  Property = 10,
+  Unit = 11,
+  Value = 12,
+  Enum = 13,
+  Keyword = 14,
+  Snippet = 15,
+  Color = 16,
+  File = 17,
+  Reference = 18,
+};
+
+/// Defines whether the insert text in a completion item should be interpreted
+/// as plain text or a snippet.
+enum class InsertTextFormat {
+  Missing = 0,
+  /// The primary text to be inserted is treated as a plain string.
+  PlainText = 1,
+  /// The primary text to be inserted is treated as a snippet.
+  ///
+  /// A snippet can define tab stops and placeholders with `$1`, `$2`
+  /// and `${3:foo}`. `$0` defines the final tab stop, it defaults to the end
+  /// of the snippet. Placeholders with equal identifiers are linked, that is
+  /// typing in one will update others too.
+  ///
+  /// See also:
+  /// https//github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+  Snippet = 2,
+};
+
+struct CompletionItem {
+  /// The label of this completion item. By default also the text that is
+  /// inserted when selecting this completion.
+  std::string label;
+
+  /// The kind of this completion item. Based of the kind an icon is chosen by
+  /// the editor.
+  CompletionItemKind kind = CompletionItemKind::Missing;
+
+  /// A human-readable string with additional information about this item, like
+  /// type or symbol information.
+  std::string detail;
+
+  /// A human-readable string that represents a doc-comment.
+  std::string documentation;
+
+  /// A string that should be used when comparing this item with other items.
+  /// When `falsy` the label is used.
+  std::string sortText;
+
+  /// A string that should be used when filtering a set of completion items.
+  /// When `falsy` the label is used.
+  std::string filterText;
+
+  /// A string that should be inserted to a document when selecting this
+  /// completion. When `falsy` the label is used.
+  std::string insertText;
+
+  /// The format of the insert text. The format applies to both the `insertText`
+  /// property and the `newText` property of a provided `textEdit`.
+  InsertTextFormat insertTextFormat = InsertTextFormat::Missing;
+
+  /// An edit which is applied to a document when selecting this completion.
+  /// When an edit is provided `insertText` is ignored.
+  ///
+  /// Note: The range of the edit must be a single line range and it must
+  /// contain the position at which completion has been requested.
+  llvm::Optional<TextEdit> textEdit;
+
+  /// An optional array of additional text edits that are applied when selecting
+  /// this completion. Edits must not overlap with the main edit nor with
+  /// themselves.
+  std::vector<TextEdit> additionalTextEdits;
+  
+  // TODO(krasimir): The following optional fields defined by the language
+  // server protocol are unsupported:
+  //
+  // command?: Command - An optional command that is executed *after* inserting
+  //                     this completion.
+  //
+  // data?: any - A data entry field that is preserved on a completion item
+  //              between a completion and a completion resolve request.
+  static std::string unparse(const CompletionItem &P);
+};
+
 } // namespace clangd
 } // namespace clang
 

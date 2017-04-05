@@ -69,7 +69,7 @@ do.end45:                                         ; preds = %do.cond42
 ; VALUE:      RAW dependences:
 ; VALUE-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 ; VALUE-NEXT: WAR dependences:
-; VALUE-NEXT:     {  }
+; VALUE-NEXT: { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 ; VALUE-NEXT: WAW dependences:
 ; VALUE-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 
@@ -83,7 +83,7 @@ do.end45:                                         ; preds = %do.cond42
 ; FUNC-VALUE:      RAW dependences:
 ; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Read0_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 ; FUNC-VALUE-NEXT: WAR dependences:
-; FUNC-VALUE-NEXT:     {  }
+; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Read0_MemRef_C[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Write3_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 ; FUNC-VALUE-NEXT: WAW dependences:
 ; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Write3_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 

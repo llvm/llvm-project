@@ -570,3 +570,75 @@ CodeActionParams::parse(llvm::yaml::MappingNode *Params) {
   }
   return Result;
 }
+
+llvm::Optional<TextDocumentPositionParams>
+TextDocumentPositionParams::parse(llvm::yaml::MappingNode *Params) {
+  TextDocumentPositionParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+    if (!Value)
+      return llvm::None;
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "textDocument") {
+      auto Parsed = TextDocumentIdentifier::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "position") {
+      auto Parsed = Position::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.position = std::move(*Parsed);
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}
+
+std::string CompletionItem::unparse(const CompletionItem &CI) {
+  std::string Result = "{";
+  llvm::raw_string_ostream Os(Result);
+  assert(!CI.label.empty() && "completion item label is required");
+  Os << R"("label":")" << llvm::yaml::escape(CI.label) << R"(",)";
+  if (CI.kind != CompletionItemKind::Missing)
+    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(",)";
+  if (!CI.detail.empty())
+    Os << R"("detail":")" << llvm::yaml::escape(CI.detail) << R"(",)";
+  if (!CI.documentation.empty())
+    Os << R"("documentation":")" << llvm::yaml::escape(CI.documentation)
+       << R"(",)";
+  if (!CI.sortText.empty())
+    Os << R"("sortText":")" << llvm::yaml::escape(CI.sortText) << R"(",)";
+  if (!CI.filterText.empty())
+    Os << R"("filterText":")" << llvm::yaml::escape(CI.filterText) << R"(",)";
+  if (!CI.insertText.empty())
+    Os << R"("insertText":")" << llvm::yaml::escape(CI.insertText) << R"(",)";
+  if (CI.insertTextFormat != InsertTextFormat::Missing) {
+    Os << R"("insertTextFormat":")" << static_cast<int>(CI.insertTextFormat)
+       << R"(",)";
+  }
+  if (CI.textEdit)
+    Os << R"("textEdit":)" << TextEdit::unparse(*CI.textEdit) << ',';
+  if (!CI.additionalTextEdits.empty()) {
+    Os << R"("additionalTextEdits":[)";
+    for (const auto &Edit : CI.additionalTextEdits)
+      Os << TextEdit::unparse(Edit) << ",";
+    Os.flush();
+    // The list additionalTextEdits is guaranteed nonempty at this point.
+    // Replace the trailing comma with right brace.
+    Result.back() = ']';
+  }
+  Os.flush();
+  // Label is required, so Result is guaranteed to have a trailing comma.
+  Result.back() = '}';
+  return Result;
+}

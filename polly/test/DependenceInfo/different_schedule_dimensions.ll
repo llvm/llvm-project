@@ -6,7 +6,7 @@
 ; CHECK: RAW dependences:
 ; CHECK:   { Stmt_bb9[0] -> Stmt_bb10[0] }
 ; CHECK: WAR dependences:
-; CHECK:   {  }
+; CHECK:   { Stmt_bb3[0] -> Stmt_bb10[0] }
 ; CHECK: WAW dependences:
 ; CHECK:   { Stmt_bb3[0] -> Stmt_bb10[0] }
 ; CHECK: Reduction dependences:
@@ -15,7 +15,7 @@
 ; FUNC: RAW dependences:
 ; FUNC-NEXT:   { Stmt_bb9[0] -> Stmt_bb10[0]; [Stmt_bb9[0] -> Stmt_bb9_Write0_MemRef_tmp11[]] -> [Stmt_bb10[0] -> Stmt_bb10_Read0_MemRef_tmp11[]] }
 ; FUNC-NEXT: WAR dependences:
-; FUNC-NEXT:   {  }
+; FUNC-NEXT:   { Stmt_bb3[0] -> Stmt_bb10[0]; [Stmt_bb3[0] -> Stmt_bb3_Read0_MemRef_arg1[]] -> [Stmt_bb10[0] -> Stmt_bb10_Write1_MemRef_arg1[]] }
 ; FUNC-NEXT: WAW dependences:
 ; FUNC-NEXT:   { Stmt_bb3[0] -> Stmt_bb10[0]; [Stmt_bb3[0] -> Stmt_bb3_Write1_MemRef_arg1[]] -> [Stmt_bb10[0] -> Stmt_bb10_Write1_MemRef_arg1[]] }
 ; FUNC-NEXT: Reduction dependences:
