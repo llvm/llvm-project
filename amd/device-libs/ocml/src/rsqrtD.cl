@@ -14,9 +14,9 @@ MATH_MANGLE(rsqrt)(double x)
 
     if (AMD_OPT()) {
         double y0 = BUILTIN_RSQRT_F64(x);
-        double y1 = y0 * MATH_MAD(-x*y0*0.5, y0, 1.5);
-        double y2 = y1 * MATH_MAD(-x*y1*0.5, y1, 1.5);
-        ret = BUILTIN_CLASS_F64(y0, CLASS_PSUB|CLASS_PNOR) ? y2 : y0;
+        double e = MATH_MAD(-x*y0, y0, 1.0);
+        double y1 = MATH_MAD(y0*e, MATH_MAD(e, 0.375, 0.5), y0);
+        ret = BUILTIN_CLASS_F64(y0, CLASS_PSUB|CLASS_PNOR) ? y1 : y0;
     } else {
         USE_TABLE(double, p_tbl, M64_RSQRT);
         double y = x * (x < 0x1.0p-1000 ? 0x1.0p+1000 : 1.0);
