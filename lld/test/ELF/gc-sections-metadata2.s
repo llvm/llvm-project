@@ -13,7 +13,7 @@ _start:
 
 .section .foo,"a"
 .quad 0
-.section .bar,"am",@progbits,.foo
+.section .bar,"ao",@progbits,.foo
 .quad 0
-.section .zed,"am",@progbits,.foo
+.section .zed,"ao",@progbits,.foo
 .quad 0

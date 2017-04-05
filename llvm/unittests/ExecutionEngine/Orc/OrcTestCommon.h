@@ -68,8 +68,6 @@ public:
 protected:
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
-private:
-  static bool NativeTargetInitialized;
 };
 
 class ModuleBuilder {

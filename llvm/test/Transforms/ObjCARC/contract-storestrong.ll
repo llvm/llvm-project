@@ -243,6 +243,19 @@ entry:
   ret void
 }
 
+; This used to crash.
+; CHECK-LABEL: define i8* @test13(
+; CHECK: tail call void @objc_storeStrong(i8** %{{.*}}, i8* %[[NEW:.*]])
+; CHECK-NEXT: ret i8* %[[NEW]]
+
+define i8* @test13(i8* %a0, i8* %a1, i8** %addr, i8* %new) {
+  %old = load i8*, i8** %addr, align 8
+  call void @objc_release(i8* %old)
+  %retained = call i8* @objc_retain(i8* %new)
+  store i8* %retained, i8** %addr, align 8
+  ret i8* %retained
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }

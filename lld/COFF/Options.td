@@ -21,6 +21,8 @@ def base    : P<"base", "Base address of the program">;
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def entry   : P<"entry", "Name of entry point symbol">;
+def errorlimit : P<"errorlimit",
+    "Maximum number of errors to emit before stopping (0 = no limit)">;
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;

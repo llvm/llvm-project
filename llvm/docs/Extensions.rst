@@ -204,7 +204,7 @@ For example, the following code creates two sections named ``.text``.
 The unique number is not present in the resulting object at all. It is just used
 in the assembler to differentiate the sections.
 
-The 'm' flag is mapped to SHF_LINK_ORDER. If it is present, a symbol
+The 'o' flag is mapped to SHF_LINK_ORDER. If it is present, a symbol
 must be given that identifies the section to be placed is the
 .sh_link.
 
@@ -212,14 +212,14 @@ must be given that identifies the section to be placed is the
 
         .section .foo,"a",@progbits
         .Ltmp:
-        .section .bar,"am",@progbits,.Ltmp
+        .section .bar,"ao",@progbits,.Ltmp
 
 which is equivalent to just
 
 .. code-block:: gas
 
         .section .foo,"a",@progbits
-        .section .bar,"am",@progbits,.foo
+        .section .bar,"ao",@progbits,.foo
 
 
 Target Specific Behaviour

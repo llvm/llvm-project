@@ -288,8 +288,10 @@ bool ExecutionDepsFix::visitInstr(MachineInstr *MI) {
 /// \brief Helps avoid false dependencies on undef registers by updating the
 /// machine instructions' undef operand to use a register that the instruction
 /// is truly dependent on, or use a register with clearance higher than Pref.
-void ExecutionDepsFix::pickBestRegisterForUndef(MachineInstr *MI,
-    unsigned OpIdx, unsigned Pref) {
+/// Returns true if it was able to find a true dependency, thus not requiring
+/// a dependency breaking instruction regardless of clearance.
+bool ExecutionDepsFix::pickBestRegisterForUndef(MachineInstr *MI,
+                                                unsigned OpIdx, unsigned Pref) {
   MachineOperand &MO = MI->getOperand(OpIdx);
   assert(MO.isUndef() && "Expected undef machine operand");
 
@@ -297,7 +299,7 @@ void ExecutionDepsFix::pickBestRegisterForUndef(MachineInstr *MI,
 
   // Update only undef operands that are mapped to one register.
   if (AliasMap[OriginalReg].size() != 1)
-    return;
+    return false;
 
   // Get the undef operand's register class
   const TargetRegisterClass *OpRC =
@@ -312,7 +314,7 @@ void ExecutionDepsFix::pickBestRegisterForUndef(MachineInstr *MI,
     // We found a true dependency - replace the undef register with the true
     // dependency.
     MO.setReg(CurrMO.getReg());
-    return;
+    return true;
   }
 
   // Go over all registers in the register class and find the register with
@@ -337,6 +339,8 @@ void ExecutionDepsFix::pickBestRegisterForUndef(MachineInstr *MI,
   // Update the operand if we found a register with better clearance.
   if (MaxClearanceReg != OriginalReg)
     MO.setReg(MaxClearanceReg);
+
+  return false;
 }
 
 /// \brief Return true to if it makes sense to break dependence on a partial def
@@ -371,8 +375,11 @@ void ExecutionDepsFix::processDefs(MachineInstr *MI, bool breakDependency,
   if (breakDependency) {
     unsigned Pref = TII->getUndefRegClearance(*MI, OpNum, TRI);
     if (Pref) {
-      pickBestRegisterForUndef(MI, OpNum, Pref);
-      if (shouldBreakDependence(MI, OpNum, Pref))
+      bool HadTrueDependency = pickBestRegisterForUndef(MI, OpNum, Pref);
+      // We don't need to bother trying to break a dependency if this
+      // instruction has a true dependency on that register through another
+      // operand - we'll have to wait for it to be available regardless.
+      if (!HadTrueDependency && shouldBreakDependence(MI, OpNum, Pref))
         UndefReads.push_back(std::make_pair(MI, OpNum));
     }
   }

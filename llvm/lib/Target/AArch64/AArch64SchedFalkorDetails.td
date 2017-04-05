@@ -331,13 +331,16 @@ def : InstRW<[FalkorWr_4VXVY_3cyc],   (instrs SHA256SU1rrr)>;
 
 // FP Load Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[WriteLD],               (instregex "^LDR((Q|D|S|H|B)(post|pre|ui)|(Q|D|S)l)$")>;
+def : InstRW<[WriteLD],               (instregex "^LDR((Q|D|S|H|B)ui|(Q|D|S)l)$")>;
+def : InstRW<[WriteLD, WriteAdr],     (instregex "^LDR(Q|D|S|H|B)(post|pre)$")>;
 def : InstRW<[WriteLD],               (instregex "^LDUR(Q|D|S|H|B)i$")>;
 def : InstRW<[FalkorWr_1XYZ_1LD_4cyc],(instregex "^LDR(Q|D|H|S|B)ro(W|X)$")>;
-def : InstRW<[FalkorWr_2LD_3cyc],     (instrs LDNPQi)>;
-def : InstRW<[FalkorWr_2LD_3cyc],     (instregex "^LDPQ(pre|post|i)$")>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc],(instregex "LDNP(D|S)i$")>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc],(instregex "LDP(D|S)(pre|post|i)$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, WriteLDHi],(instrs LDNPQi)>;
+def : InstRW<[FalkorWr_2LD_3cyc, WriteLDHi],(instrs LDPQi)>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, WriteLDHi],(instregex "LDNP(D|S)i$")>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, WriteLDHi],(instregex "LDP(D|S)i$")>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, WriteLDHi, WriteAdr],(instregex "LDP(D|S)(pre|post)$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, WriteLDHi, WriteAdr],(instregex "^LDPQ(pre|post)$")>;
 
 // FP Data Processing Instructions
 // -----------------------------------------------------------------------------
@@ -385,15 +388,15 @@ def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^(S|U)CVTF(v2i64|v4i32|v8i16|v
 def : InstRW<[FalkorWr_1ST_0cyc],     (instrs PRFMui, PRFMl)>;
 def : InstRW<[FalkorWr_1ST_0cyc],     (instrs PRFUMi)>;
 
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDNP(W|X)i$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDP(W|X)(i|post|pre)$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR(B|H|W|X)(post|pre|ui)$")>;
+def : InstRW<[WriteLD, WriteLDHi],     (instregex "^LDNP(W|X)i$")>;
+def : InstRW<[WriteLD, WriteLDHi],     (instregex "^LDP(W|X)i$")>;
+def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR(B|H|W|X)ui$")>;
+def : InstRW<[WriteLD, WriteAdr],     (instregex "^LDR(B|H|W|X)(post|pre)$")>;
 def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR(W|X)l$")>;
 def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDTR(B|H|W|X)i$")>;
 def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDUR(B|H|W|X)i$")>;
 
-def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDPSW(i|post|pre)$")>;
-def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDRS(BW|BX|HW|HX|W)(post|pre|ui)$")>;
+def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDRS(BW|BX|HW|HX|W)ui$")>;
 def : InstRW<[FalkorWr_1LD_4cyc],     (instrs LDRSWl)>;
 def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDTRS(BW|BX|HW|HX|W)i$")>;
 def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDURS(BW|BX|HW|HX|W)i$")>;
@@ -403,6 +406,10 @@ def : InstRW<[FalkorWr_1XYZ_1LD_4cyc],(instregex "^LDR(B|H|W|X)ro(W|X)$")>;
 
 def : InstRW<[FalkorWr_1XYZ_1LD_5cyc],(instregex "^LDRS(BW|BX|HW|HX|W)ro(W|X)$")>;
 
+def : InstRW<[FalkorWr_1LD_4cyc, WriteAdr],(instregex "^LDRS(BW|BX|HW|HX|W)(post|pre)$")>;
+def : InstRW<[WriteLD, WriteLDHi, WriteAdr],(instregex "^LDP(W|X)(post|pre)$")>;
+def : InstRW<[FalkorWr_1LD_4cyc, WriteLDHi],(instrs LDPSWi)>;
+def : InstRW<[FalkorWr_1LD_4cyc, WriteLDHi, WriteAdr],(instregex "^LDPSW(post|pre)$")>;
 // Miscellaneous Data-Processing Instructions
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^(S|U)?BFM(W|X)ri$")>;

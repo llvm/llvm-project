@@ -77,7 +77,7 @@ void error(const Twine &Msg) {
   } else if (ErrorCount == Config->ErrorLimit) {
     print("error: ", raw_ostream::RED);
     *ErrorOS << "too many errors emitted, stopping now"
-             << " (use -error-limit=0 to see all errors)\n";
+             << " (use /ERRORLIMIT:0 to see all errors)\n";
     exitLld(1);
   }
 
