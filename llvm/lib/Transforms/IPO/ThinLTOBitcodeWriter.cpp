@@ -182,6 +182,26 @@ void simplifyExternals(Module &M) {
 
 void filterModule(
     Module *M, function_ref<bool(const GlobalValue *)> ShouldKeepDefinition) {
+  for (Module::alias_iterator I = M->alias_begin(), E = M->alias_end();
+       I != E;) {
+    GlobalAlias *GA = &*I++;
+    if (ShouldKeepDefinition(GA))
+      continue;
+
+    GlobalObject *GO;
+    if (GA->getValueType()->isFunctionTy())
+      GO = Function::Create(cast<FunctionType>(GA->getValueType()),
+                            GlobalValue::ExternalLinkage, "", M);
+    else
+      GO = new GlobalVariable(
+          *M, GA->getValueType(), false, GlobalValue::ExternalLinkage,
+          (Constant *)nullptr, "", (GlobalVariable *)nullptr,
+          GA->getThreadLocalMode(), GA->getType()->getAddressSpace());
+    GO->takeName(GA);
+    GA->replaceAllUsesWith(GO);
+    GA->eraseFromParent();
+  }
+
   for (Function &F : *M) {
     if (ShouldKeepDefinition(&F))
       continue;
@@ -199,26 +219,6 @@ void filterModule(
     GV.setLinkage(GlobalValue::ExternalLinkage);
     GV.setComdat(nullptr);
     GV.clearMetadata();
-  }
-
-  for (Module::alias_iterator I = M->alias_begin(), E = M->alias_end();
-       I != E;) {
-    GlobalAlias *GA = &*I++;
-    if (ShouldKeepDefinition(GA))
-      continue;
-
-    GlobalObject *GO;
-    if (I->getValueType()->isFunctionTy())
-      GO = Function::Create(cast<FunctionType>(GA->getValueType()),
-                            GlobalValue::ExternalLinkage, "", M);
-    else
-      GO = new GlobalVariable(
-          *M, GA->getValueType(), false, GlobalValue::ExternalLinkage,
-          (Constant *)nullptr, "", (GlobalVariable *)nullptr,
-          GA->getThreadLocalMode(), GA->getType()->getAddressSpace());
-    GO->takeName(GA);
-    GA->replaceAllUsesWith(GO);
-    GA->eraseFromParent();
   }
 }
 

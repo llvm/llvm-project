@@ -1042,9 +1042,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  const APInt *Val;
-  if (match(RHS, m_APInt(Val))) {
-    if (Val->isSignBit()) {
+  const APInt *RHSC;
+  if (match(RHS, m_APInt(RHSC))) {
+    if (RHSC->isSignBit()) {
       // If wrapping is not allowed, then the addition must set the sign bit:
       // X + (signbit) --> X | signbit
       if (I.hasNoSignedWrap() || I.hasNoUnsignedWrap())
@@ -1060,17 +1060,17 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     const APInt *C;
     if (match(LHS, m_ZExt(m_Xor(m_Value(X), m_APInt(C)))) &&
         C->isMinSignedValue() &&
-        C->sext(LHS->getType()->getScalarSizeInBits()) == *Val) {
+        C->sext(LHS->getType()->getScalarSizeInBits()) == *RHSC) {
       // add(zext(xor i16 X, -32768), -32768) --> sext X
       return CastInst::Create(Instruction::SExt, X, LHS->getType());
     }
 
-    if (Val->isNegative() &&
+    if (RHSC->isNegative() &&
         match(LHS, m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C)))) &&
-        Val->sge(-C->sext(Val->getBitWidth()))) {
+        RHSC->sge(-C->sext(RHSC->getBitWidth()))) {
       // (add (zext (add nuw X, C)), Val) -> (zext (add nuw X, C+Val))
       Constant *NewC =
-          ConstantInt::get(X->getType(), *C + Val->trunc(C->getBitWidth()));
+          ConstantInt::get(X->getType(), *C + RHSC->trunc(C->getBitWidth()));
       return new ZExtInst(Builder->CreateNUWAdd(X, NewC), I.getType());
     }
   }
@@ -1320,6 +1320,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       return BinaryOperator::CreateOr(A, B);
   }
 
+  
   // (add (or A, B) (and A, B)) --> (add A, B)
   {
     Value *A = nullptr, *B = nullptr;
@@ -1563,7 +1564,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return Res;
   }
 
-  if (I.getType()->isIntegerTy(1))
+  if (I.getType()->getScalarType()->isIntegerTy(1))
     return BinaryOperator::CreateXor(Op0, Op1);
 
   // Replace (-1 - A) with (~A).

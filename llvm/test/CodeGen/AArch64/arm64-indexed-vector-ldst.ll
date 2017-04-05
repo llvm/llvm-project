@@ -6216,11 +6216,11 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane_forced_narrow(i16* %bar, i16** %pt
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 
 ; CHECK-LABEL: test_ld1lane_build:
-; CHECK-DAG: ld1.s { [[REG0:v[0-9]+]] }[0], [x0]
-; CHECK-DAG: ld1.s { [[REG0:v[0-9]+]] }[1], [x1]
-; CHECK-DAG: ld1.s { [[REG1:v[0-9]+]] }[0], [x2]
-; CHECK-DAG: ld1.s { [[REG1:v[0-9]+]] }[1], [x3]
-; CHECK: sub.2s v[[REGNUM2:[0-9]+]], [[REG0]], [[REG1]]
+; CHECK-DAG: ldr s[[REGNUM0:[0-9]+]], [x0]
+; CHECK-DAG: ld1.s { v[[REGNUM0:[0-9]+]] }[1], [x1]
+; CHECK-DAG: ldr s[[REGNUM1:[0-9]+]], [x2]
+; CHECK-DAG: ld1.s { v[[REGNUM1:[0-9]+]] }[1], [x3]
+; CHECK: sub.2s v[[REGNUM2:[0-9]+]], v[[REGNUM0]], v[[REGNUM1]]
 ; CHECK-NEXT: str d[[REGNUM2]], [x4]
 ; CHECK-NEXT: ret
 define void @test_ld1lane_build(i32* %ptr0, i32* %ptr1, i32* %ptr2, i32* %ptr3, <2 x i32>* %out) {

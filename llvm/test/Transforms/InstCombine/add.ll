@@ -565,3 +565,101 @@ define i64 @test41(i32 %a) {
   %sub = add i64 %zext, -1
   ret i64 %sub
 }
+
+define i32 @test42(i1 %C) {
+; CHECK-LABEL: @test42(
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], i32 1123, i32 133
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %A = select i1 %C, i32 1000, i32 10
+  %V = add i32 123, %A
+  ret i32 %V
+}
+
+define <2 x i32> @test42vec(i1 %C) {
+; CHECK-LABEL: @test42vec(
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
+  %V = add <2 x i32> <i32 123, i32 123>, %A
+  ret <2 x i32> %V
+}
+
+define <2 x i32> @test42vec2(i1 %C) {
+; CHECK-LABEL: @test42vec2(
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 2500>, <2 x i32> <i32 10, i32 30>
+; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 333>
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %A = select i1 %C, <2 x i32> <i32 1000, i32 2500>, <2 x i32> <i32 10, i32 30>
+  %V = add <2 x i32> <i32 123, i32 333>, %A
+  ret <2 x i32> %V
+}
+
+define i32 @test55(i1 %which) {
+; CHECK-LABEL: @test55(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 1123, [[ENTRY:%.*]] ], [ 133, [[DELAY]] ]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi i32 [ 1000, %entry ], [ 10, %delay ]
+  %value = add i32 123, %A
+  ret i32 %value
+}
+
+define <2 x i32> @test43vec(i1 %which) {
+; CHECK-LABEL: @test43vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1123, i32 1123>, [[ENTRY:%.*]] ], [ <i32 133, i32 133>, [[DELAY]] ]
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi <2 x i32> [ <i32 1000, i32 1000>, %entry ], [ <i32 10, i32 10>, %delay ]
+  %value = add <2 x i32> <i32 123, i32 123>, %A
+  ret <2 x i32> %value
+}
+
+define <2 x i32> @test43vec2(i1 %which) {
+; CHECK-LABEL: @test43vec2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1123, i32 2833>, [[ENTRY:%.*]] ], [ <i32 133, i32 363>, [[DELAY]] ]
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi <2 x i32> [ <i32 1000, i32 2500>, %entry ], [ <i32 10, i32 30>, %delay ]
+  %value = add <2 x i32> <i32 123, i32 333>, %A
+  ret <2 x i32> %value
+}

@@ -264,7 +264,8 @@ TargetPassConfig::~TargetPassConfig() {
 TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
     : ImmutablePass(ID), PM(&pm), Started(true), Stopped(false),
       AddingMachinePasses(false), TM(tm), Impl(nullptr), Initialized(false),
-      DisableVerify(false), EnableTailMerge(true) {
+      DisableVerify(false), EnableTailMerge(true),
+      RequireCodeGenSCCOrder(false) {
 
   Impl = new PassConfigImpl();
 
@@ -282,6 +283,9 @@ TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
 
   if (StringRef(PrintMachineInstrs.getValue()).equals(""))
     TM->Options.PrintMachineCode = true;
+
+  if (TM->Options.EnableIPRA)
+    setRequiresCodeGenSCCOrder();
 }
 
 CodeGenOpt::Level TargetPassConfig::getOptLevel() const {
@@ -534,7 +538,7 @@ void TargetPassConfig::addISelPrepare() {
   addPreISel();
 
   // Force codegen to run according to the callgraph.
-  if (TM->Options.EnableIPRA)
+  if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
   // Add both the safe stack and the stack protection passes: each of them will

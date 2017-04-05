@@ -404,6 +404,16 @@ define <16 x i32> @shuffle_v8i32_17_16_01_00_21_20_05_04_25_24_09_08_29_28_13_12
   ret <16 x i32> %shuffle
 }
 
+define <16 x float> @shuffle_v8f32_v16f32_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04(<8 x float> %a) {
+; ALL-LABEL: shuffle_v8f32_v16f32_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04_04:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <16 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  ret <16 x float> %shuffle
+}
+
 define <16 x i32> @mask_shuffle_v16i32_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00_01(<16 x i32> %a, <16 x i32> %passthru, i16 %mask) {
 ; AVX512F-LABEL: mask_shuffle_v16i32_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00_01:
 ; AVX512F:       # BB#0:

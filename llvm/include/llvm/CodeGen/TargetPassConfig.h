@@ -115,6 +115,10 @@ protected:
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge;
 
+  /// Require processing of functions such that callees are generated before
+  /// callers.
+  bool RequireCodeGenSCCOrder;
+
 public:
   TargetPassConfig(TargetMachine *tm, PassManagerBase &pm);
   // Dummy constructor.
@@ -161,6 +165,11 @@ public:
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }
+
+  bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
+  void setRequiresCodeGenSCCOrder(bool Enable = true) {
+    setOpt(RequireCodeGenSCCOrder, Enable);
+  }
 
   /// Allow the target to override a specific pass without overriding the pass
   /// pipeline. When passes are added to the standard pipeline at the

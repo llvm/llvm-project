@@ -2200,7 +2200,7 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
     Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
-      MUD->setDefiningAccess(LiveOnEntry, true);
+      MUD->setOptimized(LiveOnEntry);
     return LiveOnEntry;
   }
 
@@ -2218,7 +2218,7 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
   DEBUG(dbgs() << *Result << "\n");
   if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
-    MUD->setDefiningAccess(Result, true);
+    MUD->setOptimized(Result);
 
   return Result;
 }

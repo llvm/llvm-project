@@ -6587,19 +6587,13 @@ FailedModImm:
     SDValue Op0 = Op.getOperand(0);
     unsigned ElemSize = VT.getScalarSizeInBits();
     unsigned i = 0;
-    // For 32 and 64 bit types, use INSERT_SUBREG for lane zero to
+    // For 32 and 64 bit types, use SCALAR_TO_VECTOR for lane zero to
     // a) Avoid a RMW dependency on the full vector register, and
     // b) Allow the register coalescer to fold away the copy if the
-    //    value is already in an S or D register.
-    // Do not do this for UNDEF/LOAD nodes because we have better patterns
-    // for those avoiding the SCALAR_TO_VECTOR/BUILD_VECTOR.
-    if (!Op0.isUndef() && Op0.getOpcode() != ISD::LOAD &&
-        (ElemSize == 32 || ElemSize == 64)) {
-      unsigned SubIdx = ElemSize == 32 ? AArch64::ssub : AArch64::dsub;
-      MachineSDNode *N =
-          DAG.getMachineNode(TargetOpcode::INSERT_SUBREG, dl, VT, Vec, Op0,
-                             DAG.getTargetConstant(SubIdx, dl, MVT::i32));
-      Vec = SDValue(N, 0);
+    //    value is already in an S or D register, and we're forced to emit an
+    //    INSERT_SUBREG that we can't fold anywhere.
+    if (!Op0.isUndef() && (ElemSize == 32 || ElemSize == 64)) {
+      Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op0);
       ++i;
     }
     for (; i < NumElts; ++i) {

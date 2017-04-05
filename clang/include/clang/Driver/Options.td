@@ -2091,6 +2091,8 @@ def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,
   Flags<[Unsupported]>;
 def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   HelpText<"Print the full program path of <name>">, MetaVarName<"<name>">;
+def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
+  HelpText<"Print the resource directory pathname">;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">;
 def private__bundle : Flag<["-"], "private_bundle">;
