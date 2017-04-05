@@ -38,7 +38,6 @@ static cl::opt<bool>
 CheckRuntimeMDParser("amdgpu-check-rtmd-parser", cl::Hidden,
                      cl::desc("Check AMDGPU runtime metadata YAML parser"));
 
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint8_t)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Metadata)
@@ -266,9 +265,9 @@ static Kernel::Metadata getRuntimeMDForKernel(const Function &F) {
       auto Node = MD->getOperand(0);
       if (Node->getNumOperands() > 1) {
         Kernel.Language = "OpenCL C";
-        uint16_t Major = mdconst::extract<ConstantInt>(Node->getOperand(0))
+        uint32_t Major = mdconst::extract<ConstantInt>(Node->getOperand(0))
                          ->getZExtValue();
-        uint16_t Minor = mdconst::extract<ConstantInt>(Node->getOperand(1))
+        uint32_t Minor = mdconst::extract<ConstantInt>(Node->getOperand(1))
                          ->getZExtValue();
         Kernel.LanguageVersion.push_back(Major);
         Kernel.LanguageVersion.push_back(Minor);
