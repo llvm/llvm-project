@@ -2,4 +2,4 @@
 
 // CHECK: error: expected metadata symbol
 
-        .section .shf_metadata,"am",@progbits
+        .section .shf_metadata,"ao",@progbits

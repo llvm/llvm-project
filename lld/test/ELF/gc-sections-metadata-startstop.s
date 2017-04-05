@@ -28,6 +28,6 @@ _start:
 .section .foo,"a"
 .quad 0
 
-.section yy,"am",@progbits,.foo
+.section yy,"ao",@progbits,.foo
 .quad 0
 

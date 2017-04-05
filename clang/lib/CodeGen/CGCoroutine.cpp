@@ -215,6 +215,43 @@ void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
   EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
 }
 
+// For WinEH exception representation backend need to know what funclet coro.end
+// belongs to. That information is passed in a funclet bundle.
+static SmallVector<llvm::OperandBundleDef, 1>
+getBundlesForCoroEnd(CodeGenFunction &CGF) {
+  SmallVector<llvm::OperandBundleDef, 1> BundleList;
+
+  if (llvm::Instruction *EHPad = CGF.CurrentFuncletPad)
+    BundleList.emplace_back("funclet", EHPad);
+
+  return BundleList;
+}
+
+namespace {
+// We will insert coro.end to cut any of the destructors for objects that
+// do not need to be destroyed once the coroutine is resumed.
+// See llvm/docs/Coroutines.rst for more details about coro.end.
+struct CallCoroEnd final : public EHScopeStack::Cleanup {
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    auto &CGM = CGF.CGM;
+    auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
+    llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+    // See if we have a funclet bundle to associate coro.end with. (WinEH)
+    auto Bundles = getBundlesForCoroEnd(CGF);
+    auto *CoroEnd = CGF.Builder.CreateCall(
+        CoroEndFn, {NullPtr, CGF.Builder.getTrue()}, Bundles);
+    if (Bundles.empty()) {
+      // Otherwise, (landingpad model), create a conditional branch that leads
+      // either to a cleanup block or a block with EH resume instruction.
+      auto *ResumeBB = CGF.getEHResumeBlock(/*cleanup=*/true);
+      auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
+      CGF.Builder.CreateCondBr(CoroEnd, ResumeBB, CleanupContBB);
+      CGF.EmitBlock(CleanupContBB);
+    }
+  }
+};
+}
+
 namespace {
 // Make sure to call coro.delete on scope exit.
 struct CallCoroDelete final : public EHScopeStack::Cleanup {
@@ -273,6 +310,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     EmitStmt(S.getPromiseDeclStmt());
 
+    EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
+
     CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
 
     // FIXME: Emit initial suspend and more before the body.
@@ -290,6 +329,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   }
 
   EmitBlock(RetBB);
+  llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+  Builder.CreateCall(CoroEnd, {NullPtr, Builder.getFalse()});
 
   // FIXME: Emit return for the coroutine return object.
 }

@@ -4,23 +4,23 @@
 @a = global i32 1
 @b = global i32 2, !associated !0
 !0 = !{i32* @a}
-; CHECK-DAG: .section .data.b,"awm",@progbits,a
+; CHECK-DAG: .section .data.b,"awo",@progbits,a
 
 ; Loop is OK. Also, normally -data-sections=0 would place @c and @d in the same section. !associated prevents that.
 @c = global i32 2, !associated !2
 @d = global i32 2, !associated !1
 !1 = !{i32* @c}
 !2 = !{i32* @d}
-; CHECK-DAG: .section .data.c,"awm",@progbits,d
-; CHECK-DAG: .section .data.d,"awm",@progbits,c
+; CHECK-DAG: .section .data.c,"awo",@progbits,d
+; CHECK-DAG: .section .data.d,"awo",@progbits,c
 
 ; BSS is OK.
 @e = global i32 0
 @f = global i32 0, !associated !3
 @g = global i32 1, !associated !3
 !3 = !{i32* @e}
-; CHECK-DAG: .section .bss.f,"awm",@nobits,e
-; CHECK-DAG: .section .data.g,"awm",@progbits,e
+; CHECK-DAG: .section .bss.f,"awo",@nobits,e
+; CHECK-DAG: .section .data.g,"awo",@progbits,e
 
 ; Explicit sections.
 @h = global i32 1, section "aaa"
@@ -29,9 +29,9 @@
 @k = global i32 1, !associated !4
 !4 = !{i32* @h}
 ; CHECK-DAG: .section	aaa,"aw",@progbits
-; CHECK-DAG: .section	bbb,"awm",@progbits,h,unique,1
-; CHECK-DAG: .section	bbb,"awm",@progbits,h,unique,2
-; CHECK-DAG: .section	.data.k,"awm",@progbits,h
+; CHECK-DAG: .section	bbb,"awo",@progbits,h,unique,1
+; CHECK-DAG: .section	bbb,"awo",@progbits,h,unique,2
+; CHECK-DAG: .section	.data.k,"awo",@progbits,h
 
 ; Non-GlobalObject metadata.
 @l = global i32 1, section "ccc", !associated !5

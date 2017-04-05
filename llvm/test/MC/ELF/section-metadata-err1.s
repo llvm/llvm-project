@@ -2,4 +2,4 @@
 
 // CHECK: error: symbol is not in a section: foo
 
-        .section .shf_metadata,"am",@progbits,foo
+        .section .shf_metadata,"ao",@progbits,foo
