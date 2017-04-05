@@ -30,7 +30,7 @@ constant sampler_t glb_smp8 = 1.0f; // expected-error{{initializing '__constant 
 
 constant sampler_t glb_smp9 = 0x100000000LL; // expected-error{{sampler_t initialization requires 32-bit integer, not 'long long'}}
 
-void foo(sampler_t);
+void foo(sampler_t); // expected-note{{passing argument to parameter here}}
 
 constant struct sampler_s {
   sampler_t smp; // expected-error{{the 'sampler_t' type cannot be used to declare a structure or union field}}
@@ -65,7 +65,8 @@ void kernel ker(sampler_t argsmp) {
   foo(const_smp5);
   foo(const_smp6);
   foo(argsmp);
-  foo(5); // expected-error{{sampler_t variable required - got 'int'}}
+  foo(5);
+  foo(5.0f); // expected-error {{passing 'float' to parameter of incompatible type 'sampler_t'}}
   sampler_t sa[] = {argsmp, const_smp}; // expected-error {{array of 'sampler_t' type is invalid in OpenCL}}
   foo(sa[0]);
   foo(bad());

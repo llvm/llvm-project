@@ -29,7 +29,6 @@ namespace lld {
 namespace elf {
 
 class DefinedCommon;
-class ScriptParser;
 class SymbolBody;
 class InputSectionBase;
 class InputSection;
@@ -56,15 +55,6 @@ struct ExprValue {
 // ScriptParser::readExpr reads an expression and returns an Expr.
 // Later, we evaluate the expression by calling the function.
 typedef std::function<ExprValue()> Expr;
-
-// Parses a linker script. Calling this function updates
-// Config and ScriptConfig.
-void readLinkerScript(MemoryBufferRef MB);
-
-// Parses a version script.
-void readVersionScript(MemoryBufferRef MB);
-
-void readDynamicList(MemoryBufferRef MB);
 
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
@@ -123,7 +113,7 @@ struct OutputSectionCommand : BaseCommand {
   Expr AlignExpr;
   Expr LMAExpr;
   Expr SubalignExpr;
-  std::vector<std::unique_ptr<BaseCommand>> Commands;
+  std::vector<BaseCommand *> Commands;
   std::vector<StringRef> Phdrs;
   uint32_t Filler = 0;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
@@ -204,7 +194,7 @@ struct MemoryRegion {
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
   // Used to assign addresses to sections.
-  std::vector<std::unique_ptr<BaseCommand>> Commands;
+  std::vector<BaseCommand *> Commands;
 
   // Used to assign sections to headers.
   std::vector<PhdrsCommand> PhdrsCommands;
@@ -224,9 +214,11 @@ struct ScriptConfiguration {
 
 class LinkerScript {
 protected:
-  void assignSymbol(SymbolAssignment *Cmd, bool InSec = false);
-  void computeInputSections(InputSectionDescription *);
-  void setDot(Expr E, const Twine &Loc, bool InSec = false);
+  void assignSymbol(SymbolAssignment *Cmd, bool InSec);
+  void setDot(Expr E, const Twine &Loc, bool InSec);
+
+  std::vector<InputSectionBase *>
+  computeInputSections(const InputSectionDescription *);
 
   std::vector<InputSectionBase *>
   createInputSectionList(OutputSectionCommand &Cmd);

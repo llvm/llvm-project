@@ -1369,26 +1369,28 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                                QualType TBAABaseType,
                                                uint64_t TBAAOffset,
                                                bool isNontemporal) {
-  // For better performance, handle vector loads differently.
-  if (Ty->isVectorType()) {
-    const llvm::Type *EltTy = Addr.getElementType();
+  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    // For better performance, handle vector loads differently.
+    if (Ty->isVectorType()) {
+      const llvm::Type *EltTy = Addr.getElementType();
 
-    const auto *VTy = cast<llvm::VectorType>(EltTy);
+      const auto *VTy = cast<llvm::VectorType>(EltTy);
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    if (VTy->getNumElements() == 3) {
+      // Handle vectors of size 3 like size 4 for better performance.
+      if (VTy->getNumElements() == 3) {
 
-      // Bitcast to vec4 type.
-      llvm::VectorType *vec4Ty = llvm::VectorType::get(VTy->getElementType(),
-                                                         4);
-      Address Cast = Builder.CreateElementBitCast(Addr, vec4Ty, "castToVec4");
-      // Now load value.
-      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVec4");
+        // Bitcast to vec4 type.
+        llvm::VectorType *vec4Ty =
+            llvm::VectorType::get(VTy->getElementType(), 4);
+        Address Cast = Builder.CreateElementBitCast(Addr, vec4Ty, "castToVec4");
+        // Now load value.
+        llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVec4");
 
-      // Shuffle vector to get vec3.
-      V = Builder.CreateShuffleVector(V, llvm::UndefValue::get(vec4Ty),
-                                      {0, 1, 2}, "extractVec");
-      return EmitFromMemory(V, Ty);
+        // Shuffle vector to get vec3.
+        V = Builder.CreateShuffleVector(V, llvm::UndefValue::get(vec4Ty),
+                                        {0, 1, 2}, "extractVec");
+        return EmitFromMemory(V, Ty);
+      }
     }
   }
 
@@ -1456,24 +1458,25 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         uint64_t TBAAOffset,
                                         bool isNontemporal) {
 
-  // Handle vectors differently to get better performance.
-  if (Ty->isVectorType()) {
-    llvm::Type *SrcTy = Value->getType();
-    auto *VecTy = cast<llvm::VectorType>(SrcTy);
-    // Handle vec3 special.
-    if (VecTy->getNumElements() == 3) {
-      // Our source is a vec3, do a shuffle vector to make it a vec4.
-      llvm::Constant *Mask[] = {Builder.getInt32(0), Builder.getInt32(1),
-                                Builder.getInt32(2),
-                                llvm::UndefValue::get(Builder.getInt32Ty())};
-      llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
-      Value = Builder.CreateShuffleVector(Value,
-                                          llvm::UndefValue::get(VecTy),
-                                          MaskV, "extractVec");
-      SrcTy = llvm::VectorType::get(VecTy->getElementType(), 4);
-    }
-    if (Addr.getElementType() != SrcTy) {
-      Addr = Builder.CreateElementBitCast(Addr, SrcTy, "storetmp");
+  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    // Handle vectors differently to get better performance.
+    if (Ty->isVectorType()) {
+      llvm::Type *SrcTy = Value->getType();
+      auto *VecTy = cast<llvm::VectorType>(SrcTy);
+      // Handle vec3 special.
+      if (VecTy->getNumElements() == 3) {
+        // Our source is a vec3, do a shuffle vector to make it a vec4.
+        llvm::Constant *Mask[] = {Builder.getInt32(0), Builder.getInt32(1),
+                                  Builder.getInt32(2),
+                                  llvm::UndefValue::get(Builder.getInt32Ty())};
+        llvm::Value *MaskV = llvm::ConstantVector::get(Mask);
+        Value = Builder.CreateShuffleVector(Value, llvm::UndefValue::get(VecTy),
+                                            MaskV, "extractVec");
+        SrcTy = llvm::VectorType::get(VecTy->getElementType(), 4);
+      }
+      if (Addr.getElementType() != SrcTy) {
+        Addr = Builder.CreateElementBitCast(Addr, SrcTy, "storetmp");
+      }
     }
   }
 
