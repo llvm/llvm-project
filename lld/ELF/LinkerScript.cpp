@@ -354,14 +354,17 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   CurOutSec = Aether;
   Dot = 0;
 
-  for (auto It = Opt.Commands.begin(); It != Opt.Commands.end(); ++It) {
+  for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
+    auto Iter = Opt.Commands.begin() + I;
+    BaseCommand *Base1 = *Iter;
+
     // Handle symbol assignments outside of any output section.
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(*It)) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1)) {
       addSymbol(Cmd);
       continue;
     }
 
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(*It)) {
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base1)) {
       std::vector<InputSectionBase *> V = createInputSectionList(*Cmd);
 
       // The output section name `/DISCARD/' is special.
@@ -374,15 +377,15 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       // This is for ONLY_IF_RO and ONLY_IF_RW. An output section directive
       // ".foo : ONLY_IF_R[OW] { ... }" is handled only if all member input
       // sections satisfy a given constraint. If not, a directive is handled
-      // as if it weren't present from the beginning.
+      // as if it wasn't present from the beginning.
       //
       // Because we'll iterate over Commands many more times, the easiest
-      // way to "make it as if it weren't present" is to just remove it.
+      // way to "make it as if it wasn't present" is to just remove it.
       if (!matchConstraints(V, Cmd->Constraint)) {
         for (InputSectionBase *S : V)
           S->Assigned = false;
-        --It;
-        Opt.Commands.erase(It + 1);
+        Opt.Commands.erase(Iter);
+        --I;
         continue;
       }
 

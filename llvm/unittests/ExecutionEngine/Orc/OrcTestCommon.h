@@ -28,17 +28,29 @@
 
 namespace llvm {
 
-// Base class for Orc tests that will execute code.
-class OrcExecutionTest {
+class OrcNativeTarget {
 public:
-
-  OrcExecutionTest() {
+  static void initialize() {
     if (!NativeTargetInitialized) {
       InitializeNativeTarget();
       InitializeNativeTargetAsmParser();
       InitializeNativeTargetAsmPrinter();
       NativeTargetInitialized = true;
     }
+  }
+
+private:
+  static bool NativeTargetInitialized;
+};
+
+// Base class for Orc tests that will execute code.
+class OrcExecutionTest {
+public:
+
+  OrcExecutionTest() {
+
+    // Initialize the native target if it hasn't been done already.
+    OrcNativeTarget::initialize();
 
     // Try to select a TargetMachine for the host.
     TM.reset(EngineBuilder().selectTarget());
@@ -56,8 +68,6 @@ public:
 protected:
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
-private:
-  static bool NativeTargetInitialized;
 };
 
 class ModuleBuilder {

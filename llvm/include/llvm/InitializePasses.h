@@ -273,6 +273,7 @@ void initializePEIPass(PassRegistry&);
 void initializePGOIndirectCallPromotionLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationGenLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationUseLegacyPassPass(PassRegistry&);
+void initializePGOMemOPSizeOptLegacyPassPass(PassRegistry&);
 void initializePHIEliminationPass(PassRegistry&);
 void initializePartialInlinerLegacyPassPass(PassRegistry&);
 void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry&);

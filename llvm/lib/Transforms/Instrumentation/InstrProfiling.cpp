@@ -51,6 +51,21 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
+// The start and end values of precise value profile range for memory
+// intrinsic sizes
+cl::opt<std::string> MemOPSizeRange(
+    "memop-size-range",
+    cl::desc("Set the range of size in memory intrinsic calls to be profiled "
+             "precisely, in a format of <start_val>:<end_val>"),
+    cl::init(""));
+
+// The value that considered to be large value in  memory intrinsic.
+cl::opt<unsigned> MemOPSizeLarge(
+    "memop-size-large",
+    cl::desc("Set large value thresthold in memory intrinsic size profiling. "
+             "Value of 0 disables the large value profiling."),
+    cl::init(8192));
+
 namespace {
 
 cl::opt<bool> DoNameCompression("enable-name-compression",
@@ -76,17 +91,6 @@ cl::opt<double> NumCountersPerValueSite(
     // For those sites with non-zero profile, the average number of targets
     // is usually smaller than 2.
     cl::init(1.0));
-
-cl::opt<std::string> MemOPSizeRange(
-    "memop-size-range",
-    cl::desc("Set the range of size in memory intrinsic calls to be profiled "
-             "precisely, in a format of <start_val>:<end_val>"),
-    cl::init(""));
-cl::opt<unsigned> MemOPSizeLarge(
-    "memop-size-large",
-    cl::desc("Set large value thresthold in memory intrinsic size profiling. "
-             "Value of 0 disables the large value profiling."),
-    cl::init(8192));
 
 class InstrProfilingLegacyPass : public ModulePass {
   InstrProfiling InstrProf;
@@ -176,7 +180,8 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   NamesSize = 0;
   ProfileDataMap.clear();
   UsedVars.clear();
-  getMemOPSizeOptions();
+  getMemOPSizeRangeFromOption(MemOPSizeRange, MemOPSizeRangeStart,
+                              MemOPSizeRangeLast);
 
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
@@ -299,12 +304,13 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args);
   } else {
-    Value *Args[6] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-                      Builder.getInt32(Index),
-                      Builder.getInt64(MemOPSizeRangeStart),
-                      Builder.getInt64(MemOPSizeRangeLast),
-                      Builder.getInt64(MemOPSizeLargeVal)};
+    Value *Args[6] = {
+        Ind->getTargetValue(),
+        Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+        Builder.getInt32(Index),
+        Builder.getInt64(MemOPSizeRangeStart),
+        Builder.getInt64(MemOPSizeRangeLast),
+        Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
     Call =
         Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true), Args);
   }
@@ -699,25 +705,4 @@ void InstrProfiling::emitInitialization() {
   IRB.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);
-}
-
-void InstrProfiling::getMemOPSizeOptions() {
-  // Parse the value profile options.
-  MemOPSizeRangeStart = DefaultMemOPSizeRangeStart;
-  MemOPSizeRangeLast = DefaultMemOPSizeRangeLast;
-  if (!MemOPSizeRange.empty()) {
-    auto Pos = MemOPSizeRange.find(":");
-    if (Pos != std::string::npos) {
-      if (Pos > 0)
-        MemOPSizeRangeStart = atoi(MemOPSizeRange.substr(0, Pos).c_str());
-      if (Pos < MemOPSizeRange.size() - 1)
-        MemOPSizeRangeLast = atoi(MemOPSizeRange.substr(Pos + 1).c_str());
-    } else
-      MemOPSizeRangeLast = atoi(MemOPSizeRange.c_str());
-  }
-  assert(MemOPSizeRangeLast >= MemOPSizeRangeStart);
-
-  MemOPSizeLargeVal = MemOPSizeLarge;
-  if (MemOPSizeLargeVal == 0)
-    MemOPSizeLargeVal = INT64_MIN;
 }

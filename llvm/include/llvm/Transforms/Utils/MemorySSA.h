@@ -246,7 +246,8 @@ public:
     return MA->getValueID() == MemoryUseVal || MA->getValueID() == MemoryDefVal;
   }
 
-  // Sadly, these have to be public because they are needed in some of the iterators.
+  // Sadly, these have to be public because they are needed in some of the
+  // iterators.
   virtual bool isOptimized() const = 0;
   virtual MemoryAccess *getOptimized() const = 0;
   virtual void setOptimized(MemoryAccess *) = 0;
@@ -265,9 +266,10 @@ protected:
     setDefiningAccess(DMA);
   }
   void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
-    setOperand(0, DMA);
-    if (!Optimized)
+    if (!Optimized) {
+      setOperand(0, DMA);
       return;
+    }
     setOptimized(DMA);
   }
 
@@ -304,6 +306,7 @@ public:
 
   virtual void setOptimized(MemoryAccess *DMA) override {
     OptimizedID = DMA->getID();
+    setOperand(0, DMA);
   }
 
   virtual bool isOptimized() const override {
@@ -313,7 +316,9 @@ public:
   virtual MemoryAccess *getOptimized() const override {
     return getDefiningAccess();
   }
-  virtual void resetOptimized() override { OptimizedID = INVALID_MEMORYACCESS_ID; }
+  virtual void resetOptimized() override {
+    OptimizedID = INVALID_MEMORYACCESS_ID;
+  }
 
 protected:
   friend class MemorySSA;
@@ -362,10 +367,12 @@ public:
   }
   virtual MemoryAccess *getOptimized() const override { return Optimized; }
   virtual bool isOptimized() const override {
-    return getOptimized() && OptimizedID == getDefiningAccess()->getID();
+    return getOptimized() && getDefiningAccess() &&
+           OptimizedID == getDefiningAccess()->getID();
   }
-  virtual void resetOptimized() override { OptimizedID = INVALID_MEMORYACCESS_ID; }
-
+  virtual void resetOptimized() override {
+    OptimizedID = INVALID_MEMORYACCESS_ID;
+  }
 
   void print(raw_ostream &OS) const override;
 
@@ -1086,11 +1093,20 @@ upward_defs(const MemoryAccessPair &Pair) {
   return make_range(upward_defs_begin(Pair), upward_defs_end());
 }
 
-/// Walks the defining uses of MemoryDefs. Stops after we hit something that has
-/// no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when comparing
-/// against a null def_chain_iterator, this will compare equal only after
-/// walking said Phi/liveOnEntry.
-template <class T>
+/// Walks the defining accesses of MemoryDefs. Stops after we hit something that
+/// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when
+/// comparing against a null def_chain_iterator, this will compare equal only
+/// after walking said Phi/liveOnEntry.
+///
+/// The UseOptimizedChain flag specifies whether to walk the clobbering
+/// access chain, or all the accesses.
+///
+/// Normally, MemoryDef are all just def/use linked together, so a def_chain on
+/// a MemoryDef will walk all MemoryDefs above it in the program until it hits
+/// a phi node.  The optimized chain walks the clobbering access of a store.
+/// So if you are just trying to find, given a store, what the next
+/// thing that would clobber the same memory is, you want the optimized chain.
+template <class T, bool UseOptimizedChain = false>
 struct def_chain_iterator
     : public iterator_facade_base<def_chain_iterator<T>,
                                   std::forward_iterator_tag, MemoryAccess *> {
@@ -1102,7 +1118,7 @@ struct def_chain_iterator
   def_chain_iterator &operator++() {
     // N.B. liveOnEntry has a null defining access.
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
-      if (MUD->isOptimized())
+      if (UseOptimizedChain && MUD->isOptimized())
         MA = MUD->getOptimized();
       else
         MA = MUD->getDefiningAccess();
@@ -1127,6 +1143,12 @@ def_chain(T MA, MemoryAccess *UpTo = nullptr) {
          "UpTo isn't in the def chain!");
 #endif
   return make_range(def_chain_iterator<T>(MA), def_chain_iterator<T>(UpTo));
+}
+
+template <class T>
+inline iterator_range<def_chain_iterator<T, true>> optimized_def_chain(T MA) {
+  return make_range(def_chain_iterator<T, true>(MA),
+                    def_chain_iterator<T, true>(nullptr));
 }
 
 } // end namespace llvm

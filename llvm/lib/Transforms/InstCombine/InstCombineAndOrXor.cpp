@@ -1403,10 +1403,11 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
         return BinaryOperator::CreateAnd(NewCast, C3);
       }
     }
+  }
 
+  if (isa<Constant>(Op1))
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;
-  }
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
     return DeMorgan;
@@ -2130,10 +2131,11 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       return BinaryOperator::CreateXor(Or,
                             Builder->getInt(C1->getValue() & ~RHS->getValue()));
     }
+  }
 
+  if (isa<Constant>(Op1))
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;
-  }
 
   // Given an OR instruction, check to see if this is a bswap.
   if (Instruction *BSwap = MatchBSwap(I))
@@ -2593,10 +2595,11 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
         }
       }
     }
+  }
 
+  if (isa<Constant>(Op1))
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;
-  }
 
   BinaryOperator *Op1I = dyn_cast<BinaryOperator>(Op1);
   if (Op1I) {

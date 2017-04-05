@@ -67,6 +67,8 @@ protected:
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                          const MachineRegisterInfo &MRI) const;
+
+  bool isObviouslySafeToFold(MachineInstr &MI) const;
 };
 
 } // End namespace llvm.

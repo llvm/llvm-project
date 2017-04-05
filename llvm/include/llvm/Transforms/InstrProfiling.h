@@ -60,12 +60,9 @@ private:
   size_t NamesSize;
 
   // The start value of precise value profile range for memory intrinsic sizes.
-  const int64_t DefaultMemOPSizeRangeStart = 0;
   int64_t MemOPSizeRangeStart;
   // The end value of precise value profile range for memory intrinsic sizes.
-  const int64_t DefaultMemOPSizeRangeLast = 8;
   int64_t MemOPSizeRangeLast;
-  int64_t MemOPSizeLargeVal;
 
   bool isMachO() const;
 
@@ -117,9 +114,6 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
-
-  /// Helper funtion that parsing the MemOPSize value profile options
-  void getMemOPSizeOptions();
 };
 
 } // end namespace llvm

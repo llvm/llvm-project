@@ -51,6 +51,91 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
             [(set GPR32:$dst, (add GPR32:$src1, GPR32:$src2))]>;
 
+//===- Test a nested instruction match. -----------------------------------===//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if (!MI0.getOperand(1).isReg())
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    MachineInstr &MI1 = *MRI.getVRegDef(MI0.getOperand(1).getReg());
+// CHECK-NEXT:    if (MI1.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_MUL) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (((MI1.getOpcode() == TargetOpcode::G_ADD) &&
+// CHECK-NEXT:        ((/* Operand 0 */ (MRI.getType(MI1.getOperand(0).getReg()) == (LLT::scalar(32))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI1.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI1.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src2 */ (MRI.getType(MI1.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI1.getOperand(2).getReg(), MRI, TRI))))))
+// CHECK-NEXT:        ))) &&
+// CHECK-NEXT:        ((/* src3 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(2).getReg(), MRI, TRI)))))) {
+// CHECK-NEXT:        if (!isObviouslySafeToFold(MI1)) return false;
+// CHECK-NEXT:        // (mul:i32 (add:i32 GPR32:i32:$src1, GPR32:i32:$src2), GPR32:i32:$src3)  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
+// CHECK-NEXT:     MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::MULADD));
+// CHECK-NEXT:     MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:     MIB.add(MI1.getOperand(1)/*src1*/);
+// CHECK-NEXT:     MIB.add(MI1.getOperand(2)/*src2*/);
+// CHECK-NEXT:     MIB.add(MI0.getOperand(2)/*src3*/);
+// CHECK-NEXT:     for (const auto *FromMI : {&MI0, &MI1, })
+// CHECK-NEXT:       for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:         MIB.addMemOperand(MMO);
+// CHECK-NEXT:     I.eraseFromParent();
+// CHECK-NEXT:     MachineInstr &NewI = *MIB;
+// CHECK-NEXT:     constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:     return true;
+// CHECK-NEXT:   }
+
+// We also get a second rule by commutativity.
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if (!MI0.getOperand(2).isReg())
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    MachineInstr &MI1 = *MRI.getVRegDef(MI0.getOperand(2).getReg());
+// CHECK-NEXT:    if (MI1.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_MUL) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src3 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (((MI1.getOpcode() == TargetOpcode::G_ADD) &&
+// CHECK-NEXT:        ((/* Operand 0 */ (MRI.getType(MI1.getOperand(0).getReg()) == (LLT::scalar(32))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI1.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI1.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src2 */ (MRI.getType(MI1.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI1.getOperand(2).getReg(), MRI, TRI))))))
+// CHECK-NEXT:        )))) {
+// CHECK-NEXT:        if (!isObviouslySafeToFold(MI1)) return false;
+// CHECK-NEXT:        // (mul:i32 GPR32:i32:$src3, (add:i32 GPR32:i32:$src1, GPR32:i32:$src2))  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
+// CHECK-NEXT:     MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::MULADD));
+// CHECK-NEXT:     MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:     MIB.add(MI1.getOperand(1)/*src1*/);
+// CHECK-NEXT:     MIB.add(MI1.getOperand(2)/*src2*/);
+// CHECK-NEXT:     MIB.add(MI0.getOperand(1)/*src3*/);
+// CHECK-NEXT:     for (const auto *FromMI : {&MI0, &MI1, })
+// CHECK-NEXT:       for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:         MIB.addMemOperand(MMO);
+// CHECK-NEXT:     I.eraseFromParent();
+// CHECK-NEXT:     MachineInstr &NewI = *MIB;
+// CHECK-NEXT:     constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:     return true;
+// CHECK-NEXT:   }
+
+def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
+               [(set GPR32:$dst,
+                     (mul (add GPR32:$src1, GPR32:$src2), GPR32:$src3))]>;
+
+//===- Test another simple pattern with regclass operands. ----------------===//
+
 // CHECK-LABEL: if ([&]() {
 // CHECK-NEXT:    MachineInstr &MI0 = I;
 // CHECK-NEXT:    if (MI0.getNumOperands() < 3)
@@ -67,7 +152,9 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
 // CHECK-NEXT:      MIB.add(MI0.getOperand(2)/*src2*/);
 // CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*src1*/);
-// CHECK-NEXT:      MIB.setMemRefs(I.memoperands_begin(), I.memoperands_end());
+// CHECK-NEXT:     for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:       for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:         MIB.addMemOperand(MMO);
 // CHECK-NEXT:      I.eraseFromParent();
 // CHECK-NEXT:      MachineInstr &NewI = *MIB;
 // CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
@@ -100,7 +187,9 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
 // CHECK-NEXT:      MIB.addReg(MyTarget::R0);
 // CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*Wm*/);
-// CHECK-NEXT:      MIB.setMemRefs(I.memoperands_begin(), I.memoperands_end());
+// CHECK-NEXT:      for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:        for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:          MIB.addMemOperand(MMO);
 // CHECK-NEXT:      I.eraseFromParent();
 // CHECK-NEXT:      MachineInstr &NewI = *MIB;
 // CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);

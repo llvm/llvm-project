@@ -443,7 +443,7 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
        SI != SE; ++SI) {
     const SectionRef &Section = *SI;
 
-    bool IsRequired = isRequiredForExecution(Section);
+    bool IsRequired = isRequiredForExecution(Section) || ProcessAllSections;
 
     // Consider only the sections that are required to be loaded for execution
     if (IsRequired) {
@@ -703,7 +703,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   unsigned Alignment = (unsigned)Alignment64 & 0xffffffffL;
   unsigned PaddingSize = 0;
   unsigned StubBufSize = 0;
-  bool IsRequired = isRequiredForExecution(Section);
+  bool IsRequired = isRequiredForExecution(Section) || ProcessAllSections;
   bool IsVirtual = Section.isVirtual();
   bool IsZeroInit = isZeroInit(Section);
   bool IsReadOnly = isReadOnlyData(Section);

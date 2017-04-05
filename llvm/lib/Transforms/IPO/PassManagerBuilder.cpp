@@ -302,6 +302,10 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createLibCallsShrinkWrapPass());
   addExtensionsToPM(EP_Peephole, MPM);
 
+  // Optimize memory intrinsic calls based on the profiled size information.
+  if (SizeLevel == 0)
+    MPM.add(createPGOMemOPSizeOptLegacyPass());
+
   MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
   MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
   MPM.add(createReassociatePass());           // Reassociate expressions

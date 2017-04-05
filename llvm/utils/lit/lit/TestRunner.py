@@ -209,6 +209,18 @@ def quote_windows_command(seq):
 
     return ''.join(result)
 
+# cmd is export or env
+def updateEnv(env, cmd):
+    arg_idx = 1
+    for arg_idx, arg in enumerate(cmd.args[1:]):
+        # Partition the string into KEY=VALUE.
+        key, eq, val = arg.partition('=')
+        # Stop if there was no equals.
+        if eq == '':
+            break
+        env.env[key] = val
+    cmd.args = cmd.args[arg_idx+1:]
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -257,6 +269,14 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # following Popen calls will fail instead.
         return 0
 
+    if cmd.commands[0].args[0] == 'export':
+        if len(cmd.commands) != 1:
+            raise ValueError("'export' cannot be part of a pipeline")
+        if len(cmd.commands[0].args) != 2:
+            raise ValueError("'export' supports only one argument")
+        updateEnv(shenv, cmd.commands[0])
+        return 0
+
     procs = []
     input = subprocess.PIPE
     stderrTempFiles = []
@@ -273,15 +293,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             # command. There might be multiple envs in a pipeline:
             #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
             cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
-            arg_idx = 1
-            for arg_idx, arg in enumerate(j.args[1:]):
-                # Partition the string into KEY=VALUE.
-                key, eq, val = arg.partition('=')
-                # Stop if there was no equals.
-                if eq == '':
-                    break
-                cmd_shenv.env[key] = val
-            j.args = j.args[arg_idx+1:]
+            updateEnv(cmd_shenv, j)
 
         # Apply the redirections, we use (N,) as a sentinel to indicate stdin,
         # stdout, stderr for N equal to 0, 1, or 2 respectively. Redirects to or
