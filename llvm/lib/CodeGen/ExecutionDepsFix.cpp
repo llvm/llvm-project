@@ -616,26 +616,6 @@ bool ExecutionDepsFix::isBlockDone(MachineBasicBlock *MBB) {
          MBBInfos[MBB].IncomingProcessed == MBB->pred_size();
 }
 
-void ExecutionDepsFix::updateSuccessors(MachineBasicBlock *MBB, bool Primary) {
-  bool Done = isBlockDone(MBB);
-  for (auto *Succ : MBB->successors()) {
-    if (!isBlockDone(Succ)) {
-      if (Primary) {
-        MBBInfos[Succ].IncomingProcessed++;
-      }
-      if (Done) {
-        MBBInfos[Succ].IncomingCompleted++;
-      }
-      if (isBlockDone(Succ)) {
-        // Perform secondary processing for this successor. See the big comment
-        // in runOnMachineFunction, for an explanation of the iteration order.
-        processBasicBlock(Succ, false);
-        updateSuccessors(Succ, false);
-      }
-    }
-  }
-}
-
 bool ExecutionDepsFix::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(*mf.getFunction()))
     return false;
@@ -708,6 +688,7 @@ bool ExecutionDepsFix::runOnMachineFunction(MachineFunction &mf) {
 
   MachineBasicBlock *Entry = &*MF->begin();
   ReversePostOrderTraversal<MachineBasicBlock*> RPOT(Entry);
+  SmallVector<MachineBasicBlock *, 4> Workqueue;
   for (ReversePostOrderTraversal<MachineBasicBlock*>::rpo_iterator
          MBBI = RPOT.begin(), MBBE = RPOT.end(); MBBI != MBBE; ++MBBI) {
     MachineBasicBlock *MBB = *MBBI;
@@ -715,8 +696,28 @@ bool ExecutionDepsFix::runOnMachineFunction(MachineFunction &mf) {
     // processing this block's predecessors.
     MBBInfos[MBB].PrimaryCompleted = true;
     MBBInfos[MBB].PrimaryIncoming = MBBInfos[MBB].IncomingProcessed;
-    processBasicBlock(MBB, true);
-    updateSuccessors(MBB, true);
+    bool Primary = true;
+    Workqueue.push_back(MBB);
+    while (!Workqueue.empty()) {
+      MachineBasicBlock *ActiveMBB = &*Workqueue.back();
+      Workqueue.pop_back();
+      processBasicBlock(ActiveMBB, Primary);
+      bool Done = isBlockDone(ActiveMBB);
+      for (auto *Succ : ActiveMBB->successors()) {
+        if (!isBlockDone(Succ)) {
+          if (Primary) {
+            MBBInfos[Succ].IncomingProcessed++;
+          }
+          if (Done) {
+            MBBInfos[Succ].IncomingCompleted++;
+          }
+          if (isBlockDone(Succ)) {
+            Workqueue.push_back(Succ);
+          }
+        }
+      }
+      Primary = false;
+    }
   }
 
   // We need to go through again and finalize any blocks that are not done yet.

@@ -1,5 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-hexagon-hvx-double \
-; RUN:     -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-bit=0 < %s | FileCheck %s
 
 ; This spill should be eliminated.
 ; CHECK-NOT: vmem(r29+#6)
@@ -140,5 +139,5 @@ declare <64 x i32> @llvm.hexagon.V6.vmpyuh.acc.128B(<64 x i32>, <32 x i32>, i32)
 
 declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-double" }
 attributes #1 = { nounwind readnone }

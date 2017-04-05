@@ -112,6 +112,59 @@ public:
     OrigTerminator->eraseFromParent();
   }
 
+  /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from
+  /// @R.
+  ///
+  /// CodeGeneration does not copy lifetime markers into the optimized SCoP,
+  /// which would leave the them only in the original path. This can transform
+  /// code such as
+  ///
+  ///     llvm.lifetime.start(%p)
+  ///     llvm.lifetime.end(%p)
+  ///
+  /// into
+  ///
+  ///     if (RTC) {
+  ///       // generated code
+  ///     } else {
+  ///       // original code
+  ///       llvm.lifetime.start(%p)
+  ///     }
+  ///     llvm.lifetime.end(%p)
+  ///
+  /// The current StackColoring algorithm cannot handle if some, but not all,
+  /// paths from the end marker to the entry block cross the start marker. Same
+  /// for start markers that do not always cross the end markers. We avoid any
+  /// issues by removing all lifetime markers, even from the original code.
+  ///
+  /// A better solution could be to hoist all llvm.lifetime.start to the split
+  /// node and all llvm.lifetime.end to the merge node, which should be
+  /// conservatively correct.
+  void removeLifetimeMarkers(Region *R) {
+    for (auto *BB : R->blocks()) {
+      auto InstIt = BB->begin();
+      auto InstEnd = BB->end();
+
+      while (InstIt != InstEnd) {
+        auto NextIt = InstIt;
+        ++NextIt;
+
+        if (auto *IT = dyn_cast<IntrinsicInst>(&*InstIt)) {
+          switch (IT->getIntrinsicID()) {
+          case llvm::Intrinsic::lifetime_start:
+          case llvm::Intrinsic::lifetime_end:
+            BB->getInstList().erase(InstIt);
+            break;
+          default:
+            break;
+          }
+        }
+
+        InstIt = NextIt;
+      }
+    }
+  }
+
   /// Generate LLVM-IR for the SCoP @p S.
   bool runOnScop(Scop &S) override {
     AI = &getAnalysis<IslAstInfo>();
@@ -146,6 +199,7 @@ public:
     // code generating this scop.
     BasicBlock *StartBlock =
         executeScopConditionally(S, Builder.getTrue(), *DT, *RI, *LI);
+    removeLifetimeMarkers(R);
     auto *SplitBlock = StartBlock->getSinglePredecessor();
 
     IslNodeBuilder NodeBuilder(Builder, Annotator, *DL, *LI, *SE, *DT, S,

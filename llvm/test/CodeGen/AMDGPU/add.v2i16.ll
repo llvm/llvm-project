@@ -1,11 +1,11 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_v2i16:
 ; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; VI: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_add_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_add_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -53,7 +53,7 @@ define amdgpu_kernel void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <
 ; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
 
 ; VI: v_add_i32
-; VI: v_add_i32_sdwa
+; VI: v_add_i32
 define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
   %add = add <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out
@@ -257,7 +257,7 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX9: v_pk_add_u16
 ; GFX9: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 
-; VI: v_add_u16_sdwa
+; VI: v_add_u16_e32
 ; VI: v_add_u16_e32
 
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16

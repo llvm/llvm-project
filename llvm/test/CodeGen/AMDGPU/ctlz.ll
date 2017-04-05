@@ -98,8 +98,7 @@ define amdgpu_kernel void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4
 
 ; FUNC-LABEL: {{^}}v_ctlz_i8:
 ; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
-; SI-DAG: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
-; VI-DAG: v_ffbh_u32_sdwa [[RESULT:v[0-9]+]], [[VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GCN-DAG: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_byte [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {

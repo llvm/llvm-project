@@ -296,9 +296,10 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 ; VI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x6400{{$}}
 ; VI-DAG: buffer_load_dword
 ; VI-NOT: and
+; VI: v_lshrrev_b32_e32 {{v[0-9]+}}, 16,
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}
-; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[K]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}
+; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %x = load <2 x half>, <2 x half> addrspace(1)* %in

@@ -383,16 +383,29 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 #if !defined(Elf_Phdr)
         typedef ElfW(Phdr) Elf_Phdr;
 #endif
+#if !defined(Elf_Addr)
+        typedef ElfW(Addr) Elf_Addr;
+#endif
 
  #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   #if !defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
    #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
   #endif
         size_t object_length;
+#if defined(__ANDROID__)
+        Elf_Addr image_base =
+            reinterpret_cast<Elf_Addr>(pinfo->dlpi_phdr) -
+            reinterpret_cast<const Elf_Phdr *>(pinfo->dlpi_phdr)->p_offset;
+#endif
+
         for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
           const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
           if (phdr->p_type == PT_LOAD) {
             uintptr_t begin = pinfo->dlpi_addr + phdr->p_vaddr;
+#if defined(__ANDROID__)
+            if (pinfo->dlpi_addr == 0 && phdr->p_vaddr < image_base)
+              begin = begin + image_base;
+#endif
             uintptr_t end = begin + phdr->p_memsz;
             if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
               cbdata->sects->dso_base = begin;
@@ -402,6 +415,10 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
           } else if (phdr->p_type == PT_GNU_EH_FRAME) {
             EHHeaderParser<LocalAddressSpace>::EHHeaderInfo hdrInfo;
             uintptr_t eh_frame_hdr_start = pinfo->dlpi_addr + phdr->p_vaddr;
+#if defined(__ANDROID__)
+            if (pinfo->dlpi_addr == 0 && phdr->p_vaddr < image_base)
+              eh_frame_hdr_start = eh_frame_hdr_start + image_base;
+#endif
             cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
             cbdata->sects->dwarf_index_section_length = phdr->p_memsz;
             EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
