@@ -43,6 +43,18 @@ s_cbranch_execz 7
 s_cbranch_execnz 8
 // GCN: s_cbranch_execnz 8 ; encoding: [0x08,0x00,0x89,0xbf]
 
+s_cbranch_cdbgsys 9
+// GCN: s_cbranch_cdbgsys 9 ; encoding: [0x09,0x00,0x97,0xbf]
+
+s_cbranch_cdbgsys_and_user 10
+// GCN: s_cbranch_cdbgsys_and_user 10 ; encoding: [0x0a,0x00,0x9a,0xbf]
+
+s_cbranch_cdbgsys_or_user 11
+// GCN: s_cbranch_cdbgsys_or_user 11 ; encoding: [0x0b,0x00,0x99,0xbf]
+
+s_cbranch_cdbguser 12
+// GCN: s_cbranch_cdbguser 12 ; encoding: [0x0c,0x00,0x98,0xbf]
+
 s_barrier
 // GCN: s_barrier ; encoding: [0x00,0x00,0x8a,0xbf]
 
@@ -83,6 +95,9 @@ s_waitcnt vmcnt(0), expcnt(0)
 
 s_sethalt 9
 // GCN: s_sethalt 9 ; encoding: [0x09,0x00,0x8d,0xbf]
+
+s_setkill 7
+// GCN: s_setkill 7 ; encoding: [0x07,0x00,0x8b,0xbf]
 
 s_sleep 10
 // GCN: s_sleep 10 ; encoding: [0x0a,0x00,0x8e,0xbf]

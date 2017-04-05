@@ -1794,6 +1794,15 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
                           ConstantInt::get(V->getType(), 1));
   }
 
+  // X | C == C --> X <=u C
+  // X | C != C --> X  >u C
+  //   iff C+1 is a power of 2 (C is a bitmask of the low bits)
+  if (Cmp.isEquality() && Cmp.getOperand(1) == Or->getOperand(1) &&
+      (*C + 1).isPowerOf2()) {
+    Pred = (Pred == CmpInst::ICMP_EQ) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
+    return new ICmpInst(Pred, Or->getOperand(0), Or->getOperand(1));
+  }
+
   if (!Cmp.isEquality() || *C != 0 || !Or->hasOneUse())
     return nullptr;
 

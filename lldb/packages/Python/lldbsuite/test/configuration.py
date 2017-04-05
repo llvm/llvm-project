@@ -66,7 +66,7 @@ categoriesList = None
 # set to true if we are going to use categories for cherry-picking test cases
 useCategories = False
 # Categories we want to skip
-skipCategories = []
+skipCategories = ["darwin-log"]
 # use this to track per-category failures
 failuresPerCategory = {}
 

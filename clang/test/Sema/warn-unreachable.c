@@ -451,3 +451,13 @@ void unaryOpFixitCastSubExpr(int x) {
             // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:")"
   unaryOpFixitCastSubExpr(x); // expected-warning {{code will never be executed}}
 }
+
+#define false 0
+#define true 1
+
+void testTrueFalseMacros() {
+  if (false) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    testTrueFalseMacros(); // expected-warning {{code will never be executed}}
+  if (!true) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    testTrueFalseMacros(); // expected-warning {{code will never be executed}}
+}

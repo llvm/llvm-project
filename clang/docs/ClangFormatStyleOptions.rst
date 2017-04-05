@@ -1462,7 +1462,8 @@ the configuration (without a prefix: ``Auto``).
     Use C++03-compatible syntax.
 
   * ``LS_Cpp11`` (in configuration: ``Cpp11``)
-    Use features of C++11 (e.g. ``A<A<int>>`` instead of ``A<A<int> >``).
+    Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of 
+    ``A<A<int> >``).
 
   * ``LS_Auto`` (in configuration: ``Auto``)
     Automatic detection based on the input.

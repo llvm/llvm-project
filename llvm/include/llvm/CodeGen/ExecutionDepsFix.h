@@ -205,7 +205,6 @@ private:
   void leaveBasicBlock(MachineBasicBlock*);
   bool isBlockDone(MachineBasicBlock *);
   void processBasicBlock(MachineBasicBlock *MBB, bool PrimaryPass);
-  void updateSuccessors(MachineBasicBlock *MBB, bool PrimaryPass);
   bool visitInstr(MachineInstr *);
   void processDefs(MachineInstr *, bool breakDependency, bool Kill);
   void visitSoftInstr(MachineInstr*, unsigned mask);

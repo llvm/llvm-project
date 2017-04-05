@@ -78,7 +78,7 @@ unsigned X86TTIImpl::getNumberOfRegisters(bool Vector) {
   return 8;
 }
 
-unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) {
+unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) const {
   if (Vector) {
     if (ST->hasAVX512())
       return 512;
@@ -93,6 +93,10 @@ unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) {
     return 64;
 
   return 32;
+}
+
+unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
+  return getRegisterBitWidth(true);
 }
 
 unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {

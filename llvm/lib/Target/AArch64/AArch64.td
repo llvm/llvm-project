@@ -27,7 +27,7 @@ def FeatureNEON : SubtargetFeature<"neon", "HasNEON", "true",
   "Enable Advanced SIMD instructions", [FeatureFPARMv8]>;
 
 def FeatureCrypto : SubtargetFeature<"crypto", "HasCrypto", "true",
-  "Enable cryptographic instructions">;
+  "Enable cryptographic instructions", [FeatureNEON]>;
 
 def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
   "Enable ARMv8 CRC-32 checksum instructions">;

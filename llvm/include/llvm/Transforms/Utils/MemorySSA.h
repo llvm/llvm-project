@@ -1108,7 +1108,7 @@ upward_defs(const MemoryAccessPair &Pair) {
 /// thing that would clobber the same memory is, you want the optimized chain.
 template <class T, bool UseOptimizedChain = false>
 struct def_chain_iterator
-    : public iterator_facade_base<def_chain_iterator<T>,
+    : public iterator_facade_base<def_chain_iterator<T, UseOptimizedChain>,
                                   std::forward_iterator_tag, MemoryAccess *> {
   def_chain_iterator() : MA(nullptr) {}
   def_chain_iterator(T MA) : MA(MA) {}
