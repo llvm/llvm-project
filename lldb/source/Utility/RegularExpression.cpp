@@ -9,15 +9,9 @@
 
 #include "lldb/Utility/RegularExpression.h"
 
-// C Includes
-// C++ Includes
-#include <cstring>
-
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
-#include "lldb/Utility/Error.h"
+#include <string>
 
 //----------------------------------------------------------------------
 // Enable enhanced mode if it is available. This allows for things like

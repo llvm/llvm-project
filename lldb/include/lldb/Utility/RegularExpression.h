@@ -36,10 +36,12 @@ inline void regfree(llvm_regex_t *a) { llvm_regfree(a); }
 #endif
 #include <regex.h>
 #endif
-#include <stdint.h>
 
 #include <string>
 #include <vector>
+
+#include <stddef.h> // for size_t
+#include <stdint.h>
 
 namespace llvm {
 class StringRef;

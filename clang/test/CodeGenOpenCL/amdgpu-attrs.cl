@@ -129,6 +129,16 @@ kernel void flat_work_group_size_32_64_waves_per_eu_2_4_num_sgpr_32_num_vgpr_64(
 // CHECK: define amdgpu_kernel void @flat_work_group_size_32_64_waves_per_eu_2_4_num_sgpr_32_num_vgpr_64() [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64:#[0-9]+]]
 }
 
+__attribute__((reqd_work_group_size(32, 2, 1))) // expected-no-diagnostics
+kernel void reqd_work_group_size_32_2_1() {
+// CHECK: define amdgpu_kernel void @reqd_work_group_size_32_2_1() [[FLAT_WORK_GROUP_SIZE_64_64:#[0-9]+]]
+}
+__attribute__((reqd_work_group_size(32, 2, 1), amdgpu_flat_work_group_size(16, 128))) // expected-no-diagnostics
+kernel void reqd_work_group_size_32_2_1_flat_work_group_size_16_128() {
+// CHECK: define amdgpu_kernel void @reqd_work_group_size_32_2_1_flat_work_group_size_16_128() [[FLAT_WORK_GROUP_SIZE_16_128:#[0-9]+]]
+}
+
+
 // Make sure this is silently accepted on other targets.
 // X86-NOT: "amdgpu-flat-work-group-size"
 // X86-NOT: "amdgpu-waves-per-eu"
@@ -142,6 +152,8 @@ kernel void flat_work_group_size_32_64_waves_per_eu_2_4_num_sgpr_32_num_vgpr_64(
 // CHECK-NOT: "amdgpu-num-vgpr"="0"
 
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = { noinline nounwind "amdgpu-flat-work-group-size"="32,64"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = { noinline nounwind "amdgpu-flat-work-group-size"="64,64"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = { noinline nounwind "amdgpu-flat-work-group-size"="16,128"
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = { noinline nounwind "amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[WAVES_PER_EU_2_4]] = { noinline nounwind "amdgpu-waves-per-eu"="2,4"
 // CHECK-DAG: attributes [[NUM_SGPR_32]] = { noinline nounwind "amdgpu-num-sgpr"="32"

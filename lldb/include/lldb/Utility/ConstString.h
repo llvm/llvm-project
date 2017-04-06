@@ -10,13 +10,17 @@
 #ifndef liblldb_ConstString_h_
 #define liblldb_ConstString_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h" // for format_provider
 
-// Project includes
-#include "lldb/lldb-private.h"
+#include <stddef.h> // for size_t
+
+namespace lldb_private {
+class Stream;
+}
+namespace llvm {
+class raw_ostream;
+}
 
 namespace lldb_private {
 

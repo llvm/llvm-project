@@ -10,11 +10,14 @@
 #ifndef lldb_Baton_h_
 #define lldb_Baton_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/lldb-enumerations.h" // for DescriptionLevel
 #include "lldb/lldb-public.h"
+
+#include <memory> // for unique_ptr
+
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

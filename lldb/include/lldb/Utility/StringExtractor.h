@@ -10,15 +10,14 @@
 #ifndef utility_StringExtractor_h_
 #define utility_StringExtractor_h_
 
-// C Includes
-// C++ Includes
-#include <stdint.h>
-#include <string>
-
 // Other libraries and framework includes
 // Project includes
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+
+#include <stddef.h> // for size_t
+#include <stdint.h>
+#include <string>
 
 class StringExtractor {
 public:

@@ -13,7 +13,9 @@
 #if defined(__cplusplus)
 
 #include "lldb/Utility/ConstString.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/Triple.h"
 
 namespace lldb_private {

@@ -14,7 +14,18 @@
 #define _DARWIN_UNLIMITED_SELECT
 #endif
 
-// C Includes
+#include "lldb/Utility/SelectHelper.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/LLDBAssert.h"
+#include "lldb/lldb-enumerations.h" // for ErrorType::eErrorTypePOSIX
+#include "lldb/lldb-types.h"        // for socket_t
+
+#include "llvm/ADT/DenseMap.h" // for DenseMapPair, DenseMap, Dense...
+#include "llvm/ADT/Optional.h" // for Optional
+
+#include <algorithm>
+#include <chrono> // for microseconds, seconds, steady...
+
 #include <errno.h>
 #if defined(_WIN32)
 // Define NOMINMAX to avoid macros that conflict with std::min and std::max
@@ -24,16 +35,6 @@
 #include <sys/select.h>
 #endif
 
-// C++ Includes
-#include <algorithm>
-
-// Other libraries and framework includes
-#include "llvm/ADT/SmallVector.h"
-
-// Project includes
-#include "lldb/Utility/Error.h"
-#include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/SelectHelper.h"
 
 SelectHelper::SelectHelper()
     : m_fd_map(), m_end_time() // Infinite timeout unless
