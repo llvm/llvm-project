@@ -226,6 +226,15 @@ class LLVM_NODISCARD APInt {
   /// out-of-line slow case for flipAllBits.
   void flipAllBitsSlowCase();
 
+  /// out-of-line slow case for operator&=.
+  APInt& AndAssignSlowCase(const APInt& RHS);
+
+  /// out-of-line slow case for operator|=.
+  APInt& OrAssignSlowCase(const APInt& RHS);
+
+  /// out-of-line slow case for operator^=.
+  APInt& XorAssignSlowCase(const APInt& RHS);
+
 public:
   /// \name Constructors
   /// @{
@@ -708,7 +717,14 @@ public:
   /// assigned to *this.
   ///
   /// \returns *this after ANDing with RHS.
-  APInt &operator&=(const APInt &RHS);
+  APInt &operator&=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL &= RHS.VAL;
+      return *this;
+    }
+    return AndAssignSlowCase(RHS);
+  }
 
   /// \brief Bitwise AND assignment operator.
   ///
@@ -731,7 +747,14 @@ public:
   /// assigned *this;
   ///
   /// \returns *this after ORing with RHS.
-  APInt &operator|=(const APInt &RHS);
+  APInt &operator|=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL |= RHS.VAL;
+      return *this;
+    }
+    return OrAssignSlowCase(RHS);
+  }
 
   /// \brief Bitwise OR assignment operator.
   ///
@@ -754,7 +777,14 @@ public:
   /// assigned to *this.
   ///
   /// \returns *this after XORing with RHS.
-  APInt &operator^=(const APInt &RHS);
+  APInt &operator^=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL ^= RHS.VAL;
+      return *this;
+    }
+    return XorAssignSlowCase(RHS);
+  }
 
   /// \brief Bitwise XOR assignment operator.
   ///
