@@ -8040,6 +8040,11 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
+static bool isContractable(SDNode *N) {
+  SDNodeFlags F = cast<BinaryWithFlagsSDNode>(N)->Flags;
+  return F.hasAllowContract() || F.hasUnsafeAlgebra();
+}
+
 /// Try to perform FMA combining on a given FADD node.
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDValue N0 = N->getOperand(0);
@@ -8048,24 +8053,27 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDLoc SL(N);
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
 
   // Floating-point multiply-add with intermediate rounding.
   bool HasFMAD = (LegalOperations && TLI.isOperationLegal(ISD::FMAD, VT));
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      AllowFusion && TLI.isFMAFasterThanFMulAndFAdd(VT) &&
+      TLI.isFMAFasterThanFMulAndFAdd(VT) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
+  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+                              Options.UnsafeFPMath || HasFMAD);
+  // If the addition is not contractable, do not combine.
+  if (!AllowFusionGlobally && !isContractable(N))
+    return SDValue();
+
   const SelectionDAGTargetInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
-  ;
-  if (AllowFusion && STI && STI->generateFMAsInMachineCombiner(OptLevel))
+  if (STI && STI->generateFMAsInMachineCombiner(OptLevel))
     return SDValue();
 
   // Always prefer FMAD to FMA for precision.
@@ -8073,35 +8081,39 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
   bool LookThroughFPExt = TLI.isFPExtFree(VT);
 
+  // Is the node an FMUL and contractable either due to global flags or
+  // SDNodeFlags.
+  auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
+    if (N.getOpcode() != ISD::FMUL)
+      return false;
+    return AllowFusionGlobally || isContractable(N.getNode());
+  };
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && N0.getOpcode() == ISD::FMUL &&
-      N1.getOpcode() == ISD::FMUL) {
+  if (Aggressive && isContractableFMUL(N0) && isContractableFMUL(N1)) {
     if (N0.getNode()->use_size() > N1.getNode()->use_size())
       std::swap(N0, N1);
   }
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
-  if (N0.getOpcode() == ISD::FMUL &&
-      (Aggressive || N0->hasOneUse())) {
+  if (isContractableFMUL(N0) && (Aggressive || N0->hasOneUse())) {
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        N0.getOperand(0), N0.getOperand(1), N1);
   }
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
   // Note: Commutes FADD operands.
-  if (N1.getOpcode() == ISD::FMUL &&
-      (Aggressive || N1->hasOneUse())) {
+  if (isContractableFMUL(N1) && (Aggressive || N1->hasOneUse())) {
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        N1.getOperand(0), N1.getOperand(1), N0);
   }
 
   // Look through FP_EXTEND nodes to do more combining.
-  if (AllowFusion && LookThroughFPExt) {
+  if (LookThroughFPExt) {
     // fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
     if (N0.getOpcode() == ISD::FP_EXTEND) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N00))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                        N00.getOperand(0)),
@@ -8113,7 +8125,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     // Note: Commutes FADD operands.
     if (N1.getOpcode() == ISD::FP_EXTEND) {
       SDValue N10 = N1.getOperand(0);
-      if (N10.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N10))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                        N10.getOperand(0)),
@@ -8154,7 +8166,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
                                      N0));
     }
 
-    if (AllowFusion && LookThroughFPExt) {
+    if (LookThroughFPExt) {
       // fold (fadd (fma x, y, (fpext (fmul u, v))), z)
       //   -> (fma x, y, (fma (fpext u), (fpext v), z))
       auto FoldFAddFMAFPExtFMul = [&] (
@@ -8169,7 +8181,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N02 = N0.getOperand(2);
         if (N02.getOpcode() == ISD::FP_EXTEND) {
           SDValue N020 = N02.getOperand(0);
-          if (N020.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N020))
             return FoldFAddFMAFPExtFMul(N0.getOperand(0), N0.getOperand(1),
                                         N020.getOperand(0), N020.getOperand(1),
                                         N1);
@@ -8195,7 +8207,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N00 = N0.getOperand(0);
         if (N00.getOpcode() == PreferredFusedOpcode) {
           SDValue N002 = N00.getOperand(2);
-          if (N002.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N002))
             return FoldFAddFPExtFMAFMul(N00.getOperand(0), N00.getOperand(1),
                                         N002.getOperand(0), N002.getOperand(1),
                                         N1);
@@ -8208,7 +8220,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N12 = N1.getOperand(2);
         if (N12.getOpcode() == ISD::FP_EXTEND) {
           SDValue N120 = N12.getOperand(0);
-          if (N120.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N120))
             return FoldFAddFMAFPExtFMul(N1.getOperand(0), N1.getOperand(1),
                                         N120.getOperand(0), N120.getOperand(1),
                                         N0);
@@ -8224,7 +8236,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue N10 = N1.getOperand(0);
         if (N10.getOpcode() == PreferredFusedOpcode) {
           SDValue N102 = N10.getOperand(2);
-          if (N102.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N102))
             return FoldFAddFPExtFMAFMul(N10.getOperand(0), N10.getOperand(1),
                                         N102.getOperand(0), N102.getOperand(1),
                                         N0);
@@ -8244,23 +8256,26 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   SDLoc SL(N);
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
-
   // Floating-point multiply-add with intermediate rounding.
   bool HasFMAD = (LegalOperations && TLI.isOperationLegal(ISD::FMAD, VT));
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      AllowFusion && TLI.isFMAFasterThanFMulAndFAdd(VT) &&
+      TLI.isFMAFasterThanFMulAndFAdd(VT) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
+  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+                              Options.UnsafeFPMath || HasFMAD);
+  // If the subtraction is not contractable, do not combine.
+  if (!AllowFusionGlobally && !isContractable(N))
+    return SDValue();
+
   const SelectionDAGTargetInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
-  if (AllowFusion && STI && STI->generateFMAsInMachineCombiner(OptLevel))
+  if (STI && STI->generateFMAsInMachineCombiner(OptLevel))
     return SDValue();
 
   // Always prefer FMAD to FMA for precision.
@@ -8268,9 +8283,16 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
   bool LookThroughFPExt = TLI.isFPExtFree(VT);
 
+  // Is the node an FMUL and contractable either due to global flags or
+  // SDNodeFlags.
+  auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
+    if (N.getOpcode() != ISD::FMUL)
+      return false;
+    return AllowFusionGlobally || isContractable(N.getNode());
+  };
+
   // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
-  if (N0.getOpcode() == ISD::FMUL &&
-      (Aggressive || N0->hasOneUse())) {
+  if (isContractableFMUL(N0) && (Aggressive || N0->hasOneUse())) {
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        N0.getOperand(0), N0.getOperand(1),
                        DAG.getNode(ISD::FNEG, SL, VT, N1));
@@ -8278,16 +8300,14 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
   // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
   // Note: Commutes FSUB operands.
-  if (N1.getOpcode() == ISD::FMUL &&
-      (Aggressive || N1->hasOneUse()))
+  if (isContractableFMUL(N1) && (Aggressive || N1->hasOneUse()))
     return DAG.getNode(PreferredFusedOpcode, SL, VT,
                        DAG.getNode(ISD::FNEG, SL, VT,
                                    N1.getOperand(0)),
                        N1.getOperand(1), N0);
 
   // fold (fsub (fneg (fmul, x, y)), z) -> (fma (fneg x), y, (fneg z))
-  if (N0.getOpcode() == ISD::FNEG &&
-      N0.getOperand(0).getOpcode() == ISD::FMUL &&
+  if (N0.getOpcode() == ISD::FNEG && isContractableFMUL(N0.getOperand(0)) &&
       (Aggressive || (N0->hasOneUse() && N0.getOperand(0).hasOneUse()))) {
     SDValue N00 = N0.getOperand(0).getOperand(0);
     SDValue N01 = N0.getOperand(0).getOperand(1);
@@ -8297,12 +8317,12 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   }
 
   // Look through FP_EXTEND nodes to do more combining.
-  if (AllowFusion && LookThroughFPExt) {
+  if (LookThroughFPExt) {
     // fold (fsub (fpext (fmul x, y)), z)
     //   -> (fma (fpext x), (fpext y), (fneg z))
     if (N0.getOpcode() == ISD::FP_EXTEND) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N00))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                        N00.getOperand(0)),
@@ -8316,7 +8336,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     // Note: Commutes FSUB operands.
     if (N1.getOpcode() == ISD::FP_EXTEND) {
       SDValue N10 = N1.getOperand(0);
-      if (N10.getOpcode() == ISD::FMUL)
+      if (isContractableFMUL(N10))
         return DAG.getNode(PreferredFusedOpcode, SL, VT,
                            DAG.getNode(ISD::FNEG, SL, VT,
                                        DAG.getNode(ISD::FP_EXTEND, SL, VT,
@@ -8336,7 +8356,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       SDValue N00 = N0.getOperand(0);
       if (N00.getOpcode() == ISD::FNEG) {
         SDValue N000 = N00.getOperand(0);
-        if (N000.getOpcode() == ISD::FMUL) {
+        if (isContractableFMUL(N000)) {
           return DAG.getNode(ISD::FNEG, SL, VT,
                              DAG.getNode(PreferredFusedOpcode, SL, VT,
                                          DAG.getNode(ISD::FP_EXTEND, SL, VT,
@@ -8358,7 +8378,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       SDValue N00 = N0.getOperand(0);
       if (N00.getOpcode() == ISD::FP_EXTEND) {
         SDValue N000 = N00.getOperand(0);
-        if (N000.getOpcode() == ISD::FMUL) {
+        if (isContractableFMUL(N000)) {
           return DAG.getNode(ISD::FNEG, SL, VT,
                              DAG.getNode(PreferredFusedOpcode, SL, VT,
                                          DAG.getNode(ISD::FP_EXTEND, SL, VT,
@@ -8378,10 +8398,9 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     //   -> (fma x, y (fma u, v, (fneg z)))
     // FIXME: The UnsafeAlgebra flag should be propagated to FMA/FMAD, but FMF
     // are currently only supported on binary nodes.
-    if (Options.UnsafeFPMath &&
-        N0.getOpcode() == PreferredFusedOpcode &&
-        N0.getOperand(2).getOpcode() == ISD::FMUL &&
-        N0->hasOneUse() && N0.getOperand(2)->hasOneUse()) {
+    if (Options.UnsafeFPMath && N0.getOpcode() == PreferredFusedOpcode &&
+        isContractableFMUL(N0.getOperand(2)) && N0->hasOneUse() &&
+        N0.getOperand(2)->hasOneUse()) {
       return DAG.getNode(PreferredFusedOpcode, SL, VT,
                          N0.getOperand(0), N0.getOperand(1),
                          DAG.getNode(PreferredFusedOpcode, SL, VT,
@@ -8395,9 +8414,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     //   -> (fma (fneg y), z, (fma (fneg u), v, x))
     // FIXME: The UnsafeAlgebra flag should be propagated to FMA/FMAD, but FMF
     // are currently only supported on binary nodes.
-    if (Options.UnsafeFPMath &&
-        N1.getOpcode() == PreferredFusedOpcode &&
-        N1.getOperand(2).getOpcode() == ISD::FMUL) {
+    if (Options.UnsafeFPMath && N1.getOpcode() == PreferredFusedOpcode &&
+        isContractableFMUL(N1.getOperand(2))) {
       SDValue N20 = N1.getOperand(2).getOperand(0);
       SDValue N21 = N1.getOperand(2).getOperand(1);
       return DAG.getNode(PreferredFusedOpcode, SL, VT,
@@ -8410,14 +8428,14 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
                                      N21, N0));
     }
 
-    if (AllowFusion && LookThroughFPExt) {
+    if (LookThroughFPExt) {
       // fold (fsub (fma x, y, (fpext (fmul u, v))), z)
       //   -> (fma x, y (fma (fpext u), (fpext v), (fneg z)))
       if (N0.getOpcode() == PreferredFusedOpcode) {
         SDValue N02 = N0.getOperand(2);
         if (N02.getOpcode() == ISD::FP_EXTEND) {
           SDValue N020 = N02.getOperand(0);
-          if (N020.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N020))
             return DAG.getNode(PreferredFusedOpcode, SL, VT,
                                N0.getOperand(0), N0.getOperand(1),
                                DAG.getNode(PreferredFusedOpcode, SL, VT,
@@ -8440,7 +8458,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
         SDValue N00 = N0.getOperand(0);
         if (N00.getOpcode() == PreferredFusedOpcode) {
           SDValue N002 = N00.getOperand(2);
-          if (N002.getOpcode() == ISD::FMUL)
+          if (isContractableFMUL(N002))
             return DAG.getNode(PreferredFusedOpcode, SL, VT,
                                DAG.getNode(ISD::FP_EXTEND, SL, VT,
                                            N00.getOperand(0)),
@@ -8461,7 +8479,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       if (N1.getOpcode() == PreferredFusedOpcode &&
         N1.getOperand(2).getOpcode() == ISD::FP_EXTEND) {
         SDValue N120 = N1.getOperand(2).getOperand(0);
-        if (N120.getOpcode() == ISD::FMUL) {
+        if (isContractableFMUL(N120)) {
           SDValue N1200 = N120.getOperand(0);
           SDValue N1201 = N120.getOperand(1);
           return DAG.getNode(PreferredFusedOpcode, SL, VT,
@@ -8488,7 +8506,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
         SDValue N100 = N1.getOperand(0).getOperand(0);
         SDValue N101 = N1.getOperand(0).getOperand(1);
         SDValue N102 = N1.getOperand(0).getOperand(2);
-        if (N102.getOpcode() == ISD::FMUL) {
+        if (isContractableFMUL(N102)) {
           SDValue N1020 = N102.getOperand(0);
           SDValue N1021 = N102.getOperand(1);
           return DAG.getNode(PreferredFusedOpcode, SL, VT,
