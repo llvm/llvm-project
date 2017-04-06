@@ -71,8 +71,7 @@ public:
   static Error TcpConnect(llvm::StringRef host_and_port,
                           bool child_processes_inherit, Socket *&socket);
   static Error UdpConnect(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&send_socket,
-                          Socket *&recv_socket);
+                          bool child_processes_inherit, Socket *&socket);
   static Error UnixDomainConnect(llvm::StringRef host_and_port,
                                  bool child_processes_inherit, Socket *&socket);
   static Error UnixDomainAccept(llvm::StringRef host_and_port,

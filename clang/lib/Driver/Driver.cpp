@@ -1170,7 +1170,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     TC.printVerboseInfo(llvm::errs());
 
   if (C.getArgs().hasArg(options::OPT_print_resource_dir)) {
-    llvm::outs() << ResourceDir;
+    llvm::outs() << ResourceDir << '\n';
     return false;
   }
 

@@ -132,7 +132,7 @@ private:
     Error setProtections(void *block, unsigned Flags) {
       auto I = Allocs.find(block);
       if (I == Allocs.end())
-        return orcError(OrcErrorCode::RemoteMProtectAddrUnrecognized);
+        return errorCodeToError(orcError(OrcErrorCode::RemoteMProtectAddrUnrecognized));
       return errorCodeToError(
           sys::Memory::protectMappedMemory(I->second, Flags));
     }
@@ -198,7 +198,8 @@ private:
   Error handleCreateRemoteAllocator(ResourceIdMgr::ResourceId Id) {
     auto I = Allocators.find(Id);
     if (I != Allocators.end())
-      return orcError(OrcErrorCode::RemoteAllocatorIdAlreadyInUse);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteAllocatorIdAlreadyInUse));
     DEBUG(dbgs() << "  Created allocator " << Id << "\n");
     Allocators[Id] = Allocator();
     return Error::success();
@@ -207,7 +208,8 @@ private:
   Error handleCreateIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
     auto I = IndirectStubsOwners.find(Id);
     if (I != IndirectStubsOwners.end())
-      return orcError(OrcErrorCode::RemoteIndirectStubsOwnerIdAlreadyInUse);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteIndirectStubsOwnerIdAlreadyInUse));
     DEBUG(dbgs() << "  Create indirect stubs owner " << Id << "\n");
     IndirectStubsOwners[Id] = ISBlockOwnerList();
     return Error::success();
@@ -224,7 +226,8 @@ private:
   Error handleDestroyRemoteAllocator(ResourceIdMgr::ResourceId Id) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
-      return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteAllocatorDoesNotExist));
     Allocators.erase(I);
     DEBUG(dbgs() << "  Destroyed allocator " << Id << "\n");
     return Error::success();
@@ -233,7 +236,8 @@ private:
   Error handleDestroyIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
     auto I = IndirectStubsOwners.find(Id);
     if (I == IndirectStubsOwners.end())
-      return orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist));
     IndirectStubsOwners.erase(I);
     return Error::success();
   }
@@ -246,7 +250,8 @@ private:
 
     auto StubOwnerItr = IndirectStubsOwners.find(Id);
     if (StubOwnerItr == IndirectStubsOwners.end())
-      return orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist));
 
     typename TargetT::IndirectStubsInfo IS;
     if (auto Err =
@@ -361,7 +366,8 @@ private:
                                               uint64_t Size, uint32_t Align) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
-      return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteAllocatorDoesNotExist));
     auto &Allocator = I->second;
     void *LocalAllocAddr = nullptr;
     if (auto Err = Allocator.allocate(LocalAllocAddr, Size, Align))
@@ -380,7 +386,8 @@ private:
                              JITTargetAddress Addr, uint32_t Flags) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
-      return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
+      return errorCodeToError(
+               orcError(OrcErrorCode::RemoteAllocatorDoesNotExist));
     auto &Allocator = I->second;
     void *LocalAddr = reinterpret_cast<void *>(static_cast<uintptr_t>(Addr));
     DEBUG(dbgs() << "  Allocator " << Id << " set permissions on " << LocalAddr
