@@ -47,44 +47,6 @@
   FUNC3(__hc_##name, __ocml_##name##_f32, float) \
   FUNC3(__hc_##name##_double, __ocml_##name##_f64, double)
 
-#define FUNC4(name, ocml_name, T) \
-  ATTR T name(T x, int *y) \
-  { \
-    int _y; \
-    T r = ocml_name(x, &_y); \
-    *y = _y; \
-    return r; \
-  }
-
-#define FUNC4A(name) \
-  FUNC4(__hc_##name, __ocml_##name##_f32, float) \
-  FUNC4(__hc_##name##_double, __ocml_##name##_f64, double)
-
-#define FUNC5(name, ocml_name, T) \
-  ATTR T name(T x, T *y) \
-  { \
-    T _y; \
-    T r = ocml_name(x, &_y); \
-    *y = _y; \
-    return r; \
-  }
-
-#define FUNC5A(name) \
-  FUNC5(__hc_##name, __ocml_##name##_f32, float) \
-  FUNC5(__hc_##name##_double, __ocml_##name##_f64, double)
-
-#define FUNC6(name, ocml_name, T) \
-  ATTR T name(T x, T y, int *z) \
-  { \
-    int _z; \
-    T r = ocml_name(x, y, &_z); \
-    *z = _z; \
-    return r; \
-  }
-
-#define FUNC6A(name) \
-  FUNC6(__hc_##name, __ocml_##name##_f32, float) \
-  FUNC6(__hc_##name##_double, __ocml_##name##_f64, double)
 
 FUNC1A(acos)
 FUNC1A(acosh)
@@ -112,26 +74,31 @@ FUNC3A(fma)
 FUNC2A(fmax)
 FUNC2A(fmin)
 FUNC2A(fmod)
-FUNC4A(frexp)
+// frexp
+// frexp_global
+// frexp_local
 FUNC2A(hypot)
 FUNC1P(ilogb)
 FUNC1P(isfinite)
 FUNC1P(isinf)
 FUNC1P(isnan)
 FUNC1P(isnormal)
-FUNC4A(lgamma_r)
+// lgammaf
+// lgamma
 FUNC1A(log)
 FUNC1A(log10)
 FUNC1A(log2)
 FUNC1A(log1p)
 FUNC1A(logb)
-FUNC5A(modf)
+// modff
+// modf
 FUNC1B(nan)
 FUNC1A(nearbyint)
 FUNC2A(nextafter)
 FUNC2A(pow)
 FUNC2A(remainder)
-FUNC6A(remquo)
+// remquof
+// remquo
 FUNC1A(round)
 FUNC1A(rsqrt)
 FUNC1A(sinpi)
@@ -139,7 +106,7 @@ FUNC2(__hc_ldexp, __ocml_ldexp_f32, float, float, int)
 FUNC2(__hc_ldexp_double, __ocml_ldexp_f64, double, double, int)
 FUNC1P(signbit)
 FUNC1A(sin)
-FUNC5A(sincos)
+// sincos
 FUNC1A(sinh)
 FUNC1A(sqrt)
 FUNC1A(tgamma)
@@ -147,4 +114,3 @@ FUNC1A(tan)
 FUNC1A(tanh)
 FUNC1A(tanpi)
 FUNC1A(trunc)
-
