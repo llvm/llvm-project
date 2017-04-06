@@ -20,6 +20,10 @@
 
 namespace lldb_private {
 
+class ArchSpec;
+class ModuleSpec;
+class UUID;
+
 class Symbols {
 public:
   //----------------------------------------------------------------------

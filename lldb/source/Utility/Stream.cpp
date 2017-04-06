@@ -11,12 +11,12 @@
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm/ADT/SmallString.h" // for SmallString
+
+#include <string>
 
 #include <inttypes.h>
+#include <stddef.h>
 
 using namespace lldb;
 using namespace lldb_private;

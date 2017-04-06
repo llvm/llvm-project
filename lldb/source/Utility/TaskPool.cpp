@@ -9,6 +9,10 @@
 
 #include "lldb/Utility/TaskPool.h"
 
+#include <cstdint> // for uint32_t
+#include <queue>   // for queue
+#include <thread>  // for thread
+
 namespace {
 class TaskPoolImpl {
 public:

@@ -9,14 +9,5 @@
 
 #include "lldb/Utility/Baton.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Stream.h"
-
-using namespace lldb;
-using namespace lldb_private;
-
-void UntypedBaton::GetDescription(Stream *s,
-                                  lldb::DescriptionLevel level) const {}
+void lldb_private::UntypedBaton::GetDescription(
+    Stream *s, lldb::DescriptionLevel level) const {}

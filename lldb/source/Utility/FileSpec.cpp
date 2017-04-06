@@ -8,19 +8,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StringList.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallString.h" // for SmallString
+#include "llvm/ADT/SmallVector.h" // for SmallVectorTemplat...
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ConvertUTF.h"
+#include "llvm/ADT/Triple.h"         // for Triple
+#include "llvm/ADT/Twine.h"          // for Twine
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_WIN32
+#include "llvm/Support/ErrorOr.h"    // for ErrorOr
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h" // for raw_ostream, fs
+
+#include <algorithm>    // for replace, min, unique
+#include <system_error> // for error_code
+#include <vector>       // for vector
+
+#include <assert.h> // for assert
+#include <stdio.h>  // for size_t, NULL, snpr...
+#include <string.h> // for strcmp
 
 using namespace lldb;
 using namespace lldb_private;

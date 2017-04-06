@@ -1,5 +1,4 @@
-//===-- StreamGDBRemote.h ----------------------------------------*- C++
-//-*-===//
+//===-- StreamGDBRemote.h ----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,13 +10,11 @@
 #ifndef liblldb_StreamGDBRemote_h_
 #define liblldb_StreamGDBRemote_h_
 
-// C Includes
-// C++ Includes
+#include "lldb/Utility/StreamString.h" // for StreamString
+#include "lldb/lldb-enumerations.h"    // for ByteOrder
 
-// Other libraries and framework includes
-// Project includes
-
-#include "lldb/Utility/StreamString.h"
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
 
 namespace lldb_private {
 

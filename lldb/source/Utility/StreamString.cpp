@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StreamString.h"
-#include <stdio.h>
 
 using namespace lldb;
 using namespace lldb_private;

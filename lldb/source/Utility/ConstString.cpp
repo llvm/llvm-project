@@ -9,19 +9,23 @@
 
 #include "lldb/Utility/ConstString.h"
 
-// C Includes
-// C++ Includes
-#include <array>
-#include <mutex>
+#include "lldb/Utility/Stream.h"
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/iterator.h"            // for iterator_facade_base
+#include "llvm/Support/Allocator.h"       // for BumpPtrAllocator
+#include "llvm/Support/FormatProviders.h" // for format_provider
 #include "llvm/Support/RWMutex.h"
-
-// Project includes
 #include "llvm/Support/Threading.h"
-#include "lldb/Utility/Stream.h"
+
+#include <algorithm> // for min
+#include <array>
+#include <utility> // for make_pair, pair
+
+#include <inttypes.h> // for PRIu64
+#include <stdint.h>   // for uint8_t, uint32_t, uint64_t
+#include <string.h>   // for size_t, strlen
 
 using namespace lldb_private;
 

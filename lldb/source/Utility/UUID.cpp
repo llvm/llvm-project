@@ -12,16 +12,12 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Stream.h"
-
 #include "llvm/ADT/StringRef.h"
 
 // C Includes
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-
-// C++ Includes
-#include <string>
 
 namespace lldb_private {
 

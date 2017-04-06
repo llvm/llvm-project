@@ -10,15 +10,23 @@
 #ifndef LLDB_UTILITY_DATAEXTRACTOR_H
 #define LLDB_UTILITY_DATAEXTRACTOR_H
 
-// Other libraries and framework includes
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h" // for ByteOrder
+#include "lldb/lldb-forward.h"      // for DataBufferSP
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/SmallVector.h"
 
-// C Includes
-#include <limits.h>
 #include <stdint.h>
 #include <string.h>
+
+namespace lldb_private {
+class Log;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace llvm {
+template <typename T> class SmallVectorImpl;
+}
 
 // C++ Includes
 

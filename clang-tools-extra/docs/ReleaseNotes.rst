@@ -86,6 +86,11 @@ Improvements to clang-tidy
 
   Finds and replaces explicit calls to the constructor in a return statement by
   a braced initializer list so that the return type is not needlessly repeated.
+  
+- New `misc-forwarding-reference-overload
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-forwarding-reference-overload.html>`_ check
+
+  Finds perfect forwarding constructors that can unintentionally hide copy or move constructors.
 
 - Support clang-formatting of the code around applied fixes (``-format-style``
   command-line option).
