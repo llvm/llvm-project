@@ -10,15 +10,7 @@
 CONSTATTR INLINEATTR double
 MATH_MANGLE(logb)(double x)
 {
-    double ret;
-
-    if (AMD_OPT()) {
-        ret = (double)(BUILTIN_FREXP_EXP_F64(x) - 1);
-    } else {
-        int r = ((AS_INT2(x).hi >> 20) & 0x7ff) - EXPBIAS_DP64;
-        int rs = -1011 - (int)MATH_CLZL(AS_LONG(x) & MANTBITS_DP64);
-        ret = (double)(r == -EXPBIAS_DP64 ? rs : r);
-    }
+    double ret = (double)(BUILTIN_FREXP_EXP_F64(x) - 1);
 
     if (!FINITE_ONLY_OPT()) {
         double ax = BUILTIN_ABS_F64(x);

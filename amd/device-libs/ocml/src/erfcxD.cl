@@ -55,16 +55,8 @@ MATH_MANGLE(erfcx)(double x)
     }
 
     if (x <= -1.0) {
-        double x2h, x2l;
-        if (HAVE_FAST_FMA64()) {
-            x2h = ax * ax;
-            x2l = BUILTIN_FMA_F64(ax, ax, -x2h);
-        } else {
-            double xh = AS_DOUBLE(AS_ULONG(ax) & 0xffffffff00000000UL);
-            double xl = ax - xh;
-            x2h = xh*xh;
-            x2l = (ax + xh)*xl;
-        }
+        double x2h = ax * ax;
+        double x2l = BUILTIN_FMA_F64(ax, ax, -x2h);
         ret = MATH_MANGLE(exp)(x2h) * MATH_MANGLE(exp)(x2l) * 2.0 - ret;
         ret = x < -27.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
     }
