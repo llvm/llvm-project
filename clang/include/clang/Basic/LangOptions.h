@@ -209,7 +209,7 @@ public:
 
 private:
   /// Adjust BinaryOperator::FPFeatures to match the bit-field size of this.
-  LangOptions::FPContractModeKind fp_contract : 2;
+  unsigned fp_contract : 2;
 };
 
 /// \brief Describes the kind of translation unit being processed.
