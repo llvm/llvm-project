@@ -175,12 +175,22 @@ public:
 /// \brief Floating point control options
 class FPOptions {
 public:
-  unsigned fp_contract : 1;
-
   FPOptions() : fp_contract(0) {}
 
-  FPOptions(const LangOptions &LangOpts) :
-    fp_contract(LangOpts.DefaultFPContract) {}
+  explicit FPOptions(unsigned I) : fp_contract(I) {}
+
+  explicit FPOptions(const LangOptions &LangOpts)
+      : fp_contract(LangOpts.DefaultFPContract) {}
+
+  void setFPContractable(bool V) { fp_contract = V; }
+  bool isFPContractable() const { return fp_contract; }
+
+  /// Used to serialize this.
+  unsigned getInt() const { return fp_contract; }
+
+private:
+  /// Adjust BinaryOperator::FPFeatures to match the bit-field size of this.
+  unsigned fp_contract : 1;
 };
 
 /// \brief Describes the kind of translation unit being processed.
