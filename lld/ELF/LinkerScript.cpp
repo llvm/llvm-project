@@ -354,17 +354,14 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   CurOutSec = Aether;
   Dot = 0;
 
-  for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
-    auto Iter = Opt.Commands.begin() + I;
-    BaseCommand *Base1 = *Iter;
-
+  for (size_t I = 0; I < Opt.Commands.size(); ++I) {
     // Handle symbol assignments outside of any output section.
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1)) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Opt.Commands[I])) {
       addSymbol(Cmd);
       continue;
     }
 
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base1)) {
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I])) {
       std::vector<InputSectionBase *> V = createInputSectionList(*Cmd);
 
       // The output section name `/DISCARD/' is special.
@@ -384,7 +381,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       if (!matchConstraints(V, Cmd->Constraint)) {
         for (InputSectionBase *S : V)
           S->Assigned = false;
-        Opt.Commands.erase(Iter);
+        Opt.Commands.erase(Opt.Commands.begin() + I);
         --I;
         continue;
       }

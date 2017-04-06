@@ -11,6 +11,9 @@
 #define LLD_ELF_RELOCATIONS_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
+#include <map>
+#include <vector>
 
 namespace lld {
 namespace elf {
@@ -113,8 +116,29 @@ struct Relocation {
 
 template <class ELFT> void scanRelocations(InputSectionBase &);
 
-template <class ELFT>
-bool createThunks(ArrayRef<OutputSection *> OutputSections);
+class ThunkSection;
+class Thunk;
+
+template <class ELFT> class ThunkCreator {
+public:
+  // Return true if Thunks have been added to OutputSections
+  bool createThunks(ArrayRef<OutputSection *> OutputSections);
+
+private:
+  void mergeThunks(OutputSection *OS, std::vector<ThunkSection *> &Thunks);
+  ThunkSection *getOSThunkSec(ThunkSection *&TS, OutputSection *OS);
+  ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
+  std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
+
+  // Track Symbols that already have a Thunk
+  llvm::DenseMap<SymbolBody *, Thunk *> ThunkedSymbols;
+
+  // Track InputSections that have a ThunkSection placed in front
+  llvm::DenseMap<InputSection *, ThunkSection *> ThunkedSections;
+
+  // Track the ThunksSections that need to be inserted into an OutputSection
+  std::map<OutputSection *, std::vector<ThunkSection *>> ThunkSections;
+};
 
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.

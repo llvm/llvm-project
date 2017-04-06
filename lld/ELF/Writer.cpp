@@ -38,13 +38,10 @@ namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
 public:
-  typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Ehdr Elf_Ehdr;
   typedef typename ELFT::Phdr Elf_Phdr;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::SymRange Elf_Sym_Range;
-  typedef typename ELFT::Rela Elf_Rela;
+
   void run();
 
 private:
@@ -82,13 +79,13 @@ private:
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSection *Sec);
-  uintX_t getEntryAddr();
+  uint64_t getEntryAddr();
   OutputSection *findSection(StringRef Name);
 
   std::vector<PhdrEntry> Phdrs;
 
-  uintX_t FileSize;
-  uintX_t SectionHeaderOff;
+  uint64_t FileSize;
+  uint64_t SectionHeaderOff;
   bool AllocateHeader = true;
 };
 } // anonymous namespace
@@ -143,24 +140,17 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
       return false;
     if (!P.First)
       return true;
-    uintX_t Size = P.Last->Addr + P.Last->Size - P.First->Addr;
+    uint64_t Size = P.Last->Addr + P.Last->Size - P.First->Addr;
     return Size == 0;
   });
   Phdrs.erase(I, Phdrs.end());
-}
-
-template <class ELFT>
-static typename ELFT::uint getOutFlags(InputSectionBase *S) {
-  return S->Flags & ~(typename ELFT::uint)(SHF_GROUP | SHF_COMPRESSED);
 }
 
 // This function scans over the input sections and creates mergeable
 // synthetic sections. It removes MergeInputSections from array and
 // adds new synthetic ones. Each synthetic section is added to the
 // location of the first input section it replaces.
-template <class ELFT> static void combineMergableSections() {
-  typedef typename ELFT::uint uintX_t;
-
+static void combineMergableSections() {
   std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {
     MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
@@ -173,8 +163,8 @@ template <class ELFT> static void combineMergableSections() {
       continue;
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
-    uintX_t Flags = getOutFlags<ELFT>(MS);
-    uint32_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
+    uint64_t Flags = MS->Flags & ~(uint64_t)(SHF_GROUP | SHF_COMPRESSED);
+    uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I =
         llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
@@ -216,7 +206,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections();
-  combineMergableSections<ELFT>();
+  combineMergableSections();
 
   if (!Config->Relocatable)
     combineEhFrameSections<ELFT>();
@@ -334,7 +324,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ElfHeader->Size = sizeof(Elf_Ehdr);
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::ProgramHeaders->updateAlignment(sizeof(uintX_t));
+  Out::ProgramHeaders->updateAlignment(Config->Wordsize);
 
   if (needsInterpSection<ELFT>()) {
     In<ELFT>::Interp = createInterpSection();
@@ -846,6 +836,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __ehdr_start is the location of ELF file headers.
   addOptionalRegular<ELFT>("__ehdr_start", Out::ElfHeader, 0, STV_HIDDEN);
 
+  // __bss_start is the location of .bss section.
+  ElfSym::Bss =
+      addOptionalRegular<ELFT>("__bss_start", Out::ElfHeader, 0, STV_DEFAULT);
+
   auto Define = [](StringRef S, DefinedRegular *&Sym1, DefinedRegular *&Sym2) {
     Sym1 = addOptionalRegular<ELFT>(S, Out::ElfHeader, 0, STV_DEFAULT);
     assert(S.startswith("_"));
@@ -860,13 +854,13 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
 
 // Sort input sections by section name suffixes for
 // __attribute__((init_priority(N))).
-template <class ELFT> static void sortInitFini(OutputSection *S) {
+static void sortInitFini(OutputSection *S) {
   if (S)
     reinterpret_cast<OutputSection *>(S)->sortInitFini();
 }
 
 // Sort input sections by the special rule for .ctors and .dtors.
-template <class ELFT> static void sortCtorsDtors(OutputSection *S) {
+static void sortCtorsDtors(OutputSection *S) {
   if (S)
     reinterpret_cast<OutputSection *>(S)->sortCtorsDtors();
 }
@@ -931,10 +925,10 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       Factory.addInputSec(IS, getOutputSectionName(IS->Name));
 
   sortBySymbolsOrder<ELFT>(OutputSections);
-  sortInitFini<ELFT>(findSection(".init_array"));
-  sortInitFini<ELFT>(findSection(".fini_array"));
-  sortCtorsDtors<ELFT>(findSection(".ctors"));
-  sortCtorsDtors<ELFT>(findSection(".dtors"));
+  sortInitFini(findSection(".init_array"));
+  sortInitFini(findSection(".fini_array"));
+  sortCtorsDtors(findSection(".ctors"));
+  sortCtorsDtors(findSection(".dtors"));
 
   for (OutputSection *Sec : OutputSections)
     Sec->assignOffsets();
@@ -1176,7 +1170,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // we need to assign addresses so that we can tell if jump instructions
     // are out of range. This will need to turn into a loop that converges
     // when no more Thunks are added
-    if (createThunks<ELFT>(OutputSections))
+    ThunkCreator<ELFT> TC;
+    if (TC.createThunks(OutputSections))
       applySynthetic({In<ELFT>::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
@@ -1261,13 +1256,12 @@ static bool needsPtLoad(OutputSection *Sec) {
 // linker scripts are designed for creating two PT_LOADs only, one RX and one
 // RW. This means that there is no alignment in the RO to RX transition and we
 // cannot create a PT_LOAD there.
-template <class ELFT>
-static typename ELFT::uint computeFlags(typename ELFT::uint F) {
+static uint64_t computeFlags(uint64_t Flags) {
   if (Config->Omagic)
     return PF_R | PF_W | PF_X;
-  if (Config->SingleRoRx && !(F & PF_W))
-    return F | PF_X;
-  return F;
+  if (Config->SingleRoRx && !(Flags & PF_W))
+    return Flags | PF_X;
+  return Flags;
 }
 
 // Decide which program headers to create and which sections to include in each
@@ -1287,7 +1281,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     AddHdr(PT_INTERP, Sec->getPhdrFlags())->add(Sec);
 
   // Add the first PT_LOAD segment for regular output sections.
-  uintX_t Flags = computeFlags<ELFT>(PF_R);
+  uint64_t Flags = computeFlags(PF_R);
   PhdrEntry *Load = AddHdr(PT_LOAD, Flags);
   for (OutputSection *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
@@ -1300,7 +1294,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     // Therefore, we need to create a new phdr when the next section has
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
-    uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
+    uint64_t NewFlags = computeFlags(Sec->getPhdrFlags());
     if (Script->hasLMA(Sec->Name) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
@@ -1475,14 +1469,16 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Config->ImageBase;
+  uint64_t VA = Config->ImageBase;
+  uint64_t ThreadBssOffset = 0;
+
   if (AllocateHeader)
     VA += getHeaderSize();
-  uintX_t ThreadBssOffset = 0;
+
   for (OutputSection *Sec : OutputSections) {
     uint32_t Alignment = Sec->Alignment;
     if (Sec->PageAlign)
-      Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
+      Alignment = std::max<uint32_t>(Alignment, Config->MaxPageSize);
 
     auto I = Config->SectionStartMap.find(Sec->Name);
     if (I != Config->SectionStartMap.end())
@@ -1494,7 +1490,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       Sec->Addr = VA;
       VA += Sec->Size;
     } else if (Sec->Flags & SHF_TLS && Sec->Type == SHT_NOBITS) {
-      uintX_t TVA = VA + ThreadBssOffset;
+      uint64_t TVA = VA + ThreadBssOffset;
       TVA = alignTo(TVA, Alignment);
       Sec->Addr = TVA;
       ThreadBssOffset = TVA - VA + Sec->Size;
@@ -1506,8 +1502,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // its new file offset. The file offset must be the same with its
 // virtual address (modulo the page size) so that the loader can load
 // executables without any address adjustment.
-template <class ELFT, class uintX_t>
-static uintX_t getFileAlignment(uintX_t Off, OutputSection *Sec) {
+static uint64_t getFileAlignment(uint64_t Off, OutputSection *Sec) {
   OutputSection *First = Sec->FirstInPtLoad;
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!First)
@@ -1523,36 +1518,35 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSection *Sec) {
   return First->Offset + Sec->Addr - First->Addr;
 }
 
-template <class ELFT, class uintX_t>
-static uintX_t setOffset(OutputSection *Sec, uintX_t Off) {
+static uint64_t setOffset(OutputSection *Sec, uint64_t Off) {
   if (Sec->Type == SHT_NOBITS) {
     Sec->Offset = Off;
     return Off;
   }
 
-  Off = getFileAlignment<ELFT>(Off, Sec);
+  Off = getFileAlignment(Off, Sec);
   Sec->Offset = Off;
   return Off + Sec->Size;
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
-  uintX_t Off = 0;
+  uint64_t Off = 0;
   for (OutputSection *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
-      Off = setOffset<ELFT>(Sec, Off);
-  FileSize = alignTo(Off, sizeof(uintX_t));
+      Off = setOffset(Sec, Off);
+  FileSize = alignTo(Off, Config->Wordsize);
 }
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
-  uintX_t Off = 0;
-  Off = setOffset<ELFT>(Out::ElfHeader, Off);
-  Off = setOffset<ELFT>(Out::ProgramHeaders, Off);
+  uint64_t Off = 0;
+  Off = setOffset(Out::ElfHeader, Off);
+  Off = setOffset(Out::ProgramHeaders, Off);
 
   for (OutputSection *Sec : OutputSections)
-    Off = setOffset<ELFT>(Sec, Off);
+    Off = setOffset(Sec, Off);
 
-  SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
+  SectionHeaderOff = alignTo(Off, Config->Wordsize);
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
 }
 
@@ -1599,7 +1593,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 // 3. the value of the symbol start, if present;
 // 4. the address of the first byte of the .text section, if present;
 // 5. the address 0.
-template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
+template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
   // Case 1, 2 or 3. As a special case, if the symbol is actually
   // a number, we'll use that number as an address.
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
@@ -1621,12 +1615,6 @@ template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
     warn("cannot find entry symbol " + Config->Entry +
          "; not setting start address");
   return 0;
-}
-
-template <class ELFT> static uint8_t getELFEncoding() {
-  if (ELFT::TargetEndianness == llvm::support::little)
-    return ELFDATA2LSB;
-  return ELFDATA2MSB;
 }
 
 static uint16_t getELFType() {
@@ -1675,17 +1663,20 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
   if (LastRW)
     Set(ElfSym::Edata, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
 
+  if (ElfSym::Bss)
+    ElfSym::Bss->Section = findSection(".bss");
+
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
   if (Config->EMachine == EM_MIPS) {
     if (!ElfSym::MipsGp->Value) {
       // Find GP-relative section with the lowest address
       // and use this address to calculate default _gp value.
-      uintX_t Gp = -1;
+      uint64_t Gp = -1;
       for (const OutputSection *OS : OutputSections)
         if ((OS->Flags & SHF_MIPS_GPREL) && OS->Addr < Gp)
           Gp = OS->Addr;
-      if (Gp != (uintX_t)-1)
+      if (Gp != (uint64_t)-1)
         ElfSym::MipsGp->Value = Gp + 0x7ff0;
     }
   }
@@ -1697,8 +1688,8 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
   // Write the ELF header.
   auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
-  EHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  EHdr->e_ident[EI_DATA] = getELFEncoding<ELFT>();
+  EHdr->e_ident[EI_CLASS] = Config->Is64 ? ELFCLASS64 : ELFCLASS32;
+  EHdr->e_ident[EI_DATA] = Config->IsLE ? ELFDATA2LSB : ELFDATA2MSB;
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
   EHdr->e_ident[EI_OSABI] = Config->OSABI;
   EHdr->e_type = getELFType();
@@ -1747,6 +1738,11 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
+  if (!Config->Is64 && FileSize > UINT32_MAX) {
+    error("output file too large: " + Twine(FileSize) + " bytes");
+    return;
+  }
+
   unlinkAsync(Config->OutputFile);
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
