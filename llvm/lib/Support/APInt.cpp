@@ -153,16 +153,6 @@ APInt& APInt::AssignSlowCase(const APInt& RHS) {
   return clearUnusedBits();
 }
 
-APInt& APInt::operator=(uint64_t RHS) {
-  if (isSingleWord())
-    VAL = RHS;
-  else {
-    pVal[0] = RHS;
-    memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
-  }
-  return clearUnusedBits();
-}
-
 /// This method 'profiles' an APInt for use with FoldingSet.
 void APInt::Profile(FoldingSetNodeID& ID) const {
   ID.AddInteger(BitWidth);
