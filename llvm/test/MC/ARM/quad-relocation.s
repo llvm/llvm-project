@@ -4,6 +4,6 @@
 symbol:
   .quad(symbol)
 
-@ CHECK: error: bad relocation fixup type
+@ CHECK: error: unsupported relocation on symbol
 @ CHECK-NEXT:   .quad(symbol)
 @ CHECK-NEXT:        ^

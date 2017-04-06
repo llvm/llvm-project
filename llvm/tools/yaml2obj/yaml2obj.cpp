@@ -40,17 +40,19 @@ DocNum("docnum", cl::init(1),
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
+LLVM_ATTRIBUTE_NORETURN static void error(Twine Message) {
+  errs() << Message << "\n";
+  exit(1);
+}
+
 static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
   unsigned CurDocNum = 0;
   do {
     if (++CurDocNum == DocNum) {
       yaml::YamlObjectFile Doc;
       YIn >> Doc;
-      if (YIn.error()) {
-        errs() << "yaml2obj: Failed to parse YAML file!\n";
-        return 1;
-      }
-
+      if (YIn.error())
+        error("yaml2obj: Failed to parse YAML file!");
       if (Doc.Elf)
         return yaml2elf(*Doc.Elf, Out);
       if (Doc.Coff)
@@ -59,14 +61,12 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
         return yaml2macho(Doc, Out);
       if (Doc.Wasm)
         return yaml2wasm(*Doc.Wasm, Out);
-      errs() << "yaml2obj: Unknown document type!\n";
-      return 1;
+      error("yaml2obj: Unknown document type!");
     }
   } while (YIn.nextDocument());
 
-  errs() << "yaml2obj: Cannot find the " << DocNum
-         << llvm::getOrdinalSuffix(DocNum) << " document\n";
-  return 1;
+  error("yaml2obj: Cannot find the " + utostr(DocNum) +
+        llvm::getOrdinalSuffix(DocNum) + " document");
 }
 
 int main(int argc, char **argv) {
@@ -81,10 +81,8 @@ int main(int argc, char **argv) {
   std::error_code EC;
   std::unique_ptr<tool_output_file> Out(
       new tool_output_file(OutputFilename, EC, sys::fs::F_None));
-  if (EC) {
-    errs() << EC.message() << '\n';
-    return 1;
-  }
+  if (EC)
+    error("yaml2obj: Error opening '" + OutputFilename + "': " + EC.message());
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFileOrSTDIN(Input);

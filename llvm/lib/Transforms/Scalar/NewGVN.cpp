@@ -1986,7 +1986,7 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
   if (MSSA->isLiveOnEntryDef(First))
     return false;
   const auto *EndDef = First;
-  for (auto *ChainDef : def_chain(First)) {
+  for (auto *ChainDef : optimized_def_chain(First)) {
     if (ChainDef == Second)
       return true;
     if (MSSA->isLiveOnEntryDef(ChainDef))

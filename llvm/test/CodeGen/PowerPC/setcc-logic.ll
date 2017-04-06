@@ -433,11 +433,11 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
 define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
 ; CHECK-LABEL: and_eq:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    cmpw 0, 3, 4
-; CHECK-NEXT:    cmpw 1, 5, 6
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    crnand 20, 2, 6
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    xor 5, 5, 6
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    rlwinm 3, 3, 27, 31, 31
 ; CHECK-NEXT:    blr
   %cmp1 = icmp eq i16 %a, %b
   %cmp2 = icmp eq i16 %c, %d
@@ -448,11 +448,12 @@ define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 z
 define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: or_ne:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    cmpw 0, 3, 4
-; CHECK-NEXT:    cmpw 1, 5, 6
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    crand 20, 6, 2
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    xor 5, 5, 6
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    nor 3, 3, 3
+; CHECK-NEXT:    rlwinm 3, 3, 27, 31, 31
 ; CHECK-NEXT:    blr
   %cmp1 = icmp ne i32 %a, %b
   %cmp2 = icmp ne i32 %c, %d

@@ -37,7 +37,7 @@ public:
                          bool &IsResolved) override;
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
@@ -131,7 +131,7 @@ void AMDGPUAsmBackend::processFixupValue(const MCAssembler &Asm,
 
 void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                   unsigned DataSize, uint64_t Value,
-                                  bool IsPCRel) const {
+                                  bool IsPCRel, MCContext &Ctx) const {
   if (!Value)
     return; // Doesn't change encoding.
 

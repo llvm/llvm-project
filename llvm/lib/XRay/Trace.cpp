@@ -213,7 +213,7 @@ Error processFDRWallTimeRecord(FDRState &State, uint8_t RecordFirstByte,
 }
 
 /// Advances the state machine for reading the FDR record type by reading one
-/// Metadata Record and updating the State approriately based on the kind of
+/// Metadata Record and updating the State appropriately based on the kind of
 /// record encountered. The RecordKind is encoded in the first byte of the
 /// Record, which the caller should pass in because they have already read it
 /// to determine that this is a metadata record as opposed to a function record.

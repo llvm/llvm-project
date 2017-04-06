@@ -1014,6 +1014,14 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
   int Car = floor(
       (FirstCacheLevelAssociativity - 1) /
       (1 + static_cast<double>(MicroKernelParams.Nr) / MicroKernelParams.Mr));
+
+  // Car can be computed to be zero since it is floor to int.
+  // On Mac OS, division by 0 does not raise a signal. This causes negative
+  // tile sizes to be computed. Prevent division by 0 Cac by early returning
+  // if this happens.
+  if (Car == 0)
+    return {1, 1, 1};
+
   auto ElementSize = getMatMulAlignTypeSize(MMI);
   assert(ElementSize > 0 && "The element size of the matrix multiplication "
                             "operands should be greater than zero.");
@@ -1024,6 +1032,9 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
       SecondCacheLevelSize;
   int Mc = floor((SecondCacheLevelAssociativity - 2) / Cac);
   int Nc = PollyPatternMatchingNcQuotient * MicroKernelParams.Nr;
+
+  assert(Mc > 0 && Nc > 0 && Kc > 0 &&
+         "Matrix block sizes should be  greater than zero");
   return {Mc, Nc, Kc};
 }
 

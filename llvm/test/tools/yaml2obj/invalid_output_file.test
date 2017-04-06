@@ -1,0 +1,4 @@
+# RUN: not yaml2obj -o %p/path/does/not/exist 2>&1 | FileCheck %s
+
+# Don't check the OS-dependent message "No such file or directory".
+# CHECK: yaml2obj: Error opening '{{.*}}/path/does/not/exist': {{.*}}

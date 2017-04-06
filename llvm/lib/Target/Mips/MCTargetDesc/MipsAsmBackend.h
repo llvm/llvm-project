@@ -39,7 +39,7 @@ public:
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
@@ -81,11 +81,6 @@ public:
   /// @}
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
-
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
 
 }; // class MipsAsmBackend
 

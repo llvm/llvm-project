@@ -437,6 +437,15 @@ public:
     return false;
   }
 
+  /// Use bitwise logic to make pairs of compares more efficient. For example:
+  /// and (seteq A, B), (seteq C, D) --> seteq (or (xor A, B), (xor C, D)), 0
+  /// This should be true when it takes more than one instruction to lower
+  /// setcc (cmp+set on x86 scalar), when bitwise ops are faster than logic on
+  /// condition bits (crand on PowerPC), and/or when reducing cmp+br is a win.
+  virtual bool convertSetCCLogicToBitwiseLogic(EVT VT) const {
+    return false;
+  }
+
   /// Return the preferred operand type if the target has a quick way to compare
   /// integer values of the given size. Assume that any legal integer type can
   /// be compared efficiently. Targets may override this to allow illegal wide

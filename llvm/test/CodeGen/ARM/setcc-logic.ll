@@ -20,13 +20,11 @@ define zeroext i1 @ne_neg1_and_ne_zero(i32 %x) nounwind {
 define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: and_eq:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movweq r2, #1
-; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    movweq r12, #1
-; CHECK-NEXT:    and r0, r12, r2
+; CHECK-NEXT:    eor r2, r2, r3
+; CHECK-NEXT:    eor r0, r0, r1
+; CHECK-NEXT:    orrs r0, r0, r2
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movweq r0, #1
 ; CHECK-NEXT:    bx lr
   %cmp1 = icmp eq i32 %a, %b
   %cmp2 = icmp eq i32 %c, %d
@@ -37,13 +35,10 @@ define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: or_ne:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwne r2, #1
-; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    movwne r12, #1
-; CHECK-NEXT:    orr r0, r12, r2
+; CHECK-NEXT:    eor r2, r2, r3
+; CHECK-NEXT:    eor r0, r0, r1
+; CHECK-NEXT:    orrs r0, r0, r2
+; CHECK-NEXT:    movwne r0, #1
 ; CHECK-NEXT:    bx lr
   %cmp1 = icmp ne i32 %a, %b
   %cmp2 = icmp ne i32 %c, %d
