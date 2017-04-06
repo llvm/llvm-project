@@ -117,7 +117,9 @@ public:
 
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
-  bool isFPContractable() const { return FPFeatures.isFPContractable(); }
+  bool isFPContractableWithinStatement() const {
+    return FPFeatures.allowFPContractWithinStatement();
+  }
 
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
