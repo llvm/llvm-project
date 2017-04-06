@@ -2342,6 +2342,6 @@ statements in C)
   }
 
 
-The pragma can also be used with 'off' which turns FP contraction off for a
+The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
 enabled for the translation unit with the ``-ffp-contract=fast` flag.
