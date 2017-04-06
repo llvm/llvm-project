@@ -160,9 +160,6 @@ static ExprValue bitOr(ExprValue A, ExprValue B) {
           (A.getValue() | B.getValue()) - A.getSecAddr()};
 }
 
-static ExprValue bitNot(ExprValue A) { return ~A.getValue(); }
-static ExprValue minus(ExprValue A) { return -A.getValue(); }
-
 void ScriptParser::readDynamicList() {
   expect("{");
   readAnonymousDeclaration();
@@ -434,13 +431,19 @@ SortSectionPolicy ScriptParser::readSortKind() {
   return SortSectionPolicy::Default;
 }
 
-// Method reads a list of sequence of excluded files and section globs given in
-// a following form: ((EXCLUDE_FILE(file_pattern+))? section_pattern+)+
-// Example: *(.foo.1 EXCLUDE_FILE (*a.o) .foo.2 EXCLUDE_FILE (*b.o) .foo.3)
-// The semantics of that is next:
-// * Include .foo.1 from every file.
-// * Include .foo.2 from every file but a.o
-// * Include .foo.3 from every file but b.o
+// Reads SECTIONS command contents in the following form:
+//
+// <contents> ::= <elem>*
+// <elem>     ::= <exclude>? <glob-pattern>
+// <exclude>  ::= "EXCLUDE_FILE" "(" <glob-pattern>+ ")"
+//
+// For example,
+//
+// *(.foo EXCLUDE_FILE (a.o) .bar EXCLUDE_FILE (b.o) .baz)
+//
+// is parsed as ".foo", ".bar" with "a.o", and ".baz" with "b.o".
+// The semantics of that is section .foo in any file, section .bar in
+// any file but a.o, and section .baz in any file but b.o.
 std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   std::vector<SectionPattern> Ret;
   while (!Error && peek() != ")") {
@@ -759,38 +762,38 @@ uint64_t static getConstant(StringRef S) {
   return 0;
 }
 
-// Parses Tok as an integer. Returns true if successful.
-// It recognizes hexadecimal (prefixed with "0x" or suffixed with "H")
-// and decimal numbers. Decimal numbers may have "K" (kilo) or
-// "M" (mega) prefixes.
-static bool readInteger(StringRef Tok, uint64_t &Result) {
+// Parses Tok as an integer. It recognizes hexadecimal (prefixed with
+// "0x" or suffixed with "H") and decimal numbers. Decimal numbers may
+// have "K" (Ki) or "M" (Mi) suffixes.
+static Optional<uint64_t> parseInt(StringRef Tok) {
   // Negative number
   if (Tok.startswith("-")) {
-    if (!readInteger(Tok.substr(1), Result))
-      return false;
-    Result = -Result;
-    return true;
+    if (Optional<uint64_t> Val = parseInt(Tok.substr(1)))
+      return -*Val;
+    return None;
   }
 
   // Hexadecimal
-  if (Tok.startswith_lower("0x"))
-    return !Tok.substr(2).getAsInteger(16, Result);
-  if (Tok.endswith_lower("H"))
-    return !Tok.drop_back().getAsInteger(16, Result);
+  uint64_t Val;
+  if (Tok.startswith_lower("0x") && !Tok.substr(2).getAsInteger(16, Val))
+    return Val;
+  if (Tok.endswith_lower("H") && !Tok.drop_back().getAsInteger(16, Val))
+    return Val;
 
   // Decimal
-  int Suffix = 1;
   if (Tok.endswith_lower("K")) {
-    Suffix = 1024;
-    Tok = Tok.drop_back();
-  } else if (Tok.endswith_lower("M")) {
-    Suffix = 1024 * 1024;
-    Tok = Tok.drop_back();
+    if (Tok.drop_back().getAsInteger(10, Val))
+      return None;
+    return Val * 1024;
   }
-  if (Tok.getAsInteger(10, Result))
-    return false;
-  Result *= Suffix;
-  return true;
+  if (Tok.endswith_lower("M")) {
+    if (Tok.drop_back().getAsInteger(10, Val))
+      return None;
+    return Val * 1024 * 1024;
+  }
+  if (Tok.getAsInteger(10, Val))
+    return None;
+  return Val;
 }
 
 BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
@@ -817,17 +820,17 @@ Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
 
+  if (consume("~")) {
+    Expr E = readPrimary();
+    return [=] { return ~E().getValue(); };
+  }
+  if (consume("-")) {
+    Expr E = readPrimary();
+    return [=] { return -E().getValue(); };
+  }
+
   StringRef Tok = next();
   std::string Location = getCurrentLocation();
-
-  if (Tok == "~") {
-    Expr E = readPrimary();
-    return [=] { return bitNot(E()); };
-  }
-  if (Tok == "-") {
-    Expr E = readPrimary();
-    return [=] { return minus(E()); };
-  }
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
@@ -913,17 +916,18 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "SIZEOF_HEADERS")
     return [=] { return elf::getHeaderSize(); };
 
+  // Tok is the dot.
+  if (Tok == ".")
+    return [=] { return Script->getSymbolValue(Location, Tok); };
+
   // Tok is a literal number.
-  uint64_t V;
-  if (readInteger(Tok, V))
-    return [=] { return V; };
+  if (Optional<uint64_t> Val = parseInt(Tok))
+    return [=] { return *Val; };
 
   // Tok is a symbol name.
-  if (Tok != ".") {
-    if (!isValidCIdentifier(Tok))
-      setError("malformed number: " + Tok);
-    Script->Opt.UndefinedSymbols.push_back(Tok);
-  }
+  if (!isValidCIdentifier(Tok))
+    setError("malformed number: " + Tok);
+  Script->Opt.ReferencedSymbols.push_back(Tok);
   return [=] { return Script->getSymbolValue(Location, Tok); };
 }
 
@@ -954,9 +958,8 @@ std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
 // name of a program header type or a constant (e.g. "0x3").
 unsigned ScriptParser::readPhdrType() {
   StringRef Tok = next();
-  uint64_t Val;
-  if (readInteger(Tok, Val))
-    return Val;
+  if (Optional<uint64_t> Val = parseInt(Tok))
+    return *Val;
 
   unsigned Ret = StringSwitch<unsigned>(Tok)
                      .Case("PT_NULL", PT_NULL)
@@ -1097,10 +1100,10 @@ uint64_t ScriptParser::readMemoryAssignment(StringRef S1, StringRef S2,
   expect("=");
 
   // TODO: Fully support constant expressions.
-  uint64_t Val;
-  if (!readInteger(next(), Val))
-    setError("nonconstant expression for " + S1);
-  return Val;
+  if (Optional<uint64_t> Val = parseInt(next()))
+    return *Val;
+  setError("nonconstant expression for " + S1);
+  return 0;
 }
 
 // Parse the MEMORY command as specified in:

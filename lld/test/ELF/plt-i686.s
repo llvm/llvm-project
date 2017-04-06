@@ -135,23 +135,23 @@
 // DISASMSHARED-NEXT:  1013: e9 e8 ff ff ff jmp -24
 // DISASMSHARED-NEXT:  Disassembly of section .plt:
 // DISASMSHARED-NEXT:  .plt:
-// DISASMSHARED-NEXT:  1020: ff b3 04 00 00 00  pushl 4(%ebx)
-// DISASMSHARED-NEXT:  1026: ff a3 08 00 00 00  jmpl *8(%ebx)
+// DISASMSHARED-NEXT:  1020: ff b3 04 20 00 00 pushl 8196(%ebx)
+// DISASMSHARED-NEXT:  1026: ff a3 08 20 00 00 jmpl *8200(%ebx)
 // DISASMSHARED-NEXT:  102c: 90 nop
 // DISASMSHARED-NEXT:  102d: 90 nop
 // DISASMSHARED-NEXT:  102e: 90 nop
 // DISASMSHARED-NEXT:  102f: 90 nop
-// DISASMSHARED-NEXT:  1030: ff a3 0c 00 00 00  jmpl *12(%ebx)
+// DISASMSHARED-NEXT:  1030: ff a3 0c 20 00 00 jmpl *8204(%ebx)
 // DISASMSHARED-NEXT:  1036: 68 00 00 00 00     pushl $0
 // DISASMSHARED-NEXT:  103b: e9 e0 ff ff ff     jmp -32 <.plt>
-// DISASMSHARED-NEXT:  1040: ff a3 10 00 00 00  jmpl *16(%ebx)
+// DISASMSHARED-NEXT:  1040: ff a3 10 20 00 00 jmpl *8208(%ebx)
 // DISASMSHARED-NEXT:  1046: 68 08 00 00 00     pushl $8
 // DISASMSHARED-NEXT:  104b: e9 d0 ff ff ff     jmp -48 <.plt>
 
 // DISASMPIE:      Disassembly of section .plt:
 // DISASMPIE-NEXT: .plt:
-// DISASMPIE-NEXT:   1020:	ff b3 04 00 00 00 pushl 4(%ebx)
-// DISASMPIE-NEXT:   1026:	ff a3 08 00 00 00 jmpl *8(%ebx)
+// DISASMPIE-NEXT:   1020:	ff b3 04 20 00 00 pushl 8196(%ebx)
+// DISASMPIE-NEXT:   1026:	ff a3 08 20 00 00 jmpl *8200(%ebx)
 // DISASMPIE-NEXT:   102c:	90 nop
 // DISASMPIE-NEXT:   102d:	90 nop
 // DISASMPIE-NEXT:   102e:	90 nop

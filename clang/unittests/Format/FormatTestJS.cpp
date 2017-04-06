@@ -132,6 +132,8 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x.interface = 1;");
   verifyFormat("x.for = 1;");
   verifyFormat("x.of() = 1;");
+  verifyFormat("of(null);");
+  verifyFormat("import {of} from 'x';");
   verifyFormat("x.in() = 1;");
   verifyFormat("x.let() = 1;");
   verifyFormat("x.var() = 1;");

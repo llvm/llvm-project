@@ -1256,7 +1256,8 @@ struct FormatStyle {
   enum LanguageStandard {
     /// Use C++03-compatible syntax.
     LS_Cpp03,
-    /// Use features of C++11 (e.g. ``A<A<int>>`` instead of ``A<A<int> >``).
+    /// Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of
+    /// ``A<A<int> >``).
     LS_Cpp11,
     /// Automatic detection based on the input.
     LS_Auto

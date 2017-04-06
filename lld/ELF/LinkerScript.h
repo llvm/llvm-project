@@ -68,9 +68,6 @@ enum SectionsCommandKind {
 
 struct BaseCommand {
   BaseCommand(int K) : Kind(K) {}
-
-  virtual ~BaseCommand() = default;
-
   int Kind;
 };
 
@@ -208,8 +205,8 @@ struct ScriptConfiguration {
   // A map from memory region name to a memory region descriptor.
   llvm::DenseMap<llvm::StringRef, MemoryRegion> MemoryRegions;
 
-  // A list of undefined symbols referenced by the script.
-  std::vector<llvm::StringRef> UndefinedSymbols;
+  // A list of symbols referenced by the script.
+  std::vector<llvm::StringRef> ReferencedSymbols;
 };
 
 class LinkerScript {
