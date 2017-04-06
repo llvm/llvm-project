@@ -242,8 +242,8 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomic(const CallSite &CS) {
   StringRef Name = Callee->getName();
   IRBuilder<> LlvmBuilder(*Context);
   LlvmBuilder.SetInsertPoint(CS.getInstruction());
-  std::unique_ptr<char> Buf(
-      itaniumDemangle(Name.str().c_str(), nullptr, nullptr, nullptr));
+  std::unique_ptr<char, llvm::FreeDeleter> Buf(
+    itaniumDemangle(Name.str().c_str(), nullptr, nullptr, nullptr));
   StringRef DemangledName(Buf.get());
   if (DemangledName.empty())
     return nullptr;
