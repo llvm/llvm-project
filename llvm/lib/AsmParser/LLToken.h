@@ -98,6 +98,7 @@ enum Kind {
   kw_ninf,
   kw_nsz,
   kw_arcp,
+  kw_contract,
   kw_fast,
   kw_nuw,
   kw_nsw,
