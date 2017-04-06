@@ -1269,84 +1269,28 @@ error:
 	return NULL;
 }
 
-/* Replace the variables x starting at pos in the rows q
- * by x' with x = M x' with M the matrix mat.
+/* Replace the variables x starting at "first_col" in the rows "rows"
+ * of some coefficient matrix by x' with x = M x' with M the matrix mat.
  * That is, replace the corresponding coefficients c by c M.
  */
-static int transform(isl_ctx *ctx, isl_int **q, unsigned n,
-	unsigned pos, __isl_take isl_mat *mat)
+isl_stat isl_mat_sub_transform(isl_int **row, unsigned n_row,
+	unsigned first_col, __isl_take isl_mat *mat)
 {
 	int i;
+	isl_ctx *ctx;
 	isl_mat *t;
 
-	t = isl_mat_sub_alloc6(ctx, q, 0, n, pos, mat->n_row);
+	if (!mat)
+		return isl_stat_error;
+	ctx = isl_mat_get_ctx(mat);
+	t = isl_mat_sub_alloc6(ctx, row, 0, n_row, first_col, mat->n_row);
 	t = isl_mat_product(t, mat);
 	if (!t)
-		return -1;
-	for (i = 0; i < n; ++i)
-		isl_seq_swp_or_cpy(q[i] + pos, t->row[i], t->n_col);
+		return isl_stat_error;
+	for (i = 0; i < n_row; ++i)
+		isl_seq_swp_or_cpy(row[i] + first_col, t->row[i], t->n_col);
 	isl_mat_free(t);
-	return 0;
-}
-
-/* Replace the variables x of type "type" starting at "first" in "bmap"
- * by x' with x = M x' with M the matrix trans.
- * That is, replace the corresponding coefficients c by c M.
- *
- * The transformation matrix should be a square matrix.
- */
-__isl_give isl_basic_map *isl_basic_map_transform_dims(
-	__isl_take isl_basic_map *bmap, enum isl_dim_type type, unsigned first,
-	__isl_take isl_mat *trans)
-{
-	isl_ctx *ctx;
-	unsigned pos;
-
-	bmap = isl_basic_map_cow(bmap);
-	if (!bmap || !trans)
-		goto error;
-
-	ctx = isl_basic_map_get_ctx(bmap);
-	if (trans->n_row != trans->n_col)
-		isl_die(trans->ctx, isl_error_invalid,
-			"expecting square transformation matrix", goto error);
-	if (first + trans->n_row > isl_basic_map_dim(bmap, type))
-		isl_die(trans->ctx, isl_error_invalid,
-			"oversized transformation matrix", goto error);
-
-	pos = isl_basic_map_offset(bmap, type) + first;
-
-	if (transform(ctx, bmap->eq, bmap->n_eq, pos, isl_mat_copy(trans)) < 0)
-		goto error;
-	if (transform(ctx, bmap->ineq, bmap->n_ineq, pos,
-		      isl_mat_copy(trans)) < 0)
-		goto error;
-	if (transform(ctx, bmap->div, bmap->n_div, 1 + pos,
-		      isl_mat_copy(trans)) < 0)
-		goto error;
-
-	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED);
-	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED_DIVS);
-
-	isl_mat_free(trans);
-	return bmap;
-error:
-	isl_mat_free(trans);
-	isl_basic_map_free(bmap);
-	return NULL;
-}
-
-/* Replace the variables x of type "type" starting at "first" in "bset"
- * by x' with x = M x' with M the matrix trans.
- * That is, replace the corresponding coefficients c by c M.
- *
- * The transformation matrix should be a square matrix.
- */
-__isl_give isl_basic_set *isl_basic_set_transform_dims(
-	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first,
-	__isl_take isl_mat *trans)
-{
-	return isl_basic_map_transform_dims(bset, type, first, trans);
+	return isl_stat_ok;
 }
 
 void isl_mat_print_internal(__isl_keep isl_mat *mat, FILE *out, int indent)

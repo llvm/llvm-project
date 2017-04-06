@@ -90,6 +90,10 @@ public:
 
   bool NeedsThunks = false;
 
+  // A 4-byte field corresponding to one or more trap instructions, used to pad
+  // executable OutputSections.
+  uint32_t TrapInstr = 0;
+
   virtual RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                   RelExpr Expr) const;
   virtual void relaxGot(uint8_t *Loc, uint64_t Val) const;

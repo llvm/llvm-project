@@ -201,11 +201,13 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       continue;
     }
     uptr sp;
-    bool have_registers =
-        (suspended_threads.GetRegistersAndSP(i, registers.data(), &sp) == 0);
-    if (!have_registers) {
-      Report("Unable to get registers from thread %d.\n");
-      // If unable to get SP, consider the entire stack to be reachable.
+    PtraceRegistersStatus have_registers =
+        suspended_threads.GetRegistersAndSP(i, registers.data(), &sp);
+    if (have_registers != REGISTERS_AVAILABLE) {
+      Report("Unable to get registers from thread %d.\n", os_id);
+      // If unable to get SP, consider the entire stack to be reachable unless
+      // GetRegistersAndSP failed with ESRCH.
+      if (have_registers == REGISTERS_UNAVAILABLE_FATAL) continue;
       sp = stack_begin;
     }
 
@@ -253,7 +255,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
         if (tls_end > cache_end)
           ScanRangeForPointers(cache_end, tls_end, frontier, "TLS", kReachable);
       }
-      if (dtls) {
+      if (dtls && !DTLSInDestruction(dtls)) {
         for (uptr j = 0; j < dtls->dtv_size; ++j) {
           uptr dtls_beg = dtls->dtv[j].beg;
           uptr dtls_end = dtls_beg + dtls->dtv[j].size;
@@ -263,6 +265,10 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                                  kReachable);
           }
         }
+      } else {
+        // We are handling a thread with DTLS under destruction. Log about
+        // this and continue.
+        LOG_THREADS("Thread %d has DTLS under destruction.\n", os_id);
       }
     }
   }

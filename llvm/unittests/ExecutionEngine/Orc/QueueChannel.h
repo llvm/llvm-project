@@ -14,6 +14,7 @@
 #include "llvm/Support/Error.h"
 
 #include <queue>
+#include <condition_variable>
 
 namespace llvm {
 

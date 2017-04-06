@@ -50,6 +50,9 @@ int isl_seq_eq(isl_int *p1, isl_int *p2, unsigned len);
 int isl_seq_cmp(isl_int *p1, isl_int *p2, unsigned len);
 int isl_seq_is_neg(isl_int *p1, isl_int *p2, unsigned len);
 
+void isl_seq_substitute(isl_int *p, int pos, isl_int *subs,
+	int p_len, int subs_len, isl_int v);
+
 uint32_t isl_seq_get_hash(isl_int *p, unsigned len);
 uint32_t isl_seq_get_hash_bits(isl_int *p, unsigned len, unsigned bits);
 

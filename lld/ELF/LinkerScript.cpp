@@ -862,12 +862,12 @@ bool LinkerScript::ignoreInterpSection() {
   return true;
 }
 
-uint32_t LinkerScript::getFiller(StringRef Name) {
+Optional<uint32_t> LinkerScript::getFiller(StringRef Name) {
   for (BaseCommand *Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       if (Cmd->Name == Name)
         return Cmd->Filler;
-  return 0;
+  return None;
 }
 
 static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {

@@ -579,7 +579,7 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
     return Y;
 
   /// i1 add -> xor.
-  if (MaxRecurse && Op0->getType()->isIntegerTy(1))
+  if (MaxRecurse && Op0->getType()->getScalarType()->isIntegerTy(1))
     if (Value *V = SimplifyXorInst(Op0, Op1, Q, MaxRecurse-1))
       return V;
 
@@ -796,7 +796,7 @@ static Value *SimplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
       return ConstantExpr::getIntegerCast(Result, Op0->getType(), true);
 
   // i1 sub -> xor.
-  if (MaxRecurse && Op0->getType()->isIntegerTy(1))
+  if (MaxRecurse && Op0->getType()->getScalarType()->isIntegerTy(1))
     if (Value *V = SimplifyXorInst(Op0, Op1, Q, MaxRecurse-1))
       return V;
 

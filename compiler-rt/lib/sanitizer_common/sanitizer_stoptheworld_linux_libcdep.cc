@@ -493,9 +493,9 @@ typedef _user_regs_struct regs_struct;
 #error "Unsupported architecture"
 #endif // SANITIZER_ANDROID && defined(__arm__)
 
-int SuspendedThreadsList::GetRegistersAndSP(uptr index,
-                                            uptr *buffer,
-                                            uptr *sp) const {
+PtraceRegistersStatus SuspendedThreadsList::GetRegistersAndSP(uptr index,
+                                                              uptr *buffer,
+                                                              uptr *sp) const {
   pid_t tid = GetThreadID(index);
   regs_struct regs;
   int pterrno;
@@ -513,12 +513,16 @@ int SuspendedThreadsList::GetRegistersAndSP(uptr index,
   if (isErr) {
     VReport(1, "Could not get registers from thread %d (errno %d).\n", tid,
             pterrno);
-    return -1;
+    // ESRCH means that the given thread is not suspended or already dead.
+    // Therefore it's unsafe to inspect its data (e.g. walk through stack) and
+    // we should notify caller about this.
+    return pterrno == ESRCH ? REGISTERS_UNAVAILABLE_FATAL
+                            : REGISTERS_UNAVAILABLE;
   }
 
   *sp = regs.REG_SP;
   internal_memcpy(buffer, &regs, sizeof(regs));
-  return 0;
+  return REGISTERS_AVAILABLE;
 }
 
 uptr SuspendedThreadsList::RegisterCount() {
