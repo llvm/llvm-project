@@ -575,6 +575,11 @@ void APInt::clearBit(unsigned bitPosition) {
 }
 
 /// @brief Toggle every bit to its opposite value.
+void APInt::flipAllBitsSlowCase() {
+  for (unsigned i = 0; i < getNumWords(); ++i)
+    pVal[i] ^= UINT64_MAX;
+  clearUnusedBits();
+}
 
 /// Toggle a given bit to its opposite value whose position is given
 /// as "bitPosition".
