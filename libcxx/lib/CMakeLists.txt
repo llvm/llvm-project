@@ -83,7 +83,12 @@ add_library_flags_if(LIBCXX_HAS_PTHREAD_LIB pthread)
 add_library_flags_if(LIBCXX_HAS_C_LIB c)
 add_library_flags_if(LIBCXX_HAS_M_LIB m)
 add_library_flags_if(LIBCXX_HAS_RT_LIB rt)
-add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
+if (LIBCXX_USE_COMPILER_RT)
+  find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+  add_library_flags_if(LIBCXX_BUILTINS_LIBRARY "${LIBCXX_BUILTINS_LIBRARY}")
+else()
+  add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
+endif()
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Add the unwinder library.

@@ -476,7 +476,6 @@ public:
   void write();
 
 private:
-  void writeIndex();
   void writeModStrings();
   void writeCombinedValueSymbolTable();
   void writeCombinedGlobalValueSummary();

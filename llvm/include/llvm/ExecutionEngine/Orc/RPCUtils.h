@@ -500,7 +500,7 @@ public:
 
   // Create an error instance representing an abandoned response.
   static Error createAbandonedResponseError() {
-    return orcError(OrcErrorCode::RPCResponseAbandoned);
+    return errorCodeToError(orcError(OrcErrorCode::RPCResponseAbandoned));
   }
 };
 
@@ -522,7 +522,7 @@ public:
       return Err;
     if (auto Err = C.endReceiveMessage())
       return Err;
-    return Handler(Result);
+    return Handler(std::move(Result));
   }
 
   // Abandon this response by calling the handler with an 'abandoned response'
@@ -817,7 +817,8 @@ public:
       // This isn't a channel error so we don't want to abandon other pending
       // responses, but we still need to run the user handler with an error to
       // let them know the call failed.
-      if (auto Err = Handler(orcError(OrcErrorCode::UnknownRPCFunction)))
+      if (auto Err = Handler(errorCodeToError(
+                               orcError(OrcErrorCode::UnknownRPCFunction))))
         report_fatal_error(std::move(Err));
       return FnIdOrErr.takeError();
     }
@@ -884,7 +885,7 @@ public:
       return I->second(C, SeqNo);
 
     // else: No handler found. Report error to client?
-    return orcError(OrcErrorCode::UnexpectedRPCCall);
+    return errorCodeToError(orcError(OrcErrorCode::UnexpectedRPCCall));
   }
 
   /// Helper for handling setter procedures - this method returns a functor that
@@ -994,7 +995,7 @@ protected:
         // Unlock the pending results map to prevent recursive lock.
         Lock.unlock();
         abandonPendingResponses();
-        return orcError(OrcErrorCode::UnexpectedRPCResponse);
+        return errorCodeToError(orcError(OrcErrorCode::UnexpectedRPCResponse));
       }
     }
 

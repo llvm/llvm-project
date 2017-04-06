@@ -9038,14 +9038,10 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         // with that name must be marked "overloadable".
         Diag(NewFD->getLocation(), diag::err_attribute_overloadable_missing)
           << Redeclaration << NewFD;
-        NamedDecl *OverloadedDecl = nullptr;
-        if (Redeclaration)
-          OverloadedDecl = OldDecl;
-        else if (!Previous.empty())
-          OverloadedDecl = Previous.getRepresentativeDecl();
-        if (OverloadedDecl)
-          Diag(OverloadedDecl->getLocation(),
-               diag::note_attribute_overloadable_prev_overload);
+        NamedDecl *OverloadedDecl =
+            Redeclaration ? OldDecl : Previous.getRepresentativeDecl();
+        Diag(OverloadedDecl->getLocation(),
+             diag::note_attribute_overloadable_prev_overload);
         NewFD->addAttr(OverloadableAttr::CreateImplicit(Context));
       }
     }

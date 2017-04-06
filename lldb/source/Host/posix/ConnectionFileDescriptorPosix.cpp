@@ -748,14 +748,12 @@ ConnectionStatus ConnectionFileDescriptor::ConnectTCP(llvm::StringRef s,
 
 ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
                                                       Error *error_ptr) {
-  Socket *send_socket = nullptr;
-  Socket *recv_socket = nullptr;
-  Error error = Socket::UdpConnect(s, m_child_processes_inherit, send_socket,
-                                   recv_socket);
+  Socket *socket = nullptr;
+  Error error = Socket::UdpConnect(s, m_child_processes_inherit, socket);
   if (error_ptr)
     *error_ptr = error;
-  m_write_sp.reset(send_socket);
-  m_read_sp.reset(recv_socket);
+  m_write_sp.reset(socket);
+  m_read_sp = m_write_sp;
   if (error.Fail()) {
     return eConnectionStatusError;
   }
