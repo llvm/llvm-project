@@ -12,16 +12,7 @@ CONSTATTR UGEN(logb)
 CONSTATTR INLINEATTR half
 MATH_MANGLE(logb)(half x)
 {
-    half ret;
-
-    if (AMD_OPT()) {
-        ret = (half)(BUILTIN_FREXP_EXP_F16(x) - (short)1);
-    } else {
-        int ix = (int)AS_USHORT(x);
-        int r = ((ix >> 10) & 0x1f) - EXPBIAS_HP16;
-        int rs = 7 - (int)MATH_CLZI(ix & MANTBITS_HP16);
-        ret = (half)(r == -EXPBIAS_HP16 ? rs : r);
-    }
+    half ret = (half)(BUILTIN_FREXP_EXP_F16(x) - (short)1);
 
     if (!FINITE_ONLY_OPT()) {
         half ax = BUILTIN_ABS_F16(x);

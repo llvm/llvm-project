@@ -42,14 +42,7 @@ MATH_MANGLE(exp)(double x)
     double2 r = fadd(t, mul(sqr(t), p));
     double z = 1.0 + r.hi;
 
-    int n = (int)dn;
-    if (AMD_OPT()) {
-        z = BUILTIN_FLDEXP_F64(z, n);
-    } else {
-        double ss = AS_DOUBLE(0x1L << (n + 1074));
-        double sn = AS_DOUBLE((long)(n + EXPBIAS_DP64) << EXPSHIFTBITS_DP64);
-        z *= n < -1022 ? ss : sn;
-    }
+    z = BUILTIN_FLDEXP_F64(z, (int)dn);
 
     if (!FINITE_ONLY_OPT()) {
         z = x > 1024.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;

@@ -21,22 +21,12 @@ MATH_MANGLE(pow)(half x, half y)
 #if defined(COMPILING_POWN)
     float fy = (float)ny;
 #elif defined(COMPILING_ROOTN)
-    float fy;
-    if (AMD_OPT()) {
-        fy = BUILTIN_RCP_F32((float)ny);
-    } else {
-        fy = BUILTIN_DIV_F32(1.0f, (float)ny);
-    }
+    float fy = BUILTIN_RCP_F32((float)ny);
 #else
     float fy = (float)y;
 #endif
 
-    float p;
-    if (AMD_OPT()) {
-        p = BUILTIN_EXP2_F32(fy * BUILTIN_LOG2_F32((float)ax));
-    } else {
-        p = MATH_UPMANGLE(exp2)(fy * MATH_UPMANGLE(log2)((float)ax));
-    }
+    float p = BUILTIN_EXP2_F32(fy * BUILTIN_LOG2_F32((float)ax));
 
     // Classify y:
     //   inty = 0 means not an integer.

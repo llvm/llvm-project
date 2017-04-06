@@ -22,18 +22,14 @@
     _clzl_ret; \
 })
 
-#define MATH_MAD(A,B,C) BUILTIN_MAD_F64(A, B, C)
+#define MATH_MAD(A,B,C) BUILTIN_FMA_F64(A, B, C)
 
 #define MATH_FAST_RCP(X) ({ \
     double _frcp_x = X; \
     double _frcp_ret; \
-    if (AMD_OPT()) { \
-        _frcp_ret = BUILTIN_RCP_F64(_frcp_x); \
-        _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
-        _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
-    } else { \
-        _frcp_ret = BUILTIN_DIV_F64(1.0, _frcp_x); \
-    } \
+    _frcp_ret = BUILTIN_RCP_F64(_frcp_x); \
+    _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
+    _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
     _frcp_ret; \
 })
 #define MATH_RCP(X) BUILTIN_DIV_F64(1.0, X)
@@ -42,19 +38,14 @@
     double _fdiv_x = X; \
     double _fdiv_y = Y; \
     double _fdiv_ret; \
-    if (AMD_OPT()) { \
-        double _fdiv_r = BUILTIN_RCP_F64(_fdiv_y); \
-        _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
-        _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
-        _fdiv_ret = _fdiv_x * _fdiv_r; \
-        _fdiv_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_ret, _fdiv_x), _fdiv_r, _fdiv_ret); \
-    } else { \
-        _fdiv_ret =  BUILTIN_DIV_F64(_fdiv_x, _fdiv_y); \
-    } \
+    double _fdiv_r = BUILTIN_RCP_F64(_fdiv_y); \
+    _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
+    _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
+    _fdiv_ret = _fdiv_x * _fdiv_r; \
+    _fdiv_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_ret, _fdiv_x), _fdiv_r, _fdiv_ret); \
     _fdiv_ret; \
 })
 #define MATH_DIV(X,Y) BUILTIN_DIV_F64(X, Y)
-
 
 #define MATH_FAST_SQRT(X) ({ \
     double _fsqrt_x = X; \

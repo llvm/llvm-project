@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-CONSTATTR static inline bool
+CONSTATTR INLINEATTR static bool
 samesign(half x, half y)
 {
     return (AS_USHORT(x) & (ushort)SIGNBIT_HP16) == (AS_USHORT(y) & (ushort)SIGNBIT_HP16);
@@ -35,29 +35,14 @@ MATH_MANGLE(remainder)(half x, half y)
     if (ax > ay) {
         int ex, ey;
 
-        if (AMD_OPT()) {
-            ex = BUILTIN_FREXP_EXP_F32(ax) - 1;
-            ax = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ax), bits);
-            ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
-            ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
-        } else {
-            ex = (AS_INT(ax) >> 23) - 127;
-            ax = AS_FLOAT(((127+bits-1) << 23) | (AS_INT(ax) & 0x007fffff));
-            ax = x == 0.0f ? 0.0f : ax;
-            ex = x == 0.0f ? 0 : ex;
-            ey = (AS_INT(ay) >> 23) - 127;
-            ay = AS_FLOAT((127 << 23) | (AS_INT(ay) & 0x007fffff));
-            ey = y == 0.0f ? ex : ey;
-        }
+        ex = BUILTIN_FREXP_EXP_F32(ax) - 1;
+        ax = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ax), bits);
+        ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
+        ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
 
         int nb = ex - ey;
 
-        float ayinv;
-        if (AMD_OPT()) {
-            ayinv = BUILTIN_RCP_F32(ay);
-        } else {
-            ayinv = BUILTIN_DIV_F32(1.0f, ay);
-        }
+        float ayinv = BUILTIN_RCP_F32(ay);
 
 #if !defined(COMPILING_FMOD)
         int qacc = 0;
@@ -74,19 +59,11 @@ MATH_MANGLE(remainder)(half x, half y)
             iq -= clt;
             qacc = (qacc << bits) | iq;
 #endif
-            if (AMD_OPT()) {
-                ax = BUILTIN_FLDEXP_F32(ax, bits); 
-            } else {
-                ax *= AS_FLOAT((127 + bits) << 23);
-            }
+            ax = BUILTIN_FLDEXP_F32(ax, bits); 
             nb -= bits;
         }
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
-        } else {
-            ax *= AS_FLOAT((127 + nb - bits + 1) << 23);
-        }
+        ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
 
         // Final iteration
         {
@@ -118,12 +95,7 @@ MATH_MANGLE(remainder)(half x, half y)
 #endif
 #endif
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F32(ax, ey);
-        } else {
-            ax *= AS_FLOAT((127 + ey) << 23);
-        }
-
+        ax = BUILTIN_FLDEXP_F32(ax, ey);
         short ir = AS_SHORT((half)ax);
         ir ^= AS_SHORT(x) & (short)SIGNBIT_HP16;
         ret = AS_HALF(ir);
@@ -136,8 +108,8 @@ MATH_MANGLE(remainder)(half x, half y)
 #if !defined(COMPILING_FMOD)
         bool c = ax > 0.5f*ay;
 
-        half qsgn = samesign(x,y) ? -1.0h : 1.0h;
-        half t = MATH_MAD(y, qsgn, x);
+        int qsgn = samesign(x,y) ? 1 : -1;
+        half t = MATH_MAD(y, -(half)qsgn, x);
         ret = c ? t : ret;
 #if defined(COMPILING_REMQUO)
         q7 = c ? qsgn : q7;
