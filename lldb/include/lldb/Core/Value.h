@@ -10,17 +10,39 @@
 #ifndef liblldb_Value_h_
 #define liblldb_Value_h_
 
-// C Includes
-// C++ Includes
-#include <vector>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Scalar.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-enumerations.h"         // for ByteOrder, ByteOrder::eB...
+#include "lldb/lldb-private-enumerations.h" // for AddressType
+#include "lldb/lldb-private-types.h"        // for type128, RegisterInfo
+
+#include "llvm/ADT/APInt.h" // for APInt
+
+#include <vector>
+
+#include <stdint.h> // for uint8_t, uint32_t, uint64_t
+#include <string.h> // for size_t, memcpy
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class ExecutionContext;
+}
+namespace lldb_private {
+class Module;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class Type;
+}
+namespace lldb_private {
+class Variable;
+}
 
 namespace lldb_private {
 

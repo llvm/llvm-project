@@ -9,14 +9,12 @@
 
 #include "lldb/Core/FileSpecList.h"
 
-// C Includes
-// C++ Includes
-#include <algorithm>
-
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Stream.h"
-#include "llvm/Support/FileSystem.h"
+
+#include <utility> // for find
+
+#include <stdint.h> // for UINT32_MAX
 
 using namespace lldb_private;
 using namespace std;

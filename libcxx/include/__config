@@ -211,6 +211,16 @@
 # if defined(_LIBCPP_MSVCRT)
 #   define _LIBCPP_HAS_QUICK_EXIT
 # endif
+
+// Some CRT APIs are unavailable to store apps
+#if defined(WINAPI_FAMILY)
+#include <winapifamily.h>
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) &&                      \
+    (!defined(WINAPI_PARTITION_SYSTEM) ||                                      \
+     !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_SYSTEM))
+#define _LIBCPP_WINDOWS_STORE_APP
+#endif
+#endif
 #endif // defined(_WIN32)
 
 #ifdef __sun__

@@ -1036,7 +1036,7 @@ static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
 // We need to add input synthetic sections early in createSyntheticSections()
 // to make them visible from linkescript side. But not all sections are always
 // required to be in output. For example we don't need dynamic section content
-// sometimes. This function filters out such unused sections from output.
+// sometimes. This function filters out such unused sections from the output.
 static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. We iterate over them all and exit at first
@@ -1048,12 +1048,12 @@ static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
     if (!SS->empty() || !SS->OutSec)
       continue;
 
-    OutputSection *OutSec = cast<OutputSection>(SS->OutSec);
-    OutSec->Sections.erase(
-        std::find(OutSec->Sections.begin(), OutSec->Sections.end(), SS));
-    // If there is no other sections in output section, remove it from output.
-    if (OutSec->Sections.empty())
-      V.erase(std::find(V.begin(), V.end(), OutSec));
+    SS->OutSec->Sections.erase(std::find(SS->OutSec->Sections.begin(),
+                                         SS->OutSec->Sections.end(), SS));
+    // If there are no other sections in the output section, remove it from the
+    // output.
+    if (SS->OutSec->Sections.empty())
+      V.erase(std::find(V.begin(), V.end(), SS->OutSec));
   }
 }
 

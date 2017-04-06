@@ -124,7 +124,6 @@ public:
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -147,7 +146,6 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   bool isPicRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -219,7 +217,6 @@ public:
   uint32_t getDynRel(uint32_t Type) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -241,7 +238,6 @@ public:
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
@@ -305,8 +301,6 @@ bool TargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,
 bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
-
-bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const { return false; }
 
 void TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   writeGotPlt(Buf, S);
@@ -429,10 +423,6 @@ uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_386_TLS_LE_32)
     return R_386_TLS_TPOFF32;
   return Type;
-}
-
-bool X86TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
-  return Type == R_386_TLS_GD;
 }
 
 bool X86TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
@@ -755,11 +745,6 @@ bool X86_64TargetInfo<ELFT>::isPicRel(uint32_t Type) const {
 template <class ELFT>
 bool X86_64TargetInfo<ELFT>::isTlsInitialExecRel(uint32_t Type) const {
   return Type == R_X86_64_GOTTPOFF;
-}
-
-template <class ELFT>
-bool X86_64TargetInfo<ELFT>::isTlsGlobalDynamicRel(uint32_t Type) const {
-  return Type == R_X86_64_TLSGD;
 }
 
 template <class ELFT>
@@ -2048,10 +2033,6 @@ bool ARMTargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
   return Type == R_ARM_TLS_LDO32 || Type == R_ARM_TLS_LDM32;
 }
 
-bool ARMTargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
-  return Type == R_ARM_TLS_GD32;
-}
-
 bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
   return Type == R_ARM_TLS_IE32;
 }
@@ -2150,11 +2131,6 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::isTlsLocalDynamicRel(uint32_t Type) const {
   return Type == R_MIPS_TLS_LDM;
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::isTlsGlobalDynamicRel(uint32_t Type) const {
-  return Type == R_MIPS_TLS_GD;
 }
 
 template <class ELFT>

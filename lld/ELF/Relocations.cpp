@@ -79,13 +79,6 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   return Msg + S.getObjMsg<ELFT>(Off);
 }
 
-static bool refersToGotEntry(RelExpr Expr) {
-  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-                        R_MIPS_GOT_OFF32, R_MIPS_TLSGD, R_MIPS_TLSLD,
-                        R_GOT_PAGE_PC, R_GOT_PC, R_GOT_FROM_END, R_TLSGD,
-                        R_TLSGD_PC, R_TLSDESC, R_TLSDESC_PAGE>(Expr);
-}
-
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   // In case of MIPS GP-relative relocations always resolve to a definition
   // in a regular input file, ignoring the one-definition rule. So we,
@@ -133,7 +126,7 @@ static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
     return 1;
   }
 
-  if (Target->isTlsGlobalDynamicRel(Type)) {
+  if (isRelExprOneOf<R_TLSGD, R_TLSGD_PC, R_MIPS_TLSGD>(Expr)) {
     if (Got->addDynTlsEntry(Body) &&
         (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
       uint64_t Off = Got->getGlobalDynOffset(Body);
@@ -202,8 +195,8 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL>(Expr) ||
-      Target->isTlsGlobalDynamicRel(Type)) {
+  if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD,
+                     R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
       if (In<ELFT>::Got->addDynTlsEntry(Body)) {
         uint64_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
@@ -250,6 +243,9 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;
   }
+
+  if (Expr == R_TLSDESC_CALL)
+    return 1;
   return 0;
 }
 
@@ -282,8 +278,18 @@ static bool isAbsoluteValue(const SymbolBody &Body) {
   return isAbsolute(Body) || Body.isTls();
 }
 
+// Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
   return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC>(Expr);
+}
+
+// Returns true if Expr refers a GOT entry. Note that this function
+// returns false for TLS variables even though they need GOT, because
+// TLS variables uses GOT differently than the regular variables.
+static bool needsGot(RelExpr Expr) {
+  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
+                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
+                        R_GOT_FROM_END>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -817,21 +823,49 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
                        R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
       In<ELFT>::Got->HasGotOffRel = true;
 
+    // Read an addend.
     int64_t Addend = computeAddend<ELFT>(Rel, Sec.Data.data());
     if (Config->EMachine == EM_MIPS)
       Addend += computeMipsAddend<ELFT>(Rel, Sec, Expr, Body, End);
 
+    // Process some TLS relocations, including relaxing TLS relocations.
+    // Note that this function does not handle all TLS relocations.
     if (unsigned Processed =
             handleTlsRelocation<ELFT>(Type, Body, Sec, Offset, Addend, Expr)) {
       I += (Processed - 1);
       continue;
     }
 
-    if (Expr == R_TLSDESC_CALL)
-      continue;
+    // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
+    if (needsPlt(Expr) && !Body.isInPlt()) {
+      if (Body.isGnuIFunc() && !Preemptible)
+        addPltEntry(InX::Iplt, In<ELFT>::IgotPlt, In<ELFT>::RelaIplt,
+                    Target->IRelativeRel, Body, true);
+      else
+        addPltEntry(InX::Plt, In<ELFT>::GotPlt, In<ELFT>::RelaPlt,
+                    Target->PltRel, Body, !Preemptible);
+    }
 
-    if (!needsPlt(Expr) && !refersToGotEntry(Expr) &&
-        isPreemptible(Body, Type)) {
+    // Create a GOT slot if a relocation needs GOT.
+    if (needsGot(Expr)) {
+      if (Config->EMachine == EM_MIPS) {
+        // MIPS ABI has special rules to process GOT entries and doesn't
+        // require relocation entries for them. A special case is TLS
+        // relocations. In that case dynamic loader applies dynamic
+        // relocations to initialize TLS GOT entries.
+        // See "Global Offset Table" in Chapter 5 in the following document
+        // for detailed description:
+        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+        In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
+        if (Body.isTls() && Body.isPreemptible())
+          In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::MipsGot,
+                                       Body.getGotOffset(), false, &Body, 0});
+      } else if (!Body.isInGot()) {
+        addGotEntry<ELFT>(Body, Preemptible);
+      }
+    }
+
+    if (!needsPlt(Expr) && !needsGot(Expr) && isPreemptible(Body, Type)) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
@@ -863,7 +897,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     }
 
     // If the relocation points to something in the file, we can process it.
-    bool Constant =
+    bool IsConstant =
         isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, Sec, Rel.r_offset);
 
     // If the output being produced is position independent, the final value
@@ -871,53 +905,15 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     // dynamic linker. We can however do better than just copying the incoming
     // relocation. We can process some of it and and just ask the dynamic
     // linker to add the load address.
-    if (!Constant)
+    if (!IsConstant)
       In<ELFT>::RelaDyn->addReloc(
           {Target->RelativeRel, &Sec, Offset, true, &Body, Addend});
 
     // If the produced value is a constant, we just remember to write it
     // when outputting this section. We also have to do it if the format
     // uses Elf_Rel, since in that case the written value is the addend.
-    if (Constant || !RelTy::IsRela)
+    if (IsConstant || !RelTy::IsRela)
       Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
-
-    // At this point we are done with the relocated position. Some relocations
-    // also require us to create a got or plt entry.
-
-    // If a relocation needs PLT, we create a PLT and a GOT slot for the symbol.
-    if (needsPlt(Expr)) {
-      if (Body.isInPlt())
-        continue;
-
-      if (Body.isGnuIFunc() && !Preemptible)
-        addPltEntry(InX::Iplt, In<ELFT>::IgotPlt, In<ELFT>::RelaIplt,
-                    Target->IRelativeRel, Body, true);
-      else
-        addPltEntry(InX::Plt, In<ELFT>::GotPlt, In<ELFT>::RelaPlt,
-                    Target->PltRel, Body, !Preemptible);
-      continue;
-    }
-
-    if (refersToGotEntry(Expr)) {
-      if (Config->EMachine == EM_MIPS) {
-        // MIPS ABI has special rules to process GOT entries and doesn't
-        // require relocation entries for them. A special case is TLS
-        // relocations. In that case dynamic loader applies dynamic
-        // relocations to initialize TLS GOT entries.
-        // See "Global Offset Table" in Chapter 5 in the following document
-        // for detailed description:
-        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
-        if (Body.isTls() && Body.isPreemptible())
-          In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::MipsGot,
-                                       Body.getGotOffset(), false, &Body, 0});
-        continue;
-      }
-
-      if (!Body.isInGot())
-        addGotEntry<ELFT>(Body, Preemptible);
-      continue;
-    }
   }
 }
 

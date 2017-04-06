@@ -9,22 +9,19 @@
 
 #include "lldb/Core/ValueObjectConstResult.h"
 
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectChild.h"
-#include "lldb/Core/ValueObjectConstResultChild.h"
+#include "lldb/Core/Scalar.h" // for Scalar
 #include "lldb/Core/ValueObjectDynamicValue.h"
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextScope
+#include "lldb/Target/Process.h"
+#include "lldb/Utility/DataBuffer.h"     // for DataBuffer
+#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
 #include "lldb/Utility/DataExtractor.h"
 
-#include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/Type.h"
-#include "lldb/Symbol/Variable.h"
-
-#include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
+namespace lldb_private {
+class Module;
+}
 
 using namespace lldb;
 using namespace lldb_private;

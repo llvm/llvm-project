@@ -7,22 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
+#include "lldb/Utility/Error.h"
+
+#include "lldb/Utility/VASPrintf.h"
+#include "lldb/lldb-defines.h"            // for LLDB_GENERIC_ERROR
+#include "lldb/lldb-enumerations.h"       // for ErrorType, ErrorType::eErr...
+#include "llvm/ADT/SmallString.h"         // for SmallString
+#include "llvm/ADT/StringRef.h"           // for StringRef
+#include "llvm/Support/FormatProviders.h" // for format_provider
+
+#include <cerrno>
+#include <cstdarg>
+#include <string> // for string
+#include <system_error>
+
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
 
-// C++ Includes
-#include <cerrno>
-#include <cstdarg>
-#include <system_error>
+#include <stdint.h> // for uint32_t
+#include <string.h> // for strerror
 
-// Other libraries and framework includes
-#include "llvm/ADT/SmallVector.h"
-
-// Project includes
-#include "lldb/Utility/Error.h"
-#include "lldb/Utility/VASPrintf.h"
+namespace llvm {
+class raw_ostream;
+}
 
 using namespace lldb;
 using namespace lldb_private;

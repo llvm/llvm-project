@@ -10,8 +10,22 @@
 #ifndef liblldb_AddressResolverFileLine_h_
 #define liblldb_AddressResolverFileLine_h_
 
-// Project includes
 #include "lldb/Core/AddressResolver.h"
+#include "lldb/Core/SearchFilter.h" // for Searcher, Searcher::CallbackR...
+#include "lldb/Utility/FileSpec.h"  // for FileSpec
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class SymbolContext;
+}
 
 namespace lldb_private {
 

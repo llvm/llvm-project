@@ -10,18 +10,18 @@
 #ifndef liblldb_StringList_h_
 #define liblldb_StringList_h_
 
-// C Includes
-#include <stdint.h>
+#include "llvm/ADT/StringRef.h"
 
-// C++ Includes
+#include <stddef.h> // for size_t
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
-
-// Project includes
-#include "lldb/lldb-forward.h"
+namespace lldb_private {
+class Log;
+}
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

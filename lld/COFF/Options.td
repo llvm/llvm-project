@@ -82,6 +82,8 @@ def force_unresolved : F<"force:unresolved">;
 
 defm allowbind: B<"allowbind", "Disable DLL binding">;
 defm allowisolation : B<"allowisolation", "Set NO_ISOLATION bit">;
+defm appcontainer : B<"appcontainer",
+                      "Image can only be run in an app container">;
 defm dynamicbase : B<"dynamicbase",
                      "Disable address space layout randomization">;
 defm fixed    : B<"fixed", "Enable base relocations">;

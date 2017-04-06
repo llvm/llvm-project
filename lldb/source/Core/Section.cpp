@@ -8,11 +8,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Section.h"
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/Stream.h"   // for Stream
+#include "lldb/Utility/VMRange.h"  // for VMRange
 
+#include <inttypes.h> // for PRIx64
+#include <limits>     // for numeric_limits
+#include <utility>    // for distance
+
+namespace lldb_private {
+class DataExtractor;
+}
 using namespace lldb;
 using namespace lldb_private;
 

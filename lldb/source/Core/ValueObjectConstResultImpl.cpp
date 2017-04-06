@@ -1,5 +1,4 @@
-//===-- ValueObjectConstResultImpl.cpp ---------------------------*- C++
-//-*-===//
+//===-- ValueObjectConstResultImpl.cpp ---------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,24 +9,26 @@
 
 #include "lldb/Core/ValueObjectConstResultImpl.h"
 
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectChild.h"
+#include "lldb/Core/Scalar.h"      // for Scalar
+#include "lldb/Core/Value.h"       // for Value, Value::Val...
+#include "lldb/Core/ValueObject.h" // for ValueObject
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectConstResultCast.h"
 #include "lldb/Core/ValueObjectConstResultChild.h"
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Utility/DataExtractor.h"
-
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/Type.h"
-#include "lldb/Symbol/Variable.h"
-
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
+#include "lldb/Utility/Endian.h"         // for InlHostByteOrder
+#include "lldb/Utility/SharingPtr.h"     // for SharingPtr
+
+#include <string> // for string
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Error;
+}
 
 using namespace lldb;
 using namespace lldb_private;

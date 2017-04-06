@@ -162,7 +162,7 @@ public:
   const ClangTidyStats &getStats() const { return Stats; }
 
   /// \brief Returns all collected errors.
-  const std::vector<ClangTidyError> &getErrors() const { return Errors; }
+  ArrayRef<ClangTidyError> getErrors() const { return Errors; }
 
   /// \brief Clears collected errors.
   void clearErrors() { Errors.clear(); }

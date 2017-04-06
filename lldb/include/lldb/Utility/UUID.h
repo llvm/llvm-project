@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <stddef.h>
 #include <stdint.h>
 #include <string>
 

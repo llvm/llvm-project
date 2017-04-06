@@ -10,17 +10,39 @@
 #ifndef liblldb_Section_h_
 #define liblldb_Section_h_
 
-#include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/Flags.h"
-
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Core/RangeMap.h"
-#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/UserID.h"
-#include "lldb/Utility/VMRange.h"
-#include "lldb/lldb-private.h"
-#include <limits.h>
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h" // for SectionType
+#include "lldb/lldb-forward.h"      // for SectionSP, ModuleSP, SectionWP
+#include "lldb/lldb-types.h"        // for addr_t, offset_t, user_id_t
+
+#include <memory> // for enable_shared_from_this
+#include <vector> // for vector
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, UINT32_MAX
+
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class ObjectFile;
+}
+namespace lldb_private {
+class Section;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class Target;
+}
 
 namespace lldb_private {
 

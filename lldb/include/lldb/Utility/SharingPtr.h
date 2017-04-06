@@ -12,7 +12,6 @@
 
 // C Includes
 // C++ Includes
-#include <algorithm>
 #include <memory>
 
 // Microsoft Visual C++ currently does not enable std::atomic to work
@@ -23,6 +22,8 @@
 #else
 #include <atomic>
 #endif
+
+#include <stddef.h>
 
 // Other libraries and framework includes
 // Project includes

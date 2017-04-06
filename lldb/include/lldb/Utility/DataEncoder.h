@@ -12,8 +12,12 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/lldb-private.h"
-#include <limits.h>
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h" // for ByteOrder
+#include "lldb/lldb-forward.h"      // for DataBufferSP
+#include "lldb/lldb-types.h"        // for addr_t
+
+#include <stddef.h> // for size_t
 #include <stdint.h>
 
 namespace lldb_private {

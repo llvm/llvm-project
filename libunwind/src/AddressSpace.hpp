@@ -383,7 +383,7 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 #if !defined(Elf_Phdr)
         typedef ElfW(Phdr) Elf_Phdr;
 #endif
-#if !defined(Elf_Addr)
+#if !defined(Elf_Addr) && defined(__ANDROID__)
         typedef ElfW(Addr) Elf_Addr;
 #endif
 

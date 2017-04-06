@@ -17,6 +17,8 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Process.h"

@@ -24,6 +24,7 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"

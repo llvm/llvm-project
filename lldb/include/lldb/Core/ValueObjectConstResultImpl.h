@@ -10,11 +10,26 @@
 #ifndef liblldb_ValueObjectConstResultImpl_h_
 #define liblldb_ValueObjectConstResultImpl_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ValueObject.h"
+#include "lldb/Utility/ConstString.h"       // for ConstString
+#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-forward.h"              // for ValueObjectSP
+#include "lldb/lldb-private-enumerations.h" // for AddressType, AddressType...
+#include "lldb/lldb-types.h"                // for addr_t
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, int32_t
+namespace lldb_private {
+class CompilerType;
+}
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class ValueObject;
+}
 
 namespace lldb_private {
 
