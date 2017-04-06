@@ -5353,6 +5353,37 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
   return m_thread_context_offsets.GetSize();
 }
 
+// The LC_IDENT load command has been obsoleted for a very
+// long time and it should not occur in Mach-O files.  But
+// if it is there, it may contain a hint about where to find
+// the main binary in a core file, so we'll use it.
+std::string ObjectFileMachO::GetIdentifierString() {
+  std::string result;
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
+      const uint32_t cmd_offset = offset;
+      struct ident_command ident_command;
+      if (m_data.GetU32(&offset, &ident_command, 2) == NULL)
+        break;
+      if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
+        char *buf = (char *)malloc (ident_command.cmdsize);
+        if (buf != nullptr 
+            && m_data.CopyData (offset, ident_command.cmdsize, buf) == ident_command.cmdsize) {
+          buf[ident_command.cmdsize - 1] = '\0';
+          result = buf;
+        }
+        if (buf)
+          free (buf);
+      }
+      offset = cmd_offset + ident_command.cmdsize;
+    }
+  }
+  return result;
+}
+
 lldb::RegisterContextSP
 ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
                                          lldb_private::Thread &thread) {

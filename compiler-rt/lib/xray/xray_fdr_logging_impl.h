@@ -32,6 +32,8 @@
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_log_records.h"
+#include "xray_flags.h"
+#include "xray_tsc.h"
 
 namespace __xray {
 
@@ -108,8 +110,16 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
 //-----------------------------------------------------------------------------|
 
 namespace {
+
 thread_local BufferQueue::Buffer Buffer;
 thread_local char *RecordPtr = nullptr;
+
+// The number of FunctionEntry records immediately preceding RecordPtr.
+thread_local uint8_t NumConsecutiveFnEnters = 0;
+
+// The number of adjacent, consecutive pairs of FunctionEntry, Tail Exit
+// records preceding RecordPtr.
+thread_local uint8_t NumTailCalls = 0;
 
 constexpr auto MetadataRecSize = sizeof(MetadataRecord);
 constexpr auto FunctionRecSize = sizeof(FunctionRecord);
@@ -209,6 +219,8 @@ static inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
   }
   std::memcpy(MemPtr, Records, sizeof(MetadataRecord) * InitRecordsCount);
   MemPtr += sizeof(MetadataRecord) * InitRecordsCount;
+  NumConsecutiveFnEnters = 0;
+  NumTailCalls = 0;
 }
 
 static inline void setupNewBuffer(const BufferQueue::Buffer &Buffer,
@@ -221,6 +233,8 @@ static inline void setupNewBuffer(const BufferQueue::Buffer &Buffer,
   // This is typically clock_gettime, but callers have injection ability.
   wall_clock_reader(CLOCK_MONOTONIC, &TS);
   writeNewBufferPreamble(Tid, TS, RecordPtr);
+  NumConsecutiveFnEnters = 0;
+  NumTailCalls = 0;
 }
 
 static inline void writeNewCPUIdMetadata(uint16_t CPU, uint64_t TSC,
@@ -237,6 +251,8 @@ static inline void writeNewCPUIdMetadata(uint16_t CPU, uint64_t TSC,
   std::memcpy(&NewCPUId.Data[sizeof(CPU)], &TSC, sizeof(TSC));
   std::memcpy(MemPtr, &NewCPUId, sizeof(MetadataRecord));
   MemPtr += sizeof(MetadataRecord);
+  NumConsecutiveFnEnters = 0;
+  NumTailCalls = 0;
 }
 
 static inline void writeNewCPUIdMetadata(uint16_t CPU,
@@ -251,6 +267,8 @@ static inline void writeEOBMetadata(char *&MemPtr) XRAY_NEVER_INSTRUMENT {
   // For now we don't write any bytes into the Data field.
   std::memcpy(MemPtr, &EOBMeta, sizeof(MetadataRecord));
   MemPtr += sizeof(MetadataRecord);
+  NumConsecutiveFnEnters = 0;
+  NumTailCalls = 0;
 }
 
 static inline void writeEOBMetadata() XRAY_NEVER_INSTRUMENT {
@@ -269,6 +287,8 @@ static inline void writeTSCWrapMetadata(uint64_t TSC,
   std::memcpy(&TSCWrap.Data, &TSC, sizeof(TSC));
   std::memcpy(MemPtr, &TSCWrap, sizeof(MetadataRecord));
   MemPtr += sizeof(MetadataRecord);
+  NumConsecutiveFnEnters = 0;
+  NumTailCalls = 0;
 }
 
 static inline void writeTSCWrapMetadata(uint64_t TSC) XRAY_NEVER_INSTRUMENT {
@@ -289,13 +309,35 @@ static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
 
   switch (EntryType) {
   case XRayEntryType::ENTRY:
+    ++NumConsecutiveFnEnters;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
+    break;
   case XRayEntryType::LOG_ARGS_ENTRY:
+    // We should not rewind functions with logged args.
+    NumConsecutiveFnEnters = 0;
+    NumTailCalls = 0;
     FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
     break;
   case XRayEntryType::EXIT:
+    // If we've decided to log the function exit, we will never erase the log
+    // before it.
+    NumConsecutiveFnEnters = 0;
+    NumTailCalls = 0;
     FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionExit);
     break;
   case XRayEntryType::TAIL:
+    // If we just entered the function we're tail exiting from or erased every
+    // invocation since then, this function entry tail pair is a candidate to
+    // be erased when the child function exits.
+    if (NumConsecutiveFnEnters > 0) {
+      ++NumTailCalls;
+      NumConsecutiveFnEnters = 0;
+    } else {
+      // We will never be able to erase this tail call since we have logged
+      // something in between the function entry and tail exit.
+      NumTailCalls = 0;
+      NumConsecutiveFnEnters = 0;
+    }
     FuncRecord.RecordKind =
         uint8_t(FunctionRecord::RecordKinds::FunctionTailExit);
     break;
@@ -337,6 +379,8 @@ static inline void processFunctionHook(
   // We assume that we'll support only 65536 CPUs for x86_64.
   thread_local uint16_t CurrentCPU = std::numeric_limits<uint16_t>::max();
   thread_local uint64_t LastTSC = 0;
+  thread_local uint64_t LastFunctionEntryTSC = 0;
+  thread_local uint64_t NumberOfTicksThreshold = 0;
 
   // Make sure a thread that's ever called handleArg0 has a thread-local
   // live reference to the buffer queue for this particular instance of
@@ -379,6 +423,10 @@ static inline void processFunctionHook(
       return;
     }
 
+    uint64_t CycleFrequency = getTSCFrequency();
+    NumberOfTicksThreshold = CycleFrequency *
+                             flags()->xray_fdr_log_func_duration_threshold_us /
+                             1000000;
     setupNewBuffer(Buffer, wall_clock_reader);
   }
 
@@ -441,6 +489,10 @@ static inline void processFunctionHook(
              BufferQueue::getErrorString(EC));
       return;
     }
+    uint64_t CycleFrequency = getTSCFrequency();
+    NumberOfTicksThreshold = CycleFrequency *
+                             flags()->xray_fdr_log_func_duration_threshold_us /
+                             1000000;
     setupNewBuffer(Buffer, wall_clock_reader);
   }
 
@@ -486,10 +538,92 @@ static inline void processFunctionHook(
       RecordTSCDelta = Delta;
   }
 
-  // We then update our "LastTSC" and "CurrentCPU" thread-local variables to aid
-  // us in future computations of this TSC delta value.
   LastTSC = TSC;
   CurrentCPU = CPU;
+  using AlignedFuncStorage =
+      std::aligned_storage<sizeof(FunctionRecord),
+                           alignof(FunctionRecord)>::type;
+  switch (Entry) {
+  case XRayEntryType::ENTRY:
+  case XRayEntryType::LOG_ARGS_ENTRY:
+    // Update the thread local state for the next invocation.
+    LastFunctionEntryTSC = TSC;
+    break;
+  case XRayEntryType::TAIL:
+    break;
+  case XRayEntryType::EXIT:
+    // Break out and write the exit record if we can't erase any functions.
+    if (NumConsecutiveFnEnters == 0 ||
+        (TSC - LastFunctionEntryTSC) >= NumberOfTicksThreshold)
+      break;
+    // Otherwise we unwind functions that are too short to log by decrementing
+    // our view ptr into the buffer. We can erase a Function Entry record and
+    // neglect to log our EXIT. We have to make sure to update some state like
+    // the LastTSC and count of consecutive FunctionEntry records.
+    RecordPtr -= FunctionRecSize;
+    AlignedFuncStorage AlignedFuncRecordBuffer;
+    const auto &FuncRecord = *reinterpret_cast<FunctionRecord *>(
+        std::memcpy(&AlignedFuncRecordBuffer, RecordPtr, FunctionRecSize));
+    assert(FuncRecord.RecordKind ==
+               uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+           "Expected to find function entry recording when rewinding.");
+    assert(FuncRecord.FuncId == (FuncId & ~(0x0F << 28)) &&
+           "Expected matching function id when rewinding Exit");
+    --NumConsecutiveFnEnters;
+    LastTSC -= FuncRecord.TSCDelta;
+
+    // We unwound one call. Update the state and return without writing a log.
+    if (NumConsecutiveFnEnters != 0) {
+      LastFunctionEntryTSC = LastFunctionEntryTSC - FuncRecord.TSCDelta;
+      return;
+    }
+
+    // Otherwise we've rewound the stack of all function entries, we might be
+    // able to rewind further by erasing tail call functions that are being
+    // exited from via this exit.
+    LastFunctionEntryTSC = 0;
+    auto RewindingTSC = LastTSC;
+    auto RewindingRecordPtr = RecordPtr - FunctionRecSize;
+    while (NumTailCalls > 0) {
+      AlignedFuncStorage TailExitRecordBuffer;
+      // Rewind the TSC back over the TAIL EXIT record.
+      const auto &ExpectedTailExit =
+          *reinterpret_cast<FunctionRecord *>(std::memcpy(
+              &TailExitRecordBuffer, RewindingRecordPtr, FunctionRecSize));
+
+      assert(ExpectedTailExit.RecordKind ==
+                 uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
+             "Expected to find tail exit when rewinding.");
+      auto TailExitFuncId = ExpectedTailExit.FuncId;
+      RewindingRecordPtr -= FunctionRecSize;
+      RewindingTSC -= ExpectedTailExit.TSCDelta;
+      AlignedFuncStorage FunctionEntryBuffer;
+      const auto &ExpectedFunctionEntry =
+          *reinterpret_cast<FunctionRecord *>(std::memcpy(
+              &FunctionEntryBuffer, RewindingRecordPtr, FunctionRecSize));
+      assert(ExpectedFunctionEntry.RecordKind ==
+                 uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+             "Expected to find function entry when rewinding tail call.");
+      assert(ExpectedFunctionEntry.FuncId == TailExitFuncId &&
+             "Expected funcids to match when rewinding tail call.");
+
+      if ((TSC - RewindingTSC) < NumberOfTicksThreshold) {
+        // We can erase a tail exit pair that we're exiting through since
+        // its duration is under threshold.
+        --NumTailCalls;
+        RewindingRecordPtr -= FunctionRecSize;
+        RewindingTSC -= ExpectedFunctionEntry.TSCDelta;
+        RecordPtr -= 2 * FunctionRecSize;
+        LastTSC = RewindingTSC;
+      } else {
+        // This tail call exceeded the threshold duration. It will not
+        // be erased.
+        NumTailCalls = 0;
+        return;
+      }
+    }
+    return; // without writing log.
+  }
 
   writeFunctionRecord(FuncId, RecordTSCDelta, Entry, RecordPtr);
 
@@ -510,5 +644,4 @@ static inline void processFunctionHook(
 } // namespace __xray_fdr_internal
 
 } // namespace __xray
-
 #endif // XRAY_XRAY_FDR_LOGGING_IMPL_H

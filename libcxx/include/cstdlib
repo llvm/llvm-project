@@ -130,8 +130,10 @@ using ::abort;
 using ::atexit;
 using ::exit;
 using ::_Exit;
+#ifndef _LIBCPP_WINDOWS_STORE_APP
 using ::getenv;
 using ::system;
+#endif
 using ::bsearch;
 using ::qsort;
 using ::abs;

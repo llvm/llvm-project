@@ -172,15 +172,13 @@ Error Socket::TcpListen(llvm::StringRef host_and_port,
 }
 
 Error Socket::UdpConnect(llvm::StringRef host_and_port,
-                         bool child_processes_inherit, Socket *&send_socket,
-                         Socket *&recv_socket) {
+                         bool child_processes_inherit, Socket *&socket) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
                 host_and_port.data());
 
-  return UDPSocket::Connect(host_and_port, child_processes_inherit, send_socket,
-                            recv_socket);
+  return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
 
 Error Socket::UnixDomainConnect(llvm::StringRef name,

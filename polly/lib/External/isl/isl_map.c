@@ -847,6 +847,53 @@ int isl_set_find_dim_by_name(__isl_keep isl_set *set, enum isl_dim_type type,
 	return isl_map_find_dim_by_name(set, type, name);
 }
 
+/* Check whether equality i of bset is a pure stride constraint
+ * on a single dimension, i.e., of the form
+ *
+ *	v = k e
+ *
+ * with k a constant and e an existentially quantified variable.
+ */
+isl_bool isl_basic_set_eq_is_stride(__isl_keep isl_basic_set *bset, int i)
+{
+	unsigned nparam;
+	unsigned d;
+	unsigned n_div;
+	int pos1;
+	int pos2;
+
+	if (!bset)
+		return isl_bool_error;
+
+	if (!isl_int_is_zero(bset->eq[i][0]))
+		return isl_bool_false;
+
+	nparam = isl_basic_set_dim(bset, isl_dim_param);
+	d = isl_basic_set_dim(bset, isl_dim_set);
+	n_div = isl_basic_set_dim(bset, isl_dim_div);
+
+	if (isl_seq_first_non_zero(bset->eq[i] + 1, nparam) != -1)
+		return isl_bool_false;
+	pos1 = isl_seq_first_non_zero(bset->eq[i] + 1 + nparam, d);
+	if (pos1 == -1)
+		return isl_bool_false;
+	if (isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + pos1 + 1,
+					d - pos1 - 1) != -1)
+		return isl_bool_false;
+
+	pos2 = isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + d, n_div);
+	if (pos2 == -1)
+		return isl_bool_false;
+	if (isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + d  + pos2 + 1,
+				   n_div - pos2 - 1) != -1)
+		return isl_bool_false;
+	if (!isl_int_is_one(bset->eq[i][1 + nparam + pos1]) &&
+	    !isl_int_is_negone(bset->eq[i][1 + nparam + pos1]))
+		return isl_bool_false;
+
+	return isl_bool_true;
+}
+
 /* Reset the user pointer on all identifiers of parameters and tuples
  * of the space of "map".
  */
@@ -1969,6 +2016,71 @@ struct isl_basic_set *isl_basic_set_set_to_empty(struct isl_basic_set *bset)
 	return bset_from_bmap(isl_basic_map_set_to_empty(bset_to_bmap(bset)));
 }
 
+__isl_give isl_basic_map *isl_basic_map_set_rational(
+	__isl_take isl_basic_map *bmap)
+{
+	if (!bmap)
+		return NULL;
+
+	if (ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL))
+		return bmap;
+
+	bmap = isl_basic_map_cow(bmap);
+	if (!bmap)
+		return NULL;
+
+	ISL_F_SET(bmap, ISL_BASIC_MAP_RATIONAL);
+
+	return isl_basic_map_finalize(bmap);
+}
+
+__isl_give isl_basic_set *isl_basic_set_set_rational(
+	__isl_take isl_basic_set *bset)
+{
+	return isl_basic_map_set_rational(bset);
+}
+
+__isl_give isl_basic_set *isl_basic_set_set_integral(
+	__isl_take isl_basic_set *bset)
+{
+	if (!bset)
+		return NULL;
+
+	if (!ISL_F_ISSET(bset, ISL_BASIC_MAP_RATIONAL))
+		return bset;
+
+	bset = isl_basic_set_cow(bset);
+	if (!bset)
+		return NULL;
+
+	ISL_F_CLR(bset, ISL_BASIC_MAP_RATIONAL);
+
+	return isl_basic_set_finalize(bset);
+}
+
+__isl_give isl_map *isl_map_set_rational(__isl_take isl_map *map)
+{
+	int i;
+
+	map = isl_map_cow(map);
+	if (!map)
+		return NULL;
+	for (i = 0; i < map->n; ++i) {
+		map->p[i] = isl_basic_map_set_rational(map->p[i]);
+		if (!map->p[i])
+			goto error;
+	}
+	return map;
+error:
+	isl_map_free(map);
+	return NULL;
+}
+
+__isl_give isl_set *isl_set_set_rational(__isl_take isl_set *set)
+{
+	return isl_map_set_rational(set);
+}
+
 /* Swap divs "a" and "b" in "bmap" (without modifying any of the constraints
  * of "bmap").
  */
@@ -2006,6 +2118,205 @@ void isl_basic_map_swap_div(struct isl_basic_map *bmap, int a, int b)
 void isl_basic_set_swap_div(__isl_keep isl_basic_set *bset, int a, int b)
 {
 	isl_basic_map_swap_div(bset, a, b);
+}
+
+static void constraint_drop_vars(isl_int *c, unsigned n, unsigned rem)
+{
+	isl_seq_cpy(c, c + n, rem);
+	isl_seq_clr(c + rem, n);
+}
+
+/* Drop n dimensions starting at first.
+ *
+ * In principle, this frees up some extra variables as the number
+ * of columns remains constant, but we would have to extend
+ * the div array too as the number of rows in this array is assumed
+ * to be equal to extra.
+ */
+struct isl_basic_set *isl_basic_set_drop_dims(
+		struct isl_basic_set *bset, unsigned first, unsigned n)
+{
+	return isl_basic_map_drop(bset_to_bmap(bset), isl_dim_set, first, n);
+}
+
+/* Move "n" divs starting at "first" to the end of the list of divs.
+ */
+static struct isl_basic_map *move_divs_last(struct isl_basic_map *bmap,
+	unsigned first, unsigned n)
+{
+	isl_int **div;
+	int i;
+
+	if (first + n == bmap->n_div)
+		return bmap;
+
+	div = isl_alloc_array(bmap->ctx, isl_int *, n);
+	if (!div)
+		goto error;
+	for (i = 0; i < n; ++i)
+		div[i] = bmap->div[first + i];
+	for (i = 0; i < bmap->n_div - first - n; ++i)
+		bmap->div[first + i] = bmap->div[first + n + i];
+	for (i = 0; i < n; ++i)
+		bmap->div[bmap->n_div - n + i] = div[i];
+	free(div);
+	return bmap;
+error:
+	isl_basic_map_free(bmap);
+	return NULL;
+}
+
+/* Drop "n" dimensions of type "type" starting at "first".
+ *
+ * In principle, this frees up some extra variables as the number
+ * of columns remains constant, but we would have to extend
+ * the div array too as the number of rows in this array is assumed
+ * to be equal to extra.
+ */
+struct isl_basic_map *isl_basic_map_drop(struct isl_basic_map *bmap,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	int i;
+	unsigned dim;
+	unsigned offset;
+	unsigned left;
+
+	if (!bmap)
+		goto error;
+
+	dim = isl_basic_map_dim(bmap, type);
+	isl_assert(bmap->ctx, first + n <= dim, goto error);
+
+	if (n == 0 && !isl_space_is_named_or_nested(bmap->dim, type))
+		return bmap;
+
+	bmap = isl_basic_map_cow(bmap);
+	if (!bmap)
+		return NULL;
+
+	offset = isl_basic_map_offset(bmap, type) + first;
+	left = isl_basic_map_total_dim(bmap) - (offset - 1) - n;
+	for (i = 0; i < bmap->n_eq; ++i)
+		constraint_drop_vars(bmap->eq[i]+offset, n, left);
+
+	for (i = 0; i < bmap->n_ineq; ++i)
+		constraint_drop_vars(bmap->ineq[i]+offset, n, left);
+
+	for (i = 0; i < bmap->n_div; ++i)
+		constraint_drop_vars(bmap->div[i]+1+offset, n, left);
+
+	if (type == isl_dim_div) {
+		bmap = move_divs_last(bmap, first, n);
+		if (!bmap)
+			goto error;
+		if (isl_basic_map_free_div(bmap, n) < 0)
+			return isl_basic_map_free(bmap);
+	} else
+		bmap->dim = isl_space_drop_dims(bmap->dim, type, first, n);
+	if (!bmap->dim)
+		goto error;
+
+	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED);
+	bmap = isl_basic_map_simplify(bmap);
+	return isl_basic_map_finalize(bmap);
+error:
+	isl_basic_map_free(bmap);
+	return NULL;
+}
+
+__isl_give isl_basic_set *isl_basic_set_drop(__isl_take isl_basic_set *bset,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	return bset_from_bmap(isl_basic_map_drop(bset_to_bmap(bset),
+							type, first, n));
+}
+
+struct isl_map *isl_map_drop(struct isl_map *map,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	int i;
+
+	if (!map)
+		goto error;
+
+	isl_assert(map->ctx, first + n <= isl_map_dim(map, type), goto error);
+
+	if (n == 0 && !isl_space_is_named_or_nested(map->dim, type))
+		return map;
+	map = isl_map_cow(map);
+	if (!map)
+		goto error;
+	map->dim = isl_space_drop_dims(map->dim, type, first, n);
+	if (!map->dim)
+		goto error;
+
+	for (i = 0; i < map->n; ++i) {
+		map->p[i] = isl_basic_map_drop(map->p[i], type, first, n);
+		if (!map->p[i])
+			goto error;
+	}
+	ISL_F_CLR(map, ISL_MAP_NORMALIZED);
+
+	return map;
+error:
+	isl_map_free(map);
+	return NULL;
+}
+
+struct isl_set *isl_set_drop(struct isl_set *set,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	return set_from_map(isl_map_drop(set_to_map(set), type, first, n));
+}
+
+/*
+ * We don't cow, as the div is assumed to be redundant.
+ */
+__isl_give isl_basic_map *isl_basic_map_drop_div(
+	__isl_take isl_basic_map *bmap, unsigned div)
+{
+	int i;
+	unsigned pos;
+
+	if (!bmap)
+		goto error;
+
+	pos = 1 + isl_space_dim(bmap->dim, isl_dim_all) + div;
+
+	isl_assert(bmap->ctx, div < bmap->n_div, goto error);
+
+	for (i = 0; i < bmap->n_eq; ++i)
+		constraint_drop_vars(bmap->eq[i]+pos, 1, bmap->extra-div-1);
+
+	for (i = 0; i < bmap->n_ineq; ++i) {
+		if (!isl_int_is_zero(bmap->ineq[i][pos])) {
+			isl_basic_map_drop_inequality(bmap, i);
+			--i;
+			continue;
+		}
+		constraint_drop_vars(bmap->ineq[i]+pos, 1, bmap->extra-div-1);
+	}
+
+	for (i = 0; i < bmap->n_div; ++i)
+		constraint_drop_vars(bmap->div[i]+1+pos, 1, bmap->extra-div-1);
+
+	if (div != bmap->n_div - 1) {
+		int j;
+		isl_int *t = bmap->div[div];
+
+		for (j = div; j < bmap->n_div - 1; ++j)
+			bmap->div[j] = bmap->div[j+1];
+
+		bmap->div[bmap->n_div - 1] = t;
+	}
+	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED);
+	if (isl_basic_map_free_div(bmap, 1) < 0)
+		return isl_basic_map_free(bmap);
+
+	return bmap;
+error:
+	isl_basic_map_free(bmap);
+	return NULL;
 }
 
 /* Eliminate the specified n dimensions starting at first from the
@@ -13093,4 +13404,63 @@ __isl_give isl_basic_set *isl_basic_set_tighten_outward(
 	}
 
 	return bset;
+}
+
+/* Replace the variables x of type "type" starting at "first" in "bmap"
+ * by x' with x = M x' with M the matrix trans.
+ * That is, replace the corresponding coefficients c by c M.
+ *
+ * The transformation matrix should be a square matrix.
+ */
+__isl_give isl_basic_map *isl_basic_map_transform_dims(
+	__isl_take isl_basic_map *bmap, enum isl_dim_type type, unsigned first,
+	__isl_take isl_mat *trans)
+{
+	unsigned pos;
+
+	bmap = isl_basic_map_cow(bmap);
+	if (!bmap || !trans)
+		goto error;
+
+	if (trans->n_row != trans->n_col)
+		isl_die(trans->ctx, isl_error_invalid,
+			"expecting square transformation matrix", goto error);
+	if (first + trans->n_row > isl_basic_map_dim(bmap, type))
+		isl_die(trans->ctx, isl_error_invalid,
+			"oversized transformation matrix", goto error);
+
+	pos = isl_basic_map_offset(bmap, type) + first;
+
+	if (isl_mat_sub_transform(bmap->eq, bmap->n_eq, pos,
+			isl_mat_copy(trans)) < 0)
+		goto error;
+	if (isl_mat_sub_transform(bmap->ineq, bmap->n_ineq, pos,
+		      isl_mat_copy(trans)) < 0)
+		goto error;
+	if (isl_mat_sub_transform(bmap->div, bmap->n_div, 1 + pos,
+		      isl_mat_copy(trans)) < 0)
+		goto error;
+
+	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED);
+	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED_DIVS);
+
+	isl_mat_free(trans);
+	return bmap;
+error:
+	isl_mat_free(trans);
+	isl_basic_map_free(bmap);
+	return NULL;
+}
+
+/* Replace the variables x of type "type" starting at "first" in "bset"
+ * by x' with x = M x' with M the matrix trans.
+ * That is, replace the corresponding coefficients c by c M.
+ *
+ * The transformation matrix should be a square matrix.
+ */
+__isl_give isl_basic_set *isl_basic_set_transform_dims(
+	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first,
+	__isl_take isl_mat *trans)
+{
+	return isl_basic_map_transform_dims(bset, type, first, trans);
 }

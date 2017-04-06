@@ -196,7 +196,7 @@ class SSHExecutor(RemoteExecutor):
         # Not sure how to do suffix on osx yet
         dir_arg = '-d' if is_dir else ''
         cmd = 'mktemp -q {} /tmp/libcxx.XXXXXXXXXX'.format(dir_arg)
-        temp_path, err, exitCode = self._execute_command_remote([cmd])
+        _, temp_path, err, exitCode = self._execute_command_remote([cmd])
         temp_path = temp_path.strip()
         if exitCode != 0:
             raise RuntimeError(err)
@@ -219,4 +219,5 @@ class SSHExecutor(RemoteExecutor):
         remote_cmd = ' '.join(env_cmd + cmd)
         if remote_work_dir != '.':
             remote_cmd = 'cd ' + remote_work_dir + ' && ' + remote_cmd
-        return self.local_run(ssh_cmd + [remote_cmd])
+        out, err, rc = self.local_run(ssh_cmd + [remote_cmd])
+        return (remote_cmd, out, err, rc)
