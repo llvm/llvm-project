@@ -2917,11 +2917,9 @@ public:
 private:
   unsigned Opc : 6;
 
-  // Records the FP_CONTRACT pragma status at the point that this binary
-  // operator was parsed. This bit is only meaningful for operations on
-  // floating point types. For all other types it should default to
-  // false.
-  unsigned FPContractable : 1;
+  // This is only meaningful for operations on floating point types and 0
+  // otherwise.
+  unsigned FPFeatures : 2;
   SourceLocation OpLoc;
 
   enum { LHS, RHS, END_EXPR };
@@ -2930,7 +2928,7 @@ public:
 
   BinaryOperator(Expr *lhs, Expr *rhs, Opcode opc, QualType ResTy,
                  ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, bool fpContractable)
+                 SourceLocation opLoc, FPOptions FPFeatures)
     : Expr(BinaryOperatorClass, ResTy, VK, OK,
            lhs->isTypeDependent() || rhs->isTypeDependent(),
            lhs->isValueDependent() || rhs->isValueDependent(),
@@ -2938,7 +2936,7 @@ public:
             rhs->isInstantiationDependent()),
            (lhs->containsUnexpandedParameterPack() ||
             rhs->containsUnexpandedParameterPack())),
-      Opc(opc), FPContractable(fpContractable), OpLoc(opLoc) {
+      Opc(opc), FPFeatures(FPFeatures.getInt()), OpLoc(opLoc) {
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
     assert(!isCompoundAssignmentOp() &&
@@ -3073,16 +3071,20 @@ public:
 
   // Set the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
-  void setFPContractable(bool FPC) { FPContractable = FPC; }
+  void setFPFeatures(FPOptions F) { FPFeatures = F.getInt(); }
+
+  FPOptions getFPFeatures() const { return FPOptions(FPFeatures); }
 
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
-  bool isFPContractable() const { return FPContractable; }
+  bool isFPContractableWithinStatement() const {
+    return FPOptions(FPFeatures).allowFPContractWithinStatement();
+  }
 
 protected:
   BinaryOperator(Expr *lhs, Expr *rhs, Opcode opc, QualType ResTy,
                  ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, bool fpContractable, bool dead2)
+                 SourceLocation opLoc, FPOptions FPFeatures, bool dead2)
     : Expr(CompoundAssignOperatorClass, ResTy, VK, OK,
            lhs->isTypeDependent() || rhs->isTypeDependent(),
            lhs->isValueDependent() || rhs->isValueDependent(),
@@ -3090,7 +3092,7 @@ protected:
             rhs->isInstantiationDependent()),
            (lhs->containsUnexpandedParameterPack() ||
             rhs->containsUnexpandedParameterPack())),
-      Opc(opc), FPContractable(fpContractable), OpLoc(opLoc) {
+      Opc(opc), FPFeatures(FPFeatures.getInt()), OpLoc(opLoc) {
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
   }
@@ -3112,8 +3114,8 @@ public:
   CompoundAssignOperator(Expr *lhs, Expr *rhs, Opcode opc, QualType ResType,
                          ExprValueKind VK, ExprObjectKind OK,
                          QualType CompLHSType, QualType CompResultType,
-                         SourceLocation OpLoc, bool fpContractable)
-    : BinaryOperator(lhs, rhs, opc, ResType, VK, OK, OpLoc, fpContractable,
+                         SourceLocation OpLoc, FPOptions FPFeatures)
+    : BinaryOperator(lhs, rhs, opc, ResType, VK, OK, OpLoc, FPFeatures,
                      true),
       ComputationLHSType(CompLHSType),
       ComputationResultType(CompResultType) {

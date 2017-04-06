@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -fallow-half-arguments-and-returns -ffp-contract=fast -S -emit-llvm -o - %s \
+// RUN:     -fallow-half-arguments-and-returns -S -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg \
 // RUN: | FileCheck %s
 

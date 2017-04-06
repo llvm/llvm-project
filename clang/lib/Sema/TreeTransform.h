@@ -8855,7 +8855,7 @@ TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
     return E;
 
   Sema::FPContractStateRAII FPContractState(getSema());
-  getSema().FPFeatures.fp_contract = E->isFPContractable();
+  getSema().FPFeatures = E->getFPFeatures();
 
   return getDerived().RebuildBinaryOperator(E->getOperatorLoc(), E->getOpcode(),
                                             LHS.get(), RHS.get());
@@ -9335,7 +9335,7 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     return SemaRef.MaybeBindToTemporary(E);
 
   Sema::FPContractStateRAII FPContractState(getSema());
-  getSema().FPFeatures.fp_contract = E->isFPContractable();
+  getSema().FPFeatures = E->getFPFeatures();
 
   return getDerived().RebuildCXXOperatorCallExpr(E->getOperator(),
                                                  E->getOperatorLoc(),
