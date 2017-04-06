@@ -62,40 +62,10 @@ MATH_MANGLE(remainder)(float x, float y)
     if (ax > ay) {
         int ex, ey;
 
-        if (AMD_OPT()) {
-            ex = BUILTIN_FREXP_EXP_F32(ax) - 1;
-            ax = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ax), bits);
-            ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
-            ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
-        } else {
-            if (!DAZ_OPT()) {
-                int exs = -118 - (int)MATH_CLZI(AS_INT(ax));
-                float axs = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) |
-                                     ((AS_INT(ax) << (-126 - exs)) & MANTBITS_SP32));
-                ex = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ax = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (AS_INT(ax) & MANTBITS_SP32));
-                ax = ex == -EXPBIAS_SP32 ? axs : ax;
-                ex = ex == -EXPBIAS_SP32 ? exs : ex;
-            } else {
-                ex = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ax = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (AS_INT(ax) & MANTBITS_SP32));
-            }
-            ax = x == 0.0f ? 0.0f : ax;
-            ex = x == 0.0f ? 0 : ex;
-
-            if (!DAZ_OPT()) {
-                int eys = -118 - (int)MATH_CLZI(AS_INT(ay));
-                float ays = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) << (-126 - eys)));
-                ey = (AS_INT(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ay = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) & MANTBITS_SP32));
-                ay = ey == -EXPBIAS_SP32 ? ays : ay;
-                ey = ey == -EXPBIAS_SP32 ? eys : ey;
-            } else {
-                ey = (AS_INT(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ay = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) & MANTBITS_SP32));
-            }
-            ey = y == 0.0f ? ex : ey;
-        }
+        ex = BUILTIN_FREXP_EXP_F32(ax) - 1;
+        ax = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ax), bits);
+        ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
+        ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
 
         int nb = ex - ey;
         float ayinv = MATH_FAST_RCP(ay);
@@ -115,19 +85,11 @@ MATH_MANGLE(remainder)(float x, float y)
             iq -= clt;
             qacc = (qacc << bits) | iq;
 #endif
-            if (AMD_OPT()) {
-                ax = BUILTIN_FLDEXP_F32(ax, bits); 
-            } else {
-                ax *= AS_FLOAT((EXPBIAS_SP32 + bits) << EXPSHIFTBITS_SP32);
-            }
+            ax = BUILTIN_FLDEXP_F32(ax, bits); 
             nb -= bits;
         }
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
-        } else {
-            ax *= AS_FLOAT((EXPBIAS_SP32 + nb - bits + 1) << EXPSHIFTBITS_SP32);
-        }
+        ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
 
         // Final iteration
         {
@@ -159,15 +121,7 @@ MATH_MANGLE(remainder)(float x, float y)
 #endif
 #endif
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F32(ax, ey);
-        } else {
-            int ey2 = ey >> 1;
-            float xsc1 = AS_FLOAT((EXPBIAS_SP32 + ey2) << EXPSHIFTBITS_SP32);
-            float xsc2 = AS_FLOAT((EXPBIAS_SP32 + (ey - ey2)) << EXPSHIFTBITS_SP32);
-            ax = (ax * xsc1) * xsc2;
-        }
-
+        ax = BUILTIN_FLDEXP_F32(ax, ey);
         ret = AS_FLOAT((AS_INT(x) & SIGNBIT_SP32) ^ AS_INT(ax));
     } else {
         ret = x;

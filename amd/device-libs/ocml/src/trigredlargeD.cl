@@ -63,69 +63,22 @@
         C3 += C2; \
     } while (0)
 
-static double
-get_twobypi_bits(int start, int scale)
-{
-    USE_TABLE(uint, twobypi, M64_PIBITS);
-
-    int i = start >> 5;
-    int b = start & 0x1f;
-    uint w2 = twobypi[i];
-    uint w1 = twobypi[i+1];
-    uint w0 = twobypi[i+2];
-    uint t;
-
-    t = (w2 << b) | (w1 >> (32-b));
-    w2 = b != 0 ? t : w2;
-
-    t = (w1 << b) | (w0 >> (32-b));
-    w1 = b != 0 ? t : w1;
-    w1 &= 0xfffff800;
-
-    int z = (int)MATH_CLZI(w2);
-    b = 11 - z;
-    w1 = (w1 >> b) | (w2 << (32-b));
-    w2 >>= b;
-    return AS_DOUBLE(((ulong)(1022 + scale - start - z) << 52) | ((ulong)(w2 & 0x000fffff) << 32) | (ulong)w1);
-}
-
 int
 MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
 {
-    double p0, p1, p2;
-
     // Scale x by relevant part of 2/pi
-    if (AMD_OPT()) {
-        p2 = BUILTIN_TRIG_PREOP_F64(x, 0);
-        p1 = BUILTIN_TRIG_PREOP_F64(x, 1);
-        p0 = BUILTIN_TRIG_PREOP_F64(x, 2);
-    } else {
-        const int e_clamp = 1077;
-        int e = AS_INT2(x).y >> 20;
-        int shift = e > e_clamp ?  e - e_clamp : 0;
-        int scale = e >= 0x7b0 ? 128 : 0;
+    double p2 = BUILTIN_TRIG_PREOP_F64(x, 0);
+    double p1 = BUILTIN_TRIG_PREOP_F64(x, 1);
+    double p0 = BUILTIN_TRIG_PREOP_F64(x, 2);
 
-        p2 = get_twobypi_bits(shift,       scale);
-        p1 = get_twobypi_bits(shift +  53, scale);
-        p0 = get_twobypi_bits(shift + 106, scale);
-    }
-
-    if (AMD_OPT()) {
-        x = BUILTIN_FLDEXP_F64(x, x >= 0x1.0p+945 ? -128 : 0);
-    } else {
-        x *= x >= 0x1.0p+945 ? 0x1.0p-128 : 1.0;
-    }
+    x = BUILTIN_FLDEXP_F64(x, x >= 0x1.0p+945 ? -128 : 0);
 
     double f2, f1, f0, c2, c1;
     EXPAND(x, p2, p1, p0, f2, f1, f0, c2, c1);
     SHIFT(f2, f1, f0, c2, c1);
 
     // Remove most significant integer bits
-    if (AMD_OPT()) {
-        f2 = BUILTIN_FLDEXP_F64(BUILTIN_FRACTION_F64(BUILTIN_FLDEXP_F64(f2, -16)), 16);
-    } else {
-        f2 = BUILTIN_FRACTION_F64(f2 * 0x1.0p-16) * 0x1.0p+16;
-    }
+    f2 = BUILTIN_FLDEXP_F64(BUILTIN_FRACTION_F64(BUILTIN_FLDEXP_F64(f2, -16)), 16);
 
     // Don't let it become negative
     f2 += f2+f1 < 0.0 ? 0x1.0p+16 : 0.0;
@@ -147,23 +100,10 @@ MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
 
     // Scale by pi/2
     const double pio2h  = 0x1.921fb54442d18p+0;
-    const double pio2hh = 0x1.921fb50000000p+0;
-    const double pio2ht = 0x1.110b460000000p-26;
     const double pio2t  = 0x1.1a62633145c07p-54;
 
-    double rh, rt;
-
-    if (HAVE_FAST_FMA64()) {
-        rh = f2 * pio2h;
-        rt = BUILTIN_FMA_F64(f1, pio2h, BUILTIN_FMA_F64(f2, pio2t, BUILTIN_FMA_F64(f2, pio2h, -rh)));
-    } else { 
-        double f2h = AS_DOUBLE(AS_ULONG(f2) & 0xfffffffff8000000UL);
-        double f2t = f2 - f2h;
-
-        rh = f2 * pio2h;
-        rt = MATH_MAD(f2t, pio2ht, MATH_MAD(f2h, pio2ht, MATH_MAD(f2t, pio2hh, MATH_MAD(f2h, pio2hh, -rh)))) +
-             MATH_MAD(f1, pio2h, f2*pio2t);
-    }
+    double rh = f2 * pio2h;
+    double rt = BUILTIN_FMA_F64(f1, pio2h, BUILTIN_FMA_F64(f2, pio2t, BUILTIN_FMA_F64(f2, pio2h, -rh)));
 
     FSUM2(rh, rt, rh, rt);
     *r = rh;

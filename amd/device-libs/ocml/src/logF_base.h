@@ -71,206 +71,105 @@ MATH_MANGLE(log10)(float x)
 MATH_MANGLE(log)(float x)
 #endif
 {
-    if (AMD_OPT()) {
-        if (DAZ_OPT()) {
-            if (UNSAFE_MATH_OPT()) {
+    if (DAZ_OPT()) {
+        if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_LOG2
-                return BUILTIN_LOG2_F32(x);
+            return BUILTIN_LOG2_F32(x);
 #elif defined COMPILING_LOG10
-                return BUILTIN_LOG2_F32(x) * 0x1.344136p-2f;
+            return BUILTIN_LOG2_F32(x) * 0x1.344136p-2f;
 #else
-                return BUILTIN_LOG2_F32(x) * 0x1.62e430p-1f;
+            return BUILTIN_LOG2_F32(x) * 0x1.62e430p-1f;
 #endif
-            } else {
-#if defined COMPILING_LOG2
-                return BUILTIN_LOG2_F32(x);
-#else
-                float y = BUILTIN_LOG2_F32(x);
-                float r;
-
-                if (HAVE_FAST_FMA32()) {
-#if defined COMPILING_LOG10
-                    const float c = 0x1.344134p-2f;
-                    const float cc = 0x1.09f79ep-26f; // c+cc are ln(2)/ln(10) to more than 49 bits
-#else
-                    const float c = 0x1.62e42ep-1f;
-                    const float cc = 0x1.efa39ep-25f; // c + cc is ln(2) to more than 49 bits
-#endif
-	            r = y * c;
-	            r = r + BUILTIN_FMA_F32(y, cc, BUILTIN_FMA_F32(y, c, -r));
-                } else {
-#if defined COMPILING_LOG10
-                    const float ch = 0x1.344000p-2f;
-                    const float ct = 0x1.3509f6p-18f; // ch+ct is ln(2)/ln(10) to more than 36 bits
-#else
-                    const float ch = 0x1.62e000p-1f;
-                    const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
-#endif
-                    float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
-                    float yt = y - yh;
-	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
-                }
-
-                r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
-                return r;
-#endif
-            }
         } else {
-            // not DAZ
-            if (UNSAFE_MATH_OPT()) {
-                bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
-                x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
-                return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
-#elif defined COMPILING_LOG10
-                return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.344136p-2f, s ? -0x1.344136p+3f : 0.0f);
+            return BUILTIN_LOG2_F32(x);
 #else
-                return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
-#endif
-            } else {
-                bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
-                x *= s ? 0x1.0p+32f : 1.0f;
-#if defined COMPILING_LOG2
-                return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
-#else
-                float y = BUILTIN_LOG2_F32(x);
-                float r;
+            float y = BUILTIN_LOG2_F32(x);
+            float r;
 
-                if (HAVE_FAST_FMA32()) {
+            if (HAVE_FAST_FMA32()) {
 #if defined COMPILING_LOG10
-                    const float c = 0x1.344134p-2f;
-                    const float cc = 0x1.09f79ep-26f; // c+cc are ln(2)/ln(10) to more than 49 bits
+                const float c = 0x1.344134p-2f;
+                const float cc = 0x1.09f79ep-26f; // c+cc are ln(2)/ln(10) to more than 49 bits
 #else
-                    const float c = 0x1.62e42ep-1f;
-                    const float cc = 0x1.efa39ep-25f; // c + cc is ln(2) to more than 49 bits
+                const float c = 0x1.62e42ep-1f;
+                const float cc = 0x1.efa39ep-25f; // c + cc is ln(2) to more than 49 bits
 #endif
 	            r = y * c;
 	            r = r + BUILTIN_FMA_F32(y, cc, BUILTIN_FMA_F32(y, c, -r));
-                } else {
+            } else {
 #if defined COMPILING_LOG10
-                    const float ch = 0x1.344000p-2f;
-                    const float ct = 0x1.3509f6p-18f; // ch+ct is ln(2)/ln(10) to more than 36 bits
+                const float ch = 0x1.344000p-2f;
+                const float ct = 0x1.3509f6p-18f; // ch+ct is ln(2)/ln(10) to more than 36 bits
 #else
-                    const float ch = 0x1.62e000p-1f;
-                    const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
+                const float ch = 0x1.62e000p-1f;
+                const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
 #endif
-                    float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
-                    float yt = y - yh;
+                float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
+                float yt = y - yh;
 	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
-                }
-
-                r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
-
-#if defined COMPILING_LOG10
-                r = r - (s ? 0x1.344136p+3f : 0.0f);
-#else
-                r = r - (s ? 0x1.62e430p+4f : 0.0f);
-#endif
-
-                // r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
-                return r;
-#endif
             }
+
+            r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
+            return r;
+#endif
         }
     } else {
-        USE_TABLE(float, p_inv, M32_LOG_INV);
-
+        // not DAZ
+        if (UNSAFE_MATH_OPT()) {
+            bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
+            x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
-        USE_TABLE(float2, p_log, M32_LOG2);
-        const float LOG2E = 0x1.715476p+0f;      // 1.4426950408889634
-        const float LOG2E_HEAD = 0x1.700000p+0f; // 1.4375
-        const float LOG2E_TAIL = 0x1.547652p-8f; // 0.00519504072
+            return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
 #elif defined COMPILING_LOG10
-        USE_TABLE(float2, p_log, M32_LOG10);
-        const float LOG10E = 0x1.bcb7b2p-2f;        // 0.43429448190325182
-        const float LOG10E_HEAD = 0x1.bc0000p-2f;   // 0.43359375
-        const float LOG10E_TAIL = 0x1.6f62a4p-11f;  // 0.0007007319
-        const float LOG10_2_HEAD = 0x1.340000p-2f;  // 0.30078125
-        const float LOG10_2_TAIL = 0x1.04d426p-12f; // 0.000248745637
+            return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.344136p-2f, s ? -0x1.344136p+3f : 0.0f);
 #else
-        USE_TABLE(float2, p_log, M32_LOGE);
-        const float LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
-        const float LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
+            return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
 #endif
+        } else {
+            bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
+            x *= s ? 0x1.0p+32f : 1.0f;
+#if defined COMPILING_LOG2
+            return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
+#else
+            float y = BUILTIN_LOG2_F32(x);
+            float r;
 
-        float z;
-
-        float r = x - 1.0f;
-        if (BUILTIN_ABS_F32(r) >= 0x1.0p-4f) {
-            int m;
-            uint xi;
-            if (!DAZ_OPT()) {
-                float xs = x * 0x1.0p+30f;
-                bool c = x < 0x1.0p-96f;
-                xi = AS_UINT(c ? xs : x);
-                m = (int)(xi >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32 - (c ? 30 : 0);
+            if (HAVE_FAST_FMA32()) {
+#if defined COMPILING_LOG10
+                const float c = 0x1.344134p-2f;
+                const float cc = 0x1.09f79ep-26f; // c+cc are ln(2)/ln(10) to more than 49 bits
+#else
+                const float c = 0x1.62e42ep-1f;
+                const float cc = 0x1.efa39ep-25f; // c + cc is ln(2) to more than 49 bits
+#endif
+	            r = y * c;
+	            r = r + BUILTIN_FMA_F32(y, cc, BUILTIN_FMA_F32(y, c, -r));
             } else {
-                x = BUILTIN_CANONICALIZE_F32(x);
-                xi = AS_UINT(x);
-                m = (int)(xi >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+#if defined COMPILING_LOG10
+                const float ch = 0x1.344000p-2f;
+                const float ct = 0x1.3509f6p-18f; // ch+ct is ln(2)/ln(10) to more than 36 bits
+#else
+                const float ch = 0x1.62e000p-1f;
+                const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
+#endif
+                float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
+                float yt = y - yh;
+	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
             }
 
-            float mf = (float)m;
-            uint indx = (xi & 0x007f0000) + ((xi & 0x00008000) << 1);
+            r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
 
-            // F - Y
-            float f = AS_FLOAT(0x3f000000 | indx) - AS_FLOAT(0x3f000000 | (xi & MANTBITS_SP32));
-
-            indx = indx >> 16;
-            r = f * p_inv[indx];
-
-            // 1/3,  1/2
-            float poly = MATH_MAD(MATH_MAD(r, 0x1.555556p-2f, 0.5f), r*r, r);
-
-            float2 tv = p_log[indx];
-            float z1, z2;
-
-#if defined COMPILING_LOG2
-            z1 = tv.s0 + mf;
-            z2 = MATH_MAD(poly, -LOG2E, tv.s1);
-#elif defined COMPILING_LOG10
-            z1 = MATH_MAD(mf, LOG10_2_HEAD, tv.s0);
-            z2 = MATH_MAD(poly, -LOG10E, mf*LOG10_2_TAIL) + tv.s1;
+#if defined COMPILING_LOG10
+            r = r - (s ? 0x1.344136p+3f : 0.0f);
 #else
-            z1 = MATH_MAD(mf, LOG2_HEAD, tv.s0);
-            z2 = MATH_MAD(mf, LOG2_TAIL, -poly) + tv.s1;
+            r = r - (s ? 0x1.62e430p+4f : 0.0f);
 #endif
 
-            z = z1 + z2;
-        } else {
-            // Calculations for |x-1| < 2^-4
-            float u2 = MATH_FAST_DIV(r, 2.0f + r);
-            float corr = u2 * r;
-            float u = u2 + u2;
-            float v = u * u;
-            float z1, z2;
-
-            // 2/(5 * 2^5), 2/(3 * 2^3)
-            z2 = MATH_MAD(u, MATH_MAD(v, 0x1.99999ap-7f, 0x1.555556p-4f)*v, -corr);
-
-#if defined COMPILING_LOG2
-            z1 = AS_FLOAT(AS_INT(r) & 0xffff0000);
-            z2 = z2 + (r - z1);
-            z = MATH_MAD(z1, LOG2E_HEAD, MATH_MAD(z2, LOG2E_HEAD, MATH_MAD(z1, LOG2E_TAIL, z2*LOG2E_TAIL)));
-#elif defined COMPILING_LOG10
-            z1 = AS_FLOAT(AS_INT(r) & 0xffff0000);
-            z2 = z2 + (r - z1);
-            z = MATH_MAD(z1, LOG10E_HEAD, MATH_MAD(z2, LOG10E_HEAD, MATH_MAD(z1, LOG10E_TAIL, z2*LOG10E_TAIL)));
-#else
-            z = z2 + r;
+            // r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
+            return r;
 #endif
         }
-
-        // Corner cases
-        if (!FINITE_ONLY_OPT()) {
-            uint xi = AS_UINT(x);
-            uint ax = xi & EXSIGNBIT_SP32;
-            z = ax >= PINFBITPATT_SP32 ? x : z;
-            z = xi != ax ? AS_FLOAT(QNANBITPATT_SP32) : z;
-            z = ax == 0 ? AS_FLOAT(NINFBITPATT_SP32) : z;
-        }
-
-        return z;
     }
 }
 

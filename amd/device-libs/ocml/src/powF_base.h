@@ -80,23 +80,8 @@ MATH_MANGLE(pow)(float x, float y)
         int ixn;
         float mfn;
         
-        if (AMD_OPT()) {
-            mfn = (float)(BUILTIN_FREXP_EXP_F32(ax) - 1);
-            ixn = AS_INT(BUILTIN_FREXP_MANT_F32(ax)) + (1 << EXPSHIFTBITS_SP32);
-        } else {
-            if (DAZ_OPT()) {
-                mfn = (float)((AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32);
-                ixn = AS_INT(ax);
-            } else {
-                m = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                float mf = (float)m;
-                int ixs = AS_INT(AS_FLOAT(AS_INT(ax) | ONEEXPBITS_SP32) - 1.0f);
-                float mfs = (float)((ixs >> EXPSHIFTBITS_SP32) - 253);
-                bool c = m == -127;
-                ixn = c ? ixs : ax;
-                mfn = c ? mfs : mf;
-            }
-        }
+        mfn = (float)(BUILTIN_FREXP_EXP_F32(ax) - 1);
+        ixn = AS_INT(BUILTIN_FREXP_MANT_F32(ax)) + (1 << EXPSHIFTBITS_SP32);
 
         int indx = (ixn & 0x007f0000) + ((ixn & 0x00008000) << 1);
 
@@ -182,13 +167,7 @@ MATH_MANGLE(pow)(float x, float y)
 
     float expylnx = MATH_MAD(tv.s0, poly, MATH_MAD(tv.s1, poly, tv.s1)) + tv.s0;
 
-    if (AMD_OPT()) {
-        expylnx = BUILTIN_FLDEXP_F32(expylnx, m);
-    } else {
-        float sexpylnx = expylnx * AS_FLOAT(0x1 << (m + 149));
-        float texpylnx = AS_FLOAT(AS_INT(expylnx) + (m << EXPSHIFTBITS_SP32));
-        expylnx = m < -125 ? sexpylnx : texpylnx;
-    }
+    expylnx = BUILTIN_FLDEXP_F32(expylnx, m);
 
     // Result is +-Inf if (ylogx + ylogx_t) > 128*log2
     expylnx = (ylogx > 0x1.62e430p+6f) | (ylogx == 0x1.62e430p+6f & ylogx_t > -0x1.05c610p-22f) ? AS_FLOAT(PINFBITPATT_SP32) : expylnx;

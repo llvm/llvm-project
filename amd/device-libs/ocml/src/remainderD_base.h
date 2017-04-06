@@ -7,29 +7,10 @@
 
 #include "mathD.h"
 
-#define FULL_MUL(A, B, CHI, CLO) \
-    do { \
-        double __ha = AS_DOUBLE(AS_ULONG(A) & 0xfffffffff8000000UL); \
-        double __ta = A - __ha; \
-        double __hb = AS_DOUBLE(AS_ULONG(B) & 0xfffffffff8000000UL); \
-        double __tb = B - __hb; \
-        CHI = A * B; \
-        CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \
-    } while (0)
-
-CONSTATTR static inline double
+CONSTATTR INLINEATTR static double
 fnma(double a, double b, double c)
 {
-    double d;
-    if (HAVE_FAST_FMA64()) {
-        d = BUILTIN_FMA_F64(-a, b, c);
-    } else {
-        double h, t;
-        FULL_MUL(a, b, h, t);
-        d = c - h;
-        d = (((c - d) - h) - t) + d;
-    }
-    return d;
+    return BUILTIN_FMA_F64(-a, b, c);
 }
 
 #if defined(COMPILING_FMOD)
@@ -56,30 +37,10 @@ MATH_MANGLE(remainder)(double x, double y)
     if (ax > ay) {
         int ex, ey;
 
-        if (AMD_OPT()) {
-            ex = BUILTIN_FREXP_EXP_F64(ax) - 1;
-            ax = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ax), bits);
-            ey = BUILTIN_FREXP_EXP_F64(ay) - 1;
-            ay = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ay), 1);
-        } else {
-            ex = (AS_INT2(ax).hi >> 20) - EXPBIAS_DP64;
-            int exs = -1011 - (int)MATH_CLZL(AS_ULONG(ax));
-            double axs = AS_DOUBLE(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) |
-                               ((AS_ULONG(ax) << (-1022 - exs)) & MANTBITS_DP64));
-            ax = AS_DOUBLE(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) | (AS_ULONG(ax) & MANTBITS_DP64));
-            ax = ex == -EXPBIAS_DP64 ? axs : ax;
-            ex = ex == -EXPBIAS_DP64 ? exs : ex;
-            ax = x == 0.0 ? 0.0 : ax;
-            ex = x == 0.0 ? 0 : ex;
-
-            ey = (AS_INT2(ay).hi >> 20) - EXPBIAS_DP64;
-            int eys = -1011 - (int)MATH_CLZL(AS_ULONG(ay));
-            double ays = AS_DOUBLE(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (AS_ULONG(ay) << (-1022 - eys)));
-            ay = AS_DOUBLE(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (AS_ULONG(ay) & MANTBITS_DP64));
-            ay = ey == -EXPBIAS_DP64 ? ays : ay;
-            ey = ey == -EXPBIAS_DP64 ? eys : ey;
-            ey = y == 0.0 ? ex : ey;
-        }
+        ex = BUILTIN_FREXP_EXP_F64(ax) - 1;
+        ax = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ax), bits);
+        ey = BUILTIN_FREXP_EXP_F64(ay) - 1;
+        ay = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ay), 1);
 
         int nb = ex - ey;
         double ayinv = MATH_RCP(ay);
@@ -99,19 +60,11 @@ MATH_MANGLE(remainder)(double x, double y)
             iq -= clt;
             qacc = (qacc << bits) | iq;
 #endif
-            if (AMD_OPT()) {
-                ax = BUILTIN_FLDEXP_F64(ax, bits); 
-            } else {
-                ax *= AS_DOUBLE((ulong)(EXPBIAS_DP64 + bits) << EXPSHIFTBITS_DP64);
-            }
+            ax = BUILTIN_FLDEXP_F64(ax, bits); 
             nb -= bits;
         }
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F64(ax, nb - bits + 1);
-        } else {
-            ax *= AS_DOUBLE((ulong)(EXPBIAS_DP64 + nb - bits + 1) << EXPSHIFTBITS_DP64);
-        }
+        ax = BUILTIN_FLDEXP_F64(ax, nb - bits + 1);
 
         // Final iteration
         {
@@ -143,15 +96,7 @@ MATH_MANGLE(remainder)(double x, double y)
 #endif
 #endif
 
-        if (AMD_OPT()) {
-            ax = BUILTIN_FLDEXP_F64(ax, ey);
-        } else {
-            int ey2 = ey >> 1;
-            double xsc1 = AS_DOUBLE((ulong)(EXPBIAS_DP64 + ey2) << EXPSHIFTBITS_DP64);
-            double xsc2 = AS_DOUBLE((ulong)(EXPBIAS_DP64 + (ey - ey2)) << EXPSHIFTBITS_DP64);
-            ax = (ax * xsc1) * xsc2;
-        }
-
+        ax = BUILTIN_FLDEXP_F64(ax, ey);
         ret =  AS_DOUBLE((AS_ULONG(x) & SIGNBIT_DP64) ^ AS_ULONG(ax));
     } else {
         ret = x;

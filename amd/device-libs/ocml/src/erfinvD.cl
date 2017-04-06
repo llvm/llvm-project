@@ -25,13 +25,7 @@ MATH_MANGLE(erfinv)(double x)
                   0x1.62847c8653359p-4), 0x1.053c2c0a5e083p-3), 0x1.db29fb2feec72p-3), 0x1.c5bf891b4ef6ap-1);
         ret = ax * ret;
     } else if (ax < 0x1.fffep-1) {
-        double w;
-        if (HAVE_FAST_FMA64()) {
-            w = BUILTIN_FMA_F64(-ax, ax, 1.0);
-        } else {
-            w = (1.0 - ax) * (1.0 + ax);
-        }
-        w = -MATH_MANGLE(log)(w);
+        double w = -MATH_MANGLE(log)(BUILTIN_FMA_F64(-ax, ax, 1.0));
 
         if (w < 6.25) {
             w = w - 3.125;

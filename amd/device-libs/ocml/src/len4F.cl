@@ -31,30 +31,15 @@ MATH_MANGLE(len4)(float x, float y, float z, float w)
     c        = AS_FLOAT(BUILTIN_MIN_U32(AS_UINT(b2), AS_UINT(c2)));
 
     int e;
-    if (AMD_OPT()) {
-        e = BUILTIN_FREXP_EXP_F32(a) - 1;
-        e = BUILTIN_CLAMP_S32(e, -126, 126);
-        a = BUILTIN_FLDEXP_F32(a, -e);
-        b = BUILTIN_FLDEXP_F32(b, -e);
-        c = BUILTIN_FLDEXP_F32(c, -e);
-        d = BUILTIN_FLDEXP_F32(d, -e);
-    } else {
-        e = (int)(AS_INT(a) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-        e = BUILTIN_MIN_S32(BUILTIN_MAX_S32(e, -126), 126);
-        float sc = AS_FLOAT((EXPBIAS_SP32 - e) << EXPSHIFTBITS_SP32);
-        a *= sc;
-        b *= sc;
-        c *= sc;
-        d *= sc;
-    }
+    e = BUILTIN_FREXP_EXP_F32(a) - 1;
+    e = BUILTIN_CLAMP_S32(e, -126, 126);
+    a = BUILTIN_FLDEXP_F32(a, -e);
+    b = BUILTIN_FLDEXP_F32(b, -e);
+    c = BUILTIN_FLDEXP_F32(c, -e);
+    d = BUILTIN_FLDEXP_F32(d, -e);
 
     float ret = MATH_FAST_SQRT(MATH_MAD(a, a, MATH_MAD(b, b, MATH_MAD(c, c, d*d))));
-
-    if (AMD_OPT()) {
-        ret = BUILTIN_FLDEXP_F32(ret, e);
-    } else {
-        ret *= AS_FLOAT((EXPBIAS_SP32 + e) << EXPSHIFTBITS_SP32);
-    }
+    ret = BUILTIN_FLDEXP_F32(ret, e);
 
     if (!FINITE_ONLY_OPT()) {
         ret = AS_UINT(a) > PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : ret;

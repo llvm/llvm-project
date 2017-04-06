@@ -10,13 +10,7 @@
 CONSTATTR INLINEATTR float
 MATH_MANGLE(scalb)(float x, float y)
 {
-    float t;
-    if (AMD_OPT()) {
-        t = BUILTIN_CLAMP_F32(y, -0x1.0p+20f, 0x1.0p+20f);
-    } else {
-        t = BUILTIN_MIN_F32(BUILTIN_MAX_F32(y, -0x1.0p+20f), 0x1.0p+20f);
-    }
-
+    float t = BUILTIN_CLAMP_F32(y, -0x1.0p+20f, 0x1.0p+20f);
     float ret = MATH_MANGLE(ldexp)(x, (int)BUILTIN_RINT_F32(t));
 
     if (!FINITE_ONLY_OPT()) {

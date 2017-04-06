@@ -12,7 +12,7 @@ MATH_MANGLE(fmin)(float x, float y)
 {
     float ret;
 
-    if (AMD_OPT() & DAZ_OPT() & !FINITE_ONLY_OPT()) {
+    if (DAZ_OPT() & !FINITE_ONLY_OPT()) {
         // XXX revisit this later
         ret = BUILTIN_CMIN_F32(BUILTIN_CANONICALIZE_F32(x), BUILTIN_CANONICALIZE_F32(y));
     } else {
