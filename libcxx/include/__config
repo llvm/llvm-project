@@ -265,7 +265,7 @@
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
 // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT left here for backward compatibility.
 #if (defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) &&       \
-     !defined(__arm__)) ||                                                     \
+     (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)) ||                           \
     defined(_LIBCPP_ALTERNATE_STRING_LAYOUT)
 #define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 #endif

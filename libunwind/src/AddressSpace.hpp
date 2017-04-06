@@ -394,8 +394,11 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
         size_t object_length;
 #if defined(__ANDROID__)
         Elf_Addr image_base =
-            reinterpret_cast<Elf_Addr>(pinfo->dlpi_phdr) -
-            reinterpret_cast<const Elf_Phdr *>(pinfo->dlpi_phdr)->p_offset;
+            pinfo->dlpi_phnum
+                ? reinterpret_cast<Elf_Addr>(pinfo->dlpi_phdr) -
+                      reinterpret_cast<const Elf_Phdr *>(pinfo->dlpi_phdr)
+                          ->p_offset
+                : 0;
 #endif
 
         for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
