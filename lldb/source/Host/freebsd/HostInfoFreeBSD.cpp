@@ -14,6 +14,7 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 
 using namespace lldb_private;
 
