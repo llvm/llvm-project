@@ -8,14 +8,11 @@
 ; GFX9: v_mov_b32_e32 [[VLHS:v[0-9]+]], [[LHS]]
 ; GFX9: v_pk_ashrrev_i16 [[RESULT:v[0-9]+]], [[RHS]], [[VLHS]]
 
-; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-
-; CI: v_ashrrev_i32_e32
-; CI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
-; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; CI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
-; CI: v_or_b32_e32
+; CIVI: v_ashrrev_i32_e32
+; CIVI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
+; CIVI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CIVI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
+; CIVI: v_or_b32_e32
 define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
   %result = ashr <2 x i16> %lhs, %rhs
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out
@@ -27,8 +24,10 @@ define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 ; GCN: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_ashrrev_i16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
 
+; VI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; VI: v_ashrrev_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI: v_ashrrev_i16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_ashrrev_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 ; CI: s_mov_b32 [[MASK:s[0-9]+]], 0xffff{{$}}
@@ -117,14 +116,6 @@ define amdgpu_kernel void @ashr_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; GCN: {{buffer|flat}}_load_dwordx2
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-
-; VI: v_ashrrev_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI: v_ashrrev_i16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI: v_ashrrev_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI: v_ashrrev_i16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-
 ; GCN: {{buffer|flat}}_store_dwordx2
 define amdgpu_kernel void @v_ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

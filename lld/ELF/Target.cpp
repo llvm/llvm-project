@@ -446,8 +446,8 @@ bool X86TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 void X86TargetInfo::writePltHeader(uint8_t *Buf) const {
   if (Config->Pic) {
     const uint8_t V[] = {
-        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
-        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp   *8(%ebx)
+        0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl GOTPLT+4(%ebx)
+        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *GOTPLT+8(%ebx)
         0x90, 0x90, 0x90, 0x90              // nop
     };
     memcpy(Buf, V, sizeof(V));
@@ -460,8 +460,8 @@ void X86TargetInfo::writePltHeader(uint8_t *Buf) const {
   }
 
   const uint8_t PltData[] = {
-      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushl (GOT+4)
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp   *(GOT+8)
+      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushl (GOTPLT+4)
+      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *(GOTPLT+8)
       0x90, 0x90, 0x90, 0x90              // nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
@@ -720,15 +720,15 @@ void X86_64TargetInfo<ELFT>::writeGotPlt(uint8_t *Buf,
 template <class ELFT>
 void X86_64TargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   const uint8_t PltData[] = {
-      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushq GOT+8(%rip)
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *GOT+16(%rip)
-      0x0f, 0x1f, 0x40, 0x00              // nopl 0x0(rax)
+      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushq GOTPLT+8(%rip)
+      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *GOTPLT+16(%rip)
+      0x0f, 0x1f, 0x40, 0x00              // nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint64_t Got = In<ELFT>::GotPlt->getVA();
+  uint64_t GotPlt = In<ELFT>::GotPlt->getVA();
   uint64_t Plt = In<ELFT>::Plt->getVA();
-  write32le(Buf + 2, Got - Plt + 2); // GOT+8
-  write32le(Buf + 8, Got - Plt + 4); // GOT+16
+  write32le(Buf + 2, GotPlt - Plt + 2); // GOTPLT+8
+  write32le(Buf + 8, GotPlt - Plt + 4); // GOTPLT+16
 }
 
 template <class ELFT>
@@ -2222,14 +2222,16 @@ void MipsTargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
     write32<E>(Buf + 8, 0x279c0000);  // addiu $28, $28, %lo(&GOTPLT[0])
     write32<E>(Buf + 12, 0x031cc023); // subu  $24, $24, $28
   }
+
   write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
   write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   write32<E>(Buf + 24, 0x0320f809); // jalr  $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
-  uint64_t Got = In<ELFT>::GotPlt->getVA();
-  writeMipsHi16<E>(Buf, Got);
-  writeMipsLo16<E>(Buf + 4, Got);
-  writeMipsLo16<E>(Buf + 8, Got);
+
+  uint64_t GotPlt = In<ELFT>::GotPlt->getVA();
+  writeMipsHi16<E>(Buf, GotPlt);
+  writeMipsLo16<E>(Buf + 4, GotPlt);
+  writeMipsLo16<E>(Buf + 8, GotPlt);
 }
 
 template <class ELFT>

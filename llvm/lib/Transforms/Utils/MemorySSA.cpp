@@ -44,10 +44,6 @@
 
 #define DEBUG_TYPE "memoryssa"
 using namespace llvm;
-STATISTIC(NumClobberCacheLookups, "Number of Memory SSA version cache lookups");
-STATISTIC(NumClobberCacheHits, "Number of Memory SSA version cache hits");
-STATISTIC(NumClobberCacheInserts, "Number of MemorySSA version cache inserts");
-
 INITIALIZE_PASS_BEGIN(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                       true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
@@ -323,58 +319,6 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
                               AA.pointsToConstantMemory(I));
 }
 
-/// Cache for our caching MemorySSA walker.
-class WalkerCache {
-  DenseMap<ConstMemoryAccessPair, MemoryAccess *> Accesses;
-  DenseMap<const MemoryAccess *, MemoryAccess *> Calls;
-
-public:
-  MemoryAccess *lookup(const MemoryAccess *MA, const MemoryLocation &Loc,
-                       bool IsCall) const {
-    ++NumClobberCacheLookups;
-    MemoryAccess *R = IsCall ? Calls.lookup(MA) : Accesses.lookup({MA, Loc});
-    if (R)
-      ++NumClobberCacheHits;
-    return R;
-  }
-
-  bool insert(const MemoryAccess *MA, MemoryAccess *To,
-              const MemoryLocation &Loc, bool IsCall) {
-    // This is fine for Phis, since there are times where we can't optimize
-    // them.  Making a def its own clobber is never correct, though.
-    assert((MA != To || isa<MemoryPhi>(MA)) &&
-           "Something can't clobber itself!");
-
-    ++NumClobberCacheInserts;
-    bool Inserted;
-    if (IsCall)
-      Inserted = Calls.insert({MA, To}).second;
-    else
-      Inserted = Accesses.insert({{MA, Loc}, To}).second;
-
-    return Inserted;
-  }
-
-  bool remove(const MemoryAccess *MA, const MemoryLocation &Loc, bool IsCall) {
-    return IsCall ? Calls.erase(MA) : Accesses.erase({MA, Loc});
-  }
-
-  void clear() {
-    Accesses.clear();
-    Calls.clear();
-  }
-
-  bool contains(const MemoryAccess *MA) const {
-    for (auto &P : Accesses)
-      if (P.first.first == MA || P.second == MA)
-        return true;
-    for (auto &P : Calls)
-      if (P.first == MA || P.second == MA)
-        return true;
-    return false;
-  }
-};
-
 /// Verifies that `Start` is clobbered by `ClobberAt`, and that nothing
 /// inbetween `Start` and `ClobberAt` can clobbers `Start`.
 ///
@@ -476,49 +420,11 @@ class ClobberWalker {
   const MemorySSA &MSSA;
   AliasAnalysis &AA;
   DominatorTree &DT;
-  WalkerCache &WC;
   UpwardsMemoryQuery *Query;
-  bool UseCache;
 
   // Phi optimization bookkeeping
   SmallVector<DefPath, 32> Paths;
   DenseSet<ConstMemoryAccessPair> VisitedPhis;
-
-  void setUseCache(bool Use) { UseCache = Use; }
-  bool shouldIgnoreCache() const {
-    // UseCache will only be false when we're debugging, or when expensive
-    // checks are enabled. In either case, we don't care deeply about speed.
-    return LLVM_UNLIKELY(!UseCache);
-  }
-
-  void addCacheEntry(const MemoryAccess *What, MemoryAccess *To,
-                     const MemoryLocation &Loc) const {
-// EXPENSIVE_CHECKS because most of these queries are redundant.
-#ifdef EXPENSIVE_CHECKS
-    assert(MSSA.dominates(To, What));
-#endif
-    if (shouldIgnoreCache())
-      return;
-    WC.insert(What, To, Loc, Query->IsCall);
-  }
-
-  MemoryAccess *lookupCache(const MemoryAccess *MA,
-                            const MemoryLocation &Loc) const {
-    return shouldIgnoreCache() ? nullptr : WC.lookup(MA, Loc, Query->IsCall);
-  }
-
-  void cacheDefPath(const DefPath &DN, MemoryAccess *Target) const {
-    if (shouldIgnoreCache())
-      return;
-
-    for (MemoryAccess *MA : def_chain(DN.First, DN.Last))
-      addCacheEntry(MA, Target, DN.Loc);
-
-    // DefPaths only express the path we walked. So, DN.Last could either be a
-    // thing we want to cache, or not.
-    if (DN.Last != Target)
-      addCacheEntry(DN.Last, Target, DN.Loc);
-  }
 
   /// Find the nearest def or phi that `From` can legally be optimized to.
   const MemoryAccess *getWalkTarget(const MemoryPhi *From) const {
@@ -541,7 +447,6 @@ class ClobberWalker {
     /// both.
     MemoryAccess *Result;
     bool IsKnownClobber;
-    bool FromCache;
   };
 
   /// Walk to the next Phi or Clobber in the def chain starting at Desc.Last.
@@ -557,22 +462,17 @@ class ClobberWalker {
     for (MemoryAccess *Current : def_chain(Desc.Last)) {
       Desc.Last = Current;
       if (Current == StopAt)
-        return {Current, false, false};
+        return {Current, false};
 
       if (auto *MD = dyn_cast<MemoryDef>(Current))
         if (MSSA.isLiveOnEntryDef(MD) ||
             instructionClobbersQuery(MD, Desc.Loc, Query->Inst, AA))
-          return {MD, true, false};
-
-      // Cache checks must be done last, because if Current is a clobber, the
-      // cache will contain the clobber for Current.
-      if (MemoryAccess *MA = lookupCache(Current, Desc.Loc))
-        return {MA, true, true};
+          return {MD, true};
     }
 
     assert(isa<MemoryPhi>(Desc.Last) &&
            "Ended at a non-clobber that's not a phi?");
-    return {Desc.Last, false, false};
+    return {Desc.Last, false};
   }
 
   void addSearches(MemoryPhi *Phi, SmallVectorImpl<ListIndex> &PausedSearches,
@@ -637,11 +537,11 @@ class ClobberWalker {
 
       UpwardsWalkResult Res = walkToPhiOrClobber(Node, /*StopAt=*/StopWhere);
       if (Res.IsKnownClobber) {
-        assert(Res.Result != StopWhere || Res.FromCache);
+        assert(Res.Result != StopWhere);
         // If this wasn't a cache hit, we hit a clobber when walking. That's a
         // failure.
         TerminatedPath Term{Res.Result, PathIndex};
-        if (!Res.FromCache || !MSSA.dominates(Res.Result, StopWhere))
+        if (!MSSA.dominates(Res.Result, StopWhere))
           return Term;
 
         // Otherwise, it's a valid thing to potentially optimize to.
@@ -778,8 +678,6 @@ class ClobberWalker {
       // For the moment, this is fine, since we do nothing with blocker info.
       if (Optional<TerminatedPath> Blocker = getBlockingAccess(
               Target, PausedSearches, NewPaused, TerminatedPaths)) {
-        // Cache our work on the blocking node, since we know that's correct.
-        cacheDefPath(Paths[Blocker->LastNode], Blocker->Clobber);
 
         // Find the node we started at. We can't search based on N->Last, since
         // we may have gone around a loop with a different MemoryLocation.
@@ -882,35 +780,6 @@ class ClobberWalker {
     }
   }
 
-  /// Caches everything in an OptznResult.
-  void cacheOptResult(const OptznResult &R) {
-    if (R.OtherClobbers.empty()) {
-      // If we're not going to be caching OtherClobbers, don't bother with
-      // marking visited/etc.
-      for (const DefPath &N : const_def_path(R.PrimaryClobber.LastNode))
-        cacheDefPath(N, R.PrimaryClobber.Clobber);
-      return;
-    }
-
-    // PrimaryClobber is our answer. If we can cache anything back, we need to
-    // stop caching when we visit PrimaryClobber.
-    SmallBitVector Visited(Paths.size());
-    for (const DefPath &N : const_def_path(R.PrimaryClobber.LastNode)) {
-      Visited[defPathIndex(N)] = true;
-      cacheDefPath(N, R.PrimaryClobber.Clobber);
-    }
-
-    for (const TerminatedPath &P : R.OtherClobbers) {
-      for (const DefPath &N : const_def_path(P.LastNode)) {
-        ListIndex NIndex = defPathIndex(N);
-        if (Visited[NIndex])
-          break;
-        Visited[NIndex] = true;
-        cacheDefPath(N, P.Clobber);
-      }
-    }
-  }
-
   void verifyOptResult(const OptznResult &R) const {
     assert(all_of(R.OtherClobbers, [&](const TerminatedPath &P) {
       return MSSA.dominates(P.Clobber, R.PrimaryClobber.Clobber);
@@ -923,17 +792,14 @@ class ClobberWalker {
   }
 
 public:
-  ClobberWalker(const MemorySSA &MSSA, AliasAnalysis &AA, DominatorTree &DT,
-                WalkerCache &WC)
-      : MSSA(MSSA), AA(AA), DT(DT), WC(WC), UseCache(true) {}
+  ClobberWalker(const MemorySSA &MSSA, AliasAnalysis &AA, DominatorTree &DT)
+      : MSSA(MSSA), AA(AA), DT(DT) {}
 
   void reset() {}
 
   /// Finds the nearest clobber for the given query, optimizing phis if
   /// possible.
-  MemoryAccess *findClobber(MemoryAccess *Start, UpwardsMemoryQuery &Q,
-                            bool UseWalkerCache = true) {
-    setUseCache(UseWalkerCache);
+  MemoryAccess *findClobber(MemoryAccess *Start, UpwardsMemoryQuery &Q) {
     Query = &Q;
 
     MemoryAccess *Current = Start;
@@ -948,13 +814,11 @@ public:
     UpwardsWalkResult WalkResult = walkToPhiOrClobber(FirstDesc);
     MemoryAccess *Result;
     if (WalkResult.IsKnownClobber) {
-      cacheDefPath(FirstDesc, WalkResult.Result);
       Result = WalkResult.Result;
     } else {
       OptznResult OptRes = tryOptimizePhi(cast<MemoryPhi>(FirstDesc.Last),
                                           Current, Q.StartingLoc);
       verifyOptResult(OptRes);
-      cacheOptResult(OptRes);
       resetPhiOptznState();
       Result = OptRes.PrimaryClobber.Clobber;
     }
@@ -985,41 +849,9 @@ struct RenamePassData {
 } // anonymous namespace
 
 namespace llvm {
-/// \brief A MemorySSAWalker that does AA walks and caching of lookups to
-/// disambiguate accesses.
-///
-/// FIXME: The current implementation of this can take quadratic space in rare
-/// cases. This can be fixed, but it is something to note until it is fixed.
-///
-/// In order to trigger this behavior, you need to store to N distinct locations
-/// (that AA can prove don't alias), perform M stores to other memory
-/// locations that AA can prove don't alias any of the initial N locations, and
-/// then load from all of the N locations. In this case, we insert M cache
-/// entries for each of the N loads.
-///
-/// For example:
-/// define i32 @foo() {
-///   %a = alloca i32, align 4
-///   %b = alloca i32, align 4
-///   store i32 0, i32* %a, align 4
-///   store i32 0, i32* %b, align 4
-///
-///   ; Insert M stores to other memory that doesn't alias %a or %b here
-///
-///   %c = load i32, i32* %a, align 4 ; Caches M entries in
-///                                   ; CachedUpwardsClobberingAccess for the
-///                                   ; MemoryLocation %a
-///   %d = load i32, i32* %b, align 4 ; Caches M entries in
-///                                   ; CachedUpwardsClobberingAccess for the
-///                                   ; MemoryLocation %b
-///
-///   ; For completeness' sake, loading %a or %b again would not cache *another*
-///   ; M entries.
-///   %r = add i32 %c, %d
-///   ret i32 %r
-/// }
+/// \brief A MemorySSAWalker that does AA walks to disambiguate accesses. It no longer does caching on its own,
+/// but the name has been retained for the moment.
 class MemorySSA::CachingWalker final : public MemorySSAWalker {
-  WalkerCache Cache;
   ClobberWalker Walker;
   bool AutoResetWalker;
 
@@ -2084,35 +1916,13 @@ MemorySSAWalker::MemorySSAWalker(MemorySSA *M) : MSSA(M) {}
 
 MemorySSA::CachingWalker::CachingWalker(MemorySSA *M, AliasAnalysis *A,
                                         DominatorTree *D)
-    : MemorySSAWalker(M), Walker(*M, *A, *D, Cache), AutoResetWalker(true) {}
+    : MemorySSAWalker(M), Walker(*M, *A, *D), AutoResetWalker(true) {}
 
 MemorySSA::CachingWalker::~CachingWalker() {}
 
 void MemorySSA::CachingWalker::invalidateInfo(MemoryAccess *MA) {
-  // TODO: We can do much better cache invalidation with differently stored
-  // caches.  For now, for MemoryUses, we simply remove them
-  // from the cache, and kill the entire call/non-call cache for everything
-  // else.  The problem is for phis or defs, currently we'd need to follow use
-  // chains down and invalidate anything below us in the chain that currently
-  // terminates at this access.
-
-  // See if this is a MemoryUse, if so, just remove the cached info. MemoryUse
-  // is by definition never a barrier, so nothing in the cache could point to
-  // this use. In that case, we only need invalidate the info for the use
-  // itself.
-
-  if (MemoryUse *MU = dyn_cast<MemoryUse>(MA)) {
-    UpwardsMemoryQuery Q(MU->getMemoryInst(), MU);
-    Cache.remove(MU, Q.StartingLoc, Q.IsCall);
-    MU->resetOptimized();
-  } else {
-    // If it is not a use, the best we can do right now is destroy the cache.
-    Cache.clear();
-  }
-
-#ifdef EXPENSIVE_CHECKS
-  verifyRemoved(MA);
-#endif
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
+    MUD->resetOptimized();
 }
 
 /// \brief Walk the use-def chains starting at \p MA and find
@@ -2123,8 +1933,7 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
     MemoryAccess *StartingAccess, UpwardsMemoryQuery &Q) {
   MemoryAccess *New = Walker.findClobber(StartingAccess, Q);
 #ifdef EXPENSIVE_CHECKS
-  MemoryAccess *NewNoCache =
-      Walker.findClobber(StartingAccess, Q, /*UseWalkerCache=*/false);
+  MemoryAccess *NewNoCache = Walker.findClobber(StartingAccess, Q);
   assert(NewNoCache == New && "Cache made us hand back a different result?");
 #endif
   if (AutoResetWalker)
@@ -2153,9 +1962,6 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
   Q.StartingLoc = Loc;
   Q.Inst = I;
   Q.IsCall = false;
-
-  if (auto *CacheResult = Cache.lookup(StartingUseOrDef, Loc, Q.IsCall))
-    return CacheResult;
 
   // Unlike the other function, do not walk to the def of a def, because we are
   // handed something we already believe is the clobbering access.
@@ -2193,12 +1999,8 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (!Q.IsCall && I->isFenceLike())
     return StartingAccess;
 
-  if (auto *CacheResult = Cache.lookup(StartingAccess, Q.StartingLoc, Q.IsCall))
-    return CacheResult;
-
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
-    Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(StartingAccess))
       MUD->setOptimized(LiveOnEntry);
     return LiveOnEntry;
@@ -2221,11 +2023,6 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
     MUD->setOptimized(Result);
 
   return Result;
-}
-
-// Verify that MA doesn't exist in any of the caches.
-void MemorySSA::CachingWalker::verifyRemoved(MemoryAccess *MA) {
-  assert(!Cache.contains(MA) && "Found removed MemoryAccess in cache.");
 }
 
 MemoryAccess *

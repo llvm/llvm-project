@@ -917,40 +917,39 @@ static bool checkArgPlaceholdersForOverload(Sema &S,
   return false;
 }
 
-// IsOverload - Determine whether the given New declaration is an
-// overload of the declarations in Old. This routine returns false if
-// New and Old cannot be overloaded, e.g., if New has the same
-// signature as some function in Old (C++ 1.3.10) or if the Old
-// declarations aren't functions (or function templates) at all. When
-// it does return false, MatchedDecl will point to the decl that New
-// cannot be overloaded with.  This decl may be a UsingShadowDecl on
-// top of the underlying declaration.
-//
-// Example: Given the following input:
-//
-//   void f(int, float); // #1
-//   void f(int, int); // #2
-//   int f(int, int); // #3
-//
-// When we process #1, there is no previous declaration of "f",
-// so IsOverload will not be used.
-//
-// When we process #2, Old contains only the FunctionDecl for #1.  By
-// comparing the parameter types, we see that #1 and #2 are overloaded
-// (since they have different signatures), so this routine returns
-// false; MatchedDecl is unchanged.
-//
-// When we process #3, Old is an overload set containing #1 and #2. We
-// compare the signatures of #3 to #1 (they're overloaded, so we do
-// nothing) and then #3 to #2. Since the signatures of #3 and #2 are
-// identical (return types of functions are not part of the
-// signature), IsOverload returns false and MatchedDecl will be set to
-// point to the FunctionDecl for #2.
-//
-// 'NewIsUsingShadowDecl' indicates that 'New' is being introduced
-// into a class by a using declaration.  The rules for whether to hide
-// shadow declarations ignore some properties which otherwise figure
-// into a function template's signature.
+/// Determine whether the given New declaration is an overload of the
+/// declarations in Old. This routine returns Ovl_Match or Ovl_NonFunction if
+/// New and Old cannot be overloaded, e.g., if New has the same signature as
+/// some function in Old (C++ 1.3.10) or if the Old declarations aren't
+/// functions (or function templates) at all. When it does return Ovl_Match or
+/// Ovl_NonFunction, MatchedDecl will point to the decl that New cannot be
+/// overloaded with. This decl may be a UsingShadowDecl on top of the underlying
+/// declaration.
+///
+/// Example: Given the following input:
+///
+///   void f(int, float); // #1
+///   void f(int, int); // #2
+///   int f(int, int); // #3
+///
+/// When we process #1, there is no previous declaration of "f", so IsOverload
+/// will not be used.
+///
+/// When we process #2, Old contains only the FunctionDecl for #1. By comparing
+/// the parameter types, we see that #1 and #2 are overloaded (since they have
+/// different signatures), so this routine returns Ovl_Overload; MatchedDecl is
+/// unchanged.
+///
+/// When we process #3, Old is an overload set containing #1 and #2. We compare
+/// the signatures of #3 to #1 (they're overloaded, so we do nothing) and then
+/// #3 to #2. Since the signatures of #3 and #2 are identical (return types of
+/// functions are not part of the signature), IsOverload returns Ovl_Match and
+/// MatchedDecl will be set to point to the FunctionDecl for #2.
+///
+/// 'NewIsUsingShadowDecl' indicates that 'New' is being introduced into a class
+/// by a using declaration. The rules for whether to hide shadow declarations
+/// ignore some properties which otherwise figure into a function template's
+/// signature.
 Sema::OverloadKind
 Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
                     NamedDecl *&Match, bool NewIsUsingDecl) {

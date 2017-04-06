@@ -54,7 +54,7 @@ void StringTableBuilder::write(raw_ostream &OS) const {
   assert(isFinalized());
   SmallString<0> Data;
   Data.resize(getSize());
-  write((uint8_t *)&Data[0]);
+  write((uint8_t *)Data.data());
   OS << Data;
 }
 
