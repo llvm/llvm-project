@@ -111,6 +111,8 @@ public:
 
   uint32_t GetNumThreadContexts() override;
 
+  std::string GetIdentifierString() override;
+
   lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) override;
 
