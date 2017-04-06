@@ -156,53 +156,6 @@ error:
 	return -1;
 }
 
-__isl_give isl_basic_map *isl_basic_map_set_rational(
-	__isl_take isl_basic_map *bmap)
-{
-	if (!bmap)
-		return NULL;
-
-	if (ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL))
-		return bmap;
-
-	bmap = isl_basic_map_cow(bmap);
-	if (!bmap)
-		return NULL;
-
-	ISL_F_SET(bmap, ISL_BASIC_MAP_RATIONAL);
-
-	return isl_basic_map_finalize(bmap);
-}
-
-__isl_give isl_basic_set *isl_basic_set_set_rational(
-	__isl_take isl_basic_set *bset)
-{
-	return isl_basic_map_set_rational(bset);
-}
-
-__isl_give isl_map *isl_map_set_rational(__isl_take isl_map *map)
-{
-	int i;
-
-	map = isl_map_cow(map);
-	if (!map)
-		return NULL;
-	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_set_rational(map->p[i]);
-		if (!map->p[i])
-			goto error;
-	}
-	return map;
-error:
-	isl_map_free(map);
-	return NULL;
-}
-
-__isl_give isl_set *isl_set_set_rational(__isl_take isl_set *set)
-{
-	return isl_map_set_rational(set);
-}
-
 static struct isl_basic_set *isl_basic_set_add_equality(
 	struct isl_basic_set *bset, isl_int *c)
 {

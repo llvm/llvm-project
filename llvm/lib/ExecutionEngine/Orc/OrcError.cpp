@@ -60,19 +60,16 @@ namespace orc {
 
 char RPCFunctionNotSupported::ID = 0;
 
-Error orcError(OrcErrorCode ErrCode) {
+std::error_code orcError(OrcErrorCode ErrCode) {
   typedef std::underlying_type<OrcErrorCode>::type UT;
-  return errorCodeToError(
-      std::error_code(static_cast<UT>(ErrCode), *OrcErrCat));
+  return std::error_code(static_cast<UT>(ErrCode), *OrcErrCat);
 }
 
 RPCFunctionNotSupported::RPCFunctionNotSupported(std::string RPCFunctionSignature)
   : RPCFunctionSignature(std::move(RPCFunctionSignature)) {}
 
 std::error_code RPCFunctionNotSupported::convertToErrorCode() const {
-  typedef std::underlying_type<OrcErrorCode>::type UT;
-  return std::error_code(static_cast<UT>(OrcErrorCode::UnknownRPCFunction),
-                         *OrcErrCat);
+  return orcError(OrcErrorCode::UnknownRPCFunction);
 }
 
 void RPCFunctionNotSupported::log(raw_ostream &OS) const {

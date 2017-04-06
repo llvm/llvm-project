@@ -1357,6 +1357,22 @@ m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
   return m_CombineOr(m_ICmp(Pred, L, R), m_ICmp(Pred, R, L));
 }
 
+/// \brief Matches a Add with LHS and RHS in either order.
+template<typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
+                        BinaryOp_match<RHS, LHS, Instruction::Add>>
+m_c_Add(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Add(L, R), m_Add(R, L));
+}
+
+/// \brief Matches a Mul with LHS and RHS in either order.
+template<typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Mul>,
+                        BinaryOp_match<RHS, LHS, Instruction::Mul>>
+m_c_Mul(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Mul(L, R), m_Mul(R, L));
+}
+
 /// \brief Matches an And with LHS and RHS in either order.
 template<typename LHS, typename RHS>
 inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::And>,

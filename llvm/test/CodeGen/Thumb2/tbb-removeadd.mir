@@ -1,0 +1,124 @@
+#RUN: llc -run-pass arm-cp-islands %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8r-arm-none-eabi"
+  
+  define void @Func(i32 %i, i32* nocapture %p) local_unnamed_addr {
+  entry:
+    switch i32 %i, label %sw.epilog [
+      i32 0, label %sw.bb
+      i32 1, label %sw.bb1
+      i32 2, label %sw.epilog.sink.split
+      i32 4, label %sw.bb3
+    ]
+  
+  sw.bb:                                            ; preds = %entry
+    br label %sw.epilog.sink.split
+  
+  sw.bb1:                                           ; preds = %entry
+    store i32 0, i32* %p, align 4
+    br label %sw.epilog.sink.split
+  
+  sw.bb3:                                           ; preds = %entry
+    br label %sw.epilog.sink.split
+  
+  sw.epilog.sink.split:                             ; preds = %sw.bb3, %sw.bb1, %sw.bb, %entry
+    %.sink = phi i32 [ 2, %sw.bb3 ], [ 0, %sw.bb ], [ 1, %entry ], [ 1, %sw.bb1 ]
+    store i32 %.sink, i32* %p, align 4
+    br label %sw.epilog
+  
+  sw.epilog:                                        ; preds = %sw.epilog.sink.split, %entry
+    ret void
+  }
+
+...
+---
+name:            Func
+alignment:       1
+exposesReturnsTwice: false
+noVRegs:         true
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%r0' }
+  - { reg: '%r1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+jumpTable:       
+  kind:            inline
+  entries:         
+    - id:              0
+      blocks:          [ '%bb.2.sw.bb', '%bb.3.sw.bb1', '%bb.5.sw.epilog.sink.split', 
+                         '%bb.6.sw.epilog', '%bb.4.sw.bb3' ]
+# The ADD should be deleted along with the LEA
+# CHECK-NOT: t2LEApcrelJT
+# CHECK-NOT: t2ADDrs
+# CHECK: tMOVi8
+# CHECK: t2TBB_JT
+
+body:             |
+  bb.0.entry:
+    successors: %bb.6.sw.epilog(0x0ccccccb), %bb.1.entry(0x73333335)
+    liveins: %r0, %r1
+  
+    tCMPi8 %r0, 4, 14, _, implicit-def %cpsr
+    t2Bcc %bb.6.sw.epilog, 8, killed %cpsr
+  
+  bb.1.entry:
+    successors: %bb.2.sw.bb(0x1c71c71c), %bb.3.sw.bb1(0x1c71c71c), %bb.5.sw.epilog.sink.split(0x1c71c71c), %bb.6.sw.epilog(0x0e38e38e), %bb.4.sw.bb3(0x1c71c71c)
+    liveins: %r0, %r1
+  
+    %r2 = t2LEApcrelJT %jump-table.0, 14, _
+    %r3 = t2ADDrs killed %r2, %r0, 18, 14, _, _
+    %r2, dead %cpsr = tMOVi8 1, 14, _
+    t2BR_JT killed %r3, killed %r0, %jump-table.0
+  
+  bb.2.sw.bb:
+    successors: %bb.5.sw.epilog.sink.split(0x80000000)
+    liveins: %r1
+  
+    %r2, dead %cpsr = tMOVi8 0, 14, _
+    t2B %bb.5.sw.epilog.sink.split, 14, _
+  
+  bb.3.sw.bb1:
+    successors: %bb.5.sw.epilog.sink.split(0x80000000)
+    liveins: %r1
+  
+    %r0, dead %cpsr = tMOVi8 0, 14, _
+    %r2, dead %cpsr = tMOVi8 1, 14, _
+    tSTRi killed %r0, %r1, 0, 14, _ :: (store 4 into %ir.p)
+    t2B %bb.5.sw.epilog.sink.split, 14, _
+  
+  bb.4.sw.bb3:
+    successors: %bb.5.sw.epilog.sink.split(0x80000000)
+    liveins: %r1
+  
+    %r2, dead %cpsr = tMOVi8 2, 14, _
+  
+  bb.5.sw.epilog.sink.split:
+    successors: %bb.6.sw.epilog(0x80000000)
+    liveins: %r1, %r2
+  
+    tSTRi killed %r2, killed %r1, 0, 14, _ :: (store 4 into %ir.p)
+  
+  bb.6.sw.epilog:
+    tBX_RET 14, _
+
+...

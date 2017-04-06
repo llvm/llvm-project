@@ -23,11 +23,11 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
   CHECK(0 && "unimplemented");
 }
 
-int SuspendedThreadsList::GetRegistersAndSP(uptr index,
-                                            uptr *buffer,
-                                            uptr *sp) const {
+PtraceRegistersStatus SuspendedThreadsList::GetRegistersAndSP(uptr index,
+                                                              uptr *buffer,
+                                                              uptr *sp) const {
   CHECK(0 && "unimplemented");
-  return 0;
+  return REGISTERS_UNAVAILABLE_FATAL;
 }
 
 uptr SuspendedThreadsList::RegisterCount() {

@@ -22,3 +22,6 @@ XRAY_FLAG(const char *, xray_logfile_base, "xray-log.",
           "Filename base for the xray logfile.")
 XRAY_FLAG(bool, xray_fdr_log, false,
           "Whether to install the flight data recorder logging implementation.")
+XRAY_FLAG(int, xray_fdr_log_func_duration_threshold_us, 5,
+          "FDR logging will try to skip functions that execute for fewer "
+          "microseconds than this threshold.")

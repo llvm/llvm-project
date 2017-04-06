@@ -347,15 +347,6 @@ class Run(object):
                 {k: multiprocessing.Semaphore(v) for k, v in
                  self.lit_config.parallelism_groups.items()}
 
-        # Save the display object on the runner so that we can update it from
-        # our task completion callback.
-        self.display = display
-
-        # Start a process pool. Copy over the data shared between all test runs.
-        pool = multiprocessing.Pool(jobs, worker_initializer,
-                                    (self.lit_config,
-                                     self.parallelism_semaphores))
-
         # Install a console-control signal handler on Windows.
         if win32api is not None:
             def console_ctrl_handler(type):
@@ -366,10 +357,24 @@ class Run(object):
                 return True
             win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
 
-        # FIXME: Implement max_time using .wait() timeout argument and a
-        # deadline.
+        # Save the display object on the runner so that we can update it from
+        # our task completion callback.
+        self.display = display
+
+        # We need to issue many wait calls, so compute the final deadline and
+        # subtract time.time() from that as we go along.
+        deadline = None
+        if max_time:
+            deadline = time.time() + max_time
+
+        # Start a process pool. Copy over the data shared between all test runs.
+        pool = multiprocessing.Pool(jobs, worker_initializer,
+                                    (self.lit_config,
+                                     self.parallelism_semaphores))
 
         try:
+            self.failure_count = 0
+            self.hit_max_failures = False
             async_results = [pool.apply_async(worker_run_one_test,
                                               args=(test_index, test),
                                               callback=self.consume_test_result)
@@ -378,10 +383,21 @@ class Run(object):
             # Wait for all results to come in. The callback that runs in the
             # parent process will update the display.
             for a in async_results:
-                a.wait()
+                if deadline:
+                    a.wait(deadline - time.time())
+                else:
+                    # Python condition variables cannot be interrupted unless
+                    # they have a timeout. This can make lit unresponsive to
+                    # KeyboardInterrupt, so do a busy wait with a timeout.
+                    while not a.ready():
+                        a.wait(1)
                 if not a.successful():
                     a.get() # Exceptions raised here come from the worker.
+                if self.hit_max_failures:
+                    break
         finally:
+            # Stop the workers and wait for any straggling results to come in
+            # if we exited without waiting on every async result.
             pool.terminate()
             pool.join()
 
@@ -398,6 +414,12 @@ class Run(object):
         up the original test object. Also updates the progress bar as tasks
         complete.
         """
+        # Don't add any more test results after we've hit the maximum failure
+        # count.  Otherwise we're racing with the main thread, which is going
+        # to terminate the process pool soon.
+        if self.hit_max_failures:
+            return
+
         (test_index, test_with_result) = pool_result
         # Update the parent process copy of the test. This includes the result,
         # XFAILS, REQUIRES, and UNSUPPORTED statuses.
@@ -405,6 +427,13 @@ class Run(object):
                 "parent and child disagree on test path"
         self.tests[test_index] = test_with_result
         self.display.update(test_with_result)
+
+        # If we've finished all the tests or too many tests have failed, notify
+        # the main thread that we've stopped testing.
+        self.failure_count += (test_with_result.result.code == lit.Test.FAIL)
+        if self.lit_config.maxFailures and \
+                self.failure_count == self.lit_config.maxFailures:
+            self.hit_max_failures = True
 
 child_lit_config = None
 child_parallelism_semaphores = None

@@ -70,6 +70,9 @@ public:
     /// \brief The entity being initialized is a field of block descriptor for
     /// the copied-in c++ object.
     EK_BlockElement,
+    /// The entity being initialized is a field of block descriptor for the
+    /// copied-in lambda object that's used in the lambda to block conversion.
+    EK_LambdaToBlockConversionBlockElement,
     /// \brief The entity being initialized is the real or imaginary part of a
     /// complex number.
     EK_ComplexElement,
@@ -260,7 +263,13 @@ public:
                                            QualType Type, bool NRVO) {
     return InitializedEntity(EK_BlockElement, BlockVarLoc, Type, NRVO);
   }
-  
+
+  static InitializedEntity InitializeLambdaToBlock(SourceLocation BlockVarLoc,
+                                                   QualType Type, bool NRVO) {
+    return InitializedEntity(EK_LambdaToBlockConversionBlockElement,
+                             BlockVarLoc, Type, NRVO);
+  }
+
   /// \brief Create the initialization entity for an exception object.
   static InitializedEntity InitializeException(SourceLocation ThrowLoc,
                                                QualType Type, bool NRVO) {

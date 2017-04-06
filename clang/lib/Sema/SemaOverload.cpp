@@ -4047,7 +4047,7 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
         = S.Context.canAssignObjCInterfaces(ToPtr1, ToPtr2);
       bool ToAssignRight
         = S.Context.canAssignObjCInterfaces(ToPtr2, ToPtr1);
-      
+
       // A conversion to an a non-id object pointer type or qualified 'id' 
       // type is better than a conversion to 'id'.
       if (ToPtr1->isObjCIdType() &&
@@ -4081,11 +4081,25 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
         return ImplicitConversionSequence::Better;
 
       //   -- "conversion of C* to B* is better than conversion of C* to A*,"
-      if (S.Context.hasSameType(FromType1, FromType2) && 
+      if (S.Context.hasSameType(FromType1, FromType2) &&
           !FromPtr1->isObjCIdType() && !FromPtr1->isObjCClassType() &&
-          (ToAssignLeft != ToAssignRight))
+          (ToAssignLeft != ToAssignRight)) {
+        if (FromPtr1->isSpecialized()) {
+          // "conversion of B<A> * to B * is better than conversion of B * to
+          // C *.
+          bool IsFirstSame =
+              FromPtr1->getInterfaceDecl() == ToPtr1->getInterfaceDecl();
+          bool IsSecondSame =
+              FromPtr1->getInterfaceDecl() == ToPtr2->getInterfaceDecl();
+          if (IsFirstSame) {
+            if (!IsSecondSame)
+              return ImplicitConversionSequence::Better;
+          } else if (IsSecondSame)
+            return ImplicitConversionSequence::Worse;
+        }
         return ToAssignLeft? ImplicitConversionSequence::Worse
                            : ImplicitConversionSequence::Better;
+      }
 
       //   -- "conversion of B* to A* is better than conversion of C* to A*,"
       if (S.Context.hasSameUnqualifiedType(ToType1, ToType2) &&

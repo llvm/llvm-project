@@ -13,9 +13,8 @@ Building with XRay
 ------------------
 
 To debug an application with XRay instrumentation, we need to build it with a
-Clang that supports the ``-fxray-instrument`` option. See `XRay
-<http://llvm.org/docs/XRay.html` for more technical details of how XRay works
-for background information.
+Clang that supports the ``-fxray-instrument`` option. See `XRay <XRay.html>`_
+for more technical details of how XRay works for background information.
 
 In our example, we need to add ``-fxray-instrument`` to the list of flags
 passed to Clang when building a binary. Note that we need to link with Clang as

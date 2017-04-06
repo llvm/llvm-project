@@ -20,6 +20,12 @@
 namespace __sanitizer {
 typedef int SuspendedThreadID;
 
+enum PtraceRegistersStatus {
+  REGISTERS_UNAVAILABLE_FATAL = -1,
+  REGISTERS_UNAVAILABLE = 0,
+  REGISTERS_AVAILABLE = 1
+};
+
 // Holds the list of suspended threads and provides an interface to dump their
 // register contexts.
 class SuspendedThreadsList {
@@ -30,7 +36,8 @@ class SuspendedThreadsList {
     CHECK_LT(index, thread_ids_.size());
     return thread_ids_[index];
   }
-  int GetRegistersAndSP(uptr index, uptr *buffer, uptr *sp) const;
+  PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
+                                          uptr *sp) const;
   // The buffer in GetRegistersAndSP should be at least this big.
   static uptr RegisterCount();
   uptr thread_count() const { return thread_ids_.size(); }

@@ -29,9 +29,9 @@ namespace rename {
 /// Create atomic changes for renaming all symbol references which are
 /// identified by the USRs set to a given new name.
 ///
-/// \param USRs: The set containing USRs of a particular old symbol.
-/// \param NewName: The new name to replace old symbol name.
-/// \param TranslationUnitDecl: The translation unit declaration.
+/// \param USRs The set containing USRs of a particular old symbol.
+/// \param NewName The new name to replace old symbol name.
+/// \param TranslationUnitDecl The translation unit declaration.
 ///
 /// \return Atomic changes for renaming.
 std::vector<tooling::AtomicChange>

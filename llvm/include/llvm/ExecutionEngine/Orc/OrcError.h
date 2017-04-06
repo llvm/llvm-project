@@ -33,7 +33,7 @@ enum class OrcErrorCode : int {
   UnknownRPCFunction
 };
 
-Error orcError(OrcErrorCode ErrCode);
+std::error_code orcError(OrcErrorCode ErrCode);
 
 class RPCFunctionNotSupported : public ErrorInfo<RPCFunctionNotSupported> {
 public:

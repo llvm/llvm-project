@@ -38,7 +38,7 @@ UDPSocket::UDPSocket(bool child_processes_inherit, Error &error)
 
 size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
   return ::sendto(m_socket, static_cast<const char *>(buf), num_bytes, 0,
-                  m_send_sockaddr, m_send_sockaddr.GetLength());
+                  m_sockaddr, m_sockaddr.GetLength());
 }
 
 Error UDPSocket::Connect(llvm::StringRef name) {
@@ -55,9 +55,8 @@ Error UDPSocket::Accept(llvm::StringRef name, bool child_processes_inherit,
 }
 
 Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
-                         Socket *&send_socket, Socket *&recv_socket) {
-  std::unique_ptr<UDPSocket> final_send_socket;
-  std::unique_ptr<UDPSocket> final_recv_socket;
+                         Socket *&socket) {
+  std::unique_ptr<UDPSocket> final_socket;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
@@ -68,25 +67,6 @@ Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
   std::string port_str;
   int32_t port = INT32_MIN;
   if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
-    return error;
-
-  // Setup the receiving end of the UDP connection on this localhost
-  // on port zero. After we bind to port zero we can read the port.
-  final_recv_socket.reset(new UDPSocket(child_processes_inherit, error));
-  if (error.Success()) {
-    // Socket was created, now lets bind to the requested port
-    SocketAddress addr;
-    addr.SetToAnyAddress(AF_INET, 0);
-
-    if (::bind(final_recv_socket->GetNativeSocket(), addr, addr.GetLength()) ==
-        -1) {
-      // Bind failed...
-      SetLastError(error);
-    }
-  }
-
-  assert(error.Fail() == !(final_recv_socket && final_recv_socket->IsValid()));
-  if (error.Fail())
     return error;
 
   // At this point we have setup the receive port, now we need to
@@ -118,8 +98,8 @@ Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
         service_info_ptr->ai_family, service_info_ptr->ai_socktype,
         service_info_ptr->ai_protocol, child_processes_inherit, error);
     if (error.Success()) {
-      final_send_socket.reset(new UDPSocket(send_fd));
-      final_send_socket->m_send_sockaddr = service_info_ptr;
+      final_socket.reset(new UDPSocket(send_fd));
+      final_socket->m_sockaddr = service_info_ptr;
       break;
     } else
       continue;
@@ -127,11 +107,31 @@ Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
 
   ::freeaddrinfo(service_info_list);
 
-  if (!final_send_socket)
+  if (!final_socket)
     return error;
 
-  send_socket = final_send_socket.release();
-  recv_socket = final_recv_socket.release();
+  SocketAddress bind_addr;
+
+  // Only bind to the loopback address if we are expecting a connection from
+  // localhost to avoid any firewall issues.
+  const bool bind_addr_success = (host_str == "127.0.0.1" || host_str == "localhost")
+                                     ? bind_addr.SetToLocalhost(kDomain, port)
+                                     : bind_addr.SetToAnyAddress(kDomain, port);
+
+  if (!bind_addr_success) {
+    error.SetErrorString("Failed to get hostspec to bind for");
+    return error;
+  }
+
+  bind_addr.SetPort(0); // Let the source port # be determined dynamically
+
+  err = ::bind(final_socket->GetNativeSocket(), bind_addr, bind_addr.GetLength());
+
+  struct sockaddr_in source_info;
+  socklen_t address_len = sizeof (struct sockaddr_in);
+  err = ::getsockname(final_socket->GetNativeSocket(), (struct sockaddr *) &source_info, &address_len);
+
+  socket = final_socket.release();
   error.Clear();
   return error;
 }
