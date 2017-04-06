@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class AArch64RegisterBankInfo;
+
 class AArch64TargetMachine : public LLVMTargetMachine {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;

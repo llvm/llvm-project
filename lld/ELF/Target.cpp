@@ -349,6 +349,8 @@ X86TargetInfo::X86TargetInfo() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
+  // 0xCC is the "int3" (call debug exception handler) instruction.
+  TrapInstr = 0xcccccccc;
 }
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
@@ -647,6 +649,8 @@ template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   DefaultImageBase = 0x200000;
+  // 0xCC is the "int3" (call debug exception handler) instruction.
+  TrapInstr = 0xcccccccc;
 }
 
 template <class ELFT>

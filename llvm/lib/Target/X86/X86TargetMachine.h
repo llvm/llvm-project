@@ -25,6 +25,8 @@
 namespace llvm {
 
 class StringRef;
+class X86Subtarget;
+class X86RegisterBankInfo;
 
 class X86TargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;

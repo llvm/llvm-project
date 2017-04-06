@@ -2017,6 +2017,44 @@ static bool jumpTableFollowsTB(MachineInstr *JTMI, MachineInstr *CPEMI) {
          &*MBB->begin() == CPEMI;
 }
 
+static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
+                                         MachineInstr *JumpMI,
+                                         unsigned &DeadSize) {
+  // Remove a dead add between the LEA and JT, which used to compute EntryReg,
+  // but the JT now uses PC. Finds the last ADD (if any) that def's EntryReg
+  // and is not clobbered / used.
+  MachineInstr *RemovableAdd = nullptr;
+  unsigned EntryReg = JumpMI->getOperand(0).getReg();
+
+  // Find the last ADD to set EntryReg
+  MachineBasicBlock::iterator I(LEAMI);
+  for (++I; &*I != JumpMI; ++I) {
+    if (I->getOpcode() == ARM::t2ADDrs && I->getOperand(0).getReg() == EntryReg)
+      RemovableAdd = &*I;
+  }
+
+  if (!RemovableAdd)
+    return;
+
+  // Ensure EntryReg is not clobbered or used.
+  MachineBasicBlock::iterator J(RemovableAdd);
+  for (++J; &*J != JumpMI; ++J) {
+    for (unsigned K = 0, E = J->getNumOperands(); K != E; ++K) {
+      const MachineOperand &MO = J->getOperand(K);
+      if (!MO.isReg() || !MO.getReg())
+        continue;
+      if (MO.isDef() && MO.getReg() == EntryReg)
+        return;
+      if (MO.isUse() && MO.getReg() == EntryReg)
+        return;
+    }
+  }
+
+  DEBUG(dbgs() << "Removing Dead Add: " << *RemovableAdd);
+  RemovableAdd->eraseFromParent();
+  DeadSize += 4;
+}
+
 static bool registerDefinedBetween(unsigned Reg,
                                    MachineBasicBlock::iterator From,
                                    MachineBasicBlock::iterator To,
@@ -2172,7 +2210,10 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       NewJTMI->getOperand(0).setReg(ARM::PC);
       NewJTMI->getOperand(0).setIsKill(false);
 
-      if (CanDeleteLEA)  {
+      if (CanDeleteLEA) {
+        if (isThumb2)
+          RemoveDeadAddBetweenLEAAndJT(User.MI, MI, DeadSize);
+
         User.MI->eraseFromParent();
         DeadSize += isThumb2 ? 4 : 2;
 
