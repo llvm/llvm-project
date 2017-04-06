@@ -136,8 +136,16 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
   if (Idx != ~0U && isa<PHINode>(Inst))
     return cast<PHINode>(Inst)->getIncomingBlock(Idx)->getTerminator();
 
-  BasicBlock *IDom = DT->getNode(Inst->getParent())->getIDom()->getBlock();
-  return IDom->getTerminator();
+  // This must be an EH pad. Iterate over immediate dominators until we find a
+  // non-EH pad. We need to skip over catchswitch blocks, which are both EH pads
+  // and terminators.
+  auto IDom = DT->getNode(Inst->getParent())->getIDom();
+  while (IDom->getBlock()->isEHPad()) {
+    assert(Entry != IDom->getBlock() && "eh pad in entry block");
+    IDom = IDom->getIDom();
+  }
+
+  return IDom->getBlock()->getTerminator();
 }
 
 /// \brief Find an insertion point that dominates all uses.
