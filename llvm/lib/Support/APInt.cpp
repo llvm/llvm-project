@@ -153,16 +153,6 @@ APInt& APInt::AssignSlowCase(const APInt& RHS) {
   return clearUnusedBits();
 }
 
-APInt& APInt::operator=(uint64_t RHS) {
-  if (isSingleWord())
-    VAL = RHS;
-  else {
-    pVal[0] = RHS;
-    memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
-  }
-  return clearUnusedBits();
-}
-
 /// This method 'profiles' an APInt for use with FoldingSet.
 void APInt::Profile(FoldingSetNodeID& ID) const {
   ID.AddInteger(BitWidth);
@@ -412,41 +402,25 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
-APInt& APInt::operator&=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL &= RHS.VAL;
-    return *this;
-  }
+APInt& APInt::AndAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] &= RHS.pVal[i];
   return *this;
 }
 
-APInt& APInt::operator|=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL |= RHS.VAL;
-    return *this;
-  }
+APInt& APInt::OrAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] |= RHS.pVal[i];
   return *this;
 }
 
-APInt& APInt::operator^=(const APInt& RHS) {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
-    VAL ^= RHS.VAL;
-    this->clearUnusedBits();
-    return *this;
-  }
+APInt& APInt::XorAssignSlowCase(const APInt& RHS) {
   unsigned numWords = getNumWords();
   for (unsigned i = 0; i < numWords; ++i)
     pVal[i] ^= RHS.pVal[i];
-  return clearUnusedBits();
+  return *this;
 }
 
 APInt APInt::AndSlowCase(const APInt& RHS) const {
@@ -471,10 +445,7 @@ APInt APInt::XorSlowCase(const APInt& RHS) const {
   for (unsigned i = 0; i < numWords; ++i)
     val[i] = pVal[i] ^ RHS.pVal[i];
 
-  APInt Result(val, getBitWidth());
-  // 0^0==1 so clear the high bits in case they got set.
-  Result.clearUnusedBits();
-  return Result;
+  return APInt(val, getBitWidth());
 }
 
 APInt APInt::operator*(const APInt& RHS) const {
@@ -567,6 +538,11 @@ void APInt::clearBit(unsigned bitPosition) {
 }
 
 /// @brief Toggle every bit to its opposite value.
+void APInt::flipAllBitsSlowCase() {
+  for (unsigned i = 0; i < getNumWords(); ++i)
+    pVal[i] ^= UINT64_MAX;
+  clearUnusedBits();
+}
 
 /// Toggle a given bit to its opposite value whose position is given
 /// as "bitPosition".

@@ -223,6 +223,18 @@ class LLVM_NODISCARD APInt {
   /// out-of-line slow case for countPopulation
   unsigned countPopulationSlowCase() const;
 
+  /// out-of-line slow case for flipAllBits.
+  void flipAllBitsSlowCase();
+
+  /// out-of-line slow case for operator&=.
+  APInt& AndAssignSlowCase(const APInt& RHS);
+
+  /// out-of-line slow case for operator|=.
+  APInt& OrAssignSlowCase(const APInt& RHS);
+
+  /// out-of-line slow case for operator^=.
+  APInt& XorAssignSlowCase(const APInt& RHS);
+
 public:
   /// \name Constructors
   /// @{
@@ -688,7 +700,16 @@ public:
   /// than 64, the value is zero filled in the unspecified high order bits.
   ///
   /// \returns *this after assignment of RHS value.
-  APInt &operator=(uint64_t RHS);
+  APInt &operator=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL = RHS;
+      clearUnusedBits();
+    } else {
+      pVal[0] = RHS;
+      memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
+    }
+    return *this;
+  }
 
   /// \brief Bitwise AND assignment operator.
   ///
@@ -696,7 +717,29 @@ public:
   /// assigned to *this.
   ///
   /// \returns *this after ANDing with RHS.
-  APInt &operator&=(const APInt &RHS);
+  APInt &operator&=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL &= RHS.VAL;
+      return *this;
+    }
+    return AndAssignSlowCase(RHS);
+  }
+
+  /// \brief Bitwise AND assignment operator.
+  ///
+  /// Performs a bitwise AND operation on this APInt and RHS. RHS is
+  /// logically zero-extended or truncated to match the bit-width of
+  /// the LHS.
+  APInt &operator&=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL &= RHS;
+      return *this;
+    }
+    pVal[0] &= RHS;
+    memset(pVal+1, 0, (getNumWords() - 1) * APINT_WORD_SIZE);
+    return *this;
+  }
 
   /// \brief Bitwise OR assignment operator.
   ///
@@ -704,7 +747,14 @@ public:
   /// assigned *this;
   ///
   /// \returns *this after ORing with RHS.
-  APInt &operator|=(const APInt &RHS);
+  APInt &operator|=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL |= RHS.VAL;
+      return *this;
+    }
+    return OrAssignSlowCase(RHS);
+  }
 
   /// \brief Bitwise OR assignment operator.
   ///
@@ -727,7 +777,29 @@ public:
   /// assigned to *this.
   ///
   /// \returns *this after XORing with RHS.
-  APInt &operator^=(const APInt &RHS);
+  APInt &operator^=(const APInt &RHS) {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord()) {
+      VAL ^= RHS.VAL;
+      return *this;
+    }
+    return XorAssignSlowCase(RHS);
+  }
+
+  /// \brief Bitwise XOR assignment operator.
+  ///
+  /// Performs a bitwise XOR operation on this APInt and RHS. RHS is
+  /// logically zero-extended or truncated to match the bit-width of
+  /// the LHS.
+  APInt &operator^=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL ^= RHS;
+      clearUnusedBits();
+    } else {
+      pVal[0] ^= RHS;
+    }
+    return *this;
+  }
 
   /// \brief Multiplication assignment operator.
   ///
@@ -1232,13 +1304,12 @@ public:
 
   /// \brief Toggle every bit to its opposite value.
   void flipAllBits() {
-    if (isSingleWord())
+    if (isSingleWord()) {
       VAL ^= UINT64_MAX;
-    else {
-      for (unsigned i = 0; i < getNumWords(); ++i)
-        pVal[i] ^= UINT64_MAX;
+      clearUnusedBits();
+    } else {
+      flipAllBitsSlowCase();
     }
-    clearUnusedBits();
   }
 
   /// \brief Toggles a given bit to its opposite value.
@@ -1722,6 +1793,36 @@ struct APInt::mu {
 inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
 
 inline bool operator!=(uint64_t V1, const APInt &V2) { return V2 != V1; }
+
+inline APInt operator&(APInt a, uint64_t RHS) {
+  a &= RHS;
+  return a;
+}
+
+inline APInt operator&(uint64_t LHS, APInt b) {
+  b &= LHS;
+  return b;
+}
+
+inline APInt operator|(APInt a, uint64_t RHS) {
+  a |= RHS;
+  return a;
+}
+
+inline APInt operator|(uint64_t LHS, APInt b) {
+  b |= LHS;
+  return b;
+}
+
+inline APInt operator^(APInt a, uint64_t RHS) {
+  a ^= RHS;
+  return a;
+}
+
+inline APInt operator^(uint64_t LHS, APInt b) {
+  b ^= LHS;
+  return b;
+}
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APInt &I) {
   I.print(OS, true);
