@@ -2583,6 +2583,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   Flags.setVectorReduction(vec_redux);
   if (EnableFMFInDAG) {
     Flags.setAllowReciprocal(FMF.allowReciprocal());
+    Flags.setAllowContract(FMF.allowContract());
     Flags.setNoInfs(FMF.noInfs());
     Flags.setNoNaNs(FMF.noNaNs());
     Flags.setNoSignedZeros(FMF.noSignedZeros());
