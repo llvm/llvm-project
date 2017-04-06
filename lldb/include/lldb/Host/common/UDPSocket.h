@@ -18,7 +18,7 @@ public:
   UDPSocket(bool child_processes_inherit, Error &error);
 
   static Error Connect(llvm::StringRef name, bool child_processes_inherit,
-                       Socket *&send_socket, Socket *&recv_socket);
+                       Socket *&socket);
 
 private:
   UDPSocket(NativeSocket socket);
@@ -29,7 +29,7 @@ private:
   Error Accept(llvm::StringRef name, bool child_processes_inherit,
                Socket *&socket) override;
 
-  SocketAddress m_send_sockaddr;
+  SocketAddress m_sockaddr;
 };
 }
 
