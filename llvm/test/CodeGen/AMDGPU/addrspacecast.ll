@@ -12,7 +12,11 @@
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
 ; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
-; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
+; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(15, 16, 16)
+; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_SHARED_BASE]]
+
+; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
 
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
@@ -45,7 +49,11 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %pt
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
 ; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
-; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
+; GFX9-DAG: s_getreg_b32 [[SSRC_PRIVATE:s[0-9]+]], hwreg(15, 0, 16)
+; GFX9-DAG: s_lshl_b32 [[SSRC_PRIVATE_BASE:s[0-9]+]], [[SSRC_PRIVATE]], 16
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_PRIVATE_BASE]]
+
+; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
 
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
@@ -153,7 +161,11 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* 
 ; HSA-LABEL: {{^}}cast_0_group_to_flat_addrspacecast:
 ; CI: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10
 ; CI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
-; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], src_shared_base
+; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(15, 16, 16)
+; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SSRC_SHARED_BASE]]
+
+; GFX9-XXX: v_mov_b32_e32 v[[HI:[0-9]+]], src_shared_base
 
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}

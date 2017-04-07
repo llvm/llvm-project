@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=amdgcn -mcpu=hawaii -amdgpu-sdwa-peephole=0 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=VGPR -check-prefix=GCN %s
 
 ; FIXME: we should disable sdwa peephole because dead-code elimination, that
 ; runs after peephole, ruins this test (different register numbers)

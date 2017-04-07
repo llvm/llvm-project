@@ -3603,17 +3603,19 @@ LexNextToken:
 
   // UCNs (C99 6.4.3, C++11 [lex.charset]p2)
   case '\\':
-    if (uint32_t CodePoint = tryReadUCN(CurPtr, BufferPtr, &Result)) {
-      if (CheckUnicodeWhitespace(Result, CodePoint, CurPtr)) {
-        if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
-          return true; // KeepWhitespaceMode
+    if (!LangOpts.AsmPreprocessor) {
+      if (uint32_t CodePoint = tryReadUCN(CurPtr, BufferPtr, &Result)) {
+        if (CheckUnicodeWhitespace(Result, CodePoint, CurPtr)) {
+          if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+            return true; // KeepWhitespaceMode
 
-        // We only saw whitespace, so just try again with this lexer.
-        // (We manually eliminate the tail call to avoid recursion.)
-        goto LexNextToken;
+          // We only saw whitespace, so just try again with this lexer.
+          // (We manually eliminate the tail call to avoid recursion.)
+          goto LexNextToken;
+        }
+
+        return LexUnicode(Result, CodePoint, CurPtr);
       }
-
-      return LexUnicode(Result, CodePoint, CurPtr);
     }
 
     Kind = tok::unknown;

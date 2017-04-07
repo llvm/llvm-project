@@ -29,9 +29,20 @@
 namespace clang {
 namespace clangd {
 
+struct URI {
+  std::string uri;
+  std::string file;
+
+  static URI fromUri(llvm::StringRef uri);
+  static URI fromFile(llvm::StringRef file);
+
+  static URI parse(llvm::yaml::ScalarNode *Param);
+  static std::string unparse(const URI &U);
+};
+
 struct TextDocumentIdentifier {
   /// The text document's URI.
-  std::string uri;
+  URI uri;
 
   static llvm::Optional<TextDocumentIdentifier>
   parse(llvm::yaml::MappingNode *Params);
@@ -90,7 +101,7 @@ struct TextEdit {
 
 struct TextDocumentItem {
   /// The text document's URI.
-  std::string uri;
+  URI uri;
 
   /// The text document's language identifier.
   std::string languageId;
@@ -328,7 +339,7 @@ struct CompletionItem {
   /// this completion. Edits must not overlap with the main edit nor with
   /// themselves.
   std::vector<TextEdit> additionalTextEdits;
-  
+
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //

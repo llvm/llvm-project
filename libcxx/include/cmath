@@ -398,7 +398,6 @@ using ::cbrtf;
 using ::copysign;
 using ::copysignf;
 
-#if !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 using ::erf;
 using ::erff;
 using ::erfc;
@@ -435,12 +434,10 @@ using ::lrint;
 using ::lrintf;
 using ::lround;
 using ::lroundf;
-#endif // !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 
 using ::nan;
 using ::nanf;
 
-#if !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 using ::nearbyint;
 using ::nearbyintf;
 using ::nextafter;
@@ -463,7 +460,6 @@ using ::tgamma;
 using ::tgammaf;
 using ::trunc;
 using ::truncf;
-#endif // !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 
 using ::acosl;
 using ::asinl;
@@ -495,7 +491,6 @@ using ::cbrtl;
 
 using ::copysignl;
 
-#if !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 using ::erfl;
 using ::erfcl;
 using ::exp2l;
@@ -526,7 +521,6 @@ using ::scalblnl;
 using ::scalbnl;
 using ::tgammal;
 using ::truncl;
-#endif // !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 
 #if _LIBCPP_STD_VER > 14
 inline _LIBCPP_INLINE_VISIBILITY float       hypot(       float x,       float y,       float z ) { return sqrt(x*x + y*y + z*z); }

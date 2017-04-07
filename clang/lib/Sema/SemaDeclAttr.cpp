@@ -1923,6 +1923,17 @@ static void handleNakedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                                                      Attr.getName()))
     return;
 
+  if (Attr.isDeclspecAttribute()) {
+    const auto &Triple = S.getASTContext().getTargetInfo().getTriple();
+    const auto &Arch = Triple.getArch();
+    if (Arch != llvm::Triple::x86 &&
+        (Arch != llvm::Triple::arm && Arch != llvm::Triple::thumb)) {
+      S.Diag(Attr.getLoc(), diag::err_attribute_not_supported_on_arch)
+          << Attr.getName() << Triple.getArchName();
+      return;
+    }
+  }
+
   D->addAttr(::new (S.Context) NakedAttr(Attr.getRange(), S.Context,
                                          Attr.getAttributeSpellingListIndex()));
 }

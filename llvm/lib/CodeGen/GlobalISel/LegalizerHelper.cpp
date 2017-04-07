@@ -274,6 +274,26 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_CONSTANT: {
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts =
+        MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
+    const APInt &Cst = MI.getOperand(1).getCImm()->getValue();
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+
+    SmallVector<unsigned, 2> DstRegs;
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+      ConstantInt *CI =
+          ConstantInt::get(Ctx, Cst.lshr(NarrowSize * i).trunc(NarrowSize));
+      MIRBuilder.buildConstant(DstReg, *CI);
+      DstRegs.push_back(DstReg);
+    }
+    unsigned DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildMerge(DstReg, DstRegs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 

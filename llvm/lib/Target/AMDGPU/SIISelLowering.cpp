@@ -2340,16 +2340,28 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);;
 }
 
-SDValue SITargetLowering::getSegmentAperture(unsigned AS,
+SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  // FIXME: Use inline constants (src_{shared, private}_base) instead.
+  if (Subtarget->hasApertureRegs()) {
+    unsigned Offset = AS == AMDGPUASI.LOCAL_ADDRESS ?
+        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
+        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
+    unsigned WidthM1 = AS == AMDGPUASI.LOCAL_ADDRESS ?
+        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
+        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
+    unsigned Encoding =
+        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
+        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
+        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
 
-  if (Subtarget->hasApertureRegs()) { // Read from Aperture Registers directly.
-    unsigned RegNo = (AS == AMDGPUASI.LOCAL_ADDRESS) ? AMDGPU::SRC_SHARED_BASE :
-                                                       AMDGPU::SRC_PRIVATE_BASE;
-    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass, RegNo, MVT::i32);
+    SDValue EncodingImm = DAG.getTargetConstant(Encoding, DL, MVT::i16);
+    SDValue ApertureReg = SDValue(
+        DAG.getMachineNode(AMDGPU::S_GETREG_B32, DL, MVT::i32, EncodingImm), 0);
+    SDValue ShiftAmount = DAG.getTargetConstant(WidthM1 + 1, DL, MVT::i32);
+    return DAG.getNode(ISD::SHL, DL, MVT::i32, ApertureReg, ShiftAmount);
   }
 
-  SDLoc SL;
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   unsigned UserSGPR = Info->getQueuePtrUserSGPR();
@@ -2362,8 +2374,8 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
   // private_segment_aperture_base_hi.
   uint32_t StructOffset = (AS == AMDGPUASI.LOCAL_ADDRESS) ? 0x40 : 0x44;
 
-  SDValue Ptr = DAG.getNode(ISD::ADD, SL, MVT::i64, QueuePtr,
-                            DAG.getConstant(StructOffset, SL, MVT::i64));
+  SDValue Ptr = DAG.getNode(ISD::ADD, DL, MVT::i64, QueuePtr,
+                            DAG.getConstant(StructOffset, DL, MVT::i64));
 
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
@@ -2372,7 +2384,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
                                               AMDGPUASI.CONSTANT_ADDRESS));
 
   MachinePointerInfo PtrInfo(V, StructOffset);
-  return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr, PtrInfo,
+  return DAG.getLoad(MVT::i32, DL, QueuePtr.getValue(1), Ptr, PtrInfo,
                      MinAlign(64, StructOffset),
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
@@ -2417,7 +2429,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       SDValue NonNull
         = DAG.getSetCC(SL, MVT::i1, Src, SegmentNullPtr, ISD::SETNE);
 
-      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), DAG);
+      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
       SDValue CvtPtr
         = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
 

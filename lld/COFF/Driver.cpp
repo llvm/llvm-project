@@ -674,6 +674,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
+  if (Args.hasArg(OPT_appcontainer))
+    Config->AppContainer = true;
+
   // Handle /machine
   if (auto *Arg = Args.getLastArg(OPT_machine))
     Config->Machine = getMachineType(Arg->getValue());

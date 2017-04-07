@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -addr-sink-using-gep=1 | FileCheck %s
 
 define void @merge_store(i32* nocapture %a) {
 ; CHECK-LABEL: merge_store:
