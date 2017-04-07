@@ -174,3 +174,30 @@ namespace class_id {
   void f(Class) { }
   void f(id) { }
 }
+
+@interface NSDictionary<__covariant KeyType, __covariant ObjectType> : A
+@end
+
+@interface NSMutableDictionary<KeyType, ObjectType> : NSDictionary<KeyType, ObjectType>
+@end
+
+namespace rdar20124827 {
+
+int overload(NSDictionary *) { return 1; }
+
+__attribute__((deprecated))  // expected-note {{'overload' has been explicitly marked deprecated here}}
+int overload(NSMutableDictionary *) { return 0; }
+
+__attribute__((deprecated))
+void overload2(NSDictionary *); // expected-note {{candidate function}}
+void overload2(NSDictionary<A *, A *> *); // expected-note {{candidate function}}
+
+void test(NSDictionary *d1, NSDictionary<A *, A *> *d2, NSMutableDictionary<A *, A *> *m1) {
+  overload(d1);
+  overload(d2); // no warning
+  overload(m1); // expected-warning {{'overload' is deprecated}}
+  overload2(d2); // no warning
+  overload2(m1); // expected-error {{call to 'overload2' is ambiguous}}
+}
+
+}
