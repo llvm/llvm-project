@@ -224,6 +224,9 @@ void OutputSection::sortCtorsDtors() {
 // Fill [Buf, Buf + Size) with Filler. Filler is written in big
 // endian order. This is used for linker script "=fillexp" command.
 static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
+  if (Filler == 0)
+    return;
+
   uint8_t V[4];
   write32be(V, Filler);
   size_t I = 0;
@@ -232,17 +235,44 @@ static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
   memcpy(Buf + I, V, Size - I);
 }
 
+uint32_t OutputSection::getFill() {
+  // Determine what to fill gaps between InputSections with, as specified by the
+  // linker script. If nothing is specified and this is an executable section,
+  // fall back to trap instructions to prevent bad diassembly and detect invalid
+  // jumps to padding.
+  if (Optional<uint32_t> Filler = Script->getFiller(Name))
+    return *Filler;
+  if (Flags & SHF_EXECINSTR)
+    return Target->TrapInstr;
+  return 0;
+}
+
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
-  if (uint32_t Filler = Script->getFiller(this->Name))
-    fill(Buf, this->Size, Filler);
 
-  parallelForEach(Sections.begin(), Sections.end(),
-                  [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); });
+  uint32_t Filler = getFill();
+
+  // Write leading padding.
+  size_t FillSize = Sections.empty() ? Size : Sections[0]->OutSecOff;
+  fill(Buf, FillSize, Filler);
+
+  parallelFor(0, Sections.size(), [=](size_t I) {
+    InputSection *Sec = Sections[I];
+    Sec->writeTo<ELFT>(Buf);
+
+    // Fill gaps between sections with the specified fill value.
+    uint8_t *Start = Buf + Sec->OutSecOff + Sec->getSize();
+    uint8_t *End;
+    if (I + 1 == Sections.size())
+      End = Buf + Size;
+    else
+      End = Buf + Sections[I + 1]->OutSecOff;
+    fill(Start, End - Start, Filler);
+  });
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script->writeDataBytes(this->Name, Buf);
+  Script->writeDataBytes(Name, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {

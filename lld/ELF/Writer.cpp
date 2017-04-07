@@ -1790,7 +1790,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.
-  if (EhFrameHdr)
+  if (EhFrameHdr && !EhFrameHdr->Sections.empty())
     EhFrameHdr->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
 }
 

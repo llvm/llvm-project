@@ -17,7 +17,43 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Path.h"
 using namespace clang::clangd;
+
+
+URI URI::fromUri(llvm::StringRef uri) {
+  URI Result;
+  Result.uri = uri;
+  uri.consume_front("file://");
+  // For Windows paths e.g. /X:
+  if (uri.size() > 2 && uri[0] == '/' && uri[2] == ':')
+    uri.consume_front("/");
+  // Make sure that file paths are in native separators
+  Result.file = llvm::sys::path::convert_to_slash(uri);
+  return Result;
+}
+
+URI URI::fromFile(llvm::StringRef file) {
+  using namespace llvm::sys;
+  URI Result;
+  Result.file = file;
+  Result.uri = "file://";
+  // For Windows paths e.g. X:
+  if (file.size() > 1 && file[1] == ':')
+    Result.uri += "/";
+  // Make sure that uri paths are with posix separators
+  Result.uri += path::convert_to_slash(file, path::Style::posix);
+  return Result;
+}
+
+URI URI::parse(llvm::yaml::ScalarNode *Param) {
+  llvm::SmallString<10> Storage;
+  return URI::fromUri(Param->getValue(Storage));
+}
+
+std::string URI::unparse(const URI &U) {
+  return U.uri;
+}
 
 llvm::Optional<TextDocumentIdentifier>
 TextDocumentIdentifier::parse(llvm::yaml::MappingNode *Params) {
@@ -34,9 +70,8 @@ TextDocumentIdentifier::parse(llvm::yaml::MappingNode *Params) {
     if (!Value)
       return llvm::None;
 
-    llvm::SmallString<10> Storage;
     if (KeyValue == "uri") {
-      Result.uri = Value->getValue(Storage);
+      Result.uri = URI::parse(Value);
     } else if (KeyValue == "version") {
       // FIXME: parse version, but only for VersionedTextDocumentIdentifiers.
     } else {
@@ -142,7 +177,7 @@ TextDocumentItem::parse(llvm::yaml::MappingNode *Params) {
 
     llvm::SmallString<10> Storage;
     if (KeyValue == "uri") {
-      Result.uri = Value->getValue(Storage);
+      Result.uri = URI::parse(Value);
     } else if (KeyValue == "languageId") {
       Result.languageId = Value->getValue(Storage);
     } else if (KeyValue == "version") {

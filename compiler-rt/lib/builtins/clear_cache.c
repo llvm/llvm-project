@@ -90,7 +90,7 @@ uintptr_t GetCurrentProcess(void);
  */
 
 void __clear_cache(void *start, void *end) {
-#if __i386__ || __x86_64__
+#if __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
 /*
  * Intel processors have a unified instruction and data cache
  * so there is nothing to do

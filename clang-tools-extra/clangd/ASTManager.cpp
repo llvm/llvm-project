@@ -28,7 +28,6 @@ getRemappedFiles(const DocumentStore &Docs) {
   std::vector<ASTUnit::RemappedFile> RemappedFiles;
   for (const auto &P : Docs.getAllDocuments()) {
     StringRef FileName = P.first;
-    FileName.consume_front("file://");
     RemappedFiles.push_back(ASTUnit::RemappedFile(
         FileName,
         llvm::MemoryBuffer::getMemBufferCopy(P.second, FileName).release()));
@@ -142,7 +141,7 @@ void ASTManager::parseFileAndPublishDiagnostics(StringRef File) {
     Diagnostics.pop_back(); // Drop trailing comma.
   Output.writeMessage(
       R"({"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":")" +
-      File + R"(","diagnostics":[)" + Diagnostics + R"(]}})");
+      URI::fromFile(File).uri + R"(","diagnostics":[)" + Diagnostics + R"(]}})");
 }
 
 ASTManager::~ASTManager() {
@@ -155,42 +154,39 @@ ASTManager::~ASTManager() {
   ClangWorker.join();
 }
 
-void ASTManager::onDocumentAdd(StringRef Uri) {
+void ASTManager::onDocumentAdd(StringRef File) {
   if (RunSynchronously) {
-    parseFileAndPublishDiagnostics(Uri);
+    parseFileAndPublishDiagnostics(File);
     return;
   }
   std::lock_guard<std::mutex> Guard(RequestLock);
   // Currently we discard all pending requests and just enqueue the latest one.
   RequestQueue.clear();
-  RequestQueue.push_back(Uri);
+  RequestQueue.push_back(File);
   ClangRequestCV.notify_one();
 }
 
 tooling::CompilationDatabase *
-ASTManager::getOrCreateCompilationDatabaseForFile(StringRef Uri) {
-  auto &I = CompilationDatabases[Uri];
+ASTManager::getOrCreateCompilationDatabaseForFile(StringRef File) {
+  auto &I = CompilationDatabases[File];
   if (I)
     return I.get();
 
-  Uri.consume_front("file://");
-
   std::string Error;
-  I = tooling::CompilationDatabase::autoDetectFromSource(Uri, Error);
+  I = tooling::CompilationDatabase::autoDetectFromSource(File, Error);
   Output.log("Failed to load compilation database: " + Twine(Error) + "\n");
   return I.get();
 }
 
 std::unique_ptr<clang::ASTUnit>
-ASTManager::createASTUnitForFile(StringRef Uri, const DocumentStore &Docs) {
+ASTManager::createASTUnitForFile(StringRef File, const DocumentStore &Docs) {
   tooling::CompilationDatabase *CDB =
-      getOrCreateCompilationDatabaseForFile(Uri);
+      getOrCreateCompilationDatabaseForFile(File);
 
-  Uri.consume_front("file://");
   std::vector<tooling::CompileCommand> Commands;
 
   if (CDB) {
-    Commands = CDB->getCompileCommands(Uri);
+    Commands = CDB->getCompileCommands(File);
     // chdir. This is thread hostile.
     if (!Commands.empty())
       llvm::sys::fs::set_current_path(Commands.front().Directory);
@@ -198,8 +194,8 @@ ASTManager::createASTUnitForFile(StringRef Uri, const DocumentStore &Docs) {
   if (Commands.empty()) {
     // Add a fake command line if we know nothing.
     Commands.push_back(tooling::CompileCommand(
-        llvm::sys::path::parent_path(Uri), llvm::sys::path::filename(Uri),
-        {"clang", "-fsyntax-only", Uri.str()}, ""));
+        llvm::sys::path::parent_path(File), llvm::sys::path::filename(File),
+        {"clang", "-fsyntax-only", File.str()}, ""));
   }
 
   // Inject the resource dir.
@@ -278,7 +274,7 @@ public:
 } // namespace
 
 std::vector<CompletionItem>
-ASTManager::codeComplete(StringRef Uri, unsigned Line, unsigned Column) {
+ASTManager::codeComplete(StringRef File, unsigned Line, unsigned Column) {
   CodeCompleteOptions CCO;
   CCO.IncludeBriefComments = 1;
   // This is where code completion stores dirty buffers. Need to free after
@@ -290,15 +286,13 @@ ASTManager::codeComplete(StringRef Uri, unsigned Line, unsigned Column) {
   std::vector<CompletionItem> Items;
   CompletionItemsCollector Collector(&Items, CCO);
   std::lock_guard<std::mutex> Guard(ASTLock);
-  auto &Unit = ASTs[Uri];
+  auto &Unit = ASTs[File];
   if (!Unit)
-    Unit = createASTUnitForFile(Uri, this->Store);
+    Unit = createASTUnitForFile(File, this->Store);
   if (!Unit)
     return {};
   IntrusiveRefCntPtr<SourceManager> SourceMgr(
       new SourceManager(*DiagEngine, Unit->getFileManager()));
-  StringRef File(Uri);
-  File.consume_front("file://");
   // CodeComplete seems to require fresh LangOptions.
   LangOptions LangOpts = Unit->getLangOpts();
   // The language server protocol uses zero-based line and column numbers.

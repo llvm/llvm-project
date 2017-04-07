@@ -102,25 +102,25 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // Mips has a custom MipsGotSection that handles the writing of GOT entries
 // without dynamic relocations.
 template <class ELFT>
-static unsigned handleMipsTlsRelocation(MipsGotSection *Got, uint32_t Type,
-                                        SymbolBody &Body, InputSectionBase &C,
-                                        uint64_t Offset, int64_t Addend,
-                                        RelExpr Expr) {
+static unsigned handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                        InputSectionBase &C, uint64_t Offset,
+                                        int64_t Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
-    if (Got->addTlsIndex() && Config->Pic)
-      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Got,
-                                   Got->getTlsIndexOff(), false, nullptr, 0});
+    if (In<ELFT>::MipsGot->addTlsIndex() && Config->Pic)
+      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::MipsGot,
+                                   In<ELFT>::MipsGot->getTlsIndexOff(), false,
+                                   nullptr, 0});
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
 
   if (Expr == R_MIPS_TLSGD) {
-    if (Got->addDynTlsEntry(Body) && Body.isPreemptible()) {
-      uint64_t Off = Got->getGlobalDynOffset(Body);
+    if (In<ELFT>::MipsGot->addDynTlsEntry(Body) && Body.isPreemptible()) {
+      uint64_t Off = In<ELFT>::MipsGot->getGlobalDynOffset(Body);
       In<ELFT>::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, Got, Off, false, &Body, 0});
+          {Target->TlsModuleIndexRel, In<ELFT>::MipsGot, Off, false, &Body, 0});
       if (Body.isPreemptible())
-        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
+        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::MipsGot,
                                      Off + Config->Wordsize, false, &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -144,20 +144,19 @@ static unsigned handleMipsTlsRelocation(MipsGotSection *Got, uint32_t Type,
 // GOT[e0] Module Index (Used to find pointer to TLS block at run-time)
 // GOT[e1] Offset of symbol in TLS block
 template <class ELFT>
-static unsigned handleARMTlsRelocation(GotSection<ELFT> *Got, uint32_t Type,
-                                       SymbolBody &Body, InputSectionBase &C,
-                                       uint64_t Offset, int64_t Addend,
-                                       RelExpr Expr) {
+static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                       InputSectionBase &C, uint64_t Offset,
+                                       int64_t Addend, RelExpr Expr) {
   auto addModuleReloc = [&](uint64_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
     // if we know that the TLS Symbol is in an executable.
     if (!Body.isPreemptible() && !Config->Pic)
-      Got->Relocations.push_back(
+      In<ELFT>::Got->Relocations.push_back(
           {R_ABS, Target->TlsModuleIndexRel, Off, 0, &Body});
     else {
       SymbolBody *Dest = LD ? nullptr : &Body;
       In<ELFT>::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
+          {Target->TlsModuleIndexRel, In<ELFT>::Got, Off, false, Dest, 0});
     }
   };
 
@@ -165,8 +164,8 @@ static unsigned handleARMTlsRelocation(GotSection<ELFT> *Got, uint32_t Type,
   // being suitable for being dynamically loaded via dlopen.
   // GOT[e0] is the module index, with a special value of 0 for the current
   // module. GOT[e1] is unused. There only needs to be one module index entry.
-  if (Expr == R_TLSLD_PC && Got->addTlsIndex()) {
-    addModuleReloc(Got->getTlsIndexOff(), true);
+  if (Expr == R_TLSLD_PC && In<ELFT>::Got->addTlsIndex()) {
+    addModuleReloc(In<ELFT>::Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
@@ -175,14 +174,14 @@ static unsigned handleARMTlsRelocation(GotSection<ELFT> *Got, uint32_t Type,
   // the module index and offset of symbol in TLS block we can fill these in
   // using static GOT relocations.
   if (Expr == R_TLSGD_PC) {
-    if (Got->addDynTlsEntry(Body)) {
-      uint64_t Off = Got->getGlobalDynOffset(Body);
+    if (In<ELFT>::Got->addDynTlsEntry(Body)) {
+      uint64_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
       addModuleReloc(Off, false);
       if (Body.isPreemptible())
-        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
+        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
                                      Off + Config->Wordsize, false, &Body, 0});
       else
-        Got->Relocations.push_back(
+        In<ELFT>::Got->Relocations.push_back(
             {R_ABS, R_ARM_ABS32, Off + Config->Wordsize, 0, &Body});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -203,11 +202,9 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
     return 0;
 
   if (Config->EMachine == EM_ARM)
-    return handleARMTlsRelocation<ELFT>(In<ELFT>::Got, Type, Body, C, Offset,
-                                        Addend, Expr);
+    return handleARMTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
   if (Config->EMachine == EM_MIPS)
-    return handleMipsTlsRelocation<ELFT>(In<ELFT>::MipsGot, Type, Body, C,
-                                         Offset, Addend, Expr);
+    return handleMipsTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
 
   bool IsPreemptible = isPreemptible(Body, Type);
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
