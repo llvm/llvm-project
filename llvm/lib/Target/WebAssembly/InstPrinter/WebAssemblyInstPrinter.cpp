@@ -253,7 +253,6 @@ const char *llvm::WebAssembly::TypeToString(wasm::ValType Type) {
     return "f32";
   case wasm::ValType::F64:
     return "f64";
-  default:
-    llvm_unreachable("unsupported type");
   }
+  llvm_unreachable("unsupported type");
 }

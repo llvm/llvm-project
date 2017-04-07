@@ -4736,8 +4736,11 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 // Return true if VT is a vector whose elements are a whole number of bytes
-// in width.
-static bool canTreatAsByteVector(EVT VT) {
+// in width. Also check for presence of vector support.
+bool SystemZTargetLowering::canTreatAsByteVector(EVT VT) const {
+  if (!Subtarget.hasVector())
+    return false;
+
   return VT.isVector() && VT.getScalarSizeInBits() % 8 == 0 && VT.isSimple();
 }
 
@@ -5001,8 +5004,6 @@ SDValue SystemZTargetLowering::combineSTORE(
 SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
     SDNode *N, DAGCombinerInfo &DCI) const {
 
-  // <1 x ..> vectors may be present in the function even without vector
-  // support, which will be handled during legalization.
   if (!Subtarget.hasVector())
     return SDValue();
 

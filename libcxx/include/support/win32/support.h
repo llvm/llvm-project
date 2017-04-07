@@ -21,9 +21,6 @@
 #if defined(_LIBCPP_COMPILER_MSVC)
 #include <intrin.h>
 #endif
-#if defined(_LIBCPP_MSVCRT)
-#include <crtversion.h>
-#endif
 #define swprintf _snwprintf
 #define vswprintf _vsnwprintf
 
@@ -43,11 +40,6 @@ size_t wcsnrtombs(char *__restrict dst, const wchar_t **__restrict src,
                   size_t nwc, size_t len, mbstate_t *__restrict ps);
 }
 #endif // __MINGW32__
-
-#if defined(_VC_CRT_MAJOR_VERSION) && _VC_CRT_MAJOR_VERSION < 14
-#define snprintf _snprintf
-#define _Exit _exit
-#endif
 
 #if defined(_LIBCPP_COMPILER_MSVC)
 

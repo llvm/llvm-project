@@ -21,7 +21,7 @@ void TextDocumentDidOpenHandler::handleNotification(
     Output.log("Failed to decode DidOpenTextDocumentParams!\n");
     return;
   }
-  Store.addDocument(DOTDP->textDocument.uri, DOTDP->textDocument.text);
+  Store.addDocument(DOTDP->textDocument.uri.file, DOTDP->textDocument.text);
 }
 
 void TextDocumentDidChangeHandler::handleNotification(
@@ -32,7 +32,7 @@ void TextDocumentDidChangeHandler::handleNotification(
     return;
   }
   // We only support full syncing right now.
-  Store.addDocument(DCTDP->textDocument.uri, DCTDP->contentChanges[0].text);
+  Store.addDocument(DCTDP->textDocument.uri.file, DCTDP->contentChanges[0].text);
 }
 
 /// Turn a [line, column] pair into an offset in Code.
@@ -83,9 +83,6 @@ static std::string formatCode(StringRef Code, StringRef Filename,
   // Call clang-format.
   // FIXME: Don't ignore style.
   format::FormatStyle Style = format::getLLVMStyle();
-  // On windows FileManager doesn't like file://. Just strip it, clang-format
-  // doesn't need it.
-  Filename.consume_front("file://");
   tooling::Replacements Replacements =
       format::reformat(Style, Code, Ranges, Filename);
 
@@ -102,12 +99,12 @@ void TextDocumentRangeFormattingHandler::handleMethod(
     return;
   }
 
-  std::string Code = Store.getDocument(DRFP->textDocument.uri);
+  std::string Code = Store.getDocument(DRFP->textDocument.uri.file);
 
   size_t Begin = positionToOffset(Code, DRFP->range.start);
   size_t Len = positionToOffset(Code, DRFP->range.end) - Begin;
 
-  writeMessage(formatCode(Code, DRFP->textDocument.uri,
+  writeMessage(formatCode(Code, DRFP->textDocument.uri.file,
                           {clang::tooling::Range(Begin, Len)}, ID));
 }
 
@@ -121,14 +118,14 @@ void TextDocumentOnTypeFormattingHandler::handleMethod(
 
   // Look for the previous opening brace from the character position and format
   // starting from there.
-  std::string Code = Store.getDocument(DOTFP->textDocument.uri);
+  std::string Code = Store.getDocument(DOTFP->textDocument.uri.file);
   size_t CursorPos = positionToOffset(Code, DOTFP->position);
   size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
   if (PreviousLBracePos == StringRef::npos)
     PreviousLBracePos = CursorPos;
   size_t Len = 1 + CursorPos - PreviousLBracePos;
 
-  writeMessage(formatCode(Code, DOTFP->textDocument.uri,
+  writeMessage(formatCode(Code, DOTFP->textDocument.uri.file,
                           {clang::tooling::Range(PreviousLBracePos, Len)}, ID));
 }
 
@@ -141,8 +138,8 @@ void TextDocumentFormattingHandler::handleMethod(
   }
 
   // Format everything.
-  std::string Code = Store.getDocument(DFP->textDocument.uri);
-  writeMessage(formatCode(Code, DFP->textDocument.uri,
+  std::string Code = Store.getDocument(DFP->textDocument.uri.file);
+  writeMessage(formatCode(Code, DFP->textDocument.uri.file,
                           {clang::tooling::Range(0, Code.size())}, ID));
 }
 
@@ -156,7 +153,7 @@ void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
 
   // We provide a code action for each diagnostic at the requested location
   // which has FixIts available.
-  std::string Code = AST.getStore().getDocument(CAP->textDocument.uri);
+  std::string Code = AST.getStore().getDocument(CAP->textDocument.uri.file);
   std::string Commands;
   for (Diagnostic &D : CAP->context.diagnostics) {
     std::vector<clang::tooling::Replacement> Fixes = AST.getFixIts(D);
@@ -166,7 +163,7 @@ void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
       Commands +=
           R"({"title":"Apply FixIt ')" + llvm::yaml::escape(D.message) +
           R"('", "command": "clangd.applyFix", "arguments": [")" +
-          llvm::yaml::escape(CAP->textDocument.uri) +
+          llvm::yaml::escape(CAP->textDocument.uri.uri) +
           R"(", [)" + Edits +
           R"(]]},)";
   }
@@ -187,7 +184,7 @@ void CompletionHandler::handleMethod(llvm::yaml::MappingNode *Params,
     return;
   }
 
-  auto Items = AST.codeComplete(TDPP->textDocument.uri, TDPP->position.line,
+  auto Items = AST.codeComplete(TDPP->textDocument.uri.file, TDPP->position.line,
                                 TDPP->position.character);
   std::string Completions;
   for (const auto &Item : Items) {

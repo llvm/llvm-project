@@ -731,6 +731,11 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SIFoldOperandsID);
   addPass(&DeadMachineInstructionElimID);
   addPass(&SILoadStoreOptimizerID);
+  addPass(createSIShrinkInstructionsPass());
+  if (EnableSDWAPeephole) {
+    addPass(&SIPeepholeSDWAID);
+    addPass(&DeadMachineInstructionElimID);
+  }
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -772,11 +777,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 #endif
 
 void GCNPassConfig::addPreRegAlloc() {
-  addPass(createSIShrinkInstructionsPass());
-  if (EnableSDWAPeephole) {
-    addPass(&SIPeepholeSDWAID);
-    addPass(&DeadMachineInstructionElimID);
-  }
   addPass(createSIWholeQuadModePass());
 }
 

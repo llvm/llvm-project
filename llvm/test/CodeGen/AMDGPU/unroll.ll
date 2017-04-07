@@ -64,3 +64,37 @@ loop.inc:
 exit:
   ret void
 }
+
+; Check that a loop with if inside completely unrolled to eliminate phi and if
+
+; CHECK-LABEL: @unroll_for_if
+; CHECK: entry:
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: store
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: store
+; CHECK-NOT: br
+define amdgpu_kernel void @unroll_for_if(i32* %a) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc
+  %i1 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %and = and i32 %i1, 1
+  %tobool = icmp eq i32 %and, 0
+  br i1 %tobool, label %for.inc, label %if.then
+
+if.then:                                          ; preds = %for.body
+  %0 = sext i32 %i1 to i64
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %0
+  store i32 0, i32* %arrayidx, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+  %inc = add nuw nsw i32 %i1, 1
+  %cmp = icmp ult i32 %inc, 48
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}

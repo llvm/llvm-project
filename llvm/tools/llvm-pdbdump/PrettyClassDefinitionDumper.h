@@ -39,24 +39,6 @@ public:
 
 private:
   LinePrinter &Printer;
-
-  struct SymbolGroup {
-    SymbolGroup() {}
-    SymbolGroup(SymbolGroup &&Other) {
-      Functions = std::move(Other.Functions);
-      Data = std::move(Other.Data);
-      Unknown = std::move(Other.Unknown);
-    }
-
-    std::list<std::unique_ptr<PDBSymbolFunc>> Functions;
-    std::list<std::unique_ptr<PDBSymbolData>> Data;
-    std::list<std::unique_ptr<PDBSymbol>> Unknown;
-    SymbolGroup(const SymbolGroup &other) = delete;
-    SymbolGroup &operator=(const SymbolGroup &other) = delete;
-  };
-  typedef std::unordered_map<int, SymbolGroup> SymbolGroupByAccess;
-
-  int dumpAccessGroup(PDB_MemberAccess Access, const SymbolGroup &Group);
 };
 }
 }

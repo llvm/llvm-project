@@ -333,10 +333,6 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (Subtarget->isThumb())
     return false;
 
-  // FIXME: Support soft float (when we're ready to generate libcalls)
-  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2())
-    return false;
-
   for (auto &Arg : F.args())
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;

@@ -616,7 +616,7 @@ entry:
 ; CHECK: binsri.h
   %a = load <8 x i16>, <8 x i16> * %ptr, align 16
   %b = load <8 x i16>, <8 x i16> * %ptr2, align 16
-  %r = call <8 x i16> @llvm.mips.binsri.h(<8 x i16> %a, <8 x i16> %b, i32 15)
+  %r = call <8 x i16> @llvm.mips.binsri.h(<8 x i16> %a, <8 x i16> %b, i32 14)
   store <8 x i16> %r, <8 x i16> * %ptr, align 16
   ret void
 }

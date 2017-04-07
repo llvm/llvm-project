@@ -29,3 +29,18 @@ TEST(Parallel, sort) {
   lld::parallel_sort(std::begin(array), std::end(array));
   ASSERT_TRUE(std::is_sorted(std::begin(array), std::end(array)));
 }
+
+TEST(Parallel, parallel_for) {
+  // We need to test the case with a TaskSize > 1. We are white-box testing
+  // here. The TaskSize is calculated as (End - Begin) / 1024 at the time of
+  // writing.
+  uint32_t range[2050];
+  std::fill(range, range + 2050, 1);
+  lld::parallel_for(0, 2049, [&range](size_t I) { ++range[I]; });
+
+  uint32_t expected[2049];
+  std::fill(expected, expected + 2049, 2);
+  ASSERT_TRUE(std::equal(range, range + 2049, expected));
+  // Check that we don't write past the end of the requested range.
+  ASSERT_EQ(range[2049], 1u);
+}

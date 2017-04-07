@@ -124,6 +124,7 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
 
   TestCase test_cases[] = {
       {"main", "", "main"},
+      {"main     ", "", "main"},
       {"foo01::bar", "foo01", "bar"},
       {"foo::~bar", "foo", "~bar"},
       {"std::vector<int>::push_back", "std::vector<int>", "push_back"},
@@ -150,4 +151,8 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       CPlusPlusLanguage::ExtractContextAndIdentifier("", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "selector:", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "selector:otherField:", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "abc::", context, basename));
 }

@@ -662,6 +662,16 @@ public:
                                   unsigned &NumIntermediates,
                                   MVT &RegisterVT) const;
 
+  /// Certain targets such as MIPS require that some types such as vectors are
+  /// always broken down into scalars in some contexts. This occurs even if the
+  /// vector type is legal.
+  virtual unsigned getVectorTypeBreakdownForCallingConv(
+      LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+      unsigned &NumIntermediates, MVT &RegisterVT) const {
+    return getVectorTypeBreakdown(Context, VT, IntermediateVT, NumIntermediates,
+                                  RegisterVT);
+  }
+
   struct IntrinsicInfo {
     unsigned     opc = 0;          // target opcode
     EVT          memVT;            // memory VT
@@ -1000,6 +1010,33 @@ public:
       return (BitWidth + RegWidth - 1) / RegWidth;
     }
     llvm_unreachable("Unsupported extended type!");
+  }
+
+  /// Certain combinations of ABIs, Targets and features require that types
+  /// are legal for some operations and not for other operations.
+  /// For MIPS all vector types must be passed through the integer register set.
+  virtual MVT getRegisterTypeForCallingConv(MVT VT) const {
+    return getRegisterType(VT);
+  }
+
+  virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+                                            EVT VT) const {
+    return getRegisterType(Context, VT);
+  }
+
+  /// Certain targets require unusual breakdowns of certain types. For MIPS,
+  /// this occurs when a vector type is used, as vector are passed through the
+  /// integer register set.
+  virtual unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                                 EVT VT) const {
+    return getNumRegisters(Context, VT);
+  }
+
+  /// Certain targets have context senstive alignment requirements, where one
+  /// type has the alignment requirement of another type.
+  virtual unsigned getABIAlignmentForCallingConv(Type *ArgTy,
+                                                 DataLayout DL) const {
+    return DL.getABITypeAlignment(ArgTy);
   }
 
   /// If true, then instruction selection should seek to shrink the FP constant

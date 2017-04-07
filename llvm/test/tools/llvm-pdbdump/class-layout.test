@@ -17,9 +17,7 @@
 ; MEMBERS_TEST: class MembersTest::A {
 ; MEMBERS_TEST-DAG: typedef int NestedTypedef
 ; MEMBERS_TEST-DAG: enum NestedEnum
-; MEMBERS_TEST: public:
-; MEMBERS_TEST-NEXT: void MemberFunc()
-; MEMBERS_TEST-NEXT: private:
+; MEMBERS_TEST: void MemberFunc()
 ; MEMBERS_TEST-DAG: int IntMemberVar
 ; MEMBERS_TEST-DAG: double DoubleMemberVar
 ; MEMBERS_TEST: }
@@ -48,7 +46,6 @@
 
 ; BITFIELD_TEST: ---TYPES---
 ; BITFIELD_TEST: struct BitFieldTest::A {
-; BITFIELD_TEST-NEXT: public:
 ; BITFIELD_TEST-NEXT: +0x00 int Bits1 : 1
 ; BITFIELD_TEST-NEXT: +0x00 int Bits2 : 2
 ; BITFIELD_TEST-NEXT: +0x00 int Bits3 : 3

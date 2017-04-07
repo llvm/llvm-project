@@ -537,6 +537,7 @@ private:
                                  unsigned UnpackHigh) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
 
+  bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
                          unsigned Index, DAGCombinerInfo &DCI,
                          bool Force) const;

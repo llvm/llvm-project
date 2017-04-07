@@ -55,7 +55,7 @@ public:
   /// that describe a non-empty sub-array in the body of the given CompoundStmt.
   ///
   /// \param Stmt A CompoundStmt that contains all statements in its body.
-  /// \param Decl The Decl containing this Stmt.
+  /// \param D The Decl containing this Stmt.
   /// \param StartIndex The inclusive start index in the children array of
   ///                   \p Stmt
   /// \param EndIndex The exclusive end index in the children array of \p Stmt.
@@ -65,7 +65,7 @@ public:
   /// Constructs a StmtSequence holding a single statement.
   ///
   /// \param Stmt An arbitrary Stmt.
-  /// \param Decl The Decl containing this Stmt.
+  /// \param D The Decl containing this Stmt.
   StmtSequence(const Stmt *Stmt, const Decl *D);
 
   /// Constructs an empty StmtSequence.
@@ -202,7 +202,8 @@ public:
   /// Searches for clones in all previously passed statements.
   /// \param Result Output parameter to which all created clone groups are
   ///               added.
-  /// \param Passes The constraints that should be applied to the result.
+  /// \param ConstraintList The constraints that should be applied to the
+  //         result.
   template <typename... Ts>
   void findClones(std::vector<CloneGroup> &Result, Ts... ConstraintList) {
     // The initial assumption is that there is only one clone group and every

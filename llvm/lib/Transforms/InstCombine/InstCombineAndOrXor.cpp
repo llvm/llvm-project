@@ -2092,14 +2092,16 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   }
 
   // ((~A & B) | A) -> (A | B)
-  if (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
-      match(Op1, m_Specific(A)))
-    return BinaryOperator::CreateOr(A, B);
+  if (match(Op0, m_c_And(m_Not(m_Specific(Op1)), m_Value(A))))
+    return BinaryOperator::CreateOr(A, Op1);
+  if (match(Op1, m_c_And(m_Not(m_Specific(Op0)), m_Value(A))))
+    return BinaryOperator::CreateOr(Op0, A);
 
   // ((A & B) | ~A) -> (~A | B)
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      match(Op1, m_Not(m_Specific(A))))
-    return BinaryOperator::CreateOr(Builder->CreateNot(A), B);
+  // The NOT is guaranteed to be in the RHS by complexity ordering.
+  if (match(Op1, m_Not(m_Value(A))) &&
+      match(Op0, m_c_And(m_Specific(A), m_Value(B))))
+    return BinaryOperator::CreateOr(Op1, B);
 
   // (A & ~B) | (A ^ B) -> (A ^ B)
   // (~B & A) | (A ^ B) -> (A ^ B)

@@ -32,12 +32,36 @@ using namespace llvm;
 static cl::opt<unsigned> UnrollThresholdPrivate(
   "amdgpu-unroll-threshold-private",
   cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2000), cl::Hidden);
+  cl::init(2500), cl::Hidden);
 
 static cl::opt<unsigned> UnrollThresholdLocal(
   "amdgpu-unroll-threshold-local",
   cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
   cl::init(1000), cl::Hidden);
+
+static cl::opt<unsigned> UnrollThresholdIf(
+  "amdgpu-unroll-threshold-if",
+  cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
+  cl::init(150), cl::Hidden);
+
+static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
+                              unsigned Depth = 0) {
+  const Instruction *I = dyn_cast<Instruction>(Cond);
+  if (!I)
+    return false;
+
+  for (const Value *V : I->operand_values()) {
+    if (!L->contains(I))
+      continue;
+    if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
+      if (none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
+                  return SubLoop->contains(PHI); }))
+        return true;
+    } else if (Depth < 10 && dependsOnLocalPhi(L, V, Depth+1))
+      return true;
+  }
+  return false;
+}
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
                                             TTI::UnrollingPreferences &UP) {
@@ -57,7 +81,33 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
     const DataLayout &DL = BB->getModule()->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
+    if (any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
+               return SubLoop->contains(BB); }))
+        continue; // Block belongs to an inner loop.
+
     for (const Instruction &I : *BB) {
+
+      // Unroll a loop which contains an "if" statement whose condition
+      // defined by a PHI belonging to the loop. This may help to eliminate
+      // if region and potentially even PHI itself, saving on both divergence
+      // and registers used for the PHI.
+      // Add a small bonus for each of such "if" statements.
+      if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
+        if (UP.Threshold < MaxBoost && Br->isConditional()) {
+          if (L->isLoopExiting(Br->getSuccessor(0)) ||
+              L->isLoopExiting(Br->getSuccessor(1)))
+            continue;
+          if (dependsOnLocalPhi(L, Br->getCondition())) {
+            UP.Threshold += UnrollThresholdIf;
+            DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
+                         << " for loop:\n" << *L << " due to " << *Br << '\n');
+            if (UP.Threshold >= MaxBoost)
+              return;
+          }
+        }
+        continue;
+      }
+
       const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I);
       if (!GEP)
         continue;
@@ -128,7 +178,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
       UP.Threshold = Threshold;
       DEBUG(dbgs() << "Set unroll threshold " << Threshold << " for loop:\n"
                    << *L << " due to " << *GEP << '\n');
-      if (UP.Threshold == MaxBoost)
+      if (UP.Threshold >= MaxBoost)
         return;
     }
   }

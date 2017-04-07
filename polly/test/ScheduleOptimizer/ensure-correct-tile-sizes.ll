@@ -1,4 +1,4 @@
-; RUN: opt -analyze -polly-process-unprofitable  -polly-remarks-minimal \
+; RUN: opt %loadPolly -analyze -polly-process-unprofitable  -polly-remarks-minimal \
 ; RUN:     -polly-opt-isl  -polly-pattern-matching-based-opts=true \
 ; RUN:     -polly-target-throughput-vector-fma=1 \
 ; RUN:     -polly-target-latency-vector-fma=1 \

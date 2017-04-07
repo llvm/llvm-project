@@ -3,6 +3,7 @@
 # RUN: echo "SECTIONS {     \
 # RUN:  .out : {            \
 # RUN:   FILL(0x11111111);  \
+# RUN:   . += 2;            \
 # RUN:   *(.aaa)            \
 # RUN:   . += 4;            \
 # RUN:   *(.bbb)            \
@@ -15,7 +16,7 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .out:
-# CHECK-NEXT: aa222222 22bb2222 22222222 2222
+# CHECK-NEXT: 2222aa22 222222bb 22222222 22222222
 
 .text
 .globl _start

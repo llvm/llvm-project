@@ -30,7 +30,6 @@
 
 ; TYPES_1: Classes
 ; TYPES_1: struct A {
-; TYPES_1: public:
 ; TYPES_1: virtual void PureFunc() = 0
 ; TYPES_1: virtual void VirtualFunc()
 ; TYPES_1: void RegularFunc()
