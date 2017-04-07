@@ -6,8 +6,12 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: A:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -27,21 +31,17 @@ entry:
 define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-LABEL: A2:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    pushl %esi
-; X32-NEXT:  Lcfi0:
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  Lcfi1:
-; X32-NEXT:    .cfi_offset %esi, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
-; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    vmovd %edx, %xmm0
+; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A2:
@@ -592,8 +592,12 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: G:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G:
@@ -611,20 +615,16 @@ entry:
 define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-LABEL: G2:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    pushl %esi
-; X32-NEXT:  Lcfi2:
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  Lcfi3:
-; X32-NEXT:    .cfi_offset %esi, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
-; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    popl %esi
+; X32-NEXT:    vmovd %edx, %xmm0
+; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G2:

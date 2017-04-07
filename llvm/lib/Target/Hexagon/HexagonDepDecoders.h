@@ -32,6 +32,11 @@ static DecodeStatus s31_1ImmDecoder(MCInst &MI, unsigned tmp,
   signedDecoder<12>(MI, tmp, Decoder);
   return MCDisassembler::Success;
 }
+static DecodeStatus s3_0ImmDecoder(MCInst &MI, unsigned tmp,
+    uint64_t, const void *Decoder) {
+  signedDecoder<3>(MI, tmp, Decoder);
+  return MCDisassembler::Success;
+}
 static DecodeStatus s30_2ImmDecoder(MCInst &MI, unsigned tmp,
     uint64_t, const void *Decoder) {
   signedDecoder<13>(MI, tmp, Decoder);

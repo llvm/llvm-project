@@ -38,14 +38,9 @@ int main()
         std::hash<optional<double>>{}(optional<double>{});
 
     {
-        optional<B> opt;
-        ASSERT_NOT_NOEXCEPT(std::hash<optional<B>>()(opt));
-        ASSERT_NOT_NOEXCEPT(std::hash<optional<const B>>()(opt));
-    }
-
-    {
         typedef int T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = 2;
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));
@@ -53,6 +48,7 @@ int main()
     {
         typedef std::string T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = std::string("123");
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));
@@ -60,6 +56,7 @@ int main()
     {
         typedef std::unique_ptr<int> T;
         optional<T> opt;
+        ASSERT_NOT_NOEXCEPT(std::hash<optional<T>>()(opt));
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = std::unique_ptr<int>(new int(3));
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));

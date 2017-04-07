@@ -17,6 +17,8 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
 
+#include <stdint.h>
+
 namespace llvm {
 namespace support {
 enum endianness {big, little, native};

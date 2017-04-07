@@ -141,10 +141,9 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 /// given by OpcodeToExpand, while "A" corresponds to LHS and "B op' C" to RHS.
 /// Also performs the transform "(A op' B) op C" -> "(A op C) op' (B op C)".
 /// Returns the simplified value, or null if no simplification was performed.
-static Value *ExpandBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                          unsigned OpcToExpand, const Query &Q,
+static Value *ExpandBinOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
+                          Instruction::BinaryOps OpcodeToExpand, const Query &Q,
                           unsigned MaxRecurse) {
-  Instruction::BinaryOps OpcodeToExpand = (Instruction::BinaryOps)OpcToExpand;
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -200,9 +199,9 @@ static Value *ExpandBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 
 /// Generic simplifications for associative binary operations.
 /// Returns the simpler value, or null if none was found.
-static Value *SimplifyAssociativeBinOp(unsigned Opc, Value *LHS, Value *RHS,
-                                       const Query &Q, unsigned MaxRecurse) {
-  Instruction::BinaryOps Opcode = (Instruction::BinaryOps)Opc;
+static Value *SimplifyAssociativeBinOp(Instruction::BinaryOps Opcode,
+                                       Value *LHS, Value *RHS, const Query &Q,
+                                       unsigned MaxRecurse) {
   assert(Instruction::isAssociative(Opcode) && "Not an associative operation!");
 
   // Recursion is always used, so bail out at once if we already hit the limit.
@@ -299,8 +298,9 @@ static Value *SimplifyAssociativeBinOp(unsigned Opc, Value *LHS, Value *RHS,
 /// try to simplify the binop by seeing whether evaluating it on both branches
 /// of the select results in the same value. Returns the common value if so,
 /// otherwise returns null.
-static Value *ThreadBinOpOverSelect(unsigned Opcode, Value *LHS, Value *RHS,
-                                    const Query &Q, unsigned MaxRecurse) {
+static Value *ThreadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
+                                    Value *RHS, const Query &Q,
+                                    unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -452,8 +452,9 @@ static Value *ThreadCmpOverSelect(CmpInst::Predicate Pred, Value *LHS,
 /// try to simplify the binop by seeing whether evaluating it on the incoming
 /// phi values yields the same result for every value. If so returns the common
 /// value, otherwise returns null.
-static Value *ThreadBinOpOverPHI(unsigned Opcode, Value *LHS, Value *RHS,
-                                 const Query &Q, unsigned MaxRecurse) {
+static Value *ThreadBinOpOverPHI(Instruction::BinaryOps Opcode, Value *LHS,
+                                 Value *RHS, const Query &Q,
+                                 unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -930,7 +931,7 @@ static Value *SimplifyMulInst(Value *Op0, Value *Op1, const Query &Q,
     return X;
 
   // i1 mul -> and.
-  if (MaxRecurse && Op0->getType()->isIntegerTy(1))
+  if (MaxRecurse && Op0->getType()->getScalarType()->isIntegerTy(1))
     if (Value *V = SimplifyAndInst(Op0, Op1, Q, MaxRecurse-1))
       return V;
 
@@ -4169,28 +4170,7 @@ static Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
   case Instruction::Xor:
     return SimplifyXorInst(LHS, RHS, Q, MaxRecurse);
   default:
-    if (Constant *CLHS = dyn_cast<Constant>(LHS))
-      if (Constant *CRHS = dyn_cast<Constant>(RHS))
-        return ConstantFoldBinaryOpOperands(Opcode, CLHS, CRHS, Q.DL);
-
-    // If the operation is associative, try some generic simplifications.
-    if (Instruction::isAssociative(Opcode))
-      if (Value *V = SimplifyAssociativeBinOp(Opcode, LHS, RHS, Q, MaxRecurse))
-        return V;
-
-    // If the operation is with the result of a select instruction check whether
-    // operating on either branch of the select always yields the same value.
-    if (isa<SelectInst>(LHS) || isa<SelectInst>(RHS))
-      if (Value *V = ThreadBinOpOverSelect(Opcode, LHS, RHS, Q, MaxRecurse))
-        return V;
-
-    // If the operation is with the result of a phi instruction, check whether
-    // operating on all incoming values of the phi always yields the same value.
-    if (isa<PHINode>(LHS) || isa<PHINode>(RHS))
-      if (Value *V = ThreadBinOpOverPHI(Opcode, LHS, RHS, Q, MaxRecurse))
-        return V;
-
-    return nullptr;
+    llvm_unreachable("Unexpected opcode");
   }
 }
 

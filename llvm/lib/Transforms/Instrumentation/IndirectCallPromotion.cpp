@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/IR/BasicBlock.h"
@@ -187,6 +188,7 @@ private:
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
 } // end anonymous namespace
@@ -1016,6 +1018,8 @@ PreservedAnalyses PGOMemOPSizeOpt::run(Function &F,
   bool Changed = PGOMemOPSizeOptImpl(F, BFI);
   if (!Changed)
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  auto  PA = PreservedAnalyses();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 } // namespace llvm

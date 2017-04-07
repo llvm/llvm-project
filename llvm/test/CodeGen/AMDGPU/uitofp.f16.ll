@@ -38,16 +38,22 @@ entry:
 
 ; GCN-LABEL: {{^}}uitofp_v2i16_to_v2f16
 ; GCN:     buffer_load_dword
-; SI:      v_cvt_f32_u32_e32
-; SI:      v_cvt_f32_u32_e32
-; VI:      v_cvt_f32_i32_e32
-; VI:      v_cvt_f32_i32_e32
-; GCN:     v_cvt_f16_f32_e32
-; GCN:     v_cvt_f16_f32_e32
-; GCN-DAG: v_lshlrev_b32_e32
-; GCN-DAG: v_or_b32_e32
-; GCN:     buffer_store_dword
-; GCN:     s_endpgm
+
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f16_f32_e32
+; SI: v_cvt_f16_f32_e32
+; SI-DAG: v_lshlrev_b32_e32
+; SI: v_or_b32_e32
+
+; VI-DAG: v_cvt_f16_f32_e32
+; VI-DAG: v_cvt_f32_i32_sdwa
+; VI-DAG: v_cvt_f32_i32_sdwa
+; VI-DAG: v_cvt_f16_f32_sdwa
+; VI:     v_or_b32_e32
+
+; GCN: buffer_store_dword
+; GCN: s_endpgm
 define amdgpu_kernel void @uitofp_v2i16_to_v2f16(
     <2 x half> addrspace(1)* %r,
     <2 x i16> addrspace(1)* %a) {
@@ -60,12 +66,20 @@ entry:
 
 ; GCN-LABEL: {{^}}uitofp_v2i32_to_v2f16
 ; GCN:     buffer_load_dwordx2
-; GCN:     v_cvt_f32_u32_e32
-; GCN:     v_cvt_f32_u32_e32
-; GCN:     v_cvt_f16_f32_e32
-; GCN:     v_cvt_f16_f32_e32
-; GCN-DAG: v_lshlrev_b32_e32
-; GCN-DAG: v_or_b32_e32
+
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f32_u32_e32
+; SI: v_cvt_f16_f32_e32
+; SI: v_cvt_f16_f32_e32
+; SI-DAG: v_lshlrev_b32_e32
+; SI: v_or_b32_e32
+
+; VI-DAG: v_cvt_f32_u32_e32
+; VI-DAG: v_cvt_f32_u32_e32
+; VI-DAG: v_cvt_f16_f32_e32
+; VI-DAG: v_cvt_f16_f32_sdwa
+; VI:     v_or_b32_e32
+
 ; GCN:     buffer_store_dword
 ; GCN:     s_endpgm
 define amdgpu_kernel void @uitofp_v2i32_to_v2f16(

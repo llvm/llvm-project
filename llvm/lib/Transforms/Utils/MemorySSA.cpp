@@ -849,7 +849,8 @@ struct RenamePassData {
 } // anonymous namespace
 
 namespace llvm {
-/// \brief A MemorySSAWalker that does AA walks to disambiguate accesses. It no longer does caching on its own,
+/// \brief A MemorySSAWalker that does AA walks to disambiguate accesses. It no
+/// longer does caching on its own,
 /// but the name has been retained for the moment.
 class MemorySSA::CachingWalker final : public MemorySSAWalker {
   ClobberWalker Walker;
@@ -1456,6 +1457,19 @@ MemoryUseOrDef *MemorySSA::createDefinedAccess(Instruction *I,
   return NewAccess;
 }
 
+// Return true if the instruction has ordering constraints.
+// Note specifically that this only considers stores and loads
+// because others are still considered ModRef by getModRefInfo.
+static inline bool isOrdered(const Instruction *I) {
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (!SI->isUnordered())
+      return true;
+  } else if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (!LI->isUnordered())
+      return true;
+  }
+  return false;
+}
 /// \brief Helper function to create new memory accesses
 MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // The assume intrinsic has a control dependency which we model by claiming
@@ -1468,7 +1482,15 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
 
   // Find out what affect this instruction has on memory.
   ModRefInfo ModRef = AA->getModRefInfo(I);
-  bool Def = bool(ModRef & MRI_Mod);
+  // The isOrdered check is used to ensure that volatiles end up as defs
+  // (atomics end up as ModRef right now anyway).  Until we separate the
+  // ordering chain from the memory chain, this enables people to see at least
+  // some relative ordering to volatiles.  Note that getClobberingMemoryAccess
+  // will still give an answer that bypasses other volatile loads.  TODO:
+  // Separate memory aliasing and ordering into two different chains so that we
+  // can precisely represent both "what memory will this read/write/is clobbered
+  // by" and "what instructions can I move this past".
+  bool Def = bool(ModRef & MRI_Mod) || isOrdered(I);
   bool Use = bool(ModRef & MRI_Ref);
 
   // It's possible for an instruction to not modify memory at all. During

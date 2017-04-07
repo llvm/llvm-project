@@ -77,7 +77,7 @@ public:
   uint64_t Addr = 0;
   uint32_t ShName = 0;
 
-  void addSection(InputSectionBase *C);
+  void addSection(InputSection *S);
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();

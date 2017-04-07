@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=0 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -addr-sink-using-gep=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
 
 %struct.A = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 %struct.B = type { i32, i32, i32, i32, i32, i32, i32, i32 }

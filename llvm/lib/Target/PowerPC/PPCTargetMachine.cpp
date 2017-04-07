@@ -218,9 +218,7 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                         computeFSAdditions(FS, OL, TT), Options,
                         getEffectiveRelocModel(TT, RM), CM, OL),
       TLOF(createTLOF(getTargetTriple())),
-      TargetABI(computeTargetABI(TT, Options)),
-      Subtarget(TargetTriple, CPU, computeFSAdditions(FS, OL, TT), *this) {
-
+      TargetABI(computeTargetABI(TT, Options)) {
   initAsmInfo();
 }
 

@@ -111,9 +111,8 @@ template <class ELFT> void OutputSection::finalize() {
   this->Info = S->OutSec->SectionIndex;
 }
 
-void OutputSection::addSection(InputSectionBase *C) {
-  assert(C->Live);
-  auto *S = cast<InputSection>(C);
+void OutputSection::addSection(InputSection *S) {
+  assert(S->Live);
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
@@ -358,7 +357,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     OutputSections.push_back(Sec);
   }
 
-  Sec->addSection(IS);
+  Sec->addSection(cast<InputSection>(IS));
 }
 
 OutputSectionFactory::~OutputSectionFactory() {}

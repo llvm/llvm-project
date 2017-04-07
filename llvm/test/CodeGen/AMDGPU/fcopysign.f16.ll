@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX8 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
 
 declare half @llvm.copysign.f16(half, half)
 declare float @llvm.copysign.f32(float, float)
@@ -17,10 +17,10 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_F32]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
-; VI: buffer_load_ushort v[[SIGN:[0-9]+]]
-; VI: buffer_load_ushort v[[MAG:[0-9]+]]
-; VI: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
-; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN]]
+; GFX89: buffer_load_ushort v[[SIGN:[0-9]+]]
+; GFX89: buffer_load_ushort v[[MAG:[0-9]+]]
+; GFX89: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
+; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_f16(
@@ -84,8 +84,8 @@ entry:
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_F32]]
-; VI-DAG: v_lshlrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
-; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
+; GFX89-DAG: v_lshlrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
+; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_dword v[[OUT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f32_mag_f32_sign_f16(
@@ -107,8 +107,8 @@ entry:
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_F32]]
-; VI-DAG: v_lshlrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
-; VI: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_SHIFT]]
+; GFX89-DAG: v_lshlrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
+; GFX89: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[MAG_LO]]:[[OUT_HI]]{{\]}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f64_mag_f64_sign_f16(
@@ -131,9 +131,9 @@ entry:
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
-; VI-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
-; VI-DAG: v_lshrrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
-; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
+; GFX89-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
+; GFX89-DAG: v_lshrrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
+; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f16_mag_f16_sign_f32(
@@ -156,9 +156,9 @@ entry:
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_HI]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
-; VI-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
-; VI-DAG: v_lshrrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN_HI]]
-; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
+; GFX89-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
+; GFX89-DAG: v_lshrrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN_HI]]
+; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG]], v[[SIGN_SHIFT]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f16_mag_f16_sign_f64(
@@ -183,9 +183,9 @@ entry:
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG_TRUNC]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_F32]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
-; VI-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
-; VI-DAG: v_cvt_f16_f32_e32 v[[MAG_TRUNC:[0-9]+]], v[[MAG]]
-; VI: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG_TRUNC]], v[[SIGN]]
+; GFX89-DAG: s_movk_i32 s[[CONST:[0-9]+]], 0x7fff
+; GFX89-DAG: v_cvt_f16_f32_e32 v[[MAG_TRUNC:[0-9]+]], v[[MAG]]
+; GFX89: v_bfi_b32 v[[OUT:[0-9]+]], s[[CONST]], v[[MAG_TRUNC]], v[[SIGN]]
 ; GCN: buffer_store_short v[[OUT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f16_mag_f32_sign_f16(
@@ -220,6 +220,7 @@ entry:
 ; GCN-LABEL: {{^}}test_copysign_v2f16:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
+; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_v2f16(
   <2 x half> addrspace(1)* %arg_out,

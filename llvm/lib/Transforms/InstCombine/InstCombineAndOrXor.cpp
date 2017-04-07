@@ -295,77 +295,6 @@ Value *InstCombiner::insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
   return Builder->CreateICmp(Pred, VMinusLo, HiMinusLo);
 }
 
-/// Returns true iff Val consists of one contiguous run of 1s with any number
-/// of 0s on either side.  The 1s are allowed to wrap from LSB to MSB,
-/// so 0x000FFF0, 0x0000FFFF, and 0xFF0000FF are all runs.  0x0F0F0000 is
-/// not, since all 1s are not contiguous.
-static bool isRunOfOnes(ConstantInt *Val, uint32_t &MB, uint32_t &ME) {
-  const APInt& V = Val->getValue();
-  uint32_t BitWidth = Val->getType()->getBitWidth();
-  if (!V.isShiftedMask()) return false;
-
-  // look for the first zero bit after the run of ones
-  MB = BitWidth - ((V - 1) ^ V).countLeadingZeros();
-  // look for the first non-zero bit
-  ME = V.getActiveBits();
-  return true;
-}
-
-/// This is part of an expression (LHS +/- RHS) & Mask, where isSub determines
-/// whether the operator is a sub. If we can fold one of the following xforms:
-///
-/// ((A & N) +/- B) & Mask -> (A +/- B) & Mask iff N&Mask == Mask
-/// ((A | N) +/- B) & Mask -> (A +/- B) & Mask iff N&Mask == 0
-/// ((A ^ N) +/- B) & Mask -> (A +/- B) & Mask iff N&Mask == 0
-///
-/// return (A +/- B).
-///
-Value *InstCombiner::FoldLogicalPlusAnd(Value *LHS, Value *RHS,
-                                        ConstantInt *Mask, bool isSub,
-                                        Instruction &I) {
-  Instruction *LHSI = dyn_cast<Instruction>(LHS);
-  if (!LHSI || LHSI->getNumOperands() != 2 ||
-      !isa<ConstantInt>(LHSI->getOperand(1))) return nullptr;
-
-  ConstantInt *N = cast<ConstantInt>(LHSI->getOperand(1));
-
-  switch (LHSI->getOpcode()) {
-  default: return nullptr;
-  case Instruction::And:
-    if (ConstantExpr::getAnd(N, Mask) == Mask) {
-      // If the AndRHS is a power of two minus one (0+1+), this is simple.
-      if ((Mask->getValue().countLeadingZeros() +
-           Mask->getValue().countPopulation()) ==
-          Mask->getValue().getBitWidth())
-        break;
-
-      // Otherwise, if Mask is 0+1+0+, and if B is known to have the low 0+
-      // part, we don't need any explicit masks to take them out of A.  If that
-      // is all N is, ignore it.
-      uint32_t MB = 0, ME = 0;
-      if (isRunOfOnes(Mask, MB, ME)) {  // begin/end bit of run, inclusive
-        uint32_t BitWidth = cast<IntegerType>(RHS->getType())->getBitWidth();
-        APInt Mask(APInt::getLowBitsSet(BitWidth, MB-1));
-        if (MaskedValueIsZero(RHS, Mask, 0, &I))
-          break;
-      }
-    }
-    return nullptr;
-  case Instruction::Or:
-  case Instruction::Xor:
-    // If the AndRHS is a power of two minus one (0+1+), and N&Mask == 0
-    if ((Mask->getValue().countLeadingZeros() +
-         Mask->getValue().countPopulation()) == Mask->getValue().getBitWidth()
-        && ConstantExpr::getAnd(N, Mask)->isNullValue())
-      break;
-    return nullptr;
-  }
-
-  if (isSub)
-    return Builder->CreateSub(LHSI->getOperand(0), RHS, "fold");
-  return Builder->CreateAdd(LHSI->getOperand(0), RHS, "fold");
-}
-
 /// Classify (icmp eq (A & B), C) and (icmp ne (A & B), C) as matching patterns
 /// that can be simplified.
 /// One of A and B is considered the mask. The other is the value. This is
@@ -1328,23 +1257,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
 
         break;
       }
-      case Instruction::Add:
-        // ((A & N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == AndRHS.
-        // ((A | N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == 0
-        // ((A ^ N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == 0
-        if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, false, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);
-        if (Value *V = FoldLogicalPlusAnd(Op0RHS, Op0LHS, AndRHS, false, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);  // Add commutes
-        break;
-
       case Instruction::Sub:
-        // ((A & N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == AndRHS.
-        // ((A | N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == 0
-        // ((A ^ N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == 0
-        if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, true, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);
-
         // -x & 1 -> x & 1
         if (AndRHSMask == 1 && match(Op0LHS, m_Zero()))
           return BinaryOperator::CreateAnd(Op0RHS, AndRHS);
@@ -2179,14 +2092,16 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   }
 
   // ((~A & B) | A) -> (A | B)
-  if (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
-      match(Op1, m_Specific(A)))
-    return BinaryOperator::CreateOr(A, B);
+  if (match(Op0, m_c_And(m_Not(m_Specific(Op1)), m_Value(A))))
+    return BinaryOperator::CreateOr(A, Op1);
+  if (match(Op1, m_c_And(m_Not(m_Specific(Op0)), m_Value(A))))
+    return BinaryOperator::CreateOr(Op0, A);
 
   // ((A & B) | ~A) -> (~A | B)
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      match(Op1, m_Not(m_Specific(A))))
-    return BinaryOperator::CreateOr(Builder->CreateNot(A), B);
+  // The NOT is guaranteed to be in the RHS by complexity ordering.
+  if (match(Op1, m_Not(m_Value(A))) &&
+      match(Op0, m_c_And(m_Specific(A), m_Value(B))))
+    return BinaryOperator::CreateOr(Op1, B);
 
   // (A & ~B) | (A ^ B) -> (A ^ B)
   // (~B & A) | (A ^ B) -> (A ^ B)

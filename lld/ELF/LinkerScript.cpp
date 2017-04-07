@@ -333,7 +333,7 @@ LinkerScript::createInputSectionList(OutputSectionCommand &OutCmd) {
 
     Cmd->Sections = computeInputSections(Cmd);
     for (InputSectionBase *S : Cmd->Sections)
-      Ret.push_back(static_cast<InputSectionBase *>(S));
+      Ret.push_back(S);
   }
 
   return Ret;

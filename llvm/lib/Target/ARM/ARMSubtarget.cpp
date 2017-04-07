@@ -276,6 +276,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexM3:
   case ExynosM1:
   case CortexR52:
+  case Kryo:
     break;
   case Krait:
     PreISelOperandLatencyAdjustment = 1;

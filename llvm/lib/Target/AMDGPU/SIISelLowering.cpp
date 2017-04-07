@@ -1092,17 +1092,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     assert(VA.isRegLoc() && "Parameter must be in a register!");
 
     unsigned Reg = VA.getLocReg();
-
-    if (VT == MVT::i64) {
-      // For now assume it is a pointer
-      Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0,
-                                     &AMDGPU::SGPR_64RegClass);
-      Reg = MF.addLiveIn(Reg, &AMDGPU::SGPR_64RegClass);
-      SDValue Copy = DAG.getCopyFromReg(Chain, DL, Reg, VT);
-      InVals.push_back(Copy);
-      continue;
-    }
-
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
     Reg = MF.addLiveIn(Reg, RC);
@@ -2351,16 +2340,28 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);;
 }
 
-SDValue SITargetLowering::getSegmentAperture(unsigned AS,
+SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  // FIXME: Use inline constants (src_{shared, private}_base) instead.
+  if (Subtarget->hasApertureRegs()) {
+    unsigned Offset = AS == AMDGPUASI.LOCAL_ADDRESS ?
+        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
+        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
+    unsigned WidthM1 = AS == AMDGPUASI.LOCAL_ADDRESS ?
+        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
+        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
+    unsigned Encoding =
+        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
+        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
+        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
 
-  if (Subtarget->hasApertureRegs()) { // Read from Aperture Registers directly.
-    unsigned RegNo = (AS == AMDGPUASI.LOCAL_ADDRESS) ? AMDGPU::SRC_SHARED_BASE :
-                                                       AMDGPU::SRC_PRIVATE_BASE;
-    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass, RegNo, MVT::i32);
+    SDValue EncodingImm = DAG.getTargetConstant(Encoding, DL, MVT::i16);
+    SDValue ApertureReg = SDValue(
+        DAG.getMachineNode(AMDGPU::S_GETREG_B32, DL, MVT::i32, EncodingImm), 0);
+    SDValue ShiftAmount = DAG.getTargetConstant(WidthM1 + 1, DL, MVT::i32);
+    return DAG.getNode(ISD::SHL, DL, MVT::i32, ApertureReg, ShiftAmount);
   }
 
-  SDLoc SL;
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   unsigned UserSGPR = Info->getQueuePtrUserSGPR();
@@ -2373,8 +2374,8 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
   // private_segment_aperture_base_hi.
   uint32_t StructOffset = (AS == AMDGPUASI.LOCAL_ADDRESS) ? 0x40 : 0x44;
 
-  SDValue Ptr = DAG.getNode(ISD::ADD, SL, MVT::i64, QueuePtr,
-                            DAG.getConstant(StructOffset, SL, MVT::i64));
+  SDValue Ptr = DAG.getNode(ISD::ADD, DL, MVT::i64, QueuePtr,
+                            DAG.getConstant(StructOffset, DL, MVT::i64));
 
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
@@ -2383,7 +2384,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
                                               AMDGPUASI.CONSTANT_ADDRESS));
 
   MachinePointerInfo PtrInfo(V, StructOffset);
-  return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr, PtrInfo,
+  return DAG.getLoad(MVT::i32, DL, QueuePtr.getValue(1), Ptr, PtrInfo,
                      MinAlign(64, StructOffset),
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
@@ -2428,7 +2429,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       SDValue NonNull
         = DAG.getSetCC(SL, MVT::i1, Src, SegmentNullPtr, ISD::SETNE);
 
-      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), DAG);
+      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
       SDValue CvtPtr
         = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
 
@@ -3159,6 +3160,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
     return DAG.getNode(AMDGPUISD::KILL, DL, MVT::Other, Chain, Cast);
   }
+  case Intrinsic::amdgcn_s_barrier: {
+    if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
+      const MachineFunction &MF = DAG.getMachineFunction();
+      const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+      unsigned WGSize = ST.getFlatWorkGroupSizes(*MF.getFunction()).second;
+      if (WGSize <= ST.getWavefrontSize())
+        return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL, MVT::Other,
+                                          Op.getOperand(0)), 0);
+    }
+    return SDValue();
+  };
   default:
     return Op;
   }
@@ -4035,13 +4047,59 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   return SDValue();
 }
 
+// Instructions that will be lowered with a final instruction that zeros the
+// high result bits.
+// XXX - probably only need to list legal operations.
 static bool fp16SrcZerosHighBits(unsigned Opc) {
   switch (Opc) {
-  case ISD::SELECT:
-  case ISD::EXTRACT_VECTOR_ELT:
-    return false;
-  default:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
+  case ISD::FMA:
+  case ISD::FMAD:
+  case ISD::FCANONICALIZE:
+  case ISD::FP_ROUND:
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+  case ISD::FABS:
+    // Fabs is lowered to a bit operation, but it's an and which will clear the
+    // high bits anyway.
+  case ISD::FSQRT:
+  case ISD::FSIN:
+  case ISD::FCOS:
+  case ISD::FPOWI:
+  case ISD::FPOW:
+  case ISD::FLOG:
+  case ISD::FLOG2:
+  case ISD::FLOG10:
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FCEIL:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FFLOOR:
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case AMDGPUISD::FRACT:
+  case AMDGPUISD::CLAMP:
+  case AMDGPUISD::COS_HW:
+  case AMDGPUISD::SIN_HW:
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAX3:
+  case AMDGPUISD::FMED3:
+  case AMDGPUISD::FMAD_FTZ:
+  case AMDGPUISD::RCP:
+  case AMDGPUISD::RSQ:
+  case AMDGPUISD::LDEXP:
     return true;
+  default:
+    // fcopysign, select and others may be lowered to 32-bit bit operations
+    // which don't zero the high bits.
+    return false;
   }
 }
 

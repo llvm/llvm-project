@@ -17,6 +17,16 @@ def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_hi)>;
 def IsOrAdd: PatFrag<(ops node:$Addr, node:$off),
     (or node:$Addr, node:$off), [{ return isOrEquivalentToAdd(N); }]>;
 
+def Iss4_6 : PatLeaf<(i32 imm), [{
+  int32_t V = N->getSExtValue();
+  return isShiftedInt<4,6>(V);
+}]>;
+
+def Iss4_7 : PatLeaf<(i32 imm), [{
+  int32_t V = N->getSExtValue();
+  return isShiftedInt<4,7>(V);
+}]>;
+
 def IsPow2_32 : PatLeaf<(i32 imm), [{
   uint32_t V = N->getZExtValue();
   return isPowerOf2_32(V);
@@ -2746,25 +2756,25 @@ multiclass vS32b_ai_pats <ValueType VTSgl, ValueType VTDbl> {
   // Fold Add R+OFF into vector store.
   let AddedComplexity = 10 in {
     def : Pat<(alignedstore (VTSgl VectorRegs:$src1),
-                     (add IntRegs:$src2, s4_6ImmPred:$offset)),
-              (V6_vS32b_ai IntRegs:$src2, s4_6ImmPred:$offset,
+                     (add IntRegs:$src2, Iss4_6:$offset)),
+              (V6_vS32b_ai IntRegs:$src2, Iss4_6:$offset,
                            (VTSgl VectorRegs:$src1))>,
               Requires<[UseHVXSgl]>;
     def : Pat<(unalignedstore (VTSgl VectorRegs:$src1),
-                     (add IntRegs:$src2, s4_6ImmPred:$offset)),
-              (V6_vS32Ub_ai IntRegs:$src2, s4_6ImmPred:$offset,
+                     (add IntRegs:$src2, Iss4_6:$offset)),
+              (V6_vS32Ub_ai IntRegs:$src2, Iss4_6:$offset,
                            (VTSgl VectorRegs:$src1))>,
               Requires<[UseHVXSgl]>;
 
     // Fold Add R+OFF into vector store 128B.
     def : Pat<(alignedstore (VTDbl VectorRegs128B:$src1),
-                     (add IntRegs:$src2, s4_7ImmPred:$offset)),
-              (V6_vS32b_ai_128B IntRegs:$src2, s4_7ImmPred:$offset,
+                     (add IntRegs:$src2, Iss4_7:$offset)),
+              (V6_vS32b_ai_128B IntRegs:$src2, Iss4_7:$offset,
                                 (VTDbl VectorRegs128B:$src1))>,
               Requires<[UseHVXDbl]>;
     def : Pat<(unalignedstore (VTDbl VectorRegs128B:$src1),
-                     (add IntRegs:$src2, s4_7ImmPred:$offset)),
-              (V6_vS32Ub_ai_128B IntRegs:$src2, s4_7ImmPred:$offset,
+                     (add IntRegs:$src2, Iss4_7:$offset)),
+              (V6_vS32Ub_ai_128B IntRegs:$src2, Iss4_7:$offset,
                                 (VTDbl VectorRegs128B:$src1))>,
               Requires<[UseHVXDbl]>;
   }
@@ -2795,18 +2805,18 @@ multiclass vL32b_ai_pats <ValueType VTSgl, ValueType VTDbl> {
 
   // Fold Add R+OFF into vector load.
   let AddedComplexity = 10 in {
-    def : Pat<(VTDbl (alignedload (add IntRegs:$src2, s4_7ImmPred:$offset))),
-              (V6_vL32b_ai_128B IntRegs:$src2, s4_7ImmPred:$offset)>,
+    def : Pat<(VTDbl (alignedload (add IntRegs:$src2, Iss4_7:$offset))),
+              (V6_vL32b_ai_128B IntRegs:$src2, Iss4_7:$offset)>,
                Requires<[UseHVXDbl]>;
-    def : Pat<(VTDbl (unalignedload (add IntRegs:$src2, s4_7ImmPred:$offset))),
-              (V6_vL32Ub_ai_128B IntRegs:$src2, s4_7ImmPred:$offset)>,
+    def : Pat<(VTDbl (unalignedload (add IntRegs:$src2, Iss4_7:$offset))),
+              (V6_vL32Ub_ai_128B IntRegs:$src2, Iss4_7:$offset)>,
                Requires<[UseHVXDbl]>;
 
-    def : Pat<(VTSgl (alignedload (add IntRegs:$src2, s4_6ImmPred:$offset))),
-              (V6_vL32b_ai IntRegs:$src2, s4_6ImmPred:$offset)>,
+    def : Pat<(VTSgl (alignedload (add IntRegs:$src2, Iss4_6:$offset))),
+              (V6_vL32b_ai IntRegs:$src2, Iss4_6:$offset)>,
               Requires<[UseHVXSgl]>;
-    def : Pat<(VTSgl (unalignedload (add IntRegs:$src2, s4_6ImmPred:$offset))),
-              (V6_vL32Ub_ai IntRegs:$src2, s4_6ImmPred:$offset)>,
+    def : Pat<(VTSgl (unalignedload (add IntRegs:$src2, Iss4_6:$offset))),
+              (V6_vL32Ub_ai IntRegs:$src2, Iss4_6:$offset)>,
               Requires<[UseHVXSgl]>;
   }
 }

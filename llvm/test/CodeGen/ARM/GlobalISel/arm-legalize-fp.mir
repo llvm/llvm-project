@@ -1,0 +1,37 @@
+# RUN: llc -mtriple arm-- -mattr=+vfp2 -float-abi=hard -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple arm-- -mattr=+vfp2 -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple arm-- -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_frem_float() { ret void }
+...
+---
+name:            test_frem_float
+# CHECK-LABEL: name: test_frem_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK: ADJCALLSTACKDOWN
+    ; CHECK-DAG: %r0 = COPY [[X]]
+    ; CHECK-DAG: %r1 = COPY [[Y]]
+    ; CHECK: BLX $fmodf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; CHECK: [[R:%[0-9]+]](s32) = COPY %r0
+    ; CHECK: ADJCALLSTACKUP
+    %2(s32) = G_FREM %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...

@@ -29,35 +29,43 @@ using namespace llvm::pdb;
 TypeDumper::TypeDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 
 void TypeDumper::start(const PDBSymbolExe &Exe) {
-  auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>();
-  Printer.NewLine();
-  WithColor(Printer, PDB_ColorItem::Identifier).get() << "Enums";
-  Printer << ": (" << Enums->getChildCount() << " items)";
-  Printer.Indent();
-  while (auto Enum = Enums->getNext())
-    Enum->dump(*this);
-  Printer.Unindent();
+  if (opts::pretty::Enums) {
+    auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>();
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Enums";
+    Printer << ": (" << Enums->getChildCount() << " items)";
+    Printer.Indent();
+    while (auto Enum = Enums->getNext())
+      Enum->dump(*this);
+    Printer.Unindent();
+  }
 
-  auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>();
-  Printer.NewLine();
-  WithColor(Printer, PDB_ColorItem::Identifier).get() << "Typedefs";
-  Printer << ": (" << Typedefs->getChildCount() << " items)";
-  Printer.Indent();
-  while (auto Typedef = Typedefs->getNext())
-    Typedef->dump(*this);
-  Printer.Unindent();
+  if (opts::pretty::Typedefs) {
+    auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>();
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Typedefs";
+    Printer << ": (" << Typedefs->getChildCount() << " items)";
+    Printer.Indent();
+    while (auto Typedef = Typedefs->getNext())
+      Typedef->dump(*this);
+    Printer.Unindent();
+  }
 
-  auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>();
-  Printer.NewLine();
-  WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
-  Printer << ": (" << Classes->getChildCount() << " items)";
-  Printer.Indent();
-  while (auto Class = Classes->getNext())
-    Class->dump(*this);
-  Printer.Unindent();
+  if (opts::pretty::Classes) {
+    auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>();
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
+    Printer << ": (" << Classes->getChildCount() << " items)";
+    Printer.Indent();
+    while (auto Class = Classes->getNext())
+      Class->dump(*this);
+    Printer.Unindent();
+  }
 }
 
 void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
+  assert(opts::pretty::Enums);
+
   if (Symbol.getUnmodifiedTypeId() != 0)
     return;
   if (Printer.IsTypeExcluded(Symbol.getName()))
@@ -72,6 +80,8 @@ void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
 }
 
 void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
+  assert(opts::pretty::Typedefs);
+
   if (Printer.IsTypeExcluded(Symbol.getName()))
     return;
 
@@ -81,6 +91,8 @@ void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
 }
 
 void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
+  assert(opts::pretty::Classes);
+
   if (Symbol.getUnmodifiedTypeId() != 0)
     return;
   if (Printer.IsTypeExcluded(Symbol.getName()))
@@ -88,7 +100,7 @@ void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
 
   Printer.NewLine();
 
-  if (opts::pretty::NoClassDefs) {
+  if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "class ";
     WithColor(Printer, PDB_ColorItem::Identifier).get() << Symbol.getName();
   } else {

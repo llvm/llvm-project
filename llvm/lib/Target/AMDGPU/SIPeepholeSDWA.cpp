@@ -233,11 +233,10 @@ static bool isSubregOf(const MachineOperand &SubReg,
   if (SuperReg.getReg() != SubReg.getReg())
     return false;
 
-  LaneBitmask::Type SuperMask =
-      TRI->getSubRegIndexLaneMask(SuperReg.getSubReg()).getAsInteger();
-  LaneBitmask::Type SubMask =
-      TRI->getSubRegIndexLaneMask(SubReg.getSubReg()).getAsInteger();
-  return TRI->regmaskSubsetEqual(&SubMask, &SuperMask);
+  LaneBitmask SuperMask = TRI->getSubRegIndexLaneMask(SuperReg.getSubReg());
+  LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubReg.getSubReg());
+  SuperMask |= ~SubMask;
+  return SuperMask.all();
 }
 
 uint64_t SDWASrcOperand::getSrcMods() const {

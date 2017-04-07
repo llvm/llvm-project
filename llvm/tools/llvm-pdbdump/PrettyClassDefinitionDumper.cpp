@@ -35,6 +35,9 @@ ClassDefinitionDumper::ClassDefinitionDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
 
 void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
+  assert(opts::pretty::ClassFormat !=
+         opts::pretty::ClassDefinitionFormat::None);
+
   std::string Name = Class.getName();
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
@@ -61,96 +64,48 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
 
   Printer << " {";
   auto Children = Class.findAllChildren();
-  if (Children->getChildCount() == 0) {
-    Printer << "}";
-    return;
-  }
-
-  // Try to dump symbols organized by member access level.  Public members
-  // first, then protected, then private.  This might be slow, so it's worth
-  // reconsidering the value of this if performance of large PDBs is a problem.
-  // NOTE: Access level of nested types is not recorded in the PDB, so we have
-  // a special case for them.
-  SymbolGroupByAccess Groups;
-  Groups.insert(std::make_pair(0, SymbolGroup()));
-  Groups.insert(std::make_pair((int)PDB_MemberAccess::Private, SymbolGroup()));
-  Groups.insert(
-      std::make_pair((int)PDB_MemberAccess::Protected, SymbolGroup()));
-  Groups.insert(std::make_pair((int)PDB_MemberAccess::Public, SymbolGroup()));
-
+  Printer.Indent();
+  int DumpedCount = 0;
   while (auto Child = Children->getNext()) {
-    PDB_MemberAccess Access = Child->getRawSymbol().getAccess();
-    if (isa<PDBSymbolTypeBaseClass>(*Child))
-      continue;
 
-    auto &AccessGroup = Groups.find((int)Access)->second;
+    if (opts::pretty::ClassFormat ==
+        opts::pretty::ClassDefinitionFormat::LayoutOnly) {
+      if (auto Data = dyn_cast<PDBSymbolData>(Child.get())) {
+        switch (Data->getLocationType()) {
+        case PDB_LocType::ThisRel:
+        case PDB_LocType::BitField:
+          break;
+        default:
+          // All other types of data field do not occupy any storage (e.g. are
+          // const),
+          // so in layout mode we skip them.
+          continue;
+        }
+      } else {
+        // Only data symbols affect record layout, so skip any non-data symbols
+        // if
+        // we're in record layout mode.
+        continue;
+      }
+    }
 
     if (auto Func = dyn_cast<PDBSymbolFunc>(Child.get())) {
       if (Func->isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
         continue;
+
       if (Func->getLength() == 0 && !Func->isPureVirtual() &&
           !Func->isIntroVirtualFunction())
         continue;
-      Child.release();
-      AccessGroup.Functions.push_back(std::unique_ptr<PDBSymbolFunc>(Func));
-    } else if (auto Data = dyn_cast<PDBSymbolData>(Child.get())) {
-      Child.release();
-      AccessGroup.Data.push_back(std::unique_ptr<PDBSymbolData>(Data));
-    } else {
-      AccessGroup.Unknown.push_back(std::move(Child));
     }
+
+    ++DumpedCount;
+    Child->dump(*this);
   }
 
-  int Count = 0;
-  Count += dumpAccessGroup((PDB_MemberAccess)0, Groups[0]);
-  Count += dumpAccessGroup(PDB_MemberAccess::Public,
-                           Groups[(int)PDB_MemberAccess::Public]);
-  Count += dumpAccessGroup(PDB_MemberAccess::Protected,
-                           Groups[(int)PDB_MemberAccess::Protected]);
-  Count += dumpAccessGroup(PDB_MemberAccess::Private,
-                           Groups[(int)PDB_MemberAccess::Private]);
-  if (Count > 0)
+  Printer.Unindent();
+  if (DumpedCount > 0)
     Printer.NewLine();
   Printer << "}";
-}
-
-int ClassDefinitionDumper::dumpAccessGroup(PDB_MemberAccess Access,
-                                           const SymbolGroup &Group) {
-  if (Group.Functions.empty() && Group.Data.empty() && Group.Unknown.empty())
-    return 0;
-
-  int Count = 0;
-  if (Access == PDB_MemberAccess::Private) {
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << "private";
-    Printer << ":";
-  } else if (Access == PDB_MemberAccess::Protected) {
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << "protected";
-    Printer << ":";
-  } else if (Access == PDB_MemberAccess::Public) {
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << "public";
-    Printer << ":";
-  }
-  Printer.Indent();
-  for (auto iter = Group.Functions.begin(), end = Group.Functions.end();
-       iter != end; ++iter) {
-    ++Count;
-    (*iter)->dump(*this);
-  }
-  for (auto iter = Group.Data.begin(), end = Group.Data.end(); iter != end;
-       ++iter) {
-    ++Count;
-    (*iter)->dump(*this);
-  }
-  for (auto iter = Group.Unknown.begin(), end = Group.Unknown.end();
-       iter != end; ++iter) {
-    ++Count;
-    (*iter)->dump(*this);
-  }
-  Printer.Unindent();
-  return Count;
 }
 
 void ClassDefinitionDumper::dump(const PDBSymbolTypeBaseClass &Symbol) {}

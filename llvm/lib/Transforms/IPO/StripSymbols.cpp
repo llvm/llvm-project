@@ -323,6 +323,15 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
       LiveGVs.insert(GVE);
   }
 
+  std::set<DICompileUnit *> LiveCUs;
+  // Any CU referenced from a function is live.
+  for (Function &F : M.functions()) {
+    DISubprogram *SP = F.getSubprogram();
+    if (SP && SP->getUnit())
+      LiveCUs.insert(SP->getUnit());
+  }
+
+  bool HasDeadCUs = false;
   for (DICompileUnit *DIC : F.compile_units()) {
     // Create our live global variable list.
     bool GlobalVariableChange = false;
@@ -341,6 +350,11 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
         GlobalVariableChange = true;
     }
 
+    if (!LiveGlobalVariables.empty())
+      LiveCUs.insert(DIC);
+    else if (!LiveCUs.count(DIC))
+      HasDeadCUs = true;
+
     // If we found dead global variables, replace the current global
     // variable list with our new live global variable list.
     if (GlobalVariableChange) {
@@ -350,6 +364,17 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
 
     // Reset lists for the next iteration.
     LiveGlobalVariables.clear();
+  }
+
+  if (HasDeadCUs) {
+    // Delete the old node and replace it with a new one
+    NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+    NMD->clearOperands();
+    if (!LiveCUs.empty()) {
+      for (DICompileUnit *CU : LiveCUs)
+        NMD->addOperand(CU);
+    }
+    Changed = true;
   }
 
   return Changed;

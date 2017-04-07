@@ -189,7 +189,12 @@ define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: Q64:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpbroadcastq (%eax), %xmm0
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: Q64:
@@ -207,8 +212,13 @@ define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: QQ64:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: QQ64:
@@ -1430,8 +1440,12 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %xmm0, (%esp)
-; X32-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    vpbroadcastq %xmm1, %xmm1
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm1
+; X32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
+; X32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
 ; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $60, %esp
@@ -1487,10 +1501,15 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; X32-NEXT:    vmovaps %ymm0, (%esp)
-; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm1, %ymm1
+; X32-NEXT:    movl (%eax), %ecx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    vmovd %ecx, %xmm1
+; X32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X32-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
+; X32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X32-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm1
 ; X32-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    vzeroupper

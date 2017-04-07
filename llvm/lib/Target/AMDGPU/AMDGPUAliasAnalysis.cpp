@@ -52,20 +52,20 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   /* Region   */ {NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, MayAlias}
   };
   static const AliasResult ASAliasRulesGenIsZero[6][6] = {
-  /*             Flat       Global    Region    Group     Constant  Private */
+  /*             Flat       Global    Constant  Group     Region    Private */
   /* Flat     */ {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias},
   /* Global   */ {MayAlias, MayAlias, NoAlias , NoAlias , NoAlias , NoAlias},
-  /* Region   */ {NoAlias , NoAlias , MayAlias, NoAlias,  NoAlias , MayAlias},
+  /* Constant */ {MayAlias, NoAlias , MayAlias, NoAlias , NoAlias,  NoAlias},
   /* Group    */ {MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , NoAlias},
-  /* Constant */ {MayAlias, NoAlias , NoAlias , NoAlias , MayAlias, NoAlias},
+  /* Region   */ {MayAlias, NoAlias , NoAlias , NoAlias,  MayAlias, NoAlias},
   /* Private  */ {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias}
   };
   assert(AS.MAX_COMMON_ADDRESS <= 5);
   if (AS.FLAT_ADDRESS == 0) {
     assert(AS.GLOBAL_ADDRESS   == 1 &&
-           AS.REGION_ADDRESS   == 2 &&
+           AS.REGION_ADDRESS   == 4 &&
            AS.LOCAL_ADDRESS    == 3 &&
-           AS.CONSTANT_ADDRESS == 4 &&
+           AS.CONSTANT_ADDRESS == 2 &&
            AS.PRIVATE_ADDRESS  == 5);
     ASAliasRules = &ASAliasRulesGenIsZero;
   } else {
