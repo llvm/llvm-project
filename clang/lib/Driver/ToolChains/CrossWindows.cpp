@@ -156,15 +156,6 @@ void tools::CrossWindows::Linker::ConstructJob(
     CmdArgs.push_back(Args.MakeArgString(ImpLib));
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    const std::string CRTPath(D.SysRoot + "/usr/lib/");
-    const char *CRTBegin;
-
-    CRTBegin =
-        Args.hasArg(options::OPT_shared) ? "crtbeginS.obj" : "crtbegin.obj";
-    CmdArgs.push_back(Args.MakeArgString(CRTPath + CRTBegin));
-  }
-
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);

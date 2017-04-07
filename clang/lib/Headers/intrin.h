@@ -173,7 +173,6 @@ void __cdecl _disable(void);
 void __cdecl _enable(void);
 long _InterlockedAddLargeStatistic(__int64 volatile *_Addend, long _Value);
 unsigned char _interlockedbittestandreset(long volatile *, long);
-static __inline__
 unsigned char _interlockedbittestandset(long volatile *, long);
 long _InterlockedCompareExchange_HLEAcquire(long volatile *, long, long);
 long _InterlockedCompareExchange_HLERelease(long volatile *, long, long);
@@ -368,11 +367,6 @@ _bittestandset(long *_BitBase, long _BitPos) {
   unsigned char _Res = (*_BitBase >> _BitPos) & 1;
   *_BitBase = *_BitBase | (1 << _BitPos);
   return _Res;
-}
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_interlockedbittestandset(long volatile *_BitBase, long _BitPos) {
-  long _PrevVal = __atomic_fetch_or(_BitBase, 1l << _BitPos, __ATOMIC_SEQ_CST);
-  return (_PrevVal >> _BitPos) & 1;
 }
 #if defined(__arm__) || defined(__aarch64__)
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
