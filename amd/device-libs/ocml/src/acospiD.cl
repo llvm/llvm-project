@@ -7,6 +7,9 @@
 
 #include "mathD.h"
 
+#define DOUBLE_SPECIALIZATION
+#include "ep.h"
+
 CONSTATTR double
 MATH_MANGLE(acospi)(double x)
 {
@@ -25,7 +28,6 @@ MATH_MANGLE(acospi)(double x)
     // together with the above rational approximation, and
     // reconstruct the terms carefully.
 
-    const double piinv = 0x1.45f306dc9c883p-2;
 
     double y = BUILTIN_ABS_F64(x);
     bool transform = y >= 0.5;
@@ -41,20 +43,15 @@ MATH_MANGLE(acospi)(double x)
                        0x1.ff0549b4e0449p-9), 0x1.21604ae288f96p-8), 0x1.6a2b36f9aec49p-8), 0x1.d2b076c914f04p-8),
                        0x1.3ce53861f8f1fp-7), 0x1.d1a4529a30a69p-7), 0x1.8723a1d61d2e9p-6), 0x1.b2995e7b7af0fp-5);
 
-    double z;
+    const double piinv = 0x1.45f306dc9c883p-2;
+    double z = 0.5 - MATH_MAD(x, u, piinv*x);
     if (transform) {
-        double s = MATH_FAST_SQRT(r);
-        if (x < 0.0) {
-            z = MATH_MAD(-2.0, MATH_MAD(s, u, piinv*s), 1.0);
-            z = x == -1.0 ? 1.0 : z;
-        } else {
-            double sh = AS_DOUBLE(AS_ULONG(s) & 0xffffffff00000000UL);
-            double st = MATH_FAST_DIV(MATH_MAD(-sh, sh, r), s + sh);
-            z = 2.0 * (piinv*sh + MATH_MAD(s, u, piinv*st));
-            z = x == 1.0 ? 0.0 : z;
-        }
-    } else {
-        z = 0.5 - MATH_MAD(x, u, piinv*x);
+        double2 s = ldx(root2(r), 1);
+        double zm = 1.0 - MATH_MAD(s.hi, u, piinv*s.hi);
+        double2 zp = fadd(mul(piinv, s), mul(s, u));
+        z = x < 0.0 ? zm : zp.hi;
+        z = x == -1.0 ? 1.0 : z;
+        z = x == 1.0 ? 0.0 : z;
     }
 
     return z;

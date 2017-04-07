@@ -5,39 +5,60 @@
 #define T float
 #define T2 float2
 #define FMA BUILTIN_FMA_F32
+#define RCP MATH_FAST_RCP
+#define DIV(X,Y) MATH_FAST_DIV(X,Y)
 #define LDEXP BUILTIN_FLDEXP_F32
-#define SQRT MATH_SQRT
+#define SQRT MATH_FAST_SQRT
 #define ISINF(X) BUILTIN_CLASS_F32(X, CLASS_PINF|CLASS_NINF)
 #define USE_FMA HAVE_FAST_FMA32()
 #define HIGH(X) AS_FLOAT(AS_UINT(X) & 0xfffff000U)
+#define COPYSIGN BUILTIN_COPYSIGN_F64
 #endif
 
 #if defined DOUBLE_SPECIALIZATION
 #define T double
 #define T2 double2
 #define FMA BUILTIN_FMA_F64
+#define RCP MATH_FAST_RCP
+#define DIV(X,Y) MATH_FAST_DIV(X,Y)
 #define LDEXP BUILTIN_FLDEXP_F64
-#define SQRT MATH_SQRT
+#define SQRT MATH_FAST_SQRT
 #define ISINF(X) BUILTIN_CLASS_F64(X, CLASS_PINF|CLASS_NINF)
 #define USE_FMA true
 #define HIGH(X) AS_DOUBLE(AS_ULONG(X) & 0xfffffffff8000000UL)
+#define COPYSIGN BUILTIN_COPYSIGN_F32
 #endif
 
 #if defined HALF_SPECIALIZATION
 #define T half
 #define T2 half2
 #define FMA BUILTIN_FMA_F16
+#define RCP MATH_FAST_RCP
+#define DIV(X,Y) MATH_FAST_DIV(X,Y)
 #define LDEXP BUILTIN_FLDEXP_F16
-#define SQRT MATH_SQRT
+#define SQRT MATH_FAST_SQRT
 #define ISINF(X) BUILTIN_CLASS_F16(X, CLASS_PINF|CLASS_NINF)
 #define USE_FMA true
 #define HIGH(X) AS_HALF(AS_USHORT(X) & (ushort)0xffc0U)
+#define COPYSIGN BUILTIN_COPYSIGN_F16
 #endif
 
 static ATTR T2
 con(T a, T b)
 {
     return (T2)(b, a);
+}
+
+static ATTR T2
+csgn(T2 a, T b)
+{
+    return con(COPYSIGN(a.hi, b), COPYSIGN(a.lo, b));
+}
+
+static ATTR T2
+csgn(T2 a, T2 b)
+{
+    return con(COPYSIGN(a.hi, b.hi), COPYSIGN(a.lo, b.lo));
 }
 
 static ATTR T2
@@ -297,7 +318,7 @@ omul(T2 a, T2 b)
 static ATTR T2
 div(T a, T b)
 {
-    T r = (T)1 / b;
+    T r = RCP(b);
     T qhi = a * r;
     T2 p = mul(qhi, b);
     T2 d = fsub(a, p.hi);
@@ -309,7 +330,7 @@ div(T a, T b)
 static ATTR T2
 div(T2 a, T b)
 {
-    T r = (T)1 / b;
+    T r = RCP(b);
     T qhi = a.hi * r;
     T2 p = mul(qhi, b);
     T2 d = fsub(a.hi, p.hi);
@@ -321,7 +342,7 @@ div(T2 a, T b)
 static ATTR T2
 div(T a, T2 b)
 {
-    T r = (T)1 / b.hi;
+    T r = RCP(b.hi);
     T qhi = a * r;
     T2 p = mul(qhi, b);
     T2 d = fsub(a, p.hi);
@@ -333,7 +354,7 @@ div(T a, T2 b)
 static ATTR T2
 fdiv(T2 a, T2 b)
 {
-    T r = (T)1 / b.hi;
+    T r = RCP(b.hi);
     T qhi = a.hi * r;
     T2 p = mul(qhi, b);
     T2 d = fsub(a.hi, p.hi);
@@ -345,7 +366,7 @@ fdiv(T2 a, T2 b)
 static ATTR T2
 div(T2 a, T2 b)
 {
-    T y = (T)1 / b.hi;
+    T y = RCP(b.hi);
     T qhi = a.hi * y;
     T2 r = fsub(a, mul(qhi, b));
     T qmi = r.hi * y;
@@ -359,7 +380,7 @@ div(T2 a, T2 b)
 static ATTR T2
 rcp(T b)
 {
-    T qhi = (T)1 / b;
+    T qhi = RCP(b);
     T2 p = mul(qhi, b);
     T2 d = fsub((T)1, p.hi);
     d.lo -= p.lo;
@@ -370,7 +391,7 @@ rcp(T b)
 static ATTR T2
 frcp(T2 b)
 {
-    T qhi = (T)1 / b.hi;
+    T qhi = RCP(b.hi);
     T2 p = mul(qhi, b);
     T2 d = fsub((T)1, p.hi);
     d.lo -= p.lo;
@@ -381,7 +402,7 @@ frcp(T2 b)
 static ATTR T2
 rcp(T2 b)
 {
-    T qhi = (T)1 / b.hi;
+    T qhi = RCP(b.hi);
     T2 r = fsub((T)1, mul(qhi, b));
     T qmi = r.hi * qhi;
     r = fsub(r, mul(qmi, b));
@@ -408,7 +429,7 @@ root2(T a)
 {
     T shi = SQRT(a);
     T2 e = fsub(a, sqr(shi));
-    T slo = e.hi / ((T)2 * shi);
+    T slo = DIV(e.hi, (T)2 * shi);
     return fadd(shi, slo);
 }
 
@@ -417,7 +438,7 @@ root2(T2 a)
 {
     T shi = SQRT(a.hi);
     T2 e = fsub(a, sqr(shi));
-    T slo = e.hi / ((T)2 * shi);
+    T slo = DIV(e.hi, (T)2 * shi);
     return fadd(shi, slo);
 }
 
@@ -425,9 +446,12 @@ root2(T2 a)
 #undef T
 #undef T2
 #undef FMA
+#undef RCP
+#undef DIV
 #undef LDEXP
 #undef SQRT
 #undef ISINF
 #undef USE_FMA
 #undef HIGH
+#undef COPYSIGN
 

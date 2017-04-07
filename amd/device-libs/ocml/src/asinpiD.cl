@@ -7,6 +7,9 @@
 
 #include "mathD.h"
 
+#define DOUBLE_SPECIALIZATION
+#include "ep.h"
+
 CONSTATTR double
 MATH_MANGLE(asinpi)(double x)
 {
@@ -24,8 +27,6 @@ MATH_MANGLE(asinpi)(double x)
     // together with the above rational approximation, and
     // reconstruct the terms carefully.
 
-    const double piinv = 0x1.45f306dc9c883p-2;
-
     double y = BUILTIN_ABS_F64(x);
     bool transform = y >= 0.5;
 
@@ -40,17 +41,13 @@ MATH_MANGLE(asinpi)(double x)
                        0x1.ff0549b4e0449p-9), 0x1.21604ae288f96p-8), 0x1.6a2b36f9aec49p-8), 0x1.d2b076c914f04p-8),
                        0x1.3ce53861f8f1fp-7), 0x1.d1a4529a30a69p-7), 0x1.8723a1d61d2e9p-6), 0x1.b2995e7b7af0fp-5);
 
-    double v;
+    const double piinv = 0x1.45f306dc9c883p-2;
+    double v = MATH_MAD(y, piinv, y*u);
     if (transform) {
-        double s = MATH_FAST_SQRT(r);
-        double sh = AS_DOUBLE(AS_ULONG(s) & 0xffffffff00000000UL);
-        double st = MATH_FAST_DIV(MATH_MAD(-sh, sh, r), s + sh);
-        double p = 2.0*MATH_MAD(s, u, piinv*st);
-        double q = MATH_MAD(-2.0*piinv, sh, 0.25);
-        v = 0.25 - (p - q);
+        double2 s = ldx(root2(r), 1);
+        double2 ve = fsub(0.5, fadd(mul(piinv, s), mul(s, u)));
+        v = ve.hi;
         v = y == 1.0 ? 0.5 : v;
-    } else {
-        v = MATH_MAD(y, piinv, y*u);
     }
 
     return BUILTIN_COPYSIGN_F64(v, x);
