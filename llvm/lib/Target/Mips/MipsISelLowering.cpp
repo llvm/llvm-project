@@ -71,48 +71,6 @@ static bool isShiftedMask(uint64_t I, uint64_t &Pos, uint64_t &Size) {
   return true;
 }
 
-// The MIPS MSA ABI passes vector arguments in the integer register set.
-// The number of integer registers used is dependant on the ABI used.
-MVT MipsTargetLowering::getRegisterTypeForCallingConv(MVT VT) const {
-  if (VT.isVector() && Subtarget.hasMSA())
-    return Subtarget.isABI_O32() ? MVT::i32 : MVT::i64;
-  return MipsTargetLowering::getRegisterType(VT);
-}
-
-MVT MipsTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
-                                                      EVT VT) const {
-  if (VT.isVector()) {
-      if (Subtarget.isABI_O32()) {
-        return MVT::i32;
-      } else {
-        return (VT.getSizeInBits() == 32) ? MVT::i32 : MVT::i64;
-      }
-  }
-  return MipsTargetLowering::getRegisterType(Context, VT);
-}
-
-unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
-                                                           EVT VT) const {
-  if (VT.isVector())
-    return std::max((VT.getSizeInBits() / (Subtarget.isABI_O32() ? 32 : 64)),
-                    1U);
-  return MipsTargetLowering::getNumRegisters(Context, VT);
-}
-
-unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
-    LLVMContext &Context, EVT VT, EVT &IntermediateVT,
-    unsigned &NumIntermediates, MVT &RegisterVT) const {
-
-  // Break down vector types to either 2 i64s or 4 i32s.
-  RegisterVT = getRegisterTypeForCallingConv(Context, VT) ;
-  IntermediateVT = RegisterVT;
-  NumIntermediates = VT.getSizeInBits() < RegisterVT.getSizeInBits()
-                         ? VT.getVectorNumElements()
-                         : VT.getSizeInBits() / RegisterVT.getSizeInBits();
-
-  return NumIntermediates;
-}
-
 SDValue MipsTargetLowering::getGlobalReg(SelectionDAG &DAG, EVT Ty) const {
   MipsFunctionInfo *FI = DAG.getMachineFunction().getInfo<MipsFunctionInfo>();
   return DAG.getRegister(FI->getGlobalBaseReg(), Ty);
@@ -2557,11 +2515,6 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
 //       yet to hold an argument. Otherwise, use A2, A3 and stack. If A1 is
 //       not used, it must be shadowed. If only A3 is available, shadow it and
 //       go to stack.
-// vXiX - Received as scalarized i32s, passed in A0 - A3 and the stack.
-// vXf32 - Passed in either a pair of registers {A0, A1}, {A2, A3} or {A0 - A3}
-//         with the remainder spilled to the stack.
-// vXf64 - Passed in either {A0, A1, A2, A3} or {A2, A3} and in both cases
-//         spilling the remainder to the stack.
 //
 //  For vararg functions, all arguments are passed in A0, A1, A2, A3 and stack.
 //===----------------------------------------------------------------------===//
@@ -2573,12 +2526,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.getMachineFunction().getSubtarget());
 
   static const MCPhysReg IntRegs[] = { Mips::A0, Mips::A1, Mips::A2, Mips::A3 };
-
-  const MipsCCState * MipsState = static_cast<MipsCCState *>(&State);
-
   static const MCPhysReg F32Regs[] = { Mips::F12, Mips::F14 };
-
-  static const MCPhysReg FloatVectorIntRegs[] = { Mips::A0, Mips::A2 };
 
   // Do not process byval args here.
   if (ArgFlags.isByVal())
@@ -2617,26 +2565,8 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
                                 State.getFirstUnallocated(F32Regs) != ValNo;
   unsigned OrigAlign = ArgFlags.getOrigAlign();
   bool isI64 = (ValVT == MVT::i32 && OrigAlign == 8);
-  bool isVectorFloat = MipsState->WasOriginalArgVectorFloat(ValNo);
 
-  // The MIPS vector ABI for floats passes them in a pair of registers
-  if (ValVT == MVT::i32 && isVectorFloat) {
-    // This is the start of an vector that was scalarized into an unknown number
-    // of components. It doesn't matter how many there are. Allocate one of the
-    // notional 8 byte aligned registers which map onto the argument stack, and
-    // shadow the register lost to alignment requirements.
-    if (ArgFlags.isSplit()) {
-      Reg = State.AllocateReg(FloatVectorIntRegs);
-      if (Reg == Mips::A2)
-        State.AllocateReg(Mips::A1);
-      else if (Reg == 0)
-        State.AllocateReg(Mips::A3);
-    } else {
-      // If we're an intermediate component of the split, we can just attempt to
-      // allocate a register directly.
-      Reg = State.AllocateReg(IntRegs);
-    }
-  } else if (ValVT == MVT::i32 || (ValVT == MVT::f32 && AllocateFloatsInIntReg)) {
+  if (ValVT == MVT::i32 || (ValVT == MVT::f32 && AllocateFloatsInIntReg)) {
     Reg = State.AllocateReg(IntRegs);
     // If this is the first part of an i64 arg,
     // the allocated register must be either A0 or A2.

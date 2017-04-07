@@ -52,18 +52,6 @@ extern char **environ;
 using namespace lldb;
 using namespace lldb_private;
 
-size_t Host::GetEnvironment(StringList &env) {
-  char *v;
-  char **var = environ;
-  for (; var != NULL && *var != NULL; ++var) {
-    v = strchr(*var, (int)'-');
-    if (v == NULL)
-      continue;
-    env.AppendString(v);
-  }
-  return env.GetSize();
-}
-
 static bool
 GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                       ProcessInstanceInfo &process_info) {
@@ -241,6 +229,15 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 
   process_info.Clear();
   return false;
+}
+
+size_t Host::GetEnvironment(StringList &env) {
+  char **host_env = environ;
+  char *env_entry;
+  size_t i;
+  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
+    env.AppendString(env_entry);
+  return i;
 }
 
 Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {

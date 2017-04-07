@@ -17,6 +17,8 @@
 #include <complex.h>
 #include <stdio.h>
 
+// REQUIRES: c99-complex
+
 // Returns: the quotient of (a + ib) / (c + id)
 
 COMPILER_RT_ABI double _Complex

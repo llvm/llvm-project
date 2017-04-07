@@ -13,6 +13,8 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
+pythonize_bool(MSVC)
+
 #TODO: Add support for Apple.
 if (NOT APPLE)
 foreach(arch ${BUILTIN_SUPPORTED_ARCH})

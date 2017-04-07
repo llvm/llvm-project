@@ -128,11 +128,8 @@ entry:
 
 ; CHECK-LABEL:        call_f2:
 ; CHECK:        call16(f2)
-; CHECK:        addiu $4, $sp, [[O0:[0-9]+]]
-; CHECK-DAG:    lwc1 $f[[F0:[0-9]]], [[O0]]($sp)
-; CHECK-DAG:    lwc1 $f[[F1:[0-9]]], 20($sp)
-; CHECK:        add.s    $f0, $f[[F0]], $f[[F1]]
-
+; CHECK-NOT:    lwc1
+; CHECK:        add.s    $[[R2:[a-z0-9]+]], $[[R0:[a-z0-9]+]], $[[R1:[a-z0-9]+]]
 }
 
 
@@ -146,12 +143,11 @@ entry:
 
 ; CHECK-LABEL:        call_d2:
 ; CHECK:        call16(d2)
-; CHECK:        addiu $4, $sp, [[O0:[0-9]+]]
-; CHECK-DAG:    ldc1 $f[[F0:[0-9]+]], 24($sp)
-; CHECK-DAG:    ldc1 $f[[F1:[0-9]+]], [[O0]]($sp)
-; CHECK:        add.d    $f0, $f[[F1]], $f[[F0]]
-
+; CHECK-NOT:    ldc1
+; CHECK:        add.d    $[[R2:[a-z0-9]+]], $[[R0:[a-z0-9]+]], $[[R1:[a-z0-9]+]]
 }
+
+
 
 ; Check that function returns vector on stack in cases when vector can't be
 ; returned in registers. Also check that vector is placed on stack starting
@@ -183,12 +179,11 @@ entry:
   ret <4 x float> %vecins4
 
 ; CHECK-LABEL:        return_f4:
-; CHECK-DAG:    lwc1    $f[[R0:[0-9]+]], 16($sp)
-; CHECK-DAG:    swc1    $f[[R0]], 12($4)
+; CHECK-DAG:    lwc1    $[[R0:[a-z0-9]+]], 16($sp)
+; CHECK-DAG:    swc1    $[[R0]], 12($4)
 ; CHECK-DAG:    sw      $7, 8($4)
 ; CHECK-DAG:    sw      $6, 4($4)
 ; CHECK-DAG:    sw      $5, 0($4)
-
 }
 
 
@@ -232,8 +227,8 @@ entry:
   ret <2 x float> %vecins2
 
 ; CHECK-LABEL:        return_f2:
-; CHECK-DAG:    sw   $5, 0($4)
-; CHECK-DAG:    sw   $6, 4($4)
+; CHECK:        mov.s   $f0, $f12
+; CHECK:        mov.s   $f2, $f14
 }
 
 
@@ -244,10 +239,6 @@ entry:
   ret <2 x double> %vecins2
 
 ; CHECK-LABEL:        return_d2:
-; CHECK-DAG:    ldc1 $f[[F0:[0-9]]], 16($sp)
-; CHECK-DAG:    sdc1 $f[[F0]], 8($4)
-; CHECK-DAG:    mtc1 $6, $f[[F1:[0-9]+]]
-; CHECK-DAG:    mtc1 $7, $f
-; CHECK-DAG:    sdc1 $f[[F0]], 0($4)
-
+; CHECK:        mov.d   $f0, $f12
+; CHECK:        mov.d   $f2, $f14
 }
