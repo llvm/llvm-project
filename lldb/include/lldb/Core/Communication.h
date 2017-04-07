@@ -10,19 +10,31 @@
 #ifndef liblldb_Communication_h_
 #define liblldb_Communication_h_
 
-// C Includes
-// C++ Includes
-#include <atomic>
-#include <mutex>
-#include <string>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h" // for ConnectionStatus, FLAGS_ANONYMOU...
+#include "lldb/lldb-forward.h"      // for ConnectionSP
+#include "lldb/lldb-types.h"        // for thread_arg_t, thread_result_t
+
+#include <atomic>
+#include <mutex>
+#include <ratio> // for micro
+#include <string>
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint8_t
+
+namespace lldb_private {
+class Connection;
+}
+namespace lldb_private {
+class ConstString;
+}
+namespace lldb_private {
+class Error;
+}
 
 namespace lldb_private {
 

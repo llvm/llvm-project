@@ -289,7 +289,7 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <
 ; SI-NOT: v_min_u32_e32
 
 ; VI: v_min_u16_e32
-; VI: v_min_u16_e32
+; VI: v_min_u16_sdwa
 ; VI: v_min_u16_e32
 ; VI-NOT: v_min_u16_e32
 

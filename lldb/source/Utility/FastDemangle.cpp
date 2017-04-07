@@ -7,14 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lldb/Utility/FastDemangle.h"
+
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
 
 #include <functional>
 
-#include "lldb/Utility/FastDemangle.h"
-#include "lldb/lldb-private.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 //#define DEBUG_FAILURES 1
 //#define DEBUG_SUBSTITUTIONS 1

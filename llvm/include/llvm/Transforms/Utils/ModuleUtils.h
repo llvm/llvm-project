@@ -46,6 +46,9 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 // getOrInsertFunction returns a bitcast.
 Function *checkSanitizerInterfaceFunction(Constant *FuncOrBitcast);
 
+Function *declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                       ArrayRef<Type *> InitArgTypes);
+
 /// \brief Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
@@ -80,6 +83,17 @@ void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 /// and thus removing them is safe (provided *all* are removed).
 void filterDeadComdatFunctions(
     Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions);
+
+/// \brief Produce a unique identifier for this module by taking the MD5 sum of
+/// the names of the module's strong external symbols.
+///
+/// This identifier is normally guaranteed to be unique, or the program would
+/// fail to link due to multiply defined symbols.
+///
+/// If the module has no strong external symbols (such a module may still have a
+/// semantic effect if it performs global initialization), we cannot produce a
+/// unique identifier for this module, so we return the empty string.
+std::string getUniqueModuleId(Module *M);
 
 } // End llvm namespace
 

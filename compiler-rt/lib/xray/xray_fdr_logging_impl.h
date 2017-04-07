@@ -594,7 +594,6 @@ static inline void processFunctionHook(
       assert(ExpectedTailExit.RecordKind ==
                  uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
              "Expected to find tail exit when rewinding.");
-      auto TailExitFuncId = ExpectedTailExit.FuncId;
       RewindingRecordPtr -= FunctionRecSize;
       RewindingTSC -= ExpectedTailExit.TSCDelta;
       AlignedFuncStorage FunctionEntryBuffer;
@@ -604,7 +603,7 @@ static inline void processFunctionHook(
       assert(ExpectedFunctionEntry.RecordKind ==
                  uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
              "Expected to find function entry when rewinding tail call.");
-      assert(ExpectedFunctionEntry.FuncId == TailExitFuncId &&
+      assert(ExpectedFunctionEntry.FuncId == ExpectedTailExit.FuncId &&
              "Expected funcids to match when rewinding tail call.");
 
       if ((TSC - RewindingTSC) < NumberOfTicksThreshold) {

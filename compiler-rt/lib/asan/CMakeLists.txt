@@ -37,10 +37,6 @@ include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
-# FIXME(fjricci) - remove this once lsan for darwin is fully enabled
-if(APPLE AND COMPILER_RT_HAS_LSAN)
-  set(ASAN_CFLAGS ${ASAN_CFLAGS} -DCAN_SANITIZE_LEAKS_MAC=1)
-endif()
 append_rtti_flag(OFF ASAN_CFLAGS)
 
 set(ASAN_DYNAMIC_LINK_FLAGS)

@@ -10,8 +10,12 @@
 #include "lldb/Utility/VASPrintf.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h" // for SmallVectorImpl
+#include "llvm/ADT/StringRef.h"   // for StringRef
 
-using namespace lldb_private;
+#include <assert.h> // for assert
+#include <stdarg.h> // for va_end, va_list, va_copy
+#include <stdio.h>  // for vsnprintf, size_t
 
 bool lldb_private::VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt,
                              va_list args) {

@@ -10,18 +10,16 @@
 #ifndef liblldb_Timer_h_
 #define liblldb_Timer_h_
 
-// C Includes
-#include <stdarg.h>
-#include <stdio.h>
-
-// C++ Includes
-#include <atomic>
-#include <mutex>
-
-// Other libraries and framework includes
-// Project includes
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
 #include "llvm/Support/Chrono.h"
+
+#include <atomic>
+
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

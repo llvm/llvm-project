@@ -10,16 +10,30 @@
 #ifndef liblldb_ValueObjectSyntheticFilter_h_
 #define liblldb_ValueObjectSyntheticFilter_h_
 
-// C Includes
-// C++ Includes
-#include <memory>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ThreadSafeSTLMap.h"
 #include "lldb/Core/ThreadSafeSTLVector.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Symbol/CompilerType.h"       // for CompilerType
+#include "lldb/Utility/ConstString.h"       // for ConstString
+#include "lldb/lldb-defines.h"              // for ThreadSafeSTLMap::operator=
+#include "lldb/lldb-enumerations.h"         // for DynamicValueType, Langua...
+#include "lldb/lldb-forward.h"              // for ValueObjectSP, Synthetic...
+#include "lldb/lldb-private-enumerations.h" // for LazyBool, LazyBool::eLaz...
 
+#include <cstdint> // for uint32_t, uint64_t
+#include <memory>
+
+#include <stddef.h> // for size_t
+
+namespace lldb_private {
+class Declaration;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class SyntheticChildrenFrontEnd;
+}
 namespace lldb_private {
 
 //----------------------------------------------------------------------

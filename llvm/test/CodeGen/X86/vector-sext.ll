@@ -1263,13 +1263,14 @@ define <2 x i64> @load_sext_2i1_to_2i64(<2 x i1> *%ptr) {
 ; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE41-NEXT:    movzbl (%eax), %eax
 ; X32-SSE41-NEXT:    movl %eax, %ecx
-; X32-SSE41-NEXT:    shll $30, %ecx
+; X32-SSE41-NEXT:    shll $31, %ecx
 ; X32-SSE41-NEXT:    sarl $31, %ecx
-; X32-SSE41-NEXT:    shll $31, %eax
+; X32-SSE41-NEXT:    movd %ecx, %xmm0
+; X32-SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
+; X32-SSE41-NEXT:    shll $30, %eax
 ; X32-SSE41-NEXT:    sarl $31, %eax
-; X32-SSE41-NEXT:    movd %eax, %xmm0
-; X32-SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
-; X32-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; X32-SSE41-NEXT:    pinsrd $2, %eax, %xmm0
+; X32-SSE41-NEXT:    pinsrd $3, %eax, %xmm0
 ; X32-SSE41-NEXT:    retl
 entry:
  %X = load <2 x i1>, <2 x i1>* %ptr

@@ -15,7 +15,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Utility/ConstString.h"

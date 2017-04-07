@@ -10,19 +10,28 @@
 #ifndef liblldb_Event_h_
 #define liblldb_Event_h_
 
-// C Includes
-// C++ Includes
-#include <chrono>
-#include <memory>
-#include <string>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-forward.h" // for EventDataSP, ProcessSP, Struct...
+
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <chrono>
+#include <memory>
+#include <string>
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class Event;
+}
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

@@ -9,27 +9,16 @@
 
 #include "lldb/Core/ValueObjectCast.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/Module.h"
+#include "lldb/Core/Scalar.h" // for operator!=, Scalar
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Utility/Log.h"
-
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/Type.h"
-#include "lldb/Symbol/Variable.h"
-
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h"
+#include "lldb/Utility/Error.h" // for Error
+
+namespace lldb_private {
+class ConstString;
+}
 
 using namespace lldb_private;
 

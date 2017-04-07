@@ -9,16 +9,11 @@
 
 #include "lldb/Core/AddressResolver.h"
 
-// Project includes
-
-#include "lldb/Core/Address.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
+
+namespace lldb_private {
+class ModuleList;
+}
 
 using namespace lldb_private;
 

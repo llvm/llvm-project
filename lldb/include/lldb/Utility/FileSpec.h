@@ -18,11 +18,26 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-private.h"
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/StringRef.h" // for StringRef
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, uint64_t
+
+namespace lldb_private {
+class Stream;
+}
+namespace llvm {
+class Triple;
+}
+namespace llvm {
+class raw_ostream;
+}
+namespace llvm {
+template <typename T> class SmallVectorImpl;
+}
 
 namespace lldb_private {
 

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs -mattr=-flat-for-global < %s | FileCheck %s
+; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -amdgpu-sdwa-peephole=0 -verify-machineinstrs -mattr=-flat-for-global < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_debug_value:
 ; CHECK: s_load_dwordx2 s[4:5]

@@ -10,16 +10,13 @@
 #ifndef liblldb_OptionValueEnumeration_h_
 #define liblldb_OptionValueEnumeration_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
 

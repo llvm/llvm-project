@@ -3589,7 +3589,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       SDValue NewLoad(Load, 0);
 
       // Fold the AND away. NewLoad may get replaced immediately.
-      CombineTo(N, NewLoad);
+      CombineTo(N, (N0.getNode() == Load) ? NewLoad : N0);
 
       if (Load->getExtensionType() == ISD::EXTLOAD) {
         NewLoad = DAG.getLoad(Load->getAddressingMode(), ISD::ZEXTLOAD,

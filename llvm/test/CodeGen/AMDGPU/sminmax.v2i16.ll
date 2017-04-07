@@ -8,15 +8,23 @@
 ; GFX9: v_pk_max_i16 [[MAX:v[0-9]+]], [[VAL]], [[SUB]]
 ; GFX9: v_pk_add_u16 [[ADD:v[0-9]+]], [[MAX]], 2
 
-; CIVI: v_sub_i32_e32
-; CIVI-DAG: v_sub_i32_e32
-; CIVI: v_bfe_i32
-; CIVI-DAG: v_bfe_i32
-; CIVI-DAG: v_add_i32_e32
-; CIVI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16
-; CIVI: v_add_i32_e32
-; CIVI: v_and_b32_e32 v{{[0-9]+}}, 0xffff,
-; CIVI: v_or_b32_e32
+; VI: v_sub_i32_e32
+; VI-DAG: v_sub_i32_e32
+; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI: v_add_i32_e32
+; VI: v_add_i32_e32
+; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+
+; CI: v_sub_i32_e32
+; CI-DAG: v_sub_i32_e32
+; CI: v_bfe_i32
+; CI-DAG: v_bfe_i32
+; CI-DAG: v_add_i32_e32
+; CI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16
+; CI: v_add_i32_e32
+; CI: v_and_b32_e32 v{{[0-9]+}}, 0xffff,
+; CI: v_or_b32_e32
 define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %val) #0 {
   %neg = sub <2 x i16> zeroinitializer, %val
   %cond = icmp sgt <2 x i16> %val, %neg

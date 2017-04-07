@@ -10,19 +10,19 @@
 #ifndef liblldb_AddressResolver_h_
 #define liblldb_AddressResolver_h_
 
-#include <vector>
-
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
 
+#include <stddef.h> // for size_t
+#include <vector>
+
+namespace lldb_private {
+class ModuleList;
+}
+namespace lldb_private {
+class Stream;
+}
 namespace lldb_private {
 
 //----------------------------------------------------------------------

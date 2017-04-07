@@ -10,9 +10,14 @@
 #ifndef liblldb_StreamString_h_
 #define liblldb_StreamString_h_
 
-#include <string>
+#include "lldb/Utility/Stream.h"    // for Stream
+#include "lldb/lldb-enumerations.h" // for ByteOrder
+#include "llvm/ADT/StringRef.h"     // for StringRef
 
-#include "lldb/Utility/Stream.h"
+#include <string> // for string
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
 
 namespace lldb_private {
 

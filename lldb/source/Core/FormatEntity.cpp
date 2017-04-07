@@ -9,30 +9,31 @@
 
 #include "lldb/Core/FormatEntity.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-
-// Project includes
 #include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/RegisterValue.h"  // for RegisterValue
+#include "lldb/Core/StructuredData.h" // for StructuredData::O...
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormatClasses.h" // for TypeNameSpecifier...
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/DataFormatters/ValueObjectPrinter.h"
+#include "lldb/DataFormatters/TypeSummary.h" // for TypeSummaryImpl::...
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/CompilerType.h" // for CompilerType
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextS...
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -42,9 +43,36 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/ConstString.h" // for ConstString, oper...
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"        // for Log
+#include "lldb/Utility/Logging.h"    // for GetLogIfAllCatego...
+#include "lldb/Utility/SharingPtr.h" // for SharingPtr
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h" // for StringList
+#include "lldb/lldb-defines.h"       // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-forward.h"       // for ValueObjectSP
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"       // for Triple, Triple::O...
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+
+#include <ctype.h>     // for isxdigit
+#include <inttypes.h>  // for PRIu64, PRIx64
+#include <memory>      // for shared_ptr, opera...
+#include <stdio.h>     // for sprintf
+#include <stdlib.h>    // for strtoul
+#include <string.h>    // for size_t, strchr
+#include <type_traits> // for move
+#include <utility>     // for pair
+
+namespace lldb_private {
+class ScriptInterpreter;
+}
+namespace lldb_private {
+struct RegisterInfo;
+}
 
 using namespace lldb;
 using namespace lldb_private;
@@ -822,8 +850,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     StreamString bitfield_name;
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
-    lldb::TypeNameSpecifierImplSP type_sp(
-        new TypeNameSpecifierImpl(bitfield_name.GetString(), false));
+    auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
+        bitfield_name.GetString(), false);
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))

@@ -1,5 +1,4 @@
-//===----------------- LLDBAssert.h --------------------------------*- C++
-//-*-===//
+//===----------------- LLDBAssert.h ------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,8 +9,6 @@
 
 #ifndef utility_LLDBAssert_h_
 #define utility_LLDBAssert_h_
-
-#include <assert.h>
 
 #ifdef LLDB_CONFIGURATION_DEBUG
 #define lldbassert(x) assert(x)

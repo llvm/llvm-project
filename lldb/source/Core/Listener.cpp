@@ -9,16 +9,17 @@
 
 #include "lldb/Core/Listener.h"
 
-// C Includes
-// C++ Includes
-#include <algorithm>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet, LIBL...
+
+#include "llvm/ADT/Optional.h" // for Optional
+
+#include <algorithm>
+#include <memory>  // for make_shared
+#include <utility> // for pair, make_pair
 
 using namespace lldb;
 using namespace lldb_private;

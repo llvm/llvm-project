@@ -772,13 +772,11 @@ AMDGPUAS getAMDGPUAS(Triple T) {
   AMDGPUAS AS;
   if (Env == "amdgiz" || Env == "amdgizcl") {
     AS.FLAT_ADDRESS     = 0;
-    AS.CONSTANT_ADDRESS = 4;
     AS.PRIVATE_ADDRESS  = 5;
-    AS.REGION_ADDRESS   = 2;
+    AS.REGION_ADDRESS   = 4;
   }
   else {
     AS.FLAT_ADDRESS     = 4;
-    AS.CONSTANT_ADDRESS = 2;
     AS.PRIVATE_ADDRESS  = 0;
     AS.REGION_ADDRESS   = 5;
    }

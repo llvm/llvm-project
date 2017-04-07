@@ -9,7 +9,12 @@
 
 #include "lldb/Core/DumpDataExtractor.h"
 
+#include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-forward.h" // for TargetSP, DisassemblerSP
+
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
@@ -17,6 +22,23 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
+
+#include "clang/AST/ASTContext.h"    // for ASTContext
+#include "clang/AST/CanonicalType.h" // for CanQualType
+
+#include "llvm/ADT/APFloat.h"     // for APFloat, APFloatBase:...
+#include "llvm/ADT/APInt.h"       // for APInt
+#include "llvm/ADT/ArrayRef.h"    // for ArrayRef
+#include "llvm/ADT/SmallVector.h" // for SmallVector
+
+#include <limits> // for numeric_limits, numer...
+#include <memory> // for shared_ptr
+#include <string> // for string, basic_string
+
+#include <assert.h>   // for assert
+#include <ctype.h>    // for isprint
+#include <inttypes.h> // for PRIu64, PRIx64, PRIX64
+#include <math.h>     // for ldexpf
 
 #include <bitset>
 #include <sstream>

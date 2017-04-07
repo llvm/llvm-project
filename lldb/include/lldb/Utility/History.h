@@ -10,17 +10,19 @@
 #ifndef lldb_History_h_
 #define lldb_History_h_
 
-// C Includes
-#include <stdint.h>
+#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
 
 // C++ Includes
 #include <mutex>
 #include <stack>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/lldb-public.h"
+#include <stddef.h> // for size_t
+#include <stdint.h>
+
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

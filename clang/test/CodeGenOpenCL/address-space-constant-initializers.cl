@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -ffake-address-space-map -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple amdgcn-amd-amdhsa-opencl -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple amdgcn-amd-amdhsa-amdgizcl -emit-llvm -o - | FileCheck %s
 
 typedef struct {
     int i;

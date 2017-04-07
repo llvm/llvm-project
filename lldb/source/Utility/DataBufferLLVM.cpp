@@ -13,6 +13,9 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include <assert.h>    // for assert
+#include <type_traits> // for move
+
 using namespace lldb_private;
 
 DataBufferLLVM::DataBufferLLVM(std::unique_ptr<llvm::MemoryBuffer> MemBuffer)

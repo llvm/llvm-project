@@ -10,13 +10,12 @@
 #ifndef utility_TaskPool_h_
 #define utility_TaskPool_h_
 
-#include <cassert>
-#include <cstdint>
+#include <functional> // for bind, function
 #include <future>
 #include <list>
-#include <queue>
-#include <thread>
-#include <vector>
+#include <memory>      // for make_shared
+#include <mutex>       // for mutex, unique_lock, condition_variable
+#include <type_traits> // for forward, result_of, move
 
 // Global TaskPool class for running tasks in parallel on a set of worker thread
 // created the first

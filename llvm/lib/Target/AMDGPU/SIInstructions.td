@@ -248,6 +248,10 @@ def SI_KILL_TERMINATOR : SPseudoInstSI <
   let isTerminator = 1;
 }
 
+def SI_ILLEGAL_COPY : SPseudoInstSI <
+  (outs unknown:$dst), (ins unknown:$src),
+  [], " ; illegal copy $src to $dst">;
+
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
 // Branch on undef scc. Used to avoid intermediate copy from

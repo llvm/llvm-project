@@ -261,8 +261,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_v2f16:
 ; VI: v_xor_b32_e32 [[FNEG:v[0-9]+]], 0x80008000, v{{[0-9]+}}
 ; VI-DAG: v_lshrrev_b32_e32 [[FNEG_HI:v[0-9]+]], 16, [[FNEG]]
-; VI-DAG: v_mul_f16_e32 [[REG0:v[0-9]+]], 1.0, [[FNEG]]
 ; VI-DAG: v_mul_f16_e32 [[REG1:v[0-9]+]], 1.0, [[FNEG_HI]]
+; VI-DAG: v_mul_f16_e32 [[REG0:v[0-9]+]], 1.0, [[FNEG]]
 ; VI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
 ; VI-NOT: 0xffff
 

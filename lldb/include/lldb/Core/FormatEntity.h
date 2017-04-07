@@ -10,19 +10,38 @@
 #ifndef liblldb_FormatEntity_h_
 #define liblldb_FormatEntity_h_
 
-// C Includes
-// C++ Includes
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/FileSpec.h"  // for FileSpec
+#include "lldb/lldb-enumerations.h" // for Format::eFormatDefault, Format
+#include "lldb/lldb-types.h"        // for addr_t
+#include <algorithm>                // for min
+#include <stddef.h>                 // for size_t
+#include <stdint.h>                 // for uint32_t, uint64_t
+
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Error.h"
-#include "lldb/lldb-private.h"
-
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class ExecutionContext;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class StringList;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class ValueObject;
+}
 namespace llvm {
 class StringRef;
-} // namespace llvm
+}
 
 namespace lldb_private {
 class FormatEntity {
