@@ -1092,17 +1092,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     assert(VA.isRegLoc() && "Parameter must be in a register!");
 
     unsigned Reg = VA.getLocReg();
-
-    if (VT == MVT::i64) {
-      // For now assume it is a pointer
-      Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0,
-                                     &AMDGPU::SGPR_64RegClass);
-      Reg = MF.addLiveIn(Reg, &AMDGPU::SGPR_64RegClass);
-      SDValue Copy = DAG.getCopyFromReg(Chain, DL, Reg, VT);
-      InVals.push_back(Copy);
-      continue;
-    }
-
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
     Reg = MF.addLiveIn(Reg, RC);
@@ -3159,6 +3148,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
     return DAG.getNode(AMDGPUISD::KILL, DL, MVT::Other, Chain, Cast);
   }
+  case Intrinsic::amdgcn_s_barrier: {
+    if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
+      const MachineFunction &MF = DAG.getMachineFunction();
+      const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+      unsigned WGSize = ST.getFlatWorkGroupSizes(*MF.getFunction()).second;
+      if (WGSize <= ST.getWavefrontSize())
+        return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL, MVT::Other,
+                                          Op.getOperand(0)), 0);
+    }
+    return SDValue();
+  };
   default:
     return Op;
   }

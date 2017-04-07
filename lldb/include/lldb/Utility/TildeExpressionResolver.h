@@ -10,9 +10,12 @@
 #ifndef LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
 #define LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+
+namespace llvm {
+template <typename T> class SmallVectorImpl;
+}
 
 namespace lldb_private {
 class TildeExpressionResolver {

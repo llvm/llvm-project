@@ -44,6 +44,37 @@ static bool allocateKernArg(unsigned ValNo, MVT ValVT, MVT LocVT,
   return true;
 }
 
+static bool allocateCCRegs(unsigned ValNo, MVT ValVT, MVT LocVT,
+                           CCValAssign::LocInfo LocInfo,
+                           ISD::ArgFlagsTy ArgFlags, CCState &State,
+                           const TargetRegisterClass *RC,
+                           unsigned NumRegs) {
+  ArrayRef<MCPhysReg> RegList = makeArrayRef(RC->begin(), NumRegs);
+  unsigned RegResult = State.AllocateReg(RegList);
+  if (RegResult == AMDGPU::NoRegister)
+    return false;
+
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, RegResult, LocVT, LocInfo));
+  return true;
+}
+
+static bool allocateSGPRTuple(unsigned ValNo, MVT ValVT, MVT LocVT,
+                              CCValAssign::LocInfo LocInfo,
+                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  switch (LocVT.SimpleTy) {
+  case MVT::i64:
+  case MVT::f64:
+  case MVT::v2i32:
+  case MVT::v2f32: {
+    // Up to SGPR0-SGPR39
+    return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
+                          &AMDGPU::SGPR_64RegClass, 20);
+  }
+  default:
+    return false;
+  }
+}
+
 #include "AMDGPUGenCallingConv.inc"
 
 // Find a larger type to do a load / store of a vector with.

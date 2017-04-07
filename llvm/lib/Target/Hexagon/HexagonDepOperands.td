@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+def s3_0ImmOperand : AsmOperandClass { let Name = "s3_0Imm"; let RenderMethod = "addSignedImmOperands"; }
+def s3_0Imm : Operand<i32> { let ParserMatchClass = s3_0ImmOperand; let DecoderMethod = "s3_0ImmDecoder"; }
+def s3_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<3, 0>(N->getSExtValue());}]>;
 def s4_0ImmOperand : AsmOperandClass { let Name = "s4_0Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s4_0Imm : Operand<i32> { let ParserMatchClass = s4_0ImmOperand; let DecoderMethod = "s4_0ImmDecoder"; }
 def s4_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<4, 0>(N->getSExtValue());}]>;
@@ -70,9 +73,6 @@ def s6_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<6, 0>(N->getSExtValu
 def u5_3ImmOperand : AsmOperandClass { let Name = "u5_3Imm"; let RenderMethod = "addImmOperands"; }
 def u5_3Imm : Operand<i32> { let ParserMatchClass = u5_3ImmOperand; let DecoderMethod = "unsignedImmDecoder"; }
 def u5_3ImmPred : PatLeaf<(i32 imm), [{ return isShiftedUInt<5, 3>(N->getSExtValue());}]>;
-def s4_7ImmOperand : AsmOperandClass { let Name = "s4_7Imm"; }
-def s4_7Imm : Operand<i32> { let ParserMatchClass = s4_7ImmOperand; let DecoderMethod = "s4_7ImmDecoder"; let PrintMethod = "prints4_7ImmOperand"; }
-def s4_7ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<4, 7>(N->getSExtValue());}]>;
 def s32_0ImmOperand : AsmOperandClass { let Name = "s32_0Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s32_0Imm : Operand<i32> { let ParserMatchClass = s32_0ImmOperand; let DecoderMethod = "s32_0ImmDecoder"; }
 def s32_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<32, 0>(N->getSExtValue());}]>;
@@ -82,9 +82,6 @@ def s6_3ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<6, 3>(N->getSExtValu
 def u10_0ImmOperand : AsmOperandClass { let Name = "u10_0Imm"; let RenderMethod = "addImmOperands"; }
 def u10_0Imm : Operand<i32> { let ParserMatchClass = u10_0ImmOperand; let DecoderMethod = "unsignedImmDecoder"; }
 def u10_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedUInt<10, 0>(N->getSExtValue());}]>;
-def s3_6ImmOperand : AsmOperandClass { let Name = "s3_6Imm"; }
-def s3_6Imm : Operand<i32> { let ParserMatchClass = s3_6ImmOperand; let DecoderMethod = "s3_6ImmDecoder"; let PrintMethod = "prints3_6ImmOperand"; }
-def s3_6ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<3, 6>(N->getSExtValue());}]>;
 def u31_1ImmOperand : AsmOperandClass { let Name = "u31_1Imm"; let RenderMethod = "addImmOperands"; }
 def u31_1Imm : Operand<i32> { let ParserMatchClass = u31_1ImmOperand; let DecoderMethod = "unsignedImmDecoder"; }
 def u31_1ImmPred : PatLeaf<(i32 imm), [{ return isShiftedUInt<32, 1>(N->getSExtValue());}]>;
@@ -127,15 +124,9 @@ def b30_2ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<32, 2>(N->getSExtVa
 def u8_0ImmOperand : AsmOperandClass { let Name = "u8_0Imm"; let RenderMethod = "addImmOperands"; }
 def u8_0Imm : Operand<i32> { let ParserMatchClass = u8_0ImmOperand; let DecoderMethod = "unsignedImmDecoder"; }
 def u8_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedUInt<8, 0>(N->getSExtValue());}]>;
-def s3_7ImmOperand : AsmOperandClass { let Name = "s3_7Imm"; }
-def s3_7Imm : Operand<i32> { let ParserMatchClass = s3_7ImmOperand; let DecoderMethod = "s3_7ImmDecoder"; let PrintMethod = "prints3_7ImmOperand"; }
-def s3_7ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<3, 7>(N->getSExtValue());}]>;
 def u30_2ImmOperand : AsmOperandClass { let Name = "u30_2Imm"; let RenderMethod = "addImmOperands"; }
 def u30_2Imm : Operand<i32> { let ParserMatchClass = u30_2ImmOperand; let DecoderMethod = "unsignedImmDecoder"; }
 def u30_2ImmPred : PatLeaf<(i32 imm), [{ return isShiftedUInt<32, 2>(N->getSExtValue());}]>;
-def s4_6ImmOperand : AsmOperandClass { let Name = "s4_6Imm"; }
-def s4_6Imm : Operand<i32> { let ParserMatchClass = s4_6ImmOperand; let DecoderMethod = "s4_6ImmDecoder"; let PrintMethod = "prints4_6ImmOperand"; }
-def s4_6ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<4, 6>(N->getSExtValue());}]>;
 def s10_0ImmOperand : AsmOperandClass { let Name = "s10_0Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s10_0Imm : Operand<i32> { let ParserMatchClass = s10_0ImmOperand; let DecoderMethod = "s10_0ImmDecoder"; }
 def s10_0ImmPred : PatLeaf<(i32 imm), [{ return isShiftedInt<10, 0>(N->getSExtValue());}]>;

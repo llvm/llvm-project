@@ -44,14 +44,6 @@ public:
                           raw_ostream &O) const;
   void printNOneImmOperand(MCInst const *MI, unsigned OpNo,
                            raw_ostream &O) const;
-  void prints3_6ImmOperand(MCInst const *MI, unsigned OpNo,
-                           raw_ostream &O) const;
-  void prints3_7ImmOperand(MCInst const *MI, unsigned OpNo,
-                           raw_ostream &O) const;
-  void prints4_6ImmOperand(MCInst const *MI, unsigned OpNo,
-                           raw_ostream &O) const;
-  void prints4_7ImmOperand(MCInst const *MI, unsigned OpNo,
-                           raw_ostream &O) const;
   void printBranchOperand(MCInst const *MI, unsigned OpNo,
                           raw_ostream &O) const;
   void printCallOperand(MCInst const *MI, unsigned OpNo, raw_ostream &O) const;

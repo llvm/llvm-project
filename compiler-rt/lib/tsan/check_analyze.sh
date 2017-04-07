@@ -26,22 +26,16 @@ check() {
   fi
 }
 
-for f in write1; do
+for f in write1 write2 write4 write8; do
   check $f rsp 1
   check $f push 2
   check $f pop 2
 done
 
-for f in write2 write4 write8; do
-  check $f rsp 1
-  check $f push 3
-  check $f pop 3
-done
-
 for f in read1 read2 read4 read8; do
   check $f rsp 1
-  check $f push 5
-  check $f pop 5
+  check $f push 4
+  check $f pop 4
 done
 
 for f in func_entry func_exit; do

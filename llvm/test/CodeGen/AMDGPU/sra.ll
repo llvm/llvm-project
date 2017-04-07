@@ -49,8 +49,8 @@ define amdgpu_kernel void @ashr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> ad
 ; FUNC-LABEL: {{^}}ashr_v2i16:
 ; FIXME: The ashr operation is uniform, but because its operands come from a
 ; global load we end up with the vector instructions rather than scalar.
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %in, i16 1
   %a = load <2 x i16>, <2 x i16> addrspace(1)* %in
@@ -63,10 +63,10 @@ define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> ad
 ; FUNC-LABEL: {{^}}ashr_v4i16:
 ; FIXME: The ashr operation is uniform, but because its operands come from a
 ; global load we end up with the vector instructions rather than scalar.
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; VI: v_ashrrev_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI: v_ashrrev_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %in, i16 1
   %a = load <4 x i16>, <4 x i16> addrspace(1)* %in

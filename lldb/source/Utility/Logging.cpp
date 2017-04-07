@@ -10,6 +10,10 @@
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Log.h"
 
+#include "llvm/ADT/ArrayRef.h" // for ArrayRef
+
+#include <stdarg.h> // for va_end, va_list, va_start
+
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {

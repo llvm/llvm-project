@@ -112,7 +112,7 @@ struct OutputSectionCommand : BaseCommand {
   Expr SubalignExpr;
   std::vector<BaseCommand *> Commands;
   std::vector<StringRef> Phdrs;
-  llvm::Optional<uint32_t> Filler;
+  uint32_t Filler = 0;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
   std::string Location;
   std::string MemoryRegionName;
@@ -262,7 +262,7 @@ public:
   std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
-  llvm::Optional<uint32_t> getFiller(StringRef Name);
+  uint32_t getFiller(StringRef Name);
   bool hasLMA(StringRef Name);
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);

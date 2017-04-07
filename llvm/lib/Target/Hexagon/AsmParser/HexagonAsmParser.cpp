@@ -320,10 +320,6 @@ public:
   bool iss4_1Imm() const { return CheckImmRange(4, 1, true, false, false); }
   bool iss4_2Imm() const { return CheckImmRange(4, 2, true, false, false); }
   bool iss4_3Imm() const { return CheckImmRange(4, 3, true, false, false); }
-  bool iss4_6Imm() const { return CheckImmRange(4, 0, true, false, false); }
-  bool iss4_7Imm() const { return CheckImmRange(4, 0, true, false, false); }
-  bool iss3_7Imm() const { return CheckImmRange(3, 0, true, false, false); }
-  bool iss3_6Imm() const { return CheckImmRange(3, 0, true, false, false); }
   bool iss3_0Imm() const { return CheckImmRange(3, 0, true, false, false); }
 
   bool isu64_0Imm() const { return CheckImmRange(64, 0, false, true, true); }
@@ -404,20 +400,6 @@ public:
 
   void addn1ConstOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
-  }
-
-  void adds4_6ImmOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE =
-        dyn_cast<MCConstantExpr>(&HexagonMCInstrInfo::getExpr(*getImm()));
-    Inst.addOperand(MCOperand::createImm(CE->getValue() * 64));
-  }
-
-  void adds3_6ImmOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE =
-        dyn_cast<MCConstantExpr>(&HexagonMCInstrInfo::getExpr(*getImm()));
-    Inst.addOperand(MCOperand::createImm(CE->getValue() * 64));
   }
 
   StringRef getToken() const {

@@ -38,6 +38,8 @@
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueConst.h"
 
+#include <algorithm>
+
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarCreate constructor.

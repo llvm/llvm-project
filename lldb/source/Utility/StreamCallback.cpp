@@ -9,6 +9,8 @@
 
 #include "lldb/Utility/StreamCallback.h"
 
+#include <string>
+
 using namespace lldb_private;
 
 StreamCallback::StreamCallback(lldb::LogOutputCallback callback, void *baton)

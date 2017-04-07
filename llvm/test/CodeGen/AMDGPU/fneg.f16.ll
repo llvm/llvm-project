@@ -69,10 +69,11 @@ define amdgpu_kernel void @v_fneg_fold_f16(half addrspace(1)* %out, half addrspa
 ; CI: v_or_b32_e32
 
 ; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x8000{{$}}
-; VI: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
-; VI: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
+; VI-DAG: v_xor_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
 
 ; GFX9: v_xor_b32_e32 v{{[0-9]+}}, 0x80008000, v{{[0-9]+}}
+
 define amdgpu_kernel void @s_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %in
   store <2 x half> %fneg, <2 x half> addrspace(1)* %out

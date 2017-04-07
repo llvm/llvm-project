@@ -1,5 +1,4 @@
-//===--------------------- Range.cpp -----------------------------*- C++
-//-*-===//
+//===--------------------- Range.cpp -----------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Range.h"
+
+#include <algorithm>
+#include <utility>
 
 using namespace lldb_utility;
 

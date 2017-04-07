@@ -1332,18 +1332,21 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
         // ((A & N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == AndRHS.
         // ((A | N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == 0
         // ((A ^ N) + B) & AndRHS -> (A + B) & AndRHS iff N&AndRHS == 0
-        if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, false, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);
-        if (Value *V = FoldLogicalPlusAnd(Op0RHS, Op0LHS, AndRHS, false, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);  // Add commutes
+        if (Op0I->hasOneUse()) {
+          if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, false, I))
+            return BinaryOperator::CreateAnd(V, AndRHS);
+          if (Value *V = FoldLogicalPlusAnd(Op0RHS, Op0LHS, AndRHS, false, I))
+            return BinaryOperator::CreateAnd(V, AndRHS);  // Add commutes
+        }
         break;
 
       case Instruction::Sub:
         // ((A & N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == AndRHS.
         // ((A | N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == 0
         // ((A ^ N) - B) & AndRHS -> (A - B) & AndRHS iff N&AndRHS == 0
-        if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, true, I))
-          return BinaryOperator::CreateAnd(V, AndRHS);
+        if (Op0I->hasOneUse())
+          if (Value *V = FoldLogicalPlusAnd(Op0LHS, Op0RHS, AndRHS, true, I))
+            return BinaryOperator::CreateAnd(V, AndRHS);
 
         // -x & 1 -> x & 1
         if (AndRHSMask == 1 && match(Op0LHS, m_Zero()))

@@ -12,12 +12,13 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 
+#include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
 #include "llvm/Support/MathExtras.h"
 
-// C Includes
-// C++ Includes
 #include <cassert>
 #include <cstddef>
+
+#include <string.h>
 
 using namespace lldb;
 using namespace lldb_private;
