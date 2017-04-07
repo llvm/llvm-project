@@ -17,6 +17,8 @@
 #include <complex.h>
 #include <stdio.h>
 
+// REQUIRES: c99-complex
+
 // Returns: the product of a + ib and c + id
 
 COMPILER_RT_ABI double _Complex

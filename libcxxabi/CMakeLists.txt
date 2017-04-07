@@ -8,6 +8,13 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
 endif()
 
+# Add path for custom modules
+set(CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  ${CMAKE_MODULE_PATH}
+  )
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxxabi)
 
@@ -124,6 +131,7 @@ endif()
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(HandleCompilerRT)
 
 # Define options.
 option(LIBCXXABI_ENABLE_EXCEPTIONS "Use exceptions." ON)
