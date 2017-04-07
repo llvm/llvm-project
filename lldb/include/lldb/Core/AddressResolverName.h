@@ -10,10 +10,21 @@
 #ifndef liblldb_AddressResolverName_h_
 #define liblldb_AddressResolverName_h_
 
-// Project includes
-
 #include "lldb/Core/AddressResolver.h"
+#include "lldb/Core/SearchFilter.h"   // for Searcher, Searcher::Call...
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
+
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class SymbolContext;
+}
 
 namespace lldb_private {
 

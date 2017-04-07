@@ -1796,22 +1796,16 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
         return Err;
       Value *V = ValOrErr.get();
 
-      auto *GO = dyn_cast<GlobalObject>(V);
-      if (!GO) {
-        // If this is an alias, need to get the actual Function object
-        // it aliases, in order to set up the DeferredFunctionInfo entry below.
-        auto *GA = dyn_cast<GlobalAlias>(V);
-        if (GA)
-          GO = GA->getBaseObject();
-        assert(GO);
-      }
+      auto *F = dyn_cast<Function>(V);
+      // Ignore function offsets emitted for aliases of functions in older
+      // versions of LLVM.
+      if (!F)
+        break;
 
       // Note that we subtract 1 here because the offset is relative to one word
       // before the start of the identification or module block, which was
       // historically always the start of the regular bitcode header.
       uint64_t FuncWordOffset = Record[1] - 1;
-      Function *F = dyn_cast<Function>(GO);
-      assert(F);
       uint64_t FuncBitOffset = FuncWordOffset * 32;
       DeferredFunctionInfo[F] = FuncBitOffset + FuncBitcodeOffsetDelta;
       // Set the LastFunctionBlockBit to point to the last function block.

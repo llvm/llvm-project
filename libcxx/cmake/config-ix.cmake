@@ -1,4 +1,5 @@
 include(CheckLibraryExists)
+include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
 if(WIN32 AND NOT MINGW)
@@ -24,7 +25,7 @@ endif()
 # required during compilation (which has the -nodefaultlibs). libc is
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
-check_cxx_compiler_flag(-nodefaultlibs LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
+check_c_compiler_flag(-nodefaultlibs LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
 if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   if (LIBCXX_HAS_C_LIB)

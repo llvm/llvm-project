@@ -22,40 +22,40 @@ class DocumentStore;
 
 struct DocumentStoreListener {
   virtual ~DocumentStoreListener() = default;
-  virtual void onDocumentAdd(StringRef Uri) {}
-  virtual void onDocumentRemove(StringRef Uri) {}
+  virtual void onDocumentAdd(StringRef File) {}
+  virtual void onDocumentRemove(StringRef File) {}
 };
 
-/// A container for files opened in a workspace, addressed by URI. The contents
+/// A container for files opened in a workspace, addressed by File. The contents
 /// are owned by the DocumentStore.
 class DocumentStore {
 public:
   /// Add a document to the store. Overwrites existing contents.
-  void addDocument(StringRef Uri, StringRef Text) {
+  void addDocument(StringRef File, StringRef Text) {
     {
       std::lock_guard<std::mutex> Guard(DocsMutex);
-      Docs[Uri] = Text;
+      Docs[File] = Text;
     }
     for (const auto &Listener : Listeners)
-      Listener->onDocumentAdd(Uri);
+      Listener->onDocumentAdd(File);
   }
   /// Delete a document from the store.
-  void removeDocument(StringRef Uri) {
+  void removeDocument(StringRef File) {
     {
       std::lock_guard<std::mutex> Guard(DocsMutex);
-      Docs.erase(Uri);
+      Docs.erase(File);
     }
     for (const auto &Listener : Listeners)
-      Listener->onDocumentRemove(Uri);
+      Listener->onDocumentRemove(File);
   }
   /// Retrieve a document from the store. Empty string if it's unknown.
   ///
   /// This function is thread-safe. It returns a copy to avoid handing out
   /// references to unguarded data.
-  std::string getDocument(StringRef Uri) const {
+  std::string getDocument(StringRef File) const {
     // FIXME: This could be a reader lock.
     std::lock_guard<std::mutex> Guard(DocsMutex);
-    return Docs.lookup(Uri);
+    return Docs.lookup(File);
   }
 
   /// Add a listener. Does not take ownership.

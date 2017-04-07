@@ -1,9 +1,16 @@
 ; RUN: llvm-pdbdump pretty -symbols -globals -types %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=NO_FILTER %s
+
 ; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalTypedef|NestedTypedef" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
+; RUN: llvm-pdbdump pretty -classes -enums %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
+
 ; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalEnum|NestedEnum" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_ENUMS %s
+; RUN: llvm-pdbdump pretty -classes -typedefs %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=EXCLUDE_ENUMS %s
+
 ; RUN: llvm-pdbdump pretty -types -symbols -globals -exclude-symbols="MemberVar|GlobalVar" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_VARS %s
 ; RUN: llvm-pdbdump pretty -types -exclude-types="FilterTestClass" \
@@ -36,31 +43,25 @@
 ; NO_FILTER-DAG: GlobalEnum GlobalEnumVar
 
 ; EXCLUDE_TYPEDEFS: ---TYPES---
-; EXCLUDE_TYPEDEFS: Enums:
-; EXCLUDE_TYPEDEFS: GlobalEnum
-; EXCLUDE_TYPEDEFS: Typedefs
 ; EXCLUDE_TYPEDEFS-NOT: GlobalTypedef
-; EXCLUDE_TYPEDEFS: Classes
-; EXCLUDE_TYPEDEFS: class FilterTestClass
 ; EXCLUDE_TYPEDEFS-NOT: NestedTypedef
-; EXCLUDE_TYPEDEFS: private:
+; EXCLUDE_TYPEDEFS-DAG: GlobalEnum
+; EXCLUDE_TYPEDEFS-DAG: NestedEnum
+; EXCLUDE_TYPEDEFS: class FilterTestClass
 
 ; EXCLUDE_ENUMS: ---TYPES---
-; EXCLUDE_ENUMS: Enums:
 ; EXCLUDE_ENUMS-NOT: GlobalEnum
-; EXCLUDE_ENUMS: Typedefs
-; EXCLUDE_ENUMS: GlobalTypedef
-; EXCLUDE_ENUMS: Classes
-; EXCLUDE_ENUMS: class FilterTestClass
 ; EXCLUDE_ENUMS-NOT: NestedEnum
-; EXCLUDE_ENUMS: private:
+; EXCLUDE_ENUMS: GlobalTypedef
+; EXCLUDE_ENUMS: class FilterTestClass
 
 ; EXCLUDE_VARS: ---TYPES---
-; EXCLUDE_VARS: Classes:
-; EXCLUDE_VARS: class FilterTestClass
-; EXCLUDE_VARS: private:
 ; EXCLUDE_VARS-NOT: IntMemberVar
 ; EXCLUDE_VARS-NOT: DoubleMemberVar
+; EXCLUDE_VARS-DAG: GlobalEnum
+; EXCLUDE_VARS-DAG: NestedEnum
+; EXCLUDE_VARS: GlobalTypedef
+; EXCLUDE_VARS: class FilterTestClass
 ; EXCLUDE_VARS: ---GLOBALS---
 ; EXCLUDE_VARS-NOT: DoubleGlobalVar
 ; EXCLUDE_VARS-NOT: IntGlobalVar

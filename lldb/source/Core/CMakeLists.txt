@@ -52,6 +52,7 @@ add_lldb_library(lldbCore
   ValueObjectVariable.cpp
 
   LINK_LIBS
+    clangAST
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression
@@ -64,7 +65,6 @@ add_lldb_library(lldbCore
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjectFileJIT
-    lldbPluginExpressionParserClang
 
   LINK_COMPONENTS
     Support

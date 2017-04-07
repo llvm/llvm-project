@@ -277,32 +277,6 @@ static Type *ToVectorTy(Type *Scalar, unsigned VF) {
   return VectorType::get(Scalar, VF);
 }
 
-/// A helper function that returns GEP instruction and knows to skip a
-/// 'bitcast'. The 'bitcast' may be skipped if the source and the destination
-/// pointee types of the 'bitcast' have the same size.
-/// For example:
-///   bitcast double** %var to i64* - can be skipped
-///   bitcast double** %var to i8*  - can not
-static GetElementPtrInst *getGEPInstruction(Value *Ptr) {
-
-  if (isa<GetElementPtrInst>(Ptr))
-    return cast<GetElementPtrInst>(Ptr);
-
-  if (isa<BitCastInst>(Ptr) &&
-      isa<GetElementPtrInst>(cast<BitCastInst>(Ptr)->getOperand(0))) {
-    Type *BitcastTy = Ptr->getType();
-    Type *GEPTy = cast<BitCastInst>(Ptr)->getSrcTy();
-    if (!isa<PointerType>(BitcastTy) || !isa<PointerType>(GEPTy))
-      return nullptr;
-    Type *Pointee1Ty = cast<PointerType>(BitcastTy)->getPointerElementType();
-    Type *Pointee2Ty = cast<PointerType>(GEPTy)->getPointerElementType();
-    const DataLayout &DL = cast<BitCastInst>(Ptr)->getModule()->getDataLayout();
-    if (DL.getTypeSizeInBits(Pointee1Ty) == DL.getTypeSizeInBits(Pointee2Ty))
-      return cast<GetElementPtrInst>(cast<BitCastInst>(Ptr)->getOperand(0));
-  }
-  return nullptr;
-}
-
 // FIXME: The following helper functions have multiple implementations
 // in the project. They can be effectively organized in a common Load/Store
 // utilities unit.
@@ -2996,40 +2970,12 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   VectorParts VectorGep;
 
   // Handle consecutive loads/stores.
-  GetElementPtrInst *Gep = getGEPInstruction(Ptr);
   if (ConsecutiveStride) {
     Ptr = getScalarValue(Ptr, 0, 0);
   } else {
     // At this point we should vector version of GEP for Gather or Scatter
     assert(CreateGatherScatter && "The instruction should be scalarized");
-    if (Gep) {
-      // Vectorizing GEP, across UF parts. We want to get a vector value for base
-      // and each index that's defined inside the loop, even if it is
-      // loop-invariant but wasn't hoisted out. Otherwise we want to keep them
-      // scalar.
-      SmallVector<VectorParts, 4> OpsV;
-      for (Value *Op : Gep->operands()) {
-        Instruction *SrcInst = dyn_cast<Instruction>(Op);
-        if (SrcInst && OrigLoop->contains(SrcInst))
-          OpsV.push_back(getVectorValue(Op));
-        else
-          OpsV.push_back(VectorParts(UF, Op));
-      }
-      for (unsigned Part = 0; Part < UF; ++Part) {
-        SmallVector<Value *, 4> Ops;
-        Value *GEPBasePtr = OpsV[0][Part];
-        for (unsigned i = 1; i < Gep->getNumOperands(); i++)
-          Ops.push_back(OpsV[i][Part]);
-        Value *NewGep =  Builder.CreateGEP(GEPBasePtr, Ops, "VectorGep");
-        cast<GetElementPtrInst>(NewGep)->setIsInBounds(Gep->isInBounds());
-        assert(NewGep->getType()->isVectorTy() && "Expected vector GEP");
-
-        NewGep =
-            Builder.CreateBitCast(NewGep, VectorType::get(Ptr->getType(), VF));
-        VectorGep.push_back(NewGep);
-      }
-    } else
-      VectorGep = getVectorValue(Ptr);
+    VectorGep = getVectorValue(Ptr);
   }
 
   VectorParts Mask = createBlockInMask(Instr->getParent());
@@ -4789,7 +4735,72 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB) {
       widenPHIInstruction(&I, UF, VF);
       continue;
     } // End of PHI.
+    case Instruction::GetElementPtr: {
+      // Construct a vector GEP by widening the operands of the scalar GEP as
+      // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
+      // results in a vector of pointers when at least one operand of the GEP
+      // is vector-typed. Thus, to keep the representation compact, we only use
+      // vector-typed operands for loop-varying values.
+      auto *GEP = cast<GetElementPtrInst>(&I);
+      VectorParts Entry(UF);
 
+      if (VF > 1 && OrigLoop->hasLoopInvariantOperands(GEP)) {
+        // If we are vectorizing, but the GEP has only loop-invariant operands,
+        // the GEP we build (by only using vector-typed operands for
+        // loop-varying values) would be a scalar pointer. Thus, to ensure we
+        // produce a vector of pointers, we need to either arbitrarily pick an
+        // operand to broadcast, or broadcast a clone of the original GEP.
+        // Here, we broadcast a clone of the original.
+        //
+        // TODO: If at some point we decide to scalarize instructions having
+        //       loop-invariant operands, this special case will no longer be
+        //       required. We would add the scalarization decision to
+        //       collectLoopScalars() and teach getVectorValue() to broadcast
+        //       the lane-zero scalar value.
+        auto *Clone = Builder.Insert(GEP->clone());
+        for (unsigned Part = 0; Part < UF; ++Part)
+          Entry[Part] = Builder.CreateVectorSplat(VF, Clone);
+      } else {
+        // If the GEP has at least one loop-varying operand, we are sure to
+        // produce a vector of pointers. But if we are only unrolling, we want
+        // to produce a scalar GEP for each unroll part. Thus, the GEP we
+        // produce with the code below will be scalar (if VF == 1) or vector
+        // (otherwise). Note that for the unroll-only case, we still maintain
+        // values in the vector mapping with initVector, as we do for other
+        // instructions.
+        for (unsigned Part = 0; Part < UF; ++Part) {
+
+          // The pointer operand of the new GEP. If it's loop-invariant, we
+          // won't broadcast it.
+          auto *Ptr = OrigLoop->isLoopInvariant(GEP->getPointerOperand())
+                          ? GEP->getPointerOperand()
+                          : getVectorValue(GEP->getPointerOperand())[Part];
+
+          // Collect all the indices for the new GEP. If any index is
+          // loop-invariant, we won't broadcast it.
+          SmallVector<Value *, 4> Indices;
+          for (auto &U : make_range(GEP->idx_begin(), GEP->idx_end())) {
+            if (OrigLoop->isLoopInvariant(U.get()))
+              Indices.push_back(U.get());
+            else
+              Indices.push_back(getVectorValue(U.get())[Part]);
+          }
+
+          // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
+          // but it should be a vector, otherwise.
+          auto *NewGEP = GEP->isInBounds()
+                             ? Builder.CreateInBoundsGEP(Ptr, Indices)
+                             : Builder.CreateGEP(Ptr, Indices);
+          assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
+                 "NewGEP is not a pointer vector");
+          Entry[Part] = NewGEP;
+        }
+      }
+
+      VectorLoopValueMap.initVector(&I, Entry);
+      addMetadata(Entry, GEP);
+      break;
+    }
     case Instruction::UDiv:
     case Instruction::SDiv:
     case Instruction::SRem:
@@ -5469,46 +5480,158 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
 void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
 
-  // We should not collect Scalars more than once per VF. Right now,
-  // this function is called from collectUniformsAndScalars(), which 
-  // already does this check. Collecting Scalars for VF=1 does not make any
-  // sense.
-
+  // We should not collect Scalars more than once per VF. Right now, this
+  // function is called from collectUniformsAndScalars(), which already does
+  // this check. Collecting Scalars for VF=1 does not make any sense.
   assert(VF >= 2 && !Scalars.count(VF) &&
          "This function should not be visited twice for the same VF");
 
-  // If an instruction is uniform after vectorization, it will remain scalar.
-  Scalars[VF].insert(Uniforms[VF].begin(), Uniforms[VF].end());
+  SmallSetVector<Instruction *, 8> Worklist;
 
-  // Collect the getelementptr instructions that will not be vectorized. A
-  // getelementptr instruction is only vectorized if it is used for a legal
-  // gather or scatter operation.
+  // These sets are used to seed the analysis with pointers used by memory
+  // accesses that will remain scalar.
+  SmallSetVector<Instruction *, 8> ScalarPtrs;
+  SmallPtrSet<Instruction *, 8> PossibleNonScalarPtrs;
+
+  // A helper that returns true if the use of Ptr by MemAccess will be scalar.
+  // The pointer operands of loads and stores will be scalar as long as the
+  // memory access is not a gather or scatter operation. The value operand of a
+  // store will remain scalar if the store is scalarized.
+  auto isScalarUse = [&](Instruction *MemAccess, Value *Ptr) {
+    InstWidening WideningDecision = getWideningDecision(MemAccess, VF);
+    assert(WideningDecision != CM_Unknown &&
+           "Widening decision should be ready at this moment");
+    if (auto *Store = dyn_cast<StoreInst>(MemAccess))
+      if (Ptr == Store->getValueOperand())
+        return WideningDecision == CM_Scalarize;
+    assert(Ptr == getPointerOperand(MemAccess) &&
+           "Ptr is neither a value or pointer operand");
+    return WideningDecision != CM_GatherScatter;
+  };
+
+  // A helper that returns true if the given value is a bitcast or
+  // getelementptr instruction contained in the loop.
+  auto isLoopVaryingBitCastOrGEP = [&](Value *V) {
+    return ((isa<BitCastInst>(V) && V->getType()->isPointerTy()) ||
+            isa<GetElementPtrInst>(V)) &&
+           !TheLoop->isLoopInvariant(V);
+  };
+
+  // A helper that evaluates a memory access's use of a pointer. If the use
+  // will be a scalar use, and the pointer is only used by memory accesses, we
+  // place the pointer in ScalarPtrs. Otherwise, the pointer is placed in
+  // PossibleNonScalarPtrs.
+  auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
+
+    // We only care about bitcast and getelementptr instructions contained in
+    // the loop.
+    if (!isLoopVaryingBitCastOrGEP(Ptr))
+      return;
+
+    // If the pointer has already been identified as scalar (e.g., if it was
+    // also identified as uniform), there's nothing to do.
+    auto *I = cast<Instruction>(Ptr);
+    if (Worklist.count(I))
+      return;
+
+    // If the use of the pointer will be a scalar use, and all users of the
+    // pointer are memory accesses, place the pointer in ScalarPtrs. Otherwise,
+    // place the pointer in PossibleNonScalarPtrs.
+    if (isScalarUse(MemAccess, Ptr) && all_of(I->users(), [&](User *U) {
+          return isa<LoadInst>(U) || isa<StoreInst>(U);
+        }))
+      ScalarPtrs.insert(I);
+    else
+      PossibleNonScalarPtrs.insert(I);
+  };
+
+  // We seed the scalars analysis with three classes of instructions: (1)
+  // instructions marked uniform-after-vectorization, (2) bitcast and
+  // getelementptr instructions used by memory accesses requiring a scalar use,
+  // and (3) pointer induction variables and their update instructions (we
+  // currently only scalarize these).
+  //
+  // (1) Add to the worklist all instructions that have been identified as
+  // uniform-after-vectorization.
+  Worklist.insert(Uniforms[VF].begin(), Uniforms[VF].end());
+
+  // (2) Add to the worklist all bitcast and getelementptr instructions used by
+  // memory accesses requiring a scalar use. The pointer operands of loads and
+  // stores will be scalar as long as the memory accesses is not a gather or
+  // scatter operation. The value operand of a store will remain scalar if the
+  // store is scalarized.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        Scalars[VF].insert(GEP);
-        continue;
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        evaluatePtrUse(Load, Load->getPointerOperand());
+      } else if (auto *Store = dyn_cast<StoreInst>(&I)) {
+        evaluatePtrUse(Store, Store->getPointerOperand());
+        evaluatePtrUse(Store, Store->getValueOperand());
       }
-      auto *Ptr = getPointerOperand(&I);
-      if (!Ptr)
-        continue;
-      auto *GEP = getGEPInstruction(Ptr);
-      if (GEP && getWideningDecision(&I, VF) == CM_GatherScatter)
-        Scalars[VF].erase(GEP);
+    }
+  for (auto *I : ScalarPtrs)
+    if (!PossibleNonScalarPtrs.count(I)) {
+      DEBUG(dbgs() << "LV: Found scalar instruction: " << *I << "\n");
+      Worklist.insert(I);
     }
 
-  // An induction variable will remain scalar if all users of the induction
-  // variable and induction variable update remain scalar.
+  // (3) Add to the worklist all pointer induction variables and their update
+  // instructions.
+  //
+  // TODO: Once we are able to vectorize pointer induction variables we should
+  //       no longer insert them into the worklist here.
   auto *Latch = TheLoop->getLoopLatch();
   for (auto &Induction : *Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
+    if (Induction.second.getKind() != InductionDescriptor::IK_PtrInduction)
+      continue;
+    Worklist.insert(Ind);
+    Worklist.insert(IndUpdate);
+    DEBUG(dbgs() << "LV: Found scalar instruction: " << *Ind << "\n");
+    DEBUG(dbgs() << "LV: Found scalar instruction: " << *IndUpdate << "\n");
+  }
+
+  // Expand the worklist by looking through any bitcasts and getelementptr
+  // instructions we've already identified as scalar. This is similar to the
+  // expansion step in collectLoopUniforms(); however, here we're only
+  // expanding to include additional bitcasts and getelementptr instructions.
+  unsigned Idx = 0;
+  while (Idx != Worklist.size()) {
+    Instruction *Dst = Worklist[Idx++];
+    if (!isLoopVaryingBitCastOrGEP(Dst->getOperand(0)))
+      continue;
+    auto *Src = cast<Instruction>(Dst->getOperand(0));
+    if (all_of(Src->users(), [&](User *U) -> bool {
+          auto *J = cast<Instruction>(U);
+          return !TheLoop->contains(J) || Worklist.count(J) ||
+                 ((isa<LoadInst>(J) || isa<StoreInst>(J)) &&
+                  isScalarUse(J, Src));
+        })) {
+      Worklist.insert(Src);
+      DEBUG(dbgs() << "LV: Found scalar instruction: " << *Src << "\n");
+    }
+  }
+
+  // An induction variable will remain scalar if all users of the induction
+  // variable and induction variable update remain scalar.
+  for (auto &Induction : *Legal->getInductionVars()) {
+    auto *Ind = Induction.first;
+    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
+
+    // We already considered pointer induction variables, so there's no reason
+    // to look at their users again.
+    //
+    // TODO: Once we are able to vectorize pointer induction variables we
+    //       should no longer skip over them here.
+    if (Induction.second.getKind() == InductionDescriptor::IK_PtrInduction)
+      continue;
 
     // Determine if all users of the induction variable are scalar after
     // vectorization.
     auto ScalarInd = all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Scalars[VF].count(I);
+      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I);
     });
     if (!ScalarInd)
       continue;
@@ -5517,15 +5640,19 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
     // scalar after vectorization.
     auto ScalarIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || !TheLoop->contains(I) || Scalars[VF].count(I);
+      return I == Ind || !TheLoop->contains(I) || Worklist.count(I);
     });
     if (!ScalarIndUpdate)
       continue;
 
     // The induction variable and its update instruction will remain scalar.
-    Scalars[VF].insert(Ind);
-    Scalars[VF].insert(IndUpdate);
+    Worklist.insert(Ind);
+    Worklist.insert(IndUpdate);
+    DEBUG(dbgs() << "LV: Found scalar instruction: " << *Ind << "\n");
+    DEBUG(dbgs() << "LV: Found scalar instruction: " << *IndUpdate << "\n");
   }
+
+  Scalars[VF].insert(Worklist.begin(), Worklist.end());
 }
 
 bool LoopVectorizationLegality::isScalarWithPredication(Instruction *I) {

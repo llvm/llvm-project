@@ -17,14 +17,18 @@
 namespace opts {
 
 namespace pretty {
+enum class ClassDefinitionFormat { None, LayoutOnly, Full };
+
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;
-extern llvm::cl::opt<bool> Types;
+extern llvm::cl::opt<bool> Classes;
+extern llvm::cl::opt<bool> Enums;
+extern llvm::cl::opt<bool> Typedefs;
 extern llvm::cl::opt<bool> All;
 extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
 
-extern llvm::cl::opt<bool> NoClassDefs;
+extern llvm::cl::opt<ClassDefinitionFormat> ClassFormat;
 extern llvm::cl::opt<bool> NoEnumDefs;
 extern llvm::cl::list<std::string> ExcludeTypes;
 extern llvm::cl::list<std::string> ExcludeSymbols;

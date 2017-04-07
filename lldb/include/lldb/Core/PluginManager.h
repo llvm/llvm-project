@@ -10,13 +10,28 @@
 #ifndef liblldb_PluginManager_h_
 #define liblldb_PluginManager_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Utility/Error.h" // for Error
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-enumerations.h"       // for ScriptLanguage
+#include "lldb/lldb-forward.h"            // for OptionValuePropertiesSP
+#include "lldb/lldb-private-interfaces.h" // for DebuggerInitializeCallback
+#include "llvm/ADT/StringRef.h"           // for StringRef
 
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class CommandInterpreter;
+}
+namespace lldb_private {
+class ConstString;
+}
+namespace lldb_private {
+class Debugger;
+}
+namespace lldb_private {
+class StringList;
+}
 namespace lldb_private {
 
 class PluginManager {

@@ -29,7 +29,6 @@ public:
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   PPCABI TargetABI;
-  PPCSubtarget Subtarget;
 
   mutable StringMap<std::unique_ptr<PPCSubtarget>> SubtargetMap;
 

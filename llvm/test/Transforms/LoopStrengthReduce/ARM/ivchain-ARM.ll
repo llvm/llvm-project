@@ -1,5 +1,4 @@
 ; RUN: llc -O3 -mtriple=thumb-eabi -mcpu=cortex-a9 %s -o - | FileCheck %s -check-prefix=A9
-; RUN: llc -O3 -mtriple=thumb-eabi -mcpu=cortex-a9 -addr-sink-using-gep=1 %s -o - | FileCheck %s -check-prefix=A9
 
 ; @simple is the most basic chain of address induction variables. Chaining
 ; saves at least one register and avoids complex addressing and setup

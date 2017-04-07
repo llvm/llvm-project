@@ -9,24 +9,53 @@
 
 #include "lldb/Core/Address.h"
 
-// C Includes
-// C++ Includes
-#include "llvm/ADT/Triple.h"
-
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/Declaration.h" // for Declaration
+#include "lldb/Symbol/LineEntry.h"   // for LineEntry
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symbol.h"        // for Symbol
+#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/Symtab.h" // for Symtab
+#include "lldb/Symbol/Type.h"   // for Type
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextScope
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"   // for ConstString
+#include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/Endian.h"        // for InlHostByteOrder
+#include "lldb/Utility/Error.h"         // for Error
+#include "lldb/Utility/FileSpec.h"      // for FileSpec
+#include "lldb/Utility/Stream.h"        // for Stream
+#include "lldb/Utility/StreamString.h"  // for StreamString
+
+#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+
+#include <cstdint> // for uint8_t, uint32_t
+#include <memory>  // for shared_ptr, operator!=
+#include <vector>  // for vector
+
+#include <assert.h>   // for assert
+#include <inttypes.h> // for PRIu64, PRIx64
+#include <string.h>   // for size_t, strlen
+
+namespace lldb_private {
+class CompileUnit;
+}
+namespace lldb_private {
+class Function;
+}
 
 using namespace lldb;
 using namespace lldb_private;

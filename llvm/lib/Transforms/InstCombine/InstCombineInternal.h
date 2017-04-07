@@ -653,8 +653,6 @@ private:
   Instruction *OptAndOp(BinaryOperator *Op, ConstantInt *OpRHS,
                         ConstantInt *AndRHS, BinaryOperator &TheAnd);
 
-  Value *FoldLogicalPlusAnd(Value *LHS, Value *RHS, ConstantInt *Mask,
-                            bool isSub, Instruction &I);
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);

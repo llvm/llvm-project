@@ -218,10 +218,10 @@ define void @nophi(i32* %p) {
 ; CHECK-NEXT:    tail call void @use(i32 1)
 ; CHECK-NEXT:    br label [[INDIRECTGOTO]]
 ; CHECK:       indirectgoto:
-; CHECK-NEXT:    [[SUNKADDR:%.*]] = ptrtoint i32* [[P]] to i64
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = add i64 [[SUNKADDR]], 4
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = inttoptr i64 [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[NEWP:%.*]] = load i32, i32* [[SUNKADDR2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to i8*
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, i8* [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR]] to i32*
+; CHECK-NEXT:    [[NEWP:%.*]] = load i32, i32* [[TMP1]], align 4
 ; CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[NEWP]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @nophi.targets, i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[NEWOP:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8

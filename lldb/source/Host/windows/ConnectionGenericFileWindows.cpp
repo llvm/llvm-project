@@ -10,6 +10,7 @@
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timeout.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"

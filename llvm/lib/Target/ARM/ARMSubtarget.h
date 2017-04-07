@@ -64,6 +64,7 @@ protected:
     CortexR7,
     ExynosM1,
     Krait,
+    Kryo,
     Swift
   };
   enum ARMProcClassEnum {

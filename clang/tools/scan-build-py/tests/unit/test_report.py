@@ -75,7 +75,7 @@ class ParseFileTest(unittest.TestCase):
                          'file.i.stderr.txt')
 
     def test_parse_real_crash(self):
-        import libscanbuild.runner as sut2
+        import libscanbuild.analyze as sut2
         import re
         with libear.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')

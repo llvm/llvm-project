@@ -138,6 +138,17 @@ Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
   report_fatal_error(Err);
 }
 
+Function *llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                             ArrayRef<Type *> InitArgTypes) {
+  assert(!InitName.empty() && "Expected init function name");
+  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+      InitName,
+      FunctionType::get(Type::getVoidTy(M.getContext()), InitArgTypes, false),
+      AttributeList()));
+  F->setLinkage(Function::ExternalLinkage);
+  return F;
+}
+
 std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
@@ -145,16 +156,13 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   assert(!InitName.empty() && "Expected init function name");
   assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
+  Function *InitFunction =
+      declareSanitizerInitFunction(M, InitName, InitArgTypes);
   Function *Ctor = Function::Create(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
       GlobalValue::InternalLinkage, CtorName, &M);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
-  Function *InitFunction =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          InitName, FunctionType::get(IRB.getVoidTy(), InitArgTypes, false),
-          AttributeList()));
-  InitFunction->setLinkage(Function::ExternalLinkage);
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
     Function *VersionCheckFunction =
@@ -228,4 +236,36 @@ void llvm::filterDeadComdatFunctions(
     return ComdatEntriesCovered.find(GV->getComdat()) ==
            ComdatEntriesCovered.end();
   });
+}
+
+std::string llvm::getUniqueModuleId(Module *M) {
+  MD5 Md5;
+  bool ExportsSymbols = false;
+  auto AddGlobal = [&](GlobalValue &GV) {
+    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+        !GV.hasExternalLinkage())
+      return;
+    ExportsSymbols = true;
+    Md5.update(GV.getName());
+    Md5.update(ArrayRef<uint8_t>{0});
+  };
+
+  for (auto &F : *M)
+    AddGlobal(F);
+  for (auto &GV : M->globals())
+    AddGlobal(GV);
+  for (auto &GA : M->aliases())
+    AddGlobal(GA);
+  for (auto &IF : M->ifuncs())
+    AddGlobal(IF);
+
+  if (!ExportsSymbols)
+    return "";
+
+  MD5::MD5Result R;
+  Md5.final(R);
+
+  SmallString<32> Str;
+  MD5::stringifyResult(R, Str);
+  return ("$" + Str).str();
 }

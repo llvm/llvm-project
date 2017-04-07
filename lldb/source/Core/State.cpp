@@ -12,7 +12,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/State.h"
-#include <stdio.h>
 
 using namespace lldb;
 using namespace lldb_private;

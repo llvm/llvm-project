@@ -10,13 +10,30 @@
 #ifndef liblldb_ValueObjectDynamicValue_h_
 #define liblldb_ValueObjectDynamicValue_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Symbol/CompilerType.h" // for CompilerType
 #include "lldb/Symbol/Type.h"
+#include "lldb/Utility/ConstString.h"       // for ConstString
+#include "lldb/Utility/SharingPtr.h"        // for operator==
+#include "lldb/lldb-defines.h"              // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h"         // for DynamicValueType, Langua...
+#include "lldb/lldb-forward.h"              // for ValueObjectSP, VariableSP
+#include "lldb/lldb-private-enumerations.h" // for LazyBool, LazyBool::eLaz...
 
+#include <assert.h> // for assert
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint64_t, uint32_t
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Declaration;
+}
+namespace lldb_private {
+class Error;
+}
 namespace lldb_private {
 
 //----------------------------------------------------------------------

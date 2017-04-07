@@ -9,12 +9,6 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 
-// C Includes
-// C++ Includes
-#include <cstring>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -22,12 +16,26 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h"
+#include "lldb/Target/StackFrame.h"   // for StackFrame
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Stream.h" // for Stream, Stream::::eBinary
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-forward.h"            // for ProcessSP
+#include "lldb/lldb-private-interfaces.h" // for EmulateInstructionCreateIn...
+
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <cstring>
+#include <memory> // for shared_ptr
+
+#include <inttypes.h> // for PRIx64, PRId64, PRIu64
+#include <stdio.h>    // for stdout
+
+namespace lldb_private {
+class Target;
+}
 
 using namespace lldb;
 using namespace lldb_private;

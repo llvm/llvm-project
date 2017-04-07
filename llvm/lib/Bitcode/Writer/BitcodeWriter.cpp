@@ -2924,13 +2924,6 @@ void ModuleBitcodeWriter::writeValueSymbolTable(
     NameVals.push_back(VE.getValueID(Name.getValue()));
 
     Function *F = dyn_cast<Function>(Name.getValue());
-    if (!F) {
-      // If value is an alias, need to get the aliased base object to
-      // see if it is a function.
-      auto *GA = dyn_cast<GlobalAlias>(Name.getValue());
-      if (GA && GA->getBaseObject())
-        F = dyn_cast<Function>(GA->getBaseObject());
-    }
 
     // VST_CODE_ENTRY:   [valueid, namechar x N]
     // VST_CODE_FNENTRY: [valueid, funcoffset, namechar x N]

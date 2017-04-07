@@ -10,19 +10,27 @@
 #ifndef lldb_RegisterValue_h
 #define lldb_RegisterValue_h
 
-// C Includes
-#include <string.h>
-
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/APInt.h"
-
-// Project includes
 #include "lldb/Core/Scalar.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/lldb-private.h"
-#include "lldb/lldb-public.h"
+#include "lldb/Utility/Error.h"     // for Error
+#include "lldb/lldb-enumerations.h" // for ByteOrder, Format
+#include "lldb/lldb-types.h"        // for offset_t
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <stdint.h> // for uint32_t, uint8_t, uint64_t, uin...
+#include <string.h>
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+struct RegisterInfo;
+}
 namespace lldb_private {
 
 class RegisterValue {

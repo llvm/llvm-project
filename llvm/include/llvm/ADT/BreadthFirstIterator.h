@@ -119,7 +119,6 @@ public:
   static bf_iterator end(const GraphT &G) { return bf_iterator(); }
 
   bool operator==(const bf_iterator &RHS) const {
-    assert(VisitQueue.size() == 0);
     return VisitQueue == RHS.VisitQueue;
   }
 

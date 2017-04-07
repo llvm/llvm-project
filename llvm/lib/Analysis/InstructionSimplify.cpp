@@ -141,10 +141,9 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 /// given by OpcodeToExpand, while "A" corresponds to LHS and "B op' C" to RHS.
 /// Also performs the transform "(A op' B) op C" -> "(A op C) op' (B op C)".
 /// Returns the simplified value, or null if no simplification was performed.
-static Value *ExpandBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                          unsigned OpcToExpand, const Query &Q,
+static Value *ExpandBinOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
+                          Instruction::BinaryOps OpcodeToExpand, const Query &Q,
                           unsigned MaxRecurse) {
-  Instruction::BinaryOps OpcodeToExpand = (Instruction::BinaryOps)OpcToExpand;
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -200,9 +199,9 @@ static Value *ExpandBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 
 /// Generic simplifications for associative binary operations.
 /// Returns the simpler value, or null if none was found.
-static Value *SimplifyAssociativeBinOp(unsigned Opc, Value *LHS, Value *RHS,
-                                       const Query &Q, unsigned MaxRecurse) {
-  Instruction::BinaryOps Opcode = (Instruction::BinaryOps)Opc;
+static Value *SimplifyAssociativeBinOp(Instruction::BinaryOps Opcode,
+                                       Value *LHS, Value *RHS, const Query &Q,
+                                       unsigned MaxRecurse) {
   assert(Instruction::isAssociative(Opcode) && "Not an associative operation!");
 
   // Recursion is always used, so bail out at once if we already hit the limit.
@@ -299,8 +298,9 @@ static Value *SimplifyAssociativeBinOp(unsigned Opc, Value *LHS, Value *RHS,
 /// try to simplify the binop by seeing whether evaluating it on both branches
 /// of the select results in the same value. Returns the common value if so,
 /// otherwise returns null.
-static Value *ThreadBinOpOverSelect(unsigned Opcode, Value *LHS, Value *RHS,
-                                    const Query &Q, unsigned MaxRecurse) {
+static Value *ThreadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
+                                    Value *RHS, const Query &Q,
+                                    unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -452,8 +452,9 @@ static Value *ThreadCmpOverSelect(CmpInst::Predicate Pred, Value *LHS,
 /// try to simplify the binop by seeing whether evaluating it on the incoming
 /// phi values yields the same result for every value. If so returns the common
 /// value, otherwise returns null.
-static Value *ThreadBinOpOverPHI(unsigned Opcode, Value *LHS, Value *RHS,
-                                 const Query &Q, unsigned MaxRecurse) {
+static Value *ThreadBinOpOverPHI(Instruction::BinaryOps Opcode, Value *LHS,
+                                 Value *RHS, const Query &Q,
+                                 unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;

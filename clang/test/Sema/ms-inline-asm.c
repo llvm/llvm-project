@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fms-extensions -fasm-blocks -Wno-microsoft -Wunused-label -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple i386-apple-darwin10 -fms-extensions -fasm-blocks -Wno-microsoft -Wunused-label -verify -fsyntax-only
 
 void t1(void) { 
  __asm __asm // expected-error {{__asm used with no assembly instructions}}

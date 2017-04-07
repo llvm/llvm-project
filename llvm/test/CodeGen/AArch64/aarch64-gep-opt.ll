@@ -96,9 +96,13 @@ exit:
 ; CHECK-NoAA: add i64 [[TMP:%[a-zA-Z0-9]+]], 528
 ; CHECK-NoAA: add i64 [[TMP]], 532
 ; CHECK-NoAA: if.true:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 532
+; CHECK-NoAA: inttoptr
+; CHECK-NoAA: bitcast
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, {{.*}}, i64 532
 ; CHECK-NoAA: exit:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 528
+; CHECK-NoAA: inttoptr
+; CHECK-NoAA: bitcast
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, {{.*}}, i64 528
 
 ; CHECK-UseAA-LABEL: test_GEP_across_BB(
 ; CHECK-UseAA: [[PTR0:%[a-zA-Z0-9]+]] = getelementptr
