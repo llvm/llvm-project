@@ -9,13 +9,10 @@
 
 #include "lldb/Core/Value.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h"  // for Address
+#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -25,9 +22,20 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Endian.h"   // for InlHostByteOrder
+#include "lldb/Utility/FileSpec.h" // for FileSpec
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-forward.h" // for DataBufferSP, ModuleSP
+#include "lldb/lldb-types.h"   // for addr_t
+
+#include <memory> // for make_shared
+#include <string> // for string
+
+#include <inttypes.h> // for PRIx64
 
 using namespace lldb;
 using namespace lldb_private;
@@ -538,7 +546,8 @@ Error Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   // Make sure we have enough room within "data", and if we don't make
   // something large enough that does
   if (!data.ValidOffsetForDataOfSize(data_offset, byte_size)) {
-    DataBufferSP data_sp(new DataBufferHeap(data_offset + byte_size, '\0'));
+    auto data_sp =
+        std::make_shared<DataBufferHeap>(data_offset + byte_size, '\0');
     data.SetData(data_sp);
   }
 

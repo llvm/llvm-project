@@ -12,7 +12,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/ThreadPlanStepUntil.h"
+
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"

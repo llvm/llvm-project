@@ -477,13 +477,6 @@ else()
   set(COMPILER_RT_HAS_LSAN FALSE)
 endif()
 
-if(APPLE)
-  option(COMPILER_RT_ENABLE_LSAN_OSX "Enable building LSan for OS X - Experimental" Off)
-  if(COMPILER_RT_ENABLE_LSAN_OSX)
-    set(COMPILER_RT_HAS_LSAN TRUE)
-  endif()
-endif()
-
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND MSAN_SUPPORTED_ARCH AND
     OS_NAME MATCHES "Linux")
   set(COMPILER_RT_HAS_MSAN TRUE)

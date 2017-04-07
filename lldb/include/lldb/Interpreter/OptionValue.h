@@ -18,6 +18,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-private-interfaces.h"
 
 namespace lldb_private {
 

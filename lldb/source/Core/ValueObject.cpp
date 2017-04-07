@@ -9,52 +9,67 @@
 
 #include "lldb/Core/ValueObject.h"
 
-// C Includes
-#include <stdlib.h>
-
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/Support/raw_ostream.h"
-
-// Project includes
-#include "lldb/Core/Debugger.h"
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Scalar.h" // for Scalar
 #include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectDynamicValue.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
-
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormatManager.h" // for FormatManager
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/DataFormatters/TypeFormat.h"    // for TypeFormatImpl_F...
+#include "lldb/DataFormatters/TypeSummary.h"   // for TypeSummaryOptions
+#include "lldb/DataFormatters/TypeValidator.h" // for TypeValidatorImp...
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
-
-#include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
-
-#include "lldb/Utility/Endian.h"
-
-#include "lldb/Interpreter/CommandInterpreter.h"
-
+#include "lldb/Expression/ExpressionVariable.h" // for ExpressionVariable
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/Declaration.h"   // for Declaration
+#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Symbol/Type.h"
-
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/StackFrame.h" // for StackFrame
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadList.h"  // for ThreadList
+#include "lldb/Utility/DataBuffer.h" // for DataBuffer
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Flags.h" // for Flags
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h"    // for GetLogIfAllCateg...
+#include "lldb/Utility/SharingPtr.h" // for SharingPtr
+#include "lldb/Utility/Stream.h"     // for Stream
+#include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-private-types.h" // for RegisterInfo
+
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+
+#include <algorithm> // for min
+#include <cstdint>   // for uint32_t, uint64_t
+#include <cstdlib>   // for size_t, NULL
+#include <memory>    // for shared_ptr, oper...
+#include <tuple>     // for tie, tuple
+
+#include <assert.h>   // for assert
+#include <inttypes.h> // for PRIu64, PRIx64
+#include <stdio.h>    // for snprintf
+#include <string.h>   // for memcpy, memcmp
+
+namespace lldb_private {
+class ExecutionContextScope;
+}
+namespace lldb_private {
+class SymbolContextScope;
+}
 
 using namespace lldb;
 using namespace lldb_private;

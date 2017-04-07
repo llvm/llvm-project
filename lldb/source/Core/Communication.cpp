@@ -7,21 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <cstring>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Communication.h"
+
 #include "lldb/Core/Connection.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
-#include "lldb/Core/Timer.h"
-#include "lldb/Host/Host.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/Error.h"       // for Error
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h" // for LogIfAnyCategoriesSet, LIBLLDB...
+
+#include "llvm/ADT/None.h"         // for None
+#include "llvm/ADT/Optional.h"     // for Optional
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+
+#include <algorithm> // for min
+#include <chrono>    // for duration, seconds
+#include <cstring>
+#include <memory> // for shared_ptr
+
+#include <errno.h>    // for EIO
+#include <inttypes.h> // for PRIu64
+#include <stdio.h>    // for snprintf
 
 using namespace lldb;
 using namespace lldb_private;

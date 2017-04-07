@@ -21,6 +21,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"

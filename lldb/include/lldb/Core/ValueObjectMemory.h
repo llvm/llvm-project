@@ -10,12 +10,21 @@
 #ifndef liblldb_ValueObjectMemory_h_
 #define liblldb_ValueObjectMemory_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/lldb-defines.h"        // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h"   // for ValueType
+#include "lldb/lldb-forward.h"        // for TypeSP, ValueObjectSP, ModuleSP
+#include "llvm/ADT/StringRef.h"       // for StringRef
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, uint64_t
+
+namespace lldb_private {
+class ExecutionContextScope;
+}
 
 namespace lldb_private {
 

@@ -50,7 +50,7 @@ namespace std {
 
 template <class T>
 struct hash<::min_pointer<T, std::integral_constant<size_t, 1>>> {
-  size_t operator()(::min_pointer<T, std::integral_constant<size_t, 1>> p) const {
+  size_t operator()(::min_pointer<T, std::integral_constant<size_t, 1>> p) const noexcept(false) {
     if (!p) return 0;
     return std::hash<T*>{}(std::addressof(*p));
   }
@@ -67,9 +67,13 @@ int main()
     int* ptr = new int;
     std::unique_ptr<int> p(ptr);
     std::hash<std::unique_ptr<int> > f;
-    ASSERT_NOT_NOEXCEPT(f(p));
     std::size_t h = f(p);
     assert(h == std::hash<int*>()(ptr));
+  }
+  {
+    std::unique_ptr<int, PointerDeleter<int, 1>> pThrowingHash;
+    std::hash<std::unique_ptr<int, PointerDeleter<int, 1>>> fThrowingHash;
+    ASSERT_NOT_NOEXCEPT(fThrowingHash(pThrowingHash));
   }
 #if TEST_STD_VER >= 11
   {

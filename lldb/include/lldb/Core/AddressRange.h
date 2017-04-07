@@ -10,11 +10,21 @@
 #ifndef liblldb_AddressRange_h_
 #define liblldb_AddressRange_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
+#include "lldb/lldb-forward.h" // for SectionSP
+#include "lldb/lldb-types.h"   // for addr_t
+
+#include <stddef.h> // for size_t
+
+namespace lldb_private {
+class SectionList;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class Target;
+}
 
 namespace lldb_private {
 

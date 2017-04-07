@@ -10,20 +10,25 @@
 #ifndef lldb_Opcode_h
 #define lldb_Opcode_h
 
-// C Includes
-#include <string.h>
+#include "lldb/Utility/Endian.h"
+#include "lldb/lldb-enumerations.h" // for ByteOrder, ByteOrder::eByteOrde...
 
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/Support/MathExtras.h"
 
-// Project includes
-#include "lldb/Utility/Endian.h"
-#include "lldb/lldb-public.h"
+#include <assert.h> // for assert
+#include <stdint.h> // for uint32_t, uint8_t, uint16_t
+#include <string.h>
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb {
 class SBInstruction;
-} // namespace lldb
+}
 
 namespace lldb_private {
 

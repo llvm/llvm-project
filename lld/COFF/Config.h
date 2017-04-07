@@ -160,6 +160,7 @@ struct Configuration {
   bool TerminalServerAware = true;
   bool LargeAddressAware = false;
   bool HighEntropyVA = false;
+  bool AppContainer = false;
 
   // This is for debugging.
   bool DebugPdb = false;

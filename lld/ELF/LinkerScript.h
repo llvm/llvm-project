@@ -99,12 +99,26 @@ struct SymbolAssignment : BaseCommand {
 // with ONLY_IF_RW is created if all input sections are RW.
 enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
+// This struct is used to represent the location and size of regions of
+// target memory. Instances of the struct are created by parsing the
+// MEMORY command.
+struct MemoryRegion {
+  std::string Name;
+  uint64_t Origin;
+  uint64_t Length;
+  uint64_t Offset;
+  uint32_t Flags;
+  uint32_t NegFlags;
+};
+
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
       : BaseCommand(OutputSectionKind), Name(Name) {}
 
   static bool classof(const BaseCommand *C);
 
+  OutputSection *Sec = nullptr;
+  MemoryRegion *MemRegion = nullptr;
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
@@ -176,18 +190,6 @@ struct PhdrsCommand {
   Expr LMAExpr;
 };
 
-// This struct is used to represent the location and size of regions of
-// target memory. Instances of the struct are created by parsing the
-// MEMORY command.
-struct MemoryRegion {
-  std::string Name;
-  uint64_t Origin;
-  uint64_t Length;
-  uint64_t Offset;
-  uint32_t Flags;
-  uint32_t NegFlags;
-};
-
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
   // Used to assign addresses to sections.
@@ -223,7 +225,7 @@ protected:
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
-  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd, OutputSection *Sec);
+  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd);
 
   void switchTo(OutputSection *Sec);
   void flush();

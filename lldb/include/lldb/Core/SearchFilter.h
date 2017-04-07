@@ -10,13 +10,44 @@
 #ifndef liblldb_SearchFilter_h_
 #define liblldb_SearchFilter_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/lldb-private.h"
+
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/lldb-forward.h"     // for SearchFilterSP, TargetSP, Modu...
+
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class Address;
+}
+namespace lldb_private {
+class Breakpoint;
+}
+namespace lldb_private {
+class CompileUnit;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class Function;
+}
+namespace lldb_private {
+class ModuleList;
+}
+namespace lldb_private {
+class SearchFilter;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class Target;
+}
 
 namespace lldb_private {
 

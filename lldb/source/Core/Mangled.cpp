@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FreeBSD9-STABLE requires this to know about size_t in cxxabi.h
-#include <cstddef>
+#include "lldb/Core/Mangled.h"
+
 #if defined(_WIN32)
-#include "lldb/Host/windows/windows.h"
+#include <windows.h>
+
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
@@ -21,24 +22,31 @@
 #include "lldb/Utility/FastDemangle.h"
 #include "llvm/Demangle/Demangle.h"
 #else
+// FreeBSD9-STABLE requires this to know about size_t in cxxabi.
+#include <cstddef>
 #include <cxxabi.h>
 #endif
 
-#include "llvm/ADT/DenseMap.h"
-
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include <ctype.h>
+#include "lldb/lldb-enumerations.h" // for LanguageType
+
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
+
+#include "llvm/ADT/StringRef.h"    // for StringRef
+#include "llvm/Support/Compiler.h" // for LLVM_PRETT...
+
+#include <mutex>   // for mutex, loc...
+#include <string>  // for string
+#include <utility> // for pair
+
 #include <stdlib.h>
 #include <string.h>
-
 using namespace lldb_private;
 
 #if defined(_MSC_VER)
