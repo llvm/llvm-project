@@ -169,14 +169,110 @@ PHIExpression::~PHIExpression() = default;
 // possible to split them up, it turns out to be *incredibly* complicated to get
 // it to work right, because of the interdependency.  While structurally
 // slightly messier, it is algorithmically much simpler and faster to do what we
-// do here,
-// and track them both at once in the same class.
-struct CongruenceClass {
-  using MemberSet = SmallPtrSet<Value *, 4>;
-  using MemoryMemberSet = SmallPtrSet<const MemoryPhi *, 2>;
+// do here, and track them both at once in the same class.
+// Note: The default iterators for this class iterate over values
+class CongruenceClass {
+public:
+  using MemberType = Value;
+  using MemberSet = SmallPtrSet<MemberType *, 4>;
+  using MemoryMemberType = MemoryPhi;
+  using MemoryMemberSet = SmallPtrSet<const MemoryMemberType *, 2>;
+
+  explicit CongruenceClass(unsigned ID) : ID(ID) {}
+  CongruenceClass(unsigned ID, Value *Leader, const Expression *E)
+      : ID(ID), RepLeader(Leader), DefiningExpr(E) {}
+  unsigned getID() const { return ID; }
+  // True if this class has no members left.  This is mainly used for assertion
+  // purposes, and for skipping empty classes.
+  bool isDead() const {
+    // If it's both dead from a value perspective, and dead from a memory
+    // perspective, it's really dead.
+    return empty() && memory_empty();
+  }
+  // Leader functions
+  Value *getLeader() const { return RepLeader; }
+  void setLeader(Value *Leader) { RepLeader = Leader; }
+  const std::pair<Value *, unsigned int> &getNextLeader() const {
+    return NextLeader;
+  }
+  void resetNextLeader() { NextLeader = {nullptr, ~0}; }
+
+  void addPossibleNextLeader(std::pair<Value *, unsigned int> LeaderPair) {
+    if (LeaderPair.second < NextLeader.second)
+      NextLeader = LeaderPair;
+  }
+
+  Value *getStoredValue() const { return RepStoredValue; }
+  void setStoredValue(Value *Leader) { RepStoredValue = Leader; }
+  const MemoryAccess *getMemoryLeader() const { return RepMemoryAccess; }
+  void setMemoryLeader(const MemoryAccess *Leader) { RepMemoryAccess = Leader; }
+
+  // Forward propagation info
+  const Expression *getDefiningExpr() const { return DefiningExpr; }
+  void setDefiningExpr(const Expression *E) { DefiningExpr = E; }
+
+  // Value member set
+  bool empty() const { return Members.empty(); }
+  unsigned size() const { return Members.size(); }
+  MemberSet::const_iterator begin() const { return Members.begin(); }
+  MemberSet::const_iterator end() const { return Members.end(); }
+  void insert(MemberType *M) { Members.insert(M); }
+  void erase(MemberType *M) { Members.erase(M); }
+  void swap(MemberSet &Other) { Members.swap(Other); }
+
+  // Memory member set
+  bool memory_empty() const { return MemoryMembers.empty(); }
+  unsigned memory_size() const { return MemoryMembers.size(); }
+  MemoryMemberSet::const_iterator memory_begin() const {
+    return MemoryMembers.begin();
+  }
+  MemoryMemberSet::const_iterator memory_end() const {
+    return MemoryMembers.end();
+  }
+  iterator_range<MemoryMemberSet::const_iterator> memory() const {
+    return make_range(memory_begin(), memory_end());
+  }
+  void memory_insert(const MemoryMemberType *M) { MemoryMembers.insert(M); }
+  void memory_erase(const MemoryMemberType *M) { MemoryMembers.erase(M); }
+
+  // Store count
+  unsigned getStoreCount() const { return StoreCount; }
+  void incStoreCount() { ++StoreCount; }
+  void decStoreCount() {
+    assert(StoreCount != 0 && "Store count went negative");
+    --StoreCount;
+  }
+
+  // Return true if two congruence classes are equivalent to each other.  This
+  // means
+  // that every field but the ID number and the dead field are equivalent.
+  bool isEquivalentTo(const CongruenceClass *Other) const {
+    if (!Other)
+      return false;
+    if (this == Other)
+      return true;
+
+    if (std::tie(StoreCount, RepLeader, RepStoredValue, RepMemoryAccess) !=
+        std::tie(Other->StoreCount, Other->RepLeader, Other->RepStoredValue,
+                 Other->RepMemoryAccess))
+      return false;
+    if (DefiningExpr != Other->DefiningExpr)
+      if (!DefiningExpr || !Other->DefiningExpr ||
+          *DefiningExpr != *Other->DefiningExpr)
+        return false;
+    // We need some ordered set
+    std::set<Value *> AMembers(Members.begin(), Members.end());
+    std::set<Value *> BMembers(Members.begin(), Members.end());
+    return AMembers == BMembers;
+  }
+
+private:
   unsigned ID;
   // Representative leader.
   Value *RepLeader = nullptr;
+  // The most dominating leader after our current leader, because the member set
+  // is not sorted and is expensive to keep sorted all the time.
+  std::pair<Value *, unsigned int> NextLeader = {nullptr, ~0U};
   // If this is represented by a store, the value of the store.
   Value *RepStoredValue = nullptr;
   // If this class contains MemoryDefs or MemoryPhis, this is the leading memory
@@ -190,50 +286,10 @@ struct CongruenceClass {
   // MemoryUses have real instructions representing them, so we only need to
   // track MemoryPhis here.
   MemoryMemberSet MemoryMembers;
-
   // Number of stores in this congruence class.
   // This is used so we can detect store equivalence changes properly.
   int StoreCount = 0;
-
-  // The most dominating leader after our current leader, because the member set
-  // is not sorted and is expensive to keep sorted all the time.
-  std::pair<Value *, unsigned int> NextLeader = {nullptr, ~0U};
-
-  explicit CongruenceClass(unsigned ID) : ID(ID) {}
-  CongruenceClass(unsigned ID, Value *Leader, const Expression *E)
-      : ID(ID), RepLeader(Leader), DefiningExpr(E) {}
-  // True if this class has no members left.  This is mainly used for assertion
-  // purposes, and for skipping empty classes.
-  bool isDead() const {
-    // If it's both dead from a value perspective, and dead from a memory
-    // perspective, it's really dead.
-    return Members.empty() && MemoryMembers.empty();
-  }
 };
-
-// Return true if two congruence classes are equivalent to each other.  This
-// means
-// that every field but the ID number and the dead field are equivalent.
-bool areClassesEquivalent(const CongruenceClass *A, const CongruenceClass *B) {
-  if (A == B)
-    return true;
-  if ((A && !B) || (B && !A))
-    return false;
-
-  if (std::tie(A->StoreCount, A->RepLeader, A->RepStoredValue,
-               A->RepMemoryAccess) != std::tie(B->StoreCount, B->RepLeader,
-                                               B->RepStoredValue,
-                                               B->RepMemoryAccess))
-    return false;
-  if (A->DefiningExpr != B->DefiningExpr)
-    if (!A->DefiningExpr || !B->DefiningExpr ||
-        *A->DefiningExpr != *B->DefiningExpr)
-      return false;
-  // We need some ordered set
-  std::set<Value *> AMembers(A->Members.begin(), A->Members.end());
-  std::set<Value *> BMembers(B->Members.begin(), B->Members.end());
-  return AMembers == BMembers;
-}
 
 namespace llvm {
 template <> struct DenseMapInfo<const Expression *> {
@@ -398,19 +454,19 @@ private:
 
   CongruenceClass *createMemoryClass(MemoryAccess *MA) {
     auto *CC = createCongruenceClass(nullptr, nullptr);
-    CC->RepMemoryAccess = MA;
+    CC->setMemoryLeader(MA);
     return CC;
   }
   CongruenceClass *ensureLeaderOfMemoryClass(MemoryAccess *MA) {
     auto *CC = getMemoryClass(MA);
-    if (CC->RepMemoryAccess != MA)
+    if (CC->getMemoryLeader() != MA)
       CC = createMemoryClass(MA);
     return CC;
   }
 
   CongruenceClass *createSingletonCongruenceClass(Value *Member) {
     CongruenceClass *CClass = createCongruenceClass(Member, nullptr);
-    CClass->Members.insert(Member);
+    CClass->insert(Member);
     ValueToClass[Member] = CClass;
     return CClass;
   }
@@ -460,12 +516,12 @@ private:
 
   // Elimination.
   struct ValueDFS;
-  void convertClassToDFSOrdered(const CongruenceClass::MemberSet &,
+  void convertClassToDFSOrdered(const CongruenceClass &,
                                 SmallVectorImpl<ValueDFS> &,
                                 DenseMap<const Value *, unsigned int> &,
-                                SmallPtrSetImpl<Instruction *> &);
-  void convertClassToLoadsAndStores(const CongruenceClass::MemberSet &,
-                                    SmallVectorImpl<ValueDFS> &);
+                                SmallPtrSetImpl<Instruction *> &) const;
+  void convertClassToLoadsAndStores(const CongruenceClass &,
+                                    SmallVectorImpl<ValueDFS> &) const;
 
   bool eliminateInstructions(Function &);
   void replaceInstruction(Instruction *, Value *);
@@ -670,13 +726,13 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
   }
 
   CongruenceClass *CC = ValueToClass.lookup(V);
-  if (CC && CC->DefiningExpr) {
+  if (CC && CC->getDefiningExpr()) {
     if (I)
       DEBUG(dbgs() << "Simplified " << *I << " to "
                    << " expression " << *V << "\n");
     NumGVNOpsSimplified++;
     deleteExpression(E);
-    return CC->DefiningExpr;
+    return CC->getDefiningExpr();
   }
   return nullptr;
 }
@@ -841,13 +897,13 @@ bool NewGVN::someEquivalentDominates(const Instruction *Inst,
   // any of these siblings.
   if (!CC)
     return false;
-  if (DT->dominates(cast<Instruction>(CC->RepLeader), U))
+  if (DT->dominates(cast<Instruction>(CC->getLeader()), U))
     return true;
-  if (CC->NextLeader.first &&
-      DT->dominates(cast<Instruction>(CC->NextLeader.first), U))
+  if (CC->getNextLeader().first &&
+      DT->dominates(cast<Instruction>(CC->getNextLeader().first), U))
     return true;
-  return llvm::any_of(CC->Members, [&](const Value *Member) {
-    return Member != CC->RepLeader &&
+  return llvm::any_of(*CC, [&](const Value *Member) {
+    return Member != CC->getLeader() &&
            DT->dominates(cast<Instruction>(Member), U);
   });
 }
@@ -862,7 +918,7 @@ Value *NewGVN::lookupOperandLeader(Value *V) const {
     // RepLeader to undef.
     if (CC == TOPClass)
       return UndefValue::get(V->getType());
-    return CC->RepStoredValue ? CC->RepStoredValue : CC->RepLeader;
+    return CC->getStoredValue() ? CC->getStoredValue() : CC->getLeader();
   }
 
   return V;
@@ -870,10 +926,11 @@ Value *NewGVN::lookupOperandLeader(Value *V) const {
 
 const MemoryAccess *NewGVN::lookupMemoryLeader(const MemoryAccess *MA) const {
   auto *CC = getMemoryClass(MA);
-  assert(CC->RepMemoryAccess && "Every MemoryAccess should be mapped to a "
-                                "congruence class with a represenative memory "
-                                "access");
-  return CC->RepMemoryAccess;
+  assert(CC->getMemoryLeader() &&
+         "Every MemoryAccess should be mapped to a "
+         "congruence class with a represenative memory "
+         "access");
+  return CC->getMemoryLeader();
 }
 
 // Return true if the MemoryAccess is really equivalent to everything. This is
@@ -882,7 +939,6 @@ const MemoryAccess *NewGVN::lookupMemoryLeader(const MemoryAccess *MA) const {
 bool NewGVN::isMemoryAccessTop(const MemoryAccess *MA) const {
   return getMemoryClass(MA) == TOPClass;
 }
-
 
 LoadExpression *NewGVN::createLoadExpression(Type *LoadType, Value *PointerOp,
                                              LoadInst *LI,
@@ -952,7 +1008,7 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {
     // The RepStoredValue gets nulled if all the stores disappear in a class, so
     // we don't need to check if the class contains a store besides us.
     if (LastCC &&
-        LastCC->RepStoredValue == lookupOperandLeader(SI->getValueOperand()))
+        LastCC->getStoredValue() == lookupOperandLeader(SI->getValueOperand()))
       return LastStore;
     deleteExpression(LastStore);
     // Also check if our value operand is defined by a load of the same memory
@@ -1195,7 +1251,7 @@ const Expression *NewGVN::performSymbolicCallEvaluation(Instruction *I) {
     }
   }
   if (AA->doesNotAccessMemory(CI)) {
-    return createCallExpression(CI, TOPClass->RepMemoryAccess);
+    return createCallExpression(CI, TOPClass->getMemoryLeader());
   } else if (AA->onlyReadsMemory(CI)) {
     MemoryAccess *DefiningAccess = MSSAWalker->getClobberingMemoryAccess(CI);
     return createCallExpression(CI, DefiningAccess);
@@ -1219,8 +1275,8 @@ bool NewGVN::setMemoryClass(const MemoryAccess *From,
          "Every MemoryAccess should be getting mapped to a non-null class");
   DEBUG(dbgs() << "Setting " << *From);
   DEBUG(dbgs() << " equivalent to congruence class ");
-  DEBUG(dbgs() << NewClass->ID << " with current MemoryAccess leader ");
-  DEBUG(dbgs() << *NewClass->RepMemoryAccess);
+  DEBUG(dbgs() << NewClass->getID() << " with current MemoryAccess leader ");
+  DEBUG(dbgs() << *NewClass->getMemoryLeader());
   DEBUG(dbgs() << "\n");
 
   auto LookupResult = MemoryAccessToClass.find(From);
@@ -1231,17 +1287,17 @@ bool NewGVN::setMemoryClass(const MemoryAccess *From,
     if (OldClass != NewClass) {
       // If this is a phi, we have to handle memory member updates.
       if (auto *MP = dyn_cast<MemoryPhi>(From)) {
-        OldClass->MemoryMembers.erase(MP);
-        NewClass->MemoryMembers.insert(MP);
+        OldClass->memory_erase(MP);
+        NewClass->memory_insert(MP);
         // This may have killed the class if it had no non-memory members
-        if (OldClass->RepMemoryAccess == From) {
-          if (OldClass->MemoryMembers.empty()) {
-            OldClass->RepMemoryAccess = nullptr;
+        if (OldClass->getMemoryLeader() == From) {
+          if (OldClass->memory_empty()) {
+            OldClass->setMemoryLeader(nullptr);
           } else {
-            // TODO: Verify memory phi leader cycling is not possible
-            OldClass->RepMemoryAccess = getNextMemoryLeader(OldClass);
+            OldClass->setMemoryLeader(getNextMemoryLeader(OldClass));
             DEBUG(dbgs() << "Memory class leader change for class "
-                         << OldClass->ID << " to " << *OldClass->RepMemoryAccess
+                         << OldClass->getID() << " to "
+                         << *OldClass->getMemoryLeader()
                          << " due to removal of a memory member " << *From
                          << "\n");
             markMemoryLeaderChangeTouched(OldClass);
@@ -1593,14 +1649,14 @@ void NewGVN::markPredicateUsersTouched(Instruction *I) {
 
 // Mark users affected by a memory leader change.
 void NewGVN::markMemoryLeaderChangeTouched(CongruenceClass *CC) {
-  for (auto M : CC->MemoryMembers)
+  for (auto M : CC->memory())
     markMemoryDefTouched(M);
 }
 
 // Touch the instructions that need to be updated after a congruence class has a
 // leader change, and mark changed values.
 void NewGVN::markValueLeaderChangeTouched(CongruenceClass *CC) {
-  for (auto M : CC->Members) {
+  for (auto M : *CC) {
     if (auto *I = dyn_cast<Instruction>(M))
       TouchedInstructions.set(InstrToDFSNum(I));
     LeaderChanges.insert(M);
@@ -1627,24 +1683,23 @@ const MemoryAccess *NewGVN::getNextMemoryLeader(CongruenceClass *CC) const {
   // TODO: If this ends up to slow, we can maintain a next memory leader like we
   // do for regular leaders.
   // Make sure there will be a leader to find
-  assert(CC->StoreCount > 0 ||
-         !CC->MemoryMembers.empty() &&
-             "Can't get next leader if there is none");
-  if (CC->StoreCount > 0) {
-    if (auto *NL = dyn_cast_or_null<StoreInst>(CC->NextLeader.first))
+  assert(CC->getStoreCount() > 0 ||
+         !CC->memory_empty() && "Can't get next leader if there is none");
+  if (CC->getStoreCount() > 0) {
+    if (auto *NL = dyn_cast_or_null<StoreInst>(CC->getNextLeader().first))
       return MSSA->getMemoryAccess(NL);
     // Find the store with the minimum DFS number.
     auto *V = getMinDFSOfRange<Value>(make_filter_range(
-        CC->Members, [&](const Value *V) { return isa<StoreInst>(V); }));
+        *CC, [&](const Value *V) { return isa<StoreInst>(V); }));
     return MSSA->getMemoryAccess(cast<StoreInst>(V));
   }
-  assert(CC->StoreCount == 0);
+  assert(CC->getStoreCount() == 0);
 
   // Given our assertion, hitting this part must mean
-  // !OldClass->MemoryMembers.empty()
-  if (CC->MemoryMembers.size() == 1)
-    return *CC->MemoryMembers.begin();
-  return getMinDFSOfRange<const MemoryPhi>(CC->MemoryMembers);
+  // !OldClass->memory_empty()
+  if (CC->memory_size() == 1)
+    return *CC->memory_begin();
+  return getMinDFSOfRange<const MemoryPhi>(CC->memory());
 }
 
 // This function returns the next value leader of a congruence class, under the
@@ -1655,17 +1710,17 @@ Value *NewGVN::getNextValueLeader(CongruenceClass *CC) const {
   // sorting the TOP class because everything either gets out of it or is
   // unreachable.
 
-  if (CC->Members.size() == 1 || CC == TOPClass) {
-    return *(CC->Members.begin());
-  } else if (CC->NextLeader.first) {
+  if (CC->size() == 1 || CC == TOPClass) {
+    return *(CC->begin());
+  } else if (CC->getNextLeader().first) {
     ++NumGVNAvoidedSortedLeaderChanges;
-    return CC->NextLeader.first;
+    return CC->getNextLeader().first;
   } else {
     ++NumGVNSortedLeaderChanges;
     // NOTE: If this ends up to slow, we can maintain a dual structure for
     // member testing/insertion, or keep things mostly sorted, and sort only
     // here, or use SparseBitVector or ....
-    return getMinDFSOfRange<Value>(CC->Members);
+    return getMinDFSOfRange<Value>(*CC);
   }
 }
 
@@ -1683,31 +1738,33 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
                                             CongruenceClass *NewClass) {
   // If the leader is I, and we had a represenative MemoryAccess, it should
   // be the MemoryAccess of OldClass.
-  assert(!InstMA || !OldClass->RepMemoryAccess || OldClass->RepLeader != I ||
-         OldClass->RepMemoryAccess == InstMA &&
+  assert(!InstMA || !OldClass->getMemoryLeader() ||
+         OldClass->getLeader() != I ||
+         OldClass->getMemoryLeader() == InstMA &&
              "Representative MemoryAccess mismatch");
   // First, see what happens to the new class
-  if (!NewClass->RepMemoryAccess) {
+  if (!NewClass->getMemoryLeader()) {
     // Should be a new class, or a store becoming a leader of a new class.
-    assert(NewClass->Members.size() == 1 ||
-           (isa<StoreInst>(I) && NewClass->StoreCount == 1));
-    NewClass->RepMemoryAccess = InstMA;
+    assert(NewClass->size() == 1 ||
+           (isa<StoreInst>(I) && NewClass->getStoreCount() == 1));
+    NewClass->setMemoryLeader(InstMA);
     // Mark it touched if we didn't just create a singleton
-    DEBUG(dbgs() << "Memory class leader change for class " << NewClass->ID
+    DEBUG(dbgs() << "Memory class leader change for class " << NewClass->getID()
                  << " due to new memory instruction becoming leader\n");
     markMemoryLeaderChangeTouched(NewClass);
   }
   setMemoryClass(InstMA, NewClass);
   // Now, fixup the old class if necessary
-  if (OldClass->RepMemoryAccess == InstMA) {
-    if (OldClass->StoreCount != 0 || !OldClass->MemoryMembers.empty()) {
-      OldClass->RepMemoryAccess = getNextMemoryLeader(OldClass);
-      DEBUG(dbgs() << "Memory class leader change for class " << OldClass->ID
-                   << " to " << *OldClass->RepMemoryAccess
+  if (OldClass->getMemoryLeader() == InstMA) {
+    if (OldClass->getStoreCount() != 0 || !OldClass->memory_empty()) {
+      OldClass->setMemoryLeader(getNextMemoryLeader(OldClass));
+      DEBUG(dbgs() << "Memory class leader change for class "
+                   << OldClass->getID() << " to "
+                   << *OldClass->getMemoryLeader()
                    << " due to removal of old leader " << *InstMA << "\n");
       markMemoryLeaderChangeTouched(OldClass);
     } else
-      OldClass->RepMemoryAccess = nullptr;
+      OldClass->setMemoryLeader(nullptr);
   }
 }
 
@@ -1716,20 +1773,20 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
 void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
                                            CongruenceClass *OldClass,
                                            CongruenceClass *NewClass) {
-  if (I == OldClass->NextLeader.first)
-    OldClass->NextLeader = {nullptr, ~0U};
+  if (I == OldClass->getNextLeader().first)
+    OldClass->resetNextLeader();
 
   // It's possible, though unlikely, for us to discover equivalences such
   // that the current leader does not dominate the old one.
   // This statistic tracks how often this happens.
   // We assert on phi nodes when this happens, currently, for debugging, because
   // we want to make sure we name phi node cycles properly.
-  if (isa<Instruction>(NewClass->RepLeader) && NewClass->RepLeader &&
-      I != NewClass->RepLeader) {
+  if (isa<Instruction>(NewClass->getLeader()) && NewClass->getLeader() &&
+      I != NewClass->getLeader()) {
     auto *IBB = I->getParent();
-    auto *NCBB = cast<Instruction>(NewClass->RepLeader)->getParent();
+    auto *NCBB = cast<Instruction>(NewClass->getLeader())->getParent();
     bool Dominated =
-        IBB == NCBB && InstrToDFSNum(I) < InstrToDFSNum(NewClass->RepLeader);
+        IBB == NCBB && InstrToDFSNum(I) < InstrToDFSNum(NewClass->getLeader());
     Dominated = Dominated || DT->properlyDominates(IBB, NCBB);
     if (Dominated) {
       ++NumGVNNotMostDominatingLeader;
@@ -1739,76 +1796,71 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
     }
   }
 
-  if (NewClass->RepLeader != I) {
-    auto DFSNum = InstrToDFSNum(I);
-    if (DFSNum < NewClass->NextLeader.second)
-      NewClass->NextLeader = {I, DFSNum};
-  }
+  if (NewClass->getLeader() != I)
+    NewClass->addPossibleNextLeader({I, InstrToDFSNum(I)});
 
-  OldClass->Members.erase(I);
-  NewClass->Members.insert(I);
+  OldClass->erase(I);
+  NewClass->insert(I);
   // Handle our special casing of stores.
   if (auto *SI = dyn_cast<StoreInst>(I)) {
-    --OldClass->StoreCount;
-    assert(OldClass->StoreCount >= 0);
-    // Okay, so when do we want to make a store a leader of a class?  If we have
-    // a store defined by an earlier load, we want the earlier load to lead the
-    // class.  If we have a store defined by something else, we want the store
-    // to lead the class so everything else gets the "something else" as a
-    // value.
+    OldClass->decStoreCount();
+    // Okay, so when do we want to make a store a leader of a class?
+    // If we have a store defined by an earlier load, we want the earlier load
+    // to lead the class.
+    // If we have a store defined by something else, we want the store to lead
+    // the class so everything else gets the "something else" as a value.
     // If we have a store as the single member of the class, we want the store
-    // as the leader.
-    if (NewClass->StoreCount == 0 && !NewClass->RepStoredValue) {
+    // as the leader
+    if (NewClass->getStoreCount() == 0 && !NewClass->getStoredValue()) {
       // If it's a store expression we are using, it means we are not equivalent
       // to something earlier.
       if (isa<StoreExpression>(E)) {
         assert(lookupOperandLeader(SI->getValueOperand()) !=
-               NewClass->RepLeader);
-        NewClass->RepStoredValue = lookupOperandLeader(SI->getValueOperand());
+               NewClass->getLeader());
+        NewClass->setStoredValue(lookupOperandLeader(SI->getValueOperand()));
         markValueLeaderChangeTouched(NewClass);
         // Shift the new class leader to be the store
-        DEBUG(dbgs() << "Changing leader of congruence class " << NewClass->ID
-                     << " from " << *NewClass->RepLeader << " to  " << *SI
-                     << " because store joined class\n");
+        DEBUG(dbgs() << "Changing leader of congruence class "
+                     << NewClass->getID() << " from " << *NewClass->getLeader()
+                     << " to  " << *SI << " because store joined class\n");
         // If we changed the leader, we have to mark it changed because we don't
         // know what it will do to symbolic evlauation.
-        NewClass->RepLeader = SI;
+        NewClass->setLeader(SI);
       }
       // We rely on the code below handling the MemoryAccess change.
     }
-    ++NewClass->StoreCount;
-    assert(NewClass->StoreCount > 0);
+    NewClass->incStoreCount();
   }
   // True if there is no memory instructions left in a class that had memory
   // instructions before.
 
   // If it's not a memory use, set the MemoryAccess equivalence
   auto *InstMA = dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(I));
-  bool InstWasMemoryLeader = InstMA && OldClass->RepMemoryAccess == InstMA;
+  bool InstWasMemoryLeader = InstMA && OldClass->getMemoryLeader() == InstMA;
   if (InstMA)
     moveMemoryToNewCongruenceClass(I, InstMA, OldClass, NewClass);
   ValueToClass[I] = NewClass;
   // See if we destroyed the class or need to swap leaders.
-  if (OldClass->Members.empty() && OldClass != TOPClass) {
-    if (OldClass->DefiningExpr) {
-      DEBUG(dbgs() << "Erasing expression " << OldClass->DefiningExpr
+  if (OldClass->empty() && OldClass != TOPClass) {
+    if (OldClass->getDefiningExpr()) {
+      DEBUG(dbgs() << "Erasing expression " << OldClass->getDefiningExpr()
                    << " from table\n");
-      ExpressionToClass.erase(OldClass->DefiningExpr);
+      ExpressionToClass.erase(OldClass->getDefiningExpr());
     }
-  } else if (OldClass->RepLeader == I) {
+  } else if (OldClass->getLeader() == I) {
     // When the leader changes, the value numbering of
     // everything may change due to symbolization changes, so we need to
     // reprocess.
-    DEBUG(dbgs() << "Value class leader change for class " << OldClass->ID
+    DEBUG(dbgs() << "Value class leader change for class " << OldClass->getID()
                  << "\n");
     ++NumGVNLeaderChanges;
     // Destroy the stored value if there are no more stores to represent it.
     // Note that this is basically clean up for the expression removal that
     // happens below.  If we remove stores from a class, we may leave it as a
     // class of equivalent memory phis.
-    if (OldClass->StoreCount == 0) {
-      if (OldClass->RepStoredValue)
-        OldClass->RepStoredValue = nullptr;
+    if (OldClass->getStoreCount() == 0) {
+      if (OldClass->getStoredValue())
+        OldClass->setStoredValue(nullptr);
     }
     // If we destroy the old access leader and it's a store, we have to
     // effectively destroy the congruence class.  When it comes to scalars,
@@ -1829,14 +1881,14 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
     // different for memory phis, becuase they are evaluated anew each time, and
     // they become equal not by hashing, but by seeing if all operands are the
     // same (or only one is reachable).
-    if (OldClass->StoreCount > 0 && InstWasMemoryLeader) {
-      DEBUG(dbgs() << "Kicking everything out of class " << OldClass->ID
+    if (OldClass->getStoreCount() > 0 && InstWasMemoryLeader) {
+      DEBUG(dbgs() << "Kicking everything out of class " << OldClass->getID()
                    << " because MemoryAccess leader changed");
-      for (auto Member : OldClass->Members)
+      for (auto Member : *OldClass)
         ExpressionToClass.erase(ValueToExpression.lookup(Member));
     }
-    OldClass->RepLeader = getNextValueLeader(OldClass);
-    OldClass->NextLeader = {nullptr, ~0U};
+    OldClass->setLeader(getNextValueLeader(OldClass));
+    OldClass->resetNextLeader();
     markValueLeaderChangeTouched(OldClass);
   }
 }
@@ -1866,34 +1918,34 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
 
       // Constants and variables should always be made the leader.
       if (const auto *CE = dyn_cast<ConstantExpression>(E)) {
-        NewClass->RepLeader = CE->getConstantValue();
+        NewClass->setLeader(CE->getConstantValue());
       } else if (const auto *SE = dyn_cast<StoreExpression>(E)) {
         StoreInst *SI = SE->getStoreInst();
-        NewClass->RepLeader = SI;
-        NewClass->RepStoredValue = lookupOperandLeader(SI->getValueOperand());
+        NewClass->setLeader(SI);
+        NewClass->setStoredValue(lookupOperandLeader(SI->getValueOperand()));
         // The RepMemoryAccess field will be filled in properly by the
         // moveValueToNewCongruenceClass call.
       } else {
-        NewClass->RepLeader = I;
+        NewClass->setLeader(I);
       }
       assert(!isa<VariableExpression>(E) &&
              "VariableExpression should have been handled already");
 
       EClass = NewClass;
       DEBUG(dbgs() << "Created new congruence class for " << *I
-                   << " using expression " << *E << " at " << NewClass->ID
-                   << " and leader " << *(NewClass->RepLeader));
-      if (NewClass->RepStoredValue)
-        DEBUG(dbgs() << " and stored value " << *(NewClass->RepStoredValue));
+                   << " using expression " << *E << " at " << NewClass->getID()
+                   << " and leader " << *(NewClass->getLeader()));
+      if (NewClass->getStoredValue())
+        DEBUG(dbgs() << " and stored value " << *(NewClass->getStoredValue()));
       DEBUG(dbgs() << "\n");
     } else {
       EClass = lookupResult.first->second;
       if (isa<ConstantExpression>(E))
-        assert(
-            isa<Constant>(EClass->RepLeader) ||
-            (EClass->RepStoredValue && isa<Constant>(EClass->RepStoredValue)) &&
-                "Any class with a constant expression should have a "
-                "constant leader");
+        assert(isa<Constant>(EClass->getLeader()) ||
+               (EClass->getStoredValue() &&
+                isa<Constant>(EClass->getStoredValue())) &&
+                   "Any class with a constant expression should have a "
+                   "constant leader");
 
       assert(EClass && "Somehow don't have an eclass");
 
@@ -1903,7 +1955,7 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   bool ClassChanged = IClass != EClass;
   bool LeaderChanged = LeaderChanges.erase(I);
   if (ClassChanged || LeaderChanged) {
-    DEBUG(dbgs() << "New class " << EClass->ID << " for expression " << *E
+    DEBUG(dbgs() << "New class " << EClass->getID() << " for expression " << *E
                  << "\n");
     if (ClassChanged)
       moveValueToNewCongruenceClass(I, E, IClass, EClass);
@@ -2054,9 +2106,8 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
   // the access "it reaches all the way back to the beginning of the function"
 
   // Initialize all other instructions to be in TOP class.
-  CongruenceClass::MemberSet InitialValues;
   TOPClass = createCongruenceClass(nullptr, nullptr);
-  TOPClass->RepMemoryAccess = MSSA->getLiveOnEntryDef();
+  TOPClass->setMemoryLeader(MSSA->getLiveOnEntryDef());
   //  The live on entry def gets put into it's own class
   MemoryAccessToClass[MSSA->getLiveOnEntryDef()] =
       createMemoryClass(MSSA->getLiveOnEntryDef());
@@ -2074,23 +2125,22 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
         // Insert the memory phis into the member list.
         if (!MD) {
           const MemoryPhi *MP = cast<MemoryPhi>(&Def);
-          TOPClass->MemoryMembers.insert(MP);
+          TOPClass->memory_insert(MP);
           MemoryPhiState.insert({MP, MPS_TOP});
         }
 
         if (MD && isa<StoreInst>(MD->getMemoryInst()))
-          ++TOPClass->StoreCount;
+          TOPClass->incStoreCount();
       }
     for (auto &I : B) {
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.
       if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
         continue;
-      InitialValues.insert(&I);
+      TOPClass->insert(&I);
       ValueToClass[&I] = TOPClass;
     }
   }
-  TOPClass->Members.swap(InitialValues);
 
   // Initialize arguments to be in their own unique congruence classes
   for (auto &FA : F.args())
@@ -2099,8 +2149,8 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
 
 void NewGVN::cleanupTables() {
   for (unsigned i = 0, e = CongruenceClasses.size(); i != e; ++i) {
-    DEBUG(dbgs() << "Congruence class " << CongruenceClasses[i]->ID << " has "
-                 << CongruenceClasses[i]->Members.size() << " members\n");
+    DEBUG(dbgs() << "Congruence class " << CongruenceClasses[i]->getID()
+                 << " has " << CongruenceClasses[i]->size() << " members\n");
     // Make sure we delete the congruence class (probably worth switching to
     // a unique_ptr at some point.
     delete CongruenceClasses[i];
@@ -2299,20 +2349,22 @@ void NewGVN::verifyMemoryCongruency() const {
   for (const auto *CC : CongruenceClasses) {
     if (CC == TOPClass || CC->isDead())
       continue;
-    if (CC->StoreCount != 0) {
-      assert(CC->RepStoredValue ||
-             !isa<StoreInst>(CC->RepLeader) && "Any class with a store as a "
-                                               "leader should have a "
-                                               "representative stored value\n");
-      assert(CC->RepMemoryAccess && "Any congruence class with a store should "
-                                    "have a representative access\n");
+    if (CC->getStoreCount() != 0) {
+      assert(CC->getStoredValue() ||
+             !isa<StoreInst>(CC->getLeader()) &&
+                 "Any class with a store as a "
+                 "leader should have a "
+                 "representative stored value\n");
+      assert(CC->getMemoryLeader() &&
+             "Any congruence class with a store should "
+             "have a representative access\n");
     }
 
-    if (CC->RepMemoryAccess)
-      assert(MemoryAccessToClass.lookup(CC->RepMemoryAccess) == CC &&
+    if (CC->getMemoryLeader())
+      assert(MemoryAccessToClass.lookup(CC->getMemoryLeader()) == CC &&
              "Representative MemoryAccess does not appear to be reverse "
              "mapped properly");
-    for (auto M : CC->MemoryMembers)
+    for (auto M : CC->memory())
       assert(MemoryAccessToClass.lookup(M) == CC &&
              "Memory member does not appear to be reverse mapped properly");
   }
@@ -2341,7 +2393,7 @@ void NewGVN::verifyMemoryCongruency() const {
     assert(KV.second != TOPClass &&
            "Memory not unreachable but ended up in TOP");
     if (auto *FirstMUD = dyn_cast<MemoryUseOrDef>(KV.first)) {
-      auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second->RepMemoryAccess);
+      auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second->getMemoryLeader());
       if (FirstMUD && SecondMUD)
         assert((singleReachablePHIPath(FirstMUD, SecondMUD) ||
                 ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
@@ -2415,7 +2467,7 @@ void NewGVN::verifyIterationSettled(Function &F) {
     // Note that the classes can't change at this point, so we memoize the set
     // that are equal.
     if (!EqualClasses.count({BeforeCC, AfterCC})) {
-      assert(areClassesEquivalent(BeforeCC, AfterCC) &&
+      assert(BeforeCC->isEquivalentTo(AfterCC) &&
              "Value number changed after main loop completed!");
       EqualClasses.insert({BeforeCC, AfterCC});
     }
@@ -2656,10 +2708,9 @@ struct NewGVN::ValueDFS {
 // seem
 // dead (have no non-dead uses) are stored in ProbablyDead.
 void NewGVN::convertClassToDFSOrdered(
-    const CongruenceClass::MemberSet &Dense,
-    SmallVectorImpl<ValueDFS> &DFSOrderedSet,
+    const CongruenceClass &Dense, SmallVectorImpl<ValueDFS> &DFSOrderedSet,
     DenseMap<const Value *, unsigned int> &UseCounts,
-    SmallPtrSetImpl<Instruction *> &ProbablyDead) {
+    SmallPtrSetImpl<Instruction *> &ProbablyDead) const {
   for (auto D : Dense) {
     // First add the value.
     BasicBlock *BB = getBlockForValue(D);
@@ -2736,8 +2787,8 @@ void NewGVN::convertClassToDFSOrdered(
 // This function converts the set of members for a congruence class from values,
 // to the set of defs for loads and stores, with associated DFS info.
 void NewGVN::convertClassToLoadsAndStores(
-    const CongruenceClass::MemberSet &Dense,
-    SmallVectorImpl<ValueDFS> &LoadsAndStores) {
+    const CongruenceClass &Dense,
+    SmallVectorImpl<ValueDFS> &LoadsAndStores) const {
   for (auto D : Dense) {
     if (!isa<LoadInst>(D) && !isa<StoreInst>(D))
       continue;
@@ -2928,12 +2979,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
     // dead store elimination.
     SmallVector<ValueDFS, 8> PossibleDeadStores;
     SmallPtrSet<Instruction *, 8> ProbablyDead;
-    if (CC->isDead() || CC->Members.empty())
+    if (CC->isDead() || CC->empty())
       continue;
     // Everything still in the TOP class is unreachable or dead.
     if (CC == TOPClass) {
 #ifndef NDEBUG
-      for (auto M : CC->Members)
+      for (auto M : *CC)
         assert((!ReachableBlocks.count(cast<Instruction>(M)->getParent()) ||
                 InstructionsToErase.count(cast<Instruction>(M))) &&
                "Everything in TOP should be unreachable or dead at this "
@@ -2942,15 +2993,16 @@ bool NewGVN::eliminateInstructions(Function &F) {
       continue;
     }
 
-    assert(CC->RepLeader && "We should have had a leader");
+    assert(CC->getLeader() && "We should have had a leader");
     // If this is a leader that is always available, and it's a
     // constant or has no equivalences, just replace everything with
     // it. We then update the congruence class with whatever members
     // are left.
-    Value *Leader = CC->RepStoredValue ? CC->RepStoredValue : CC->RepLeader;
+    Value *Leader =
+        CC->getStoredValue() ? CC->getStoredValue() : CC->getLeader();
     if (alwaysAvailable(Leader)) {
       CongruenceClass::MemberSet MembersLeft;
-      for (auto M : CC->Members) {
+      for (auto M : *CC) {
         Value *Member = M;
         // Void things have no uses we can replace.
         if (Member == Leader || !isa<Instruction>(Member) ||
@@ -2965,11 +3017,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
         replaceInstruction(I, Leader);
         AnythingReplaced = true;
       }
-      CC->Members.swap(MembersLeft);
+      CC->swap(MembersLeft);
     } else {
-      DEBUG(dbgs() << "Eliminating in congruence class " << CC->ID << "\n");
+      DEBUG(dbgs() << "Eliminating in congruence class " << CC->getID()
+                   << "\n");
       // If this is a singleton, we can skip it.
-      if (CC->Members.size() != 1) {
+      if (CC->size() != 1) {
         // This is a stack because equality replacement/etc may place
         // constants in the middle of the member list, and we want to use
         // those constant values in preference to the current leader, over
@@ -2978,8 +3031,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
         // Convert the members to DFS ordered sets and then merge them.
         SmallVector<ValueDFS, 8> DFSOrderedSet;
-        convertClassToDFSOrdered(CC->Members, DFSOrderedSet, UseCounts,
-                                 ProbablyDead);
+        convertClassToDFSOrdered(*CC, DFSOrderedSet, UseCounts, ProbablyDead);
 
         // Sort the whole thing.
         std::sort(DFSOrderedSet.begin(), DFSOrderedSet.end());
@@ -3110,15 +3162,15 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
     // Cleanup the congruence class.
     CongruenceClass::MemberSet MembersLeft;
-    for (auto *Member : CC->Members)
+    for (auto *Member : *CC)
       if (!isa<Instruction>(Member) ||
           !InstructionsToErase.count(cast<Instruction>(Member)))
         MembersLeft.insert(Member);
-    CC->Members.swap(MembersLeft);
+    CC->swap(MembersLeft);
 
     // If we have possible dead stores to look at, try to eliminate them.
-    if (CC->StoreCount > 0) {
-      convertClassToLoadsAndStores(CC->Members, PossibleDeadStores);
+    if (CC->getStoreCount() > 0) {
+      convertClassToLoadsAndStores(*CC, PossibleDeadStores);
       std::sort(PossibleDeadStores.begin(), PossibleDeadStores.end());
       ValueDFSStack EliminationStack;
       for (auto &VD : PossibleDeadStores) {
@@ -3145,7 +3197,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
         DEBUG(dbgs() << "Marking dead store " << *Member
                      << " that is dominated by " << *Leader << "\n");
         markInstructionForDeletion(Member);
-        CC->Members.erase(Member);
+        CC->erase(Member);
         ++NumGVNDeadStores;
       }
     }

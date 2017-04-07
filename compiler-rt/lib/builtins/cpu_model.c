@@ -27,6 +27,10 @@
 #include <intrin.h>
 #endif
 
+#ifndef __has_attribute
+#define __has_attribute(attr) 0
+#endif
+
 enum VendorSignatures {
   SIG_INTEL = 0x756e6547 /* Genu */,
   SIG_AMD = 0x68747541 /* Auth */
@@ -720,14 +724,17 @@ static unsigned getAvailableFeatures(unsigned int ECX, unsigned int EDX,
   return Features;
 }
 
-#ifdef HAVE_INIT_PRIORITY
-#define CONSTRUCTOR_PRIORITY (101)
+#if defined(HAVE_INIT_PRIORITY)
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__ 101))
+#elif __has_attribute(__constructor__)
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__))
 #else
-#define CONSTRUCTOR_PRIORITY
+// FIXME: For MSVC, we should make a function pointer global in .CRT$X?? so that
+// this runs during initialization.
+#define CONSTRUCTOR_ATTRIBUTE
 #endif
 
-int __cpu_indicator_init(void)
-    __attribute__((constructor CONSTRUCTOR_PRIORITY));
+int __cpu_indicator_init(void) CONSTRUCTOR_ATTRIBUTE;
 
 struct __processor_model {
   unsigned int __cpu_vendor;
@@ -742,7 +749,7 @@ struct __processor_model {
    the priority set.  However, it still runs after ifunc initializers and
    needs to be called explicitly there.  */
 
-int __attribute__((constructor CONSTRUCTOR_PRIORITY))
+int CONSTRUCTOR_ATTRIBUTE
 __cpu_indicator_init(void) {
   unsigned int EAX, EBX, ECX, EDX;
   unsigned int MaxLeaf = 5;
