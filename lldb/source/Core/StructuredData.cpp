@@ -9,17 +9,26 @@
 
 #include "lldb/Core/StructuredData.h"
 
-#include <errno.h>
-#include <inttypes.h>
-#include <stdlib.h>
-
 #include "lldb/Host/File.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h" // for FilePermissions::eFilePermiss...
+#include "lldb/lldb-forward.h"      // for DataBufferSP
+
+#include "llvm/ADT/STLExtras.h" // for make_unique
+
+#include <limits> // for numeric_limits
+
+#include <errno.h>
+#include <inttypes.h>
+#include <stdio.h> // for printf
+#include <stdlib.h>
+#include <sys/types.h> // for off_t
 
 using namespace lldb_private;
 
@@ -70,10 +79,8 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Error &error) {
 
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed
-  // by the time this function is called
-  std::unique_ptr<StructuredData::Dictionary> dict_up(
-      new StructuredData::Dictionary());
+  // consumed by the time this function is called
+  auto dict_up = llvm::make_unique<StructuredData::Dictionary>();
 
   std::string value;
   std::string key;
@@ -105,7 +112,7 @@ static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been
   // consumed
   // by the time this function is called
-  std::unique_ptr<StructuredData::Array> array_up(new StructuredData::Array());
+  auto array_up = llvm::make_unique<StructuredData::Array>();
 
   std::string value;
   std::string key;
@@ -142,26 +149,26 @@ static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser) {
     bool success = false;
     uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
     if (success)
-      return StructuredData::ObjectSP(new StructuredData::Integer(uval));
+      return std::make_shared<StructuredData::Integer>(uval);
   } break;
 
   case JSONParser::Token::Float: {
     bool success = false;
     double val = StringConvert::ToDouble(value.c_str(), 0.0, &success);
     if (success)
-      return StructuredData::ObjectSP(new StructuredData::Float(val));
+      return std::make_shared<StructuredData::Float>(val);
   } break;
 
   case JSONParser::Token::String:
-    return StructuredData::ObjectSP(new StructuredData::String(value));
+    return std::make_shared<StructuredData::String>(value);
 
   case JSONParser::Token::True:
   case JSONParser::Token::False:
-    return StructuredData::ObjectSP(
-        new StructuredData::Boolean(token == JSONParser::Token::True));
+    return std::make_shared<StructuredData::Boolean>(token ==
+                                                     JSONParser::Token::True);
 
   case JSONParser::Token::Null:
-    return StructuredData::ObjectSP(new StructuredData::Null());
+    return std::make_shared<StructuredData::Null>();
 
   default:
     break;

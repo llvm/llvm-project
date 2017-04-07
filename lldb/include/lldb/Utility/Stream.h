@@ -10,17 +10,16 @@
 #ifndef liblldb_Stream_h_
 #define liblldb_Stream_h_
 
-// C Includes
-#include <stdarg.h>
-
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
-
-#include "lldb/lldb-private.h"
-
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h" // for ByteOrder::eByteOrderInvalid
+#include "llvm/ADT/StringRef.h"     // for StringRef
 #include "llvm/Support/FormatVariadic.h"
+
+#include <stdarg.h>
+#include <stddef.h>    // for size_t
+#include <stdint.h>    // for uint32_t, uint64_t, uint8_t
+#include <type_traits> // for forward
 
 namespace lldb_private {
 

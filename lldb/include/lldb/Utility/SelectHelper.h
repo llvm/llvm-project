@@ -10,16 +10,13 @@
 #ifndef liblldb_SelectHelper_h_
 #define liblldb_SelectHelper_h_
 
-// C Includes
-// C++ Includes
-#include <chrono>
+#include "lldb/Utility/Error.h" // for Error
+#include "lldb/lldb-types.h"    // for socket_t
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 
-// Project includes
-#include "lldb/lldb-forward.h"
+#include <chrono>
 
 class SelectHelper {
 public:

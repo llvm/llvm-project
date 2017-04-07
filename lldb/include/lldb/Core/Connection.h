@@ -10,14 +10,23 @@
 #ifndef liblldb_Connection_h_
 #define liblldb_Connection_h_
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h" // for ConnectionStatus
+#include "lldb/lldb-forward.h"      // for IOObjectSP
 
-// C Includes
-// C++ Includes
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <ratio> // for micro
 #include <string>
+
+#include <stddef.h> // for size_t
+
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+template <typename Ratio> class Timeout;
+}
 
 namespace lldb_private {
 

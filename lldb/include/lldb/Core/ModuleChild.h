@@ -10,7 +10,7 @@
 #ifndef liblldb_ModuleChild_h_
 #define liblldb_ModuleChild_h_
 
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 

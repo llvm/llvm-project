@@ -10,10 +10,12 @@
 #ifndef liblldb_DataBufferHeap_h_
 #define liblldb_DataBufferHeap_h_
 
-#include <vector>
-
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"    // for offset_t
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <cstdint> // for uint8_t, uint64_t
+#include <vector>
 
 namespace lldb_private {
 

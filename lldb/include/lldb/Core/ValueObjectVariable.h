@@ -10,11 +10,33 @@
 #ifndef liblldb_ValueObjectVariable_h_
 #define liblldb_ValueObjectVariable_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObject.h"
+
+#include "lldb/Core/Value.h"          // for Value
+#include "lldb/Symbol/CompilerType.h" // for CompilerType
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/lldb-defines.h"        // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h"   // for ValueType
+#include "lldb/lldb-forward.h"        // for VariableSP, ModuleSP, ValueObj...
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, uint64_t
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Declaration;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class ExecutionContextScope;
+}
+namespace lldb_private {
+class SymbolContextScope;
+}
 
 namespace lldb_private {
 

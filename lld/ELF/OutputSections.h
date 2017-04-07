@@ -81,7 +81,6 @@ public:
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
-  uint32_t getFill();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void finalize();
   void assignOffsets();

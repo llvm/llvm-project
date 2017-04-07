@@ -10,22 +10,29 @@
 #ifndef LLDB_UTILITY_LOG_H
 #define LLDB_UTILITY_LOG_H
 
-// Project includes
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/lldb-defines.h"
 
-// Other libraries and framework includes
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h" // for StringMap
+#include "llvm/ADT/StringRef.h" // for StringRef, StringLiteral
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
-// C++ Includes
+
 #include <atomic>
 #include <cstdarg>
 #include <cstdint>
-// C Includes
+#include <memory>      // for shared_ptr
+#include <string>      // for string
+#include <type_traits> // for forward
 
+namespace llvm {
+class raw_ostream;
+}
+namespace llvm {
+template <class C> class ManagedStatic;
+}
 //----------------------------------------------------------------------
 // Logging Options
 //----------------------------------------------------------------------

@@ -79,12 +79,6 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   return Msg + S.getObjMsg<ELFT>(Off);
 }
 
-static bool refersToGotEntry(RelExpr Expr) {
-  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
-                        R_GOT_FROM_END>(Expr);
-}
-
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   // In case of MIPS GP-relative relocations always resolve to a definition
   // in a regular input file, ignoring the one-definition rule. So we,
@@ -284,8 +278,18 @@ static bool isAbsoluteValue(const SymbolBody &Body) {
   return isAbsolute(Body) || Body.isTls();
 }
 
+// Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
   return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC>(Expr);
+}
+
+// Returns true if Expr refers a GOT entry. Note that this function
+// returns false for TLS variables even though they need GOT, because
+// TLS variables uses GOT differently than the regular variables.
+static bool needsGot(RelExpr Expr) {
+  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
+                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
+                        R_GOT_FROM_END>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -843,7 +847,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     }
 
     // Create a GOT slot if a relocation needs GOT.
-    if (refersToGotEntry(Expr)) {
+    if (needsGot(Expr)) {
       if (Config->EMachine == EM_MIPS) {
         // MIPS ABI has special rules to process GOT entries and doesn't
         // require relocation entries for them. A special case is TLS
@@ -861,8 +865,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       }
     }
 
-    if (!needsPlt(Expr) && !refersToGotEntry(Expr) &&
-        isPreemptible(Body, Type)) {
+    if (!needsPlt(Expr) && !needsGot(Expr) && isPreemptible(Body, Type)) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))

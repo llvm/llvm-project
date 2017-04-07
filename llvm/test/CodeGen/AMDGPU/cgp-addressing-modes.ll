@@ -11,7 +11,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in
 ; OPT-VI: getelementptr i32, i32 addrspace(1)* %in
 ; OPT: br i1
-; OPT-CI: ptrtoint
+; OPT-CI: getelementptr i8,
 
 ; GCN-LABEL: {{^}}test_sink_global_small_offset_i32:
 ; GCN: {{^}}BB0_2:
@@ -124,7 +124,7 @@ done:
 ; OPT-LABEL: @test_sink_scratch_small_offset_i32(
 ; OPT-NOT:  getelementptr [512 x i32]
 ; OPT: br i1
-; OPT: ptrtoint
+; OPT: getelementptr i8,
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32:
 ; GCN: s_and_saveexec_b64
@@ -162,7 +162,7 @@ done:
 ; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
 ; OPT-NOT:  getelementptr [512 x i32]
 ; OPT: br i1
-; OPT: ptrtoint
+; OPT: getelementptr i8,
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
 ; GCN: s_and_saveexec_b64
@@ -488,7 +488,7 @@ done:
 %struct.foo = type { [3 x float], [3 x float] }
 
 ; OPT-LABEL: @sink_ds_address(
-; OPT: ptrtoint %struct.foo addrspace(3)* %ptr to i32
+; OPT: getelementptr i8,
 
 ; GCN-LABEL: {{^}}sink_ds_address:
 ; GCN: s_load_dword [[SREG1:s[0-9]+]],
@@ -519,8 +519,7 @@ bb34:
 ; OPT-LABEL: @test_sink_constant_small_max_mubuf_offset_load_i32_align_1(
 ; OPT: br i1 %tmp0,
 ; OPT: if:
-; OPT: %sunkaddr = ptrtoint i8 addrspace(2)* %in to i64
-; OPT: %sunkaddr1 = add i64 %sunkaddr, 4095
+; OPT: getelementptr i8, {{.*}} 4095
 define amdgpu_kernel void @test_sink_constant_small_max_mubuf_offset_load_i32_align_1(i32 addrspace(1)* %out, i8 addrspace(2)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 1024
@@ -544,10 +543,10 @@ done:
 }
 
 ; OPT-LABEL: @test_sink_local_small_offset_atomicrmw_i32(
-; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
-; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
-; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1 = atomicrmw add i32 addrspace(3)* %sunkaddr2, i32 2 seq_cst
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1 = atomicrmw add i32 addrspace(3)* %1, i32 2 seq_cst
 define amdgpu_kernel void @test_sink_local_small_offset_atomicrmw_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
@@ -570,10 +569,10 @@ done:
 }
 
 ; OPT-LABEL: @test_sink_local_small_offset_cmpxchg_i32(
-; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
-; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
-; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1.struct = cmpxchg i32 addrspace(3)* %sunkaddr2, i32 undef, i32 2 seq_cst monotonic
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1.struct = cmpxchg i32 addrspace(3)* %1, i32 undef, i32 2 seq_cst monotonic
 define amdgpu_kernel void @test_sink_local_small_offset_cmpxchg_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
@@ -623,10 +622,10 @@ done:
 }
 
 ; OPT-LABEL: @test_sink_local_small_offset_atomic_inc_i32(
-; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
-; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
-; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2, i32 0, i32 0, i1 false)
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %1, i32 2, i32 0, i32 0, i1 false)
 define amdgpu_kernel void @test_sink_local_small_offset_atomic_inc_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
@@ -649,10 +648,10 @@ done:
 }
 
 ; OPT-LABEL: @test_sink_local_small_offset_atomic_dec_i32(
-; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
-; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
-; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
-; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %sunkaddr2, i32 2, i32 0, i32 0, i1 false)
+; OPT: %0 = bitcast i32 addrspace(3)* %in to i8 addrspace(3)*
+; OPT: %sunkaddr = getelementptr i8, i8 addrspace(3)* %0, i32 28
+; OPT: %1 = bitcast i8 addrspace(3)* %sunkaddr to i32 addrspace(3)*
+; OPT: %tmp1 = call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* %1, i32 2, i32 0, i32 0, i1 false)
 define amdgpu_kernel void @test_sink_local_small_offset_atomic_dec_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999

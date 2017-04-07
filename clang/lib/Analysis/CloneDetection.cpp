@@ -24,27 +24,27 @@
 
 using namespace clang;
 
-StmtSequence::StmtSequence(const CompoundStmt *Stmt, ASTContext &Context,
+StmtSequence::StmtSequence(const CompoundStmt *Stmt, const Decl *D,
                            unsigned StartIndex, unsigned EndIndex)
-    : S(Stmt), Context(&Context), StartIndex(StartIndex), EndIndex(EndIndex) {
+    : S(Stmt), D(D), StartIndex(StartIndex), EndIndex(EndIndex) {
   assert(Stmt && "Stmt must not be a nullptr");
   assert(StartIndex < EndIndex && "Given array should not be empty");
   assert(EndIndex <= Stmt->size() && "Given array too big for this Stmt");
 }
 
-StmtSequence::StmtSequence(const Stmt *Stmt, ASTContext &Context)
-    : S(Stmt), Context(&Context), StartIndex(0), EndIndex(0) {}
+StmtSequence::StmtSequence(const Stmt *Stmt, const Decl *D)
+    : S(Stmt), D(D), StartIndex(0), EndIndex(0) {}
 
 StmtSequence::StmtSequence()
-    : S(nullptr), Context(nullptr), StartIndex(0), EndIndex(0) {}
+    : S(nullptr), D(nullptr), StartIndex(0), EndIndex(0) {}
 
 bool StmtSequence::contains(const StmtSequence &Other) const {
-  // If both sequences reside in different translation units, they can never
-  // contain each other.
-  if (Context != Other.Context)
+  // If both sequences reside in different declarations, they can never contain
+  // each other.
+  if (D != Other.D)
     return false;
 
-  const SourceManager &SM = Context->getSourceManager();
+  const SourceManager &SM = getASTContext().getSourceManager();
 
   // Otherwise check if the start and end locations of the current sequence
   // surround the other sequence.
@@ -76,6 +76,11 @@ StmtSequence::iterator StmtSequence::end() const {
   return CS->body_begin() + EndIndex;
 }
 
+ASTContext &StmtSequence::getASTContext() const {
+  assert(D);
+  return D->getASTContext();
+}
+
 SourceLocation StmtSequence::getStartLoc() const {
   return front()->getLocStart();
 }
@@ -86,168 +91,8 @@ SourceRange StmtSequence::getSourceRange() const {
   return SourceRange(getStartLoc(), getEndLoc());
 }
 
-namespace {
-
-/// \brief Analyzes the pattern of the referenced variables in a statement.
-class VariablePattern {
-
-  /// \brief Describes an occurence of a variable reference in a statement.
-  struct VariableOccurence {
-    /// The index of the associated VarDecl in the Variables vector.
-    size_t KindID;
-    /// The statement in the code where the variable was referenced.
-    const Stmt *Mention;
-
-    VariableOccurence(size_t KindID, const Stmt *Mention)
-        : KindID(KindID), Mention(Mention) {}
-  };
-
-  /// All occurences of referenced variables in the order of appearance.
-  std::vector<VariableOccurence> Occurences;
-  /// List of referenced variables in the order of appearance.
-  /// Every item in this list is unique.
-  std::vector<const VarDecl *> Variables;
-
-  /// \brief Adds a new variable referenced to this pattern.
-  /// \param VarDecl The declaration of the variable that is referenced.
-  /// \param Mention The SourceRange where this variable is referenced.
-  void addVariableOccurence(const VarDecl *VarDecl, const Stmt *Mention) {
-    // First check if we already reference this variable
-    for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {
-      if (Variables[KindIndex] == VarDecl) {
-        // If yes, add a new occurence that points to the existing entry in
-        // the Variables vector.
-        Occurences.emplace_back(KindIndex, Mention);
-        return;
-      }
-    }
-    // If this variable wasn't already referenced, add it to the list of
-    // referenced variables and add a occurence that points to this new entry.
-    Occurences.emplace_back(Variables.size(), Mention);
-    Variables.push_back(VarDecl);
-  }
-
-  /// \brief Adds each referenced variable from the given statement.
-  void addVariables(const Stmt *S) {
-    // Sometimes we get a nullptr (such as from IfStmts which often have nullptr
-    // children). We skip such statements as they don't reference any
-    // variables.
-    if (!S)
-      return;
-
-    // Check if S is a reference to a variable. If yes, add it to the pattern.
-    if (auto D = dyn_cast<DeclRefExpr>(S)) {
-      if (auto VD = dyn_cast<VarDecl>(D->getDecl()->getCanonicalDecl()))
-        addVariableOccurence(VD, D);
-    }
-
-    // Recursively check all children of the given statement.
-    for (const Stmt *Child : S->children()) {
-      addVariables(Child);
-    }
-  }
-
-public:
-  /// \brief Creates an VariablePattern object with information about the given
-  ///        StmtSequence.
-  VariablePattern(const StmtSequence &Sequence) {
-    for (const Stmt *S : Sequence)
-      addVariables(S);
-  }
-
-  /// \brief Counts the differences between this pattern and the given one.
-  /// \param Other The given VariablePattern to compare with.
-  /// \param FirstMismatch Output parameter that will be filled with information
-  ///        about the first difference between the two patterns. This parameter
-  ///        can be a nullptr, in which case it will be ignored.
-  /// \return Returns the number of differences between the pattern this object
-  ///         is following and the given VariablePattern.
-  ///
-  /// For example, the following statements all have the same pattern and this
-  /// function would return zero:
-  ///
-  ///   if (a < b) return a; return b;
-  ///   if (x < y) return x; return y;
-  ///   if (u2 < u1) return u2; return u1;
-  ///
-  /// But the following statement has a different pattern (note the changed
-  /// variables in the return statements) and would have two differences when
-  /// compared with one of the statements above.
-  ///
-  ///   if (a < b) return b; return a;
-  ///
-  /// This function should only be called if the related statements of the given
-  /// pattern and the statements of this objects are clones of each other.
-  unsigned countPatternDifferences(
-      const VariablePattern &Other,
-      CloneDetector::SuspiciousClonePair *FirstMismatch = nullptr) {
-    unsigned NumberOfDifferences = 0;
-
-    assert(Other.Occurences.size() == Occurences.size());
-    for (unsigned i = 0; i < Occurences.size(); ++i) {
-      auto ThisOccurence = Occurences[i];
-      auto OtherOccurence = Other.Occurences[i];
-      if (ThisOccurence.KindID == OtherOccurence.KindID)
-        continue;
-
-      ++NumberOfDifferences;
-
-      // If FirstMismatch is not a nullptr, we need to store information about
-      // the first difference between the two patterns.
-      if (FirstMismatch == nullptr)
-        continue;
-
-      // Only proceed if we just found the first difference as we only store
-      // information about the first difference.
-      if (NumberOfDifferences != 1)
-        continue;
-
-      const VarDecl *FirstSuggestion = nullptr;
-      // If there is a variable available in the list of referenced variables
-      // which wouldn't break the pattern if it is used in place of the
-      // current variable, we provide this variable as the suggested fix.
-      if (OtherOccurence.KindID < Variables.size())
-        FirstSuggestion = Variables[OtherOccurence.KindID];
-
-      // Store information about the first clone.
-      FirstMismatch->FirstCloneInfo =
-          CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
-              Variables[ThisOccurence.KindID], ThisOccurence.Mention,
-              FirstSuggestion);
-
-      // Same as above but with the other clone. We do this for both clones as
-      // we don't know which clone is the one containing the unintended
-      // pattern error.
-      const VarDecl *SecondSuggestion = nullptr;
-      if (ThisOccurence.KindID < Other.Variables.size())
-        SecondSuggestion = Other.Variables[ThisOccurence.KindID];
-
-      // Store information about the second clone.
-      FirstMismatch->SecondCloneInfo =
-          CloneDetector::SuspiciousClonePair::SuspiciousCloneInfo(
-              Other.Variables[OtherOccurence.KindID], OtherOccurence.Mention,
-              SecondSuggestion);
-
-      // SuspiciousClonePair guarantees that the first clone always has a
-      // suggested variable associated with it. As we know that one of the two
-      // clones in the pair always has suggestion, we swap the two clones
-      // in case the first clone has no suggested variable which means that
-      // the second clone has a suggested variable and should be first.
-      if (!FirstMismatch->FirstCloneInfo.Suggestion)
-        std::swap(FirstMismatch->FirstCloneInfo,
-                  FirstMismatch->SecondCloneInfo);
-
-      // This ensures that we always have at least one suggestion in a pair.
-      assert(FirstMismatch->FirstCloneInfo.Suggestion);
-    }
-
-    return NumberOfDifferences;
-  }
-};
-}
-
-/// \brief Prints the macro name that contains the given SourceLocation into
-///        the given raw_string_ostream.
+/// Prints the macro name that contains the given SourceLocation into the given
+/// raw_string_ostream.
 static void printMacroName(llvm::raw_string_ostream &MacroStack,
                            ASTContext &Context, SourceLocation Loc) {
   MacroStack << Lexer::getImmediateMacroName(Loc, Context.getSourceManager(),
@@ -258,8 +103,8 @@ static void printMacroName(llvm::raw_string_ostream &MacroStack,
   MacroStack << " ";
 }
 
-/// \brief Returns a string that represents all macro expansions that
-///        expanded into the given SourceLocation.
+/// Returns a string that represents all macro expansions that expanded into the
+/// given SourceLocation.
 ///
 /// If 'getMacroStack(A) == getMacroStack(B)' is true, then the SourceLocations
 /// A and B are expanded from the same macros in the same order.
@@ -279,7 +124,9 @@ static std::string getMacroStack(SourceLocation Loc, ASTContext &Context) {
 }
 
 namespace {
-/// \brief Collects the data of a single Stmt.
+typedef unsigned DataPiece;
+
+/// Collects the data of a single Stmt.
 ///
 /// This class defines what a code clone is: If it collects for two statements
 /// the same data, then those two statements are considered to be clones of each
@@ -292,11 +139,11 @@ template <typename T>
 class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector<T>> {
 
   ASTContext &Context;
-  /// \brief The data sink to which all data is forwarded.
+  /// The data sink to which all data is forwarded.
   T &DataConsumer;
 
 public:
-  /// \brief Collects data of the given Stmt.
+  /// Collects data of the given Stmt.
   /// \param S The given statement.
   /// \param Context The ASTContext of S.
   /// \param DataConsumer The data sink to which all data is forwarded.
@@ -307,7 +154,7 @@ public:
 
   // Below are utility methods for appending different data to the vector.
 
-  void addData(CloneDetector::DataPiece Integer) {
+  void addData(DataPiece Integer) {
     DataConsumer.update(
         StringRef(reinterpret_cast<char *>(&Integer), sizeof(Integer)));
   }
@@ -425,7 +272,7 @@ public:
   })
   DEF_ADD_DATA(DeclStmt, {
     auto numDecls = std::distance(S->decl_begin(), S->decl_end());
-    addData(static_cast<CloneDetector::DataPiece>(numDecls));
+    addData(static_cast<DataPiece>(numDecls));
     for (const Decl *D : S->decls()) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
         addData(VD->getType());
@@ -454,384 +301,44 @@ public:
 };
 } // end anonymous namespace
 
-namespace {
-/// Generates CloneSignatures for a set of statements and stores the results in
-/// a CloneDetector object.
-class CloneSignatureGenerator {
-
-  CloneDetector &CD;
-  ASTContext &Context;
-
-  /// \brief Generates CloneSignatures for all statements in the given statement
-  /// tree and stores them in the CloneDetector.
-  ///
-  /// \param S The root of the given statement tree.
-  /// \param ParentMacroStack A string representing the macros that generated
-  ///                         the parent statement or an empty string if no
-  ///                         macros generated the parent statement.
-  ///                         See getMacroStack() for generating such a string.
-  /// \return The CloneSignature of the root statement.
-  CloneDetector::CloneSignature
-  generateSignatures(const Stmt *S, const std::string &ParentMacroStack) {
-    // Create an empty signature that will be filled in this method.
-    CloneDetector::CloneSignature Signature;
-
-    llvm::MD5 Hash;
-
-    // Collect all relevant data from S and hash it.
-    StmtDataCollector<llvm::MD5>(S, Context, Hash);
-
-    // Look up what macros expanded into the current statement.
-    std::string StartMacroStack = getMacroStack(S->getLocStart(), Context);
-    std::string EndMacroStack = getMacroStack(S->getLocEnd(), Context);
-
-    // First, check if ParentMacroStack is not empty which means we are currently
-    // dealing with a parent statement which was expanded from a macro.
-    // If this parent statement was expanded from the same macros as this
-    // statement, we reduce the initial complexity of this statement to zero.
-    // This causes that a group of statements that were generated by a single
-    // macro expansion will only increase the total complexity by one.
-    // Note: This is not the final complexity of this statement as we still
-    // add the complexity of the child statements to the complexity value.
-    if (!ParentMacroStack.empty() && (StartMacroStack == ParentMacroStack &&
-                                      EndMacroStack == ParentMacroStack)) {
-      Signature.Complexity = 0;
-    }
-
-    // Storage for the signatures of the direct child statements. This is only
-    // needed if the current statement is a CompoundStmt.
-    std::vector<CloneDetector::CloneSignature> ChildSignatures;
-    const CompoundStmt *CS = dyn_cast<const CompoundStmt>(S);
-
-    // The signature of a statement includes the signatures of its children.
-    // Therefore we create the signatures for every child and add them to the
-    // current signature.
-    for (const Stmt *Child : S->children()) {
-      // Some statements like 'if' can have nullptr children that we will skip.
-      if (!Child)
-        continue;
-
-      // Recursive call to create the signature of the child statement. This
-      // will also create and store all clone groups in this child statement.
-      // We pass only the StartMacroStack along to keep things simple.
-      auto ChildSignature = generateSignatures(Child, StartMacroStack);
-
-      // Add the collected data to the signature of the current statement.
-      Signature.Complexity += ChildSignature.Complexity;
-      Hash.update(StringRef(reinterpret_cast<char *>(&ChildSignature.Hash),
-                            sizeof(ChildSignature.Hash)));
-
-      // If the current statement is a CompoundStatement, we need to store the
-      // signature for the generation of the sub-sequences.
-      if (CS)
-        ChildSignatures.push_back(ChildSignature);
-    }
-
-    // If the current statement is a CompoundStmt, we also need to create the
-    // clone groups from the sub-sequences inside the children.
-    if (CS)
-      handleSubSequences(CS, ChildSignatures);
-
-    // Create the final hash code for the current signature.
-    llvm::MD5::MD5Result HashResult;
-    Hash.final(HashResult);
-
-    // Copy as much of the generated hash code to the signature's hash code.
-    std::memcpy(&Signature.Hash, &HashResult,
-                std::min(sizeof(Signature.Hash), sizeof(HashResult)));
-
-    // Save the signature for the current statement in the CloneDetector object.
-    CD.add(StmtSequence(S, Context), Signature);
-
-    return Signature;
-  }
-
-  /// \brief Adds all possible sub-sequences in the child array of the given
-  ///        CompoundStmt to the CloneDetector.
-  /// \param CS The given CompoundStmt.
-  /// \param ChildSignatures A list of calculated signatures for each child in
-  ///                        the given CompoundStmt.
-  void handleSubSequences(
-      const CompoundStmt *CS,
-      const std::vector<CloneDetector::CloneSignature> &ChildSignatures) {
-
-    // FIXME: This function has quadratic runtime right now. Check if skipping
-    // this function for too long CompoundStmts is an option.
-
-    // The length of the sub-sequence. We don't need to handle sequences with
-    // the length 1 as they are already handled in CollectData().
-    for (unsigned Length = 2; Length <= CS->size(); ++Length) {
-      // The start index in the body of the CompoundStmt. We increase the
-      // position until the end of the sub-sequence reaches the end of the
-      // CompoundStmt body.
-      for (unsigned Pos = 0; Pos <= CS->size() - Length; ++Pos) {
-        // Create an empty signature and add the signatures of all selected
-        // child statements to it.
-        CloneDetector::CloneSignature SubSignature;
-        llvm::MD5 SubHash;
-
-        for (unsigned i = Pos; i < Pos + Length; ++i) {
-          SubSignature.Complexity += ChildSignatures[i].Complexity;
-          size_t ChildHash = ChildSignatures[i].Hash;
-
-          SubHash.update(StringRef(reinterpret_cast<char *>(&ChildHash),
-                                sizeof(ChildHash)));
-        }
-
-        // Create the final hash code for the current signature.
-        llvm::MD5::MD5Result HashResult;
-        SubHash.final(HashResult);
-
-        // Copy as much of the generated hash code to the signature's hash code.
-        std::memcpy(&SubSignature.Hash, &HashResult,
-                    std::min(sizeof(SubSignature.Hash), sizeof(HashResult)));
-
-        // Save the signature together with the information about what children
-        // sequence we selected.
-        CD.add(StmtSequence(CS, Context, Pos, Pos + Length), SubSignature);
-      }
-    }
-  }
-
-public:
-  explicit CloneSignatureGenerator(CloneDetector &CD, ASTContext &Context)
-      : CD(CD), Context(Context) {}
-
-  /// \brief Generates signatures for all statements in the given function body.
-  void consumeCodeBody(const Stmt *S) { generateSignatures(S, ""); }
-};
-} // end anonymous namespace
-
 void CloneDetector::analyzeCodeBody(const Decl *D) {
   assert(D);
   assert(D->hasBody());
-  CloneSignatureGenerator Generator(*this, D->getASTContext());
-  Generator.consumeCodeBody(D->getBody());
+
+  Sequences.push_back(StmtSequence(D->getBody(), D));
 }
 
-void CloneDetector::add(const StmtSequence &S,
-                        const CloneSignature &Signature) {
-  Sequences.push_back(std::make_pair(Signature, S));
-}
-
-namespace {
-/// \brief Returns true if and only if \p Stmt contains at least one other
+/// Returns true if and only if \p Stmt contains at least one other
 /// sequence in the \p Group.
-bool containsAnyInGroup(StmtSequence &Stmt, CloneDetector::CloneGroup &Group) {
-  for (StmtSequence &GroupStmt : Group.Sequences) {
-    if (Stmt.contains(GroupStmt))
+static bool containsAnyInGroup(StmtSequence &Seq,
+                               CloneDetector::CloneGroup &Group) {
+  for (StmtSequence &GroupSeq : Group) {
+    if (Seq.contains(GroupSeq))
       return true;
   }
   return false;
 }
 
-/// \brief Returns true if and only if all sequences in \p OtherGroup are
+/// Returns true if and only if all sequences in \p OtherGroup are
 /// contained by a sequence in \p Group.
-bool containsGroup(CloneDetector::CloneGroup &Group,
-                   CloneDetector::CloneGroup &OtherGroup) {
+static bool containsGroup(CloneDetector::CloneGroup &Group,
+                          CloneDetector::CloneGroup &OtherGroup) {
   // We have less sequences in the current group than we have in the other,
   // so we will never fulfill the requirement for returning true. This is only
   // possible because we know that a sequence in Group can contain at most
   // one sequence in OtherGroup.
-  if (Group.Sequences.size() < OtherGroup.Sequences.size())
+  if (Group.size() < OtherGroup.size())
     return false;
 
-  for (StmtSequence &Stmt : Group.Sequences) {
+  for (StmtSequence &Stmt : Group) {
     if (!containsAnyInGroup(Stmt, OtherGroup))
       return false;
   }
   return true;
 }
-} // end anonymous namespace
 
-namespace {
-/// \brief Wrapper around FoldingSetNodeID that it can be used as the template
-///        argument of the StmtDataCollector.
-class FoldingSetNodeIDWrapper {
-
-  llvm::FoldingSetNodeID &FS;
-
-public:
-  FoldingSetNodeIDWrapper(llvm::FoldingSetNodeID &FS) : FS(FS) {}
-
-  void update(StringRef Str) { FS.AddString(Str); }
-};
-} // end anonymous namespace
-
-/// \brief Writes the relevant data from all statements and child statements
-///        in the given StmtSequence into the given FoldingSetNodeID.
-static void CollectStmtSequenceData(const StmtSequence &Sequence,
-                                    FoldingSetNodeIDWrapper &OutputData) {
-  for (const Stmt *S : Sequence) {
-    StmtDataCollector<FoldingSetNodeIDWrapper>(S, Sequence.getASTContext(),
-                                               OutputData);
-
-    for (const Stmt *Child : S->children()) {
-      if (!Child)
-        continue;
-
-      CollectStmtSequenceData(StmtSequence(Child, Sequence.getASTContext()),
-                              OutputData);
-    }
-  }
-}
-
-/// \brief Returns true if both sequences are clones of each other.
-static bool areSequencesClones(const StmtSequence &LHS,
-                               const StmtSequence &RHS) {
-  // We collect the data from all statements in the sequence as we did before
-  // when generating a hash value for each sequence. But this time we don't
-  // hash the collected data and compare the whole data set instead. This
-  // prevents any false-positives due to hash code collisions.
-  llvm::FoldingSetNodeID DataLHS, DataRHS;
-  FoldingSetNodeIDWrapper LHSWrapper(DataLHS);
-  FoldingSetNodeIDWrapper RHSWrapper(DataRHS);
-
-  CollectStmtSequenceData(LHS, LHSWrapper);
-  CollectStmtSequenceData(RHS, RHSWrapper);
-
-  return DataLHS == DataRHS;
-}
-
-/// \brief Finds all actual clone groups in a single group of presumed clones.
-/// \param Result Output parameter to which all found groups are added.
-/// \param Group A group of presumed clones. The clones are allowed to have a
-///              different variable pattern and may not be actual clones of each
-///              other.
-/// \param CheckVariablePattern If true, every clone in a group that was added
-///              to the output follows the same variable pattern as the other
-///              clones in its group.
-static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
-                              const CloneDetector::CloneGroup &Group,
-                              bool CheckVariablePattern) {
-  // We remove the Sequences one by one, so a list is more appropriate.
-  std::list<StmtSequence> UnassignedSequences(Group.Sequences.begin(),
-                                              Group.Sequences.end());
-
-  // Search for clones as long as there could be clones in UnassignedSequences.
-  while (UnassignedSequences.size() > 1) {
-
-    // Pick the first Sequence as a protoype for a new clone group.
-    StmtSequence Prototype = UnassignedSequences.front();
-    UnassignedSequences.pop_front();
-
-    CloneDetector::CloneGroup FilteredGroup(Prototype, Group.Signature);
-
-    // Analyze the variable pattern of the prototype. Every other StmtSequence
-    // needs to have the same pattern to get into the new clone group.
-    VariablePattern PrototypeFeatures(Prototype);
-
-    // Search all remaining StmtSequences for an identical variable pattern
-    // and assign them to our new clone group.
-    auto I = UnassignedSequences.begin(), E = UnassignedSequences.end();
-    while (I != E) {
-      // If the sequence doesn't fit to the prototype, we have encountered
-      // an unintended hash code collision and we skip it.
-      if (!areSequencesClones(Prototype, *I)) {
-        ++I;
-        continue;
-      }
-
-      // If we weren't asked to check for a matching variable pattern in clone
-      // groups we can add the sequence now to the new clone group.
-      // If we were asked to check for matching variable pattern, we first have
-      // to check that there are no differences between the two patterns and
-      // only proceed if they match.
-      if (!CheckVariablePattern ||
-          VariablePattern(*I).countPatternDifferences(PrototypeFeatures) == 0) {
-        FilteredGroup.Sequences.push_back(*I);
-        I = UnassignedSequences.erase(I);
-        continue;
-      }
-
-      // We didn't found a matching variable pattern, so we continue with the
-      // next sequence.
-      ++I;
-    }
-
-    // Add a valid clone group to the list of found clone groups.
-    if (!FilteredGroup.isValid())
-      continue;
-
-    Result.push_back(FilteredGroup);
-  }
-}
-
-void CloneDetector::findClones(std::vector<CloneGroup> &Result,
-                               unsigned MinGroupComplexity,
-                               bool CheckPatterns) {
-  // A shortcut (and necessary for the for-loop later in this function).
-  if (Sequences.empty())
-    return;
-
-  // We need to search for groups of StmtSequences with the same hash code to
-  // create our initial clone groups. By sorting all known StmtSequences by
-  // their hash value we make sure that StmtSequences with the same hash code
-  // are grouped together in the Sequences vector.
-  // Note: We stable sort here because the StmtSequences are added in the order
-  // in which they appear in the source file. We want to preserve that order
-  // because we also want to report them in that order in the CloneChecker.
-  std::stable_sort(Sequences.begin(), Sequences.end(),
-                   [](std::pair<CloneSignature, StmtSequence> LHS,
-                      std::pair<CloneSignature, StmtSequence> RHS) {
-                     return LHS.first.Hash < RHS.first.Hash;
-                   });
-
-  std::vector<CloneGroup> CloneGroups;
-
-  // Check for each CloneSignature if its successor has the same hash value.
-  // We don't check the last CloneSignature as it has no successor.
-  // Note: The 'size - 1' in the condition is safe because we check for an empty
-  // Sequences vector at the beginning of this function.
-  for (unsigned i = 0; i < Sequences.size() - 1; ++i) {
-    const auto Current = Sequences[i];
-    const auto Next = Sequences[i + 1];
-
-    if (Current.first.Hash != Next.first.Hash)
-      continue;
-
-    // It's likely that we just found an sequence of CloneSignatures that
-    // represent a CloneGroup, so we create a new group and start checking and
-    // adding the CloneSignatures in this sequence.
-    CloneGroup Group;
-    Group.Signature = Current.first;
-
-    for (; i < Sequences.size(); ++i) {
-      const auto &Signature = Sequences[i];
-
-      // A different hash value means we have reached the end of the sequence.
-      if (Current.first.Hash != Signature.first.Hash) {
-        // The current Signature could be the start of a new CloneGroup. So we
-        // decrement i so that we visit it again in the outer loop.
-        // Note: i can never be 0 at this point because we are just comparing
-        // the hash of the Current CloneSignature with itself in the 'if' above.
-        assert(i != 0);
-        --i;
-        break;
-      }
-
-      // Skip CloneSignatures that won't pass the complexity requirement.
-      if (Signature.first.Complexity < MinGroupComplexity)
-        continue;
-
-      Group.Sequences.push_back(Signature.second);
-    }
-
-    // There is a chance that we haven't found more than two fitting
-    // CloneSignature because not enough CloneSignatures passed the complexity
-    // requirement. As a CloneGroup with less than two members makes no sense,
-    // we ignore this CloneGroup and won't add it to the result.
-    if (!Group.isValid())
-      continue;
-
-    CloneGroups.push_back(Group);
-  }
-
-  // Add every valid clone group that fulfills the complexity requirement.
-  for (const CloneGroup &Group : CloneGroups) {
-    createCloneGroups(Result, Group, CheckPatterns);
-  }
-
+void OnlyLargestCloneConstraint::constrain(
+    std::vector<CloneDetector::CloneGroup> &Result) {
   std::vector<unsigned> IndexesToRemove;
 
   // Compare every group in the result with the rest. If one groups contains
@@ -859,36 +366,378 @@ void CloneDetector::findClones(std::vector<CloneGroup> &Result,
   }
 }
 
-void CloneDetector::findSuspiciousClones(
-    std::vector<CloneDetector::SuspiciousClonePair> &Result,
-    unsigned MinGroupComplexity) {
-  std::vector<CloneGroup> Clones;
-  // Reuse the normal search for clones but specify that the clone groups don't
-  // need to have a common referenced variable pattern so that we can manually
-  // search for the kind of pattern errors this function is supposed to find.
-  findClones(Clones, MinGroupComplexity, false);
+static size_t createHash(llvm::MD5 &Hash) {
+  size_t HashCode;
 
-  for (const CloneGroup &Group : Clones) {
-    for (unsigned i = 0; i < Group.Sequences.size(); ++i) {
-      VariablePattern PatternA(Group.Sequences[i]);
+  // Create the final hash code for the current Stmt.
+  llvm::MD5::MD5Result HashResult;
+  Hash.final(HashResult);
 
-      for (unsigned j = i + 1; j < Group.Sequences.size(); ++j) {
-        VariablePattern PatternB(Group.Sequences[j]);
+  // Copy as much as possible of the generated hash code to the Stmt's hash
+  // code.
+  std::memcpy(&HashCode, &HashResult,
+              std::min(sizeof(HashCode), sizeof(HashResult)));
 
-        CloneDetector::SuspiciousClonePair ClonePair;
-        // For now, we only report clones which break the variable pattern just
-        // once because multiple differences in a pattern are an indicator that
-        // those differences are maybe intended (e.g. because it's actually
-        // a different algorithm).
-        // TODO: In very big clones even multiple variables can be unintended,
-        // so replacing this number with a percentage could better handle such
-        // cases. On the other hand it could increase the false-positive rate
-        // for all clones if the percentage is too high.
-        if (PatternA.countPatternDifferences(PatternB, &ClonePair) == 1) {
-          Result.push_back(ClonePair);
-          break;
+  return HashCode;
+}
+
+size_t RecursiveCloneTypeIIConstraint::saveHash(
+    const Stmt *S, const Decl *D,
+    std::vector<std::pair<size_t, StmtSequence>> &StmtsByHash) {
+  llvm::MD5 Hash;
+  ASTContext &Context = D->getASTContext();
+
+  StmtDataCollector<llvm::MD5>(S, Context, Hash);
+
+  auto CS = dyn_cast<CompoundStmt>(S);
+  SmallVector<size_t, 8> ChildHashes;
+
+  for (const Stmt *Child : S->children()) {
+    if (Child == nullptr) {
+      ChildHashes.push_back(0);
+      continue;
+    }
+    size_t ChildHash = saveHash(Child, D, StmtsByHash);
+    Hash.update(
+        StringRef(reinterpret_cast<char *>(&ChildHash), sizeof(ChildHash)));
+    ChildHashes.push_back(ChildHash);
+  }
+
+  if (CS) {
+    for (unsigned Length = 2; Length <= CS->size(); ++Length) {
+      for (unsigned Pos = 0; Pos <= CS->size() - Length; ++Pos) {
+        llvm::MD5 Hash;
+        for (unsigned i = Pos; i < Pos + Length; ++i) {
+          size_t ChildHash = ChildHashes[i];
+          Hash.update(StringRef(reinterpret_cast<char *>(&ChildHash),
+                                sizeof(ChildHash)));
         }
+        StmtsByHash.push_back(std::make_pair(
+            createHash(Hash), StmtSequence(CS, D, Pos, Pos + Length)));
       }
     }
   }
+
+  size_t HashCode = createHash(Hash);
+  StmtsByHash.push_back(std::make_pair(HashCode, StmtSequence(S, D)));
+  return HashCode;
+}
+
+namespace {
+/// Wrapper around FoldingSetNodeID that it can be used as the template
+/// argument of the StmtDataCollector.
+class FoldingSetNodeIDWrapper {
+
+  llvm::FoldingSetNodeID &FS;
+
+public:
+  FoldingSetNodeIDWrapper(llvm::FoldingSetNodeID &FS) : FS(FS) {}
+
+  void update(StringRef Str) { FS.AddString(Str); }
+};
+} // end anonymous namespace
+
+/// Writes the relevant data from all statements and child statements
+/// in the given StmtSequence into the given FoldingSetNodeID.
+static void CollectStmtSequenceData(const StmtSequence &Sequence,
+                                    FoldingSetNodeIDWrapper &OutputData) {
+  for (const Stmt *S : Sequence) {
+    StmtDataCollector<FoldingSetNodeIDWrapper>(S, Sequence.getASTContext(),
+                                               OutputData);
+
+    for (const Stmt *Child : S->children()) {
+      if (!Child)
+        continue;
+
+      CollectStmtSequenceData(StmtSequence(Child, Sequence.getContainingDecl()),
+                              OutputData);
+    }
+  }
+}
+
+/// Returns true if both sequences are clones of each other.
+static bool areSequencesClones(const StmtSequence &LHS,
+                               const StmtSequence &RHS) {
+  // We collect the data from all statements in the sequence as we did before
+  // when generating a hash value for each sequence. But this time we don't
+  // hash the collected data and compare the whole data set instead. This
+  // prevents any false-positives due to hash code collisions.
+  llvm::FoldingSetNodeID DataLHS, DataRHS;
+  FoldingSetNodeIDWrapper LHSWrapper(DataLHS);
+  FoldingSetNodeIDWrapper RHSWrapper(DataRHS);
+
+  CollectStmtSequenceData(LHS, LHSWrapper);
+  CollectStmtSequenceData(RHS, RHSWrapper);
+
+  return DataLHS == DataRHS;
+}
+
+void RecursiveCloneTypeIIConstraint::constrain(
+    std::vector<CloneDetector::CloneGroup> &Sequences) {
+  // FIXME: Maybe we can do this in-place and don't need this additional vector.
+  std::vector<CloneDetector::CloneGroup> Result;
+
+  for (CloneDetector::CloneGroup &Group : Sequences) {
+    // We assume in the following code that the Group is non-empty, so we
+    // skip all empty groups.
+    if (Group.empty())
+      continue;
+
+    std::vector<std::pair<size_t, StmtSequence>> StmtsByHash;
+
+    // Generate hash codes for all children of S and save them in StmtsByHash.
+    for (const StmtSequence &S : Group) {
+      saveHash(S.front(), S.getContainingDecl(), StmtsByHash);
+    }
+
+    // Sort hash_codes in StmtsByHash.
+    std::stable_sort(StmtsByHash.begin(), StmtsByHash.end(),
+                     [](std::pair<size_t, StmtSequence> LHS,
+                            std::pair<size_t, StmtSequence> RHS) {
+                       return LHS.first < RHS.first;
+                     });
+
+    // Check for each StmtSequence if its successor has the same hash value.
+    // We don't check the last StmtSequence as it has no successor.
+    // Note: The 'size - 1 ' in the condition is safe because we check for an
+    // empty Group vector at the beginning of this function.
+    for (unsigned i = 0; i < StmtsByHash.size() - 1; ++i) {
+      const auto Current = StmtsByHash[i];
+
+      // It's likely that we just found an sequence of StmtSequences that
+      // represent a CloneGroup, so we create a new group and start checking and
+      // adding the StmtSequences in this sequence.
+      CloneDetector::CloneGroup NewGroup;
+
+      size_t PrototypeHash = Current.first;
+
+      for (; i < StmtsByHash.size(); ++i) {
+        // A different hash value means we have reached the end of the sequence.
+        if (PrototypeHash != StmtsByHash[i].first ||
+            !areSequencesClones(StmtsByHash[i].second, Current.second)) {
+          // The current sequence could be the start of a new CloneGroup. So we
+          // decrement i so that we visit it again in the outer loop.
+          // Note: i can never be 0 at this point because we are just comparing
+          // the hash of the Current StmtSequence with itself in the 'if' above.
+          assert(i != 0);
+          --i;
+          break;
+        }
+        // Same hash value means we should add the StmtSequence to the current
+        // group.
+        NewGroup.push_back(StmtsByHash[i].second);
+      }
+
+      // We created a new clone group with matching hash codes and move it to
+      // the result vector.
+      Result.push_back(NewGroup);
+    }
+  }
+  // Sequences is the output parameter, so we copy our result into it.
+  Sequences = Result;
+}
+
+size_t MinComplexityConstraint::calculateStmtComplexity(
+    const StmtSequence &Seq, const std::string &ParentMacroStack) {
+  if (Seq.empty())
+    return 0;
+
+  size_t Complexity = 1;
+
+  ASTContext &Context = Seq.getASTContext();
+
+  // Look up what macros expanded into the current statement.
+  std::string StartMacroStack = getMacroStack(Seq.getStartLoc(), Context);
+  std::string EndMacroStack = getMacroStack(Seq.getEndLoc(), Context);
+
+  // First, check if ParentMacroStack is not empty which means we are currently
+  // dealing with a parent statement which was expanded from a macro.
+  // If this parent statement was expanded from the same macros as this
+  // statement, we reduce the initial complexity of this statement to zero.
+  // This causes that a group of statements that were generated by a single
+  // macro expansion will only increase the total complexity by one.
+  // Note: This is not the final complexity of this statement as we still
+  // add the complexity of the child statements to the complexity value.
+  if (!ParentMacroStack.empty() && (StartMacroStack == ParentMacroStack &&
+                                    EndMacroStack == ParentMacroStack)) {
+    Complexity = 0;
+  }
+
+  // Iterate over the Stmts in the StmtSequence and add their complexity values
+  // to the current complexity value.
+  if (Seq.holdsSequence()) {
+    for (const Stmt *S : Seq) {
+      Complexity += calculateStmtComplexity(
+          StmtSequence(S, Seq.getContainingDecl()), StartMacroStack);
+    }
+  } else {
+    for (const Stmt *S : Seq.front()->children()) {
+      Complexity += calculateStmtComplexity(
+          StmtSequence(S, Seq.getContainingDecl()), StartMacroStack);
+    }
+  }
+  return Complexity;
+}
+
+void MatchingVariablePatternConstraint::constrain(
+    std::vector<CloneDetector::CloneGroup> &CloneGroups) {
+  CloneConstraint::splitCloneGroups(
+      CloneGroups, [](const StmtSequence &A, const StmtSequence &B) {
+        VariablePattern PatternA(A);
+        VariablePattern PatternB(B);
+        return PatternA.countPatternDifferences(PatternB) == 0;
+      });
+}
+
+void CloneConstraint::splitCloneGroups(
+    std::vector<CloneDetector::CloneGroup> &CloneGroups,
+    std::function<bool(const StmtSequence &, const StmtSequence &)> Compare) {
+  std::vector<CloneDetector::CloneGroup> Result;
+  for (auto &HashGroup : CloneGroups) {
+    // Contains all indexes in HashGroup that were already added to a
+    // CloneGroup.
+    std::vector<char> Indexes;
+    Indexes.resize(HashGroup.size());
+
+    for (unsigned i = 0; i < HashGroup.size(); ++i) {
+      // Skip indexes that are already part of a CloneGroup.
+      if (Indexes[i])
+        continue;
+
+      // Pick the first unhandled StmtSequence and consider it as the
+      // beginning
+      // of a new CloneGroup for now.
+      // We don't add i to Indexes because we never iterate back.
+      StmtSequence Prototype = HashGroup[i];
+      CloneDetector::CloneGroup PotentialGroup = {Prototype};
+      ++Indexes[i];
+
+      // Check all following StmtSequences for clones.
+      for (unsigned j = i + 1; j < HashGroup.size(); ++j) {
+        // Skip indexes that are already part of a CloneGroup.
+        if (Indexes[j])
+          continue;
+
+        // If a following StmtSequence belongs to our CloneGroup, we add it to
+        // it.
+        const StmtSequence &Candidate = HashGroup[j];
+
+        if (!Compare(Prototype, Candidate))
+          continue;
+
+        PotentialGroup.push_back(Candidate);
+        // Make sure we never visit this StmtSequence again.
+        ++Indexes[j];
+      }
+
+      // Otherwise, add it to the result and continue searching for more
+      // groups.
+      Result.push_back(PotentialGroup);
+    }
+
+    assert(std::all_of(Indexes.begin(), Indexes.end(),
+                       [](char c) { return c == 1; }));
+  }
+  CloneGroups = Result;
+}
+
+void VariablePattern::addVariableOccurence(const VarDecl *VarDecl,
+                                           const Stmt *Mention) {
+  // First check if we already reference this variable
+  for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {
+    if (Variables[KindIndex] == VarDecl) {
+      // If yes, add a new occurence that points to the existing entry in
+      // the Variables vector.
+      Occurences.emplace_back(KindIndex, Mention);
+      return;
+    }
+  }
+  // If this variable wasn't already referenced, add it to the list of
+  // referenced variables and add a occurence that points to this new entry.
+  Occurences.emplace_back(Variables.size(), Mention);
+  Variables.push_back(VarDecl);
+}
+
+void VariablePattern::addVariables(const Stmt *S) {
+  // Sometimes we get a nullptr (such as from IfStmts which often have nullptr
+  // children). We skip such statements as they don't reference any
+  // variables.
+  if (!S)
+    return;
+
+  // Check if S is a reference to a variable. If yes, add it to the pattern.
+  if (auto D = dyn_cast<DeclRefExpr>(S)) {
+    if (auto VD = dyn_cast<VarDecl>(D->getDecl()->getCanonicalDecl()))
+      addVariableOccurence(VD, D);
+  }
+
+  // Recursively check all children of the given statement.
+  for (const Stmt *Child : S->children()) {
+    addVariables(Child);
+  }
+}
+
+unsigned VariablePattern::countPatternDifferences(
+    const VariablePattern &Other,
+    VariablePattern::SuspiciousClonePair *FirstMismatch) {
+  unsigned NumberOfDifferences = 0;
+
+  assert(Other.Occurences.size() == Occurences.size());
+  for (unsigned i = 0; i < Occurences.size(); ++i) {
+    auto ThisOccurence = Occurences[i];
+    auto OtherOccurence = Other.Occurences[i];
+    if (ThisOccurence.KindID == OtherOccurence.KindID)
+      continue;
+
+    ++NumberOfDifferences;
+
+    // If FirstMismatch is not a nullptr, we need to store information about
+    // the first difference between the two patterns.
+    if (FirstMismatch == nullptr)
+      continue;
+
+    // Only proceed if we just found the first difference as we only store
+    // information about the first difference.
+    if (NumberOfDifferences != 1)
+      continue;
+
+    const VarDecl *FirstSuggestion = nullptr;
+    // If there is a variable available in the list of referenced variables
+    // which wouldn't break the pattern if it is used in place of the
+    // current variable, we provide this variable as the suggested fix.
+    if (OtherOccurence.KindID < Variables.size())
+      FirstSuggestion = Variables[OtherOccurence.KindID];
+
+    // Store information about the first clone.
+    FirstMismatch->FirstCloneInfo =
+        VariablePattern::SuspiciousClonePair::SuspiciousCloneInfo(
+            Variables[ThisOccurence.KindID], ThisOccurence.Mention,
+            FirstSuggestion);
+
+    // Same as above but with the other clone. We do this for both clones as
+    // we don't know which clone is the one containing the unintended
+    // pattern error.
+    const VarDecl *SecondSuggestion = nullptr;
+    if (ThisOccurence.KindID < Other.Variables.size())
+      SecondSuggestion = Other.Variables[ThisOccurence.KindID];
+
+    // Store information about the second clone.
+    FirstMismatch->SecondCloneInfo =
+        VariablePattern::SuspiciousClonePair::SuspiciousCloneInfo(
+            Other.Variables[OtherOccurence.KindID], OtherOccurence.Mention,
+            SecondSuggestion);
+
+    // SuspiciousClonePair guarantees that the first clone always has a
+    // suggested variable associated with it. As we know that one of the two
+    // clones in the pair always has suggestion, we swap the two clones
+    // in case the first clone has no suggested variable which means that
+    // the second clone has a suggested variable and should be first.
+    if (!FirstMismatch->FirstCloneInfo.Suggestion)
+      std::swap(FirstMismatch->FirstCloneInfo, FirstMismatch->SecondCloneInfo);
+
+    // This ensures that we always have at least one suggestion in a pair.
+    assert(FirstMismatch->FirstCloneInfo.Suggestion);
+  }
+
+  return NumberOfDifferences;
 }

@@ -2425,9 +2425,10 @@ define <2 x i64> @test_mm_set1_epi64x(i64 %a0) nounwind {
 ; X32-LABEL: test_mm_set1_epi64x:
 ; X32:       # BB#0:
 ; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; X32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set1_epi64x:

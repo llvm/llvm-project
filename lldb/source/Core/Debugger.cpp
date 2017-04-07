@@ -9,59 +9,70 @@
 
 #include "lldb/Core/Debugger.h"
 
-// C Includes
-// C++ Includes
-#include <map>
-#include <mutex>
-
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
-
-// Project includes
+#include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint, Brea...
+#include "lldb/Core/Event.h"            // for Event, EventData...
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/Listener.h" // for Listener
+#include "lldb/Core/Mangled.h"  // for Mangled
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StructuredData.h"
-#include "lldb/Core/Timer.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
-#include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Expression/REPL.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/File.h" // for File, File::kInv...
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionValue.h" // for OptionValue, Opt...
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
 #include "lldb/Interpreter/OptionValueString.h"
-#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Interpreter/Property.h"          // for PropertyDefinition
+#include "lldb/Interpreter/ScriptInterpreter.h" // for ScriptInterpreter
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/VariableList.h"
+#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/SectionLoadList.h"
-#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadList.h" // for ThreadList
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/Log.h"    // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-private.h"
+
+#if defined(LLVM_ON_WIN32)
+#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#endif
+
+#include "llvm/ADT/None.h"      // for None
+#include "llvm/ADT/STLExtras.h" // for make_unique
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h" // for iterator_facade_...
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h" // for raw_fd_ostream
+
+#include <list>   // for list
+#include <memory> // for make_shared
+#include <mutex>
+#include <set>          // for set
+#include <stdio.h>      // for size_t, NULL
+#include <stdlib.h>     // for getenv
+#include <string.h>     // for strcmp
+#include <string>       // for string
+#include <system_error> // for error_code
+
+namespace lldb_private {
+class Address;
+}
 
 using namespace lldb;
 using namespace lldb_private;
@@ -298,9 +309,9 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (str.length())
         new_prompt = str;
       GetCommandInterpreter().UpdatePrompt(new_prompt);
-      EventSP prompt_change_event_sp(
-          new Event(CommandInterpreter::eBroadcastBitResetPrompt,
-                    new EventDataBytes(new_prompt)));
+      auto bytes = llvm::make_unique<EventDataBytes>(new_prompt);
+      auto prompt_change_event_sp = std::make_shared<Event>(
+          CommandInterpreter::eBroadcastBitResetPrompt, bytes.release());
       GetCommandInterpreter().BroadcastEvent(prompt_change_event_sp);
     } else if (property_path == g_properties[ePropertyUseColor].name) {
       // use-color changed. Ping the prompt so it can reset the ansi terminal
@@ -699,16 +710,16 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
 
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
-      Properties(OptionValuePropertiesSP(new OptionValueProperties())),
-      m_input_file_sp(new StreamFile(stdin, false)),
-      m_output_file_sp(new StreamFile(stdout, false)),
-      m_error_file_sp(new StreamFile(stderr, false)),
+      Properties(std::make_shared<OptionValueProperties>()),
+      m_input_file_sp(std::make_shared<StreamFile>(stdin, false)),
+      m_output_file_sp(std::make_shared<StreamFile>(stdout, false)),
+      m_error_file_sp(std::make_shared<StreamFile>(stderr, false)),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
       m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_ap(), m_source_file_cache(),
-      m_command_interpreter_ap(
-          new CommandInterpreter(*this, eScriptLanguageDefault, false)),
+      m_command_interpreter_ap(llvm::make_unique<CommandInterpreter>(
+          *this, eScriptLanguageDefault, false)),
       m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
@@ -717,7 +728,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   snprintf(instance_cstr, sizeof(instance_cstr), "debugger_%d", (int)GetID());
   m_instance_name.SetCString(instance_cstr);
   if (log_callback)
-    m_log_callback_stream_sp.reset(new StreamCallback(log_callback, baton));
+    m_log_callback_stream_sp =
+        std::make_shared<StreamCallback>(log_callback, baton);
   m_command_interpreter_ap->Initialize();
   // Always add our default platform to the platform list
   PlatformSP default_platform_sp(Platform::GetHostPlatform());
@@ -813,7 +825,7 @@ void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (m_input_file_sp)
     m_input_file_sp->GetFile().SetStream(fh, tranfer_ownership);
   else
-    m_input_file_sp.reset(new StreamFile(fh, tranfer_ownership));
+    m_input_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
 
   File &in_file = m_input_file_sp->GetFile();
   if (!in_file.IsValid())
@@ -828,7 +840,7 @@ void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (m_output_file_sp)
     m_output_file_sp->GetFile().SetStream(fh, tranfer_ownership);
   else
-    m_output_file_sp.reset(new StreamFile(fh, tranfer_ownership));
+    m_output_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
 
   File &out_file = m_output_file_sp->GetFile();
   if (!out_file.IsValid())
@@ -847,7 +859,7 @@ void Debugger::SetErrorFileHandle(FILE *fh, bool tranfer_ownership) {
   if (m_error_file_sp)
     m_error_file_sp->GetFile().SetStream(fh, tranfer_ownership);
   else
-    m_error_file_sp.reset(new StreamFile(fh, tranfer_ownership));
+    m_error_file_sp = std::make_shared<StreamFile>(fh, tranfer_ownership);
 
   File &err_file = m_error_file_sp->GetFile();
   if (!err_file.IsValid())
@@ -998,7 +1010,7 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
 
     // If there is nothing, use stdin
     if (!in)
-      in = StreamFileSP(new StreamFile(stdin, false));
+      in = std::make_shared<StreamFile>(stdin, false);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out) {
@@ -1009,7 +1021,7 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
 
     // If there is nothing, use stdout
     if (!out)
-      out = StreamFileSP(new StreamFile(stdout, false));
+      out = std::make_shared<StreamFile>(stdout, false);
   }
   // If no STDERR has been set, then set it appropriately
   if (!err) {
@@ -1020,7 +1032,7 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
 
     // If there is nothing, use stderr
     if (!err)
-      err = StreamFileSP(new StreamFile(stdout, false));
+      err = std::make_shared<StreamFile>(stdout, false);
   }
 }
 
@@ -1077,11 +1089,11 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
 }
 
 StreamSP Debugger::GetAsyncOutputStream() {
-  return StreamSP(new StreamAsynchronousIO(*this, true));
+  return std::make_shared<StreamAsynchronousIO>(*this, true);
 }
 
 StreamSP Debugger::GetAsyncErrorStream() {
-  return StreamSP(new StreamAsynchronousIO(*this, false));
+  return std::make_shared<StreamAsynchronousIO>(*this, false);
 }
 
 size_t Debugger::GetNumDebuggers() {
@@ -1236,7 +1248,8 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // For simplicity's sake, I am not going to deal with how to close down any
   // open logging streams, I just redirect everything from here on out to the
   // callback.
-  m_log_callback_stream_sp.reset(new StreamCallback(log_callback, baton));
+  m_log_callback_stream_sp =
+      std::make_shared<StreamCallback>(log_callback, baton);
 }
 
 bool Debugger::EnableLog(llvm::StringRef channel,
@@ -1269,8 +1282,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         error_stream << "Unable to open log file: " << ec.message();
         return false;
       }
-      log_stream_sp.reset(
-          new llvm::raw_fd_ostream(FD, should_close, unbuffered));
+      log_stream_sp =
+          std::make_shared<llvm::raw_fd_ostream>(FD, should_close, unbuffered);
       m_log_streams[log_file] = log_stream_sp;
     }
   }
@@ -1286,7 +1299,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
 
 SourceManager &Debugger::GetSourceManager() {
   if (!m_source_manager_ap)
-    m_source_manager_ap.reset(new SourceManager(shared_from_this()));
+    m_source_manager_ap = llvm::make_unique<SourceManager>(shared_from_this());
   return *m_source_manager_ap;
 }
 

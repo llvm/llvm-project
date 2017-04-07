@@ -1621,11 +1621,11 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
     // zero.
-    if ((*Op0C + 1).isPowerOf2()) {
-      APInt KnownZero(BitWidth, 0);
-      APInt KnownOne(BitWidth, 0);
-      computeKnownBits(&I, KnownZero, KnownOne, 0, &I);
-      if ((*Op0C | KnownZero).isAllOnesValue())
+    if (Op0C->isMask()) {
+      APInt RHSKnownZero(BitWidth, 0);
+      APInt RHSKnownOne(BitWidth, 0);
+      computeKnownBits(Op1, RHSKnownZero, RHSKnownOne, 0, &I);
+      if ((*Op0C | RHSKnownZero).isAllOnesValue())
         return BinaryOperator::CreateXor(Op1, Op0);
     }
   }

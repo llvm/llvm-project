@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -347,6 +348,21 @@ bool SIInstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   return (NumLoads * DstRC->getSize()) <= LoadClusterThreshold;
 }
 
+static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              const DebugLoc &DL, unsigned DestReg,
+                              unsigned SrcReg, bool KillSrc) {
+  MachineFunction *MF = MBB.getParent();
+  DiagnosticInfoUnsupported IllegalCopy(*MF->getFunction(),
+                                        "illegal SGPR to VGPR copy",
+                                        DL, DS_Error);
+  LLVMContext &C = MF->getFunction()->getContext();
+  C.diagnose(IllegalCopy);
+
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_ILLEGAL_COPY), DestReg)
+    .addReg(SrcReg, getKillRegState(KillSrc));
+}
+
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, unsigned DestReg,
@@ -370,7 +386,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
+      return;
+    }
+
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DestReg)
             .addReg(SrcReg, getKillRegState(KillSrc));
     return;
@@ -392,7 +412,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    assert(AMDGPU::SReg_64RegClass.contains(SrcReg));
+    if (!AMDGPU::SReg_64RegClass.contains(SrcReg)) {
+      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
+      return;
+    }
+
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), DestReg)
             .addReg(SrcReg, getKillRegState(KillSrc));
     return;
@@ -416,7 +440,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opcode = AMDGPU::S_MOV_B32;
       EltSize = 4;
     }
+
+    if (!RI.isSGPRClass(RI.getPhysRegClass(SrcReg))) {
+      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
+      return;
+    }
   }
+
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
   bool Forward = RI.getHWRegIndex(DestReg) <= RI.getHWRegIndex(SrcReg);
@@ -3223,12 +3253,15 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
     bool HasDst = Inst.getOperand(0).isReg() && Inst.getOperand(0).isDef();
     unsigned NewDstReg = AMDGPU::NoRegister;
     if (HasDst) {
+      unsigned DstReg = Inst.getOperand(0).getReg();
+      if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+        continue;
+
       // Update the destination register class.
       const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Inst);
       if (!NewDstRC)
         continue;
 
-      unsigned DstReg = Inst.getOperand(0).getReg();
       if (Inst.isCopy() &&
           TargetRegisterInfo::isVirtualRegister(Inst.getOperand(1).getReg()) &&
           NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {

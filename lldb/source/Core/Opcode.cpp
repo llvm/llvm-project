@@ -9,17 +9,15 @@
 
 #include "lldb/Core/Opcode.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/Triple.h"
-
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-forward.h" // for DataBufferSP
+
+#include <memory> // for make_shared
+
+#include <inttypes.h> // for PRIx64
 
 using namespace lldb;
 using namespace lldb_private;
@@ -132,7 +130,7 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
   if (buf != nullptr) {
     DataBufferSP buffer_sp;
 
-    buffer_sp.reset(new DataBufferHeap(buf, byte_size));
+    buffer_sp = std::make_shared<DataBufferHeap>(buf, byte_size);
     data.SetByteOrder(GetDataByteOrder());
     data.SetData(buffer_sp);
     return byte_size;

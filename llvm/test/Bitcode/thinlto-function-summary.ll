@@ -17,7 +17,7 @@
 ; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'variadic'
 ; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
 ; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
-; BC-NEXT: <FNENTRY {{.*}} op0=5 {{.*}}> record string = 'f'
+; BC-NEXT: <ENTRY {{.*}} op0=5 {{.*}}> record string = 'f'
 ; BC-NEXT: <ENTRY {{.*}} record string = 'h'
 ; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
 

@@ -6120,54 +6120,6 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Attempt to lower a build vector of repeated elts as a build vector of unique
-// ops followed by a shuffle.
-static SDValue
-lowerBuildVectorWithRepeatedEltsUsingShuffle(SDValue V, SelectionDAG &DAG,
-                                             const X86Subtarget &Subtarget) {
-  MVT VT = V.getSimpleValueType();
-  unsigned NumElts = VT.getVectorNumElements();
-
-  // TODO - vXi8 insertions+shuffles often cause PSHUFBs which can lead to
-  // excessive/bulky shuffle mask creation.
-  if (VT.getScalarSizeInBits() < 16)
-    return SDValue();
-
-  // Create list of unique operands to be passed to a build vector and a shuffle
-  // mask describing the repetitions.
-  // TODO - we currently insert the first occurances in place - sometimes it
-  // might be better to insert them in other locations for shuffle efficiency.
-  bool HasRepeatedElts = false;
-  SmallVector<int, 16> Mask(NumElts, SM_SentinelUndef);
-  SmallVector<SDValue, 16> Uniques(V->op_begin(), V->op_end());
-  for (unsigned i = 0; i != NumElts; ++i) {
-    SDValue Op = Uniques[i];
-    if (Op.isUndef())
-      continue;
-    Mask[i] = i;
-
-    // Zeros can be efficiently repeated, so don't shuffle these.
-    if (X86::isZeroNode(Op))
-      continue;
-
-    // If any repeated operands are found then mark the build vector entry as
-    // undef and setup a copy in the shuffle mask.
-    for (unsigned j = i + 1; j != NumElts; ++j)
-      if (Op == Uniques[j]) {
-        HasRepeatedElts = true;
-        Mask[j] = i;
-        Uniques[j] = DAG.getUNDEF(VT.getScalarType());
-      }
-  }
-
-  if (!HasRepeatedElts)
-    return SDValue();
-
-  SDLoc DL(V);
-  return DAG.getVectorShuffle(VT, DL, DAG.getBuildVector(VT, DL, Uniques),
-                              DAG.getUNDEF(VT), Mask);
-}
-
 /// Custom lower build_vector of v16i8.
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
                                      unsigned NumNonZero, unsigned NumZero,
@@ -7800,17 +7752,11 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (IsAllConstants)
     return SDValue();
 
+  // See if we can use a vector load to get all of the elements.
   if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
-    // See if we can use a vector load to get all of the elements.
     SmallVector<SDValue, 64> Ops(Op->op_begin(), Op->op_begin() + NumElems);
     if (SDValue LD = EltsFromConsecutiveLoads(VT, Ops, dl, DAG, false))
       return LD;
-
-    // Attempt to lower a build vector of repeated elts as single insertions
-    // followed by a shuffle.
-    if (SDValue V =
-            lowerBuildVectorWithRepeatedEltsUsingShuffle(Op, DAG, Subtarget))
-      return V;
   }
 
   // For AVX-length vectors, build the individual 128-bit pieces and use

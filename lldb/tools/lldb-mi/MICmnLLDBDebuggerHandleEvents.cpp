@@ -40,6 +40,8 @@
 #include "MIUtilDebug.h"
 #include "Platform.h" // for PATH_MAX
 
+#include <algorithm>
+
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmnLLDBDebuggerHandleEvents constructor.

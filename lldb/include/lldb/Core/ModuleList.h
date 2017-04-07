@@ -10,18 +10,67 @@
 #ifndef liblldb_ModuleList_h_
 #define liblldb_ModuleList_h_
 
-// C Includes
-// C++ Includes
+#include "lldb/Core/Address.h"     // for Address
+#include "lldb/Core/ModuleSpec.h"  // for ModuleSpec
+#include "lldb/Utility/Error.h"    // for Error
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/Iterable.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
+
+#include "llvm/ADT/DenseSet.h"
+
 #include <functional>
 #include <list>
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Iterable.h"
-#include "lldb/lldb-private.h"
-#include "llvm/ADT/DenseSet.h"
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
+
+namespace lldb_private {
+class ConstString;
+}
+namespace lldb_private {
+class FileSpecList;
+}
+namespace lldb_private {
+class Function;
+}
+namespace lldb_private {
+class Log;
+}
+namespace lldb_private {
+class Module;
+}
+namespace lldb_private {
+class RegularExpression;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class SymbolContextList;
+}
+namespace lldb_private {
+class SymbolFile;
+}
+namespace lldb_private {
+class Target;
+}
+namespace lldb_private {
+class TypeList;
+}
+namespace lldb_private {
+class UUID;
+}
+namespace lldb_private {
+class VariableList;
+}
 
 namespace lldb_private {
 

@@ -7,13 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-#include <string.h>
-
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Utility/StringExtractorGDBRemote.h"
+
+#include <ctype.h> // for isxdigit
+#include <string.h>
 
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType() const {

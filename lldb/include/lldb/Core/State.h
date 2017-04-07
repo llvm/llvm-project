@@ -10,8 +10,13 @@
 #ifndef liblldb_State_h_
 #define liblldb_State_h_
 
-#include "lldb/lldb-private.h"
 #include "llvm/Support/FormatProviders.h"
+
+#include "lldb/lldb-enumerations.h"   // for StateType
+#include "llvm/ADT/StringRef.h"       // for StringRef
+#include "llvm/Support/raw_ostream.h" // for raw_ostream
+
+#include <stdint.h> // for uint32_t
 
 namespace lldb_private {
 

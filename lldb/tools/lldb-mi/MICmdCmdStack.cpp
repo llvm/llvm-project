@@ -32,6 +32,8 @@
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueConst.h"
 
+#include <algorithm>
+
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmdCmdStackInfoDepth constructor.

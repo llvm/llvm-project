@@ -169,6 +169,8 @@ An overview of all the command-line options:
                                      - 'llvm', 'google', 'webkit', 'mozilla'
                                    See clang-format documentation for the up-to-date
                                    information about formatting styles and options.
+                                   This option overrides the 'FormatStyle` option in
+                                   .clang-tidy file, if any.
     -header-filter=<string>      -
                                    Regular expression matching the names of the
                                    headers to output diagnostics from. Diagnostics
@@ -195,9 +197,6 @@ An overview of all the command-line options:
                                    printing statistics about ignored warnings and
                                    warnings treated as errors if the respective
                                    options are specified.
-    -style=<string>              -
-                                   Fallback style for reformatting after inserting fixes
-                                   if there is no clang-format config file found.
     -system-headers              - Display the errors from system headers.
     -warnings-as-errors=<string> -
                                    Upgrades warnings to errors. Same format as
@@ -233,12 +232,13 @@ An overview of all the command-line options:
     option, command-line option takes precedence. The effective
     configuration can be inspected using -dump-config:
 
-      $ clang-tidy -dump-config - --
+      $ clang-tidy -dump-config
       ---
       Checks:          '-*,some-check'
       WarningsAsErrors: ''
       HeaderFilterRegex: ''
       AnalyzeTemporaryDtors: false
+      FormatStyle:     none
       User:            user
       CheckOptions:
         - key:             some-check.SomeOption

@@ -10,22 +10,29 @@
 #ifndef liblldb_StructuredData_h_
 #define liblldb_StructuredData_h_
 
-// C Includes
-// C++ Includes
+#include "llvm/ADT/StringRef.h"
+
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits> // for move
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
+#include <assert.h> // for assert
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint64_t
 
-// Project includes
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/lldb-defines.h"
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 
@@ -368,13 +375,12 @@ public:
     }
 
     ObjectSP GetKeys() const {
-      ObjectSP object_sp(new Array());
-      Array *array = object_sp->GetAsArray();
+      auto object_sp = std::make_shared<Array>();
       collection::const_iterator iter;
       for (iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
-        ObjectSP key_object_sp(new String());
-        key_object_sp->GetAsString()->SetValue(iter->first.AsCString());
-        array->Push(key_object_sp);
+        auto key_object_sp = std::make_shared<String>();
+        key_object_sp->SetValue(iter->first.AsCString());
+        object_sp->Push(key_object_sp);
       }
       return object_sp;
     }
@@ -500,19 +506,19 @@ public:
     }
 
     void AddIntegerItem(llvm::StringRef key, uint64_t value) {
-      AddItem(key, ObjectSP(new Integer(value)));
+      AddItem(key, std::make_shared<Integer>(value));
     }
 
     void AddFloatItem(llvm::StringRef key, double value) {
-      AddItem(key, ObjectSP(new Float(value)));
+      AddItem(key, std::make_shared<Float>(value));
     }
 
     void AddStringItem(llvm::StringRef key, std::string value) {
-      AddItem(key, ObjectSP(new String(std::move(value))));
+      AddItem(key, std::make_shared<String>(std::move(value)));
     }
 
     void AddBooleanItem(llvm::StringRef key, bool value) {
-      AddItem(key, ObjectSP(new Boolean(value)));
+      AddItem(key, std::make_shared<Boolean>(value));
     }
 
     void Dump(Stream &s, bool pretty_print = true) const override;

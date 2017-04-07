@@ -797,3 +797,48 @@ final:
   %value = or <2 x i32> %A, <i32 123, i32 333>
   ret <2 x i32> %value
 }
+
+define i8 @test51(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @test51(
+; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[W]], [[Z]]
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[Y]], [[A]]
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %w = mul i8 %b, %c
+  %z = xor i8 %a, -1
+  %y = and i8 %w, %z
+  %x = or i8 %y, %a
+  ret i8 %x
+}
+
+define i8 @test52(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @test52(
+; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[W]], -1
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[W]], [[Y]]
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %w = mul i8 %b, %c
+  %z = xor i8 %w, -1
+  %y = and i8 %z, %a
+  %x = or i8 %w, %y
+  ret i8 %x
+}
+
+define i8 @test53(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @test53(
+; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[W]], -1
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[W]], [[Y]]
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %w = mul i8 %b, %c
+  %z = xor i8 %w, -1
+  %y = and i8 %z, %a
+  %x = or i8 %w, %y
+  ret i8 %x
+}

@@ -36,9 +36,9 @@ done:
 ; OPT-CI-NOT: getelementptr
 ; OPT: br i1
 
-; OPT-CI: ptrtoint
-; OPT-CI: add
-; OPT-CI: inttoptr
+; OPT-CI: addrspacecast
+; OPT-CI: getelementptr
+; OPT-CI: bitcast
 ; OPT: br label
 
 ; GCN-LABEL: {{^}}test_sink_noop_addrspacecast_flat_to_global_i32:
@@ -69,9 +69,9 @@ done:
 ; OPT-CI-NOT: getelementptr
 ; OPT: br i1
 
-; OPT-CI: ptrtoint
-; OPT-CI: add
-; OPT-CI: inttoptr
+; OPT-CI: addrspacecast
+; OPT-CI: getelementptr
+; OPT-CI: bitcast
 ; OPT: br label
 
 ; GCN-LABEL: {{^}}test_sink_noop_addrspacecast_flat_to_constant_i32:

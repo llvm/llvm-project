@@ -45,6 +45,7 @@ si_int __ctzsi2(si_int a);  // count trailing zeros
 si_int __ctzdi2(di_int a);  // count trailing zeros
 si_int __ctzti2(ti_int a);  // count trailing zeros
 
+si_int __ffssi2(si_int a);  // find least significant 1 bit
 si_int __ffsdi2(di_int a);  // find least significant 1 bit
 si_int __ffsti2(ti_int a);  // find least significant 1 bit
 

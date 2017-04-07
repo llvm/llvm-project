@@ -712,6 +712,7 @@
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
+		49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
@@ -2474,6 +2475,8 @@
 		49EC3E9C118F90D400B1265E /* ThreadPlanCallFunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanCallFunction.h; path = include/lldb/Target/ThreadPlanCallFunction.h; sourceTree = "<group>"; };
 		49F1A74511B3388F003ED505 /* ClangExpressionDeclMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangExpressionDeclMap.cpp; path = ExpressionParser/Clang/ClangExpressionDeclMap.cpp; sourceTree = "<group>"; };
 		49F1A74911B338AE003ED505 /* ClangExpressionDeclMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangExpressionDeclMap.h; path = ExpressionParser/Clang/ClangExpressionDeclMap.h; sourceTree = "<group>"; };
+		49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CPlusPlusNameParser.cpp; path = Language/CPlusPlus/CPlusPlusNameParser.cpp; sourceTree = "<group>"; };
+		49F811F01E931B1500F4E163 /* CPlusPlusNameParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CPlusPlusNameParser.h; path = Language/CPlusPlus/CPlusPlusNameParser.h; sourceTree = "<group>"; };
 		4C00832C1B9A58A700D5CF24 /* Expression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Expression.h; path = include/lldb/Expression/Expression.h; sourceTree = "<group>"; };
 		4C00832D1B9A58A700D5CF24 /* FunctionCaller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctionCaller.h; path = include/lldb/Expression/FunctionCaller.h; sourceTree = "<group>"; };
 		4C00832E1B9A58A700D5CF24 /* UserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserExpression.h; path = include/lldb/Expression/UserExpression.h; sourceTree = "<group>"; };
@@ -6108,6 +6111,8 @@
 				945261B01B9A11BE00BF138D /* Formatters */,
 				94B6385C1B8FB174004FE1E4 /* CPlusPlusLanguage.h */,
 				94B6385B1B8FB174004FE1E4 /* CPlusPlusLanguage.cpp */,
+				49F811F01E931B1500F4E163 /* CPlusPlusNameParser.h */,
+				49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */,
 			);
 			name = CPlusPlus;
 			sourceTree = "<group>";
@@ -7077,6 +7082,7 @@
 				2689FFF713353DB600698AC0 /* BreakpointLocation.cpp in Sources */,
 				2654A68D1E552D1500DA1013 /* PseudoTerminal.cpp in Sources */,
 				2689FFF913353DB600698AC0 /* BreakpointLocationCollection.cpp in Sources */,
+				49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */,
 				2689FFFB13353DB600698AC0 /* BreakpointLocationList.cpp in Sources */,
 				2689FFFD13353DB600698AC0 /* BreakpointOptions.cpp in Sources */,
 				2689FFFF13353DB600698AC0 /* BreakpointResolver.cpp in Sources */,

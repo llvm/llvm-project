@@ -20,6 +20,7 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/Timeout.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
