@@ -189,7 +189,7 @@ INSTANTIATE_TEST_CASE_P(
         // friends, everyone needs friends.
         {"class Foo { int i; friend class a::Foo; };",
          "class Foo { int i; friend class b::Bar; };", "", ""},
-    })));
+    })), );
 
 TEST_P(RenameClassTest, RenameClasses) {
   auto Param = GetParam();
@@ -298,7 +298,7 @@ INSTANTIATE_TEST_CASE_P(
         {"namespace o1 { class Foo { int i; friend class Old; }; }",
          "namespace o1 { class Foo { int i; friend class New; }; }",
          "::o1::Old", "::o1::New"},
-    })));
+    })), );
 
 TEST_P(NamespaceDetectionTest, RenameClasses) {
   auto Param = GetParam();
@@ -394,7 +394,7 @@ INSTANTIATE_TEST_CASE_P(
         {"template <typename T> struct Moo { ns::Old<T> o_; }; Moo<int> m;",
          "template <typename T> struct Moo { ns::New<T> o_; }; Moo<int> m;",
          "ns::Old", "ns::New"},
-    })));
+    })), );
 
 TEST_P(TemplatedClassRenameTest, RenameTemplateClasses) {
   auto Param = GetParam();

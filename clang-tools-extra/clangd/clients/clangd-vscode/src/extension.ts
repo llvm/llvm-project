@@ -23,7 +23,14 @@ export function activate(context: vscode.ExtensionContext) {
 
     const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for C/C++ files
-        documentSelector: ['c', 'cc', 'cpp', 'h', 'hh', 'hpp']
+        documentSelector: ['c', 'cc', 'cpp', 'h', 'hh', 'hpp'],
+        uriConverters: {
+            // FIXME: by default the URI sent over the protocol will be percent encoded (see rfc3986#section-2.1)
+            //        the "workaround" below disables temporarily the encoding until decoding
+            //        is implemented properly in clangd
+            code2Protocol: (uri: vscode.Uri) : string => uri.toString(true),
+            protocol2Code: (uri: string) : vscode.Uri => undefined
+        }
     };
 
     const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
@@ -31,7 +38,8 @@ export function activate(context: vscode.ExtensionContext) {
     function applyTextEdits(uri: string, edits: vscodelc.TextEdit[]) {
         let textEditor = vscode.window.activeTextEditor;
 
-        if (textEditor && textEditor.document.uri.toString() === uri) {
+        // FIXME: vscode expects that uri will be percent encoded
+        if (textEditor && textEditor.document.uri.toString(true) === uri) {
             textEditor.edit(mutator => {
                 for (const edit of edits) {
                     mutator.replace(vscodelc.Protocol2Code.asRange(edit.range), edit.newText);

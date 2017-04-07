@@ -318,12 +318,11 @@ void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
 
   TaskGroup Tg;
   IndexTy I = Begin;
-  for (; I < End; I += TaskSize) {
+  for (; I + TaskSize < End; I += TaskSize) {
     Tg.spawn([=, &Fn] {
       for (IndexTy J = I, E = I + TaskSize; J != E; ++J)
         Fn(J);
     });
-    Begin += TaskSize;
   }
   Tg.spawn([=, &Fn] {
     for (IndexTy J = I; J < End; ++J)
