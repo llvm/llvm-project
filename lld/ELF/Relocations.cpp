@@ -851,7 +851,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
       reportUndefined<ELFT>(Body, Sec, Rel.r_offset);
 
-    RelExpr Expr = Target->getRelExpr(Type, Body);
+    RelExpr Expr =
+        Target->getRelExpr(Type, Body, Sec.Data.begin() + Rel.r_offset);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))

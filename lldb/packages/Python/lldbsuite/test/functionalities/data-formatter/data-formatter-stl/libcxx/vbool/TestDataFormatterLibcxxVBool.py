@@ -24,7 +24,7 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @add_test_categories(["libc++"])
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr32553")
+    @expectedFailureAll(bugnumber="llvm.org/pr32553")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

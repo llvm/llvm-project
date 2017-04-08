@@ -268,7 +268,9 @@ public:
                      MachineBasicBlock::iterator &It,
                      MachineFunction &MF,
                      bool IsTailCall) const override;
-
+  /// Returns true if the instruction has a shift by immediate that can be
+  /// executed in one cycle less.
+  bool isFalkorLSLFast(const MachineInstr &MI) const;
 private:
 
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP

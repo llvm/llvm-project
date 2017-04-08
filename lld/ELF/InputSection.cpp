@@ -561,7 +561,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
-    RelExpr Expr = Target->getRelExpr(Type, Sym);
+    RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {
