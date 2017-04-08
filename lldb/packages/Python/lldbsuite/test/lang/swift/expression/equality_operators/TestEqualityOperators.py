@@ -35,6 +35,9 @@ class TestUnitTests(TestBase):
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
+    @decorators.expectedFailureAll(
+        oslist=["macosx"],
+       bugnumber="rdar://31515121")
     def test_equality_operators_fileprivate(self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
@@ -43,6 +46,9 @@ class TestUnitTests(TestBase):
     @decorators.expectedFailureAll(
         oslist=["linux"],
         bugnumber="rdar://28180489")
+    @decorators.expectedFailureAll(
+        oslist=["macosx"],
+       bugnumber="rdar://31515121")
     def test_equality_operators_private(self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
@@ -110,7 +116,7 @@ class TestUnitTests(TestBase):
 
         # And make sure we got did increment the counter by the right value.
         value = self.frame.EvaluateExpression("Fooey.GetCounter()", options)
-        self.assertTrue(value.GetError().Success(), "GetCounter worked")
+        self.assertTrue(value.GetError().Success(), "GetCounter failed with error %s"%(value.GetError().GetCString()))
 
         counter = value.GetValueAsUnsigned()
         self.assertTrue(
