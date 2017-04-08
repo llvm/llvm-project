@@ -35,7 +35,7 @@ entry:
 ; CHECK-NOT: vldr
 ; CHECK: ldrd [[REG1:(r[0-9]+)]], [[REG2:(r[0-9]+)]], [r0]
 ; CHECK-NOT: b LBB
-; CHECK: bfc [[REG2]], #31, #1
+; CHECK: bic [[REG2]], [[REG2]], #-2147483648
 ; CHECK: cmp [[REG1]], #0
 ; CHECK: cmpeq [[REG2]], #0
 ; CHECK-NOT: vcmp.f32

@@ -19,6 +19,10 @@
 //      down one Z pipe, six SD pipes, four VX pipes and the total latency is
 //      six cycles.
 //
+// Contains all of the Falkor specific ReadAdvance types for forwarding logic.
+//
+// Contains all of the Falkor specific WriteVariant types for immediate zero
+// and LSLFast.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -47,6 +51,7 @@ def FalkorWr_1VXVY_6cyc : SchedWriteRes<[FalkorUnitVXVY]>{ let Latency = 6; }
 
 def FalkorWr_1LD_0cyc   : SchedWriteRes<[FalkorUnitLD]>  { let Latency = 0; }
 def FalkorWr_1ST_0cyc   : SchedWriteRes<[FalkorUnitST]>  { let Latency = 0; }
+def FalkorWr_1ST_3cyc   : SchedWriteRes<[FalkorUnitST]>  { let Latency = 3; }
 
 def FalkorWr_1GTOV_1cyc : SchedWriteRes<[FalkorUnitGTOV]>{ let Latency = 1; }
 def FalkorWr_1GTOV_4cyc : SchedWriteRes<[FalkorUnitGTOV]>{ let Latency = 4; }
@@ -113,6 +118,11 @@ def FalkorWr_1VX_1VY_10cyc : SchedWriteRes<[FalkorUnitVX, FalkorUnitVY]> {
   let NumMicroOps = 2;
 }
 
+def FalkorWr_2GTOV_1cyc    : SchedWriteRes<[FalkorUnitGTOV, FalkorUnitGTOV]> {
+  let Latency = 1;
+  let NumMicroOps = 2;
+}
+
 def FalkorWr_1XYZ_1ST_4cyc: SchedWriteRes<[FalkorUnitXYZ, FalkorUnitST]> {
   let Latency = 4;
   let NumMicroOps = 2;
@@ -134,12 +144,12 @@ def FalkorWr_1Z_1XY_0cyc : SchedWriteRes<[FalkorUnitZ, FalkorUnitXY]> {
 
 def FalkorWr_1X_1Z_8cyc  : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 8;
-  let NumMicroOps = 2;
+  let ResourceCycles = [2, 8];
 }
 
 def FalkorWr_1X_1Z_16cyc : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 16;
-  let NumMicroOps = 2;
+  let ResourceCycles = [2, 16];
 }
 
 def FalkorWr_1LD_1Z_3cyc : SchedWriteRes<[FalkorUnitLD, FalkorUnitZ]> {
@@ -305,3 +315,42 @@ def FalkorWr_2LD_2VXVY_1XYZ_2LD_2VXVY_4cyc:SchedWriteRes<[FalkorUnitLD,
   let Latency = 4;
   let NumMicroOps = 9;
 }
+
+// Forwarding logic is modeled for vector multiply and accumulate
+// -----------------------------------------------------------------------------
+def FalkorReadVMA : SchedReadAdvance<2, [FalkorWr_1VXVY_4cyc,
+                                         FalkorWr_2VXVY_4cyc]>;
+def FalkorReadFMA : SchedReadAdvance<3, [FalkorWr_1VXVY_5cyc,
+                                         FalkorWr_1VXVY_6cyc,
+                                         FalkorWr_2VXVY_5cyc,
+                                         FalkorWr_2VXVY_6cyc]>;
+
+// SchedPredicates and WriteVariants for Immediate Zero and LSLFast
+// -----------------------------------------------------------------------------
+def FalkorImmZPred    : SchedPredicate<[{TII->isGPRZero(*MI)}]>;
+def FalkorLSLFastPred : SchedPredicate<[{TII->isFalkorLSLFast(*MI)}]>; 
+
+def FalkorWr_FMOV  : SchedWriteVariant<[
+                       SchedVar<FalkorImmZPred, [FalkorWr_1none_0cyc]>,
+                       SchedVar<NoSchedPred,    [FalkorWr_1GTOV_1cyc]>]>;
+
+def FalkorWr_MOVZ  : SchedWriteVariant<[
+                       SchedVar<FalkorImmZPred, [FalkorWr_1none_0cyc]>,
+                       SchedVar<NoSchedPred,    [FalkorWr_1XYZB_1cyc]>]>;
+
+def FalkorWr_LDR   : SchedWriteVariant<[
+                       SchedVar<FalkorLSLFastPred, [FalkorWr_1LD_3cyc]>,
+                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1LD_4cyc]>]>;
+
+def FalkorWr_ADD   : SchedWriteVariant<[
+                       SchedVar<FalkorLSLFastPred, [FalkorWr_1XYZ_1cyc]>,
+                       SchedVar<FalkorImmZPred,    [FalkorWr_1XYZ_1cyc]>,
+                       SchedVar<NoSchedPred,       [FalkorWr_2XYZ_2cyc]>]>;
+
+def FalkorWr_PRFM  : SchedWriteVariant<[
+                       SchedVar<FalkorLSLFastPred, [FalkorWr_1ST_3cyc]>,
+                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1ST_4cyc]>]>;
+
+def FalkorWr_LDRS  : SchedWriteVariant<[
+                       SchedVar<FalkorLSLFastPred, [FalkorWr_1LD_4cyc]>,
+                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1LD_5cyc]>]>;

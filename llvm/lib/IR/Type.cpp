@@ -41,12 +41,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   }
 }
 
-Type *Type::getScalarType() const {
-  if (auto *VTy = dyn_cast<VectorType>(this))
-    return VTy->getElementType();
-  return const_cast<Type*>(this);
-}
-
 bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }

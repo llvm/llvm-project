@@ -171,20 +171,33 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // and are assumed to be legal.
       if (!isPreISelGenericOpcode(MI->getOpcode()))
         continue;
+      SmallVector<MachineInstr *, 4> WorkList;
+      Helper.MIRBuilder.recordInsertions(
+          [&](MachineInstr *MI) { WorkList.push_back(MI); });
+      WorkList.push_back(&*MI);
 
-      auto Res = Helper.legalizeInstr(*MI);
+      LegalizerHelper::LegalizeResult Res;
+      unsigned Idx = 0;
+      do {
+        Res = Helper.legalizeInstrStep(*WorkList[Idx]);
+        // Error out if we couldn't legalize this instruction. We may want to
+        // fall
+        // back to DAG ISel instead in the future.
+        if (Res == LegalizerHelper::UnableToLegalize) {
+          Helper.MIRBuilder.stopRecordingInsertions();
+          if (Res == LegalizerHelper::UnableToLegalize) {
+            reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+                               "unable to legalize instruction",
+                               *WorkList[Idx]);
+            return false;
+          }
+        }
+        Changed |= Res == LegalizerHelper::Legalized;
+        ++Idx;
+      } while (Idx < WorkList.size());
 
-      // Error out if we couldn't legalize this instruction. We may want to fall
-      // back to DAG ISel instead in the future.
-      if (Res == LegalizerHelper::UnableToLegalize) {
-        reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
-                           "unable to legalize instruction", *MI);
-        return false;
-      }
-
-      Changed |= Res == LegalizerHelper::Legalized;
+      Helper.MIRBuilder.stopRecordingInsertions();
     }
-
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();

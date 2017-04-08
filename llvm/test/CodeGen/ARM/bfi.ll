@@ -77,7 +77,7 @@ entry:
 
 define i32 @f7(i32 %x, i32 %y) {
 ; CHECK-LABEL: f7:
-; CHECK: bfi r1, r0, #4, #1
+; CHECK: bfi r0, r2, #4, #1
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4
   %or = or i32 %y2, 16
@@ -88,8 +88,8 @@ define i32 @f7(i32 %x, i32 %y) {
 
 define i32 @f8(i32 %x, i32 %y) {
 ; CHECK-LABEL: f8:
-; CHECK: bfi r1, r0, #4, #1
-; CHECK: bfi r1, r0, #5, #1
+; CHECK: bfi r0, r2, #4, #1
+; CHECK: bfi r0, r2, #5, #1
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4
   %or = or i32 %y2, 48
@@ -111,7 +111,7 @@ define i32 @f9(i32 %x, i32 %y) {
 
 define i32 @f10(i32 %x, i32 %y) {
 ; CHECK-LABEL: f10:
-; CHECK: bfi r1, r0, #4, #2
+; CHECK: bfi r0, r2, #4, #2
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4
   %or = or i32 %y2, 32
@@ -128,7 +128,7 @@ define i32 @f10(i32 %x, i32 %y) {
 
 define i32 @f11(i32 %x, i32 %y) {
 ; CHECK-LABEL: f11:
-; CHECK: bfi r1, r0, #4, #3
+; CHECK: bfi r0, r2, #4, #3
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4
   %or = or i32 %y2, 32
@@ -150,7 +150,7 @@ define i32 @f11(i32 %x, i32 %y) {
 
 define i32 @f12(i32 %x, i32 %y) {
 ; CHECK-LABEL: f12:
-; CHECK: bfi r1, r0, #4, #1
+; CHECK: bfi r0, r2, #4, #1
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4
   %or = or i32 %y2, 16
