@@ -59,7 +59,7 @@ TargetInfo *Target;
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
-template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
+template <class ELFT> static std::string getErrorLoc(const uint8_t *Loc) {
   for (InputSectionBase *D : InputSections) {
     auto *IS = dyn_cast_or_null<InputSection>(D);
     if (!IS || !IS->OutSec)
@@ -72,7 +72,7 @@ template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
   return "";
 }
 
-static std::string getErrorLocation(uint8_t *Loc) {
+static std::string getErrorLocation(const uint8_t *Loc) {
   switch (Config->EKind) {
   case ELF32LEKind:
     return getErrorLoc<ELF32LE>(Loc);
@@ -119,7 +119,8 @@ namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
   X86TargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
@@ -143,7 +144,8 @@ public:
 template <class ELFT> class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -171,13 +173,15 @@ class PPCTargetInfo final : public TargetInfo {
 public:
   PPCTargetInfo();
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
 };
 
 class PPC64TargetInfo final : public TargetInfo {
 public:
   PPC64TargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -186,7 +190,8 @@ public:
 class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -206,13 +211,15 @@ class AMDGPUTargetInfo final : public TargetInfo {
 public:
   AMDGPUTargetInfo();
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
 };
 
 class ARMTargetInfo final : public TargetInfo {
 public:
   ARMTargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
@@ -233,7 +240,8 @@ public:
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
@@ -353,7 +361,8 @@ X86TargetInfo::X86TargetInfo() {
   TrapInstr = 0xcccccccc;
 }
 
-RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                  const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
   case R_386_16:
@@ -376,6 +385,24 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_GOT;
   case R_386_GOT32:
   case R_386_GOT32X:
+    // These relocations can be calculated in two different ways.
+    // Usual calculation is G + A - GOT what means an offset in GOT table
+    // (R_GOT_FROM_END). When instruction pointed by relocation has no base
+    // register, then relocations can be used when PIC code is disabled. In that
+    // case calculation is G + A, it resolves to an address of entry in GOT
+    // (R_GOT) and not an offset.
+    //
+    // To check that instruction has no base register we scan ModR/M byte.
+    // See "Table 2-2. 32-Bit Addressing Forms with the ModR/M Byte"
+    // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
+    //  64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
+    if ((Loc[-1] & 0xc7) != 0x5)
+      return R_GOT_FROM_END;
+    if (Config->Pic)
+      error(toString(S.File) + ": relocation " + toString(Type) + " against '" +
+            S.getName() +
+            "' without base register can not be used when PIC enabled");
+    return R_GOT;
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
@@ -654,8 +681,8 @@ template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
 }
 
 template <class ELFT>
-RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
-                                           const SymbolBody &S) const {
+RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                           const uint8_t *Loc) const {
   switch (Type) {
   case R_X86_64_8:
   case R_X86_64_16:
@@ -1093,7 +1120,8 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-RelExpr PPCTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+RelExpr PPCTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                  const uint8_t *Loc) const {
   switch (Type) {
   case R_PPC_REL24:
   case R_PPC_REL32:
@@ -1142,7 +1170,8 @@ uint64_t getPPC64TocBase() {
   return TocVA + PPC64TocOffset;
 }
 
-RelExpr PPC64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+RelExpr PPC64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                    const uint8_t *Loc) const {
   switch (Type) {
   default:
     return R_ABS;
@@ -1290,8 +1319,8 @@ AArch64TargetInfo::AArch64TargetInfo() {
   TcbSize = 16;
 }
 
-RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
-                                      const SymbolBody &S) const {
+RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                      const uint8_t *Loc) const {
   switch (Type) {
   default:
     return R_ABS;
@@ -1634,7 +1663,8 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                     const uint8_t *Loc) const {
   switch (Type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_ABS64:
@@ -1671,7 +1701,8 @@ ARMTargetInfo::ARMTargetInfo() {
   NeedsThunks = true;
 }
 
-RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                  const uint8_t *Loc) const {
   switch (Type) {
   default:
     return R_ABS;
@@ -2065,8 +2096,8 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
 }
 
 template <class ELFT>
-RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
-                                         const SymbolBody &S) const {
+RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                         const uint8_t *Loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     Type &= 0xff;
