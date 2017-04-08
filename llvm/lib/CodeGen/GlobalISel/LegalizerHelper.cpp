@@ -57,31 +57,6 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
   }
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstr(MachineInstr &MI) {
-  SmallVector<MachineInstr *, 4> WorkList;
-  MIRBuilder.recordInsertions(
-      [&](MachineInstr *MI) { WorkList.push_back(MI); });
-  WorkList.push_back(&MI);
-
-  bool Changed = false;
-  LegalizeResult Res;
-  unsigned Idx = 0;
-  do {
-    Res = legalizeInstrStep(*WorkList[Idx]);
-    if (Res == UnableToLegalize) {
-      MIRBuilder.stopRecordingInsertions();
-      return UnableToLegalize;
-    }
-    Changed |= Res == Legalized;
-    ++Idx;
-  } while (Idx < WorkList.size());
-
-  MIRBuilder.stopRecordingInsertions();
-
-  return Changed ? Legalized : AlreadyLegal;
-}
-
 void LegalizerHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
                                    SmallVectorImpl<unsigned> &VRegs) {
   for (int i = 0; i < NumParts; ++i)

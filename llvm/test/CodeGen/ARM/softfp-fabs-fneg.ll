@@ -14,8 +14,7 @@ define double @f(double %a) {
 
 define float @g(float %a) {
   ; CHECK-LABEL: g:
-  ; CHECK-THUMB: bic r0, r0, #-2147483648
-  ; CHECK-ARM: bfc r0, #31, #1
+  ; CHECK: bic r0, r0, #-2147483648
   ; CHECK-NEXT: bx lr
   %x = call float @llvm.fabs.f32(float %a) readnone
   ret float %x

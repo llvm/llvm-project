@@ -3524,6 +3524,9 @@ public:
   /// "trap-func-name" if specified.
   llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
 
+  /// \brief Emit a stub for the cross-DSO CFI check function.
+  void EmitCfiCheckStub();
+
   /// \brief Emit a cross-DSO CFI failure handling function.
   void EmitCfiCheckFail();
 

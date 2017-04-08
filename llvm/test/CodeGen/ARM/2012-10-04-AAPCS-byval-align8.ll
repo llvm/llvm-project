@@ -19,7 +19,7 @@ entry:
   call void @llvm.va_start(i8* %g1)
 
 ; CHECK: add	[[REG:(r[0-9]+)|(lr)]], {{(r[0-9]+)|(lr)}}, #7
-; CHECK: bfc	[[REG]], #0, #3
+; CHECK: bic	[[REG]], [[REG]], #7
   %0 = va_arg i8** %g, double
   call void @llvm.va_end(i8* %g1)
 

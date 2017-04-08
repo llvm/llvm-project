@@ -3893,6 +3893,7 @@ def  MVNi  : AsI1<0b1111, (outs GPR:$Rd), (ins mod_imm:$imm), DPFrm,
   let Inst{11-0} = imm;
 }
 
+let AddedComplexity = 1 in
 def : ARMPat<(and   GPR:$src, mod_imm_not:$imm),
              (BICri GPR:$src, mod_imm_not:$imm)>;
 
