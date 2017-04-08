@@ -7,6 +7,9 @@
 
 #include "mathD.h"
 
+#define DOUBLE_SPECIALIZATION
+#include "ep.h"
+
 CONSTATTR double
 MATH_MANGLE(asin)(double x)
 {
@@ -24,9 +27,6 @@ MATH_MANGLE(asin)(double x)
     // together with the above rational approximation, and
     // reconstruct the terms carefully.
 
-    const double piby2 = 0x1.921fb54442d18p+0;
-    const double piby2_tail = 0x1.1a62633145c07p-54;
-    const double hpiby2_head = 0x1.921fb54442d18p-1;
 
     double y = BUILTIN_ABS_F64(x);
     bool transform = y >= 0.5;
@@ -42,18 +42,12 @@ MATH_MANGLE(asin)(double x)
                        0x1.8ed60a300c8d2p-7), 0x1.c6fa84b77012bp-7), 0x1.1c6c111dccb70p-6), 0x1.6e89f0a0adacfp-6),
                        0x1.f1c72c668963fp-6), 0x1.6db6db41ce4bdp-5), 0x1.333333336fd5bp-4), 0x1.5555555555380p-3);
 
-    // Reconstruct asin carefully in transformed region
-    double v;
+    double v = MATH_MAD(y, u, y);
     if (transform) {
-        double s = MATH_FAST_SQRT(r);
-        double sh = AS_DOUBLE(AS_ULONG(s) & 0xffffffff00000000UL);
-        double st = MATH_FAST_DIV(MATH_MAD(-sh, sh, r), s + sh);
-        double p = MATH_MAD(2.0*s, u, -MATH_MAD(-2.0, st, piby2_tail));
-        double q = MATH_MAD(-2.0, sh, hpiby2_head);
-        v = hpiby2_head - (p - q);
-        v = y == 1.0 ? piby2 : v;
-    } else {
-        v = MATH_MAD(y, u, y);
+        double2 s = root2(r);
+        double2 ve = fsub(con(0x1.921fb54442d18p-1, 0x1.1a62633145c07p-55), fadd(s, mul(s, u)));
+        v = ve.hi + ve.hi;
+        v = y == 1.0 ? 0x1.921fb54442d18p+0 : v;
     }
 
     return BUILTIN_COPYSIGN_F64(v, x);
