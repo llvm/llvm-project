@@ -9,3 +9,9 @@ define arm_aapcscc float @test_frem_float(float %x, float %y) {
   ret float %r
 }
 
+define arm_aapcscc double @test_frem_double(double %x, double %y) {
+; CHECK-LABEL: test_frem_double:
+; CHECK: blx fmod
+  %r = frem double %x, %y
+  ret double %r
+}

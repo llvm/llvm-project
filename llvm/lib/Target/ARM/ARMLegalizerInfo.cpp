@@ -66,6 +66,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   }
 
   setAction({G_FREM, s32}, Libcall);
+  setAction({G_FREM, s64}, Libcall);
 
   computeTables();
 }

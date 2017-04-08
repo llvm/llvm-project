@@ -4510,7 +4510,12 @@ unsigned AArch64TargetLowering::getRegisterByName(const char* RegName, EVT VT,
                                                   SelectionDAG &DAG) const {
   unsigned Reg = StringSwitch<unsigned>(RegName)
                        .Case("sp", AArch64::SP)
+                       .Case("x18", AArch64::X18)
+                       .Case("w18", AArch64::W18)
                        .Default(0);
+  if ((Reg == AArch64::X18 || Reg == AArch64::W18) &&
+      !Subtarget->isX18Reserved())
+    Reg = 0;
   if (Reg)
     return Reg;
   report_fatal_error(Twine("Invalid register name \""
