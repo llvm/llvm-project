@@ -290,7 +290,11 @@ public:
 
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
-  Type *getScalarType() const LLVM_READONLY;
+  Type *getScalarType() const {
+    if (isVectorTy())
+      return getVectorElementType();
+    return const_cast<Type*>(this);
+  }
 
   //===--------------------------------------------------------------------===//
   // Type Iteration support.
