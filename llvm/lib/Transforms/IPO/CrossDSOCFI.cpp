@@ -100,6 +100,9 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
       "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
       Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx), nullptr);
   Function *F = dyn_cast<Function>(C);
+  // Take over the existing function. The frontend emits a weak stub so that the
+  // linker knows about the symbol; this pass replaces the function body.
+  F->deleteBody();
   F->setAlignment(4096);
   auto args = F->arg_begin();
   Value &CallSiteTypeId = *(args++);

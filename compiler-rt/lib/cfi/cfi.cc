@@ -231,7 +231,8 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
     if (p->st_name >= strsz) break;
     char *name = (char*)(strtab + p->st_name);
     if (strcmp(name, "__cfi_check") == 0) {
-      assert(p->st_info == ELF32_ST_INFO(STB_GLOBAL, STT_FUNC));
+      assert(p->st_info == ELF32_ST_INFO(STB_GLOBAL, STT_FUNC) ||
+             p->st_info == ELF32_ST_INFO(STB_WEAK, STT_FUNC));
       uptr addr = info->dlpi_addr + p->st_value;
       return addr;
     }

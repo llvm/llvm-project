@@ -38,12 +38,10 @@ suspend:
 ; CHECK: store void (%f.Frame*)* @f.destroy, void (%f.Frame*)** %destroy.addr
 ; CHECK: %phi1 = select i1 %n, i32 0, i32 2
 ; CHECK: %phi2 = select i1 %n, i32 1, i32 3
-; FIXME: The ordering of these spills is non-determinstic. Remove -DAG and the
-; (4|5) regex when that's fixed.
-; CHECK-DAG: %phi2.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 {{(4|5)}}
-; CHECK-DAG: store i32 %phi2, i32* %phi2.spill.addr
-; CHECK-DAG: %phi1.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 {{(4|5)}}
-; CHECK-DAG: store i32 %phi1, i32* %phi1.spill.addr
+; CHECK: %phi2.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
+; CHECK: store i32 %phi2, i32* %phi2.spill.addr
+; CHECK: %phi1.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK: store i32 %phi1, i32* %phi1.spill.addr
 ; CHECK: ret i8* %hdl
 
 declare i8* @llvm.coro.free(token, i8*)
