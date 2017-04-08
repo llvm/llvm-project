@@ -53,7 +53,8 @@ public:
   // targeting S.
   virtual bool needsThunk(RelExpr Expr, uint32_t RelocType,
                           const InputFile *File, const SymbolBody &S) const;
-  virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
+  virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                             const uint8_t *Loc) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
   virtual ~TargetInfo();
 
