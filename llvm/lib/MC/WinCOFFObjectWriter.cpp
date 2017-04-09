@@ -194,8 +194,6 @@ public:
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
-  bool isWeak(const MCSymbol &Sym) const override;
-
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, bool &IsPCRel,
@@ -707,23 +705,6 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     return false;
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
                                                                 InSet, IsPCRel);
-}
-
-bool WinCOFFObjectWriter::isWeak(const MCSymbol &Sym) const {
-  if (!Sym.isExternal())
-    return false;
-
-  if (!Sym.isInSection())
-    return false;
-
-  const auto &Sec = cast<MCSectionCOFF>(Sym.getSection());
-  if (!Sec.getCOMDATSymbol())
-    return false;
-
-  // It looks like for COFF it is invalid to replace a reference to a global
-  // in a comdat with a reference to a local.
-  // FIXME: Add a specification reference if available.
-  return true;
 }
 
 void WinCOFFObjectWriter::recordRelocation(
