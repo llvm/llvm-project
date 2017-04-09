@@ -4189,7 +4189,7 @@ bool SROA::promoteAllocas(Function &F) {
   NumPromoted += PromotableAllocas.size();
 
   DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
-  PromoteMemToReg(PromotableAllocas, *DT, nullptr, AC);
+  PromoteMemToReg(PromotableAllocas, *DT, AC);
   PromotableAllocas.clear();
   return true;
 }

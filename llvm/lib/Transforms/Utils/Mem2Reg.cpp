@@ -46,7 +46,7 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
     if (Allocas.empty())
       break;
 
-    PromoteMemToReg(Allocas, DT, nullptr, &AC);
+    PromoteMemToReg(Allocas, DT, &AC);
     NumPromoted += Allocas.size();
     Changed = true;
   }
