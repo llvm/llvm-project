@@ -316,7 +316,8 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
   // FIXME: We should handle invariant groups, as well. It's a bit harder,
   // because we need to pay close attention to invariant group barriers.
   return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
-                              AA.pointsToConstantMemory(I));
+                              AA.pointsToConstantMemory(cast<LoadInst>(I)->
+                                                          getPointerOperand()));
 }
 
 /// Verifies that `Start` is clobbered by `ClobberAt`, and that nothing

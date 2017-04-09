@@ -2070,26 +2070,29 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Instruction *BSwap = MatchBSwap(I))
     return BSwap;
 
-  Value *A = nullptr, *B = nullptr;
-  ConstantInt *C1 = nullptr, *C2 = nullptr;
+  {
+    Value *A;
+    const APInt *C;
+    // (X^C)|Y -> (X|Y)^C iff Y&C == 0
+    if (match(Op0, m_OneUse(m_Xor(m_Value(A), m_APInt(C)))) &&
+        MaskedValueIsZero(Op1, *C, 0, &I)) {
+      Value *NOr = Builder->CreateOr(A, Op1);
+      NOr->takeName(Op0);
+      return BinaryOperator::CreateXor(NOr,
+                                       cast<Instruction>(Op0)->getOperand(1));
+    }
 
-  // (X^C)|Y -> (X|Y)^C iff Y&C == 0
-  if (Op0->hasOneUse() &&
-      match(Op0, m_Xor(m_Value(A), m_ConstantInt(C1))) &&
-      MaskedValueIsZero(Op1, C1->getValue(), 0, &I)) {
-    Value *NOr = Builder->CreateOr(A, Op1);
-    NOr->takeName(Op0);
-    return BinaryOperator::CreateXor(NOr, C1);
+    // Y|(X^C) -> (X|Y)^C iff Y&C == 0
+    if (match(Op1, m_OneUse(m_Xor(m_Value(A), m_APInt(C)))) &&
+        MaskedValueIsZero(Op0, *C, 0, &I)) {
+      Value *NOr = Builder->CreateOr(A, Op0);
+      NOr->takeName(Op0);
+      return BinaryOperator::CreateXor(NOr,
+                                       cast<Instruction>(Op1)->getOperand(1));
+    }
   }
 
-  // Y|(X^C) -> (X|Y)^C iff Y&C == 0
-  if (Op1->hasOneUse() &&
-      match(Op1, m_Xor(m_Value(A), m_ConstantInt(C1))) &&
-      MaskedValueIsZero(Op0, C1->getValue(), 0, &I)) {
-    Value *NOr = Builder->CreateOr(A, Op0);
-    NOr->takeName(Op0);
-    return BinaryOperator::CreateXor(NOr, C1);
-  }
+  Value *A, *B;
 
   // ((~A & B) | A) -> (A | B)
   if (match(Op0, m_c_And(m_Not(m_Specific(Op1)), m_Value(A))))
@@ -2121,8 +2124,8 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
     Value *V1 = nullptr, *V2 = nullptr;
-    C1 = dyn_cast<ConstantInt>(C);
-    C2 = dyn_cast<ConstantInt>(D);
+    ConstantInt *C1 = dyn_cast<ConstantInt>(C);
+    ConstantInt *C2 = dyn_cast<ConstantInt>(D);
     if (C1 && C2) {  // (A & C1)|(B & C2)
       if ((C1->getValue() & C2->getValue()) == 0) {
         // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
@@ -2347,6 +2350,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   // be simplified by a later pass either, so we try swapping the inner/outer
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
+  ConstantInt *C1;
   if (Op0->hasOneUse() && !isa<ConstantInt>(Op1) &&
       match(Op0, m_Or(m_Value(A), m_ConstantInt(C1)))) {
     Value *Inner = Builder->CreateOr(A, Op1);
@@ -2446,14 +2450,14 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
                                CI->getOperand(0), CI->getOperand(1));
   }
 
-  if (ConstantInt *RHS = dyn_cast<ConstantInt>(Op1)) {
+  if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
     // fold (xor(zext(cmp)), 1) and (xor(sext(cmp)), -1) to ext(!cmp).
     if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
       if (CmpInst *CI = dyn_cast<CmpInst>(Op0C->getOperand(0))) {
         if (CI->hasOneUse() && Op0C->hasOneUse()) {
           Instruction::CastOps Opcode = Op0C->getOpcode();
           if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
-              (RHS == ConstantExpr::getCast(Opcode, Builder->getTrue(),
+              (RHSC == ConstantExpr::getCast(Opcode, Builder->getTrue(),
                                             Op0C->getDestTy()))) {
             CI->setPredicate(CI->getInversePredicate());
             return CastInst::Create(Opcode, CI, Op0C->getType());
@@ -2464,26 +2468,23 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ~(c-X) == X-c-1 == X+(-c-1)
-      if (Op0I->getOpcode() == Instruction::Sub && RHS->isAllOnesValue())
+      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isAllOnesValue())
         if (Constant *Op0I0C = dyn_cast<Constant>(Op0I->getOperand(0))) {
           Constant *NegOp0I0C = ConstantExpr::getNeg(Op0I0C);
-          Constant *ConstantRHS = ConstantExpr::getSub(NegOp0I0C,
-                                      ConstantInt::get(I.getType(), 1));
-          return BinaryOperator::CreateAdd(Op0I->getOperand(1), ConstantRHS);
+          return BinaryOperator::CreateAdd(Op0I->getOperand(1),
+                                           SubOne(NegOp0I0C));
         }
 
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
         if (Op0I->getOpcode() == Instruction::Add) {
           // ~(X-c) --> (-c-1)-X
-          if (RHS->isAllOnesValue()) {
+          if (RHSC->isAllOnesValue()) {
             Constant *NegOp0CI = ConstantExpr::getNeg(Op0CI);
-            return BinaryOperator::CreateSub(
-                           ConstantExpr::getSub(NegOp0CI,
-                                      ConstantInt::get(I.getType(), 1)),
-                                      Op0I->getOperand(0));
-          } else if (RHS->getValue().isSignBit()) {
+            return BinaryOperator::CreateSub(SubOne(NegOp0CI),
+                                             Op0I->getOperand(0));
+          } else if (RHSC->getValue().isSignBit()) {
             // (X + C) ^ signbit -> (X + C + signbit)
-            Constant *C = Builder->getInt(RHS->getValue() + Op0CI->getValue());
+            Constant *C = Builder->getInt(RHSC->getValue() + Op0CI->getValue());
             return BinaryOperator::CreateAdd(Op0I->getOperand(0), C);
 
           }
@@ -2491,10 +2492,10 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
           // (X|C1)^C2 -> X^(C1|C2) iff X&~C1 == 0
           if (MaskedValueIsZero(Op0I->getOperand(0), Op0CI->getValue(),
                                 0, &I)) {
-            Constant *NewRHS = ConstantExpr::getOr(Op0CI, RHS);
+            Constant *NewRHS = ConstantExpr::getOr(Op0CI, RHSC);
             // Anything in both C1 and C2 is known to be zero, remove it from
             // NewRHS.
-            Constant *CommonBits = ConstantExpr::getAnd(Op0CI, RHS);
+            Constant *CommonBits = ConstantExpr::getAnd(Op0CI, RHSC);
             NewRHS = ConstantExpr::getAnd(NewRHS,
                                        ConstantExpr::getNot(CommonBits));
             Worklist.Add(Op0I);
@@ -2512,7 +2513,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
               E1->getOpcode() == Instruction::Xor &&
               (C1 = dyn_cast<ConstantInt>(E1->getOperand(1)))) {
             // fold (C1 >> C2) ^ C3
-            ConstantInt *C2 = Op0CI, *C3 = RHS;
+            ConstantInt *C2 = Op0CI, *C3 = RHSC;
             APInt FoldConst = C1->getValue().lshr(C2->getValue());
             FoldConst ^= C3->getValue();
             // Prepare the two operands.
@@ -2570,8 +2571,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
                Op0I->hasOneUse()){
       if (A == Op1)                                        // (A&B)^A -> (B&A)^A
         std::swap(A, B);
+      const APInt *C;
       if (B == Op1 &&                                      // (B&A)^A == ~B & A
-          !isa<ConstantInt>(Op1)) {  // Canonical form is (B&C)^C
+          !match(Op1, m_APInt(C))) {  // Canonical form is (B&C)^C
         return BinaryOperator::CreateAnd(Builder->CreateNot(A), Op1);
       }
     }
