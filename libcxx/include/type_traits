@@ -1272,11 +1272,13 @@ template <class _Tp> using remove_all_extents_t = typename remove_all_extents<_T
 
 // decay
 
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS decay
-{
-private:
-    typedef typename remove_reference<_Tp>::type _Up;
+template <class _Up, bool>
+struct __decay {
+    typedef typename remove_cv<_Up>::type type;
+};
+
+template <class _Up>
+struct __decay<_Up, true> {
 public:
     typedef typename conditional
                      <
@@ -1289,6 +1291,15 @@ public:
                               typename remove_cv<_Up>::type
                          >::type
                      >::type type;
+};
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS decay
+{
+private:
+    typedef typename remove_reference<_Tp>::type _Up;
+public:
+    typedef typename __decay<_Up, __is_referenceable<_Up>::value>::type type;
 };
 
 #if _LIBCPP_STD_VER > 11
