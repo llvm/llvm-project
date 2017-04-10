@@ -897,26 +897,18 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X u< 13 & X == 15) -> false
     case ICmpInst::ICMP_UGT: // (X u< 13 & X u> 15) -> false
       return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    case ICmpInst::ICMP_SGT: // (X u< 13 & X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u< 13 & X != 15) -> X u< 13
     case ICmpInst::ICMP_ULT: // (X u< 13 & X u< 15) -> X u< 13
       return LHS;
-    case ICmpInst::ICMP_SLT: // (X u< 13 & X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SLT:
     switch (PredR) {
     default:
       llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_UGT: // (X s< 13 & X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s< 13 & X != 15) -> X < 13
     case ICmpInst::ICMP_SLT: // (X s< 13 & X s< 15) -> X < 13
       return LHS;
-    case ICmpInst::ICMP_ULT: // (X s< 13 & X u< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_UGT:
@@ -926,8 +918,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X u> 13 & X == 15) -> X == 15
     case ICmpInst::ICMP_UGT: // (X u> 13 & X u> 15) -> X u> 15
       return RHS;
-    case ICmpInst::ICMP_SGT: // (X u> 13 & X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X u> 13 & X != 14) -> X u> 14
         return Builder->CreateICmp(PredL, Val, RHSC);
@@ -935,8 +925,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) <u 1
       return insertRangeTest(Val, LHSC->getValue() + 1, RHSC->getValue(), false,
                              true);
-    case ICmpInst::ICMP_SLT: // (X u> 13 & X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SGT:
@@ -946,8 +934,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X s> 13 & X == 15) -> X == 15
     case ICmpInst::ICMP_SGT: // (X s> 13 & X s> 15) -> X s> 15
       return RHS;
-    case ICmpInst::ICMP_UGT: // (X s> 13 & X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X s> 13 & X != 14) -> X s> 14
         return Builder->CreateICmp(PredL, Val, RHSC);
@@ -955,8 +941,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) s< 1
       return insertRangeTest(Val, LHSC->getValue() + 1, RHSC->getValue(), true,
                              true);
-    case ICmpInst::ICMP_ULT: // (X s> 13 & X u< 15) -> no change
-      break;
     }
     break;
   }
@@ -1846,13 +1830,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return LHS;
       return insertRangeTest(Val, LHSC->getValue(), RHSC->getValue() + 1, false,
                              false);
-    case ICmpInst::ICMP_SGT: // (X u< 13 | X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u< 13 | X != 15) -> X != 15
     case ICmpInst::ICMP_ULT: // (X u< 13 | X u< 15) -> X u< 15
       return RHS;
-    case ICmpInst::ICMP_SLT: // (X u< 13 | X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SLT:
@@ -1868,13 +1848,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return LHS;
       return insertRangeTest(Val, LHSC->getValue(), RHSC->getValue() + 1, true,
                              false);
-    case ICmpInst::ICMP_UGT: // (X s< 13 | X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s< 13 | X != 15) -> X != 15
     case ICmpInst::ICMP_SLT: // (X s< 13 | X s< 15) -> X s< 15
       return RHS;
-    case ICmpInst::ICMP_ULT: // (X s< 13 | X u< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_UGT:
@@ -1884,13 +1860,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:  // (X u> 13 | X == 15) -> X u> 13
     case ICmpInst::ICMP_UGT: // (X u> 13 | X u> 15) -> X u> 13
       return LHS;
-    case ICmpInst::ICMP_SGT: // (X u> 13 | X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u> 13 | X != 15) -> true
     case ICmpInst::ICMP_ULT: // (X u> 13 | X u< 15) -> true
       return Builder->getTrue();
-    case ICmpInst::ICMP_SLT: // (X u> 13 | X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SGT:
@@ -1900,13 +1872,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:  // (X s> 13 | X == 15) -> X > 13
     case ICmpInst::ICMP_SGT: // (X s> 13 | X s> 15) -> X > 13
       return LHS;
-    case ICmpInst::ICMP_UGT: // (X s> 13 | X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s> 13 | X != 15) -> true
     case ICmpInst::ICMP_SLT: // (X s> 13 | X s< 15) -> true
       return Builder->getTrue();
-    case ICmpInst::ICMP_ULT: // (X s> 13 | X u< 15) -> no change
-      break;
     }
     break;
   }

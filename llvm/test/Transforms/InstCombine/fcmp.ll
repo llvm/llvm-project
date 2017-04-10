@@ -334,15 +334,3 @@ define i1 @test19_undef_ordered() nounwind {
   ret i1 %cmp
 }
 
-; PR1570
-
-define i1 @invert_fcmp(float %X, float %Y) {
-; CHECK-LABEL: @invert_fcmp(
-; CHECK-NEXT:    [[TOBOOLNOT5:%.*]] = fcmp uge float %X, %Y
-; CHECK-NEXT:    ret i1 [[TOBOOLNOT5]]
-;
-  %tmp3 = fcmp olt float %X, %Y
-  %toBoolnot5 = xor i1 %tmp3, true
-  ret i1 %toBoolnot5
-}
-
