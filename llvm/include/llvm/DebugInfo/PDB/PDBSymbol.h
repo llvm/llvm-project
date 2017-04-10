@@ -22,6 +22,23 @@
     return RawSymbol->MethodName();                                            \
   }
 
+#define FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(ConcreteType, PrivateName, \
+                                                    PublicName)                \
+  auto PublicName##Id() const->decltype(RawSymbol->PrivateName##Id()) {        \
+    return RawSymbol->PrivateName##Id();                                       \
+  }                                                                            \
+  std::unique_ptr<ConcreteType> PublicName() const {                           \
+    uint32_t Id = PublicName##Id();                                            \
+    return getConcreteSymbolByIdHelper<ConcreteType>(Id);                      \
+  }
+
+#define FORWARD_SYMBOL_ID_METHOD_WITH_NAME(PrivateName, PublicName)            \
+  FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(PDBSymbol, PrivateName,          \
+                                              PublicName)
+
+#define FORWARD_SYMBOL_ID_METHOD(MethodName)                                   \
+  FORWARD_SYMBOL_ID_METHOD_WITH_NAME(MethodName, MethodName)
+
 namespace llvm {
 
 class StringRef;
@@ -29,6 +46,7 @@ class raw_ostream;
 
 namespace pdb {
 class IPDBRawSymbol;
+class IPDBSession;
 
 #define DECLARE_PDB_SYMBOL_CONCRETE_TYPE(TagValue)                             \
   static const PDB_SymType Tag = TagValue;                                     \
@@ -57,6 +75,8 @@ public:
   /// override the behavior to only dump known fields.
   virtual void dump(PDBSymDumper &Dumper) const = 0;
   void defaultDump(raw_ostream &OS, int Indent) const;
+  void dumpProperties() const;
+  void dumpChildStats() const;
 
   PDB_SymType getSymTag() const;
   uint32_t getSymIndexId() const;
@@ -65,6 +85,14 @@ public:
     auto Enumerator(findAllChildren<T>());
     return Enumerator->getNext();
   }
+
+  template <typename T> T *cast() { return llvm::dyn_cast<T>(this); }
+
+  template <typename T> const T *cast() const {
+    return llvm::dyn_cast<T>(this);
+  }
+
+  std::unique_ptr<PDBSymbol> clone() const;
 
   template <typename T>
   std::unique_ptr<ConcreteSymbolEnumerator<T>> findAllChildren() const {
@@ -91,6 +119,20 @@ public:
   std::unique_ptr<IPDBEnumSymbols> getChildStats(TagStats &Stats) const;
 
 protected:
+  std::unique_ptr<PDBSymbol> getSymbolByIdHelper(uint32_t Id) const;
+
+  template <typename ConcreteType>
+  std::unique_ptr<ConcreteType> getConcreteSymbolByIdHelper(uint32_t Id) const {
+    auto Sym = getSymbolByIdHelper(Id);
+    if (!Sym)
+      return nullptr;
+    ConcreteType *Result = Sym->cast<ConcreteType>();
+    if (!Result)
+      return nullptr;
+    Sym.release();
+    return std::unique_ptr<ConcreteType>(Result);
+  }
+
   const IPDBSession &Session;
   const std::unique_ptr<IPDBRawSymbol> RawSymbol;
 };

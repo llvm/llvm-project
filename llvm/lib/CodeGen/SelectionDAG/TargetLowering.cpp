@@ -791,6 +791,10 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       // TODO: Should we check for other forms of sign-bit comparisons?
       // Examples: X <= -1, X >= 0
     }
+    if (getBooleanContents(Op0.getValueType()) ==
+            TargetLowering::ZeroOrOneBooleanContent &&
+        BitWidth > 1)
+      KnownZero.setBitsFrom(1);
     break;
   }
   case ISD::SHL:
@@ -1233,7 +1237,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       return true;
     assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
 
-    KnownZero |= ~InMask & NewMask;
+    KnownZero |= ~InMask;
     break;
   }
   case ISD::BITCAST:

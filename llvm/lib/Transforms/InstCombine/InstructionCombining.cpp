@@ -937,11 +937,15 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
     Constant *C = cast<Constant>(I.getOperand(1));
     for (unsigned i = 0; i != NumPHIValues; ++i) {
       Value *InV = nullptr;
-      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i)))
+      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i))) {
         InV = ConstantExpr::get(I.getOpcode(), InC, C);
-      else
+      } else {
         InV = Builder->CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
                                    PN->getIncomingValue(i), C, "phitmp");
+        auto *FPInst = dyn_cast<Instruction>(InV);
+        if (FPInst && isa<FPMathOperator>(FPInst))
+          FPInst->copyFastMathFlags(&I);
+      }
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   } else {

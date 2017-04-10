@@ -66,8 +66,6 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
   assert(opts::pretty::Enums);
 
-  if (Symbol.getUnmodifiedTypeId() != 0)
-    return;
   if (Printer.IsTypeExcluded(Symbol.getName()))
     return;
   // Dump member enums when dumping their class definition.

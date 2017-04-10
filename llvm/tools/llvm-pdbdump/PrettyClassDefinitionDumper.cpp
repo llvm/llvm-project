@@ -70,26 +70,24 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
 
     if (opts::pretty::ClassFormat ==
         opts::pretty::ClassDefinitionFormat::LayoutOnly) {
-      if (auto Data = dyn_cast<PDBSymbolData>(Child.get())) {
+      if (auto Data = Child->cast<PDBSymbolData>()) {
         switch (Data->getLocationType()) {
         case PDB_LocType::ThisRel:
         case PDB_LocType::BitField:
           break;
         default:
           // All other types of data field do not occupy any storage (e.g. are
-          // const),
-          // so in layout mode we skip them.
+          // const), so in layout mode we skip them.
           continue;
         }
       } else {
         // Only data symbols affect record layout, so skip any non-data symbols
-        // if
-        // we're in record layout mode.
+        // if we're in record layout mode.
         continue;
       }
     }
 
-    if (auto Func = dyn_cast<PDBSymbolFunc>(Child.get())) {
+    if (auto Func = Child->cast<PDBSymbolFunc>()) {
       if (Func->isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
         continue;
 

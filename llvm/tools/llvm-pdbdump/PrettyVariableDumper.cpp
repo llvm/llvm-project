@@ -101,7 +101,7 @@ void VariableDumper::dump(const PDBSymbolTypePointer &Symbol) {
   if (!PointeeType)
     return;
 
-  if (auto Func = dyn_cast<PDBSymbolFunc>(PointeeType.get())) {
+  if (auto Func = PointeeType->cast<PDBSymbolFunc>()) {
     FunctionDumper NestedDumper(Printer);
     FunctionDumper::PointerType Pointer =
         Symbol.isReference() ? FunctionDumper::PointerType::Reference
@@ -128,11 +128,11 @@ void VariableDumper::dump(const PDBSymbolTypeUDT &Symbol) {
 
 void VariableDumper::dumpSymbolTypeAndName(const PDBSymbol &Type,
                                            StringRef Name) {
-  if (auto *ArrayType = dyn_cast<PDBSymbolTypeArray>(&Type)) {
+  if (auto *ArrayType = Type.cast<PDBSymbolTypeArray>()) {
     std::string IndexSpec;
     raw_string_ostream IndexStream(IndexSpec);
     std::unique_ptr<PDBSymbol> ElementType = ArrayType->getElementType();
-    while (auto NestedArray = dyn_cast<PDBSymbolTypeArray>(ElementType.get())) {
+    while (auto NestedArray = ElementType->cast<PDBSymbolTypeArray>()) {
       IndexStream << "[";
       IndexStream << NestedArray->getCount();
       IndexStream << "]";
@@ -154,10 +154,9 @@ bool VariableDumper::tryDumpFunctionPointer(const PDBSymbol &Type,
                                             StringRef Name) {
   // Function pointers come across as pointers to function signatures.  But the
   // signature carries no name, so we have to handle this case separately.
-  if (auto *PointerType = dyn_cast<PDBSymbolTypePointer>(&Type)) {
+  if (auto *PointerType = Type.cast<PDBSymbolTypePointer>()) {
     auto PointeeType = PointerType->getPointeeType();
-    if (auto *FunctionSig =
-            dyn_cast<PDBSymbolTypeFunctionSig>(PointeeType.get())) {
+    if (auto *FunctionSig = PointeeType->cast<PDBSymbolTypeFunctionSig>()) {
       FunctionDumper Dumper(Printer);
       FunctionDumper::PointerType PT = FunctionDumper::PointerType::Pointer;
       if (PointerType->isReference())

@@ -19,10 +19,8 @@ using namespace llvm::pdb;
 
 PDBSymbolTypeArray::PDBSymbolTypeArray(const IPDBSession &PDBSession,
                                        std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {}
-
-std::unique_ptr<PDBSymbol> PDBSymbolTypeArray::getElementType() const {
-  return Session.getSymbolById(getTypeId());
+    : PDBSymbol(PDBSession, std::move(Symbol)) {
+  assert(RawSymbol->getSymTag() == PDB_SymType::ArrayType);
 }
 
 void PDBSymbolTypeArray::dump(PDBSymDumper &Dumper) const {

@@ -897,26 +897,18 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X u< 13 & X == 15) -> false
     case ICmpInst::ICMP_UGT: // (X u< 13 & X u> 15) -> false
       return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    case ICmpInst::ICMP_SGT: // (X u< 13 & X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u< 13 & X != 15) -> X u< 13
     case ICmpInst::ICMP_ULT: // (X u< 13 & X u< 15) -> X u< 13
       return LHS;
-    case ICmpInst::ICMP_SLT: // (X u< 13 & X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SLT:
     switch (PredR) {
     default:
       llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_UGT: // (X s< 13 & X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s< 13 & X != 15) -> X < 13
     case ICmpInst::ICMP_SLT: // (X s< 13 & X s< 15) -> X < 13
       return LHS;
-    case ICmpInst::ICMP_ULT: // (X s< 13 & X u< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_UGT:
@@ -926,8 +918,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X u> 13 & X == 15) -> X == 15
     case ICmpInst::ICMP_UGT: // (X u> 13 & X u> 15) -> X u> 15
       return RHS;
-    case ICmpInst::ICMP_SGT: // (X u> 13 & X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X u> 13 & X != 14) -> X u> 14
         return Builder->CreateICmp(PredL, Val, RHSC);
@@ -935,8 +925,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) <u 1
       return insertRangeTest(Val, LHSC->getValue() + 1, RHSC->getValue(), false,
                              true);
-    case ICmpInst::ICMP_SLT: // (X u> 13 & X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SGT:
@@ -946,8 +934,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_EQ:  // (X s> 13 & X == 15) -> X == 15
     case ICmpInst::ICMP_SGT: // (X s> 13 & X s> 15) -> X s> 15
       return RHS;
-    case ICmpInst::ICMP_UGT: // (X s> 13 & X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X s> 13 & X != 14) -> X s> 14
         return Builder->CreateICmp(PredL, Val, RHSC);
@@ -955,8 +941,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) s< 1
       return insertRangeTest(Val, LHSC->getValue() + 1, RHSC->getValue(), true,
                              true);
-    case ICmpInst::ICMP_ULT: // (X s> 13 & X u< 15) -> no change
-      break;
     }
     break;
   }
@@ -1846,13 +1830,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return LHS;
       return insertRangeTest(Val, LHSC->getValue(), RHSC->getValue() + 1, false,
                              false);
-    case ICmpInst::ICMP_SGT: // (X u< 13 | X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u< 13 | X != 15) -> X != 15
     case ICmpInst::ICMP_ULT: // (X u< 13 | X u< 15) -> X u< 15
       return RHS;
-    case ICmpInst::ICMP_SLT: // (X u< 13 | X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SLT:
@@ -1868,13 +1848,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return LHS;
       return insertRangeTest(Val, LHSC->getValue(), RHSC->getValue() + 1, true,
                              false);
-    case ICmpInst::ICMP_UGT: // (X s< 13 | X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s< 13 | X != 15) -> X != 15
     case ICmpInst::ICMP_SLT: // (X s< 13 | X s< 15) -> X s< 15
       return RHS;
-    case ICmpInst::ICMP_ULT: // (X s< 13 | X u< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_UGT:
@@ -1884,13 +1860,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:  // (X u> 13 | X == 15) -> X u> 13
     case ICmpInst::ICMP_UGT: // (X u> 13 | X u> 15) -> X u> 13
       return LHS;
-    case ICmpInst::ICMP_SGT: // (X u> 13 | X s> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X u> 13 | X != 15) -> true
     case ICmpInst::ICMP_ULT: // (X u> 13 | X u< 15) -> true
       return Builder->getTrue();
-    case ICmpInst::ICMP_SLT: // (X u> 13 | X s< 15) -> no change
-      break;
     }
     break;
   case ICmpInst::ICMP_SGT:
@@ -1900,13 +1872,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:  // (X s> 13 | X == 15) -> X > 13
     case ICmpInst::ICMP_SGT: // (X s> 13 | X s> 15) -> X > 13
       return LHS;
-    case ICmpInst::ICMP_UGT: // (X s> 13 | X u> 15) -> no change
-      break;
     case ICmpInst::ICMP_NE:  // (X s> 13 | X != 15) -> true
     case ICmpInst::ICMP_SLT: // (X s> 13 | X s< 15) -> true
       return Builder->getTrue();
-    case ICmpInst::ICMP_ULT: // (X s> 13 | X u< 15) -> no change
-      break;
     }
     break;
   }
@@ -2533,22 +2501,20 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;
 
-  BinaryOperator *Op1I = dyn_cast<BinaryOperator>(Op1);
-  if (Op1I) {
+  {
     Value *A, *B;
-    if (match(Op1I, m_Or(m_Value(A), m_Value(B)))) {
-      if (A == Op0) {              // B^(B|A) == (A|B)^B
-        Op1I->swapOperands();
-        I.swapOperands();
-        std::swap(Op0, Op1);
-      } else if (B == Op0) {       // B^(A|B) == (A|B)^B
+    if (match(Op1, m_OneUse(m_Or(m_Value(A), m_Value(B))))) {
+      if (A == Op0) {                                      // A^(A|B) == A^(B|A)
+        cast<BinaryOperator>(Op1)->swapOperands();
+        std::swap(A, B);
+      }
+      if (B == Op0) {                                      // A^(B|A) == (B|A)^A
         I.swapOperands();     // Simplified below.
         std::swap(Op0, Op1);
       }
-    } else if (match(Op1I, m_And(m_Value(A), m_Value(B))) &&
-               Op1I->hasOneUse()){
+    } else if (match(Op1, m_OneUse(m_And(m_Value(A), m_Value(B))))) {
       if (A == Op0) {                                      // A^(A&B) -> A^(B&A)
-        Op1I->swapOperands();
+        cast<BinaryOperator>(Op1)->swapOperands();
         std::swap(A, B);
       }
       if (B == Op0) {                                      // A^(B&A) -> (B&A)^A
@@ -2558,17 +2524,14 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0);
-  if (Op0I) {
+  {
     Value *A, *B;
-    if (match(Op0I, m_Or(m_Value(A), m_Value(B))) &&
-        Op0I->hasOneUse()) {
+    if (match(Op0, m_OneUse(m_Or(m_Value(A), m_Value(B))))) {
       if (A == Op1)                                  // (B|A)^B == (A|B)^B
         std::swap(A, B);
       if (B == Op1)                                  // (A|B)^B == A & ~B
         return BinaryOperator::CreateAnd(A, Builder->CreateNot(Op1));
-    } else if (match(Op0I, m_And(m_Value(A), m_Value(B))) &&
-               Op0I->hasOneUse()){
+    } else if (match(Op0, m_OneUse(m_And(m_Value(A), m_Value(B))))) {
       if (A == Op1)                                        // (A&B)^A -> (B&A)^A
         std::swap(A, B);
       const APInt *C;
@@ -2579,45 +2542,45 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  if (Op0I && Op1I) {
+  {
     Value *A, *B, *C, *D;
     // (A & B)^(A | B) -> A ^ B
-    if (match(Op0I, m_And(m_Value(A), m_Value(B))) &&
-        match(Op1I, m_Or(m_Value(C), m_Value(D)))) {
+    if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+        match(Op1, m_Or(m_Value(C), m_Value(D)))) {
       if ((A == C && B == D) || (A == D && B == C))
         return BinaryOperator::CreateXor(A, B);
     }
     // (A | B)^(A & B) -> A ^ B
-    if (match(Op0I, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op1I, m_And(m_Value(C), m_Value(D)))) {
+    if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+        match(Op1, m_And(m_Value(C), m_Value(D)))) {
       if ((A == C && B == D) || (A == D && B == C))
         return BinaryOperator::CreateXor(A, B);
     }
     // (A | ~B) ^ (~A | B) -> A ^ B
     // (~B | A) ^ (~A | B) -> A ^ B
-    if (match(Op0I, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1I, m_Or(m_Not(m_Specific(A)), m_Specific(B))))
+    if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1, m_Or(m_Not(m_Specific(A)), m_Specific(B))))
       return BinaryOperator::CreateXor(A, B);
 
     // (~A | B) ^ (A | ~B) -> A ^ B
-    if (match(Op0I, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1I, m_Or(m_Specific(A), m_Not(m_Specific(B))))) {
+    if (match(Op0, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Op1, m_Or(m_Specific(A), m_Not(m_Specific(B))))) {
       return BinaryOperator::CreateXor(A, B);
     }
     // (A & ~B) ^ (~A & B) -> A ^ B
     // (~B & A) ^ (~A & B) -> A ^ B
-    if (match(Op0I, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1I, m_And(m_Not(m_Specific(A)), m_Specific(B))))
+    if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1, m_And(m_Not(m_Specific(A)), m_Specific(B))))
       return BinaryOperator::CreateXor(A, B);
 
     // (~A & B) ^ (A & ~B) -> A ^ B
-    if (match(Op0I, m_And(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1I, m_And(m_Specific(A), m_Not(m_Specific(B))))) {
+    if (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Op1, m_And(m_Specific(A), m_Not(m_Specific(B))))) {
       return BinaryOperator::CreateXor(A, B);
     }
     // (A ^ C)^(A | B) -> ((~A) & B) ^ C
-    if (match(Op0I, m_Xor(m_Value(D), m_Value(C))) &&
-        match(Op1I, m_Or(m_Value(A), m_Value(B)))) {
+    if (match(Op0, m_Xor(m_Value(D), m_Value(C))) &&
+        match(Op1, m_Or(m_Value(A), m_Value(B)))) {
       if (D == A)
         return BinaryOperator::CreateXor(
             Builder->CreateAnd(Builder->CreateNot(A), B), C);
@@ -2626,8 +2589,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
             Builder->CreateAnd(Builder->CreateNot(B), A), C);
     }
     // (A | B)^(A ^ C) -> ((~A) & B) ^ C
-    if (match(Op0I, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op1I, m_Xor(m_Value(D), m_Value(C)))) {
+    if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+        match(Op1, m_Xor(m_Value(D), m_Value(C)))) {
       if (D == A)
         return BinaryOperator::CreateXor(
             Builder->CreateAnd(Builder->CreateNot(A), B), C);
@@ -2636,12 +2599,12 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
             Builder->CreateAnd(Builder->CreateNot(B), A), C);
     }
     // (A & B) ^ (A ^ B) -> (A | B)
-    if (match(Op0I, m_And(m_Value(A), m_Value(B))) &&
-        match(Op1I, m_Xor(m_Specific(A), m_Specific(B))))
+    if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+        match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
     // (A ^ B) ^ (A & B) -> (A | B)
-    if (match(Op0I, m_Xor(m_Value(A), m_Value(B))) &&
-        match(Op1I, m_And(m_Specific(A), m_Specific(B))))
+    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+        match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
   }
 
