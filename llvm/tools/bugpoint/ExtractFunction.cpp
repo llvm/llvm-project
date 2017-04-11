@@ -209,6 +209,7 @@ static void eliminateAliases(GlobalValue *GV) {
 void llvm::DeleteGlobalInitializer(GlobalVariable *GV) {
   eliminateAliases(GV);
   GV->setInitializer(nullptr);
+  GV->setComdat(nullptr);
 }
 
 // DeleteFunctionBody - "Remove" the function by deleting all of its basic

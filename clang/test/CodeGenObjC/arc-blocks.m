@@ -75,7 +75,7 @@ void test3(void (^sink)(id*)) {
   // CHECK-NEXT: bitcast i8*
   // CHECK-NEXT: store void (i8**)* {{%.*}}, void (i8**)** [[SINK]]
   // CHECK-NEXT: [[STRONGPTR1:%.*]] = bitcast i8** [[STRONG]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[STRONGPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[STRONGPTR1]])
   // CHECK-NEXT: store i8* null, i8** [[STRONG]]
 
   // CHECK-NEXT: load void (i8**)*, void (i8**)** [[SINK]]
@@ -97,7 +97,7 @@ void test3(void (^sink)(id*)) {
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[STRONG]]
   // CHECK-NEXT: call void @objc_release(i8* [[T0]])
   // CHECK-NEXT: [[STRONGPTR2:%.*]] = bitcast i8** [[STRONG]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[STRONGPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[STRONGPTR2]])
 
   // CHECK-NEXT: load void (i8**)*, void (i8**)** [[SINK]]
   // CHECK-NEXT: bitcast
@@ -172,7 +172,7 @@ void test5(void) {
   // CHECK:      [[VAR:%.*]] = alloca i8*
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
   // CHECK-NEXT: [[VARPTR1:%.*]] = bitcast i8** [[VAR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[VARPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[VARPTR1]])
   // CHECK: [[T0:%.*]] = call i8* @test5_source()
   // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[VAR]],
@@ -185,7 +185,7 @@ void test5(void) {
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to
   // CHECK: call void @test5_helper
   // CHECK-NEXT: [[VARPTR2:%.*]] = bitcast i8** [[VAR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[VARPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[VARPTR2]])
   // CHECK-NEXT: ret void
 }
 
@@ -199,7 +199,7 @@ void test6(void) {
   // CHECK:      [[VAR:%.*]] = alloca [[BYREF_T:%.*]],
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
   // CHECK-NEXT: [[VARPTR1:%.*]] = bitcast [[BYREF_T]]* [[VAR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 48, i8* [[VARPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 48, i8* [[VARPTR1]])
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 2
   // 0x02000000 - has copy/dispose helpers weak
   // CHECK-NEXT: store i32 1107296256, i32* [[T0]]
@@ -218,7 +218,7 @@ void test6(void) {
   // CHECK-NEXT: call void @_Block_object_dispose(i8* [[T0]], i32 8)
   // CHECK-NEXT: call void @objc_destroyWeak(i8** [[SLOT]])
   // CHECK-NEXT: [[VARPTR2:%.*]] = bitcast [[BYREF_T]]* [[VAR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 48, i8* [[VARPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 48, i8* [[VARPTR2]])
   // CHECK-NEXT: ret void
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_copy_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
@@ -506,7 +506,7 @@ void test13(id x) {
   // CHECK-NEXT: [[T0:%.*]] = call i8* @objc_retain(i8* {{%.*}})
   // CHECK-NEXT: store i8* [[T0]], i8** [[X]], align 8
   // CHECK-NEXT: [[BPTR1:%.*]] = bitcast void ()** [[B]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[BPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[BPTR1]])
   // CHECK-NEXT: [[CLEANUP_ADDR:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[X]], align 8
   // CHECK-NEXT: [[T1:%.*]] = icmp ne i8* [[T0]], null
@@ -533,7 +533,7 @@ void test13(id x) {
   // CHECK-NEXT: [[T1:%.*]] = bitcast void ()* [[T0]] to i8*
   // CHECK-NEXT: call void @objc_release(i8* [[T1]])
   // CHECK-NEXT: [[BPTR2:%.*]] = bitcast void ()** [[B]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[BPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[BPTR2]])
 
   // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T0]]
@@ -566,7 +566,7 @@ void test16() {
   // CHECK: [[BLKVAR:%.*]]  = alloca void ()*, align 8
   // CHECK-NEXT:  [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
   // CHECK-NEXT:  [[BLKVARPTR1:%.*]] = bitcast void ()** [[BLKVAR]] to i8*
-  // CHECK-NEXT:  call void @llvm.lifetime.start(i64 8, i8* [[BLKVARPTR1]])
+  // CHECK-NEXT:  call void @llvm.lifetime.start.p0i8(i64 8, i8* [[BLKVARPTR1]])
   // CHECK-NEXT:  [[SLOTREL:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT:  store void ()* null, void ()** [[BLKVAR]], align 8
 }

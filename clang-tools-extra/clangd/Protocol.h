@@ -124,6 +124,14 @@ struct DidOpenTextDocumentParams {
   parse(llvm::yaml::MappingNode *Params);
 };
 
+struct DidCloseTextDocumentParams {
+  /// The document that was closed.
+  TextDocumentIdentifier textDocument;
+
+  static llvm::Optional<DidCloseTextDocumentParams>
+  parse(llvm::yaml::MappingNode *Params);
+};
+
 struct TextDocumentContentChangeEvent {
   /// The new text of the document.
   std::string text;

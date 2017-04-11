@@ -6,9 +6,9 @@
 define amdgpu_kernel void @store_fi_lifetime(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %b = alloca i8
-  call void @llvm.lifetime.start(i64 1, i8* %b)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %b)
   store volatile i8* %b, i8* addrspace(1)* undef
-  call void @llvm.lifetime.end(i64 1, i8* %b)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %b)
   ret void
 }
 
@@ -196,8 +196,8 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

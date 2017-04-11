@@ -685,6 +685,7 @@ void *ThreadStackReuseFunc2(void *unused) {
   return 0;
 }
 
+#if !defined(__thumb__)
 TEST(AddressSanitizer, ThreadStackReuseTest) {
   pthread_t t;
   PTHREAD_CREATE(&t, 0, ThreadStackReuseFunc1, 0);
@@ -692,6 +693,7 @@ TEST(AddressSanitizer, ThreadStackReuseTest) {
   PTHREAD_CREATE(&t, 0, ThreadStackReuseFunc2, 0);
   PTHREAD_JOIN(t, 0);
 }
+#endif
 
 #if defined(__SSE2__)
 #include <emmintrin.h>
@@ -1091,6 +1093,11 @@ TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
   }
 }
 
+// pthread_exit tries to perform unwinding stuff that leads to dlopen'ing
+// libgcc_s.so. dlopen in its turn calls malloc to store "libgcc_s.so" string
+// that confuses LSan on Thumb because it fails to understand that this
+// allocation happens in dynamic linker and should be ignored.
+#if !defined(__thumb__)
 static void *PthreadExit(void *a) {
   pthread_exit(0);
   return 0;
@@ -1103,6 +1110,7 @@ TEST(AddressSanitizer, PthreadExitTest) {
     PTHREAD_JOIN(t, 0);
   }
 }
+#endif
 
 // FIXME: Why does clang-cl define __EXCEPTIONS?
 #if defined(__EXCEPTIONS) && !defined(_WIN32)

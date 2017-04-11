@@ -43,7 +43,7 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #4
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #4
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #5
@@ -54,7 +54,7 @@ declare i64 @llvm.coro.size.i64() #1
 declare i8* @llvm.coro.begin(token, i8* writeonly) #7
 declare token @llvm.coro.save(i8*) #7
 declare i8 @llvm.coro.suspend(token, i1) #7
-declare void @llvm.lifetime.end(i64, i8* nocapture) #4
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #4
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #5
 declare void @free(i8* nocapture) local_unnamed_addr #6
 declare i1 @llvm.coro.end(i8*, i1) #7

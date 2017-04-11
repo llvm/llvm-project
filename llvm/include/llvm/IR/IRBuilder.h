@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1089,9 +1090,15 @@ public:
   // Instruction creation methods: Memory Instructions
   //===--------------------------------------------------------------------===//
 
+  AllocaInst *CreateAlloca(Type *Ty, unsigned AddrSpace,
+                           Value *ArraySize = nullptr, const Twine &Name = "") {
+    return Insert(new AllocaInst(Ty, AddrSpace, ArraySize), Name);
+  }
+
   AllocaInst *CreateAlloca(Type *Ty, Value *ArraySize = nullptr,
                            const Twine &Name = "") {
-    return Insert(new AllocaInst(Ty, ArraySize), Name);
+    const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    return Insert(new AllocaInst(Ty, DL.getAllocaAddrSpace(), ArraySize), Name);
   }
   // \brief Provided to resolve 'CreateLoad(Ptr, "...")' correctly, instead of
   // converting the string to 'bool' for the isVolatile parameter.

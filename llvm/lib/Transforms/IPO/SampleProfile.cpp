@@ -664,13 +664,11 @@ bool SampleProfileLoader::inlineHotFunctions(
         continue;
       }
       DebugLoc DLoc = I->getDebugLoc();
-      uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
       if (InlineFunction(CallSite(DI), IFI)) {
         LocalChanged = true;
         emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
                                Twine("inlined hot callee '") +
-                                   CalledFunction->getName() + "' with " +
-                                   Twine(NumSamples) + " samples into '" +
+                                   CalledFunction->getName() + "' into '" +
                                    F.getName() + "'");
       }
     }

@@ -3,7 +3,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7-unknown-linux-gnueabihf"
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
 
 ; Function Attrs: nounwind
 declare void @_ZNSaIcEC2Ev() unnamed_addr #0 align 2
@@ -25,7 +25,7 @@ define hidden void @_ZN4llvm14DOTGraphTraitsIPNS_13ScheduleDAGMIEE17getEdgeAttri
   br label %3
 
 ; <label>:2:                                      ; preds = %0
-  call void @llvm.lifetime.start(i64 1, i8* undef) #0
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* undef) #0
   call void @_ZNSaIcEC2Ev() #0
   br label %3
 

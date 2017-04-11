@@ -1027,7 +1027,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
     return getSequenceIfElementsMatch<ConstantDataVector>(C, V);
 
   // Otherwise, the element type isn't compatible with ConstantDataVector, or
-  // the operand list constants a ConstantExpr or something else strange.
+  // the operand list contains a ConstantExpr or something else strange.
   return nullptr;
 }
 

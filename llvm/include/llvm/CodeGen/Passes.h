@@ -81,6 +81,9 @@ namespace llvm {
 /// MachineDominanaceFrontier - This pass is a machine dominators analysis pass.
   extern char &MachineDominanceFrontierID;
 
+  /// MachineRegionInfo - This pass computes SESE regions for machine functions.
+  extern char &MachineRegionInfoPassID;
+
   /// EdgeBundles analysis - Bundle machine CFG edges.
   extern char &EdgeBundlesID;
 

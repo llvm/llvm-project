@@ -1113,36 +1113,50 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                    int *parent_tidptr, void *newtls, int *child_tidptr) {
   long long res;
-/* Stack frame offsets.  */
-#if _CALL_ELF != 2
-#define FRAME_MIN_SIZE         112
-#define FRAME_TOC_SAVE         40
+// Stack frame structure.
+#if SANITIZER_PPC64V1
+//   Back chain == 0        (SP + 112)
+// Frame (112 bytes):
+//   Parameter save area    (SP + 48), 8 doublewords
+//   TOC save area          (SP + 40)
+//   Link editor doubleword (SP + 32)
+//   Compiler doubleword    (SP + 24)
+//   LR save area           (SP + 16)
+//   CR save area           (SP + 8)
+//   Back chain             (SP + 0)
+# define FRAME_SIZE 112
+# define FRAME_TOC_SAVE_OFFSET 40
+#elif SANITIZER_PPC64V2
+//   Back chain == 0        (SP + 32)
+// Frame (32 bytes):
+//   TOC save area          (SP + 24)
+//   LR save area           (SP + 16)
+//   CR save area           (SP + 8)
+//   Back chain             (SP + 0)
+# define FRAME_SIZE 32
+# define FRAME_TOC_SAVE_OFFSET 24
 #else
-#define FRAME_MIN_SIZE         32
-#define FRAME_TOC_SAVE         24
+# error "Unsupported PPC64 ABI"
 #endif
   if (!fn || !child_stack)
     return -EINVAL;
   CHECK_EQ(0, (uptr)child_stack % 16);
-  child_stack = (char *)child_stack - 2 * sizeof(unsigned long long);
-  ((unsigned long long *)child_stack)[0] = (uptr)fn;
-  ((unsigned long long *)child_stack)[1] = (uptr)arg;
 
   register int (*__fn)(void *) __asm__("r3") = fn;
   register void *__cstack      __asm__("r4") = child_stack;
   register int __flags         __asm__("r5") = flags;
-  register void * __arg        __asm__("r6") = arg;
-  register int * __ptidptr     __asm__("r7") = parent_tidptr;
-  register void * __newtls     __asm__("r8") = newtls;
-  register int * __ctidptr     __asm__("r9") = child_tidptr;
+  register void *__arg         __asm__("r6") = arg;
+  register int *__ptidptr      __asm__("r7") = parent_tidptr;
+  register void *__newtls      __asm__("r8") = newtls;
+  register int *__ctidptr      __asm__("r9") = child_tidptr;
 
  __asm__ __volatile__(
-           /* fn, arg, child_stack are saved acrVoss the syscall */
+           /* fn and arg are saved across the syscall */
            "mr 28, %5\n\t"
-           "mr 29, %6\n\t"
            "mr 27, %8\n\t"
 
            /* syscall
+             r0 == __NR_clone
              r3 == flags
              r4 == child_stack
              r5 == parent_tidptr
@@ -1160,15 +1174,21 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
            "crandc cr1*4+eq, cr1*4+eq, cr0*4+so\n\t"
            "bne-   cr1, 1f\n\t"
 
+           /* Set up stack frame */
+           "li    29, 0\n\t"
+           "stdu  29, -8(1)\n\t"
+           "stdu  1, -%12(1)\n\t"
            /* Do the function call */
            "std   2, %13(1)\n\t"
-#if _CALL_ELF != 2
+#if SANITIZER_PPC64V1
            "ld    0, 0(28)\n\t"
            "ld    2, 8(28)\n\t"
            "mtctr 0\n\t"
-#else
+#elif SANITIZER_PPC64V2
            "mr    12, 28\n\t"
            "mtctr 12\n\t"
+#else
+# error "Unsupported PPC64 ABI"
 #endif
            "mr    3, 27\n\t"
            "bctrl\n\t"
@@ -1182,13 +1202,20 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
            "1:\n\t"
            "mr %0, 3\n\t"
              : "=r" (res)
-             : "0" (-1), "i" (EINVAL),
-               "i" (__NR_clone), "i" (__NR_exit),
-               "r" (__fn), "r" (__cstack), "r" (__flags),
-               "r" (__arg), "r" (__ptidptr), "r" (__newtls),
-               "r" (__ctidptr), "i" (FRAME_MIN_SIZE), "i" (FRAME_TOC_SAVE)
-             : "cr0", "cr1", "memory", "ctr",
-               "r0", "r29", "r27", "r28");
+             : "0" (-1),
+               "i" (EINVAL),
+               "i" (__NR_clone),
+               "i" (__NR_exit),
+               "r" (__fn),
+               "r" (__cstack),
+               "r" (__flags),
+               "r" (__arg),
+               "r" (__ptidptr),
+               "r" (__newtls),
+               "r" (__ctidptr),
+               "i" (FRAME_SIZE),
+               "i" (FRAME_TOC_SAVE_OFFSET)
+             : "cr0", "cr1", "memory", "ctr", "r0", "r27", "r28", "r29");
   return res;
 }
 #elif defined(__i386__) && SANITIZER_LINUX
@@ -1253,6 +1280,72 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                          "d"(parent_tidptr),
                          "S"(newtls),
                          "D"(child_tidptr)
+                       : "memory");
+  return res;
+}
+#elif defined(__arm__) && SANITIZER_LINUX
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                    int *parent_tidptr, void *newtls, int *child_tidptr) {
+  unsigned int res;
+  if (!fn || !child_stack)
+    return -EINVAL;
+  child_stack = (char *)child_stack - 2 * sizeof(unsigned int);
+  ((unsigned int *)child_stack)[0] = (uptr)fn;
+  ((unsigned int *)child_stack)[1] = (uptr)arg;
+  register int r0 __asm__("r0") = flags;
+  register void *r1 __asm__("r1") = child_stack;
+  register int *r2 __asm__("r2") = parent_tidptr;
+  register void *r3 __asm__("r3") = newtls;
+  register int *r4 __asm__("r4") = child_tidptr;
+  register int r7 __asm__("r7") = __NR_clone;
+
+#if __ARM_ARCH > 4 || defined (__ARM_ARCH_4T__)
+# define ARCH_HAS_BX
+#endif
+#if __ARM_ARCH > 4
+# define ARCH_HAS_BLX
+#endif
+
+#ifdef ARCH_HAS_BX
+# ifdef ARCH_HAS_BLX
+#  define BLX(R) "blx "  #R "\n"
+# else
+#  define BLX(R) "mov lr, pc; bx" #R "\n"
+# endif
+#else
+# define BLX(R)  "mov lr, pc; mov pc," #R "\n"
+#endif
+
+  __asm__ __volatile__(
+                       /* %r0 = syscall(%r7 = SYSCALL(clone),
+                        *               %r0 = flags,
+                        *               %r1 = child_stack,
+                        *               %r2 = parent_tidptr,
+                        *               %r3  = new_tls,
+                        *               %r4 = child_tidptr)
+                        */
+
+                       /* Do the system call */
+                       "swi 0x0\n"
+
+                       /* if (%r0 != 0)
+                        *   return %r0;
+                        */
+                       "cmp r0, #0\n"
+                       "bne 1f\n"
+
+                       /* In the child, now. Call "fn(arg)". */
+                       "ldr r0, [sp, #4]\n"
+                       "ldr ip, [sp], #8\n"
+                       BLX(ip)
+                       /* Call _exit(%r0). */
+                       "mov r7, %7\n"
+                       "swi 0x0\n"
+                       "1:\n"
+                       "mov %0, r0\n"
+                       : "=r"(res)
+                       : "r"(r0), "r"(r1), "r"(r2), "r"(r3), "r"(r4), "r"(r7),
+                         "i"(__NR_exit)
                        : "memory");
   return res;
 }

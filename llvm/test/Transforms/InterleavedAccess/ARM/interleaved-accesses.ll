@@ -843,3 +843,14 @@ define void @store_factor4_wide(<32 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1, 
   store <32 x i32> %interleaved.vec, <32 x i32>* %ptr, align 4
   ret void
 }
+
+define void @load_factor2_fp128(<4 x fp128>* %ptr) {
+; ALL-LABEL: @load_factor2_fp128(
+; ALL-NOT:     @llvm.arm.neon
+; ALL:         ret void
+;
+  %interleaved.vec = load <4 x fp128>, <4 x fp128>* %ptr, align 16
+  %v0 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> undef, <2 x i32> <i32 0, i32 2>
+  %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> undef, <2 x i32> <i32 1, i32 3>
+  ret void
+}

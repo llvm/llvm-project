@@ -57,12 +57,11 @@ define i5 @biggest_divisor(i5 %x) {
   ret i5 %rem
 }
 
-; TODO: Should vector subtract of constant be canonicalized to add?
 define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
 ; CHECK-LABEL: @big_divisor_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> %x, <i4 -3, i4 -3>
-; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i4> %x, <i4 -3, i4 -3>
-; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i4> %x, <2 x i4> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X:%.*]], <i4 -3, i4 -3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i4> [[X]], <i4 3, i4 3>
+; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i4> [[X]], <2 x i4> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[REM]]
 ;
   %rem = urem <2 x i4> %x, <i4 13, i4 13>

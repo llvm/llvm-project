@@ -1,4 +1,3 @@
-
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
@@ -123,6 +122,7 @@ LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
 #endif
 
 char MachineRegionInfoPass::ID = 0;
+char &MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)

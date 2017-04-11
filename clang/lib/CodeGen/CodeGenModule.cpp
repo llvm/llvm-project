@@ -2935,13 +2935,11 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       continue;
 
     // Get the call site's attribute list.
-    SmallVector<llvm::AttributeList, 8> newAttrs;
+    SmallVector<llvm::AttributeSetNode *, 8> newAttrs;
     llvm::AttributeList oldAttrs = callSite.getAttributes();
 
     // Collect any return attributes from the call.
-    if (oldAttrs.hasAttributes(llvm::AttributeList::ReturnIndex))
-      newAttrs.push_back(llvm::AttributeList::get(newFn->getContext(),
-                                                  oldAttrs.getRetAttributes()));
+    newAttrs.push_back(oldAttrs.getRetAttributes());
 
     // If the function was passed too few arguments, don't transform.
     unsigned newNumArgs = newFn->arg_size();
@@ -2959,16 +2957,12 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       }
 
       // Add any parameter attributes.
-      if (oldAttrs.hasAttributes(argNo + 1))
-        newAttrs.push_back(llvm::AttributeList::get(
-            newFn->getContext(), oldAttrs.getParamAttributes(argNo + 1)));
+      newAttrs.push_back(oldAttrs.getParamAttributes(argNo + 1));
     }
     if (dontTransform)
       continue;
 
-    if (oldAttrs.hasAttributes(llvm::AttributeList::FunctionIndex))
-      newAttrs.push_back(llvm::AttributeList::get(newFn->getContext(),
-                                                  oldAttrs.getFnAttributes()));
+    newAttrs.push_back(oldAttrs.getFnAttributes());
 
     // Okay, we can transform this.  Create the new call instruction and copy
     // over the required information.

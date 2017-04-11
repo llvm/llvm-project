@@ -726,6 +726,21 @@ Value *InstCombiner::dyn_castNegVal(Value *V) const {
     if (C->getType()->getElementType()->isIntegerTy())
       return ConstantExpr::getNeg(C);
 
+  if (ConstantVector *CV = dyn_cast<ConstantVector>(V)) {
+    for (unsigned i = 0, e = CV->getNumOperands(); i != e; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt)
+        return nullptr;
+
+      if (isa<UndefValue>(Elt))
+        continue;
+
+      if (!isa<ConstantInt>(Elt))
+        return nullptr;
+    }
+    return ConstantExpr::getNeg(CV);
+  }
+
   return nullptr;
 }
 
@@ -937,11 +952,15 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
     Constant *C = cast<Constant>(I.getOperand(1));
     for (unsigned i = 0; i != NumPHIValues; ++i) {
       Value *InV = nullptr;
-      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i)))
+      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i))) {
         InV = ConstantExpr::get(I.getOpcode(), InC, C);
-      else
+      } else {
         InV = Builder->CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
                                    PN->getIncomingValue(i), C, "phitmp");
+        auto *FPInst = dyn_cast<Instruction>(InV);
+        if (FPInst && isa<FPMathOperator>(FPInst))
+          FPInst->copyFastMathFlags(&I);
+      }
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   } else {

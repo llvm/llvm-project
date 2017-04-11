@@ -161,6 +161,17 @@ public:
     return -1;
   }
 
+  /// find_first_unset - Returns the index of the first unset bit, -1 if all
+  /// of the bits are set.
+  int find_first_unset() const {
+    for (unsigned i = 0; i < NumBitWords(size()); ++i)
+      if (Bits[i] != ~0UL) {
+        unsigned Result = i * BITWORD_SIZE + countTrailingOnes(Bits[i]);
+        return Result < size() ? Result : -1;
+      }
+    return -1;
+  }
+
   /// find_next - Returns the index of the next set bit following the
   /// "Prev" bit. Returns -1 if the next set bit is not found.
   int find_next(unsigned Prev) const {
@@ -181,6 +192,30 @@ public:
     for (unsigned i = WordPos+1; i < NumBitWords(size()); ++i)
       if (Bits[i] != 0)
         return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
+    return -1;
+  }
+
+  /// find_next_unset - Returns the index of the next usnet bit following the
+  /// "Prev" bit.  Returns -1 if all remaining bits are set.
+  int find_next_unset(unsigned Prev) const {
+    ++Prev;
+    if (Prev >= Size)
+      return -1;
+
+    unsigned WordPos = Prev / BITWORD_SIZE;
+    unsigned BitPos = Prev % BITWORD_SIZE;
+    BitWord Copy = Bits[WordPos];
+    // Mask in previous bits.
+    BitWord Mask = (1 << BitPos) - 1;
+    Copy |= Mask;
+
+    if (Copy != ~0UL)
+      return next_unset_in_word(WordPos, Copy);
+
+    // Check subsequent words.
+    for (unsigned i = WordPos + 1; i < NumBitWords(size()); ++i)
+      if (Bits[i] != ~0UL)
+        return next_unset_in_word(i, Bits[i]);
     return -1;
   }
 
@@ -503,6 +538,11 @@ public:
   }
 
 private:
+  int next_unset_in_word(int WordIndex, BitWord Word) const {
+    unsigned Result = WordIndex * BITWORD_SIZE + countTrailingOnes(Word);
+    return Result < size() ? Result : -1;
+  }
+
   unsigned NumBitWords(unsigned S) const {
     return (S + BITWORD_SIZE-1) / BITWORD_SIZE;
   }

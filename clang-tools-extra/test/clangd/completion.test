@@ -16,9 +16,9 @@ Content-Length: 148
 # nondeterministic, so we check regardless of order.
 #
 # CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"a"}
-# CHECK-DAG: {"label":"bb"}
-# CHECK-DAG: {"label":"ccc"}
+# CHECK-DAG: {"label":"a","kind":5}
+# CHECK-DAG: {"label":"bb","kind":5}
+# CHECK-DAG: {"label":"ccc","kind":5}
 # CHECK: ]}
 Content-Length: 44
 

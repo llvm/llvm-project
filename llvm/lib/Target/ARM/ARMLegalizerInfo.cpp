@@ -63,10 +63,14 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
     setAction({G_LOAD, s64}, Legal);
     setAction({G_STORE, s64}, Legal);
+  } else {
+    for (auto Ty : {s32, s64})
+      setAction({G_FADD, Ty}, Libcall);
   }
 
-  setAction({G_FREM, s32}, Libcall);
-  setAction({G_FREM, s64}, Libcall);
+  for (unsigned Op : {G_FREM, G_FPOW})
+    for (auto Ty : {s32, s64})
+      setAction({Op, Ty}, Libcall);
 
   computeTables();
 }

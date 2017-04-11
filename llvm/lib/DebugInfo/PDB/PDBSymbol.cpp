@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolAnnotation.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolBlock.h"
@@ -100,13 +101,33 @@ PDBSymbol::create(const IPDBSession &PDBSession,
 }
 
 #define TRY_DUMP_TYPE(Type)                                                    \
-  if (const Type *DerivedThis = dyn_cast<Type>(this))                          \
+  if (const Type *DerivedThis = this->cast<Type>())                            \
     Dumper.dump(OS, Indent, *DerivedThis);
 
 #define ELSE_TRY_DUMP_TYPE(Type, Dumper) else TRY_DUMP_TYPE(Type, Dumper)
 
 void PDBSymbol::defaultDump(raw_ostream &OS, int Indent) const {
   RawSymbol->dump(OS, Indent);
+}
+
+void PDBSymbol::dumpProperties() const {
+  outs() << "\n";
+  defaultDump(outs(), 0);
+  outs().flush();
+}
+
+void PDBSymbol::dumpChildStats() const {
+  TagStats Stats;
+  getChildStats(Stats);
+  outs() << "\n";
+  for (auto &Stat : Stats) {
+    outs() << Stat.first << ": " << Stat.second << "\n";
+  }
+  outs().flush();
+}
+
+std::unique_ptr<PDBSymbol> PDBSymbol::clone() const {
+  return Session.getSymbolById(getSymIndexId());
 }
 
 PDB_SymType PDBSymbol::getSymTag() const { return RawSymbol->getSymTag(); }
@@ -147,4 +168,8 @@ PDBSymbol::getChildStats(TagStats &Stats) const {
   }
   Result->reset();
   return Result;
+}
+
+std::unique_ptr<PDBSymbol> PDBSymbol::getSymbolByIdHelper(uint32_t Id) const {
+  return Session.getSymbolById(Id);
 }

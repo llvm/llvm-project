@@ -24,7 +24,7 @@ define i32 @foo(float %a, i8* nocapture readnone %fmt, ...) nounwind {
 entry:
   %ap = alloca [1 x %struct.__va_list_tag], align 16
   %0 = bitcast [1 x %struct.__va_list_tag]* %ap to i8*
-  call void @llvm.lifetime.start(i64 16, i8* %0) #2
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0) #2
   call void @llvm.va_start(i8* %0)
 ; SSE: subl $72, %esp
 ; SSE: testb %al, %al
@@ -79,14 +79,14 @@ vaarg.end:                                        ; preds = %vaarg.in_mem, %vaar
   %vaarg.addr = bitcast i8* %vaarg.addr.in to i32*
   %4 = load i32, i32* %vaarg.addr, align 4
   call void @llvm.va_end(i8* %0)
-  call void @llvm.lifetime.end(i64 16, i8* %0) #2
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* %0) #2
   ret i32 %4
 ; SSE: movl ([[ADDR]]), %eax
 ; SSE: retq
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
 ; Function Attrs: nounwind
 declare void @llvm.va_start(i8*) nounwind
@@ -95,5 +95,5 @@ declare void @llvm.va_start(i8*) nounwind
 declare void @llvm.va_end(i8*) nounwind
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
 

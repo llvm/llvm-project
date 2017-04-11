@@ -110,6 +110,25 @@ define void @test.stackprotectorcheck() {
   ret void
 }
 
+declare void  @llvm.lifetime.start(i64, i8* nocapture) nounwind readonly
+declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+
+define void @tests.lifetime.start.end() {
+  ; CHECK-LABEL: @tests.lifetime.start.end(
+  %a = alloca i8
+  call void @llvm.lifetime.start(i64 1, i8* %a)
+  ; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %a)
+  store i8 0, i8* %a
+  call void @llvm.lifetime.end(i64 1, i8* %a)
+  ; CHECK: call void @llvm.lifetime.end.p0i8(i64 1, i8* %a)
+  ret void
+}
+
+
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets
 ; emitted at the end.
 ; CHECK: declare i32 @llvm.objectsize.i32.p0i8
+
+
+; CHECK: declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+; CHECK: declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

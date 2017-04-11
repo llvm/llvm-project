@@ -177,14 +177,14 @@ struct FormatStyle {
     SFS_Empty,
     /// \brief Only merge functions defined inside a class. Implies "empty".
     /// \code
-    ///   class {
+    ///   class Foo {
     ///     void f() { foo(); }
     ///   };
     /// \endcode
     SFS_Inline,
     /// \brief Merge all functions fitting on a single line.
     /// \code
-    ///   class {
+    ///   class Foo {
     ///     void f() { foo(); }
     ///   };
     ///   void f() { bar(); }
@@ -705,6 +705,12 @@ struct FormatStyle {
   bool BreakConstructorInitializersBeforeComma;
 
   /// \brief Break after each annotation on a field in Java files.
+  /// \code{.java}
+  ///    true:                                  false:
+  ///    @Partial                       vs.     @Partial @Mock DataLoad loader;
+  ///    @Mock
+  ///    DataLoad loader;
+  /// \endcode
   bool BreakAfterJavaFieldAnnotations;
 
   /// \brief Allow breaking string literals when formatting.
@@ -720,7 +726,7 @@ struct FormatStyle {
   /// \brief A regular expression that describes comments with special meaning,
   /// which should not be split into lines or otherwise changed.
   /// \code
-  ///    CommentPragmas: '^ FOOBAR pragma:'
+  ///    // CommentPragmas: '^ FOOBAR pragma:'
   ///    // Will leave the following line unaffected
   ///    #include <vector> // FOOBAR pragma: keep
   /// \endcode
@@ -760,6 +766,13 @@ struct FormatStyle {
   unsigned ConstructorInitializerIndentWidth;
 
   /// \brief Indent width for line continuations.
+  /// \code
+  ///    ContinuationIndentWidth: 2
+  ///
+  ///    int i =         //  VeryVeryVeryVeryVeryLongComment
+  ///      longFunction( // Again a long comment
+  ///        arg);
+  /// \endcode
   unsigned ContinuationIndentWidth;
 
   /// \brief If ``true``, format braced lists as best suited for C++11 braced
@@ -775,11 +788,20 @@ struct FormatStyle {
   /// (e.g. a type or variable name), clang-format formats as if the ``{}`` were
   /// the parentheses of a function call with that name. If there is no name,
   /// a zero-length name is assumed.
+  /// \code
+  ///    true:                                  false:
+  ///    vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
+  ///    vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
+  ///    f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
+  ///    new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+  /// \endcode
   bool Cpp11BracedListStyle;
 
   /// \brief If ``true``, analyze the formatted file for the most common
-  /// alignment of ``&`` and ``*``. ``PointerAlignment`` is then used only as
-  /// fallback.
+  /// alignment of ``&`` and ``*``.
+  /// Pointer and reference alignment styles are going to be updated according
+  /// to the preferences found in the file.
+  /// ``PointerAlignment`` is then used only as fallback.
   bool DerivePointerAlignment;
 
   /// \brief Disables formatting completely.
@@ -880,11 +902,22 @@ struct FormatStyle {
   ///
   /// When ``false``, use the same indentation level as for the switch statement.
   /// Switch statement body is always indented one level more than case labels.
+  /// \code
+  ///    false:                                 true:
+  ///    switch (fool) {                vs.     switch (fool) {
+  ///    case 1:                                  case 1:
+  ///      bar();                                   bar();
+  ///      break;                                   break;
+  ///    default:                                 default:
+  ///      plop();                                  plop();
+  ///    }                                      }
+  /// \endcode
   bool IndentCaseLabels;
 
   /// \brief The number of columns to use for indentation.
   /// \code
   ///    IndentWidth: 3
+  ///
   ///    void f() {
   ///       someFunction();
   ///       if (true, false) {
@@ -896,6 +929,15 @@ struct FormatStyle {
 
   /// \brief Indent if a function definition or declaration is wrapped after the
   /// type.
+  /// \code
+  ///    true:
+  ///    LoooooooooooooooooooooooooooooooooooooooongReturnType
+  ///        LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+  ///
+  ///    false:
+  ///    LoooooooooooooooooooooooooooooooooooooooongReturnType
+  ///    LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+  /// \endcode
   bool IndentWrappedFunctionNames;
 
   /// \brief Quotation styles for JavaScript strings. Does not affect template
@@ -938,7 +980,14 @@ struct FormatStyle {
   /// \endcode
   bool JavaScriptWrapImports;
 
-  /// \brief If true, empty lines at the start of blocks are kept.
+  /// \brief If true, the empty line at the start of blocks is kept.
+  /// \code
+  ///    true:                                  false:
+  ///    if (foo) {                     vs.     if (foo) {
+  ///                                             bar();
+  ///      bar();                               }
+  ///    }
+  /// \endcode
   bool KeepEmptyLinesAtTheStartOfBlocks;
 
   /// \brief Supported languages.
@@ -1050,6 +1099,13 @@ struct FormatStyle {
   NamespaceIndentationKind NamespaceIndentation;
 
   /// \brief The number of characters to use for indentation of ObjC blocks.
+  /// \code{.objc}
+  ///    ObjCBlockIndentWidth: 4
+  ///
+  ///    [operation setCompletionBlock:^{
+  ///        [self onOperationDone];
+  ///    }];
+  /// \endcode
   unsigned ObjCBlockIndentWidth;
 
   /// \brief Add a space after ``@property`` in Objective-C, i.e. use

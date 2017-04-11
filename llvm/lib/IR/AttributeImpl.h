@@ -16,10 +16,10 @@
 #ifndef LLVM_LIB_IR_ATTRIBUTEIMPL_H
 #define LLVM_LIB_IR_ATTRIBUTEIMPL_H
 
-#include "AttributeSetNode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/AttributeSetNode.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
@@ -172,38 +172,7 @@ private:
 
 public:
   AttributeListImpl(LLVMContext &C,
-                    ArrayRef<std::pair<unsigned, AttributeSetNode *>> Slots)
-      : Context(C), NumSlots(Slots.size()), AvailableFunctionAttrs(0) {
-    static_assert(Attribute::EndAttrKinds <=
-                      sizeof(AvailableFunctionAttrs) * CHAR_BIT,
-                  "Too many attributes");
-
-#ifndef NDEBUG
-    if (Slots.size() >= 2) {
-      for (const std::pair<unsigned, AttributeSetNode *> *i = Slots.begin() + 1,
-                                                         *e = Slots.end();
-           i != e; ++i) {
-        assert((i-1)->first <= i->first && "Attribute set not ordered!");
-      }
-    }
-#endif
-    // There's memory after the node where we can store the entries in.
-    std::copy(Slots.begin(), Slots.end(), getTrailingObjects<IndexAttrPair>());
-
-    // Initialize AvailableFunctionAttrs summary bitset.
-    if (NumSlots > 0) {
-      static_assert(AttributeList::FunctionIndex == ~0u,
-                    "FunctionIndex should be biggest possible index");
-      const std::pair<unsigned, AttributeSetNode *> &Last = Slots.back();
-      if (Last.first == AttributeList::FunctionIndex) {
-        const AttributeSetNode *Node = Last.second;
-        for (Attribute I : *Node) {
-          if (!I.isStringAttribute())
-            AvailableFunctionAttrs |= ((uint64_t)1) << I.getKindAsEnum();
-        }
-      }
-    }
-  }
+                    ArrayRef<std::pair<unsigned, AttributeSetNode *>> Slots);
 
   // AttributesSetImpt is uniqued, these should not be available.
   AttributeListImpl(const AttributeListImpl &) = delete;
@@ -250,16 +219,9 @@ public:
   iterator begin(unsigned Slot) const { return getSlotNode(Slot)->begin(); }
   iterator end(unsigned Slot) const { return getSlotNode(Slot)->end(); }
 
-  void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, makeArrayRef(getNode(0), getNumSlots()));
-  }
+  void Profile(FoldingSetNodeID &ID) const;
   static void Profile(FoldingSetNodeID &ID,
-                      ArrayRef<std::pair<unsigned, AttributeSetNode*>> Nodes) {
-    for (const auto &Node : Nodes) {
-      ID.AddInteger(Node.first);
-      ID.AddPointer(Node.second);
-    }
-  }
+                      ArrayRef<std::pair<unsigned, AttributeSetNode*>> Nodes);
 
   void dump() const;
 };

@@ -24,6 +24,17 @@ void TextDocumentDidOpenHandler::handleNotification(
   Store.addDocument(DOTDP->textDocument.uri.file, DOTDP->textDocument.text);
 }
 
+void TextDocumentDidCloseHandler::handleNotification(
+    llvm::yaml::MappingNode *Params) {
+  auto DCTDP = DidCloseTextDocumentParams::parse(Params);
+  if (!DCTDP) {
+    Output.log("Failed to decode DidCloseTextDocumentParams!\n");
+    return;
+  }
+
+  Store.removeDocument(DCTDP->textDocument.uri.file);
+}
+
 void TextDocumentDidChangeHandler::handleNotification(
     llvm::yaml::MappingNode *Params) {
   auto DCTDP = DidChangeTextDocumentParams::parse(Params);
@@ -156,7 +167,7 @@ void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
   std::string Code = AST.getStore().getDocument(CAP->textDocument.uri.file);
   std::string Commands;
   for (Diagnostic &D : CAP->context.diagnostics) {
-    std::vector<clang::tooling::Replacement> Fixes = AST.getFixIts(D);
+    std::vector<clang::tooling::Replacement> Fixes = AST.getFixIts(CAP->textDocument.uri.file, D);
     std::string Edits = replacementsToEdits(Code, Fixes);
 
     if (!Edits.empty())

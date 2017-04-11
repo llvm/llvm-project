@@ -21,7 +21,7 @@ void test_array() {
 
   // Initializing first element
   // CHECK: [[PTR1:%.*]] = bitcast i8** [[ARR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[PTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTR1]])
   // CHECK: [[ELEMENT0:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OBJECTS]], i64 0, i64 0
   // CHECK-NEXT: call void @_ZN1XC1Ev
   // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv
@@ -51,7 +51,7 @@ void test_array() {
   // CHECK-NOT: ret void
   // CHECK: call void @objc_release
   // CHECK-NEXT: [[PTR2:%.*]] = bitcast i8** [[ARR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[PTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTR2]])
   // CHECK-NEXT: ret void
 
   // Check cleanups
@@ -73,7 +73,7 @@ void test_array_instantiation() {
 
   // Initializing first element
   // CHECK:      [[PTR1:%.*]] = bitcast i8** [[ARR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[PTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTR1]])
   // CHECK: [[ELEMENT0:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OBJECTS]], i64 0, i64 0
   // CHECK-NEXT: call void @_ZN1XC1Ev
   // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv
@@ -103,7 +103,7 @@ void test_array_instantiation() {
   // CHECK-NOT: ret void
   // CHECK: call void @objc_release
   // CHECK-NEXT: [[PTR2]] = bitcast i8** [[ARR]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[PTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTR2]])
   // CHECK-NEXT: ret void
 
   // Check cleanups

@@ -64,6 +64,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeLessLess())
     return;
+  if (tryMergeNSStringLiteral())
+    return;
 
   if (Style.Language == FormatStyle::LK_JavaScript) {
     static const tok::TokenKind JSIdentity[] = {tok::equalequal, tok::equal};
@@ -82,6 +84,22 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
       return;
   }
+}
+
+bool FormatTokenLexer::tryMergeNSStringLiteral() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &At = *(Tokens.end() - 2);
+  auto &String = *(Tokens.end() - 1);
+  if (!At->is(tok::at) || !String->is(tok::string_literal))
+    return false;
+  At->Tok.setKind(tok::string_literal);
+  At->TokenText = StringRef(At->TokenText.begin(),
+                            String->TokenText.end() - At->TokenText.begin());
+  At->ColumnWidth += String->ColumnWidth;
+  At->Type = TT_ObjCStringLiteral;
+  Tokens.erase(Tokens.end() - 1);
+  return true;
 }
 
 bool FormatTokenLexer::tryMergeLessLess() {

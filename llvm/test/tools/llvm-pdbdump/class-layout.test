@@ -46,9 +46,9 @@
 
 ; BITFIELD_TEST: ---TYPES---
 ; BITFIELD_TEST: struct BitFieldTest::A {
-; BITFIELD_TEST-NEXT: +0x00 int Bits1 : 1
-; BITFIELD_TEST-NEXT: +0x00 int Bits2 : 2
-; BITFIELD_TEST-NEXT: +0x00 int Bits3 : 3
-; BITFIELD_TEST-NEXT: +0x00 int Bits4 : 4
-; BITFIELD_TEST-NEXT: +0x00 int Bits22 : 22
-; BITFIELD_TEST-NEXT: +0x04 int Offset0x04
+; BITFIELD_TEST-NEXT: +0x00 [sizeof=4] int Bits1 : 1
+; BITFIELD_TEST-NEXT: +0x00 [sizeof=4] int Bits2 : 2
+; BITFIELD_TEST-NEXT: +0x00 [sizeof=4] int Bits3 : 3
+; BITFIELD_TEST-NEXT: +0x00 [sizeof=4] int Bits4 : 4
+; BITFIELD_TEST-NEXT: +0x00 [sizeof=4] int Bits22 : 22
+; BITFIELD_TEST-NEXT: +0x04 [sizeof=4] int Offset0x04

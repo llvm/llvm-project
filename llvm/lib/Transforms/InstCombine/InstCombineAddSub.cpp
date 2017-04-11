@@ -1128,8 +1128,8 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     }
   }
 
-  if (isa<Constant>(RHS) && isa<PHINode>(LHS))
-    if (Instruction *NV = FoldOpIntoPhi(I))
+  if (isa<Constant>(RHS))
+    if (Instruction *NV = foldOpWithConstantIntoOperand(I))
       return NV;
 
   if (I.getType()->getScalarType()->isIntegerTy(1))
@@ -1200,11 +1200,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
         return BinaryOperator::CreateAnd(NewAdd, C2);
       }
     }
-
-    // Try to fold constant add into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(LHS))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
   }
 
   // add (select X 0 (sub n A)) A  -->  select X A n
@@ -1310,23 +1305,19 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   {
     Value *A = nullptr, *B = nullptr;
     if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
-        (match(LHS, m_And(m_Specific(A), m_Specific(B))) ||
-         match(LHS, m_And(m_Specific(B), m_Specific(A)))))
+        match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
 
     if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
-        (match(RHS, m_And(m_Specific(A), m_Specific(B))) ||
-         match(RHS, m_And(m_Specific(B), m_Specific(A)))))
+        match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
   }
 
-  
   // (add (or A, B) (and A, B)) --> (add A, B)
   {
     Value *A = nullptr, *B = nullptr;
     if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
-        (match(LHS, m_And(m_Specific(A), m_Specific(B))) ||
-         match(LHS, m_And(m_Specific(B), m_Specific(A))))) {
+        match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
       auto *New = BinaryOperator::CreateAdd(A, B);
       New->setHasNoSignedWrap(I.hasNoSignedWrap());
       New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
@@ -1334,8 +1325,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     }
 
     if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
-        (match(RHS, m_And(m_Specific(A), m_Specific(B))) ||
-         match(RHS, m_And(m_Specific(B), m_Specific(A))))) {
+        match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
       auto *New = BinaryOperator::CreateAdd(A, B);
       New->setHasNoSignedWrap(I.hasNoSignedWrap());
       New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
@@ -1633,8 +1623,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   {
     Value *Y;
     // X-(X+Y) == -Y    X-(Y+X) == -Y
-    if (match(Op1, m_Add(m_Specific(Op0), m_Value(Y))) ||
-        match(Op1, m_Add(m_Value(Y), m_Specific(Op0))))
+    if (match(Op1, m_c_Add(m_Specific(Op0), m_Value(Y))))
       return BinaryOperator::CreateNeg(Y);
 
     // (X-Y)-X == -Y
@@ -1644,18 +1633,16 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
   // (sub (or A, B) (xor A, B)) --> (and A, B)
   {
-    Value *A = nullptr, *B = nullptr;
+    Value *A, *B;
     if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
-        (match(Op0, m_Or(m_Specific(A), m_Specific(B))) ||
-         match(Op0, m_Or(m_Specific(B), m_Specific(A)))))
+        match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
   }
 
-  if (Op0->hasOneUse()) {
-    Value *Y = nullptr;
+  {
+    Value *Y;
     // ((X | Y) - X) --> (~X & Y)
-    if (match(Op0, m_Or(m_Value(Y), m_Specific(Op1))) ||
-        match(Op0, m_Or(m_Specific(Op1), m_Value(Y))))
+    if (match(Op0, m_OneUse(m_c_Or(m_Value(Y), m_Specific(Op1)))))
       return BinaryOperator::CreateAnd(
           Y, Builder->CreateNot(Op1, Op1->getName() + ".not"));
   }
@@ -1663,7 +1650,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (Op1->hasOneUse()) {
     Value *X = nullptr, *Y = nullptr, *Z = nullptr;
     Constant *C = nullptr;
-    Constant *CI = nullptr;
 
     // (X - (Y - Z))  -->  (X + (Z - Y)).
     if (match(Op1, m_Sub(m_Value(Y), m_Value(Z))))
@@ -1672,8 +1658,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // (X - (X & Y))   -->   (X & ~Y)
     //
-    if (match(Op1, m_And(m_Value(Y), m_Specific(Op0))) ||
-        match(Op1, m_And(m_Specific(Op0), m_Value(Y))))
+    if (match(Op1, m_c_And(m_Value(Y), m_Specific(Op0))))
       return BinaryOperator::CreateAnd(Op0,
                                   Builder->CreateNot(Y, Y->getName() + ".not"));
 
@@ -1701,14 +1686,14 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // X - A*-B -> X + A*B
     // X - -A*B -> X + A*B
     Value *A, *B;
-    if (match(Op1, m_Mul(m_Value(A), m_Neg(m_Value(B)))) ||
-        match(Op1, m_Mul(m_Neg(m_Value(A)), m_Value(B))))
+    Constant *CI;
+    if (match(Op1, m_c_Mul(m_Value(A), m_Neg(m_Value(B)))))
       return BinaryOperator::CreateAdd(Op0, Builder->CreateMul(A, B));
 
     // X - A*CI -> X + A*-CI
-    // X - CI*A -> X + A*-CI
-    if (match(Op1, m_Mul(m_Value(A), m_Constant(CI))) ||
-        match(Op1, m_Mul(m_Constant(CI), m_Value(A)))) {
+    // No need to handle commuted multiply because multiply handling will
+    // ensure constant will be move to the right hand side.
+    if (match(Op1, m_Mul(m_Value(A), m_Constant(CI)))) {
       Value *NewMul = Builder->CreateMul(A, ConstantExpr::getNeg(CI));
       return BinaryOperator::CreateAdd(Op0, NewMul);
     }

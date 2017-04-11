@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 
 #include "PDBSymbol.h"
+#include "PDBSymbolTypeFunctionSig.h"
 #include "PDBTypes.h"
 
 namespace llvm {
@@ -26,8 +27,6 @@ public:
 
   void dump(PDBSymDumper &Dumper) const override;
 
-  std::unique_ptr<PDBSymbolTypeFunctionSig> getSignature() const;
-  std::unique_ptr<PDBSymbolTypeUDT> getClassParent() const;
   std::unique_ptr<IPDBEnumChildren<PDBSymbolData>> getArguments() const;
 
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Function)
@@ -35,7 +34,7 @@ public:
   FORWARD_SYMBOL_METHOD(getAccess)
   FORWARD_SYMBOL_METHOD(getAddressOffset)
   FORWARD_SYMBOL_METHOD(getAddressSection)
-  FORWARD_SYMBOL_METHOD(getClassParentId)
+  FORWARD_SYMBOL_ID_METHOD(getClassParent)
   FORWARD_SYMBOL_METHOD(isCompilerGenerated)
   FORWARD_SYMBOL_METHOD(isConstType)
   FORWARD_SYMBOL_METHOD(hasCustomCallingConvention)
@@ -54,7 +53,7 @@ public:
   FORWARD_SYMBOL_METHOD(isNaked)
   FORWARD_SYMBOL_METHOD(isStatic)
   FORWARD_SYMBOL_METHOD(getLength)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getLocalBasePointerRegisterId)
   FORWARD_SYMBOL_METHOD(getLocationType)
   FORWARD_SYMBOL_METHOD(getName)
@@ -67,7 +66,8 @@ public:
   FORWARD_SYMBOL_METHOD(isPureVirtual)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
   FORWARD_SYMBOL_METHOD(getToken)
-  FORWARD_SYMBOL_METHOD(getTypeId)
+  FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(PDBSymbolTypeFunctionSig, getType,
+                                              getSignature)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(getUndecoratedName)
   FORWARD_SYMBOL_METHOD(isVirtual)

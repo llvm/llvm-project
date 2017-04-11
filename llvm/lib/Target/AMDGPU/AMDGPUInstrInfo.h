@@ -21,7 +21,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 
 #define GET_INSTRINFO_HEADER
-#define GET_INSTRINFO_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 
 namespace llvm {

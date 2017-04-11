@@ -1335,6 +1335,11 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
                                  CS.getInstruction(), &AC, &DT) < ByValAlign)
     return false;
 
+  // The address space of the memcpy source must match the byval argument
+  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
+      ByValArg->getType()->getPointerAddressSpace())
+    return false;
+
   // Verify that the copied-from memory doesn't change in between the memcpy and
   // the byval call.
   //    memcpy(a <- b)

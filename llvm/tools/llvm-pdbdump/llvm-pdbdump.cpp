@@ -122,6 +122,14 @@ cl::opt<bool> Enums("enums", cl::desc("Display enum types"),
                     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<bool> Typedefs("typedefs", cl::desc("Display typedef types"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+cl::opt<ClassDefinitionFormat>
+    ClassFormat("class-definitions", cl::desc("Class definition format"),
+                cl::init(ClassDefinitionFormat::Standard),
+                cl::values(clEnumValN(ClassDefinitionFormat::Standard, "full",
+                                      "Display complete class definition"),
+                           clEnumValN(ClassDefinitionFormat::None, "none",
+                                      "Don't display class definitions")),
+                cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Lines("lines", cl::desc("Line tables"), cl::cat(TypeCategory),
                     cl::sub(PrettySubcommand));
@@ -161,6 +169,10 @@ cl::list<std::string> IncludeCompilands(
     "include-compilands",
     cl::desc("Include only compilands those which match a regular expression"),
     cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::opt<bool> OnlyPaddingClasses(
+    "only-padding-classes", cl::desc("When dumping classes, only display those "
+                                     "with non-zero amounts of padding bytes"),
+    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> ExcludeCompilerGenerated(
     "no-compiler-generated",
@@ -170,16 +182,6 @@ cl::opt<bool>
     ExcludeSystemLibraries("no-system-libs",
                            cl::desc("Don't show symbols from system libraries"),
                            cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::opt<ClassDefinitionFormat> ClassFormat(
-    "class-definitions", cl::desc("Class definition format"),
-    cl::init(ClassDefinitionFormat::Full),
-    cl::values(clEnumValN(ClassDefinitionFormat::Full, "full",
-                          "Display complete class definition"),
-               clEnumValN(ClassDefinitionFormat::LayoutOnly, "layout",
-                          "Display only members which affect record layout"),
-               clEnumValN(ClassDefinitionFormat::None, "none",
-                          "Don't display class definitions")),
-    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::desc("Don't display full enum definitions"),
