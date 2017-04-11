@@ -1,20 +1,24 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+#include <arpa/inet.h>
+#include <assert.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-struct sockaddr_in addr;
+struct sockaddr_in addr4;
+struct sockaddr_in6 addr6;
+struct sockaddr *addr;
+socklen_t addrlen;
 int X;
 
 void *ClientThread(void *x) {
   X = 42;
-  int c = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (connect(c, (struct sockaddr*)&addr, sizeof(addr))) {
+  int c = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+  if (connect(c, addr, addrlen)) {
     perror("connect");
     exit(1);
   }
@@ -27,13 +31,26 @@ void *ClientThread(void *x) {
 }
 
 int main() {
-  int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  addr.sin_family = AF_INET;
-  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-  addr.sin_port = INADDR_ANY;
-  socklen_t len = sizeof(addr);
-  bind(s, (sockaddr*)&addr, len);
-  getsockname(s, (sockaddr*)&addr, &len);
+  addr4.sin_family = AF_INET;
+  addr4.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr4.sin_port = INADDR_ANY;
+  addr = (struct sockaddr *)&addr4;
+  addrlen = sizeof(addr4);
+
+  int s = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+  if (s <= 0) {
+    // Try to fall-back to IPv6
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_addr = in6addr_loopback;
+    addr6.sin6_port = INADDR_ANY;
+    addr = (struct sockaddr *)&addr6;
+    addrlen = sizeof(addr6);
+    s = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+  }
+  assert(s > 0);
+
+  bind(s, addr, addrlen);
+  getsockname(s, addr, &addrlen);
   listen(s, 10);
   pthread_t t;
   pthread_create(&t, 0, ClientThread, 0);

@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 
   unsigned int z;
   int res = ioctl(fd, FIOGETOWN, &z);

@@ -5,7 +5,7 @@
 // RUN: LSAN_OPTIONS=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
 // RUN: LSAN_OPTIONS=$LSAN_BASE:"use_tls=1" %run %t 2>&1
 // RUN: LSAN_OPTIONS="" %run %t 2>&1
-// UNSUPPORTED: i386-linux,i686-linux
+// UNSUPPORTED: i386-linux,i686-linux,arm
 
 #ifndef BUILD_DSO
 #include <assert.h>

@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
   struct ifreq ifreqs[20];
   struct ifconf ifc;
