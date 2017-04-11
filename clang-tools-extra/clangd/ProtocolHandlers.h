@@ -75,6 +75,16 @@ private:
   DocumentStore &Store;
 };
 
+struct TextDocumentDidCloseHandler : Handler {
+  TextDocumentDidCloseHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
+
+  void handleNotification(llvm::yaml::MappingNode *Params) override;
+
+private:
+  DocumentStore &Store;
+};
+
 struct TextDocumentOnTypeFormattingHandler : Handler {
   TextDocumentOnTypeFormattingHandler(JSONOutput &Output, DocumentStore &Store)
       : Handler(Output), Store(Store) {}

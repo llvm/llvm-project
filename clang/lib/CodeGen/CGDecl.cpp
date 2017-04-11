@@ -1726,17 +1726,19 @@ void CodeGenFunction::pushRegularPartialArrayCleanup(llvm::Value *arrayBegin,
 
 /// Lazily declare the @llvm.lifetime.start intrinsic.
 llvm::Constant *CodeGenModule::getLLVMLifetimeStartFn() {
-  if (LifetimeStartFn) return LifetimeStartFn;
+  if (LifetimeStartFn)
+    return LifetimeStartFn;
   LifetimeStartFn = llvm::Intrinsic::getDeclaration(&getModule(),
-                                            llvm::Intrinsic::lifetime_start);
+    llvm::Intrinsic::lifetime_start, Int8PtrTy);
   return LifetimeStartFn;
 }
 
 /// Lazily declare the @llvm.lifetime.end intrinsic.
 llvm::Constant *CodeGenModule::getLLVMLifetimeEndFn() {
-  if (LifetimeEndFn) return LifetimeEndFn;
+  if (LifetimeEndFn)
+    return LifetimeEndFn;
   LifetimeEndFn = llvm::Intrinsic::getDeclaration(&getModule(),
-                                              llvm::Intrinsic::lifetime_end);
+    llvm::Intrinsic::lifetime_end, Int8PtrTy);
   return LifetimeEndFn;
 }
 
