@@ -3107,8 +3107,8 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // If both operands have range metadata, use the metadata
   // to simplify the comparison.
   if (isa<Instruction>(RHS) && isa<Instruction>(LHS)) {
-    auto RHS_Instr = dyn_cast<Instruction>(RHS);
-    auto LHS_Instr = dyn_cast<Instruction>(LHS);
+    auto RHS_Instr = cast<Instruction>(RHS);
+    auto LHS_Instr = cast<Instruction>(LHS);
 
     if (RHS_Instr->getMetadata(LLVMContext::MD_range) &&
         LHS_Instr->getMetadata(LLVMContext::MD_range)) {

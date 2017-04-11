@@ -227,6 +227,17 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, QualType DstType,
   return TmpAddr;
 }
 
+static QualType getCanonicalParamType(ASTContext &C, QualType T) {
+  if (T->isLValueReferenceType()) {
+    return C.getLValueReferenceType(
+        getCanonicalParamType(C, T.getNonReferenceType()),
+        /*SpelledAsLValue=*/false);
+  }
+  if (T->isPointerType())
+    return C.getPointerType(getCanonicalParamType(C, T->getPointeeType()));
+  return C.getCanonicalParamType(T);
+}
+
 llvm::Function *
 CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   assert(
@@ -266,13 +277,8 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       II = &getContext().Idents.get("vla");
     }
     if (ArgType->isVariablyModifiedType()) {
-      bool IsReference = ArgType->isLValueReferenceType();
       ArgType =
-          getContext().getCanonicalParamType(ArgType.getNonReferenceType());
-      if (IsReference && !ArgType->isPointerType()) {
-        ArgType = getContext().getLValueReferenceType(
-            ArgType, /*SpelledAsLValue=*/false);
-      }
+          getCanonicalParamType(getContext(), ArgType.getNonReferenceType());
     }
     Args.push_back(ImplicitParamDecl::Create(getContext(), nullptr,
                                              FD->getLocation(), II, ArgType));

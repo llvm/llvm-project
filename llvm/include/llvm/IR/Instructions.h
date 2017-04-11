@@ -67,18 +67,21 @@ protected:
   AllocaInst *cloneImpl() const;
 
 public:
-  explicit AllocaInst(Type *Ty, Value *ArraySize = nullptr,
+  explicit AllocaInst(Type *Ty, unsigned AddrSpace,
+                      Value *ArraySize = nullptr,
                       const Twine &Name = "",
                       Instruction *InsertBefore = nullptr);
-  AllocaInst(Type *Ty, Value *ArraySize,
+  AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
-  AllocaInst(Type *Ty, const Twine &Name, Instruction *InsertBefore = nullptr);
-  AllocaInst(Type *Ty, const Twine &Name, BasicBlock *InsertAtEnd);
+  AllocaInst(Type *Ty, unsigned AddrSpace,
+             const Twine &Name, Instruction *InsertBefore = nullptr);
+  AllocaInst(Type *Ty, unsigned AddrSpace,
+             const Twine &Name, BasicBlock *InsertAtEnd);
 
-  AllocaInst(Type *Ty, Value *ArraySize, unsigned Align,
+  AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, unsigned Align,
              const Twine &Name = "", Instruction *InsertBefore = nullptr);
-  AllocaInst(Type *Ty, Value *ArraySize, unsigned Align,
+  AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, unsigned Align,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
   // Out of line virtual method, so the vtable, etc. has a home.

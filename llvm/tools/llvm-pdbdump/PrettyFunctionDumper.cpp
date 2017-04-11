@@ -195,10 +195,7 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
 }
 
 void FunctionDumper::dump(const PDBSymbolTypeArray &Symbol) {
-  uint32_t ElementTypeId = Symbol.getTypeId();
-  auto ElementType = Symbol.getSession().getSymbolById(ElementTypeId);
-  if (!ElementType)
-    return;
+  auto ElementType = Symbol.getElementType();
 
   ElementType->dump(*this);
   Printer << "[";
@@ -232,12 +229,11 @@ void FunctionDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
 }
 
 void FunctionDumper::dump(const PDBSymbolTypePointer &Symbol) {
-  uint32_t PointeeId = Symbol.getTypeId();
-  auto PointeeType = Symbol.getSession().getSymbolById(PointeeId);
+  auto PointeeType = Symbol.getPointeeType();
   if (!PointeeType)
     return;
 
-  if (auto FuncSig = dyn_cast<PDBSymbolTypeFunctionSig>(PointeeType.get())) {
+  if (auto FuncSig = PointeeType->cast<PDBSymbolTypeFunctionSig>()) {
     FunctionDumper NestedDumper(Printer);
     PointerType Pointer =
         Symbol.isReference() ? PointerType::Reference : PointerType::Pointer;

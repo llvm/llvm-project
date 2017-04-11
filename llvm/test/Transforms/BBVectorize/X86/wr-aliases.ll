@@ -14,7 +14,7 @@ declare fastcc void @_ZL12printQBezier7QBezier(%class.QBezier.15* byval nocaptur
 declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 
 define void @main_arrayctor.cont([10 x %class.QBezier.15]* %beziers, %class.QBezier.15* %agg.tmp.i, %class.QBezier.15* %agg.tmp55.i, %class.QBezier.15* %agg.tmp56.i) {
 newFuncRoot:
@@ -134,9 +134,9 @@ arrayctor.cont:                                   ; preds = %newFuncRoot
   call fastcc void @_ZL12printQBezier7QBezier(%class.QBezier.15* byval align 8 %agg.tmp55.i)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %v2, i8* %v3, i64 64, i32 8, i1 false)
   call fastcc void @_ZL12printQBezier7QBezier(%class.QBezier.15* byval align 8 %agg.tmp56.i)
-  call void @llvm.lifetime.end(i64 64, i8* %v0)
-  call void @llvm.lifetime.end(i64 64, i8* %v1)
-  call void @llvm.lifetime.end(i64 64, i8* %v2)
+  call void @llvm.lifetime.end.p0i8(i64 64, i8* %v0)
+  call void @llvm.lifetime.end.p0i8(i64 64, i8* %v1)
+  call void @llvm.lifetime.end.p0i8(i64 64, i8* %v2)
   br label %arrayctor.cont.ret.exitStub
 }
 

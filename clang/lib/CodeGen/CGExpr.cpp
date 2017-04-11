@@ -71,7 +71,8 @@ Address CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
 /// block.
 llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     const Twine &Name) {
-  return new llvm::AllocaInst(Ty, nullptr, Name, AllocaInsertPt);
+  return new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+                              nullptr, Name, AllocaInsertPt);
 }
 
 /// CreateDefaultAlignTempAlloca - This creates an alloca with the

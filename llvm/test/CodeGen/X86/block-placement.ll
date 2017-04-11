@@ -1454,9 +1454,50 @@ exit:
   ret void
 }
 
+; Because %endif has a higher frequency than %if, the calculations show we
+; shouldn't tail-duplicate %endif so that we can place it after %if. We were
+; previously undercounting the cost by ignoring execution frequency that didn't
+; come from the %if->%endif path.
+; CHECK-LABEL: higher_frequency_succ_tail_dup
+; CHECK: %entry
+; CHECK: %elseif
+; CHECK: %else
+; CHECK: %endif
+; CHECK: %then
+; CHECK: %ret
+define void @higher_frequency_succ_tail_dup(i1 %a, i1 %b, i1 %c) {
+entry:
+  br label %if
+if:                                               ; preds = %entry
+  call void @effect(i32 0)
+  br i1 %a, label %elseif, label %endif, !prof !11 ; even
+
+elseif:                                           ; preds = %if
+  call void @effect(i32 1)
+  br i1 %b, label %else, label %endif, !prof !11 ; even
+
+else:                                             ; preds = %elseif
+  call void @effect(i32 2)
+  br label %endif
+
+endif:                                            ; preds = %if, %elseif, %else
+  br i1 %c, label %then, label %ret, !prof !12 ; 5 to 3
+
+then:                                             ; preds = %endif
+  call void @effect(i32 3)
+  br label %ret
+
+ret:                                              ; preds = %endif, %then
+  ret void
+}
+
+declare void @effect(i32)
+
 !5 = !{!"branch_weights", i32 84, i32 16}
 !6 = !{!"function_entry_count", i32 10}
 !7 = !{!"branch_weights", i32 60, i32 40}
 !8 = !{!"branch_weights", i32 5001, i32 4999}
 !9 = !{!"branch_weights", i32 85, i32 15}
 !10 = !{!"branch_weights", i32 90, i32 10}
+!11 = !{!"branch_weights", i32 1, i32 1}
+!12 = !{!"branch_weights", i32 5, i32 3}

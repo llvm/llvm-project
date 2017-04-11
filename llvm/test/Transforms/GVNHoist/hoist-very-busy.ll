@@ -32,3 +32,24 @@ exit:
 declare void @longjmp(%struct.__jmp_buf_tag*, i32) #0
 
 attributes #0 = { noreturn nounwind }
+
+; Check that the store is hoisted.
+; CHECK-LABEL: define void @fun(
+; CHECK: store
+; CHECK-NOT: store
+
+define void @fun() {
+entry:
+  br label %if.then
+
+if.then:                                          ; preds = %entry
+  br i1 undef, label %sw0, label %sw1
+
+sw0:
+  store i32 1, i32* @G
+  unreachable
+
+sw1:
+  store i32 1, i32* @G
+  ret void
+}

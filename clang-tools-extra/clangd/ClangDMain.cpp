@@ -46,7 +46,9 @@ int main(int argc, char *argv[]) {
   Dispatcher.registerHandler(
       "textDocument/didOpen",
       llvm::make_unique<TextDocumentDidOpenHandler>(Out, Store));
-  // FIXME: Implement textDocument/didClose.
+  Dispatcher.registerHandler(
+      "textDocument/didClose",
+      llvm::make_unique<TextDocumentDidCloseHandler>(Out, Store));
   Dispatcher.registerHandler(
       "textDocument/didChange",
       llvm::make_unique<TextDocumentDidChangeHandler>(Out, Store));

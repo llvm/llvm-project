@@ -272,8 +272,7 @@ define i32 @test19(i1 %C) {
 
 define <2 x i32> @test19vec(i1 %C) {
 ; CHECK-LABEL: @test19vec(
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
-; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1123, i32 1123>, <2 x i32> <i32 133, i32 133>
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
@@ -604,8 +603,7 @@ define i32 @test42(i1 %C) {
 
 define <2 x i32> @test42vec(i1 %C) {
 ; CHECK-LABEL: @test42vec(
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
-; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 123>
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1123, i32 1123>, <2 x i32> <i32 133, i32 133>
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
@@ -615,8 +613,7 @@ define <2 x i32> @test42vec(i1 %C) {
 
 define <2 x i32> @test42vec2(i1 %C) {
 ; CHECK-LABEL: @test42vec2(
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1000, i32 2500>, <2 x i32> <i32 10, i32 30>
-; CHECK-NEXT:    [[V:%.*]] = add nuw nsw <2 x i32> [[A]], <i32 123, i32 333>
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1123, i32 2833>, <2 x i32> <i32 133, i32 363>
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 2500>, <2 x i32> <i32 10, i32 30>

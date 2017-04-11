@@ -182,6 +182,45 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
+TYPED_TEST(BitVectorTest, FindOperations) {
+  // Test finding in an empty BitVector.
+  TypeParam A;
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(-1, A.find_first_unset());
+  EXPECT_EQ(-1, A.find_next(0));
+  EXPECT_EQ(-1, A.find_next_unset(0));
+
+  // Test finding next set and unset bits in a BitVector with multiple words
+  A.resize(100);
+  A.set(12);
+  A.set(13);
+  A.set(75);
+
+  EXPECT_EQ(12, A.find_first());
+  EXPECT_EQ(13, A.find_next(12));
+  EXPECT_EQ(75, A.find_next(13));
+  EXPECT_EQ(-1, A.find_next(75));
+
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(14, A.find_next_unset(11));
+  EXPECT_EQ(14, A.find_next_unset(12));
+  EXPECT_EQ(14, A.find_next_unset(13));
+  EXPECT_EQ(16, A.find_next_unset(15));
+  EXPECT_EQ(76, A.find_next_unset(74));
+  EXPECT_EQ(76, A.find_next_unset(75));
+  EXPECT_EQ(-1, A.find_next_unset(99));
+
+  A.set(0, 100);
+  EXPECT_EQ(100U, A.count());
+  EXPECT_EQ(0, A.find_first());
+  EXPECT_EQ(-1, A.find_first_unset());
+
+  A.reset(0, 100);
+  EXPECT_EQ(0U, A.count());
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(0, A.find_first_unset());
+}
+
 TYPED_TEST(BitVectorTest, CompoundAssignment) {
   TypeParam A;
   A.resize(10);

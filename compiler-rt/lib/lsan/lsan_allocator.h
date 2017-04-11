@@ -48,7 +48,8 @@ struct ChunkMetadata {
   u32 stack_trace_id;
 };
 
-#if defined(__mips64) || defined(__aarch64__) || defined(__i386__)
+#if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
+    defined(__arm__)
 static const uptr kRegionSizeLog = 20;
 static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
 typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;

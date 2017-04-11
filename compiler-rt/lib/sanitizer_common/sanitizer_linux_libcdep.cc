@@ -183,8 +183,8 @@ void InitTlsSize() { }
 #endif  // !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO
 
 #if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) \
-    || defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__)) \
-    && SANITIZER_LINUX && !SANITIZER_ANDROID
+    || defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) \
+    || defined(__arm__)) && SANITIZER_LINUX && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t kThreadDescriptorSize;
 
@@ -192,14 +192,14 @@ uptr ThreadDescriptorSize() {
   uptr val = atomic_load(&kThreadDescriptorSize, memory_order_relaxed);
   if (val)
     return val;
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
 #ifdef _CS_GNU_LIBC_VERSION
   char buf[64];
   uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
   if (len < sizeof(buf) && internal_strncmp(buf, "glibc 2.", 8) == 0) {
     char *end;
     int minor = internal_simple_strtoll(buf + 8, &end, 10);
-    if (end != buf + 8 && (*end == '\0' || *end == '.')) {
+    if (end != buf + 8 && (*end == '\0' || *end == '.' || *end == '-')) {
       int patch = 0;
       if (*end == '.')
         // strtoll will return 0 if no valid conversion could be performed
@@ -208,6 +208,9 @@ uptr ThreadDescriptorSize() {
       /* sizeof(struct pthread) values from various glibc versions.  */
       if (SANITIZER_X32)
         val = 1728;  // Assume only one particular version for x32.
+      // For ARM sizeof(struct pthread) changed in Glibc 2.23.
+      else if (SANITIZER_ARM)
+        val = minor <= 22 ? 1120 : 1216;
       else if (minor <= 3)
         val = FIRST_32_SECOND_64(1104, 1696);
       else if (minor == 4)
@@ -293,7 +296,7 @@ uptr ThreadSelf() {
                 rdhwr %0,$29;\
                 .set pop" : "=r" (thread_pointer));
   descr_addr = thread_pointer - kTlsTcbOffset - TlsPreTcbSize();
-# elif defined(__aarch64__)
+# elif defined(__aarch64__) || defined(__arm__)
   descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
                                       ThreadDescriptorSize();
 # elif defined(__s390__)
@@ -342,7 +345,8 @@ static void GetTls(uptr *addr, uptr *size) {
   *size = GetTlsSize();
   *addr -= *size;
   *addr += ThreadDescriptorSize();
-# elif defined(__mips__) || defined(__aarch64__) || defined(__powerpc64__)
+# elif defined(__mips__) || defined(__aarch64__) || defined(__powerpc64__) \
+    || defined(__arm__)
   *addr = ThreadSelf();
   *size = GetTlsSize();
 # else

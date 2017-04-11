@@ -51,5 +51,3 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   // On ELF and COFF  A - B is absolute if A and B are in the same section.
   return &SecA == &SecB;
 }
-
-bool MCObjectWriter::isWeak(const MCSymbol &) const { return false; }

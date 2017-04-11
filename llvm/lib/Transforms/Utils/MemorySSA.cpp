@@ -214,12 +214,16 @@ static bool instructionClobbersQuery(MemoryDef *MD,
                                      AliasAnalysis &AA) {
   Instruction *DefInst = MD->getMemoryInst();
   assert(DefInst && "Defining instruction not actually an instruction");
+  ImmutableCallSite UseCS(UseInst);
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     // These intrinsics will show up as affecting memory, but they are just
     // markers.
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
+      if (UseCS)
+        return false;
+      return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), UseLoc);
     case Intrinsic::lifetime_end:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
@@ -230,7 +234,6 @@ static bool instructionClobbersQuery(MemoryDef *MD,
     }
   }
 
-  ImmutableCallSite UseCS(UseInst);
   if (UseCS) {
     ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
     return I != MRI_NoModRef;
@@ -298,7 +301,6 @@ static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
   Instruction *Inst = MD->getMemoryInst();
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
       return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
     default:
@@ -316,7 +318,8 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
   // FIXME: We should handle invariant groups, as well. It's a bit harder,
   // because we need to pay close attention to invariant group barriers.
   return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
-                              AA.pointsToConstantMemory(I));
+                              AA.pointsToConstantMemory(cast<LoadInst>(I)->
+                                                          getPointerOperand()));
 }
 
 /// Verifies that `Start` is clobbered by `ClobberAt`, and that nothing
@@ -971,13 +974,6 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
       WorkStack.push_back({Child, Child->begin(), IncomingVal});
     }
   }
-}
-
-/// \brief Compute dominator levels, used by the phi insertion algorithm above.
-void MemorySSA::computeDomLevels(DenseMap<DomTreeNode *, unsigned> &DomLevels) {
-  for (auto DFI = df_begin(DT->getRootNode()), DFE = df_end(DT->getRootNode());
-       DFI != DFE; ++DFI)
-    DomLevels[*DFI] = DFI.getPathLength() - 1;
 }
 
 /// \brief This handles unreachable block accesses by deleting phi nodes in

@@ -331,6 +331,10 @@ class DFSanVisitor : public InstVisitor<DFSanVisitor> {
   DFSanFunction &DFSF;
   DFSanVisitor(DFSanFunction &DFSF) : DFSF(DFSF) {}
 
+  const DataLayout &getDataLayout() const {
+    return DFSF.F->getParent()->getDataLayout();
+  }
+
   void visitOperandShadowInst(Instruction &I);
 
   void visitBinaryOperator(BinaryOperator &BO);
@@ -1482,7 +1486,8 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
           auto *LabelVATy = ArrayType::get(DFSF.DFS.ShadowTy,
                                            CS.arg_size() - FT->getNumParams());
           auto *LabelVAAlloca = new AllocaInst(
-              LabelVATy, "labelva", &DFSF.F->getEntryBlock().front());
+              LabelVATy, getDataLayout().getAllocaAddrSpace(),
+              "labelva", &DFSF.F->getEntryBlock().front());
 
           for (unsigned n = 0; i != CS.arg_end(); ++i, ++n) {
             auto LabelVAPtr = IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, n);
@@ -1495,8 +1500,9 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
         if (!FT->getReturnType()->isVoidTy()) {
           if (!DFSF.LabelReturnAlloca) {
             DFSF.LabelReturnAlloca =
-                new AllocaInst(DFSF.DFS.ShadowTy, "labelreturn",
-                               &DFSF.F->getEntryBlock().front());
+              new AllocaInst(DFSF.DFS.ShadowTy,
+                             getDataLayout().getAllocaAddrSpace(),
+                             "labelreturn", &DFSF.F->getEntryBlock().front());
           }
           Args.push_back(DFSF.LabelReturnAlloca);
         }
@@ -1575,7 +1581,8 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
       unsigned VarArgSize = CS.arg_size() - FT->getNumParams();
       ArrayType *VarArgArrayTy = ArrayType::get(DFSF.DFS.ShadowTy, VarArgSize);
       AllocaInst *VarArgShadow =
-          new AllocaInst(VarArgArrayTy, "", &DFSF.F->getEntryBlock().front());
+        new AllocaInst(VarArgArrayTy, getDataLayout().getAllocaAddrSpace(),
+                       "", &DFSF.F->getEntryBlock().front());
       Args.push_back(IRB.CreateConstGEP2_32(VarArgArrayTy, VarArgShadow, 0, 0));
       for (unsigned n = 0; i != e; ++i, ++n) {
         IRB.CreateStore(

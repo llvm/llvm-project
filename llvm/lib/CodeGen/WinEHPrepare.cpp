@@ -86,6 +86,7 @@ private:
   // All fields are reset by runOnFunction.
   EHPersonality Personality = EHPersonality::Unknown;
 
+  const DataLayout *DL = nullptr;
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   MapVector<BasicBlock *, std::vector<BasicBlock *>> FuncletBlocks;
 };
@@ -111,6 +112,7 @@ bool WinEHPrepare::runOnFunction(Function &Fn) {
   if (!isFuncletEHPersonality(Personality))
     return false;
 
+  DL = &Fn.getParent()->getDataLayout();
   return prepareExplicitEH(Fn);
 }
 
@@ -1070,7 +1072,7 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
   if (!isa<TerminatorInst>(EHPad)) {
     // If the EHPad isn't a terminator, then we can insert a load in this block
     // that will dominate all uses.
-    SpillSlot = new AllocaInst(PN->getType(), nullptr,
+    SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(PN->getName(), ".wineh.spillslot"),
                                &F.getEntryBlock().front());
     Value *V = new LoadInst(SpillSlot, Twine(PN->getName(), ".wineh.reload"),
@@ -1157,7 +1159,7 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
                                       Function &F) {
   // Lazilly create the spill slot.
   if (!SpillSlot)
-    SpillSlot = new AllocaInst(V->getType(), nullptr,
+    SpillSlot = new AllocaInst(V->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(V->getName(), ".wineh.spillslot"),
                                &F.getEntryBlock().front());
 

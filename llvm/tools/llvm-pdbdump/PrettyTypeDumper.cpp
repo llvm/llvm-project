@@ -66,8 +66,6 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
   assert(opts::pretty::Enums);
 
-  if (Symbol.getUnmodifiedTypeId() != 0)
-    return;
   if (Printer.IsTypeExcluded(Symbol.getName()))
     return;
   // Dump member enums when dumping their class definition.
@@ -98,9 +96,8 @@ void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
   if (Printer.IsTypeExcluded(Symbol.getName()))
     return;
 
-  Printer.NewLine();
-
   if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
+    Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "class ";
     WithColor(Printer, PDB_ColorItem::Identifier).get() << Symbol.getName();
   } else {

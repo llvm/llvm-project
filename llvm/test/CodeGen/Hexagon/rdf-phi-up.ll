@@ -7,8 +7,8 @@ target triple = "hexagon"
 
 %struct.0 = type { i32, i16, i8* }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 define i32 @fred(i8* readonly %p0, i32* %p1) local_unnamed_addr #0 {
 entry:
@@ -32,7 +32,7 @@ if.then3:                                         ; preds = %if.then
 
 if.else:                                          ; preds = %lor.lhs.false
   %v6 = bitcast i16* %v0 to i8*
-  call void @llvm.lifetime.start(i64 2, i8* nonnull %v6) #0
+  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %v6) #0
   store i16 0, i16* %v0, align 2
   %v7 = call i32 @foo(%struct.0* nonnull %v3, i16* nonnull %v0) #0
   %v8 = icmp eq i32* %p1, null
@@ -45,7 +45,7 @@ if.then6:                                         ; preds = %if.else
   br label %if.end7
 
 if.end7:                                          ; preds = %if.else, %if.then6
-  call void @llvm.lifetime.end(i64 2, i8* nonnull %v6) #0
+  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %v6) #0
   br label %cleanup
 
 cleanup:                                          ; preds = %if.then3, %if.then,

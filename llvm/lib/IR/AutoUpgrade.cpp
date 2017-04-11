@@ -412,26 +412,31 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
-  case 'i': {
-    if (Name.startswith("invariant.start")) {
+  case 'i':
+  case 'l': {
+    bool IsLifetimeStart = Name.startswith("lifetime.start");
+    if (IsLifetimeStart || Name.startswith("invariant.start")) {
+      Intrinsic::ID ID = IsLifetimeStart ?
+        Intrinsic::lifetime_start : Intrinsic::invariant_start;
       auto Args = F->getFunctionType()->params();
       Type* ObjectPtr[1] = {Args[1]};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::invariant_start, ObjectPtr)) {
+      if (F->getName() != Intrinsic::getName(ID, ObjectPtr)) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(
-            F->getParent(), Intrinsic::invariant_start, ObjectPtr);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
         return true;
       }
     }
-    if (Name.startswith("invariant.end")) {
+
+    bool IsLifetimeEnd = Name.startswith("lifetime.end");
+    if (IsLifetimeEnd || Name.startswith("invariant.end")) {
+      Intrinsic::ID ID = IsLifetimeEnd ?
+        Intrinsic::lifetime_end : Intrinsic::invariant_end;
+
       auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[2]};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::invariant_end, ObjectPtr)) {
+      Type* ObjectPtr[1] = {Args[IsLifetimeEnd ? 1 : 2]};
+      if (F->getName() != Intrinsic::getName(ID, ObjectPtr)) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::invariant_end, ObjectPtr);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
         return true;
       }
     }

@@ -248,8 +248,6 @@ public:
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
-  bool isWeak(const MCSymbol &Sym) const override;
-
   void writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
   void writeSection(const SectionIndexMapTy &SectionIndexMap,
                     uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
@@ -1359,32 +1357,11 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);
-    if (::isWeak(SymA))
+    if (isWeak(SymA))
       return false;
   }
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
                                                                 InSet, IsPCRel);
-}
-
-bool ELFObjectWriter::isWeak(const MCSymbol &S) const {
-  const auto &Sym = cast<MCSymbolELF>(S);
-  if (::isWeak(Sym))
-    return true;
-
-  // It is invalid to replace a reference to a global in a comdat
-  // with a reference to a local since out of comdat references
-  // to a local are forbidden.
-  // We could try to return false for more cases, like the reference
-  // being in the same comdat or Sym being an alias to another global,
-  // but it is not clear if it is worth the effort.
-  if (Sym.getBinding() != ELF::STB_GLOBAL)
-    return false;
-
-  if (!Sym.isInSection())
-    return false;
-
-  const auto &Sec = cast<MCSectionELF>(Sym.getSection());
-  return Sec.getGroup();
 }
 
 MCObjectWriter *llvm::createELFObjectWriter(MCELFObjectTargetWriter *MOTW,

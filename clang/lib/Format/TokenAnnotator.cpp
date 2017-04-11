@@ -907,7 +907,7 @@ private:
                                TT_FunctionLBrace, TT_ImplicitStringLiteral,
                                TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow,
                                TT_OverloadedOperator, TT_RegexLiteral,
-                               TT_TemplateString))
+                               TT_TemplateString, TT_ObjCStringLiteral))
       CurrentToken->Type = TT_Unknown;
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -1120,21 +1120,17 @@ private:
           }
         }
     } else if (Current.is(tok::at) && Current.Next) {
-      if (Current.Next->isStringLiteral()) {
-        Current.Type = TT_ObjCStringLiteral;
-      } else {
-        switch (Current.Next->Tok.getObjCKeywordID()) {
-        case tok::objc_interface:
-        case tok::objc_implementation:
-        case tok::objc_protocol:
-          Current.Type = TT_ObjCDecl;
-          break;
-        case tok::objc_property:
-          Current.Type = TT_ObjCProperty;
-          break;
-        default:
-          break;
-        }
+      switch (Current.Next->Tok.getObjCKeywordID()) {
+      case tok::objc_interface:
+      case tok::objc_implementation:
+      case tok::objc_protocol:
+        Current.Type = TT_ObjCDecl;
+        break;
+      case tok::objc_property:
+        Current.Type = TT_ObjCProperty;
+        break;
+      default:
+        break;
       }
     } else if (Current.is(tok::period)) {
       FormatToken *PreviousNoComment = Current.getPreviousNonComment();
@@ -2457,8 +2453,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_Cpp ||
              Style.Language == FormatStyle::LK_ObjC ||
              Style.Language == FormatStyle::LK_Proto) {
-    if (Left.isStringLiteral() &&
-        (Right.isStringLiteral() || Right.is(TT_ObjCStringLiteral)))
+    if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }
 

@@ -181,6 +181,8 @@ class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
 def VOP_MADMK_F16 : VOP_MADMK <f16>;
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 
+// FIXME: Remove src2_modifiers. It isn't used, so is wasting memory
+// and processing time but it makes it easier to convert to mad.
 class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,

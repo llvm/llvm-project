@@ -45,7 +45,7 @@ void test3() {
   // CHECK-NEXT: call void @_Z6calleev()
   callee();
   // CHECK-NEXT: [[PTR:%.*]] = bitcast i8*** [[REF]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTR]])
   // CHECK-NEXT: call void @objc_destroyWeak
   // CHECK-NEXT: ret void
 }
@@ -75,11 +75,11 @@ void test5(__strong id &x) {
   // CHECK-NEXT: [[OBJ_ID:%[a-zA-Z0-9]+]] = bitcast [[A]]* [[OBJ_A]] to i8*
   // CHECK-NEXT: call void @objc_release
   // CHECK-NEXT: [[IPTR1:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 4, i8* [[IPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 4, i8* [[IPTR1]])
   // CHECK-NEXT: store i32 17, i32
   int i = 17;
   // CHECK-NEXT: [[IPTR2:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 4, i8* [[IPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* [[IPTR2]])
   // CHECK-NEXT: ret void
 }
 

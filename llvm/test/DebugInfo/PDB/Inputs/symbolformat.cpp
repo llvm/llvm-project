@@ -50,6 +50,7 @@ struct MemberTest {
   float m_float;
   double m_double;
   void (*m_pfn_2_args)(int, double);
+  int m_multidimensional_array[2][3];
 };
 
 typedef int IntType;
@@ -57,6 +58,13 @@ typedef A ClassAType;
 
 int g_global_int;
 void *g_global_pointer = nullptr;
+
+typedef int int_array[3];
+int_array g_array = { 1, 2, 3 };
+int_array *g_pointer_to_array = &g_array;
+const int *g_pointer_to_const_int = nullptr;
+int * const g_const_pointer_to_int = nullptr;
+const int * const g_const_pointer_to_const_int = nullptr;
 
 int main(int argc, char **argv) {
   // Force symbol references so the linker generates debug info

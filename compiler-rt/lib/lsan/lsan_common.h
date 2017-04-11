@@ -37,6 +37,9 @@
 #elif defined(__i386__) && \
     (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC)
 #define CAN_SANITIZE_LEAKS 1
+#elif defined(__arm__) && \
+    SANITIZER_LINUX && !SANITIZER_ANDROID
+#define CAN_SANITIZE_LEAKS 1
 #else
 #define CAN_SANITIZE_LEAKS 0
 #endif
@@ -144,13 +147,36 @@ struct ScopedInterceptorDisabler {
   ~ScopedInterceptorDisabler() { EnableInThisThread(); }
 };
 
-// Special case for "new T[0]" where T is a type with DTOR.
-// new T[0] will allocate one word for the array size (0) and store a pointer
-// to the end of allocated chunk.
-inline bool IsSpecialCaseOfOperatorNew0(uptr chunk_beg, uptr chunk_size,
-                                        uptr addr) {
+// According to Itanium C++ ABI array cookie is a one word containing
+// size of allocated array.
+static inline bool IsItaniumABIArrayCookie(uptr chunk_beg, uptr chunk_size,
+                                           uptr addr) {
   return chunk_size == sizeof(uptr) && chunk_beg + chunk_size == addr &&
          *reinterpret_cast<uptr *>(chunk_beg) == 0;
+}
+
+// According to ARM C++ ABI array cookie consists of two words:
+// struct array_cookie {
+//   std::size_t element_size; // element_size != 0
+//   std::size_t element_count;
+// };
+static inline bool IsARMABIArrayCookie(uptr chunk_beg, uptr chunk_size,
+                                       uptr addr) {
+  return chunk_size == 2 * sizeof(uptr) && chunk_beg + chunk_size == addr &&
+         *reinterpret_cast<uptr *>(chunk_beg + sizeof(uptr)) == 0;
+}
+
+// Special case for "new T[0]" where T is a type with DTOR.
+// new T[0] will allocate a cookie (one or two words) for the array size (0)
+// and store a pointer to the end of allocated chunk. The actual cookie layout
+// varies between platforms according to their C++ ABI implementation.
+inline bool IsSpecialCaseOfOperatorNew0(uptr chunk_beg, uptr chunk_size,
+                                        uptr addr) {
+#if defined(__arm__)
+  return IsARMABIArrayCookie(chunk_beg, chunk_size, addr);
+#else
+  return IsItaniumABIArrayCookie(chunk_beg, chunk_size, addr);
+#endif
 }
 
 // The following must be implemented in the parent tool.

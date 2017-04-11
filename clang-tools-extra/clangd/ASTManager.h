@@ -29,13 +29,49 @@ class CompilationDatabase;
 
 namespace clangd {
 
+/// Using 'unsigned' here to avoid undefined behaviour on overflow.
+typedef unsigned DocVersion;
+
+/// Stores ASTUnit and FixIts map for an opened document
+class DocData {
+public:
+  typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>
+      DiagnosticToReplacementMap;
+
+public:
+  void setAST(std::unique_ptr<ASTUnit> AST);
+  ASTUnit *getAST() const;
+
+  void cacheFixIts(DiagnosticToReplacementMap FixIts);
+  std::vector<clang::tooling::Replacement>
+  getFixIts(const clangd::Diagnostic &D) const;
+
+private:
+  std::unique_ptr<ASTUnit> AST;
+  DiagnosticToReplacementMap FixIts;
+};
+
+enum class ASTManagerRequestType { ParseAndPublishDiagnostics, RemoveDocData };
+
+/// A request to the worker thread
+class ASTManagerRequest {
+public:
+  ASTManagerRequest() = default;
+  ASTManagerRequest(ASTManagerRequestType Type, std::string File,
+                    DocVersion Version);
+
+  ASTManagerRequestType Type;
+  std::string File;
+  DocVersion Version;
+};
+
 class ASTManager : public DocumentStoreListener {
 public:
   ASTManager(JSONOutput &Output, DocumentStore &Store, bool RunSynchronously);
   ~ASTManager() override;
 
   void onDocumentAdd(StringRef File) override;
-  // FIXME: Implement onDocumentRemove
+  void onDocumentRemove(StringRef File) override;
 
   /// Get code completions at a specified \p Line and \p Column in \p File.
   ///
@@ -44,12 +80,13 @@ public:
   std::vector<CompletionItem> codeComplete(StringRef File, unsigned Line,
                                            unsigned Column);
 
-  /// Get the fixes associated with a certain diagnostic as replacements.
+  /// Get the fixes associated with a certain diagnostic in a specified file as
+  /// replacements.
   ///
   /// This function is thread-safe. It returns a copy to avoid handing out
   /// references to unguarded data.
   std::vector<clang::tooling::Replacement>
-  getFixIts(const clangd::Diagnostic &D);
+  getFixIts(StringRef File, const clangd::Diagnostic &D);
 
   DocumentStore &getStore() const { return Store; }
 
@@ -70,41 +107,52 @@ private:
   std::unique_ptr<clang::ASTUnit>
   createASTUnitForFile(StringRef File, const DocumentStore &Docs);
 
+  /// If RunSynchronously is false, queues the request to be run on the worker
+  /// thread.
+  /// If RunSynchronously is true, runs the request handler immediately on the
+  /// main thread.
+  void queueOrRun(ASTManagerRequestType RequestType, StringRef File);
+
   void runWorker();
+  void handleRequest(ASTManagerRequestType RequestType, StringRef File);
+
+  /// Parses files and publishes diagnostics.
+  /// This function is called on the worker thread in asynchronous mode and
+  /// on the main thread in synchronous mode.
   void parseFileAndPublishDiagnostics(StringRef File);
 
-  /// Clang objects.
-
-  /// A map from File-s to ASTUnit-s. Guarded by \c ASTLock. ASTUnit-s are used
-  /// for generating diagnostics and fix-it-s asynchronously by the worker
-  /// thread and synchronously for code completion.
-  ///
-  /// TODO(krasimir): code completion should always have priority over parsing
-  /// for diagnostics.
-  llvm::StringMap<std::unique_ptr<clang::ASTUnit>> ASTs;
-  /// A lock for access to the map \c ASTs.
-  std::mutex ASTLock;
-
+  /// Caches compilation databases loaded from directories(keys are directories).
   llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
+
+  /// Clang objects.
+  /// A map from filenames to DocData structures that store ASTUnit and Fixits for
+  /// the files. The ASTUnits are used for generating diagnostics and fix-it-s
+  /// asynchronously by the worker thread and synchronously for code completion.
+  llvm::StringMap<DocData> DocDatas;
   std::shared_ptr<clang::PCHContainerOperations> PCHs;
+  /// A lock for access to the DocDatas, CompilationDatabases and PCHs.
+  std::mutex ClangObjectLock;
 
-  typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>
-      DiagnosticToReplacementMap;
-  DiagnosticToReplacementMap FixIts;
-  std::mutex FixItLock;
+  /// Stores latest versions of the tracked documents to discard outdated requests.
+  /// Guarded by RequestLock.
+  /// TODO(ibiryukov): the entries are neved deleted from this map.
+  llvm::StringMap<DocVersion> DocVersions;
 
-  /// Queue of requests.
-  std::deque<std::string> RequestQueue;
+  /// A LIFO queue of requests. Note that requests are discarded if the `version`
+  /// field is not equal to the one stored inside DocVersions.
+  /// TODO(krasimir): code completion should always have priority over parsing
+  /// for diagnostics.
+  std::deque<ASTManagerRequest> RequestQueue;
   /// Setting Done to true will make the worker thread terminate.
   bool Done = false;
   /// Condition variable to wake up the worker thread.
   std::condition_variable ClangRequestCV;
-  /// Lock for accesses to RequestQueue and Done.
+  /// Lock for accesses to RequestQueue, DocVersions and Done.
   std::mutex RequestLock;
 
-  /// We run parsing on a separate thread. This thread looks into PendingRequest
-  /// as a 'one element work queue' as the queue is non-empty.
+  /// We run parsing on a separate thread. This thread looks into RequestQueue to
+  /// find requests to handle and terminates when Done is set to true.
   std::thread ClangWorker;
 };
 

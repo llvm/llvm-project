@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBSESSION_H
 #define LLVM_DEBUGINFO_PDB_IPDBSESSION_H
 
+#include "PDBSymbol.h"
 #include "PDBTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"

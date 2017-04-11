@@ -1812,6 +1812,9 @@ as follows:
     must be a multiple of 8-bits. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
+``A<address space>``
+    Specifies the address space of  objects created by '``alloca``'.
+    Defaults to the default address space of 0.
 ``p[n]:<size>:<abi>:<pref>``
     This specifies the *size* of a pointer and its ``<abi>`` and
     ``<pref>``\erred alignments for address space ``n``. All sizes are in
@@ -7192,7 +7195,7 @@ Syntax:
 
 ::
 
-      <result> = alloca [inalloca] <type> [, <ty> <NumElements>] [, align <alignment>]     ; yields type*:result
+      <result> = alloca [inalloca] <type> [, <ty> <NumElements>] [, align <alignment>] [, addrspace(<num>)]     ; yields type addrspace(num)*:result
 
 Overview:
 """""""""
@@ -7200,7 +7203,7 @@ Overview:
 The '``alloca``' instruction allocates memory on the stack frame of the
 currently executing function, to be automatically released when this
 function returns to its caller. The object is always allocated in the
-default address space (address space zero).
+address space for allocas indicated in the datalayout.
 
 Arguments:
 """"""""""

@@ -413,14 +413,14 @@ return:                                           ; preds = %invoke.cont, %catch
 define i32 @f9() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   %s = alloca i8, align 1
-  call void @llvm.lifetime.start(i64 1, i8* nonnull %s)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %s)
   %bc = bitcast i8* %s to %struct.S2*
   invoke void @"\01??1S2@@QEAA@XZ"(%struct.S2* %bc)
           to label %try.cont unwind label %ehcleanup
 
 ehcleanup:
   %cleanup.pad = cleanuppad within none []
-  call void @llvm.lifetime.end(i64 1, i8* nonnull %s)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %s)
   cleanupret from %cleanup.pad unwind label %catch.dispatch
 
 catch.dispatch:
@@ -466,5 +466,5 @@ declare void @use_x(i32 %x)
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

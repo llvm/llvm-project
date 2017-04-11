@@ -529,15 +529,14 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits) {
     unsigned NumElts = VecTy->getVectorNumElements();
-    Type *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
-    unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
+    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one vldN/vstN instruction.
-    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize % 128 == 0) &&
-        !VecTy->getScalarType()->isHalfTy())
-      return Factor * ((SubVecSize + 127) / 128);
+    if (NumElts % Factor == 0 &&
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL))
+      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,

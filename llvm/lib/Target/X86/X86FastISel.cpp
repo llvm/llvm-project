@@ -528,6 +528,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
 bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
                                    X86AddressMode &AM,
                                    MachineMemOperand *MMO, bool Aligned) {
+  bool HasSSE1 = Subtarget->hasSSE1();
   bool HasSSE2 = Subtarget->hasSSE2();
   bool HasSSE4A = Subtarget->hasSSE4A();
   bool HasAVX = Subtarget->hasAVX();
@@ -587,6 +588,9 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
               HasAVX ? X86::VMOVSDmr : X86::MOVSDmr;
     } else
       Opc = X86::ST_Fp64m;
+    break;
+  case MVT::x86mmx:
+    Opc = (IsNonTemporal && HasSSE1) ? X86::MMX_MOVNTQmr : X86::MMX_MOVQ64mr;
     break;
   case MVT::v4f32:
     if (Aligned) {

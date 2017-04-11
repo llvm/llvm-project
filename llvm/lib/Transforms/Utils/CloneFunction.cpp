@@ -103,21 +103,25 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                  ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                  TypeMapper, Materializer));
 
+  SmallVector<std::pair<unsigned, AttributeSetNode*>, 4> AttrVec;
   AttributeList OldAttrs = OldFunc->getAttributes();
+
+  // Copy the return attributes.
+  if (auto *RetAttrs = OldAttrs.getRetAttributes())
+    AttrVec.emplace_back(AttributeList::ReturnIndex, RetAttrs);
+
   // Clone any argument attributes that are present in the VMap.
   for (const Argument &OldArg : OldFunc->args())
     if (Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg])) {
-      AttributeList attrs = OldAttrs.getParamAttributes(OldArg.getArgNo() + 1);
-      if (attrs.getNumSlots() > 0)
-        NewArg->addAttr(attrs);
+      if (auto *ParmAttrs = OldAttrs.getParamAttributes(OldArg.getArgNo() + 1))
+        AttrVec.emplace_back(NewArg->getArgNo() + 1, ParmAttrs);
     }
 
-  NewFunc->setAttributes(
-      NewFunc->getAttributes()
-          .addAttributes(NewFunc->getContext(), AttributeList::ReturnIndex,
-                         OldAttrs.getRetAttributes())
-          .addAttributes(NewFunc->getContext(), AttributeList::FunctionIndex,
-                         OldAttrs.getFnAttributes()));
+  // Copy any function attributes.
+  if (auto *FnAttrs = OldAttrs.getFnAttributes())
+    AttrVec.emplace_back(AttributeList::FunctionIndex, FnAttrs);
+
+  NewFunc->setAttributes(AttributeList::get(NewFunc->getContext(), AttrVec));
 
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc->getAllMetadata(MDs);

@@ -306,9 +306,11 @@ TEST_F(ScalarEvolutionsTest, ExpandPtrTypeSCEV) {
   //   %bitcast2 = bitcast i8* %select to i32*
   //   br i1 undef, label %loop, label %exit
 
+  const DataLayout &DL = F->getParent()->getDataLayout();
   BranchInst *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  AllocaInst *Alloca = new AllocaInst(I32Ty, "alloca", Br);
+  AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(),
+                                      "alloca", Br);
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
   GetElementPtrInst *Gep0 =
       GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br);

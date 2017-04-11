@@ -831,3 +831,26 @@ define fp128 @min4(fp128 %a, fp128 %b) {
 ; CHECK-NEXT:  select {{.*}} fp128 %a, fp128 %b 
 ; CHECK-NEXT:  ret
 }
+
+define float @test55(i1 %which, float %a) {
+; CHECK-LABEL: @test55(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    [[PHITMP:%.*]] = fadd fast float [[A:%.*]], 1.000000e+00
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[A:%.*]] = phi float [ 3.000000e+00, [[ENTRY:%.*]] ], [ [[PHITMP]], [[DELAY]] ]
+; CHECK-NEXT:    ret float [[A]]
+;
+entry:
+  br i1 %which, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %A = phi float [ 2.0, %entry ], [ %a, %delay ]
+  %value = fadd fast float %A, 1.0
+  ret float %value
+}

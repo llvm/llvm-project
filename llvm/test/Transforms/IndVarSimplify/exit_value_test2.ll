@@ -8,14 +8,14 @@
 ; CHECK-NOT: udiv
 
 declare void @_Z3mixRjj(i32* dereferenceable(4), i32)
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 define i32 @_Z3fooPKcjj(i8* nocapture readonly %s, i32 %len, i32 %c) {
 entry:
   %a = alloca i32, align 4
   %tmp = bitcast i32* %a to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %tmp)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %tmp)
   store i32 -1640531527, i32* %a, align 4
   %cmp8 = icmp ugt i32 %len, 11
   br i1 %cmp8, label %while.body.lr.ph, label %while.end
@@ -47,6 +47,6 @@ while.end:                                        ; preds = %while.cond.while.en
   %keylen.0.lcssa = phi i32 [ %sub.lcssa, %while.cond.while.end_crit_edge ], [ %len, %entry ]
   call void @_Z3mixRjj(i32* dereferenceable(4) %a, i32 %keylen.0.lcssa)
   %tmp4 = load i32, i32* %a, align 4
-  call void @llvm.lifetime.end(i64 4, i8* %tmp)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %tmp)
   ret i32 %tmp4
 }

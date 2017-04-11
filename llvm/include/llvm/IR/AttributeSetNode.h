@@ -1,5 +1,4 @@
-//===-- AttributeSetNode.h - AttributeList Internal Node ---------*- C++
-//-*-===//
+//===-- AttributeSetNode.h - AttributeList Internal Node --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the node class used internally by AttributeList.
+/// \brief This file defines the class that represents a group of attributes
+/// that apply to one element: function, return type, or parameter.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -43,19 +43,7 @@ class AttributeSetNode final
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint64_t AvailableAttrs;
 
-  AttributeSetNode(ArrayRef<Attribute> Attrs)
-    : NumAttrs(Attrs.size()), AvailableAttrs(0) {
-    static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
-                  "Too many attributes for AvailableAttrs");
-    // There's memory after the node where we can store the entries in.
-    std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<Attribute>());
-
-    for (Attribute I : *this) {
-      if (!I.isStringAttribute()) {
-        AvailableAttrs |= ((uint64_t)1) << I.getKindAsEnum();
-      }
-    }
-  }
+  AttributeSetNode(ArrayRef<Attribute> Attrs);
 
 public:
   // AttributesSetNode is uniqued, these should not be available.
@@ -64,11 +52,9 @@ public:
 
   void operator delete(void *p) { ::operator delete(p); }
 
-  static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
+  static AttributeSetNode *get(LLVMContext &C, const AttrBuilder &B);
 
-  static AttributeSetNode *get(AttributeList AS, unsigned Index) {
-    return AS.getAttributes(Index);
-  }
+  static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
   /// \brief Return the number of attributes this AttributeList contains.
   unsigned getNumAttributes() const { return NumAttrs; }
