@@ -324,10 +324,9 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
   }
 
   std::set<DICompileUnit *> LiveCUs;
-  // Any CU referenced from a function is live.
-  for (Function &F : M.functions()) {
-    DISubprogram *SP = F.getSubprogram();
-    if (SP && SP->getUnit())
+  // Any CU referenced from a subprogram is live.
+  for (DISubprogram *SP : F.subprograms()) {
+    if (SP->getUnit())
       LiveCUs.insert(SP->getUnit());
   }
 
