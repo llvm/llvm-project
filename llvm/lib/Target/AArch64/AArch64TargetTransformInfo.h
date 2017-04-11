@@ -88,6 +88,12 @@ public:
     return 64;
   }
 
+  unsigned getMinVectorRegisterBitWidth() {
+    // FIXME: This should probably be enabled for any Neon subtarget but
+    // currently it was only tuned for Cyclone.
+    return ST->getMinVectorRegisterBitWidth();
+  }
+
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src);
