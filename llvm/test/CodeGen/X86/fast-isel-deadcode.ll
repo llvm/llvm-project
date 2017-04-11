@@ -83,7 +83,7 @@ entry:
   %tmp = alloca { <2 x float>, float }, align 8
   store i32 0, i32* %retval, align 4
   %0 = bitcast %struct.FVector* %v to i8*
-  call void @llvm.lifetime.start(i64 12, i8* %0) nounwind
+  call void @llvm.lifetime.start.p0i8(i64 12, i8* %0) nounwind
   %x.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 0
   store float 1.000000e+00, float* %x.i, align 4
   %y.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 1
@@ -136,12 +136,12 @@ func.exit:                         ; preds = %if.then.i, %if.else.i, %if.end.5.i
   %5 = bitcast %struct.FVector* %ref.tmp to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 12, i32 4, i1 false)
   %6 = bitcast %struct.FVector* %v to i8*
-  call void @llvm.lifetime.end(i64 12, i8* %6) nounwind
+  call void @llvm.lifetime.end.p0i8(i64 12, i8* %6) nounwind
   ret i32 0
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) argmemonly nounwind
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) argmemonly nounwind
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind

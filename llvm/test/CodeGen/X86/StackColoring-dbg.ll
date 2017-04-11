@@ -15,16 +15,16 @@ entry:
   br label %for.body
 
 for.body:
-  call void @llvm.lifetime.end(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.start(i64 -1, i8* %x.i) nounwind
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %x.i) nounwind
   call void @llvm.dbg.declare(metadata i8* %x.i, metadata !22, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !2)
   br label %for.body
 }
 
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23}

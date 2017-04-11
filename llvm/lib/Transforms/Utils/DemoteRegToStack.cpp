@@ -28,15 +28,17 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
     return nullptr;
   }
 
+  Function *F = I.getParent()->getParent();
+  const DataLayout &DL = F->getParent()->getDataLayout();
+
   // Create a stack slot to hold the value.
   AllocaInst *Slot;
   if (AllocaPoint) {
-    Slot = new AllocaInst(I.getType(), nullptr,
+    Slot = new AllocaInst(I.getType(), DL.getAllocaAddrSpace(), nullptr,
                           I.getName()+".reg2mem", AllocaPoint);
   } else {
-    Function *F = I.getParent()->getParent();
-    Slot = new AllocaInst(I.getType(), nullptr, I.getName() + ".reg2mem",
-                          &F->getEntryBlock().front());
+    Slot = new AllocaInst(I.getType(), DL.getAllocaAddrSpace(), nullptr,
+                          I.getName() + ".reg2mem", &F->getEntryBlock().front());
   }
 
   // We cannot demote invoke instructions to the stack if their normal edge
@@ -110,14 +112,17 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, Instruction *AllocaPoint) {
     return nullptr;
   }
 
+  const DataLayout &DL = P->getModule()->getDataLayout();
+
   // Create a stack slot to hold the value.
   AllocaInst *Slot;
   if (AllocaPoint) {
-    Slot = new AllocaInst(P->getType(), nullptr,
+    Slot = new AllocaInst(P->getType(), DL.getAllocaAddrSpace(), nullptr,
                           P->getName()+".reg2mem", AllocaPoint);
   } else {
     Function *F = P->getParent()->getParent();
-    Slot = new AllocaInst(P->getType(), nullptr, P->getName() + ".reg2mem",
+    Slot = new AllocaInst(P->getType(), DL.getAllocaAddrSpace(), nullptr,
+                          P->getName() + ".reg2mem",
                           &F->getEntryBlock().front());
   }
 

@@ -26,3 +26,7 @@ PDBSymbolTypePointer::PDBSymbolTypePointer(
 void PDBSymbolTypePointer::dump(PDBSymDumper &Dumper) const {
   Dumper.dump(*this);
 }
+
+void PDBSymbolTypePointer::dumpRight(PDBSymDumper &Dumper) const {
+  Dumper.dumpRight(*this);
+}

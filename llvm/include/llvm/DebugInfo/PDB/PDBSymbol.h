@@ -74,6 +74,11 @@ public:
   /// unknown properties, but individual implementations of PDBSymbol may
   /// override the behavior to only dump known fields.
   virtual void dump(PDBSymDumper &Dumper) const = 0;
+
+  /// For certain PDBSymbolTypes, dumps additional information for the type that
+  /// normally goes on the right side of the symbol.
+  virtual void dumpRight(PDBSymDumper &Dumper) const {}
+
   void defaultDump(raw_ostream &OS, int Indent) const;
   void dumpProperties() const;
   void dumpChildStats() const;

@@ -600,6 +600,22 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   if (MBB2->isLayoutSuccessor(MBB1) && I1 == MBB1->begin())
     return true;
 
+  // If both blocks are identical and end in a branch, merge them unless they
+  // both have a fallthrough predecessor and successor.
+  // We can only do this after block placement because it depends on whether
+  // there are fallthroughs, and we don't know until after layout.
+  if (AfterPlacement && I1 == MBB1->begin() && I2 == MBB2->begin()) {
+    auto BothFallThrough = [](MachineBasicBlock *MBB) {
+      if (MBB->succ_size() != 0 && !MBB->canFallThrough())
+        return false;
+      MachineFunction::iterator I(MBB);
+      MachineFunction *MF = MBB->getParent();
+      return (MBB != &*MF->begin()) && std::prev(I)->canFallThrough();
+    };
+    if (!BothFallThrough(MBB1) || !BothFallThrough(MBB2))
+      return true;
+  }
+
   // If both blocks have an unconditional branch temporarily stripped out,
   // count that as an additional common instruction for the following
   // heuristics. This heuristic is only accurate for single-succ blocks, so to

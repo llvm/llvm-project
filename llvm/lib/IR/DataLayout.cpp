@@ -174,6 +174,7 @@ void DataLayout::reset(StringRef Desc) {
 
   LayoutMap = nullptr;
   BigEndian = false;
+  AllocaAddrSpace = 0;
   StackNaturalAlign = 0;
   ManglingMode = MM_None;
   NonIntegralAddressSpaces.clear();
@@ -352,6 +353,12 @@ void DataLayout::parseSpecifier(StringRef Desc) {
       StackNaturalAlign = inBytes(getInt(Tok));
       break;
     }
+    case 'A': { // Default stack/alloca address space.
+      AllocaAddrSpace = getInt(Tok);
+      if (!isUInt<24>(AllocaAddrSpace))
+        report_fatal_error("Invalid address space, must be a 24bit integer");
+      break;
+    }
     case 'm':
       if (!Tok.empty())
         report_fatal_error("Unexpected trailing characters after mangling specifier in datalayout string");
@@ -394,6 +401,7 @@ void DataLayout::init(const Module *M) { *this = M->getDataLayout(); }
 
 bool DataLayout::operator==(const DataLayout &Other) const {
   bool Ret = BigEndian == Other.BigEndian &&
+             AllocaAddrSpace == Other.AllocaAddrSpace &&
              StackNaturalAlign == Other.StackNaturalAlign &&
              ManglingMode == Other.ManglingMode &&
              LegalIntWidths == Other.LegalIntWidths &&

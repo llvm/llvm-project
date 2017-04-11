@@ -1244,14 +1244,14 @@ define float @test_pow_intrin(float %l, float %r) {
   ret float %res
 }
 
-declare void @llvm.lifetime.start(i64, i8*)
-declare void @llvm.lifetime.end(i64, i8*)
+declare void @llvm.lifetime.start.p0i8(i64, i8*)
+declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {
 ; CHECK-LABEL: name: test_lifetime_intrin
 ; CHECK: RET_ReallyLR
   %slot = alloca i8, i32 4
-  call void @llvm.lifetime.start(i64 0, i8* %slot)
-  call void @llvm.lifetime.end(i64 0, i8* %slot)
+  call void @llvm.lifetime.start.p0i8(i64 0, i8* %slot)
+  call void @llvm.lifetime.end.p0i8(i64 0, i8* %slot)
   ret void
 }
 

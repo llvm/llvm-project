@@ -80,3 +80,7 @@ PDBSymbolTypeFunctionSig::getArguments() const {
 void PDBSymbolTypeFunctionSig::dump(PDBSymDumper &Dumper) const {
   Dumper.dump(*this);
 }
+
+void PDBSymbolTypeFunctionSig::dumpRight(PDBSymDumper &Dumper) const {
+  Dumper.dumpRight(*this);
+}

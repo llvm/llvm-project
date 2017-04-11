@@ -26,6 +26,7 @@ public:
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::ArrayType)
 
   void dump(PDBSymDumper &Dumper) const override;
+  void dumpRight(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_ID_METHOD(getArrayIndexType)
   FORWARD_SYMBOL_METHOD(isConstType)

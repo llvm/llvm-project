@@ -1305,7 +1305,8 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
     // If we're in the middle of scheduling a call, don't begin scheduling
     // another call. Also, don't allow any physical registers to be live across
     // the call.
-    if (Node->getMachineOpcode() == (unsigned)TII->getCallFrameDestroyOpcode()) {
+    if ((Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) ||
+        (Node->getMachineOpcode() == TII->getCallFrameSetupOpcode())) {
       // Check the special calling-sequence resource.
       unsigned CallResource = TRI->getNumRegs();
       if (LiveRegDefs[CallResource]) {

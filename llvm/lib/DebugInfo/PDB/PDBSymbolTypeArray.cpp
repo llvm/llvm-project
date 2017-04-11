@@ -26,3 +26,7 @@ PDBSymbolTypeArray::PDBSymbolTypeArray(const IPDBSession &PDBSession,
 void PDBSymbolTypeArray::dump(PDBSymDumper &Dumper) const {
   Dumper.dump(*this);
 }
+
+void PDBSymbolTypeArray::dumpRight(PDBSymDumper &Dumper) const {
+  Dumper.dumpRight(*this);
+}

@@ -28,6 +28,7 @@ public:
   std::unique_ptr<IPDBEnumSymbols> getArguments() const;
 
   void dump(PDBSymDumper &Dumper) const override;
+  void dumpRight(PDBSymDumper &Dumper) const override;
   void dumpArgList(raw_ostream &OS) const;
 
   FORWARD_SYMBOL_METHOD(getCallingConvention)

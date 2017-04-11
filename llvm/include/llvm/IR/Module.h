@@ -321,12 +321,22 @@ public:
   /// or a ConstantExpr BitCast of that type if the named function has a
   /// different type. This version of the method takes a null terminated list of
   /// function arguments, which makes it easier for clients to use.
-  Constant *getOrInsertFunction(StringRef Name, AttributeList AttributeList,
-                                Type *RetTy, ...) LLVM_END_WITH_NULL;
+  template<typename... ArgsTy>
+  Constant *getOrInsertFunction(StringRef Name,
+                                AttributeList AttributeList,
+                                Type *RetTy, ArgsTy... Args)
+  {
+    SmallVector<Type*, sizeof...(ArgsTy)> ArgTys{Args...};
+    return getOrInsertFunction(Name,
+                               FunctionType::get(RetTy, ArgTys, false),
+                               AttributeList);
+  }
 
   /// Same as above, but without the attributes.
-  Constant *getOrInsertFunction(StringRef Name, Type *RetTy, ...)
-    LLVM_END_WITH_NULL;
+  template<typename... ArgsTy>
+  Constant *getOrInsertFunction(StringRef Name, Type *RetTy, ArgsTy... Args) {
+    return getOrInsertFunction(Name, AttributeList{}, RetTy, Args...);
+  }
 
   /// Look up the specified function in the module symbol table. If it does not
   /// exist, return null.

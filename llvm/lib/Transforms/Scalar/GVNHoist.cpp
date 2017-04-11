@@ -17,6 +17,28 @@
 // is disabled in the following cases.
 // 1. Scalars across calls.
 // 2. geps when corresponding load/store cannot be hoisted.
+//
+// TODO: Hoist from >2 successors. Currently GVNHoist will not hoist stores
+// in this case because it works on two instructions at a time.
+// entry:
+//   switch i32 %c1, label %exit1 [
+//     i32 0, label %sw0
+//     i32 1, label %sw1
+//   ]
+//
+// sw0:
+//   store i32 1, i32* @G
+//   br label %exit
+//
+// sw1:
+//   store i32 1, i32* @G
+//   br label %exit
+//
+// exit1:
+//   store i32 1, i32* @G
+//   ret void
+// exit:
+//   ret void
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -73,13 +95,6 @@ public:
 
   // Returns true when A executes before B.
   bool operator()(const Instruction *A, const Instruction *B) const {
-    // FIXME: libc++ has a std::sort() algorithm that will call the compare
-    // function on the same element.  Once PR20837 is fixed and some more years
-    // pass by and all the buildbots have moved to a corrected std::sort(),
-    // enable the following assert:
-    //
-    // assert(A != B);
-
     const BasicBlock *BA = A->getParent();
     const BasicBlock *BB = B->getParent();
     unsigned ADFS, BDFS;
@@ -255,6 +270,7 @@ private:
   const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
+  DenseSet<const BasicBlock*> HoistBarrier;
   int HoistedCtr;
 
   enum InsKind { Unknown, Scalar, Load, Store };
@@ -310,8 +326,8 @@ private:
         continue;
       }
 
-      // Check for end of function, calls that do not return, etc.
-      if (!isGuaranteedToTransferExecutionToSuccessor(BB->getTerminator()))
+      // We reached the leaf Basic Block => not all paths have this instruction.
+      if (!BB->getTerminator()->getNumSuccessors())
         return false;
 
       // When reaching the back-edge of a loop, there may be a path through the
@@ -390,7 +406,8 @@ private:
     // executed between the execution of NewBB and OldBB. Hoisting an expression
     // from OldBB into NewBB has to be safe on all execution paths.
     for (auto I = idf_begin(OldBB), E = idf_end(OldBB); I != E;) {
-      if (*I == NewBB) {
+      const BasicBlock *BB = *I;
+      if (BB == NewBB) {
         // Stop traversal when reaching HoistPt.
         I.skipChildren();
         continue;
@@ -401,11 +418,17 @@ private:
         return true;
 
       // Impossible to hoist with exceptions on the path.
-      if (hasEH(*I))
+      if (hasEH(BB))
+        return true;
+
+      // No such instruction after HoistBarrier in a basic block was
+      // selected for hoisting so instructions selected within basic block with
+      // a hoist barrier can be hoisted.
+      if ((BB != OldBB) && HoistBarrier.count(BB))
         return true;
 
       // Check that we do not move a store past loads.
-      if (hasMemoryUse(NewPt, Def, *I))
+      if (hasMemoryUse(NewPt, Def, BB))
         return true;
 
       // -1 is unlimited number of blocks on all paths.
@@ -422,17 +445,18 @@ private:
   // Decrement by 1 NBBsOnAllPaths for each block between HoistPt and BB, and
   // return true when the counter NBBsOnAllPaths reaches 0, except when it is
   // initialized to -1 which is unlimited.
-  bool hasEHOnPath(const BasicBlock *HoistPt, const BasicBlock *BB,
+  bool hasEHOnPath(const BasicBlock *HoistPt, const BasicBlock *SrcBB,
                    int &NBBsOnAllPaths) {
-    assert(DT->dominates(HoistPt, BB) && "Invalid path");
+    assert(DT->dominates(HoistPt, SrcBB) && "Invalid path");
 
     // Walk all basic blocks reachable in depth-first iteration on
     // the inverse CFG from BBInsn to NewHoistPt. These blocks are all the
     // blocks that may be executed between the execution of NewHoistPt and
     // BBInsn. Hoisting an expression from BBInsn into NewHoistPt has to be safe
     // on all execution paths.
-    for (auto I = idf_begin(BB), E = idf_end(BB); I != E;) {
-      if (*I == HoistPt) {
+    for (auto I = idf_begin(SrcBB), E = idf_end(SrcBB); I != E;) {
+      const BasicBlock *BB = *I;
+      if (BB == HoistPt) {
         // Stop traversal when reaching NewHoistPt.
         I.skipChildren();
         continue;
@@ -443,7 +467,13 @@ private:
         return true;
 
       // Impossible to hoist with exceptions on the path.
-      if (hasEH(*I))
+      if (hasEH(BB))
+        return true;
+
+      // No such instruction after HoistBarrier in a basic block was
+      // selected for hoisting so instructions selected within basic block with
+      // a hoist barrier can be hoisted.
+      if ((BB != SrcBB) && HoistBarrier.count(BB))
         return true;
 
       // -1 is unlimited number of blocks on all paths.
@@ -629,6 +659,8 @@ private:
       // Compute the insertion point and the list of expressions to be hoisted.
       SmallVecInsn InstructionsToHoist;
       for (auto I : V)
+        // We don't need to check for hoist-barriers here because if
+        // I->getParent() is a barrier then I precedes the barrier.
         if (!hasEH(I->getParent()))
           InstructionsToHoist.push_back(I);
 
@@ -899,6 +931,12 @@ private:
     for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
       int InstructionNb = 0;
       for (Instruction &I1 : *BB) {
+        // If I1 cannot guarantee progress, subsequent instructions
+        // in BB cannot be hoisted anyways.
+        if (!isGuaranteedToTransferExecutionToSuccessor(&I1)) {
+           HoistBarrier.insert(BB);
+           break;
+        }
         // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
         // deeper may increase the register pressure and compilation time.
         if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)

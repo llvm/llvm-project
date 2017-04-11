@@ -264,7 +264,7 @@ declare void @do_something() #1
 define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-LABEL: do_nothing_if_resultant_opcodes_would_differ
 ; CHECK: cmn
-; CHECK: b.le
+; CHECK: b.gt
 ; CHECK: cmp
 ; CHECK: b.gt
 entry:

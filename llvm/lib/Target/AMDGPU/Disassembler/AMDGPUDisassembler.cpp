@@ -22,6 +22,7 @@
 #include "AMDGPURegisterInfo.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
@@ -105,10 +106,6 @@ static DecodeStatus decodeOperand_VSrcV216(MCInst &Inst,
   return addOperand(Inst, DAsm->decodeOperand_VSrcV216(Imm));
 }
 
-#define GET_SUBTARGETINFO_ENUM
-#include "AMDGPUGenSubtargetInfo.inc"
-#undef GET_SUBTARGETINFO_ENUM
-
 #include "AMDGPUGenDisassemblerTables.inc"
 
 //===----------------------------------------------------------------------===//
@@ -187,6 +184,17 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableAMDGPU64, MI, QW, Address);
   } while (false);
+
+  if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
+              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_si ||
+              MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi)) {
+    // Insert dummy unused src2_modifiers.
+    int Src2ModIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                AMDGPU::OpName::src2_modifiers);
+    auto I = MI.begin();
+    std::advance(I, Src2ModIdx);
+    MI.insert(I, MCOperand::createImm(0));
+  }
 
   Size = Res ? (MaxInstBytesNum - Bytes.size()) : 0;
   return Res;

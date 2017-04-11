@@ -24,7 +24,7 @@ define i32 @fn() #0 {
 entry:
   %n = alloca [8 x [8 x i32]], align 16
   %tmp = bitcast [8 x [8 x i32]]* %n to i8*
-  call void @llvm.lifetime.start(i64 256, i8* %tmp) #3
+  call void @llvm.lifetime.start.p0i8(i64 256, i8* %tmp) #3
   %tmp1 = bitcast [8 x [8 x i32]]* %n to i8*
   %arraydecay.1 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %n, i64 0, i64 1, i64 0
   %tmp2 = bitcast i32* %arraydecay.1 to i8*
@@ -222,12 +222,12 @@ for.inc73:                                        ; preds = %for.body61.preheade
 
 for.end75:                                        ; preds = %for.inc73
   %m.4.lcssa = phi i32 [ %m.4, %for.inc73 ]
-  call void @llvm.lifetime.end(i64 256, i8* %tmp) #3
+  call void @llvm.lifetime.end.p0i8(i64 256, i8* %tmp) #3
   ret i32 %m.4.lcssa
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 declare void @LumaPrediction4x4(i32, i32, i32, i32, i32, i16 signext, i16 signext) #2
 
@@ -237,7 +237,7 @@ declare i32 @distortion4x4(i32*) #2
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

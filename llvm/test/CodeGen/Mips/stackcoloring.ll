@@ -11,7 +11,7 @@ define i32 @foo1() {
 entry:
   %b = alloca [16 x i32], align 4
   %0 = bitcast [16 x i32]* %b to i8*
-  call void @llvm.lifetime.start(i64 64, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 64, i8* %0)
   %arraydecay = getelementptr inbounds [16 x i32], [16 x i32]* %b, i32 0, i32 0
   br label %for.body
 
@@ -28,12 +28,12 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  call void @llvm.lifetime.end(i64 64, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 64, i8* %0)
   ret i32 %add
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 
 declare i32 @foo2(i32, i32*)
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

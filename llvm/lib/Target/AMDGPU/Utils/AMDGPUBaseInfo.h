@@ -21,10 +21,6 @@
 #include <cstdint>
 #include <utility>
 
-#define GET_INSTRINFO_OPERAND_ENUM
-#include "AMDGPUGenInstrInfo.inc"
-#undef GET_INSTRINFO_OPERAND_ENUM
-
 namespace llvm {
 
 class FeatureBitset;

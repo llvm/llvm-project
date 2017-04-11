@@ -70,6 +70,8 @@ enum class PDB_ColorItem {
   None,
   Address,
   Type,
+  Comment,
+  Padding,
   Keyword,
   Offset,
   Identifier,

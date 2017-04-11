@@ -210,11 +210,9 @@ struct ValueDFS_Compare {
     auto LookupResult = OBBMap.find(BB);
     if (LookupResult != OBBMap.end())
       return LookupResult->second->dominates(AInst, BInst);
-    else {
-      auto Result = OBBMap.insert({BB, make_unique<OrderedBasicBlock>(BB)});
-      return Result.first->second->dominates(AInst, BInst);
-    }
-    return std::tie(ADef, A.U) < std::tie(BDef, B.U);
+
+    auto Result = OBBMap.insert({BB, make_unique<OrderedBasicBlock>(BB)});
+    return Result.first->second->dominates(AInst, BInst);
   }
 };
 

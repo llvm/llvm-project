@@ -237,35 +237,3 @@ void llvm::filterDeadComdatFunctions(
            ComdatEntriesCovered.end();
   });
 }
-
-std::string llvm::getUniqueModuleId(Module *M) {
-  MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
-        !GV.hasExternalLinkage())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
-
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
-
-  if (!ExportsSymbols)
-    return "";
-
-  MD5::MD5Result R;
-  Md5.final(R);
-
-  SmallString<32> Str;
-  MD5::stringifyResult(R, Str);
-  return ("$" + Str).str();
-}

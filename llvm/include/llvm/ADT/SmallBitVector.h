@@ -216,6 +216,18 @@ public:
     return getPointer()->find_first();
   }
 
+  /// Returns the index of the first unset bit, -1 if all of the bits are set.
+  int find_first_unset() const {
+    if (isSmall()) {
+      if (count() == getSmallSize())
+        return -1;
+
+      uintptr_t Bits = getSmallBits();
+      return countTrailingOnes(Bits);
+    }
+    return getPointer()->find_first_unset();
+  }
+
   /// Returns the index of the next set bit following the "Prev" bit.
   /// Returns -1 if the next set bit is not found.
   int find_next(unsigned Prev) const {
@@ -228,6 +240,23 @@ public:
       return countTrailingZeros(Bits);
     }
     return getPointer()->find_next(Prev);
+  }
+
+  /// Returns the index of the next unset bit following the "Prev" bit.
+  /// Returns -1 if the next unset bit is not found.
+  int find_next_unset(unsigned Prev) const {
+    if (isSmall()) {
+      ++Prev;
+      uintptr_t Bits = getSmallBits();
+      // Mask in previous bits.
+      uintptr_t Mask = (1 << Prev) - 1;
+      Bits |= Mask;
+
+      if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
+        return -1;
+      return countTrailingOnes(Bits);
+    }
+    return getPointer()->find_next_unset(Prev);
   }
 
   /// Clear all bits.

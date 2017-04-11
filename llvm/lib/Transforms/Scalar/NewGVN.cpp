@@ -1683,8 +1683,8 @@ const MemoryAccess *NewGVN::getNextMemoryLeader(CongruenceClass *CC) const {
   // TODO: If this ends up to slow, we can maintain a next memory leader like we
   // do for regular leaders.
   // Make sure there will be a leader to find
-  assert(CC->getStoreCount() > 0 ||
-         !CC->memory_empty() && "Can't get next leader if there is none");
+  assert((CC->getStoreCount() > 0 || !CC->memory_empty()) &&
+         "Can't get next leader if there is none");
   if (CC->getStoreCount() > 0) {
     if (auto *NL = dyn_cast_or_null<StoreInst>(CC->getNextLeader().first))
       return MSSA->getMemoryAccess(NL);
@@ -1738,10 +1738,10 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
                                             CongruenceClass *NewClass) {
   // If the leader is I, and we had a represenative MemoryAccess, it should
   // be the MemoryAccess of OldClass.
-  assert(!InstMA || !OldClass->getMemoryLeader() ||
-         OldClass->getLeader() != I ||
-         OldClass->getMemoryLeader() == InstMA &&
-             "Representative MemoryAccess mismatch");
+  assert((!InstMA || !OldClass->getMemoryLeader() ||
+          OldClass->getLeader() != I ||
+          OldClass->getMemoryLeader() == InstMA) &&
+         "Representative MemoryAccess mismatch");
   // First, see what happens to the new class
   if (!NewClass->getMemoryLeader()) {
     // Should be a new class, or a store becoming a leader of a new class.
@@ -1941,11 +1941,11 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
     } else {
       EClass = lookupResult.first->second;
       if (isa<ConstantExpression>(E))
-        assert(isa<Constant>(EClass->getLeader()) ||
-               (EClass->getStoredValue() &&
-                isa<Constant>(EClass->getStoredValue())) &&
-                   "Any class with a constant expression should have a "
-                   "constant leader");
+        assert((isa<Constant>(EClass->getLeader()) ||
+                (EClass->getStoredValue() &&
+                 isa<Constant>(EClass->getStoredValue()))) &&
+               "Any class with a constant expression should have a "
+               "constant leader");
 
       assert(EClass && "Somehow don't have an eclass");
 
@@ -2350,11 +2350,10 @@ void NewGVN::verifyMemoryCongruency() const {
     if (CC == TOPClass || CC->isDead())
       continue;
     if (CC->getStoreCount() != 0) {
-      assert(CC->getStoredValue() ||
-             !isa<StoreInst>(CC->getLeader()) &&
-                 "Any class with a store as a "
-                 "leader should have a "
-                 "representative stored value\n");
+      assert((CC->getStoredValue() || !isa<StoreInst>(CC->getLeader())) &&
+             "Any class with a store as a "
+             "leader should have a "
+             "representative stored value\n");
       assert(CC->getMemoryLeader() &&
              "Any congruence class with a store should "
              "have a representative access\n");
