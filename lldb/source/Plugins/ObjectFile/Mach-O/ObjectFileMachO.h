@@ -17,6 +17,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/RangeMap.h"
+#include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/SafeMachO.h"
@@ -112,6 +113,8 @@ public:
   uint32_t GetNumThreadContexts() override;
 
   std::string GetIdentifierString() override;
+
+  bool GetCorefileMainBinaryInfo (lldb::addr_t &address, lldb_private::UUID &uuid) override;
 
   lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) override;
