@@ -1310,7 +1310,7 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 # ifdef ARCH_HAS_BLX
 #  define BLX(R) "blx "  #R "\n"
 # else
-#  define BLX(R) "mov lr, pc; bx" #R "\n"
+#  define BLX(R) "mov lr, pc; bx " #R "\n"
 # endif
 #else
 # define BLX(R)  "mov lr, pc; mov pc," #R "\n"

@@ -41,6 +41,13 @@
 namespace __lsan {
 
 void InitializeInterceptors();
+void ReplaceSystemMalloc();
+
+#define ENSURE_LSAN_INITED do {   \
+  CHECK(!lsan_init_is_running);   \
+  if (!lsan_inited)               \
+    __lsan_init();                \
+} while (0)
 
 }  // namespace __lsan
 
