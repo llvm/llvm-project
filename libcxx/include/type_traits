@@ -1998,9 +1998,7 @@ struct _LIBCPP_TEMPLATE_VIS common_type {};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
-{
-    typedef typename common_type<_Tp, _Tp>::type type;
-};
+    : public common_type<_Tp, _Tp> {};
 
 // bullet 3 - sizeof...(Tp) == 2
 

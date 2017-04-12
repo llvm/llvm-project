@@ -95,6 +95,65 @@
 # CHECK2-NEXT:   }
 # CHECK2-NEXT: ]
 
+
+## --export-dynamic overrides --dynamic-list, i.e. --export-dynamic with an
+## incomplete dynamic-list still exports everything.
+# RUN: echo "{ foo2; };" > %t.list
+# RUN: ld.lld --dynamic-list %t.list --export-dynamic %t %t2.so -o %t.exe
+# RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+## The same with --export-dynamic-symbol.
+# RUN: ld.lld --export-dynamic-symbol=foo2 --export-dynamic %t %t2.so -o %t.exe
+# RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+# CHECK3:      DynamicSymbols [
+# CHECK3-NEXT:   Symbol {
+# CHECK3-NEXT:     Name: @
+# CHECK3-NEXT:     Value: 0x0
+# CHECK3-NEXT:     Size: 0
+# CHECK3-NEXT:     Binding: Local
+# CHECK3-NEXT:     Type: None
+# CHECK3-NEXT:     Other: 0
+# CHECK3-NEXT:     Section: Undefined
+# CHECK3-NEXT:   }
+# CHECK3-NEXT:   Symbol {
+# CHECK3-NEXT:     Name: _start@
+# CHECK3-NEXT:     Value: 0x201003
+# CHECK3-NEXT:     Size: 0
+# CHECK3-NEXT:     Binding: Global (0x1)
+# CHECK3-NEXT:     Type: None (0x0)
+# CHECK3-NEXT:     Other: 0
+# CHECK3-NEXT:     Section: .text (0x4)
+# CHECK3-NEXT:   }
+# CHECK3-NEXT:   Symbol {
+# CHECK3-NEXT:     Name: foo1@
+# CHECK3-NEXT:     Value: 0x201000
+# CHECK3-NEXT:     Size: 0
+# CHECK3-NEXT:     Binding: Global (0x1)
+# CHECK3-NEXT:     Type: None (0x0)
+# CHECK3-NEXT:     Other: 0
+# CHECK3-NEXT:     Section: .text (0x4)
+# CHECK3-NEXT:   }
+# CHECK3-NEXT:   Symbol {
+# CHECK3-NEXT:     Name: foo2@
+# CHECK3-NEXT:     Value: 0x201001
+# CHECK3-NEXT:     Size: 0
+# CHECK3-NEXT:     Binding: Global (0x1)
+# CHECK3-NEXT:     Type: None (0x0)
+# CHECK3-NEXT:     Other: 0
+# CHECK3-NEXT:     Section: .text (0x4)
+# CHECK3-NEXT:   }
+# CHECK3-NEXT:   Symbol {
+# CHECK3-NEXT:     Name: foo31@
+# CHECK3-NEXT:     Value: 0x201002
+# CHECK3-NEXT:     Size: 0
+# CHECK3-NEXT:     Binding: Global (0x1)
+# CHECK3-NEXT:     Type: None (0x0)
+# CHECK3-NEXT:     Other: 0
+# CHECK3-NEXT:     Section: .text (0x4)
+# CHECK3-NEXT:   }
+# CHECK3-NEXT: ]
+
 .globl foo1
 foo1:
   ret
