@@ -10,15 +10,16 @@ using link-time optimization; in the case where LTO is not being used, the
 linkage unit's LTO unit is empty. Each linkage unit has only a single LTO unit.
 
 The LTO visibility of a class is used by the compiler to determine which
-classes the virtual function call optimization and control flow integrity
-features apply to. These features use whole-program information, so they
-require the entire class hierarchy to be visible in order to work correctly.
+classes the whole-program devirtualization (``-fwhole-program-vtables``) and
+control flow integrity (``-fsanitize=cfi-vcall``) features apply to. These
+features use whole-program information, so they require the entire class
+hierarchy to be visible in order to work correctly.
 
-If any translation unit in the program uses either of the virtual function
-call optimization or control flow integrity features, it is effectively an
-ODR violation to define a class with hidden LTO visibility in multiple linkage
+If any translation unit in the program uses either of the whole-program
+devirtualization or control flow integrity features, it is effectively an ODR
+violation to define a class with hidden LTO visibility in multiple linkage
 units. A class with public LTO visibility may be defined in multiple linkage
-units, but the tradeoff is that the virtual function call optimization and
+units, but the tradeoff is that the whole-program devirtualization and
 control flow integrity features can only be applied to classes with hidden LTO
 visibility. A class's LTO visibility is treated as an ODR-relevant property
 of its definition, so it must be consistent between translation units.

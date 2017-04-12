@@ -1547,7 +1547,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
   SmallVector<ISD::InputArg, 8> LocalIns;
 
   if (AMDGPU::isShader(CallConv)) {
-    AnalyzeFormalArguments(CCInfo, Ins);
+    CCInfo.AnalyzeFormalArguments(Ins, CCAssignFnForCall(CallConv, isVarArg));
   } else {
     analyzeFormalArgumentsCompute(CCInfo, Ins);
   }

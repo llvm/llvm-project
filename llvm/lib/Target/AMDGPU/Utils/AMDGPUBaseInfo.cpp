@@ -36,19 +36,12 @@
 #include <cstring>
 #include <utility>
 
-#define GET_SUBTARGETINFO_ENUM
-#include "AMDGPUGenSubtargetInfo.inc"
-#undef GET_SUBTARGETINFO_ENUM
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
-#define GET_REGINFO_ENUM
-#include "AMDGPUGenRegisterInfo.inc"
-#undef GET_REGINFO_ENUM
 
 #define GET_INSTRINFO_NAMED_OPS
-#define GET_INSTRINFO_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 #undef GET_INSTRINFO_NAMED_OPS
-#undef GET_INSTRINFO_ENUM
 
 namespace {
 
@@ -515,6 +508,10 @@ bool isShader(CallingConv::ID cc) {
 
 bool isCompute(CallingConv::ID cc) {
   return !isShader(cc) || cc == CallingConv::AMDGPU_CS;
+}
+
+bool isEntryFunctionCC(CallingConv::ID CC) {
+  return true;
 }
 
 bool isSI(const MCSubtargetInfo &STI) {

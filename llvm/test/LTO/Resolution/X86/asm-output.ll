@@ -2,9 +2,9 @@
 ;
 ; RUN: llvm-as < %s > %t1.bc
 ;
-; RUN: llvm-lto2 -filetype=asm -r %t1.bc,main,px -o %t2 %t1.bc
+; RUN: llvm-lto2 run -filetype=asm -r %t1.bc,main,px -o %t2 %t1.bc
 ; RUN: FileCheck --check-prefix=ASM %s < %t2.0
-; RUN: llvm-lto2 -filetype=obj -r %t1.bc,main,px -o %t2 %t1.bc
+; RUN: llvm-lto2 run -filetype=obj -r %t1.bc,main,px -o %t2 %t1.bc
 ; RUN: llvm-objdump -d %t2.0 | FileCheck --check-prefix=ASM %s
 ;
 ; ASM: main:

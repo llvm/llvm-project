@@ -26,6 +26,7 @@ public:
 
   void start(const PDBSymbolData &Var);
 
+  void dump(const PDBSymbolTypeArray &Symbol) override;
   void dump(const PDBSymbolTypeBuiltin &Symbol) override;
   void dump(const PDBSymbolTypeEnum &Symbol) override;
   void dump(const PDBSymbolTypeFunctionSig &Symbol) override;
@@ -33,9 +34,12 @@ public:
   void dump(const PDBSymbolTypeTypedef &Symbol) override;
   void dump(const PDBSymbolTypeUDT &Symbol) override;
 
+  void dumpRight(const PDBSymbolTypeArray &Symbol) override;
+  void dumpRight(const PDBSymbolTypeFunctionSig &Symbol) override;
+  void dumpRight(const PDBSymbolTypePointer &Symbol) override;
+
 private:
   void dumpSymbolTypeAndName(const PDBSymbol &Type, StringRef Name);
-  bool tryDumpFunctionPointer(const PDBSymbol &Type, StringRef Name);
 
   LinePrinter &Printer;
 };

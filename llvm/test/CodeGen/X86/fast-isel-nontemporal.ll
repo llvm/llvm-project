@@ -100,7 +100,7 @@ define void @test_mmx(x86_mmx* nocapture %a0, x86_mmx* nocapture %a1) {
 ; ALL:       # BB#0: # %entry
 ; ALL-NEXT:    movq (%rdi), %mm0
 ; ALL-NEXT:    psrlq $3, %mm0
-; ALL-NEXT:    movq %mm0, (%rsi)
+; ALL-NEXT:    movntq %mm0, (%rsi)
 ; ALL-NEXT:    retq
 entry:
   %0 = load x86_mmx, x86_mmx* %a0

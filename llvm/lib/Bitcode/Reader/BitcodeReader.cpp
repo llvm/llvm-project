@@ -4006,7 +4006,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       }
       if (!Ty || !Size)
         return error("Invalid record");
-      AllocaInst *AI = new AllocaInst(Ty, Size, Align);
+
+      // FIXME: Make this an optional field.
+      const DataLayout &DL = TheModule->getDataLayout();
+      unsigned AS = DL.getAllocaAddrSpace();
+
+      AllocaInst *AI = new AllocaInst(Ty, AS, Size, Align);
       AI->setUsedWithInAlloca(InAlloca);
       AI->setSwiftError(SwiftError);
       I = AI;
@@ -4742,33 +4747,13 @@ Error ModuleSummaryIndexBitcodeReader::parseModule(StringRef ModulePath) {
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
           break;
-        // GLOBALVAR: [pointer type, isconst, initid,
-        //             linkage, alignment, section, visibility, threadlocal,
-        //             unnamed_addr, externally_initialized, dllstorageclass,
-        //             comdat]
-        case bitc::MODULE_CODE_GLOBALVAR: {
-          if (Record.size() < 6)
-            return error("Invalid record");
-          uint64_t RawLinkage = Record[3];
-          GlobalValue::LinkageTypes Linkage = getDecodedLinkage(RawLinkage);
-          ValueIdToLinkageMap[ValueId++] = Linkage;
-          break;
-        }
-        // FUNCTION:  [type, callingconv, isproto, linkage, paramattr,
-        //             alignment, section, visibility, gc, unnamed_addr,
-        //             prologuedata, dllstorageclass, comdat, prefixdata]
-        case bitc::MODULE_CODE_FUNCTION: {
-          if (Record.size() < 8)
-            return error("Invalid record");
-          uint64_t RawLinkage = Record[3];
-          GlobalValue::LinkageTypes Linkage = getDecodedLinkage(RawLinkage);
-          ValueIdToLinkageMap[ValueId++] = Linkage;
-          break;
-        }
-        // ALIAS: [alias type, addrspace, aliasee val#, linkage, visibility,
-        // dllstorageclass]
+        // GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
+        // FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
+        // ALIAS:     [alias type,   addrspace,   aliasee val#, linkage, ...]
+        case bitc::MODULE_CODE_GLOBALVAR:
+        case bitc::MODULE_CODE_FUNCTION:
         case bitc::MODULE_CODE_ALIAS: {
-          if (Record.size() < 6)
+          if (Record.size() <= 3)
             return error("Invalid record");
           uint64_t RawLinkage = Record[3];
           GlobalValue::LinkageTypes Linkage = getDecodedLinkage(RawLinkage);

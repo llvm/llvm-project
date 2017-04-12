@@ -95,9 +95,10 @@ Error TpiStream::reload() {
         Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
     BinaryStreamReader HSR(*HS);
 
+    // There should be a hash value for every type record, or no hashes at all.
     uint32_t NumHashValues =
         Header->HashValueBuffer.Length / sizeof(ulittle32_t);
-    if (NumHashValues != NumTypeRecords())
+    if (NumHashValues != NumTypeRecords() && NumHashValues != 0)
       return make_error<RawError>(
           raw_error_code::corrupt_file,
           "TPI hash count does not match with the number of type records.");
@@ -124,8 +125,9 @@ Error TpiStream::reload() {
 
     // TPI hash table is a parallel array for the type records.
     // Verify that the hash values match with type records.
-    if (auto EC = verifyHashValues())
-      return EC;
+    if (NumHashValues > 0)
+      if (auto EC = verifyHashValues())
+        return EC;
   }
 
   return Error::success();

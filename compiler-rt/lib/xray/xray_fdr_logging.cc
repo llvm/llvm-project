@@ -192,7 +192,21 @@ void fdrLoggingHandleArg0(int32_t FuncId,
   // we've seen this CPU before. We also do it before we load anything else, to
   // allow for forward progress with the scheduling.
   unsigned char CPU;
-  uint64_t TSC = __xray::readTSC(CPU);
+  uint64_t TSC;
+
+  if(probeRequiredCPUFeatures()) {
+    TSC = __xray::readTSC(CPU);
+  } else {
+    // FIXME: This code needs refactoring as it appears in multiple locations
+    timespec TS;
+    int result = clock_gettime(CLOCK_REALTIME, &TS);
+    if (result != 0) {
+      Report("clock_gettime(2) return %d, errno=%d", result, int(errno));
+      TS = {0, 0};
+    }
+    CPU = 0;
+    TSC = TS.tv_sec * __xray::NanosecondsPerSecond + TS.tv_nsec;
+  }
 
   __xray_fdr_internal::processFunctionHook(FuncId, Entry, TSC, CPU,
                                            clock_gettime, LoggingStatus, BQ);

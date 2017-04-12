@@ -3874,6 +3874,12 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
     if (parseIdentifier(Parameter.Name))
       return TokError("expected identifier in '.macro' directive");
 
+    // Emit an error if two (or more) named parameters share the same name
+    for (const MCAsmMacroParameter& CurrParam : Parameters)
+      if (CurrParam.Name.equals(Parameter.Name))
+        return TokError("macro '" + Name + "' has multiple parameters"
+                        " named '" + Parameter.Name + "'");
+
     if (Lexer.is(AsmToken::Colon)) {
       Lex();  // consume ':'
 

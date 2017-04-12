@@ -23,7 +23,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-subtarget"
 
-#define GET_SUBTARGETINFO_ENUM
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "AMDGPUGenSubtargetInfo.inc"

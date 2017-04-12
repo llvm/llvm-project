@@ -99,6 +99,9 @@ void WithColor::applyColor(PDB_ColorItem C) {
   case PDB_ColorItem::None:
     OS.resetColor();
     return;
+  case PDB_ColorItem::Comment:
+    OS.changeColor(raw_ostream::GREEN, false);
+    return;
   case PDB_ColorItem::Address:
     OS.changeColor(raw_ostream::YELLOW, /*bold=*/true);
     return;
@@ -118,6 +121,7 @@ void WithColor::applyColor(PDB_ColorItem C) {
   case PDB_ColorItem::Path:
     OS.changeColor(raw_ostream::CYAN, false);
     return;
+  case PDB_ColorItem::Padding:
   case PDB_ColorItem::SectionHeader:
     OS.changeColor(raw_ostream::RED, true);
     return;

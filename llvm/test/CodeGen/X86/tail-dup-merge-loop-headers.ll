@@ -6,13 +6,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: tail_dup_merge_loops
 ; CHECK: # %entry
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
-; CHECK: # %exit
-; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %inner_loop_exit
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %inner_loop_latch
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %inner_loop_test
+; CHECK-NOT: # %{{[a-zA-Z_]+}}
+; CHECK: # %exit
 define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 {
 entry:
   %notlhs674.i = icmp eq i32 %a, 0

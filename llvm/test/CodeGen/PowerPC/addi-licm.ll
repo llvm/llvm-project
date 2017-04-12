@@ -9,9 +9,9 @@ entry:
   %x = alloca [2048 x float], align 4
   %y = alloca [2048 x float], align 4
   %0 = bitcast [2048 x float]* %x to i8*
-  call void @llvm.lifetime.start(i64 8192, i8* %0) #2
+  call void @llvm.lifetime.start.p0i8(i64 8192, i8* %0) #2
   %1 = bitcast [2048 x float]* %y to i8*
-  call void @llvm.lifetime.start(i64 8192, i8* %1) #2
+  call void @llvm.lifetime.start.p0i8(i64 8192, i8* %1) #2
   br label %for.body.i
 
 ; CHECK-LABEL: @foo
@@ -50,12 +50,12 @@ loop.exit:                                        ; preds = %for.body.i
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 
 declare void @bar(float*, float*)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
 
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind }

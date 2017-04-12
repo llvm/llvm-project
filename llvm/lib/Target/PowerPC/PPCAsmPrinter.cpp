@@ -405,7 +405,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                       .addImm(CallTarget & 0xFFFF));
 
       // Save the current TOC pointer before the remote call.
-      int TOCSaveOffset = Subtarget->isELFv2ABI() ? 24 : 40;
+      int TOCSaveOffset = Subtarget->getFrameLowering()->getTOCSaveOffset();
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::STD)
                                       .addReg(PPC::X2)
                                       .addImm(TOCSaveOffset)

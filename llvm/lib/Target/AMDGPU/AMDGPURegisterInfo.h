@@ -16,10 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
-
 #define GET_REGINFO_HEADER
-#define GET_REGINFO_ENUM
 #include "AMDGPUGenRegisterInfo.inc"
 
 namespace llvm {

@@ -172,6 +172,7 @@
 # RAW-NEXT:       }
 # RAW-NEXT:     }
 # RAW-NEXT:     TypeIndexOffsets [
+# RAW-NEXT:       Index: 0x1000, Offset: 0
 # RAW-NEXT:     ]
 # RAW-NEXT:   ]
 # RAW-NEXT: }

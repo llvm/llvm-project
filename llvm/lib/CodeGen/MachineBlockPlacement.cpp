@@ -761,57 +761,65 @@ bool MachineBlockPlacement::isProfitableToTailDup(
   //  Cost in the first case is: P + V
   //  For this calculation, we always assume P > Qout. If Qout > P
   //  The result of this function will be ignored at the caller.
-  //  Cost in the second case is: Qout + Qin * U + P * V
+  //  Let F = SuccFreq - Qin
+  //  Cost in the second case is: Qout + min(Qin, F) * U + max(Qin, F) * V
 
   if (PDom == nullptr || !Succ->isSuccessor(PDom)) {
     BranchProbability UProb = BestSuccSucc;
     BranchProbability VProb = AdjustedSuccSumProb - UProb;
+    BlockFrequency F = SuccFreq - Qin;
     BlockFrequency V = SuccFreq * VProb;
-    BlockFrequency QinU = Qin * UProb;
+    BlockFrequency QinU = std::min(Qin, F) * UProb;
     BlockFrequency BaseCost = P + V;
-    BlockFrequency DupCost = Qout + QinU + P * VProb;
+    BlockFrequency DupCost = Qout + QinU + std::max(Qin, F) * VProb;
     return greaterWithBias(BaseCost, DupCost, EntryFreq);
   }
   BranchProbability UProb = MBPI->getEdgeProbability(Succ, PDom);
   BranchProbability VProb = AdjustedSuccSumProb - UProb;
   BlockFrequency U = SuccFreq * UProb;
   BlockFrequency V = SuccFreq * VProb;
+  BlockFrequency F = SuccFreq - Qin;
   // If there is a post-dominating successor, here is the calculation:
   // BB         BB                 BB          BB
-  // | \Qout    |  \               | \Qout     |  \
-  // |P C       |   =              |P C        |   =
-  // =   C'     |P   C             =   C'      |P   C
-  // |  /Qin    |     |            |  /Qin     |     |
-  // | /        |     C' (+Succ)   | /         |     C' (+Succ)
-  // Succ       Succ /|            Succ        Succ /|
-  // | \  V     |  \/ |            | \  V      |  \/ |
-  // |U \       |U /\ |            |U =        |U /\ |
-  // =   D      = =  \=            |   D       | =  =|
-  // |  /       |/    D            |  /        |/    D
-  // | /        |    /             | =         |    /
-  // |/         |   /              |/          |   =
-  // Dom        Dom                Dom         Dom
+  // | \Qout    |   \               | \Qout     |  \
+  // |P C       |    =              |P C        |   =
+  // =   C'     |P    C             =   C'      |P   C
+  // |  /Qin    |      |            |  /Qin     |     |
+  // | /        |      C' (+Succ)   | /         |     C' (+Succ)
+  // Succ       Succ  /|            Succ        Succ /|
+  // | \  V     |   \/ |            | \  V      |  \/ |
+  // |U \       |U  /\ =?           |U =        |U /\ |
+  // =   D      = =  =?|            |   D       | =  =|
+  // |  /       |/     D            |  /        |/    D
+  // | /        |     /             | =         |    /
+  // |/         |    /              |/          |   =
+  // Dom         Dom                Dom         Dom
   //  '=' : Branch taken for that CFG edge
   // The cost for taken branches in the first case is P + U
+  // Let F = SuccFreq - Qin
   // The cost in the second case (assuming independence), given the layout:
-  // BB, Succ, (C+Succ), D, Dom
-  // is Qout + P * V + Qin * U
+  // BB, Succ, (C+Succ), D, Dom or the layout:
+  // BB, Succ, D, Dom, (C+Succ)
+  // is Qout + max(F, Qin) * U + min(F, Qin)
   // compare P + U vs Qout + P * U + Qin.
   //
   // The 3rd and 4th cases cover when Dom would be chosen to follow Succ.
   //
   // For the 3rd case, the cost is P + 2 * V
-  // For the 4th case, the cost is Qout + Qin * U + P * V + V
-  // We choose 4 over 3 when (P + V) > Qout + Qin * U + P * V
+  // For the 4th case, the cost is Qout + min(Qin, F) * U + max(Qin, F) * V + V
+  // We choose 4 over 3 when (P + V) > Qout + min(Qin, F) * U + max(Qin, F) * V
   if (UProb > AdjustedSuccSumProb / 2 &&
       !hasBetterLayoutPredecessor(Succ, PDom, *BlockToChain[PDom], UProb, UProb,
                                   Chain, BlockFilter))
     // Cases 3 & 4
-    return greaterWithBias((P + V), (Qout + Qin * UProb + P * VProb),
-                           EntryFreq);
+    return greaterWithBias(
+        (P + V), (Qout + std::max(Qin, F) * VProb + std::min(Qin, F) * UProb),
+        EntryFreq);
   // Cases 1 & 2
-  return greaterWithBias(
-      (P + U), (Qout + Qin * AdjustedSuccSumProb + P * UProb), EntryFreq);
+  return greaterWithBias((P + U),
+                         (Qout + std::min(Qin, F) * AdjustedSuccSumProb +
+                          std::max(Qin, F) * UProb),
+                         EntryFreq);
 }
 
 /// Check for a trellis layout. \p BB is the upper part of a trellis if its
@@ -1481,11 +1489,7 @@ MachineBlockPlacement::selectBestSuccessor(
     if (DupProb < BestProb)
       break;
     if (canTailDuplicateUnplacedPreds(BB, Succ, Chain, BlockFilter)
-        // If tail duplication gives us fallthrough when we otherwise wouldn't
-        // have it, that is a strict gain.
-        && (BestSucc.BB == nullptr
-            || isProfitableToTailDup(BB, Succ, BestProb, Chain,
-                                     BlockFilter))) {
+        && (isProfitableToTailDup(BB, Succ, BestProb, Chain, BlockFilter))) {
       DEBUG(
           dbgs() << "    Candidate: " << getBlockName(Succ) << ", probability: "
                  << DupProb

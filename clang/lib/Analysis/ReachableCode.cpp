@@ -58,6 +58,14 @@ static bool isTrivialDoWhile(const CFGBlock *B, const Stmt *S) {
   return false;
 }
 
+static bool isBuiltinUnreachable(const Stmt *S) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S))
+    if (const auto *FDecl = dyn_cast<FunctionDecl>(DRE->getDecl()))
+      return FDecl->getIdentifier() &&
+             FDecl->getBuiltinID() == Builtin::BI__builtin_unreachable;
+  return false;
+}
+
 static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
   // Look to see if the current control flow ends with a 'return', and see if
   // 'S' is a substatement. The 'return' may not be the last element in the
@@ -592,8 +600,7 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
 
   if (isa<BreakStmt>(S)) {
     UK = reachable_code::UK_Break;
-  }
-  else if (isTrivialDoWhile(B, S)) {
+  } else if (isTrivialDoWhile(B, S) || isBuiltinUnreachable(S)) {
     return;
   }
   else if (isDeadReturn(B, S)) {

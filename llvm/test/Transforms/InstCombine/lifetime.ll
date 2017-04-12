@@ -1,8 +1,8 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @foo(i8* nocapture, i8* nocapture)
 
 define void @bar(i1 %flag) !dbg !4 {
@@ -17,11 +17,11 @@ entry:
 ; CHECK: bb3:
 ; CHECK-NEXT: call void @llvm.dbg.declare
 ; CHECK-NEXT: br label %fin
-; CHECK: call void @llvm.lifetime.start(i64 1, i8* %[[T]])
-; CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* %[[B]])
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[T]])
+; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[B]])
 ; CHECK-NEXT: call void @foo(i8* %[[B]], i8* %[[T]])
-; CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* %[[B]])
-; CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* %[[T]])
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[B]])
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[T]])
   %text = alloca [1 x i8], align 1
   %buff = alloca [1 x i8], align 1
   %0 = getelementptr inbounds [1 x i8], [1 x i8]* %text, i64 0, i64 0
@@ -29,31 +29,31 @@ entry:
   br i1 %flag, label %if, label %else
 
 if:
-  call void @llvm.lifetime.start(i64 1, i8* %0)
-  call void @llvm.lifetime.start(i64 1, i8* %1)
-  call void @llvm.lifetime.end(i64 1, i8* %1)
-  call void @llvm.lifetime.end(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
   br label %bb2
 
 bb2:
-  call void @llvm.lifetime.start(i64 1, i8* %0)
-  call void @llvm.lifetime.start(i64 1, i8* %1)
-  call void @llvm.lifetime.end(i64 1, i8* %0)
-  call void @llvm.lifetime.end(i64 1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
   br label %bb3
 
 bb3:
-  call void @llvm.lifetime.start(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
   call void @llvm.dbg.declare(metadata [1 x i8]* %text, metadata !14, metadata !25), !dbg !26
-  call void @llvm.lifetime.end(i64 1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
   br label %fin
 
 else:
-  call void @llvm.lifetime.start(i64 1, i8* %0)
-  call void @llvm.lifetime.start(i64 1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
   call void @foo(i8* %1, i8* %0)
-  call void @llvm.lifetime.end(i64 1, i8* %1)
-  call void @llvm.lifetime.end(i64 1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
   br  label %fin
 
 fin:

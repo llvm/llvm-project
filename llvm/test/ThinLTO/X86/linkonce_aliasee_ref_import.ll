@@ -7,7 +7,7 @@
 ; RUN: llvm-nm -o - < %t2.bc.thinlto.o | FileCheck %s --check-prefix=NM2
 
 ; Import with instr limit to ensure only foo imported.
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:    -r=%t1.bc,foo,pxl \
 ; RUN:    -r=%t1.bc,baz,pxl \
 ; RUN:    -r=%t1.bc,baz.clone,pxl \

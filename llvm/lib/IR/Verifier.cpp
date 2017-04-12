@@ -832,28 +832,6 @@ static bool isType(const Metadata *MD) { return !MD || isa<DIType>(MD); }
 static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 
-template <class Ty>
-static bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
-  for (Metadata *MD : N.operands()) {
-    if (MD) {
-      if (!isa<Ty>(MD))
-        return false;
-    } else {
-      if (!AllowNull)
-        return false;
-    }
-  }
-  return true;
-}
-
-template <class Ty> static bool isValidMetadataArray(const MDTuple &N) {
-  return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ false);
-}
-
-template <class Ty> static bool isValidMetadataNullArray(const MDTuple &N) {
-  return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ true);
-}
-
 void Verifier::visitDILocation(const DILocation &N) {
   AssertDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
            "location requires a valid scope", &N, N.getRawScope());
@@ -3181,8 +3159,9 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 void Verifier::visitAllocaInst(AllocaInst &AI) {
   SmallPtrSet<Type*, 4> Visited;
   PointerType *PTy = AI.getType();
-  Assert(PTy->getAddressSpace() == 0,
-         "Allocation instruction pointer not in the generic address space!",
+  // TODO: Relax this restriction?
+  Assert(PTy->getAddressSpace() == DL.getAllocaAddrSpace(),
+         "Allocation instruction pointer not in the stack address space!",
          &AI);
   Assert(AI.getAllocatedType()->isSized(&Visited),
          "Cannot allocate unsized type", &AI);

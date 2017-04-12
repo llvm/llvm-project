@@ -26,6 +26,8 @@ void SetCurrentThread(u32 tid) { current_thread_tid = tid; }
 static THREADLOCAL AllocatorCache allocator_cache;
 AllocatorCache *GetAllocatorCache() { return &allocator_cache; }
 
+void ReplaceSystemMalloc() {}
+
 } // namespace __lsan
 
 #endif // SANITIZER_LINUX

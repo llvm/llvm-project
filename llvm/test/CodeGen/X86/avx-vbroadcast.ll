@@ -878,15 +878,15 @@ define float @broadcast_lifetime() nounwind {
   %3 = bitcast <4 x float>* %1 to i8*
   %4 = bitcast <4 x float>* %2 to i8*
 
-  call void @llvm.lifetime.start(i64 16, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %3)
   call void @gfunc(<4 x float>* %1)
   %5 = load <4 x float>, <4 x float>* %1, align 16
-  call void @llvm.lifetime.end(i64 16, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* %3)
 
-  call void @llvm.lifetime.start(i64 16, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %4)
   call void @gfunc(<4 x float>* %2)
   %6 = load <4 x float>, <4 x float>* %2, align 16
-  call void @llvm.lifetime.end(i64 16, i8* %4)
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* %4)
 
   %7 = extractelement <4 x float> %5, i32 1
   %8 = extractelement <4 x float> %6, i32 1
@@ -895,5 +895,5 @@ define float @broadcast_lifetime() nounwind {
 }
 
 declare void @gfunc(<4 x float>*)
-declare void @llvm.lifetime.start(i64, i8*)
-declare void @llvm.lifetime.end(i64, i8*)
+declare void @llvm.lifetime.start.p0i8(i64, i8*)
+declare void @llvm.lifetime.end.p0i8(i64, i8*)

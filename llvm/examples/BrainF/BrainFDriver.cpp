@@ -77,7 +77,7 @@ void addMainFunction(Module *mod) {
     getOrInsertFunction("main", IntegerType::getInt32Ty(mod->getContext()),
                         IntegerType::getInt32Ty(mod->getContext()),
                         PointerType::getUnqual(PointerType::getUnqual(
-                          IntegerType::getInt8Ty(mod->getContext()))), NULL));
+                          IntegerType::getInt8Ty(mod->getContext())))));
   {
     Function::arg_iterator args = main_func->arg_begin();
     Value *arg_0 = &*args++;

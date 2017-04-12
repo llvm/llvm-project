@@ -18,6 +18,8 @@ using namespace llvm::pdb;
 
 PDBSymbolTypeUDT::PDBSymbolTypeUDT(const IPDBSession &PDBSession,
                                    std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {}
+    : PDBSymbol(PDBSession, std::move(Symbol)) {
+  assert(RawSymbol->getSymTag() == PDB_SymType::UDT);
+}
 
 void PDBSymbolTypeUDT::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }

@@ -190,17 +190,17 @@ public:
 };
 
 template <typename PT1, typename PT2>
-static bool operator==(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
+bool operator==(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
   return lhs.getOpaqueValue() == rhs.getOpaqueValue();
 }
 
 template <typename PT1, typename PT2>
-static bool operator!=(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
+bool operator!=(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
   return lhs.getOpaqueValue() != rhs.getOpaqueValue();
 }
 
 template <typename PT1, typename PT2>
-static bool operator<(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
+bool operator<(PointerUnion<PT1, PT2> lhs, PointerUnion<PT1, PT2> rhs) {
   return lhs.getOpaqueValue() < rhs.getOpaqueValue();
 }
 

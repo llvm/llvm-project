@@ -34,8 +34,6 @@ add_llvm_library(LLVMTransformUtils
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
   Mem2Reg.cpp
-  MemorySSA.cpp
-  MemorySSAUpdater.cpp
   MetaRenamer.cpp
   ModuleUtils.cpp
   NameAnonGlobals.cpp

@@ -23,7 +23,7 @@ entry:
   ; Poison memory in prologue: F1F1F1F1F8F3F3F3
   ; CHECK: store i64 -868082052615769615, i64* %{{[0-9]+}}
 
-  call void @llvm.lifetime.start(i64 4, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
   ; CHECK: store i8 4, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.start
 
@@ -37,7 +37,7 @@ lpad:
   %1 = landingpad { i8*, i32 }
           cleanup
   call void @_ZN3ABCD2Ev(%struct.ABC* nonnull %x)
-  call void @llvm.lifetime.end(i64 4, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
   ; CHECK: store i8 -8, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.end
 
@@ -77,7 +77,7 @@ entry:
   ; Poison memory in prologue: F1F1F1F1F8F304F2
   ; CHECK: store i64 -935355671561244175, i64* %{{[0-9]+}}
 
-  call void @llvm.lifetime.start(i64 4, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
   ; CHECK: store i8 4, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.start
 
@@ -90,7 +90,7 @@ entry:
 ehcleanup:
   %2 = cleanuppad within none []
   call void @"\01??1ABC@@QEAA@XZ"(%struct.ABC* nonnull %x) [ "funclet"(token %2) ]
-  call void @llvm.lifetime.end(i64 4, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
   ; CHECK: store i8 -8, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.end
 
@@ -104,8 +104,8 @@ unreachable:
 
 
 declare i32 @__gxx_personality_v0(...)
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 declare i8* @__cxa_allocate_exception(i64) local_unnamed_addr
 declare void @_ZN3ABCD2Ev(%struct.ABC* %this) unnamed_addr

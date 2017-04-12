@@ -24,7 +24,7 @@
 extern "C" void *memset(void *ptr, int value, uptr num);
 
 namespace __lsan {
-#if defined(__i386__)
+#if defined(__i386__) || defined(__arm__)
 static const uptr kMaxAllowedMallocSize = 1UL << 30;
 #elif defined(__mips64) || defined(__aarch64__)
 static const uptr kMaxAllowedMallocSize = 4UL << 30;
@@ -115,6 +115,37 @@ uptr GetMallocUsableSize(const void *p) {
   ChunkMetadata *m = Metadata(p);
   if (!m) return 0;
   return m->requested_size;
+}
+
+void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
+  return Allocate(stack, size, alignment, kAlwaysClearMemory);
+}
+
+void *lsan_malloc(uptr size, const StackTrace &stack) {
+  return Allocate(stack, size, 1, kAlwaysClearMemory);
+}
+
+void lsan_free(void *p) {
+  Deallocate(p);
+}
+
+void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
+  return Reallocate(stack, p, size, 1);
+}
+
+void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
+  size *= nmemb;
+  return Allocate(stack, size, 1, true);
+}
+
+void *lsan_valloc(uptr size, const StackTrace &stack) {
+  if (size == 0)
+    size = GetPageSizeCached();
+  return Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory);
+}
+
+uptr lsan_mz_size(const void *p) {
+  return GetMallocUsableSize(p);
 }
 
 ///// Interface to the common LSan module. /////

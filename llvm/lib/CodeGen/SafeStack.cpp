@@ -451,7 +451,7 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, ReturnInst &RI,
   IRBuilder<> IRBFail(CheckTerm);
   // FIXME: respect -fsanitize-trap / -ftrap-function here?
   Constant *StackChkFail = F.getParent()->getOrInsertFunction(
-      "__stack_chk_fail", IRB.getVoidTy(), nullptr);
+      "__stack_chk_fail", IRB.getVoidTy());
   IRBFail.CreateCall(StackChkFail, {});
 }
 

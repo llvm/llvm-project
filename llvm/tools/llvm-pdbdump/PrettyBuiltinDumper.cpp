@@ -20,6 +20,10 @@ BuiltinDumper::BuiltinDumper(LinePrinter &P)
     : PDBSymDumper(false), Printer(P) {}
 
 void BuiltinDumper::start(const PDBSymbolTypeBuiltin &Symbol) {
+  if (Symbol.isConstType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
+  if (Symbol.isVolatileType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
   WithColor(Printer, PDB_ColorItem::Type).get() << getTypeName(Symbol);
 }
 

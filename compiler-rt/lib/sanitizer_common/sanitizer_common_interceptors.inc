@@ -4637,7 +4637,7 @@ INTERCEPTOR(SIZE_T, iconv, void *cd, char **inbuf, SIZE_T *inbytesleft,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   SIZE_T res = REAL(iconv)(cd, inbuf, inbytesleft, outbuf, outbytesleft);
-  if (res != (SIZE_T) - 1 && outbuf && *outbuf > outbuf_orig) {
+  if (outbuf && *outbuf > outbuf_orig) {
     SIZE_T sz = (char *)*outbuf - (char *)outbuf_orig;
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, outbuf_orig, sz);
   }

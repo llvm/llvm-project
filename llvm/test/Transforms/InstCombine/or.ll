@@ -215,9 +215,23 @@ define i1 @test19(i32 %A) {
 ;
   %B = icmp eq i32 %A, 50
   %C = icmp eq i32 %A, 51
-  ;; (A&-2) == 50
   %D = or i1 %B, %C
   ret i1 %D
+}
+
+; PR32524: https://bugs.llvm.org/show_bug.cgi?id=32524
+
+define i1 @or_icmps_eq_diff1(i32 %x) {
+; CHECK-LABEL: @or_icmps_eq_diff1(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 %x, -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 %x, 0
+; CHECK-NEXT:    [[LOGIC:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[LOGIC]]
+;
+  %cmp1 = icmp eq i32 %x, -1
+  %cmp2 = icmp eq i32 %x, 0
+  %logic = or i1 %cmp1, %cmp2
+  ret i1 %logic
 }
 
 define i32 @test20(i32 %x) {

@@ -33,4 +33,10 @@ int main()
     test_decay<int[3], int*>();
     test_decay<const int[3], const int*>();
     test_decay<void(), void (*)()>();
+#if TEST_STD_VER > 11
+	test_decay<int(int) const, int(int) const>();
+	test_decay<int(int) volatile, int(int) volatile>();
+	test_decay<int(int)  &, int(int)  &>();
+	test_decay<int(int) &&, int(int) &&>();
+#endif
 }

@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o %t1.bc %s
 ; RUN: llvm-as -o %t2.bc %p/Inputs/commons.ll
-; RUN: llvm-lto2 %t1.bc -r=%t1.bc,x,l %t2.bc -r=%t2.bc,x,pl -o %t.out -save-temps
+; RUN: llvm-lto2 run %t1.bc -r=%t1.bc,x,l %t2.bc -r=%t2.bc,x,pl -o %t.out -save-temps
 ; RUN: llvm-dis -o - %t.out.0.0.preopt.bc  | FileCheck %s
 
 ; A strong definition should override the common

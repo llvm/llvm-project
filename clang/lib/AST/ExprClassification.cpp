@@ -627,7 +627,8 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
   // Const stuff is obviously not modifiable.
   if (CT.isConstQualified())
     return Cl::CM_ConstQualified;
-  if (CT.getQualifiers().getAddressSpace() == LangAS::opencl_constant)
+  if (Ctx.getLangOpts().OpenCL &&
+      CT.getQualifiers().getAddressSpace() == LangAS::opencl_constant)
     return Cl::CM_ConstAddrSpace;
 
   // Arrays are not modifiable, only their elements are.

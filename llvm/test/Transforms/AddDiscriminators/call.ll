@@ -14,8 +14,8 @@ define void @_Z3foov() #0 !dbg !4 {
 ; CHECK:  call void @_Z3barv(), !dbg ![[CALL0:[0-9]+]]
   %a = alloca [100 x i8], align 16
   %b = bitcast [100 x i8]* %a to i8*
-  call void @llvm.lifetime.start(i64 100, i8* %b), !dbg !11
-  call void @llvm.lifetime.end(i64 100, i8* %b), !dbg !11
+  call void @llvm.lifetime.start.p0i8(i64 100, i8* %b), !dbg !11
+  call void @llvm.lifetime.end.p0i8(i64 100, i8* %b), !dbg !11
   call void @_Z3barv(), !dbg !11
 ; CHECK:  call void @_Z3barv(), !dbg ![[CALL1:[0-9]+]]
   call void @_Z3barv(), !dbg !12
@@ -24,8 +24,8 @@ define void @_Z3foov() #0 !dbg !4 {
 }
 
 declare void @_Z3barv() #1
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind argmemonly
 
 attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -679,11 +679,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (Current.is(tok::identifier) && Current.Next &&
       Current.Next->is(TT_DictLiteral))
     return State.Stack.back().Indent;
-  if (NextNonComment->isStringLiteral() && State.StartOfStringLiteral != 0)
-    return State.StartOfStringLiteral;
   if (NextNonComment->is(TT_ObjCStringLiteral) &&
       State.StartOfStringLiteral != 0)
     return State.StartOfStringLiteral - 1;
+  if (NextNonComment->isStringLiteral() && State.StartOfStringLiteral != 0)
+    return State.StartOfStringLiteral;
   if (NextNonComment->is(tok::lessless) &&
       State.Stack.back().FirstLessLess != 0)
     return State.Stack.back().FirstLessLess;
@@ -864,10 +864,10 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 
-  if (Current.isStringLiteral() && State.StartOfStringLiteral == 0)
-    State.StartOfStringLiteral = State.Column;
   if (Current.is(TT_ObjCStringLiteral) && State.StartOfStringLiteral == 0)
     State.StartOfStringLiteral = State.Column + 1;
+  else if (Current.isStringLiteral() && State.StartOfStringLiteral == 0)
+    State.StartOfStringLiteral = State.Column;
   else if (!Current.isOneOf(tok::comment, tok::identifier, tok::hash) &&
            !Current.isStringLiteral())
     State.StartOfStringLiteral = 0;
@@ -1175,18 +1175,12 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     StringRef Text = Current.TokenText;
     StringRef Prefix;
     StringRef Postfix;
-    bool IsNSStringLiteral = false;
     // FIXME: Handle whitespace between '_T', '(', '"..."', and ')'.
     // FIXME: Store Prefix and Suffix (or PrefixLength and SuffixLength to
     // reduce the overhead) for each FormatToken, which is a string, so that we
     // don't run multiple checks here on the hot path.
-    if (Text.startswith("\"") && Current.Previous &&
-        Current.Previous->is(tok::at)) {
-      IsNSStringLiteral = true;
-      Prefix = "@\"";
-    }
     if ((Text.endswith(Postfix = "\"") &&
-         (IsNSStringLiteral || Text.startswith(Prefix = "\"") ||
+         (Text.startswith(Prefix = "@\"") || Text.startswith(Prefix = "\"") ||
           Text.startswith(Prefix = "u\"") || Text.startswith(Prefix = "U\"") ||
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||

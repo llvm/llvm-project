@@ -221,19 +221,26 @@ private:
   /// the empty attributes list.
   AttributeListImpl *pImpl = nullptr;
 
-  /// \brief The attributes for the specified index are returned.
-  AttributeSetNode *getAttributes(unsigned Index) const;
-
+public:
   /// \brief Create an AttributeList with the specified parameters in it.
   static AttributeList get(LLVMContext &C,
                            ArrayRef<std::pair<unsigned, Attribute>> Attrs);
   static AttributeList
   get(LLVMContext &C, ArrayRef<std::pair<unsigned, AttributeSetNode *>> Attrs);
 
+  /// \brief Create an AttributeList from a vector of AttributeSetNodes. The
+  /// index of each set is implied by its position in the array \p Attrs:
+  ///   0      : Return attributes
+  /// 1 to n-1 : Argument attributes
+  ///   n      : Function attributes
+  /// Any element that has no entries should be left null.
+  static AttributeList get(LLVMContext &C, ArrayRef<AttributeSetNode *> Attrs);
+
   static AttributeList
   getImpl(LLVMContext &C,
           ArrayRef<std::pair<unsigned, AttributeSetNode *>> Attrs);
 
+private:
   explicit AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
 
 public:
@@ -272,6 +279,12 @@ public:
   AttributeList addAttributes(LLVMContext &C, unsigned Index,
                               AttributeList Attrs) const;
 
+  AttributeList addAttributes(LLVMContext &C, unsigned Index,
+                              AttributeSetNode *AS) const;
+
+  AttributeList addAttributes(LLVMContext &C, unsigned Index,
+                              const AttrBuilder &B) const;
+
   /// \brief Remove the specified attribute at the specified index from this
   /// attribute list. Because attribute lists are immutable, this returns the
   /// new list.
@@ -295,6 +308,11 @@ public:
   /// new list.
   AttributeList removeAttributes(LLVMContext &C, unsigned Index,
                                  const AttrBuilder &Attrs) const;
+
+  /// \brief Remove all attributes at the specified index from this
+  /// attribute list. Because attribute lists are immutable, this returns the
+  /// new list.
+  AttributeList removeAttributes(LLVMContext &C, unsigned Index) const;
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// index. Because attribute sets are immutable, this returns a new set.
@@ -321,13 +339,16 @@ public:
   LLVMContext &getContext() const;
 
   /// \brief The attributes for the specified index are returned.
-  AttributeList getParamAttributes(unsigned Index) const;
+  AttributeSetNode *getAttributes(unsigned Index) const;
+
+  /// \brief The attributes for the specified index are returned.
+  AttributeSetNode *getParamAttributes(unsigned Index) const;
 
   /// \brief The attributes for the ret value are returned.
-  AttributeList getRetAttributes() const;
+  AttributeSetNode *getRetAttributes() const;
 
   /// \brief The function attributes are returned.
-  AttributeList getFnAttributes() const;
+  AttributeSetNode *getFnAttributes() const;
 
   /// \brief Return true if the attribute exists at the given index.
   bool hasAttribute(unsigned Index, Attribute::AttrKind Kind) const;
@@ -462,6 +483,7 @@ public:
     addAttribute(A);
   }
   AttrBuilder(AttributeList AS, unsigned Idx);
+  AttrBuilder(AttributeSetNode *AS);
 
   void clear();
 
@@ -478,7 +500,7 @@ public:
   AttrBuilder &removeAttribute(Attribute::AttrKind Val);
 
   /// \brief Remove the attributes from the builder.
-  AttrBuilder &removeAttributes(AttributeList A, uint64_t Index);
+  AttrBuilder &removeAttributes(AttributeList A, uint64_t WithoutIndex);
 
   /// \brief Remove the target-dependent attribute to the builder.
   AttrBuilder &removeAttribute(StringRef A);

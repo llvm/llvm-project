@@ -68,10 +68,8 @@ private:
 
 PDBSymbolTypeFunctionSig::PDBSymbolTypeFunctionSig(
     const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {}
-
-std::unique_ptr<PDBSymbol> PDBSymbolTypeFunctionSig::getReturnType() const {
-  return Session.getSymbolById(getTypeId());
+    : PDBSymbol(PDBSession, std::move(Symbol)) {
+  assert(RawSymbol->getSymTag() == PDB_SymType::FunctionSig);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -79,13 +77,10 @@ PDBSymbolTypeFunctionSig::getArguments() const {
   return llvm::make_unique<FunctionArgEnumerator>(Session, *this);
 }
 
-std::unique_ptr<PDBSymbol> PDBSymbolTypeFunctionSig::getClassParent() const {
-  uint32_t ClassId = getClassParentId();
-  if (ClassId == 0)
-    return nullptr;
-  return Session.getSymbolById(ClassId);
-}
-
 void PDBSymbolTypeFunctionSig::dump(PDBSymDumper &Dumper) const {
   Dumper.dump(*this);
+}
+
+void PDBSymbolTypeFunctionSig::dumpRight(PDBSymDumper &Dumper) const {
+  Dumper.dumpRight(*this);
 }

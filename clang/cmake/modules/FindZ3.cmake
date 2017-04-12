@@ -1,5 +1,5 @@
 find_path(Z3_INCLUDE_DIR NAMES z3.h
-   PATH_SUFFIXES libz3
+   PATH_SUFFIXES libz3 z3
    )
 
 find_library(Z3_LIBRARIES NAMES z3 libz3

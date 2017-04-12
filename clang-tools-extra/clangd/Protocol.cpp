@@ -262,6 +262,33 @@ DidOpenTextDocumentParams::parse(llvm::yaml::MappingNode *Params) {
   return Result;
 }
 
+llvm::Optional<DidCloseTextDocumentParams>
+DidCloseTextDocumentParams::parse(llvm::yaml::MappingNode *Params) {
+  DidCloseTextDocumentParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value = NextKeyValue.getValue();
+
+    if (KeyValue == "textDocument") {
+      auto *Map = dyn_cast<llvm::yaml::MappingNode>(Value);
+      if (!Map)
+        return llvm::None;
+      auto Parsed = TextDocumentIdentifier::parse(Map);
+      if (!Parsed)
+        return llvm::None;
+      Result.textDocument = std::move(*Parsed);
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<DidChangeTextDocumentParams>
 DidChangeTextDocumentParams::parse(llvm::yaml::MappingNode *Params) {
   DidChangeTextDocumentParams Result;
@@ -645,7 +672,7 @@ std::string CompletionItem::unparse(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
   Os << R"("label":")" << llvm::yaml::escape(CI.label) << R"(",)";
   if (CI.kind != CompletionItemKind::Missing)
-    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(",)";
+    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(,)";
   if (!CI.detail.empty())
     Os << R"("detail":")" << llvm::yaml::escape(CI.detail) << R"(",)";
   if (!CI.documentation.empty())

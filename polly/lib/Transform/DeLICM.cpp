@@ -1465,8 +1465,7 @@ private:
       ProcessAllIncoming(TargetStmt);
 
     auto AnyMapped = false;
-    auto &DL =
-        S->getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+    auto &DL = S->getRegion().getEntry()->getModule()->getDataLayout();
     auto StoreSize =
         DL.getTypeAllocSize(TargetStoreMA->getAccessValue()->getType());
 

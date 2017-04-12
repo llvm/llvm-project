@@ -14,16 +14,16 @@ entry:
   %x0a = bitcast i64* %x0 to i8*
   %x2a = bitcast i64* %x2 to i8*
 
-  call void @llvm.lifetime.start(i64 4, i8* %x0a)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x0a)
   call void @capture64(i64* %x0)
-  call void @llvm.lifetime.end(i64 4, i8* %x0a)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %x0a)
 
-  call void @llvm.lifetime.start(i64 4, i8* %x1)
-  call void @llvm.lifetime.start(i64 4, i8* %x2a)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x1)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x2a)
   call void @capture8(i8* %x1)
   call void @capture64(i64* %x2)
-  call void @llvm.lifetime.end(i64 4, i8* %x1)
-  call void @llvm.lifetime.end(i64 4, i8* %x2a)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %x1)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %x2a)
 
 ; Test that i64 allocas share space.
 ; CHECK: getelementptr i8, i8* %unsafe_stack_ptr, i32 -8
@@ -33,7 +33,7 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @capture8(i8*)
 declare void @capture64(i64*)

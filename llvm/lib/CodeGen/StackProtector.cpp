@@ -484,13 +484,13 @@ BasicBlock *StackProtector::CreateFailBB() {
     Constant *StackChkFail =
         M->getOrInsertFunction("__stack_smash_handler",
                                Type::getVoidTy(Context),
-                               Type::getInt8PtrTy(Context), nullptr);
+                               Type::getInt8PtrTy(Context));
 
     B.CreateCall(StackChkFail, B.CreateGlobalStringPtr(F->getName(), "SSH"));
   } else {
     Constant *StackChkFail =
-        M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context),
-                               nullptr);
+        M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));
+
     B.CreateCall(StackChkFail, {});
   }
   B.CreateUnreachable();

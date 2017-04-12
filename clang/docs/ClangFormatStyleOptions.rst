@@ -641,6 +641,13 @@ the configuration (without a prefix: ``Auto``).
 **BreakAfterJavaFieldAnnotations** (``bool``)
   Break after each annotation on a field in Java files.
 
+  .. code-block:: java
+
+     true:                                  false:
+     @Partial                       vs.     @Partial @Mock DataLoad loader;
+     @Mock
+     DataLoad loader;
+
 **BreakBeforeBinaryOperators** (``BinaryOperatorStyle``)
   The way to wrap binary operators.
 
@@ -928,6 +935,14 @@ the configuration (without a prefix: ``Auto``).
 **ContinuationIndentWidth** (``unsigned``)
   Indent width for line continuations.
 
+  .. code-block:: c++
+
+     ContinuationIndentWidth: 2
+
+     int i =         //  VeryVeryVeryVeryVeryLongComment
+       longFunction( // Again a long comment
+         arg);
+
 **Cpp11BracedListStyle** (``bool``)
   If ``true``, format braced lists as best suited for C++11 braced
   lists.
@@ -943,10 +958,20 @@ the configuration (without a prefix: ``Auto``).
   the parentheses of a function call with that name. If there is no name,
   a zero-length name is assumed.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
+     vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
+     f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
+     new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+
 **DerivePointerAlignment** (``bool``)
   If ``true``, analyze the formatted file for the most common
-  alignment of ``&`` and ``*``. ``PointerAlignment`` is then used only as
-  fallback.
+  alignment of ``&`` and ``*``.
+  Pointer and reference alignment styles are going to be updated according
+  to the preferences found in the file.
+  ``PointerAlignment`` is then used only as fallback.
 
 **DisableFormat** (``bool``)
   Disables formatting completely.
@@ -1041,12 +1066,24 @@ the configuration (without a prefix: ``Auto``).
   When ``false``, use the same indentation level as for the switch statement.
   Switch statement body is always indented one level more than case labels.
 
+  .. code-block:: c++
+
+     false:                                 true:
+     switch (fool) {                vs.     switch (fool) {
+     case 1:                                  case 1:
+       bar();                                   bar();
+       break;                                   break;
+     default:                                 default:
+       plop();                                  plop();
+     }                                      }
+
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
 
   .. code-block:: c++
 
      IndentWidth: 3
+
      void f() {
         someFunction();
         if (true, false) {
@@ -1057,6 +1094,16 @@ the configuration (without a prefix: ``Auto``).
 **IndentWrappedFunctionNames** (``bool``)
   Indent if a function definition or declaration is wrapped after the
   type.
+
+  .. code-block:: c++
+
+     true:
+     LoooooooooooooooooooooooooooooooooooooooongReturnType
+         LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+
+     false:
+     LoooooooooooooooooooooooooooooooooooooooongReturnType
+     LoooooooooooooooooooooooooooooooongFunctionDeclaration();
 
 **JavaScriptQuotes** (``JavaScriptQuoteStyle``)
   The JavaScriptQuoteStyle to use for JavaScript strings.
@@ -1105,7 +1152,15 @@ the configuration (without a prefix: ``Auto``).
      import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
-  If true, empty lines at the start of blocks are kept.
+  If true, the empty line at the start of blocks is kept.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     if (foo) {                     vs.     if (foo) {
+                                              bar();
+       bar();                               }
+     }
 
 **Language** (``LanguageKind``)
   Language, this format style is targeted at.
@@ -1227,6 +1282,14 @@ the configuration (without a prefix: ``Auto``).
 
 **ObjCBlockIndentWidth** (``unsigned``)
   The number of characters to use for indentation of ObjC blocks.
+
+  .. code-block:: objc
+
+     ObjCBlockIndentWidth: 4
+
+     [operation setCompletionBlock:^{
+         [self onOperationDone];
+     }];
 
 **ObjCSpaceAfterProperty** (``bool``)
   Add a space after ``@property`` in Objective-C, i.e. use

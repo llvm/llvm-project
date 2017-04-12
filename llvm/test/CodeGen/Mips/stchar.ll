@@ -34,7 +34,7 @@ entry:
 ; 16_h: lh      ${{[0-9]+}}, [[offset2]](${{[0-9]+}})
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
 

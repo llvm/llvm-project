@@ -140,6 +140,14 @@ public:
     return nullptr;
   }
 
+  /// getBlockAddress - If this is a constant with a BlockAddress value, return
+  /// it, otherwise return null.
+  BlockAddress *getBlockAddress() const {
+    if (isConstant())
+      return dyn_cast<BlockAddress>(getConstant());
+    return nullptr;
+  }
+
   void markForcedConstant(Constant *V) {
     assert(isUnknown() && "Can't force a defined value!");
     Val.setInt(forcedconstant);
@@ -600,10 +608,32 @@ void SCCPSolver::getFeasibleSuccessors(TerminatorInst &TI,
     return;
   }
 
-  // TODO: This could be improved if the operand is a [cast of a] BlockAddress.
-  if (isa<IndirectBrInst>(&TI)) {
-    // Just mark all destinations executable!
-    Succs.assign(TI.getNumSuccessors(), true);
+  // In case of indirect branch and its address is a blockaddress, we mark
+  // the target as executable.
+  if (auto *IBR = dyn_cast<IndirectBrInst>(&TI)) {
+    // Casts are folded by visitCastInst.
+    LatticeVal IBRValue = getValueState(IBR->getAddress());
+    BlockAddress *Addr = IBRValue.getBlockAddress();
+    if (!Addr) {   // Overdefined or unknown condition?
+      // All destinations are executable!
+      if (!IBRValue.isUnknown())
+        Succs.assign(TI.getNumSuccessors(), true);
+      return;
+    }
+
+    BasicBlock* T = Addr->getBasicBlock();
+    assert(Addr->getFunction() == T->getParent() &&
+           "Block address of a different function ?");
+    for (unsigned i = 0; i < IBR->getNumSuccessors(); ++i) {
+      // This is the target.
+      if (IBR->getDestination(i) == T) {
+        Succs[i] = true;
+        return;
+      }
+    }
+
+    // If we didn't find our destination in the IBR successor list, then we
+    // have undefined behavior. Its ok to assume no successor is executable.
     return;
   }
 
@@ -656,10 +686,18 @@ bool SCCPSolver::isEdgeFeasible(BasicBlock *From, BasicBlock *To) {
     return SI->findCaseValue(CI).getCaseSuccessor() == To;
   }
 
-  // Just mark all destinations executable!
-  // TODO: This could be improved if the operand is a [cast of a] BlockAddress.
-  if (isa<IndirectBrInst>(TI))
-    return true;
+  // In case of indirect branch and its address is a blockaddress, we mark
+  // the target as executable.
+  if (auto *IBR = dyn_cast<IndirectBrInst>(TI)) {
+    LatticeVal IBRValue = getValueState(IBR->getAddress());
+    BlockAddress *Addr = IBRValue.getBlockAddress();
+
+    if (!Addr)
+      return !IBRValue.isUnknown();
+
+    // At this point, the indirectbr is branching on a blockaddress.
+    return Addr->getBasicBlock() == To;
+  }
 
   DEBUG(dbgs() << "Unknown terminator instruction: " << *TI << '\n');
   llvm_unreachable("SCCP: Don't know how to handle this terminator!");
@@ -1481,6 +1519,31 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // branch to false.
       markForcedConstant(BI->getCondition(),
                          ConstantInt::getFalse(TI->getContext()));
+      return true;
+    }
+
+   if (auto *IBR = dyn_cast<IndirectBrInst>(TI)) {
+      // Indirect branch with no successor ?. Its ok to assume it branches
+      // to no target.
+      if (IBR->getNumSuccessors() < 1)
+        continue;
+
+      if (!getValueState(IBR->getAddress()).isUnknown())
+        continue;
+
+      // If the input to SCCP is actually branch on undef, fix the undef to
+      // the first successor of the indirect branch.
+      if (isa<UndefValue>(IBR->getAddress())) {
+        IBR->setAddress(BlockAddress::get(IBR->getSuccessor(0)));
+        markEdgeExecutable(&BB, IBR->getSuccessor(0));
+        return true;
+      }
+
+      // Otherwise, it is a branch on a symbolic value which is currently
+      // considered to be undef.  Handle this by forcing the input value to the
+      // branch to the first successor.
+      markForcedConstant(IBR->getAddress(),
+                         BlockAddress::get(IBR->getSuccessor(0)));
       return true;
     }
 

@@ -4,15 +4,15 @@
 define void @nowarn() local_unnamed_addr #0 !dbg !6 {
   %1 = alloca [504 x i8], align 1
   %2 = getelementptr inbounds [504 x i8], [504 x i8]* %1, i64 0, i64 0, !dbg !15
-  call void @llvm.lifetime.start(i64 504, i8* nonnull %2) #4, !dbg !15
+  call void @llvm.lifetime.start.p0i8(i64 504, i8* nonnull %2) #4, !dbg !15
   tail call void @llvm.dbg.declare(metadata [504 x i8]* %1, metadata !10, metadata !16), !dbg !17
   call void @doit(i8* nonnull %2) #4, !dbg !18
-  call void @llvm.lifetime.end(i64 504, i8* nonnull %2) #4, !dbg !19
+  call void @llvm.lifetime.end.p0i8(i64 504, i8* nonnull %2) #4, !dbg !19
   ret void, !dbg !19
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -20,17 +20,17 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare void @doit(i8*) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 ; CHECK: error: warn_stack.c
 ; CHECK: BPF stack limit
 define void @warn() local_unnamed_addr #0 !dbg !20 {
   %1 = alloca [512 x i8], align 1
   %2 = getelementptr inbounds [512 x i8], [512 x i8]* %1, i64 0, i64 0, !dbg !26
-  call void @llvm.lifetime.start(i64 512, i8* nonnull %2) #4, !dbg !26
+  call void @llvm.lifetime.start.p0i8(i64 512, i8* nonnull %2) #4, !dbg !26
   tail call void @llvm.dbg.declare(metadata [512 x i8]* %1, metadata !22, metadata !16), !dbg !27
   call void @doit(i8* nonnull %2) #4, !dbg !28
-  call void @llvm.lifetime.end(i64 512, i8* nonnull %2) #4, !dbg !29
+  call void @llvm.lifetime.end.p0i8(i64 512, i8* nonnull %2) #4, !dbg !29
   ret void, !dbg !29
 }
 

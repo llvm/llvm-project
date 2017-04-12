@@ -1392,7 +1392,6 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;
-  AttributeList ReturnAttrs;
   if (CS.isCall()) {
     CallInst *ToReplace = cast<CallInst>(CS.getInstruction());
     CallInst *Call = Builder.CreateGCStatepointCall(
@@ -1407,8 +1406,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     AttributeList NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
     // In case if we can handle this set of attributes - set up function attrs
     // directly on statepoint and return attrs later for gc_result intrinsic.
-    Call->setAttributes(NewAttrs.getFnAttributes());
-    ReturnAttrs = NewAttrs.getRetAttributes();
+    Call->setAttributes(AttributeList::get(Call->getContext(),
+                                           AttributeList::FunctionIndex,
+                                           NewAttrs.getFnAttributes()));
 
     Token = Call;
 
@@ -1435,8 +1435,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     AttributeList NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
     // In case if we can handle this set of attributes - set up function attrs
     // directly on statepoint and return attrs later for gc_result intrinsic.
-    Invoke->setAttributes(NewAttrs.getFnAttributes());
-    ReturnAttrs = NewAttrs.getRetAttributes();
+    Invoke->setAttributes(AttributeList::get(Invoke->getContext(),
+                                             AttributeList::FunctionIndex,
+                                             NewAttrs.getFnAttributes()));
 
     Token = Invoke;
 
@@ -1482,7 +1483,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
       StringRef Name =
           CS.getInstruction()->hasName() ? CS.getInstruction()->getName() : "";
       CallInst *GCResult = Builder.CreateGCResult(Token, CS.getType(), Name);
-      GCResult->setAttributes(CS.getAttributes().getRetAttributes());
+      GCResult->setAttributes(
+          AttributeList::get(GCResult->getContext(), AttributeList::ReturnIndex,
+                             CS.getAttributes().getRetAttributes()));
 
       // We cannot RAUW or delete CS.getInstruction() because it could be in the
       // live set of some other safepoint, in which case that safepoint's
@@ -1619,8 +1622,10 @@ static void relocationViaAlloca(
 
   // Emit alloca for "LiveValue" and record it in "allocaMap" and
   // "PromotableAllocas"
+  const DataLayout &DL = F.getParent()->getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
-    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(), "",
+    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(),
+                                        DL.getAllocaAddrSpace(), "",
                                         F.getEntryBlock().getFirstNonPHI());
     AllocaMap[LiveValue] = Alloca;
     PromotableAllocas.push_back(Alloca);
