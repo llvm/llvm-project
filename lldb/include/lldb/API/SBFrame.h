@@ -78,6 +78,10 @@ public:
   const char *GetDisplayFunctionName();
 
   const char *GetFunctionName() const;
+  
+  // Return the frame function's language.  If there isn't a function, then
+  // guess the language type from the mangled name.
+  lldb::LanguageType GuessLanguage() const;
 
   /// Return true if this frame represents an inlined function.
   ///

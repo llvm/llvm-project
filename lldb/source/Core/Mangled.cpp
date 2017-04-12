@@ -507,6 +507,14 @@ lldb::LanguageType Mangled::GuessLanguage() const {
       else if (SwiftLanguageRuntime::IsSwiftMangledName(mangled_name))
         return lldb::eLanguageTypeSwift;
     }
+  } else {
+    // ObjC names aren't really mangled, so they won't necessarily be in the 
+    // mangled name slot.
+    ConstString demangled_name = GetDemangledName(lldb::eLanguageTypeUnknown);
+    if (demangled_name 
+        && ObjCLanguage::IsPossibleObjCMethodName(demangled_name.GetCString()))
+      return lldb::eLanguageTypeObjC;
+  
   }
   return lldb::eLanguageTypeUnknown;
 }
