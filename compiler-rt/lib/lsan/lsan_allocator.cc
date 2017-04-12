@@ -117,6 +117,37 @@ uptr GetMallocUsableSize(const void *p) {
   return m->requested_size;
 }
 
+void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
+  return Allocate(stack, size, alignment, kAlwaysClearMemory);
+}
+
+void *lsan_malloc(uptr size, const StackTrace &stack) {
+  return Allocate(stack, size, 1, kAlwaysClearMemory);
+}
+
+void lsan_free(void *p) {
+  Deallocate(p);
+}
+
+void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
+  return Reallocate(stack, p, size, 1);
+}
+
+void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
+  size *= nmemb;
+  return Allocate(stack, size, 1, true);
+}
+
+void *lsan_valloc(uptr size, const StackTrace &stack) {
+  if (size == 0)
+    size = GetPageSizeCached();
+  return Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory);
+}
+
+uptr lsan_mz_size(const void *p) {
+  return GetMallocUsableSize(p);
+}
+
 ///// Interface to the common LSan module. /////
 
 void LockAllocator() {

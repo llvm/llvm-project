@@ -102,7 +102,7 @@ namespace test0 {
     friend void ns::f(int a);
   };
 }
-// CHECK: <Declaration>friend void f(int a)</Declaration>
+// CHECK: <Declaration>friend void ns::f(int a)</Declaration>
 
 namespace test1 {
   template <class T> struct Outer {
@@ -115,7 +115,7 @@ namespace test1 {
     };
   };
 }
-// CHECK: <Declaration>friend void foo(T)</Declaration>
+// CHECK: <Declaration>friend void Outer&lt;T&gt;::foo(T)</Declaration>
 
 namespace test2 {
   namespace foo {
@@ -129,7 +129,7 @@ namespace test2 {
     friend void ::test2::foo::Func(int x);
   };
 }
-// CHECK: <Declaration>friend void Func(int x)</Declaration>
+// CHECK: <Declaration>friend void ::test2::foo::Func(int x)</Declaration>
 
 namespace test3 {
   template<class T> class vector {
@@ -149,7 +149,7 @@ namespace test3 {
   };
 }
 // CHECK: <Declaration>void f(const T &amp;t = T())</Declaration>
-// CHECK: <Declaration>friend void f(const test3::A &amp;)</Declaration>
+// CHECK: <Declaration>friend void vector&lt;A&gt;::f(const test3::A &amp;)</Declaration>
 
 class MyClass
 {

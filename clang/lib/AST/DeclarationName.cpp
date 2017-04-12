@@ -660,7 +660,9 @@ void DeclarationNameInfo::printName(raw_ostream &OS) const {
       LangOptions LO;
       LO.CPlusPlus = true;
       LO.Bool = true;
-      OS << TInfo->getType().getAsString(PrintingPolicy(LO));
+      PrintingPolicy PP(LO);
+      PP.SuppressScope = true;
+      OS << TInfo->getType().getAsString(PP);
     } else
       OS << Name;
     return;

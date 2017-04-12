@@ -73,8 +73,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), ODRHash(0), NumBases(0), NumVBases(0),
-      Bases(), VBases(), Definition(D), FirstFriend() {}
+      IsParsingBaseSpecifiers(false), HasODRHash(false), ODRHash(0),
+      NumBases(0), NumVBases(0), Bases(), VBases(), Definition(D),
+      FirstFriend() {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -381,15 +382,22 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   data().IsParsingBaseSpecifiers = false;
 }
 
-void CXXRecordDecl::computeODRHash() {
-  if (!DefinitionData)
-    return;
+unsigned CXXRecordDecl::getODRHash() const {
+  assert(hasDefinition() && "ODRHash only for records with definitions");
 
+  // Previously calculated hash is stored in DefinitionData.
+  if (DefinitionData->HasODRHash)
+    return DefinitionData->ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
   ODRHash Hash;
-  Hash.AddCXXRecordDecl(this);
-
+  Hash.AddCXXRecordDecl(getDefinition());
+  DefinitionData->HasODRHash = true;
   DefinitionData->ODRHash = Hash.CalculateHash();
+
+  return DefinitionData->ODRHash;
 }
+
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:

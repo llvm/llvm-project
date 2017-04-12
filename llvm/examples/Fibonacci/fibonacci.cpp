@@ -54,8 +54,7 @@ static Function *CreateFibFunction(Module *M, LLVMContext &Context) {
   // to return an int and take an int parameter.
   Function *FibF =
     cast<Function>(M->getOrInsertFunction("fib", Type::getInt32Ty(Context),
-                                          Type::getInt32Ty(Context),
-                                          nullptr));
+                                          Type::getInt32Ty(Context)));
 
   // Add a basic block to the function.
   BasicBlock *BB = BasicBlock::Create(Context, "EntryBlock", FibF);

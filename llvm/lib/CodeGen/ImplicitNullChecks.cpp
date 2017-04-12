@@ -22,7 +22,7 @@
 // With the help of a runtime that understands the .fault_maps section,
 // faulting_load_op branches to throw_npe if executing movl (%r10), %esi incurs
 // a page fault.
-// Store is also supported.
+// Store and LoadStore are also supported.
 //
 //===----------------------------------------------------------------------===//
 

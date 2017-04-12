@@ -292,8 +292,8 @@ def : InstRW<[FalkorWr_1VXVY_5cyc],   (instrs FRECPS32, FRSQRTS32, FRECPSv2f32, 
 
 def : InstRW<[FalkorWr_1VXVY_6cyc],   (instrs FRECPS64, FRSQRTS64)>;
 
+def : InstRW<[FalkorWr_1GTOV_1VXVY_2cyc],(instregex "^INSv(i32|i64)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_2GTOV_1cyc],   (instregex "^DUP(v4i32|v2i64)(gpr|lane)$")>;
-def : InstRW<[FalkorWr_2GTOV_1cyc],   (instregex "^INSv(i32|i64)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs EXTv16i8)>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instregex "(MOVI|MVNI)(v2d_ns|v16b_ns|v4i32|v8i16|v4s_msl)$")>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs NOTv16i8)>;

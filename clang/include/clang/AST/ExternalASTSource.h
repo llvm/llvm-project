@@ -172,7 +172,7 @@ public:
 
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
-  virtual ExtKind hasExternalDefinitions(unsigned ID);
+  virtual ExtKind hasExternalDefinitions(const Decl *D);
 
   /// \brief Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.

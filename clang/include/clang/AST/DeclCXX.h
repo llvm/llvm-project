@@ -464,6 +464,8 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief Whether we are currently parsing base specifiers.
     unsigned IsParsingBaseSpecifiers : 1;
 
+    unsigned HasODRHash : 1;
+
     /// \brief A hash of parts of the class to help in ODR checking.
     unsigned ODRHash;
 
@@ -712,8 +714,7 @@ public:
     return data().IsParsingBaseSpecifiers;
   }
 
-  void computeODRHash();
-  unsigned getODRHash() const { return data().ODRHash; }
+  unsigned getODRHash() const;
 
   /// \brief Sets the base classes of this struct or class.
   void setBases(CXXBaseSpecifier const * const *Bases, unsigned NumBases);

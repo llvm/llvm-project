@@ -21,11 +21,13 @@
 namespace llvm {
 
 class SITargetLowering final : public AMDGPUTargetLowering {
-  SDValue LowerParameterPtr(SelectionDAG &DAG, const SDLoc &SL, SDValue Chain,
-                            unsigned Offset) const;
-  SDValue LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL,
-                         SDValue Chain, unsigned Offset, bool Signed,
-                         const ISD::InputArg *Arg = nullptr) const;
+  SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
+                                   SDValue Chain, uint64_t Offset) const;
+  SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
+                                   const SDLoc &SL, SDValue Chain,
+                                   uint64_t Offset, bool Signed,
+                                   const ISD::InputArg *Arg = nullptr) const;
+
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
@@ -54,6 +56,10 @@ class SITargetLowering final : public AMDGPUTargetLowering {
                             SDValue Op,
                             const SDLoc &DL,
                             EVT VT) const;
+
+  SDValue convertArgType(
+    SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL, SDValue Val,
+    bool Signed, const ISD::InputArg *Arg = nullptr) const;
 
   /// \brief Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;

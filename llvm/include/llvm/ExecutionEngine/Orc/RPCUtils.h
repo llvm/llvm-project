@@ -289,8 +289,8 @@ static Error respond(ChannelT &C, const FunctionIdT &ResponseId,
 // the handler ran.
 template <typename WireRetT, typename ChannelT, typename FunctionIdT,
           typename SequenceNumberT>
-static Error respond(ChannelT &C, const FunctionIdT &ResponseId,
-                     SequenceNumberT SeqNo, Error Err) {
+Error respond(ChannelT &C, const FunctionIdT &ResponseId, SequenceNumberT SeqNo,
+              Error Err) {
   if (Err)
     return Err;
   if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))

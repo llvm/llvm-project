@@ -335,7 +335,7 @@ MCObjectWriter *AVRAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 
 void AVRAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                unsigned DataSize, uint64_t Value,
-                               bool IsPCRel) const {
+                               bool IsPCRel, MCContext &Ctx) const {
   if (Value == 0)
     return; // Doesn't change encoding.
 

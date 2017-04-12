@@ -3,7 +3,7 @@
 ; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=REGULAR
 ; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc -o -  --exported-symbol=foo | llvm-dis -o - | FileCheck %s --check-prefix=INTERNALIZE
 
-; RUN: llvm-lto2 %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc -o %t.o -save-temps \
 ; RUN:     -r=%t1.bc,_foo,pxl \
 ; RUN:     -r=%t1.bc,_bar,pl \
 ; RUN:     -r=%t1.bc,_linkonce_func,pl

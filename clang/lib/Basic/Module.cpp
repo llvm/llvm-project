@@ -33,7 +33,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
       IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
-      NoUndeclaredIncludes(false), WithCodegen(false), NameVisibility(Hidden) {
+      NoUndeclaredIncludes(false), NameVisibility(Hidden) {
   if (Parent) {
     if (!Parent->isAvailable())
       IsAvailable = false;

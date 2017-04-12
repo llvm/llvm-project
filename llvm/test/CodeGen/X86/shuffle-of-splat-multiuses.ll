@@ -42,3 +42,59 @@ define <8 x float> @foo8(<8 x float> %v, <8 x float> *%p) nounwind {
   store <8 x float> %res, <8 x float>* %p
   ret <8 x float> %res1
 }
+
+define <4 x i32> @undef_splatmask(<4 x i32> %v) nounwind {
+; AVX2-LABEL: undef_splatmask:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,3]
+; AVX2-NEXT:    retq
+  %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+  ret <4 x i32> %res1
+}
+
+define <4 x i32> @undef_splatmask2(<4 x i32> %v) nounwind {
+; AVX2-LABEL: undef_splatmask2:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX2-NEXT:    retq
+  %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 undef>
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+  ret <4 x i32> %res1
+}
+
+define <4 x i32> @undef_splatmask3(<4 x i32> %v) nounwind {
+; AVX2-LABEL: undef_splatmask3:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,3]
+; AVX2-NEXT:    retq
+  %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 3>
+  ret <4 x i32> %res1
+}
+
+define <4 x i32> @undef_splatmask4(<4 x i32> %v, <4 x i32>* %p) nounwind {
+; AVX2-LABEL: undef_splatmask4:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX2-NEXT:    retq
+  %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+  store <4 x i32> %res, <4 x i32>* %p
+  ret <4 x i32> %res1
+}
+
+define <4 x i32> @undef_splatmask5(<4 x i32> %v, <4 x i32>* %p) nounwind {
+; AVX2-LABEL: undef_splatmask5:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX2-NEXT:    retq
+  %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 undef>
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 3>
+  store <4 x i32> %res, <4 x i32>* %p
+  ret <4 x i32> %res1
+}

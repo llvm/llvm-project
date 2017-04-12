@@ -11,6 +11,5 @@ add_llvm_unittest(UtilsTests
   FunctionComparator.cpp
   IntegerDivision.cpp
   Local.cpp
-  MemorySSA.cpp
   ValueMapperTest.cpp
   )

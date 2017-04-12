@@ -50,6 +50,7 @@ FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
+FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM = nullptr);
 
 ModulePass *createAMDGPUAnnotateKernelFeaturesPass(const TargetMachine *TM = nullptr);
@@ -148,6 +149,9 @@ extern char &SIDebuggerInsertNopsID;
 
 void initializeSIInsertWaitsPass(PassRegistry&);
 extern char &SIInsertWaitsID;
+
+void initializeSIInsertWaitcntsPass(PassRegistry&);
+extern char &SIInsertWaitcntsID;
 
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
 extern char &AMDGPUUnifyDivergentExitNodesID;

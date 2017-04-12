@@ -522,5 +522,17 @@ TEST_F(FormatTestJava, AlignsBlockComments) {
                    "  void f() {}"));
 }
 
+TEST_F(FormatTestJava, RetainsLogicalShifts) {
+    verifyFormat("void f() {\n"
+                 "  int a = 1;\n"
+                 "  a >>>= 1;\n"
+                 "}");
+    verifyFormat("void f() {\n"
+                 "  int a = 1;\n"
+                 "  a = a >>> 1;\n"
+                 "}");
+}
+
+
 } // end namespace tooling
 } // end namespace clang

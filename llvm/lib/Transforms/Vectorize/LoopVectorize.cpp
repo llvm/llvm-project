@@ -4069,7 +4069,12 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   VecPhi->addIncoming(Incoming, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
 
   // Extract the last vector element in the middle block. This will be the
-  // initial value for the recurrence when jumping to the scalar loop.
+  // initial value for the recurrence when jumping to the scalar loop. 
+  // FIXME: Note that the last vector element need not always be the correct one:
+  // consider a loop  where we have phi uses outside the loop - we need the
+  // second last iteration value and not the last one). For now, we avoid
+  // considering such cases as firstOrderRecurrences (see
+  // isFirstOrderRecurrence).
   auto *Extract = Incoming;
   if (VF > 1) {
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());

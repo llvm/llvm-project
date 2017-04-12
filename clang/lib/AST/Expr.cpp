@@ -3887,16 +3887,22 @@ PseudoObjectExpr::PseudoObjectExpr(QualType type, ExprValueKind VK,
 
 // UnaryExprOrTypeTraitExpr
 Stmt::child_range UnaryExprOrTypeTraitExpr::children() {
+  const_child_range CCR =
+      const_cast<const UnaryExprOrTypeTraitExpr *>(this)->children();
+  return child_range(cast_away_const(CCR.begin()), cast_away_const(CCR.end()));
+}
+
+Stmt::const_child_range UnaryExprOrTypeTraitExpr::children() const {
   // If this is of a type and the type is a VLA type (and not a typedef), the
   // size expression of the VLA needs to be treated as an executable expression.
   // Why isn't this weirdness documented better in StmtIterator?
   if (isArgumentType()) {
-    if (const VariableArrayType* T = dyn_cast<VariableArrayType>(
-                                   getArgumentType().getTypePtr()))
-      return child_range(child_iterator(T), child_iterator());
-    return child_range(child_iterator(), child_iterator());
+    if (const VariableArrayType *T =
+            dyn_cast<VariableArrayType>(getArgumentType().getTypePtr()))
+      return const_child_range(const_child_iterator(T), const_child_iterator());
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
-  return child_range(&Argument.Ex, &Argument.Ex + 1);
+  return const_child_range(&Argument.Ex, &Argument.Ex + 1);
 }
 
 AtomicExpr::AtomicExpr(SourceLocation BLoc, ArrayRef<Expr*> args,

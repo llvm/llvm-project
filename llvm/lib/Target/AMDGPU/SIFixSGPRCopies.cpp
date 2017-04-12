@@ -198,6 +198,10 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   if (!CopyUse.isCopy())
     return false;
 
+  // It is illegal to have vreg inputs to a physreg defining reg_sequence.
+  if (TargetRegisterInfo::isPhysicalRegister(CopyUse.getOperand(0).getReg()))
+    return false;
+
   const TargetRegisterClass *SrcRC, *DstRC;
   std::tie(SrcRC, DstRC) = getCopyRegClasses(CopyUse, *TRI, MRI);
 

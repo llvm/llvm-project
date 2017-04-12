@@ -92,6 +92,7 @@ void ThreadStart(u32 tid, uptr os_id) {
 
 void ThreadFinish() {
   thread_registry->FinishThread(GetCurrentThread());
+  SetCurrentThread(kInvalidTid);
 }
 
 ThreadContext *CurrentThreadContext() {

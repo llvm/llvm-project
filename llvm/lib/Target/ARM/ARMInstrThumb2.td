@@ -2265,70 +2265,52 @@ def t2USADA8  : T2FourReg_mac<0, 0b111, 0b0000, (outs rGPR:$Rd),
           Requires<[IsThumb2, HasDSP]>;
 
 // Signed/Unsigned saturate.
-class T2SatI<dag oops, dag iops, InstrItinClass itin,
-           string opc, string asm, list<dag> pattern>
-  : T2I<oops, iops, itin, opc, asm, pattern> {
+class T2SatI<dag iops, string opc, string asm>
+  : T2I<(outs rGPR:$Rd), iops, NoItinerary, opc, asm, []> {
   bits<4> Rd;
   bits<4> Rn;
   bits<5> sat_imm;
-  bits<7> sh;
+  bits<6> sh;
 
-  let Inst{11-8}  = Rd;
+  let Inst{31-24} = 0b11110011;
+  let Inst{21} = sh{5};
+  let Inst{20} = 0;
   let Inst{19-16} = Rn;
-  let Inst{4-0}   = sat_imm;
-  let Inst{21}    = sh{5};
+  let Inst{15} = 0;
   let Inst{14-12} = sh{4-2};
-  let Inst{7-6}   = sh{1-0};
+  let Inst{11-8}  = Rd;
+  let Inst{7-6} = sh{1-0};
+  let Inst{5} = 0;
+  let Inst{4-0}   = sat_imm;
 }
 
-def t2SSAT: T2SatI<
-              (outs rGPR:$Rd),
-              (ins imm1_32:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-              NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
-              Requires<[IsThumb2]> {
-  let Inst{31-27} = 0b11110;
-  let Inst{25-22} = 0b1100;
-  let Inst{20} = 0;
-  let Inst{15} = 0;
+def t2SSAT: T2SatI<(ins imm1_32:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
+                   "ssat", "\t$Rd, $sat_imm, $Rn$sh">,
+                   Requires<[IsThumb2]> {
+  let Inst{23-22} = 0b00;
   let Inst{5}  = 0;
 }
 
-def t2SSAT16: T2SatI<
-                (outs rGPR:$Rd), (ins imm1_16:$sat_imm, rGPR:$Rn), NoItinerary,
-                "ssat16", "\t$Rd, $sat_imm, $Rn", []>,
-                Requires<[IsThumb2, HasDSP]> {
-  let Inst{31-27} = 0b11110;
-  let Inst{25-22} = 0b1100;
-  let Inst{20} = 0;
-  let Inst{15} = 0;
-  let Inst{21} = 1;        // sh = '1'
-  let Inst{14-12} = 0b000; // imm3 = '000'
-  let Inst{7-6} = 0b00;    // imm2 = '00'
-  let Inst{5-4} = 0b00;
-}
-
-def t2USAT: T2SatI<
-               (outs rGPR:$Rd),
-               (ins imm0_31:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-                NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []>,
-                Requires<[IsThumb2]> {
-  let Inst{31-27} = 0b11110;
-  let Inst{25-22} = 0b1110;
-  let Inst{20} = 0;
-  let Inst{15} = 0;
-}
-
-def t2USAT16: T2SatI<(outs rGPR:$Rd), (ins imm0_15:$sat_imm, rGPR:$Rn),
-                     NoItinerary,
-                     "usat16", "\t$Rd, $sat_imm, $Rn", []>,
+def t2SSAT16: T2SatI<(ins imm1_16:$sat_imm, rGPR:$Rn),
+                     "ssat16", "\t$Rd, $sat_imm, $Rn">,
                      Requires<[IsThumb2, HasDSP]> {
-  let Inst{31-22} = 0b1111001110;
-  let Inst{20} = 0;
-  let Inst{15} = 0;
-  let Inst{21} = 1;        // sh = '1'
-  let Inst{14-12} = 0b000; // imm3 = '000'
-  let Inst{7-6} = 0b00;    // imm2 = '00'
-  let Inst{5-4} = 0b00;
+  let Inst{23-22} = 0b00;
+  let sh = 0b100000;
+  let Inst{4} = 0;
+}
+
+def t2USAT: T2SatI<(ins imm0_31:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
+                    "usat", "\t$Rd, $sat_imm, $Rn$sh">,
+                    Requires<[IsThumb2]> {
+  let Inst{23-22} = 0b10;
+}
+
+def t2USAT16: T2SatI<(ins imm0_15:$sat_imm, rGPR:$Rn),
+                     "usat16", "\t$Rd, $sat_imm, $Rn">,
+                     Requires<[IsThumb2, HasDSP]> {
+  let Inst{23-22} = 0b10;
+  let sh = 0b100000;
+  let Inst{4} = 0;
 }
 
 def : T2Pat<(int_arm_ssat GPR:$a, imm1_32:$pos), (t2SSAT imm1_32:$pos, GPR:$a, 0)>;

@@ -10,7 +10,7 @@
 // This file implements the MemorySSAUpdater class.
 //
 //===----------------------------------------------------------------===//
-#include "llvm/Transforms/Utils/MemorySSAUpdater.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -24,7 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Transforms/Utils/MemorySSA.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "memoryssa"

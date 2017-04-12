@@ -51,7 +51,7 @@ namespace __xray_fdr_internal {
 
 /// Writes the new buffer record and wallclock time that begin a buffer for a
 /// thread to MemPtr and increments MemPtr. Bypasses the thread local state
-// machine and writes directly to memory without checks.
+/// machine and writes directly to memory without checks.
 static void writeNewBufferPreamble(pid_t Tid, timespec TS, char *&MemPtr);
 
 /// Write a metadata record to switch to a new CPU to MemPtr and increments
@@ -75,8 +75,7 @@ static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
 
 /// Sets up a new buffer in thread_local storage and writes a preamble. The
 /// wall_clock_reader function is used to populate the WallTimeRecord entry.
-static void setupNewBuffer(const BufferQueue::Buffer &Buffer,
-                           int (*wall_clock_reader)(clockid_t,
+static void setupNewBuffer(int (*wall_clock_reader)(clockid_t,
                                                     struct timespec *));
 
 /// Called to record CPU time for a new CPU within the current thread.
@@ -223,8 +222,7 @@ static inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
   NumTailCalls = 0;
 }
 
-static inline void setupNewBuffer(const BufferQueue::Buffer &Buffer,
-                                  int (*wall_clock_reader)(clockid_t,
+static inline void setupNewBuffer(int (*wall_clock_reader)(clockid_t,
                                                            struct timespec *))
     XRAY_NEVER_INSTRUMENT {
   RecordPtr = static_cast<char *>(Buffer.Buffer);
@@ -246,7 +244,7 @@ static inline void writeNewCPUIdMetadata(uint16_t CPU, uint64_t TSC,
   // The data for the New CPU will contain the following bytes:
   //   - CPU ID (uint16_t, 2 bytes)
   //   - Full TSC (uint64_t, 8 bytes)
-  // Total = 12 bytes.
+  // Total = 10 bytes.
   std::memcpy(&NewCPUId.Data, &CPU, sizeof(CPU));
   std::memcpy(&NewCPUId.Data[sizeof(CPU)], &TSC, sizeof(TSC));
   std::memcpy(MemPtr, &NewCPUId, sizeof(MetadataRecord));
@@ -347,6 +345,16 @@ static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
   MemPtr += sizeof(FunctionRecord);
 }
 
+static inline bool releaseThreadLocalBuffer(BufferQueue *BQ) {
+  auto EC = BQ->releaseBuffer(Buffer);
+  if (EC != BufferQueue::ErrorCode::Ok) {
+    Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
+           BufferQueue::getErrorString(EC));
+    return false;
+  }
+  return true;
+}
+
 static inline void processFunctionHook(
     int32_t FuncId, XRayEntryType Entry, uint64_t TSC, unsigned char CPU,
     int (*wall_clock_reader)(clockid_t, struct timespec *),
@@ -361,12 +369,8 @@ static inline void processFunctionHook(
         (Status == XRayLogInitStatus::XRAY_LOG_FINALIZING ||
          Status == XRayLogInitStatus::XRAY_LOG_FINALIZED)) {
       writeEOBMetadata();
-      auto EC = BQ->releaseBuffer(Buffer);
-      if (EC != BufferQueue::ErrorCode::Ok) {
-        Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-               BufferQueue::getErrorString(EC));
+      if (!releaseThreadLocalBuffer(BQ.get()))
         return;
-      }
       RecordPtr = nullptr;
     }
     return;
@@ -402,12 +406,8 @@ static inline void processFunctionHook(
 
   if (!loggingInitialized(LoggingStatus) || LocalBQ->finalizing()) {
     writeEOBMetadata();
-    auto EC = BQ->releaseBuffer(Buffer);
-    if (EC != BufferQueue::ErrorCode::Ok) {
-      Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-             BufferQueue::getErrorString(EC));
+    if (!releaseThreadLocalBuffer(BQ.get()))
       return;
-    }
     RecordPtr = nullptr;
   }
 
@@ -423,11 +423,13 @@ static inline void processFunctionHook(
       return;
     }
 
-    uint64_t CycleFrequency = getTSCFrequency();
+    uint64_t CycleFrequency = probeRequiredCPUFeatures()
+                              ? getTSCFrequency()
+                              : __xray::NanosecondsPerSecond;
     NumberOfTicksThreshold = CycleFrequency *
                              flags()->xray_fdr_log_func_duration_threshold_us /
                              1000000;
-    setupNewBuffer(Buffer, wall_clock_reader);
+    setupNewBuffer(wall_clock_reader);
   }
 
   if (CurrentCPU == std::numeric_limits<uint16_t>::max()) {
@@ -477,13 +479,9 @@ static inline void processFunctionHook(
   if ((RecordPtr + (MetadataRecSize + FunctionRecSize)) - BufferStart <
       static_cast<ptrdiff_t>(MetadataRecSize)) {
     writeEOBMetadata();
-    auto EC = LocalBQ->releaseBuffer(Buffer);
-    if (EC != BufferQueue::ErrorCode::Ok) {
-      Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-             BufferQueue::getErrorString(EC));
+    if (!releaseThreadLocalBuffer(LocalBQ.get()))
       return;
-    }
-    EC = LocalBQ->getBuffer(Buffer);
+    auto EC = LocalBQ->getBuffer(Buffer);
     if (EC != BufferQueue::ErrorCode::Ok) {
       Report("Failed to acquire a buffer; error=%s\n",
              BufferQueue::getErrorString(EC));
@@ -493,7 +491,7 @@ static inline void processFunctionHook(
     NumberOfTicksThreshold = CycleFrequency *
                              flags()->xray_fdr_log_func_duration_threshold_us /
                              1000000;
-    setupNewBuffer(Buffer, wall_clock_reader);
+    setupNewBuffer(wall_clock_reader);
   }
 
   // By this point, we are now ready to write at most 24 bytes (one metadata
@@ -630,12 +628,8 @@ static inline void processFunctionHook(
   // make sure that other threads may start using this buffer.
   if ((RecordPtr + MetadataRecSize) - BufferStart == MetadataRecSize) {
     writeEOBMetadata();
-    auto EC = LocalBQ->releaseBuffer(Buffer);
-    if (EC != BufferQueue::ErrorCode::Ok) {
-      Report("Failed releasing buffer at %p; error=%s\n", Buffer.Buffer,
-             BufferQueue::getErrorString(EC));
+    if (!releaseThreadLocalBuffer(LocalBQ.get()))
       return;
-    }
     RecordPtr = nullptr;
   }
 }

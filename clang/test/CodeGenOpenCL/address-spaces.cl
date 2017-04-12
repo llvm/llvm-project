@@ -1,7 +1,12 @@
-// RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefix=CL20
+// RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-opencl -emit-llvm -o - | FileCheck --check-prefixes=CHECK,SPIR %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-opencl -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-amdgizcl -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,GIZ
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-amdgizcl -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20GIZ
 
-// CHECK: i32* %arg
+// SPIR: i32* %arg
+// GIZ: i32 addrspace(5)* %arg
 void f__p(__private int *arg) {}
 
 // CHECK: i32 addrspace(1)* %arg
@@ -13,7 +18,8 @@ void f__l(__local int *arg) {}
 // CHECK: i32 addrspace(2)* %arg
 void f__c(__constant int *arg) {}
 
-// CHECK: i32* %arg
+// SPIR: i32* %arg
+// GIZ: i32 addrspace(5)* %arg
 void fp(private int *arg) {}
 
 // CHECK: i32 addrspace(1)* %arg
@@ -29,16 +35,21 @@ void fc(constant int *arg) {}
 int i;
 // CL20-DAG: @i = common addrspace(1) global i32 0
 int *ptr;
-// CL20-DAG: @ptr = common addrspace(1) global i32 addrspace(4)* null
+// CL20SPIR-DAG: @ptr = common addrspace(1) global i32 addrspace(4)* null
+// CL20GIZ-DAG: @ptr = common addrspace(1) global i32* null
 #endif
 
-// CHECK: i32* %arg
-// CL20-DAG: i32 addrspace(4)* %arg
+// SPIR: i32* %arg
+// GIZ: i32 addrspace(5)* %arg
+// CL20SPIR-DAG: i32 addrspace(4)* %arg
+// CL20GIZ-DAG: i32* %arg
 void f(int *arg) {
 
   int i;
-// CHECK: %i = alloca i32,
-// CL20-DAG: %i = alloca i32,
+// SPIR: %i = alloca i32,
+// GIZ: %i = alloca i32{{.*}}addrspace(5)
+// CL20SPIR-DAG: %i = alloca i32,
+// CL20GIZ-DAG: %i = alloca i32{{.*}}addrspace(5)
 
 #ifdef CL20
   static int ii;

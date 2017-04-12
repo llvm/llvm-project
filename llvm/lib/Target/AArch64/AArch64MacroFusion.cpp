@@ -29,21 +29,25 @@ static cl::opt<bool> EnableMacroFusion("aarch64-misched-fusion", cl::Hidden,
 
 namespace {
 
-/// \brief Verify that the instruction pair, First and Second,
-/// should be scheduled back to back.  Given an anchor instruction, if the other
-/// instruction is unspecified, then verify that the anchor instruction may be
-/// part of a pair at all.
-static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
-                                   const AArch64Subtarget &ST,
-                                   const MachineInstr *First,
-                                   const MachineInstr *Second) {
-  assert((First || Second) && "At least one instr must be specified");
+/// \brief Verify that the instr pair, FirstMI and SecondMI, should be fused
+/// together.  Given an anchor instr, when the other instr is unspecified, then
+/// check if the anchor instr may be part of a fused pair at all.
+static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                                   const TargetSubtargetInfo &TSI,
+                                   const MachineInstr *FirstMI,
+                                   const MachineInstr *SecondMI) {
+  assert((FirstMI || SecondMI) && "At least one instr must be specified");
+
+  const AArch64InstrInfo &II = static_cast<const AArch64InstrInfo&>(TII);
+  const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+
+  // Assume wildcards for unspecified instrs.
   unsigned FirstOpcode =
-    First ? First->getOpcode()
-	  : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+    FirstMI ? FirstMI->getOpcode()
+	    : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
   unsigned SecondOpcode =
-    Second ? Second->getOpcode()
-           : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+    SecondMI ? SecondMI->getOpcode()
+             : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
 
   if (ST.hasArithmeticBccFusion())
     // Fuse CMN, CMP, TST followed by Bcc.
@@ -75,7 +79,7 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
       case AArch64::BICSWrs:
       case AArch64::BICSXrs:
         // Shift value can be 0 making these behave like the "rr" variant...
-        return !TII.hasShiftedReg(*First);
+        return !II.hasShiftedReg(*FirstMI);
       case AArch64::INSTRUCTION_LIST_END:
         return true;
       }
@@ -117,7 +121,7 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
       case AArch64::BICWrs:
       case AArch64::BICXrs:
         // Shift value can be 0 making these behave like the "rr" variant...
-        return !TII.hasShiftedReg(*First);
+        return !II.hasShiftedReg(*FirstMI);
       case AArch64::INSTRUCTION_LIST_END:
         return true;
       }
@@ -145,92 +149,98 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
     // 32 bit immediate.
     case AArch64::MOVZWi:
       return (SecondOpcode == AArch64::MOVKWi &&
-              Second->getOperand(3).getImm() == 16) ||
+              SecondMI->getOperand(3).getImm() == 16) ||
              SecondOpcode == AArch64::INSTRUCTION_LIST_END;
     // Lower half of 64 bit immediate.
     case AArch64::MOVZXi:
       return (SecondOpcode == AArch64::MOVKXi &&
-              Second->getOperand(3).getImm() == 16) ||
+              SecondMI->getOperand(3).getImm() == 16) ||
              SecondOpcode == AArch64::INSTRUCTION_LIST_END;
     // Upper half of 64 bit immediate.
     case AArch64::MOVKXi:
-      return First->getOperand(3).getImm() == 32 &&
+      return FirstMI->getOperand(3).getImm() == 32 &&
              ((SecondOpcode == AArch64::MOVKXi &&
-               Second->getOperand(3).getImm() == 48) ||
+               SecondMI->getOperand(3).getImm() == 48) ||
               SecondOpcode == AArch64::INSTRUCTION_LIST_END);
     }
 
   return false;
 }
 
-/// \brief Implement the fusion of instruction pairs in the scheduling
-/// DAG, anchored at the instruction in ASU. Preds
-/// indicates if its dependencies in \param APreds are predecessors instead of
-/// successors.
-static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit *ASU,
-                                 SmallVectorImpl<SDep> &APreds, bool Preds) {
-  const AArch64InstrInfo *TII = static_cast<const AArch64InstrInfo *>(DAG->TII);
-  const AArch64Subtarget &ST = DAG->MF.getSubtarget<AArch64Subtarget>();
-
-  const MachineInstr *AMI = ASU->getInstr();
-  if (!AMI || AMI->isPseudo() || AMI->isTransient() ||
-      (Preds && !shouldScheduleAdjacent(*TII, ST, nullptr, AMI)) ||
-      (!Preds && !shouldScheduleAdjacent(*TII, ST, AMI, nullptr)))
+/// \brief Implement the fusion of instr pairs in the scheduling DAG,
+/// anchored at the instr in AnchorSU..
+static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit &AnchorSU) {
+  const MachineInstr *AnchorMI = AnchorSU.getInstr();
+  if (!AnchorMI || AnchorMI->isPseudo() || AnchorMI->isTransient())
     return false;
 
-  for (SDep &BDep : APreds) {
-    if (BDep.isWeak())
+  // If the anchor instr is the ExitSU, then consider its predecessors;
+  // otherwise, its successors.
+  bool Preds = (&AnchorSU == &DAG->ExitSU);
+  SmallVectorImpl<SDep> &AnchorDeps = Preds ? AnchorSU.Preds : AnchorSU.Succs;
+
+  const MachineInstr *FirstMI = Preds ? nullptr : AnchorMI;
+  const MachineInstr *SecondMI = Preds ? AnchorMI : nullptr;
+
+  // Check if the anchor instr may be fused.
+  if (!shouldScheduleAdjacent(*DAG->TII, DAG->MF.getSubtarget(),
+                              FirstMI, SecondMI))
+    return false;
+
+  // Explorer for fusion candidates among the dependencies of the anchor instr.
+  for (SDep &Dep : AnchorDeps) {
+    // Ignore dependencies that don't enforce ordering.
+    if (Dep.isWeak())
       continue;
 
-    SUnit *BSU = BDep.getSUnit();
-    const MachineInstr *BMI = BSU->getInstr();
-    if (!BMI || BMI->isPseudo() || BMI->isTransient() ||
-        (Preds && !shouldScheduleAdjacent(*TII, ST, BMI, AMI)) ||
-        (!Preds && !shouldScheduleAdjacent(*TII, ST, AMI, BMI)))
+    SUnit &DepSU = *Dep.getSUnit();
+    // Ignore the ExitSU if the dependents are successors.
+    if (!Preds && &DepSU == &DAG->ExitSU)
       continue;
 
-    // Create a single weak edge between the adjacent instrs. The only
-    // effect is to cause bottom-up scheduling to heavily prioritize the
-    // clustered instrs.
-    if (Preds)
-      DAG->addEdge(ASU, SDep(BSU, SDep::Cluster));
-    else
-      DAG->addEdge(BSU, SDep(ASU, SDep::Cluster));
+    const MachineInstr *DepMI = DepSU.getInstr();
+    if (!DepMI || DepMI->isPseudo() || DepMI->isTransient())
+      continue;
 
-    // Adjust the latency between the 1st instr and its predecessors/successors.
-    for (SDep &Dep : APreds)
-      if (Dep.getSUnit() == BSU)
-        Dep.setLatency(0);
+    FirstMI = Preds ? DepMI : AnchorMI;
+    SecondMI = Preds ? AnchorMI : DepMI;
+    if (!shouldScheduleAdjacent(*DAG->TII, DAG->MF.getSubtarget(),
+                                FirstMI, SecondMI))
+      continue;
 
-    // Adjust the latency between the 2nd instr and its successors/predecessors.
-    auto &BSuccs = Preds ? BSU->Succs : BSU->Preds;
-    for (SDep &Dep : BSuccs)
-      if (Dep.getSUnit() == ASU)
-        Dep.setLatency(0);
+    // Create a single weak edge between the adjacent instrs. The only effect is
+    // to cause bottom-up scheduling to heavily prioritize the clustered instrs.
+    SUnit &FirstSU = Preds ? DepSU : AnchorSU;
+    SUnit &SecondSU = Preds ? AnchorSU : DepSU;
+    DAG->addEdge(&SecondSU, SDep(&FirstSU, SDep::Cluster));
+
+    // Adjust the latency between the anchor instr and its
+    // predecessors/successors.
+    for (SDep &IDep : AnchorDeps)
+      if (IDep.getSUnit() == &DepSU)
+        IDep.setLatency(0);
+
+    // Adjust the latency between the dependent instr and its
+    // successors/predecessors.
+    for (SDep &IDep : Preds ? DepSU.Succs : DepSU.Preds)
+      if (IDep.getSUnit() == &AnchorSU)
+        IDep.setLatency(0);
+
+    DEBUG(dbgs() << DAG->MF.getName() << "(): Macro fuse ";
+          FirstSU.print(dbgs(), DAG); dbgs() << " - ";
+          SecondSU.print(dbgs(), DAG); dbgs() << " /  ";
+          dbgs() << DAG->TII->getName(FirstMI->getOpcode()) << " - " <<
+                    DAG->TII->getName(SecondMI->getOpcode()) << '\n'; );
 
     ++NumFused;
-    DEBUG({ SUnit *LSU = Preds ? BSU : ASU;
-            SUnit *RSU = Preds ? ASU : BSU;
-            const MachineInstr *LMI = Preds ? BMI : AMI;
-            const MachineInstr *RMI = Preds ? AMI : BMI;
-
-            dbgs() << DAG->MF.getName() << "(): Macro fuse ";
-            LSU->print(dbgs(), DAG);
-            dbgs() << " - ";
-            RSU->print(dbgs(), DAG);
-            dbgs() << " / " <<
-                      TII->getName(LMI->getOpcode()) << " - " <<
-                      TII->getName(RMI->getOpcode()) << '\n';
-          });
-
     return true;
   }
 
   return false;
 }
 
-/// \brief Post-process the DAG to create cluster edges between instructions
-/// that may be fused by the processor into a single operation.
+/// \brief Post-process the DAG to create cluster edges between instrs that may
+/// be fused by the processor into a single operation.
 class AArch64MacroFusion : public ScheduleDAGMutation {
 public:
   AArch64MacroFusion() {}
@@ -241,13 +251,13 @@ public:
 void AArch64MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
   ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
 
-  // For each of the SUnits in the scheduling block, try to fuse the instruction
-  // in it with one in its successors.
-  for (SUnit &ASU : DAG->SUnits)
-    scheduleAdjacentImpl(DAG, &ASU, ASU.Succs, false);
+  // For each of the SUnits in the scheduling block, try to fuse the instr in it
+  // with one in its successors.
+  for (SUnit &ISU : DAG->SUnits)
+    scheduleAdjacentImpl(DAG, ISU);
 
-  // Try to fuse the instruction in the ExitSU with one in its predecessors.
-  scheduleAdjacentImpl(DAG, &DAG->ExitSU, DAG->ExitSU.Preds, true);
+  // Try to fuse the instr in the ExitSU with one in its predecessors.
+  scheduleAdjacentImpl(DAG, DAG->ExitSU);
 }
 
 } // end namespace

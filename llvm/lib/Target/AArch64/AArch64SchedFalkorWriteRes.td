@@ -118,6 +118,11 @@ def FalkorWr_1VX_1VY_10cyc : SchedWriteRes<[FalkorUnitVX, FalkorUnitVY]> {
   let NumMicroOps = 2;
 }
 
+def FalkorWr_1GTOV_1VXVY_2cyc : SchedWriteRes<[FalkorUnitGTOV, FalkorUnitVXVY]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+}
+
 def FalkorWr_2GTOV_1cyc    : SchedWriteRes<[FalkorUnitGTOV, FalkorUnitGTOV]> {
   let Latency = 1;
   let NumMicroOps = 2;

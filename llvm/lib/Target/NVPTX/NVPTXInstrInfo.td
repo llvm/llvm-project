@@ -517,7 +517,7 @@ multiclass ADD_SUB_i1<SDNode OpNode> {
 defm ADD_i1 : ADD_SUB_i1<add>;
 defm SUB_i1 : ADD_SUB_i1<sub>;
 
-// int16, int32, and int64 signed addition.  Since nvptx is 2's compliment, we
+// int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
 defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;

@@ -119,7 +119,8 @@ namespace clang {
     }
 
     void ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update);
-    void ReadCXXDefinitionData(struct CXXRecordDecl::DefinitionData &Data);
+    void ReadCXXDefinitionData(struct CXXRecordDecl::DefinitionData &Data,
+                               const CXXRecordDecl *D);
     void MergeDefinitionData(CXXRecordDecl *D,
                              struct CXXRecordDecl::DefinitionData &&NewDD);
     void ReadObjCDefinitionData(struct ObjCInterfaceDecl::DefinitionData &Data);
@@ -424,6 +425,8 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
 }
 
 void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
+  if (Record.readInt())
+    Reader.BodySource[FD] = Loc.F->Kind == ModuleKind::MK_MainFile;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     CD->NumCtorInitializers = Record.readInt();
     if (CD->NumCtorInitializers)
@@ -1488,7 +1491,7 @@ void ASTDeclReader::VisitUnresolvedUsingTypenameDecl(
 }
 
 void ASTDeclReader::ReadCXXDefinitionData(
-                                   struct CXXRecordDecl::DefinitionData &Data) {
+    struct CXXRecordDecl::DefinitionData &Data, const CXXRecordDecl *D) {
   // Note: the caller has deserialized the IsLambda bit already.
   Data.UserDeclaredConstructor = Record.readInt();
   Data.UserDeclaredSpecialMembers = Record.readInt();
@@ -1533,6 +1536,13 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasDeclaredCopyConstructorWithConstParam = Record.readInt();
   Data.HasDeclaredCopyAssignmentWithConstParam = Record.readInt();
   Data.ODRHash = Record.readInt();
+  Data.HasODRHash = true;
+
+  if (Record.readInt()) {
+    Reader.BodySource[D] = Loc.F->Kind == ModuleKind::MK_MainFile
+                               ? ExternalASTSource::EK_Never
+                               : ExternalASTSource::EK_Always;
+  }
 
   Data.NumBases = Record.readInt();
   if (Data.NumBases)
@@ -1664,7 +1674,6 @@ void ASTDeclReader::MergeDefinitionData(
   OR_FIELD(HasDeclaredCopyConstructorWithConstParam)
   OR_FIELD(HasDeclaredCopyAssignmentWithConstParam)
   MATCH_FIELD(IsLambda)
-  MATCH_FIELD(ODRHash)
 #undef OR_FIELD
 #undef MATCH_FIELD
 
@@ -1688,6 +1697,10 @@ void ASTDeclReader::MergeDefinitionData(
     // when they occur within the body of a function template specialization).
   }
 
+  if (D->getODRHash() != MergeDD.ODRHash) {
+    DetectedOdrViolation = true;
+  }
+
   if (DetectedOdrViolation)
     Reader.PendingOdrMergeFailures[DD.Definition].push_back(MergeDD.Definition);
 }
@@ -1705,7 +1718,7 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update) {
   else
     DD = new (C) struct CXXRecordDecl::DefinitionData(D);
 
-  ReadCXXDefinitionData(*DD);
+  ReadCXXDefinitionData(*DD, D);
 
   // We might already have a definition for this record. This can happen either
   // because we're reading an update record, or because we've already done some
@@ -2551,7 +2564,11 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
            Var->isThisDeclarationADefinition() == VarDecl::Definition;
   if (FunctionDecl *Func = dyn_cast<FunctionDecl>(D))
     return Func->doesThisDeclarationHaveABody() || HasBody;
-  
+
+  if (auto *ES = D->getASTContext().getExternalSource())
+    if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
+      return true;
+
   return false;
 }
 

@@ -9,6 +9,8 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTImporter.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/ExternalASTMerger.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -189,61 +191,18 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
 } // end namespace
 
 namespace {
-class TestExternalASTSource : public ExternalASTSource {
-private:
-  llvm::ArrayRef<std::unique_ptr<CompilerInstance>> ImportCIs;
-  std::map<CompilerInstance *, std::unique_ptr<ASTImporter>> ForwardImporters;
-  std::map<CompilerInstance *, std::unique_ptr<ASTImporter>> ReverseImporters;
-
-public:
-  TestExternalASTSource(
-      CompilerInstance &ExpressionCI,
-      llvm::ArrayRef<std::unique_ptr<CompilerInstance>> ImportCIs)
-      : ImportCIs(ImportCIs) {
-    for (const std::unique_ptr<CompilerInstance> &ImportCI : ImportCIs) {
-      ForwardImporters[ImportCI.get()] = llvm::make_unique<ASTImporter>(
-          ExpressionCI.getASTContext(), ExpressionCI.getFileManager(),
-          ImportCI->getASTContext(), ImportCI->getFileManager(),
-          /*MinimalImport=*/true);
-      ReverseImporters[ImportCI.get()] = llvm::make_unique<ASTImporter>(
-          ImportCI->getASTContext(), ImportCI->getFileManager(),
-          ExpressionCI.getASTContext(), ExpressionCI.getFileManager(),
-          /*MinimalImport=*/true);
-    }
-  }
-
-  bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override {
-    llvm::SmallVector<NamedDecl *, 1> Decls;
-
-    if (isa<TranslationUnitDecl>(DC)) {
-      for (const std::unique_ptr<CompilerInstance> &I : ImportCIs) {
-        DeclarationName FromName = ReverseImporters[I.get()]->Import(Name);
-        DeclContextLookupResult Result =
-            I->getASTContext().getTranslationUnitDecl()->lookup(FromName);
-        for (NamedDecl *FromD : Result) {
-          NamedDecl *D =
-              llvm::cast<NamedDecl>(ForwardImporters[I.get()]->Import(FromD));
-          Decls.push_back(D);
-        }
-      }
-    }
-    if (Decls.empty()) {
-      return false;
-    } else {
-      SetExternalVisibleDeclsForName(DC, Name, Decls);
-      return true;
-    }
-  }
-};
-
+ 
 void AddExternalSource(
     CompilerInstance &CI,
     llvm::ArrayRef<std::unique_ptr<CompilerInstance>> Imports) {
-  ASTContext &AST = CI.getASTContext();
-  auto ES = llvm::make_unique<TestExternalASTSource>(CI, Imports);
-  AST.setExternalSource(ES.release());
-  AST.getTranslationUnitDecl()->setHasExternalVisibleStorage();
+  ExternalASTMerger::ImporterEndpoint Target({CI.getASTContext(), CI.getFileManager()});
+  llvm::SmallVector<ExternalASTMerger::ImporterEndpoint, 3> Sources;
+  for (const std::unique_ptr<CompilerInstance> &CI : Imports) {
+    Sources.push_back({CI->getASTContext(), CI->getFileManager()});
+  }
+  auto ES = llvm::make_unique<ExternalASTMerger>(Target, Sources);
+  CI.getASTContext().setExternalSource(ES.release());
+  CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage();
 }
 
 llvm::Error ParseSource(const std::string &Path, CompilerInstance &CI,
@@ -292,6 +251,7 @@ Parse(const std::string &Path,
     return std::move(CI);
   }
 }
+
 } // end namespace
 
 int main(int argc, const char **argv) {

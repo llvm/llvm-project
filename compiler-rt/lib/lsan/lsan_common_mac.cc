@@ -33,7 +33,17 @@ typedef struct {
 static pthread_key_t key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
-static void make_tls_key() { CHECK_EQ(pthread_key_create(&key, NULL), 0); }
+// The main thread destructor requires the current thread id,
+// so we can't destroy it until it's been used and reset to invalid tid
+void restore_tid_data(void *ptr) {
+  thread_local_data_t *data = (thread_local_data_t *)ptr;
+  if (data->current_thread_id != kInvalidTid)
+    pthread_setspecific(key, data);
+}
+
+static void make_tls_key() {
+  CHECK_EQ(pthread_key_create(&key, restore_tid_data), 0);
+}
 
 static thread_local_data_t *get_tls_val(bool alloc) {
   pthread_once(&key_once, make_tls_key);
@@ -65,7 +75,11 @@ void EnableInThisThread() {
   --*disable_counter;
 }
 
-u32 GetCurrentThread() { return get_tls_val(true)->current_thread_id; }
+u32 GetCurrentThread() {
+  thread_local_data_t *data = get_tls_val(false);
+  CHECK(data);
+  return data->current_thread_id;
+}
 
 void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
 

@@ -606,8 +606,7 @@ int main(int argc, char **argv, char * const *envp) {
     // If the program doesn't explicitly call exit, we will need the Exit
     // function later on to make an explicit call, so get the function now.
     Constant *Exit = Mod->getOrInsertFunction("exit", Type::getVoidTy(Context),
-                                                      Type::getInt32Ty(Context),
-                                                      nullptr);
+                                                      Type::getInt32Ty(Context));
 
     // Run static constructors.
     if (!ForceInterpreter) {

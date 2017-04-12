@@ -2,7 +2,7 @@
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/funcimport2.ll -o %t2.bc
 
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:     -r=%t1.bc,_foo,plx \
 ; RUN:     -r=%t2.bc,_main,plx \
 ; RUN:     -r=%t2.bc,_foo,l
@@ -11,7 +11,7 @@
 
 ; We shouldn't do any importing at -O0
 ; rm -f %t.o.1.3.import.bc
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:     -O0 \
 ; RUN:     -r=%t1.bc,_foo,plx \
 ; RUN:     -r=%t2.bc,_main,plx \
