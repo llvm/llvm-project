@@ -24,6 +24,7 @@
 // Project includes
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
@@ -33,7 +34,6 @@
 #include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
-#include "ProcessPOSIXLog.h"
 #include "RegisterContextPOSIXProcessMonitor_arm.h"
 #include "RegisterContextPOSIXProcessMonitor_arm64.h"
 #include "RegisterContextPOSIXProcessMonitor_mips64.h"

@@ -436,6 +436,13 @@ def err_declaration_does_not_declare_param : Error<
   "declaration does not declare a parameter">;
 def err_no_matching_param : Error<"parameter named %0 is missing">;
 
+/// Objective-C++ parser diagnostics
+def err_expected_token_instead_of_objcxx_keyword : Error<
+  "expected %0; %1 is a keyword in Objective-C++">;
+def err_expected_member_name_or_semi_objcxx_keyword : Error<
+  "expected member name or ';' after declaration specifiers; "
+  "%0 is a keyword in Objective-C++">;
+
 /// C++ parser diagnostics
 def err_invalid_operator_on_type : Error<
   "cannot use %select{dot|arrow}0 operator on a type">;

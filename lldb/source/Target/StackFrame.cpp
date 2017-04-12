@@ -1212,9 +1212,14 @@ lldb::LanguageType StackFrame::GuessLanguage() {
   LanguageType lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    Function *f = GetSymbolContext(eSymbolContextFunction).function;
-    if (f) {
-      lang_type = f->GetMangled().GuessLanguage();
+    SymbolContext sc = GetSymbolContext(eSymbolContextFunction 
+                                        | eSymbolContextSymbol);
+    if (sc.function) {
+      lang_type = sc.function->GetMangled().GuessLanguage();
+    }
+    else if (sc.symbol)
+    {
+      lang_type = sc.symbol->GetMangled().GuessLanguage();
     }
   }
 

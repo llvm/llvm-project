@@ -1,31 +1,5 @@
 include_directories(.)
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-include_directories(
-  Plugins/Process/Linux
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "FreeBSD" )
-include_directories(
-  Plugins/Process/FreeBSD
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-include_directories(
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "OpenBSD" )
-include_directories(
-  Plugins/Process/POSIX
-  )
-endif ()
-
 set(lldbBase_SOURCES
     lldb.cpp
   )

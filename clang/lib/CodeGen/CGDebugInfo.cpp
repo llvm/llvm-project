@@ -1820,6 +1820,10 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
     return true;
 
+  if (auto *ES = RD->getASTContext().getExternalSource())
+    if (ES->hasExternalDefinitions(RD) == ExternalASTSource::EK_Always)
+      return true;
+
   if (DebugKind > codegenoptions::LimitedDebugInfo)
     return false;
 
@@ -2552,11 +2556,17 @@ void CGDebugInfo::completeTemplateDefinition(
     const ClassTemplateSpecializationDecl &SD) {
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
+  completeUnusedClass(SD);
+}
 
-  completeClassData(&SD);
+void CGDebugInfo::completeUnusedClass(const CXXRecordDecl &D) {
+  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
+    return;
+
+  completeClassData(&D);
   // In case this type has no member function definitions being emitted, ensure
   // it is retained
-  RetainedTypes.push_back(CGM.getContext().getRecordType(&SD).getAsOpaquePtr());
+  RetainedTypes.push_back(CGM.getContext().getRecordType(&D).getAsOpaquePtr());
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {

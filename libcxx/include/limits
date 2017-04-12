@@ -101,12 +101,12 @@ template<> class numeric_limits<cv long double>;
 }  // std
 
 */
+#include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
-#include <__config>
 #include <type_traits>
 
 #include <__undef_min_max>

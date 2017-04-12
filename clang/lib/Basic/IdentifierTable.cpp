@@ -244,7 +244,7 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
 
 /// \brief Returns true if the identifier represents a keyword in the
 /// specified language.
-bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) {
+bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
   case KS_Enabled:
   case KS_Extension:
@@ -252,6 +252,19 @@ bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) {
   default:
     return false;
   }
+}
+
+/// \brief Returns true if the identifier represents a C++ keyword in the
+/// specified language.
+bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
+  if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))
+    return false;
+  // This is a C++ keyword if this identifier is not a keyword when checked
+  // using LangOptions without C++ support.
+  LangOptions LangOptsNoCPP = LangOpts;
+  LangOptsNoCPP.CPlusPlus = false;
+  LangOptsNoCPP.CPlusPlus11 = false;
+  return !isKeyword(LangOptsNoCPP);
 }
 
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {

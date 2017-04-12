@@ -672,7 +672,7 @@ std::string CompletionItem::unparse(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
   Os << R"("label":")" << llvm::yaml::escape(CI.label) << R"(",)";
   if (CI.kind != CompletionItemKind::Missing)
-    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(",)";
+    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(,)";
   if (!CI.detail.empty())
     Os << R"("detail":")" << llvm::yaml::escape(CI.detail) << R"(",)";
   if (!CI.documentation.empty())

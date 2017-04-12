@@ -1115,6 +1115,8 @@ private:
   /// predefines buffer may contain additional definitions.
   std::string SuggestedPredefines;
 
+  llvm::DenseMap<const Decl *, bool> BodySource;
+
   /// \brief Reads a statement from the specified cursor.
   Stmt *ReadStmtFromStream(ModuleFile &F);
 
@@ -1997,7 +1999,7 @@ public:
   /// \brief Return a descriptor for the corresponding module.
   llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID) override;
 
-  ExtKind hasExternalDefinitions(unsigned ID) override;
+  ExtKind hasExternalDefinitions(const Decl *D) override;
 
   /// \brief Retrieve a selector from the given module with its local ID
   /// number.

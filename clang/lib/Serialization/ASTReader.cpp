@@ -4835,7 +4835,6 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       bool InferExplicitSubmodules = Record[Idx++];
       bool InferExportWildcard = Record[Idx++];
       bool ConfigMacrosExhaustive = Record[Idx++];
-      bool WithCodegen = Record[Idx++];
 
       Module *ParentModule = nullptr;
       if (Parent)
@@ -4882,7 +4881,6 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       CurrentModule->InferExplicitSubmodules = InferExplicitSubmodules;
       CurrentModule->InferExportWildcard = InferExportWildcard;
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
-      CurrentModule->WithCodegen = WithCodegen;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -5529,35 +5527,60 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
              "Invalid data, not enough diag/map pairs");
       while (Size--) {
         unsigned DiagID = Record[Idx++];
-        diag::Severity Map = (diag::Severity)Record[Idx++];
-        DiagnosticMapping Mapping = Diag.makeUserMapping(Map, Loc);
-        if (Mapping.isPragma() || IncludeNonPragmaStates)
-          NewState->setMapping(DiagID, Mapping);
+        unsigned SeverityAndUpgradedFromWarning = Record[Idx++];
+        bool WasUpgradedFromWarning =
+            DiagnosticMapping::deserializeUpgradedFromWarning(
+                SeverityAndUpgradedFromWarning);
+        DiagnosticMapping NewMapping =
+            Diag.makeUserMapping(DiagnosticMapping::deserializeSeverity(
+                                     SeverityAndUpgradedFromWarning),
+                                 Loc);
+        if (!NewMapping.isPragma() && !IncludeNonPragmaStates)
+          continue;
+
+        DiagnosticMapping &Mapping = NewState->getOrAddMapping(DiagID);
+
+        // If this mapping was specified as a warning but the severity was
+        // upgraded due to diagnostic settings, simulate the current diagnostic
+        // settings (and use a warning).
+        if (WasUpgradedFromWarning && !Mapping.isErrorOrFatal()) {
+          Mapping = Diag.makeUserMapping(diag::Severity::Warning, Loc);
+          continue;
+        }
+
+        // Use the deserialized mapping verbatim.
+        Mapping = NewMapping;
+        Mapping.setUpgradedFromWarning(WasUpgradedFromWarning);
       }
       return NewState;
     };
 
-    auto *FirstState = ReadDiagState(
-        F.isModule() ? DiagState() : *Diag.DiagStatesByLoc.CurDiagState,
-        SourceLocation(), F.isModule());
-    SourceLocation CurStateLoc =
-        ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
-    auto *CurState = ReadDiagState(*FirstState, CurStateLoc, false);
+    // Read the first state.
+    DiagState *FirstState;
+    if (F.Kind == MK_ImplicitModule) {
+      // Implicitly-built modules are reused with different diagnostic
+      // settings.  Use the initial diagnostic state from Diag to simulate this
+      // compilation's diagnostic settings.
+      FirstState = Diag.DiagStatesByLoc.FirstDiagState;
+      DiagStates.push_back(FirstState);
 
-    if (!F.isModule()) {
-      Diag.DiagStatesByLoc.CurDiagState = CurState;
-      Diag.DiagStatesByLoc.CurDiagStateLoc = CurStateLoc;
-
-      // Preserve the property that the imaginary root file describes the
-      // current state.
-      auto &T = Diag.DiagStatesByLoc.Files[FileID()].StateTransitions;
-      if (T.empty())
-        T.push_back({CurState, 0});
-      else
-        T[0].State = CurState;
+      // Skip the initial diagnostic state from the serialized module.
+      assert(Record[0] == 0 &&
+             "Invalid data, unexpected backref in initial state");
+      Idx = 2 + Record[1] * 2;
+      assert(Idx < Record.size() &&
+             "Invalid data, not enough state change pairs in initial state");
+    } else {
+      FirstState = ReadDiagState(
+          F.isModule() ? DiagState() : *Diag.DiagStatesByLoc.CurDiagState,
+          SourceLocation(), F.isModule());
     }
 
-    while (Idx < Record.size()) {
+    // Read the state transitions.
+    unsigned NumLocations = Record[Idx++];
+    while (NumLocations--) {
+      assert(Idx < Record.size() &&
+             "Invalid data, missing pragma diagnostic states");
       SourceLocation Loc = ReadSourceLocation(F, Record[Idx++]);
       auto IDAndOffset = SourceMgr.getDecomposedLoc(Loc);
       assert(IDAndOffset.second == 0 && "not a start location for a FileID");
@@ -5575,6 +5598,26 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
             ReadDiagState(*FirstState, Loc.getLocWithOffset(Offset), false);
         F.StateTransitions.push_back({State, Offset});
       }
+    }
+
+    // Read the final state.
+    assert(Idx < Record.size() &&
+           "Invalid data, missing final pragma diagnostic state");
+    SourceLocation CurStateLoc =
+        ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
+    auto *CurState = ReadDiagState(*FirstState, CurStateLoc, false);
+
+    if (!F.isModule()) {
+      Diag.DiagStatesByLoc.CurDiagState = CurState;
+      Diag.DiagStatesByLoc.CurDiagStateLoc = CurStateLoc;
+
+      // Preserve the property that the imaginary root file describes the
+      // current state.
+      auto &T = Diag.DiagStatesByLoc.Files[FileID()].StateTransitions;
+      if (T.empty())
+        T.push_back({CurState, 0});
+      else
+        T[0].State = CurState;
     }
 
     // Don't try to read these mappings again.
@@ -8151,16 +8194,11 @@ ASTReader::getSourceDescriptor(unsigned ID) {
   return None;
 }
 
-ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(unsigned ID) {
-  const Module *M = getSubmodule(ID);
-  if (!M || !M->WithCodegen)
+ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
+  auto I = BodySource.find(FD);
+  if (I == BodySource.end())
     return EK_ReplyHazy;
-
-  ModuleFile *MF = ModuleMgr.lookup(M->getASTFile());
-  assert(MF); // ?
-  if (MF->Kind == ModuleKind::MK_MainFile)
-    return EK_Never;
-  return EK_Always;
+  return I->second ? EK_Never : EK_Always;
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
@@ -8994,9 +9032,9 @@ void ASTReader::finishPendingActions() {
       // FIXME: Check for =delete/=default?
       // FIXME: Complain about ODR violations here?
       const FunctionDecl *Defn = nullptr;
-      if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn))
+      if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn)) {
         FD->setLazyBody(PB->second);
-      else
+      } else
         mergeDefinitionVisibility(const_cast<FunctionDecl*>(Defn), FD);
       continue;
     }
@@ -9291,6 +9329,11 @@ void ASTReader::diagnoseOdrViolations() {
         MethodVolatile,
         MethodConst,
         MethodInline,
+        MethodNumberParameters,
+        MethodParameterType,
+        MethodParameterName,
+        MethodParameterSingleDefaultArgument,
+        MethodParameterDifferentDefaultArguments,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9611,6 +9654,104 @@ void ASTReader::diagnoseOdrViolations() {
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodInline)
               << SecondName << SecondInline;
+          Diagnosed = true;
+          break;
+        }
+
+        const unsigned FirstNumParameters = FirstMethod->param_size();
+        const unsigned SecondNumParameters = SecondMethod->param_size();
+        if (FirstNumParameters != SecondNumParameters) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodNumberParameters)
+              << FirstName << FirstNumParameters;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodNumberParameters)
+              << SecondName << SecondNumParameters;
+          Diagnosed = true;
+          break;
+        }
+
+        // Need this status boolean to know when break out of the switch.
+        bool ParameterMismatch = false;
+        for (unsigned I = 0; I < FirstNumParameters; ++I) {
+          const ParmVarDecl *FirstParam = FirstMethod->getParamDecl(I);
+          const ParmVarDecl *SecondParam = SecondMethod->getParamDecl(I);
+
+          QualType FirstParamType = FirstParam->getType();
+          QualType SecondParamType = SecondParam->getType();
+          if (FirstParamType != SecondParamType) {
+            if (const DecayedType *ParamDecayedType =
+                    FirstParamType->getAs<DecayedType>()) {
+              ODRDiagError(FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), MethodParameterType)
+                  << FirstName << (I + 1) << FirstParamType << true
+                  << ParamDecayedType->getOriginalType();
+            } else {
+              ODRDiagError(FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), MethodParameterType)
+                  << FirstName << (I + 1) << FirstParamType << false;
+            }
+
+            if (const DecayedType *ParamDecayedType =
+                    SecondParamType->getAs<DecayedType>()) {
+              ODRDiagNote(SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), MethodParameterType)
+                  << SecondName << (I + 1) << SecondParamType << true
+                  << ParamDecayedType->getOriginalType();
+            } else {
+              ODRDiagNote(SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), MethodParameterType)
+                  << SecondName << (I + 1) << SecondParamType << false;
+            }
+            ParameterMismatch = true;
+            break;
+          }
+
+          DeclarationName FirstParamName = FirstParam->getDeclName();
+          DeclarationName SecondParamName = SecondParam->getDeclName();
+          if (FirstParamName != SecondParamName) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(), MethodParameterName)
+                << FirstName << (I + 1) << FirstParamName;
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(), MethodParameterName)
+                << SecondName << (I + 1) << SecondParamName;
+            ParameterMismatch = true;
+            break;
+          }
+
+          const Expr* FirstDefaultArg = FirstParam->getDefaultArg();
+          const Expr* SecondDefaultArg = SecondParam->getDefaultArg();
+          if ((!FirstDefaultArg && SecondDefaultArg) ||
+              (FirstDefaultArg && !SecondDefaultArg)) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(),
+                         MethodParameterSingleDefaultArgument)
+                << FirstName << (I + 1) << (FirstDefaultArg != nullptr);
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterSingleDefaultArgument)
+                << SecondName << (I + 1) << (SecondDefaultArg != nullptr);
+            ParameterMismatch = true;
+            break;
+          }
+
+          if (ComputeODRHash(FirstDefaultArg) !=
+              ComputeODRHash(SecondDefaultArg)) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(),
+                         MethodParameterDifferentDefaultArguments)
+                << FirstName << (I + 1);
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterDifferentDefaultArguments)
+                << SecondName << (I + 1);
+            ParameterMismatch = true;
+            break;
+          }
+        }
+
+        if (ParameterMismatch) {
           Diagnosed = true;
           break;
         }

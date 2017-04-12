@@ -33,9 +33,9 @@
 
 #include "FreeBSDThread.h"
 #include "Plugins/Process/POSIX/CrashReason.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
-#include "ProcessPOSIXLog.h"
 
 extern "C" {
 extern char **environ;

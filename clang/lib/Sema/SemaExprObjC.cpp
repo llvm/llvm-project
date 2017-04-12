@@ -3355,7 +3355,7 @@ namespace {
       if (isAnyRetainable(TargetClass) &&
           isAnyRetainable(SourceClass) &&
           var &&
-          var->getStorageClass() == SC_Extern &&
+          !var->hasDefinition(Context) &&
           var->getType().isConstQualified()) {
 
         // In system headers, they can also be assumed to be immune to retains.
