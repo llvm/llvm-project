@@ -5,25 +5,25 @@
 ; RUN: llvm-as %S/Inputs/link-odr-availextern-ae.ll -o %t2ae
 ; RUN: llvm-as %S/Inputs/link-odr-availextern-odr.ll -o %t2odr
 
-; RUN: llvm-lto2 -o %t3 %t1 %t2ae -r %t1,f,p -r %t2ae,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t1 %t2ae -r %t1,f,p -r %t2ae,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=PREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t1 %t2odr -r %t1,f,p -r %t2odr,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t1 %t2odr -r %t1,f,p -r %t2odr,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=PREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t2ae %t1 -r %t1,f,p -r %t2ae,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t2ae %t1 -r %t1,f,p -r %t2ae,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=PREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t2odr %t1 -r %t1,f,p -r %t2odr,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t2odr %t1 -r %t1,f,p -r %t2odr,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=PREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t2ae -r %t2ae,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t2ae -r %t2ae,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=NONPREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t2odr -r %t2odr,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t2odr -r %t2odr,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=NONPREVAILING %s
 
-; RUN: llvm-lto2 -o %t3 %t2odr %t1 -r %t1,f, -r %t2odr,f, -save-temps
+; RUN: llvm-lto2 run -o %t3 %t2odr %t1 -r %t1,f, -r %t2odr,f, -save-temps
 ; RUN: llvm-dis < %t3.0.0.preopt.bc -o - | FileCheck --check-prefix=NONPREVAILING %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

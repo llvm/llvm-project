@@ -376,28 +376,20 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mul_add_shr_i32:
-; NOSDWA-NOT: v_mul_u32_u24_sdwa
+; GCN-LABEL: {{^}}add_bb_v2i16:
 ; NOSDWA-NOT: v_add_i32_sdwa
-; SDWA-NOT: v_mul_u32_u24_sdwa
-; SDWA-NOT: v_add_i32_sdwa
 
-define void @mul_add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %ina, i32 addrspace(1)* %inb, i1 addrspace(1)* %incond) {
+; SDWA: v_add_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+
+define amdgpu_kernel void @add_bb_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
-  %a = load i32, i32 addrspace(1)* %ina, align 4
-  %b = load i32, i32 addrspace(1)* %inb, align 4
-  %cond = load i1, i1 addrspace(1)* %incond, align 4
-  %shra = lshr i32 %a, 16
-  %shrb = lshr i32 %b, 16
-  br i1 %cond, label %mul_label, label %add_label
-mul_label:
-  %mul = mul i32 %shra, %shrb
-  br label %store_label
+  %a = load <2 x i16>, <2 x i16> addrspace(1)* %ina, align 4
+  %b = load <2 x i16>, <2 x i16> addrspace(1)* %inb, align 4
+  br label %add_label
 add_label:
-  %add = add i32 %shra, %shrb
+  %add = add <2 x i16> %a, %b
   br label %store_label
 store_label:
-  %store = phi i32 [%mul, %mul_label], [%add, %add_label]
-  store i32 %store, i32 addrspace(1)* %out, align 4
+  store <2 x i16> %add, <2 x i16> addrspace(1)* %out, align 4
   ret void
 }

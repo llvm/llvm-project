@@ -8980,28 +8980,25 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
     break;
   }
 
-  // Check if chain operands and base addresses match.
-  if (Load1->getOperand(0) != Load2->getOperand(0) ||
-      Load1->getOperand(5) != Load2->getOperand(5))
-    return false;
-  // Segment operands should match as well.
-  if (Load1->getOperand(4) != Load2->getOperand(4))
-    return false;
-  // Scale should be 1, Index should be Reg0.
-  if (Load1->getOperand(1) == Load2->getOperand(1) &&
-      Load1->getOperand(2) == Load2->getOperand(2)) {
-    if (cast<ConstantSDNode>(Load1->getOperand(1))->getZExtValue() != 1)
-      return false;
+  // Lambda to check if both the loads have the same value for an operand index.
+  auto HasSameOp = [&](int I) {
+    return Load1->getOperand(I) == Load2->getOperand(I);
+  };
 
-    // Now let's examine the displacements.
-    if (isa<ConstantSDNode>(Load1->getOperand(3)) &&
-        isa<ConstantSDNode>(Load2->getOperand(3))) {
-      Offset1 = cast<ConstantSDNode>(Load1->getOperand(3))->getSExtValue();
-      Offset2 = cast<ConstantSDNode>(Load2->getOperand(3))->getSExtValue();
-      return true;
-    }
-  }
-  return false;
+  // All operands except the displacement should match.
+  if (!HasSameOp(X86::AddrBaseReg) || !HasSameOp(X86::AddrScaleAmt) ||
+      !HasSameOp(X86::AddrIndexReg) || !HasSameOp(X86::AddrSegmentReg))
+    return false;
+
+  // Now let's examine if the displacements are constants.
+  auto Disp1 = dyn_cast<ConstantSDNode>(Load1->getOperand(X86::AddrDisp));
+  auto Disp2 = dyn_cast<ConstantSDNode>(Load2->getOperand(X86::AddrDisp));
+  if (!Disp1 || !Disp2)
+    return false;
+
+  Offset1 = Disp1->getSExtValue();
+  Offset2 = Disp2->getSExtValue();
+  return true;
 }
 
 bool X86InstrInfo::shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,

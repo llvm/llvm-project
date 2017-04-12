@@ -34606,15 +34606,17 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z,
                                DAG.getConstant(1, DL, Z.getValueType()));
 
+  SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
+
   // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
   // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
   if (CC == X86::COND_NE)
-    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VT, X,
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VTs, X,
                        DAG.getConstant(-1ULL, DL, VT), NewCmp);
 
   // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
   // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
-  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VT, X,
+  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
                      DAG.getConstant(0, DL, VT), NewCmp);
 }
 

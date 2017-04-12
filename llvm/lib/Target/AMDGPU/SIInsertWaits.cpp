@@ -690,5 +690,19 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   for (MachineInstr *I : RemoveMI)
     I->eraseFromParent();
 
+  if (!MFI->isEntryFunction()) {
+    // Wait for any outstanding memory operations that the input registers may
+    // depend on. We can't track them and it's better to to the wait after the
+    // costly call sequence.
+
+    // TODO: Could insert earlier and schedule more liberally with operations
+    // that only use caller preserved registers.
+    MachineBasicBlock &EntryBB = MF.front();
+    BuildMI(EntryBB, EntryBB.getFirstNonPHI(), DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
+      .addImm(0);
+
+    Changes = true;
+  }
+
   return Changes;
 }

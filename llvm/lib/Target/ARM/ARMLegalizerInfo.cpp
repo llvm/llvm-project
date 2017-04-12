@@ -63,6 +63,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
     setAction({G_LOAD, s64}, Legal);
     setAction({G_STORE, s64}, Legal);
+  } else {
+    for (auto Ty : {s32, s64})
+      setAction({G_FADD, Ty}, Libcall);
   }
 
   for (unsigned Op : {G_FREM, G_FPOW})

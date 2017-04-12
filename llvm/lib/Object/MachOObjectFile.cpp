@@ -106,13 +106,6 @@ static StringRef parseSegmentOrSectionName(const char *P) {
   return StringRef(P, 16);
 }
 
-// Helper to advance a section or symbol iterator multiple increments at a time.
-template<class T>
-static void advance(T &it, size_t Val) {
-  while (Val--)
-    ++it;
-}
-
 static unsigned getCPUType(const MachOObjectFile &O) {
   return O.getHeader().cputype;
 }

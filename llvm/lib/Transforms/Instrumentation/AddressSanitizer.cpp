@@ -1625,11 +1625,12 @@ void AddressSanitizerModule::SetComdatForGlobalMetadata(
 GlobalVariable *
 AddressSanitizerModule::CreateMetadataGlobal(Module &M, Constant *Initializer,
                                              StringRef OriginalName) {
-  GlobalVariable *Metadata =
-      new GlobalVariable(M, Initializer->getType(), false,
-                         GlobalVariable::InternalLinkage, Initializer,
-                         Twine("__asan_global_") +
-                             GlobalValue::getRealLinkageName(OriginalName));
+  auto Linkage = TargetTriple.isOSBinFormatMachO()
+                     ? GlobalVariable::InternalLinkage
+                     : GlobalVariable::PrivateLinkage;
+  GlobalVariable *Metadata = new GlobalVariable(
+      M, Initializer->getType(), false, Linkage, Initializer,
+      Twine("__asan_global_") + GlobalValue::getRealLinkageName(OriginalName));
   Metadata->setSection(getGlobalMetadataSection());
   return Metadata;
 }
@@ -1963,28 +1964,39 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
       const std::string ExpStr = Exp ? "exp_" : "";
       const std::string SuffixStr = CompileKernel ? "N" : "_n";
       const std::string EndingStr = Recover ? "_noabort" : "";
-      Type *ExpType = Exp ? Type::getInt32Ty(*C) : nullptr;
-      AsanErrorCallbackSized[AccessIsWrite][Exp] =
-          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr + EndingStr,
-              IRB.getVoidTy(), IntptrTy, IntptrTy, ExpType));
-      AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
-          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              ClMemoryAccessCallbackPrefix + ExpStr + TypeStr + "N" + EndingStr,
-              IRB.getVoidTy(), IntptrTy, IntptrTy, ExpType));
-      for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
-           AccessSizeIndex++) {
-        const std::string Suffix = TypeStr + itostr(1ULL << AccessSizeIndex);
-        AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
-            checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-                kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
-                IRB.getVoidTy(), IntptrTy, ExpType));
-        AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
-            checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-                ClMemoryAccessCallbackPrefix + ExpStr + Suffix + EndingStr,
-                IRB.getVoidTy(), IntptrTy, ExpType));
+
+      SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
+      SmallVector<Type *, 2> Args1{1, IntptrTy};
+      if (Exp) {
+        Type *ExpType = Type::getInt32Ty(*C);
+        Args2.push_back(ExpType);
+        Args1.push_back(ExpType);
       }
-    }
+	    AsanErrorCallbackSized[AccessIsWrite][Exp] =
+	        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+	            kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr +
+	                EndingStr,
+	            FunctionType::get(IRB.getVoidTy(), Args2, false)));
+
+	    AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
+	        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+	            ClMemoryAccessCallbackPrefix + ExpStr + TypeStr + "N" + EndingStr,
+	            FunctionType::get(IRB.getVoidTy(), Args2, false)));
+
+	    for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
+	         AccessSizeIndex++) {
+	      const std::string Suffix = TypeStr + itostr(1ULL << AccessSizeIndex);
+	      AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
+	          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+	              kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
+	              FunctionType::get(IRB.getVoidTy(), Args1, false)));
+
+	      AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
+	          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+	              ClMemoryAccessCallbackPrefix + ExpStr + Suffix + EndingStr,
+	              FunctionType::get(IRB.getVoidTy(), Args1, false)));
+	    }
+	  }
   }
 
   const std::string MemIntrinCallbackPrefix =

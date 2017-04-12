@@ -2640,6 +2640,9 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // there are no MachineLoops.
   PreferredLoopExit = nullptr;
 
+  assert(BlockToChain.empty());
+  assert(ComputedEdges.empty());
+
   if (TailDupPlacement) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
     unsigned TailDupSize = TailDupPlacementThreshold;
@@ -2648,8 +2651,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
-
-  assert(BlockToChain.empty());
 
   buildCFGChains();
 
@@ -2671,6 +2672,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                             /*AfterBlockPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();
+      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->runOnMachineFunction(MF);
@@ -2683,6 +2685,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   alignBlocks();
 
   BlockToChain.clear();
+  ComputedEdges.clear();
   ChainAllocator.DestroyAll();
 
   if (AlignAllBlock)

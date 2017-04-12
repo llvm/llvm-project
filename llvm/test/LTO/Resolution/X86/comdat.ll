@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/comdat.ll -o %t2.o
-; RUN: llvm-lto2 -save-temps -o %t3.o %t.o %t2.o \
+; RUN: llvm-lto2 run -save-temps -o %t3.o %t.o %t2.o \
 ; RUN:  -r=%t.o,f1,plx \
 ; RUN:  -r=%t.o,v1,px \
 ; RUN:  -r=%t.o,r11,px \

@@ -340,7 +340,7 @@ ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {
 }
 
 template <class ELFT>
-static bool compareAddr(uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
+bool compareAddr(uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
   return VAddr < Phdr->p_vaddr;
 }
 

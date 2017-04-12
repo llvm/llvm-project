@@ -17,6 +17,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 
 #include "AMDGPU.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
@@ -114,8 +115,6 @@ protected:
                                     SmallVectorImpl<SDValue> &Results) const;
   void analyzeFormalArgumentsCompute(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
-  void AnalyzeFormalArguments(CCState &State,
-                              const SmallVectorImpl<ISD::InputArg> &Ins) const;
   void AnalyzeReturn(CCState &State,
                      const SmallVectorImpl<ISD::OutputArg> &Outs) const;
 
@@ -161,6 +160,7 @@ public:
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
 
+  static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,

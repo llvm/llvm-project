@@ -9,17 +9,17 @@
 ; where both t and t-import are sensitive to typeid1's resolution
 ; so 4 distinct objects in total.
 ; RUN: rm -rf %t.cache
-; RUN: llvm-lto2 -o %t.o %t.bc %t-import.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
-; RUN: llvm-lto2 -o %t.o %t.bc %t-import.bc %t1.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx -r=%t1.bc,vt1,plx
+; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
+; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc %t1.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx -r=%t1.bc,vt1,plx
 ; RUN: ls %t.cache | count 4
 
 ; Three resolutions for typeid2: Indir, SingleImpl, UniqueRetVal
 ; where both t and t-import are sensitive to typeid2's resolution
 ; so 6 distinct objects in total.
 ; RUN: rm -rf %t.cache
-; RUN: llvm-lto2 -o %t.o %t.bc %t-import.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
-; RUN: llvm-lto2 -o %t.o %t.bc %t-import.bc %t2.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t2.bc,vt2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
-; RUN: llvm-lto2 -o %t.o %t.bc %t-import.bc %t3.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t3.bc,vt2a,plx -r=%t3.bc,vt2b,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
+; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
+; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc %t2.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t2.bc,vt2,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
+; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc %t3.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t3.bc,vt2a,plx -r=%t3.bc,vt2b,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
 ; RUN: ls %t.cache | count 6
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

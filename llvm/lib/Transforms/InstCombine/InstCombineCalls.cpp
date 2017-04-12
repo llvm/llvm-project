@@ -23,7 +23,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/AttributeSetNode.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
@@ -4119,7 +4118,7 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
     }
   }
 
-  AttributeSetNode *FnAttrs = CallerPAL.getFnAttributes();
+  AttributeSet FnAttrs = CallerPAL.getFnAttributes();
   if (CallerPAL.hasAttributes(AttributeList::FunctionIndex))
     attrVec.push_back(AttributeList::get(Callee->getContext(),
                                          AttributeList::FunctionIndex,
@@ -4218,7 +4217,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
   if (!NestAttrs.isEmpty()) {
     unsigned NestIdx = 1;
     Type *NestTy = nullptr;
-    AttributeSetNode *NestAttr;
+    AttributeSet NestAttr;
 
     // Look for a parameter marked with the 'nest' attribute.
     for (FunctionType::param_iterator I = NestFTy->param_begin(),
@@ -4233,7 +4232,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
     if (NestTy) {
       Instruction *Caller = CS.getInstruction();
       std::vector<Value*> NewArgs;
-      std::vector<AttributeSetNode *> NewAttrs;
+      std::vector<AttributeSet> NewAttrs;
       NewArgs.reserve(CS.arg_size() + 1);
       NewAttrs.reserve(CS.arg_size() + 2);
 

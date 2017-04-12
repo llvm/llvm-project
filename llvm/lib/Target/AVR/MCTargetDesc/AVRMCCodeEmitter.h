@@ -63,7 +63,7 @@ private:
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
 
-  /// Takes the compliment of a number (~0 - val).
+  /// Takes the complement of a number (~0 - val).
   unsigned encodeComplement(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;

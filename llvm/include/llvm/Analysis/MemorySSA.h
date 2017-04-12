@@ -69,8 +69,8 @@
 /// per instruction.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
-#define LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
+#ifndef LLVM_ANALYSIS_MEMORYSSA_H
+#define LLVM_ANALYSIS_MEMORYSSA_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -1152,4 +1152,4 @@ inline iterator_range<def_chain_iterator<T, true>> optimized_def_chain(T MA) {
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
+#endif // LLVM_ANALYSIS_MEMORYSSA_H

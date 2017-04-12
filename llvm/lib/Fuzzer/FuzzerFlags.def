@@ -90,7 +90,7 @@ FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information at exit."
 FUZZER_FLAG_INT(dump_coverage, 0, "If 1, dump coverage information at exit."
                                   " Experimental, only with trace-pc-guard")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
-FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGSEGV.")
+FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
 FUZZER_FLAG_INT(handle_ill, 1, "If 1, try to intercept SIGILL.")
 FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")

@@ -867,11 +867,6 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(CCState &State,
   }
 }
 
-void AMDGPUTargetLowering::AnalyzeFormalArguments(CCState &State,
-                              const SmallVectorImpl<ISD::InputArg> &Ins) const {
-  State.AnalyzeFormalArguments(Ins, CC_AMDGPU);
-}
-
 void AMDGPUTargetLowering::AnalyzeReturn(CCState &State,
                            const SmallVectorImpl<ISD::OutputArg> &Outs) const {
 
@@ -890,6 +885,24 @@ AMDGPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 //===---------------------------------------------------------------------===//
 // Target specific lowering
 //===---------------------------------------------------------------------===//
+
+/// Selects the correct CCAssignFn for a given CallingConvention value.
+CCAssignFn *AMDGPUTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
+                                                    bool IsVarArg) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return CC_AMDGPU_Kernel;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+    return CC_AMDGPU;
+  default:
+    report_fatal_error("Unsupported calling convention.");
+  }
+}
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                         SmallVectorImpl<SDValue> &InVals) const {

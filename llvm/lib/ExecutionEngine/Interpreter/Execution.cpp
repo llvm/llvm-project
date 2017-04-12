@@ -899,10 +899,10 @@ void Interpreter::visitSwitchInst(SwitchInst &I) {
 
   // Check to see if any of the cases match...
   BasicBlock *Dest = nullptr;
-  for (SwitchInst::CaseIt i = I.case_begin(), e = I.case_end(); i != e; ++i) {
-    GenericValue CaseVal = getOperandValue(i.getCaseValue(), SF);
+  for (auto Case : I.cases()) {
+    GenericValue CaseVal = getOperandValue(Case.getCaseValue(), SF);
     if (executeICMP_EQ(CondVal, CaseVal, ElTy).IntVal != 0) {
-      Dest = cast<BasicBlock>(i.getCaseSuccessor());
+      Dest = cast<BasicBlock>(Case.getCaseSuccessor());
       break;
     }
   }

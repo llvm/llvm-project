@@ -10,7 +10,7 @@
 // This file implements the MemorySSA class.
 //
 //===----------------------------------------------------------------===//
-#include "llvm/Transforms/Utils/MemorySSA.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"

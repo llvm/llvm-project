@@ -108,11 +108,9 @@ static const uint32_t IH_TAKEN_WEIGHT = 1024 * 1024 - 1;
 /// instruction. This is essentially never taken.
 static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 
-/// \brief Calculate edge weights for successors lead to unreachable.
-///
-/// Predict that a successor which leads necessarily to an
-/// unreachable-terminated block as extremely unlikely.
-bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
+/// \brief Add \p BB to PostDominatedByUnreachable set if applicable.
+void
+BranchProbabilityInfo::updatePostDominatedByUnreachable(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0) {
     if (isa<UnreachableInst>(TI) ||
@@ -122,38 +120,86 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
         // never execute.
         BB->getTerminatingDeoptimizeCall())
       PostDominatedByUnreachable.insert(BB);
-    return false;
+    return;
   }
+
+  // If the terminator is an InvokeInst, check only the normal destination block
+  // as the unwind edge of InvokeInst is also very unlikely taken.
+  if (auto *II = dyn_cast<InvokeInst>(TI)) {
+    if (PostDominatedByUnreachable.count(II->getNormalDest()))
+      PostDominatedByUnreachable.insert(BB);
+    return;
+  }
+
+  for (auto *I : successors(BB))
+    // If any of successor is not post dominated then BB is also not.
+    if (!PostDominatedByUnreachable.count(I))
+      return;
+
+  PostDominatedByUnreachable.insert(BB);
+}
+
+/// \brief Add \p BB to PostDominatedByColdCall set if applicable.
+void
+BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
+  assert(!PostDominatedByColdCall.count(BB));
+  const TerminatorInst *TI = BB->getTerminator();
+  if (TI->getNumSuccessors() == 0)
+    return;
+
+  // If all of successor are post dominated then BB is also done.
+  if (llvm::all_of(successors(BB), [&](const BasicBlock *SuccBB) {
+        return PostDominatedByColdCall.count(SuccBB);
+      })) {
+    PostDominatedByColdCall.insert(BB);
+    return;
+  }
+
+  // If the terminator is an InvokeInst, check only the normal destination
+  // block as the unwind edge of InvokeInst is also very unlikely taken.
+  if (auto *II = dyn_cast<InvokeInst>(TI))
+    if (PostDominatedByColdCall.count(II->getNormalDest())) {
+      PostDominatedByColdCall.insert(BB);
+      return;
+    }
+
+  // Otherwise, if the block itself contains a cold function, add it to the
+  // set of blocks post-dominated by a cold call.
+  for (auto &I : *BB)
+    if (const CallInst *CI = dyn_cast<CallInst>(&I))
+      if (CI->hasFnAttr(Attribute::Cold)) {
+        PostDominatedByColdCall.insert(BB);
+        return;
+      }
+}
+
+/// \brief Calculate edge weights for successors lead to unreachable.
+///
+/// Predict that a successor which leads necessarily to an
+/// unreachable-terminated block as extremely unlikely.
+bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
+  const TerminatorInst *TI = BB->getTerminator();
+  if (TI->getNumSuccessors() == 0)
+    return false;
 
   SmallVector<unsigned, 4> UnreachableEdges;
   SmallVector<unsigned, 4> ReachableEdges;
 
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
     if (PostDominatedByUnreachable.count(*I))
       UnreachableEdges.push_back(I.getSuccessorIndex());
     else
       ReachableEdges.push_back(I.getSuccessorIndex());
-  }
-
-  // If all successors are in the set of blocks post-dominated by unreachable,
-  // this block is too.
-  if (UnreachableEdges.size() == TI->getNumSuccessors())
-    PostDominatedByUnreachable.insert(BB);
 
   // Skip probabilities if this block has a single successor or if all were
   // reachable.
   if (TI->getNumSuccessors() == 1 || UnreachableEdges.empty())
     return false;
 
-  // If the terminator is an InvokeInst, check only the normal destination block
-  // as the unwind edge of InvokeInst is also very unlikely taken.
-  if (auto *II = dyn_cast<InvokeInst>(TI))
-    if (PostDominatedByUnreachable.count(II->getNormalDest())) {
-      PostDominatedByUnreachable.insert(BB);
-      // Return false here so that edge weights for InvokeInst could be decided
-      // in calcInvokeHeuristics().
-      return false;
-    }
+  // Return false here so that edge weights for InvokeInst could be decided
+  // in calcInvokeHeuristics().
+  if (isa<InvokeInst>(TI))
+    return false;
 
   if (ReachableEdges.empty()) {
     BranchProbability Prob(1, UnreachableEdges.size());
@@ -263,31 +309,10 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
     else
       NormalEdges.push_back(I.getSuccessorIndex());
 
-  // If all successors are in the set of blocks post-dominated by cold calls,
-  // this block is in the set post-dominated by cold calls.
-  if (ColdEdges.size() == TI->getNumSuccessors())
-    PostDominatedByColdCall.insert(BB);
-  else {
-    // Otherwise, if the block itself contains a cold function, add it to the
-    // set of blocks postdominated by a cold call.
-    assert(!PostDominatedByColdCall.count(BB));
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-      if (const CallInst *CI = dyn_cast<CallInst>(I))
-        if (CI->hasFnAttr(Attribute::Cold)) {
-          PostDominatedByColdCall.insert(BB);
-          break;
-        }
-  }
-
-  if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    // If the terminator is an InvokeInst, consider only the normal destination
-    // block.
-    if (PostDominatedByColdCall.count(II->getNormalDest()))
-      PostDominatedByColdCall.insert(BB);
-    // Return false here so that edge weights for InvokeInst could be decided
-    // in calcInvokeHeuristics().
+  // Return false here so that edge weights for InvokeInst could be decided
+  // in calcInvokeHeuristics().
+  if (isa<InvokeInst>(TI))
     return false;
-  }
 
   // Skip probabilities if this block has a single successor.
   if (TI->getNumSuccessors() == 1 || ColdEdges.empty())
@@ -671,6 +696,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI) {
   // the successors of a block iteratively.
   for (auto BB : post_order(&F.getEntryBlock())) {
     DEBUG(dbgs() << "Computing probabilities for " << BB->getName() << "\n");
+    updatePostDominatedByUnreachable(BB);
+    updatePostDominatedByColdCall(BB);
     if (calcUnreachableHeuristics(BB))
       continue;
     if (calcMetadataWeights(BB))

@@ -807,7 +807,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     }
   }
 
-  // FIXME: The code below is duplicated in FoldOrOfICmps.
   // From here on, we only handle:
   //    (icmp1 A, C1) & (icmp2 A, C2) --> something simpler.
   if (LHS0 != RHS0)
@@ -826,14 +825,11 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;
-  if (CmpInst::isUnsigned(PredL) || CmpInst::isUnsigned(PredR)) {
-    // We have an unsigned compare (possibly with an equality compare), so treat
-    // the constants as unsigned.
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-  } else {
-    // Equality transforms treat the constants as signed.
+  if (CmpInst::isSigned(PredL) ||
+      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
     ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  }
+  else
+    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
 
   if (ShouldSwap) {
     std::swap(LHS, RHS);
@@ -881,6 +877,10 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_SGT: // (X != 13 & X s> 15) -> X s> 15
       return RHS;
     case ICmpInst::ICMP_NE:
+      // Special case to get the ordering right when the values wrap around
+      // zero.
+      if (LHSC->getValue() == 0 && RHSC->getValue().isAllOnesValue())
+        std::swap(LHSC, RHSC);
       if (LHSC == SubOne(RHSC)) { // (X != 13 & X != 14) -> X-13 >u 1
         Constant *AddC = ConstantExpr::getNeg(LHSC);
         Value *Add = Builder->CreateAdd(LHS0, AddC, LHS0->getName() + ".off");
@@ -1272,8 +1272,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       case Instruction::Sub:
         Value *X;
         ConstantInt *C1;
-        if (match(Op0I, m_BinOp(m_ZExt(m_Value(X)), m_ConstantInt(C1))) ||
-            match(Op0I, m_BinOp(m_ConstantInt(C1), m_ZExt(m_Value(X))))) {
+        if (match(Op0I, m_c_BinOp(m_ZExt(m_Value(X)), m_ConstantInt(C1)))) {
           if (AndRHSMask.isIntN(X->getType()->getScalarSizeInBits())) {
             auto *TruncC1 = ConstantExpr::getTrunc(C1, X->getType());
             Value *BinOp;
@@ -1727,7 +1726,6 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return Builder->CreateICmpULE(LHS0, LHSC);
   }
 
-  // FIXME: The code below is duplicated in FoldAndOfICmps.
   // From here on, we only handle:
   //    (icmp1 A, C1) | (icmp2 A, C2) --> something simpler.
   if (LHS0 != RHS0)
@@ -1746,14 +1744,11 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;
-  if (CmpInst::isUnsigned(PredL) || CmpInst::isUnsigned(PredR)) {
-    // We have an unsigned compare (possibly with an equality compare), so treat
-    // the constants as unsigned.
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-  } else {
-    // Equality transforms treat the constants as signed.
+  if (CmpInst::isSigned(PredL) ||
+      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
     ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  }
+  else
+    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
 
   if (ShouldSwap) {
     std::swap(LHS, RHS);

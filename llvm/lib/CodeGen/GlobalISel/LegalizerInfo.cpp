@@ -73,11 +73,6 @@ LegalizerInfo::getAction(const InstrAspect &Aspect) const {
   // These *have* to be implemented for now, they're the fundamental basis of
   // how everything else is transformed.
 
-  // Nothing is going to go well with types that aren't a power of 2 yet, so
-  // don't even try because we might make things worse.
-  if (!isPowerOf2_64(Aspect.Type.getSizeInBits()))
-      return std::make_pair(Unsupported, LLT());
-
   // FIXME: the long-term plan calls for expansion in terms of load/store (if
   // they're not legal).
   if (Aspect.Opcode == TargetOpcode::G_SEQUENCE ||
@@ -86,12 +81,20 @@ LegalizerInfo::getAction(const InstrAspect &Aspect) const {
       Aspect.Opcode == TargetOpcode::G_UNMERGE_VALUES)
     return std::make_pair(Legal, Aspect.Type);
 
+  LLT Ty = Aspect.Type;
   LegalizeAction Action = findInActions(Aspect);
+  // LegalizerHelper is not able to handle non-power-of-2 types right now, so do
+  // not try to legalize them unless they are marked as Legal or Custom.
+  // FIXME: This is a temporary hack until the general non-power-of-2
+  // legalization works.
+  if (!isPowerOf2_64(Ty.getSizeInBits()) &&
+      !(Action == Legal || Action == Custom))
+    return std::make_pair(Unsupported, LLT());
+
   if (Action != NotFound)
     return findLegalAction(Aspect, Action);
 
   unsigned Opcode = Aspect.Opcode;
-  LLT Ty = Aspect.Type;
   if (!Ty.isVector()) {
     auto DefaultAction = DefaultActions.find(Aspect.Opcode);
     if (DefaultAction != DefaultActions.end() && DefaultAction->second == Legal)

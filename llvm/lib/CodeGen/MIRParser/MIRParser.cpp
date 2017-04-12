@@ -367,9 +367,6 @@ bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
   }
   PFS.SM = &SM;
 
-  if (MF.empty())
-    return error(Twine("machine function '") + Twine(MF.getName()) +
-                 "' requires at least one machine basic block in its body");
   // Initialize the frame information after creating all the MBBs so that the
   // MBB references in the frame information can be resolved.
   if (initializeFrameInfo(PFS, YamlMF))

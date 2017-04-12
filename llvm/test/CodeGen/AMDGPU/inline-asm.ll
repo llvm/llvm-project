@@ -183,3 +183,16 @@ entry:
   ", ""()
   ret void
 }
+
+; FIXME: Should not have intermediate sgprs
+; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
+; CHECK: s_mov_b32 s1, 0
+; CHECK: s_mov_b32 s0, 0x1e240
+; CHECK: v_mov_b32_e32 v0, s0
+; CHECK: v_mov_b32_e32 v1, s1
+; CHECK: use v[0:1]
+define void @i64_imm_input_phys_vgpr() {
+entry:
+  call void asm sideeffect "; use $0 ", "{VGPR0_VGPR1}"(i64 123456)
+  ret void
+}

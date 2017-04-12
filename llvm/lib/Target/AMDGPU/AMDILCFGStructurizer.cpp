@@ -99,16 +99,6 @@ DEBUG( \
 
 #define INVALIDSCCNUM -1
 
-template<class NodeT>
-void ReverseVector(SmallVectorImpl<NodeT *> &Src) {
-  size_t sz = Src.size();
-  for (size_t i = 0; i < sz/2; ++i) {
-    NodeT *t = Src[i];
-    Src[i] = Src[sz - i - 1];
-    Src[sz - i - 1] = t;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 //
 // supporting data structure for CFGStructurizer
