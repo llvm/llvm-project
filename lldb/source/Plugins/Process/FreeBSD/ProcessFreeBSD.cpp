@@ -32,11 +32,11 @@
 #include "lldb/Target/Target.h"
 
 #include "FreeBSDThread.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
-#include "ProcessPOSIXLog.h"
 
 // Other libraries and framework includes
 #include "lldb/Breakpoint/BreakpointLocation.h"

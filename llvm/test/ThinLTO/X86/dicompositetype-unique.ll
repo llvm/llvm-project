@@ -1,7 +1,7 @@
 ; RUN: opt -module-summary -o %t1.bc %s
 ; RUN: opt -module-summary -o %t2.bc %S/Inputs/dicompositetype-unique.ll
 
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t --save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t --save-temps \
 ; RUN:    -r %t1.bc,_foo,lx \
 ; RUN:    -r %t1.bc,_main,plx \
 ; RUN:    -r %t2.bc,_foo,plx

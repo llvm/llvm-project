@@ -349,3 +349,25 @@ scalar.body:
 for.end:
   ret void
 }
+
+; FIXME: we can vectorize this first order recurrence, by generating two
+; extracts - one for the phi `val.phi` and other for the phi update `addx`.
+; val.phi at end of loop is 94 + x.
+; CHECK-LABEL: extract_second_last_iteration
+; CHECK-NOT: vector.body
+define i32 @extract_second_last_iteration(i32* %cval, i32 %x)  {
+entry:
+  br label %for.body
+
+for.body:
+  %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %val.phi = phi i32 [ 0, %entry ], [ %addx, %for.body ]
+  %inc = add i32 %inc.phi, 1
+  %bc = zext i32 %inc.phi to i64
+  %addx = add i32 %inc.phi, %x
+  %cmp = icmp eq i32 %inc.phi, 95
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:
+  ret i32 %val.phi
+}

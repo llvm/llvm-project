@@ -93,6 +93,10 @@ public:
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint8_t OSABI = 0;
 
+  // For SharedKind inputs, the string to use in DT_NEEDED when the library
+  // has no soname.
+  std::string DefaultSoName;
+
   // Cache for toString(). Only toString() should use this member.
   mutable std::string ToStringCache;
 

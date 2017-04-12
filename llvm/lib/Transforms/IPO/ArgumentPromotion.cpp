@@ -42,7 +42,6 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/AttributeSetNode.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -103,7 +102,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   // Attribute - Keep track of the parameter attributes for the arguments
   // that we are *not* promoting. For the ones that we do promote, the parameter
   // attributes are lost
-  SmallVector<AttributeSetNode *, 8> AttributesVec;
+  SmallVector<AttributeSet, 8> AttributesVec;
   const AttributeList &PAL = F->getAttributes();
 
   // Add any return attributes.
@@ -118,7 +117,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       Type *AgTy = cast<PointerType>(I->getType())->getElementType();
       StructType *STy = cast<StructType>(AgTy);
       Params.insert(Params.end(), STy->element_begin(), STy->element_end());
-      AttributesVec.insert(AttributesVec.end(), STy->getNumElements(), nullptr);
+      AttributesVec.insert(AttributesVec.end(), STy->getNumElements(),
+                           AttributeSet());
       ++NumByValArgsPromoted;
     } else if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
@@ -168,7 +168,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         Params.push_back(GetElementPtrInst::getIndexedType(
             cast<PointerType>(I->getType()->getScalarType())->getElementType(),
             ArgIndex.second));
-        AttributesVec.push_back(nullptr);
+        AttributesVec.push_back(AttributeSet());
         assert(Params.back());
       }
 
@@ -240,7 +240,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
               STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i), Call);
           // TODO: Tell AA about the new values?
           Args.push_back(new LoadInst(Idx, Idx->getName() + ".val", Call));
-          AttributesVec.push_back(nullptr);
+          AttributesVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
         // Non-dead argument: insert GEPs and loads as appropriate.
@@ -283,7 +283,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           newLoad->setAAMetadata(AAInfo);
 
           Args.push_back(newLoad);
-          AttributesVec.push_back(nullptr);
+          AttributesVec.push_back(AttributeSet());
         }
       }
 

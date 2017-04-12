@@ -76,6 +76,49 @@ static int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
+static CompletionItemKind getKind(CXCursorKind K) {
+  switch (K) {
+  case CXCursor_MacroInstantiation:
+  case CXCursor_MacroDefinition:
+    return CompletionItemKind::Text;
+  case CXCursor_CXXMethod:
+    return CompletionItemKind::Method;
+  case CXCursor_FunctionDecl:
+  case CXCursor_FunctionTemplate:
+    return CompletionItemKind::Function;
+  case CXCursor_Constructor:
+  case CXCursor_Destructor:
+    return CompletionItemKind::Constructor;
+  case CXCursor_FieldDecl:
+    return CompletionItemKind::Field;
+  case CXCursor_VarDecl:
+  case CXCursor_ParmDecl:
+    return CompletionItemKind::Variable;
+  case CXCursor_ClassDecl:
+  case CXCursor_StructDecl:
+  case CXCursor_UnionDecl:
+  case CXCursor_ClassTemplate:
+  case CXCursor_ClassTemplatePartialSpecialization:
+    return CompletionItemKind::Class;
+  case CXCursor_Namespace:
+  case CXCursor_NamespaceAlias:
+  case CXCursor_NamespaceRef:
+    return CompletionItemKind::Module;
+  case CXCursor_EnumConstantDecl:
+    return CompletionItemKind::Value;
+  case CXCursor_EnumDecl:
+    return CompletionItemKind::Enum;
+  case CXCursor_TypeAliasDecl:
+  case CXCursor_TypeAliasTemplateDecl:
+  case CXCursor_TypedefDecl:
+  case CXCursor_MemberRef:
+  case CXCursor_TypeRef:
+    return CompletionItemKind::Reference;
+  default:
+    return CompletionItemKind::Missing;
+  }
+}
+
 ASTManager::ASTManager(JSONOutput &Output, DocumentStore &Store,
                        bool RunSynchronously)
     : Output(Output), Store(Store), RunSynchronously(RunSynchronously),
@@ -334,13 +377,15 @@ public:
                                   CodeCompletionResult *Results,
                                   unsigned NumResults) override {
     for (unsigned I = 0; I != NumResults; ++I) {
-      CodeCompletionString *CCS = Results[I].CreateCodeCompletionString(
+      CodeCompletionResult &Result = Results[I];
+      CodeCompletionString *CCS = Result.CreateCodeCompletionString(
           S, Context, *Allocator, CCTUInfo,
           CodeCompleteOpts.IncludeBriefComments);
       if (CCS) {
         CompletionItem Item;
         assert(CCS->getTypedText());
         Item.label = CCS->getTypedText();
+        Item.kind = getKind(Result.CursorKind);
         if (CCS->getBriefComment())
           Item.documentation = CCS->getBriefComment();
         Items->push_back(std::move(Item));

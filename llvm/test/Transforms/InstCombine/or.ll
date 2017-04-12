@@ -223,9 +223,10 @@ define i1 @test19(i32 %A) {
 
 define i1 @or_icmps_eq_diff1(i32 %x) {
 ; CHECK-LABEL: @or_icmps_eq_diff1(
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 %x, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 %x, -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 %x, 0
+; CHECK-NEXT:    [[LOGIC:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[LOGIC]]
 ;
   %cmp1 = icmp eq i32 %x, -1
   %cmp2 = icmp eq i32 %x, 0

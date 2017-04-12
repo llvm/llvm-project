@@ -267,35 +267,35 @@ void EfficiencySanitizer::initializeCallbacks(Module &M) {
     SmallString<32> AlignedLoadName("__esan_aligned_load" + ByteSizeStr);
     EsanAlignedLoad[Idx] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            AlignedLoadName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+            AlignedLoadName, IRB.getVoidTy(), IRB.getInt8PtrTy()));
     SmallString<32> AlignedStoreName("__esan_aligned_store" + ByteSizeStr);
     EsanAlignedStore[Idx] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            AlignedStoreName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+            AlignedStoreName, IRB.getVoidTy(), IRB.getInt8PtrTy()));
     SmallString<32> UnalignedLoadName("__esan_unaligned_load" + ByteSizeStr);
     EsanUnalignedLoad[Idx] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            UnalignedLoadName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+            UnalignedLoadName, IRB.getVoidTy(), IRB.getInt8PtrTy()));
     SmallString<32> UnalignedStoreName("__esan_unaligned_store" + ByteSizeStr);
     EsanUnalignedStore[Idx] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            UnalignedStoreName, IRB.getVoidTy(), IRB.getInt8PtrTy(), nullptr));
+            UnalignedStoreName, IRB.getVoidTy(), IRB.getInt8PtrTy()));
   }
   EsanUnalignedLoadN = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("__esan_unaligned_loadN", IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
+                            IRB.getInt8PtrTy(), IntptrTy));
   EsanUnalignedStoreN = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("__esan_unaligned_storeN", IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
+                            IRB.getInt8PtrTy(), IntptrTy));
   MemmoveFn = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("memmove", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
+                            IRB.getInt8PtrTy(), IntptrTy));
   MemcpyFn = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("memcpy", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, nullptr));
+                            IRB.getInt8PtrTy(), IntptrTy));
   MemsetFn = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("memset", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                            IRB.getInt32Ty(), IntptrTy, nullptr));
+                            IRB.getInt32Ty(), IntptrTy));
 }
 
 bool EfficiencySanitizer::shouldIgnoreStructType(StructType *StructTy) {
@@ -533,7 +533,7 @@ void EfficiencySanitizer::createDestructor(Module &M, Constant *ToolInfoArg) {
   IRBuilder<> IRB_Dtor(EsanDtorFunction->getEntryBlock().getTerminator());
   Function *EsanExit = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(EsanExitName, IRB_Dtor.getVoidTy(),
-                            Int8PtrTy, nullptr));
+                            Int8PtrTy));
   EsanExit->setLinkage(Function::ExternalLinkage);
   IRB_Dtor.CreateCall(EsanExit, {ToolInfoArg});
   appendToGlobalDtors(M, EsanDtorFunction, EsanCtorAndDtorPriority);

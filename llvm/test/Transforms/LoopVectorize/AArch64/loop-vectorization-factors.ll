@@ -235,10 +235,13 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_phifail2(
-; CHECK: load <16 x i8>, <16 x i8>*
-; CHECK: add nuw nsw <16 x i32>
-; CHECK: store <16 x i8>
+; CHECK-NOT: load <16 x i8>, <16 x i8>*
+; CHECK-NOT: add nuw nsw <16 x i32>
+; CHECK-NOT: store <16 x i8>
 ; Function Attrs: nounwind
+; FIXME: Currently, if we vectorize this loop, we will generate incorrect code
+; if %len evenly divides VF. Vectorized loop code gen returns a_phi = p[len -1],
+; whereas it should be the previous value a_phi = p[len -2]
 define i8 @add_phifail2(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
 entry:
   br label %for.body

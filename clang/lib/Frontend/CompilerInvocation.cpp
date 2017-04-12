@@ -2660,29 +2660,6 @@ std::string CompilerInvocation::getModuleHash() const {
     code = ext->hashExtension(code);
   }
 
-  // Darwin-specific hack: if we have a sysroot, use the contents and
-  // modification time of
-  //   $sysroot/System/Library/CoreServices/SystemVersion.plist
-  // as part of the module hash.
-  if (!hsOpts.Sysroot.empty()) {
-    SmallString<128> systemVersionFile;
-    systemVersionFile += hsOpts.Sysroot;
-    llvm::sys::path::append(systemVersionFile, "System");
-    llvm::sys::path::append(systemVersionFile, "Library");
-    llvm::sys::path::append(systemVersionFile, "CoreServices");
-    llvm::sys::path::append(systemVersionFile, "SystemVersion.plist");
-
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
-        llvm::MemoryBuffer::getFile(systemVersionFile);
-    if (buffer) {
-      code = hash_combine(code, buffer.get()->getBuffer());
-
-      struct stat statBuf;
-      if (stat(systemVersionFile.c_str(), &statBuf) == 0)
-        code = hash_combine(code, statBuf.st_mtime);
-    }
-  }
-
   return llvm::APInt(64, code).toString(36, /*Signed=*/false);
 }
 

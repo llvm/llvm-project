@@ -126,12 +126,12 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
   return T();
 }
 
-int main(int argc, char **argv) {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
+static int usage() {
+  errs() << "Available subcommands: run\n";
+  return 1;
+}
 
+static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
@@ -284,4 +284,25 @@ int main(int argc, char **argv) {
     Cache = check(localCache(CacheDir, AddBuffer), "failed to create cache");
 
   check(Lto.run(AddStream, Cache), "LTO::run failed");
+  return 0;
+}
+
+int main(int argc, char **argv) {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  // FIXME: This should use llvm::cl subcommands, but it isn't currently
+  // possible to pass an argument not associated with a subcommand to a
+  // subcommand (e.g. -lto-use-new-pm).
+  if (argc < 2)
+    return usage();
+
+  StringRef Subcommand = argv[1];
+  // Ensure that argv[0] is correct after adjusting argv/argc.
+  argv[1] = argv[0];
+  if (Subcommand == "run")
+    return run(argc - 1, argv + 1);
+  return usage();
 }

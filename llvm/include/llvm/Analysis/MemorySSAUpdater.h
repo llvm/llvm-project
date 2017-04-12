@@ -29,8 +29,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_MEMORYSSAUPDATER_H
-#define LLVM_TRANSFORMS_UTILS_MEMORYSSAUPDATER_H
+#ifndef LLVM_ANALYSIS_MEMORYSSAUPDATER_H
+#define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,7 +45,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Transforms/Utils/MemorySSA.h"
+#include "llvm/Analysis/MemorySSA.h"
 
 namespace llvm {
 
@@ -150,4 +150,4 @@ private:
 };
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_MEMORYSSAUPDATER_H
+#endif // LLVM_ANALYSIS_MEMORYSSAUPDATER_H

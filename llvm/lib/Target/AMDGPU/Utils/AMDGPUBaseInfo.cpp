@@ -510,6 +510,10 @@ bool isCompute(CallingConv::ID cc) {
   return !isShader(cc) || cc == CallingConv::AMDGPU_CS;
 }
 
+bool isEntryFunctionCC(CallingConv::ID CC) {
+  return true;
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
 }

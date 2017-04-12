@@ -1,12 +1,15 @@
-# RUN: llc -mtriple arm-gnueabihf -mattr=+vfp2 -float-abi=hard -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -mtriple arm-- -mattr=+vfp2 -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT
-# RUN: llc -mtriple arm-- -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT
+# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
+# RUN: llc -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
 --- |
   define void @test_frem_float() { ret void }
   define void @test_frem_double() { ret void }
 
   define void @test_fpow_float() { ret void }
   define void @test_fpow_double() { ret void }
+
+  define void @test_fadd_float() { ret void }
+  define void @test_fadd_double() { ret void }
 ...
 ---
 name:            test_frem_float
@@ -186,6 +189,91 @@ body:             |
     ; HARD: BLX $pow, {{.*}}, implicit %d0, implicit %d1, implicit-def %d0
     ; CHECK: ADJCALLSTACKUP
     %6(s64) = G_FPOW %4, %5
+    %7(s32) = G_EXTRACT %6(s64), 0
+    %8(s32) = G_EXTRACT %6(s64), 32
+    %r0 = COPY %7(s32)
+    %r1 = COPY %8(s32)
+    BX_RET 14, _, implicit %r0, implicit %r1
+...
+---
+name:            test_fadd_float
+# CHECK-LABEL: name: test_fadd_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HARD: [[R:%[0-9]+]](s32) = G_FADD [[X]], [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fadd, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__addsf3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    %2(s32) = G_FADD %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fadd_double
+# CHECK-LABEL: name: test_fadd_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    %3(s32) = COPY %r3
+    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_SEQUENCE [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_SEQUENCE [[Y0]]
+    %4(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 32
+    %5(s64) = G_SEQUENCE %2(s32), 0, %3(s32), 32
+    ; HARD: [[R:%[0-9]+]](s64) = G_FADD [[X]], [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X0]]
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X1]]
+    ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y0]]
+    ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y1]]
+    ; SOFT-AEABI: BLX $__aeabi_dadd, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT-DEFAULT: BLX $__adddf3, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT: ADJCALLSTACKUP
+    %6(s64) = G_FADD %4, %5
+    ; HARD-DAG: G_EXTRACT [[R]](s64), 0
+    ; HARD-DAG: G_EXTRACT [[R]](s64), 32
     %7(s32) = G_EXTRACT %6(s64), 0
     %8(s32) = G_EXTRACT %6(s64), 32
     %r0 = COPY %7(s32)

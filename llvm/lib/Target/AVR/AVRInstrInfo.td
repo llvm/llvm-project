@@ -694,7 +694,7 @@ Defs = [SREG] in
 }
 
 //===----------------------------------------------------------------------===//
-// One's/Two's Compliment
+// One's/Two's Complement
 //===----------------------------------------------------------------------===//
 let Constraints = "$src = $rd",
 Defs = [SREG] in
@@ -1718,7 +1718,7 @@ Defs = [SREG] in
                      (implicit SREG)]>;
 
   // CBR Rd, K
-  // Alias for `ANDI Rd, COM(K)` where COM(K) is the compliment of K.
+  // Alias for `ANDI Rd, COM(K)` where COM(K) is the complement of K.
   // FIXME: This uses the 'complement' encoder. We need it to also use the
   // imm_ldi8 encoder. This will cause no fixups to be created on this instruction.
   def CBRRdK : FRdK<0b0111,

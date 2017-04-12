@@ -504,7 +504,14 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressSpecifiers = false;
-  std::string Proto = D->getNameInfo().getAsString();
+  std::string Proto;
+  if (!Policy.SuppressScope) {
+    if (const NestedNameSpecifier *NS = D->getQualifier()) {
+      llvm::raw_string_ostream OS(Proto);
+      NS->print(OS, Policy);
+    }
+  }
+  Proto += D->getNameInfo().getAsString();
   if (GuideDecl)
     Proto = GuideDecl->getDeducedTemplate()->getDeclName().getAsString();
   if (const TemplateArgumentList *TArgs = D->getTemplateSpecializationArgs()) {

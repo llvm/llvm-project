@@ -137,8 +137,7 @@ Parser::ParseObjCAtClassDeclaration(SourceLocation atLoc) {
 
   while (1) {
     MaybeSkipAttributes(tok::objc_class);
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected) << tok::identifier;
+    if (expectIdentifier()) {
       SkipUntil(tok::semi);
       return Actions.ConvertDeclToDeclGroup(nullptr);
     }
@@ -229,11 +228,8 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
 
   MaybeSkipAttributes(tok::objc_interface);
 
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected)
-        << tok::identifier; // missing class or category name.
-    return nullptr;
-  }
+  if (expectIdentifier())
+    return nullptr; // missing class or category name.
 
   // We have a class or category name - consume it.
   IdentifierInfo *nameId = Tok.getIdentifierInfo();
@@ -319,11 +315,8 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
       return nullptr;
     }
 
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected)
-          << tok::identifier; // missing super class name.
-      return nullptr;
-    }
+    if (expectIdentifier())
+      return nullptr; // missing super class name.
     superClassId = Tok.getIdentifierInfo();
     superClassLoc = ConsumeToken();
 
@@ -1438,12 +1431,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
       cutOffParsing();
       return nullptr;
     }
-    
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected)
-          << tok::identifier; // missing argument name.
-      break;
-    }
+
+    if (expectIdentifier())
+      break; // missing argument name.
 
     ArgInfo.Name = Tok.getIdentifierInfo();
     ArgInfo.NameLoc = Tok.getLocation();
@@ -1552,8 +1542,7 @@ ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
       return true;
     }
 
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected) << tok::identifier;
+    if (expectIdentifier()) {
       SkipUntil(tok::greater, StopAtSemi);
       return true;
     }
@@ -2035,10 +2024,8 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
 
   MaybeSkipAttributes(tok::objc_protocol);
 
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected) << tok::identifier; // missing protocol name.
-    return nullptr;
-  }
+  if (expectIdentifier())
+    return nullptr; // missing protocol name.
   // Save the protocol name, then consume it.
   IdentifierInfo *protocolName = Tok.getIdentifierInfo();
   SourceLocation nameLoc = ConsumeToken();
@@ -2058,8 +2045,7 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
     // Parse the list of forward declarations.
     while (1) {
       ConsumeToken(); // the ','
-      if (Tok.isNot(tok::identifier)) {
-        Diag(Tok, diag::err_expected) << tok::identifier;
+      if (expectIdentifier()) {
         SkipUntil(tok::semi);
         return nullptr;
       }
@@ -2126,11 +2112,8 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc) {
 
   MaybeSkipAttributes(tok::objc_implementation);
 
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected)
-        << tok::identifier; // missing class or category name.
-    return nullptr;
-  }
+  if (expectIdentifier())
+    return nullptr; // missing class or category name.
   // We have a class or category name - consume it.
   IdentifierInfo *nameId = Tok.getIdentifierInfo();
   SourceLocation nameLoc = ConsumeToken(); // consume class or category name
@@ -2200,11 +2183,8 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc) {
     IdentifierInfo *superClassId = nullptr;
     if (TryConsumeToken(tok::colon)) {
       // We have a super class
-      if (Tok.isNot(tok::identifier)) {
-        Diag(Tok, diag::err_expected)
-            << tok::identifier; // missing super class name.
-        return nullptr;
-      }
+      if (expectIdentifier())
+        return nullptr; // missing super class name.
       superClassId = Tok.getIdentifierInfo();
       superClassLoc = ConsumeToken(); // Consume super class name
     }
@@ -2304,16 +2284,12 @@ Decl *Parser::ParseObjCAtAliasDeclaration(SourceLocation atLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_compatibility_alias) &&
          "ParseObjCAtAliasDeclaration(): Expected @compatibility_alias");
   ConsumeToken(); // consume compatibility_alias
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected) << tok::identifier;
+  if (expectIdentifier())
     return nullptr;
-  }
   IdentifierInfo *aliasId = Tok.getIdentifierInfo();
   SourceLocation aliasLoc = ConsumeToken(); // consume alias-name
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected) << tok::identifier;
+  if (expectIdentifier())
     return nullptr;
-  }
   IdentifierInfo *classId = Tok.getIdentifierInfo();
   SourceLocation classLoc = ConsumeToken(); // consume class-name;
   ExpectAndConsume(tok::semi, diag::err_expected_after, "@compatibility_alias");
@@ -2361,11 +2337,9 @@ Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
         cutOffParsing();
         return nullptr;
       }
-      
-      if (Tok.isNot(tok::identifier)) {
-        Diag(Tok, diag::err_expected) << tok::identifier;
+
+      if (expectIdentifier())
         break;
-      }
       propertyIvar = Tok.getIdentifierInfo();
       propertyIvarLoc = ConsumeToken(); // consume ivar-name
     }
@@ -2423,9 +2397,8 @@ Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
       cutOffParsing();
       return nullptr;
     }
-    
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected) << tok::identifier;
+
+    if (expectIdentifier()) {
       SkipUntil(tok::semi);
       return nullptr;
     }
@@ -3561,8 +3534,8 @@ Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
-  if (Tok.isNot(tok::identifier))
-    return ExprError(Diag(Tok, diag::err_expected) << tok::identifier);
+  if (expectIdentifier())
+    return ExprError();
 
   IdentifierInfo *protocolId = Tok.getIdentifierInfo();
   SourceLocation ProtoIdLoc = ConsumeToken();

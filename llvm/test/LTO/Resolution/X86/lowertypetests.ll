@@ -1,5 +1,5 @@
 ; RUN: opt -thinlto-bc -o %t %s
-; RUN: llvm-lto2 -r %t,f,plx -r %t,foo,lx -r %t,foo,plx -o %t1 %t
+; RUN: llvm-lto2 run -r %t,f,plx -r %t,foo,lx -r %t,foo,plx -o %t1 %t
 ; RUN: llvm-nm %t1.0 | FileCheck --check-prefix=MERGED %s
 ; RUN: llvm-nm %t1.1 | FileCheck %s
 

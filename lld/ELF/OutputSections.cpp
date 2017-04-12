@@ -221,21 +221,16 @@ void OutputSection::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors);
 }
 
-// Fill [Buf, Buf + Size) with Filler. Filler is written in big
-// endian order. This is used for linker script "=fillexp" command.
+// Fill [Buf, Buf + Size) with Filler.
+// This is used for linker script "=fillexp" command.
 static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
-  if (Filler == 0)
-    return;
-
-  uint8_t V[4];
-  write32be(V, Filler);
   size_t I = 0;
   for (; I + 4 < Size; I += 4)
-    memcpy(Buf + I, V, 4);
-  memcpy(Buf + I, V, Size - I);
+    memcpy(Buf + I, &Filler, 4);
+  memcpy(Buf + I, &Filler, Size - I);
 }
 
-uint32_t OutputSection::getFill() {
+uint32_t OutputSection::getFiller() {
   // Determine what to fill gaps between InputSections with, as specified by the
   // linker script. If nothing is specified and this is an executable section,
   // fall back to trap instructions to prevent bad diassembly and detect invalid
@@ -250,24 +245,25 @@ uint32_t OutputSection::getFill() {
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
 
-  uint32_t Filler = getFill();
-
   // Write leading padding.
-  size_t FillSize = Sections.empty() ? Size : Sections[0]->OutSecOff;
-  fill(Buf, FillSize, Filler);
+  uint32_t Filler = getFiller();
+  if (Filler)
+    fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
 
   parallelFor(0, Sections.size(), [=](size_t I) {
     InputSection *Sec = Sections[I];
     Sec->writeTo<ELFT>(Buf);
 
-    // Fill gaps between sections with the specified fill value.
-    uint8_t *Start = Buf + Sec->OutSecOff + Sec->getSize();
-    uint8_t *End;
-    if (I + 1 == Sections.size())
-      End = Buf + Size;
-    else
-      End = Buf + Sections[I + 1]->OutSecOff;
-    fill(Start, End - Start, Filler);
+    // Fill gaps between sections.
+    if (Filler) {
+      uint8_t *Start = Buf + Sec->OutSecOff + Sec->getSize();
+      uint8_t *End;
+      if (I + 1 == Sections.size())
+        End = Buf + Size;
+      else
+        End = Buf + Sections[I + 1]->OutSecOff;
+      fill(Start, End - Start, Filler);
+    }
   });
 
   // Linker scripts may have BYTE()-family commands with which you

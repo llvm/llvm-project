@@ -13,6 +13,7 @@ set(LSAN_SOURCES
   lsan_allocator.cc
   lsan_linux.cc
   lsan_interceptors.cc
+  lsan_malloc_mac.cc
   lsan_preinit.cc
   lsan_thread.cc)
 

@@ -16,11 +16,7 @@
 ---
 # CHECK: [[@LINE+1]]:1: missing required key 'name'
 nme:             foo
-body: |
-  bb.0:
 ...
 ---
 name:            bar
-body: |
-  bb.0:
 ...

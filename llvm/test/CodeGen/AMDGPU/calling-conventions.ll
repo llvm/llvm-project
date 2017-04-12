@@ -12,13 +12,13 @@ entry:
 }
 
 ; FIXME: This is treated like a kernel
-; GCN-LABEL: {{^}}func:
-; GCN: s_endpgm
-define spir_func void @func(i32 addrspace(1)* %out) {
-entry:
-  store i32 0, i32 addrspace(1)* %out
-  ret void
-}
+; XGCN-LABEL: {{^}}func:
+; XGCN: s_endpgm
+; define spir_func void @func(i32 addrspace(1)* %out) {
+; entry:
+;   store i32 0, i32 addrspace(1)* %out
+;   ret void
+; }
 
 ; GCN-LABEL: {{^}}ps_ret_cc_f16:
 ; SI: v_cvt_f16_f32_e32 v0, v0

@@ -11,18 +11,12 @@
 #ifndef liblldb_ProcessFreeBSD_H_
 #define liblldb_ProcessFreeBSD_H_
 
-// C Includes
-
-// C++ Includes
+#include "Plugins/Process/POSIX/ProcessMessage.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/ThreadList.h"
 #include <mutex>
 #include <queue>
 #include <set>
-
-// Other libraries and framework includes
-#include "ProcessFreeBSD.h"
-#include "ProcessMessage.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/ThreadList.h"
 
 class ProcessMonitor;
 class FreeBSDThread;

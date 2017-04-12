@@ -5529,14 +5529,14 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       addrSpace.setIsSigned(false);
     }
     llvm::APSInt max(addrSpace.getBitWidth());
-    max = Qualifiers::MaxAddressSpace;
+    max = Qualifiers::MaxAddressSpace - LangAS::Count;
     if (addrSpace > max) {
       S.Diag(Attr.getLoc(), diag::err_attribute_address_space_too_high)
-        << int(Qualifiers::MaxAddressSpace) << ASArgExpr->getSourceRange();
+        << (unsigned)max.getZExtValue() << ASArgExpr->getSourceRange();
       Attr.setInvalid();
       return;
     }
-    ASIdx = static_cast<unsigned>(addrSpace.getZExtValue());
+    ASIdx = static_cast<unsigned>(addrSpace.getZExtValue()) + LangAS::Count;
   } else {
     // The keyword-based type attributes imply which address space to use.
     switch (Attr.getKind()) {

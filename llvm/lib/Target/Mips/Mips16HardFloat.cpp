@@ -420,7 +420,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
                            Attribute::ReadNone);
         A = A.addAttribute(C, AttributeList::FunctionIndex,
                            Attribute::NoInline);
-        Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T, nullptr));
+        Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T));
         CallInst::Create(F, Params, "", &I);
       } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
         FunctionType *FT = CI->getFunctionType();

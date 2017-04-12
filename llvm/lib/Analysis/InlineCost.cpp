@@ -1438,13 +1438,6 @@ LLVM_DUMP_METHOD void CallAnalyzer::dump() {
 }
 #endif
 
-/// \brief Test that two functions either have or have not the given attribute
-///        at the same time.
-template <typename AttrKind>
-static bool attributeMatches(Function *F1, Function *F2, AttrKind Attr) {
-  return F1->getFnAttribute(Attr) == F2->getFnAttribute(Attr);
-}
-
 /// \brief Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(Function *Caller,

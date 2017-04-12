@@ -1,7 +1,7 @@
 ; RUN: llvm-as < %s >%t.bc
 
 ; RUN: rm -f %t.yaml
-; RUN: llvm-lto2 -pass-remarks-output=%t.yaml \
+; RUN: llvm-lto2 run -pass-remarks-output=%t.yaml \
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc

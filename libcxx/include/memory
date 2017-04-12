@@ -433,8 +433,8 @@ public:
     long use_count() const noexcept;
     bool unique() const noexcept;
     explicit operator bool() const noexcept;
-    template<class U> bool owner_before(shared_ptr<U> const& b) const;
-    template<class U> bool owner_before(weak_ptr<U> const& b) const;
+    template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
+    template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
 };
 
 // shared_ptr comparisons:
@@ -531,8 +531,8 @@ public:
     long use_count() const noexcept;
     bool expired() const noexcept;
     shared_ptr<T> lock() const noexcept;
-    template<class U> bool owner_before(shared_ptr<U> const& b) const;
-    template<class U> bool owner_before(weak_ptr<U> const& b) const;
+    template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
+    template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
 };
 
 // weak_ptr specialized algorithms:
@@ -546,9 +546,9 @@ struct owner_less<shared_ptr<T>>
     : binary_function<shared_ptr<T>, shared_ptr<T>, bool>
 {
     typedef bool result_type;
-    bool operator()(shared_ptr<T> const&, shared_ptr<T> const&) const;
-    bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const;
-    bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const;
+    bool operator()(shared_ptr<T> const&, shared_ptr<T> const&) const noexcept;
+    bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const noexcept;
+    bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const noexcept;
 };
 
 template<class T>
@@ -556,9 +556,24 @@ struct owner_less<weak_ptr<T>>
     : binary_function<weak_ptr<T>, weak_ptr<T>, bool>
 {
     typedef bool result_type;
-    bool operator()(weak_ptr<T> const&, weak_ptr<T> const&) const;
-    bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const;
-    bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const;
+    bool operator()(weak_ptr<T> const&, weak_ptr<T> const&) const noexcept;
+    bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const noexcept;
+    bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const noexcept;
+};
+
+template <>  // Added in C++14
+struct owner_less<void>
+{
+    template <class _Tp, class _Up>
+    bool operator()( shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept;
+    template <class _Tp, class _Up>
+    bool operator()( shared_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const noexcept;
+    template <class _Tp, class _Up>
+    bool operator()(   weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept;
+    template <class _Tp, class _Up>
+    bool operator()(   weak_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const noexcept;
+
+    typedef void is_transparent;
 };
 
 template<class T>
@@ -3807,11 +3822,11 @@ public:
     _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {return get() != 0;}
     template <class _Up>
         _LIBCPP_INLINE_VISIBILITY
-        bool owner_before(shared_ptr<_Up> const& __p) const
+        bool owner_before(shared_ptr<_Up> const& __p) const _NOEXCEPT
         {return __cntrl_ < __p.__cntrl_;}
     template <class _Up>
         _LIBCPP_INLINE_VISIBILITY
-        bool owner_before(weak_ptr<_Up> const& __p) const
+        bool owner_before(weak_ptr<_Up> const& __p) const _NOEXCEPT
         {return __cntrl_ < __p.__cntrl_;}
     _LIBCPP_INLINE_VISIBILITY
     bool
@@ -4907,11 +4922,11 @@ public:
     shared_ptr<_Tp> lock() const _NOEXCEPT;
     template<class _Up>
         _LIBCPP_INLINE_VISIBILITY
-        bool owner_before(const shared_ptr<_Up>& __r) const
+        bool owner_before(const shared_ptr<_Up>& __r) const _NOEXCEPT
         {return __cntrl_ < __r.__cntrl_;}
     template<class _Up>
         _LIBCPP_INLINE_VISIBILITY
-        bool owner_before(const weak_ptr<_Up>& __r) const
+        bool owner_before(const weak_ptr<_Up>& __r) const _NOEXCEPT
         {return __cntrl_ < __r.__cntrl_;}
 
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
@@ -5120,13 +5135,13 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> >
 {
     typedef bool result_type;
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const
+    bool operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(shared_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const
+    bool operator()(shared_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(  weak_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const
+    bool operator()(  weak_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
 };
 
@@ -5136,13 +5151,13 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> >
 {
     typedef bool result_type;
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(  weak_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const
+    bool operator()(  weak_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(shared_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const
+    bool operator()(shared_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(  weak_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const
+    bool operator()(  weak_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
 };
 
@@ -5152,19 +5167,19 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<void>
 {
     template <class _Tp, class _Up>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()( shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const
+    bool operator()( shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     template <class _Tp, class _Up>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()( shared_ptr<_Tp> const& __x,  weak_ptr<_Up> const& __y) const
+    bool operator()( shared_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     template <class _Tp, class _Up>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(   weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const
+    bool operator()(   weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     template <class _Tp, class _Up>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(   weak_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const
+    bool operator()(   weak_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
     typedef void is_transparent;
 };

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   SmallVector<char, 0> Buffer;
   BitcodeWriter Writer(Buffer);
   if (BinaryCat) {
-    for (std::string InputFilename : InputFilenames) {
+    for (const auto &InputFilename : InputFilenames) {
       std::unique_ptr<MemoryBuffer> MB = ExitOnErr(
           errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
       std::vector<BitcodeModule> Mods = ExitOnErr(getBitcodeModuleList(*MB));
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
                       BitcodeMod.getBuffer().end());
     }
   } else {
-    for (std::string InputFilename : InputFilenames) {
+    for (const auto &InputFilename : InputFilenames) {
       SMDiagnostic Err;
       std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
       if (!M) {

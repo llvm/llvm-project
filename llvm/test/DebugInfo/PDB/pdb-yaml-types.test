@@ -1,0 +1,74 @@
+RUN: llvm-pdbdump pdb2yaml -tpi-stream %p/Inputs/big-read.pdb > %t.yaml
+RUN: FileCheck -check-prefix=YAML %s < %t.yaml
+RUN: llvm-pdbdump yaml2pdb %t.yaml -pdb %t.pdb
+RUN: llvm-pdbdump raw -tpi-records %t.pdb | FileCheck %s --check-prefix=PDB
+
+Only verify the beginning of the type stream.
+
+YAML:      TpiStream:       
+YAML-NEXT:   Version:         VC80
+YAML-NEXT:   Records:         
+YAML-NEXT:     - Kind:            LF_ARGLIST
+YAML-NEXT:       ArgList:         
+YAML-NEXT:         ArgIndices:      [  ]
+YAML-NEXT:     - Kind:            LF_PROCEDURE
+YAML-NEXT:       Procedure:       
+YAML-NEXT:         ReturnType:      3
+YAML-NEXT:         CallConv:        NearC
+YAML-NEXT:         Options:         [ None ]
+YAML-NEXT:         ParameterCount:  0
+YAML-NEXT:         ArgumentList:    4096
+YAML-NEXT:     - Kind:            LF_PROCEDURE
+YAML-NEXT:       Procedure:       
+YAML-NEXT:         ReturnType:      116
+YAML-NEXT:         CallConv:        NearC
+YAML-NEXT:         Options:         [ None ]
+YAML-NEXT:         ParameterCount:  0
+YAML-NEXT:         ArgumentList:    4096
+
+This test is mostly checking to make sure we include the type index offset
+table, and eventually hash codes. The type index offsets should be similar to
+what are already present in big-read.pdb.
+
+PDB:      Type Info Stream (TPI) {
+PDB-NEXT:   TPI Version: 20040203
+PDB-NEXT:   Record count: 728
+PDB-NEXT:   Records [
+PDB-NEXT:     {
+PDB-NEXT:       ArgList (0x1000) {
+PDB-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
+PDB-NEXT:         NumArgs: 0
+PDB-NEXT:         Arguments [
+PDB-NEXT:         ]
+PDB-NEXT:       }
+PDB-NEXT:     }
+PDB-NEXT:     {
+PDB-NEXT:       Procedure (0x1001) {
+PDB-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
+PDB-NEXT:         ReturnType: void (0x3)
+PDB-NEXT:         CallingConvention: NearC (0x0)
+PDB-NEXT:         FunctionOptions [ (0x0)
+PDB-NEXT:         ]
+PDB-NEXT:         NumParameters: 0
+PDB-NEXT:         ArgListType: () (0x1000)
+PDB-NEXT:       }
+PDB-NEXT:     }
+PDB-NEXT:     {
+PDB-NEXT:       Procedure (0x1002) {
+PDB-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
+PDB-NEXT:         ReturnType: int (0x74)
+PDB-NEXT:         CallingConvention: NearC (0x0)
+PDB-NEXT:         FunctionOptions [ (0x0)
+PDB-NEXT:         ]
+PDB-NEXT:         NumParameters: 0
+PDB-NEXT:         ArgListType: () (0x1000)
+PDB-NEXT:       }
+PDB-NEXT:     }
+...
+PDB:          TypeIndexOffsets [
+PDB-NEXT:       Index: 0x1000, Offset: 0
+PDB-NEXT:       Index: 0x106c, Offset: 8,116
+PDB-NEXT:       Index: 0x1118, Offset: 16,372
+PDB-NEXT:       Index: 0x11df, Offset: 24,564
+PDB-NEXT:       Index: 0x128e, Offset: 32,752
+PDB-NEXT:     ]

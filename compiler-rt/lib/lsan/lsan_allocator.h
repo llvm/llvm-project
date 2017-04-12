@@ -36,6 +36,8 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end);
 void AllocatorThreadFinish();
 void InitializeAllocator();
 
+const bool kAlwaysClearMemory = true;
+
 struct ChunkMetadata {
   u8 allocated : 8;  // Must be first.
   ChunkTag tag : 2;
@@ -72,6 +74,15 @@ typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 
 AllocatorCache *GetAllocatorCache();
+
+void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack);
+void *lsan_malloc(uptr size, const StackTrace &stack);
+void lsan_free(void *p);
+void *lsan_realloc(void *p, uptr size, const StackTrace &stack);
+void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack);
+void *lsan_valloc(uptr size, const StackTrace &stack);
+uptr lsan_mz_size(const void *p);
+
 }  // namespace __lsan
 
 #endif  // LSAN_ALLOCATOR_H

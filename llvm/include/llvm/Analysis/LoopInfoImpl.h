@@ -577,10 +577,9 @@ bool compareVectors(std::vector<T> &BB1, std::vector<T> &BB2) {
 }
 
 template <class BlockT, class LoopT>
-static void
-addInnerLoopsToHeadersMap(DenseMap<BlockT *, const LoopT *> &LoopHeaders,
-                          const LoopInfoBase<BlockT, LoopT> &LI,
-                          const LoopT &L) {
+void addInnerLoopsToHeadersMap(DenseMap<BlockT *, const LoopT *> &LoopHeaders,
+                               const LoopInfoBase<BlockT, LoopT> &LI,
+                               const LoopT &L) {
   LoopHeaders[L.getHeader()] = &L;
   for (LoopT *SL : L)
     addInnerLoopsToHeadersMap(LoopHeaders, LI, *SL);
