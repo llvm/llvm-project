@@ -205,3 +205,12 @@ void multiplicativeSanityTest(int x) {
 
   clang_analyzer_eval(x == 3); // expected-warning{{UNKNOWN}}
 }
+
+void additiveSymSymFolding(int x, int y) {
+  // We should simplify 'x - 1' to '0' and handle the comparison,
+  // despite both sides being complicated symbols.
+  int z = x - 1;
+  if (x == 1)
+    if (y >= 0)
+      clang_analyzer_eval(z <= y); // expected-warning{{TRUE}}
+}
