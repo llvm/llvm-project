@@ -60,6 +60,8 @@
 
 #ifndef __APPLE__
 #include "Utility/UuidCompatibility.h"
+#else
+#include <uuid/uuid.h>
 #endif
 
 #define THUMB_ADDRESS_BIT_MASK 0xfffffffffffffffeull
@@ -5599,23 +5601,67 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
   return m_thread_context_offsets.GetSize();
 }
 
-// The LC_IDENT load command has been obsoleted for a very
-// long time and it should not occur in Mach-O files.  But
-// if it is there, it may contain a hint about where to find
-// the main binary in a core file, so we'll use it.
 std::string ObjectFileMachO::GetIdentifierString() {
   std::string result;
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
+    // First, look over the load commands for an LC_NOTE load command
+    // with data_owner string "kern ver str" & use that if found.
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
+      const uint32_t cmd_offset = offset;
+      load_command lc;
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+          break;
+      if (lc.cmd == LC_NOTE)
+      {
+          char data_owner[17];
+          m_data.CopyData (offset, 16, data_owner);
+          data_owner[16] = '\0';
+          offset += 16;
+          uint64_t fileoff = m_data.GetU64_unchecked (&offset);
+          uint64_t size = m_data.GetU64_unchecked (&offset);
+
+          // "kern ver str" has a uint32_t version and then a
+          // nul terminated c-string.
+          if (strcmp ("kern ver str", data_owner) == 0)
+          {
+              offset = fileoff;
+              uint32_t version;
+              if (m_data.GetU32 (&offset, &version, 1) != nullptr)
+              {
+                  if (version == 1)
+                  {
+                      uint32_t strsize = size - sizeof (uint32_t);
+                      char *buf = (char*) malloc (strsize);
+                      if (buf)
+                      {
+                          m_data.CopyData (offset, strsize, buf);
+                          buf[strsize - 1] = '\0';
+                          result = buf;
+                          if (buf)
+                              free (buf);
+                          return result;
+                      }
+                  }
+              }
+          }
+      }
+      offset = cmd_offset + lc.cmdsize;
+    }
+
+    // Second, make a pass over the load commands looking for an
+    // obsolete LC_IDENT load command.
+    offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       struct ident_command ident_command;
       if (m_data.GetU32(&offset, &ident_command, 2) == NULL)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
-        char *buf = (char *)malloc (ident_command.cmdsize);
+        char *buf = (char *) malloc (ident_command.cmdsize);
         if (buf != nullptr 
             && m_data.CopyData (offset, ident_command.cmdsize, buf) == ident_command.cmdsize) {
           buf[ident_command.cmdsize - 1] = '\0';
@@ -5626,8 +5672,63 @@ std::string ObjectFileMachO::GetIdentifierString() {
       }
       offset = cmd_offset + ident_command.cmdsize;
     }
+
   }
   return result;
+}
+
+bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
+  address = LLDB_INVALID_ADDRESS;
+  uuid.Clear();
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
+      const uint32_t cmd_offset = offset;
+      load_command lc;
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+          break;
+      if (lc.cmd == LC_NOTE)
+      {
+          char data_owner[17];
+          memset (data_owner, 0, sizeof (data_owner));
+          m_data.CopyData (offset, 16, data_owner);
+          offset += 16;
+          uint64_t fileoff = m_data.GetU64_unchecked (&offset);
+          uint64_t size = m_data.GetU64_unchecked (&offset);
+
+          // "main bin spec" (main binary specification) data payload is formatted:
+          //    uint32_t version       [currently 1]
+          //    uint32_t type          [0 == unspecified, 1 == kernel, 2 == user process]
+          //    uint64_t address       [ UINT64_MAX if address not specified ]
+          //    uuid_t   uuid          [ all zero's if uuid not specified ]
+          //    uint32_t log2_pagesize [ process page size in log base 2, e.g. 4k pages are 12.  0 for unspecified ]
+
+          if (strcmp ("main bin spec", data_owner) == 0 && size >= 32)
+          {
+              offset = fileoff;
+              uint32_t version;
+              if (m_data.GetU32 (&offset, &version, 1) != nullptr && version == 1)
+              {
+                  uint32_t type = 0;
+                  uuid_t raw_uuid;
+                  uuid_clear (raw_uuid);
+
+                  if (m_data.GetU32 (&offset, &type, 1)
+                      && m_data.GetU64 (&offset, &address, 1)
+                      && m_data.CopyData (offset, sizeof (uuid_t), raw_uuid) != 0
+                      && uuid.SetBytes (raw_uuid, sizeof (uuid_t)))
+                  {
+                      return true;
+                  }
+              }
+          }
+      }
+      offset = cmd_offset + lc.cmdsize;
+    }
+  }
+  return false;
 }
 
 lldb::RegisterContextSP
