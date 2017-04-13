@@ -20,3 +20,8 @@ void f() {
   (void)@available(macos); // expected-error{{expected a version}}
   (void)@available; // expected-error{{expected '('}}
 }
+
+#if __has_builtin(__builtin_available)
+#error expected
+// expected-error@-1 {{expected}}
+#endif

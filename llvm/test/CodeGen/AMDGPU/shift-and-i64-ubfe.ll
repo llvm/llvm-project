@@ -9,7 +9,7 @@
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_31_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -42,7 +42,7 @@ define amdgpu_kernel void @v_uextract_bit_63_i64(i64 addrspace(1)* %out, i64 add
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_1_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -58,7 +58,7 @@ define amdgpu_kernel void @v_uextract_bit_1_i64(i64 addrspace(1)* %out, i64 addr
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_20_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -106,7 +106,7 @@ define amdgpu_kernel void @v_uextract_bit_33_i64(i64 addrspace(1)* %out, i64 add
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_20_21_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -122,7 +122,7 @@ define amdgpu_kernel void @v_uextract_bit_20_21_i64(i64 addrspace(1)* %out, i64 
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_1_30_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -138,7 +138,7 @@ define amdgpu_kernel void @v_uextract_bit_1_30_i64(i64 addrspace(1)* %out, i64 a
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_1_31_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -156,7 +156,7 @@ define amdgpu_kernel void @v_uextract_bit_1_31_i64(i64 addrspace(1)* %out, i64 a
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[AND]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @v_uextract_bit_31_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
-  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %id.x
   %ld.64 = load i64, i64 addrspace(1)* %in.gep
@@ -382,6 +382,8 @@ define amdgpu_kernel void @v_uextract_bit_33_36_use_upper_half_shift_i64(i64 add
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
+
+declare i32 @llvm.amdgcn.workgroup.id.x() #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

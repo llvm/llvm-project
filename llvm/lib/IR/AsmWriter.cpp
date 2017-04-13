@@ -2897,12 +2897,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ", ";
     writeOperand(SI.getDefaultDest(), true);
     Out << " [";
-    for (SwitchInst::ConstCaseIt i = SI.case_begin(), e = SI.case_end();
-         i != e; ++i) {
+    for (auto Case : SI.cases()) {
       Out << "\n    ";
-      writeOperand(i.getCaseValue(), true);
+      writeOperand(Case.getCaseValue(), true);
       Out << ", ";
-      writeOperand(i.getCaseSuccessor(), true);
+      writeOperand(Case.getCaseSuccessor(), true);
     }
     Out << "\n  ]";
   } else if (isa<IndirectBrInst>(I)) {

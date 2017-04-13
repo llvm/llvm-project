@@ -16,6 +16,8 @@
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 
+#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>
+
 /* Define to 1 if you have the <CrashReporterClient.h> header file. */
 #cmakedefine HAVE_CRASHREPORTERCLIENT_H
 

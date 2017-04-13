@@ -143,6 +143,20 @@ class DS_1A2D_RET<string opName,
   let hasPostISelHook = 1;
 }
 
+class DS_1A2D_Off8_RET<string opName,
+                       RegisterClass rc = VGPR_32,
+                       RegisterClass src = rc>
+: DS_Pseudo<opName,
+  (outs rc:$vdst),
+  (ins VGPR_32:$addr, src:$data0, src:$data1, offset0:$offset0, offset1:$offset1, gds:$gds),
+  "$vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
+
+  let has_offset = 0;
+  let AsmMatchConverter = "cvtDSOffset01";
+
+  let hasPostISelHook = 1;
+}
+
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
@@ -353,9 +367,9 @@ def DS_MAX_RTN_F32    : DS_1A1D_RET <"ds_max_rtn_f32">,
 
 def DS_WRXCHG_RTN_B32      : DS_1A1D_RET<"ds_wrxchg_rtn_b32">,
                              AtomicNoRet<"", 1>;
-def DS_WRXCHG2_RTN_B32     : DS_1A2D_RET<"ds_wrxchg2_rtn_b32", VReg_64, VGPR_32>,
+def DS_WRXCHG2_RTN_B32     : DS_1A2D_Off8_RET<"ds_wrxchg2_rtn_b32", VReg_64, VGPR_32>,
                              AtomicNoRet<"", 1>;
-def DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_RET<"ds_wrxchg2st64_rtn_b32", VReg_64, VGPR_32>,
+def DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_Off8_RET<"ds_wrxchg2st64_rtn_b32", VReg_64, VGPR_32>,
                              AtomicNoRet<"", 1>;
 
 def DS_ADD_RTN_U64    : DS_1A1D_RET<"ds_add_rtn_u64", VReg_64>,
@@ -394,11 +408,11 @@ def DS_MAX_RTN_F64    : DS_1A1D_RET<"ds_max_rtn_f64", VReg_64>,
                         AtomicNoRet<"ds_max_f64", 1>;
 
 def DS_WRXCHG_RTN_B64      : DS_1A1D_RET<"ds_wrxchg_rtn_b64", VReg_64>,
-                             AtomicNoRet<"ds_wrxchg_b64", 1>;
-def DS_WRXCHG2_RTN_B64     : DS_1A2D_RET<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>,
-                             AtomicNoRet<"ds_wrxchg2_b64", 1>;
-def DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_RET<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>,
-                             AtomicNoRet<"ds_wrxchg2st64_b64", 1>;
+                             AtomicNoRet<"", 1>;
+def DS_WRXCHG2_RTN_B64     : DS_1A2D_Off8_RET<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>,
+                             AtomicNoRet<"", 1>;
+def DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>,
+                             AtomicNoRet<"", 1>;
 
 def DS_GWS_INIT       : DS_GWS_1D<"ds_gws_init">;
 def DS_GWS_SEMA_V     : DS_GWS_0D<"ds_gws_sema_v">;

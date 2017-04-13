@@ -509,7 +509,7 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
             KnownSucc = SI->getSuccessor(0);
           else if (ConstantInt *SimpleCondVal =
                        dyn_cast<ConstantInt>(SimpleCond))
-            KnownSucc = SI->findCaseValue(SimpleCondVal).getCaseSuccessor();
+            KnownSucc = SI->findCaseValue(SimpleCondVal)->getCaseSuccessor();
         }
       }
       if (KnownSucc) {

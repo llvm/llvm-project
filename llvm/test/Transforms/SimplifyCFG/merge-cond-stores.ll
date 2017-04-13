@@ -5,8 +5,8 @@
 define void @test_simple(i32* %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_simple(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X2]], true
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
@@ -43,8 +43,8 @@ define void @test_recursive(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[X4:%.*]] = icmp eq i32 [[D:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[X4]], true
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[X4]], true
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; CHECK:         [[X3:%.*]] = icmp eq i32 [[C]], 0

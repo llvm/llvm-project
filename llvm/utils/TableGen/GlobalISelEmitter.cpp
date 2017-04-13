@@ -32,6 +32,7 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
@@ -803,7 +804,7 @@ void OperandPlaceholder::emitCxxValueExpr(raw_ostream &OS) const {
 
 class OperandRenderer {
 public:
-  enum RendererKind { OR_Copy, OR_Register, OR_ComplexPattern };
+  enum RendererKind { OR_Copy, OR_Imm, OR_Register, OR_ComplexPattern };
 
 protected:
   RendererKind Kind;
@@ -865,6 +866,24 @@ public:
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
     OS << "    MIB.addReg(" << RegisterDef->getValueAsString("Namespace")
        << "::" << RegisterDef->getName() << ");\n";
+  }
+};
+
+/// Adds a specific immediate to the instruction being built.
+class ImmRenderer : public OperandRenderer {
+protected:
+  int64_t Imm;
+
+public:
+  ImmRenderer(int64_t Imm)
+      : OperandRenderer(OR_Imm), Imm(Imm) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_Imm;
+  }
+
+  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+    OS << "    MIB.addImm(" << Imm << ");\n";
   }
 };
 
@@ -1444,11 +1463,66 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher, DstIOperand.Name);
   }
 
+  // Figure out which operands need defaults inserted. Operands that subclass
+  // OperandWithDefaultOps are considered from left to right until we have
+  // enough operands to render the instruction.
+  SmallSet<unsigned, 2> DefaultOperands;
+  unsigned DstINumUses = DstI.Operands.size() - DstI.Operands.NumDefs;
+  unsigned NumDefaultOperands = 0;
+  for (unsigned I = 0; I < DstINumUses &&
+                       DstINumUses > Dst->getNumChildren() + NumDefaultOperands;
+       ++I) {
+    const auto &DstIOperand = DstI.Operands[DstI.Operands.NumDefs + I];
+    if (DstIOperand.Rec->isSubClassOf("OperandWithDefaultOps")) {
+      DefaultOperands.insert(I);
+      NumDefaultOperands +=
+          DstIOperand.Rec->getValueAsDag("DefaultOps")->getNumArgs();
+    }
+  }
+  if (DstINumUses > Dst->getNumChildren() + DefaultOperands.size())
+    return failedImport("Insufficient operands supplied and default ops "
+                        "couldn't make up the shortfall");
+  if (DstINumUses < Dst->getNumChildren() + DefaultOperands.size())
+    return failedImport("Too many operands supplied");
+
   // Render the explicit uses.
-  for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {
-    if (auto Error = importExplicitUseRenderer(DstMIBuilder, Dst->getChild(i),
-                                               InsnMatcher))
+  unsigned Child = 0;
+  for (unsigned I = 0; I != DstINumUses; ++I) {
+    // If we need to insert default ops here, then do so.
+    if (DefaultOperands.count(I)) {
+      const auto &DstIOperand = DstI.Operands[DstI.Operands.NumDefs + I];
+
+      DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
+      for (const auto *DefaultOp : DefaultOps->args()) {
+        // Look through ValueType operators.
+        if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
+          if (const DefInit *DefaultDagOperator =
+                  dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
+            if (DefaultDagOperator->getDef()->isSubClassOf("ValueType"))
+              DefaultOp = DefaultDagOp->getArg(0);
+          }
+        }
+
+        if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
+          DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
+          continue;
+        }
+
+        if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
+          DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
+          continue;
+        }
+
+        return failedImport("Could not add default op");
+      }
+
+      continue;
+    }
+
+    if (auto Error = importExplicitUseRenderer(
+            DstMIBuilder, Dst->getChild(Child), InsnMatcher))
       return std::move(Error);
+    ++Child;
   }
 
   return DstMIBuilder;

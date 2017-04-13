@@ -550,7 +550,8 @@ namespace {
                           TargetTransformInfo::OperandValueKind Op1VK =
                               TargetTransformInfo::OK_AnyValue,
                           TargetTransformInfo::OperandValueKind Op2VK =
-                              TargetTransformInfo::OK_AnyValue) {
+                              TargetTransformInfo::OK_AnyValue,
+                          const Instruction *I = nullptr) {
       switch (Opcode) {
       default: break;
       case Instruction::GetElementPtr:
@@ -584,7 +585,7 @@ namespace {
       case Instruction::Select:
       case Instruction::ICmp:
       case Instruction::FCmp:
-        return TTI->getCmpSelInstrCost(Opcode, T1, T2);
+        return TTI->getCmpSelInstrCost(Opcode, T1, T2, I);
       case Instruction::ZExt:
       case Instruction::SExt:
       case Instruction::FPToUI:
@@ -598,7 +599,7 @@ namespace {
       case Instruction::FPTrunc:
       case Instruction::BitCast:
       case Instruction::ShuffleVector:
-        return TTI->getCastInstrCost(Opcode, T1, T2);
+        return TTI->getCastInstrCost(Opcode, T1, T2, I);
       }
 
       return 1;
@@ -1044,14 +1045,14 @@ namespace {
         return false;
       }
     } else if (TTI) {
-      unsigned ICost = getInstrCost(I->getOpcode(), IT1, IT2);
-      unsigned JCost = getInstrCost(J->getOpcode(), JT1, JT2);
-      Type *VT1 = getVecTypeForPair(IT1, JT1),
-           *VT2 = getVecTypeForPair(IT2, JT2);
       TargetTransformInfo::OperandValueKind Op1VK =
           TargetTransformInfo::OK_AnyValue;
       TargetTransformInfo::OperandValueKind Op2VK =
           TargetTransformInfo::OK_AnyValue;
+      unsigned ICost = getInstrCost(I->getOpcode(), IT1, IT2, Op1VK, Op2VK, I);
+      unsigned JCost = getInstrCost(J->getOpcode(), JT1, JT2, Op1VK, Op2VK, J);
+      Type *VT1 = getVecTypeForPair(IT1, JT1),
+           *VT2 = getVecTypeForPair(IT2, JT2);
 
       // On some targets (example X86) the cost of a vector shift may vary
       // depending on whether the second operand is a Uniform or
@@ -1090,7 +1091,7 @@ namespace {
       // but this cost is ignored (because insert and extract element
       // instructions are assigned a zero depth factor and are not really
       // fused in general).
-      unsigned VCost = getInstrCost(I->getOpcode(), VT1, VT2, Op1VK, Op2VK);
+      unsigned VCost = getInstrCost(I->getOpcode(), VT1, VT2, Op1VK, Op2VK, I);
 
       if (VCost > ICost + JCost)
         return false;

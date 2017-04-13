@@ -91,7 +91,6 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
       HeaderInfo(HeaderInfo), BuiltinIncludeDir(nullptr),
       SourceModule(nullptr), NumCreatedModules(0) {
   MMapLangOpts.LineComment = true;
-  MMapLangOpts.ModularCodegen = LangOpts.ModularCodegen;
 }
 
 ModuleMap::~ModuleMap() {

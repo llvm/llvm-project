@@ -1014,8 +1014,8 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   // does not (yet) fire.
   SmallPtrSet<BasicBlock *, 8> SuccessorBlocks;
   SuccessorBlocks.insert(SI.getDefaultDest());
-  for (auto I = SI.case_begin(), E = SI.case_end(); I != E; ++I)
-    SuccessorBlocks.insert(I.getCaseSuccessor());
+  for (auto Case : SI.cases())
+    SuccessorBlocks.insert(Case.getCaseSuccessor());
   // Add cost corresponding to the number of distinct destinations. The first
   // we model as free because of fallthrough.
   Cost += (SuccessorBlocks.size() - 1) * InlineConstants::InstrCost;
@@ -1379,7 +1379,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
       Value *Cond = SI->getCondition();
       if (ConstantInt *SimpleCond =
               dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
-        BBWorklist.insert(SI->findCaseValue(SimpleCond).getCaseSuccessor());
+        BBWorklist.insert(SI->findCaseValue(SimpleCond)->getCaseSuccessor());
         continue;
       }
     }

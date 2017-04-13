@@ -236,7 +236,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
   // removing a case doesn't cause trouble for the iteration.
   bool Changed = false;
   for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
-    ConstantInt *Case = CI.getCaseValue();
+    ConstantInt *Case = CI->getCaseValue();
 
     // Check to see if the switch condition is equal to/not equal to the case
     // value on every incoming edge, equal/not equal being the same each time.
@@ -269,7 +269,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
 
     if (State == LazyValueInfo::False) {
       // This case never fires - remove it.
-      CI.getCaseSuccessor()->removePredecessor(BB);
+      CI->getCaseSuccessor()->removePredecessor(BB);
       CI = SI->removeCase(CI);
       CE = SI->case_end();
 

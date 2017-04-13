@@ -308,8 +308,7 @@ public:
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The types of the arguments are ordinarily
-  /// scalar, in which case the costs are multiplied with VF. Vector
-  /// arguments are allowed if 1 is passed for VF.
+  /// scalar, in which case the costs are multiplied with VF.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                             unsigned VF) {
     unsigned Cost = 0;
@@ -318,8 +317,10 @@ public:
       if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
         Type *VecTy = nullptr;
         if (A->getType()->isVectorTy()) {
-          assert (VF == 1 && "Vector argument passed with VF > 1");
           VecTy = A->getType();
+          // If A is a vector operand, VF should be 1 or correspond to A.
+          assert ((VF == 1 || VF == VecTy->getVectorNumElements()) &&
+                  "Vector argument does not match VF");
         }
         else
           VecTy = VectorType::get(A->getType(), VF);
@@ -327,6 +328,23 @@ public:
         Cost += getScalarizationOverhead(VecTy, false, true);
       }
     }
+
+    return Cost;
+  }
+
+  unsigned getScalarizationOverhead(Type *VecTy, ArrayRef<const Value *> Args) {
+    assert (VecTy->isVectorTy());
+    
+    unsigned Cost = 0;
+
+    Cost += getScalarizationOverhead(VecTy, true, false);
+    if (!Args.empty())
+      Cost += getOperandsScalarizationOverhead(Args,
+                                               VecTy->getVectorNumElements());
+    else
+      // When no information on arguments is provided, we add the cost
+      // associated with one argument as a heuristic.
+      Cost += getScalarizationOverhead(VecTy, false, true);
 
     return Cost;
   }
@@ -373,15 +391,7 @@ public:
                           ->getArithmeticInstrCost(Opcode, Ty->getScalarType());
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      unsigned TotCost = getScalarizationOverhead(Ty, true, false) + Num * Cost;
-      if (!Args.empty())
-        TotCost += getOperandsScalarizationOverhead(Args, Num);
-      else
-        // When no information on arguments is provided, we add the cost
-        // associated with one argument as a heuristic.
-        TotCost += getScalarizationOverhead(Ty, false, true);
-
-      return TotCost;
+      return getScalarizationOverhead(Ty, Args) + Num * Cost;
     }
 
     // We don't know anything about this scalar instruction.
@@ -397,7 +407,8 @@ public:
     return 1;
   }
 
-  unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
+  unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                            const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -425,6 +436,18 @@ public:
         TLI->isNoopAddrSpaceCast(Src->getPointerAddressSpace(),
                                  Dst->getPointerAddressSpace()))
       return 0;
+
+    // If this is a zext/sext of a load, return 0 if the corresponding
+    // extending load exists on target.
+    if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
+        I && isa<LoadInst>(I->getOperand(0))) {
+        EVT ExtVT = EVT::getEVT(Dst);
+        EVT LoadVT = EVT::getEVT(Src);
+        unsigned LType =
+          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
+        if (TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
+          return 0;
+    }
 
     // If the cast is marked as legal (or promote) then assume low cost.
     if (SrcLT.first == DstLT.first &&
@@ -483,14 +506,14 @@ public:
                                          Src->getVectorNumElements() / 2);
         T *TTI = static_cast<T *>(this);
         return TTI->getVectorSplitCost() +
-               (2 * TTI->getCastInstrCost(Opcode, SplitDst, SplitSrc));
+               (2 * TTI->getCastInstrCost(Opcode, SplitDst, SplitSrc, I));
       }
 
       // In other cases where the source or destination are illegal, assume
       // the operation will get scalarized.
       unsigned Num = Dst->getVectorNumElements();
       unsigned Cost = static_cast<T *>(this)->getCastInstrCost(
-          Opcode, Dst->getScalarType(), Src->getScalarType());
+          Opcode, Dst->getScalarType(), Src->getScalarType(), I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -524,7 +547,8 @@ public:
     return 0;
   }
 
-  unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
+  unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                              const Instruction *I) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -552,7 +576,7 @@ public:
       if (CondTy)
         CondTy = CondTy->getScalarType();
       unsigned Cost = static_cast<T *>(this)->getCmpSelInstrCost(
-          Opcode, ValTy->getScalarType(), CondTy);
+          Opcode, ValTy->getScalarType(), CondTy, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -571,7 +595,7 @@ public:
   }
 
   unsigned getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                           unsigned AddressSpace) {
+                       unsigned AddressSpace, const Instruction *I = nullptr) {
     assert(!Src->isVoidTy() && "Invalid type");
     std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Src);
 

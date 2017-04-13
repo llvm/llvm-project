@@ -50,7 +50,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; GCN-LABEL: {{^}}s_ubfe_sub_i32:
 ; GCN: s_load_dword [[SRC:s[0-9]+]]
 ; GCN: s_load_dword [[WIDTH:s[0-9]+]]
-; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]]
+; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]], {{s[0-9]+}}
 ; GCN: v_bfe_u32 v{{[0-9]+}}, [[SRC]], 0, [[VWIDTH]]
 define amdgpu_kernel void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -128,7 +128,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; GCN-LABEL: {{^}}s_sbfe_sub_i32:
 ; GCN: s_load_dword [[SRC:s[0-9]+]]
 ; GCN: s_load_dword [[WIDTH:s[0-9]+]]
-; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]]
+; GCN: v_mov_b32_e32 [[VWIDTH:v[0-9]+]], {{s[0-9]+}}
 ; GCN: v_bfe_i32 v{{[0-9]+}}, [[SRC]], 0, [[VWIDTH]]
 define amdgpu_kernel void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()

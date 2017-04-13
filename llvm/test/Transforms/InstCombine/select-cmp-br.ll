@@ -15,8 +15,8 @@ define void @test1(%C* %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load i64*, i64** [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C]], %C* [[ARG]], i64 1, i32 0, i32 0
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
 ; CHECK-NEXT:    [[NOT_TMP5:%.*]] = icmp ne i64* [[M]], [[N]]
+; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP71]], [[NOT_TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
@@ -115,8 +115,8 @@ define void @test3(%C* %arg) {
 ; CHECK-NEXT:    [[M:%.*]] = load i64*, i64** [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C]], %C* [[ARG]], i64 1, i32 0, i32 0
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
 ; CHECK-NEXT:    [[NOT_TMP5:%.*]] = icmp ne i64* [[M]], [[N]]
+; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP71]], [[NOT_TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:

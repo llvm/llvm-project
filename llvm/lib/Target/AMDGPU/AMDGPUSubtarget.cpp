@@ -16,6 +16,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include <algorithm>
 
@@ -238,6 +239,65 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
     return Default;
 
   return Requested;
+}
+
+bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
+  Function *Kernel = I->getParent()->getParent();
+  unsigned MinSize = 0;
+  unsigned MaxSize = getFlatWorkGroupSizes(*Kernel).second;
+  bool IdQuery = false;
+
+  // If reqd_work_group_size is present it narrows value down.
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    const Function *F = CI->getCalledFunction();
+    if (F) {
+      unsigned Dim = UINT_MAX;
+      switch (F->getIntrinsicID()) {
+      case Intrinsic::amdgcn_workitem_id_x:
+      case Intrinsic::r600_read_tidig_x:
+        IdQuery = true;
+      case Intrinsic::r600_read_local_size_x:
+        Dim = 0;
+        break;
+      case Intrinsic::amdgcn_workitem_id_y:
+      case Intrinsic::r600_read_tidig_y:
+        IdQuery = true;
+      case Intrinsic::r600_read_local_size_y:
+        Dim = 1;
+        break;
+      case Intrinsic::amdgcn_workitem_id_z:
+      case Intrinsic::r600_read_tidig_z:
+        IdQuery = true;
+      case Intrinsic::r600_read_local_size_z:
+        Dim = 2;
+        break;
+      default:
+        break;
+      }
+      if (Dim <= 3) {
+        if (auto Node = Kernel->getMetadata("reqd_work_group_size"))
+          if (Node->getNumOperands() == 3)
+            MinSize = MaxSize = mdconst::extract<ConstantInt>(
+                                  Node->getOperand(Dim))->getZExtValue();
+      }
+    }
+  }
+
+  if (!MaxSize)
+    return false;
+
+  // Range metadata is [Lo, Hi). For ID query we need to pass max size
+  // as Hi. For size query we need to pass Hi + 1.
+  if (IdQuery)
+    MinSize = 0;
+  else
+    ++MaxSize;
+
+  MDBuilder MDB(I->getContext());
+  MDNode *MaxWorkGroupSizeRange = MDB.createRange(APInt(32, MinSize),
+                                                  APInt(32, MaxSize));
+  I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  return true;
 }
 
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,

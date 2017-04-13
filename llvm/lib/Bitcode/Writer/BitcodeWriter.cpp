@@ -2578,7 +2578,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       Vals.push_back(VE.getTypeID(SI.getCondition()->getType()));
       pushValue(SI.getCondition(), InstID, Vals);
       Vals.push_back(VE.getValueID(SI.getDefaultDest()));
-      for (SwitchInst::ConstCaseIt Case : SI.cases()) {
+      for (auto Case : SI.cases()) {
         Vals.push_back(VE.getValueID(Case.getCaseValue()));
         Vals.push_back(VE.getValueID(Case.getCaseSuccessor()));
       }

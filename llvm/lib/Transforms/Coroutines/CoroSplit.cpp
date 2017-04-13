@@ -185,9 +185,9 @@ static void handleFinalSuspend(IRBuilder<> &Builder, Value *FramePtr,
                                coro::Shape &Shape, SwitchInst *Switch,
                                bool IsDestroy) {
   assert(Shape.HasFinalSuspend);
-  auto FinalCase = --Switch->case_end();
-  BasicBlock *ResumeBB = FinalCase.getCaseSuccessor();
-  Switch->removeCase(FinalCase);
+  auto FinalCaseIt = std::prev(Switch->case_end());
+  BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
+  Switch->removeCase(FinalCaseIt);
   if (IsDestroy) {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");

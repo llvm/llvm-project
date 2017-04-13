@@ -203,3 +203,11 @@ s_set_gpr_idx_mode 0
 s_set_gpr_idx_mode 15
 // VI: s_set_gpr_idx_mode dst src0 src1 src2 ; encoding: [0x0f,0x00,0x9d,0xbf]
 // NOSICI: error: instruction not supported on this GPU
+
+s_endpgm_saved
+// VI: s_endpgm_saved ; encoding: [0x00,0x00,0x9b,0xbf]
+// NOSICI: error: instruction not supported on this GPU
+
+s_wakeup
+// VI: s_wakeup ; encoding: [0x00,0x00,0x83,0xbf]
+// NOSICI: error: instruction not supported on this GPU

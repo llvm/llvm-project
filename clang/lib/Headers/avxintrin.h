@@ -1613,9 +1613,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_NEQ_UQ   0x04 /* Not-equal (unordered, non-signaling)  */
 #define _CMP_NLT_US   0x05 /* Not-less-than (unordered, signaling)  */
 #define _CMP_NLE_US   0x06 /* Not-less-than-or-equal (unordered, signaling)  */
-#define _CMP_ORD_Q    0x07 /* Ordered (nonsignaling)   */
+#define _CMP_ORD_Q    0x07 /* Ordered (non-signaling)   */
 #define _CMP_EQ_UQ    0x08 /* Equal (unordered, non-signaling)  */
-#define _CMP_NGE_US   0x09 /* Not-greater-than-or-equal (unord, signaling)  */
+#define _CMP_NGE_US   0x09 /* Not-greater-than-or-equal (unordered, signaling)  */
 #define _CMP_NGT_US   0x0a /* Not-greater-than (unordered, signaling)  */
 #define _CMP_FALSE_OQ 0x0b /* False (ordered, non-signaling)  */
 #define _CMP_NEQ_OQ   0x0c /* Not-equal (ordered, non-signaling)  */
@@ -1628,10 +1628,10 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_UNORD_S  0x13 /* Unordered (signaling)  */
 #define _CMP_NEQ_US   0x14 /* Not-equal (unordered, signaling)  */
 #define _CMP_NLT_UQ   0x15 /* Not-less-than (unordered, non-signaling)  */
-#define _CMP_NLE_UQ   0x16 /* Not-less-than-or-equal (unord, non-signaling)  */
+#define _CMP_NLE_UQ   0x16 /* Not-less-than-or-equal (unordered, non-signaling)  */
 #define _CMP_ORD_S    0x17 /* Ordered (signaling)  */
 #define _CMP_EQ_US    0x18 /* Equal (unordered, signaling)  */
-#define _CMP_NGE_UQ   0x19 /* Not-greater-than-or-equal (unord, non-sign)  */
+#define _CMP_NGE_UQ   0x19 /* Not-greater-than-or-equal (unordered, non-signaling)  */
 #define _CMP_NGT_UQ   0x1a /* Not-greater-than (unordered, non-signaling)  */
 #define _CMP_FALSE_OS 0x1b /* False (ordered, signaling)  */
 #define _CMP_NEQ_OS   0x1c /* Not-equal (ordered, signaling)  */
@@ -1660,17 +1660,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
 #define _mm_cmp_pd(a, b, c) __extension__ ({ \
   (__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
@@ -1697,17 +1718,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
 #define _mm_cmp_ps(a, b, c) __extension__ ({ \
   (__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
@@ -1734,17 +1776,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 256-bit vector of [4 x double] containing the comparison results.
 #define _mm256_cmp_pd(a, b, c) __extension__ ({ \
   (__m256d)__builtin_ia32_cmppd256((__v4df)(__m256d)(a), \
@@ -1771,17 +1834,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 256-bit vector of [8 x float] containing the comparison results.
 #define _mm256_cmp_ps(a, b, c) __extension__ ({ \
   (__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
@@ -1807,17 +1891,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
 #define _mm_cmp_sd(a, b, c) __extension__ ({ \
   (__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
@@ -1843,17 +1948,38 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
-///    00h, 08h, 10h, 18h: Equal \n
-///    01h, 09h, 11h, 19h: Less than \n
-///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal
-///                        (swapped operands) \n
-///    03h, 0Bh, 13h, 1Bh: Unordered \n
-///    04h, 0Ch, 14h, 1Ch: Not equal \n
-///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than
-///                        (swapped operands) \n
-///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
-///                        (swapped operands) \n
-///    07h, 0Fh, 17h, 1Fh: Ordered
+///    0x00 : Equal (ordered, non-signaling)
+///    0x01 : Less-than (ordered, signaling)
+///    0x02 : Less-than-or-equal (ordered, signaling)
+///    0x03 : Unordered (non-signaling)
+///    0x04 : Not-equal (unordered, non-signaling)
+///    0x05 : Not-less-than (unordered, signaling)
+///    0x06 : Not-less-than-or-equal (unordered, signaling)
+///    0x07 : Ordered (non-signaling)
+///    0x08 : Equal (unordered, non-signaling)
+///    0x09 : Not-greater-than-or-equal (unordered, signaling)
+///    0x0a : Not-greater-than (unordered, signaling)
+///    0x0b : False (ordered, non-signaling)
+///    0x0c : Not-equal (ordered, non-signaling)
+///    0x0d : Greater-than-or-equal (ordered, signaling)
+///    0x0e : Greater-than (ordered, signaling)
+///    0x0f : True (unordered, non-signaling)
+///    0x10 : Equal (ordered, signaling)
+///    0x11 : Less-than (ordered, non-signaling)
+///    0x12 : Less-than-or-equal (ordered, non-signaling)
+///    0x13 : Unordered (signaling)
+///    0x14 : Not-equal (unordered, signaling)
+///    0x15 : Not-less-than (unordered, non-signaling)
+///    0x16 : Not-less-than-or-equal (unordered, non-signaling)
+///    0x17 : Ordered (signaling)
+///    0x18 : Equal (unordered, signaling)
+///    0x19 : Not-greater-than-or-equal (unordered, non-signaling)
+///    0x1a : Not-greater-than (unordered, non-signaling)
+///    0x1b : False (ordered, signaling)
+///    0x1c : Not-equal (ordered, signaling)
+///    0x1d : Greater-than-or-equal (ordered, non-signaling)
+///    0x1e : Greater-than (ordered, non-signaling)
+///    0x1f : True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
 #define _mm_cmp_ss(a, b, c) __extension__ ({ \
   (__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \

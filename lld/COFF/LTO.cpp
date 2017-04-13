@@ -73,7 +73,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                                  /*UseInputModulePath*/ true));
   lto::ThinBackend Backend;
-  if (Config->LTOJobs != -1u)
+  if (Config->LTOJobs != 0)
     Backend = lto::createInProcessThinBackend(Config->LTOJobs);
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
                                      Config->LTOPartitions);

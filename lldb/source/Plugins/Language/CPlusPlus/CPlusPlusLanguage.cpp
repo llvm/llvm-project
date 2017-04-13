@@ -560,13 +560,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSynthetic(
       cpp_category_sp,
-      lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEndCreator,
-      "libc++ std::vector<bool> synthetic children",
-      ConstString(
-          "^std::__(ndk)?1::vector<bool, std::__(ndk)?1::allocator<bool> >$"),
-      stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
       lldb_private::formatters::LibcxxStdVectorSyntheticFrontEndCreator,
       "libc++ std::vector synthetic children",
       ConstString("^std::__(ndk)?1::vector<.+>(( )?&)?$"), stl_synth_flags,
@@ -582,19 +575,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::map synthetic children",
       ConstString("^std::__(ndk)?1::map<.+> >(( )?&)?$"), stl_synth_flags,
       true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEndCreator,
-      "libc++ std::vector<bool> synthetic children",
-      ConstString("std::__(ndk)?1::vector<std::__(ndk)?1::allocator<bool> >"),
-      stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEndCreator,
-      "libc++ std::vector<bool> synthetic children",
-      ConstString(
-          "std::__(ndk)?1::vector<bool, std::__(ndk)?1::allocator<bool> >"),
-      stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator,
@@ -653,12 +633,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider,
-      "libc++ std::vector<bool> summary provider",
-      ConstString(
-          "std::__(ndk)?1::vector<bool, std::__(ndk)?1::allocator<bool> >"),
-      stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::vector summary provider",
@@ -723,12 +697,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::vector iterator synthetic children",
       ConstString("^std::__(ndk)?1::__wrap_iter<.+>$"), stl_synth_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider,
-      "libc++ std::vector<bool> summary provider",
-      ConstString(
-          "std::__(ndk)?1::vector<bool, std::__(ndk)?1::allocator<bool> >"),
-      stl_summary_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEndCreator,
@@ -739,7 +707,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp, lldb_private::formatters::LibcxxFunctionFrontEndCreator,
       "std::function synthetic value provider",
-      ConstString("^std::__1::function<.+>$"), stl_synth_flags, true);
+      ConstString("^std::__(ndk)?1::function<.+>$"), stl_synth_flags, true);
 #endif
 }
 

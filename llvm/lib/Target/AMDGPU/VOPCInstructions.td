@@ -563,7 +563,7 @@ multiclass VOPC_CLASS_F16 <string opName> :
   VOPC_Class_Pseudos <opName, VOPC_I1_F16_I32, 0>;
 
 multiclass VOPCX_CLASS_F16 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 1>;
+  VOPC_Class_Pseudos <opName, VOPC_I1_F16_I32, 1>;
 
 multiclass VOPC_CLASS_F32 <string opName> :
   VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;

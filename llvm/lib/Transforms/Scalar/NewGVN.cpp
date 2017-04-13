@@ -2054,8 +2054,8 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
     if (CondEvaluated && isa<ConstantInt>(CondEvaluated)) {
       auto *CondVal = cast<ConstantInt>(CondEvaluated);
       // We should be able to get case value for this.
-      auto CaseVal = SI->findCaseValue(CondVal);
-      if (CaseVal.getCaseSuccessor() == SI->getDefaultDest()) {
+      auto Case = *SI->findCaseValue(CondVal);
+      if (Case.getCaseSuccessor() == SI->getDefaultDest()) {
         // We proved the value is outside of the range of the case.
         // We can't do anything other than mark the default dest as reachable,
         // and go home.
@@ -2063,7 +2063,7 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
         return;
       }
       // Now get where it goes and mark it reachable.
-      BasicBlock *TargetBlock = CaseVal.getCaseSuccessor();
+      BasicBlock *TargetBlock = Case.getCaseSuccessor();
       updateReachableEdge(B, TargetBlock);
     } else {
       for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {

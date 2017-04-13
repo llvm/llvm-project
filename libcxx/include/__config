@@ -35,6 +35,16 @@
 #define _LIBCPP_ABI_VERSION 1
 #endif
 
+#if defined(__ELF__)
+#define _LIBCPP_OBJECT_FORMAT_ELF   1
+#elif defined(__MACH__)
+#define _LIBCPP_OBJECT_FORMAT_MACHO 1
+#elif defined(_WIN32)
+#define _LIBCPP_OBJECT_FORMAT_COFF  1
+#else
+#error Unknown object file format
+#endif
+
 #if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
@@ -63,9 +73,12 @@
 // using that class define their own copies.
 #define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #elif _LIBCPP_ABI_VERSION == 1
-#if !defined(_WIN32)
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
-// applications compiled against older libraries.
+// applications compiled against older libraries. This is unnecessary with
+// COFF dllexport semantics, since dllexport forces a non-inline definition
+// of inline functions to be emitted anyway. Our own non-inline copy would
+// conflict with the dllexport-emitted copy, so we disable it.
 #define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 #endif
 // Feature macros for disabling pre ABI v1 features. All of these options
@@ -571,14 +584,6 @@ namespace std {
 #define _LIBCPP_HAS_NO_ASAN
 
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
-
-#if defined(__ELF__)
-#define _LIBCPP_OBJECT_FORMAT_ELF   1
-#elif defined(__MACH__)
-#define _LIBCPP_OBJECT_FORMAT_MACHO 1
-#else
-#define _LIBCPP_OBJECT_FORMAT_COFF  1
-#endif
 
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 #if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)

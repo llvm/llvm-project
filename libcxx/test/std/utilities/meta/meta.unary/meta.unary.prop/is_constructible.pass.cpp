@@ -251,6 +251,7 @@ int main()
     LIBCPP_STATIC_ASSERT(
         clang_disallows_valid_static_cast_bug !=
         std::__libcpp_is_constructible<int&&, ExplicitTo<int&&>>::value, "");
+    ((void)clang_disallows_valid_static_cast_bug); // Prevent unused warning
 #else
     static_assert(clang_disallows_valid_static_cast_bug == false, "");
     LIBCPP_STATIC_ASSERT(std::__libcpp_is_constructible<int&&, ExplicitTo<int&&>>::value, "");

@@ -512,6 +512,9 @@ public:
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
+
+  /// Creates value range metadata on an workitemid.* inrinsic call or load.
+  bool makeLIDRangeMetadata(Instruction *I) const;
 };
 
 class R600Subtarget final : public AMDGPUSubtarget {

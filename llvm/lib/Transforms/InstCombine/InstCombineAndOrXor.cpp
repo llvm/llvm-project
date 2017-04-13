@@ -1272,8 +1272,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       case Instruction::Sub:
         Value *X;
         ConstantInt *C1;
-        if (match(Op0I, m_BinOp(m_ZExt(m_Value(X)), m_ConstantInt(C1))) ||
-            match(Op0I, m_BinOp(m_ConstantInt(C1), m_ZExt(m_Value(X))))) {
+        if (match(Op0I, m_c_BinOp(m_ZExt(m_Value(X)), m_ConstantInt(C1)))) {
           if (AndRHSMask.isIntN(X->getType()->getScalarSizeInBits())) {
             auto *TruncC1 = ConstantExpr::getTrunc(C1, X->getType());
             Value *BinOp;
@@ -2409,13 +2408,12 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  if (Constant *RHS = dyn_cast<Constant>(Op1)) {
-    if (RHS->isAllOnesValue() && Op0->hasOneUse())
-      // xor (cmp A, B), true = not (cmp A, B) = !cmp A, B
-      if (CmpInst *CI = dyn_cast<CmpInst>(Op0))
-        return CmpInst::Create(CI->getOpcode(),
-                               CI->getInversePredicate(),
-                               CI->getOperand(0), CI->getOperand(1));
+  // xor (cmp A, B), true = not (cmp A, B) = !cmp A, B
+  ICmpInst::Predicate Pred;
+  if (match(Op0, m_OneUse(m_Cmp(Pred, m_Value(), m_Value()))) &&
+      match(Op1, m_AllOnes())) {
+    cast<CmpInst>(Op0)->setPredicate(CmpInst::getInversePredicate(Pred));
+    return replaceInstUsesWith(I, Op0);
   }
 
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {

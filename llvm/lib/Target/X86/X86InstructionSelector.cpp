@@ -18,13 +18,13 @@
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,6 +65,8 @@ private:
                          MachineFunction &MF) const;
   bool selectFrameIndex(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
+  bool selectConstant(MachineInstr &I, MachineRegisterInfo &MRI,
+                      MachineFunction &MF) const;
 
   const X86Subtarget &STI;
   const X86InstrInfo &TII;
@@ -202,6 +204,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectLoadStoreOp(I, MRI, MF))
     return true;
   if (selectFrameIndex(I, MRI, MF))
+    return true;
+  if (selectConstant(I, MRI, MF))
     return true;
 
   return selectImpl(I);
@@ -455,6 +459,53 @@ bool X86InstructionSelector::selectFrameIndex(MachineInstr &I,
   MachineInstrBuilder MIB(MF, I);
   addOffset(MIB, 0);
 
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}
+
+bool X86InstructionSelector::selectConstant(MachineInstr &I,
+                                            MachineRegisterInfo &MRI,
+                                            MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_CONSTANT)
+    return false;
+
+  const unsigned DefReg = I.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DefReg);
+
+  assert(Ty.isScalar() && "invalid element type.");
+
+  uint64_t Val = 0;
+  if (I.getOperand(1).isCImm()) {
+    Val = I.getOperand(1).getCImm()->getZExtValue();
+    I.getOperand(1).ChangeToImmediate(Val);
+  } else if (I.getOperand(1).isImm()) {
+    Val = I.getOperand(1).getImm();
+  } else
+    llvm_unreachable("Unsupported operand type.");
+
+  unsigned NewOpc;
+  switch (Ty.getSizeInBits()) {
+  case 8:
+    NewOpc = X86::MOV8ri;
+    break;
+  case 16:
+    NewOpc = X86::MOV16ri;
+    break;
+  case 32:
+    NewOpc = X86::MOV32ri;
+    break;
+  case 64: {
+    // TODO: in case isUInt<32>(Val), X86::MOV32ri can be used
+    if (isInt<32>(Val))
+      NewOpc = X86::MOV64ri32;
+    else
+      NewOpc = X86::MOV64ri;
+    break;
+  }
+  default:
+    llvm_unreachable("Can't select G_CONSTANT, unsupported type.");
+  }
+
+  I.setDesc(TII.get(NewOpc));
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 

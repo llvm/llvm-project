@@ -38,7 +38,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -71,7 +70,6 @@ private:
   const TargetMachine *TM;
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
-  MDNode *MaxWorkGroupSizeRange = nullptr;
   AMDGPUAS AS;
 
   // FIXME: This should be per-kernel.
@@ -132,13 +130,6 @@ bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
 
   Mod = &M;
   DL = &Mod->getDataLayout();
-
-  // The maximum workitem id.
-  //
-  // FIXME: Should get as subtarget property. Usually runtime enforced max is
-  // 256.
-  MDBuilder MDB(Mod->getContext());
-  MaxWorkGroupSizeRange = MDB.createRange(APInt(32, 0), APInt(32, 2048));
 
   const Triple &TT = TM->getTargetTriple();
 
@@ -258,6 +249,9 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
 
 std::pair<Value *, Value *>
 AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
+                                *Builder.GetInsertBlock()->getParent());
+
   if (!IsAMDHSA) {
     Function *LocalSizeYFn
       = Intrinsic::getDeclaration(Mod, Intrinsic::r600_read_local_size_y);
@@ -267,8 +261,8 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
     CallInst *LocalSizeY = Builder.CreateCall(LocalSizeYFn, {});
     CallInst *LocalSizeZ = Builder.CreateCall(LocalSizeZFn, {});
 
-    LocalSizeY->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
-    LocalSizeZ->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+    ST.makeLIDRangeMetadata(LocalSizeY);
+    ST.makeLIDRangeMetadata(LocalSizeZ);
 
     return std::make_pair(LocalSizeY, LocalSizeZ);
   }
@@ -333,7 +327,7 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
   MDNode *MD = MDNode::get(Mod->getContext(), None);
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
-  LoadZU->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  ST.makeLIDRangeMetadata(LoadZU);
 
   // Extract y component. Upper half of LoadZU should be zero already.
   Value *Y = Builder.CreateLShr(LoadXY, 16);
@@ -342,6 +336,8 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
 }
 
 Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
+                                *Builder.GetInsertBlock()->getParent());
   Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
 
   switch (N) {
@@ -364,7 +360,7 @@ Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
 
   Function *WorkitemIdFn = Intrinsic::getDeclaration(Mod, IntrID);
   CallInst *CI = Builder.CreateCall(WorkitemIdFn);
-  CI->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  ST.makeLIDRangeMetadata(CI);
 
   return CI;
 }
@@ -690,8 +686,6 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
 
   const AMDGPUSubtarget &ST =
     TM->getSubtarget<AMDGPUSubtarget>(ContainingFunction);
-  // FIXME: We should also try to get this value from the reqd_work_group_size
-  // function attribute if it is available.
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
   const DataLayout &DL = Mod->getDataLayout();

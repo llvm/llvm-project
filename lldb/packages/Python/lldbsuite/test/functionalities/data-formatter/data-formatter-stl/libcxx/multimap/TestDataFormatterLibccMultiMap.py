@@ -18,8 +18,12 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfWindows  # libc++ not ported to Windows yet
-    @skipIf(compiler="gcc")
+    def setUp(self):
+        TestBase.setUp(self)
+        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
+        self.namespace = 'std::__' + ns + '1'
+
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -30,9 +34,6 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                 self, "Set break point at this line."))
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -53,16 +54,15 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect('image list', substrs=self.getLibcPlusPlusLibs())
-
+        multimap = self.namespace + "::multimap"
         self.expect('frame variable ii',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
-                    substrs=['size=2',
+                    substrs=[multimap, 'size=2',
                              '[0] = ',
                              'first = 0',
                              'second = 0',
@@ -73,7 +73,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
-                    substrs=['size=4',
+                    substrs=[multimap, 'size=4',
                              '[2] = ',
                              'first = 2',
                              'second = 0',
@@ -84,7 +84,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable ii",
-                    substrs=['size=8',
+                    substrs=[multimap, 'size=8',
                              '[5] = ',
                              'first = 5',
                              'second = 0',
@@ -93,7 +93,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              'second = 1'])
 
         self.expect("p ii",
-                    substrs=['size=8',
+                    substrs=[multimap, 'size=8',
                              '[5] = ',
                              'first = 5',
                              'second = 0',
@@ -125,17 +125,17 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         self.expect('frame variable si',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable si',
-                    substrs=['size=1',
+                    substrs=[multimap, 'size=1',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0'])
@@ -143,7 +143,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable si",
-                    substrs=['size=4',
+                    substrs=[multimap, 'size=4',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0',
@@ -158,7 +158,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              'second = 3'])
 
         self.expect("p si",
-                    substrs=['size=4',
+                    substrs=[multimap, 'size=4',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0',
@@ -193,19 +193,19 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable si',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable is',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable is",
-                    substrs=['size=4',
+                    substrs=[multimap, 'size=4',
                              '[0] = ',
                              'second = \"goofy\"',
                              'first = 85',
@@ -220,7 +220,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              'first = 3'])
 
         self.expect("p is",
-                    substrs=['size=4',
+                    substrs=[multimap, 'size=4',
                              '[0] = ',
                              'second = \"goofy\"',
                              'first = 85',
@@ -255,19 +255,19 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable is',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ss',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable ss",
-                    substrs=['size=3',
+                    substrs=[multimap, 'size=3',
                              '[0] = ',
                              'second = \"hello\"',
                              'first = \"ciao\"',
@@ -279,7 +279,7 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              'first = \"gatto\"'])
 
         self.expect("p ss",
-                    substrs=['size=3',
+                    substrs=[multimap, 'size=3',
                              '[0] = ',
                              'second = \"hello\"',
                              'first = \"ciao\"',
@@ -310,5 +310,5 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ss',
-                    substrs=['size=0',
+                    substrs=[multimap, 'size=0',
                              '{}'])
