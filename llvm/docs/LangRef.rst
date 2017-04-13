@@ -5126,6 +5126,7 @@ another based on aliasing information. This is because invariant.group is tied
 to the SSA value of the pointer operand.
 
 .. code-block:: llvm
+  
   %v = load i8, i8* %x, !invariant.group !0
   ; if %x mustalias %y then we can replace the above instruction with
   %v = load i8, i8* %y
@@ -5811,9 +5812,7 @@ This instruction requires several arguments:
 #. '``exception label``': the label reached when a callee returns via
    the :ref:`resume <i_resume>` instruction or other exception handling
    mechanism.
-#. The optional :ref:`function attributes <fnattrs>` list. Only
-   '``noreturn``', '``nounwind``', '``readonly``' and '``readnone``'
-   attributes are valid here.
+#. The optional :ref:`function attributes <fnattrs>` list.
 #. The optional :ref:`operand bundles <opbundles>` list.
 
 Semantics:
@@ -7070,9 +7069,10 @@ Semantics:
 The elements of the two input vectors are numbered from left to right
 across both of the vectors. The shuffle mask operand specifies, for each
 element of the result vector, which element of the two input vectors the
-result element gets. The element selector may be undef (meaning "don't
-care") and the second operand may be undef if performing a shuffle from
-only one vector.
+result element gets. If the shuffle mask is undef, the result vector is
+undef. If any element of the mask operand is undef, that element of the
+result is undef. If the shuffle mask selects an undef element from one
+of the input vectors, the resulting element is undef.
 
 Example:
 """"""""
@@ -8871,9 +8871,7 @@ This instruction requires several arguments:
    be of :ref:`first class <t_firstclass>` type. If the function signature
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
-#. The optional :ref:`function attributes <fnattrs>` list. Only
-   '``noreturn``', '``nounwind``', '``readonly``' , '``readnone``',
-   and '``convergent``' attributes are valid here.
+#. The optional :ref:`function attributes <fnattrs>` list.
 #. The optional :ref:`operand bundles <opbundles>` list.
 
 Semantics:

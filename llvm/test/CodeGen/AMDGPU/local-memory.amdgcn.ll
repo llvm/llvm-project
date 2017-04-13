@@ -45,11 +45,7 @@ entry:
 ; GCN-LABEL: {{^}}local_memory_two_objects:
 ; GCN: v_lshlrev_b32_e32 [[ADDRW:v[0-9]+]], 2, v0
 ; CI-DAG: ds_write2_b32 [[ADDRW]], {{v[0-9]+}}, {{v[0-9]+}} offset1:4
-
-; SI: v_add_i32_e32 [[ADDRW_OFF:v[0-9]+]], vcc, 16, [[ADDRW]]
-
-; SI-DAG: ds_write_b32 [[ADDRW]],
-; SI-DAG: ds_write_b32 [[ADDRW_OFF]],
+; SI-DAG: ds_write2_b32 [[ADDRW]], {{v[0-9]+}}, {{v[0-9]+}} offset1:4
 
 ; GCN: s_barrier
 

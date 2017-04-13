@@ -561,6 +561,10 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
+  append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+endif()
+
 macro(append_common_sanitizer_flags)
   if (NOT MSVC)
     # Append -fno-omit-frame-pointer and turn on debug info to get better

@@ -563,7 +563,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::CopyToReg: {
     const SITargetLowering& Lowering =
       *static_cast<const SITargetLowering*>(getTargetLowering());
-    Lowering.legalizeTargetIndependentNode(N, *CurDAG);
+    N = Lowering.legalizeTargetIndependentNode(N, *CurDAG);
     break;
   }
   case ISD::AND:

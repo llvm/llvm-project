@@ -55,7 +55,7 @@ ModulePass *createAMDGPUAnnotateKernelFeaturesPass(const TargetMachine *TM = nul
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
-ModulePass *createAMDGPULowerIntrinsicsPass();
+ModulePass *createAMDGPULowerIntrinsicsPass(const TargetMachine *TM = nullptr);
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 

@@ -18,7 +18,7 @@ namespace opts {
 
 namespace pretty {
 
-enum class ClassDefinitionFormat { None, Standard };
+enum class ClassDefinitionFormat { None, Layout, Graphical, Standard };
 
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;

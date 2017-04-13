@@ -120,7 +120,7 @@ APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
 }
 
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
-  : BitWidth(numbits), VAL(0) {
+  : VAL(0), BitWidth(numbits) {
   assert(BitWidth && "Bitwidth too small");
   fromString(numbits, Str, radix);
 }
@@ -171,50 +171,13 @@ void APInt::Profile(FoldingSetNodeID& ID) const {
     ID.AddInteger(pVal[i]);
 }
 
-/// This function adds a single "digit" integer, y, to the multiple
-/// "digit" integer array,  x[]. x[] is modified to reflect the addition and
-/// 1 is returned if there is a carry out, otherwise 0 is returned.
-/// @returns the carry of the addition.
-static bool add_1(uint64_t dest[], uint64_t x[], unsigned len, uint64_t y) {
-  for (unsigned i = 0; i < len; ++i) {
-    dest[i] = y + x[i];
-    if (dest[i] < y)
-      y = 1; // Carry one to next digit.
-    else {
-      y = 0; // No need to carry so exit early
-      break;
-    }
-  }
-  return y;
-}
-
 /// @brief Prefix increment operator. Increments the APInt by one.
 APInt& APInt::operator++() {
   if (isSingleWord())
     ++VAL;
   else
-    add_1(pVal, pVal, getNumWords(), 1);
+    tcIncrement(pVal, getNumWords());
   return clearUnusedBits();
-}
-
-/// This function subtracts a single "digit" (64-bit word), y, from
-/// the multi-digit integer array, x[], propagating the borrowed 1 value until
-/// no further borrowing is needed or it runs out of "digits" in x.  The result
-/// is 1 if "borrowing" exhausted the digits in x, or 0 if x was not exhausted.
-/// In other words, if y > x then this function returns 1, otherwise 0.
-/// @returns the borrow out of the subtraction
-static bool sub_1(uint64_t x[], unsigned len, uint64_t y) {
-  for (unsigned i = 0; i < len; ++i) {
-    uint64_t X = x[i];
-    x[i] -= y;
-    if (y > X)
-      y = 1;  // We have to "borrow 1" from next "digit"
-    else {
-      y = 0;  // No need to borrow
-      break;  // Remaining digits are unchanged so exit early
-    }
-  }
-  return bool(y);
 }
 
 /// @brief Prefix decrement operator. Decrements the APInt by one.
@@ -222,7 +185,7 @@ APInt& APInt::operator--() {
   if (isSingleWord())
     --VAL;
   else
-    sub_1(pVal, getNumWords(), 1);
+    tcDecrement(pVal, getNumWords());
   return clearUnusedBits();
 }
 
@@ -242,7 +205,7 @@ APInt& APInt::operator+=(uint64_t RHS) {
   if (isSingleWord())
     VAL += RHS;
   else
-    add_1(pVal, pVal, getNumWords(), RHS);
+    tcAddPart(pVal, RHS, getNumWords());
   return clearUnusedBits();
 }
 
@@ -262,7 +225,7 @@ APInt& APInt::operator-=(uint64_t RHS) {
   if (isSingleWord())
     VAL -= RHS;
   else
-    sub_1(pVal, getNumWords(), RHS);
+    tcSubtractPart(pVal, RHS, getNumWords());
   return clearUnusedBits();
 }
 
@@ -2471,6 +2434,22 @@ APInt::WordType APInt::tcAdd(WordType *dst, const WordType *rhs,
   return c;
 }
 
+/// This function adds a single "word" integer, src, to the multiple
+/// "word" integer array, dst[]. dst[] is modified to reflect the addition and
+/// 1 is returned if there is a carry out, otherwise 0 is returned.
+/// @returns the carry of the addition.
+APInt::WordType APInt::tcAddPart(WordType *dst, WordType src,
+                                 unsigned parts) {
+  for (unsigned i = 0; i < parts; ++i) {
+    dst[i] += src;
+    if (dst[i] >= src)
+      return 0; // No need to carry so exit early.
+    src = 1; // Carry one to next digit.
+  }
+
+  return 1;
+}
+
 /* DST -= RHS + C where C is zero or one.  Returns the carry flag.  */
 APInt::WordType APInt::tcSubtract(WordType *dst, const WordType *rhs,
                                   WordType c, unsigned parts) {
@@ -2488,6 +2467,26 @@ APInt::WordType APInt::tcSubtract(WordType *dst, const WordType *rhs,
   }
 
   return c;
+}
+
+/// This function subtracts a single "word" (64-bit word), src, from
+/// the multi-word integer array, dst[], propagating the borrowed 1 value until
+/// no further borrowing is needed or it runs out of "words" in dst.  The result
+/// is 1 if "borrowing" exhausted the digits in dst, or 0 if dst was not
+/// exhausted. In other words, if src > dst then this function returns 1,
+/// otherwise 0.
+/// @returns the borrow out of the subtraction
+APInt::WordType APInt::tcSubtractPart(WordType *dst, WordType src,
+                                      unsigned parts) {
+  for (unsigned i = 0; i < parts; ++i) {
+    WordType Dst = dst[i];
+    dst[i] -= src;
+    if (src <= Dst)
+      return 0; // No need to borrow so exit early.
+    src = 1; // We have to "borrow 1" from next "word"
+  }
+
+  return 1;
 }
 
 /* Negate a bignum in-place.  */
@@ -2783,29 +2782,6 @@ int APInt::tcCompare(const WordType *lhs, const WordType *rhs,
 
   return 0;
 }
-
-/* Increment a bignum in-place, return the carry flag.  */
-APInt::WordType APInt::tcIncrement(WordType *dst, unsigned parts) {
-  unsigned i;
-  for (i = 0; i < parts; i++)
-    if (++dst[i] != 0)
-      break;
-
-  return i == parts;
-}
-
-/* Decrement a bignum in-place, return the borrow flag.  */
-APInt::WordType APInt::tcDecrement(WordType *dst, unsigned parts) {
-  for (unsigned i = 0; i < parts; i++) {
-    // If the current word is non-zero, then the decrement has no effect on the
-    // higher-order words of the integer and no borrow can occur. Exit early.
-    if (dst[i]--)
-      return 0;
-  }
-  // If every word was zero, then there is a borrow.
-  return 1;
-}
-
 
 /* Set the least significant BITS bits of a bignum, clear the
    rest.  */

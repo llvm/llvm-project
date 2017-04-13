@@ -4764,16 +4764,14 @@ bool LLParser::ParseFunctionHeader(Function *&Fn, bool isDefine) {
   std::vector<Type*> ParamTypeList;
   SmallVector<AttributeSet, 8> Attrs;
 
-  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
-
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
     ParamTypeList.push_back(ArgList[i].Ty);
     Attrs.push_back(ArgList[i].Attrs);
   }
 
-  Attrs.push_back(AttributeSet::get(Context, FuncAttrs));
-
-  AttributeList PAL = AttributeList::get(Context, Attrs);
+  AttributeList PAL =
+      AttributeList::get(Context, AttributeSet::get(Context, FuncAttrs),
+                         AttributeSet::get(Context, RetAttrs), Attrs);
 
   if (PAL.hasAttribute(1, Attribute::StructRet) && !RetType->isVoidTy())
     return Error(RetTypeLoc, "functions with 'sret' argument must return void");
@@ -5383,10 +5381,8 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   // Set up the Attribute for the function.
-  SmallVector<AttributeSet, 8> Attrs;
-  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
-
-  SmallVector<Value*, 8> Args;
+  SmallVector<Value *, 8> Args;
+  SmallVector<AttributeSet, 8> ArgAttrs;
 
   // Loop through FunctionType's arguments and ensure they are specified
   // correctly.  Also, gather any parameter attributes.
@@ -5404,7 +5400,7 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
       return Error(ArgList[i].Loc, "argument is not of expected type '" +
                    getTypeString(ExpectedTy) + "'");
     Args.push_back(ArgList[i].V);
-    Attrs.push_back(ArgList[i].Attrs);
+    ArgAttrs.push_back(ArgList[i].Attrs);
   }
 
   if (I != E)
@@ -5413,10 +5409,10 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   if (FnAttrs.hasAlignmentAttr())
     return Error(CallLoc, "invoke instructions may not have an alignment");
 
-  Attrs.push_back(AttributeSet::get(Context, FnAttrs));
-
   // Finish off the Attribute and check them
-  AttributeList PAL = AttributeList::get(Context, Attrs);
+  AttributeList PAL =
+      AttributeList::get(Context, AttributeSet::get(Context, FnAttrs),
+                         AttributeSet::get(Context, RetAttrs), ArgAttrs);
 
   InvokeInst *II =
       InvokeInst::Create(Ty, Callee, NormalBB, UnwindBB, Args, BundleList);
@@ -5978,7 +5974,6 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   // Set up the Attribute for the function.
   SmallVector<AttributeSet, 8> Attrs;
-  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
 
   SmallVector<Value*, 8> Args;
 
@@ -6007,10 +6002,10 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   if (FnAttrs.hasAlignmentAttr())
     return Error(CallLoc, "call instructions may not have an alignment");
 
-  Attrs.push_back(AttributeSet::get(Context, FnAttrs));
-
   // Finish off the Attribute and check them
-  AttributeList PAL = AttributeList::get(Context, Attrs);
+  AttributeList PAL =
+      AttributeList::get(Context, AttributeSet::get(Context, FnAttrs),
+                         AttributeSet::get(Context, RetAttrs), Attrs);
 
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);

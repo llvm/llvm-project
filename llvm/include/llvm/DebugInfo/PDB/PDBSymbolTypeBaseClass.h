@@ -13,6 +13,9 @@
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
+
 namespace llvm {
 
 class raw_ostream;

@@ -18,6 +18,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
+#include <memory>
 
 namespace llvm {
 
@@ -73,6 +74,14 @@ template <typename To, typename From> struct isa_impl_cl {
 template <typename To, typename From> struct isa_impl_cl<To, const From> {
   static inline bool doit(const From &Val) {
     return isa_impl<To, From>::doit(Val);
+  }
+};
+
+template <typename To, typename From>
+struct isa_impl_cl<To, const std::unique_ptr<From>> {
+  static inline bool doit(const std::unique_ptr<From> &Val) {
+    assert(Val && "isa<> used on a null pointer");
+    return isa_impl_cl<To, From>::doit(*Val);
   }
 };
 
@@ -161,6 +170,15 @@ template<class To, class From> struct cast_retty_impl<To, const From*const> {
   typedef const To* ret_type;   // Constant pointer arg case, return const Ty*
 };
 
+template <class To, class From>
+struct cast_retty_impl<To, std::unique_ptr<From>> {
+private:
+  typedef typename cast_retty_impl<To, From *>::ret_type PointerType;
+  typedef typename std::remove_pointer<PointerType>::type ResultType;
+
+public:
+  typedef std::unique_ptr<ResultType> ret_type;
+};
 
 template<class To, class From, class SimpleFrom>
 struct cast_retty_wrap {
@@ -238,6 +256,16 @@ inline typename cast_retty<X, Y *>::ret_type cast(Y *Val) {
                           typename simplify_type<Y*>::SimpleType>::doit(Val);
 }
 
+template <class X, class Y>
+inline typename cast_retty<X, std::unique_ptr<Y>>::ret_type
+cast(std::unique_ptr<Y> &&Val) {
+  assert(isa<X>(Val.get()) && "cast<Ty>() argument of incompatible type!");
+  using ret_type = typename cast_retty<X, std::unique_ptr<Y>>::ret_type;
+  return ret_type(
+      cast_convert_val<X, Y *, typename simplify_type<Y *>::SimpleType>::doit(
+          Val.release()));
+}
+
 // cast_or_null<X> - Functionally identical to cast, except that a null value is
 // accepted.
 //
@@ -271,6 +299,13 @@ cast_or_null(Y *Val) {
   return cast<X>(Val);
 }
 
+template <class X, class Y>
+inline typename cast_retty<X, std::unique_ptr<Y>>::ret_type
+cast_or_null(std::unique_ptr<Y> &&Val) {
+  if (!Val)
+    return nullptr;
+  return cast<X>(std::move(Val));
+}
 
 // dyn_cast<X> - Return the argument parameter cast to the specified type.  This
 // casting operator returns null if the argument is of the wrong type, so it can
@@ -321,6 +356,41 @@ template <class X, class Y>
 LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type
 dyn_cast_or_null(Y *Val) {
   return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
+}
+
+// unique_dyn_cast<X> - Given a unique_ptr<Y>, try to return a unique_ptr<X>,
+// taking ownership of the input pointer iff isa<X>(Val) is true.  If the
+// cast is successful, From refers to nullptr on exit and the casted value
+// is returned.  If the cast is unsuccessful, the function returns nullptr
+// and From is unchanged.
+template <class X, class Y>
+LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &Val)
+    -> decltype(cast<X>(Val)) {
+  if (!isa<X>(Val))
+    return nullptr;
+  return cast<X>(std::move(Val));
+}
+
+template <class X, class Y>
+LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val)
+    -> decltype(cast<X>(Val)) {
+  return unique_dyn_cast<X, Y>(Val);
+}
+
+// dyn_cast_or_null<X> - Functionally identical to unique_dyn_cast, except that
+// a null value is accepted.
+template <class X, class Y>
+LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &Val)
+    -> decltype(cast<X>(Val)) {
+  if (!Val)
+    return nullptr;
+  return unique_dyn_cast<X, Y>(Val);
+}
+
+template <class X, class Y>
+LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val)
+    -> decltype(cast<X>(Val)) {
+  return unique_dyn_cast_or_null<X, Y>(Val);
 }
 
 } // End llvm namespace

@@ -102,11 +102,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   // Attribute - Keep track of the parameter attributes for the arguments
   // that we are *not* promoting. For the ones that we do promote, the parameter
   // attributes are lost
-  SmallVector<AttributeSet, 8> AttributesVec;
-  const AttributeList &PAL = F->getAttributes();
-
-  // Add any return attributes.
-  AttributesVec.push_back(PAL.getRetAttributes());
+  SmallVector<AttributeSet, 8> ArgAttrVec;
+  AttributeList PAL = F->getAttributes();
 
   // First, determine the new argument list
   unsigned ArgIndex = 1;
@@ -117,13 +114,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       Type *AgTy = cast<PointerType>(I->getType())->getElementType();
       StructType *STy = cast<StructType>(AgTy);
       Params.insert(Params.end(), STy->element_begin(), STy->element_end());
-      AttributesVec.insert(AttributesVec.end(), STy->getNumElements(),
-                           AttributeSet());
+      ArgAttrVec.insert(ArgAttrVec.end(), STy->getNumElements(),
+                        AttributeSet());
       ++NumByValArgsPromoted;
     } else if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
       Params.push_back(I->getType());
-      AttributesVec.push_back(PAL.getParamAttributes(ArgIndex));
+      ArgAttrVec.push_back(PAL.getParamAttributes(ArgIndex));
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
@@ -168,7 +165,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         Params.push_back(GetElementPtrInst::getIndexedType(
             cast<PointerType>(I->getType()->getScalarType())->getElementType(),
             ArgIndex.second));
-        AttributesVec.push_back(AttributeSet());
+        ArgAttrVec.push_back(AttributeSet());
         assert(Params.back());
       }
 
@@ -178,9 +175,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         ++NumAggregatesPromoted;
     }
   }
-
-  // Add any function attributes.
-  AttributesVec.push_back(PAL.getFnAttributes());
 
   Type *RetTy = FTy->getReturnType();
 
@@ -200,8 +194,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
-  NF->setAttributes(AttributeList::get(F->getContext(), AttributesVec));
-  AttributesVec.clear();
+  NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttributes(),
+                                       PAL.getRetAttributes(), ArgAttrVec));
+  ArgAttrVec.clear();
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
@@ -216,9 +211,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     Instruction *Call = CS.getInstruction();
     const AttributeList &CallPAL = CS.getAttributes();
 
-    // Add any return attributes.
-    AttributesVec.push_back(CallPAL.getRetAttributes());
-
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
     CallSite::arg_iterator AI = CS.arg_begin();
@@ -227,7 +219,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
          ++I, ++AI, ++ArgIndex)
       if (!ArgsToPromote.count(&*I) && !ByValArgsToTransform.count(&*I)) {
         Args.push_back(*AI); // Unmodified argument
-        AttributesVec.push_back(CallPAL.getAttributes(ArgIndex));
+        ArgAttrVec.push_back(CallPAL.getAttributes(ArgIndex));
       } else if (ByValArgsToTransform.count(&*I)) {
         // Emit a GEP and load for each element of the struct.
         Type *AgTy = cast<PointerType>(I->getType())->getElementType();
@@ -240,7 +232,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
               STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i), Call);
           // TODO: Tell AA about the new values?
           Args.push_back(new LoadInst(Idx, Idx->getName() + ".val", Call));
-          AttributesVec.push_back(AttributeSet());
+          ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
         // Non-dead argument: insert GEPs and loads as appropriate.
@@ -283,48 +275,43 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           newLoad->setAAMetadata(AAInfo);
 
           Args.push_back(newLoad);
-          AttributesVec.push_back(AttributeSet());
+          ArgAttrVec.push_back(AttributeSet());
         }
       }
 
     // Push any varargs arguments on the list.
     for (; AI != CS.arg_end(); ++AI, ++ArgIndex) {
       Args.push_back(*AI);
-      AttributesVec.push_back(CallPAL.getAttributes(ArgIndex));
+      ArgAttrVec.push_back(CallPAL.getAttributes(ArgIndex));
     }
-
-    // Add any function attributes.
-    AttributesVec.push_back(CallPAL.getFnAttributes());
 
     SmallVector<OperandBundleDef, 1> OpBundles;
     CS.getOperandBundlesAsDefs(OpBundles);
 
-    Instruction *New;
+    CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
-      New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
+      NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
                                Args, OpBundles, "", Call);
-      cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<InvokeInst>(New)->setAttributes(
-          AttributeList::get(II->getContext(), AttributesVec));
     } else {
-      New = CallInst::Create(NF, Args, OpBundles, "", Call);
-      cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<CallInst>(New)->setAttributes(
-          AttributeList::get(New->getContext(), AttributesVec));
-      cast<CallInst>(New)->setTailCallKind(
-          cast<CallInst>(Call)->getTailCallKind());
+      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", Call);
+      NewCall->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
+      NewCS = NewCall;
     }
-    New->setDebugLoc(Call->getDebugLoc());
+    NewCS.setCallingConv(CS.getCallingConv());
+    NewCS.setAttributes(
+        AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
+                           CallPAL.getRetAttributes(), ArgAttrVec));
+    NewCS->setDebugLoc(Call->getDebugLoc());
     Args.clear();
-    AttributesVec.clear();
+    ArgAttrVec.clear();
 
     // Update the callgraph to know that the callsite has been transformed.
     if (ReplaceCallSite)
-      (*ReplaceCallSite)(CS, CallSite(New));
+      (*ReplaceCallSite)(CS, NewCS);
 
     if (!Call->use_empty()) {
-      Call->replaceAllUsesWith(New);
-      New->takeName(Call);
+      Call->replaceAllUsesWith(NewCS.getInstruction());
+      NewCS->takeName(Call);
     }
 
     // Finally, remove the old call from the program, reducing the use-count of

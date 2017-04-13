@@ -284,11 +284,14 @@ defm V_MOVRELS_B32 : VOP1Inst <"v_movrels_b32", VOP_I32_VI32_NO_EXT>;
 defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_NO_EXT<VOP_I32_I32>>;
 } // End Uses = [M0, EXEC]
 
+let SchedRW = [WriteQuarterRate32] in {
+defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
+}
+
 // These instruction only exist on SI and CI
 let SubtargetPredicate = isSICI in {
 
 let SchedRW = [WriteQuarterRate32] in {
-defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
 defm V_LOG_CLAMP_F32 : VOP1Inst <"v_log_clamp_f32", VOP_F32_F32, int_amdgcn_log_clamp>;
 defm V_RCP_CLAMP_F32 : VOP1Inst <"v_rcp_clamp_f32", VOP_F32_F32>;
 defm V_RCP_LEGACY_F32 : VOP1Inst <"v_rcp_legacy_f32", VOP_F32_F32, AMDGPUrcp_legacy>;
@@ -533,6 +536,7 @@ defm V_CVT_F32_I32       : VOP1_Real_vi <0x5>;
 defm V_CVT_F32_U32       : VOP1_Real_vi <0x6>;
 defm V_CVT_U32_F32       : VOP1_Real_vi <0x7>;
 defm V_CVT_I32_F32       : VOP1_Real_vi <0x8>;
+defm V_MOV_FED_B32       : VOP1_Real_vi <0x9>;
 defm V_CVT_F16_F32       : VOP1_Real_vi <0xa>;
 defm V_CVT_F32_F16       : VOP1_Real_vi <0xb>;
 defm V_CVT_RPI_I32_F32   : VOP1_Real_vi <0xc>;

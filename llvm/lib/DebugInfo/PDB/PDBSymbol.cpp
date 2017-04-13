@@ -54,6 +54,9 @@ PDBSymbol::PDBSymbol(const IPDBSession &PDBSession,
                      std::unique_ptr<IPDBRawSymbol> Symbol)
     : Session(PDBSession), RawSymbol(std::move(Symbol)) {}
 
+PDBSymbol::PDBSymbol(PDBSymbol &Symbol)
+    : Session(Symbol.Session), RawSymbol(std::move(Symbol.RawSymbol)) {}
+
 PDBSymbol::~PDBSymbol() = default;
 
 #define FACTORY_SYMTAG_CASE(Tag, Type)                                         \
@@ -99,12 +102,6 @@ PDBSymbol::create(const IPDBSession &PDBSession,
         new PDBSymbolUnknown(PDBSession, std::move(Symbol)));
   }
 }
-
-#define TRY_DUMP_TYPE(Type)                                                    \
-  if (const Type *DerivedThis = this->cast<Type>())                            \
-    Dumper.dump(OS, Indent, *DerivedThis);
-
-#define ELSE_TRY_DUMP_TYPE(Type, Dumper) else TRY_DUMP_TYPE(Type, Dumper)
 
 void PDBSymbol::defaultDump(raw_ostream &OS, int Indent) const {
   RawSymbol->dump(OS, Indent);

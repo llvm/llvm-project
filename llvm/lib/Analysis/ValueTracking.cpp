@@ -3216,6 +3216,9 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
       if (GA->isInterposable())
         return V;
       V = GA->getAliasee();
+    } else if (isa<AllocaInst>(V)) {
+      // An alloca can't be further simplified.
+      return V;
     } else {
       if (auto CS = CallSite(V))
         if (Value *RV = CS.getReturnedArgOperand()) {

@@ -40,10 +40,10 @@ ConstantRange::ConstantRange(uint32_t BitWidth, bool Full) {
 
 /// Initialize a range to hold the single specified value.
 ///
-ConstantRange::ConstantRange(APIntMoveTy V)
+ConstantRange::ConstantRange(APInt V)
     : Lower(std::move(V)), Upper(Lower + 1) {}
 
-ConstantRange::ConstantRange(APIntMoveTy L, APIntMoveTy U)
+ConstantRange::ConstantRange(APInt L, APInt U)
     : Lower(std::move(L)), Upper(std::move(U)) {
   assert(Lower.getBitWidth() == Upper.getBitWidth() &&
          "ConstantRange with unequal bit widths");

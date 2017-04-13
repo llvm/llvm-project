@@ -96,7 +96,7 @@ cl::SubCommand
                       "Analyze various aspects of a PDB's structure");
 
 cl::OptionCategory TypeCategory("Symbol Type Options");
-cl::OptionCategory FilterCategory("Filtering Options");
+cl::OptionCategory FilterCategory("Filtering and Sorting Options");
 cl::OptionCategory OtherOptions("Other Options");
 
 namespace pretty {
@@ -122,14 +122,18 @@ cl::opt<bool> Enums("enums", cl::desc("Display enum types"),
                     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<bool> Typedefs("typedefs", cl::desc("Display typedef types"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
-cl::opt<ClassDefinitionFormat>
-    ClassFormat("class-definitions", cl::desc("Class definition format"),
-                cl::init(ClassDefinitionFormat::Standard),
-                cl::values(clEnumValN(ClassDefinitionFormat::Standard, "full",
-                                      "Display complete class definition"),
-                           clEnumValN(ClassDefinitionFormat::None, "none",
-                                      "Don't display class definitions")),
-                cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+cl::opt<ClassDefinitionFormat> ClassFormat(
+    "class-definitions", cl::desc("Class definition format"),
+    cl::init(ClassDefinitionFormat::Standard),
+    cl::values(
+        clEnumValN(ClassDefinitionFormat::Standard, "all-members",
+                   "Display all class members including data, constants, "
+                   "typedefs, etc"),
+        clEnumValN(ClassDefinitionFormat::Layout, "layout-members",
+                   "Only display members that contribute to class size."),
+        clEnumValN(ClassDefinitionFormat::None, "none",
+                   "Don't display class definitions")),
+    cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Lines("lines", cl::desc("Line tables"), cl::cat(TypeCategory),
                     cl::sub(PrettySubcommand));

@@ -4232,15 +4232,12 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
     if (NestTy) {
       Instruction *Caller = CS.getInstruction();
       std::vector<Value*> NewArgs;
-      std::vector<AttributeSet> NewAttrs;
+      std::vector<AttributeSet> NewArgAttrs;
       NewArgs.reserve(CS.arg_size() + 1);
-      NewAttrs.reserve(CS.arg_size() + 2);
+      NewArgAttrs.reserve(CS.arg_size());
 
       // Insert the nest argument into the call argument list, which may
       // mean appending it.  Likewise for attributes.
-
-      // Add any result attributes.
-      NewAttrs.push_back(Attrs.getRetAttributes());
 
       {
         unsigned Idx = 1;
@@ -4252,7 +4249,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
             if (NestVal->getType() != NestTy)
               NestVal = Builder->CreateBitCast(NestVal, NestTy, "nest");
             NewArgs.push_back(NestVal);
-            NewAttrs.push_back(NestAttr);
+            NewArgAttrs.push_back(NestAttr);
           }
 
           if (I == E)
@@ -4260,15 +4257,12 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
 
           // Add the original argument and attributes.
           NewArgs.push_back(*I);
-          NewAttrs.push_back(Attrs.getParamAttributes(Idx));
+          NewArgAttrs.push_back(Attrs.getParamAttributes(Idx));
 
           ++Idx;
           ++I;
         } while (true);
       }
-
-      // Add any function attributes.
-      NewAttrs.push_back(Attrs.getFnAttributes());
 
       // The trampoline may have been bitcast to a bogus type (FTy).
       // Handle this by synthesizing a new function type, equal to FTy
@@ -4308,7 +4302,9 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
         NestF->getType() == PointerType::getUnqual(NewFTy) ?
         NestF : ConstantExpr::getBitCast(NestF,
                                          PointerType::getUnqual(NewFTy));
-      AttributeList NewPAL = AttributeList::get(FTy->getContext(), NewAttrs);
+      AttributeList NewPAL =
+          AttributeList::get(FTy->getContext(), Attrs.getFnAttributes(),
+                             Attrs.getRetAttributes(), NewArgAttrs);
 
       SmallVector<OperandBundleDef, 1> OpBundles;
       CS.getOperandBundlesAsDefs(OpBundles);

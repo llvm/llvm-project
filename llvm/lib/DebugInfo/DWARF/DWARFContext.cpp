@@ -786,10 +786,9 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         if (isRelocScattered(Obj, Reloc))
           continue;
 
-        object::symbol_iterator RelSym = Reloc.getSymbol();
         Expected<uint64_t> SymAddrOrErr = getSymbolAddress(Obj, Reloc, L);
         if (!SymAddrOrErr) {
-          errs() << toString(std::move(SymAddrOrErr.takeError())) << '\n';
+          errs() << toString(SymAddrOrErr.takeError()) << '\n';
           continue;
         }
 

@@ -197,6 +197,10 @@ getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
   return TTIImpl->getOperandsScalarizationOverhead(Args, VF);
 }
 
+bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
+  return TTIImpl->supportsEfficientVectorElementLoadStore();
+}
+
 bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
 }
@@ -314,8 +318,10 @@ int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, Type *Ty, int Index,
 }
 
 int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst,
-                                          Type *Src) const {
-  int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src);
+                                 Type *Src, const Instruction *I) const {
+  assert ((I == nullptr || I->getOpcode() == Opcode) &&
+          "Opcode should reflect passed instruction.");
+  int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -335,8 +341,10 @@ int TargetTransformInfo::getCFInstrCost(unsigned Opcode) const {
 }
 
 int TargetTransformInfo::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                            Type *CondTy) const {
-  int Cost = TTIImpl->getCmpSelInstrCost(Opcode, ValTy, CondTy);
+                                 Type *CondTy, const Instruction *I) const {
+  assert ((I == nullptr || I->getOpcode() == Opcode) &&
+          "Opcode should reflect passed instruction.");
+  int Cost = TTIImpl->getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -350,8 +358,11 @@ int TargetTransformInfo::getVectorInstrCost(unsigned Opcode, Type *Val,
 
 int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
                                          unsigned Alignment,
-                                         unsigned AddressSpace) const {
-  int Cost = TTIImpl->getMemoryOpCost(Opcode, Src, Alignment, AddressSpace);
+                                         unsigned AddressSpace,
+                                         const Instruction *I) const {
+  assert ((I == nullptr || I->getOpcode() == Opcode) &&
+          "Opcode should reflect passed instruction.");
+  int Cost = TTIImpl->getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

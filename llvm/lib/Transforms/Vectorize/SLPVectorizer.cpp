@@ -1702,6 +1702,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
   Type *ScalarTy = VL[0]->getType();
   if (StoreInst *SI = dyn_cast<StoreInst>(VL[0]))
     ScalarTy = SI->getValueOperand()->getType();
+  else if (CmpInst *CI = dyn_cast<CmpInst>(VL[0]))
+    ScalarTy = CI->getOperand(0)->getType();
   VectorType *VecTy = VectorType::get(ScalarTy, VL.size());
 
   // If we have computed a smaller type for the expression, update VecTy so
@@ -1762,10 +1764,10 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
 
       // Calculate the cost of this instruction.
       int ScalarCost = VL.size() * TTI->getCastInstrCost(VL0->getOpcode(),
-                                                         VL0->getType(), SrcTy);
+                                                         VL0->getType(), SrcTy, VL0);
 
       VectorType *SrcVecTy = VectorType::get(SrcTy, VL.size());
-      int VecCost = TTI->getCastInstrCost(VL0->getOpcode(), VecTy, SrcVecTy);
+      int VecCost = TTI->getCastInstrCost(VL0->getOpcode(), VecTy, SrcVecTy, VL0);
       return VecCost - ScalarCost;
     }
     case Instruction::FCmp:
@@ -1774,8 +1776,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       // Calculate the cost of this instruction.
       VectorType *MaskTy = VectorType::get(Builder.getInt1Ty(), VL.size());
       int ScalarCost = VecTy->getNumElements() *
-          TTI->getCmpSelInstrCost(Opcode, ScalarTy, Builder.getInt1Ty());
-      int VecCost = TTI->getCmpSelInstrCost(Opcode, VecTy, MaskTy);
+          TTI->getCmpSelInstrCost(Opcode, ScalarTy, Builder.getInt1Ty(), VL0);
+      int VecCost = TTI->getCmpSelInstrCost(Opcode, VecTy, MaskTy, VL0);
       return VecCost - ScalarCost;
     }
     case Instruction::Add:
@@ -1858,18 +1860,18 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       // Cost of wide load - cost of scalar loads.
       unsigned alignment = dyn_cast<LoadInst>(VL0)->getAlignment();
       int ScalarLdCost = VecTy->getNumElements() *
-            TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0);
+          TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0, VL0);
       int VecLdCost = TTI->getMemoryOpCost(Instruction::Load,
-                                           VecTy, alignment, 0);
+                                           VecTy, alignment, 0, VL0);
       return VecLdCost - ScalarLdCost;
     }
     case Instruction::Store: {
       // We know that we can merge the stores. Calculate the cost.
       unsigned alignment = dyn_cast<StoreInst>(VL0)->getAlignment();
       int ScalarStCost = VecTy->getNumElements() *
-            TTI->getMemoryOpCost(Instruction::Store, ScalarTy, alignment, 0);
+          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, alignment, 0, VL0);
       int VecStCost = TTI->getMemoryOpCost(Instruction::Store,
-                                           VecTy, alignment, 0);
+                                           VecTy, alignment, 0, VL0);
       return VecStCost - ScalarStCost;
     }
     case Instruction::Call: {

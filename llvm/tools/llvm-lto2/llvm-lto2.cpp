@@ -127,7 +127,7 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 }
 
 static int usage() {
-  errs() << "Available subcommands: run\n";
+  errs() << "Available subcommands: dump-symtab run\n";
   return 1;
 }
 
@@ -287,6 +287,56 @@ static int run(int argc, char **argv) {
   return 0;
 }
 
+static int dumpSymtab(int argc, char **argv) {
+  for (StringRef F : make_range(argv + 1, argv + argc)) {
+    std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
+    std::unique_ptr<InputFile> Input =
+        check(InputFile::create(MB->getMemBufferRef()), F);
+
+    outs() << "source filename: " << Input->getSourceFileName() << '\n';
+    outs() << "linker opts (COFF only): " << Input->getCOFFLinkerOpts() << '\n';
+
+    std::vector<StringRef> ComdatTable = Input->getComdatTable();
+    for (const InputFile::Symbol &Sym : Input->symbols()) {
+      switch (Sym.getVisibility()) {
+      case GlobalValue::HiddenVisibility:
+        outs() << 'H';
+        break;
+      case GlobalValue::ProtectedVisibility:
+        outs() << 'P';
+        break;
+      case GlobalValue::DefaultVisibility:
+        outs() << 'D';
+        break;
+      }
+
+      auto PrintBool = [&](char C, bool B) { outs() << (B ? C : '-'); };
+      PrintBool('U', Sym.isUndefined());
+      PrintBool('C', Sym.isCommon());
+      PrintBool('W', Sym.isWeak());
+      PrintBool('I', Sym.isIndirect());
+      PrintBool('O', Sym.canBeOmittedFromSymbolTable());
+      PrintBool('T', Sym.isTLS());
+      outs() << ' ' << Sym.getName() << '\n';
+
+      if (Sym.isCommon())
+        outs() << "        size " << Sym.getCommonSize() << " align "
+               << Sym.getCommonAlignment() << '\n';
+
+      int Comdat = Sym.getComdatIndex();
+      if (Comdat != -1)
+        outs() << "        comdat " << ComdatTable[Comdat] << '\n';
+
+      if (Sym.isWeak() && Sym.isIndirect())
+        outs() << "        fallback " << Sym.getCOFFWeakExternalFallback() << '\n';
+    }
+
+    outs() << '\n';
+  }
+
+  return 0;
+}
+
 int main(int argc, char **argv) {
   InitializeAllTargets();
   InitializeAllTargetMCs();
@@ -302,6 +352,8 @@ int main(int argc, char **argv) {
   StringRef Subcommand = argv[1];
   // Ensure that argv[0] is correct after adjusting argv/argc.
   argv[1] = argv[0];
+  if (Subcommand == "dump-symtab")
+    return dumpSymtab(argc - 1, argv + 1);
   if (Subcommand == "run")
     return run(argc - 1, argv + 1);
   return usage();

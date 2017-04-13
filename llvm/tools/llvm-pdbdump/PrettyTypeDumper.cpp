@@ -26,6 +26,23 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+template <typename Enumerator>
+static std::vector<std::unique_ptr<PDBSymbolTypeUDT>>
+filterClassDefs(LinePrinter &Printer, Enumerator &E) {
+  std::vector<std::unique_ptr<PDBSymbolTypeUDT>> Filtered;
+  while (auto Class = E.getNext()) {
+    if (Class->getUnmodifiedTypeId() != 0)
+      continue;
+
+    if (Printer.IsTypeExcluded(Class->getName()))
+      continue;
+
+    Filtered.push_back(std::move(Class));
+  }
+
+  return Filtered;
+}
+
 TypeDumper::TypeDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 
 void TypeDumper::start(const PDBSymbolExe &Exe) {
@@ -53,11 +70,19 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 
   if (opts::pretty::Classes) {
     auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>();
+    auto Filtered = filterClassDefs(Printer, *Classes);
+
     Printer.NewLine();
+    uint32_t Shown = Filtered.size();
+    uint32_t All = Classes->getChildCount();
+
     WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
-    Printer << ": (" << Classes->getChildCount() << " items)";
+    Printer << ": (Showing " << Shown << " items";
+    if (Shown < All)
+      Printer << ", " << (All - Shown) << " filtered";
+    Printer << ")";
     Printer.Indent();
-    while (auto Class = Classes->getNext())
+    for (auto &Class : Filtered)
       Class->dump(*this);
     Printer.Unindent();
   }
@@ -90,11 +115,6 @@ void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
 
 void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
   assert(opts::pretty::Classes);
-
-  if (Symbol.getUnmodifiedTypeId() != 0)
-    return;
-  if (Printer.IsTypeExcluded(Symbol.getName()))
-    return;
 
   if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
     Printer.NewLine();

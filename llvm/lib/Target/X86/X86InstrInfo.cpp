@@ -8990,6 +8990,10 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
       !HasSameOp(X86::AddrIndexReg) || !HasSameOp(X86::AddrSegmentReg))
     return false;
 
+  // Chain Operand must be the same.
+  if (!HasSameOp(5))
+    return false;
+
   // Now let's examine if the displacements are constants.
   auto Disp1 = dyn_cast<ConstantSDNode>(Load1->getOperand(X86::AddrDisp));
   auto Disp2 = dyn_cast<ConstantSDNode>(Load2->getOperand(X86::AddrDisp));

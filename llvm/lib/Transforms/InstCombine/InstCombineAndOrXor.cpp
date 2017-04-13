@@ -2408,13 +2408,12 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  if (Constant *RHS = dyn_cast<Constant>(Op1)) {
-    if (RHS->isAllOnesValue() && Op0->hasOneUse())
-      // xor (cmp A, B), true = not (cmp A, B) = !cmp A, B
-      if (CmpInst *CI = dyn_cast<CmpInst>(Op0))
-        return CmpInst::Create(CI->getOpcode(),
-                               CI->getInversePredicate(),
-                               CI->getOperand(0), CI->getOperand(1));
+  // xor (cmp A, B), true = not (cmp A, B) = !cmp A, B
+  ICmpInst::Predicate Pred;
+  if (match(Op0, m_OneUse(m_Cmp(Pred, m_Value(), m_Value()))) &&
+      match(Op1, m_AllOnes())) {
+    cast<CmpInst>(Op0)->setPredicate(CmpInst::getInversePredicate(Pred));
+    return replaceInstUsesWith(I, Op0);
   }
 
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {

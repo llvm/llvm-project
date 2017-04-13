@@ -10,7 +10,7 @@
 
 ; MEMBER_ENUM: ---TYPES---
 ; MEMBER_ENUM: Classes:
-; MEMBER_ENUM: struct __vc_attributes::threadingAttribute {
+; MEMBER_ENUM: struct __vc_attributes::threadingAttribute [sizeof = 4] {
 ; MEMBER_ENUM-NEXT: enum threading_e {
 ; MEMBER_ENUM-NEXT: apartment = 1
 ; MEMBER_ENUM-NEXT: single = 2
