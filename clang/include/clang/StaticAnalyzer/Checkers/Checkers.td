@@ -279,6 +279,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def MisusedMovedObjectChecker: Checker<"MisusedMovedObject">,
+     HelpText<"Method calls on a moved-from object and copying a moved-from "
+              "object will be reported">,
+     DescFile<"MisusedMovedObjectChecker.cpp">;
+
 def IteratorPastEndChecker : Checker<"IteratorPastEnd">,
   HelpText<"Check iterators used past end">,
   DescFile<"IteratorPastEndChecker.cpp">;
