@@ -12,9 +12,9 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; OPT: call i32 @llvm.r600.read.local.size.y(), !range !0
 ; OPT: call i32 @llvm.r600.read.local.size.z(), !range !0
-; OPT: call i32 @llvm.r600.read.tidig.x(), !range !0
-; OPT: call i32 @llvm.r600.read.tidig.y(), !range !0
-; OPT: call i32 @llvm.r600.read.tidig.z(), !range !0
+; OPT: call i32 @llvm.r600.read.tidig.x(), !range !1
+; OPT: call i32 @llvm.r600.read.tidig.y(), !range !1
+; OPT: call i32 @llvm.r600.read.tidig.z(), !range !1
 
 define amdgpu_kernel void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
@@ -295,6 +295,7 @@ define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   ret void
 }
 
-; OPT: !0 = !{i32 0, i32 2048}
+; OPT: !0 = !{i32 0, i32 257}
+; OPT: !1 = !{i32 0, i32 256}
 
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }

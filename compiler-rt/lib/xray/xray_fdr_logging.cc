@@ -17,6 +17,7 @@
 #include "xray_fdr_logging.h"
 #include <algorithm>
 #include <bitset>
+#include <cerrno>
 #include <cstring>
 #include <sys/syscall.h>
 #include <sys/time.h>

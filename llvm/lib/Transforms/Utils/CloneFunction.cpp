@@ -354,7 +354,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
       Cond = dyn_cast_or_null<ConstantInt>(V);
     }
     if (Cond) {     // Constant fold to uncond branch!
-      SwitchInst::ConstCaseIt Case = SI->findCaseValue(Cond);
+      SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock*>(Case.getCaseSuccessor());
       VMap[OldTI] = BranchInst::Create(Dest, NewBB);
       ToClone.push_back(Dest);

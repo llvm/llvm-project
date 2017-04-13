@@ -345,6 +345,83 @@ static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
   MemPtr += sizeof(FunctionRecord);
 }
 
+static uint64_t thresholdTicks() {
+  static uint64_t TicksPerSec = probeRequiredCPUFeatures() ? getTSCFrequency() :
+                                __xray::NanosecondsPerSecond;
+  static const uint64_t ThresholdTicks =
+      TicksPerSec * flags()->xray_fdr_log_func_duration_threshold_us / 1000000;
+  return ThresholdTicks;
+}
+
+// Re-point the thread local pointer into this thread's Buffer before the recent
+// "Function Entry" record and any "Tail Call Exit" records after that.
+static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
+                             uint64_t &LastFunctionEntryTSC, int32_t FuncId) {
+  using AlignedFuncStorage =
+      std::aligned_storage<sizeof(FunctionRecord),
+                           alignof(FunctionRecord)>::type;
+  RecordPtr -= FunctionRecSize;
+  AlignedFuncStorage AlignedFuncRecordBuffer;
+  const auto &FuncRecord = *reinterpret_cast<FunctionRecord *>(
+      std::memcpy(&AlignedFuncRecordBuffer, RecordPtr, FunctionRecSize));
+  assert(FuncRecord.RecordKind ==
+             uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+         "Expected to find function entry recording when rewinding.");
+  assert(FuncRecord.FuncId == (FuncId & ~(0x0F << 28)) &&
+         "Expected matching function id when rewinding Exit");
+  --NumConsecutiveFnEnters;
+  LastTSC -= FuncRecord.TSCDelta;
+
+  // We unwound one call. Update the state and return without writing a log.
+  if (NumConsecutiveFnEnters != 0) {
+    LastFunctionEntryTSC -= FuncRecord.TSCDelta;
+    return;
+  }
+
+  // Otherwise we've rewound the stack of all function entries, we might be
+  // able to rewind further by erasing tail call functions that are being
+  // exited from via this exit.
+  LastFunctionEntryTSC = 0;
+  auto RewindingTSC = LastTSC;
+  auto RewindingRecordPtr = RecordPtr - FunctionRecSize;
+  while (NumTailCalls > 0) {
+    AlignedFuncStorage TailExitRecordBuffer;
+    // Rewind the TSC back over the TAIL EXIT record.
+    const auto &ExpectedTailExit =
+        *reinterpret_cast<FunctionRecord *>(std::memcpy(
+            &TailExitRecordBuffer, RewindingRecordPtr, FunctionRecSize));
+
+    assert(ExpectedTailExit.RecordKind ==
+               uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
+           "Expected to find tail exit when rewinding.");
+    RewindingRecordPtr -= FunctionRecSize;
+    RewindingTSC -= ExpectedTailExit.TSCDelta;
+    AlignedFuncStorage FunctionEntryBuffer;
+    const auto &ExpectedFunctionEntry =
+        *reinterpret_cast<FunctionRecord *>(std::memcpy(
+            &FunctionEntryBuffer, RewindingRecordPtr, FunctionRecSize));
+    assert(ExpectedFunctionEntry.RecordKind ==
+               uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+           "Expected to find function entry when rewinding tail call.");
+    assert(ExpectedFunctionEntry.FuncId == ExpectedTailExit.FuncId &&
+           "Expected funcids to match when rewinding tail call.");
+
+    // This tail call exceeded the threshold duration. It will not be erased.
+    if ((TSC - RewindingTSC) >= thresholdTicks()) {
+      NumTailCalls = 0;
+      return;
+    }
+
+    // We can erase a tail exit pair that we're exiting through since
+    // its duration is under threshold.
+    --NumTailCalls;
+    RewindingRecordPtr -= FunctionRecSize;
+    RewindingTSC -= ExpectedFunctionEntry.TSCDelta;
+    RecordPtr -= 2 * FunctionRecSize;
+    LastTSC = RewindingTSC;
+  }
+}
+
 static inline bool releaseThreadLocalBuffer(BufferQueue *BQ) {
   auto EC = BQ->releaseBuffer(Buffer);
   if (EC != BufferQueue::ErrorCode::Ok) {
@@ -384,7 +461,6 @@ static inline void processFunctionHook(
   thread_local uint16_t CurrentCPU = std::numeric_limits<uint16_t>::max();
   thread_local uint64_t LastTSC = 0;
   thread_local uint64_t LastFunctionEntryTSC = 0;
-  thread_local uint64_t NumberOfTicksThreshold = 0;
 
   // Make sure a thread that's ever called handleArg0 has a thread-local
   // live reference to the buffer queue for this particular instance of
@@ -423,12 +499,6 @@ static inline void processFunctionHook(
       return;
     }
 
-    uint64_t CycleFrequency = probeRequiredCPUFeatures()
-                              ? getTSCFrequency()
-                              : __xray::NanosecondsPerSecond;
-    NumberOfTicksThreshold = CycleFrequency *
-                             flags()->xray_fdr_log_func_duration_threshold_us /
-                             1000000;
     setupNewBuffer(wall_clock_reader);
   }
 
@@ -487,10 +557,6 @@ static inline void processFunctionHook(
              BufferQueue::getErrorString(EC));
       return;
     }
-    uint64_t CycleFrequency = getTSCFrequency();
-    NumberOfTicksThreshold = CycleFrequency *
-                             flags()->xray_fdr_log_func_duration_threshold_us /
-                             1000000;
     setupNewBuffer(wall_clock_reader);
   }
 
@@ -538,9 +604,6 @@ static inline void processFunctionHook(
 
   LastTSC = TSC;
   CurrentCPU = CPU;
-  using AlignedFuncStorage =
-      std::aligned_storage<sizeof(FunctionRecord),
-                           alignof(FunctionRecord)>::type;
   switch (Entry) {
   case XRayEntryType::ENTRY:
   case XRayEntryType::LOG_ARGS_ENTRY:
@@ -552,73 +615,9 @@ static inline void processFunctionHook(
   case XRayEntryType::EXIT:
     // Break out and write the exit record if we can't erase any functions.
     if (NumConsecutiveFnEnters == 0 ||
-        (TSC - LastFunctionEntryTSC) >= NumberOfTicksThreshold)
+        (TSC - LastFunctionEntryTSC) >= thresholdTicks())
       break;
-    // Otherwise we unwind functions that are too short to log by decrementing
-    // our view ptr into the buffer. We can erase a Function Entry record and
-    // neglect to log our EXIT. We have to make sure to update some state like
-    // the LastTSC and count of consecutive FunctionEntry records.
-    RecordPtr -= FunctionRecSize;
-    AlignedFuncStorage AlignedFuncRecordBuffer;
-    const auto &FuncRecord = *reinterpret_cast<FunctionRecord *>(
-        std::memcpy(&AlignedFuncRecordBuffer, RecordPtr, FunctionRecSize));
-    assert(FuncRecord.RecordKind ==
-               uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
-           "Expected to find function entry recording when rewinding.");
-    assert(FuncRecord.FuncId == (FuncId & ~(0x0F << 28)) &&
-           "Expected matching function id when rewinding Exit");
-    --NumConsecutiveFnEnters;
-    LastTSC -= FuncRecord.TSCDelta;
-
-    // We unwound one call. Update the state and return without writing a log.
-    if (NumConsecutiveFnEnters != 0) {
-      LastFunctionEntryTSC = LastFunctionEntryTSC - FuncRecord.TSCDelta;
-      return;
-    }
-
-    // Otherwise we've rewound the stack of all function entries, we might be
-    // able to rewind further by erasing tail call functions that are being
-    // exited from via this exit.
-    LastFunctionEntryTSC = 0;
-    auto RewindingTSC = LastTSC;
-    auto RewindingRecordPtr = RecordPtr - FunctionRecSize;
-    while (NumTailCalls > 0) {
-      AlignedFuncStorage TailExitRecordBuffer;
-      // Rewind the TSC back over the TAIL EXIT record.
-      const auto &ExpectedTailExit =
-          *reinterpret_cast<FunctionRecord *>(std::memcpy(
-              &TailExitRecordBuffer, RewindingRecordPtr, FunctionRecSize));
-
-      assert(ExpectedTailExit.RecordKind ==
-                 uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
-             "Expected to find tail exit when rewinding.");
-      RewindingRecordPtr -= FunctionRecSize;
-      RewindingTSC -= ExpectedTailExit.TSCDelta;
-      AlignedFuncStorage FunctionEntryBuffer;
-      const auto &ExpectedFunctionEntry =
-          *reinterpret_cast<FunctionRecord *>(std::memcpy(
-              &FunctionEntryBuffer, RewindingRecordPtr, FunctionRecSize));
-      assert(ExpectedFunctionEntry.RecordKind ==
-                 uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
-             "Expected to find function entry when rewinding tail call.");
-      assert(ExpectedFunctionEntry.FuncId == ExpectedTailExit.FuncId &&
-             "Expected funcids to match when rewinding tail call.");
-
-      if ((TSC - RewindingTSC) < NumberOfTicksThreshold) {
-        // We can erase a tail exit pair that we're exiting through since
-        // its duration is under threshold.
-        --NumTailCalls;
-        RewindingRecordPtr -= FunctionRecSize;
-        RewindingTSC -= ExpectedFunctionEntry.TSCDelta;
-        RecordPtr -= 2 * FunctionRecSize;
-        LastTSC = RewindingTSC;
-      } else {
-        // This tail call exceeded the threshold duration. It will not
-        // be erased.
-        NumTailCalls = 0;
-        return;
-      }
-    }
+    rewindRecentCall(TSC, LastTSC, LastFunctionEntryTSC, FuncId);
     return; // without writing log.
   }
 

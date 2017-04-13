@@ -46,6 +46,12 @@ else
 	TOOLCHAIN_DIR := $(subst -none,,$(TRIPLE))-4.9
 endif
 
+ifeq "$(ARCH)" "arm"
+	TOOL_PREFIX := arm-linux-androideabi
+else
+	TOOL_PREFIX := $(subst -none,,$(TRIPLE))
+endif
+
 ifeq "$(HOST_OS)" "Linux"
 	HOST_TAG := linux-x86_64
 else ifeq "$(HOST_OS)" "Darwin"
@@ -54,11 +60,13 @@ else
 	HOST_TAG := windows-x86_64
 endif
 
+GCC_TOOLCHAIN = $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
+
+OBJCOPY ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-objcopy
+
 ifeq "$(findstring clang,$(CC))" "clang"
-	ARCH_CFLAGS += -target $(TRIPLE) \
-		-gcc-toolchain $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
-	ARCH_LDFLAGS += -target $(TRIPLE) \
-		-gcc-toolchain $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
+	ARCH_CFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
+	ARCH_LDFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
 endif
 
 ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH)

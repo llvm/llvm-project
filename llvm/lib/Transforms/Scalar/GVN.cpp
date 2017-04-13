@@ -1761,11 +1761,11 @@ bool GVN::processInstruction(Instruction *I) {
 
     for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
          i != e; ++i) {
-      BasicBlock *Dst = i.getCaseSuccessor();
+      BasicBlock *Dst = i->getCaseSuccessor();
       // If there is only a single edge, propagate the case value into it.
       if (SwitchEdges.lookup(Dst) == 1) {
         BasicBlockEdge E(Parent, Dst);
-        Changed |= propagateEquality(SwitchCond, i.getCaseValue(), E, true);
+        Changed |= propagateEquality(SwitchCond, i->getCaseValue(), E, true);
       }
     }
     return Changed;

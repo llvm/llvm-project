@@ -4,6 +4,8 @@
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
+declare i32 @llvm.r600.read.tgid.x() #0
+
 
 ;EG: {{^}}shl_v2i32:
 ;EG: LSHL {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
@@ -288,7 +290,7 @@ define amdgpu_kernel void @s_shl_32_i64(i64 addrspace(1)* %out, i64 %a) {
 ; GCN-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[LO_A]]{{\]}}
 define amdgpu_kernel void @v_shl_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.r600.read.tgid.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep.in

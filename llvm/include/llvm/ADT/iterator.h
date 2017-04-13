@@ -165,8 +165,14 @@ public:
     return !static_cast<const DerivedT *>(this)->operator<(RHS);
   }
 
+  PointerT operator->() { return &static_cast<DerivedT *>(this)->operator*(); }
   PointerT operator->() const {
     return &static_cast<const DerivedT *>(this)->operator*();
+  }
+  ReferenceProxy operator[](DifferenceTypeT n) {
+    static_assert(IsRandomAccess,
+                  "Subscripting is only defined for random access iterators.");
+    return ReferenceProxy(static_cast<DerivedT *>(this)->operator+(n));
   }
   ReferenceProxy operator[](DifferenceTypeT n) const {
     static_assert(IsRandomAccess,

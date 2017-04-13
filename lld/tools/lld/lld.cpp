@@ -43,9 +43,9 @@ LLVM_ATTRIBUTE_NORETURN static void die(const Twine &S) {
 
 static Flavor getFlavor(StringRef S) {
   return StringSwitch<Flavor>(S)
-      .Cases("ld", "ld.lld", "gnu", Gnu)
-      .Case("link", WinLink)
-      .Case("darwin", Darwin)
+      .CasesLower("ld", "ld.lld", "gnu", Gnu)
+      .CaseLower("link", WinLink)
+      .CaseLower("darwin", Darwin)
       .Default(Invalid);
 }
 

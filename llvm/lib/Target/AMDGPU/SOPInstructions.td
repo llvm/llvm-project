@@ -82,6 +82,12 @@ class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+class SOP1_0_32R <string opName, list<dag> pattern = []> : SOP1_Pseudo <
+  opName, (outs), (ins SReg_32:$src0),
+  "$src0", pattern> {
+  let has_sdst = 0;
+}
+
 class SOP1_64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   opName, (outs SReg_64:$sdst), (ins SSrc_b64:$src0),
   "$sdst, $src0", pattern
@@ -210,7 +216,7 @@ def S_MOVRELD_B32 : SOP1_32 <"s_movreld_b32">;
 def S_MOVRELD_B64 : SOP1_64 <"s_movreld_b64">;
 } // End Uses = [M0]
 
-def S_CBRANCH_JOIN : SOP1_1  <"s_cbranch_join">;
+def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 def S_MOV_REGRD_B32 : SOP1_32 <"s_mov_regrd_b32">;
 let Defs = [SCC] in {
 def S_ABS_I32 : SOP1_32 <"s_abs_i32">;
@@ -437,6 +443,17 @@ def S_CBRANCH_G_FORK : SOP2_Pseudo <
 let Defs = [SCC] in {
 def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32">;
 } // End Defs = [SCC]
+
+let SubtargetPredicate = isVI in {
+  def S_RFE_RESTORE_B64 : SOP2_Pseudo <
+    "s_rfe_restore_b64", (outs),
+    (ins SSrc_b64:$src0, SSrc_b32:$src1),
+    "$src0, $src1"
+  > {
+    let hasSideEffects = 1;
+    let has_sdst = 0;
+  }
+}
 
 let SubtargetPredicate = isGFX9 in {
   def S_PACK_LL_B32_B16 : SOP2_32<"s_pack_ll_b32_b16">;
@@ -756,6 +773,14 @@ def S_ENDPGM : SOPP <0x00000001, (ins), "s_endpgm",
   let isReturn = 1;
 }
 
+let SubtargetPredicate = isVI in {
+def S_ENDPGM_SAVED : SOPP <0x0000001B, (ins), "s_endpgm_saved"> {
+  let simm16 = 0;
+  let isBarrier = 1;
+  let isReturn = 1;
+}
+}
+
 let isBranch = 1, SchedRW = [WriteBranch] in {
 def S_BRANCH : SOPP <
   0x00000002, (ins sopp_brtarget:$simm16), "s_branch $simm16",
@@ -828,6 +853,14 @@ def S_BARRIER : SOPP <0x0000000a, (ins), "s_barrier",
   let mayLoad = 1;
   let mayStore = 1;
   let isConvergent = 1;
+}
+
+let SubtargetPredicate = isVI in {
+def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
+  let simm16 = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
 }
 
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
@@ -1235,6 +1268,7 @@ def S_ABSDIFF_I32_vi       : SOP2_Real_vi <0x2a, S_ABSDIFF_I32>;
 def S_PACK_LL_B32_B16_vi   : SOP2_Real_vi <0x32, S_PACK_LL_B32_B16>;
 def S_PACK_LH_B32_B16_vi   : SOP2_Real_vi <0x33, S_PACK_LH_B32_B16>;
 def S_PACK_HH_B32_B16_vi   : SOP2_Real_vi <0x34, S_PACK_HH_B32_B16>;
+def S_RFE_RESTORE_B64_vi   : SOP2_Real_vi <0x2b, S_RFE_RESTORE_B64>;
 
 def S_MOVK_I32_vi          : SOPK_Real_vi <0x00, S_MOVK_I32>;
 def S_CMOVK_I32_vi         : SOPK_Real_vi <0x01, S_CMOVK_I32>;

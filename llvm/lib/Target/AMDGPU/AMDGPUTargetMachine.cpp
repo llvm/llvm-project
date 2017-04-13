@@ -568,6 +568,8 @@ void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
 }
 
 void AMDGPUPassConfig::addIRPasses() {
+  const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
+
   // There is no reason to run these.
   disablePass(&StackMapLivenessID);
   disablePass(&FuncletLayoutID);
@@ -575,7 +577,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // this pass should be performed on linked module
   addPass(createAMDGPULowerKernelCallsPass());
-  addPass(createAMDGPULowerIntrinsicsPass());
+  addPass(createAMDGPULowerIntrinsicsPass(&TM));
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());
@@ -586,8 +588,6 @@ void AMDGPUPassConfig::addIRPasses() {
   // functions, then we will generate code for the first function
   // without ever running any passes on the second.
   addPass(createBarrierNoopPass());
-
-  const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
 
   if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
     // TODO: May want to move later or split into an early and late one.

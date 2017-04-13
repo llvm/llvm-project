@@ -731,8 +731,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
     }
 
-    KnownZero = KnownZeroOut;
-    KnownOne  = KnownOneOut;
+    KnownZero = std::move(KnownZeroOut);
+    KnownOne  = std::move(KnownOneOut);
     break;
   case ISD::SELECT:
     if (SimplifyDemandedBits(Op.getOperand(2), NewMask, KnownZero,

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
 declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()

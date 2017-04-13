@@ -5134,6 +5134,17 @@ Examples:
    !0 = !{!"magic ptr"}
    !1 = !{!"other ptr"}
 
+The invariant.group metadata must be dropped when replacing one pointer by
+another based on aliasing information. This is because invariant.group is tied
+to the SSA value of the pointer operand.
+
+.. code-block:: llvm
+  
+  %v = load i8, i8* %x, !invariant.group !0
+  ; if %x mustalias %y then we can replace the above instruction with
+  %v = load i8, i8* %y
+
+
 '``type``' Metadata
 ^^^^^^^^^^^^^^^^^^^
 
@@ -7073,9 +7084,10 @@ Semantics:
 The elements of the two input vectors are numbered from left to right
 across both of the vectors. The shuffle mask operand specifies, for each
 element of the result vector, which element of the two input vectors the
-result element gets. The element selector may be undef (meaning "don't
-care") and the second operand may be undef if performing a shuffle from
-only one vector.
+result element gets. If the shuffle mask is undef, the result vector is
+undef. If any element of the mask operand is undef, that element of the
+result is undef. If the shuffle mask selects an undef element from one
+of the input vectors, the resulting element is undef.
 
 Example:
 """"""""

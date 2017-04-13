@@ -67,11 +67,11 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   if (!ExpectedValue)
     return false;
 
-  SwitchInst::CaseIt Case = SI.findCaseValue(ExpectedValue);
+  SwitchInst::CaseHandle Case = *SI.findCaseValue(ExpectedValue);
   unsigned n = SI.getNumCases(); // +1 for default case.
   SmallVector<uint32_t, 16> Weights(n + 1, UnlikelyBranchWeight);
 
-  if (Case == SI.case_default())
+  if (Case == *SI.case_default())
     Weights[0] = LikelyBranchWeight;
   else
     Weights[Case.getCaseIndex() + 1] = LikelyBranchWeight;

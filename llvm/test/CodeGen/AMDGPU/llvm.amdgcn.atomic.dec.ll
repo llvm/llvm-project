@@ -234,8 +234,8 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(i64 addrspace(4)* %p
 }
 
 ; GCN-LABEL: {{^}}flat_atomic_dec_ret_i64_offset_addr64:
-; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
-; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
 ; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}} glc{{$}}
 define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(i64 addrspace(4)* %out, i64 addrspace(4)* %ptr) #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -248,8 +248,8 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(i64 addrspace(4
 }
 
 ; GCN-LABEL: {{^}}flat_atomic_dec_noret_i64_offset_addr64:
-; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
-; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
 ; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]$}}
 define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(i64 addrspace(4)* %ptr) #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -355,8 +355,8 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset(i64 addrspace(1)* 
 }
 
 ; GCN-LABEL: {{^}}global_atomic_dec_ret_i64_offset_addr64:
-; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
-; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
 ; CI: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:40 glc{{$}}
 ; VI: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}} glc{{$}}
 define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
@@ -370,8 +370,8 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace
 }
 
 ; GCN-LABEL: {{^}}global_atomic_dec_noret_i64_offset_addr64:
-; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
-; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
 ; CI: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:40{{$}}
 ; VI: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}}{{$}}
 define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(i64 addrspace(1)* %ptr) #0 {

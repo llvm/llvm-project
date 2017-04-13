@@ -347,9 +347,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     // There should be no need to check for float types other than v2f64
     // since <2 x f32> isn't a legal type.
     setOperationAction(ISD::FP_TO_SINT, MVT::v2i64, Legal);
+    setOperationAction(ISD::FP_TO_SINT, MVT::v2f64, Legal);
     setOperationAction(ISD::FP_TO_UINT, MVT::v2i64, Legal);
+    setOperationAction(ISD::FP_TO_UINT, MVT::v2f64, Legal);
     setOperationAction(ISD::SINT_TO_FP, MVT::v2i64, Legal);
+    setOperationAction(ISD::SINT_TO_FP, MVT::v2f64, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::v2i64, Legal);
+    setOperationAction(ISD::UINT_TO_FP, MVT::v2f64, Legal);
   }
 
   // Handle floating-point types.

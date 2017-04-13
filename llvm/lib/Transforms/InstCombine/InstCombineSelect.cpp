@@ -1053,8 +1053,10 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
       // If the select condition element is false, choose from the 2nd vector.
       Mask.push_back(ConstantInt::get(Int32Ty, i + NumElts));
     } else if (isa<UndefValue>(Elt)) {
-      // If the select condition element is undef, the shuffle mask is undef.
-      Mask.push_back(UndefValue::get(Int32Ty));
+      // Undef in a select condition (choose one of the operands) does not mean
+      // the same thing as undef in a shuffle mask (any value is acceptable), so
+      // give up.
+      return nullptr;
     } else {
       // Bail out on a constant expression.
       return nullptr;

@@ -92,7 +92,8 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
 }
 
 
-int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
+int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                 const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -310,7 +311,8 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
 }
 
-int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
+int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                   const Instruction *I) {
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a a vector select gets lowered to vbsl.
@@ -335,7 +337,7 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
     return LT.first;
   }
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
 int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
@@ -504,7 +506,7 @@ int ARMTTIImpl::getArithmeticInstrCost(
 }
 
 int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                unsigned AddressSpace) {
+                                unsigned AddressSpace, const Instruction *I) {
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
   if (Src->isVectorTy() && Alignment != 16 &&

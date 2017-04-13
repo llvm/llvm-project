@@ -25,8 +25,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
-#if HAVE_EXECINFO_H
-# include <execinfo.h>         // For backtrace().
+#ifdef HAVE_BACKTRACE
+# include BACKTRACE_HEADER         // For backtrace().
 #endif
 #if HAVE_SIGNAL_H
 #include <signal.h>

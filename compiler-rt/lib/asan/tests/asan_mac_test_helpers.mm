@@ -237,4 +237,5 @@ void TestNSURLDeallocation() {
       [[NSURL alloc] initWithString:@"Saved Application State"
                      relativeToURL:base];
   [u release];
+  [base release];
 }

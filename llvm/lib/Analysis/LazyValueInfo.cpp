@@ -1430,14 +1430,14 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
     unsigned BitWidth = Val->getType()->getIntegerBitWidth();
     ConstantRange EdgesVals(BitWidth, DefaultCase/*isFullSet*/);
 
-    for (SwitchInst::CaseIt i : SI->cases()) {
-      ConstantRange EdgeVal(i.getCaseValue()->getValue());
+    for (auto Case : SI->cases()) {
+      ConstantRange EdgeVal(Case.getCaseValue()->getValue());
       if (DefaultCase) {
         // It is possible that the default destination is the destination of
         // some cases. There is no need to perform difference for those cases.
-        if (i.getCaseSuccessor() != BBTo)
+        if (Case.getCaseSuccessor() != BBTo)
           EdgesVals = EdgesVals.difference(EdgeVal);
-      } else if (i.getCaseSuccessor() == BBTo)
+      } else if (Case.getCaseSuccessor() == BBTo)
         EdgesVals = EdgesVals.unionWith(EdgeVal);
     }
     Result = LVILatticeVal::getRange(std::move(EdgesVals));

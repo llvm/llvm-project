@@ -102,6 +102,10 @@
     ret double* %p1
   }
 
+  define void @constInt_check() {
+    ret void
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -604,4 +608,27 @@ body:             |
     RET 0, implicit %rax
 
 ...
+---
+name:            constInt_check
+alignment:       4
+legalized:       true
+# CHECK-LABEL: name:            constInt_check
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(s8) = G_CONSTANT i8 8
+    %1(s16) = G_CONSTANT i16 16
+    %2(s32) = G_CONSTANT i32 32
+    %3(s64) = G_CONSTANT i64 64
+    RET 0
 
+...

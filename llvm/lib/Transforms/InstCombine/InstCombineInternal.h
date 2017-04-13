@@ -542,6 +542,13 @@ private:
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, APInt &KnownZero,
                             APInt &KnownOne, unsigned Depth = 0);
+  /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
+  /// bits. It also tries to handle simplifications that can be done based on
+  /// DemandedMask, but without modifying the Instruction.
+  Value *SimplifyMultipleUseDemandedBits(Instruction *I,
+                                         const APInt &DemandedMask,
+                                         APInt &KnownZero, APInt &KnownOne,
+                                         unsigned Depth, Instruction *CxtI);
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
   Value *SimplifyShrShlDemandedBits(Instruction *Lsr, Instruction *Sftl,
