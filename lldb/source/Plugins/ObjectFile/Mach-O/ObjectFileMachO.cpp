@@ -5672,7 +5672,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
               {
                   uint32_t type = 0;
                   uuid_t raw_uuid;
-                  uuid_clear (raw_uuid);
+                  memset (raw_uuid, 0, sizeof (uuid_t));
 
                   if (m_data.GetU32 (&offset, &type, 1)
                       && m_data.GetU64 (&offset, &address, 1)
