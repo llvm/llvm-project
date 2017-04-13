@@ -44,9 +44,7 @@
 # CHECK-NEXT:     Alignment: 16384
 # CHECK-NEXT:   }
 
-# RUN: echo "SECTIONS { \
-# RUN:         symbol = CONSTANT(MAXPAGESIZE); \
-# RUN:       }" > %t.script
+# RUN: echo "SECTIONS { symbol = CONSTANT(MAXPAGESIZE); }" > %t.script
 # RUN: ld.lld -z max-page-size=0x4000 -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck -check-prefix CHECK-SCRIPT %s
 

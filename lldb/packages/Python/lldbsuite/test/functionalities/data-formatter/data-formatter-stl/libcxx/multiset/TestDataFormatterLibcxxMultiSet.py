@@ -17,8 +17,17 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
+    def setUp(self):
+        TestBase.setUp(self)
+        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
+        self.namespace = 'std::__' + ns + '1'
+
+    def getVariableType(self, name):
+        var = self.frame().FindVariable(name)
+        self.assertTrue(var.IsValid())
+        return var.GetType().GetCanonicalType().GetName()
+
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -29,9 +38,6 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
                 self, "Set break point at this line."))
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -52,7 +58,9 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect('image list', substrs=self.getLibcPlusPlusLibs())
+        ii_type = self.getVariableType("ii")
+        self.assertTrue(ii_type.startswith(self.namespace + "::multiset"),
+                        "Type: " + ii_type)
 
         self.expect("frame variable ii", substrs=["size=0", "{}"])
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
@@ -86,6 +94,9 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
         self.expect("frame variable ii", substrs=["size=0", "{}"])
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
         self.expect("frame variable ii", substrs=["size=0", "{}"])
+        ss_type = self.getVariableType("ss")
+        self.assertTrue(ss_type.startswith(self.namespace + "::multiset"),
+                        "Type: " + ss_type)
         self.expect("frame variable ss", substrs=["size=0", "{}"])
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
         self.expect(

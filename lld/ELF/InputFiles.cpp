@@ -625,13 +625,20 @@ SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
       toString(this));
 }
 
+template <class ELFT> StringRef SharedFile<ELFT>::getSoName() const {
+  if (SoName.empty())
+    return this->DefaultSoName;
+  return SoName;
+}
+
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
 template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   const Elf_Shdr *DynamicSec = nullptr;
-
   const ELFFile<ELFT> Obj = this->getObj();
   ArrayRef<Elf_Shdr> Sections = check(Obj.sections(), toString(this));
+
+  // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     default:
@@ -658,14 +665,9 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   if (this->VersymSec && this->Symbols.empty())
     error("SHT_GNU_versym should be associated with symbol table");
 
-  // DSOs are identified by soname, and they usually contain
-  // DT_SONAME tag in their header. But if they are missing,
-  // filenames are used as default sonames.
-  SoName = this->DefaultSoName;
-
+  // Search for a DT_SONAME tag to initialize this->SoName.
   if (!DynamicSec)
     return;
-
   ArrayRef<Elf_Dyn> Arr =
       check(Obj.template getSectionContentsAsArray<Elf_Dyn>(DynamicSec),
             toString(this));

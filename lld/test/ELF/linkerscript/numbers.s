@@ -28,23 +28,17 @@
 # CHECK-NEXT:   6 .mega2        00000008 0000000000200000
 
 ## Mailformed number errors.
-# RUN: echo "SECTIONS { \
-# RUN:  . = 0x11h; \
-# RUN: }" > %t2.script
+# RUN: echo "SECTIONS { . = 0x11h; }" > %t2.script
 # RUN: not ld.lld %t --script %t2.script -o %t3 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR1 %s
 # ERR1: malformed number: 0x11h
 
-# RUN: echo "SECTIONS { \
-# RUN:  . = 0x11k; \
-# RUN: }" > %t3.script
+# RUN: echo "SECTIONS { . = 0x11k; }" > %t3.script
 # RUN: not ld.lld %t --script %t3.script -o %t4 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR2 %s
 # ERR2: malformed number: 0x11k
 
-# RUN: echo "SECTIONS { \
-# RUN:  . = 0x11m; \
-# RUN: }" > %t4.script
+# RUN: echo "SECTIONS { . = 0x11m; }" > %t4.script
 # RUN: not ld.lld %t --script %t4.script -o %t5 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR3 %s
 # ERR3: malformed number: 0x11m

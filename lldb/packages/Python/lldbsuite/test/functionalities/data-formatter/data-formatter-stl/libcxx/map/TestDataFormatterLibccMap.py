@@ -17,8 +17,12 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
+    def setUp(self):
+        TestBase.setUp(self)
+        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
+        self.namespace = 'std::__' + ns + '1'
+
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -29,9 +33,6 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                 self, "Set break point at this line."))
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -52,16 +53,16 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect('image list', substrs=self.getLibcPlusPlusLibs())
-
+        ns = self.namespace
         self.expect('frame variable ii',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns,
+                             'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
-                    substrs=['size=2',
+                    substrs=['%s::map' % ns, 'size=2',
                              '[0] = ',
                              'first = 0',
                              'second = 0',
@@ -72,7 +73,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
-                    substrs=['size=4',
+                    substrs=['%s::map' % ns, 'size=4',
                              '[2] = ',
                              'first = 2',
                              'second = 0',
@@ -83,7 +84,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable ii",
-                    substrs=['size=8',
+                    substrs=['%s::map' % ns, 'size=8',
                              '[5] = ',
                              'first = 5',
                              'second = 0',
@@ -92,7 +93,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                              'second = 1'])
 
         self.expect("p ii",
-                    substrs=['size=8',
+                    substrs=['%s::map' % ns, 'size=8',
                              '[5] = ',
                              'first = 5',
                              'second = 0',
@@ -124,17 +125,17 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.runCmd("continue")
 
         self.expect('frame variable ii',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         self.expect('frame variable si',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         self.runCmd("continue")
 
         self.expect('frame variable si',
-                    substrs=['size=1',
+                    substrs=['%s::map' % ns, 'size=1',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0'])
@@ -142,7 +143,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable si",
-                    substrs=['size=4',
+                    substrs=['%s::map' % ns, 'size=4',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0',
@@ -157,7 +158,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                              'second = 3'])
 
         self.expect("p si",
-                    substrs=['size=4',
+                    substrs=['%s::map' % ns, 'size=4',
                              '[0] = ',
                              'first = \"zero\"',
                              'second = 0',
@@ -192,19 +193,19 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable si',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable is',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable is",
-                    substrs=['size=4',
+                    substrs=['%s::map' % ns, 'size=4',
                              '[0] = ',
                              'second = \"goofy\"',
                              'first = 85',
@@ -219,7 +220,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                              'first = 3'])
 
         self.expect("p is",
-                    substrs=['size=4',
+                    substrs=['%s::map' % ns, 'size=4',
                              '[0] = ',
                              'second = \"goofy\"',
                              'first = 85',
@@ -254,19 +255,19 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable is',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ss',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable ss",
-                    substrs=['size=3',
+                    substrs=['%s::map' % ns, 'size=3',
                              '[0] = ',
                              'second = \"hello\"',
                              'first = \"ciao\"',
@@ -278,7 +279,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
                              'first = \"gatto\"'])
 
         self.expect("p ss",
-                    substrs=['size=3',
+                    substrs=['%s::map' % ns, 'size=3',
                              '[0] = ',
                              'second = \"hello\"',
                              'first = \"ciao\"',
@@ -309,5 +310,5 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ss',
-                    substrs=['size=0',
+                    substrs=['%s::map' % ns, 'size=0',
                              '{}'])

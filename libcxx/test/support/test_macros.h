@@ -184,7 +184,7 @@ struct is_same<T, T> { enum {value = 1}; };
 } // namespace test_macros_detail
 
 #define ASSERT_SAME_TYPE(...) \
-    static_assert(test_macros_detail::is_same<__VA_ARGS__>::value, \
+    static_assert((test_macros_detail::is_same<__VA_ARGS__>::value), \
                  "Types differ uexpectedly")
 
 #ifndef TEST_HAS_NO_EXCEPTIONS

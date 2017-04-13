@@ -18,6 +18,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -574,6 +575,32 @@ public:
   //------------------------------------------------------------------
   virtual std::string GetIdentifierString () { 
       return std::string(); 
+  }
+
+  //------------------------------------------------------------------
+  /// When the ObjectFile is a core file, lldb needs to locate the
+  /// "binary" in the core file.  lldb can iterate over the pages looking
+  /// for a valid binary, but some core files may have metadata 
+  /// describing where the main binary is exactly which removes ambiguity
+  /// when there are multiple binaries present in the captured memory pages.
+  ///
+  /// @param[out] address
+  ///   If the address of the binary is specified, this will be set.
+  ///   This is an address is the virtual address space of the core file
+  ///   memory segments; it is not an offset into the object file.
+  ///   If no address is available, will be set to LLDB_INVALID_ADDRESS.
+  ///
+  /// @param[out] uuid
+  ///   If the uuid of the binary is specified, this will be set.
+  ///   If no UUID is available, will be cleared.
+  ///
+  /// @return
+  ///   Returns true if either address or uuid has been set.
+  //------------------------------------------------------------------
+  virtual bool GetCorefileMainBinaryInfo (lldb::addr_t &address, UUID &uuid) {
+      address = LLDB_INVALID_ADDRESS;
+      uuid.Clear();
+      return false;
   }
 
   virtual lldb::RegisterContextSP

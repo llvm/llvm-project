@@ -296,7 +296,7 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   const Elf_Shdr *VerdefSec = nullptr;
 
 public:
-  StringRef getSoName() const { return SoName; }
+  StringRef getSoName() const;
   const Elf_Shdr *getSection(const Elf_Sym &Sym) const;
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }
 

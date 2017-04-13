@@ -25,6 +25,7 @@ target_link_libraries(clang-tidy
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTooling
+  clangToolingCore
   )
 
 install(TARGETS clang-tidy

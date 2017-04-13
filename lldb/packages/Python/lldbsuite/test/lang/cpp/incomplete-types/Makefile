@@ -13,10 +13,10 @@ endif
 all: limit nolimit
 
 limit: main.o length_limit.o a.o
-	$(CXX) $(LDFLAGS) main.o length_limit.o a.o -o limit
+	$(CXX) main.o length_limit.o a.o -o limit $(LDFLAGS)
 
 nolimit: main.o length_nolimit.o a.o
-	$(CXX) $(LDFLAGS) main.o length_nolimit.o a.o -o nolimit
+	$(CXX) main.o length_nolimit.o a.o -o nolimit $(LDFLAGS)
 
 main.o: main.cpp
 	$(CXX) $(CFLAGS_LIMIT) main.cpp -o main.o

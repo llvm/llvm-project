@@ -2,26 +2,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "SECTIONS { \
 # RUN:  . = 0x1000; \
-# RUN:  .aaa : AT(0x2000) \
-# RUN:  { \
-# RUN:   *(.aaa) \
-# RUN:  } \
-# RUN:  .bbb : \
-# RUN:  { \
-# RUN:   *(.bbb) \
-# RUN:  } \
-# RUN:  .ccc : AT(0x3000) \
-# RUN:  { \
-# RUN:   *(.ccc) \
-# RUN:  } \
-# RUN:  .ddd : AT(0x4000) \
-# RUN:  { \
-# RUN:   *(.ddd) \
-# RUN:  } \
-# RUN:  .eee 0x5000 : AT(0x5000) \
-# RUN:  { \
-# RUN:   *(.eee) \
-# RUN:  } \
+# RUN:  .aaa : AT(0x2000) { *(.aaa) } \
+# RUN:  .bbb : { *(.bbb) } \
+# RUN:  .ccc : AT(0x3000) { *(.ccc) } \
+# RUN:  .ddd : AT(0x4000) { *(.ddd) } \
+# RUN:  .eee 0x5000 : AT(0x5000) { *(.eee) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-readobj -program-headers %t2 | FileCheck %s
