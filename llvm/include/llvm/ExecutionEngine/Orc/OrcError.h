@@ -27,25 +27,15 @@ enum class OrcErrorCode : int {
   RemoteMProtectAddrUnrecognized,
   RemoteIndirectStubsOwnerDoesNotExist,
   RemoteIndirectStubsOwnerIdAlreadyInUse,
+  RPCConnectionClosed,
+  RPCCouldNotNegotiateFunction,
   RPCResponseAbandoned,
   UnexpectedRPCCall,
   UnexpectedRPCResponse,
-  UnknownRPCFunction
+  UnknownErrorCodeFromRemote
 };
 
 std::error_code orcError(OrcErrorCode ErrCode);
-
-class RPCFunctionNotSupported : public ErrorInfo<RPCFunctionNotSupported> {
-public:
-  static char ID;
-
-  RPCFunctionNotSupported(std::string RPCFunctionSignature);
-  std::error_code convertToErrorCode() const override;
-  void log(raw_ostream &OS) const override;
-  const std::string &getFunctionSignature() const;
-private:
-  std::string RPCFunctionSignature;
-};
 
 } // End namespace orc.
 } // End namespace llvm.

@@ -25,14 +25,28 @@
 
 #ifdef __GNUC__
 #define _GNUC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
+// The _GNUC_VER_NEW macro better represents the new GCC versioning scheme
+// introduced in GCC 5.0.
+#define _GNUC_VER_NEW (_GNUC_VER * 10 + __GNUC_PATCHLEVEL__)
 #else
 #define _GNUC_VER 0
+#define _GNUC_VER_NEW 0
 #endif
 
 #define _LIBCPP_VERSION 5000
 
 #ifndef _LIBCPP_ABI_VERSION
 #define _LIBCPP_ABI_VERSION 1
+#endif
+
+#if defined(__ELF__)
+#define _LIBCPP_OBJECT_FORMAT_ELF   1
+#elif defined(__MACH__)
+#define _LIBCPP_OBJECT_FORMAT_MACHO 1
+#elif defined(_WIN32)
+#define _LIBCPP_OBJECT_FORMAT_COFF  1
+#else
+#error Unknown object file format
 #endif
 
 #if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
@@ -63,9 +77,12 @@
 // using that class define their own copies.
 #define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #elif _LIBCPP_ABI_VERSION == 1
-#if !defined(_WIN32)
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
-// applications compiled against older libraries.
+// applications compiled against older libraries. This is unnecessary with
+// COFF dllexport semantics, since dllexport forces a non-inline definition
+// of inline functions to be emitted anyway. Our own non-inline copy would
+// conflict with the dllexport-emitted copy, so we disable it.
 #define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 #endif
 // Feature macros for disabling pre ABI v1 features. All of these options
@@ -572,14 +589,6 @@ namespace std {
 
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
 
-#if defined(__ELF__)
-#define _LIBCPP_OBJECT_FORMAT_ELF   1
-#elif defined(__MACH__)
-#define _LIBCPP_OBJECT_FORMAT_MACHO 1
-#else
-#define _LIBCPP_OBJECT_FORMAT_COFF  1
-#endif
-
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 #if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 # define _LIBCPP_DLL_VIS
@@ -847,6 +856,11 @@ template <unsigned> struct __static_assert_check {};
 # endif
 #endif
 
+#ifdef _LIBCPP_DISABLE_EXTERN_TEMPLATE
+#define _LIBCPP_EXTERN_TEMPLATE(...)
+#define _LIBCPP_EXTERN_TEMPLATE2(...)
+#endif
+
 #ifndef _LIBCPP_EXTERN_TEMPLATE
 #define _LIBCPP_EXTERN_TEMPLATE(...) extern template __VA_ARGS__;
 #endif
@@ -1056,7 +1070,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if !__has_builtin(__builtin_addressof) && _GNUC_VER < 700
-#define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
+# define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_OFF_T_FUNCTIONS)
@@ -1086,10 +1100,15 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
 # define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 # define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
+# define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 #endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
 #if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201611
 # define _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#endif
+
+#if !__has_keyword(__is_aggregate) && (_GNUC_VER_NEW < 7001)
+# define _LIBCPP_HAS_NO_IS_AGGREGATE
 #endif
 
 #endif // __cplusplus

@@ -4885,8 +4885,33 @@ static bool isFrameIndexOp(SDValue Op) {
 /// \brief Legalize target independent instructions (e.g. INSERT_SUBREG)
 /// with frame index operands.
 /// LLVM assumes that inputs are to these instructions are registers.
-void SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
-                                                     SelectionDAG &DAG) const {
+SDNode *SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
+                                                        SelectionDAG &DAG) const {
+  if (Node->getOpcode() == ISD::CopyToReg) {
+    RegisterSDNode *DestReg = cast<RegisterSDNode>(Node->getOperand(1));
+    SDValue SrcVal = Node->getOperand(2);
+
+    // Insert a copy to a VReg_1 virtual register so LowerI1Copies doesn't have
+    // to try understanding copies to physical registers.
+    if (SrcVal.getValueType() == MVT::i1 &&
+        TargetRegisterInfo::isPhysicalRegister(DestReg->getReg())) {
+      SDLoc SL(Node);
+      MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+      SDValue VReg = DAG.getRegister(
+        MRI.createVirtualRegister(&AMDGPU::VReg_1RegClass), MVT::i1);
+
+      SDNode *Glued = Node->getGluedNode();
+      SDValue ToVReg
+        = DAG.getCopyToReg(Node->getOperand(0), SL, VReg, SrcVal,
+                         SDValue(Glued, Glued ? Glued->getNumValues() - 1 : 0));
+      SDValue ToResultReg
+        = DAG.getCopyToReg(ToVReg, SL, SDValue(DestReg, 0),
+                           VReg, ToVReg.getValue(1));
+      DAG.ReplaceAllUsesWith(Node, ToResultReg.getNode());
+      DAG.RemoveDeadNode(Node);
+      return ToResultReg.getNode();
+    }
+  }
 
   SmallVector<SDValue, 8> Ops;
   for (unsigned i = 0; i < Node->getNumOperands(); ++i) {
@@ -4902,6 +4927,7 @@ void SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
   }
 
   DAG.UpdateNodeOperands(Node, Ops);
+  return Node;
 }
 
 /// \brief Fold the instructions after selecting them.

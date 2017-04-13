@@ -147,8 +147,71 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   return None;
 }
 
-static bool isTrivialOperatorNode(const TreePatternNode *N) {
-  return !N->isLeaf() && !N->hasAnyPredicate() && !N->getTransformFn();
+static std::string explainPredicates(const TreePatternNode *N) {
+  std::string Explanation = "";
+  StringRef Separator = "";
+  for (const auto &P : N->getPredicateFns()) {
+    Explanation +=
+        (Separator + P.getOrigPatFragRecord()->getRecord()->getName()).str();
+    if (P.isAlwaysTrue())
+      Explanation += " always-true";
+    if (P.isImmediatePattern())
+      Explanation += " immediate";
+  }
+  return Explanation;
+}
+
+static std::string explainRulePredicates(const ArrayRef<Init *> Predicates) {
+  std::string Explanation = "";
+  StringRef Separator = "";
+  for (const auto *P : Predicates) {
+    Explanation += Separator;
+
+    if (const DefInit *PDef = dyn_cast<DefInit>(P)) {
+      Explanation += PDef->getDef()->getName();
+    } else
+      Explanation += "<unknown>";
+  }
+  return Explanation;
+}
+
+std::string explainOperator(Record *Operator) {
+  if (Operator->isSubClassOf("SDNode"))
+    return " (" + Operator->getValueAsString("Opcode") + ")";
+
+  if (Operator->isSubClassOf("Intrinsic"))
+    return (" (Operator is an Intrinsic, " + Operator->getName() + ")").str();
+
+  return " (Operator not understood)";
+}
+
+/// Helper function to let the emitter report skip reason error messages.
+static Error failedImport(const Twine &Reason) {
+  return make_error<StringError>(Reason, inconvertibleErrorCode());
+}
+
+static Error isTrivialOperatorNode(const TreePatternNode *N) {
+  std::string Explanation = "";
+  std::string Separator = "";
+  if (N->isLeaf()) {
+    Explanation = "Is a leaf";
+    Separator = ", ";
+  }
+
+  if (N->hasAnyPredicate()) {
+    Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
+    Separator = ", ";
+  }
+
+  if (N->getTransformFn()) {
+    Explanation += Separator + "Has a transform function";
+    Separator = ", ";
+  }
+
+  if (!N->isLeaf() && !N->hasAnyPredicate() && !N->getTransformFn())
+    return Error::success();
+
+  return failedImport(Explanation);
 }
 
 //===- Matchers -----------------------------------------------------------===//
@@ -1250,16 +1313,12 @@ GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
 
 //===- Emitter ------------------------------------------------------------===//
 
-/// Helper function to let the emitter report skip reason error messages.
-static Error failedImport(const Twine &Reason) {
-  return make_error<StringError>(Reason, inconvertibleErrorCode());
-}
-
 Error
 GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
                                         ArrayRef<Init *> Predicates) const {
   if (!Predicates.empty())
-    return failedImport("Pattern has a predicate");
+    return failedImport("Pattern has a rule predicate (" +
+                        explainRulePredicates(Predicates) + ")");
   return Error::success();
 }
 
@@ -1271,7 +1330,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 
   auto SrcGIOrNull = findNodeEquiv(Src->getOperator());
   if (!SrcGIOrNull)
-    return failedImport("Pattern operator lacks an equivalent Instruction");
+    return failedImport("Pattern operator lacks an equivalent Instruction" +
+                        explainOperator(Src->getOperator()));
   auto &SrcGI = *SrcGIOrNull;
 
   // The operators look good: match the opcode and mutate it to the new one.
@@ -1310,7 +1370,8 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
       InsnMatcher.addOperand(OpIdx, SrcChild->getName(), TempOpIdx);
 
   if (SrcChild->hasAnyPredicate())
-    return failedImport("Src pattern child has predicate");
+    return failedImport("Src pattern child has predicate (" +
+                        explainPredicates(SrcChild) + ")");
 
   ArrayRef<EEVT::TypeSet> ChildTypes = SrcChild->getExtTypes();
   if (ChildTypes.size() != 1)
@@ -1366,13 +1427,18 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
     if (ChildRec->isSubClassOf("ComplexPattern")) {
       const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
       if (ComplexPattern == ComplexPatternEquivs.end())
-        return failedImport(
-            "SelectionDAG ComplexPattern not mapped to GlobalISel");
+        return failedImport("SelectionDAG ComplexPattern (" +
+                            ChildRec->getName() + ") not mapped to GlobalISel");
 
       const auto &Predicate = OM.addPredicate<ComplexPatternOperandMatcher>(
           OM, *ComplexPattern->second);
       TempOpIdx += Predicate.countTemporaryOperands();
       return Error::success();
+    }
+
+    if (ChildRec->isSubClassOf("ImmLeaf")) {
+      return failedImport(
+          "Src pattern child def is an unsupported tablegen class (ImmLeaf)");
     }
 
     return failedImport(
@@ -1401,7 +1467,8 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
 
   // Otherwise, we're looking for a bog-standard RegisterClass operand.
   if (DstChild->hasAnyPredicate())
-    return failedImport("Dst pattern child has predicate");
+    return failedImport("Dst pattern child has predicate (" +
+                        explainPredicates(DstChild) + ")");
 
   if (auto *ChildDefInit = dyn_cast<DefInit>(DstChild->getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
@@ -1440,6 +1507,10 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       return Error::success();
     }
 
+    if (ChildRec->isSubClassOf("SDNodeXForm"))
+      return failedImport("Dst pattern child def is an unsupported tablegen "
+                          "class (SDNodeXForm)");
+
     return failedImport(
         "Dst pattern child def is an unsupported tablegen class");
   }
@@ -1451,8 +1522,12 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, const TreePatternNode *Dst,
     const InstructionMatcher &InsnMatcher) const {
   Record *DstOp = Dst->getOperator();
-  if (!DstOp->isSubClassOf("Instruction"))
+  if (!DstOp->isSubClassOf("Instruction")) {
+    if (DstOp->isSubClassOf("ValueType"))
+      return failedImport(
+          "Pattern operator isn't an instruction (it's a ValueType)");
     return failedImport("Pattern operator isn't an instruction");
+  }
   auto &DstI = Target.getInstruction(DstOp);
 
   auto &DstMIBuilder = M.addAction<BuildMIAction>(&DstI, InsnMatcher);
@@ -1549,10 +1624,12 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   TreePatternNode *Dst = P.getDstPattern();
 
   // If the root of either pattern isn't a simple operator, ignore it.
-  if (!isTrivialOperatorNode(Dst))
-    return failedImport("Dst pattern root isn't a trivial operator");
-  if (!isTrivialOperatorNode(Src))
-    return failedImport("Src pattern root isn't a trivial operator");
+  if (auto Err = isTrivialOperatorNode(Dst))
+    return failedImport("Dst pattern root isn't a trivial operator (" +
+                        toString(std::move(Err)) + ")");
+  if (auto Err = isTrivialOperatorNode(Src))
+    return failedImport("Src pattern root isn't a trivial operator (" +
+                        toString(std::move(Err)) + ")");
 
   // Start with the defined operands (i.e., the results of the root operator).
   Record *DstOp = Dst->getOperator();
@@ -1561,7 +1638,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   auto &DstI = Target.getInstruction(DstOp);
   if (DstI.Operands.NumDefs != Src->getExtTypes().size())
-    return failedImport("Src pattern results and dst MI defs are different");
+    return failedImport("Src pattern results and dst MI defs are different (" +
+                        to_string(Src->getExtTypes().size()) + " def(s) vs " +
+                        to_string(DstI.Operands.NumDefs) + " def(s))");
 
   InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher();
   auto InsnMatcherOrError = createAndImportSelDAGMatcher(InsnMatcherTemp, Src);

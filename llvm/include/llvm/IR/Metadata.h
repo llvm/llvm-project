@@ -78,7 +78,7 @@ public:
 protected:
   Metadata(unsigned ID, StorageType Storage)
       : SubclassID(ID), Storage(Storage), SubclassData16(0), SubclassData32(0) {
-    static_assert(sizeof(*this) == 8, "Metdata fields poorly packed");
+    static_assert(sizeof(*this) == 8, "Metadata fields poorly packed");
   }
 
   ~Metadata() = default;

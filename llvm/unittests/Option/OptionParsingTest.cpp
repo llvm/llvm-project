@@ -97,11 +97,11 @@ TEST(Option, OptionParsing) {
   EXPECT_NE(std::string::npos, Help.find("-A"));
 
   // Test aliases.
-  arg_iterator Cs = AL.filtered_begin(OPT_C);
-  ASSERT_NE(AL.filtered_end(), Cs);
-  EXPECT_EQ("desu", StringRef((*Cs)->getValue()));
+  auto Cs = AL.filtered(OPT_C);
+  ASSERT_NE(Cs.begin(), Cs.end());
+  EXPECT_EQ("desu", StringRef((*Cs.begin())->getValue()));
   ArgStringList ASL;
-  (*Cs)->render(AL, ASL);
+  (*Cs.begin())->render(AL, ASL);
   ASSERT_EQ(2u, ASL.size());
   EXPECT_EQ("-C", StringRef(ASL[0]));
   EXPECT_EQ("desu", StringRef(ASL[1]));

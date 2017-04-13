@@ -1977,3 +1977,46 @@ TEST(APIntTest, getHiBits) {
   i128.setHighBits(2);
   EXPECT_EQ(0xc, i128.getHiBits(4));
 }
+
+TEST(APIntTest, GCD) {
+  using APIntOps::GreatestCommonDivisor;
+
+  for (unsigned Bits : {1, 2, 32, 63, 64, 65}) {
+    // Test some corner cases near zero.
+    APInt Zero(Bits, 0), One(Bits, 1);
+    EXPECT_EQ(GreatestCommonDivisor(Zero, Zero), Zero);
+    EXPECT_EQ(GreatestCommonDivisor(Zero, One), One);
+    EXPECT_EQ(GreatestCommonDivisor(One, Zero), One);
+    EXPECT_EQ(GreatestCommonDivisor(One, One), One);
+
+    if (Bits > 1) {
+      APInt Two(Bits, 2);
+      EXPECT_EQ(GreatestCommonDivisor(Zero, Two), Two);
+      EXPECT_EQ(GreatestCommonDivisor(One, Two), One);
+      EXPECT_EQ(GreatestCommonDivisor(Two, Two), Two);
+
+      // Test some corner cases near the highest representable value.
+      APInt Max(Bits, 0);
+      Max.setAllBits();
+      EXPECT_EQ(GreatestCommonDivisor(Zero, Max), Max);
+      EXPECT_EQ(GreatestCommonDivisor(One, Max), One);
+      EXPECT_EQ(GreatestCommonDivisor(Two, Max), One);
+      EXPECT_EQ(GreatestCommonDivisor(Max, Max), Max);
+
+      APInt MaxOver2 = Max.udiv(Two);
+      EXPECT_EQ(GreatestCommonDivisor(MaxOver2, Max), One);
+      // Max - 1 == Max / 2 * 2, because Max is odd.
+      EXPECT_EQ(GreatestCommonDivisor(MaxOver2, Max - 1), MaxOver2);
+    }
+  }
+
+  // Compute the 20th Mersenne prime.
+  const unsigned BitWidth = 4450;
+  APInt HugePrime = APInt::getLowBitsSet(BitWidth, 4423);
+
+  // 9931 and 123456 are coprime.
+  APInt A = HugePrime * APInt(BitWidth, 9931);
+  APInt B = HugePrime * APInt(BitWidth, 123456);
+  APInt C = GreatestCommonDivisor(A, B);
+  EXPECT_EQ(C, HugePrime);
+}

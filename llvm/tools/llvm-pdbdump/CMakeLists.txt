@@ -18,6 +18,8 @@ add_llvm_tool(llvm-pdbdump
   PdbYaml.cpp
   PrettyBuiltinDumper.cpp
   PrettyClassDefinitionDumper.cpp
+  PrettyClassLayoutTextDumper.cpp
+  PrettyClassLayoutGraphicalDumper.cpp
   PrettyCompilandDumper.cpp
   PrettyEnumDumper.cpp
   PrettyExternalSymbolDumper.cpp

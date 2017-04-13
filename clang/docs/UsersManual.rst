@@ -562,6 +562,16 @@ control the crash diagnostics.
 The -fno-crash-diagnostics flag can be helpful for speeding the process
 of generating a delta reduced test case.
 
+Clang is also capable of generating preprocessed source file(s) and associated
+run script(s) even without a crash. This is specially useful when trying to
+generate a reproducer for warnings or errors while using modules.
+
+.. option:: -gen-reproducer
+
+  Generates preprocessed source files, a reproducer script and if relevant, a
+  cache containing: built module pcm's and all headers needed to rebuilt the
+  same modules.
+
 .. _rpass:
 
 Options to Emit Optimization Reports

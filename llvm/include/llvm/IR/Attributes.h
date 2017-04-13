@@ -213,7 +213,7 @@ class AttributeSet {
   template <typename Ty> friend struct DenseMapInfo;
 
 private:
-  AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
+  explicit AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
 
 public:
   /// AttributeSet is a trivially copyable value type.
@@ -307,13 +307,11 @@ public:
   static AttributeList
   get(LLVMContext &C, ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
 
-  /// \brief Create an AttributeList from a vector of AttributeSetNodes. The
-  /// index of each set is implied by its position in the array \p Attrs:
-  ///   0      : Return attributes
-  /// 1 to n-1 : Argument attributes
-  ///   n      : Function attributes
-  /// Any element that has no entries should be left null.
-  static AttributeList get(LLVMContext &C, ArrayRef<AttributeSet> Attrs);
+  /// \brief Create an AttributeList from attribute sets for a function, its
+  /// return value, and all of its arguments.
+  static AttributeList get(LLVMContext &C, AttributeSet FnAttrs,
+                           AttributeSet RetAttrs,
+                           ArrayRef<AttributeSet> ArgAttrs);
 
   static AttributeList
   getImpl(LLVMContext &C,

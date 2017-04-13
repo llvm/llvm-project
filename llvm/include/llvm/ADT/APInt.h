@@ -79,8 +79,6 @@ public:
   };
 
 private:
-  unsigned BitWidth; ///< The number of bits in this APInt.
-
   /// This union is used to store the integer value. When the
   /// integer bit-width <= 64, it uses VAL, otherwise it uses pVal.
   union {
@@ -88,13 +86,15 @@ private:
     uint64_t *pVal; ///< Used to store the >64 bits integer value.
   };
 
+  unsigned BitWidth; ///< The number of bits in this APInt.
+
   friend struct DenseMapAPIntKeyInfo;
 
   /// \brief Fast internal constructor
   ///
   /// This constructor is used only internally for speed of construction of
   /// temporaries. It is unsafe for general use so it is not public.
-  APInt(uint64_t *val, unsigned bits) : BitWidth(bits), pVal(val) {}
+  APInt(uint64_t *val, unsigned bits) : pVal(val), BitWidth(bits) {}
 
   /// \brief Determine if this APInt just has one word to store value.
   ///
@@ -290,7 +290,7 @@ public:
   }
 
   /// \brief Move Constructor.
-  APInt(APInt &&that) : BitWidth(that.BitWidth), VAL(that.VAL) {
+  APInt(APInt &&that) : VAL(that.VAL), BitWidth(that.BitWidth) {
     that.BitWidth = 0;
   }
 
@@ -305,7 +305,7 @@ public:
   ///
   /// This is useful for object deserialization (pair this with the static
   ///  method Read).
-  explicit APInt() : BitWidth(1), VAL(0) {}
+  explicit APInt() : VAL(0), BitWidth(1) {}
 
   /// \brief Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }
@@ -620,7 +620,9 @@ public:
 
   /// \brief Postfix increment operator.
   ///
-  /// \returns a new APInt value representing *this incremented by one
+  /// Increments *this by 1.
+  ///
+  /// \returns a new APInt value representing the original value of *this.
   const APInt operator++(int) {
     APInt API(*this);
     ++(*this);
@@ -634,7 +636,9 @@ public:
 
   /// \brief Postfix decrement operator.
   ///
-  /// \returns a new APInt representing *this decremented by one.
+  /// Decrements *this by 1.
+  ///
+  /// \returns a new APInt value representing the original value of *this.
   const APInt operator--(int) {
     APInt API(*this);
     --(*this);
@@ -865,7 +869,14 @@ public:
   /// \brief Logical right-shift function.
   ///
   /// Logical right-shift this APInt by shiftAmt.
-  APInt lshr(unsigned shiftAmt) const;
+  APInt lshr(unsigned shiftAmt) const {
+    APInt R(*this);
+    R.lshrInPlace(shiftAmt);
+    return R;
+  }
+
+  /// Logical right-shift this APInt by shiftAmt in place.
+  void lshrInPlace(unsigned shiftAmt);
 
   /// \brief Left-shift function.
   ///
@@ -1698,10 +1709,14 @@ public:
   /// DST += RHS + CARRY where CARRY is zero or one.  Returns the carry flag.
   static WordType tcAdd(WordType *, const WordType *,
                         WordType carry, unsigned);
+  /// DST += RHS.  Returns the carry flag.
+  static WordType tcAddPart(WordType *, WordType, unsigned);
 
   /// DST -= RHS + CARRY where CARRY is zero or one. Returns the carry flag.
   static WordType tcSubtract(WordType *, const WordType *,
                              WordType carry, unsigned);
+  /// DST -= RHS.  Returns the carry flag.
+  static WordType tcSubtractPart(WordType *, WordType, unsigned);
 
   /// DST += SRC * MULTIPLIER + PART   if add is true
   /// DST  = SRC * MULTIPLIER + PART   if add is false
@@ -1762,10 +1777,14 @@ public:
   static int tcCompare(const WordType *, const WordType *, unsigned);
 
   /// Increment a bignum in-place.  Return the carry flag.
-  static WordType tcIncrement(WordType *, unsigned);
+  static WordType tcIncrement(WordType *dst, unsigned parts) {
+    return tcAddPart(dst, 1, parts);
+  }
 
   /// Decrement a bignum in-place.  Return the borrow flag.
-  static WordType tcDecrement(WordType *, unsigned);
+  static WordType tcDecrement(WordType *dst, unsigned parts) {
+    return tcSubtractPart(dst, 1, parts);
+  }
 
   /// Set the least significant BITS and clear the rest.
   static void tcSetLeastSignificantBits(WordType *, unsigned, unsigned bits);
@@ -1937,7 +1956,7 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
-/// \brief Compute GCD of two APInt values.
+/// \brief Compute GCD of two unsigned APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values
 /// using Euclid's algorithm.

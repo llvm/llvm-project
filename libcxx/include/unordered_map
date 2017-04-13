@@ -404,7 +404,7 @@ public:
         _NOEXCEPT_(__is_nothrow_swappable<_Hash>::value)
     {
         using _VSTD::swap;
-        swap(static_cast<const _Hash&>(*this), static_cast<const _Hash&>(__y));
+        swap(static_cast<_Hash&>(*this), static_cast<_Hash&>(__y));
     }
 };
 
@@ -475,7 +475,7 @@ public:
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
         using _VSTD::swap;
-        swap(static_cast<const _Pred&>(*this), static_cast<const _Pred&>(__y));
+        swap(static_cast<_Pred&>(*this), static_cast<_Pred&>(__y));
     }
 };
 

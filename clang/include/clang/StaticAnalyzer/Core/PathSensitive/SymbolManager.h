@@ -44,7 +44,10 @@ class SymbolRegionValue : public SymbolData {
 
 public:
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
-    : SymbolData(SymbolRegionValueKind, sym), R(r) {}
+      : SymbolData(SymbolRegionValueKind, sym), R(r) {
+    assert(r);
+    assert(isValidTypeForSymbol(r->getValueType()));
+  }
 
   const TypedValueRegion* getRegion() const { return R; }
 
@@ -81,7 +84,15 @@ public:
   SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
                  QualType t, unsigned count, const void *symbolTag)
       : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
-        LCtx(lctx), SymbolTag(symbolTag) {}
+        LCtx(lctx), SymbolTag(symbolTag) {
+    // FIXME: 's' might be a nullptr if we're conducting invalidation
+    // that was caused by a destructor call on a temporary object,
+    // which has no statement associated with it.
+    // Due to this, we might be creating the same invalidation symbol for
+    // two different invalidation passes (for two different temporaries).
+    assert(lctx);
+    assert(isValidTypeForSymbol(t));
+  }
 
   const Stmt *getStmt() const { return S; }
   unsigned getCount() const { return Count; }
@@ -120,7 +131,11 @@ class SymbolDerived : public SymbolData {
 
 public:
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
-    : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {}
+      : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {
+    assert(parent);
+    assert(r);
+    assert(isValidTypeForSymbol(r->getValueType()));
+  }
 
   SymbolRef getParentSymbol() const { return parentSymbol; }
   const TypedValueRegion *getRegion() const { return R; }
@@ -155,7 +170,9 @@ class SymbolExtent : public SymbolData {
   
 public:
   SymbolExtent(SymbolID sym, const SubRegion *r)
-  : SymbolData(SymbolExtentKind, sym), R(r) {}
+      : SymbolData(SymbolExtentKind, sym), R(r) {
+    assert(r);
+  }
 
   const SubRegion *getRegion() const { return R; }
 
@@ -193,7 +210,13 @@ public:
   SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
                  const LocationContext *LCtx, unsigned count, const void *tag)
   : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), LCtx(LCtx),
-    Count(count), Tag(tag) {}
+    Count(count), Tag(tag) {
+      assert(r);
+      assert(s);
+      assert(isValidTypeForSymbol(t));
+      assert(LCtx);
+      assert(tag);
+    }
 
   const MemRegion *getRegion() const { return R; }
   const Stmt *getStmt() const { return S; }
@@ -236,8 +259,13 @@ class SymbolCast : public SymExpr {
   QualType ToTy;
 
 public:
-  SymbolCast(const SymExpr *In, QualType From, QualType To) :
-    SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) { }
+  SymbolCast(const SymExpr *In, QualType From, QualType To)
+      : SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) {
+    assert(In);
+    assert(isValidTypeForSymbol(From));
+    // FIXME: GenericTaintChecker creates symbols of void type.
+    // Otherwise, 'To' should also be a valid type.
+  }
 
   QualType getType() const override { return ToTy; }
 
@@ -270,7 +298,10 @@ class BinarySymExpr : public SymExpr {
 
 protected:
   BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
-    : SymExpr(k), Op(op), T(t) {}
+      : SymExpr(k), Op(op), T(t) {
+    assert(classof(this));
+    assert(isValidTypeForSymbol(t));
+  }
 
 public:
   // FIXME: We probably need to make this out-of-line to avoid redundant
@@ -293,8 +324,10 @@ class SymIntExpr : public BinarySymExpr {
 
 public:
   SymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-             const llvm::APSInt& rhs, QualType t)
-    : BinarySymExpr(SymIntExprKind, op, t), LHS(lhs), RHS(rhs) {}
+             const llvm::APSInt &rhs, QualType t)
+      : BinarySymExpr(SymIntExprKind, op, t), LHS(lhs), RHS(rhs) {
+    assert(lhs);
+  }
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -327,9 +360,11 @@ class IntSymExpr : public BinarySymExpr {
   const SymExpr *RHS;
 
 public:
-  IntSymExpr(const llvm::APSInt& lhs, BinaryOperator::Opcode op,
+  IntSymExpr(const llvm::APSInt &lhs, BinaryOperator::Opcode op,
              const SymExpr *rhs, QualType t)
-    : BinarySymExpr(IntSymExprKind, op, t), LHS(lhs), RHS(rhs) {}
+      : BinarySymExpr(IntSymExprKind, op, t), LHS(lhs), RHS(rhs) {
+    assert(rhs);
+  }
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -364,7 +399,10 @@ class SymSymExpr : public BinarySymExpr {
 public:
   SymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op, const SymExpr *rhs,
              QualType t)
-    : BinarySymExpr(SymSymExprKind, op, t), LHS(lhs), RHS(rhs) {}
+      : BinarySymExpr(SymSymExprKind, op, t), LHS(lhs), RHS(rhs) {
+    assert(lhs);
+    assert(rhs);
+  }
 
   const SymExpr *getLHS() const { return LHS; }
   const SymExpr *getRHS() const { return RHS; }

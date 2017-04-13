@@ -121,7 +121,7 @@ int llvm::libDriverMain(llvm::ArrayRef<const char*> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
 
-  if (Args.filtered_begin(OPT_INPUT) == Args.filtered_end()) {
+  if (!Args.hasArgNoClaim(OPT_INPUT)) {
     // No input files.  To match lib.exe, silently do nothing.
     return 0;
   }

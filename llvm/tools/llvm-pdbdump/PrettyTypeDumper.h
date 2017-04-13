@@ -15,6 +15,7 @@
 namespace llvm {
 namespace pdb {
 class LinePrinter;
+class ClassLayout;
 
 class TypeDumper : public PDBSymDumper {
 public:
@@ -24,7 +25,8 @@ public:
 
   void dump(const PDBSymbolTypeEnum &Symbol) override;
   void dump(const PDBSymbolTypeTypedef &Symbol) override;
-  void dump(const PDBSymbolTypeUDT &Symbol) override;
+
+  void dumpClassLayout(const ClassLayout &Class);
 
 private:
   LinePrinter &Printer;

@@ -27,8 +27,9 @@
 
 ; GCN: [[LOOP_ENTRY:BB[0-9]+_[0-9]+]]: ; %bb1
 ; GCN: s_or_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[INITMASK]]
-; GCN: s_cmp_gt_i32 s{{[0-9]+}}, -1
-; GCN-NEXT: s_cbranch_scc1 [[FLOW:BB[0-9]+_[0-9]+]]
+; GCN: v_cmp_lt_i32_e32 vcc, -1
+; GCN: s_and_b64 vcc, exec, vcc
+; GCN-NEXT: s_cbranch_vccnz [[FLOW:BB[0-9]+_[0-9]+]]
 
 ; GCN: ; BB#2: ; %bb4
 ; GCN: buffer_load_dword

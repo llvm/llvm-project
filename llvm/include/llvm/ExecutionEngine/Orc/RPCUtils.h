@@ -32,6 +32,109 @@ namespace llvm {
 namespace orc {
 namespace rpc {
 
+/// Base class of all fatal RPC errors (those that necessarily result in the
+/// termination of the RPC session).
+class RPCFatalError : public ErrorInfo<RPCFatalError> {
+public:
+  static char ID;
+};
+
+/// RPCConnectionClosed is returned from RPC operations if the RPC connection
+/// has already been closed due to either an error or graceful disconnection.
+class ConnectionClosed : public ErrorInfo<ConnectionClosed> {
+public:
+  static char ID;
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+};
+
+/// BadFunctionCall is returned from handleOne when the remote makes a call with
+/// an unrecognized function id.
+///
+/// This error is fatal because Orc RPC needs to know how to parse a function
+/// call to know where the next call starts, and if it doesn't recognize the
+/// function id it cannot parse the call.
+template <typename FnIdT, typename SeqNoT>
+class BadFunctionCall
+  : public ErrorInfo<BadFunctionCall<FnIdT, SeqNoT>, RPCFatalError> {
+public:
+  static char ID;
+
+  BadFunctionCall(FnIdT FnId, SeqNoT SeqNo)
+      : FnId(std::move(FnId)), SeqNo(std::move(SeqNo)) {}
+
+  std::error_code convertToErrorCode() const override {
+    return orcError(OrcErrorCode::UnexpectedRPCCall);
+  }
+
+  void log(raw_ostream &OS) const override {
+    OS << "Call to invalid RPC function id '" << FnId << "' with "
+          "sequence number " << SeqNo;
+  }
+
+private:
+  FnIdT FnId;
+  SeqNoT SeqNo;
+};
+
+template <typename FnIdT, typename SeqNoT>
+char BadFunctionCall<FnIdT, SeqNoT>::ID = 0;
+
+/// InvalidSequenceNumberForResponse is returned from handleOne when a response
+/// call arrives with a sequence number that doesn't correspond to any in-flight
+/// function call.
+///
+/// This error is fatal because Orc RPC needs to know how to parse the rest of
+/// the response call to know where the next call starts, and if it doesn't have
+/// a result parser for this sequence number it can't do that.
+template <typename SeqNoT>
+class InvalidSequenceNumberForResponse
+    : public ErrorInfo<InvalidSequenceNumberForResponse<SeqNoT>, RPCFatalError> {
+public:
+  static char ID;
+
+  InvalidSequenceNumberForResponse(SeqNoT SeqNo)
+      : SeqNo(std::move(SeqNo)) {}
+
+  std::error_code convertToErrorCode() const override {
+    return orcError(OrcErrorCode::UnexpectedRPCCall);
+  };
+
+  void log(raw_ostream &OS) const override {
+    OS << "Response has unknown sequence number " << SeqNo;
+  }
+private:
+  SeqNoT SeqNo;
+};
+
+template <typename SeqNoT>
+char InvalidSequenceNumberForResponse<SeqNoT>::ID = 0;
+
+/// This non-fatal error will be passed to asynchronous result handlers in place
+/// of a result if the connection goes down before a result returns, or if the
+/// function to be called cannot be negotiated with the remote.
+class ResponseAbandoned : public ErrorInfo<ResponseAbandoned> {
+public:
+  static char ID;
+
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+};
+
+/// This error is returned if the remote does not have a handler installed for
+/// the given RPC function.
+class CouldNotNegotiate : public ErrorInfo<CouldNotNegotiate> {
+public:
+  static char ID;
+
+  CouldNotNegotiate(std::string Signature);
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const std::string &getSignature() const { return Signature; }
+private:
+  std::string Signature;
+};
+
 template <typename DerivedFunc, typename FnT> class Function;
 
 // RPC Function class.
@@ -259,30 +362,122 @@ template <> class ResultTraits<Error> : public ResultTraits<void> {};
 template <typename RetT>
 class ResultTraits<Expected<RetT>> : public ResultTraits<RetT> {};
 
+// Determines whether an RPC function's defined error return type supports
+// error return value.
+template <typename T>
+class SupportsErrorReturn {
+public:
+  static const bool value = false;
+};
+
+template <>
+class SupportsErrorReturn<Error> {
+public:
+  static const bool value = true;
+};
+
+template <typename T>
+class SupportsErrorReturn<Expected<T>> {
+public:
+  static const bool value = true;
+};
+
+// RespondHelper packages return values based on whether or not the declared
+// RPC function return type supports error returns.
+template <bool FuncSupportsErrorReturn>
+class RespondHelper;
+
+// RespondHelper specialization for functions that support error returns.
+template <>
+class RespondHelper<true> {
+public:
+
+  // Send Expected<T>.
+  template <typename WireRetT, typename HandlerRetT, typename ChannelT,
+            typename FunctionIdT, typename SequenceNumberT>
+  static Error sendResult(ChannelT &C, const FunctionIdT &ResponseId,
+                          SequenceNumberT SeqNo,
+                          Expected<HandlerRetT> ResultOrErr) {
+    if (!ResultOrErr && ResultOrErr.template errorIsA<RPCFatalError>())
+      return ResultOrErr.takeError();
+
+    // Open the response message.
+    if (auto Err = C.startSendMessage(ResponseId, SeqNo))
+      return Err;
+
+    // Serialize the result.
+    if (auto Err =
+        SerializationTraits<ChannelT, WireRetT,
+                            Expected<HandlerRetT>>::serialize(
+                                                     C, std::move(ResultOrErr)))
+      return Err;
+
+    // Close the response message.
+    return C.endSendMessage();
+  }
+
+  template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
+  static Error sendResult(ChannelT &C, const FunctionIdT &ResponseId,
+                          SequenceNumberT SeqNo, Error Err) {
+    if (Err && Err.isA<RPCFatalError>())
+      return Err;
+    if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))
+      return Err2;
+    if (auto Err2 = serializeSeq(C, std::move(Err)))
+      return Err2;
+    return C.endSendMessage();
+  }
+
+};
+
+// RespondHelper specialization for functions that do not support error returns.
+template <>
+class RespondHelper<false> {
+public:
+
+  template <typename WireRetT, typename HandlerRetT, typename ChannelT,
+            typename FunctionIdT, typename SequenceNumberT>
+  static Error sendResult(ChannelT &C, const FunctionIdT &ResponseId,
+                          SequenceNumberT SeqNo,
+                          Expected<HandlerRetT> ResultOrErr) {
+    if (auto Err = ResultOrErr.takeError())
+      return Err;
+
+    // Open the response message.
+    if (auto Err = C.startSendMessage(ResponseId, SeqNo))
+      return Err;
+
+    // Serialize the result.
+    if (auto Err =
+        SerializationTraits<ChannelT, WireRetT, HandlerRetT>::serialize(
+                                                               C, *ResultOrErr))
+      return Err;
+
+    // Close the response message.
+    return C.endSendMessage();
+  }
+
+  template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
+  static Error sendResult(ChannelT &C, const FunctionIdT &ResponseId,
+                          SequenceNumberT SeqNo, Error Err) {
+    if (Err)
+      return Err;
+    if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))
+      return Err2;
+    return C.endSendMessage();
+  }
+
+};
+
+
 // Send a response of the given wire return type (WireRetT) over the
 // channel, with the given sequence number.
 template <typename WireRetT, typename HandlerRetT, typename ChannelT,
           typename FunctionIdT, typename SequenceNumberT>
-static Error respond(ChannelT &C, const FunctionIdT &ResponseId,
-                     SequenceNumberT SeqNo, Expected<HandlerRetT> ResultOrErr) {
-  // If this was an error bail out.
-  // FIXME: Send an "error" message to the client if this is not a channel
-  //        failure?
-  if (auto Err = ResultOrErr.takeError())
-    return Err;
-
-  // Open the response message.
-  if (auto Err = C.startSendMessage(ResponseId, SeqNo))
-    return Err;
-
-  // Serialize the result.
-  if (auto Err =
-          SerializationTraits<ChannelT, WireRetT, HandlerRetT>::serialize(
-              C, *ResultOrErr))
-    return Err;
-
-  // Close the response message.
-  return C.endSendMessage();
+Error respond(ChannelT &C, const FunctionIdT &ResponseId,
+              SequenceNumberT SeqNo, Expected<HandlerRetT> ResultOrErr) {
+  return RespondHelper<SupportsErrorReturn<WireRetT>::value>::
+    template sendResult<WireRetT>(C, ResponseId, SeqNo, std::move(ResultOrErr));
 }
 
 // Send an empty response message on the given channel to indicate that
@@ -291,11 +486,8 @@ template <typename WireRetT, typename ChannelT, typename FunctionIdT,
           typename SequenceNumberT>
 Error respond(ChannelT &C, const FunctionIdT &ResponseId, SequenceNumberT SeqNo,
               Error Err) {
-  if (Err)
-    return Err;
-  if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))
-    return Err2;
-  return C.endSendMessage();
+  return RespondHelper<SupportsErrorReturn<WireRetT>::value>::
+    sendResult(C, ResponseId, SeqNo, std::move(Err));
 }
 
 // Converts a given type to the equivalent error return type.
@@ -500,7 +692,7 @@ public:
 
   // Create an error instance representing an abandoned response.
   static Error createAbandonedResponseError() {
-    return errorCodeToError(orcError(OrcErrorCode::RPCResponseAbandoned));
+    return make_error<ResponseAbandoned>();
   }
 };
 
@@ -552,6 +744,72 @@ public:
     if (auto Err = C.endReceiveMessage())
       return Err;
     return Handler(Error::success());
+  }
+
+  // Abandon this response by calling the handler with an 'abandoned response'
+  // error.
+  void abandon() override {
+    if (auto Err = Handler(this->createAbandonedResponseError())) {
+      // Handlers should not fail when passed an abandoned response error.
+      report_fatal_error(std::move(Err));
+    }
+  }
+
+private:
+  HandlerT Handler;
+};
+
+template <typename ChannelT, typename FuncRetT, typename HandlerT>
+class ResponseHandlerImpl<ChannelT, Expected<FuncRetT>, HandlerT>
+    : public ResponseHandler<ChannelT> {
+public:
+  ResponseHandlerImpl(HandlerT Handler) : Handler(std::move(Handler)) {}
+
+  // Handle the result by deserializing it from the channel then passing it
+  // to the user defined handler.
+  Error handleResponse(ChannelT &C) override {
+    using HandlerArgType = typename ResponseHandlerArg<
+        typename HandlerTraits<HandlerT>::Type>::ArgType;
+    HandlerArgType Result((typename HandlerArgType::value_type()));
+
+    if (auto Err =
+            SerializationTraits<ChannelT, Expected<FuncRetT>,
+                                HandlerArgType>::deserialize(C, Result))
+      return Err;
+    if (auto Err = C.endReceiveMessage())
+      return Err;
+    return Handler(std::move(Result));
+  }
+
+  // Abandon this response by calling the handler with an 'abandoned response'
+  // error.
+  void abandon() override {
+    if (auto Err = Handler(this->createAbandonedResponseError())) {
+      // Handlers should not fail when passed an abandoned response error.
+      report_fatal_error(std::move(Err));
+    }
+  }
+
+private:
+  HandlerT Handler;
+};
+
+template <typename ChannelT, typename HandlerT>
+class ResponseHandlerImpl<ChannelT, Error, HandlerT>
+    : public ResponseHandler<ChannelT> {
+public:
+  ResponseHandlerImpl(HandlerT Handler) : Handler(std::move(Handler)) {}
+
+  // Handle the result by deserializing it from the channel then passing it
+  // to the user defined handler.
+  Error handleResponse(ChannelT &C) override {
+    Error Result = Error::success();
+    if (auto Err =
+            SerializationTraits<ChannelT, Error, Error>::deserialize(C, Result))
+      return Err;
+    if (auto Err = C.endReceiveMessage())
+      return Err;
+    return Handler(std::move(Result));
   }
 
   // Abandon this response by calling the handler with an 'abandoned response'
@@ -814,12 +1072,9 @@ public:
     if (auto FnIdOrErr = getRemoteFunctionId<Func>(LazyAutoNegotiation, false))
       FnId = *FnIdOrErr;
     else {
-      // This isn't a channel error so we don't want to abandon other pending
-      // responses, but we still need to run the user handler with an error to
-      // let them know the call failed.
-      if (auto Err = Handler(errorCodeToError(
-                               orcError(OrcErrorCode::UnknownRPCFunction))))
-        report_fatal_error(std::move(Err));
+      // Negotiation failed. Notify the handler then return the negotiate-failed
+      // error.
+      cantFail(Handler(make_error<ResponseAbandoned>()));
       return FnIdOrErr.takeError();
     }
 
@@ -885,7 +1140,8 @@ public:
       return I->second(C, SeqNo);
 
     // else: No handler found. Report error to client?
-    return errorCodeToError(orcError(OrcErrorCode::UnexpectedRPCCall));
+    return make_error<BadFunctionCall<FunctionIdT, SequenceNumberT>>(FnId,
+                                                                     SeqNo);
   }
 
   /// Helper for handling setter procedures - this method returns a functor that
@@ -995,7 +1251,8 @@ protected:
         // Unlock the pending results map to prevent recursive lock.
         Lock.unlock();
         abandonPendingResponses();
-        return errorCodeToError(orcError(OrcErrorCode::UnexpectedRPCResponse));
+        return make_error<
+                 InvalidSequenceNumberForResponse<SequenceNumberT>>(SeqNo);
       }
     }
 
@@ -1041,7 +1298,7 @@ protected:
           Impl.template callB<OrcRPCNegotiate>(Func::getPrototype())) {
         RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
         if (*RemoteIdOrErr == getInvalidFunctionId())
-          return make_error<RPCFunctionNotSupported>(Func::getPrototype());
+          return make_error<CouldNotNegotiate>(Func::getPrototype());
         return *RemoteIdOrErr;
       } else
         return RemoteIdOrErr.takeError();
@@ -1049,7 +1306,7 @@ protected:
 
     // No key was available in the map and we weren't allowed to try to
     // negotiate one, so return an unknown function error.
-    return make_error<RPCFunctionNotSupported>(Func::getPrototype());
+    return make_error<CouldNotNegotiate>(Func::getPrototype());
   }
 
   using WrappedHandlerFn = std::function<Error(ChannelT &, SequenceNumberT)>;

@@ -7234,31 +7234,6 @@ static void PassObjCImplDeclToConsumer(ObjCImplDecl *ImplD,
   Consumer->HandleInterestingDecl(DeclGroupRef(ImplD));
 }
 
-void ASTReader::PassInterestingDeclsToConsumer() {
-  assert(Consumer);
-
-  if (PassingDeclsToConsumer)
-    return;
-
-  // Guard variable to avoid recursively redoing the process of passing
-  // decls to consumer.
-  SaveAndRestore<bool> GuardPassingDeclsToConsumer(PassingDeclsToConsumer,
-                                                   true);
-
-  // Ensure that we've loaded all potentially-interesting declarations
-  // that need to be eagerly loaded.
-  for (auto ID : EagerlyDeserializedDecls)
-    GetDecl(ID);
-  EagerlyDeserializedDecls.clear();
-
-  while (!InterestingDecls.empty()) {
-    Decl *D = InterestingDecls.front();
-    InterestingDecls.pop_front();
-
-    PassInterestingDeclToConsumer(D);
-  }
-}
-
 void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
   if (ObjCImplDecl *ImplD = dyn_cast<ObjCImplDecl>(D))
     PassObjCImplDeclToConsumer(ImplD, Consumer);

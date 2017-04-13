@@ -1684,7 +1684,8 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A = *it;
       assert(A->getOption().getID() == options::OPT_static &&
              "missing expected -static argument");
-      it = DAL->getArgs().erase(it);
+      *it = nullptr;
+      ++it;
     }
   }
 

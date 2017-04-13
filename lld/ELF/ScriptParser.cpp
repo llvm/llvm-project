@@ -1102,12 +1102,7 @@ uint64_t ScriptParser::readMemoryAssignment(StringRef S1, StringRef S2,
     return 0;
   }
   expect("=");
-
-  // TODO: Fully support constant expressions.
-  if (Optional<uint64_t> Val = parseInt(next()))
-    return *Val;
-  setError("nonconstant expression for " + S1);
-  return 0;
+  return readExpr()().getValue();
 }
 
 // Parse the MEMORY command as specified in:

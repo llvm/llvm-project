@@ -20,6 +20,7 @@ namespace llvm {
 
 class MachineInstrBuilder;
 class MCCFIInstruction;
+class X86InstrInfo;
 class X86Subtarget;
 class X86RegisterInfo;
 
@@ -30,7 +31,7 @@ public:
   // Cached subtarget predicates.
 
   const X86Subtarget &STI;
-  const TargetInstrInfo &TII;
+  const X86InstrInfo &TII;
   const X86RegisterInfo *TRI;
 
   unsigned SlotSize;

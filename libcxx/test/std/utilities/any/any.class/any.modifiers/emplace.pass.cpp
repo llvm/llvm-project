@@ -11,9 +11,9 @@
 
 // <any>
 
-// template <class T, class ...Args> emplace(Args&&...);
+// template <class T, class ...Args> T& emplace(Args&&...);
 // template <class T, class U, class ...Args>
-// void emplace(initializer_list<U>, Args&&...);
+// T& emplace(initializer_list<U>, Args&&...);
 
 #include <any>
 #include <cassert>
@@ -42,7 +42,9 @@ void test_emplace_type() {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
-        a.emplace<Type>();
+        auto &v = a.emplace<Type>();
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
 
         assert(Tracked::count == 0);
         assert(Type::count == 1);
@@ -56,7 +58,9 @@ void test_emplace_type() {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
-        a.emplace<Type>(101);
+        auto &v = a.emplace<Type>(101);
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
 
         assert(Tracked::count == 0);
         assert(Type::count == 1);
@@ -70,7 +74,9 @@ void test_emplace_type() {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
-        a.emplace<Type>(-1, 42, -1);
+        auto &v = a.emplace<Type>(-1, 42, -1);
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
 
         assert(Tracked::count == 0);
         assert(Type::count == 1);
@@ -89,14 +95,20 @@ void test_emplace_type_tracked() {
     {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
-        a.emplace<Type>();
+        auto &v = a.emplace<Type>();
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
+
         assert(Tracked::count == 0);
         assertArgsMatch<Type>(a);
     }
     {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
-        a.emplace<Type>(-1, 42, -1);
+        auto &v = a.emplace<Type>(-1, 42, -1);
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
+
         assert(Tracked::count == 0);
         assertArgsMatch<Type, int, int, int>(a);
     }
@@ -104,7 +116,10 @@ void test_emplace_type_tracked() {
     {
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
-        a.emplace<Type>({-1, 42, -1});
+        auto &v = a.emplace<Type>({-1, 42, -1});
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
+
         assert(Tracked::count == 0);
         assertArgsMatch<Type, std::initializer_list<int>>(a);
     }
@@ -112,7 +127,10 @@ void test_emplace_type_tracked() {
         int x = 42;
         any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
-        a.emplace<Type>({-1, 42, -1}, x);
+        auto &v = a.emplace<Type>({-1, 42, -1}, x);
+        static_assert( std::is_same_v<Type&, decltype(v)>, "" );
+		assert(&v == std::any_cast<Type>(&a));
+
         assert(Tracked::count == 0);
         assertArgsMatch<Type, std::initializer_list<int>, int&>(a);
     }

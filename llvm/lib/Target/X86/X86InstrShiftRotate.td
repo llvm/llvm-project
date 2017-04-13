@@ -403,7 +403,7 @@ def RCR64ri : RIi8<0xC1, MRM3r, (outs GR64:$dst), (ins GR64:$src1, u8imm:$cnt),
 
 } // Constraints = "$src = $dst"
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
+let SchedRW = [WriteShiftLd, WriteRMW], mayStore = 1 in {
 let Uses = [EFLAGS] in {
 def RCL8m1 : I<0xD0, MRM2m, (outs), (ins i8mem:$dst),
                "rcl{b}\t$dst", [], IIC_SR>;

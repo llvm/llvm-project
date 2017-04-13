@@ -4627,6 +4627,10 @@ Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
     Result = SimplifyCastInst(I->getOpcode(), I->getOperand(0), I->getType(),
                               DL, TLI, DT, AC, I);
     break;
+  case Instruction::Alloca:
+    // No simplifications for Alloca and it can't be constant folded.
+    Result = nullptr;
+    break;
   }
 
   // In general, it is possible for computeKnownBits to determine all bits in a

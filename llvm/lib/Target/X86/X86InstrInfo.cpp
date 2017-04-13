@@ -3616,18 +3616,13 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getParent()->getParent();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
 
-  if (MI.getOpcode() == getCallFrameSetupOpcode() ||
-      MI.getOpcode() == getCallFrameDestroyOpcode()) {
+  if (isFrameInstr(MI)) {
     unsigned StackAlign = TFI->getStackAlignment();
-    int SPAdj =
-        (MI.getOperand(0).getImm() + StackAlign - 1) / StackAlign * StackAlign;
-
-    SPAdj -= MI.getOperand(1).getImm();
-
-    if (MI.getOpcode() == getCallFrameSetupOpcode())
-      return SPAdj;
-    else
-      return -SPAdj;
+    int SPAdj = alignTo(getFrameSize(MI), StackAlign);
+    SPAdj -= getFrameAdjustment(MI);
+    if (!isFrameSetup(MI))
+      SPAdj = -SPAdj;
+    return SPAdj;
   }
 
   // To know whether a call adjusts the stack, we need information

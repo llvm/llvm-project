@@ -553,21 +553,12 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
     return false;
 
+  // Ensure every user of the phi node is dominated by the previous value.
+  // The dominance requirement ensures the loop vectorizer will not need to
+  // vectorize the initial value prior to the first iteration of the loop.
   for (User *U : Phi->users())
     if (auto *I = dyn_cast<Instruction>(U)) {
-      // Ensure every user of the phi node is dominated by the previous value.
-      // The dominance requirement ensures the loop vectorizer will not need to
-      // vectorize the initial value prior to the first iteration of the loop.
       if (!DT->dominates(Previous, I))
-        return false;
-      // When the phi node has users outside the loop, the current logic for
-      // fixFirstOrderRecurrences may generate incorrect code. Specifically, we
-      // extract the last element from the vectorized phi, which would be the
-      // update to the phi before exiting the loop. However, what we want is the
-      // previous phi value before the update (i.e. the second last update
-      // before end of the vectorized loop).
-      // See added test cases in first-order-recurrence.ll
-      if (!TheLoop->contains(I))
         return false;
     }
 

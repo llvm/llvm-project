@@ -480,8 +480,8 @@ public:
     void swap(__map_value_compare&__y)
         _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value)
     {
-        using _VSTD::swap;
-        swap(static_cast<const _Compare&>(*this), static_cast<const _Compare&>(__y));
+      using _VSTD::swap;
+      swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
     }
 
 #if _LIBCPP_STD_VER > 11

@@ -87,7 +87,7 @@ namespace std {
     constexpr optional() noexcept;
     constexpr optional(nullopt_t) noexcept;
     optional(const optional &);
-    optional(optional &&) noexcept(see below );
+    optional(optional &&) noexcept(see below);
     template <class... Args> constexpr explicit optional(in_place_t, Args &&...);
     template <class U, class... Args>
       constexpr explicit optional(in_place_t, initializer_list<U>, Args &&...);
@@ -108,9 +108,9 @@ namespace std {
     template <class U = T> optional &operator=(U &&);
     template <class U> optional &operator=(const optional<U> &);
     template <class U> optional &operator=(optional<U> &&);
-    template <class... Args> void emplace(Args &&...);
+    template <class... Args> T& emplace(Args &&...);
     template <class U, class... Args>
-      void emplace(initializer_list<U>, Args &&...);
+      T& emplace(initializer_list<U>, Args &&...);
 
     // 20.6.3.4, swap
     void swap(optional &) noexcept(see below );
@@ -729,11 +729,12 @@ public:
                       >
              >
     _LIBCPP_INLINE_VISIBILITY
-    void
+    _Tp &
     emplace(_Args&&... __args)
     {
         reset();
         this->__construct(_VSTD::forward<_Args>(__args)...);
+        return this->__get();
     }
 
     template <class _Up, class... _Args,
@@ -743,11 +744,12 @@ public:
                       >
              >
     _LIBCPP_INLINE_VISIBILITY
-    void
+    _Tp &
     emplace(initializer_list<_Up> __il, _Args&&... __args)
     {
         reset();
         this->__construct(__il, _VSTD::forward<_Args>(__args)...);
+        return this->__get();
     }
 
     _LIBCPP_INLINE_VISIBILITY

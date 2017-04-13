@@ -31,6 +31,7 @@ namespace clang {
     UTT_HasTrivialDestructor,
     UTT_HasVirtualDestructor,
     UTT_IsAbstract,
+    UTT_IsAggregate,
     UTT_IsArithmetic,
     UTT_IsArray,
     UTT_IsClass,

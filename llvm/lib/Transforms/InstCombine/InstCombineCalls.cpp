@@ -4054,10 +4054,10 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
 
   // Okay, we decided that this is a safe thing to do: go ahead and start
   // inserting cast instructions as necessary.
-  std::vector<Value*> Args;
+  SmallVector<Value *, 8> Args;
+  SmallVector<AttributeSet, 8> ArgAttrs;
   Args.reserve(NumActualArgs);
-  SmallVector<AttributeList, 8> attrVec;
-  attrVec.reserve(NumCommonArgs);
+  ArgAttrs.reserve(NumActualArgs);
 
   // Get any return attributes.
   AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
@@ -4066,32 +4066,25 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   // with the existing attributes.  Wipe out any problematic attributes.
   RAttrs.remove(AttributeFuncs::typeIncompatible(NewRetTy));
 
-  // Add the new return attributes.
-  if (RAttrs.hasAttributes())
-    attrVec.push_back(AttributeList::get(Caller->getContext(),
-                                         AttributeList::ReturnIndex, RAttrs));
-
   AI = CS.arg_begin();
   for (unsigned i = 0; i != NumCommonArgs; ++i, ++AI) {
     Type *ParamTy = FT->getParamType(i);
 
-    if ((*AI)->getType() == ParamTy) {
-      Args.push_back(*AI);
-    } else {
-      Args.push_back(Builder->CreateBitOrPointerCast(*AI, ParamTy));
-    }
+    Value *NewArg = *AI;
+    if ((*AI)->getType() != ParamTy)
+      NewArg = Builder->CreateBitOrPointerCast(*AI, ParamTy);
+    Args.push_back(NewArg);
 
     // Add any parameter attributes.
-    AttrBuilder PAttrs(CallerPAL.getParamAttributes(i + 1));
-    if (PAttrs.hasAttributes())
-      attrVec.push_back(
-          AttributeList::get(Caller->getContext(), i + 1, PAttrs));
+    ArgAttrs.push_back(CallerPAL.getParamAttributes(i + 1));
   }
 
   // If the function takes more arguments than the call was taking, add them
   // now.
-  for (unsigned i = NumCommonArgs; i != FT->getNumParams(); ++i)
+  for (unsigned i = NumCommonArgs; i != FT->getNumParams(); ++i) {
     Args.push_back(Constant::getNullValue(FT->getParamType(i)));
+    ArgAttrs.push_back(AttributeSet());
+  }
 
   // If we are removing arguments to the function, emit an obnoxious warning.
   if (FT->getNumParams() < NumActualArgs) {
@@ -4100,62 +4093,56 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
       // Add all of the arguments in their promoted form to the arg list.
       for (unsigned i = FT->getNumParams(); i != NumActualArgs; ++i, ++AI) {
         Type *PTy = getPromotedType((*AI)->getType());
+        Value *NewArg = *AI;
         if (PTy != (*AI)->getType()) {
           // Must promote to pass through va_arg area!
           Instruction::CastOps opcode =
             CastInst::getCastOpcode(*AI, false, PTy, false);
-          Args.push_back(Builder->CreateCast(opcode, *AI, PTy));
-        } else {
-          Args.push_back(*AI);
+          NewArg = Builder->CreateCast(opcode, *AI, PTy);
         }
+        Args.push_back(NewArg);
 
         // Add any parameter attributes.
-        AttrBuilder PAttrs(CallerPAL.getParamAttributes(i + 1));
-        if (PAttrs.hasAttributes())
-          attrVec.push_back(
-              AttributeList::get(FT->getContext(), i + 1, PAttrs));
+        ArgAttrs.push_back(CallerPAL.getParamAttributes(i + 1));
       }
     }
   }
 
   AttributeSet FnAttrs = CallerPAL.getFnAttributes();
-  if (CallerPAL.hasAttributes(AttributeList::FunctionIndex))
-    attrVec.push_back(AttributeList::get(Callee->getContext(),
-                                         AttributeList::FunctionIndex,
-                                         AttrBuilder(FnAttrs)));
 
   if (NewRetTy->isVoidTy())
     Caller->setName("");   // Void type should not have a name.
 
-  const AttributeList &NewCallerPAL =
-      AttributeList::get(Callee->getContext(), attrVec);
+  assert((ArgAttrs.size() == FT->getNumParams() || FT->isVarArg()) &&
+         "missing argument attributes");
+  LLVMContext &Ctx = Callee->getContext();
+  AttributeList NewCallerPAL = AttributeList::get(
+      Ctx, FnAttrs, AttributeSet::get(Ctx, RAttrs), ArgAttrs);
 
   SmallVector<OperandBundleDef, 1> OpBundles;
   CS.getOperandBundlesAsDefs(OpBundles);
 
-  Instruction *NC;
+  CallSite NewCS;
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
-    NC = Builder->CreateInvoke(Callee, II->getNormalDest(), II->getUnwindDest(),
-                               Args, OpBundles);
-    NC->takeName(II);
-    cast<InvokeInst>(NC)->setCallingConv(II->getCallingConv());
-    cast<InvokeInst>(NC)->setAttributes(NewCallerPAL);
+    NewCS = Builder->CreateInvoke(Callee, II->getNormalDest(),
+                                  II->getUnwindDest(), Args, OpBundles);
   } else {
-    CallInst *CI = cast<CallInst>(Caller);
-    NC = Builder->CreateCall(Callee, Args, OpBundles);
-    NC->takeName(CI);
-    // Preserve the weight metadata for the new call instruction. The metadata
-    // is used by SamplePGO to check callsite's hotness.
-    uint64_t W;
-    if (CI->extractProfTotalWeight(W))
-      NC->setProfWeight(W);
-
-    cast<CallInst>(NC)->setTailCallKind(CI->getTailCallKind());
-    cast<CallInst>(NC)->setCallingConv(CI->getCallingConv());
-    cast<CallInst>(NC)->setAttributes(NewCallerPAL);
+    NewCS = Builder->CreateCall(Callee, Args, OpBundles);
+    cast<CallInst>(NewCS.getInstruction())
+        ->setTailCallKind(cast<CallInst>(Caller)->getTailCallKind());
   }
+  NewCS->takeName(Caller);
+  NewCS.setCallingConv(CS.getCallingConv());
+  NewCS.setAttributes(NewCallerPAL);
+
+  // Preserve the weight metadata for the new call instruction. The metadata
+  // is used by SamplePGO to check callsite's hotness.
+  uint64_t W;
+  if (Caller->extractProfTotalWeight(W))
+    NewCS->setProfWeight(W);
 
   // Insert a cast of the return type as necessary.
+  Instruction *NC = NewCS.getInstruction();
   Value *NV = NC;
   if (OldRetTy != NV->getType() && !Caller->use_empty()) {
     if (!NV->getType()->isVoidTy()) {
@@ -4232,15 +4219,12 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
     if (NestTy) {
       Instruction *Caller = CS.getInstruction();
       std::vector<Value*> NewArgs;
-      std::vector<AttributeSet> NewAttrs;
+      std::vector<AttributeSet> NewArgAttrs;
       NewArgs.reserve(CS.arg_size() + 1);
-      NewAttrs.reserve(CS.arg_size() + 2);
+      NewArgAttrs.reserve(CS.arg_size());
 
       // Insert the nest argument into the call argument list, which may
       // mean appending it.  Likewise for attributes.
-
-      // Add any result attributes.
-      NewAttrs.push_back(Attrs.getRetAttributes());
 
       {
         unsigned Idx = 1;
@@ -4252,7 +4236,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
             if (NestVal->getType() != NestTy)
               NestVal = Builder->CreateBitCast(NestVal, NestTy, "nest");
             NewArgs.push_back(NestVal);
-            NewAttrs.push_back(NestAttr);
+            NewArgAttrs.push_back(NestAttr);
           }
 
           if (I == E)
@@ -4260,15 +4244,12 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
 
           // Add the original argument and attributes.
           NewArgs.push_back(*I);
-          NewAttrs.push_back(Attrs.getParamAttributes(Idx));
+          NewArgAttrs.push_back(Attrs.getParamAttributes(Idx));
 
           ++Idx;
           ++I;
         } while (true);
       }
-
-      // Add any function attributes.
-      NewAttrs.push_back(Attrs.getFnAttributes());
 
       // The trampoline may have been bitcast to a bogus type (FTy).
       // Handle this by synthesizing a new function type, equal to FTy
@@ -4308,7 +4289,9 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
         NestF->getType() == PointerType::getUnqual(NewFTy) ?
         NestF : ConstantExpr::getBitCast(NestF,
                                          PointerType::getUnqual(NewFTy));
-      AttributeList NewPAL = AttributeList::get(FTy->getContext(), NewAttrs);
+      AttributeList NewPAL =
+          AttributeList::get(FTy->getContext(), Attrs.getFnAttributes(),
+                             Attrs.getRetAttributes(), NewArgAttrs);
 
       SmallVector<OperandBundleDef, 1> OpBundles;
       CS.getOperandBundlesAsDefs(OpBundles);

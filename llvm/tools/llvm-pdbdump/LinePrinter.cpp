@@ -12,6 +12,7 @@
 #include "llvm-pdbdump.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/PDB/UDTLayout.h"
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
@@ -70,8 +71,20 @@ void LinePrinter::NewLine() {
   OS.indent(CurrentIndent);
 }
 
-bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName) {
-  return IsItemExcluded(TypeName, IncludeTypeFilters, ExcludeTypeFilters);
+bool LinePrinter::IsClassExcluded(const ClassLayout &Class) {
+  if (IsTypeExcluded(Class.getUDTName(), Class.getClassSize()))
+    return true;
+  if (Class.deepPaddingSize() < opts::pretty::PaddingThreshold)
+    return true;
+  return false;
+}
+
+bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName, uint32_t Size) {
+  if (IsItemExcluded(TypeName, IncludeTypeFilters, ExcludeTypeFilters))
+    return true;
+  if (Size < opts::pretty::SizeThreshold)
+    return true;
+  return false;
 }
 
 bool LinePrinter::IsSymbolExcluded(llvm::StringRef SymbolName) {

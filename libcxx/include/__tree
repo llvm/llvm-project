@@ -1502,7 +1502,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp)
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_allocator(__a)),
+      __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0)
 {
     __begin_node() = __end_node();
@@ -1512,7 +1512,7 @@ template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp,
                                            const allocator_type& __a)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_allocator(__a)),
+      __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0, __comp)
 {
     __begin_node() = __end_node();
@@ -1669,7 +1669,7 @@ __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _Input
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
+      __pair1_(__second_tag(), __node_traits::select_on_container_copy_construction(__t.__node_alloc())),
       __pair3_(0, __t.value_comp())
 {
     __begin_node() = __end_node();
@@ -1699,7 +1699,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t)
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
-    : __pair1_(__node_allocator(__a)),
+    : __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0, _VSTD::move(__t.value_comp()))
 {
     if (__a == __t.__alloc())

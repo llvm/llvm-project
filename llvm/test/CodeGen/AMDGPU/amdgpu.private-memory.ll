@@ -27,8 +27,6 @@
 ; HSA-PROMOTE: workgroup_group_segment_byte_size = 5120
 ; HSA-PROMOTE: .end_amd_kernel_code_t
 
-; FIXME: These should be merged
-; HSA-PROMOTE: s_load_dword s{{[0-9]+}}, s[4:5], 0x1
 ; HSA-PROMOTE: s_load_dword s{{[0-9]+}}, s[4:5], 0x2
 
 ; SI-PROMOTE: ds_write_b32
@@ -58,9 +56,9 @@
 ; HSAOPT: [[LDZU:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP1]], align 4, !range !1, !invariant.load !0
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
-; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !1
-; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.y(), !range !1
-; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.z(), !range !1
+; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !2
+; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.y(), !range !2
+; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.z(), !range !2
 
 ; HSAOPT: [[Y_SIZE_X_Z_SIZE:%[0-9]+]] = mul nuw nsw i32 [[EXTRACTY]], [[LDZU]]
 ; HSAOPT: [[YZ_X_XID:%[0-9]+]] = mul i32 [[Y_SIZE_X_Z_SIZE]], [[WORKITEM_ID_X]]
@@ -77,9 +75,9 @@
 
 ; NOHSAOPT: call i32 @llvm.r600.read.local.size.y(), !range !0
 ; NOHSAOPT: call i32 @llvm.r600.read.local.size.z(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !0
+; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !1
+; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !1
+; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !1
 define amdgpu_kernel void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
@@ -557,6 +555,8 @@ entry:
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }
 
 ; HSAOPT: !0 = !{}
-; HSAOPT: !1 = !{i32 0, i32 2048}
+; HSAOPT: !1 = !{i32 0, i32 257}
+; HSAOPT: !2 = !{i32 0, i32 256}
 
-; NOHSAOPT: !0 = !{i32 0, i32 2048}
+; NOHSAOPT: !0 = !{i32 0, i32 257}
+; NOHSAOPT: !1 = !{i32 0, i32 256}

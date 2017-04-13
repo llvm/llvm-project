@@ -125,6 +125,8 @@ Error Builder::addSymbol(ModuleSymbolTable::Symbol Msym) {
     Sym.Flags |= 1 << storage::Symbol::FB_global;
   if (Flags & object::BasicSymbolRef::SF_FormatSpecific)
     Sym.Flags |= 1 << storage::Symbol::FB_format_specific;
+  if (Flags & object::BasicSymbolRef::SF_Executable)
+    Sym.Flags |= 1 << storage::Symbol::FB_executable;
 
   Sym.ComdatIndex = -1;
   auto *GV = Msym.dyn_cast<GlobalValue *>();

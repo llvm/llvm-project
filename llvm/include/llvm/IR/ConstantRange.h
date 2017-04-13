@@ -45,9 +45,6 @@ class MDNode;
 class ConstantRange {
   APInt Lower, Upper;
 
-  // If we have move semantics, pass APInts by value and move them into place.
-  typedef APInt APIntMoveTy;
-
 public:
   /// Initialize a full (the default) or empty set for the specified bit width.
   ///
@@ -55,12 +52,12 @@ public:
 
   /// Initialize a range to hold the single specified value.
   ///
-  ConstantRange(APIntMoveTy Value);
+  ConstantRange(APInt Value);
 
   /// @brief Initialize a range of values explicitly. This will assert out if
   /// Lower==Upper and Lower != Min or Max value for its type. It will also
   /// assert out if the two APInt's are not the same bit width.
-  ConstantRange(APIntMoveTy Lower, APIntMoveTy Upper);
+  ConstantRange(APInt Lower, APInt Upper);
 
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the

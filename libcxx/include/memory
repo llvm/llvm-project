@@ -653,7 +653,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <tuple>
 #include <stdexcept>
 #include <cstring>
-
+#include <cassert>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif
@@ -2070,305 +2070,180 @@ public:
 };
 #endif
 
-template <class _T1, class _T2, bool = is_same<typename remove_cv<_T1>::type,
-                                                     typename remove_cv<_T2>::type>::value,
-                                bool = is_empty<_T1>::value
-                                       && !__libcpp_is_final<_T1>::value,
-                                bool = is_empty<_T2>::value
-                                       && !__libcpp_is_final<_T2>::value
-         >
-struct __libcpp_compressed_pair_switch;
+template <class _Tp, int _Idx,
+          bool _CanBeEmptyBase =
+              is_empty<_Tp>::value && !__libcpp_is_final<_Tp>::value>
+struct __compressed_pair_elem {
+  typedef _Tp _ParamT;
+  typedef _Tp& reference;
+  typedef const _Tp& const_reference;
 
-template <class _T1, class _T2, bool IsSame>
-struct __libcpp_compressed_pair_switch<_T1, _T2, IsSame, false, false> {enum {value = 0};};
+#ifndef _LIBCPP_CXX03_LANG
+  template <bool _Dummy = true, class = typename enable_if<
+      __dependent_type<is_default_constructible<_Tp>, _Dummy>::value
+    >::type
+  >
+  _LIBCPP_CONSTEXPR __compressed_pair_elem()
+      _NOEXCEPT_(is_nothrow_default_constructible<_Tp>::value)
+    : __value_() {}
 
-template <class _T1, class _T2, bool IsSame>
-struct __libcpp_compressed_pair_switch<_T1, _T2, IsSame, true, false>  {enum {value = 1};};
+  template <class _Up, class = typename enable_if<
+                           !is_same<__compressed_pair_elem, _Up>::value>::type>
+  _LIBCPP_CONSTEXPR explicit
+  __compressed_pair_elem(_Up&& __u)
+      : __value_(_VSTD::forward<_Up>(__u)){};
 
-template <class _T1, class _T2, bool IsSame>
-struct __libcpp_compressed_pair_switch<_T1, _T2, IsSame, false, true>  {enum {value = 2};};
+  template <class... _Args, size_t... _Indexes>
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+  __compressed_pair_elem(piecewise_construct_t, tuple<_Args...> __args,
+                         __tuple_indices<_Indexes...>)
+      : __value_(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
+#else
+  __compressed_pair_elem() : __value_() {}
+  __compressed_pair_elem(_ParamT __p) : __value_(std::forward<_ParamT>(__p)) {}
+#endif
 
-template <class _T1, class _T2>
-struct __libcpp_compressed_pair_switch<_T1, _T2, false, true, true>    {enum {value = 3};};
+  reference __get() _NOEXCEPT { return __value_; }
+  const_reference __get() const _NOEXCEPT { return __value_; }
 
-template <class _T1, class _T2>
-struct __libcpp_compressed_pair_switch<_T1, _T2, true, true, true>     {enum {value = 1};};
-
-template <class _T1, class _T2, unsigned = __libcpp_compressed_pair_switch<_T1, _T2>::value>
-class __libcpp_compressed_pair_imp;
-
-template <class _T1, class _T2>
-class __libcpp_compressed_pair_imp<_T1, _T2, 0>
-{
 private:
-    _T1 __first_;
-    _T2 __second_;
-public:
-    typedef _T1 _T1_param;
-    typedef _T2 _T2_param;
-
-    typedef typename remove_reference<_T1>::type& _T1_reference;
-    typedef typename remove_reference<_T2>::type& _T2_reference;
-
-    typedef const typename remove_reference<_T1>::type& _T1_const_reference;
-    typedef const typename remove_reference<_T2>::type& _T2_const_reference;
-
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp() : __first_(), __second_() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T1_param __t1)
-        : __first_(_VSTD::forward<_T1_param>(__t1)), __second_() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T2_param __t2)
-        : __first_(), __second_(_VSTD::forward<_T2_param>(__t2)) {}
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
-        : __first_(_VSTD::forward<_T1_param>(__t1)), __second_(_VSTD::forward<_T2_param>(__t2)) {}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-    template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-        _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t,
-                                     tuple<_Args1...> __first_args,
-                                     tuple<_Args2...> __second_args,
-                                     __tuple_indices<_I1...>,
-                                     __tuple_indices<_I2...>)
-            : __first_(_VSTD::forward<_Args1>(_VSTD::get<_I1>(__first_args))...),
-              __second_(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...)
-            {}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-    _LIBCPP_INLINE_VISIBILITY _T1_reference       first() _NOEXCEPT       {return __first_;}
-    _LIBCPP_INLINE_VISIBILITY _T1_const_reference first() const _NOEXCEPT {return __first_;}
-
-    _LIBCPP_INLINE_VISIBILITY _T2_reference       second() _NOEXCEPT       {return __second_;}
-    _LIBCPP_INLINE_VISIBILITY _T2_const_reference second() const _NOEXCEPT {return __second_;}
-
-    _LIBCPP_INLINE_VISIBILITY void swap(__libcpp_compressed_pair_imp& __x)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-    {
-        using _VSTD::swap;
-        swap(__first_, __x.__first_);
-        swap(__second_, __x.__second_);
-    }
+  _Tp __value_;
 };
 
-template <class _T1, class _T2>
-class __libcpp_compressed_pair_imp<_T1, _T2, 1>
-    : private _T1
-{
-private:
-    _T2 __second_;
-public:
-    typedef _T1 _T1_param;
-    typedef _T2 _T2_param;
+template <class _Tp, int _Idx>
+struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
+  typedef _Tp _ParamT;
+  typedef _Tp& reference;
+  typedef const _Tp& const_reference;
+  typedef _Tp __value_type;
 
-    typedef _T1&                                        _T1_reference;
-    typedef typename remove_reference<_T2>::type& _T2_reference;
+#ifndef _LIBCPP_CXX03_LANG
+  _LIBCPP_CONSTEXPR __compressed_pair_elem() = default;
 
-    typedef const _T1&                                        _T1_const_reference;
-    typedef const typename remove_reference<_T2>::type& _T2_const_reference;
+  template <class _Up, class = typename enable_if<
+                           !is_same<__compressed_pair_elem, _Up>::value>::type>
+  _LIBCPP_CONSTEXPR explicit
+  __compressed_pair_elem(_Up&& __u)
+      : __value_type(_VSTD::forward<_Up>(__u)){};
 
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp() : __second_() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T1_param __t1)
-        : _T1(_VSTD::forward<_T1_param>(__t1)), __second_() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T2_param __t2)
-        : __second_(_VSTD::forward<_T2_param>(__t2)) {}
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
-        : _T1(_VSTD::forward<_T1_param>(__t1)), __second_(_VSTD::forward<_T2_param>(__t2)) {}
+  template <class... _Args, size_t... _Indexes>
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+  __compressed_pair_elem(piecewise_construct_t, tuple<_Args...> __args,
+                         __tuple_indices<_Indexes...>)
+      : __value_type(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
+#else
+  __compressed_pair_elem() : __value_type() {}
+  __compressed_pair_elem(_ParamT __p)
+      : __value_type(std::forward<_ParamT>(__p)) {}
+#endif
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-    template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-        _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t,
-                                     tuple<_Args1...> __first_args,
-                                     tuple<_Args2...> __second_args,
-                                     __tuple_indices<_I1...>,
-                                     __tuple_indices<_I2...>)
-            : _T1(_VSTD::forward<_Args1>(_VSTD::get<_I1>(__first_args))...),
-              __second_(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...)
-            {}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-    _LIBCPP_INLINE_VISIBILITY _T1_reference       first() _NOEXCEPT       {return *this;}
-    _LIBCPP_INLINE_VISIBILITY _T1_const_reference first() const _NOEXCEPT {return *this;}
-
-    _LIBCPP_INLINE_VISIBILITY _T2_reference       second() _NOEXCEPT       {return __second_;}
-    _LIBCPP_INLINE_VISIBILITY _T2_const_reference second() const _NOEXCEPT {return __second_;}
-
-    _LIBCPP_INLINE_VISIBILITY void swap(__libcpp_compressed_pair_imp& __x)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-    {
-        using _VSTD::swap;
-        swap(__second_, __x.__second_);
-    }
+  reference __get() _NOEXCEPT { return *this; }
+  const_reference __get() const _NOEXCEPT { return *this; }
 };
 
-template <class _T1, class _T2>
-class __libcpp_compressed_pair_imp<_T1, _T2, 2>
-    : private _T2
-{
-private:
-    _T1 __first_;
-public:
-    typedef _T1 _T1_param;
-    typedef _T2 _T2_param;
-
-    typedef typename remove_reference<_T1>::type& _T1_reference;
-    typedef _T2&                                        _T2_reference;
-
-    typedef const typename remove_reference<_T1>::type& _T1_const_reference;
-    typedef const _T2&                                        _T2_const_reference;
-
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp() : __first_() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T1_param __t1)
-        : __first_(_VSTD::forward<_T1_param>(__t1)) {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T2_param __t2)
-        : _T2(_VSTD::forward<_T2_param>(__t2)), __first_() {}
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : _T2(_VSTD::forward<_T2_param>(__t2)), __first_(_VSTD::forward<_T1_param>(__t1)) {}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-    template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-        _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t,
-                                     tuple<_Args1...> __first_args,
-                                     tuple<_Args2...> __second_args,
-                                     __tuple_indices<_I1...>,
-                                     __tuple_indices<_I2...>)
-            : _T2(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...),
-              __first_(_VSTD::forward<_Args1>(_VSTD::get<_I1>(__first_args))...)
-              
-            {}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-    _LIBCPP_INLINE_VISIBILITY _T1_reference       first() _NOEXCEPT       {return __first_;}
-    _LIBCPP_INLINE_VISIBILITY _T1_const_reference first() const _NOEXCEPT {return __first_;}
-
-    _LIBCPP_INLINE_VISIBILITY _T2_reference       second() _NOEXCEPT       {return *this;}
-    _LIBCPP_INLINE_VISIBILITY _T2_const_reference second() const _NOEXCEPT {return *this;}
-
-    _LIBCPP_INLINE_VISIBILITY void swap(__libcpp_compressed_pair_imp& __x)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-    {
-        using _VSTD::swap;
-        swap(__first_, __x.__first_);
-    }
-};
+// Tag used to construct the second element of the compressed pair.
+struct __second_tag {};
 
 template <class _T1, class _T2>
-class __libcpp_compressed_pair_imp<_T1, _T2, 3>
-    : private _T1,
-      private _T2
-{
+class __compressed_pair : private __compressed_pair_elem<_T1, 0>,
+                          private __compressed_pair_elem<_T2, 1> {
+  typedef __compressed_pair_elem<_T1, 0> _Base1;
+  typedef __compressed_pair_elem<_T2, 1> _Base2;
+
+  // NOTE: This static assert should never fire because __compressed_pair
+  // is *almost never* used in a scenario where it's possible for T1 == T2.
+  // (The exception is std::function where it is possible that the function
+  //  object and the allocator have the same type).
+  static_assert((!is_same<_T1, _T2>::value),
+    "__compressed_pair cannot be instantated when T1 and T2 are the same type; "
+    "The current implementation is NOT ABI-compatible with the previous "
+    "implementation for this configuration");
+
 public:
-    typedef _T1 _T1_param;
-    typedef _T2 _T2_param;
+#ifndef _LIBCPP_CXX03_LANG
+  _LIBCPP_INLINE_VISIBILITY
+  __compressed_pair() = default;
 
-    typedef _T1& _T1_reference;
-    typedef _T2& _T2_reference;
+  template <class _Tp, typename enable_if<!is_same<typename decay<_Tp>::type,
+                                                   __compressed_pair>::value,
+                                          bool>::type = true>
+  _LIBCPP_INLINE_VISIBILITY constexpr explicit
+  __compressed_pair(_Tp&& __t)
+      : _Base1(std::forward<_Tp>(__t)), _Base2() {}
 
-    typedef const _T1& _T1_const_reference;
-    typedef const _T2& _T2_const_reference;
+  template <class _Tp>
+  _LIBCPP_INLINE_VISIBILITY constexpr
+  __compressed_pair(__second_tag, _Tp&& __t)
+      : _Base1(), _Base2(std::forward<_Tp>(__t)) {}
 
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T1_param __t1)
-        : _T1(_VSTD::forward<_T1_param>(__t1)) {}
-    _LIBCPP_INLINE_VISIBILITY explicit __libcpp_compressed_pair_imp(_T2_param __t2)
-        : _T2(_VSTD::forward<_T2_param>(__t2)) {}
-    _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
-        : _T1(_VSTD::forward<_T1_param>(__t1)), _T2(_VSTD::forward<_T2_param>(__t2)) {}
+  template <class _U1, class _U2>
+  _LIBCPP_INLINE_VISIBILITY constexpr
+  __compressed_pair(_U1&& __t1, _U2&& __t2)
+      : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+  template <class... _Args1, class... _Args2>
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+  __compressed_pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args,
+                    tuple<_Args2...> __second_args)
+      : _Base1(__pc, _VSTD::move(__first_args),
+               typename __make_tuple_indices<sizeof...(_Args1)>::type()),
+        _Base2(__pc, _VSTD::move(__second_args),
+               typename __make_tuple_indices<sizeof...(_Args2)>::type()) {}
 
-    template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-        _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t,
-                                     tuple<_Args1...> __first_args,
-                                     tuple<_Args2...> __second_args,
-                                     __tuple_indices<_I1...>,
-                                     __tuple_indices<_I2...>)
-            : _T1(_VSTD::forward<_Args1>(_VSTD::get<_I1>(__first_args))...),
-              _T2(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...)
-            {}
+#else
+  _LIBCPP_INLINE_VISIBILITY
+  __compressed_pair() {}
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+  _LIBCPP_INLINE_VISIBILITY explicit
+  __compressed_pair(_T1 __t1) : _Base1(_VSTD::forward<_T1>(__t1)) {}
 
-    _LIBCPP_INLINE_VISIBILITY _T1_reference       first() _NOEXCEPT       {return *this;}
-    _LIBCPP_INLINE_VISIBILITY _T1_const_reference first() const _NOEXCEPT {return *this;}
+  _LIBCPP_INLINE_VISIBILITY
+  __compressed_pair(__second_tag, _T2 __t2)
+      : _Base1(), _Base2(_VSTD::forward<_T2>(__t2)) {}
 
-    _LIBCPP_INLINE_VISIBILITY _T2_reference       second() _NOEXCEPT       {return *this;}
-    _LIBCPP_INLINE_VISIBILITY _T2_const_reference second() const _NOEXCEPT {return *this;}
+  _LIBCPP_INLINE_VISIBILITY
+  __compressed_pair(_T1 __t1, _T2 __t2)
+      : _Base1(_VSTD::forward<_T1>(__t1)), _Base2(_VSTD::forward<_T2>(__t2)) {}
+#endif
 
-    _LIBCPP_INLINE_VISIBILITY void swap(__libcpp_compressed_pair_imp&)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-    {
-    }
-};
+  _LIBCPP_INLINE_VISIBILITY
+  typename _Base1::reference first() _NOEXCEPT {
+    return static_cast<_Base1&>(*this).__get();
+  }
 
-template <class _T1, class _T2>
-class __compressed_pair
-    : private __libcpp_compressed_pair_imp<_T1, _T2>
-{
-    typedef __libcpp_compressed_pair_imp<_T1, _T2> base;
-public:
-    typedef typename base::_T1_param _T1_param;
-    typedef typename base::_T2_param _T2_param;
+  _LIBCPP_INLINE_VISIBILITY
+  typename _Base1::const_reference first() const _NOEXCEPT {
+    return static_cast<_Base1 const&>(*this).__get();
+  }
 
-    typedef typename base::_T1_reference _T1_reference;
-    typedef typename base::_T2_reference _T2_reference;
+  _LIBCPP_INLINE_VISIBILITY
+  typename _Base2::reference second() _NOEXCEPT {
+    return static_cast<_Base2&>(*this).__get();
+  }
 
-    typedef typename base::_T1_const_reference _T1_const_reference;
-    typedef typename base::_T2_const_reference _T2_const_reference;
+  _LIBCPP_INLINE_VISIBILITY
+  typename _Base2::const_reference second() const _NOEXCEPT {
+    return static_cast<_Base2 const&>(*this).__get();
+  }
 
-    _LIBCPP_INLINE_VISIBILITY __compressed_pair() {}
-    _LIBCPP_INLINE_VISIBILITY explicit __compressed_pair(_T1_param __t1)
-        : base(_VSTD::forward<_T1_param>(__t1)) {}
-    _LIBCPP_INLINE_VISIBILITY explicit __compressed_pair(_T2_param __t2)
-        : base(_VSTD::forward<_T2_param>(__t2)) {}
-    _LIBCPP_INLINE_VISIBILITY __compressed_pair(_T1_param __t1, _T2_param __t2)
-        : base(_VSTD::forward<_T1_param>(__t1), _VSTD::forward<_T2_param>(__t2)) {}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-    template <class... _Args1, class... _Args2>
-        _LIBCPP_INLINE_VISIBILITY
-        __compressed_pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args,
-                                                      tuple<_Args2...> __second_args)
-            : base(__pc, _VSTD::move(__first_args), _VSTD::move(__second_args),
-                   typename __make_tuple_indices<sizeof...(_Args1)>::type(),
-                   typename __make_tuple_indices<sizeof...(_Args2) >::type())
-            {}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-    _LIBCPP_INLINE_VISIBILITY _T1_reference       first() _NOEXCEPT       {return base::first();}
-    _LIBCPP_INLINE_VISIBILITY _T1_const_reference first() const _NOEXCEPT {return base::first();}
-
-    _LIBCPP_INLINE_VISIBILITY _T2_reference       second() _NOEXCEPT       {return base::second();}
-    _LIBCPP_INLINE_VISIBILITY _T2_const_reference second() const _NOEXCEPT {return base::second();}
-
-    _LIBCPP_INLINE_VISIBILITY void swap(__compressed_pair& __x)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-        {base::swap(__x);}
+  _LIBCPP_INLINE_VISIBILITY
+  void swap(__compressed_pair& __x)
+    _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
+               __is_nothrow_swappable<_T2>::value)
+  {
+    using std::swap;
+    swap(first(), __x.first());
+    swap(second(), __x.second());
+  }
 };
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY
-void
-swap(__compressed_pair<_T1, _T2>& __x, __compressed_pair<_T1, _T2>& __y)
-        _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
-                   __is_nothrow_swappable<_T2>::value)
-    {__x.swap(__y);}
+void swap(__compressed_pair<_T1, _T2>& __x, __compressed_pair<_T1, _T2>& __y)
+    _NOEXCEPT_(__is_nothrow_swappable<_T1>::value &&
+               __is_nothrow_swappable<_T2>::value) {
+  __x.swap(__y);
+}
 
 // __same_or_less_cv_qualified
 
@@ -2399,7 +2274,7 @@ struct __same_or_less_cv_qualified<_Ptr1, _Ptr2, false>
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete
 {
-#ifndef _LIBCPP_CXX03_LANG
+#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 #else
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT {}
@@ -2419,7 +2294,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete<_Tp[]>
 {
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 #else
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT {}
@@ -2459,8 +2334,9 @@ private:
 
     struct __nat {int __for_bool_;};
 
-    typedef       typename remove_reference<deleter_type>::type& _Dp_reference;
-    typedef const typename remove_reference<deleter_type>::type& _Dp_const_reference;
+    typedef typename remove_reference<deleter_type>::type& _Dp_reference;
+    typedef typename remove_reference<typename add_const<deleter_type>::type>::type&
+        _Dp_const_reference;
 public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR unique_ptr() _NOEXCEPT
         : __ptr_(pointer())
@@ -2648,8 +2524,9 @@ private:
 
     struct __nat {int __for_bool_;};
 
-    typedef       typename remove_reference<deleter_type>::type& _Dp_reference;
-    typedef const typename remove_reference<deleter_type>::type& _Dp_const_reference;
+    typedef typename remove_reference<deleter_type>::type& _Dp_reference;
+    typedef typename remove_reference<typename add_const<deleter_type>::type>::type&
+        _Dp_const_reference;
 public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR unique_ptr() _NOEXCEPT
         : __ptr_(pointer())

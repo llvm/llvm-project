@@ -37,6 +37,8 @@ public:
   FORWARD_SYMBOL_METHOD(getSignature)
   FORWARD_SYMBOL_METHOD(getSymbolsFileName)
 
+  uint32_t getPointerByteSize() const;
+
 private:
   void dumpChildren(raw_ostream &OS, StringRef Label, PDB_SymType ChildType,
                     int Indent) const;

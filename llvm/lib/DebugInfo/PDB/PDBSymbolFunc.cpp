@@ -95,3 +95,14 @@ PDBSymbolFunc::getArguments() const {
 }
 
 void PDBSymbolFunc::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }
+
+bool PDBSymbolFunc::isDestructor() const {
+  std::string Name = getName();
+  if (Name.empty())
+    return false;
+  if (Name[0] == '~')
+    return true;
+  if (Name == "__vecDelDtor")
+    return true;
+  return false;
+}

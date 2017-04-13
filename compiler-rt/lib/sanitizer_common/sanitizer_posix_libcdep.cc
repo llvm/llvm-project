@@ -418,6 +418,10 @@ int WaitForProcess(pid_t pid) {
   return process_status;
 }
 
+bool IsStateDetached(int state) {
+  return state == PTHREAD_CREATE_DETACHED;
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_POSIX

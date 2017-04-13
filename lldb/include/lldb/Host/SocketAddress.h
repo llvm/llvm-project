@@ -32,15 +32,23 @@ typedef ADDRESS_FAMILY sa_family_t;
 // Other libraries and framework includes
 // Project includes
 #include <string>
+#include <vector>
 
 namespace lldb_private {
 
 class SocketAddress {
 public:
+  //----------------------------------------------------------------------------
+  // Static method to get all address information for a host and/or service
+  //----------------------------------------------------------------------------
+  static std::vector<SocketAddress> GetAddressInfo(const char *hostname,
+                                                 const char *servname);
+
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
   SocketAddress();
+  SocketAddress(const struct addrinfo *addr_info);
   SocketAddress(const struct sockaddr &s);
   SocketAddress(const struct sockaddr_in &s);
   SocketAddress(const struct sockaddr_in6 &s);
@@ -62,6 +70,9 @@ public:
   const SocketAddress &operator=(const struct sockaddr_in6 &s);
 
   const SocketAddress &operator=(const struct sockaddr_storage &s);
+
+  bool operator==(const SocketAddress &rhs) const;
+  bool operator!=(const SocketAddress &rhs) const;
 
   //------------------------------------------------------------------
   // Clear the contents of this socket address
@@ -133,6 +144,11 @@ public:
   // Returns true if there is a valid socket address in this object.
   //------------------------------------------------------------------
   bool IsValid() const;
+
+  //------------------------------------------------------------------
+  // Returns true if the socket is INADDR_ANY
+  //------------------------------------------------------------------
+  bool IsAnyAddr() const;
 
   //------------------------------------------------------------------
   // Direct access to all of the sockaddr structures

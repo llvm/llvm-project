@@ -172,8 +172,8 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
-; SI-DAG: s_cmpk_eq_i32 s{{[0-9]+}}, 0x100
-; SI: s_cbranch_scc0 [[LABEL_LOOP]]
+; SI-DAG: v_cmp_eq_u32_e32 vcc, 0x100
+; SI: s_cbranch_vccz [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm
 

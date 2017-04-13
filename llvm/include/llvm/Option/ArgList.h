@@ -10,6 +10,7 @@
 #ifndef LLVM_OPTION_ARGLIST_H
 #define LLVM_OPTION_ARGLIST_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,40 +29,57 @@ class ArgList;
 class Option;
 
 /// arg_iterator - Iterates through arguments stored inside an ArgList.
+template<typename BaseIter, unsigned NumOptSpecifiers = 0>
 class arg_iterator {
-  /// The current argument.
-  SmallVectorImpl<Arg*>::const_iterator Current;
+  /// The current argument and the end of the sequence we're iterating.
+  BaseIter Current, End;
 
-  /// The argument list we are iterating over.
-  const ArgList &Args;
+  /// Optional filters on the arguments which will be match. To avoid a
+  /// zero-sized array, we store one specifier even if we're asked for none.
+  OptSpecifier Ids[NumOptSpecifiers ? NumOptSpecifiers : 1];
 
-  /// Optional filters on the arguments which will be match. Most clients
-  /// should never want to iterate over arguments without filters, so we won't
-  /// bother to factor this into two separate iterator implementations.
-  //
-  // FIXME: Make efficient; the idea is to provide efficient iteration over
-  // all arguments which match a particular id and then just provide an
-  // iterator combinator which takes multiple iterators which can be
-  // efficiently compared and returns them in order.
-  OptSpecifier Id0, Id1, Id2;
+  void SkipToNextArg() {
+    for (; Current != End; ++Current) {
+      // Skip erased elements.
+      if (!*Current)
+        continue;
 
-  void SkipToNextArg();
+      // Done if there are no filters.
+      if (!NumOptSpecifiers)
+        return;
+
+      // Otherwise require a match.
+      const Option &O = (*Current)->getOption();
+      for (auto Id : Ids) {
+        if (!Id.isValid())
+          break;
+        if (O.matches(Id))
+          return;
+      }
+    }
+  }
+
+  typedef std::iterator_traits<BaseIter> Traits;
 
 public:
-  typedef Arg * const *                 value_type;
-  typedef Arg * const &                 reference;
-  typedef Arg * const *                 pointer;
-  typedef std::forward_iterator_tag   iterator_category;
-  typedef std::ptrdiff_t              difference_type;
+  typedef typename Traits::value_type  value_type;
+  typedef typename Traits::reference   reference;
+  typedef typename Traits::pointer     pointer;
+  typedef std::forward_iterator_tag    iterator_category;
+  typedef std::ptrdiff_t               difference_type;
 
-  arg_iterator(SmallVectorImpl<Arg *>::const_iterator it, const ArgList &Args,
-               OptSpecifier Id0 = 0U, OptSpecifier Id1 = 0U,
-               OptSpecifier Id2 = 0U)
-      : Current(it), Args(Args), Id0(Id0), Id1(Id1), Id2(Id2) {
+  arg_iterator(
+      BaseIter Current, BaseIter End,
+      const OptSpecifier (&Ids)[NumOptSpecifiers ? NumOptSpecifiers : 1] = {})
+      : Current(Current), End(End) {
+    for (unsigned I = 0; I != NumOptSpecifiers; ++I)
+      this->Ids[I] = Ids[I];
     SkipToNextArg();
   }
 
+  // FIXME: This conversion function makes no sense.
   operator const Arg*() { return *Current; }
+
   reference operator*() const { return *Current; }
   pointer operator->() const { return Current; }
 
@@ -94,14 +112,30 @@ public:
 class ArgList {
 public:
   typedef SmallVector<Arg*, 16> arglist_type;
-  typedef arglist_type::iterator iterator;
-  typedef arglist_type::const_iterator const_iterator;
-  typedef arglist_type::reverse_iterator reverse_iterator;
-  typedef arglist_type::const_reverse_iterator const_reverse_iterator;
+  typedef arg_iterator<arglist_type::iterator> iterator;
+  typedef arg_iterator<arglist_type::const_iterator> const_iterator;
+  typedef arg_iterator<arglist_type::reverse_iterator> reverse_iterator;
+  typedef arg_iterator<arglist_type::const_reverse_iterator>
+      const_reverse_iterator;
+
+  template<unsigned N> using filtered_iterator =
+      arg_iterator<arglist_type::const_iterator, N>;
+  template<unsigned N> using filtered_reverse_iterator =
+      arg_iterator<arglist_type::const_reverse_iterator, N>;
 
 private:
   /// The internal list of arguments.
   arglist_type Args;
+
+  typedef std::pair<unsigned, unsigned> OptRange;
+  static OptRange emptyRange() { return {-1u, 0u}; }
+
+  /// The first and last index of each different OptSpecifier ID.
+  DenseMap<unsigned, OptRange> OptRanges;
+
+  /// Get the range of indexes in which options with the specified IDs might
+  /// reside, or (0, 0) if there are no such options.
+  OptRange getRange(std::initializer_list<OptSpecifier> Ids) const;
 
 protected:
   // Make the default special members protected so they won't be used to slice
@@ -113,24 +147,32 @@ protected:
   // InputArgList which deletes the contents of the container. If we could fix
   // up the ownership here (delegate storage/ownership to the derived class so
   // it can be a container of unique_ptr) this would be simpler.
-  ArgList(ArgList &&RHS) : Args(std::move(RHS.Args)) { RHS.Args.clear(); }
+  ArgList(ArgList &&RHS)
+      : Args(std::move(RHS.Args)), OptRanges(std::move(RHS.OptRanges)) {
+    RHS.Args.clear();
+    RHS.OptRanges.clear();
+  }
   ArgList &operator=(ArgList &&RHS) {
     Args = std::move(RHS.Args);
     RHS.Args.clear();
+    OptRanges = std::move(RHS.OptRanges);
+    RHS.OptRanges.clear();
     return *this;
   }
   // Protect the dtor to ensure this type is never destroyed polymorphically.
   ~ArgList() = default;
 
-public:
+  // Implicitly convert a value to an OptSpecifier. Used to work around a bug
+  // in MSVC's implementation of narrowing conversion checking.
+  static OptSpecifier toOptSpecifier(OptSpecifier S) { return S; }
 
+public:
   /// @name Arg Access
   /// @{
 
   /// append - Append \p A to the arg list.
   void append(Arg *A);
 
-  arglist_type &getArgs() { return Args; }
   const arglist_type &getArgs() const { return Args; }
 
   unsigned size() const { return Args.size(); }
@@ -139,30 +181,38 @@ public:
   /// @name Arg Iteration
   /// @{
 
-  iterator begin() { return Args.begin(); }
-  iterator end() { return Args.end(); }
+  iterator begin() { return {Args.begin(), Args.end()}; }
+  iterator end() { return {Args.end(), Args.end()}; }
 
-  reverse_iterator rbegin() { return Args.rbegin(); }
-  reverse_iterator rend() { return Args.rend(); }
+  reverse_iterator rbegin() { return {Args.rbegin(), Args.rend()}; }
+  reverse_iterator rend() { return {Args.rend(), Args.rend()}; }
 
-  const_iterator begin() const { return Args.begin(); }
-  const_iterator end() const { return Args.end(); }
+  const_iterator begin() const { return {Args.begin(), Args.end()}; }
+  const_iterator end() const { return {Args.end(), Args.end()}; }
 
-  const_reverse_iterator rbegin() const { return Args.rbegin(); }
-  const_reverse_iterator rend() const { return Args.rend(); }
+  const_reverse_iterator rbegin() const { return {Args.rbegin(), Args.rend()}; }
+  const_reverse_iterator rend() const { return {Args.rend(), Args.rend()}; }
 
-  arg_iterator filtered_begin(OptSpecifier Id0 = 0U, OptSpecifier Id1 = 0U,
-                              OptSpecifier Id2 = 0U) const {
-    return arg_iterator(Args.begin(), *this, Id0, Id1, Id2);
+  template<typename ...OptSpecifiers>
+  iterator_range<filtered_iterator<sizeof...(OptSpecifiers)>>
+  filtered(OptSpecifiers ...Ids) const {
+    OptRange Range = getRange({toOptSpecifier(Ids)...});
+    auto B = Args.begin() + Range.first;
+    auto E = Args.begin() + Range.second;
+    using Iterator = filtered_iterator<sizeof...(OptSpecifiers)>;
+    return make_range(Iterator(B, E, {toOptSpecifier(Ids)...}),
+                      Iterator(E, E, {toOptSpecifier(Ids)...}));
   }
-  arg_iterator filtered_end() const {
-    return arg_iterator(Args.end(), *this);
-  }
 
-  iterator_range<arg_iterator> filtered(OptSpecifier Id0 = 0U,
-                                        OptSpecifier Id1 = 0U,
-                                        OptSpecifier Id2 = 0U) const {
-    return make_range(filtered_begin(Id0, Id1, Id2), filtered_end());
+  template<typename ...OptSpecifiers>
+  iterator_range<filtered_reverse_iterator<sizeof...(OptSpecifiers)>>
+  filtered_reverse(OptSpecifiers ...Ids) const {
+    OptRange Range = getRange({toOptSpecifier(Ids)...});
+    auto B = Args.rend() - Range.second;
+    auto E = Args.rend() - Range.first;
+    using Iterator = filtered_reverse_iterator<sizeof...(OptSpecifiers)>;
+    return make_range(Iterator(B, E, {toOptSpecifier(Ids)...}),
+                      Iterator(E, E, {toOptSpecifier(Ids)...}));
   }
 
   /// @}
@@ -179,43 +229,34 @@ public:
   /// hasArg - Does the arg list contain any option matching \p Id.
   ///
   /// \p Claim Whether the argument should be claimed, if it exists.
-  bool hasArgNoClaim(OptSpecifier Id) const {
-    return getLastArgNoClaim(Id) != nullptr;
+  template<typename ...OptSpecifiers>
+  bool hasArgNoClaim(OptSpecifiers ...Ids) const {
+    return getLastArgNoClaim(Ids...) != nullptr;
   }
-  bool hasArg(OptSpecifier Id) const {
-    return getLastArg(Id) != nullptr;
-  }
-  bool hasArg(OptSpecifier Id0, OptSpecifier Id1) const {
-    return getLastArg(Id0, Id1) != nullptr;
-  }
-  bool hasArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2) const {
-    return getLastArg(Id0, Id1, Id2) != nullptr;
+  template<typename ...OptSpecifiers>
+  bool hasArg(OptSpecifiers ...Ids) const {
+    return getLastArg(Ids...) != nullptr;
   }
 
-  /// getLastArg - Return the last argument matching \p Id, or null.
-  ///
-  /// \p Claim Whether the argument should be claimed, if it exists.
-  Arg *getLastArgNoClaim(OptSpecifier Id) const;
-  Arg *getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1) const;
-  Arg *getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2) const;
-  Arg *getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                         OptSpecifier Id3) const;
-  Arg *getLastArg(OptSpecifier Id) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                  OptSpecifier Id3) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                  OptSpecifier Id3, OptSpecifier Id4) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                  OptSpecifier Id3, OptSpecifier Id4, OptSpecifier Id5) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                  OptSpecifier Id3, OptSpecifier Id4, OptSpecifier Id5,
-                  OptSpecifier Id6) const;
-  Arg *getLastArg(OptSpecifier Id0, OptSpecifier Id1, OptSpecifier Id2,
-                  OptSpecifier Id3, OptSpecifier Id4, OptSpecifier Id5,
-                  OptSpecifier Id6, OptSpecifier Id7) const;
+  /// Return the last argument matching \p Id, or null.
+  template<typename ...OptSpecifiers>
+  Arg *getLastArg(OptSpecifiers ...Ids) const {
+    Arg *Res = nullptr;
+    for (Arg *A : filtered(Ids...)) {
+      Res = A;
+      Res->claim();
+    }
+    return Res;
+  }
+
+  /// Return the last argument matching \p Id, or null. Do not "claim" the
+  /// option (don't mark it as having been used).
+  template<typename ...OptSpecifiers>
+  Arg *getLastArgNoClaim(OptSpecifiers ...Ids) const {
+    for (Arg *A : filtered_reverse(Ids...))
+      return A;
+    return nullptr;
+  }
 
   /// getArgString - Return the input argument string at \p Index.
   virtual const char *getArgString(unsigned Index) const = 0;
@@ -230,8 +271,7 @@ public:
   /// @{
 
   /// getLastArgValue - Return the value of the last argument, or a default.
-  StringRef getLastArgValue(OptSpecifier Id,
-                                  StringRef Default = "") const;
+  StringRef getLastArgValue(OptSpecifier Id, StringRef Default = "") const;
 
   /// getAllArgValues - Get the values of all instances of the given argument
   /// as strings.
@@ -273,7 +313,7 @@ public:
   /// AddAllArgValues - Render the argument values of all arguments
   /// matching the given ids.
   void AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
-                        OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
+                       OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
 
   /// AddAllArgsTranslated - Render all the arguments matching the
   /// given ids, but forced to separate args and using the provided

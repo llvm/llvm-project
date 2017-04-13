@@ -97,6 +97,7 @@ namespace std
     template <class T> struct is_polymorphic;
     template <class T> struct is_abstract;
     template <class T> struct is_final; // C++14
+    template <class T> struct is_aggregate; // C++17
 
     template <class T, class... Args> struct is_constructible;
     template <class T>                struct is_default_constructible;
@@ -286,6 +287,8 @@ namespace std
         = is_abstract<T>::value;                                         // C++17
       template <class T> constexpr bool is_final_v
         = is_final<T>::value;                                            // C++17
+      template <class T> constexpr bool is_aggregate_v
+        = is_aggregate<T>::value;                                        // C++17
       template <class T> constexpr bool is_signed_v
         = is_signed<T>::value;                                           // C++17
       template <class T> constexpr bool is_unsigned_v
@@ -1335,6 +1338,19 @@ is_final : public integral_constant<bool, __is_final(_Tp)> {};
 template <class _Tp> _LIBCPP_CONSTEXPR bool is_final_v
     = is_final<_Tp>::value;
 #endif
+
+// is_aggregate
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
+is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
+
+#if !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+constexpr bool is_aggregate_v = is_aggregate<_Tp>::value;
+#endif
+
+#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
 
 // is_base_of
 

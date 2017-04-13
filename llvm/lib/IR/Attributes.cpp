@@ -539,7 +539,8 @@ uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
 }
 
 std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
-  return SetNode ? SetNode->getAllocSizeArgs() : std::make_pair(0, 0);
+  return SetNode ? SetNode->getAllocSizeArgs()
+                 : std::pair<unsigned, Optional<unsigned>>(0, 0);
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
@@ -721,6 +722,7 @@ AttributeListImpl::AttributeListImpl(
     LLVMContext &C, ArrayRef<std::pair<unsigned, AttributeSet>> Slots)
     : Context(C), NumSlots(Slots.size()), AvailableFunctionAttrs(0) {
 #ifndef NDEBUG
+  assert(!Slots.empty() && "pointless AttributeListImpl");
   if (Slots.size() >= 2) {
     auto &PrevPair = Slots.front();
     for (auto &CurPair : Slots.drop_front()) {
@@ -733,19 +735,17 @@ AttributeListImpl::AttributeListImpl(
   std::copy(Slots.begin(), Slots.end(), getTrailingObjects<IndexAttrPair>());
 
   // Initialize AvailableFunctionAttrs summary bitset.
-  if (NumSlots > 0) {
-    static_assert(Attribute::EndAttrKinds <=
-                      sizeof(AvailableFunctionAttrs) * CHAR_BIT,
-                  "Too many attributes");
-    static_assert(AttributeList::FunctionIndex == ~0u,
-                  "FunctionIndex should be biggest possible index");
-    const auto &Last = Slots.back();
-    if (Last.first == AttributeList::FunctionIndex) {
-      AttributeSet Node = Last.second;
-      for (Attribute I : Node) {
-        if (!I.isStringAttribute())
-          AvailableFunctionAttrs |= ((uint64_t)1) << I.getKindAsEnum();
-      }
+  static_assert(Attribute::EndAttrKinds <=
+                    sizeof(AvailableFunctionAttrs) * CHAR_BIT,
+                "Too many attributes");
+  static_assert(AttributeList::FunctionIndex == ~0u,
+                "FunctionIndex should be biggest possible index");
+  const auto &Last = Slots.back();
+  if (Last.first == AttributeList::FunctionIndex) {
+    AttributeSet Node = Last.second;
+    for (Attribute I : Node) {
+      if (!I.isStringAttribute())
+        AvailableFunctionAttrs |= ((uint64_t)1) << I.getKindAsEnum();
     }
   }
 }
@@ -778,7 +778,7 @@ AttributeList AttributeList::getImpl(
 #ifndef NDEBUG
   unsigned LastIndex = 0;
   bool IsFirst = true;
-  for (const auto &AttrPair : Attrs) {
+  for (auto &&AttrPair : Attrs) {
     assert((IsFirst || LastIndex < AttrPair.first) &&
            "unsorted or duplicate AttributeList indices");
     assert(AttrPair.second.hasAttributes() && "pointless AttributeList slot");
@@ -855,20 +855,20 @@ AttributeList::get(LLVMContext &C,
   return getImpl(C, Attrs);
 }
 
-AttributeList AttributeList::get(LLVMContext &C, ArrayRef<AttributeSet> Attrs) {
-  assert(Attrs.size() >= 2 &&
-         "should always have function and return attr slots");
+AttributeList AttributeList::get(LLVMContext &C, AttributeSet FnAttrs,
+                                 AttributeSet RetAttrs,
+                                 ArrayRef<AttributeSet> ArgAttrs) {
   SmallVector<std::pair<unsigned, AttributeSet>, 8> AttrPairs;
-  size_t Index = 0;
-  for (AttributeSet AS : Attrs) {
-    if (AS.hasAttributes()) {
-      // If this is the last AttributeSetNode, it's for the function.
-      if (Index == Attrs.size() - 1)
-        Index = AttributeList::FunctionIndex;
+  if (RetAttrs.hasAttributes())
+    AttrPairs.emplace_back(ReturnIndex, RetAttrs);
+  size_t Index = 1;
+  for (AttributeSet AS : ArgAttrs) {
+    if (AS.hasAttributes())
       AttrPairs.emplace_back(Index, AS);
-    }
     ++Index;
   }
+  if (FnAttrs.hasAttributes())
+    AttrPairs.emplace_back(FunctionIndex, FnAttrs);
   if (AttrPairs.empty())
     return AttributeList();
   return getImpl(C, AttrPairs);

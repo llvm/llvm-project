@@ -695,13 +695,15 @@ void ObjCMethodCall::getExtraInvalidatedValues(
   if (const ObjCPropertyDecl *PropDecl = getAccessedProperty()) {
     if (const ObjCIvarDecl *PropIvar = PropDecl->getPropertyIvarDecl()) {
       SVal IvarLVal = getState()->getLValue(PropIvar, getReceiverSVal());
-      const MemRegion *IvarRegion = IvarLVal.getAsRegion();
-      ETraits->setTrait(
+      if (const MemRegion *IvarRegion = IvarLVal.getAsRegion()) {
+        ETraits->setTrait(
           IvarRegion,
           RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-      ETraits->setTrait(IvarRegion,
-                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
-      Values.push_back(IvarLVal);
+        ETraits->setTrait(
+          IvarRegion,
+          RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+        Values.push_back(IvarLVal);
+      }
       return;
     }
   }
