@@ -27,7 +27,7 @@ void foo() {
   // case with undefined values, too.
   c1.b.a = c2->b.a;
 #else
-  c1.b.a = c2->b.a; // expected-warning{{Function call argument is an uninitialized value}}
+  c1.b.a = c2->b.a; // expected-warning{{1st function call argument is an uninitialized value}}
 #endif
 }
 }

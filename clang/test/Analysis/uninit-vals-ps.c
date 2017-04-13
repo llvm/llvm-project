@@ -14,7 +14,7 @@ int f1_a(struct FPRec* foo) {
 
 int f1_b() {
   int x;
-  return bar(x)+1;  // expected-warning{{Function call argument is an uninitialized value}}
+  return bar(x)+1;  // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 int f2() {
