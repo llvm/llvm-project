@@ -18,6 +18,7 @@ config.have_zlib = "@HAVE_LIBZ@"
 config.clang_arcmt = @ENABLE_CLANG_ARCMT@
 config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
 config.clang_staticanalyzer = @ENABLE_CLANG_STATIC_ANALYZER@
+config.clang_staticanalyzer_z3 = "@CLANG_ANALYZER_WITH_Z3@"
 config.clang_examples = @ENABLE_CLANG_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = "@ENABLE_BACKTRACES@"
