@@ -906,7 +906,7 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
 ; CHECK: str q0
 ; CHECK-DAG: and [[MASKED_IDX:x[0-9]+]], x0, #0x7
 ; CHECK: bfi [[PTR:x[0-9]+]], [[MASKED_IDX]], #1, #3
-; CHECK-DAG: ld1 { v[[R:[0-9]+]].h }[0], {{\[}}[[PTR]]{{\]}}
+; CHECK-DAG: ldr h[[R:[0-9]+]], {{\[}}[[PTR]]{{\]}}
 ; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
 ; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
 ; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
