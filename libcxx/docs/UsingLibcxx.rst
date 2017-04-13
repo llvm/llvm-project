@@ -146,6 +146,11 @@ thread safety annotations.
   build of libc++ which does not export any symbols, which can be useful when
   building statically for inclusion into another library.
 
+**_LIBCPP_DISABLE_EXTERN_TEMPLATE**:
+  This macro is used to disable extern template declarations in the libc++
+  headers. The intended use case is for clients who wish to use the libc++
+  headers without taking a dependency on the libc++ library itself.
+
 **_LIBCPP_ENABLE_TUPLE_IMPLICIT_REDUCED_ARITY_EXTENSION**:
   This macro is used to re-enable an extension in `std::tuple` which allowed
   it to be implicitly constructed from fewer initializers than contained

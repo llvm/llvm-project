@@ -29,15 +29,15 @@ using namespace lld;
 using namespace lld::elf;
 
 DefinedRegular *ElfSym::Bss;
-DefinedRegular *ElfSym::Etext;
+DefinedRegular *ElfSym::Etext1;
 DefinedRegular *ElfSym::Etext2;
-DefinedRegular *ElfSym::Edata;
+DefinedRegular *ElfSym::Edata1;
 DefinedRegular *ElfSym::Edata2;
-DefinedRegular *ElfSym::End;
+DefinedRegular *ElfSym::End1;
 DefinedRegular *ElfSym::End2;
+DefinedRegular *ElfSym::MipsGp;
 DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;
-DefinedRegular *ElfSym::MipsGp;
 
 static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   switch (Body.kind()) {

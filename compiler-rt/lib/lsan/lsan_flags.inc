@@ -30,7 +30,7 @@ LSAN_FLAG(bool, use_globals, true,
           "Root set: include global variables (.data and .bss)")
 LSAN_FLAG(bool, use_stacks, true, "Root set: include thread stacks")
 LSAN_FLAG(bool, use_registers, true, "Root set: include thread registers")
-LSAN_FLAG(bool, use_tls, true,
+LSAN_FLAG(bool, use_tls, !SANITIZER_MAC,
           "Root set: include TLS and thread-specific storage")
 LSAN_FLAG(bool, use_root_regions, true,
           "Root set: include regions added via __lsan_register_root_region().")
