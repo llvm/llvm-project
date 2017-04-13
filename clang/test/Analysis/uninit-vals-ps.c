@@ -57,6 +57,12 @@ int f5(void) {
   return s.x; // no-warning
 }
 
+void f6(int x) {
+  int a[20];
+  if (x == 25) {}
+  if (a[x] == 123) {} // expected-warning{{The left operand of '==' is a garbage value due to array index out of bounds}}
+}
+
 int ret_uninit() {
   int i;
   int *p = &i;
