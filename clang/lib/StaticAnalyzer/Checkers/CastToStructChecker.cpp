@@ -84,6 +84,10 @@ bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
     if (!VD || VD->getType()->isReferenceType())
       return true;
 
+    if (ToPointeeTy->isIncompleteType() ||
+        OrigPointeeTy->isIncompleteType())
+      return true;
+
     // Warn when there is widening cast.
     unsigned ToWidth = Ctx.getTypeInfo(ToPointeeTy).Width;
     unsigned OrigWidth = Ctx.getTypeInfo(OrigPointeeTy).Width;
