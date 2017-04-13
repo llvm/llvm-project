@@ -1780,20 +1780,48 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
               size_t framework_offset = module_path.rfind(".framework/");
 
               if (framework_offset != std::string::npos) {
-                while (framework_offset &&
-                       (module_path[framework_offset] != '/'))
-                  framework_offset--;
+                // Sometimes the version of the framework that got loaded has been stripped
+                // and in that case, adding it to the framework search path will just
+                // short-cut a clang search that might otherwise find the needed headers.
+                // So don't add these paths.
+                std::string framework_path = module_path.substr(0, framework_offset);
+                framework_path.append(".framework");
+                FileSpec path_spec(framework_path, true);
+                FileSpec headers_spec = path_spec.CopyByAppendingPathComponent("Headers");
+                bool add_it = false;
+                if (headers_spec.Exists())
+                  add_it = true;
+                if (!add_it) {
+                  FileSpec module_spec = path_spec.CopyByAppendingPathComponent("Modules");
+                  if (module_spec.Exists())
+                    add_it = true;
+                }
+                
+                if (!add_it) {
+                  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+                  if (log)
+                    log->Printf("process_one_module rejecting framework path"
+                                " \"%s\" as it has no Headers "
+                                "or Modules subdirectories.",
+                                framework_path.c_str());
+                }
+                
+                if (add_it) {
+                  while (framework_offset &&
+                         (module_path[framework_offset] != '/'))
+                    framework_offset--;
 
-                if (module_path[framework_offset] == '/') {
-                  // framework_offset now points to the '/';
+                  if (module_path[framework_offset] == '/') {
+                    // framework_offset now points to the '/';
 
-                  std::string parent_path =
-                      module_path.substr(0, framework_offset);
+                    std::string parent_path =
+                        module_path.substr(0, framework_offset);
 
-                  if (strncmp(parent_path.c_str(), "/System/Library",
-                              strlen("/System/Library")) &&
-                      !IsDeviceSupport(parent_path.c_str())) {
-                    swift_ast_sp->AddFrameworkSearchPath(parent_path.c_str());
+                    if (strncmp(parent_path.c_str(), "/System/Library",
+                                strlen("/System/Library")) &&
+                        !IsDeviceSupport(parent_path.c_str())) {
+                      swift_ast_sp->AddFrameworkSearchPath(parent_path.c_str());
+                    }
                   }
                 }
               }
