@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -std=c++11 -DLEAKS -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -std=c++11 -DLEAKS -fblocks -verify %s
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-objc.h"
 

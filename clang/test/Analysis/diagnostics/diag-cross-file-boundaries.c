@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-output=html -o PR12421.html %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=html -o PR12421.html %s 2>&1 | FileCheck %s
 
 // Test for PR12421
 #include "diag-cross-file-boundaries.h"

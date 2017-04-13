@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,unix.API,osx.API %s -analyzer-store=region -analyzer-output=plist -analyzer-eagerly-assume -analyzer-config faux-bodies=true -analyzer-config path-diagnostics-alternate=false -fblocks -verify -o %t.plist
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,unix.API,osx.API %s -analyzer-store=region -analyzer-output=plist -analyzer-eagerly-assume -analyzer-config faux-bodies=true -analyzer-config path-diagnostics-alternate=false -fblocks -verify -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 // RUN: mkdir -p %t.dir
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.API,osx.API -analyzer-output=html -analyzer-config faux-bodies=true -fblocks -o %t.dir %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API,osx.API -analyzer-output=html -analyzer-config faux-bodies=true -fblocks -o %t.dir %s
 // RUN: rm -fR %t.dir
 struct _opaque_pthread_once_t {
   long __sig;

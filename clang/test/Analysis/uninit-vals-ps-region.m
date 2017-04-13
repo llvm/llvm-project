@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-store=region -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-store=region -analyzer-checker=core -verify %s
 
 struct s {
   int data;

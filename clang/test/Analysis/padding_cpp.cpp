@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -analyze -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
 
 // Make sure that the C cases still work fine, even when compiled as C++.
 #include "padding_c.c"

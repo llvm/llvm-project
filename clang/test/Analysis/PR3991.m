@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-incomplete-implementation %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-incomplete-implementation %s
 // expected-no-diagnostics
 
 //===----------------------------------------------------------------------===//

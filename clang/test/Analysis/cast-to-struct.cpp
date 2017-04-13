@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.core.CastToStruct,core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.CastToStruct,core -verify %s
 
 struct AB {
   int A;

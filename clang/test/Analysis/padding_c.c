@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
 
 #if __has_include(<stdalign.h>)
 #include <stdalign.h>

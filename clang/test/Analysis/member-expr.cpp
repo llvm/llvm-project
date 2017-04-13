@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection %s -verify
 
 void clang_analyzer_checkInlined(bool);
 void clang_analyzer_eval(int);

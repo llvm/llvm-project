@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -analyze -analyzer-checker=core,unix.Malloc -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,unix.Malloc -verify %s
 // expected-no-diagnostics
 
 // Test that strange prototypes doesn't crash the analyzer

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core,deadcode,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core,debug.DumpCFG -analyzer-config inline-lambdas=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,deadcode,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -analyzer-config inline-lambdas=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 void clang_analyzer_warnIfReached();
@@ -212,7 +212,7 @@ struct DontCrash {
     callLambda([&](){ ++x; });
     callLambdaFromStatic([&](){ ++x; });
   }
-  
+
   template<typename T>
   static void callLambdaFromStatic(T t) {
     t();

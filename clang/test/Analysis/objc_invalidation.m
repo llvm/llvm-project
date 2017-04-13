@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.osx.cocoa.InstanceVariableInvalidation -DRUN_IVAR_INVALIDATION -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.osx.cocoa.MissingInvalidationMethod -DRUN_MISSING_INVALIDATION_METHOD -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.osx.cocoa.InstanceVariableInvalidation -DRUN_IVAR_INVALIDATION -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.osx.cocoa.MissingInvalidationMethod -DRUN_MISSING_INVALIDATION_METHOD -verify %s
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)
      __attribute__ ((__noreturn__));

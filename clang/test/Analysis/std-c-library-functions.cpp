@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -analyze -analyzer-checker=unix.StdCLibraryFunctions,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=unix.StdCLibraryFunctions,debug.ExprInspection -verify %s
 
 // Test that we don't model functions with broken prototypes.
 // Because they probably work differently as well.

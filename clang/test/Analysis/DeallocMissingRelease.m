@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-ios4.0 -DMACOS=0 -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-macosx10.6.0 -DMACOS=1 -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-ios4.0 -DMACOS=0 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-macosx10.6.0 -DMACOS=1 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak -verify %s
 
 #include "Inputs/system-header-simulator-for-objc-dealloc.h"
 

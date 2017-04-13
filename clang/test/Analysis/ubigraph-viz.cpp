@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.API -analyzer-viz-egraph-ubigraph -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API -analyzer-viz-egraph-ubigraph -verify %s
 // expected-no-diagnostics
 
 int f(int x) {

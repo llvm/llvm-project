@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=core -analyzer-config path-diagnostics-alternate=true -analyzer-output=plist-multi-file -o %t.plist -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core -analyzer-config path-diagnostics-alternate=true -analyzer-output=plist-multi-file -o %t.plist -verify %s
 // RUN: FileCheck --input-file=%t.plist %s
 
 extern void work();

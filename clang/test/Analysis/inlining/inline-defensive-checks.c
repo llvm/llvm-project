@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-inlined-defensive-checks=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-inlined-defensive-checks=true -verify %s
 
 // Perform inline defensive checks.
 void idc(int *p) {

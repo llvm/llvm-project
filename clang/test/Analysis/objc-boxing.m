@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-objc-literal-conversion -analyze -analyzer-checker=core,unix.Malloc,osx.cocoa.NonNilReturnValue,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -Wno-objc-literal-conversion -analyzer-checker=core,unix.Malloc,osx.cocoa.NonNilReturnValue,debug.ExprInspection -analyzer-store=region -verify %s
 
 void clang_analyzer_eval(int);
 

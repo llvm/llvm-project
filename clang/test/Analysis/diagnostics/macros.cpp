@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=core,osx -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,osx -analyzer-output=text -verify %s
 
 #include "../Inputs/system-header-simulator.h"
 #include "../Inputs/system-header-simulator-cxx.h"

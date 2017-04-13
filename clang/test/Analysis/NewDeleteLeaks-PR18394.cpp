@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyzer-config graph-trim-interval=1 -analyzer-max-loop 1 -analyze -analyzer-checker=core,cplusplus.NewDeleteLeaks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-config graph-trim-interval=1 -analyzer-max-loop 1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -verify %s
 // expected-no-diagnostics
 
 class A {

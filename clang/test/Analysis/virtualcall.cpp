@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -verify -std=c++11 %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-config optin.cplusplus.VirtualCall:Interprocedural=true -DINTERPROCEDURAL=1 -verify -std=c++11 %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-config optin.cplusplus.VirtualCall:PureOnly=true -DPUREONLY=1 -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-config optin.cplusplus.VirtualCall:Interprocedural=true -DINTERPROCEDURAL=1 -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.cplusplus.VirtualCall -analyzer-store region -analyzer-config optin.cplusplus.VirtualCall:PureOnly=true -DPUREONLY=1 -verify -std=c++11 %s
 
 /* When INTERPROCEDURAL is set, we expect diagnostics in all functions reachable
    from a constructor or destructor. If it is not set, we expect diagnostics
