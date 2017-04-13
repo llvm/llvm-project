@@ -2228,10 +2228,10 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   Writer->ClearSwitchCaseIDs();
 
   assert(FD->doesThisDeclarationHaveABody());
-  bool ModularCodegen = Writer->Context->getLangOpts().ModularCodegen &&
+  bool ModulesCodegen = Writer->Context->getLangOpts().ModulesCodegen &&
                         Writer->WritingModule && !FD->isDependentContext();
-  Record->push_back(ModularCodegen);
-  if (ModularCodegen)
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
     Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(FD));
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     Record->push_back(CD->getNumCtorInitializers());

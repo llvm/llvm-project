@@ -28,3 +28,5 @@ inline void inst_decl() {
   (void)sizeof(&inst<int>);
   inst<float>();
 }
+
+asm("narf");

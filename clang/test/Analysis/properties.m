@@ -987,5 +987,21 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
 }
 
 @end
+
+@interface Wrapper
+@property(nonatomic, readonly) int value;
+@end
+
+@implementation Wrapper
+@synthesize value;
+@end
+
+void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
+   union {
+    Wrapper *wrapper;
+   } u = { 0 };
+   [u.wrapper value];
+}
+
 #endif // non-ARC
 
