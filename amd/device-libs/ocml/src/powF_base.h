@@ -7,43 +7,13 @@
 
 #include "mathF.h"
 
-// compute pow using log and exp
-// x^y = exp(y * log(x))
-//
-// we take care not to lose precision in the intermediate steps
-//
-// When computing log, calculate it in splits,
-//
-// r = f * (p_invead + p_inv_tail)
-// r = rh + rt
-//
-// calculate log polynomial using r, in end addition, do
-// poly = poly + ((rh-r) + rt)
-//
-// lth = -r
-// ltt = ((xexp * log2_t) - poly) + logT
-// lt = lth + ltt
-//
-// lh = (xexp * log2_h) + logH
-// l = lh + lt
-//
-// Calculate final log answer as gh and gt,
-// gh = l & higher-half bits
-// gt = (((ltt - (lt - lth)) + ((lh - l) + lt)) + (l - gh))
-//
-// yh = y & higher-half bits
-// yt = y - yh
-//
-// Before entering computation of exp,
-// vs = ((yt*gt + yt*gh) + yh*gt)
-// v = vs + yh*gh
-// vt = ((yh*gh - v) + vs)
-//
-// In calculation of exp, add vt to r that is used for poly
-// At the end of exp, do
-// ((((expT * poly) + expT) + expH*poly) + expH)
+#define FLOAT_SPECIALIZATION
+#include "ep.h"
 
-PUREATTR float
+extern CONSTATTR float2 MATH_PRIVATE(epln)(float);
+extern CONSTATTR float MATH_PRIVATE(expep)(float2);
+
+CONSTATTR float
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(float x, float y)
 #elif defined(COMPILING_POWN)
@@ -54,132 +24,22 @@ MATH_MANGLE(rootn)(float x, int ny)
 MATH_MANGLE(pow)(float x, float y)
 #endif
 {
-    USE_TABLE(float2, p_log, M32_LOGE);
-    USE_TABLE(float2, p_inv, M32_LOG_INV_EP);
-    USE_TABLE(float2, p_jby64, M32_EXP_EP);
-
     if (DAZ_OPT()) {
         x = BUILTIN_CANONICALIZE_F32(x);
     }
 
-#if defined(COMPILING_POWN)
-    float y = (float)ny;
-#elif defined(COMPILING_ROOTN)
-    float y = MATH_FAST_RCP((float)ny);
+#if defined COMPILING_POWN || defined COMPILING_ROOTN
+    int nyh = ny & 0xffff0000;
+    float2 y = fadd((float)nyh, (float)(ny - nyh));
+#if defined(COMPILING_ROOTN)
+    y = rcp(y);
+#endif
 #endif
 
     float ax = BUILTIN_ABS_F32(x);
+    float expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
 
-    // Extra precise log calculation
-    float r = 1.0f - ax;
-    float lth, ltt, lt, lh, l, poly;
-    float2 tv;
-    int m;
-
-    if (MATH_MANGLE(fabs)(r) > 0x1.0p-4f) {
-        int ixn;
-        float mfn;
-        
-        mfn = (float)(BUILTIN_FREXP_EXP_F32(ax) - 1);
-        ixn = AS_INT(BUILTIN_FREXP_MANT_F32(ax)) + (1 << EXPSHIFTBITS_SP32);
-
-        int indx = (ixn & 0x007f0000) + ((ixn & 0x00008000) << 1);
-
-        // F - Y
-        float f = AS_FLOAT(HALFEXPBITS_SP32 | indx) - AS_FLOAT(HALFEXPBITS_SP32 | (ixn & MANTBITS_SP32));
-
-        indx >>= 16;
-        tv = p_inv[indx];
-        float rh = f * tv.s0;
-        float rt = f * tv.s1;
-        r = rh + rt;
-
-        poly = MATH_MAD(r, MATH_MAD(r, 0x1.0p-2f, 0x1.555556p-2f), 0x1.0p-1f) * (r*r);
-        poly += (rh - r) + rt;
-
-        const float LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
-        const float LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
-        tv = p_log[indx];
-        lth = -r;
-        ltt = MATH_MAD(mfn, LOG2_TAIL, -poly) + tv.s1;
-        lt = lth + ltt;
-        lh = MATH_MAD(mfn, LOG2_HEAD, tv.s0);
-        l = lh + lt;
-    } else {
-        float r2 = r*r;
-
-        poly = MATH_MAD(r,
-                   MATH_MAD(r,
-                       MATH_MAD(r,
-                           MATH_MAD(r, 0x1.24924ap-3f, 0x1.555556p-3f),
-                           0x1.99999ap-3f),
-                       0x1.000000p-2f),
-                   0x1.555556p-2f);
-
-        poly *= r2*r;
-
-        lth = -r2 * 0.5f;
-        ltt = -poly;
-        lt = lth + ltt;
-        lh = -r;
-        l = lh + lt;
-    }
-    
-    // Final split of log
-    float gh = AS_FLOAT(AS_INT(l) & 0xfffff000);
-    float gt = ((ltt - (lt - lth)) + ((lh - l) + lt)) + (l - gh);
-
-    // Now split y
-    float yh = AS_FLOAT(AS_INT(y) & 0xfffff000);
-
-#if defined(COMPILING_POWN)
-    float yt = (float)(ny - (int)yh);
-#elif defined(COMPILING_ROOTN)
-    float fny = (float)ny;
-    float fnyh = AS_FLOAT(AS_INT(fny) & 0xfffff000);
-    float fnyt = (float)(ny - (int)fnyh);
-    float yt = MATH_FAST_DIV(MATH_MAD(-fnyt, yh, MATH_MAD(-fnyh, yh, 1.0f)), fny);
-#else
-    float yt = y - yh;
-#endif
-
-    // Compute high precision y*log(x)
-    float ylogx_s = MATH_MAD(gt, yh, MATH_MAD(gh, yt, yt*gt));
-    float ylogx = MATH_MAD(yh, gh, ylogx_s);
-    float ylogx_t = MATH_MAD(yh, gh, -ylogx) + ylogx_s;
-
-    // Now exponentiate
-    const float R_64_BY_LOG2 = 0x1.715476p+6f; // 64/log2 : 92.332482616893657
-    int n = (int)(ylogx * R_64_BY_LOG2);
-    float nf = (float) n;
-
-    int j = n & 0x3f;
-    m = n >> 6;
-
-    const float R_LOG2_BY_64_LD = 0x1.620000p-7f;  // log2/64 lead: 0.0108032227
-    const float R_LOG2_BY_64_TL = 0x1.c85fdep-16f; // log2/64 tail: 0.0000272020388
-    r = MATH_MAD(nf, -R_LOG2_BY_64_TL, MATH_MAD(nf, -R_LOG2_BY_64_LD, ylogx)) + ylogx_t;
-
-    // Truncated Taylor series for e^r
-    poly = MATH_MAD(MATH_MAD(MATH_MAD(r, 0x1.555556p-5f, 0x1.555556p-3f), r, 0x1.000000p-1f), r*r, r);
-
-    tv = p_jby64[j];
-
-    float expylnx = MATH_MAD(tv.s0, poly, MATH_MAD(tv.s1, poly, tv.s1)) + tv.s0;
-
-    expylnx = BUILTIN_FLDEXP_F32(expylnx, m);
-
-    // Result is +-Inf if (ylogx + ylogx_t) > 128*log2
-    expylnx = (ylogx > 0x1.62e430p+6f) | (ylogx == 0x1.62e430p+6f & ylogx_t > -0x1.05c610p-22f) ? AS_FLOAT(PINFBITPATT_SP32) : expylnx;
-
-    // Result is 0 if ylogx < -149*log2
-    expylnx = ylogx <  -0x1.9d1da0p+6f ? 0.0f : expylnx;
-
-    // Classify y:
-    //   inty = 0 means not an integer.
-    //   inty = 1 means odd integer.
-    //   inty = 2 means even integer.
-
+    // y status: 0=not integer, 1=odd, 2=even
 #if defined(COMPILING_POWN) || defined(COMPILING_ROOTN)
     int inty = 2 - (ny & 1);
 #else

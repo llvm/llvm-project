@@ -17,15 +17,14 @@ MATH_MANGLE(sinh)(double x)
 {
     double y = BUILTIN_ABS_F64(x);
     double2 e = MATH_PRIVATE(epexpep)(sub(y, con(0x1.62e42fefa39efp-1,0x1.abc9e3b39803fp-56)));
-    double2 c = fsub(e, ldx(rcp(e), -2));
-    double z = c.hi;
+    double2 s = fsub(e, ldx(rcp(e), -2));
+    double z = s.hi;
 
     if (!FINITE_ONLY_OPT()) {
         z = y >= 0x1.633ce8fb9f87ep+9 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
     }
 
     z = y < 0x1.0p-27 ? y : z;
-    z = BUILTIN_COPYSIGN_F64(z, x);
-    return z;
+    return BUILTIN_COPYSIGN_F64(z, x);
 }
 
