@@ -102,7 +102,7 @@ struct SizeClassAllocator64LocalCache {
   NOINLINE void Refill(PerClass *c, SizeClassAllocator *allocator,
                        uptr class_id) {
     InitCache();
-    uptr num_requested_chunks = SizeClassMap::MaxCachedHint(class_id);
+    uptr num_requested_chunks = c->max_count / 2;
     allocator->GetFromAllocator(&stats_, class_id, c->chunks,
                                 num_requested_chunks);
     c->count = num_requested_chunks;

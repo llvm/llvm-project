@@ -22,9 +22,10 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
+        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
+        self.namespace = 'std::__' + ns + '1'
 
-    @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that libc++ iterators format properly."""
         self.build()
@@ -34,9 +35,6 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
             self, "main.cpp", self.line, num_expected_locations=-1)
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -56,8 +54,6 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
-
-        self.expect('image list', substrs=self.getLibcPlusPlusLibs())
 
         self.expect('frame variable ivI', substrs=['item = 3'])
         self.expect('expr ivI', substrs=['item = 3'])

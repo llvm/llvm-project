@@ -12,7 +12,7 @@ void print_address(const char *str, int n, ...) {
     // match to the format used in the diagnotic message.
     fprintf(stderr, "0x%012lx ", (unsigned long) p);
 #elif defined(__i386__) || defined(__arm__)
-    fprintf(stderr, "0x%8lx ", (unsigned long) p);
+    fprintf(stderr, "0x%08lx ", (unsigned long) p);
 #elif defined(__mips64)
     fprintf(stderr, "0x%010lx ", (unsigned long) p);
 #endif

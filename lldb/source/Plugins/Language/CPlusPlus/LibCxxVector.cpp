@@ -45,6 +45,29 @@ private:
   CompilerType m_element_type;
   uint32_t m_element_size;
 };
+
+class LibcxxVectorBoolSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  LibcxxVectorBoolSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override { return true; }
+
+  size_t GetIndexOfChildWithName(const ConstString &name) override;
+
+private:
+  CompilerType m_bool_type;
+  ExecutionContextRef m_exe_ctx_ref;
+  uint64_t m_count;
+  lldb::addr_t m_base_data_address;
+  std::map<size_t, lldb::ValueObjectSP> m_children;
+};
+
 } // namespace formatters
 } // namespace lldb_private
 
@@ -133,9 +156,126 @@ size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   return ExtractIndexFromString(name.GetCString());
 }
 
+lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+    LibcxxVectorBoolSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_bool_type(), m_exe_ctx_ref(),
+      m_count(0), m_base_data_address(0), m_children() {
+  if (valobj_sp) {
+    Update();
+    m_bool_type =
+        valobj_sp->GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeBool);
+  }
+}
+
+size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+    CalculateNumChildren() {
+  return m_count;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
+    size_t idx) {
+  auto iter = m_children.find(idx), end = m_children.end();
+  if (iter != end)
+    return iter->second;
+  if (idx >= m_count)
+    return ValueObjectSP();
+  if (m_base_data_address == 0 || m_count == 0)
+    return ValueObjectSP();
+  if (!m_bool_type)
+    return ValueObjectSP();
+  size_t byte_idx = (idx >> 3); // divide by 8 to get byte index
+  size_t bit_index = (idx & 7); // efficient idx % 8 for bit index
+  lldb::addr_t byte_location = m_base_data_address + byte_idx;
+  ProcessSP process_sp(m_exe_ctx_ref.GetProcessSP());
+  if (!process_sp)
+    return ValueObjectSP();
+  uint8_t byte = 0;
+  uint8_t mask = 0;
+  Error err;
+  size_t bytes_read = process_sp->ReadMemory(byte_location, &byte, 1, err);
+  if (err.Fail() || bytes_read == 0)
+    return ValueObjectSP();
+  mask = 1 << bit_index;
+  bool bit_set = ((byte & mask) != 0);
+  DataBufferSP buffer_sp(
+      new DataBufferHeap(m_bool_type.GetByteSize(nullptr), 0));
+  if (bit_set && buffer_sp && buffer_sp->GetBytes()) {
+    // regardless of endianness, anything non-zero is true
+    *(buffer_sp->GetBytes()) = 1;
+  }
+  StreamString name;
+  name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+  ValueObjectSP retval_sp(CreateValueObjectFromData(
+      name.GetString(),
+      DataExtractor(buffer_sp, process_sp->GetByteOrder(),
+                    process_sp->GetAddressByteSize()),
+      m_exe_ctx_ref, m_bool_type));
+  if (retval_sp)
+    m_children[idx] = retval_sp;
+  return retval_sp;
+}
+
+/*(std::__1::vector<std::__1::allocator<bool> >) vBool = {
+ __begin_ = 0x00000001001000e0
+ __size_ = 56
+ __cap_alloc_ = {
+ std::__1::__libcpp_compressed_pair_imp<unsigned long,
+ std::__1::allocator<unsigned long> > = {
+ __first_ = 1
+ }
+ }
+ }*/
+
+bool lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
+  m_children.clear();
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return false;
+  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  ValueObjectSP size_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__size_"), true));
+  if (!size_sp)
+    return false;
+  m_count = size_sp->GetValueAsUnsigned(0);
+  if (!m_count)
+    return true;
+  ValueObjectSP begin_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__begin_"), true));
+  if (!begin_sp) {
+    m_count = 0;
+    return false;
+  }
+  m_base_data_address = begin_sp->GetValueAsUnsigned(0);
+  if (!m_base_data_address) {
+    m_count = 0;
+    return false;
+  }
+  return false;
+}
+
+size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+    GetIndexOfChildWithName(const ConstString &name) {
+  if (!m_count || !m_base_data_address)
+    return UINT32_MAX;
+  const char *item_name = name.GetCString();
+  uint32_t idx = ExtractIndexFromString(item_name);
+  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    return UINT32_MAX;
+  return idx;
+}
+
 lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return (valobj_sp ? new LibcxxStdVectorSyntheticFrontEnd(valobj_sp)
-                    : nullptr);
+  if (!valobj_sp)
+    return nullptr;
+  CompilerType type = valobj_sp->GetCompilerType();
+  if (!type.IsValid() || type.GetNumTemplateArguments() == 0)
+    return nullptr;
+  TemplateArgumentKind kind;
+  CompilerType arg_type = type.GetTemplateArgument(0, kind);
+  if (arg_type.GetTypeName() == ConstString("bool"))
+    return new LibcxxVectorBoolSyntheticFrontEnd(valobj_sp);
+  return new LibcxxStdVectorSyntheticFrontEnd(valobj_sp);
 }

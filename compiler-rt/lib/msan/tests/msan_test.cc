@@ -899,7 +899,7 @@ class SocketAddr4 : public SocketAddr {
     memset(&sai_, 0, sizeof(sai_));
     sai_.sin_family = AF_INET;
     sai_.sin_port = port;
-    sai_.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    sai_.sin_addr.s_addr = htonl(INADDR_ANY);
   }
 
   sockaddr *ptr() override { return reinterpret_cast<sockaddr *>(&sai_); }
@@ -917,7 +917,7 @@ class SocketAddr6 : public SocketAddr {
     memset(&sai_, 0, sizeof(sai_));
     sai_.sin6_family = AF_INET6;
     sai_.sin6_port = port;
-    sai_.sin6_addr = in6addr_loopback;
+    sai_.sin6_addr = in6addr_any;
   }
 
   sockaddr *ptr() override { return reinterpret_cast<sockaddr *>(&sai_); }
@@ -949,7 +949,7 @@ class MemorySanitizerIpTest : public ::testing::TestWithParam<int> {
 std::vector<int> GetAvailableIpSocketFamilies() {
   std::vector<int> result;
 
-  for (int i : std::vector<int>(AF_INET, AF_INET6)) {
+  for (int i : {AF_INET, AF_INET6}) {
     int s = socket(i, SOCK_STREAM, 0);
     if (s > 0) {
       result.push_back(i);

@@ -361,7 +361,7 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c)
 
 template <class _Tp, class _Allocator>
 __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
-    : __end_cap_(__a)
+    : __end_cap_(__second_tag(), __a)
 {
     if (__a == __c.__alloc())
     {

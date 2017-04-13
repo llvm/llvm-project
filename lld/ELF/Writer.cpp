@@ -586,25 +586,63 @@ template <class ELFT> bool elf::isRelroSection(const OutputSection *Sec) {
     return false;
 
   uint64_t Flags = Sec->Flags;
+
+  // Non-allocatable or non-writable sections don't need RELRO because
+  // they are not writable or not even mapped to memory in the first place.
+  // RELRO is for sections that are essentially read-only but need to
+  // be writable only at process startup to allow dynamic linker to
+  // apply relocations.
   if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
     return false;
+
+  // Once initialized, TLS data segments are used as data templates
+  // for a thread-local storage. For each new thread, runtime
+  // allocates memory for a TLS and copy templates there. No thread
+  // are supposed to use templates directly. Thus, it can be in RELRO.
   if (Flags & SHF_TLS)
     return true;
 
+  // .init_array, .preinit_array and .fini_array contain pointers to
+  // functions that are executed on process startup or exit. These
+  // pointers are set by the static linker, and they are not expected
+  // to change at runtime. But if you are an attacker, you could do
+  // interesting things by manipulating pointers in .fini_array, for
+  // example. So they are put into RELRO.
   uint32_t Type = Sec->Type;
   if (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
       Type == SHT_PREINIT_ARRAY)
     return true;
 
-  if (Sec == In<ELFT>::GotPlt->OutSec)
-    return Config->ZNow;
-  if (Sec == In<ELFT>::Dynamic->OutSec)
-    return true;
+  // .got contains pointers to external symbols. They are resolved by
+  // the dynamic linker when a module is loaded into memory, and after
+  // that they are not expected to change. So, it can be in RELRO.
   if (In<ELFT>::Got && Sec == In<ELFT>::Got->OutSec)
     return true;
+
+  // .got.plt contains pointers to external function symbols. They are
+  // by default resolved lazily, so we usually cannot put it into RELRO.
+  // However, if "-z now" is given, the lazy symbol resolution is
+  // disabled, which enables us to put it into RELRO.
+  if (Sec == In<ELFT>::GotPlt->OutSec)
+    return Config->ZNow;
+
+  // .dynamic section contains data for the dynamic linker, and
+  // there's no need to write to it at runtime, so it's better to put
+  // it into RELRO.
+  if (Sec == In<ELFT>::Dynamic->OutSec)
+    return true;
+
+  // .bss.rel.ro is used for copy relocations for read-only symbols.
+  // Since the dynamic linker needs to process copy relocations, the
+  // section cannot be read-only, but once initialized, they shouldn't
+  // change.
   if (Sec == In<ELFT>::BssRelRo->OutSec)
     return true;
 
+  // Sections with some special names are put into RELRO. This is a
+  // bit unfortunate because section names shouldn't be significant in
+  // ELF in spirit. But in reality many linker features depend on
+  // magic section names.
   StringRef S = Sec->Name;
   return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
          S == ".eh_frame" || S == ".openbsd.randomdata";

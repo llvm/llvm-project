@@ -15,23 +15,44 @@
 
 #include <memory>
 #include <cassert>
+#include "test_macros.h"
 
-struct Deleter
-{
-    void operator()(void*) {}
+struct Deleter {
+  Deleter() {}
 
-    int test() {return 5;}
-    int test() const {return 6;}
+  void operator()(void*) const {}
+
+  int test() { return 5; }
+  int test() const { return 6; }
 };
 
-int main()
-{
-    {
+int main() {
+  {
     std::unique_ptr<int, Deleter> p;
     assert(p.get_deleter().test() == 5);
-    }
-    {
+  }
+  {
     const std::unique_ptr<int, Deleter> p;
     assert(p.get_deleter().test() == 6);
-    }
+  }
+  {
+    typedef std::unique_ptr<int, const Deleter&> UPtr;
+    const Deleter d;
+    UPtr p(nullptr, d);
+    const UPtr& cp = p;
+    ASSERT_SAME_TYPE(decltype(p.get_deleter()), const Deleter&);
+    ASSERT_SAME_TYPE(decltype(cp.get_deleter()), const Deleter&);
+    assert(p.get_deleter().test() == 6);
+    assert(cp.get_deleter().test() == 6);
+  }
+  {
+    typedef std::unique_ptr<int, Deleter&> UPtr;
+    Deleter d;
+    UPtr p(nullptr, d);
+    const UPtr& cp = p;
+    ASSERT_SAME_TYPE(decltype(p.get_deleter()), Deleter&);
+    ASSERT_SAME_TYPE(decltype(cp.get_deleter()), Deleter&);
+    assert(p.get_deleter().test() == 5);
+    assert(cp.get_deleter().test() == 5);
+  }
 }

@@ -1,4 +1,4 @@
-//===--- ClangDMain.cpp - clangd server loop ------------------------------===//
+//===--- ClangdMain.cpp - clangd server loop ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -54,4 +54,5 @@ int main() {
   fprintf(stderr, "okthxbai!\n");
   // CHECK-SCRIBBLE: okthxbai!
   // CHECK-NOSCRIBBLE: okthxbai!
+  free(my_class_isa);
 }
