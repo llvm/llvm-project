@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "interception/interception.h"
@@ -29,9 +30,6 @@
 #include "tsan_mman.h"
 #include "tsan_fd.h"
 
-#if SANITIZER_POSIX
-#include "sanitizer_common/sanitizer_posix.h"
-#endif
 
 using namespace __tsan;  // NOLINT
 
@@ -45,13 +43,6 @@ using namespace __tsan;  // NOLINT
 #define __errno_location __errno
 #define mallopt(a, b)
 #endif
-
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
-#define PTHREAD_CREATE_DETACHED 1
-#elif SANITIZER_MAC
-#define PTHREAD_CREATE_DETACHED 2
-#endif
-
 
 #ifdef __mips__
 const int kSigCount = 129;
@@ -928,8 +919,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
     ThreadIgnoreEnd(thr, pc);
   }
   if (res == 0) {
-    int tid = ThreadCreate(thr, pc, *(uptr*)th,
-                           detached == PTHREAD_CREATE_DETACHED);
+    int tid = ThreadCreate(thr, pc, *(uptr*)th, IsStateDetached(detached));
     CHECK_NE(tid, 0);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.

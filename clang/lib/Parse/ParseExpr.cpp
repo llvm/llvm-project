@@ -676,6 +676,7 @@ class CastExpressionIdValidator : public CorrectionCandidateCallback {
 ///                   '__is_union'
 ///
 /// [Clang] unary-type-trait:
+///                   '__is_aggregate'
 ///                   '__trivially_copyable'
 ///
 ///       binary-type-trait:
@@ -804,6 +805,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
             = RTT_JOIN(tok::kw_,Name)
 
           REVERTIBLE_TYPE_TRAIT(__is_abstract);
+          REVERTIBLE_TYPE_TRAIT(__is_aggregate);
           REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
           REVERTIBLE_TYPE_TRAIT(__is_array);
           REVERTIBLE_TYPE_TRAIT(__is_assignable);

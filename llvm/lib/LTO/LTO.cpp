@@ -35,6 +35,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -74,7 +75,7 @@ static void computeCacheKey(
 
   // Start with the compiler revision
   Hasher.update(LLVM_VERSION_STRING);
-#ifdef HAVE_LLVM_REVISION
+#ifdef LLVM_REVISION
   Hasher.update(LLVM_REVISION);
 #endif
 

@@ -384,7 +384,7 @@ LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &Val)
     -> decltype(cast<X>(Val)) {
   if (!Val)
     return nullptr;
-  return unique_dyn_cast(Val);
+  return unique_dyn_cast<X, Y>(Val);
 }
 
 template <class X, class Y>

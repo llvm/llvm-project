@@ -235,19 +235,16 @@ public:
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) & RHS, IsUnsigned);
   }
-  APSInt And(const APSInt &RHS) const { return this->operator&(RHS); }
 
   APSInt operator|(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) | RHS, IsUnsigned);
   }
-  APSInt Or(const APSInt &RHS) const { return this->operator|(RHS); }
 
   APSInt operator^(const APSInt &RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) ^ RHS, IsUnsigned);
   }
-  APSInt Xor(const APSInt &RHS) const { return this->operator^(RHS); }
 
   APSInt operator*(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");

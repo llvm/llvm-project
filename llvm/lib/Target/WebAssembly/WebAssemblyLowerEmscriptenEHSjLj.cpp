@@ -435,22 +435,20 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 
   // Because we added the pointer to the callee as first argument, all
   // argument attribute indices have to be incremented by one.
-  SmallVector<AttributeSet, 8> AttributesVec;
+  SmallVector<AttributeSet, 8> ArgAttributes;
   const AttributeList &InvokeAL = CI->getAttributes();
 
-  // Add any return attributes.
-  AttributesVec.push_back(InvokeAL.getRetAttributes());
   // No attributes for the callee pointer.
-  AttributesVec.push_back(AttributeSet());
+  ArgAttributes.push_back(AttributeSet());
   // Copy the argument attributes from the original
   for (unsigned i = 1, e = CI->getNumArgOperands(); i <= e; ++i) {
-    AttributesVec.push_back(InvokeAL.getParamAttributes(i));
+    ArgAttributes.push_back(InvokeAL.getParamAttributes(i));
   }
 
-  // Add any function attributes.
-  AttributesVec.push_back(InvokeAL.getFnAttributes());
   // Reconstruct the AttributesList based on the vector we constructed.
-  AttributeList NewCallAL = AttributeList::get(C, AttributesVec);
+  AttributeList NewCallAL =
+      AttributeList::get(C, InvokeAL.getFnAttributes(),
+                         InvokeAL.getRetAttributes(), ArgAttributes);
   NewCall->setAttributes(NewCallAL);
 
   CI->replaceAllUsesWith(NewCall);

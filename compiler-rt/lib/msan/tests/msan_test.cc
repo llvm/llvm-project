@@ -890,6 +890,9 @@ class SocketAddr {
   virtual ~SocketAddr() = default;
   virtual struct sockaddr *ptr() = 0;
   virtual size_t size() const = 0;
+
+  template <class... Args>
+  static std::unique_ptr<SocketAddr> Create(int family, Args... args);
 };
 
 class SocketAddr4 : public SocketAddr {
@@ -928,6 +931,13 @@ class SocketAddr6 : public SocketAddr {
   sockaddr_in6 sai_;
 };
 
+template <class... Args>
+std::unique_ptr<SocketAddr> SocketAddr::Create(int family, Args... args) {
+  if (family == AF_INET)
+    return std::unique_ptr<SocketAddr>(new SocketAddr4(args...));
+  return std::unique_ptr<SocketAddr>(new SocketAddr6(args...));
+}
+
 class MemorySanitizerIpTest : public ::testing::TestWithParam<int> {
  public:
   void SetUp() override {
@@ -936,9 +946,7 @@ class MemorySanitizerIpTest : public ::testing::TestWithParam<int> {
 
   template <class... Args>
   std::unique_ptr<SocketAddr> CreateSockAddr(Args... args) const {
-    if (GetParam() == AF_INET)
-      return std::unique_ptr<SocketAddr>(new SocketAddr4(args...));
-    return std::unique_ptr<SocketAddr>(new SocketAddr6(args...));
+    return SocketAddr::Create(GetParam(), args...);
   }
 
   int CreateSocket(int socket_type) const {
@@ -949,10 +957,11 @@ class MemorySanitizerIpTest : public ::testing::TestWithParam<int> {
 std::vector<int> GetAvailableIpSocketFamilies() {
   std::vector<int> result;
 
-  for (int i : std::vector<int>(AF_INET, AF_INET6)) {
+  for (int i : {AF_INET, AF_INET6}) {
     int s = socket(i, SOCK_STREAM, 0);
     if (s > 0) {
-      result.push_back(i);
+      auto sai = SocketAddr::Create(i, 0);
+      if (bind(s, sai->ptr(), sai->size()) == 0) result.push_back(i);
       close(s);
     }
   }

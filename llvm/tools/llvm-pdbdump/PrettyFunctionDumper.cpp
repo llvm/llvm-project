@@ -233,7 +233,7 @@ void FunctionDumper::dump(const PDBSymbolTypePointer &Symbol) {
   if (!PointeeType)
     return;
 
-  if (auto FuncSig = PointeeType->cast<PDBSymbolTypeFunctionSig>()) {
+  if (auto FuncSig = unique_dyn_cast<PDBSymbolTypeFunctionSig>(PointeeType)) {
     FunctionDumper NestedDumper(Printer);
     PointerType Pointer =
         Symbol.isReference() ? PointerType::Reference : PointerType::Pointer;

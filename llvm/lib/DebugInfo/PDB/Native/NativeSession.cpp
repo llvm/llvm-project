@@ -70,8 +70,9 @@ uint64_t NativeSession::getLoadAddress() const { return 0; }
 
 void NativeSession::setLoadAddress(uint64_t Address) {}
 
-std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
-  auto RawSymbol = llvm::make_unique<NativeExeSymbol>(*this);
+std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() const {
+  auto RawSymbol =
+      llvm::make_unique<NativeExeSymbol>(const_cast<NativeSession &>(*this));
   auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));
   std::unique_ptr<PDBSymbolExe> ExeSymbol(
     static_cast<PDBSymbolExe *>(PdbSymbol.release()));

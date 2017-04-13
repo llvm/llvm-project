@@ -918,13 +918,14 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     // TODO: This could be generalized to clearing any bit set in y where the
     // following bit is known to be unset in y.
     Value *Y = nullptr;
-    if (match(I->getOperand(0), m_Add(m_Specific(I->getOperand(1)),
-                                      m_Value(Y))) ||
-        match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
-                                      m_Value(Y)))) {
-      APInt KnownZero3(BitWidth, 0), KnownOne3(BitWidth, 0);
-      computeKnownBits(Y, KnownZero3, KnownOne3, Depth + 1, Q);
-      if (KnownOne3.countTrailingOnes() > 0)
+    if (!KnownZero[0] && !KnownOne[0] &&
+        (match(I->getOperand(0), m_Add(m_Specific(I->getOperand(1)),
+                                       m_Value(Y))) ||
+         match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
+                                       m_Value(Y))))) {
+      KnownZero2.clearAllBits(); KnownOne2.clearAllBits();
+      computeKnownBits(Y, KnownZero2, KnownOne2, Depth + 1, Q);
+      if (KnownOne2.countTrailingOnes() > 0)
         KnownZero.setBit(0);
     }
     break;
@@ -947,7 +948,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     APInt KnownZeroOut = (KnownZero & KnownZero2) | (KnownOne & KnownOne2);
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
     KnownOne = (KnownZero & KnownOne2) | (KnownOne & KnownZero2);
-    KnownZero = KnownZeroOut;
+    KnownZero = std::move(KnownZeroOut);
     break;
   }
   case Instruction::Mul: {
@@ -975,11 +976,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     break;
   }
   case Instruction::Select: {
-    computeKnownBits(I->getOperand(2), KnownZero, KnownOne, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), KnownZero2, KnownOne2, Depth + 1, Q);
-
-    const Value *LHS;
-    const Value *RHS;
+    const Value *LHS, *RHS;
     SelectPatternFlavor SPF = matchSelectPattern(I, LHS, RHS).Flavor;
     if (SelectPatternResult::isMinOrMax(SPF)) {
       computeKnownBits(RHS, KnownZero, KnownOne, Depth + 1, Q);
@@ -3216,6 +3213,9 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
       if (GA->isInterposable())
         return V;
       V = GA->getAliasee();
+    } else if (isa<AllocaInst>(V)) {
+      // An alloca can't be further simplified.
+      return V;
     } else {
       if (auto CS = CallSite(V))
         if (Value *RV = CS.getReturnedArgOperand()) {

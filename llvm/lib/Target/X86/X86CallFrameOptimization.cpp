@@ -114,7 +114,7 @@ private:
 
   StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 
-  const TargetInstrInfo *TII;
+  const X86InstrInfo *TII;
   const X86FrameLowering *TFL;
   const X86Subtarget *STI;
   MachineRegisterInfo *MRI;
@@ -331,7 +331,6 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   // transformation.
   const X86RegisterInfo &RegInfo =
       *static_cast<const X86RegisterInfo *>(STI->getRegisterInfo());
-  unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
 
   // We expect to enter this at the beginning of a call sequence
   assert(I->getOpcode() == TII->getCallFrameSetupOpcode());
@@ -340,8 +339,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
 
   // How much do we adjust the stack? This puts an upper bound on
   // the number of parameters actually passed on it.
-  unsigned int MaxAdjust =
-      FrameSetup->getOperand(0).getImm() >> Log2SlotSize;
+  unsigned int MaxAdjust = TII->getFrameSize(*FrameSetup) >> Log2SlotSize;
 
   // A zero adjustment means no stack parameters
   if (!MaxAdjust) {
@@ -434,7 +432,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     return;
 
   Context.Call = &*I;
-  if ((++I)->getOpcode() != FrameDestroyOpcode)
+  if ((++I)->getOpcode() != TII->getCallFrameDestroyOpcode())
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
@@ -464,7 +462,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   // PEI will end up finalizing the handling of this.
   MachineBasicBlock::iterator FrameSetup = Context.FrameSetup;
   MachineBasicBlock &MBB = *(FrameSetup->getParent());
-  FrameSetup->getOperand(1).setImm(Context.ExpectedDist);
+  TII->setFrameAdjustment(*FrameSetup, Context.ExpectedDist);
 
   DebugLoc DL = FrameSetup->getDebugLoc();
   bool Is64Bit = STI->is64Bit();

@@ -264,11 +264,13 @@ kmp_nested_proc_bind_t __kmp_nested_proc_bind = { NULL, 0, 0 };
 int __kmp_affinity_num_places = 0;
 #endif
 
-int __kmp_place_num_sockets = 0;
-int __kmp_place_socket_offset = 0;
-int __kmp_place_num_cores = 0;
-int __kmp_place_core_offset = 0;
-int __kmp_place_num_threads_per_core = 0;
+kmp_hws_item_t __kmp_hws_socket = {0, 0};
+kmp_hws_item_t __kmp_hws_node = {0, 0};
+kmp_hws_item_t __kmp_hws_tile = {0, 0};
+kmp_hws_item_t __kmp_hws_core = {0, 0};
+kmp_hws_item_t __kmp_hws_proc = {0, 0};
+int __kmp_hws_requested = 0;
+int __kmp_hws_abs_flag = 0; // absolute or per-item number requested
 
 #if OMP_40_ENABLED
 kmp_int32 __kmp_default_device = 0;

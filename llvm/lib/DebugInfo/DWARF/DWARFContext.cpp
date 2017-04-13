@@ -667,11 +667,11 @@ static Expected<uint64_t> getSymbolAddress(const object::ObjectFile &Obj,
 
 static bool isRelocScattered(const object::ObjectFile &Obj,
                              const RelocationRef &Reloc) {
-  if (!isa<MachOObjectFile>(&Obj))
+  const MachOObjectFile *MachObj = dyn_cast<MachOObjectFile>(&Obj);
+  if (!MachObj)
     return false;
   // MachO also has relocations that point to sections and
   // scattered relocations.
-  const MachOObjectFile *MachObj = cast<MachOObjectFile>(&Obj);
   auto RelocInfo = MachObj->getRelocation(Reloc.getRawDataRefImpl());
   return MachObj->isRelocationScattered(RelocInfo);
 }

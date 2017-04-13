@@ -70,3 +70,7 @@ add_subdirectory(SymbolFile)
 add_subdirectory(Target)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
+
+if(LLDB_CAN_USE_DEBUGSERVER)
+  add_subdirectory(debugserver)
+endif()

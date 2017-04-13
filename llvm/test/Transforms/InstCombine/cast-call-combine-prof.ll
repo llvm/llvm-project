@@ -1,23 +1,38 @@
-; RUN: opt -instcombine -inline -S -inline-threshold=0 -hot-callsite-threshold=100 < %s | FileCheck %s
-; Checks if VP profile is used for hotness checks in inlining after instcombine
-; converted the call to a direct call.
+; RUN: opt -S -instcombine < %s | FileCheck %s
 
-declare void @bar(i16 *)
+; Check that instcombine preserves !prof metadata when removing function
+; prototype casts.
 
-define void @foo(i16* %a) {
-  call void @bar(i16* %a)
-  call void @bar(i16* %a)
-  ret void
-}
+declare i32 @__gxx_personality_v0(...)
+declare void @__cxa_call_unexpected(i8*)
+declare void @foo(i16* %a)
 
-; CHECK-LABEL: @test()
-; CHECK-NEXT: call void @bar
-; CHECK-NEXT: call void @bar
-define void @test() {
+; CHECK-LABEL: @test_call()
+; CHECK: call void @foo(i16* null), !prof ![[PROF:[0-9]+]]
+define void @test_call() {
   call void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null), !prof !0
   ret void
 }
 
+; CHECK-LABEL: @test_invoke()
+; CHECK: invoke void @foo(i16* null)
+; CHECK-NEXT: to label %done unwind label %lpad, !prof ![[PROF]]
+define void @test_invoke() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  invoke void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null)
+          to label %done unwind label %lpad, !prof !0
+
+done:
+  ret void
+
+lpad:
+  %lp = landingpad { i8*, i32 }
+          filter [0 x i8*] zeroinitializer
+  %ehptr = extractvalue { i8*, i32 } %lp, 0
+  tail call void @__cxa_call_unexpected(i8* %ehptr) noreturn nounwind
+  unreachable
+}
+
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 2000}
 !0 = !{!"VP", i32 0, i64 2000, i64 -3913987384944532146, i64 2000}
 
 !llvm.module.flags = !{!1}

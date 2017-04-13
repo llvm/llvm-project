@@ -39,14 +39,19 @@ public:
       return "Remote indirect stubs owner does not exist";
     case OrcErrorCode::RemoteIndirectStubsOwnerIdAlreadyInUse:
       return "Remote indirect stubs owner Id already in use";
+    case OrcErrorCode::RPCConnectionClosed:
+      return "RPC connection closed";
+    case OrcErrorCode::RPCCouldNotNegotiateFunction:
+      return "Could not negotiate RPC function";
     case OrcErrorCode::RPCResponseAbandoned:
       return "RPC response abandoned";
     case OrcErrorCode::UnexpectedRPCCall:
       return "Unexpected RPC call";
     case OrcErrorCode::UnexpectedRPCResponse:
       return "Unexpected RPC response";
-    case OrcErrorCode::UnknownRPCFunction:
-      return "Unknown RPC function";
+    case OrcErrorCode::UnknownErrorCodeFromRemote:
+      return "Unknown error returned from remote RPC function "
+             "(Use StringError to get error message)";
     }
     llvm_unreachable("Unhandled error code");
   }
@@ -58,26 +63,9 @@ static ManagedStatic<OrcErrorCategory> OrcErrCat;
 namespace llvm {
 namespace orc {
 
-char RPCFunctionNotSupported::ID = 0;
-
 std::error_code orcError(OrcErrorCode ErrCode) {
   typedef std::underlying_type<OrcErrorCode>::type UT;
   return std::error_code(static_cast<UT>(ErrCode), *OrcErrCat);
-}
-
-RPCFunctionNotSupported::RPCFunctionNotSupported(std::string RPCFunctionSignature)
-  : RPCFunctionSignature(std::move(RPCFunctionSignature)) {}
-
-std::error_code RPCFunctionNotSupported::convertToErrorCode() const {
-  return orcError(OrcErrorCode::UnknownRPCFunction);
-}
-
-void RPCFunctionNotSupported::log(raw_ostream &OS) const {
-  OS << "Could not negotiate RPC function '" << RPCFunctionSignature << "'";
-}
-
-const std::string &RPCFunctionNotSupported::getFunctionSignature() const {
-  return RPCFunctionSignature;
 }
 
 }

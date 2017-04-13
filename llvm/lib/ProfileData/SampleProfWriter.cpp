@@ -68,20 +68,21 @@ std::error_code SampleProfileWriterText::write(const FunctionSamples &S) {
     OS << "\n";
   }
 
-  SampleSorter<LineLocation, FunctionSamples> SortedCallsiteSamples(
+  SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get()) {
-    LineLocation Loc = I->first;
-    const FunctionSamples &CalleeSamples = I->second;
-    OS.indent(Indent);
-    if (Loc.Discriminator == 0)
-      OS << Loc.LineOffset << ": ";
-    else
-      OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
-    if (std::error_code EC = write(CalleeSamples))
-      return EC;
-  }
+  for (const auto &I : SortedCallsiteSamples.get())
+    for (const auto &FS : I->second) {
+      LineLocation Loc = I->first;
+      const FunctionSamples &CalleeSamples = FS.second;
+      OS.indent(Indent);
+      if (Loc.Discriminator == 0)
+        OS << Loc.LineOffset << ": ";
+      else
+        OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
+      if (std::error_code EC = write(CalleeSamples))
+        return EC;
+    }
   Indent -= 1;
 
   return sampleprof_error::success;
@@ -109,11 +110,12 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
   }
 
   // Recursively add all the names for inlined callsites.
-  for (const auto &J : S.getCallsiteSamples()) {
-    const FunctionSamples &CalleeSamples = J.second;
-    addName(CalleeSamples.getName());
-    addNames(CalleeSamples);
-  }
+  for (const auto &J : S.getCallsiteSamples())
+    for (const auto &FS : J.second) {
+      const FunctionSamples &CalleeSamples = FS.second;
+      addName(CalleeSamples.getName());
+      addNames(CalleeSamples);
+    }
 }
 
 std::error_code SampleProfileWriterBinary::writeHeader(
@@ -187,14 +189,15 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
 
   // Recursively emit all the callsite samples.
   encodeULEB128(S.getCallsiteSamples().size(), OS);
-  for (const auto &J : S.getCallsiteSamples()) {
-    LineLocation Loc = J.first;
-    const FunctionSamples &CalleeSamples = J.second;
-    encodeULEB128(Loc.LineOffset, OS);
-    encodeULEB128(Loc.Discriminator, OS);
-    if (std::error_code EC = writeBody(CalleeSamples))
-      return EC;
-  }
+  for (const auto &J : S.getCallsiteSamples())
+    for (const auto &FS : J.second) {
+      LineLocation Loc = J.first;
+      const FunctionSamples &CalleeSamples = FS.second;
+      encodeULEB128(Loc.LineOffset, OS);
+      encodeULEB128(Loc.Discriminator, OS);
+      if (std::error_code EC = writeBody(CalleeSamples))
+        return EC;
+    }
 
   return sampleprof_error::success;
 }

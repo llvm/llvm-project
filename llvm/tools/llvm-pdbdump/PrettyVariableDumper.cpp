@@ -91,6 +91,19 @@ void VariableDumper::start(const PDBSymbolData &Var) {
   }
 }
 
+void VariableDumper::start(const PDBSymbolTypeVTable &Var) {
+  Printer.NewLine();
+  Printer << "data ";
+  auto VTableType = cast<PDBSymbolTypePointer>(Var.getType());
+  uint32_t PointerSize = VTableType->getLength();
+
+  WithColor(Printer, PDB_ColorItem::Offset).get()
+      << "+" << format_hex(Var.getOffset(), 4) << " [sizeof=" << PointerSize
+      << "] ";
+
+  WithColor(Printer, PDB_ColorItem::Identifier).get() << " __vfptr";
+}
+
 void VariableDumper::dump(const PDBSymbolTypeArray &Symbol) {
   auto ElementType = Symbol.getElementType();
   assert(ElementType);
@@ -157,12 +170,12 @@ void VariableDumper::dump(const PDBSymbolTypePointer &Symbol) {
   if (!PointeeType)
     return;
   PointeeType->dump(*this);
-  if (auto Func = PointeeType->cast<PDBSymbolTypeFunctionSig>()) {
+  if (auto FuncSig = unique_dyn_cast<PDBSymbolTypeFunctionSig>(PointeeType)) {
     // A hack to get the calling convention in the right spot.
     Printer << " (";
-    PDB_CallingConv CC = Func->getCallingConvention();
+    PDB_CallingConv CC = FuncSig->getCallingConvention();
     WithColor(Printer, PDB_ColorItem::Keyword).get() << CC << " ";
-  } else if (isa<PDBSymbolTypeArray>(PointeeType.get())) {
+  } else if (isa<PDBSymbolTypeArray>(PointeeType)) {
     Printer << " (";
   }
   Printer << (Symbol.isReference() ? "&" : "*");
@@ -177,8 +190,8 @@ void VariableDumper::dumpRight(const PDBSymbolTypePointer &Symbol) {
   assert(PointeeType);
   if (!PointeeType)
     return;
-  if (isa<PDBSymbolTypeFunctionSig>(PointeeType.get()) ||
-      isa<PDBSymbolTypeArray>(PointeeType.get())) {
+  if (isa<PDBSymbolTypeFunctionSig>(PointeeType) ||
+      isa<PDBSymbolTypeArray>(PointeeType)) {
     Printer << ")";
   }
   PointeeType->dumpRight(*this);

@@ -24,6 +24,7 @@
 #include "kmp_lock.h"
 #include "kmp_io.h"
 #include "kmp_affinity.h"
+#include <ctype.h>   // toupper()
 
 static int __kmp_env_toPrint( char const * name, int flag );
 
@@ -3108,6 +3109,12 @@ __kmp_stg_print_topology_method( kmp_str_buf_t * buffer, char const * name,
         break;
 #  endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
+# if KMP_USE_HWLOC
+        case affinity_top_method_hwloc:
+        value = "hwloc";
+        break;
+# endif
+
         case affinity_top_method_cpuinfo:
         value = "cpuinfo";
         break;
@@ -4297,275 +4304,152 @@ __kmp_stg_print_speculative_statsfile( kmp_str_buf_t * buffer, char const * name
 // KMP_HW_SUBSET (was KMP_PLACE_THREADS)
 // -------------------------------------------------------------------------------------------------
 
+// The longest observable sequense of items is
+// Socket-Node-Tile-Core-Thread
+// So, let's limit to 5 levels for now
+// The input string is usually short enough, let's use 512 limit for now
+#define MAX_T_LEVEL 5
+#define MAX_STR_LEN 512
 static void
 __kmp_stg_parse_hw_subset( char const * name, char const * value, void * data ) {
-    // Value example: 5Cx2Tx15O
-    // Which means "use 5 cores with offset 15, 2 threads per core"
-    // AC: extended to sockets level, examples of
-    //     "use 2 sockets with offset 6, 2 cores with offset 2 per socket, 2 threads per core":
-    //     2s,6o,2c,2o,2t; 2s,6o,2c,2t,2o; 2s@6,2c@2,2t
-    //     To not break legacy code core-offset can be last;
-    //     postfix "o" or prefix @ can be offset designator.
-    // Note: not all syntax errors are analyzed, some may be skipped.
-#define CHECK_DELIM(_x)   (*(_x) == ',' || *(_x) == 'x')
-    static int parsed = 0;
-    int         num;
-    int single_warning = 0;
-    int flagS = 0, flagC = 0, flagT = 0, flagSO = 0, flagCO = 0;
-    const char *next = value;
-    const char *prev;
-
-    if( strcmp(name, "KMP_PLACE_THREADS") == 0 ) {
-        KMP_INFORM(EnvVarDeprecated,name,"KMP_HW_SUBSET");
-        if( parsed == 1 ) {
-            return; // already parsed KMP_HW_SUBSET
-        }
+  // Value example: 1s,5c@3,2T
+  // Which means "use 1 socket, 5 cores with offset 3, 2 threads per core"
+  static int parsed = 0;
+  if( strcmp(name, "KMP_PLACE_THREADS") == 0 ) {
+    KMP_INFORM(EnvVarDeprecated,name,"KMP_HW_SUBSET");
+    if( parsed == 1 ) {
+      return; // already parsed KMP_HW_SUBSET
     }
-    parsed = 1;
+  }
+  parsed = 1;
 
-    SKIP_WS(next);  // skip white spaces
-    if (*next == '\0')
-        return;   // no data provided, retain default values
-    if( strcmp(name, "KMP_PLACE_THREADS") == 0 ) {
-        KMP_INFORM(EnvVarDeprecated,name,"KMP_HW_SUBSET");
-        if( parsed == 1 ) {
-            return; // already parsed KMP_HW_SUBSET
-        }
+  char *components[MAX_T_LEVEL];
+  char const *digits = "0123456789";
+  char input[MAX_STR_LEN];
+  size_t len = 0, mlen = MAX_STR_LEN;
+  int level = 0;
+  // Canonize the string (remove spaces, unify delimiters, etc.)
+  char *pos = (char *)value;
+  while (*pos && mlen) {
+    if (*pos != ' ') { // skip spaces
+      if (len == 0 && *pos == ':') {
+        __kmp_hws_abs_flag = 1; // if the first symbol is ":", skip it
+      } else {
+        input[len] = toupper(*pos);
+        if (input[len] == 'X')
+          input[len] = ','; // unify delimiters of levels
+        if (input[len] == 'O' && strchr(digits, *(pos + 1)))
+          input[len] = '@'; // unify delimiters of offset
+        len++;
+      }
     }
-    parsed = 1;
-
-    SKIP_WS(next);  // skip white spaces
-    if (*next == '\0')
-        return;   // no data provided, retain default values
-    // Get num_sockets first (or whatever specified)
-    if (*next >= '0' && *next <= '9') {
-        prev = next;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(prev, *next);
-        SKIP_WS(next);
-        if (*next == 's' || *next == 'S') {  // e.g. "2s"
-            __kmp_place_num_sockets = num;
-            flagS = 1; // got num sockets
-            next++;
-            if (*next == '@') { // socket offset, e.g. "2s@4"
-                flagSO = 1;
-                prev = ++next;  // don't allow spaces for simplicity
-                if (!(*next >= '0' && *next <= '9')) {
-                    KMP_WARNING(AffHWSubsetInvalid, name, value);
-                    return;
-                }
-                SKIP_DIGITS(next);
-                num = __kmp_str_to_int(prev, *next);
-                __kmp_place_socket_offset = num;
-            }
-        } else if (*next == 'c' || *next == 'C') {
-            __kmp_place_num_cores = num;
-            flagS = flagC = 1; // sockets were not specified - use default
-            next++;
-            if (*next == '@') { // core offset, e.g. "2c@6"
-                flagCO = 1;
-                prev = ++next;  // don't allow spaces for simplicity
-                if (!(*next >= '0' && *next <= '9')) {
-                    KMP_WARNING(AffHWSubsetInvalid, name, value);
-                    return;
-                }
-                SKIP_DIGITS(next);
-                num = __kmp_str_to_int(prev, *next);
-                __kmp_place_core_offset = num;
-            }
-        } else if (CHECK_DELIM(next)) {
-            __kmp_place_num_cores = num; // no letter-designator - num cores
-            flagS = flagC = 1; // sockets were not specified - use default
-            next++;
-        } else if (*next == 't' || *next == 'T') {
-            __kmp_place_num_threads_per_core = num;
-            // sockets, cores were not specified - use default
-            return;   // we ignore offset value in case all cores are used
-        } else if (*next == '\0') {
-            __kmp_place_num_cores = num;
-            return;   // the only value provided - set num cores
+    mlen--;
+    pos++;
+  }
+  if (len == 0 || mlen == 0)
+    goto err; // contents is either empty or too long
+  input[len] = '\0';
+  __kmp_hws_requested = 1; // mark that subset requested
+  // Split by delimiter
+  pos = input;
+  components[level++] = pos;
+  while (pos = strchr(pos, ',')) {
+    *pos = '\0'; // modify input and avoid more copying
+    components[level++] = ++pos; // expect something after ","
+    if (level > MAX_T_LEVEL)
+      goto err; // too many components provided
+  }
+  // Check each component
+  for (int i = 0; i < level; ++i) {
+    int offset = 0;
+    int num = atoi(components[i]); // each component should start with a number
+    if ((pos = strchr(components[i], '@'))) {
+      offset = atoi(pos + 1); // save offset
+      *pos = '\0'; // cut the offset from the component
+    }
+    pos = components[i] + strspn(components[i], digits);
+    if (pos == components[i])
+      goto err;
+    // detect the component type
+    switch (*pos) {
+    case 'S': // Socket
+      if (__kmp_hws_socket.num > 0)
+        goto err; // duplicate is not allowed
+      __kmp_hws_socket.num = num;
+      __kmp_hws_socket.offset = offset;
+      break;
+    case 'N': // NUMA Node
+      if (__kmp_hws_node.num > 0)
+        goto err; // duplicate is not allowed
+      __kmp_hws_node.num = num;
+      __kmp_hws_node.offset = offset;
+      break;
+    case 'L': // Cache
+      if (*(pos + 1) == '2') { // L2 - Tile
+        if (__kmp_hws_tile.num > 0)
+          goto err; // duplicate is not allowed
+        __kmp_hws_tile.num = num;
+        __kmp_hws_tile.offset = offset;
+      } else if (*(pos + 1) == '3') { // L3 - Socket
+        if (__kmp_hws_socket.num > 0)
+          goto err; // duplicate is not allowed
+        __kmp_hws_socket.num = num;
+        __kmp_hws_socket.offset = offset;
+      } else if (*(pos + 1) == '1') { // L1 - Core
+        if (__kmp_hws_core.num > 0)
+          goto err; // duplicate is not allowed
+        __kmp_hws_core.num = num;
+        __kmp_hws_core.offset = offset;
+      }
+      break;
+    case 'C': // Core (or Cache?)
+      if (*(pos + 1) != 'A') {
+        if (__kmp_hws_core.num > 0)
+          goto err; // duplicate is not allowed
+        __kmp_hws_core.num = num;
+        __kmp_hws_core.offset = offset;
+      } else { // Cache
+        char *d = pos + strcspn(pos, digits); // find digit
+        if (*d == '2') { // L2 - Tile
+          if (__kmp_hws_tile.num > 0)
+            goto err; // duplicate is not allowed
+          __kmp_hws_tile.num = num;
+          __kmp_hws_tile.offset = offset;
+        } else if (*d == '3') { // L3 - Socket
+          if (__kmp_hws_socket.num > 0)
+            goto err; // duplicate is not allowed
+          __kmp_hws_socket.num = num;
+          __kmp_hws_socket.offset = offset;
+        } else if (*d == '1') { // L1 - Core
+          if (__kmp_hws_core.num > 0)
+            goto err; // duplicate is not allowed
+          __kmp_hws_core.num = num;
+          __kmp_hws_core.offset = offset;
         } else {
-            KMP_WARNING(AffHWSubsetInvalid, name, value);
-            return;
+          goto err;
         }
-    } else {
-        KMP_WARNING(AffHWSubsetInvalid, name, value);
-        return;
+      }
+      break;
+    case 'T': // Thread
+      if (__kmp_hws_proc.num > 0)
+        goto err; // duplicate is not allowed
+      __kmp_hws_proc.num = num;
+      __kmp_hws_proc.offset = offset;
+      break;
+    default:
+      goto err;
     }
-    KMP_DEBUG_ASSERT(flagS); // num sockets should already be set here
-    SKIP_WS(next);
-    if (*next == '\0')
-        return;   // " n  " - something like this
-    if (CHECK_DELIM(next)) {
-        next++;   // skip delimiter
-        SKIP_WS(next);
-    }
-
-    // Get second value (could be offset, num_cores, num_threads)
-    if (*next >= '0' && *next <= '9') {
-        prev = next;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(prev, *next);
-        SKIP_WS(next);
-        if (*next == 'c' || *next == 'C') {
-            KMP_DEBUG_ASSERT(flagC == 0);
-            __kmp_place_num_cores = num;
-            flagC = 1;
-            next++;
-            if (*next == '@') { // core offset, e.g. "2c@6"
-                flagCO = 1;
-                prev = ++next;  // don't allow spaces for simplicity
-                if (!(*next >= '0' && *next <= '9')) {
-                    KMP_WARNING(AffHWSubsetInvalid, name, value);
-                    return;
-                }
-                SKIP_DIGITS(next);
-                num = __kmp_str_to_int(prev, *next);
-                __kmp_place_core_offset = num;
-            }
-        } else if (*next == 'o' || *next == 'O') { // offset specified
-            KMP_WARNING(AffHWSubsetDeprecated);
-            single_warning = 1;
-            if (flagC) { // whether num_cores already specified (sockets skipped)
-                KMP_DEBUG_ASSERT(!flagCO); // either "o" or @, not both
-                __kmp_place_core_offset = num;
-            } else {
-                KMP_DEBUG_ASSERT(!flagSO); // either "o" or @, not both
-                __kmp_place_socket_offset = num;
-            }
-            next++;
-        } else if (*next == 't' || *next == 'T') {
-            KMP_DEBUG_ASSERT(flagT == 0);
-            __kmp_place_num_threads_per_core = num;
-            flagC = 1; // num_cores could be skipped ?
-            flagT = 1;
-            next++; // can have core-offset specified after num threads
-        } else if (*next == '\0') {
-            KMP_DEBUG_ASSERT(flagC); // 4x2 means 4 cores 2 threads per core
-            __kmp_place_num_threads_per_core = num;
-            return;   // two values provided without letter-designator
-        } else {
-            KMP_WARNING(AffHWSubsetInvalid, name, value);
-            return;
-        }
-    } else {
-        KMP_WARNING(AffHWSubsetInvalid, name, value);
-        return;
-    }
-    SKIP_WS(next);
-    if (*next == '\0')
-        return;   // " Ns,Nc  " - something like this
-    if (CHECK_DELIM(next)) {
-        next++;   // skip delimiter
-        SKIP_WS(next);
-    }
-
-    // Get third value (could be core-offset, num_cores, num_threads)
-    if (*next >= '0' && *next <= '9') {
-        prev = next;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(prev, *next);
-        SKIP_WS(next);
-        if (*next == 't' || *next == 'T') {
-            KMP_DEBUG_ASSERT(flagT == 0);
-            __kmp_place_num_threads_per_core = num;
-            if (flagC == 0)
-                return; // num_cores could be skipped (e.g. 2s,4o,2t)
-            flagT = 1;
-            next++; // can have core-offset specified later (e.g. 2s,1c,2t,3o)
-        } else if (*next == 'c' || *next == 'C') {
-            KMP_DEBUG_ASSERT(flagC == 0);
-            __kmp_place_num_cores = num;
-            flagC = 1;
-            next++;
-            //KMP_DEBUG_ASSERT(*next != '@'); // socket offset used "o" designator
-        } else if (*next == 'o' || *next == 'O') {
-            KMP_WARNING(AffHWSubsetDeprecated);
-            single_warning = 1;
-            KMP_DEBUG_ASSERT(flagC);
-            //KMP_DEBUG_ASSERT(!flagSO); // socket offset couldn't use @ designator
-            __kmp_place_core_offset = num;
-            next++;
-        } else {
-            KMP_WARNING(AffHWSubsetInvalid, name, value);
-            return;
-        }
-    } else {
-        KMP_WARNING(AffHWSubsetInvalid, name, value);
-        return;
-    }
-    KMP_DEBUG_ASSERT(flagC);
-    SKIP_WS(next);
-    if ( *next == '\0' )
-            return;
-    if (CHECK_DELIM(next)) {
-        next++;   // skip delimiter
-        SKIP_WS(next);
-    }
-
-    // Get 4-th value (could be core-offset, num_threads)
-    if (*next >= '0' && *next <= '9') {
-        prev = next;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(prev, *next);
-        SKIP_WS(next);
-        if (*next == 'o' || *next == 'O') {
-            if (!single_warning) { // warn once
-                KMP_WARNING(AffHWSubsetDeprecated);
-            }
-            KMP_DEBUG_ASSERT(!flagSO); // socket offset couldn't use @ designator
-            __kmp_place_core_offset = num;
-            next++;
-        } else if (*next == 't' || *next == 'T') {
-            KMP_DEBUG_ASSERT(flagT == 0);
-            __kmp_place_num_threads_per_core = num;
-            flagT = 1;
-            next++; // can have core-offset specified after num threads
-        } else {
-            KMP_WARNING(AffHWSubsetInvalid, name, value);
-            return;
-        }
-    } else {
-        KMP_WARNING(AffHWSubsetInvalid, name, value);
-        return;
-    }
-    SKIP_WS(next);
-    if ( *next == '\0' )
-        return;
-    if (CHECK_DELIM(next)) {
-        next++;   // skip delimiter
-        SKIP_WS(next);
-    }
-
-    // Get 5-th value (could be core-offset, num_threads)
-    if (*next >= '0' && *next <= '9') {
-        prev = next;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(prev, *next);
-        SKIP_WS(next);
-        if (*next == 'o' || *next == 'O') {
-            if (!single_warning) { // warn once
-                KMP_WARNING(AffHWSubsetDeprecated);
-            }
-            KMP_DEBUG_ASSERT(flagT);
-            KMP_DEBUG_ASSERT(!flagSO); // socket offset couldn't use @ designator
-            __kmp_place_core_offset = num;
-        } else if (*next == 't' || *next == 'T') {
-            KMP_DEBUG_ASSERT(flagT == 0);
-            __kmp_place_num_threads_per_core = num;
-        } else {
-            KMP_WARNING(AffHWSubsetInvalid, name, value);
-        }
-    } else {
-        KMP_WARNING(AffHWSubsetInvalid, name, value);
-    }
-    return;
-#undef CHECK_DELIM
+  }
+  return;
+err:
+  KMP_WARNING(AffHWSubsetInvalid, name, value);
+  __kmp_hws_requested = 0; // mark that subset not requested
+  return;
 }
 
 static void
 __kmp_stg_print_hw_subset( kmp_str_buf_t * buffer, char const * name, void * data ) {
-    if (__kmp_place_num_sockets + __kmp_place_num_cores + __kmp_place_num_threads_per_core) {
+    if (__kmp_hws_requested) {
         int comma = 0;
         kmp_str_buf_t buf;
         __kmp_str_buf_init(&buf);
@@ -4573,26 +4457,34 @@ __kmp_stg_print_hw_subset( kmp_str_buf_t * buffer, char const * name, void * dat
             KMP_STR_BUF_PRINT_NAME_EX(name);
         else
             __kmp_str_buf_print(buffer, "   %s='", name);
-        if (__kmp_place_num_sockets) {
-            __kmp_str_buf_print(&buf, "%ds", __kmp_place_num_sockets);
-            if (__kmp_place_socket_offset)
-                __kmp_str_buf_print(&buf, "@%d", __kmp_place_socket_offset);
+        if (__kmp_hws_socket.num) {
+            __kmp_str_buf_print(&buf, "%ds", __kmp_hws_socket.num);
+            if (__kmp_hws_socket.offset)
+                __kmp_str_buf_print(&buf, "@%d", __kmp_hws_socket.offset);
             comma = 1;
         }
-        if (__kmp_place_num_cores) {
-            __kmp_str_buf_print(&buf, "%s%dc", comma?",":"", __kmp_place_num_cores);
-            if (__kmp_place_core_offset)
-                __kmp_str_buf_print(&buf, "@%d", __kmp_place_core_offset);
+        if (__kmp_hws_node.num) {
+            __kmp_str_buf_print(&buf, "%s%dn", comma?",":"", __kmp_hws_node.num);
+            if (__kmp_hws_node.offset)
+                __kmp_str_buf_print(&buf, "@%d", __kmp_hws_node.offset);
             comma = 1;
         }
-        if (__kmp_place_num_threads_per_core)
-            __kmp_str_buf_print(&buf, "%s%dt", comma?",":"", __kmp_place_num_threads_per_core);
+        if (__kmp_hws_tile.num) {
+            __kmp_str_buf_print(&buf, "%s%dL2", comma?",":"", __kmp_hws_tile.num);
+            if (__kmp_hws_tile.offset)
+                __kmp_str_buf_print(&buf, "@%d", __kmp_hws_tile.offset);
+            comma = 1;
+        }
+        if (__kmp_hws_core.num) {
+            __kmp_str_buf_print(&buf, "%s%dc", comma?",":"", __kmp_hws_core.num);
+            if (__kmp_hws_core.offset)
+                __kmp_str_buf_print(&buf, "@%d", __kmp_hws_core.offset);
+            comma = 1;
+        }
+        if (__kmp_hws_proc.num)
+            __kmp_str_buf_print(&buf, "%s%dt", comma?",":"", __kmp_hws_proc.num);
         __kmp_str_buf_print(buffer, "%s'\n", buf.str );
         __kmp_str_buf_free(&buf);
-/*
-    } else {
-        __kmp_str_buf_print( buffer, "   %s: %s \n", name, KMP_I18N_STR( NotDefined ) );
-*/
     }
 }
 

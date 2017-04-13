@@ -294,11 +294,26 @@ Error ProcessMachCore::DoLoadCore() {
 
   bool found_main_binary_definitively = false;
 
+  addr_t objfile_binary_addr;
+  UUID objfile_binary_uuid;
+  if (core_objfile->GetCorefileMainBinaryInfo (objfile_binary_addr, objfile_binary_uuid))
+  {
+    if (objfile_binary_addr != LLDB_INVALID_ADDRESS)
+    {
+        m_mach_kernel_addr = objfile_binary_addr;
+        found_main_binary_definitively = true;
+        if (log)
+            log->Printf ("ProcessMachCore::DoLoadCore: using kernel address 0x%" PRIx64
+                         " from LC_NOTE 'main bin spec' load command.", m_mach_kernel_addr);
+    }
+  }
+  
   // This checks for the presence of an LC_IDENT string in a core file;
   // LC_IDENT is very obsolete and should not be used in new code, but
   // if the load command is present, let's use the contents.
   std::string corefile_identifier = core_objfile->GetIdentifierString();
-  if (corefile_identifier.find("Darwin Kernel") != std::string::npos) {
+  if (found_main_binary_definitively == false 
+      && corefile_identifier.find("Darwin Kernel") != std::string::npos) {
       UUID uuid;
       addr_t addr = LLDB_INVALID_ADDRESS;
       if (corefile_identifier.find("UUID=") != std::string::npos) {
@@ -320,13 +335,13 @@ Error ProcessMachCore::DoLoadCore() {
           found_main_binary_definitively = true;
           if (log)
             log->Printf("ProcessMachCore::DoLoadCore: Using the kernel address 0x%" PRIx64
-                        "from LC_IDENT string '%s'", addr, corefile_identifier.c_str());
+                        " from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'", addr, corefile_identifier.c_str());
       }
   }
 
-  if (found_main_binary_definitively == false &&
-      (m_dyld_addr == LLDB_INVALID_ADDRESS ||
-      m_mach_kernel_addr == LLDB_INVALID_ADDRESS)) {
+  if (found_main_binary_definitively == false
+      && (m_dyld_addr == LLDB_INVALID_ADDRESS
+          || m_mach_kernel_addr == LLDB_INVALID_ADDRESS)) {
     // We need to locate the main executable in the memory ranges
     // we have in the core file.  We need to search for both a user-process dyld
     // binary

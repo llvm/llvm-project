@@ -33,9 +33,11 @@ llvm::Pass *createDeLICMPass();
 ///
 /// Used by unittesting.
 bool isConflicting(isl::union_set ExistingOccupied,
-                   isl::union_set ExistingUnused, isl::union_set ExistingWrites,
+                   isl::union_set ExistingUnused, isl::union_map ExistingKnown,
+                   isl::union_map ExistingWrites,
                    isl::union_set ProposedOccupied,
-                   isl::union_set ProposedUnused, isl::union_set ProposedWrites,
+                   isl::union_set ProposedUnused, isl::union_map ProposedKnown,
+                   isl::union_map ProposedWrites,
                    llvm::raw_ostream *OS = nullptr, unsigned Indent = 0);
 } // namespace polly
 

@@ -106,6 +106,7 @@
 #define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
 #define TEST_CONSTEXPR constexpr
 #define TEST_NOEXCEPT noexcept
+#define TEST_NOEXCEPT_FALSE noexcept(false)
 #define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
 # if TEST_STD_VER >= 14
 #   define TEST_CONSTEXPR_CXX14 constexpr
@@ -123,6 +124,7 @@
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
 #define TEST_NOEXCEPT throw()
+#define TEST_NOEXCEPT_FALSE
 #define TEST_NOEXCEPT_COND(...)
 #define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 #endif
@@ -184,7 +186,7 @@ struct is_same<T, T> { enum {value = 1}; };
 } // namespace test_macros_detail
 
 #define ASSERT_SAME_TYPE(...) \
-    static_assert(test_macros_detail::is_same<__VA_ARGS__>::value, \
+    static_assert((test_macros_detail::is_same<__VA_ARGS__>::value), \
                  "Types differ uexpectedly")
 
 #ifndef TEST_HAS_NO_EXCEPTIONS

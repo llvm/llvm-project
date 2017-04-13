@@ -2935,11 +2935,8 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       continue;
 
     // Get the call site's attribute list.
-    SmallVector<llvm::AttributeSet, 8> newAttrs;
+    SmallVector<llvm::AttributeSet, 8> newArgAttrs;
     llvm::AttributeList oldAttrs = callSite.getAttributes();
-
-    // Collect any return attributes from the call.
-    newAttrs.push_back(oldAttrs.getRetAttributes());
 
     // If the function was passed too few arguments, don't transform.
     unsigned newNumArgs = newFn->arg_size();
@@ -2949,20 +2946,18 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
     // If any of the types mismatch, we don't transform.
     unsigned argNo = 0;
     bool dontTransform = false;
-    for (llvm::Function::arg_iterator ai = newFn->arg_begin(),
-           ae = newFn->arg_end(); ai != ae; ++ai, ++argNo) {
-      if (callSite.getArgument(argNo)->getType() != ai->getType()) {
+    for (llvm::Argument &A : newFn->args()) {
+      if (callSite.getArgument(argNo)->getType() != A.getType()) {
         dontTransform = true;
         break;
       }
 
       // Add any parameter attributes.
-      newAttrs.push_back(oldAttrs.getParamAttributes(argNo + 1));
+      newArgAttrs.push_back(oldAttrs.getParamAttributes(argNo + 1));
+      argNo++;
     }
     if (dontTransform)
       continue;
-
-    newAttrs.push_back(oldAttrs.getFnAttributes());
 
     // Okay, we can transform this.  Create the new call instruction and copy
     // over the required information.
@@ -2987,8 +2982,9 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
 
     if (!newCall->getType()->isVoidTy())
       newCall->takeName(callSite.getInstruction());
-    newCall.setAttributes(
-        llvm::AttributeList::get(newFn->getContext(), newAttrs));
+    newCall.setAttributes(llvm::AttributeList::get(
+        newFn->getContext(), oldAttrs.getFnAttributes(),
+        oldAttrs.getRetAttributes(), newArgAttrs));
     newCall.setCallingConv(callSite.getCallingConv());
 
     // Finally, remove the old call, replacing any uses with the new one.

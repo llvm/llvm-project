@@ -12276,26 +12276,23 @@ void DAGCombiner::getStoreMergeCandidates(
 
   SDNode *RootNode = (St->getChain()).getNode();
 
-  // Set of Parents of Candidates
-  std::set<SDNode *> CandidateParents;
-
-  if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
-    RootNode = Ldn->getChain().getNode();
-    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
-      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) // walk down chain
-        CandidateParents.insert(*I);
-  } else
-    CandidateParents.insert(RootNode);
-
-  // check all parents of mergable children
-  for (auto P = CandidateParents.begin(); P != CandidateParents.end(); ++P)
-    for (auto I = (*P)->use_begin(), E = (*P)->use_end(); I != E; ++I)
+  auto FindInNode = [&](SDNode *P) {
+    for (auto I = P->use_begin(), E = P->use_end(); I != E; ++I)
       if (I.getOperandNo() == 0)
         if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I)) {
           BaseIndexOffset Ptr;
           if (CandidateMatch(OtherST, Ptr))
             StoreNodes.push_back(MemOpLink(OtherST, Ptr.Offset));
         }
+  };
+
+  if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
+    RootNode = Ldn->getChain().getNode();
+    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
+      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) // walk down chain
+        FindInNode(*I);
+  } else
+    FindInNode(RootNode);
 }
 
 // We need to check that merging these stores does not cause a loop

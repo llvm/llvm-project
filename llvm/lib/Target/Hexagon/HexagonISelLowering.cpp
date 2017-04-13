@@ -485,9 +485,7 @@ static bool RetCC_Hexagon32(unsigned ValNo, MVT ValVT,
     }
   }
 
-  unsigned Offset = State.AllocateStack(4, 4);
-  State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  return false;
+  return true;
 }
 
 static bool RetCC_Hexagon64(unsigned ValNo, MVT ValVT,
@@ -500,9 +498,7 @@ static bool RetCC_Hexagon64(unsigned ValNo, MVT ValVT,
     }
   }
 
-  unsigned Offset = State.AllocateStack(8, 8);
-  State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  return false;
+  return true;
 }
 
 static bool RetCC_HexagonVector(unsigned ValNo, MVT ValVT,
@@ -513,7 +509,6 @@ static bool RetCC_HexagonVector(unsigned ValNo, MVT ValVT,
   bool UseHVX = HST.useHVXOps();
   bool UseHVXDbl = HST.useHVXDblOps();
 
-  unsigned OffSiz = 64;
   if (LocVT == MVT::v16i32) {
     if (unsigned Reg = State.AllocateReg(Hexagon::V0)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -525,18 +520,14 @@ static bool RetCC_HexagonVector(unsigned ValNo, MVT ValVT,
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
-    OffSiz = 128;
   } else if (LocVT == MVT::v64i32) {
     if (unsigned Reg = State.AllocateReg(Hexagon::W0)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
-    OffSiz = 256;
   }
 
-  unsigned Offset = State.AllocateStack(OffSiz, OffSiz);
-  State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  return false;
+  return true;
 }
 
 void HexagonTargetLowering::promoteLdStType(MVT VT, MVT PromotedLdStVT) {
@@ -590,6 +581,16 @@ static bool isHvxVectorType(MVT Ty) {
   default:
     return false;
   }
+}
+
+bool
+HexagonTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, RetCC_Hexagon);
 }
 
 // LowerReturn - Lower ISD::RET. If a struct is larger than 8 bytes and is
@@ -1254,7 +1255,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         InVals.push_back(FIN);
       } else {
         InVals.push_back(
-            DAG.getLoad(VA.getLocVT(), dl, Chain, FIN, MachinePointerInfo()));
+            DAG.getLoad(VA.getValVT(), dl, Chain, FIN, MachinePointerInfo()));
       }
     }
   }

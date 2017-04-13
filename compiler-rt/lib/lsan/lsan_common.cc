@@ -175,6 +175,23 @@ void ScanRangeForPointers(uptr begin, uptr end,
   }
 }
 
+// Scans a global range for pointers
+void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
+  uptr allocator_begin = 0, allocator_end = 0;
+  GetAllocatorGlobalRange(&allocator_begin, &allocator_end);
+  if (begin <= allocator_begin && allocator_begin < end) {
+    CHECK_LE(allocator_begin, allocator_end);
+    CHECK_LE(allocator_end, end);
+    if (begin < allocator_begin)
+      ScanRangeForPointers(begin, allocator_begin, frontier, "GLOBAL",
+                           kReachable);
+    if (allocator_end < end)
+      ScanRangeForPointers(allocator_end, end, frontier, "GLOBAL", kReachable);
+  } else {
+    ScanRangeForPointers(begin, end, frontier, "GLOBAL", kReachable);
+  }
+}
+
 void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg) {
   Frontier *frontier = reinterpret_cast<Frontier *>(arg);
   ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);

@@ -993,6 +993,7 @@ The following type trait primitives are supported by Clang:
 * ``__has_trivial_destructor`` (GNU, Microsoft)
 * ``__has_virtual_destructor`` (GNU, Microsoft)
 * ``__is_abstract`` (GNU, Microsoft)
+* ``__is_aggregate`` (GNU, Microsoft)
 * ``__is_base_of`` (GNU, Microsoft)
 * ``__is_class`` (GNU, Microsoft)
 * ``__is_convertible_to`` (Microsoft)

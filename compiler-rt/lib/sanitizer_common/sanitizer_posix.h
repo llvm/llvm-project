@@ -87,6 +87,9 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum);
 
 uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]);
+
+bool IsStateDetached(int state);
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX_H

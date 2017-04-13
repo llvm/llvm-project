@@ -62,6 +62,7 @@ class PDBSymbol {
 protected:
   PDBSymbol(const IPDBSession &PDBSession,
             std::unique_ptr<IPDBRawSymbol> Symbol);
+  PDBSymbol(PDBSymbol &Symbol);
 
 public:
   static std::unique_ptr<PDBSymbol>
@@ -89,12 +90,6 @@ public:
   template <typename T> std::unique_ptr<T> findOneChild() const {
     auto Enumerator(findAllChildren<T>());
     return Enumerator->getNext();
-  }
-
-  template <typename T> T *cast() { return llvm::dyn_cast<T>(this); }
-
-  template <typename T> const T *cast() const {
-    return llvm::dyn_cast<T>(this);
   }
 
   std::unique_ptr<PDBSymbol> clone() const;
@@ -128,18 +123,11 @@ protected:
 
   template <typename ConcreteType>
   std::unique_ptr<ConcreteType> getConcreteSymbolByIdHelper(uint32_t Id) const {
-    auto Sym = getSymbolByIdHelper(Id);
-    if (!Sym)
-      return nullptr;
-    ConcreteType *Result = Sym->cast<ConcreteType>();
-    if (!Result)
-      return nullptr;
-    Sym.release();
-    return std::unique_ptr<ConcreteType>(Result);
+    return unique_dyn_cast_or_null<ConcreteType>(getSymbolByIdHelper(Id));
   }
 
   const IPDBSession &Session;
-  const std::unique_ptr<IPDBRawSymbol> RawSymbol;
+  std::unique_ptr<IPDBRawSymbol> RawSymbol;
 };
 
 } // namespace llvm

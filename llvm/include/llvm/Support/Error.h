@@ -64,6 +64,12 @@ public:
   /// using std::error_code. It will be removed in the future.
   virtual std::error_code convertToErrorCode() const = 0;
 
+  // Returns the class ID for this type.
+  static const void *classID() { return &ID; }
+
+  // Returns the class ID for the dynamic type of this ErrorInfoBase instance.
+  virtual const void *dynamicClassID() const = 0;
+
   // Check whether this instance is a subclass of the class identified by
   // ClassID.
   virtual bool isA(const void *const ClassID) const {
@@ -74,9 +80,6 @@ public:
   template <typename ErrorInfoT> bool isA() const {
     return isA(ErrorInfoT::classID());
   }
-
-  // Returns the class ID for this type.
-  static const void *classID() { return &ID; }
 
 private:
   virtual void anchor();
@@ -233,6 +236,14 @@ public:
     return getPtr() && getPtr()->isA(ErrT::classID());
   }
 
+  /// Returns the dynamic class id of this error, or null if this is a success
+  /// value.
+  const void* dynamicClassID() const {
+    if (!getPtr())
+      return nullptr;
+    return getPtr()->dynamicClassID();
+  }
+
 private:
   void assertIsChecked() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -316,11 +327,14 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&... Args) {
 template <typename ThisErrT, typename ParentErrT = ErrorInfoBase>
 class ErrorInfo : public ParentErrT {
 public:
+
+  static const void *classID() { return &ThisErrT::ID; }
+
+  const void *dynamicClassID() const override { return &ThisErrT::ID; }
+
   bool isA(const void *const ClassID) const override {
     return ClassID == classID() || ParentErrT::isA(ClassID);
   }
-
-  static const void *classID() { return &ThisErrT::ID; }
 };
 
 /// Special ErrorInfo subclass representing a list of ErrorInfos.
@@ -629,6 +643,7 @@ private:
 /// takeError(). It also adds an bool errorIsA<ErrT>() method for testing the
 /// error class type.
 template <class T> class LLVM_NODISCARD Expected {
+  template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
   static const bool isRef = std::is_reference<T>::value;
   typedef ReferenceStorage<typename std::remove_reference<T>::type> wrap;
@@ -737,7 +752,7 @@ public:
 
   /// \brief Check that this Expected<T> is an error of type ErrT.
   template <typename ErrT> bool errorIsA() const {
-    return HasError && getErrorStorage()->template isA<ErrT>();
+    return HasError && (*getErrorStorage())->template isA<ErrT>();
   }
 
   /// \brief Take ownership of the stored error.
@@ -832,6 +847,18 @@ private:
     return reinterpret_cast<error_type *>(ErrorStorage.buffer);
   }
 
+  const error_type *getErrorStorage() const {
+    assert(HasError && "Cannot get error when a value exists!");
+    return reinterpret_cast<const error_type *>(ErrorStorage.buffer);
+  }
+
+  // Used by ExpectedAsOutParameter to reset the checked flag.
+  void setUnchecked() {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    Unchecked = true;
+#endif
+  }
+
   void assertIsChecked() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (Unchecked) {
@@ -856,6 +883,28 @@ private:
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   bool Unchecked : 1;
 #endif
+};
+
+/// Helper for Expected<T>s used as out-parameters.
+///
+/// See ErrorAsOutParameter.
+template <typename T>
+class ExpectedAsOutParameter {
+public:
+
+  ExpectedAsOutParameter(Expected<T> *ValOrErr)
+    : ValOrErr(ValOrErr) {
+    if (ValOrErr)
+      (void)!!*ValOrErr;
+  }
+
+  ~ExpectedAsOutParameter() {
+    if (ValOrErr)
+      ValOrErr->setUnchecked();
+  }
+
+private:
+  Expected<T> *ValOrErr;
 };
 
 /// This class wraps a std::error_code in a Error.
@@ -925,6 +974,8 @@ public:
 
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
+
+  const std::string &getMessage() const { return Msg; }
 
 private:
   std::string Msg;

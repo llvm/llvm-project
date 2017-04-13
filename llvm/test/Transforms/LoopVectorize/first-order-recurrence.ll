@@ -1,6 +1,7 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -dce -instcombine -S | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -dce -instcombine -S | FileCheck %s --check-prefix=UNROLL
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S | FileCheck %s --check-prefix=UNROLL-NO-IC
+; RUN: opt < %s -loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S | FileCheck %s --check-prefix=UNROLL-NO-VF
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -350,11 +351,35 @@ for.end:
   ret void
 }
 
-; FIXME: we can vectorize this first order recurrence, by generating two
-; extracts - one for the phi `val.phi` and other for the phi update `addx`.
-; val.phi at end of loop is 94 + x.
-; CHECK-LABEL: extract_second_last_iteration
-; CHECK-NOT: vector.body
+; We vectorize this first order recurrence, by generating two
+; extracts for the phi `val.phi` - one at the last index and 
+; another at the second last index. We need these 2 extracts because 
+; the first order recurrence phi is used outside the loop, so we require the phi
+; itself and not its update (addx).
+; UNROLL-NO-IC-LABEL: extract_second_last_iteration
+; UNROLL-NO-IC: vector.body
+; UNROLL-NO-IC:   %step.add = add <4 x i32> %vec.ind, <i32 4, i32 4, i32 4, i32 4>
+; UNROLL-NO-IC:   %[[L1:.+]] = add <4 x i32> %vec.ind, %broadcast.splat
+; UNROLL-NO-IC:   %[[L2:.+]] = add <4 x i32> %step.add, %broadcast.splat
+; UNROLL-NO-IC:   %index.next = add i32 %index, 8
+; UNROLL-NO-IC:   icmp eq i32 %index.next, 96
+; UNROLL-NO-IC: middle.block
+; UNROLL-NO-IC:   icmp eq i32 96, 96
+; UNROLL-NO-IC:   %vector.recur.extract = extractelement <4 x i32> %[[L2]], i32 3
+; UNROLL-NO-IC:   %vector.recur.extract.for.phi = extractelement <4 x i32> %[[L2]], i32 2
+; UNROLL-NO-IC: for.end
+; UNROLL-NO-IC:   %val.phi.lcssa = phi i32 [ %scalar.recur, %for.body ], [ %vector.recur.extract.for.phi, %middle.block ]
+; Check the case when unrolled but not vectorized.
+; UNROLL-NO-VF-LABEL: extract_second_last_iteration
+; UNROLL-NO-VF: vector.body:
+; UNROLL-NO-VF:   %induction = add i32 %index, 0
+; UNROLL-NO-VF:   %induction1 = add i32 %index, 1
+; UNROLL-NO-VF:   %[[L1:.+]] = add i32 %induction, %x
+; UNROLL-NO-VF:   %[[L2:.+]] = add i32 %induction1, %x
+; UNROLL-NO-VF:   %index.next = add i32 %index, 2
+; UNROLL-NO-VF:   icmp eq i32 %index.next, 96
+; UNROLL-NO-VF: for.end:
+; UNROLL-NO-VF:   %val.phi.lcssa = phi i32 [ %scalar.recur, %for.body ], [ %[[L1]], %middle.block ]
 define i32 @extract_second_last_iteration(i32* %cval, i32 %x)  {
 entry:
   br label %for.body

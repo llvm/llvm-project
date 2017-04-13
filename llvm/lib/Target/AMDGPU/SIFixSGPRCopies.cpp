@@ -65,6 +65,7 @@
 /// ultimately led to the creation of an illegal COPY.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseSet.h"
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
@@ -331,6 +332,27 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   return true;
 }
 
+static bool predsHasDivergentTerminator(MachineBasicBlock *MBB,
+                               const TargetRegisterInfo *TRI) {
+  DenseSet<MachineBasicBlock*> Visited;
+  SmallVector<MachineBasicBlock*, 4> Worklist(MBB->pred_begin(), 
+                                              MBB->pred_end());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *mbb = Worklist.back();
+    Worklist.pop_back();
+
+    if (!Visited.insert(mbb).second)
+      continue;
+    if (hasTerminatorThatModifiesExec(*mbb, *TRI))
+      return true;
+
+    Worklist.insert(Worklist.end(), mbb->pred_begin(), mbb->pred_end());
+  }
+
+  return false;
+}
+
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -387,8 +409,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
           MachineBasicBlock *MBB0 = MI.getOperand(2).getMBB();
           MachineBasicBlock *MBB1 = MI.getOperand(4).getMBB();
 
-          MachineBasicBlock *NCD = MDT->findNearestCommonDominator(MBB0, MBB1);
-          if (NCD && !hasTerminatorThatModifiesExec(*NCD, *TRI)) {
+          if (!predsHasDivergentTerminator(MBB0, TRI) &&
+              !predsHasDivergentTerminator(MBB1, TRI)) {
             DEBUG(dbgs() << "Not fixing PHI for uniform branch: " << MI << '\n');
             break;
           }

@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan.h"
 #include "lsan_allocator.h"
@@ -281,7 +282,8 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
     res = REAL(pthread_create)(th, attr, __lsan_thread_start_func, &p);
   }
   if (res == 0) {
-    int tid = ThreadCreate(GetCurrentThread(), *(uptr *)th, detached);
+    int tid = ThreadCreate(GetCurrentThread(), *(uptr *)th,
+                           IsStateDetached(detached));
     CHECK_NE(tid, 0);
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)

@@ -63,7 +63,7 @@ namespace {
 class MockSession : public IPDBSession {
   uint64_t getLoadAddress() const override { return 0; }
   void setLoadAddress(uint64_t Address) override {}
-  std::unique_ptr<PDBSymbolExe> getGlobalScope() override {
+  std::unique_ptr<PDBSymbolExe> getGlobalScope() const override {
     return nullptr;
   }
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override {
@@ -226,6 +226,7 @@ public:
   MOCK_SYMBOL_ACCESSOR(getMachineType)
   MOCK_SYMBOL_ACCESSOR(getThunkOrdinal)
   MOCK_SYMBOL_ACCESSOR(getLength)
+  MOCK_SYMBOL_ACCESSOR(getVirtualBaseTableType)
   MOCK_SYMBOL_ACCESSOR(getLiveRangeLength)
   MOCK_SYMBOL_ACCESSOR(getVirtualAddress)
   MOCK_SYMBOL_ACCESSOR(getUdtKind)

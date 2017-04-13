@@ -2117,12 +2117,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_fdeclspec, OPT_fno_declspec,
                    (Opts.MicrosoftExt || Opts.Borland || Opts.CUDA));
 
-  // For now, we only support local submodule visibility in C++ (because we
-  // heavily depend on the ODR for merging redefinitions).
-  if (Opts.ModulesLocalVisibility && !Opts.CPlusPlus)
-    Diags.Report(diag::err_drv_argument_not_allowed_with)
-        << "-fmodules-local-submodule-visibility" << "C";
-
   if (Arg *A = Args.getLastArg(OPT_faddress_space_map_mangling_EQ)) {
     switch (llvm::StringSwitch<unsigned>(A->getValue())
       .Case("target", LangOptions::ASMM_Target)

@@ -110,6 +110,18 @@ define i64 @test9(i64 %x) {
   ret i64 %and
 }
 
+; combine -x & 1 into x & 1
+define <2 x i64> @test9vec(<2 x i64> %x) {
+; CHECK-LABEL: @test9vec(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i64> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[SUB]], <i64 1, i64 1>
+; CHECK-NEXT:    ret <2 x i64> [[AND]]
+;
+  %sub = sub nsw <2 x i64> <i64 0, i64 0>, %x
+  %and = and <2 x i64> %sub, <i64 1, i64 1>
+  ret <2 x i64> %and
+}
+
 define i64 @test10(i64 %x) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 %x, 1
