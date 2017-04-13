@@ -34,6 +34,7 @@ add_clang_library(clangStaticAnalyzerCore
   PlistDiagnostics.cpp
   ProgramState.cpp
   RangeConstraintManager.cpp
+  RangedConstraintManager.cpp
   RegionStore.cpp
   SValBuilder.cpp
   SVals.cpp
