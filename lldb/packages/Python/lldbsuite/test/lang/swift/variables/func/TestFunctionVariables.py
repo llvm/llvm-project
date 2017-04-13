@@ -77,7 +77,7 @@ class TestFunctionVariables(TestBase):
 
         # Make sure the function pointer correctly resolved to our a.bar
         # function
-        self.assertTrue('a.bar () -> ()' == func_ptr_function.name)
+        self.assertTrue('a.bar() -> ()' == func_ptr_function.name)
 
 if __name__ == '__main__':
     import atexit
