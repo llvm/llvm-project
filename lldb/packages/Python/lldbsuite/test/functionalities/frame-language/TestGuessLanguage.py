@@ -24,7 +24,6 @@ class TestFrameGuessLanguage(TestBase):
 
     def test_guess_language(self):
         """Test GuessLanguage for C and C++."""
-        self.skipTest("<rdar://problem/31593541>")
         self.build()
         self.do_test()
 
