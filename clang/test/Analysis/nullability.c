@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -verify %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability -verify %s
 
 void it_takes_two(int a, int b);
 void function_pointer_arity_mismatch() {

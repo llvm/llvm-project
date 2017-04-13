@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -Wno-conversion-null -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-store region -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-conversion-null -analyzer-checker=core,debug.ExprInspection -analyzer-store region -verify %s
 
 void clang_analyzer_eval(int);
 

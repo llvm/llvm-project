@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 void test() {

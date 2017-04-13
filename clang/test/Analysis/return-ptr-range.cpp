@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.security.ReturnPtrRange -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.security.ReturnPtrRange -verify %s
 
 int arr[10];
 int *ptr;

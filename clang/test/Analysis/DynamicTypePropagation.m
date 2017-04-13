@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.ObjCGenerics -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.ObjCGenerics -verify %s
 
 #if !__has_feature(objc_generics)
 #  error Compiler does not support Objective-C generics?

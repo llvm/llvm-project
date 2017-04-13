@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -fms-extensions -std=c++1z -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -fms-extensions -std=c++1z -analyzer-checker=alpha.clone.CloneChecker -verify %s
 
 // expected-no-diagnostics
 

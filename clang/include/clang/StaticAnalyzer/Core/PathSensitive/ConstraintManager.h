@@ -139,6 +139,8 @@ public:
     return nullptr;
   }
 
+  /// Scan all symbols referenced by the constraints. If the symbol is not
+  /// alive, remove it.
   virtual ProgramStateRef removeDeadBindings(ProgramStateRef state,
                                                  SymbolReaper& SymReaper) = 0;
 
@@ -181,6 +183,9 @@ protected:
 std::unique_ptr<ConstraintManager>
 CreateRangeConstraintManager(ProgramStateManager &statemgr,
                              SubEngine *subengine);
+
+std::unique_ptr<ConstraintManager>
+CreateZ3ConstraintManager(ProgramStateManager &statemgr, SubEngine *subengine);
 
 } // end GR namespace
 

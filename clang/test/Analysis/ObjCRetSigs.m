@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core -analyzer-checker=osx.cocoa.IncompatibleMethodTypes -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-checker=osx.cocoa.IncompatibleMethodTypes -verify -Wno-objc-root-class %s
 
 int printf(const char *, ...);
 

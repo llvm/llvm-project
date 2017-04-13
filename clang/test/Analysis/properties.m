@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc %s
 
 void clang_analyzer_eval(int);
 
@@ -987,5 +987,21 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
 }
 
 @end
+
+@interface Wrapper
+@property(nonatomic, readonly) int value;
+@end
+
+@implementation Wrapper
+@synthesize value;
+@end
+
+void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
+   union {
+    Wrapper *wrapper;
+   } u = { 0 };
+   [u.wrapper value];
+}
+
 #endif // non-ARC
 

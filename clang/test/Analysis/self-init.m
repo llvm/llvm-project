@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.SelfInit -analyzer-config ipa=dynamic -fno-builtin %s -verify
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.SelfInit -fno-builtin %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.SelfInit -analyzer-config ipa=dynamic -fno-builtin %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.SelfInit -fno-builtin %s -verify
 
 @class NSZone, NSCoder;
 @protocol NSObject

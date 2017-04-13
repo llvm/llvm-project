@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 void clang_analyzer_warnOnDeadSymbol(int);

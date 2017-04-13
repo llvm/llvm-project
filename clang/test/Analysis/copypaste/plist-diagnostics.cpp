@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-output=plist -o %t.plist -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-output=plist -o %t.plist -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
 // RUN: FileCheck --input-file=%t.plist %s
 
 void log();

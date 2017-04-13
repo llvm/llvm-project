@@ -494,6 +494,11 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
+  Optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
+    RegionBindingsRef B = getRegionBindings(S);
+    return B.getDefaultBinding(R);
+  }
+
   SVal getBinding(RegionBindingsConstRef B, Loc L, QualType T = QualType());
 
   SVal getBindingForElement(RegionBindingsConstRef B, const ElementRegion *R);

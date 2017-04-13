@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount -fblocks -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount -fblocks -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false %s -o %t
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount -fblocks -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false %s -o %t
 // RUN: FileCheck --input-file=%t %s
 @class NSString;
 typedef long NSInteger;

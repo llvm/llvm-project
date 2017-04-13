@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-conversion -analyze -analyzer-checker=core,alpha.core.Conversion -verify %s
+// RUN: %clang_analyze_cc1 -Wno-conversion -analyzer-checker=core,alpha.core.Conversion -verify %s
 
 unsigned char U8;
 signed char S8;
@@ -9,9 +9,67 @@ void assign(unsigned U, signed S) {
   if (U > 300)
     S8 = U; // expected-warning {{Loss of precision in implicit conversion}}
   if (S > 10)
-    U8 = S;
+    U8 = S; // no-warning
   if (U < 200)
-    S8 = U;
+    S8 = U; // no-warning
+}
+
+void addAssign() {
+  unsigned long L = 1000;
+  int I = -100;
+  U8 += L; // expected-warning {{Loss of precision in implicit conversion}}
+  L += I; // no-warning
+}
+
+void subAssign() {
+  unsigned long L = 1000;
+  int I = -100;
+  U8 -= L; // expected-warning {{Loss of precision in implicit conversion}}
+  L -= I; // no-warning
+}
+
+void mulAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 *= L; // expected-warning {{Loss of precision in implicit conversion}}
+  L *= I;  // expected-warning {{Loss of sign in implicit conversion}}
+  I = 10;
+  L *= I; // no-warning
+}
+
+void divAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 /= L; // no-warning
+  L /= I; // expected-warning {{Loss of sign in implicit conversion}}
+}
+
+void remAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 %= L; // no-warning
+  L %= I; // expected-warning {{Loss of sign in implicit conversion}}
+}
+
+void andAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 &= L; // no-warning
+  L &= I; // expected-warning {{Loss of sign in implicit conversion}}
+}
+
+void orAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 |= L; // expected-warning {{Loss of precision in implicit conversion}}
+  L |= I;  // expected-warning {{Loss of sign in implicit conversion}}
+}
+
+void xorAssign() {
+  unsigned long L = 1000;
+  int I = -1;
+  U8 ^= L; // expected-warning {{Loss of precision in implicit conversion}}
+  L ^= I;  // expected-warning {{Loss of sign in implicit conversion}}
 }
 
 void init1() {
@@ -21,7 +79,7 @@ void init1() {
 
 void relational(unsigned U, signed S) {
   if (S > 10) {
-    if (U < S) {
+    if (U < S) { // no-warning
     }
   }
   if (S < -10) {
@@ -32,14 +90,14 @@ void relational(unsigned U, signed S) {
 
 void multiplication(unsigned U, signed S) {
   if (S > 5)
-    S = U * S;
+    S = U * S; // no-warning
   if (S < -10)
     S = U * S; // expected-warning {{Loss of sign}}
 }
 
 void division(unsigned U, signed S) {
   if (S > 5)
-    S = U / S;
+    S = U / S; // no-warning
   if (S < -10)
     S = U / S; // expected-warning {{Loss of sign}}
 }

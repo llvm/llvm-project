@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.ExprInspection -analyzer-output=plist-multi-file %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -analyzer-output=plist-multi-file %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 #include "Inputs/include/plist-diagnostics-include-check-macro.h"

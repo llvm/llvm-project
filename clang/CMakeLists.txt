@@ -185,6 +185,8 @@ if (LIBXML2_FOUND)
   set(CLANG_HAVE_LIBXML 1)
 endif()
 
+find_package(Z3 4.5)
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
@@ -329,10 +331,6 @@ if (APPLE)
   endif()
 endif()
 
-configure_file(
-  ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake
-  ${CLANG_BINARY_DIR}/include/clang/Config/config.h)
-
 include(CMakeParseArguments)
 include(AddClang)
 
@@ -381,8 +379,19 @@ else()
   set(ENABLE_CLANG_STATIC_ANALYZER "0")
 endif()
 
-if (NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
-  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT")
+option(CLANG_ANALYZER_BUILD_Z3
+  "Build the static analyzer with the Z3 constraint manager." OFF)
+
+if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_BUILD_Z3))
+  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
+endif()
+
+if(CLANG_ANALYZER_BUILD_Z3)
+  if(Z3_FOUND)
+    set(CLANG_ANALYZER_WITH_Z3 1)
+  else()
+    message(FATAL_ERROR "Cannot find Z3 header file or shared library")
+  endif()
 endif()
 
 if(CLANG_ENABLE_ARCMT)
@@ -700,3 +709,7 @@ endif()
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   add_subdirectory(utils/ClangVisualizers)
 endif()
+
+configure_file(
+  ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake
+  ${CLANG_BINARY_DIR}/include/clang/Config/config.h)

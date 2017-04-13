@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c++ -analyzer-config c++-inlining=constructors %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c++ -analyzer-config c++-inlining=constructors %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -x c++ -analyzer-config c++-inlining=constructors %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -DINLINE -verify -x c++ -analyzer-config c++-inlining=constructors %s
 
 void clang_analyzer_eval(int);
 

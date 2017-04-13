@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core -analyzer-store=region -Wno-objc-root-class %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -Wno-objc-root-class %s -verify
 // expected-no-diagnostics
 
 // The point of this test cases is to exercise properties in the static
