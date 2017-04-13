@@ -796,7 +796,7 @@ int test_uninit_branch_c(void) {
 void test_bad_call_aux(int x);
 void test_bad_call(void) {
   int y;
-  test_bad_call_aux(y); // expected-warning{{Function call argument is an uninitialized value}}
+  test_bad_call_aux(y); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 @interface TestBadArg {}
@@ -805,7 +805,7 @@ void test_bad_call(void) {
 
 void test_bad_msg(TestBadArg *p) {
   int y;
-  [p testBadArg:y]; // expected-warning{{Argument in message expression is an uninitialized value}}
+  [p testBadArg:y]; // expected-warning{{1st argument in message expression is an uninitialized value}}
 }
 
 //===----------------------------------------------------------------------===//

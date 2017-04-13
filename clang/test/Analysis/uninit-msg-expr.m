@@ -52,5 +52,5 @@ unsigned f2() {
 void f3() {
   NSMutableArray *aArray = [NSArray array];
   NSString *aString;
-  [aArray addObject:aString]; // expected-warning {{Argument in message expression is an uninitialized value}}
+  [aArray addObject:aString]; // expected-warning {{1st argument in message expression is an uninitialized value}}
 }
