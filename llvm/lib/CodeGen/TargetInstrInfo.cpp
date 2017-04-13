@@ -941,12 +941,10 @@ int TargetInstrInfo::getSPAdjust(const MachineInstr &MI) const {
   unsigned FrameSetupOpcode = getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = getCallFrameDestroyOpcode();
 
-  if (MI.getOpcode() != FrameSetupOpcode &&
-      MI.getOpcode() != FrameDestroyOpcode)
+  if (!isFrameInstr(MI))
     return 0;
 
-  int SPAdj = MI.getOperand(0).getImm();
-  SPAdj = TFI->alignSPAdjust(SPAdj);
+  int SPAdj = TFI->alignSPAdjust(getFrameSize(MI));
 
   if ((!StackGrowsDown && MI.getOpcode() == FrameSetupOpcode) ||
       (StackGrowsDown && MI.getOpcode() == FrameDestroyOpcode))

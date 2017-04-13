@@ -121,11 +121,19 @@ class SerializationTraits<ChannelT, bool, bool,
                               RawByteChannel, ChannelT>::value>::type> {
 public:
   static Error serialize(ChannelT &C, bool V) {
-    return C.appendBytes(reinterpret_cast<const char *>(&V), 1);
+    uint8_t Tmp = V ? 1 : 0;
+    if (auto Err =
+          C.appendBytes(reinterpret_cast<const char *>(&Tmp), 1))
+      return Err;
+    return Error::success();
   }
 
   static Error deserialize(ChannelT &C, bool &V) {
-    return C.readBytes(reinterpret_cast<char *>(&V), 1);
+    uint8_t Tmp = 0;
+    if (auto Err = C.readBytes(reinterpret_cast<char *>(&Tmp), 1))
+      return Err;
+    V = Tmp != 0;
+    return Error::success();
   }
 };
 

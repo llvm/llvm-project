@@ -110,6 +110,9 @@ void DemandedBits::determineLiveOperandBits(
         // the output.
         AB = AOut.byteSwap();
         break;
+      case Intrinsic::bitreverse:
+        AB = AOut.reverseBits();
+        break;
       case Intrinsic::ctlz:
         if (OperandNo == 0) {
           // We need some output bits, so we need all bits of the

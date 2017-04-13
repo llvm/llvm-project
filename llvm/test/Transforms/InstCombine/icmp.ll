@@ -1123,19 +1123,6 @@ define i1 @test68(i32 %x) {
   ret i1 %cmp
 }
 
-; PR14708
-define i1 @test69(i32 %c) {
-; CHECK-LABEL: @test69(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 %c, 32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 97
-; CHECK-NEXT:    ret i1 [[TMP2]]
-;
-  %1 = icmp eq i32 %c, 97
-  %2 = icmp eq i32 %c, 65
-  %3 = or i1 %1, %2
-  ret i1 %3
-}
-
 ; PR15940
 define i1 @test70(i32 %X) {
 ; CHECK-LABEL: @test70(

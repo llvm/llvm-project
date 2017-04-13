@@ -101,6 +101,7 @@ add_llvm_library(LLVMDebugInfoPDB
   PDBSymbolUnknown.cpp
   PDBSymbolUsingNamespace.cpp
   PDBSymDumper.cpp
+  UDTLayout.cpp
   ${PDB_IMPL_SOURCES}
 
   ADDITIONAL_HEADER_DIRS

@@ -14,10 +14,6 @@
 
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
 
-#ifdef HAVE_LLVM_REVISION
-#include "LLVMLTORevision.h"
-#endif
-
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -47,6 +43,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -304,7 +301,7 @@ public:
 
     // Start with the compiler revision
     Hasher.update(LLVM_VERSION_STRING);
-#ifdef HAVE_LLVM_REVISION
+#ifdef LLVM_REVISION
     Hasher.update(LLVM_REVISION);
 #endif
 

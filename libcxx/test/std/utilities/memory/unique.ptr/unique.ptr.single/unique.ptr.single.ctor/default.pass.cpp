@@ -25,8 +25,13 @@
 
 #include <memory>
 #include <cassert>
+#include "test_macros.h"
 
 #include "deleter_types.h"
+
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 11
+_LIBCPP_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr;
+#endif
 
 struct IncompleteT;
 

@@ -92,6 +92,7 @@ struct Symbol {
     FB_global,
     FB_format_specific,
     FB_unnamed_addr,
+    FB_executable,
   };
 
   /// The index into the Uncommon table, or -1 if this symbol does not have an
@@ -166,6 +167,7 @@ struct Symbol {
   bool isGlobal() const { return (Flags >> S::FB_global) & 1; }
   bool isFormatSpecific() const { return (Flags >> S::FB_format_specific) & 1; }
   bool isUnnamedAddr() const { return (Flags >> S::FB_unnamed_addr) & 1; }
+  bool isExecutable() const { return (Flags >> S::FB_executable) & 1; }
 
   uint64_t getCommonSize() const {
     assert(isCommon());

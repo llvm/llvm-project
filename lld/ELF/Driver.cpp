@@ -184,9 +184,17 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
       return;
     }
     Files.push_back(createSharedFile(MBRef));
-    // If the library is found at an explicitly given path use the entire path
-    // as he default soname. Such libraries should not require RPATH or
-    // LD_LIBRARY_PATH to run.
+
+    // DSOs usually have DT_SONAME tags in their ELF headers, and the
+    // sonames are used to identify DSOs. But if they are missing,
+    // they are identified by filenames. We don't know whether the new
+    // file has a DT_SONAME or not because we haven't parsed it yet.
+    // Here, we set the default soname for the file because we might
+    // need it later.
+    //
+    // If a file was specified by -lfoo, the directory part is not
+    // significant, as a user did not specify it. This behavior is
+    // compatible with GNU.
     Files.back()->DefaultSoName =
         WithLOption ? sys::path::filename(Path) : Path;
     return;

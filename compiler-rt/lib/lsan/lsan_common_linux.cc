@@ -78,20 +78,7 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
       continue;
     uptr begin = info->dlpi_addr + phdr->p_vaddr;
     uptr end = begin + phdr->p_memsz;
-    uptr allocator_begin = 0, allocator_end = 0;
-    GetAllocatorGlobalRange(&allocator_begin, &allocator_end);
-    if (begin <= allocator_begin && allocator_begin < end) {
-      CHECK_LE(allocator_begin, allocator_end);
-      CHECK_LE(allocator_end, end);
-      if (begin < allocator_begin)
-        ScanRangeForPointers(begin, allocator_begin, frontier, "GLOBAL",
-                             kReachable);
-      if (allocator_end < end)
-        ScanRangeForPointers(allocator_end, end, frontier, "GLOBAL",
-                             kReachable);
-    } else {
-      ScanRangeForPointers(begin, end, frontier, "GLOBAL", kReachable);
-    }
+    ScanGlobalRange(begin, end, frontier);
   }
   return 0;
 }

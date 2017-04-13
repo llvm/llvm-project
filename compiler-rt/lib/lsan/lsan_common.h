@@ -124,6 +124,7 @@ void DoStopTheWorld(StopTheWorldCallback callback, void* argument);
 void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
+void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
 
 enum IgnoreObjectResult {
   kIgnoreObjectSuccess,

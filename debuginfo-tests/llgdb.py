@@ -139,6 +139,10 @@ NOTE: There are several reasons why this may happen:
             frame = thread.GetFrameAtIndex(0)
             print frame.EvaluateExpression(' '.join(cmd[1:]))
 
+        elif re.match('^n|(next)$', cmd[0]):
+            thread = process.GetThreadAtIndex(0)
+            thread.StepOver()
+
         elif re.match('^q|(quit)$', cmd[0]):
             sys.exit(0)
 

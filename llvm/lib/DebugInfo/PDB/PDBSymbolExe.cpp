@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypePointer.h"
 
 #include <utility>
 
@@ -23,3 +24,13 @@ PDBSymbolExe::PDBSymbolExe(const IPDBSession &PDBSession,
 }
 
 void PDBSymbolExe::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }
+
+uint32_t PDBSymbolExe::getPointerByteSize() const {
+  auto Pointer = findOneChild<PDBSymbolTypePointer>();
+  if (Pointer)
+    return Pointer->getLength();
+
+  if (getMachineType() == PDB_Machine::x86)
+    return 4;
+  return 8;
+}

@@ -15,24 +15,25 @@
 
 // default unique_ptr ctor should require default Deleter ctor
 
-
 #include <memory>
+#include "test_macros.h"
 
-class Deleter
-{
-    // expected-error@memory:* {{base class 'Deleter' has private default constructor}}
-    // expected-note@memory:* + {{in instantiation of member function}}
-    Deleter() {} // expected-note {{implicitly declared private here}}
+class Deleter {
+  Deleter() {}
 
 public:
+  Deleter(Deleter&) {}
+  Deleter& operator=(Deleter&) { return *this; }
 
-    Deleter(Deleter&) {}
-    Deleter& operator=(Deleter&) { return *this; }
-
-    void operator()(void*) const {}
+  void operator()(void*) const {}
 };
 
-int main()
-{
-    std::unique_ptr<int[], Deleter> p;
+int main() {
+#if TEST_STD_VER >= 11
+  // expected-error@memory:* {{call to implicitly-deleted default constructor}}
+  // expected-note@memory:* {{implicitly deleted because base class 'Deleter' has an inaccessible default constructor}}
+#else
+  // expected-error@memory:* {{base class 'Deleter' has private default constructor}}
+#endif
+  std::unique_ptr<int[], Deleter> p; // expected-note {{requested here}}
 }

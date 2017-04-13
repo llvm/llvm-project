@@ -3038,18 +3038,6 @@ __kmpc_get_parent_taskid() {
 
 } // __kmpc_get_parent_taskid
 
-void __kmpc_place_threads(int nS, int sO, int nC, int cO, int nT)
-{
-    if ( ! __kmp_init_serial ) {
-        __kmp_serial_initialize();
-    }
-    __kmp_place_num_sockets = nS;
-    __kmp_place_socket_offset = sO;
-    __kmp_place_num_cores = nC;
-    __kmp_place_core_offset = cO;
-    __kmp_place_num_threads_per_core = nT;
-}
-
 #if OMP_45_ENABLED
 /*!
 @ingroup WORK_SHARING

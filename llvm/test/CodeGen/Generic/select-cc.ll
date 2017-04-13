@@ -1,8 +1,5 @@
 ; RUN: llc < %s
 
-; PR2504
-; XFAIL: hexagon
-
 ; PR31338
 ; XFAIL: avr
 
