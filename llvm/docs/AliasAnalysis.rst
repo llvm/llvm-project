@@ -136,7 +136,7 @@ be overlapping in some way, but do not start at the same address.
 
 The ``MustAlias`` response may only be returned if the two memory objects are
 guaranteed to always start at exactly the same location. A ``MustAlias``
-response implies that the pointers compare equal.
+response does not imply that the pointers compare equal.
 
 The ``getModRefInfo`` methods
 -----------------------------

@@ -143,6 +143,43 @@ exit:
 
 declare i32 @regular_function(i32 %i)
 
+define i32 @test_cold_call_sites_with_prof(i32 %a, i32 %b, i1 %flag, i1 %flag2) {
+; CHECK: Printing analysis {{.*}} for function 'test_cold_call_sites_with_prof'
+entry:
+  br i1 %flag, label %then, label %else
+; CHECK: edge entry -> then probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK: edge entry -> else probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
+
+then:
+  br i1 %flag2, label %then2, label %else2, !prof !3
+; CHECK: edge then -> then2 probability is 0x7ebb907a / 0x80000000 = 99.01% [HOT edge]
+; CHECK: edge then -> else2 probability is 0x01446f86 / 0x80000000 = 0.99%
+
+then2:
+  br label %join
+; CHECK: edge then2 -> join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+else2:
+  br label %join
+; CHECK: edge else2 -> join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+join:
+  %joinresult = phi i32 [ %a, %then2 ], [ %b, %else2 ]
+  call void @coldfunc()
+  br label %exit
+; CHECK: edge join -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+else:
+  br label %exit
+; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+exit:
+  %result = phi i32 [ %joinresult, %join ], [ %b, %else ]
+  ret i32 %result
+}
+
+!3 = !{!"branch_weights", i32 100, i32 1}
+
 define i32 @test_cold_call_sites(i32* %a) {
 ; Test that edges to blocks post-dominated by cold call sites
 ; are marked as not expected to be taken.

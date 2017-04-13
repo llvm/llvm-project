@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/AttributeSetNode.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
@@ -686,12 +685,12 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   bool HasLiveReturnedArg = false;
 
   // Set up to build a new list of parameter attributes.
-  SmallVector<AttributeSetNode *, 8> AttributesVec;
+  SmallVector<AttributeSet, 8> AttributesVec;
   const AttributeList &PAL = F->getAttributes();
 
   // Reserve an empty slot for the return value attributes, which we will
   // compute last.
-  AttributesVec.push_back(nullptr);
+  AttributesVec.push_back(AttributeSet());
 
   // Remember which arguments are still alive.
   SmallVector<bool, 10> ArgAlive(FTy->getNumParams(), false);
@@ -792,7 +791,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     assert(!RAttrs.overlaps(AttributeFuncs::typeIncompatible(NRetTy)) &&
            "Return attributes no longer compatible?");
 
-  AttributesVec[0] = AttributeSetNode::get(F->getContext(), RAttrs);
+  AttributesVec[0] = AttributeSet::get(F->getContext(), RAttrs);
 
   // Transfer the function attributes, if any.
   AttributesVec.push_back(PAL.getFnAttributes());
@@ -833,7 +832,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     // return void.
     AttrBuilder RAttrs(CallPAL.getRetAttributes());
     RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy));
-    AttributesVec.push_back(AttributeSetNode::get(F->getContext(), RAttrs));
+    AttributesVec.push_back(AttributeSet::get(F->getContext(), RAttrs));
 
     // Declare these outside of the loops, so we can reuse them for the second
     // loop, which loops the varargs.
@@ -845,15 +844,14 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       if (ArgAlive[i]) {
         Args.push_back(*I);
         // Get original parameter attributes, but skip return attributes.
-        AttributeSetNode *Attrs = CallPAL.getParamAttributes(i + 1);
-        if (NRetTy != RetTy && Attrs &&
-            Attrs->hasAttribute(Attribute::Returned)) {
+        AttributeSet Attrs = CallPAL.getParamAttributes(i + 1);
+        if (NRetTy != RetTy && Attrs.hasAttribute(Attribute::Returned)) {
           // If the return type has changed, then get rid of 'returned' on the
           // call site. The alternative is to make all 'returned' attributes on
           // call sites keep the return value alive just like 'returned'
           // attributes on function declaration but it's less clearly a win and
           // this is not an expected case anyway
-          AttributesVec.push_back(AttributeSetNode::get(
+          AttributesVec.push_back(AttributeSet::get(
               F->getContext(),
               AttrBuilder(Attrs).removeAttribute(Attribute::Returned)));
         } else {

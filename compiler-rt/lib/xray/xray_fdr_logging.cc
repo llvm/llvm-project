@@ -17,6 +17,7 @@
 #include "xray_fdr_logging.h"
 #include <algorithm>
 #include <bitset>
+#include <cerrno>
 #include <cstring>
 #include <sys/syscall.h>
 #include <sys/time.h>
@@ -120,7 +121,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   XRayFileHeader Header;
   Header.Version = 1;
   Header.Type = FileTypes::FDR_LOG;
-  Header.CycleFrequency = getTSCFrequency();
+  Header.CycleFrequency = probeRequiredCPUFeatures()
+                          ? getTSCFrequency() : __xray::NanosecondsPerSecond;
   // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
   // before setting the values in the header.
   Header.ConstantTSC = 1;

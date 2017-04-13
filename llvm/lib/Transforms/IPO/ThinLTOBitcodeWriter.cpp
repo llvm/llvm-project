@@ -69,15 +69,21 @@ std::string getModuleId(Module *M) {
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
+  DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
       continue;
 
-    GlobalValue *ImportGV = ImportM.getNamedValue(ExportGV.getName());
+    auto Name = ExportGV.getName();
+    GlobalValue *ImportGV = ImportM.getNamedValue(Name);
     if (!ImportGV || ImportGV->use_empty())
       continue;
 
-    std::string NewName = (ExportGV.getName() + ModuleId).str();
+    std::string NewName = (Name + ModuleId).str();
+
+    if (const auto *C = ExportGV.getComdat())
+      if (C->getName() == Name)
+        RenamedComdats.try_emplace(C, ExportM.getOrInsertComdat(NewName));
 
     ExportGV.setName(NewName);
     ExportGV.setLinkage(GlobalValue::ExternalLinkage);
@@ -86,6 +92,14 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
     ImportGV->setName(NewName);
     ImportGV->setVisibility(GlobalValue::HiddenVisibility);
   }
+
+  if (!RenamedComdats.empty())
+    for (auto &GO : ExportM.global_objects())
+      if (auto *C = GO.getComdat()) {
+        auto Replacement = RenamedComdats.find(C);
+        if (Replacement != RenamedComdats.end())
+          GO.setComdat(Replacement->second);
+      }
 }
 
 // Promote all internal (i.e. distinct) type ids used by the module by replacing
@@ -273,8 +287,13 @@ void splitAndWriteThinLTOBitcode(
   // inline all implementations of the virtual function into each call site,
   // rather than using function attributes to perform local optimization.
   std::set<const Function *> EligibleVirtualFns;
+  // If any member of a comdat lives in MergedM, put all members of that
+  // comdat in MergedM to keep the comdat together.
+  DenseSet<const Comdat *> MergedMComdats;
   for (GlobalVariable &GV : M.globals())
-    if (HasTypeMetadata(&GV))
+    if (HasTypeMetadata(&GV)) {
+      if (const auto *C = GV.getComdat())
+        MergedMComdats.insert(C);
       forEachVirtualFunction(GV.getInitializer(), [&](Function *F) {
         auto *RT = dyn_cast<IntegerType>(F->getReturnType());
         if (!RT || RT->getBitWidth() > 64 || F->arg_empty() ||
@@ -288,10 +307,14 @@ void splitAndWriteThinLTOBitcode(
         if (computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) == MAK_ReadNone)
           EligibleVirtualFns.insert(F);
       });
+    }
 
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> MergedM(
       CloneModule(&M, VMap, [&](const GlobalValue *GV) -> bool {
+        if (const auto *C = GV->getComdat())
+          if (MergedMComdats.count(C))
+            return true;
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
         if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getBaseObject()))
@@ -309,11 +332,15 @@ void splitAndWriteThinLTOBitcode(
       F.setComdat(nullptr);
     }
 
-  // Remove all globals with type metadata, as well as aliases pointing to them,
-  // from the thin LTO module.
+  // Remove all globals with type metadata, globals with comdats that live in
+  // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
     if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getBaseObject()))
-      return !HasTypeMetadata(GVar);
+      if (HasTypeMetadata(GVar))
+        return false;
+    if (const auto *C = GV->getComdat())
+      if (MergedMComdats.count(C))
+        return false;
     return true;
   });
 

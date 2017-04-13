@@ -133,6 +133,14 @@ public:
 
     const char *
     GetFunctionName() const;
+             
+    %feature("docstring", "
+    /// Returns the language of the frame's SBFunction, or if there.
+    /// is no SBFunction, guess the language from the mangled name.
+    /// .
+    ") GuessLanguage;
+    lldb::LanguageType
+    GuessLanguage() const;
 
     %feature("docstring", "
     /// Return true if this frame represents an inlined function.

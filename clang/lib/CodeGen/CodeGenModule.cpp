@@ -2935,7 +2935,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       continue;
 
     // Get the call site's attribute list.
-    SmallVector<llvm::AttributeSetNode *, 8> newAttrs;
+    SmallVector<llvm::AttributeSet, 8> newAttrs;
     llvm::AttributeList oldAttrs = callSite.getAttributes();
 
     // Collect any return attributes from the call.

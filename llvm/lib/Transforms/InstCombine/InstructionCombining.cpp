@@ -2254,11 +2254,11 @@ Instruction *InstCombiner::visitSwitchInst(SwitchInst &SI) {
   ConstantInt *AddRHS;
   if (match(Cond, m_Add(m_Value(Op0), m_ConstantInt(AddRHS)))) {
     // Change 'switch (X+4) case 1:' into 'switch (X) case -3'.
-    for (SwitchInst::CaseIt CaseIter : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(CaseIter.getCaseValue(), AddRHS);
+    for (auto Case : SI.cases()) {
+      Constant *NewCase = ConstantExpr::getSub(Case.getCaseValue(), AddRHS);
       assert(isa<ConstantInt>(NewCase) &&
              "Result of expression should be constant");
-      CaseIter.setValue(cast<ConstantInt>(NewCase));
+      Case.setValue(cast<ConstantInt>(NewCase));
     }
     SI.setCondition(Op0);
     return &SI;
@@ -2290,9 +2290,9 @@ Instruction *InstCombiner::visitSwitchInst(SwitchInst &SI) {
     Value *NewCond = Builder->CreateTrunc(Cond, Ty, "trunc");
     SI.setCondition(NewCond);
 
-    for (SwitchInst::CaseIt CaseIter : SI.cases()) {
-      APInt TruncatedCase = CaseIter.getCaseValue()->getValue().trunc(NewWidth);
-      CaseIter.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
+    for (auto Case : SI.cases()) {
+      APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
+      Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
     }
     return &SI;
   }
@@ -3072,17 +3072,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
-        // See if this is an explicit destination.
-        for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
-             i != e; ++i)
-          if (i.getCaseValue() == Cond) {
-            BasicBlock *ReachableBB = i.getCaseSuccessor();
-            Worklist.push_back(ReachableBB);
-            continue;
-          }
-
-        // Otherwise it is the default destination.
-        Worklist.push_back(SI->getDefaultDest());
+        Worklist.push_back(SI->findCaseValue(Cond)->getCaseSuccessor());
         continue;
       }
     }

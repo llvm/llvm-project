@@ -223,6 +223,9 @@ private:
     void setMapping(diag::kind Diag, DiagnosticMapping Info) {
       DiagMap[Diag] = Info;
     }
+    DiagnosticMapping lookupMapping(diag::kind Diag) const {
+      return DiagMap.lookup(Diag);
+    }
 
     DiagnosticMapping &getOrAddMapping(diag::kind Diag);
 

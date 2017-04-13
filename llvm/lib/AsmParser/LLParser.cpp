@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Argument.h"
-#include "llvm/IR/AttributeSetNode.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -2155,7 +2154,7 @@ bool LLParser::ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
         return true;
     }
     ArgList.push_back(ParamInfo(
-        ArgLoc, V, AttributeSetNode::get(V->getContext(), ArgAttrs)));
+        ArgLoc, V, AttributeSet::get(V->getContext(), ArgAttrs)));
   }
 
   if (IsMustTailCall && InVarArgsFunc)
@@ -2261,7 +2260,7 @@ bool LLParser::ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       return Error(TypeLoc, "invalid type for function argument");
 
     ArgList.emplace_back(TypeLoc, ArgTy,
-                         AttributeSetNode::get(ArgTy->getContext(), Attrs),
+                         AttributeSet::get(ArgTy->getContext(), Attrs),
                          std::move(Name));
 
     while (EatIfPresent(lltok::comma)) {
@@ -2289,7 +2288,7 @@ bool LLParser::ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         return Error(TypeLoc, "invalid type for function argument");
 
       ArgList.emplace_back(TypeLoc, ArgTy,
-                           AttributeSetNode::get(ArgTy->getContext(), Attrs),
+                           AttributeSet::get(ArgTy->getContext(), Attrs),
                            std::move(Name));
     }
   }
@@ -2314,7 +2313,7 @@ bool LLParser::ParseFunctionType(Type *&Result) {
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
     if (!ArgList[i].Name.empty())
       return Error(ArgList[i].Loc, "argument name invalid in function type");
-    if (ArgList[i].Attrs)
+    if (ArgList[i].Attrs.hasAttributes())
       return Error(ArgList[i].Loc,
                    "argument attributes invalid in function type");
   }
@@ -4763,16 +4762,16 @@ bool LLParser::ParseFunctionHeader(Function *&Fn, bool isDefine) {
   // Okay, if we got here, the function is syntactically valid.  Convert types
   // and do semantic checks.
   std::vector<Type*> ParamTypeList;
-  SmallVector<AttributeSetNode *, 8> Attrs;
+  SmallVector<AttributeSet, 8> Attrs;
 
-  Attrs.push_back(AttributeSetNode::get(Context, RetAttrs));
+  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
 
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
     ParamTypeList.push_back(ArgList[i].Ty);
     Attrs.push_back(ArgList[i].Attrs);
   }
 
-  Attrs.push_back(AttributeSetNode::get(Context, FuncAttrs));
+  Attrs.push_back(AttributeSet::get(Context, FuncAttrs));
 
   AttributeList PAL = AttributeList::get(Context, Attrs);
 
@@ -5384,8 +5383,8 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   // Set up the Attribute for the function.
-  SmallVector<AttributeSetNode *, 8> Attrs;
-  Attrs.push_back(AttributeSetNode::get(Context, RetAttrs));
+  SmallVector<AttributeSet, 8> Attrs;
+  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
 
   SmallVector<Value*, 8> Args;
 
@@ -5414,7 +5413,7 @@ bool LLParser::ParseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   if (FnAttrs.hasAlignmentAttr())
     return Error(CallLoc, "invoke instructions may not have an alignment");
 
-  Attrs.push_back(AttributeSetNode::get(Context, FnAttrs));
+  Attrs.push_back(AttributeSet::get(Context, FnAttrs));
 
   // Finish off the Attribute and check them
   AttributeList PAL = AttributeList::get(Context, Attrs);
@@ -5978,8 +5977,8 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
     return true;
 
   // Set up the Attribute for the function.
-  SmallVector<AttributeSetNode *, 8> Attrs;
-  Attrs.push_back(AttributeSetNode::get(Context, RetAttrs));
+  SmallVector<AttributeSet, 8> Attrs;
+  Attrs.push_back(AttributeSet::get(Context, RetAttrs));
 
   SmallVector<Value*, 8> Args;
 
@@ -6008,7 +6007,7 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   if (FnAttrs.hasAlignmentAttr())
     return Error(CallLoc, "call instructions may not have an alignment");
 
-  Attrs.push_back(AttributeSetNode::get(Context, FnAttrs));
+  Attrs.push_back(AttributeSet::get(Context, FnAttrs));
 
   // Finish off the Attribute and check them
   AttributeList PAL = AttributeList::get(Context, Attrs);

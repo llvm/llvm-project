@@ -50,7 +50,6 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
-#include <forward_list>
 #include <functional>
 #include <utility>
 using namespace llvm;
@@ -459,7 +458,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// Get the best pair of non-conflicting edges.
   static std::pair<WeightedEdge, WeightedEdge> getBestNonConflictingEdges(
       const MachineBasicBlock *BB,
-      SmallVector<SmallVector<WeightedEdge, 8>, 2> &Edges);
+      MutableArrayRef<SmallVector<WeightedEdge, 8>> Edges);
   /// Returns true if a block can tail duplicate into all unplaced
   /// predecessors. Filters based on loop.
   bool canTailDuplicateUnplacedPreds(
@@ -882,8 +881,8 @@ std::pair<MachineBlockPlacement::WeightedEdge,
           MachineBlockPlacement::WeightedEdge>
 MachineBlockPlacement::getBestNonConflictingEdges(
     const MachineBasicBlock *BB,
-    SmallVector<SmallVector<MachineBlockPlacement::WeightedEdge, 8>, 2>
-        &Edges) {
+    MutableArrayRef<SmallVector<MachineBlockPlacement::WeightedEdge, 8>>
+        Edges) {
   // Sort the edges, and then for each successor, find the best incoming
   // predecessor. If the best incoming predecessors aren't the same,
   // then that is clearly the best layout. If there is a conflict, one of the
@@ -941,7 +940,7 @@ MachineBlockPlacement::getBestTrellisSuccessor(
     return Result;
 
   // Collect the edge frequencies of all edges that form the trellis.
-  SmallVector<SmallVector<WeightedEdge, 8>, 2> Edges(2);
+  SmallVector<WeightedEdge, 8> Edges[2];
   int SuccIndex = 0;
   for (auto Succ : ViableSuccs) {
     for (MachineBasicBlock *SuccPred : Succ->predecessors()) {
@@ -1085,23 +1084,20 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
 /// We believe that 2 and 3 are common enough to justify the small margin in 1.
 void MachineBlockPlacement::precomputeTriangleChains() {
   struct TriangleChain {
-    unsigned Count;
-    std::forward_list<MachineBasicBlock*> Edges;
-    TriangleChain(MachineBasicBlock* src, MachineBasicBlock *dst) {
-      Edges.push_front(src);
-      Edges.push_front(dst);
-      Count = 1;
-    }
+    std::vector<MachineBasicBlock *> Edges;
+    TriangleChain(MachineBasicBlock *src, MachineBasicBlock *dst)
+        : Edges({src, dst}) {}
 
     void append(MachineBasicBlock *dst) {
-      assert(!Edges.empty() && Edges.front()->isSuccessor(dst) &&
+      assert(getKey()->isSuccessor(dst) &&
              "Attempting to append a block that is not a successor.");
-      Edges.push_front(dst);
-      ++Count;
+      Edges.push_back(dst);
     }
 
-    MachineBasicBlock *getKey() {
-      return Edges.front();
+    unsigned count() const { return Edges.size() - 1; }
+
+    MachineBasicBlock *getKey() const {
+      return Edges.back();
     }
   };
 
@@ -1164,24 +1160,31 @@ void MachineBlockPlacement::precomputeTriangleChains() {
       TriangleChainMap.insert(std::make_pair(Chain.getKey(), std::move(Chain)));
     } else {
       auto InsertResult = TriangleChainMap.try_emplace(PDom, &BB, PDom);
-      assert (InsertResult.second && "Block seen twice.");
-      (void) InsertResult;
+      assert(InsertResult.second && "Block seen twice.");
+      (void)InsertResult;
     }
   }
 
+  // Iterating over a DenseMap is safe here, because the only thing in the body
+  // of the loop is inserting into another DenseMap (ComputedEdges).
+  // ComputedEdges is never iterated, so this doesn't lead to non-determinism.
   for (auto &ChainPair : TriangleChainMap) {
     TriangleChain &Chain = ChainPair.second;
     // Benchmarking has shown that due to branch correlation duplicating 2 or
     // more triangles is profitable, despite the calculations assuming
     // independence.
-    if (Chain.Count < TriangleChainCount)
+    if (Chain.count() < TriangleChainCount)
       continue;
-    MachineBasicBlock *dst = Chain.Edges.front();
-    Chain.Edges.pop_front();
-    for (MachineBasicBlock *src : Chain.Edges) {
+    MachineBasicBlock *dst = Chain.Edges.back();
+    Chain.Edges.pop_back();
+    for (MachineBasicBlock *src : reverse(Chain.Edges)) {
       DEBUG(dbgs() << "Marking edge: " << getBlockName(src) << "->" <<
             getBlockName(dst) << " as pre-computed based on triangles.\n");
-      ComputedEdges[src] = { dst, true };
+
+      auto InsertResult = ComputedEdges.insert({src, {dst, true}});
+      assert(InsertResult.second && "Block seen twice.");
+      (void)InsertResult;
+
       dst = src;
     }
   }
@@ -2640,6 +2643,9 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // there are no MachineLoops.
   PreferredLoopExit = nullptr;
 
+  assert(BlockToChain.empty());
+  assert(ComputedEdges.empty());
+
   if (TailDupPlacement) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
     unsigned TailDupSize = TailDupPlacementThreshold;
@@ -2648,8 +2654,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
-
-  assert(BlockToChain.empty());
 
   buildCFGChains();
 
@@ -2671,6 +2675,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                             /*AfterBlockPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();
+      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->runOnMachineFunction(MF);
@@ -2683,6 +2688,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   alignBlocks();
 
   BlockToChain.clear();
+  ComputedEdges.clear();
   ChainAllocator.DestroyAll();
 
   if (AlignAllBlock)

@@ -258,13 +258,17 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
   // Don't allow a mapping to a warning override an error/fatal mapping.
+  bool WasUpgradedFromWarning = false;
   if (Map == diag::Severity::Warning) {
     DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
     if (Info.getSeverity() == diag::Severity::Error ||
-        Info.getSeverity() == diag::Severity::Fatal)
+        Info.getSeverity() == diag::Severity::Fatal) {
       Map = Info.getSeverity();
+      WasUpgradedFromWarning = true;
+    }
   }
   DiagnosticMapping Mapping = makeUserMapping(Map, L);
+  Mapping.setUpgradedFromWarning(WasUpgradedFromWarning);
 
   // Common case; setting all the diagnostics of a group in one place.
   if ((L.isInvalid() || L == DiagStatesByLoc.getCurDiagStateLoc()) &&

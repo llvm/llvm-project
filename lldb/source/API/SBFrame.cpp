@@ -1370,6 +1370,25 @@ const char *SBFrame::GetFunctionName() {
   return static_cast<const SBFrame *>(this)->GetFunctionName();
 }
 
+lldb::LanguageType SBFrame::GuessLanguage() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  
+  StackFrame *frame = nullptr;
+  Target *target = exe_ctx.GetTargetPtr();
+  Process *process = exe_ctx.GetProcessPtr();
+  if (target && process) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process->GetRunLock())) {
+      frame = exe_ctx.GetFramePtr();
+      if (frame) {
+        return frame->GuessLanguage();
+      }
+    }
+  }
+  return eLanguageTypeUnknown;
+}
+
 const char *SBFrame::GetFunctionName() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   const char *name = nullptr;

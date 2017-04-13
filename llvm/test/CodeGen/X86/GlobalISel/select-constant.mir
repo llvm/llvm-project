@@ -1,0 +1,143 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
+
+--- |
+  define i8 @const_i8() {
+    ret i8 2
+  }
+
+  define i16 @const_i16() {
+    ret i16 3
+  }
+
+  define i32 @const_i32() {
+    ret i32 4
+  }
+
+  define i64 @const_i64() {
+    ret i64 68719476720
+  }
+
+  define i64 @const_i64_u32() {
+    ret i64 1879048192
+  }
+
+  define i64 @const_i64_i32() {
+    ret i64 -1
+  }
+
+...
+---
+name:            const_i8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i8
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr8 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV8ri 2
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = G_CONSTANT i8 2
+    %al = COPY %0(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            const_i16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i16
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr16 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV16ri 3
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s16) = G_CONSTANT i16 3
+    %ax = COPY %0(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            const_i32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr32 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32ri 4
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 4
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            const_i64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri 68719476720
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 68719476720
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            const_i64_u32
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64_u32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri32 1879048192
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 1879048192
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            const_i64_i32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64_i32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri32 -1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 -1
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...

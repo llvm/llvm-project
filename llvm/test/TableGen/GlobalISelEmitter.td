@@ -25,6 +25,10 @@ def gi_complex :
     GIComplexOperandMatcher<s32, (ops i32imm, i32imm), "selectComplexPattern">,
     GIComplexPatternEquiv<complex>;
 
+def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
+def Z : OperandWithDefaultOps <i32, (ops R0)>;
+def m1Z : OperandWithDefaultOps <i32, (ops (i32 -1), R0)>;
+
 //===- Test the function definition boilerplate. --------------------------===//
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
@@ -242,6 +246,109 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 
 def INSN1 : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
 def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
+
+//===- Test a simple pattern with a default operand. ----------------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_XOR) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (isOperandImmEqual(MI0.getOperand(2), -2, MRI))))) {
+// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -2:i32) => (XORI:i32 GPR32:i32:$src1)
+// CHECK-NEXT:      MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::XORI));
+// CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:      MIB.addImm(-1);
+// CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:      for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:        for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:          MIB.addMemOperand(MMO);
+// CHECK-NEXT:      I.eraseFromParent();
+// CHECK-NEXT:      MachineInstr &NewI = *MIB;
+// CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:      return true;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }()) { return true; }
+
+// The -2 is just to distinguish it from the 'not' case below.
+def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
+             [(set GPR32:$dst, (xor GPR32:$src1, -2))]>;
+
+//===- Test a simple pattern with a default register operand. -------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_XOR) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (isOperandImmEqual(MI0.getOperand(2), -3, MRI))))) {
+// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -3:i32) => (XOR:i32 GPR32:i32:$src1)
+// CHECK-NEXT:      MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::XOR));
+// CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:      MIB.addReg(MyTarget::R0);
+// CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:      for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:        for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:          MIB.addMemOperand(MMO);
+// CHECK-NEXT:      I.eraseFromParent();
+// CHECK-NEXT:      MachineInstr &NewI = *MIB;
+// CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:      return true;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }()) { return true; }
+
+// The -3 is just to distinguish it from the 'not' case below and the other default op case above.
+def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
+            [(set GPR32:$dst, (xor GPR32:$src1, -3))]>;
+
+//===- Test a simple pattern with a multiple default operands. ------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_XOR) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (isOperandImmEqual(MI0.getOperand(2), -4, MRI))))) {
+// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -4:i32) => (XORlike:i32 GPR32:i32:$src1)
+// CHECK-NEXT:      MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::XORlike));
+// CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:      MIB.addImm(-1);
+// CHECK-NEXT:      MIB.addReg(MyTarget::R0);
+// CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:      for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:        for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:          MIB.addMemOperand(MMO);
+// CHECK-NEXT:      I.eraseFromParent();
+// CHECK-NEXT:      MachineInstr &NewI = *MIB;
+// CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:      return true;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }()) { return true; }
+
+// The -4 is just to distinguish it from the other 'not' cases.
+def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
+                [(set GPR32:$dst, (xor GPR32:$src1, -4))]>;
 
 //===- Test a simple pattern with constant immediate operands. ------------===//
 //

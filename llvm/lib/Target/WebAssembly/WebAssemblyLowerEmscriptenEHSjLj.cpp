@@ -435,26 +435,23 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 
   // Because we added the pointer to the callee as first argument, all
   // argument attribute indices have to be incremented by one.
-  SmallVector<AttributeList, 8> AttributesVec;
-  const AttributeList &InvokePAL = CI->getAttributes();
-  CallSite::arg_iterator AI = CI->arg_begin();
-  unsigned i = 1; // Argument attribute index starts from 1
-  for (unsigned e = CI->getNumArgOperands(); i <= e; ++AI, ++i) {
-    if (InvokePAL.hasAttributes(i)) {
-      AttrBuilder B(InvokePAL, i);
-      AttributesVec.push_back(AttributeList::get(C, i + 1, B));
-    }
-  }
+  SmallVector<AttributeSet, 8> AttributesVec;
+  const AttributeList &InvokeAL = CI->getAttributes();
+
   // Add any return attributes.
-  if (InvokePAL.hasAttributes(AttributeList::ReturnIndex))
-    AttributesVec.push_back(
-        AttributeList::get(C, InvokePAL.getRetAttributes()));
+  AttributesVec.push_back(InvokeAL.getRetAttributes());
+  // No attributes for the callee pointer.
+  AttributesVec.push_back(AttributeSet());
+  // Copy the argument attributes from the original
+  for (unsigned i = 1, e = CI->getNumArgOperands(); i <= e; ++i) {
+    AttributesVec.push_back(InvokeAL.getParamAttributes(i));
+  }
+
   // Add any function attributes.
-  if (InvokePAL.hasAttributes(AttributeList::FunctionIndex))
-    AttributesVec.push_back(AttributeList::get(C, InvokePAL.getFnAttributes()));
+  AttributesVec.push_back(InvokeAL.getFnAttributes());
   // Reconstruct the AttributesList based on the vector we constructed.
-  AttributeList NewCallPAL = AttributeList::get(C, AttributesVec);
-  NewCall->setAttributes(NewCallPAL);
+  AttributeList NewCallAL = AttributeList::get(C, AttributesVec);
+  NewCall->setAttributes(NewCallAL);
 
   CI->replaceAllUsesWith(NewCall);
 

@@ -356,10 +356,10 @@ unsigned LowerSwitch::Clusterify(CaseVector& Cases, SwitchInst *SI) {
   unsigned numCmps = 0;
 
   // Start with "simple" cases
-  for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
-    Cases.push_back(CaseRange(i.getCaseValue(), i.getCaseValue(),
-                              i.getCaseSuccessor()));
-  
+  for (auto Case : SI->cases())
+    Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
+                              Case.getCaseSuccessor()));
+
   std::sort(Cases.begin(), Cases.end(), CaseCmp());
 
   // Merge case into clusters

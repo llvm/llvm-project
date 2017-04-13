@@ -604,7 +604,7 @@ void SCCPSolver::getFeasibleSuccessors(TerminatorInst &TI,
       return;
     }
 
-    Succs[SI->findCaseValue(CI).getSuccessorIndex()] = true;
+    Succs[SI->findCaseValue(CI)->getSuccessorIndex()] = true;
     return;
   }
 
@@ -683,7 +683,7 @@ bool SCCPSolver::isEdgeFeasible(BasicBlock *From, BasicBlock *To) {
     if (!CI)
       return !SCValue.isUnknown();
 
-    return SI->findCaseValue(CI).getCaseSuccessor() == To;
+    return SI->findCaseValue(CI)->getCaseSuccessor() == To;
   }
 
   // In case of indirect branch and its address is a blockaddress, we mark
@@ -1554,12 +1554,12 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // If the input to SCCP is actually switch on undef, fix the undef to
       // the first constant.
       if (isa<UndefValue>(SI->getCondition())) {
-        SI->setCondition(SI->case_begin().getCaseValue());
-        markEdgeExecutable(&BB, SI->case_begin().getCaseSuccessor());
+        SI->setCondition(SI->case_begin()->getCaseValue());
+        markEdgeExecutable(&BB, SI->case_begin()->getCaseSuccessor());
         return true;
       }
 
-      markForcedConstant(SI->getCondition(), SI->case_begin().getCaseValue());
+      markForcedConstant(SI->getCondition(), SI->case_begin()->getCaseValue());
       return true;
     }
   }
