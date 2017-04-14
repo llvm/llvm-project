@@ -2859,11 +2859,20 @@ public:
   virtual void handleDiagnostic(swift::SourceManager &source_mgr,
                                 swift::SourceLoc source_loc,
                                 swift::DiagnosticKind kind,
-                                llvm::StringRef text,
+                                llvm::StringRef formatString,
+                                llvm::ArrayRef<swift::DiagnosticArgument> formatArgs,
                                 const swift::DiagnosticInfo &info) {
     llvm::StringRef bufferName = "<anonymous>";
     unsigned bufferID = 0;
     std::pair<unsigned, unsigned> line_col = {0, 0};
+
+    llvm::SmallString<256> text;
+    {
+      llvm::raw_svector_ostream out(text);
+      swift::DiagnosticEngine::formatDiagnosticText(out, 
+                                                    formatString, 
+                                                    formatArgs);
+    }
 
     if (source_loc.isValid()) {
       bufferID = source_mgr.findBufferContainingLoc(source_loc);
