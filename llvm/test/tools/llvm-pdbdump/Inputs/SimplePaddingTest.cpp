@@ -116,6 +116,51 @@ struct SimplePadAggregate {
   // the presence of X will cause 3 bytes of padding to be injected.
 } N;
 
+struct SimplePadVtable1 {
+  static void operator delete(void *ptr, size_t sz) {}
+  virtual ~SimplePadVtable1() {}
+  virtual void A1() {}
+  virtual void B1() {}
+} O;
+
+struct SimplePadVtable2 {
+  static void operator delete(void *ptr, size_t sz) {}
+  virtual ~SimplePadVtable2() {}
+  virtual void X2() {}
+  virtual void Y2() {}
+  virtual void Z2() {}
+} P;
+
+struct SimplePadVtable3 {
+  static void operator delete(void *ptr, size_t sz) {}
+  virtual ~SimplePadVtable3() {}
+  virtual void Foo3() {}
+  virtual void Bar3() {}
+  virtual void Baz3() {}
+  virtual void Buzz3() {}
+} Q;
+
+struct SimplePadMultiVTables
+    : public SimplePadVtable1,
+      public SimplePadVtable2,
+      public SimplePadVtable3 {
+
+  ~SimplePadMultiVTables() override {}
+  static void operator delete(void *ptr, size_t sz) {}
+
+  // SimplePadVtable1 overrides
+  void A1() override {}
+
+  // SimplePadVtable2 overrides
+  void Y2() override {}
+  void Z2() override {}
+
+  // SimplePadVtable3 overrides
+  void Bar3() override {}
+  void Baz3() override {}
+  void Buzz3() override {}
+} R;
+
 int main(int argc, char **argv) {
 
   return 0;

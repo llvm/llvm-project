@@ -38,6 +38,8 @@ bool PrettyClassLayoutTextDumper::start(const ClassLayout &Layout) {
       opts::pretty::ClassDefinitionFormat::Standard) {
     for (auto &Other : Layout.other_items())
       Other->dump(*this);
+    for (auto &Func : Layout.funcs())
+      Func->dump(*this);
   }
 
   const BitVector &UseMap = Layout.usedBytes();
@@ -101,9 +103,6 @@ void PrettyClassLayoutTextDumper::dump(const PDBSymbolTypeVTable &Symbol) {
 }
 
 void PrettyClassLayoutTextDumper::dump(const PDBSymbolTypeEnum &Symbol) {
-  if (Printer.IsTypeExcluded(Symbol.getName()))
-    return;
-
   DumpedAnything = true;
   Printer.NewLine();
   EnumDumper Dumper(Printer);
@@ -111,9 +110,6 @@ void PrettyClassLayoutTextDumper::dump(const PDBSymbolTypeEnum &Symbol) {
 }
 
 void PrettyClassLayoutTextDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
-  if (Printer.IsTypeExcluded(Symbol.getName()))
-    return;
-
   DumpedAnything = true;
   Printer.NewLine();
   TypedefDumper Dumper(Printer);

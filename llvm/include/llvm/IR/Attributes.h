@@ -242,7 +242,7 @@ public:
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
-  std::string getAsString(bool InAttrGrp) const;
+  std::string getAsString(bool InAttrGrp = false) const;
 
   typedef const Attribute *iterator;
   iterator begin() const;
@@ -418,8 +418,9 @@ public:
   /// \brief The attributes for the specified index are returned.
   AttributeSet getAttributes(unsigned Index) const;
 
-  /// \brief The attributes for the specified index are returned.
-  AttributeSet getParamAttributes(unsigned Index) const;
+  /// \brief The attributes for the argument or parameter at the given index are
+  /// returned.
+  AttributeSet getParamAttributes(unsigned ArgNo) const;
 
   /// \brief The attributes for the ret value are returned.
   AttributeSet getRetAttributes() const;
@@ -443,6 +444,9 @@ public:
   /// \brief Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
   bool hasFnAttribute(StringRef Kind) const;
+
+  /// \brief Equivalent to hasAttribute(ArgNo + 1, Kind).
+  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// \brief Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index

@@ -110,11 +110,11 @@ TransformImpl(const SCEV *S, Instruction *User, Value *OperandValToReplace) {
     const Loop *L = AR->getLoop();
     // The addrec conceptually uses its operands at loop entry.
     Instruction *LUser = &L->getHeader()->front();
-    // Transform each operand.
-    for (SCEVNAryExpr::op_iterator I = AR->op_begin(), E = AR->op_end();
-         I != E; ++I) {
-      Operands.push_back(TransformSubExpr(*I, LUser, nullptr));
-    }
+
+    transform(
+        AR->operands(), std::back_inserter(Operands),
+        [&](const SCEV *Op) { return TransformSubExpr(Op, LUser, nullptr); });
+
     // Conservatively use AnyWrap until/unless we need FlagNW.
     const SCEV *Result = SE.getAddRecExpr(Operands, L, SCEV::FlagAnyWrap);
     switch (Kind) {

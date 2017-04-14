@@ -67,6 +67,8 @@ public:
   virtual uint32_t deepPaddingSize() const;
 
   const PDBSymbolData &getDataMember();
+  bool hasUDTLayout() const;
+  const ClassLayout &getUDTLayout() const;
 
 private:
   std::unique_ptr<PDBSymbolData> DataMember;
@@ -77,13 +79,24 @@ class VTableLayoutItem : public StorageItemBase {
 public:
   VTableLayoutItem(const UDTLayoutBase &Parent,
                    std::unique_ptr<PDBSymbolTypeVTable> VTable);
+  ArrayRef<PDBSymbolFunc *> funcs() const { return VTableFuncs; }
+
+  uint32_t getElementSize() const { return ElementSize; }
+
+  void setFunction(uint32_t Index, PDBSymbolFunc &Func) {
+    VTableFuncs[Index] = &Func;
+  }
 
 private:
+  uint32_t ElementSize = 0;
+  std::unique_ptr<PDBSymbolTypeVTableShape> Shape;
   std::unique_ptr<PDBSymbolTypeVTable> VTable;
-  std::vector<std::unique_ptr<PDBSymbolFunc>> VTableFuncs;
+  std::vector<PDBSymbolFunc *> VTableFuncs;
 };
 
 class UDTLayoutBase {
+  template <typename T> using UniquePtrVector = std::vector<std::unique_ptr<T>>;
+
 public:
   UDTLayoutBase(const PDBSymbol &Symbol, const std::string &Name,
                 uint32_t Size);
@@ -99,11 +112,18 @@ public:
     return ChildStorage;
   }
 
-  ArrayRef<BaseClassLayout *> base_classes() const { return BaseClasses; }
+  VTableLayoutItem *findVTableAtOffset(uint32_t RelativeOffset);
 
-  ArrayRef<std::unique_ptr<PDBSymbol>> other_items() const {
-    return NonStorageItems;
+  StringRef getUDTName() const { return Name; }
+
+  ArrayRef<BaseClassLayout *> bases() const { return BaseClasses; }
+  ArrayRef<std::unique_ptr<PDBSymbolTypeBaseClass>> vbases() const {
+    return VirtualBases;
   }
+
+  ArrayRef<std::unique_ptr<PDBSymbolFunc>> funcs() const { return Funcs; }
+
+  ArrayRef<std::unique_ptr<PDBSymbol>> other_items() const { return Other; }
 
   const PDBSymbol &getSymbolBase() const { return SymbolBase; }
 
@@ -111,14 +131,18 @@ protected:
   void initializeChildren(const PDBSymbol &Sym);
 
   void addChildToLayout(std::unique_ptr<StorageItemBase> Child);
+  void addVirtualOverride(PDBSymbolFunc &Func);
+  void addVirtualIntro(PDBSymbolFunc &Func);
 
   const PDBSymbol &SymbolBase;
   std::string Name;
   uint32_t SizeOf = 0;
 
   BitVector UsedBytes;
-  std::vector<std::unique_ptr<PDBSymbol>> NonStorageItems;
-  std::vector<std::unique_ptr<StorageItemBase>> ChildStorage;
+  UniquePtrVector<PDBSymbol> Other;
+  UniquePtrVector<PDBSymbolFunc> Funcs;
+  UniquePtrVector<PDBSymbolTypeBaseClass> VirtualBases;
+  UniquePtrVector<StorageItemBase> ChildStorage;
   std::vector<std::list<StorageItemBase *>> ChildrenPerByte;
   std::vector<BaseClassLayout *> BaseClasses;
   VTableLayoutItem *VTable = nullptr;
@@ -128,6 +152,8 @@ class ClassLayout : public UDTLayoutBase {
 public:
   explicit ClassLayout(const PDBSymbolTypeUDT &UDT);
   explicit ClassLayout(std::unique_ptr<PDBSymbolTypeUDT> UDT);
+
+  ClassLayout(ClassLayout &&Other) = default;
 
   const PDBSymbolTypeUDT &getClass() const { return UDT; }
 
@@ -142,6 +168,7 @@ public:
                   std::unique_ptr<PDBSymbolTypeBaseClass> Base);
 
   const PDBSymbolTypeBaseClass &getBase() const { return *Base; }
+  bool isVirtualBase() const { return IsVirtualBase; }
 
 private:
   std::unique_ptr<PDBSymbolTypeBaseClass> Base;

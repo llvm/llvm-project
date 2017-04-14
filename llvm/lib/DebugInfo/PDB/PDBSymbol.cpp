@@ -159,6 +159,8 @@ PDBSymbol::findInlineFramesByRVA(uint32_t RVA) const {
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbol::getChildStats(TagStats &Stats) const {
   std::unique_ptr<IPDBEnumSymbols> Result(findAllChildren());
+  if (!Result)
+    return nullptr;
   Stats.clear();
   while (auto Child = Result->getNext()) {
     ++Stats[Child->getSymTag()];

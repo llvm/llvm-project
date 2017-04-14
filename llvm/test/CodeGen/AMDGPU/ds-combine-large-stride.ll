@@ -1,16 +1,20 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
 
-; CHECK-LABEL: ds_read32_combine_stride_400:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
-define void @ds_read32_combine_stride_400(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+; GCN-LABEL: ds_read32_combine_stride_400:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
+define amdgpu_kernel void @ds_read32_combine_stride_400(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = load float, float addrspace(3)* %arg, align 4
   %tmp2 = fadd float %tmp, 0.000000e+00
@@ -39,17 +43,20 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_read32_combine_stride_400_back:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
-; CHECK-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
-define void @ds_read32_combine_stride_400_back(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+; GCN-LABEL: ds_read32_combine_stride_400_back:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
+define amdgpu_kernel void @ds_read32_combine_stride_400_back(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 700
   %tmp2 = load float, float addrspace(3)* %tmp, align 4
@@ -78,14 +85,14 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_read32_combine_stride_8192:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:32
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:64 offset1:96
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:128 offset1:160
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:192 offset1:224
-define void @ds_read32_combine_stride_8192(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+; GCN-LABEL: ds_read32_combine_stride_8192:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:32
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:64 offset1:96
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:128 offset1:160
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:192 offset1:224
+define amdgpu_kernel void @ds_read32_combine_stride_8192(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = load float, float addrspace(3)* %arg, align 4
   %tmp2 = fadd float %tmp, 0.000000e+00
@@ -114,16 +121,19 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_read32_combine_stride_8192_shifted:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:32
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:32
-; CHECK-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:32
-define void @ds_read32_combine_stride_8192_shifted(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+; GCN-LABEL: ds_read32_combine_stride_8192_shifted:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:32
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:32
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:32
+define amdgpu_kernel void @ds_read32_combine_stride_8192_shifted(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 2
   %tmp2 = load float, float addrspace(3)* %tmp, align 4
@@ -147,15 +157,16 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_read64_combine_stride_400:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:50
-; CHECK-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:100 offset1:150
-; CHECK-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:200 offset1:250
-; CHECK-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:50
-define void @ds_read64_combine_stride_400(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
+; GCN-LABEL: ds_read64_combine_stride_400:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:50
+; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:100 offset1:150
+; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:200 offset1:250
+; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:50
+define amdgpu_kernel void @ds_read64_combine_stride_400(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
 bb:
   %tmp = load double, double addrspace(3)* %arg, align 8
   %tmp2 = fadd double %tmp, 0.000000e+00
@@ -184,16 +195,19 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_read64_combine_stride_8192_shifted:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
-; CHECK-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:16
-; CHECK-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:16
-; CHECK-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:16
-define void @ds_read64_combine_stride_8192_shifted(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
+; GCN-LABEL: ds_read64_combine_stride_8192_shifted:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:16
+; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:16
+; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:16
+define amdgpu_kernel void @ds_read64_combine_stride_8192_shifted(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds double, double addrspace(3)* %arg, i32 1
   %tmp2 = load double, double addrspace(3)* %tmp, align 8
@@ -217,17 +231,20 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write32_combine_stride_400:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-define void @ds_write32_combine_stride_400(float addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write32_combine_stride_400:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+define amdgpu_kernel void @ds_write32_combine_stride_400(float addrspace(3)* nocapture %arg) {
 bb:
   store float 1.000000e+00, float addrspace(3)* %arg, align 4
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 100
@@ -247,17 +264,20 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write32_combine_stride_400_back:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; CHECK-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-define void @ds_write32_combine_stride_400_back(float addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write32_combine_stride_400_back:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x320, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x640, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+define amdgpu_kernel void @ds_write32_combine_stride_400_back(float addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 700
   store float 1.000000e+00, float addrspace(3)* %tmp, align 4
@@ -277,14 +297,14 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write32_combine_stride_8192:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-; CHECK-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:64 offset1:96
-; CHECK-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:128 offset1:160
-; CHECK-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:192 offset1:224
-define void @ds_write32_combine_stride_8192(float addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write32_combine_stride_8192:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:64 offset1:96
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:128 offset1:160
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:192 offset1:224
+define amdgpu_kernel void @ds_write32_combine_stride_8192(float addrspace(3)* nocapture %arg) {
 bb:
   store float 1.000000e+00, float addrspace(3)* %arg, align 4
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 2048
@@ -304,16 +324,19 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write32_combine_stride_8192_shifted:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 4, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4004, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8004, [[BASE]]
-; CHECK-DAG: ds_write2st64_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-; CHECK-DAG: ds_write2st64_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-; CHECK-DAG: ds_write2st64_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-define void @ds_write32_combine_stride_8192_shifted(float addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write32_combine_stride_8192_shifted:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 4, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4004, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8004, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 4, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4004, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8004, [[BASE]]
+; GCN-DAG: ds_write2st64_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+; GCN-DAG: ds_write2st64_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+; GCN-DAG: ds_write2st64_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+define amdgpu_kernel void @ds_write32_combine_stride_8192_shifted(float addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 1
   store float 1.000000e+00, float addrspace(3)* %tmp, align 4
@@ -330,15 +353,16 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write64_combine_stride_400:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
-; CHECK-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
-; CHECK-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:100 offset1:150
-; CHECK-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:200 offset1:250
-; CHECK-DAG: ds_write2_b64 [[B1]],   v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
-define void @ds_write64_combine_stride_400(double addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write64_combine_stride_400:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 0x960, [[BASE]]
+; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
+; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:100 offset1:150
+; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:200 offset1:250
+; GCN-DAG: ds_write2_b64 [[B1]],   v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
+define amdgpu_kernel void @ds_write64_combine_stride_400(double addrspace(3)* nocapture %arg) {
 bb:
   store double 1.000000e+00, double addrspace(3)* %arg, align 8
   %tmp = getelementptr inbounds double, double addrspace(3)* %arg, i32 50
@@ -358,16 +382,19 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: ds_write64_combine_stride_8192_shifted:
-; CHECK:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; CHECK:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
-; CHECK-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
-; CHECK-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
-; CHECK-DAG: ds_write2st64_b64 [[B1]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
-; CHECK-DAG: ds_write2st64_b64 [[B2]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
-; CHECK-DAG: ds_write2st64_b64 [[B3]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
-define void @ds_write64_combine_stride_8192_shifted(double addrspace(3)* nocapture %arg) {
+; GCN-LABEL: ds_write64_combine_stride_8192_shifted:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GCN-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B2:v[0-9]+]], vcc, 0x4008, [[BASE]]
+; GFX9-DAG: v_add_i32_e32 [[B3:v[0-9]+]], vcc, 0x8008, [[BASE]]
+; GCN-DAG: ds_write2st64_b64 [[B1]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
+; GCN-DAG: ds_write2st64_b64 [[B2]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
+; GCN-DAG: ds_write2st64_b64 [[B3]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
+define amdgpu_kernel void @ds_write64_combine_stride_8192_shifted(double addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds double, double addrspace(3)* %arg, i32 1
   store double 1.000000e+00, double addrspace(3)* %tmp, align 8

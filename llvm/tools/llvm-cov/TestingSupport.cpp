@@ -52,9 +52,14 @@ int convertForTestingMain(int argc, const char *argv[]) {
     StringRef Name;
     if (Section.getName(Name))
       return 1;
-    if (Name == llvm::getInstrProfNameSectionName(false)) {
+    // TODO: with the current getInstrProfXXXSectionName interfaces, the
+    // the  host tool is limited to read coverage section on
+    // binaries with compatible profile section naming scheme as the host
+    // platform. Currently, COFF format binaries have different section
+    // naming scheme from the all the rest.
+    if (Name == llvm::getInstrProfNameSectionName()) {
       ProfileNames = Section;
-    } else if (Name == llvm::getInstrProfCoverageSectionName(false)) {
+    } else if (Name == llvm::getInstrProfCoverageSectionName()) {
       CoverageMapping = Section;
     } else
       continue;

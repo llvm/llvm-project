@@ -106,7 +106,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   AttributeList PAL = F->getAttributes();
 
   // First, determine the new argument list
-  unsigned ArgIndex = 1;
+  unsigned ArgIndex = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgIndex) {
     if (ByValArgsToTransform.count(&*I)) {

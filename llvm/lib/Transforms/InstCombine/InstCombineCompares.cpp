@@ -3810,16 +3810,14 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth,
   // greater than the RHS must differ in a bit higher than these due to carry.
   case ICmpInst::ICMP_UGT: {
     unsigned trailingOnes = RHS.countTrailingOnes();
-    APInt lowBitsSet = APInt::getLowBitsSet(BitWidth, trailingOnes);
-    return ~lowBitsSet;
+    return APInt::getBitsSetFrom(BitWidth, trailingOnes);
   }
 
   // Similarly, for a ULT comparison, we don't care about the trailing zeros.
   // Any value less than the RHS must differ in a higher bit because of carries.
   case ICmpInst::ICMP_ULT: {
     unsigned trailingZeros = RHS.countTrailingZeros();
-    APInt lowBitsSet = APInt::getLowBitsSet(BitWidth, trailingZeros);
-    return ~lowBitsSet;
+    return APInt::getBitsSetFrom(BitWidth, trailingZeros);
   }
 
   default:

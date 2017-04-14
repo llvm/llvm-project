@@ -32,7 +32,8 @@ class ClassDefinitionDumper : public PDBSymDumper {
 public:
   ClassDefinitionDumper(LinePrinter &P);
 
-  void start(const PDBSymbolTypeUDT &Exe);
+  void start(const PDBSymbolTypeUDT &Class);
+  void start(const ClassLayout &Class);
 
 private:
   void prettyPrintClassIntro(const ClassLayout &Class);

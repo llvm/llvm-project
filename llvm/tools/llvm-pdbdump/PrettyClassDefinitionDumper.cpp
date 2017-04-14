@@ -33,15 +33,15 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
          opts::pretty::ClassDefinitionFormat::None);
 
   ClassLayout Layout(Class);
+  start(Layout);
+}
 
-  if (opts::pretty::OnlyPaddingClasses && (Layout.shallowPaddingSize() == 0))
-    return;
-
+void ClassDefinitionDumper::start(const ClassLayout &Layout) {
   prettyPrintClassIntro(Layout);
 
   switch (opts::pretty::ClassFormat) {
   case opts::pretty::ClassDefinitionFormat::Graphical: {
-    PrettyClassLayoutGraphicalDumper Dumper(Printer);
+    PrettyClassLayoutGraphicalDumper Dumper(Printer, 0);
     DumpedAnything = Dumper.start(Layout);
     break;
   }
@@ -58,6 +58,20 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
   prettyPrintClassOutro(Layout);
 }
 
+static void printBase(LinePrinter &Printer, const PDBSymbolTypeBaseClass &Base,
+                      uint32_t &CurIndex, uint32_t TotalBaseCount,
+                      bool IsVirtual) {
+  Printer << " ";
+  WithColor(Printer, PDB_ColorItem::Keyword).get() << Base.getAccess();
+  if (IsVirtual)
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << " virtual";
+  WithColor(Printer, PDB_ColorItem::Type).get() << " " << Base.getName();
+  if (++CurIndex < TotalBaseCount) {
+    Printer.NewLine();
+    Printer << ",";
+  }
+}
+
 void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   DumpedAnything = false;
   Printer.NewLine();
@@ -69,24 +83,22 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
   WithColor(Printer, PDB_ColorItem::Comment).get() << " [sizeof = " << Size
                                                    << "]";
-  uint32_t BaseCount = Layout.base_classes().size();
-  if (BaseCount > 0) {
+  uint32_t BaseCount = Layout.bases().size();
+  uint32_t VBaseCount = Layout.vbases().size();
+  uint32_t TotalBaseCount = BaseCount + VBaseCount;
+  if (TotalBaseCount > 0) {
     Printer.Indent();
     Printer.NewLine();
     Printer << ":";
     uint32_t BaseIndex = 0;
-    for (auto BC : Layout.base_classes()) {
+    for (auto BC : Layout.bases()) {
       const auto &Base = BC->getBase();
-      Printer << " ";
-      WithColor(Printer, PDB_ColorItem::Keyword).get() << Base.getAccess();
-      if (Base.isVirtualBaseClass())
-        WithColor(Printer, PDB_ColorItem::Keyword).get() << " virtual";
-      WithColor(Printer, PDB_ColorItem::Type).get() << " " << Base.getName();
-      if (++BaseIndex < BaseCount) {
-        Printer.NewLine();
-        Printer << ",";
-      }
+      printBase(Printer, Base, BaseIndex, TotalBaseCount, false);
     }
+    for (auto &BC : Layout.vbases()) {
+      printBase(Printer, *BC, BaseIndex, TotalBaseCount, true);
+    }
+
     Printer.Unindent();
   }
 

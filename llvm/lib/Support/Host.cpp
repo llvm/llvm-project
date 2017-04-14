@@ -1245,6 +1245,7 @@ static int computeHostNumPhysicalCores() {
   if (std::error_code EC = Text.getError()) {
     llvm::errs() << "Can't read "
                  << "/proc/cpuinfo: " << EC.message() << "\n";
+    return -1;
   }
   SmallVector<StringRef, 8> strs;
   (*Text)->getBuffer().split(strs, "\n", /*MaxSplit=*/-1,

@@ -116,7 +116,7 @@ struct Header {
   Range<Symbol> Symbols;
   Range<Uncommon> Uncommons;
 
-  Str SourceFileName;
+  Str TargetTriple, SourceFileName;
 
   /// COFF-specific: linker directives.
   Str COFFLinkerOpts;
@@ -226,6 +226,8 @@ public:
   /// The symbols enumerated by this method are ephemeral, but they can be
   /// copied into an irsymtab::Symbol object.
   symbol_range module_symbols(unsigned I) const;
+
+  StringRef getTargetTriple() const { return str(header().TargetTriple); }
 
   /// Returns the source file path specified at compile time.
   StringRef getSourceFileName() const { return str(header().SourceFileName); }

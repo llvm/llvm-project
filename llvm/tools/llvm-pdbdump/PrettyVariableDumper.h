@@ -24,8 +24,8 @@ class VariableDumper : public PDBSymDumper {
 public:
   VariableDumper(LinePrinter &P);
 
-  void start(const PDBSymbolData &Var);
-  void start(const PDBSymbolTypeVTable &Var);
+  void start(const PDBSymbolData &Var, uint32_t Offset = 0);
+  void start(const PDBSymbolTypeVTable &Var, uint32_t Offset = 0);
 
   void dump(const PDBSymbolTypeArray &Symbol) override;
   void dump(const PDBSymbolTypeBuiltin &Symbol) override;

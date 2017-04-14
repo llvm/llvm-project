@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
@@ -70,6 +71,12 @@ const PDBSymbolData &DataMemberLayoutItem::getDataMember() {
   return *dyn_cast<PDBSymbolData>(&Symbol);
 }
 
+bool DataMemberLayoutItem::hasUDTLayout() const { return UdtLayout != nullptr; }
+
+const ClassLayout &DataMemberLayoutItem::getUDTLayout() const {
+  return *UdtLayout;
+}
+
 uint32_t DataMemberLayoutItem::deepPaddingSize() const {
   uint32_t Result = StorageItemBase::deepPaddingSize();
   if (UdtLayout)
@@ -81,31 +88,13 @@ VTableLayoutItem::VTableLayoutItem(const UDTLayoutBase &Parent,
                                    std::unique_ptr<PDBSymbolTypeVTable> VTable)
     : StorageItemBase(Parent, *VTable, "<vtbl>", 0, getTypeLength(*VTable)),
       VTable(std::move(VTable)) {
-  // initialize vtbl methods.
   auto VTableType = cast<PDBSymbolTypePointer>(this->VTable->getType());
-  uint32_t PointerSize = VTableType->getLength();
+  ElementSize = VTableType->getLength();
 
-  if (auto Shape = unique_dyn_cast<PDBSymbolTypeVTableShape>(
-          VTableType->getPointeeType())) {
+  Shape =
+      unique_dyn_cast<PDBSymbolTypeVTableShape>(VTableType->getPointeeType());
+  if (Shape)
     VTableFuncs.resize(Shape->getCount());
-
-    auto ParentFunctions =
-        Parent.getSymbolBase().findAllChildren<PDBSymbolFunc>();
-    while (auto Func = ParentFunctions->getNext()) {
-      if (Func->isVirtual()) {
-        uint32_t Index = Func->getVirtualBaseOffset();
-        assert(Index % PointerSize == 0);
-        Index /= PointerSize;
-
-        // Don't allow a compiler generated function to overwrite a user
-        // function in the VTable.  Not sure why this happens, but a function
-        // named __vecDelDtor sometimes shows up on top of the destructor.
-        if (Func->isCompilerGenerated() && VTableFuncs[Index])
-          continue;
-        VTableFuncs[Index] = std::move(Func);
-      }
-    }
-  }
 }
 
 UDTLayoutBase::UDTLayoutBase(const PDBSymbol &Symbol, const std::string &Name,
@@ -145,44 +134,191 @@ uint32_t UDTLayoutBase::deepPaddingSize() const {
 }
 
 void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
+  // Handled bases first, followed by VTables, followed by data members,
+  // followed by functions, followed by other.  This ordering is necessary
+  // so that bases and vtables get initialized before any functions which
+  // may override them.
+
+  UniquePtrVector<PDBSymbolTypeBaseClass> Bases;
+  UniquePtrVector<PDBSymbolTypeVTable> VTables;
+  UniquePtrVector<PDBSymbolData> Members;
   auto Children = Sym.findAllChildren();
   while (auto Child = Children->getNext()) {
-    if (auto Data = unique_dyn_cast<PDBSymbolData>(Child)) {
-      if (Data->getDataKind() == PDB_DataKind::Member) {
-        auto DM =
-            llvm::make_unique<DataMemberLayoutItem>(*this, std::move(Data));
+    if (auto Base = unique_dyn_cast<PDBSymbolTypeBaseClass>(Child)) {
+      if (Base->isVirtualBaseClass())
+        VirtualBases.push_back(std::move(Base));
+      else
+        Bases.push_back(std::move(Base));
+    }
 
-        addChildToLayout(std::move(DM));
-      } else {
-        NonStorageItems.push_back(std::move(Data));
+    else if (auto Data = unique_dyn_cast<PDBSymbolData>(Child)) {
+      if (Data->getDataKind() == PDB_DataKind::Member)
+        Members.push_back(std::move(Data));
+      else
+        Other.push_back(std::move(Child));
+    } else if (auto VT = unique_dyn_cast<PDBSymbolTypeVTable>(Child))
+      VTables.push_back(std::move(VT));
+    else if (auto Func = unique_dyn_cast<PDBSymbolFunc>(Child))
+      Funcs.push_back(std::move(Func));
+    else
+      Other.push_back(std::move(Child));
+  }
+
+  for (auto &Base : Bases) {
+    auto BL = llvm::make_unique<BaseClassLayout>(*this, std::move(Base));
+    BaseClasses.push_back(BL.get());
+
+    addChildToLayout(std::move(BL));
+  }
+
+  for (auto &VT : VTables) {
+    auto VTLayout = llvm::make_unique<VTableLayoutItem>(*this, std::move(VT));
+
+    VTable = VTLayout.get();
+
+    addChildToLayout(std::move(VTLayout));
+    continue;
+  }
+
+  for (auto &Data : Members) {
+    auto DM = llvm::make_unique<DataMemberLayoutItem>(*this, std::move(Data));
+
+    addChildToLayout(std::move(DM));
+  }
+
+  for (auto &Func : Funcs) {
+    if (!Func->isVirtual())
+      continue;
+
+    if (Func->isIntroVirtualFunction())
+      addVirtualIntro(*Func);
+    else
+      addVirtualOverride(*Func);
+  }
+}
+
+void UDTLayoutBase::addVirtualIntro(PDBSymbolFunc &Func) {
+  // Kind of a hack, but we prefer the more common destructor name that people
+  // are familiar with, e.g. ~ClassName.  It seems there are always both and
+  // the vector deleting destructor overwrites the nice destructor, so just
+  // ignore the vector deleting destructor.
+  if (Func.getName() == "__vecDelDtor")
+    return;
+
+  if (!VTable) {
+    // FIXME: Handle this.  What's most likely happening is we have an intro
+    // virtual in a derived class where the base also has an intro virtual.
+    // In this case the vtable lives in the base.  What we really need is
+    // for each UDTLayoutBase to contain a list of all its vtables, and
+    // then propagate this list up the hierarchy so that derived classes have
+    // direct access to their bases' vtables.
+    return;
+  }
+
+  uint32_t Stride = VTable->getElementSize();
+
+  uint32_t Index = Func.getVirtualBaseOffset();
+  assert(Index % Stride == 0);
+  Index /= Stride;
+
+  VTable->setFunction(Index, Func);
+}
+
+VTableLayoutItem *UDTLayoutBase::findVTableAtOffset(uint32_t RelativeOffset) {
+  if (VTable && VTable->getOffsetInParent() == RelativeOffset)
+    return VTable;
+  for (auto Base : BaseClasses) {
+    uint32_t Begin = Base->getOffsetInParent();
+    uint32_t End = Begin + Base->getSize();
+    if (RelativeOffset < Begin || RelativeOffset >= End)
+      continue;
+
+    return Base->findVTableAtOffset(RelativeOffset - Begin);
+  }
+
+  return nullptr;
+}
+
+void UDTLayoutBase::addVirtualOverride(PDBSymbolFunc &Func) {
+  auto Signature = Func.getSignature();
+  auto ThisAdjust = Signature->getThisAdjust();
+  // ThisAdjust tells us which VTable we're looking for.  Specifically, it's
+  // the offset into the current class of the VTable we're looking for.  So
+  // look through the base hierarchy until we find one such that
+  // AbsoluteOffset(VT) == ThisAdjust
+  VTableLayoutItem *VT = findVTableAtOffset(ThisAdjust);
+  if (!VT) {
+    // FIXME: There really should be a vtable here.  If there's not it probably
+    // means that the vtable is in a virtual base, which we don't yet support.
+    assert(!VirtualBases.empty());
+    return;
+  }
+  int32_t OverrideIndex = -1;
+  // Now we've found the VTable.  Func will not have a virtual base offset set,
+  // so instead we need to compare names and signatures.  We iterate each item
+  // in the VTable.  All items should already have non null entries because they
+  // were initialized by the intro virtual, which was guaranteed to come before.
+  for (auto ItemAndIndex : enumerate(VT->funcs())) {
+    auto Item = ItemAndIndex.value();
+    assert(Item);
+    // If the name doesn't match, this isn't an override.  Note that it's ok
+    // for the return type to not match (e.g. co-variant return).
+    if (Item->getName() != Func.getName()) {
+      if (Item->isDestructor() && Func.isDestructor()) {
+        OverrideIndex = ItemAndIndex.index();
+        break;
       }
       continue;
     }
-
-    if (auto Base = unique_dyn_cast<PDBSymbolTypeBaseClass>(Child)) {
-      auto BL = llvm::make_unique<BaseClassLayout>(*this, std::move(Base));
-      BaseClasses.push_back(BL.get());
-
-      addChildToLayout(std::move(BL));
+    // Now make sure it's the right overload.  Get the signature of the existing
+    // vtable method and make sure it has the same arglist and the same cv-ness.
+    auto ExistingSig = Item->getSignature();
+    if (ExistingSig->isConstType() != Signature->isConstType())
       continue;
-    }
-
-    if (auto VT = unique_dyn_cast<PDBSymbolTypeVTable>(Child)) {
-      auto VTLayout = llvm::make_unique<VTableLayoutItem>(*this, std::move(VT));
-
-      VTable = VTLayout.get();
-
-      addChildToLayout(std::move(VTLayout));
+    if (ExistingSig->isVolatileType() != Signature->isVolatileType())
       continue;
-    }
 
-    NonStorageItems.push_back(std::move(Child));
+    // Now compare arguments.  Using the raw bytes of the PDB this would be
+    // trivial
+    // because there is an ArgListId and they should be identical.  But DIA
+    // doesn't
+    // expose this, so the best we can do is iterate each argument and confirm
+    // that
+    // each one is identical.
+    if (ExistingSig->getCount() != Signature->getCount())
+      continue;
+    bool IsMatch = true;
+    auto ExistingEnumerator = ExistingSig->getArguments();
+    auto NewEnumerator = Signature->getArguments();
+    for (uint32_t I = 0; I < ExistingEnumerator->getChildCount(); ++I) {
+      auto ExistingArg = ExistingEnumerator->getNext();
+      auto NewArg = NewEnumerator->getNext();
+      if (ExistingArg->getSymIndexId() != NewArg->getSymIndexId()) {
+        IsMatch = false;
+        break;
+      }
+    }
+    if (!IsMatch)
+      continue;
+
+    // It's a match!  Stick the new function into the VTable.
+    OverrideIndex = ItemAndIndex.index();
+    break;
   }
+  if (OverrideIndex == -1) {
+    // FIXME: This is probably due to one of the other FIXMEs in this file.
+    return;
+  }
+  VT->setFunction(OverrideIndex, Func);
 }
 
 void UDTLayoutBase::addChildToLayout(std::unique_ptr<StorageItemBase> Child) {
   uint32_t Begin = Child->getOffsetInParent();
   uint32_t End = Begin + Child->getSize();
+  // Due to the empty base optimization, End might point outside the bounds of
+  // the parent class.  If that happens, just clamp the value.
+  End = std::min(End, getClassSize());
+
   UsedBytes.set(Begin, End);
   while (Begin != End) {
     ChildrenPerByte[Begin].push_back(Child.get());

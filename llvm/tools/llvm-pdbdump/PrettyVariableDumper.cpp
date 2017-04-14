@@ -35,7 +35,7 @@ using namespace llvm::pdb;
 VariableDumper::VariableDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
 
-void VariableDumper::start(const PDBSymbolData &Var) {
+void VariableDumper::start(const PDBSymbolData &Var, uint32_t Offset) {
   if (Var.isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
     return;
   if (Printer.IsSymbolExcluded(Var.getName()))
@@ -68,16 +68,16 @@ void VariableDumper::start(const PDBSymbolData &Var) {
     Printer.NewLine();
     Printer << "data ";
     WithColor(Printer, PDB_ColorItem::Offset).get()
-        << "+" << format_hex(Var.getOffset(), 4) << " [sizeof=" << Length
-        << "] ";
+        << "+" << format_hex(Offset + Var.getOffset(), 4)
+        << " [sizeof=" << Length << "] ";
     dumpSymbolTypeAndName(*VarType, Var.getName());
     break;
   case PDB_LocType::BitField:
     Printer.NewLine();
     Printer << "data ";
     WithColor(Printer, PDB_ColorItem::Offset).get()
-        << "+" << format_hex(Var.getOffset(), 4) << " [sizeof=" << Length
-        << "] ";
+        << "+" << format_hex(Offset + Var.getOffset(), 4)
+        << " [sizeof=" << Length << "] ";
     dumpSymbolTypeAndName(*VarType, Var.getName());
     Printer << " : ";
     WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Var.getLength();
@@ -91,17 +91,15 @@ void VariableDumper::start(const PDBSymbolData &Var) {
   }
 }
 
-void VariableDumper::start(const PDBSymbolTypeVTable &Var) {
+void VariableDumper::start(const PDBSymbolTypeVTable &Var, uint32_t Offset) {
   Printer.NewLine();
-  Printer << "data ";
+  Printer << "vfptr ";
   auto VTableType = cast<PDBSymbolTypePointer>(Var.getType());
   uint32_t PointerSize = VTableType->getLength();
 
   WithColor(Printer, PDB_ColorItem::Offset).get()
-      << "+" << format_hex(Var.getOffset(), 4) << " [sizeof=" << PointerSize
-      << "] ";
-
-  WithColor(Printer, PDB_ColorItem::Identifier).get() << " __vfptr";
+      << "+" << format_hex(Offset + Var.getOffset(), 4)
+      << " [sizeof=" << PointerSize << "] ";
 }
 
 void VariableDumper::dump(const PDBSymbolTypeArray &Symbol) {

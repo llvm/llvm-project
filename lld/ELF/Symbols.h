@@ -302,25 +302,25 @@ public:
 // Some linker-generated symbols need to be created as
 // DefinedRegular symbols.
 struct ElfSym {
-  // The content for __bss_start symbol.
+  // __bss_start
   static DefinedRegular *Bss;
 
-  // The content for _etext and etext symbols.
-  static DefinedRegular *Etext;
+  // etext and _etext
+  static DefinedRegular *Etext1;
   static DefinedRegular *Etext2;
 
-  // The content for _edata and edata symbols.
-  static DefinedRegular *Edata;
+  // edata and _edata
+  static DefinedRegular *Edata1;
   static DefinedRegular *Edata2;
 
-  // The content for _end and end symbols.
-  static DefinedRegular *End;
+  // end and _end
+  static DefinedRegular *End1;
   static DefinedRegular *End2;
 
-  // The content for _gp_disp/__gnu_local_gp symbols for MIPS target.
+  // _gp, _gp_disp and __gnu_local_gp symbols. Only for MIPS.
+  static DefinedRegular *MipsGp;
   static DefinedRegular *MipsGpDisp;
   static DefinedRegular *MipsLocalGp;
-  static DefinedRegular *MipsGp;
 };
 
 // A real symbol object, SymbolBody, is usually stored within a Symbol. There's

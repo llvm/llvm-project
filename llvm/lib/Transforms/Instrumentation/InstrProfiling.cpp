@@ -145,23 +145,23 @@ bool InstrProfiling::isMachO() const {
 }
 
 /// Get the section name for the counter variables.
-StringRef InstrProfiling::getCountersSection() const {
-  return getInstrProfCountersSectionName(isMachO());
+std::string InstrProfiling::getCountersSection() const {
+  return getInstrProfCountersSectionName(M);
 }
 
 /// Get the section name for the name variables.
-StringRef InstrProfiling::getNameSection() const {
-  return getInstrProfNameSectionName(isMachO());
+std::string InstrProfiling::getNameSection() const {
+  return getInstrProfNameSectionName(M);
 }
 
 /// Get the section name for the profile data variables.
-StringRef InstrProfiling::getDataSection() const {
-  return getInstrProfDataSectionName(isMachO());
+std::string InstrProfiling::getDataSection() const {
+  return getInstrProfDataSectionName(M);
 }
 
 /// Get the section name for the coverage mapping data.
-StringRef InstrProfiling::getCoverageSection() const {
-  return getInstrProfCoverageSectionName(isMachO());
+std::string InstrProfiling::getCoverageSection() const {
+  return getInstrProfCoverageSectionName(M);
 }
 
 static InstrProfIncrementInst *castToIncrementInst(Instruction *Instr) {
@@ -462,7 +462,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
                              Constant::getNullValue(ValuesTy),
                              getVarName(Inc, getInstrProfValuesVarPrefix()));
       ValuesVar->setVisibility(NamePtr->getVisibility());
-      ValuesVar->setSection(getInstrProfValuesSectionName(isMachO()));
+      ValuesVar->setSection(getInstrProfValuesSectionName(M));
       ValuesVar->setAlignment(8);
       ValuesVar->setComdat(ProfileVarsComdat);
       ValuesPtrExpr =
@@ -557,7 +557,7 @@ void InstrProfiling::emitVNodes() {
   auto *VNodesVar = new GlobalVariable(
       *M, VNodesTy, false, GlobalValue::PrivateLinkage,
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
-  VNodesVar->setSection(getInstrProfVNodesSectionName(isMachO()));
+  VNodesVar->setSection(getInstrProfVNodesSectionName(M));
   UsedVars.push_back(VNodesVar);
 }
 

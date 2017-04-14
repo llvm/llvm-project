@@ -295,6 +295,11 @@ public:
     return getAttributes().hasAttribute(i, Kind);
   }
 
+  /// @brief check if an attributes is in the list of attributes.
+  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    return getAttributes().hasParamAttribute(ArgNo, Kind);
+  }
+
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
     return AttributeSets.getAttribute(i, Kind);
   }

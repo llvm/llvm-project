@@ -137,9 +137,9 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
        not dereference that pointer argument, even though it may read or write
        the memory that the pointer points to if accessed through other pointers.
      */
-    if (F->getAttributes().hasAttribute(ArgNo + 1, Attribute::NoAlias) &&
-          (F->getAttributes().hasAttribute(ArgNo + 1, Attribute::ReadNone) ||
-           F->getAttributes().hasAttribute(ArgNo + 1, Attribute::ReadOnly))) {
+    if (F->hasParamAttribute(ArgNo, Attribute::NoAlias) &&
+        (F->hasParamAttribute(ArgNo, Attribute::ReadNone) ||
+         F->hasParamAttribute(ArgNo, Attribute::ReadOnly))) {
       return true;
     }
   }

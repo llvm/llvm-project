@@ -133,7 +133,9 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
   //
   //   .section   .eh_frame,"a",@progbits
   
-  if (Name == getInstrProfCoverageSectionName(false))
+  // TODO: to support Win->ELF cross compilation with coverage properly,
+  // need to pass the module pointer to the following call.
+  if (Name == getInstrProfCoverageSectionName())
     return SectionKind::getMetadata();
 
   if (Name.empty() || Name[0] != '.') return K;

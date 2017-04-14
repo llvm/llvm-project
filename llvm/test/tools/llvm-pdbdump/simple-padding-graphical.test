@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pretty -classes -class-definitions=layout-members \
+; RUN: llvm-pdbdump pretty -classes -class-definitions=graphical \
 ; RUN:     -include-types=SimplePad %p/Inputs/SimplePaddingTest.pdb > %t
 
 ; RUN: FileCheck -input-file=%t %s -check-prefix=NO_PADDING
@@ -24,6 +24,9 @@
 ; UNION-NEXT:   data +0x00 [sizeof=4] int X
 ; UNION-NEXT:   data +0x00 [sizeof=8] __int64 Y
 ; UNION-NEXT:   data +0x00 [sizeof=16] SimplePadUnion::
+; UNION-NEXT:     data +0x00 [sizeof=4] int X
+; UNION-NEXT:     <padding> (4 bytes)
+; UNION-NEXT:     data +0x08 [sizeof=8] __int64 Y
 ; UNION-NEXT: }
 
 ; NESTED_UNION:      struct {{SimplePadUnion::.*}} [sizeof = 16] {
@@ -50,7 +53,9 @@
 ; NO_PAD_IN_BASE-NEXT: }
 
 ; PAD_IN_DERIVED:      struct SimplePadDerived [sizeof = 16]
-; PAD_IN_DERIVED-NEXT:   public SimplePadBase {
+; PAD_IN_DERIVED-NEXT:   : public SimplePadBase {
+; PAD_IN_DERIVED-NEXT:   base +0x00 [sizeof=4] SimplePadBase
+; PAD_IN_DERIVED-NEXT:     data +0x00 [sizeof=4] int X
 ; PAD_IN_DERIVED-NEXT:   <padding> (4 bytes)
 ; PAD_IN_DERIVED-NEXT:   data +0x08 [sizeof=8] __int64 Y
 ; PAD_IN_DERIVED-NEXT: }
@@ -58,18 +63,25 @@
 ; EMPTY_BASE:      struct SimplePadEmpty [sizeof = 8]
 ; EMPTY_BASE-NEXT:   : public SimplePadEmptyBase1
 ; EMPTY_BASE-NEXT:   , public SimplePadEmptyBase2 {
+; EMPTY_BASE-NEXT:   base +0x00 [sizeof=1] SimplePadEmptyBase1
+; EMPTY_BASE-NEXT:   base +0x01 [sizeof=1] SimplePadEmptyBase2
 ; EMPTY_BASE-NEXT:   <padding> (2 bytes)
 ; EMPTY_BASE-NEXT:   data +0x04 [sizeof=4] int X
 ; EMPTY_BASE-NEXT: }
 
 ; VFPTR:      struct SimplePadVfptr [sizeof = 8] {
-; VFPTR-NEXT:   data +0x00 [sizeof=4] __vfptr
+; VFPTR-NEXT:   vfptr +0x00 [sizeof=4]
+; VFPTR-NEXT:     [0] &SimplePadVfptr::~SimplePadVfptr
 ; VFPTR-NEXT:   data +0x04 [sizeof=4] int X
 ; VFPTR-NEXT: }
 
 ; MULTIPLE_INHERIT:      struct SimplePadMultiInherit [sizeof = 8]
 ; MULTIPLE_INHERIT-NEXT:   : public NonEmptyBase1
 ; MULTIPLE_INHERIT-NEXT:   , public NonEmptyBase2 {
+; MULTIPLE_INHERIT-NEXT:   base +0x00 [sizeof=1] NonEmptyBase1
+; MULTIPLE_INHERIT-NEXT:     data +0x00 [sizeof=1] bool X
+; MULTIPLE_INHERIT-NEXT:   base +0x01 [sizeof=1] NonEmptyBase2
+; MULTIPLE_INHERIT-NEXT:     data +0x01 [sizeof=1] bool Y
 ; MULTIPLE_INHERIT-NEXT:   <padding> (2 bytes)
 ; MULTIPLE_INHERIT-NEXT:   data +0x04 [sizeof=4] int X
 ; MULTIPLE_INHERIT-NEXT: }
@@ -77,18 +89,33 @@
 ; MULTIPLE_INHERIT2:      SimplePadMultiInherit2 [sizeof = 16]
 ; MULTIPLE_INHERIT2-NEXT:   : public SimplePadFields1
 ; MULTIPLE_INHERIT2-NEXT:   , public SimplePadFields2 {
+; MULTIPLE_INHERIT2-NEXT:   base +0x00 [sizeof=4] SimplePadFields1
+; MULTIPLE_INHERIT2-NEXT:     data +0x00 [sizeof=1] char A
+; MULTIPLE_INHERIT2-NEXT:     data +0x01 [sizeof=1] char B
+; MULTIPLE_INHERIT2-NEXT:     data +0x02 [sizeof=1] char C
+; MULTIPLE_INHERIT2-NEXT:     <padding> (1 bytes)
+; MULTIPLE_INHERIT2-NEXT:   base +0x04 [sizeof=8] SimplePadFields2
+; MULTIPLE_INHERIT2-NEXT:     data +0x04 [sizeof=4] int Y
+; MULTIPLE_INHERIT2-NEXT:     data +0x08 [sizeof=1] char X
+; MULTIPLE_INHERIT2-NEXT:     <padding> (3 bytes)
 ; MULTIPLE_INHERIT2-NEXT:   data +0x0c [sizeof=4] int X
 ; MULTIPLE_INHERIT2-NEXT: }
 
 ; DEEP_INHERIT:      struct SimplePadTwoLevelInherit [sizeof = 16]
 ; DEEP_INHERIT-NEXT:   : public OneLevelInherit {
-; DEEP_INHERIT-NEXT:   <padding> (4 bytes)
-; DEEP_INHERIT-NEXT:   data +0x08 [sizeof=8] __int64 Z
+; DEEP_INHERIT-NEXT:     base +0x00 [sizeof=4] OneLevelInherit
+; DEEP_INHERIT-NEXT:       base +0x00 [sizeof=1] NonEmptyBase1
+; DEEP_INHERIT-NEXT:         data +0x00 [sizeof=1] bool X
+; DEEP_INHERIT-NEXT:       <padding> (1 bytes)
+; DEEP_INHERIT-NEXT:       data +0x02 [sizeof=2] short Y
+; DEEP_INHERIT-NEXT:     <padding> (4 bytes)
+; DEEP_INHERIT-NEXT:     data +0x08 [sizeof=8] __int64 Z
 ; DEEP_INHERIT-NEXT: }
 
 
 ; AGGREGATE:      struct SimplePadAggregate [sizeof = 8] {
 ; AGGREGATE-NEXT:   data +0x00 [sizeof=1] NonEmptyBase1 X
+; AGGREGATE-NEXT:     data +0x00 [sizeof=1] bool X
 ; AGGREGATE-NEXT:   <padding> (3 bytes)
 ; AGGREGATE-NEXT:   data +0x04 [sizeof=4] int Y
 ; AGGREGATE-NEXT: }
