@@ -97,7 +97,7 @@ private:
   // [begin, end) for each module
   std::vector<std::pair<size_t, size_t>> ModuleSymIndices;
 
-  StringRef SourceFileName, COFFLinkerOpts;
+  StringRef TargetTriple, SourceFileName, COFFLinkerOpts;
   std::vector<StringRef> ComdatTable;
 
 public:
@@ -137,6 +137,9 @@ public:
 
   /// Returns the path to the InputFile.
   StringRef getName() const;
+
+  /// Returns the input file's target triple.
+  StringRef getTargetTriple() const { return TargetTriple; }
 
   /// Returns the source file path specified at compile time.
   StringRef getSourceFileName() const { return SourceFileName; }

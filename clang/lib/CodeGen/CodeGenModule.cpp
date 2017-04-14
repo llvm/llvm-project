@@ -2953,7 +2953,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       }
 
       // Add any parameter attributes.
-      newArgAttrs.push_back(oldAttrs.getParamAttributes(argNo + 1));
+      newArgAttrs.push_back(oldAttrs.getParamAttributes(argNo));
       argNo++;
     }
     if (dontTransform)

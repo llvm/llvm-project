@@ -648,11 +648,15 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
                                 : support::endianness::big;
 
   // Look for the sections that we are interested in.
-  auto NamesSection = lookupSection(*OF, getInstrProfNameSectionName(false));
+  // TODO: with the current getInstrProfXXXSectionName interfaces, the
+  // the coverage reader host tool is limited to read coverage section on
+  // binaries with compatible profile section naming scheme as the host
+  // platform. Currently, COFF format binaries have different section
+  // naming scheme from the all the rest.
+  auto NamesSection = lookupSection(*OF, getInstrProfNameSectionName());
   if (auto E = NamesSection.takeError())
     return E;
-  auto CoverageSection =
-      lookupSection(*OF, getInstrProfCoverageSectionName(false));
+  auto CoverageSection = lookupSection(*OF, getInstrProfCoverageSectionName());
   if (auto E = CoverageSection.takeError())
     return E;
 

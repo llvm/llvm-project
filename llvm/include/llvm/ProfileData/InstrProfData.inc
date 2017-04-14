@@ -246,6 +246,31 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 /* COVMAP_HEADER end.  */
 
 
+#ifdef INSTR_PROF_SECT_ENTRY
+#define INSTR_PROF_DATA_DEFINED
+INSTR_PROF_SECT_ENTRY(IPSK_data, INSTR_PROF_DATA_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_cnts, INSTR_PROF_CNTS_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_name, INSTR_PROF_NAME_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vals, INSTR_PROF_VALS_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vnodes, INSTR_PROF_VNODES_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_covmap, INSTR_PROF_COVMAP_SECT_NAME_STR, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COFF), "__LLVM_COV,")
+
+#undef INSTR_PROF_SECT_ENTRY
+#endif
+
+
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
 
@@ -622,17 +647,47 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * specified via command line. */
 #define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
 
+/* section name strings common to all targets other
+   than WIN32 */
+#define INSTR_PROF_DATA_COMMON __llvm_prf_data
+#define INSTR_PROF_NAME_COMMON __llvm_prf_names
+#define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_VALS_COMMON __llvm_prf_vals
+#define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
+#define INSTR_PROF_COVMAP_COMMON __llvm_covmap
+/* Win32 */
+#define INSTR_PROF_DATA_COFF .lprfd
+#define INSTR_PROF_NAME_COFF .lprfn
+#define INSTR_PROF_CNTS_COFF .lprfc
+#define INSTR_PROF_VALS_COFF .lprfv
+#define INSTR_PROF_VNODES_COFF .lprfnd
+#define INSTR_PROF_COVMAP_COFF .lcovmap
+
+#ifdef _WIN32
 /* Runtime section names and name strings.  */
-#define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data
-#define INSTR_PROF_NAME_SECT_NAME __llvm_prf_names
-#define INSTR_PROF_CNTS_SECT_NAME __llvm_prf_cnts
+#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COFF
+#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COFF
+#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COFF
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
-#define INSTR_PROF_VALS_SECT_NAME __llvm_prf_vals
+#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_VALS_COFF
 /* Value profile nodes section. */
-#define INSTR_PROF_VNODES_SECT_NAME __llvm_prf_vnds
-#define INSTR_PROF_COVMAP_SECT_NAME __llvm_covmap
+#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
+#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
+#else
+/* Runtime section names and name strings.  */
+#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COMMON
+#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COMMON
+#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COMMON
+/* Array of pointers. Each pointer points to a list
+ * of value nodes associated with one value site.
+ */
+#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_VALS_COMMON
+/* Value profile nodes section. */
+#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COMMON
+#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COMMON
+#endif
 
 #define INSTR_PROF_DATA_SECT_NAME_STR                                          \
   INSTR_PROF_QUOTE(INSTR_PROF_DATA_SECT_NAME)

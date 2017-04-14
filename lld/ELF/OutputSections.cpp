@@ -412,9 +412,6 @@ uint64_t elf::getHeaderSize() {
   return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
 }
 
-namespace lld {
-namespace elf {
-
 template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
@@ -429,6 +426,3 @@ template void OutputSection::writeTo<ELF32LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);
-
-}
-}

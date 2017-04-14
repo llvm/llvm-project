@@ -351,6 +351,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 
   irsymtab::Reader R({Symtab.data(), Symtab.size()},
                      {File->Strtab.data(), File->Strtab.size()});
+  File->TargetTriple = R.getTargetTriple();
   File->SourceFileName = R.getSourceFileName();
   File->COFFLinkerOpts = R.getCOFFLinkerOpts();
   File->ComdatTable = R.getComdatTable();

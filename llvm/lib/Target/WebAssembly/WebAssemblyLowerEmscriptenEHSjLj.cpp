@@ -441,9 +441,8 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   // No attributes for the callee pointer.
   ArgAttributes.push_back(AttributeSet());
   // Copy the argument attributes from the original
-  for (unsigned i = 1, e = CI->getNumArgOperands(); i <= e; ++i) {
+  for (unsigned i = 0, e = CI->getNumArgOperands(); i < e; ++i)
     ArgAttributes.push_back(InvokeAL.getParamAttributes(i));
-  }
 
   // Reconstruct the AttributesList based on the vector we constructed.
   AttributeList NewCallAL =

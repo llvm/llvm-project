@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS {     \
 # RUN:  .out : {            \
-# RUN:   FILL(0x11111111);  \
+# RUN:   FILL(0x11111111)   \
 # RUN:   . += 2;            \
 # RUN:   *(.aaa)            \
 # RUN:   . += 4;            \

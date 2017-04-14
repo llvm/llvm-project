@@ -551,141 +551,139 @@ TEST(DummyRPC, TestWithAltCustomType) {
   ServerThread.join();
 }
 
-// FIXME: Temporarily disabled to investigate bot failure.
+TEST(DummyRPC, ReturnErrorSuccess) {
+  registerDummyErrorSerialization<QueueChannel>();
 
-// TEST(DummyRPC, ReturnErrorSuccess) {
-//   registerDummyErrorSerialization<QueueChannel>();
+  auto Channels = createPairedQueueChannels();
+  DummyRPCEndpoint Client(*Channels.first);
+  DummyRPCEndpoint Server(*Channels.second);
 
-//   auto Channels = createPairedQueueChannels();
-//   DummyRPCEndpoint Client(*Channels.first);
-//   DummyRPCEndpoint Server(*Channels.second);
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::ErrorFunc>(
+        []() {
+          return Error::success();
+        });
 
-//   std::thread ServerThread([&]() {
-//       Server.addHandler<DummyRPCAPI::ErrorFunc>(
-//         []() {
-//           return Error::success();
-//         });
+      // Handle the negotiate plus one call.
+      for (unsigned I = 0; I != 2; ++I)
+        cantFail(Server.handleOne());
+    });
 
-//       // Handle the negotiate plus one call.
-//       for (unsigned I = 0; I != 2; ++I)
-//         cantFail(Server.handleOne());
-//     });
+  cantFail(Client.callAsync<DummyRPCAPI::ErrorFunc>(
+             [&](Error Err) {
+               EXPECT_FALSE(!!Err) << "Expected success value";
+               return Error::success();
+             }));
 
-//   cantFail(Client.callAsync<DummyRPCAPI::ErrorFunc>(
-//              [&](Error Err) {
-//                EXPECT_FALSE(!!Err) << "Expected success value";
-//                return Error::success();
-//              }));
+  cantFail(Client.handleOne());
 
-//   cantFail(Client.handleOne());
+  ServerThread.join();
+}
 
-//   ServerThread.join();
-// }
+TEST(DummyRPC, ReturnErrorFailure) {
+  registerDummyErrorSerialization<QueueChannel>();
 
-// TEST(DummyRPC, ReturnErrorFailure) {
-//   registerDummyErrorSerialization<QueueChannel>();
+  auto Channels = createPairedQueueChannels();
+  DummyRPCEndpoint Client(*Channels.first);
+  DummyRPCEndpoint Server(*Channels.second);
 
-//   auto Channels = createPairedQueueChannels();
-//   DummyRPCEndpoint Client(*Channels.first);
-//   DummyRPCEndpoint Server(*Channels.second);
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::ErrorFunc>(
+        []() {
+          return make_error<DummyError>(42);
+        });
 
-//   std::thread ServerThread([&]() {
-//       Server.addHandler<DummyRPCAPI::ErrorFunc>(
-//         []() {
-//           return make_error<DummyError>(42);
-//         });
+      // Handle the negotiate plus one call.
+      for (unsigned I = 0; I != 2; ++I)
+        cantFail(Server.handleOne());
+    });
 
-//       // Handle the negotiate plus one call.
-//       for (unsigned I = 0; I != 2; ++I)
-//         cantFail(Server.handleOne());
-//     });
+  cantFail(Client.callAsync<DummyRPCAPI::ErrorFunc>(
+             [&](Error Err) {
+               EXPECT_TRUE(Err.isA<DummyError>())
+                 << "Incorrect error type";
+               return handleErrors(
+                        std::move(Err),
+                        [](const DummyError &DE) {
+                          EXPECT_EQ(DE.getValue(), 42ULL)
+                            << "Incorrect DummyError serialization";
+                        });
+             }));
 
-//   cantFail(Client.callAsync<DummyRPCAPI::ErrorFunc>(
-//              [&](Error Err) {
-//                EXPECT_TRUE(Err.isA<DummyError>())
-//                  << "Incorrect error type";
-//                return handleErrors(
-//                         std::move(Err),
-//                         [](const DummyError &DE) {
-//                           EXPECT_EQ(DE.getValue(), 42ULL)
-//                             << "Incorrect DummyError serialization";
-//                         });
-//              }));
+  cantFail(Client.handleOne());
 
-//   cantFail(Client.handleOne());
+  ServerThread.join();
+}
 
-//   ServerThread.join();
-// }
+TEST(DummyRPC, ReturnExpectedSuccess) {
+  registerDummyErrorSerialization<QueueChannel>();
 
-// TEST(DummyRPC, ReturnExpectedSuccess) {
-//   registerDummyErrorSerialization<QueueChannel>();
+  auto Channels = createPairedQueueChannels();
+  DummyRPCEndpoint Client(*Channels.first);
+  DummyRPCEndpoint Server(*Channels.second);
 
-//   auto Channels = createPairedQueueChannels();
-//   DummyRPCEndpoint Client(*Channels.first);
-//   DummyRPCEndpoint Server(*Channels.second);
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::ExpectedFunc>(
+        []() -> uint32_t {
+          return 42;
+        });
 
-//   std::thread ServerThread([&]() {
-//       Server.addHandler<DummyRPCAPI::ExpectedFunc>(
-//         []() -> uint32_t {
-//           return 42;
-//         });
+      // Handle the negotiate plus one call.
+      for (unsigned I = 0; I != 2; ++I)
+        cantFail(Server.handleOne());
+    });
 
-//       // Handle the negotiate plus one call.
-//       for (unsigned I = 0; I != 2; ++I)
-//         cantFail(Server.handleOne());
-//     });
+  cantFail(Client.callAsync<DummyRPCAPI::ExpectedFunc>(
+               [&](Expected<uint32_t> ValOrErr) {
+                 EXPECT_TRUE(!!ValOrErr)
+                   << "Expected success value";
+                 EXPECT_EQ(*ValOrErr, 42ULL)
+                   << "Incorrect Expected<uint32_t> deserialization";
+                 return Error::success();
+               }));
 
-//   cantFail(Client.callAsync<DummyRPCAPI::ExpectedFunc>(
-//                [&](Expected<uint32_t> ValOrErr) {
-//                  EXPECT_TRUE(!!ValOrErr)
-//                    << "Expected success value";
-//                  EXPECT_EQ(*ValOrErr, 42ULL)
-//                    << "Incorrect Expected<uint32_t> deserialization";
-//                  return Error::success();
-//                }));
+  cantFail(Client.handleOne());
 
-//   cantFail(Client.handleOne());
+  ServerThread.join();
+}
 
-//   ServerThread.join();
-// }
+TEST(DummyRPC, ReturnExpectedFailure) {
+  registerDummyErrorSerialization<QueueChannel>();
 
-// TEST(DummyRPC, ReturnExpectedFailure) {
-//   registerDummyErrorSerialization<QueueChannel>();
+  auto Channels = createPairedQueueChannels();
+  DummyRPCEndpoint Client(*Channels.first);
+  DummyRPCEndpoint Server(*Channels.second);
 
-//   auto Channels = createPairedQueueChannels();
-//   DummyRPCEndpoint Client(*Channels.first);
-//   DummyRPCEndpoint Server(*Channels.second);
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::ExpectedFunc>(
+        []() -> Expected<uint32_t> {
+          return make_error<DummyError>(7);
+        });
 
-//   std::thread ServerThread([&]() {
-//       Server.addHandler<DummyRPCAPI::ExpectedFunc>(
-//         []() -> Expected<uint32_t> {
-//           return make_error<DummyError>(7);
-//         });
+      // Handle the negotiate plus one call.
+      for (unsigned I = 0; I != 2; ++I)
+        cantFail(Server.handleOne());
+    });
 
-//       // Handle the negotiate plus one call.
-//       for (unsigned I = 0; I != 2; ++I)
-//         cantFail(Server.handleOne());
-//     });
+  cantFail(Client.callAsync<DummyRPCAPI::ExpectedFunc>(
+               [&](Expected<uint32_t> ValOrErr) {
+                 EXPECT_FALSE(!!ValOrErr)
+                   << "Expected failure value";
+                 auto Err = ValOrErr.takeError();
+                 EXPECT_TRUE(Err.isA<DummyError>())
+                   << "Incorrect error type";
+                 return handleErrors(
+                          std::move(Err),
+                          [](const DummyError &DE) {
+                            EXPECT_EQ(DE.getValue(), 7ULL)
+                              << "Incorrect DummyError serialization";
+                          });
+               }));
 
-//   cantFail(Client.callAsync<DummyRPCAPI::ExpectedFunc>(
-//                [&](Expected<uint32_t> ValOrErr) {
-//                  EXPECT_FALSE(!!ValOrErr)
-//                    << "Expected failure value";
-//                  auto Err = ValOrErr.takeError();
-//                  EXPECT_TRUE(Err.isA<DummyError>())
-//                    << "Incorrect error type";
-//                  return handleErrors(
-//                           std::move(Err),
-//                           [](const DummyError &DE) {
-//                             EXPECT_EQ(DE.getValue(), 7ULL)
-//                               << "Incorrect DummyError serialization";
-//                           });
-//                }));
+  cantFail(Client.handleOne());
 
-//   cantFail(Client.handleOne());
-
-//   ServerThread.join();
-// }
+  ServerThread.join();
+}
 
 TEST(DummyRPC, TestParallelCallGroup) {
   auto Channels = createPairedQueueChannels();

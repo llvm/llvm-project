@@ -385,17 +385,18 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::V_ADD_I32_e32), BaseReg)
-         .addImm(CI.BaseOff)
-         .addReg(AddrReg->getReg());
+           .addImm(CI.BaseOff)
+           .addReg(AddrReg->getReg());
   }
 
-  MachineInstrBuilder Read2 = BuildMI(*MBB, CI.Paired, DL, Read2Desc, DestReg)
-                                .addReg(BaseReg, BaseRegFlags) // addr
-                                .addImm(NewOffset0)            // offset0
-                                .addImm(NewOffset1)            // offset1
-                                .addImm(0)                     // gds
-                                .addMemOperand(*CI.I->memoperands_begin())
-                                .addMemOperand(*CI.Paired->memoperands_begin());
+  MachineInstrBuilder Read2 =
+    BuildMI(*MBB, CI.Paired, DL, Read2Desc, DestReg)
+      .addReg(BaseReg, BaseRegFlags) // addr
+      .addImm(NewOffset0)            // offset0
+      .addImm(NewOffset1)            // offset1
+      .addImm(0)                     // gds
+      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+
   (void)Read2;
 
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -457,19 +458,19 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::V_ADD_I32_e32), BaseReg)
-        .addImm(CI.BaseOff)
-        .addReg(Addr->getReg());
+           .addImm(CI.BaseOff)
+           .addReg(Addr->getReg());
   }
 
-  MachineInstrBuilder Write2 = BuildMI(*MBB, CI.Paired, DL, Write2Desc)
-                                .addReg(BaseReg, BaseRegFlags) // addr
-                                .add(*Data0)                   // data0
-                                .add(*Data1)                   // data1
-                                .addImm(NewOffset0)            // offset0
-                                .addImm(NewOffset1)            // offset1
-                                .addImm(0)                     // gds
-                                .addMemOperand(*CI.I->memoperands_begin())
-                                .addMemOperand(*CI.Paired->memoperands_begin());
+  MachineInstrBuilder Write2 =
+    BuildMI(*MBB, CI.Paired, DL, Write2Desc)
+      .addReg(BaseReg, BaseRegFlags) // addr
+      .add(*Data0)                   // data0
+      .add(*Data1)                   // data1
+      .addImm(NewOffset0)            // offset0
+      .addImm(NewOffset1)            // offset1
+      .addImm(0)                     // gds
+      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
 
   moveInstsAfter(Write2, CI.InstsToMove);
 

@@ -490,10 +490,9 @@ private:
   bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
                         unsigned ArgNo, std::string &Suffix);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
-  void verifyAttributeTypes(AttributeList Attrs, unsigned Idx, bool isFunction,
+  void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                             const Value *V);
-  void verifyParameterAttrs(AttributeList Attrs, unsigned Idx, Type *Ty,
-                            bool isReturnValue, const Value *V);
+  void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
@@ -1309,71 +1308,73 @@ Verifier::visitModuleFlag(const MDNode *Op,
   }
 }
 
-void Verifier::verifyAttributeTypes(AttributeList Attrs, unsigned Idx,
-                                    bool isFunction, const Value *V) {
-  unsigned Slot = ~0U;
-  for (unsigned I = 0, E = Attrs.getNumSlots(); I != E; ++I)
-    if (Attrs.getSlotIndex(I) == Idx) {
-      Slot = I;
-      break;
-    }
+/// Return true if this attribute kind only applies to functions.
+static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
+  switch (Kind) {
+  case Attribute::NoReturn:
+  case Attribute::NoUnwind:
+  case Attribute::NoInline:
+  case Attribute::AlwaysInline:
+  case Attribute::OptimizeForSize:
+  case Attribute::StackProtect:
+  case Attribute::StackProtectReq:
+  case Attribute::StackProtectStrong:
+  case Attribute::SafeStack:
+  case Attribute::NoRedZone:
+  case Attribute::NoImplicitFloat:
+  case Attribute::Naked:
+  case Attribute::InlineHint:
+  case Attribute::StackAlignment:
+  case Attribute::UWTable:
+  case Attribute::NonLazyBind:
+  case Attribute::ReturnsTwice:
+  case Attribute::SanitizeAddress:
+  case Attribute::SanitizeThread:
+  case Attribute::SanitizeMemory:
+  case Attribute::MinSize:
+  case Attribute::NoDuplicate:
+  case Attribute::Builtin:
+  case Attribute::NoBuiltin:
+  case Attribute::Cold:
+  case Attribute::OptimizeNone:
+  case Attribute::JumpTable:
+  case Attribute::Convergent:
+  case Attribute::ArgMemOnly:
+  case Attribute::NoRecurse:
+  case Attribute::InaccessibleMemOnly:
+  case Attribute::InaccessibleMemOrArgMemOnly:
+  case Attribute::AllocSize:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
 
-  assert(Slot != ~0U && "Attribute set inconsistency!");
+/// Return true if this is a function attribute that can also appear on
+/// arguments.
+static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
+  return Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly ||
+         Kind == Attribute::ReadNone;
+}
 
-  for (AttributeList::iterator I = Attrs.begin(Slot), E = Attrs.end(Slot);
-       I != E; ++I) {
-    if (I->isStringAttribute())
+void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
+                                    const Value *V) {
+  for (Attribute A : Attrs) {
+    if (A.isStringAttribute())
       continue;
 
-    if (I->getKindAsEnum() == Attribute::NoReturn ||
-        I->getKindAsEnum() == Attribute::NoUnwind ||
-        I->getKindAsEnum() == Attribute::NoInline ||
-        I->getKindAsEnum() == Attribute::AlwaysInline ||
-        I->getKindAsEnum() == Attribute::OptimizeForSize ||
-        I->getKindAsEnum() == Attribute::StackProtect ||
-        I->getKindAsEnum() == Attribute::StackProtectReq ||
-        I->getKindAsEnum() == Attribute::StackProtectStrong ||
-        I->getKindAsEnum() == Attribute::SafeStack ||
-        I->getKindAsEnum() == Attribute::NoRedZone ||
-        I->getKindAsEnum() == Attribute::NoImplicitFloat ||
-        I->getKindAsEnum() == Attribute::Naked ||
-        I->getKindAsEnum() == Attribute::InlineHint ||
-        I->getKindAsEnum() == Attribute::StackAlignment ||
-        I->getKindAsEnum() == Attribute::UWTable ||
-        I->getKindAsEnum() == Attribute::NonLazyBind ||
-        I->getKindAsEnum() == Attribute::ReturnsTwice ||
-        I->getKindAsEnum() == Attribute::SanitizeAddress ||
-        I->getKindAsEnum() == Attribute::SanitizeThread ||
-        I->getKindAsEnum() == Attribute::SanitizeMemory ||
-        I->getKindAsEnum() == Attribute::MinSize ||
-        I->getKindAsEnum() == Attribute::NoDuplicate ||
-        I->getKindAsEnum() == Attribute::Builtin ||
-        I->getKindAsEnum() == Attribute::NoBuiltin ||
-        I->getKindAsEnum() == Attribute::Cold ||
-        I->getKindAsEnum() == Attribute::OptimizeNone ||
-        I->getKindAsEnum() == Attribute::JumpTable ||
-        I->getKindAsEnum() == Attribute::Convergent ||
-        I->getKindAsEnum() == Attribute::ArgMemOnly ||
-        I->getKindAsEnum() == Attribute::NoRecurse ||
-        I->getKindAsEnum() == Attribute::InaccessibleMemOnly ||
-        I->getKindAsEnum() == Attribute::InaccessibleMemOrArgMemOnly ||
-        I->getKindAsEnum() == Attribute::AllocSize) {
-      if (!isFunction) {
-        CheckFailed("Attribute '" + I->getAsString() +
-                    "' only applies to functions!", V);
+    if (isFuncOnlyAttr(A.getKindAsEnum())) {
+      if (!IsFunction) {
+        CheckFailed("Attribute '" + A.getAsString() +
+                        "' only applies to functions!",
+                    V);
         return;
       }
-    } else if (I->getKindAsEnum() == Attribute::ReadOnly ||
-               I->getKindAsEnum() == Attribute::WriteOnly ||
-               I->getKindAsEnum() == Attribute::ReadNone) {
-      if (Idx == 0) {
-        CheckFailed("Attribute '" + I->getAsString() +
-                    "' does not apply to function returns");
-        return;
-      }
-    } else if (isFunction) {
-      CheckFailed("Attribute '" + I->getAsString() +
-                  "' does not apply to functions!", V);
+    } else if (IsFunction && !isFuncOrArgAttr(A.getKindAsEnum())) {
+      CheckFailed("Attribute '" + A.getAsString() +
+                      "' does not apply to functions!",
+                  V);
       return;
     }
   }
@@ -1381,106 +1382,91 @@ void Verifier::verifyAttributeTypes(AttributeList Attrs, unsigned Idx,
 
 // VerifyParameterAttrs - Check the given attributes for an argument or return
 // value of the specified type.  The value V is printed in error messages.
-void Verifier::verifyParameterAttrs(AttributeList Attrs, unsigned Idx, Type *Ty,
-                                    bool isReturnValue, const Value *V) {
-  if (!Attrs.hasAttributes(Idx))
+void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
+                                    const Value *V) {
+  if (!Attrs.hasAttributes())
     return;
 
-  verifyAttributeTypes(Attrs, Idx, false, V);
-
-  if (isReturnValue)
-    Assert(!Attrs.hasAttribute(Idx, Attribute::ByVal) &&
-               !Attrs.hasAttribute(Idx, Attribute::Nest) &&
-               !Attrs.hasAttribute(Idx, Attribute::StructRet) &&
-               !Attrs.hasAttribute(Idx, Attribute::NoCapture) &&
-               !Attrs.hasAttribute(Idx, Attribute::Returned) &&
-               !Attrs.hasAttribute(Idx, Attribute::InAlloca) &&
-               !Attrs.hasAttribute(Idx, Attribute::SwiftSelf) &&
-               !Attrs.hasAttribute(Idx, Attribute::SwiftError),
-           "Attributes 'byval', 'inalloca', 'nest', 'sret', 'nocapture', "
-           "'returned', 'swiftself', and 'swifterror' do not apply to return "
-           "values!",
-           V);
+  verifyAttributeTypes(Attrs, /*IsFunction=*/false, V);
 
   // Check for mutually incompatible attributes.  Only inreg is compatible with
   // sret.
   unsigned AttrCount = 0;
-  AttrCount += Attrs.hasAttribute(Idx, Attribute::ByVal);
-  AttrCount += Attrs.hasAttribute(Idx, Attribute::InAlloca);
-  AttrCount += Attrs.hasAttribute(Idx, Attribute::StructRet) ||
-               Attrs.hasAttribute(Idx, Attribute::InReg);
-  AttrCount += Attrs.hasAttribute(Idx, Attribute::Nest);
+  AttrCount += Attrs.hasAttribute(Attribute::ByVal);
+  AttrCount += Attrs.hasAttribute(Attribute::InAlloca);
+  AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
+               Attrs.hasAttribute(Attribute::InReg);
+  AttrCount += Attrs.hasAttribute(Attribute::Nest);
   Assert(AttrCount <= 1, "Attributes 'byval', 'inalloca', 'inreg', 'nest', "
                          "and 'sret' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::InAlloca) &&
-           Attrs.hasAttribute(Idx, Attribute::ReadOnly)),
+  Assert(!(Attrs.hasAttribute(Attribute::InAlloca) &&
+           Attrs.hasAttribute(Attribute::ReadOnly)),
          "Attributes "
          "'inalloca and readonly' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::StructRet) &&
-           Attrs.hasAttribute(Idx, Attribute::Returned)),
+  Assert(!(Attrs.hasAttribute(Attribute::StructRet) &&
+           Attrs.hasAttribute(Attribute::Returned)),
          "Attributes "
          "'sret and returned' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::ZExt) &&
-           Attrs.hasAttribute(Idx, Attribute::SExt)),
+  Assert(!(Attrs.hasAttribute(Attribute::ZExt) &&
+           Attrs.hasAttribute(Attribute::SExt)),
          "Attributes "
          "'zeroext and signext' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::ReadNone) &&
-           Attrs.hasAttribute(Idx, Attribute::ReadOnly)),
+  Assert(!(Attrs.hasAttribute(Attribute::ReadNone) &&
+           Attrs.hasAttribute(Attribute::ReadOnly)),
          "Attributes "
          "'readnone and readonly' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::ReadNone) &&
-           Attrs.hasAttribute(Idx, Attribute::WriteOnly)),
+  Assert(!(Attrs.hasAttribute(Attribute::ReadNone) &&
+           Attrs.hasAttribute(Attribute::WriteOnly)),
          "Attributes "
          "'readnone and writeonly' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::ReadOnly) &&
-           Attrs.hasAttribute(Idx, Attribute::WriteOnly)),
+  Assert(!(Attrs.hasAttribute(Attribute::ReadOnly) &&
+           Attrs.hasAttribute(Attribute::WriteOnly)),
          "Attributes "
          "'readonly and writeonly' are incompatible!",
          V);
 
-  Assert(!(Attrs.hasAttribute(Idx, Attribute::NoInline) &&
-           Attrs.hasAttribute(Idx, Attribute::AlwaysInline)),
+  Assert(!(Attrs.hasAttribute(Attribute::NoInline) &&
+           Attrs.hasAttribute(Attribute::AlwaysInline)),
          "Attributes "
          "'noinline and alwaysinline' are incompatible!",
          V);
 
-  Assert(
-      !AttrBuilder(Attrs, Idx).overlaps(AttributeFuncs::typeIncompatible(Ty)),
-      "Wrong types for attribute: " +
-          AttributeList::get(Context, Idx, AttributeFuncs::typeIncompatible(Ty))
-              .getAsString(Idx),
-      V);
+  AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
+  Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
+         "Wrong types for attribute: " +
+             AttributeSet::get(Context, IncompatibleAttrs).getAsString(),
+         V);
 
   if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
     SmallPtrSet<Type*, 4> Visited;
     if (!PTy->getElementType()->isSized(&Visited)) {
-      Assert(!Attrs.hasAttribute(Idx, Attribute::ByVal) &&
-                 !Attrs.hasAttribute(Idx, Attribute::InAlloca),
+      Assert(!Attrs.hasAttribute(Attribute::ByVal) &&
+                 !Attrs.hasAttribute(Attribute::InAlloca),
              "Attributes 'byval' and 'inalloca' do not support unsized types!",
              V);
     }
     if (!isa<PointerType>(PTy->getElementType()))
-      Assert(!Attrs.hasAttribute(Idx, Attribute::SwiftError),
+      Assert(!Attrs.hasAttribute(Attribute::SwiftError),
              "Attribute 'swifterror' only applies to parameters "
              "with pointer to pointer type!",
              V);
   } else {
-    Assert(!Attrs.hasAttribute(Idx, Attribute::ByVal),
+    Assert(!Attrs.hasAttribute(Attribute::ByVal),
            "Attribute 'byval' only applies to parameters with pointer type!",
            V);
-    Assert(!Attrs.hasAttribute(Idx, Attribute::SwiftError),
+    Assert(!Attrs.hasAttribute(Attribute::SwiftError),
            "Attribute 'swifterror' only applies to parameters "
            "with pointer type!",
            V);
@@ -1500,123 +1486,122 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   bool SawSwiftSelf = false;
   bool SawSwiftError = false;
 
-  for (unsigned i = 0, e = Attrs.getNumSlots(); i != e; ++i) {
-    unsigned Idx = Attrs.getSlotIndex(i);
+  // Verify return value attributes.
+  AttributeSet RetAttrs = Attrs.getRetAttributes();
+  Assert((!RetAttrs.hasAttribute(Attribute::ByVal) &&
+          !RetAttrs.hasAttribute(Attribute::Nest) &&
+          !RetAttrs.hasAttribute(Attribute::StructRet) &&
+          !RetAttrs.hasAttribute(Attribute::NoCapture) &&
+          !RetAttrs.hasAttribute(Attribute::Returned) &&
+          !RetAttrs.hasAttribute(Attribute::InAlloca) &&
+          !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
+          !RetAttrs.hasAttribute(Attribute::SwiftError)),
+         "Attributes 'byval', 'inalloca', 'nest', 'sret', 'nocapture', "
+         "'returned', 'swiftself', and 'swifterror' do not apply to return "
+         "values!",
+         V);
+  Assert((!RetAttrs.hasAttribute(Attribute::ReadOnly) &&
+          !RetAttrs.hasAttribute(Attribute::WriteOnly) &&
+          !RetAttrs.hasAttribute(Attribute::ReadNone)),
+         "Attribute '" + RetAttrs.getAsString() +
+             "' does not apply to function returns",
+         V);
+  verifyParameterAttrs(RetAttrs, FT->getReturnType(), V);
 
-    Type *Ty;
-    if (Idx == 0)
-      Ty = FT->getReturnType();
-    else if (Idx-1 < FT->getNumParams())
-      Ty = FT->getParamType(Idx-1);
-    else
-      break;  // VarArgs attributes, verified elsewhere.
+  // Verify parameter attributes.
+  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+    Type *Ty = FT->getParamType(i);
+    AttributeSet ArgAttrs = Attrs.getParamAttributes(i);
 
-    verifyParameterAttrs(Attrs, Idx, Ty, Idx == 0, V);
+    verifyParameterAttrs(ArgAttrs, Ty, V);
 
-    if (Idx == 0)
-      continue;
-
-    if (Attrs.hasAttribute(Idx, Attribute::Nest)) {
+    if (ArgAttrs.hasAttribute(Attribute::Nest)) {
       Assert(!SawNest, "More than one parameter has attribute nest!", V);
       SawNest = true;
     }
 
-    if (Attrs.hasAttribute(Idx, Attribute::Returned)) {
+    if (ArgAttrs.hasAttribute(Attribute::Returned)) {
       Assert(!SawReturned, "More than one parameter has attribute returned!",
              V);
       Assert(Ty->canLosslesslyBitCastTo(FT->getReturnType()),
-             "Incompatible "
-             "argument and return types for 'returned' attribute",
+             "Incompatible argument and return types for 'returned' attribute",
              V);
       SawReturned = true;
     }
 
-    if (Attrs.hasAttribute(Idx, Attribute::StructRet)) {
+    if (ArgAttrs.hasAttribute(Attribute::StructRet)) {
       Assert(!SawSRet, "Cannot have multiple 'sret' parameters!", V);
-      Assert(Idx == 1 || Idx == 2,
+      Assert(i == 0 || i == 1,
              "Attribute 'sret' is not on first or second parameter!", V);
       SawSRet = true;
     }
 
-    if (Attrs.hasAttribute(Idx, Attribute::SwiftSelf)) {
+    if (ArgAttrs.hasAttribute(Attribute::SwiftSelf)) {
       Assert(!SawSwiftSelf, "Cannot have multiple 'swiftself' parameters!", V);
       SawSwiftSelf = true;
     }
 
-    if (Attrs.hasAttribute(Idx, Attribute::SwiftError)) {
+    if (ArgAttrs.hasAttribute(Attribute::SwiftError)) {
       Assert(!SawSwiftError, "Cannot have multiple 'swifterror' parameters!",
              V);
       SawSwiftError = true;
     }
 
-    if (Attrs.hasAttribute(Idx, Attribute::InAlloca)) {
-      Assert(Idx == FT->getNumParams(), "inalloca isn't on the last parameter!",
-             V);
+    if (ArgAttrs.hasAttribute(Attribute::InAlloca)) {
+      Assert(i == FT->getNumParams() - 1,
+             "inalloca isn't on the last parameter!", V);
     }
   }
 
   if (!Attrs.hasAttributes(AttributeList::FunctionIndex))
     return;
 
-  verifyAttributeTypes(Attrs, AttributeList::FunctionIndex, true, V);
+  verifyAttributeTypes(Attrs.getFnAttributes(), /*IsFunction=*/true, V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly)),
-      "Attributes 'readnone and readonly' are incompatible!", V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
+           Attrs.hasFnAttribute(Attribute::ReadOnly)),
+         "Attributes 'readnone and readonly' are incompatible!", V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly)),
-      "Attributes 'readnone and writeonly' are incompatible!", V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
+           Attrs.hasFnAttribute(Attribute::WriteOnly)),
+         "Attributes 'readnone and writeonly' are incompatible!", V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly)),
-      "Attributes 'readonly and writeonly' are incompatible!", V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::ReadOnly) &&
+           Attrs.hasFnAttribute(Attribute::WriteOnly)),
+         "Attributes 'readonly and writeonly' are incompatible!", V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex,
-                           Attribute::InaccessibleMemOrArgMemOnly)),
-      "Attributes 'readnone and inaccessiblemem_or_argmemonly' are "
-      "incompatible!",
-      V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
+           Attrs.hasFnAttribute(Attribute::InaccessibleMemOrArgMemOnly)),
+         "Attributes 'readnone and inaccessiblemem_or_argmemonly' are "
+         "incompatible!",
+         V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::ReadNone) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex,
-                           Attribute::InaccessibleMemOnly)),
-      "Attributes 'readnone and inaccessiblememonly' are incompatible!", V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
+           Attrs.hasFnAttribute(Attribute::InaccessibleMemOnly)),
+         "Attributes 'readnone and inaccessiblememonly' are incompatible!", V);
 
-  Assert(
-      !(Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::NoInline) &&
-        Attrs.hasAttribute(AttributeList::FunctionIndex,
-                           Attribute::AlwaysInline)),
-      "Attributes 'noinline and alwaysinline' are incompatible!", V);
+  Assert(!(Attrs.hasFnAttribute(Attribute::NoInline) &&
+           Attrs.hasFnAttribute(Attribute::AlwaysInline)),
+         "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
-  if (Attrs.hasAttribute(AttributeList::FunctionIndex,
-                         Attribute::OptimizeNone)) {
-    Assert(
-        Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::NoInline),
-        "Attribute 'optnone' requires 'noinline'!", V);
+  if (Attrs.hasFnAttribute(Attribute::OptimizeNone)) {
+    Assert(Attrs.hasFnAttribute(Attribute::NoInline),
+           "Attribute 'optnone' requires 'noinline'!", V);
 
-    Assert(!Attrs.hasAttribute(AttributeList::FunctionIndex,
-                               Attribute::OptimizeForSize),
+    Assert(!Attrs.hasFnAttribute(Attribute::OptimizeForSize),
            "Attributes 'optsize and optnone' are incompatible!", V);
 
-    Assert(
-        !Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::MinSize),
-        "Attributes 'minsize and optnone' are incompatible!", V);
+    Assert(!Attrs.hasFnAttribute(Attribute::MinSize),
+           "Attributes 'minsize and optnone' are incompatible!", V);
   }
 
-  if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::JumpTable)) {
+  if (Attrs.hasFnAttribute(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Assert(GV->hasGlobalUnnamedAddr(),
            "Attribute 'jumptable' requires 'unnamed_addr'", V);
   }
 
-  if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::AllocSize)) {
+  if (Attrs.hasFnAttribute(Attribute::AllocSize)) {
     std::pair<unsigned, Optional<unsigned>> Args =
         Attrs.getAllocSizeArgs(AttributeList::FunctionIndex);
 
@@ -1974,7 +1959,7 @@ void Verifier::visitFunction(const Function &F) {
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
   // checking for Attributes that can/can not ever be on functions.
-  Assert(!Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::Builtin),
+  Assert(!Attrs.hasFnAttribute(Attribute::Builtin),
          "Attribute 'builtin' can only be applied to a callsite.", &F);
 
   // Check that this function meets the restrictions on this calling convention.
@@ -2026,7 +2011,7 @@ void Verifier::visitFunction(const Function &F) {
     }
 
     // Check that swifterror argument is only used by loads and stores.
-    if (Attrs.hasAttribute(i+1, Attribute::SwiftError)) {
+    if (Attrs.hasParamAttribute(i, Attribute::SwiftError)) {
       verifySwiftErrorValue(&Arg);
     }
     ++i;
@@ -2652,24 +2637,25 @@ void Verifier::verifyCallSite(CallSite CS) {
     bool SawNest = false;
     bool SawReturned = false;
 
-    for (unsigned Idx = 1; Idx < 1 + FTy->getNumParams(); ++Idx) {
-      if (Attrs.hasAttribute(Idx, Attribute::Nest))
+    for (unsigned Idx = 0; Idx < FTy->getNumParams(); ++Idx) {
+      if (Attrs.hasParamAttribute(Idx, Attribute::Nest))
         SawNest = true;
-      if (Attrs.hasAttribute(Idx, Attribute::Returned))
+      if (Attrs.hasParamAttribute(Idx, Attribute::Returned))
         SawReturned = true;
     }
 
     // Check attributes on the varargs part.
-    for (unsigned Idx = 1 + FTy->getNumParams(); Idx <= CS.arg_size(); ++Idx) {
-      Type *Ty = CS.getArgument(Idx-1)->getType();
-      verifyParameterAttrs(Attrs, Idx, Ty, false, I);
+    for (unsigned Idx = FTy->getNumParams(); Idx < CS.arg_size(); ++Idx) {
+      Type *Ty = CS.getArgument(Idx)->getType();
+      AttributeSet ArgAttrs = Attrs.getParamAttributes(Idx);
+      verifyParameterAttrs(ArgAttrs, Ty, I);
 
-      if (Attrs.hasAttribute(Idx, Attribute::Nest)) {
+      if (ArgAttrs.hasAttribute(Attribute::Nest)) {
         Assert(!SawNest, "More than one parameter has attribute nest!", I);
         SawNest = true;
       }
 
-      if (Attrs.hasAttribute(Idx, Attribute::Returned)) {
+      if (ArgAttrs.hasAttribute(Attribute::Returned)) {
         Assert(!SawReturned, "More than one parameter has attribute returned!",
                I);
         Assert(Ty->canLosslesslyBitCastTo(FTy->getReturnType()),
@@ -2679,11 +2665,12 @@ void Verifier::verifyCallSite(CallSite CS) {
         SawReturned = true;
       }
 
-      Assert(!Attrs.hasAttribute(Idx, Attribute::StructRet),
+      Assert(!ArgAttrs.hasAttribute(Attribute::StructRet),
              "Attribute 'sret' cannot be used for vararg call arguments!", I);
 
-      if (Attrs.hasAttribute(Idx, Attribute::InAlloca))
-        Assert(Idx == CS.arg_size(), "inalloca isn't on the last argument!", I);
+      if (ArgAttrs.hasAttribute(Attribute::InAlloca))
+        Assert(Idx == CS.arg_size() - 1, "inalloca isn't on the last argument!",
+               I);
     }
   }
 
@@ -2763,10 +2750,10 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
       Attribute::SwiftError};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
-    if (Attrs.hasAttribute(I + 1, AK))
+    if (Attrs.hasParamAttribute(I, AK))
       Copy.addAttribute(AK);
   }
-  if (Attrs.hasAttribute(I + 1, Attribute::Alignment))
+  if (Attrs.hasParamAttribute(I, Attribute::Alignment))
     Copy.addAlignmentAttr(Attrs.getParamAlignment(I + 1));
   return Copy;
 }

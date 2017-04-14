@@ -8,9 +8,9 @@ REM Usage: build_llvm_package.bat <revision>
 
 REM Prerequisites:
 REM
-REM   Visual Studio 2015, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
+REM   Visual Studio 2017, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2015 SDK (for the clang-format plugin).
+REM   Visual Studio 2017 SDK (for the clang-format plugin).
 REM
 REM
 REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
@@ -18,7 +18,8 @@ REM   https://github.com/swig/swig/issues/769
 
 
 REM You need to modify the paths below:
-set vcdir=c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC
+set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\Tools\VsDevCmd.bat
+
 set python32_dir=C:\Users\hwennborg\AppData\Local\Programs\Python\Python35-32
 set python64_dir=C:\Users\hwennborg\AppData\Local\Programs\Python\Python35
 set PATH=%PATH%;c:\gnuwin32\bin
@@ -55,7 +56,7 @@ set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_IN
 
 REM TODO: Run all tests, including lld and compiler-rt.
 
-call "%vcdir%/vcvarsall.bat" x86
+call "%vsdevcmd%" -arch=x86
 set CC=
 set CXX=
 mkdir build32_stage0
@@ -74,11 +75,10 @@ cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% ..\llvm || exit /b
 ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
-copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangFormat.vsix ClangFormat-r%revision%.vsix
 ninja package || exit /b
 cd ..
 
-REM The plug-in is built separately as it uses a statically linked clang-cl.exe.
+REM The plug-in is built separately as it uses a statically linked clang-format.exe.
 mkdir build_vsix
 cd build_vsix
 set CC=..\build32_stage0\bin\clang-cl
@@ -89,7 +89,7 @@ copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangForm
 cd ..
 
 
-call "%vcdir%/vcvarsall.bat" amd64
+call "%vsdevcmd%" -arch=amd64
 set CC=
 set CXX=
 mkdir build64_stage0

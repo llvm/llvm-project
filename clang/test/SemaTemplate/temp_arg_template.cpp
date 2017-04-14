@@ -102,7 +102,42 @@ void foo() {
 }
 
 namespace CheckDependentNonTypeParamTypes {
-  template<template<typename T, typename U, T v> class> struct A {}; // expected-note {{previous}}
-  template<typename T, typename U, U v> struct B {}; // expected-note {{different type}}
-  A<B> ab; // expected-error {{different template parameters}}
+  template<template<typename T, typename U, T v> class X> struct A {
+    void f() {
+      X<int, void*, 3> x; // expected-error {{does not refer to any declaration}}
+    }
+    void g() {
+      X<int, long, 3> x;
+    }
+    void h() {
+      // FIXME: If we accept A<B> at all, it's not obvious what should happen
+      // here. While parsing the template, we form
+      //   X<unsigned char, int, (unsigned char)1234>
+      // but in the final instantiation do we get
+      //   B<unsigned char, int, (int)1234>
+      // or
+      //   B<unsigned char, int, (int)(unsigned char)1234>
+      // ?
+      X<unsigned char, int, 1234> x;
+      int check[x.value == 1234 ? 1 : -1];
+    }
+  };
+
+  template<typename T, typename U, U v> struct B { // expected-note {{parameter}}
+    static const U value = v;
+  };
+
+  // FIXME: This should probably be rejected, but the rules are at best unclear.
+  A<B> ab;
+
+  void use() {
+    ab.f(); // expected-note {{instantiation of}}
+    ab.g();
+    ab.h();
+  }
+}
+
+namespace PR32185 {
+  template<template<typename T, T> class U> struct A {};
+  template<template<typename T, T> class U> struct B : A<U> {};
 }

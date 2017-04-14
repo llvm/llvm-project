@@ -797,6 +797,23 @@ This diagnostic is enabled by default.
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
+-Wbitfield-enum-conversion
+--------------------------
+**Diagnostic text:**
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`bit-field` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is not wide enough to store all enumerators of` |nbsp| :placeholder:`B`|
++------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`signed bit-field` |nbsp| :placeholder:`A` |nbsp| :diagtext:`needs an extra bit to represent the largest positive enumerators of` |nbsp| :placeholder:`B`|
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`assigning value of signed enum type` |nbsp| :placeholder:`B` |nbsp| :diagtext:`to unsigned bit-field` |nbsp| :placeholder:`A`:diagtext:`; negative enumerators of enum` |nbsp| :placeholder:`B` |nbsp| :diagtext:`will be converted to positive values`|
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
 -Wbitfield-width
 ----------------
 This diagnostic is enabled by default.
@@ -833,6 +850,8 @@ This diagnostic is enabled by default.
 
 -Wblock-capture-autoreleasing
 -----------------------------
+This diagnostic is enabled by default.
+
 **Diagnostic text:**
 
 +-----------------------------------------------------------------------------------------------------------------------------+
@@ -2380,7 +2399,7 @@ This diagnostic is enabled by default.
 ------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wbool-conversion`_, `-Wconstant-conversion`_, `-Wenum-conversion`_, `-Wfloat-conversion`_, `-Wint-conversion`_, `-Wliteral-conversion`_, `-Wnon-literal-null-conversion`_, `-Wnull-conversion`_, `-Wobjc-literal-conversion`_, `-Wshorten-64-to-32`_, `-Wsign-conversion`_, `-Wstring-conversion`_.
+Also controls `-Wbitfield-enum-conversion`_, `-Wbool-conversion`_, `-Wconstant-conversion`_, `-Wenum-conversion`_, `-Wfloat-conversion`_, `-Wint-conversion`_, `-Wliteral-conversion`_, `-Wnon-literal-null-conversion`_, `-Wnull-conversion`_, `-Wobjc-literal-conversion`_, `-Wshorten-64-to-32`_, `-Wsign-conversion`_, `-Wstring-conversion`_.
 
 **Diagnostic text:**
 
@@ -2412,6 +2431,17 @@ Also controls `-Wbool-conversion`_, `-Wconstant-conversion`_, `-Wenum-conversion
 -Wconversion-null
 -----------------
 Synonym for `-Wnull-conversion`_.
+
+
+-Wcoroutine
+-----------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is required to declare the member 'unhandled\_exception()' when exceptions are enabled`|
++-----------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wcovered-switch-default
@@ -4463,6 +4493,8 @@ This diagnostic is enabled by default.
 |                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
 |                                                                                                ||:diagtext:`classes and enumerations`                                                                            ||
 |                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
+|                                                                                                ||:diagtext:`named declarations`                                                                                  ||
+|                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
 +------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -5236,6 +5268,15 @@ This diagnostic is enabled by default.
 +------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :placeholder:`A` |nbsp| :diagtext:`redeclared without 'dllimport' attribute: 'dllexport' attribute added`|
 +------------------------------------------------------------------------------------------------------------------------------------+
+
+
+-Winconsistent-missing-destructor-override
+------------------------------------------
+**Diagnostic text:**
+
++------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :placeholder:`A` |nbsp| :diagtext:`overrides a destructor but is not marked 'override'`|
++------------------------------------------------------------------------------------------------------------------+
 
 
 -Winconsistent-missing-override
@@ -6472,6 +6513,14 @@ This diagnostic is enabled by default.
 |:remark:`remark:` |nbsp| :diagtext:`finished building module '`:placeholder:`A`:diagtext:`'`|
 +--------------------------------------------------------------------------------------------+
 
++-----------------------------------------------------------------------------------------------------------------------------------+
+|:remark:`remark:` |nbsp| :diagtext:`could not acquire lock file for module '`:placeholder:`A`:diagtext:`':` |nbsp| :placeholder:`B`|
++-----------------------------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------+
+|:remark:`remark:` |nbsp| :diagtext:`timed out waiting to acquire lock file for module '`:placeholder:`A`:diagtext:`'`|
++---------------------------------------------------------------------------------------------------------------------+
+
 
 -Wmodule-conflict
 -----------------
@@ -6482,6 +6531,10 @@ This diagnostic is enabled by default.
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`module '`:placeholder:`A`:diagtext:`' conflicts with already-imported module '`:placeholder:`B`:diagtext:`':` |nbsp| :placeholder:`C`|
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`module file '`:placeholder:`A`:diagtext:`' was validated as a system module and is now being imported as a non-system module; any difference in diagnostic options will be ignored`|
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wmodule-file-config-mismatch
@@ -6554,6 +6607,17 @@ Controls `-Wpessimizing-move`_, `-Wredundant-move`_, `-Wself-move`_.
 -Wmsvc-include
 --------------
 Synonym for `-Wmicrosoft-include`_.
+
+
+-Wmsvc-not-found
+----------------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++-------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`unable to find a Visual Studio installation; try running Clang from a developer command prompt`|
++-------------------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wmultichar
@@ -7342,6 +7406,23 @@ This diagnostic is enabled by default.
 +-------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`concatenated NSString literal for an NSArray expression - possibly missing a comma`|
 +-------------------------------------------------------------------------------------------------------------------------+
+
+
+-Wobjc-unsafe-perform-selector
+------------------------------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++-------------------------------------------------------------------------------------------------------------------+--------------------+------------------------+
+|:warning:`warning:` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is incompatible with selectors that return a` |nbsp| |+------------------+| |nbsp| :diagtext:`type`|
+|                                                                                                                   ||:diagtext:`struct`||                        |
+|                                                                                                                   |+------------------+|                        |
+|                                                                                                                   ||:diagtext:`union` ||                        |
+|                                                                                                                   |+------------------+|                        |
+|                                                                                                                   ||:diagtext:`vector`||                        |
+|                                                                                                                   |+------------------+|                        |
++-------------------------------------------------------------------------------------------------------------------+--------------------+------------------------+
 
 
 -Wodr
@@ -8844,6 +8925,14 @@ Also controls `-Wshadow-field-in-constructor-modified`_, `-Wshadow-ivar`_.
 |                                                                    |||:diagtext:`field of` |nbsp| :placeholder:`C`|             ||
 |                                                                    ||+--------------------------------------------+             ||
 |                                                                    |+-----------------------------------------------------------+|
+|                                                                    ||+----------------------------------------------+           ||
+|                                                                    |||:diagtext:`typedef in` |nbsp| :placeholder:`C`|           ||
+|                                                                    ||+----------------------------------------------+           ||
+|                                                                    |+-----------------------------------------------------------+|
+|                                                                    ||+-------------------------------------------------+        ||
+|                                                                    |||:diagtext:`type alias in` |nbsp| :placeholder:`C`|        ||
+|                                                                    ||+-------------------------------------------------+        ||
+|                                                                    |+-----------------------------------------------------------+|
 +--------------------------------------------------------------------+-------------------------------------------------------------+
 
 
@@ -8851,7 +8940,16 @@ Also controls `-Wshadow-field-in-constructor-modified`_, `-Wshadow-ivar`_.
 ------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wshadow`_, `-Wshadow-field-in-constructor`_, `-Wshadow-uncaptured-local`_.
+Controls `-Wshadow`_, `-Wshadow-field`_, `-Wshadow-field-in-constructor`_, `-Wshadow-uncaptured-local`_.
+
+
+-Wshadow-field
+--------------
+**Diagnostic text:**
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`non-static data member '`:placeholder:`A`:diagtext:`' of '`:placeholder:`B`:diagtext:`' shadows member inherited from type '`:placeholder:`C`:diagtext:`'`|
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wshadow-field-in-constructor
@@ -8904,6 +9002,14 @@ This diagnostic is enabled by default.
 |                                                                    ||+--------------------------------------------+             ||
 |                                                                    |||:diagtext:`field of` |nbsp| :placeholder:`C`|             ||
 |                                                                    ||+--------------------------------------------+             ||
+|                                                                    |+-----------------------------------------------------------+|
+|                                                                    ||+----------------------------------------------+           ||
+|                                                                    |||:diagtext:`typedef in` |nbsp| :placeholder:`C`|           ||
+|                                                                    ||+----------------------------------------------+           ||
+|                                                                    |+-----------------------------------------------------------+|
+|                                                                    ||+-------------------------------------------------+        ||
+|                                                                    |||:diagtext:`type alias in` |nbsp| :placeholder:`C`|        ||
+|                                                                    ||+-------------------------------------------------+        ||
 |                                                                    |+-----------------------------------------------------------+|
 +--------------------------------------------------------------------+-------------------------------------------------------------+
 
@@ -9055,6 +9161,17 @@ This diagnostic is enabled by default.
 |                                                                                                                                                                                                 ||:diagtext:`source`     ||                                                                                       |
 |                                                                                                                                                                                                 |+-----------------------+|                                                                                       |
 +-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------+---------------------------------------------------------------------------------------+
+
+
+-Wslash-u-filename
+------------------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++--------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`'/U`:placeholder:`A`:diagtext:`' treated as the '/U' option`|
++--------------------------------------------------------------------------------------------------+
 
 
 -Wsometimes-uninitialized

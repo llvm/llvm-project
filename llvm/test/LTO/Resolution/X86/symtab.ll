@@ -1,13 +1,14 @@
 ; RUN: llvm-as -o %t %s
 ; RUN: llvm-lto2 dump-symtab %t | FileCheck %s
 
+; CHECK: target triple: i686-pc-windows-msvc18.0.0
 target triple = "i686-pc-windows-msvc18.0.0"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 
 ; CHECK: source filename: src.c
 source_filename = "src.c"
 
-; CHECK: linker opts (COFF only): /include:foo
+; CHECK: linker opts: /include:foo
 !0 = !{i32 6, !"Linker Options", !{!{!"/include:foo"}}}
 !llvm.module.flags = !{ !0 }
 
