@@ -657,10 +657,54 @@ public:
   EnumConstantInfo() : CommonEntityInfo() { }
 };
 
+/// The payload for an enum_extensibility attribute. This is a tri-state rather
+/// than just a boolean because the presence of the attribute indicates
+/// auditing.
+enum class EnumExtensibilityKind {
+  None,
+  Open,
+  Closed,
+};
+
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
+  unsigned HasFlagEnum : 1;
+  unsigned IsFlagEnum : 1;
 public:
-  TagInfo() : CommonTypeInfo() { }
+  Optional<EnumExtensibilityKind> EnumExtensibility;
+
+  Optional<bool> isFlagEnum() const {
+    if (HasFlagEnum)
+      return IsFlagEnum;
+    return None;
+  }
+  void setFlagEnum(Optional<bool> Value) {
+    if (Value.hasValue()) {
+      HasFlagEnum = true;
+      IsFlagEnum = Value.getValue();
+    } else {
+      HasFlagEnum = false;
+    }
+  }
+
+  TagInfo() : CommonTypeInfo(), HasFlagEnum(0), IsFlagEnum(0) { }
+
+  friend TagInfo &operator|=(TagInfo &lhs, const TagInfo &rhs) {
+    lhs |= static_cast<const CommonTypeInfo &>(rhs);
+    if (!lhs.HasFlagEnum && rhs.HasFlagEnum) {
+      lhs.HasFlagEnum = true;
+      lhs.IsFlagEnum = rhs.IsFlagEnum;
+    }
+    if (!lhs.EnumExtensibility.hasValue() && rhs.EnumExtensibility.hasValue())
+      lhs.EnumExtensibility = rhs.EnumExtensibility;
+    return lhs;
+  }
+
+  friend bool operator==(const TagInfo &lhs, const TagInfo &rhs) {
+    return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
+           lhs.isFlagEnum() == rhs.isFlagEnum() &&
+           lhs.EnumExtensibility == rhs.EnumExtensibility;
+  }
 };
 
 /// The kind of a swift_wrapper/swift_newtype.
@@ -676,6 +720,18 @@ public:
   Optional<SwiftWrapperKind> SwiftWrapper;
 
   TypedefInfo() : CommonTypeInfo() { }
+
+  friend TypedefInfo &operator|=(TypedefInfo &lhs, const TypedefInfo &rhs) {
+    lhs |= static_cast<const CommonTypeInfo &>(rhs);
+    if (!lhs.SwiftWrapper.hasValue() && rhs.SwiftWrapper.hasValue())
+      lhs.SwiftWrapper = rhs.SwiftWrapper;
+    return lhs;
+  }
+
+  friend bool operator==(const TypedefInfo &lhs, const TypedefInfo &rhs) {
+    return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
+           lhs.SwiftWrapper == rhs.SwiftWrapper;
+  }
 };
 
 /// Descripts a series of options for a module

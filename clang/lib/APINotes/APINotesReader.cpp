@@ -482,6 +482,17 @@ namespace {
     static TagInfo readUnversioned(internal_key_type key,
                                    const uint8_t *&data) {
       TagInfo info;
+
+      uint8_t payload = *data++;
+      if (payload & 1) {
+        info.setFlagEnum(payload & 2);
+      }
+      payload >>= 2;
+      if (payload > 0) {
+        info.EnumExtensibility =
+            static_cast<EnumExtensibilityKind>((payload & 0x3) - 1);
+      }
+
       readCommonTypeInfo(data, info);
       return info;
     }

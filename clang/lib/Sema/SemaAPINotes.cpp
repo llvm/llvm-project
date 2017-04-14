@@ -548,6 +548,33 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
 static void ProcessAPINotes(Sema &S, TagDecl *D,
                             const api_notes::TagInfo &info,
                             VersionedInfoMetadata metadata) {
+  if (auto extensibility = info.EnumExtensibility) {
+    using api_notes::EnumExtensibilityKind;
+    bool shouldAddAttribute = (*extensibility != EnumExtensibilityKind::None);
+    handleAPINotedAttribute<EnumExtensibilityAttr>(S, D, shouldAddAttribute,
+                                                   metadata, [&] {
+      EnumExtensibilityAttr::Kind kind;
+      switch (extensibility.getValue()) {
+      case EnumExtensibilityKind::None:
+        llvm_unreachable("remove only");
+      case EnumExtensibilityKind::Open:
+        kind = EnumExtensibilityAttr::Open;
+        break;
+      case EnumExtensibilityKind::Closed:
+        kind = EnumExtensibilityAttr::Closed;
+        break;
+      }
+      return EnumExtensibilityAttr::CreateImplicit(S.Context, kind);
+    });
+  }
+
+  if (auto flagEnum = info.isFlagEnum()) {
+    handleAPINotedAttribute<FlagEnumAttr>(S, D, flagEnum.getValue(), metadata,
+                                          [&] {
+      return FlagEnumAttr::CreateImplicit(S.Context);
+    });
+  }
+
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(info),
                   metadata);

@@ -15,6 +15,13 @@ Classes:
       - Name: accessorsOnlyForClassExceptInVersion3
         PropertyKind:    Class
         SwiftImportAsAccessors: true
+Tags:
+  - Name: APINotedFlagEnum
+    FlagEnum: true
+  - Name: APINotedOpenEnum
+    EnumExtensibility: open
+  - Name: APINotedClosedEnum
+    EnumExtensibility: closed
 SwiftVersions:
   - Version: 3.0
     Classes:
@@ -49,6 +56,16 @@ SwiftVersions:
     Tags:
       - Name: MyErrorCode
         NSErrorDomain: ''
+      - Name: NewlyFlagEnum
+        FlagEnum: false
+      - Name: OpenToClosedEnum
+        EnumExtensibility: open
+      - Name: ClosedToOpenEnum
+        EnumExtensibility: closed
+      - Name: NewlyClosedEnum
+        EnumExtensibility: none
+      - Name: NewlyOpenEnum
+        EnumExtensibility: none
     Typedefs:
       - Name: MyDoubleWrapper
         SwiftWrapper: none
