@@ -761,6 +761,15 @@ public:
   CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
 
   bool isBasicBlockPrologue(const MachineInstr &MI) const override;
+
+  /// \brief Return a partially built integer add instruction without carry.
+  /// Caller must add source operands.
+  /// For pre-GFX9 it will generate unused carry destination operand.
+  /// TODO: After GFX9 it should return a no-carry operation.
+  MachineInstrBuilder getAddNoCarry(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I,
+                                    const DebugLoc &DL,
+                                    unsigned DestReg) const;
 };
 
 namespace AMDGPU {

@@ -879,12 +879,12 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   };
 
   ElfSym::Bss = Add("__bss_start");
-  ElfSym::End = Add("_end");
-  ElfSym::End2 = Add("end");
-  ElfSym::Etext = Add("_etext");
-  ElfSym::Etext2 = Add("etext");
-  ElfSym::Edata = Add("_edata");
-  ElfSym::Edata2 = Add("edata");
+  ElfSym::End1 = Add("end");
+  ElfSym::End2 = Add("_end");
+  ElfSym::Etext1 = Add("etext");
+  ElfSym::Etext2 = Add("_etext");
+  ElfSym::Edata1 = Add("edata");
+  ElfSym::Edata2 = Add("_edata");
 }
 
 // Sort input sections by section name suffixes for
@@ -1692,11 +1692,11 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
       LastRO = &P;
   }
   if (Last)
-    Set(ElfSym::End, ElfSym::End2, Last->First, Last->p_memsz);
+    Set(ElfSym::End1, ElfSym::End2, Last->First, Last->p_memsz);
   if (LastRO)
-    Set(ElfSym::Etext, ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
+    Set(ElfSym::Etext1, ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
   if (LastRW)
-    Set(ElfSym::Edata, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
+    Set(ElfSym::Edata1, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
 
   if (ElfSym::Bss)
     ElfSym::Bss->Section = findSection(".bss");

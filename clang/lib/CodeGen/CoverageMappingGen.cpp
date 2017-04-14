@@ -966,7 +966,7 @@ bool isMachO(const CodeGenModule &CGM) {
 }
 
 StringRef getCoverageSection(const CodeGenModule &CGM) {
-  return llvm::getInstrProfCoverageSectionName(isMachO(CGM));
+  return llvm::getInstrProfCoverageSectionName(&CGM.getModule());
 }
 
 std::string normalizeFilename(StringRef Filename) {

@@ -698,8 +698,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     if (LiveValues.erase(Arg)) {
       Params.push_back(I->getType());
       ArgAlive[i] = true;
-      ArgAttrVec.push_back(PAL.getParamAttributes(i + 1));
-      HasLiveReturnedArg |= PAL.hasAttribute(i + 1, Attribute::Returned);
+      ArgAttrVec.push_back(PAL.getParamAttributes(i));
+      HasLiveReturnedArg |= PAL.hasParamAttribute(i, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
       DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument " << i
@@ -836,7 +836,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       if (ArgAlive[i]) {
         Args.push_back(*I);
         // Get original parameter attributes, but skip return attributes.
-        AttributeSet Attrs = CallPAL.getParamAttributes(i + 1);
+        AttributeSet Attrs = CallPAL.getParamAttributes(i);
         if (NRetTy != RetTy && Attrs.hasAttribute(Attribute::Returned)) {
           // If the return type has changed, then get rid of 'returned' on the
           // call site. The alternative is to make all 'returned' attributes on
@@ -855,7 +855,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     // Push any varargs arguments on the list. Don't forget their attributes.
     for (CallSite::arg_iterator E = CS.arg_end(); I != E; ++I, ++i) {
       Args.push_back(*I);
-      ArgAttrVec.push_back(CallPAL.getParamAttributes(i + 1));
+      ArgAttrVec.push_back(CallPAL.getParamAttributes(i));
     }
 
     // Reconstruct the AttributesList based on the vector we constructed.

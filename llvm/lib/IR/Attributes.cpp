@@ -1170,8 +1170,8 @@ AttributeList::addAllocSizeAttr(LLVMContext &C, unsigned Index,
 
 LLVMContext &AttributeList::getContext() const { return pImpl->getContext(); }
 
-AttributeSet AttributeList::getParamAttributes(unsigned Index) const {
-  return getAttributes(Index);
+AttributeSet AttributeList::getParamAttributes(unsigned ArgNo) const {
+  return getAttributes(ArgNo + 1);
 }
 
 AttributeSet AttributeList::getRetAttributes() const {
@@ -1201,6 +1201,11 @@ bool AttributeList::hasFnAttribute(Attribute::AttrKind Kind) const {
 
 bool AttributeList::hasFnAttribute(StringRef Kind) const {
   return hasAttribute(AttributeList::FunctionIndex, Kind);
+}
+
+bool AttributeList::hasParamAttribute(unsigned ArgNo,
+                                      Attribute::AttrKind Kind) const {
+  return hasAttribute(ArgNo + 1, Kind);
 }
 
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,

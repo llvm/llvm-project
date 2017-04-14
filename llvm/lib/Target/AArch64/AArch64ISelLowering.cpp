@@ -6590,14 +6590,19 @@ FailedModImm:
   if (!isConstant && !usesOnlyOneValue) {
     SDValue Vec = DAG.getUNDEF(VT);
     SDValue Op0 = Op.getOperand(0);
-    unsigned ElemSize = VT.getScalarSizeInBits();
     unsigned i = 0;
-    // For 32 and 64 bit types, use SCALAR_TO_VECTOR for lane zero to
+
+    // Use SCALAR_TO_VECTOR for lane zero to
     // a) Avoid a RMW dependency on the full vector register, and
     // b) Allow the register coalescer to fold away the copy if the
     //    value is already in an S or D register, and we're forced to emit an
     //    INSERT_SUBREG that we can't fold anywhere.
-    if (!Op0.isUndef() && (ElemSize == 32 || ElemSize == 64)) {
+    //
+    // We also allow types like i8 and i16 which are illegal scalar but legal
+    // vector element types. After type-legalization the inserted value is
+    // extended (i32) and it is safe to cast them to the vector type by ignoring
+    // the upper bits of the lowest lane (e.g. v8i8, v4i16).
+    if (!Op0.isUndef()) {
       Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op0);
       ++i;
     }

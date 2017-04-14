@@ -342,29 +342,35 @@ public:
     assert(!Name.empty() &&
            "The empty string is reserved for the Success value");
 
-    std::lock_guard<std::mutex> Lock(SerializersMutex);
-
-    // We're abusing the stability of std::map here: We take a reference to the
-    // key of the deserializers map to save us from duplicating the string in
-    // the serializer. This should be changed to use a stringpool if we switch
-    // to a map type that may move keys in memory.
-    auto I =
-      Deserializers.insert(Deserializers.begin(),
-                           std::make_pair(std::move(Name),
-                                          std::move(Deserialize)));
-
-    const std::string &KeyName = I->first;
-    // FIXME: Move capture Serialize once we have C++14.
-    Serializers[ErrorInfoT::classID()] =
-      [&KeyName, Serialize](ChannelT &C, const ErrorInfoBase &EIB) -> Error {
-        assert(EIB.dynamicClassID() == ErrorInfoT::classID() &&
-               "Serializer called for wrong error type");
-        if (auto Err = serializeSeq(C, KeyName))
-          return Err;
-        return Serialize(C, static_cast<const ErrorInfoT&>(EIB));
-      };
+    const std::string *KeyName = nullptr;
+    {
+      // We're abusing the stability of std::map here: We take a reference to the
+      // key of the deserializers map to save us from duplicating the string in
+      // the serializer. This should be changed to use a stringpool if we switch
+      // to a map type that may move keys in memory.
+      std::lock_guard<std::mutex> Lock(DeserializersMutex);
+      auto I =
+        Deserializers.insert(Deserializers.begin(),
+                             std::make_pair(std::move(Name),
+                                            std::move(Deserialize)));
+      KeyName = &I->first;
+    }
+    
+    {
+      assert(KeyName != nullptr && "No keyname pointer");
+      std::lock_guard<std::mutex> Lock(SerializersMutex);
+      // FIXME: Move capture Serialize once we have C++14.
+      Serializers[ErrorInfoT::classID()] =
+	[KeyName, Serialize](ChannelT &C, const ErrorInfoBase &EIB) -> Error {
+          assert(EIB.dynamicClassID() == ErrorInfoT::classID() &&
+		 "Serializer called for wrong error type");
+	  if (auto Err = serializeSeq(C, *KeyName))
+	    return Err;
+	  return Serialize(C, static_cast<const ErrorInfoT&>(EIB));
+        };
+    }
   }
-
+  
   static Error serialize(ChannelT &C, Error &&Err) {
     std::lock_guard<std::mutex> Lock(SerializersMutex);
     if (!Err)
@@ -380,7 +386,7 @@ public:
   }
 
   static Error deserialize(ChannelT &C, Error &Err) {
-    std::lock_guard<std::mutex> Lock(SerializersMutex);
+    std::lock_guard<std::mutex> Lock(DeserializersMutex);
 
     std::string Key;
     if (auto Err = deserializeSeq(C, Key))
@@ -412,12 +418,16 @@ private:
   }
 
   static std::mutex SerializersMutex;
+  static std::mutex DeserializersMutex;
   static std::map<const void*, WrappedErrorSerializer> Serializers;
   static std::map<std::string, WrappedErrorDeserializer> Deserializers;
 };
 
 template <typename ChannelT>
 std::mutex SerializationTraits<ChannelT, Error>::SerializersMutex;
+
+template <typename ChannelT>
+std::mutex SerializationTraits<ChannelT, Error>::DeserializersMutex;
 
 template <typename ChannelT>
 std::map<const void*,

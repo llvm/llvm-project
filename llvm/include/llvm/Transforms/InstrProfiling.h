@@ -67,16 +67,16 @@ private:
   bool isMachO() const;
 
   /// Get the section name for the counter variables.
-  StringRef getCountersSection() const;
+  std::string getCountersSection() const;
 
   /// Get the section name for the name variables.
-  StringRef getNameSection() const;
+  std::string getNameSection() const;
 
   /// Get the section name for the profile data variables.
-  StringRef getDataSection() const;
+  std::string getDataSection() const;
 
   /// Get the section name for the coverage mapping data.
-  StringRef getCoverageSection() const;
+  std::string getCoverageSection() const;
 
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);

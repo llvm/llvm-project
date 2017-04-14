@@ -54,39 +54,29 @@ class MDNode;
 class Module;
 
 /// Return the name of data section containing profile counter variables.
-inline StringRef getInstrProfCountersSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_CNTS_SECT_NAME_STR
-                    : INSTR_PROF_CNTS_SECT_NAME_STR;
-}
+/// If M is null, the target platform is assumed to be the same as
+/// the host machine, and the segment prefix will not be added.
+std::string getInstrProfCountersSectionName(const Module *M = nullptr);
 
 /// Return the name of data section containing names of instrumented
-/// functions.
-inline StringRef getInstrProfNameSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_NAME_SECT_NAME_STR
-                    : INSTR_PROF_NAME_SECT_NAME_STR;
-}
+/// functions. If M is null, the target platform is assumed to be the same as
+/// the host machine, nor will segment prefix be added.
+std::string getInstrProfNameSectionName(const Module *M = nullptr);
 
 /// Return the name of the data section containing per-function control
-/// data.
-inline StringRef getInstrProfDataSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_DATA_SECT_NAME_STR
-                      ",regular,live_support"
-                    : INSTR_PROF_DATA_SECT_NAME_STR;
-}
+/// data. If M is null, the target platform is assumed to be the same as
+/// the host machine, and the segment prefix will not be added.
+std::string getInstrProfDataSectionName(const Module *M = nullptr);
 
 /// Return the name of data section containing pointers to value profile
-/// counters/nodes.
-inline StringRef getInstrProfValuesSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_VALS_SECT_NAME_STR
-                    : INSTR_PROF_VALS_SECT_NAME_STR;
-}
+/// counters/nodes. If M is null, the target platform is assumed to be
+/// the same as the host machine, and the segment prefix will not be added.
+std::string getInstrProfValuesSectionName(const Module *M = nullptr);
 
 /// Return the name of data section containing nodes holdling value
-/// profiling data.
-inline StringRef getInstrProfVNodesSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_VNODES_SECT_NAME_STR
-                    : INSTR_PROF_VNODES_SECT_NAME_STR;
-}
+/// profiling data. If M is null, the target platform is assumed to be
+/// the same as the host machine, and the segment prefix will not be added.
+std::string getInstrProfVNodesSectionName(const Module *M = nullptr);
 
 /// Return the name profile runtime entry point to do value profiling
 /// for a given site.
@@ -101,10 +91,7 @@ inline StringRef getInstrProfValueRangeProfFuncName() {
 
 /// Return the name of the section containing function coverage mapping
 /// data.
-inline StringRef getInstrProfCoverageSectionName(bool AddSegment) {
-  return AddSegment ? "__LLVM_COV," INSTR_PROF_COVMAP_SECT_NAME_STR
-                    : INSTR_PROF_COVMAP_SECT_NAME_STR;
-}
+std::string getInstrProfCoverageSectionName(const Module *M = nullptr);
 
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }

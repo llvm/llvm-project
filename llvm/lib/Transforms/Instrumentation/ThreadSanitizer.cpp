@@ -280,8 +280,7 @@ static bool shouldInstrumentReadWriteFromAddress(Value *Addr) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      if (SectionName.endswith(getInstrProfCountersSectionName(
-            /*AddSegment=*/false)))
+      if (SectionName.endswith(getInstrProfCountersSectionName()))
         return false;
     }
 

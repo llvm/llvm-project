@@ -29,7 +29,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # CMake module path.
   list(INSERT CMAKE_MODULE_PATH 0
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
     "${LLVM_BINARY_DIR}/lib/cmake/llvm"
   )
 
@@ -65,9 +65,27 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
    set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
   endif()
 
+  set(SAFE_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(SAFE_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+
+  include(CheckLibraryExists)
+  include(CheckCCompilerFlag)
+
+  check_library_exists(c fopen "" LLVM_HAS_C_LIB)
+  check_c_compiler_flag(-nodefaultlibs LLVM_HAS_NODEFAULTLIBS_FLAG)
+  if(LLVM_HAS_NODEFAULTLIBS_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+    if(LLVM_HAS_C_LIB)
+      list(APPEND CMAKE_REQUIRED_LIBRARIES c)
+    endif()
+  endif()
+
   # Handle common options used by all runtimes.
   include(AddLLVM)
   include(HandleLLVMOptions)
+
+  set(CMAKE_REQUIRED_FLAGS ${SAFE_CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_LIBRARIES ${SAFE_CMAKE_REQUIRED_LIBRARIES})
 
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)

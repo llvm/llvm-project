@@ -190,6 +190,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   storage::Header Hdr;
 
   assert(!IRMods.empty());
+  setStr(Hdr.TargetTriple, IRMods[0]->getTargetTriple());
   setStr(Hdr.SourceFileName, IRMods[0]->getSourceFileName());
   TT = Triple(IRMods[0]->getTargetTriple());
 

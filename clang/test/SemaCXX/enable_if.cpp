@@ -472,3 +472,30 @@ namespace instantiate_constexpr_in_enable_if {
   };
   void g() { X<int>().f(); }
 }
+
+namespace PR31934 {
+int foo(int a) __attribute__((enable_if(a, "")));
+int runFn(int (&)(int));
+
+void run() {
+  {
+    int (&bar)(int) = foo; // expected-error{{cannot take address of function 'foo'}}
+    int baz = runFn(foo); // expected-error{{cannot take address of function 'foo'}}
+  }
+
+  {
+    int (&bar)(int) = (foo); // expected-error{{cannot take address of function 'foo'}}
+    int baz = runFn((foo)); // expected-error{{cannot take address of function 'foo'}}
+  }
+
+  {
+    int (&bar)(int) = static_cast<int (&)(int)>(foo); // expected-error{{cannot take address of function 'foo'}}
+    int baz = runFn(static_cast<int (&)(int)>(foo)); // expected-error{{cannot take address of function 'foo'}}
+  }
+
+  {
+    int (&bar)(int) = static_cast<int (&)(int)>((foo)); // expected-error{{cannot take address of function 'foo'}}
+    int baz = runFn(static_cast<int (&)(int)>((foo))); // expected-error{{cannot take address of function 'foo'}}
+  }
+}
+}
