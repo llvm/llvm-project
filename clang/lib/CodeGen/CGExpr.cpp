@@ -952,10 +952,7 @@ LValue CodeGenFunction::EmitUnsupportedLValue(const Expr *E,
                         E->getType());
 }
 
-bool CodeGenFunction::IsDeclRefOrWrappedCXXThis(const Expr *Obj) {
-  if (isa<DeclRefExpr>(Obj))
-    return true;
-
+bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
   const Expr *Base = Obj;
   while (!isa<CXXThisExpr>(Base)) {
     // The result of a dynamic_cast can be null.
@@ -986,9 +983,13 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
     LV = EmitLValue(E);
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
-    if (const auto *ME = dyn_cast<MemberExpr>(E))
-      if (IsDeclRefOrWrappedCXXThis(ME->getBase()))
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      bool IsBaseCXXThis = IsWrappedCXXThis(ME->getBase());
+      if (IsBaseCXXThis)
+        SkippedChecks.set(SanitizerKind::Alignment, true);
+      if (IsBaseCXXThis || isa<DeclRefExpr>(ME->getBase()))
         SkippedChecks.set(SanitizerKind::Null, true);
+    }
     EmitTypeCheck(TCK, E->getExprLoc(), LV.getPointer(),
                   E->getType(), LV.getAlignment(), SkippedChecks);
   }
@@ -3394,7 +3395,10 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     Address Addr = EmitPointerWithAlignment(BaseExpr, &AlignSource);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
-    if (IsDeclRefOrWrappedCXXThis(BaseExpr) ||
+    bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
+    if (IsBaseCXXThis)
+      SkippedChecks.set(SanitizerKind::Alignment, true);
+    if (IsBaseCXXThis || isa<DeclRefExpr>(BaseExpr) ||
         isa<llvm::ConstantPointerNull>(Addr.getPointer()))
       SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
