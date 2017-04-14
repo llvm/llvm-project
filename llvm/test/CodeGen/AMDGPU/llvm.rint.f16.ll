@@ -44,7 +44,8 @@ entry:
 ; GFX9: v_rndne_f16_e32 v[[R_F16_0:[0-9]+]], v[[A_V2_F16]]
 ; GFX9: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GFX9: v_rndne_f16_e32 v[[R_F16_1:[0-9]+]], v[[A_F16_1]]
-; GFX9: v_pack_b32_f16 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_1]]
+; GFX9: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[R_F16_0]]
+; GFX9: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], 16, v[[R_F16_LO]]
 
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm

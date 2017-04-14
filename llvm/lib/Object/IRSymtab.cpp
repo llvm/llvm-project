@@ -125,6 +125,8 @@ Error Builder::addSymbol(ModuleSymbolTable::Symbol Msym) {
     Sym.Flags |= 1 << storage::Symbol::FB_global;
   if (Flags & object::BasicSymbolRef::SF_FormatSpecific)
     Sym.Flags |= 1 << storage::Symbol::FB_format_specific;
+  if (Flags & object::BasicSymbolRef::SF_Executable)
+    Sym.Flags |= 1 << storage::Symbol::FB_executable;
 
   Sym.ComdatIndex = -1;
   auto *GV = Msym.dyn_cast<GlobalValue *>();
@@ -188,6 +190,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   storage::Header Hdr;
 
   assert(!IRMods.empty());
+  setStr(Hdr.TargetTriple, IRMods[0]->getTargetTriple());
   setStr(Hdr.SourceFileName, IRMods[0]->getSourceFileName());
   TT = Triple(IRMods[0]->getTargetTriple());
 

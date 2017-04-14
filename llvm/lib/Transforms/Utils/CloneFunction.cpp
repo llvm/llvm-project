@@ -110,7 +110,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   for (const Argument &OldArg : OldFunc->args()) {
     if (Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg])) {
       NewArgAttrs[NewArg->getArgNo()] =
-          OldAttrs.getParamAttributes(OldArg.getArgNo() + 1);
+          OldAttrs.getParamAttributes(OldArg.getArgNo());
     }
   }
 

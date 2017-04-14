@@ -1192,8 +1192,11 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
 
       // If the index is dependent on the store we will introduce a cycle when
       // creating the load (the load uses the index, and by replacing the chain
-      // we will make the index dependent on the load).
-      if (SDNode::hasPredecessorHelper(ST, Visited, Worklist))
+      // we will make the index dependent on the load). Also, the store might be
+      // dependent on the extractelement and introduce a cycle when creating 
+      // the load.
+      if (SDNode::hasPredecessorHelper(ST, Visited, Worklist) ||
+          ST->hasPredecessor(Op.getNode()))
         continue;
 
       StackPtr = ST->getBasePtr();

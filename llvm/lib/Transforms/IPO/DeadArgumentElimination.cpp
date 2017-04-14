@@ -181,30 +181,28 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
     SmallVector<OperandBundleDef, 1> OpBundles;
     CS.getOperandBundlesAsDefs(OpBundles);
 
-    Instruction *New;
+    CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
-      New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, OpBundles, "", Call);
-      cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<InvokeInst>(New)->setAttributes(PAL);
+      NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
+                                 Args, OpBundles, "", Call);
     } else {
-      New = CallInst::Create(NF, Args, OpBundles, "", Call);
-      cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<CallInst>(New)->setAttributes(PAL);
-      cast<CallInst>(New)->setTailCallKind(
-          cast<CallInst>(Call)->getTailCallKind());
+      NewCS = CallInst::Create(NF, Args, OpBundles, "", Call);
+      cast<CallInst>(NewCS.getInstruction())
+          ->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
     }
-    New->setDebugLoc(Call->getDebugLoc());
+    NewCS.setCallingConv(CS.getCallingConv());
+    NewCS.setAttributes(PAL);
+    NewCS->setDebugLoc(Call->getDebugLoc());
     uint64_t W;
     if (Call->extractProfTotalWeight(W))
-      New->setProfWeight(W);
+      NewCS->setProfWeight(W);
 
     Args.clear();
 
     if (!Call->use_empty())
-      Call->replaceAllUsesWith(New);
+      Call->replaceAllUsesWith(NewCS.getInstruction());
 
-    New->takeName(Call);
+    NewCS->takeName(Call);
 
     // Finally, remove the old call from the program, reducing the use-count of
     // F.
@@ -700,8 +698,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     if (LiveValues.erase(Arg)) {
       Params.push_back(I->getType());
       ArgAlive[i] = true;
-      ArgAttrVec.push_back(PAL.getParamAttributes(i + 1));
-      HasLiveReturnedArg |= PAL.hasAttribute(i + 1, Attribute::Returned);
+      ArgAttrVec.push_back(PAL.getParamAttributes(i));
+      HasLiveReturnedArg |= PAL.hasParamAttribute(i, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
       DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument " << i
@@ -838,7 +836,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       if (ArgAlive[i]) {
         Args.push_back(*I);
         // Get original parameter attributes, but skip return attributes.
-        AttributeSet Attrs = CallPAL.getParamAttributes(i + 1);
+        AttributeSet Attrs = CallPAL.getParamAttributes(i);
         if (NRetTy != RetTy && Attrs.hasAttribute(Attribute::Returned)) {
           // If the return type has changed, then get rid of 'returned' on the
           // call site. The alternative is to make all 'returned' attributes on
@@ -857,7 +855,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     // Push any varargs arguments on the list. Don't forget their attributes.
     for (CallSite::arg_iterator E = CS.arg_end(); I != E; ++I, ++i) {
       Args.push_back(*I);
-      ArgAttrVec.push_back(CallPAL.getParamAttributes(i + 1));
+      ArgAttrVec.push_back(CallPAL.getParamAttributes(i));
     }
 
     // Reconstruct the AttributesList based on the vector we constructed.
@@ -868,26 +866,25 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     SmallVector<OperandBundleDef, 1> OpBundles;
     CS.getOperandBundlesAsDefs(OpBundles);
 
-    Instruction *New;
+    CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
-      New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, OpBundles, "", Call->getParent());
-      cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<InvokeInst>(New)->setAttributes(NewCallPAL);
+      NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
+                                 Args, OpBundles, "", Call->getParent());
     } else {
-      New = CallInst::Create(NF, Args, OpBundles, "", Call);
-      cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
-      cast<CallInst>(New)->setAttributes(NewCallPAL);
-      cast<CallInst>(New)->setTailCallKind(
-          cast<CallInst>(Call)->getTailCallKind());
+      NewCS = CallInst::Create(NF, Args, OpBundles, "", Call);
+      cast<CallInst>(NewCS.getInstruction())
+          ->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
     }
-    New->setDebugLoc(Call->getDebugLoc());
+    NewCS.setCallingConv(CS.getCallingConv());
+    NewCS.setAttributes(NewCallPAL);
+    NewCS->setDebugLoc(Call->getDebugLoc());
     uint64_t W;
     if (Call->extractProfTotalWeight(W))
-      New->setProfWeight(W);
-
+      NewCS->setProfWeight(W);
     Args.clear();
+    ArgAttrVec.clear();
 
+    Instruction *New = NewCS.getInstruction();
     if (!Call->use_empty()) {
       if (New->getType() == Call->getType()) {
         // Return type not changed? Just replace users then.

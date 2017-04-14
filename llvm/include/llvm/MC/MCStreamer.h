@@ -836,7 +836,9 @@ public:
   }
 
   /// \brief Emit the given \p Instruction into the current section.
-  virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
+  /// PrintSchedInfo == true then schedul comment should be added to output
+  virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                               bool PrintSchedInfo = false);
 
   /// \brief Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The

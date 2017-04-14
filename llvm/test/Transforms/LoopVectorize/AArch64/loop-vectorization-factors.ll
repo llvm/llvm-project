@@ -234,15 +234,27 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-LABEL: @add_phifail2(
-; CHECK-NOT: load <16 x i8>, <16 x i8>*
-; CHECK-NOT: add nuw nsw <16 x i32>
-; CHECK-NOT: store <16 x i8>
 ; Function Attrs: nounwind
-; FIXME: Currently, if we vectorize this loop, we will generate incorrect code
-; if %len evenly divides VF. Vectorized loop code gen returns a_phi = p[len -1],
-; whereas it should be the previous value a_phi = p[len -2]
+; When we vectorize this loop, we generate correct code
+; even when %len exactly divides VF (since we extract from the second last index
+; and pass this to the for.cond.cleanup block). Vectorized loop returns 
+; the correct value a_phi = p[len -2]
 define i8 @add_phifail2(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+; CHECK-LABEL: @add_phifail2(
+; CHECK: vector.body:
+; CHECK:   %wide.load = load <16 x i8>, <16 x i8>*
+; CHECK:   %[[L1:.+]] = zext <16 x i8> %wide.load to <16 x i32>
+; CHECK:   add nuw nsw <16 x i32>
+; CHECK:   store <16 x i8>
+; CHECK:   add i64 %index, 16
+; CHECK:   icmp eq i64 %index.next, %n.vec
+; CHECK: middle.block:
+; CHECK:   %vector.recur.extract = extractelement <16 x i32> %[[L1]], i32 15
+; CHECK:   %vector.recur.extract.for.phi = extractelement <16 x i32> %[[L1]], i32 14
+; CHECK: for.cond.cleanup:
+; CHECK:   %a_phi.lcssa = phi i32 [ %scalar.recur, %for.body ], [ %vector.recur.extract.for.phi, %middle.block ]
+; CHECK:   %ret = trunc i32 %a_phi.lcssa to i8
+; CHECK:   ret i8 %ret
 entry:
   br label %for.body
 

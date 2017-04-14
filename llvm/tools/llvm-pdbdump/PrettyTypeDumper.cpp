@@ -22,24 +22,82 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
+#include "llvm/DebugInfo/PDB/UDTLayout.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
+using LayoutPtr = std::unique_ptr<ClassLayout>;
+
+typedef bool (*CompareFunc)(const LayoutPtr &S1, const LayoutPtr &S2);
+
+static bool CompareNames(const LayoutPtr &S1, const LayoutPtr &S2) {
+  return S1->getUDTName() < S2->getUDTName();
+}
+
+static bool CompareSizes(const LayoutPtr &S1, const LayoutPtr &S2) {
+  return S1->getClassSize() < S2->getClassSize();
+}
+
+static bool ComparePadding(const LayoutPtr &S1, const LayoutPtr &S2) {
+  return S1->deepPaddingSize() < S2->deepPaddingSize();
+}
+
+static CompareFunc getComparisonFunc(opts::pretty::ClassSortMode Mode) {
+  switch (Mode) {
+  case opts::pretty::ClassSortMode::Name:
+    return CompareNames;
+  case opts::pretty::ClassSortMode::Size:
+    return CompareSizes;
+  case opts::pretty::ClassSortMode::Padding:
+    return ComparePadding;
+  default:
+    return nullptr;
+  }
+}
+
 template <typename Enumerator>
-static std::vector<std::unique_ptr<PDBSymbolTypeUDT>>
-filterClassDefs(LinePrinter &Printer, Enumerator &E) {
-  std::vector<std::unique_ptr<PDBSymbolTypeUDT>> Filtered;
+static std::vector<std::unique_ptr<ClassLayout>>
+filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
+                       uint32_t UnfilteredCount) {
+  std::vector<std::unique_ptr<ClassLayout>> Filtered;
+
+  Filtered.reserve(UnfilteredCount);
+  CompareFunc Comp = getComparisonFunc(opts::pretty::ClassOrder);
+
+  uint32_t Examined = 0;
+  uint32_t Discarded = 0;
   while (auto Class = E.getNext()) {
-    if (Class->getUnmodifiedTypeId() != 0)
-      continue;
+    ++Examined;
+    if (Examined % 10000 == 0) {
+      outs() << formatv("Examined {0}/{1} items.  {2} items discarded\n",
+                        Examined, UnfilteredCount, Discarded);
+      outs().flush();
+    }
 
-    if (Printer.IsTypeExcluded(Class->getName()))
+    if (Class->getUnmodifiedTypeId() != 0) {
+      ++Discarded;
       continue;
+    }
 
-    Filtered.push_back(std::move(Class));
+    if (Printer.IsTypeExcluded(Class->getName(), Class->getLength())) {
+      ++Discarded;
+      continue;
+    }
+
+    auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
+    if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold) {
+      ++Discarded;
+      continue;
+    }
+
+    Filtered.push_back(std::move(Layout));
   }
 
+  if (Comp)
+    std::sort(Filtered.begin(), Filtered.end(), Comp);
   return Filtered;
 }
 
@@ -70,20 +128,52 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 
   if (opts::pretty::Classes) {
     auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>();
-    auto Filtered = filterClassDefs(Printer, *Classes);
-
-    Printer.NewLine();
-    uint32_t Shown = Filtered.size();
     uint32_t All = Classes->getChildCount();
 
+    Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
+
+    bool Precompute = false;
+    Precompute =
+        (opts::pretty::ClassOrder != opts::pretty::ClassSortMode::None);
+
+    // If we're using no sort mode, then we can start getting immediate output
+    // from the tool by just filtering as we go, rather than processing
+    // everything up front so that we can sort it.  This makes the tool more
+    // responsive.  So only precompute the filtered/sorted set of classes if
+    // necessary due to the specified options.
+    std::vector<LayoutPtr> Filtered;
+    uint32_t Shown = All;
+    if (Precompute) {
+      Filtered = filterAndSortClassDefs(Printer, *Classes, All);
+
+      Shown = Filtered.size();
+    }
+
     Printer << ": (Showing " << Shown << " items";
     if (Shown < All)
       Printer << ", " << (All - Shown) << " filtered";
     Printer << ")";
     Printer.Indent();
-    for (auto &Class : Filtered)
-      Class->dump(*this);
+
+    // If we pre-computed, iterate the filtered/sorted list, otherwise iterate
+    // the DIA enumerator and filter on the fly.
+    if (Precompute) {
+      for (auto &Class : Filtered)
+        dumpClassLayout(*Class);
+    } else {
+      while (auto Class = Classes->getNext()) {
+        if (Printer.IsTypeExcluded(Class->getName(), Class->getLength()))
+          continue;
+
+        auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
+        if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
+          continue;
+
+        dumpClassLayout(*Layout);
+      }
+    }
+
     Printer.Unindent();
   }
 }
@@ -91,7 +181,7 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
   assert(opts::pretty::Enums);
 
-  if (Printer.IsTypeExcluded(Symbol.getName()))
+  if (Printer.IsTypeExcluded(Symbol.getName(), Symbol.getLength()))
     return;
   // Dump member enums when dumping their class definition.
   if (nullptr != Symbol.getClassParent())
@@ -105,7 +195,7 @@ void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
 void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
   assert(opts::pretty::Typedefs);
 
-  if (Printer.IsTypeExcluded(Symbol.getName()))
+  if (Printer.IsTypeExcluded(Symbol.getName(), Symbol.getLength()))
     return;
 
   Printer.NewLine();
@@ -113,15 +203,15 @@ void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
   Dumper.start(Symbol);
 }
 
-void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
+void TypeDumper::dumpClassLayout(const ClassLayout &Class) {
   assert(opts::pretty::Classes);
 
   if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "class ";
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << Symbol.getName();
+    WithColor(Printer, PDB_ColorItem::Identifier).get() << Class.getUDTName();
   } else {
     ClassDefinitionDumper Dumper(Printer);
-    Dumper.start(Symbol);
+    Dumper.start(Class);
   }
 }

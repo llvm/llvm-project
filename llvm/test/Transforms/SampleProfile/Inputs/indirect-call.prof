@@ -1,8 +1,10 @@
 test:63067:0
  4: 3345 _Z3barv:1398 _Z3foov:2059
 test_inline:3000:0
- 5: foo_inline:3000
+ 5: foo_inline1:3000
   1: 3000
+ 5: foo_inline2:4000
+  1: 4000
 test_noinline:3000:0
  5: foo_noinline:3000
   1: 3000

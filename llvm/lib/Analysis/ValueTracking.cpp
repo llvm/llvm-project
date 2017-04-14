@@ -918,13 +918,14 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     // TODO: This could be generalized to clearing any bit set in y where the
     // following bit is known to be unset in y.
     Value *Y = nullptr;
-    if (match(I->getOperand(0), m_Add(m_Specific(I->getOperand(1)),
-                                      m_Value(Y))) ||
-        match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
-                                      m_Value(Y)))) {
-      APInt KnownZero3(BitWidth, 0), KnownOne3(BitWidth, 0);
-      computeKnownBits(Y, KnownZero3, KnownOne3, Depth + 1, Q);
-      if (KnownOne3.countTrailingOnes() > 0)
+    if (!KnownZero[0] && !KnownOne[0] &&
+        (match(I->getOperand(0), m_Add(m_Specific(I->getOperand(1)),
+                                       m_Value(Y))) ||
+         match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
+                                       m_Value(Y))))) {
+      KnownZero2.clearAllBits(); KnownOne2.clearAllBits();
+      computeKnownBits(Y, KnownZero2, KnownOne2, Depth + 1, Q);
+      if (KnownOne2.countTrailingOnes() > 0)
         KnownZero.setBit(0);
     }
     break;
@@ -947,7 +948,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     APInt KnownZeroOut = (KnownZero & KnownZero2) | (KnownOne & KnownOne2);
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
     KnownOne = (KnownZero & KnownOne2) | (KnownOne & KnownZero2);
-    KnownZero = KnownZeroOut;
+    KnownZero = std::move(KnownZeroOut);
     break;
   }
   case Instruction::Mul: {
@@ -975,11 +976,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     break;
   }
   case Instruction::Select: {
-    computeKnownBits(I->getOperand(2), KnownZero, KnownOne, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), KnownZero2, KnownOne2, Depth + 1, Q);
-
-    const Value *LHS;
-    const Value *RHS;
+    const Value *LHS, *RHS;
     SelectPatternFlavor SPF = matchSelectPattern(I, LHS, RHS).Flavor;
     if (SelectPatternResult::isMinOrMax(SPF)) {
       computeKnownBits(RHS, KnownZero, KnownOne, Depth + 1, Q);
@@ -1009,7 +1006,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
         MaxHighZeros = std::max(KnownZero.countLeadingOnes(),
                                 KnownZero2.countLeadingOnes());
       // If either side is negative, the result is negative.
-      else if (KnownOne[BitWidth - 1] || KnownOne2[BitWidth - 1])
+      else if (KnownOne.isNegative() || KnownOne2.isNegative())
         MaxHighOnes = 1;
     } else if (SPF == SPF_UMAX) {
       // We can derive a lower bound on the result by taking the max of the
@@ -1081,15 +1078,10 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     KnownZero = KnownZero.trunc(SrcBitWidth);
     KnownOne = KnownOne.trunc(SrcBitWidth);
     computeKnownBits(I->getOperand(0), KnownZero, KnownOne, Depth + 1, Q);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
-
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
-    if (KnownZero[SrcBitWidth-1])             // Input sign bit known zero
-      KnownZero.setBitsFrom(SrcBitWidth);
-    else if (KnownOne[SrcBitWidth-1])           // Input sign bit known set
-      KnownOne.setBitsFrom(SrcBitWidth);
+    KnownZero = KnownZero.sext(BitWidth);
+    KnownOne = KnownOne.sext(BitWidth);
     break;
   }
   case Instruction::Shl: {
@@ -1436,11 +1428,8 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
         // We can bound the space the count needs.  Also, bits known to be zero
         // can't contribute to the population.
         unsigned BitsPossiblySet = BitWidth - KnownZero2.countPopulation();
-        unsigned LeadingZeros =
-          APInt(BitWidth, BitsPossiblySet).countLeadingZeros();
-        assert(LeadingZeros <= BitWidth);
-        KnownZero.setHighBits(LeadingZeros);
-        KnownOne &= ~KnownZero;
+        unsigned LowBits = Log2_32(BitsPossiblySet)+1;
+        KnownZero.setBitsFrom(LowBits);
         // TODO: we could bound KnownOne using the lower bound on the number
         // of bits which might be set provided by popcnt KnownOne2.
         break;

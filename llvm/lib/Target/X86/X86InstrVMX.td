@@ -43,22 +43,26 @@ def VMPTRLDm : I<0xC7, MRM6m, (outs), (ins i64mem:$vmcs),
   "vmptrld\t$vmcs", []>, PS;
 def VMPTRSTm : I<0xC7, MRM7m, (outs), (ins i64mem:$vmcs),
   "vmptrst\t$vmcs", []>, TB;
-def VMREAD64mr : I<0x78, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-  "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
 def VMREAD64rr : I<0x78, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
+  "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
+def VMREAD32rr : I<0x78, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
+  "vmread{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
+let mayStore = 1 in {
+def VMREAD64mr : I<0x78, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
   "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
 def VMREAD32mr : I<0x78, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
   "vmread{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
-def VMREAD32rr : I<0x78, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
-  "vmread{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
-def VMWRITE64rm : I<0x79, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-  "vmwrite{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
+}
 def VMWRITE64rr : I<0x79, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
+  "vmwrite{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
+def VMWRITE32rr : I<0x79, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
+  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
+let mayLoad = 1 in {
+def VMWRITE64rm : I<0x79, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
   "vmwrite{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
 def VMWRITE32rm : I<0x79, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
   "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
-def VMWRITE32rr : I<0x79, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-  "vmwrite{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
+}
 // 0F 01 C4
 def VMXOFF : I<0x01, MRM_C4, (outs), (ins), "vmxoff", []>, TB;
 def VMXON : I<0xC7, MRM6m, (outs), (ins i64mem:$vmxon),

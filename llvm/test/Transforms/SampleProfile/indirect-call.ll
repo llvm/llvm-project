@@ -16,10 +16,14 @@ define void @test_inline(i64* (i32*)*, i32* %x) !dbg !3 {
   %2 = alloca i64* (i32*)*
   store i64* (i32*)* %0, i64* (i32*)** %2
   %3 = load i64* (i32*)*, i64* (i32*)** %2
-; CHECK: icmp {{.*}} @foo_inline
+; CHECK: icmp {{.*}} @foo_inline2
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
+; CHECK: icmp {{.*}} @foo_inline1
+; CHECK: if.true.direct_targ1:
+; CHECK-NOT: call
+; CHECK: if.false.orig_indirect2:
 ; CHECK: call
   call i64* %3(i32* %x), !dbg !5
   ret void
@@ -39,7 +43,11 @@ define void @test_noinline(void ()*) !dbg !3 {
 
 @x = global i32 0, align 4
 
-define i32* @foo_inline(i32* %x) !dbg !3 {
+define i32* @foo_inline1(i32* %x) !dbg !3 {
+  ret i32* %x
+}
+
+define i32* @foo_inline2(i32* %x) !dbg !3 {
   ret i32* %x
 }
 

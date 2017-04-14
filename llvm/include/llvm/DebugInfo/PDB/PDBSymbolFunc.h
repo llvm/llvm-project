@@ -27,6 +27,8 @@ public:
 
   void dump(PDBSymDumper &Dumper) const override;
 
+  bool isDestructor() const;
+
   std::unique_ptr<IPDBEnumChildren<PDBSymbolData>> getArguments() const;
 
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Function)

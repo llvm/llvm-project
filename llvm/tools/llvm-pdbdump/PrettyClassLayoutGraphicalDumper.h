@@ -18,22 +18,29 @@ namespace llvm {
 
 namespace pdb {
 
-class ClassLayout;
+class UDTLayoutBase;
+class StorageItemBase;
 class LinePrinter;
 
 class PrettyClassLayoutGraphicalDumper : public PDBSymDumper {
 public:
-  explicit PrettyClassLayoutGraphicalDumper(LinePrinter &P);
+  PrettyClassLayoutGraphicalDumper(LinePrinter &P, uint32_t InitialOffset);
 
-  bool start(const ClassLayout &Layout);
+  bool start(const UDTLayoutBase &Layout);
 
   void dump(const PDBSymbolTypeBaseClass &Symbol) override;
   void dump(const PDBSymbolData &Symbol) override;
-  void dump(const PDBSymbolTypeEnum &Symbol) override;
-  void dump(const PDBSymbolFunc &Symbol) override;
-  void dump(const PDBSymbolTypeTypedef &Symbol) override;
-  void dump(const PDBSymbolTypeUDT &Symbol) override;
   void dump(const PDBSymbolTypeVTable &Symbol) override;
+
+private:
+  void printPaddingRow(uint32_t Amount);
+
+  LinePrinter &Printer;
+
+  StorageItemBase *CurrentItem = nullptr;
+  uint32_t ClassOffsetZero = 0;
+  uint32_t CurrentAbsoluteOffset = 0;
+  bool DumpedAnything = false;
 };
 }
 }

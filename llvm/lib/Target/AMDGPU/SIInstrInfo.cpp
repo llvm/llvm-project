@@ -3560,36 +3560,22 @@ void SIInstrInfo::movePackToVALU(SmallVectorImpl<MachineInstr *> &Worklist,
 
   switch (Inst.getOpcode()) {
   case AMDGPU::S_PACK_LL_B32_B16: {
-    // v_pack_b32_f16 flushes denormals if not enabled. Use it if the default
-    // is to leave them untouched.
-    // XXX: Does this do anything to NaNs?
-    if (ST.hasFP16Denormals()) {
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_PACK_B32_F16), ResultReg)
-        .addImm(0)  // src0_modifiers
-        .add(Src0)  // src0
-        .addImm(0)  // src1_modifiers
-        .add(Src1)  // src2
-        .addImm(0)  // clamp
-        .addImm(0); // omod
-    } else {
-      unsigned ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    unsigned ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
-      // FIXME: Can do a lot better if we know the high bits of src0 or src1 are
-      // 0.
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
-        .addImm(0xffff);
+    // FIXME: Can do a lot better if we know the high bits of src0 or src1 are
+    // 0.
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
+      .addImm(0xffff);
 
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_B32_e64), TmpReg)
-        .addReg(ImmReg, RegState::Kill)
-        .add(Src0);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_B32_e64), TmpReg)
+      .addReg(ImmReg, RegState::Kill)
+      .add(Src0);
 
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32), ResultReg)
-        .add(Src1)
-        .addImm(16)
-        .addReg(TmpReg, RegState::Kill);
-    }
-
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32), ResultReg)
+      .add(Src1)
+      .addImm(16)
+      .addReg(TmpReg, RegState::Kill);
     break;
   }
   case AMDGPU::S_PACK_LH_B32_B16: {
@@ -3943,4 +3929,17 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
   return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
          MI.modifiesRegister(AMDGPU::EXEC, &RI);
+}
+
+MachineInstrBuilder
+SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator I,
+                           const DebugLoc &DL,
+                           unsigned DestReg) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  unsigned UnusedCarry = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+
+  return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
+           .addReg(UnusedCarry, RegState::Define | RegState::Dead);
 }

@@ -129,12 +129,14 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamples> SortedCallsiteSamples(
+    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      OS.indent(Indent + 2);
-      OS << CS->first << ": inlined callee: " << CS->second.getName() << ": ";
-      CS->second.print(OS, Indent + 4);
+      for (const auto &FS : CS->second) {
+        OS.indent(Indent + 2);
+        OS << CS->first << ": inlined callee: " << FS.second.getName() << ": ";
+        FS.second.print(OS, Indent + 4);
+      }
     }
     OS << "}\n";
   } else {

@@ -106,7 +106,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   AttributeList PAL = F->getAttributes();
 
   // First, determine the new argument list
-  unsigned ArgIndex = 1;
+  unsigned ArgIndex = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgIndex) {
     if (ByValArgsToTransform.count(&*I)) {
@@ -291,7 +291,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, OpBundles, "", Call);
+                                 Args, OpBundles, "", Call);
     } else {
       auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", Call);
       NewCall->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
@@ -302,6 +302,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
                            CallPAL.getRetAttributes(), ArgAttrVec));
     NewCS->setDebugLoc(Call->getDebugLoc());
+    uint64_t W;
+    if (Call->extractProfTotalWeight(W))
+      NewCS->setProfWeight(W);
     Args.clear();
     ArgAttrVec.clear();
 

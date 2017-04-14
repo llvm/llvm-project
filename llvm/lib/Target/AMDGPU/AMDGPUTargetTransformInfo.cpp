@@ -430,8 +430,8 @@ static bool isArgPassedInSGPR(const Argument *A) {
     return true;
 
   // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
-  if (F->getAttributes().hasAttribute(A->getArgNo() + 1, Attribute::InReg) ||
-      F->getAttributes().hasAttribute(A->getArgNo() + 1, Attribute::ByVal))
+  if (F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
+      F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal))
     return true;
 
   // Everything else is in VGPRs.

@@ -293,8 +293,13 @@ static int dumpSymtab(int argc, char **argv) {
     std::unique_ptr<InputFile> Input =
         check(InputFile::create(MB->getMemBufferRef()), F);
 
+    outs() << "target triple: " << Input->getTargetTriple() << '\n';
+    Triple TT(Input->getTargetTriple());
+
     outs() << "source filename: " << Input->getSourceFileName() << '\n';
-    outs() << "linker opts (COFF only): " << Input->getCOFFLinkerOpts() << '\n';
+
+    if (TT.isOSBinFormatCOFF())
+      outs() << "linker opts: " << Input->getCOFFLinkerOpts() << '\n';
 
     std::vector<StringRef> ComdatTable = Input->getComdatTable();
     for (const InputFile::Symbol &Sym : Input->symbols()) {
@@ -317,18 +322,19 @@ static int dumpSymtab(int argc, char **argv) {
       PrintBool('I', Sym.isIndirect());
       PrintBool('O', Sym.canBeOmittedFromSymbolTable());
       PrintBool('T', Sym.isTLS());
+      PrintBool('X', Sym.isExecutable());
       outs() << ' ' << Sym.getName() << '\n';
 
       if (Sym.isCommon())
-        outs() << "        size " << Sym.getCommonSize() << " align "
+        outs() << "         size " << Sym.getCommonSize() << " align "
                << Sym.getCommonAlignment() << '\n';
 
       int Comdat = Sym.getComdatIndex();
       if (Comdat != -1)
-        outs() << "        comdat " << ComdatTable[Comdat] << '\n';
+        outs() << "         comdat " << ComdatTable[Comdat] << '\n';
 
-      if (Sym.isWeak() && Sym.isIndirect())
-        outs() << "        fallback " << Sym.getCOFFWeakExternalFallback() << '\n';
+      if (TT.isOSBinFormatCOFF() && Sym.isWeak() && Sym.isIndirect())
+        outs() << "         fallback " << Sym.getCOFFWeakExternalFallback() << '\n';
     }
 
     outs() << '\n';

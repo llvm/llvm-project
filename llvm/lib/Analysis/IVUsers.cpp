@@ -76,9 +76,8 @@ static bool isInteresting(const SCEV *S, const Instruction *I, const Loop *L,
   // An add is interesting if exactly one of its operands is interesting.
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     bool AnyInterestingYet = false;
-    for (SCEVAddExpr::op_iterator OI = Add->op_begin(), OE = Add->op_end();
-         OI != OE; ++OI)
-      if (isInteresting(*OI, I, L, SE, LI)) {
+    for (const auto *Op : Add->operands())
+      if (isInteresting(Op, I, L, SE, LI)) {
         if (AnyInterestingYet)
           return false;
         AnyInterestingYet = true;
@@ -353,9 +352,8 @@ static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {
   }
 
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
-    for (SCEVAddExpr::op_iterator I = Add->op_begin(), E = Add->op_end();
-         I != E; ++I)
-      if (const SCEVAddRecExpr *AR = findAddRecForLoop(*I, L))
+    for (const auto *Op : Add->operands())
+      if (const SCEVAddRecExpr *AR = findAddRecForLoop(Op, L))
         return AR;
     return nullptr;
   }

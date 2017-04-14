@@ -162,6 +162,8 @@ protected:
   ErrorOr<uint64_t> getInstWeight(const Instruction &I);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
   const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
+  std::vector<const FunctionSamples *>
+  findIndirectCallFunctionSamples(const Instruction &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &ImportGUIDs);
@@ -330,11 +332,12 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
   // If there are inlined callsites in this function, count the samples found
   // in the respective bodies. However, do not bother counting callees with 0
   // total samples, these are callees that were never invoked at runtime.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Count += countUsedRecords(CalleeSamples);
-  }
+  for (const auto &I : FS->getCallsiteSamples())
+    for (const auto &J : I.second) {
+      const FunctionSamples *CalleeSamples = &J.second;
+      if (callsiteIsHot(FS, CalleeSamples))
+        Count += countUsedRecords(CalleeSamples);
+    }
 
   return Count;
 }
@@ -347,11 +350,12 @@ SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
   unsigned Count = FS->getBodySamples().size();
 
   // Only count records in hot callsites.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Count += countBodyRecords(CalleeSamples);
-  }
+  for (const auto &I : FS->getCallsiteSamples())
+    for (const auto &J : I.second) {
+      const FunctionSamples *CalleeSamples = &J.second;
+      if (callsiteIsHot(FS, CalleeSamples))
+        Count += countBodyRecords(CalleeSamples);
+    }
 
   return Count;
 }
@@ -366,11 +370,12 @@ SampleCoverageTracker::countBodySamples(const FunctionSamples *FS) const {
     Total += I.second.getSamples();
 
   // Only count samples in hot callsites.
-  for (const auto &I : FS->getCallsiteSamples()) {
-    const FunctionSamples *CalleeSamples = &I.second;
-    if (callsiteIsHot(FS, CalleeSamples))
-      Total += countBodySamples(CalleeSamples);
-  }
+  for (const auto &I : FS->getCallsiteSamples())
+    for (const auto &J : I.second) {
+      const FunctionSamples *CalleeSamples = &J.second;
+      if (callsiteIsHot(FS, CalleeSamples))
+        Total += countBodySamples(CalleeSamples);
+    }
 
   return Total;
 }
@@ -559,12 +564,49 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
   if (!DIL) {
     return nullptr;
   }
+
+  StringRef CalleeName;
+  if (const CallInst *CI = dyn_cast<CallInst>(&Inst))
+    if (Function *Callee = CI->getCalledFunction())
+      CalleeName = Callee->getName();
+
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
     return nullptr;
 
   return FS->findFunctionSamplesAt(
-      LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()));
+      LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()), CalleeName);
+}
+
+/// Returns a vector of FunctionSamples that are the indirect call targets
+/// of \p Inst. The vector is sorted by the total number of samples.
+std::vector<const FunctionSamples *>
+SampleProfileLoader::findIndirectCallFunctionSamples(
+    const Instruction &Inst) const {
+  const DILocation *DIL = Inst.getDebugLoc();
+  std::vector<const FunctionSamples *> R;
+
+  if (!DIL) {
+    return R;
+  }
+
+  const FunctionSamples *FS = findFunctionSamples(Inst);
+  if (FS == nullptr)
+    return R;
+
+  if (const FunctionSamplesMap *M = FS->findFunctionSamplesMapAt(
+          LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()))) {
+    if (M->size() == 0)
+      return R;
+    for (const auto &NameFS : *M) {
+      R.push_back(&NameFS.second);
+    }
+    std::sort(R.begin(), R.end(),
+              [](const FunctionSamples *L, const FunctionSamples *R) {
+                return L->getTotalSamples() > R->getTotalSamples();
+              });
+  }
+  return R;
 }
 
 /// \brief Get the FunctionSamples for an instruction.
@@ -578,18 +620,23 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
 /// \returns the FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
 SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
-  SmallVector<LineLocation, 10> S;
+  SmallVector<std::pair<LineLocation, StringRef>, 10> S;
   const DILocation *DIL = Inst.getDebugLoc();
-  if (!DIL) {
+  if (!DIL)
     return Samples;
+
+  const DILocation *PrevDIL = DIL;
+  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
+    S.push_back(std::make_pair(
+        LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()),
+        PrevDIL->getScope()->getSubprogram()->getLinkageName()));
+    PrevDIL = DIL;
   }
-  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt())
-    S.push_back(LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()));
   if (S.size() == 0)
     return Samples;
   const FunctionSamples *FS = Samples;
   for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
-    FS = FS->findFunctionSamplesAt(S[i]);
+    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second);
   }
   return FS;
 }
@@ -638,25 +685,27 @@ bool SampleProfileLoader::inlineHotFunctions(
       Function *CalledFunction = CallSite(I).getCalledFunction();
       Instruction *DI = I;
       if (!CalledFunction && !PromotedInsns.count(I) &&
-          CallSite(I).isIndirectCall()) {
-        auto CalleeFunctionName = findCalleeFunctionSamples(*I)->getName();
-        const char *Reason = "Callee function not available";
-        CalledFunction = F.getParent()->getFunction(CalleeFunctionName);
-        if (CalledFunction && isLegalToPromote(I, CalledFunction, &Reason)) {
-          // The indirect target was promoted and inlined in the profile, as a
-          // result, we do not have profile info for the branch probability.
-          // We set the probability to 80% taken to indicate that the static
-          // call is likely taken.
-          DI = dyn_cast<Instruction>(
-              promoteIndirectCall(I, CalledFunction, 80, 100, false)
-                  ->stripPointerCasts());
-          PromotedInsns.insert(I);
-        } else {
-          DEBUG(dbgs() << "\nFailed to promote indirect call to "
-                       << CalleeFunctionName << " because " << Reason << "\n");
-          continue;
+          CallSite(I).isIndirectCall())
+        for (const auto *FS : findIndirectCallFunctionSamples(*I)) {
+          auto CalleeFunctionName = FS->getName();
+          const char *Reason = "Callee function not available";
+          CalledFunction = F.getParent()->getFunction(CalleeFunctionName);
+          if (CalledFunction && isLegalToPromote(I, CalledFunction, &Reason)) {
+            // The indirect target was promoted and inlined in the profile, as a
+            // result, we do not have profile info for the branch probability.
+            // We set the probability to 80% taken to indicate that the static
+            // call is likely taken.
+            DI = dyn_cast<Instruction>(
+                promoteIndirectCall(I, CalledFunction, 80, 100, false)
+                    ->stripPointerCasts());
+            PromotedInsns.insert(I);
+          } else {
+            DEBUG(dbgs() << "\nFailed to promote indirect call to "
+                         << CalleeFunctionName << " because " << Reason
+                         << "\n");
+            continue;
+          }
         }
-      }
       if (!CalledFunction || !CalledFunction->getSubprogram()) {
         findCalleeFunctionSamples(*I)->findImportedFunctions(
             ImportGUIDs, F.getParent(),

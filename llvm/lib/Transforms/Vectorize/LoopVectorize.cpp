@@ -4078,24 +4078,34 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   VecPhi->addIncoming(Incoming, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
 
   // Extract the last vector element in the middle block. This will be the
-  // initial value for the recurrence when jumping to the scalar loop. 
-  // FIXME: Note that the last vector element need not always be the correct one:
-  // consider a loop  where we have phi uses outside the loop - we need the
-  // second last iteration value and not the last one). For now, we avoid
-  // considering such cases as firstOrderRecurrences (see
-  // isFirstOrderRecurrence).
-  auto *Extract = Incoming;
+  // initial value for the recurrence when jumping to the scalar loop.
+  auto *ExtractForScalar = Incoming;
   if (VF > 1) {
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
-    Extract = Builder.CreateExtractElement(Extract, Builder.getInt32(VF - 1),
-                                           "vector.recur.extract");
+    ExtractForScalar = Builder.CreateExtractElement(
+        ExtractForScalar, Builder.getInt32(VF - 1), "vector.recur.extract");
   }
+  // Extract the second last element in the middle block if the
+  // Phi is used outside the loop. We need to extract the phi itself
+  // and not the last element (the phi update in the current iteration). This
+  // will be the value when jumping to the exit block from the LoopMiddleBlock,
+  // when the scalar loop is not run at all.
+  Value *ExtractForPhiUsedOutsideLoop = nullptr;
+  if (VF > 1)
+    ExtractForPhiUsedOutsideLoop = Builder.CreateExtractElement(
+        Incoming, Builder.getInt32(VF - 2), "vector.recur.extract.for.phi");
+  // When loop is unrolled without vectorizing, initialize
+  // ExtractForPhiUsedOutsideLoop with the value just prior to unrolled value of
+  // `Incoming`. This is analogous to the vectorized case above: extracting the
+  // second last element when VF > 1.
+  else if (UF > 1)
+    ExtractForPhiUsedOutsideLoop = PreviousParts[UF - 2];
 
   // Fix the initial value of the original recurrence in the scalar loop.
   Builder.SetInsertPoint(&*LoopScalarPreHeader->begin());
   auto *Start = Builder.CreatePHI(Phi->getType(), 2, "scalar.recur.init");
   for (auto *BB : predecessors(LoopScalarPreHeader)) {
-    auto *Incoming = BB == LoopMiddleBlock ? Extract : ScalarInit;
+    auto *Incoming = BB == LoopMiddleBlock ? ExtractForScalar : ScalarInit;
     Start->addIncoming(Incoming, BB);
   }
 
@@ -4112,7 +4122,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
     if (!LCSSAPhi)
       break;
     if (LCSSAPhi->getIncomingValue(0) == Phi) {
-      LCSSAPhi->addIncoming(Extract, LoopMiddleBlock);
+      LCSSAPhi->addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
       break;
     }
   }
@@ -4190,7 +4200,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
     cast<PHINode>(VecRdxPhi[part])
       ->addIncoming(StartVal, LoopVectorPreHeader);
     cast<PHINode>(VecRdxPhi[part])
-      ->addIncoming(Val[part], LoopVectorBody);
+      ->addIncoming(Val[part], LI->getLoopFor(LoopVectorBody)->getLoopLatch());
   }
 
   // Before each round, move the insertion point right between
@@ -5049,11 +5059,10 @@ void InnerLoopVectorizer::updateAnalysis() {
   assert(DT->properlyDominates(LoopBypassBlocks.front(), LoopExitBlock) &&
          "Entry does not dominate exit.");
 
-  // We don't predicate stores by this point, so the vector body should be a
-  // single loop.
-  DT->addNewBlock(LoopVectorBody, LoopVectorPreHeader);
-
-  DT->addNewBlock(LoopMiddleBlock, LoopVectorBody);
+  DT->addNewBlock(LI->getLoopFor(LoopVectorBody)->getHeader(),
+                  LoopVectorPreHeader);
+  DT->addNewBlock(LoopMiddleBlock,
+                  LI->getLoopFor(LoopVectorBody)->getLoopLatch());
   DT->addNewBlock(LoopScalarPreHeader, LoopBypassBlocks[0]);
   DT->changeImmediateDominator(LoopScalarBody, LoopScalarPreHeader);
   DT->changeImmediateDominator(LoopExitBlock, LoopBypassBlocks[0]);

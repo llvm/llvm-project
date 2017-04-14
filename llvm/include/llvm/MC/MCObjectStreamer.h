@@ -98,7 +98,8 @@ public:
   void EmitSLEB128Value(const MCExpr *Value) override;
   void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo& STI) override;
+  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                       bool = false) override;
 
   /// \brief Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.

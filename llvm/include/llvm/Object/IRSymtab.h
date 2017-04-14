@@ -92,6 +92,7 @@ struct Symbol {
     FB_global,
     FB_format_specific,
     FB_unnamed_addr,
+    FB_executable,
   };
 
   /// The index into the Uncommon table, or -1 if this symbol does not have an
@@ -115,7 +116,7 @@ struct Header {
   Range<Symbol> Symbols;
   Range<Uncommon> Uncommons;
 
-  Str SourceFileName;
+  Str TargetTriple, SourceFileName;
 
   /// COFF-specific: linker directives.
   Str COFFLinkerOpts;
@@ -166,6 +167,7 @@ struct Symbol {
   bool isGlobal() const { return (Flags >> S::FB_global) & 1; }
   bool isFormatSpecific() const { return (Flags >> S::FB_format_specific) & 1; }
   bool isUnnamedAddr() const { return (Flags >> S::FB_unnamed_addr) & 1; }
+  bool isExecutable() const { return (Flags >> S::FB_executable) & 1; }
 
   uint64_t getCommonSize() const {
     assert(isCommon());
@@ -224,6 +226,8 @@ public:
   /// The symbols enumerated by this method are ephemeral, but they can be
   /// copied into an irsymtab::Symbol object.
   symbol_range module_symbols(unsigned I) const;
+
+  StringRef getTargetTriple() const { return str(header().TargetTriple); }
 
   /// Returns the source file path specified at compile time.
   StringRef getSourceFileName() const { return str(header().SourceFileName); }
