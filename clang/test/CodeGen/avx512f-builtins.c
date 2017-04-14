@@ -6251,7 +6251,7 @@ void test_mm512_stream_si512(__m512i * __P, __m512i __A) {
 
 __m512i test_mm512_stream_load_si512(void *__P) {
   // CHECK-LABEL: @test_mm512_stream_load_si512
-  // CHECK: @llvm.x86.avx512.movntdqa
+  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
   return _mm512_stream_load_si512(__P); 
 }
 

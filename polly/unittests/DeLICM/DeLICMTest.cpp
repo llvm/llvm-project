@@ -24,10 +24,11 @@ namespace {
 /// Get the universes of all spaces in @p USet.
 isl::union_set unionSpace(const isl::union_set &USet) {
   auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](isl::set Set) {
+  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
     auto Space = give(isl_set_get_space(Set.keep()));
     auto Universe = give(isl_set_universe(Space.take()));
     Result = give(isl_union_set_add_set(Result.take(), Universe.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -43,10 +44,11 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
 
     Known = isl::union_map::empty(ParamSpace);
     Occupied = OccupiedAndKnown.domain();
-    foreachElt(OccupiedAndKnown, [&Known](isl::map Map) {
+    OccupiedAndKnown.foreach_map([&Known](isl::map Map) -> isl::stat {
       if (isl_map_has_tuple_name(Map.keep(), isl_dim_out) != isl_bool_true)
-        return;
+        return isl::stat::ok;
       Known = give(isl_union_map_add_map(Known.take(), Map.take()));
+      return isl::stat::ok;
     });
   }
 

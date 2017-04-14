@@ -16,7 +16,7 @@
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone \
 // RUN:     -dwarf-ext-refs -fmodule-format=obj \
 // RUN:     -triple %itanium_abi_triple \
-// RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll %s
+// RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll
 // RUN: cat %t-pch.ll |  FileCheck %s
 // RUN: cat %t-pch.ll |  FileCheck %s --check-prefix=CHECK-PCH
 

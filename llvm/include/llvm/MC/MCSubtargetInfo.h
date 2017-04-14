@@ -64,6 +64,8 @@ public:
   MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
 
+  virtual ~MCSubtargetInfo() {}
+
   /// getTargetTriple - Return the target triple string.
   const Triple &getTargetTriple() const { return TargetTriple; }
 

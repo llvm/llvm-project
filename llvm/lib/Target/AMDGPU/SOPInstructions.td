@@ -434,7 +434,7 @@ def S_BFE_I64 : SOP2_64_32 <"s_bfe_i64">;
 
 def S_CBRANCH_G_FORK : SOP2_Pseudo <
   "s_cbranch_g_fork", (outs),
-  (ins SReg_64:$src0, SReg_64:$src1),
+  (ins SCSrc_b64:$src0, SCSrc_b64:$src1),
   "$src0, $src1"
 > {
   let has_sdst = 0;

@@ -1469,6 +1469,8 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   if (DI)
     DI->EmitLexicalBlockStart(Builder, S.getSourceRange().getBegin());
 
+  RunCleanupsScope ForScope(*this);
+
   // The local variable comes into scope immediately.
   AutoVarEmission variable = AutoVarEmission::invalid();
   if (const DeclStmt *SD = dyn_cast<DeclStmt>(S.getElement()))
@@ -1498,8 +1500,6 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
                                       llvm::APInt(32, NumItems),
                                       ArrayType::Normal, 0);
   Address ItemsPtr = CreateMemTemp(ItemsTy, "items.ptr");
-
-  RunCleanupsScope ForScope(*this);
 
   // Emit the collection pointer.  In ARC, we do a retain.
   llvm::Value *Collection;

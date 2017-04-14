@@ -3061,3 +3061,14 @@ define <8 x i64>@test_int_x86_avx512_mask_inserti64x4_512(<8 x i64> %x0, <4 x i6
   %res4 = add <8 x i64> %res2, %res3
   ret <8 x i64> %res4
 }
+
+define <8 x i64> @test_x86_avx512_movntdqa(i8* %a0) {
+; CHECK-LABEL: test_x86_avx512_movntdqa:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovntdqa (%rdi), %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.movntdqa(i8* %a0)
+  ret <8 x i64> %res
+}
+
+declare <8 x i64> @llvm.x86.avx512.movntdqa(i8*) nounwind readonly

@@ -7098,17 +7098,14 @@ let AddedComplexity = 400 in { // Prefer non-temporal versions
 let SchedRW = [WriteLoad] in {
 let Predicates = [HasAVX, NoVLX] in
 def VMOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
-                       "vmovntdqa\t{$src, $dst|$dst, $src}",
-                       [(set VR128:$dst, (int_x86_sse41_movntdqa addr:$src))]>,
+                       "vmovntdqa\t{$src, $dst|$dst, $src}", []>,
                        VEX, VEX_WIG;
 let Predicates = [HasAVX2, NoVLX] in
 def VMOVNTDQAYrm : SS48I<0x2A, MRMSrcMem, (outs VR256:$dst), (ins i256mem:$src),
-                         "vmovntdqa\t{$src, $dst|$dst, $src}",
-                         [(set VR256:$dst, (int_x86_avx2_movntdqa addr:$src))]>,
+                         "vmovntdqa\t{$src, $dst|$dst, $src}", []>,
                          VEX, VEX_L, VEX_WIG;
 def MOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
-                       "movntdqa\t{$src, $dst|$dst, $src}",
-                       [(set VR128:$dst, (int_x86_sse41_movntdqa addr:$src))]>;
+                       "movntdqa\t{$src, $dst|$dst, $src}", []>;
 } // SchedRW
 
 let Predicates = [HasAVX2, NoVLX] in {

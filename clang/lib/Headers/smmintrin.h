@@ -691,7 +691,7 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 static __inline__  __m128i __DEFAULT_FN_ATTRS
 _mm_stream_load_si128 (__m128i const *__V)
 {
-  return (__m128i) __builtin_ia32_movntdqa ((const __v2di *) __V);
+  return (__m128i) __builtin_nontemporal_load ((const __v2di *) __V);
 }
 
 /* SSE4 Packed Integer Min/Max Instructions.  */
