@@ -27,10 +27,10 @@ MATH_PRIVATE(lnep)(double2 a)
 
     // ln(2)*e + 2*x + x^3(c3 + x^2*p)
     double2 r = add(mul(con(0x1.62e42fefa39efp-1, 0x1.abc9e3b39803fp-56), (double)e),
-                    add(ldx(x,1),
-                        mul(mul(s, x), 
-                            add(con(0x1.5555555555555p-1,0x1.543b0d5df274dp-55),
-                                mul(s, p)))));
+                    fadd(ldx(x,1),
+                         mul(mul(s, x), 
+                             fadd(con(0x1.5555555555555p-1,0x1.543b0d5df274dp-55),
+                                  mul(s, p)))));
 
     return r.hi;
 }

@@ -7,62 +7,7 @@
 
 #include "mathF.h"
 
-/*
-   Algorithm:
-
-   Based on:
-   Ping-Tak Peter Tang
-   "Table-driven implementation of the logarithm function in IEEE
-   floating-point arithmetic"
-   ACM Transactions on Mathematical Software (TOMS)
-   Volume 16, Issue 4 (December 1990)
-
-
-   x very close to 1.0 is handled differently, for x everywhere else
-   a brief explanation is given below
-
-   x = (2^m)*A
-   x = (2^m)*(G+g) with (1 <= G < 2) and (g <= 2^(-8))
-   x = (2^m)*2*(G/2+g/2)
-   x = (2^m)*2*(F+f) with (0.5 <= F < 1) and (f <= 2^(-9))
-
-   Y = (2^(-1))*(2^(-m))*(2^m)*A
-   Now, range of Y is: 0.5 <= Y < 1
-
-   F = 0x80 + (first 7 mantissa bits) + (8th mantissa bit)
-   Now, range of F is: 128 <= F <= 256 
-   F = F / 256 
-   Now, range of F is: 0.5 <= F <= 1
-
-   f = -(Y-F), with (f <= 2^(-9))
-
-   log(x) = m*log(2) + log(2) + log(F-f)
-   log(x) = m*log(2) + log(2) + log(F) + log(1-(f/F))
-   log(x) = m*log(2) + log(2*F) + log(1-r)
-
-   r = (f/F), with (r <= 2^(-8))
-   r = f*(1/F) with (1/F) precomputed to avoid division
-
-   log(x) = m*log(2) + log(G) - poly
-
-   log(G) is precomputed
-   poly = (r + (r^2)/2 + (r^3)/3 + (r^4)/4) + (r^5)/5))
-
-   log(2) and log(G) need to be maintained in extra precision
-   to avoid losing precision in the calculations
-
-
-   For x close to 1.0, we employ the following technique to
-   ensure faster convergence.
-
-   log(x) = log((1+s)/(1-s)) = 2*s + (2/3)*s^3 + (2/5)*s^5 + (2/7)*s^7
-   x = ((1+s)/(1-s)) 
-   x = 1 + r
-   s = r/(2+r)
-
-*/
-
-INLINEATTR PUREATTR float
+INLINEATTR CONSTATTR float
 #if defined COMPILING_LOG2
 MATH_MANGLE(log2)(float x)
 #elif defined COMPILING_LOG10

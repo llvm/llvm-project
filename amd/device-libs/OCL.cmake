@@ -37,7 +37,7 @@ macro(clang_csources name dir)
       set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${rdir}/${fname}.c)
       add_custom_command(
         OUTPUT ${cfile}
-        COMMAND cp ${file} ${cfile}
+        COMMAND cp -f ${file} ${cfile}
         DEPENDS ${file}
       )
       list(APPEND csources ${cfile})
@@ -47,7 +47,7 @@ macro(clang_csources name dir)
       set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${rdir}/${fname}.o)
       add_custom_command(
         OUTPUT ${cfile}
-        COMMAND cp ${file} ${cfile}
+        COMMAND cp -f ${file} ${cfile}
         DEPENDS ${file}
       )
       list(APPEND csources ${cfile})

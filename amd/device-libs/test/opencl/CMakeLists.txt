@@ -5,7 +5,7 @@
 ## License. See LICENSE.TXT for details.
 ##===--------------------------------------------------------------------------
 
-include_directories(${CMAKE_SOURCE_DIR}/test/inc)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../inc)
 clang_opencl_test(test_common ${CMAKE_CURRENT_SOURCE_DIR})
 clang_opencl_test(test_math ${CMAKE_CURRENT_SOURCE_DIR})
 clang_opencl_test(test_workitem ${CMAKE_CURRENT_SOURCE_DIR})
