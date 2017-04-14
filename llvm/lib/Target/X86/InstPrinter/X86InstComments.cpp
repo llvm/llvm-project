@@ -1189,8 +1189,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     OS << ']';
     --i; // For loop increments element #.
   }
-  //MI->print(OS, 0);
-  OS << "\n";
 
   // We successfully added a comment to this instruction.
   return true;

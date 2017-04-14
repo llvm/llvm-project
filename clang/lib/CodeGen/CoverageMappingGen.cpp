@@ -961,11 +961,7 @@ struct CounterCoverageMappingBuilder
   }
 };
 
-bool isMachO(const CodeGenModule &CGM) {
-  return CGM.getTarget().getTriple().isOSBinFormatMachO();
-}
-
-StringRef getCoverageSection(const CodeGenModule &CGM) {
+std::string getCoverageSection(const CodeGenModule &CGM) {
   return llvm::getInstrProfCoverageSectionName(&CGM.getModule());
 }
 

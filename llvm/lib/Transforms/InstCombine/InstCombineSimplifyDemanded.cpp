@@ -571,7 +571,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       // If any of the "high bits" are demanded, we should set the sign bit as
       // demanded.
       if (DemandedMask.countLeadingZeros() <= ShiftAmt)
-        DemandedMaskIn.setBit(BitWidth-1);
+        DemandedMaskIn.setSignBit();
 
       // If the shift is exact, then it does demand the low bits (and knows that
       // they are zero).
@@ -629,12 +629,12 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         // If LHS is non-negative or has all low bits zero, then the upper bits
         // are all zero.
-        if (LHSKnownZero[BitWidth-1] || ((LHSKnownZero & LowBits) == LowBits))
+        if (LHSKnownZero.isNegative() || ((LHSKnownZero & LowBits) == LowBits))
           KnownZero |= ~LowBits;
 
         // If LHS is negative and not all low bits are zero, then the upper bits
         // are all one.
-        if (LHSKnownOne[BitWidth-1] && ((LHSKnownOne & LowBits) != 0))
+        if (LHSKnownOne.isNegative() && ((LHSKnownOne & LowBits) != 0))
           KnownOne |= ~LowBits;
 
         assert(!(KnownZero & KnownOne) && "Bits known to be one AND zero?");

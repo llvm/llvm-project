@@ -78,7 +78,7 @@ RecordStreamer::const_iterator RecordStreamer::end() { return Symbols.end(); }
 RecordStreamer::RecordStreamer(MCContext &Context) : MCStreamer(Context) {}
 
 void RecordStreamer::EmitInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
+                                     const MCSubtargetInfo &STI, bool) {
   MCStreamer::EmitInstruction(Inst, STI);
 }
 
