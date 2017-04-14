@@ -12,23 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h" 
+#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -648,15 +649,13 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
                                 : support::endianness::big;
 
   // Look for the sections that we are interested in.
-  // TODO: with the current getInstrProfXXXSectionName interfaces, the
-  // the coverage reader host tool is limited to read coverage section on
-  // binaries with compatible profile section naming scheme as the host
-  // platform. Currently, COFF format binaries have different section
-  // naming scheme from the all the rest.
-  auto NamesSection = lookupSection(*OF, getInstrProfNameSectionName());
+  bool IsCoff = (dyn_cast<COFFObjectFile>(OF.get()) != nullptr);
+  auto NamesSection =
+      lookupSection(*OF, getInstrProfNameSectionNameInObject(IsCoff));
   if (auto E = NamesSection.takeError())
     return E;
-  auto CoverageSection = lookupSection(*OF, getInstrProfCoverageSectionName());
+  auto CoverageSection =
+      lookupSection(*OF, getInstrProfCoverageSectionNameInObject(IsCoff));
   if (auto E = CoverageSection.takeError())
     return E;
 

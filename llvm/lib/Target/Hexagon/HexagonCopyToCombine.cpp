@@ -460,6 +460,8 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
 }
 
 bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
 
   if (IsCombinesDisabled) return false;
 

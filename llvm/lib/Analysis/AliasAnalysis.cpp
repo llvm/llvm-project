@@ -697,7 +697,7 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
 
 bool llvm::isNoAliasCall(const Value *V) {
   if (auto CS = ImmutableCallSite(V))
-    return CS.paramHasAttr(0, Attribute::NoAlias);
+    return CS.hasRetAttr(Attribute::NoAlias);
   return false;
 }
 

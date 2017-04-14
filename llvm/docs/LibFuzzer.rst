@@ -772,6 +772,8 @@ Trophies
 
 * Ffmpeg: `[1] <https://github.com/FFmpeg/FFmpeg/commit/c92f55847a3d9cd12db60bfcd0831ff7f089c37c>`__  `[2] <https://github.com/FFmpeg/FFmpeg/commit/25ab1a65f3acb5ec67b53fb7a2463a7368f1ad16>`__  `[3] <https://github.com/FFmpeg/FFmpeg/commit/85d23e5cbc9ad6835eef870a5b4247de78febe56>`__ `[4] <https://github.com/FFmpeg/FFmpeg/commit/04bd1b38ee6b8df410d0ab8d4949546b6c4af26a>`__
 
+* `Wireshark <https://bugs.wireshark.org/bugzilla/buglist.cgi?bug_status=UNCONFIRMED&bug_status=CONFIRMED&bug_status=IN_PROGRESS&bug_status=INCOMPLETE&bug_status=RESOLVED&bug_status=VERIFIED&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=content&f8=CP&f9=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&o7=matches&order=bug_id%20DESC&query_format=advanced&v2=libfuzzer&v3=libfuzzer&v4=libfuzzer&v5=libfuzzer&v6=libfuzzer&v7=%22libfuzzer%22>`_
+
 .. _pcre2: http://www.pcre.org/
 .. _AFL: http://lcamtuf.coredump.cx/afl/
 .. _Radamsa: https://github.com/aoh/radamsa

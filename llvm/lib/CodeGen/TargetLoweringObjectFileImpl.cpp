@@ -132,10 +132,8 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
   // section(".eh_frame") gcc will produce:
   //
   //   .section   .eh_frame,"a",@progbits
-  
-  // TODO: to support Win->ELF cross compilation with coverage properly,
-  // need to pass the module pointer to the following call.
-  if (Name == getInstrProfCoverageSectionName())
+
+  if (Name == getInstrProfCoverageSectionNameInObject(false /*not coff*/))
     return SectionKind::getMetadata();
 
   if (Name.empty() || Name[0] != '.') return K;

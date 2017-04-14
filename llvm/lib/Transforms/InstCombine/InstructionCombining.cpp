@@ -471,8 +471,7 @@ static Value *getIdentityValue(Instruction::BinaryOps Opcode, Value *V) {
 static Instruction::BinaryOps
 getBinOpsForFactorization(Instruction::BinaryOps TopLevelOpcode,
                           BinaryOperator *Op, Value *&LHS, Value *&RHS) {
-  if (!Op)
-    return Instruction::BinaryOpsEnd;
+  assert(Op && "Expected a binary operator");
 
   LHS = Op->getOperand(0);
   RHS = Op->getOperand(1);
@@ -502,11 +501,7 @@ static Value *tryFactorization(InstCombiner::BuilderTy *Builder,
                                const DataLayout &DL, BinaryOperator &I,
                                Instruction::BinaryOps InnerOpcode, Value *A,
                                Value *B, Value *C, Value *D) {
-
-  // If any of A, B, C, D are null, we can not factor I, return early.
-  // Checking A and C should be enough.
-  if (!A || !C || !B || !D)
-    return nullptr;
+  assert(A && B && C && D && "All values must be provided");
 
   Value *V = nullptr;
   Value *SimplifiedInst = nullptr;
@@ -600,31 +595,39 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
   BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS);
+  Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
 
-  // Factorization.
-  Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-  auto TopLevelOpcode = I.getOpcode();
-  auto LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
-  auto RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+  {
+    // Factorization.
+    Value *A, *B, *C, *D;
+    Instruction::BinaryOps LHSOpcode, RHSOpcode;
+    if (Op0)
+      LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+    if (Op1)
+      RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
 
-  // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
-  // a common term.
-  if (LHSOpcode == RHSOpcode) {
-    if (Value *V = tryFactorization(Builder, DL, I, LHSOpcode, A, B, C, D))
-      return V;
+    // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
+    // a common term.
+    if (Op0 && Op1 && LHSOpcode == RHSOpcode)
+      if (Value *V = tryFactorization(Builder, DL, I, LHSOpcode, A, B, C, D))
+        return V;
+
+    // The instruction has the form "(A op' B) op (C)".  Try to factorize common
+    // term.
+    if (Op0)
+      if (Value *Ident = getIdentityValue(LHSOpcode, RHS))
+        if (Value *V = tryFactorization(Builder, DL, I, LHSOpcode, A, B, RHS,
+                                        Ident))
+          return V;
+
+    // The instruction has the form "(B) op (C op' D)".  Try to factorize common
+    // term.
+    if (Op1)
+      if (Value *Ident = getIdentityValue(RHSOpcode, LHS))
+        if (Value *V = tryFactorization(Builder, DL, I, RHSOpcode, LHS, Ident,
+                                        C, D))
+          return V;
   }
-
-  // The instruction has the form "(A op' B) op (C)".  Try to factorize common
-  // term.
-  if (Value *V = tryFactorization(Builder, DL, I, LHSOpcode, A, B, RHS,
-                                  getIdentityValue(LHSOpcode, RHS)))
-    return V;
-
-  // The instruction has the form "(B) op (C op' D)".  Try to factorize common
-  // term.
-  if (Value *V = tryFactorization(Builder, DL, I, RHSOpcode, LHS,
-                                  getIdentityValue(RHSOpcode, LHS), C, D))
-    return V;
 
   // Expansion.
   if (Op0 && RightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {
@@ -836,8 +839,29 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
-Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
-  PHINode *PN = cast<PHINode>(I.getOperand(0));
+static Value *foldOperationIntoPhiValue(BinaryOperator *I, Value *InV,
+                                        InstCombiner *IC) {
+  bool ConstIsRHS = isa<Constant>(I->getOperand(1));
+  Constant *C = cast<Constant>(I->getOperand(ConstIsRHS));
+
+  if (auto *InC = dyn_cast<Constant>(InV)) {
+    if (ConstIsRHS)
+      return ConstantExpr::get(I->getOpcode(), InC, C);
+    return ConstantExpr::get(I->getOpcode(), C, InC);
+  }
+
+  Value *Op0 = InV, *Op1 = C;
+  if (!ConstIsRHS)
+    std::swap(Op0, Op1);
+
+  Value *RI = IC->Builder->CreateBinOp(I->getOpcode(), Op0, Op1, "phitmp");
+  auto *FPInst = dyn_cast<Instruction>(RI);
+  if (FPInst && isa<FPMathOperator>(FPInst))
+    FPInst->copyFastMathFlags(I);
+  return RI;
+}
+
+Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   unsigned NumPHIValues = PN->getNumIncomingValues();
   if (NumPHIValues == 0)
     return nullptr;
@@ -943,19 +967,9 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
                                   C, "phitmp");
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
-  } else if (I.getNumOperands() == 2) {
-    Constant *C = cast<Constant>(I.getOperand(1));
+  } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     for (unsigned i = 0; i != NumPHIValues; ++i) {
-      Value *InV = nullptr;
-      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i))) {
-        InV = ConstantExpr::get(I.getOpcode(), InC, C);
-      } else {
-        InV = Builder->CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
-                                   PN->getIncomingValue(i), C, "phitmp");
-        auto *FPInst = dyn_cast<Instruction>(InV);
-        if (FPInst && isa<FPMathOperator>(FPInst))
-          FPInst->copyFastMathFlags(&I);
-      }
+      Value *InV = foldOperationIntoPhiValue(BO, PN->getIncomingValue(i), this);
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   } else {
@@ -987,8 +1001,8 @@ Instruction *InstCombiner::foldOpWithConstantIntoOperand(BinaryOperator &I) {
   if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
     if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))
       return NewSel;
-  } else if (isa<PHINode>(I.getOperand(0))) {
-    if (Instruction *NewPhi = FoldOpIntoPhi(I))
+  } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
+    if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
       return NewPhi;
   }
   return nullptr;

@@ -186,7 +186,7 @@ public:
           IsNest(false), IsByVal(false), IsInAlloca(false), IsReturned(false),
           IsSwiftSelf(false), IsSwiftError(false) {}
 
-    void setAttributes(ImmutableCallSite *CS, unsigned AttrIdx);
+    void setAttributes(ImmutableCallSite *CS, unsigned ArgIdx);
   };
   typedef std::vector<ArgListEntry> ArgListTy;
 
@@ -2680,15 +2680,15 @@ public:
                                 ImmutableCallSite &Call) {
       RetTy = ResultType;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
           Call.doesNotReturn() ||
           (!Call.isInvoke() &&
            isa<UnreachableInst>(Call.getInstruction()->getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       Callee = Target;
 

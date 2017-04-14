@@ -1113,7 +1113,7 @@ static Error DebugACrash(BugDriver &BD,
       BD.EmitProgressBitcode(BD.getProgram(), "reduced-blocks");
   }
 
-  if (!DisableSimplifyCFG & !BugpointIsInterrupted) {
+  if (!DisableSimplifyCFG && !BugpointIsInterrupted) {
     std::vector<const BasicBlock *> Blocks;
     for (Function &F : *BD.getProgram())
       for (BasicBlock &BB : F)

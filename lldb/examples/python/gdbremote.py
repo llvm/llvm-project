@@ -322,6 +322,15 @@ def is_hex_byte(str):
         return str[0] in string.hexdigits and str[1] in string.hexdigits
     return False
 
+def get_hex_string_if_all_printable(str):
+    try:
+        s = binascii.unhexlify(str)
+        if all(c in string.printable for c in s):
+            return s
+    except TypeError:
+        pass
+    return None
+
 # global register info list
 g_register_infos = list()
 g_max_register_info_name_len = 0
@@ -638,6 +647,14 @@ def cmd_qSymbol(options, cmd, args):
             else:
                 print 'error: bad command format'
 
+def cmd_QSetWithHexString(options, cmd, args):
+    print '%s("%s")' % (cmd[:-1], binascii.unhexlify(args))
+
+def cmd_QSetWithString(options, cmd, args):
+    print '%s("%s")' % (cmd[:-1], args)
+
+def cmd_QSetWithUnsigned(options, cmd, args):
+    print '%s(%i)' % (cmd[:-1], int(args))
 
 def rsp_qSymbol(options, cmd, cmd_args, rsp):
     if len(rsp) == 0:
@@ -766,7 +783,11 @@ def dump_key_value_pairs(key_value_pairs):
     for key_value_pair in key_value_pairs:
         key = key_value_pair[0]
         value = key_value_pair[1]
-        print "%*s = %s" % (max_key_len, key, value)
+        unhex_value = get_hex_string_if_all_printable(value)
+        if unhex_value:
+            print "%*s = %s (%s)" % (max_key_len, key, value, unhex_value)
+        else:
+            print "%*s = %s" % (max_key_len, key, value)
 
 
 def rsp_dump_key_value_pairs(options, cmd, cmd_args, rsp):
@@ -910,26 +931,29 @@ def rsp_qThreadInfo(options, cmd, cmd_args, rsp):
 
 
 def rsp_hex_big_endian(options, cmd, cmd_args, rsp):
-    packet = Packet(rsp)
-    uval = packet.get_hex_uint('big')
-    print '%s: 0x%x' % (cmd, uval)
+    if rsp == '':
+        print "%s%s is not supported" % (cmd, cmd_args)
+    else:    
+        packet = Packet(rsp)
+        uval = packet.get_hex_uint('big')
+        print '%s: 0x%x' % (cmd, uval)
 
 
 def cmd_read_mem_bin(options, cmd, args):
     # x0x7fff5fc39200,0x200
     packet = Packet(args)
-    addr = packet.get_number()
+    addr = packet.get_hex_uint('big')
     comma = packet.get_char()
-    size = packet.get_number()
+    size = packet.get_hex_uint('big')
     print 'binary_read_memory (addr = 0x%16.16x, size = %u)' % (addr, size)
     return False
 
 
 def rsp_mem_bin_bytes(options, cmd, cmd_args, rsp):
     packet = Packet(cmd_args)
-    addr = packet.get_number()
+    addr = packet.get_hex_uint('big')
     comma = packet.get_char()
-    size = packet.get_number()
+    size = packet.get_hex_uint('big')
     print 'memory:'
     if size > 0:
         dump_hex_memory_buffer(addr, rsp)
@@ -1192,11 +1216,11 @@ gdb_remote_commands = {
     'QStartNoAckMode': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "query if no ack mode is supported"},
     'QThreadSuffixSupported': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "query if thread suffix is supported"},
     'QListThreadsInStopReply': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "query if threads in stop reply packets are supported"},
-    'QSetDetachOnError': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_success, 'name': "set if we should detach on error"},
-    'QSetDisableASLR': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_success, 'name': "set if we should disable ASLR"},
+    'QSetDetachOnError:': {'cmd': cmd_QSetWithUnsigned, 'rsp': rsp_ok_means_success, 'name': "set if we should detach on error"},
+    'QSetDisableASLR:': {'cmd': cmd_QSetWithUnsigned, 'rsp': rsp_ok_means_success, 'name': "set if we should disable ASLR"},
     'qLaunchSuccess': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_success, 'name': "check on launch success for the A packet"},
     'A': {'cmd': cmd_A, 'rsp': rsp_ok_means_success, 'name': "launch process"},
-    'QLaunchArch': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "set if we should disable ASLR"},
+    'QLaunchArch:': {'cmd': cmd_QSetWithString, 'rsp': rsp_ok_means_supported, 'name': "set the arch to launch in case the file contains multiple architectures"},
     'qVAttachOrWaitSupported': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "set the launch architecture"},
     'qHostInfo': {'cmd': cmd_query_packet, 'rsp': rsp_dump_key_value_pairs, 'name': "get host information"},
     'qC': {'cmd': cmd_qC, 'rsp': rsp_qC, 'name': "return the current thread ID"},
@@ -1213,6 +1237,11 @@ gdb_remote_commands = {
     'qSupported': {'cmd': cmd_query_packet, 'rsp': rsp_ok_means_supported, 'name': "query supported"},
     'qXfer:': {'cmd': cmd_qXfer, 'rsp': rsp_qXfer, 'name': "qXfer"},
     'qSymbol:': {'cmd': cmd_qSymbol, 'rsp': rsp_qSymbol, 'name': "qSymbol"},
+    'QSetSTDIN:' : {'cmd' : cmd_QSetWithHexString, 'rsp' : rsp_ok_means_success, 'name': "set STDIN prior to launching with A packet"},
+    'QSetSTDOUT:' : {'cmd' : cmd_QSetWithHexString, 'rsp' : rsp_ok_means_success, 'name': "set STDOUT prior to launching with A packet"},
+    'QSetSTDERR:' : {'cmd' : cmd_QSetWithHexString, 'rsp' : rsp_ok_means_success, 'name': "set STDERR prior to launching with A packet"},
+    'QEnvironment:' : {'cmd' : cmd_QSetWithString, 'rsp' : rsp_ok_means_success, 'name': "set an environment variable prior to launching with A packet"},
+    'QEnvironmentHexEncoded:' : {'cmd' : cmd_QSetWithHexString, 'rsp' : rsp_ok_means_success, 'name': "set an environment variable prior to launching with A packet"},
     'x': {'cmd': cmd_read_mem_bin, 'rsp': rsp_mem_bin_bytes, 'name': "read memory binary"},
     'X': {'cmd': cmd_write_memory, 'rsp': rsp_ok_means_success, 'name': "write memory binary"},
     'm': {'cmd': cmd_read_memory, 'rsp': rsp_memory_bytes, 'name': "read memory"},
@@ -1269,7 +1298,7 @@ def parse_gdb_log(file, options):
     packet_name_regex = re.compile('([A-Za-z_]+)[^a-z]')
     packet_transmit_name_regex = re.compile(
         '(?P<direction>send|read) packet: (?P<packet>.*)')
-    packet_contents_name_regex = re.compile('\$([^#]+)#[0-9a-fA-F]{2}')
+    packet_contents_name_regex = re.compile('\$([^#]*)#[0-9a-fA-F]{2}')
     packet_checksum_regex = re.compile('.*#[0-9a-fA-F]{2}$')
     packet_names_regex_str = '(' + \
         '|'.join(gdb_remote_commands.keys()) + ')(.*)'

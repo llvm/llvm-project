@@ -1118,6 +1118,12 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   if (D.hasAttr<AnnotateAttr>())
     EmitVarAnnotations(&D, address.getPointer());
 
+  // Make sure we call @llvm.lifetime.end.
+  if (emission.useLifetimeMarkers())
+    EHStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                         emission.getAllocatedAddress(),
+                                         emission.getSizeForLifetimeMarkers());
+
   return emission;
 }
 
@@ -1407,13 +1413,6 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   if (!HaveInsertPoint()) return;
 
   const VarDecl &D = *emission.Variable;
-
-  // Make sure we call @llvm.lifetime.end.  This needs to happen
-  // *last*, so the cleanup needs to be pushed *first*.
-  if (emission.useLifetimeMarkers())
-    EHStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
-                                         emission.getAllocatedAddress(),
-                                         emission.getSizeForLifetimeMarkers());
 
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.getType().isDestructedType())

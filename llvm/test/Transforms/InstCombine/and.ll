@@ -311,19 +311,6 @@ define <2 x i1> @test25vec(<2 x i32> %A) {
   ret <2 x i1> %D
 }
 
-define i1 @test26(i32 %A) {
-; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 %A, -49
-; CHECK-NEXT:    [[A_CMP:%.*]] = icmp ugt i32 [[A_OFF]], 1
-; CHECK-NEXT:    ret i1 [[A_CMP]]
-;
-  %B = icmp ne i32 %A, 49
-  %C = icmp ne i32 %A, 50
-  ;; (A-49) > 1
-  %D = and i1 %B, %C
-  ret i1 %D
-}
-
 define i8 @test27(i8 %A) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    ret i8 0

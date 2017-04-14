@@ -2638,7 +2638,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             " Shadow: " << *ArgShadow << "\n");
       bool ArgIsInitialized = false;
       const DataLayout &DL = F.getParent()->getDataLayout();
-      if (CS.paramHasAttr(i + 1, Attribute::ByVal)) {
+      if (CS.paramHasAttr(i, Attribute::ByVal)) {
         assert(A->getType()->isPointerTy() &&
                "ByVal argument is not a pointer!");
         Size = DL.getTypeAllocSize(A->getType()->getPointerElementType());
@@ -2976,7 +2976,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
       Value *A = *ArgIt;
       unsigned ArgNo = CS.getArgumentNo(ArgIt);
       bool IsFixed = ArgNo < CS.getFunctionType()->getNumParams();
-      bool IsByVal = CS.paramHasAttr(ArgNo + 1, Attribute::ByVal);
+      bool IsByVal = CS.paramHasAttr(ArgNo, Attribute::ByVal);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
         // Fixed arguments passed through the overflow area will be stepped
@@ -3497,7 +3497,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       Value *A = *ArgIt;
       unsigned ArgNo = CS.getArgumentNo(ArgIt);
       bool IsFixed = ArgNo < CS.getFunctionType()->getNumParams();
-      bool IsByVal = CS.paramHasAttr(ArgNo + 1, Attribute::ByVal);
+      bool IsByVal = CS.paramHasAttr(ArgNo, Attribute::ByVal);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = A->getType()->getPointerElementType();

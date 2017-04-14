@@ -183,7 +183,7 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
 
 static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
   ImmutableCallSite CS(LookThroughBitCast ? V->stripPointerCasts() : V);
-  return CS && CS.paramHasAttr(AttributeList::ReturnIndex, Attribute::NoAlias);
+  return CS && CS.hasRetAttr(Attribute::NoAlias);
 }
 
 

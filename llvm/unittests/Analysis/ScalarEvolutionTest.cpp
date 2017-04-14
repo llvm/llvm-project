@@ -602,5 +602,68 @@ TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
   EXPECT_NE(nullptr, SE.getSCEV(Mul1));
 }
 
+static Instruction &GetInstByName(Function &F, StringRef Name) {
+  for (auto &I : instructions(F))
+    if (I.getName() == Name)
+      return I;
+  llvm_unreachable("Could not find instructions!");
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "target datalayout = \"e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128\" "
+      " "
+      "@var_0 = external global i32, align 4"
+      "@var_1 = external global i32, align 4"
+      "@var_2 = external global i32, align 4"
+      " "
+      "declare i32 @unknown(i32, i32, i32)"
+      " "
+      "define void @f_1(i8* nocapture %arr, i32 %n, i32* %A, i32* %B) "
+      "    local_unnamed_addr { "
+      "entry: "
+      "  br label %loop.ph "
+      " "
+      "loop.ph: "
+      "  br label %loop "
+      " "
+      "loop: "
+      "  %iv0 = phi i32 [ %iv0.inc, %loop ], [ 0, %loop.ph ] "
+      "  %iv1 = phi i32 [ %iv1.inc, %loop ], [ -2147483648, %loop.ph ] "
+      "  %iv0.inc = add i32 %iv0, 1 "
+      "  %iv1.inc = add i32 %iv1, 3 "
+      "  br i1 undef, label %for.end.loopexit, label %loop "
+      " "
+      "for.end.loopexit: "
+      "  ret void "
+      "} "
+      ,
+      Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithFunctionAndSE(*M, "f_1", [&](Function &F, ScalarEvolution &SE) {
+    auto &I0 = GetInstByName(F, "iv0");
+    auto &I1 = *I0.getNextNode();
+
+    auto *S0 = cast<SCEVAddRecExpr>(SE.getSCEV(&I0));
+    PostIncLoopSet Loops;
+    Loops.insert(S0->getLoop());
+    auto *N0 = normalizeForPostIncUse(S0, Loops, SE);
+    auto *D0 = denormalizeForPostIncUse(N0, Loops, SE);
+    EXPECT_EQ(S0, D0) << *S0 << " " << *D0;
+
+    auto *S1 = cast<SCEVAddRecExpr>(SE.getSCEV(&I1));
+    Loops.clear();
+    Loops.insert(S1->getLoop());
+    auto *N1 = normalizeForPostIncUse(S1, Loops, SE);
+    auto *D1 = denormalizeForPostIncUse(N1, Loops, SE);
+    EXPECT_EQ(S1, D1) << *S1 << " " << *D1;
+  });
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

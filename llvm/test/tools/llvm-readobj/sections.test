@@ -494,45 +494,56 @@ MACHO-ARM-NEXT:  }
 MACHO-ARM-NEXT:]
 
 WASM: Sections [
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: TYPE (0x1)
-WASM-NEXT:     Size: 15
-WASM-NEXT:     Offset: 8
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: IMPORT (0x2)
-WASM-NEXT:     Size: 11
-WASM-NEXT:     Offset: 25
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: FUNCTION (0x3)
-WASM-NEXT:     Size: 3
-WASM-NEXT:     Offset: 38
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: TABLE (0x4)
-WASM-NEXT:     Size: 5
-WASM-NEXT:     Offset: 43
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: EXPORT (0x7)
-WASM-NEXT:     Size: 14
-WASM-NEXT:     Offset: 50
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: ELEM (0x9)
-WASM-NEXT:     Size: 7
-WASM-NEXT:     Offset: 66
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: CODE (0xA)
-WASM-NEXT:     Size: 42
-WASM-NEXT:     Offset: 75
-WASM-NEXT:   }
-WASM-NEXT:   Section {
-WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 60
-WASM-NEXT:     Offset: 119
-WASM-NEXT:     Name: name
-WASM-NEXT:   }
-WASM-NEXT: ]
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: TYPE (0x1)
+WASM-NEXT:    Size: 5
+WASM-NEXT:    Offset: 8
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: IMPORT (0x2)
+WASM-NEXT:    Size: 23
+WASM-NEXT:    Offset: 19
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: FUNCTION (0x3)
+WASM-NEXT:    Size: 2
+WASM-NEXT:    Offset: 48
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: TABLE (0x4)
+WASM-NEXT:    Size: 4
+WASM-NEXT:    Offset: 56
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: MEMORY (0x5)
+WASM-NEXT:    Size: 3
+WASM-NEXT:    Offset: 66
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: EXPORT (0x7)
+WASM-NEXT:    Size: 7
+WASM-NEXT:    Offset: 75
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: ELEM (0x9)
+WASM-NEXT:    Size: 7
+WASM-NEXT:    Offset: 88
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: CODE (0xA)
+WASM-NEXT:    Size: 61
+WASM-NEXT:    Offset: 101
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: CUSTOM (0x0)
+WASM-NEXT:    Size: 17
+WASM-NEXT:    Offset: 168
+WASM-NEXT:    Name: name
+WASM-NEXT:  }
+WASM-NEXT:  Section {
+WASM-NEXT:    Type: CUSTOM (0x0)
+WASM-NEXT:    Size: 24
+WASM-NEXT:    Offset: 191
+WASM-NEXT:    Name: reloc.CODE
+WASM-NEXT:  }
+WASM-NEXT:]

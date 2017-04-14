@@ -8931,7 +8931,7 @@ _mm512_stream_si512 (__m512i * __P, __m512i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_stream_load_si512 (void *__P)
 {
-  return __builtin_ia32_movntdqa512 ((__v8di *)__P);
+  return (__m512i) __builtin_nontemporal_load((const __v8di *)__P);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS

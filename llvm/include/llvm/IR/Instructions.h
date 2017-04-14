@@ -1708,8 +1708,11 @@ public:
     return hasFnAttrImpl(Kind);
   }
 
-  /// Determine whether the call or the callee has the given attributes.
-  bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
+  /// Determine whether the return value has the given attribute.
+  bool hasRetAttr(Attribute::AttrKind Kind) const;
+
+  /// Determine whether the argument or parameter has the given attribute.
+  bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
@@ -1848,7 +1851,7 @@ public:
       return false;
 
     // Be friendly and also check the callee.
-    return paramHasAttr(1, Attribute::StructRet);
+    return paramHasAttr(0, Attribute::StructRet);
   }
 
   /// Determine if any call argument is an aggregate passed by value.
@@ -3794,8 +3797,11 @@ public:
     return hasFnAttrImpl(Kind);
   }
 
-  /// Determine whether the call or the callee has the given attributes.
-  bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
+  /// Determine whether the return value has the given attribute.
+  bool hasRetAttr(Attribute::AttrKind Kind) const;
+
+  /// Determine whether the argument or parameter has the given attribute.
+  bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
@@ -3929,7 +3935,7 @@ public:
       return false;
 
     // Be friendly and also check the callee.
-    return paramHasAttr(1, Attribute::StructRet);
+    return paramHasAttr(0, Attribute::StructRet);
   }
 
   /// Determine if any call argument is an aggregate passed by value.

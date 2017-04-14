@@ -56,7 +56,7 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
   return Node.hasDefaultArgument() &&
          TypeMatcher.matches(Node.getDefaultArgument(), Finder, Builder);
 }
-}
+} // namespace
 
 void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
   // Forwarding references require C++11 or later.
@@ -123,7 +123,8 @@ void ForwardingReferenceOverloadCheck::check(
         (OtherCtor->isCopyConstructor() ? EnabledCopy : EnabledMove) = true;
     }
   }
-  bool Copy = !DisabledCopy || EnabledCopy, Move = !DisabledMove || EnabledMove;
+  bool Copy = (!EnabledMove && !DisabledMove && !DisabledCopy) || EnabledCopy;
+  bool Move = !DisabledMove || EnabledMove;
   if (!Copy && !Move)
     return;
   diag(Ctor->getLocation(),

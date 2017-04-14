@@ -357,9 +357,14 @@ public:
     CALLSITE_DELEGATE_GETTER(hasFnAttr(Kind));
   }
 
+  /// Return true if this return value has the given attribute.
+  bool hasRetAttr(Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(hasRetAttr(Kind));
+  }
+
   /// Return true if the call or the callee has the given attribute.
-  bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-    CALLSITE_DELEGATE_GETTER(paramHasAttr(i, Kind));
+  bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(paramHasAttr(ArgNo, Kind));
   }
 
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
@@ -554,24 +559,24 @@ public:
 
   /// Determine whether this argument is passed by value.
   bool isByValArgument(unsigned ArgNo) const {
-    return paramHasAttr(ArgNo + 1, Attribute::ByVal);
+    return paramHasAttr(ArgNo, Attribute::ByVal);
   }
 
   /// Determine whether this argument is passed in an alloca.
   bool isInAllocaArgument(unsigned ArgNo) const {
-    return paramHasAttr(ArgNo + 1, Attribute::InAlloca);
+    return paramHasAttr(ArgNo, Attribute::InAlloca);
   }
 
   /// Determine whether this argument is passed by value or in an alloca.
   bool isByValOrInAllocaArgument(unsigned ArgNo) const {
-    return paramHasAttr(ArgNo + 1, Attribute::ByVal) ||
-           paramHasAttr(ArgNo + 1, Attribute::InAlloca);
+    return paramHasAttr(ArgNo, Attribute::ByVal) ||
+           paramHasAttr(ArgNo, Attribute::InAlloca);
   }
 
   /// Determine if there are is an inalloca argument. Only the last argument can
   /// have the inalloca attribute.
   bool hasInAllocaArgument() const {
-    return paramHasAttr(arg_size(), Attribute::InAlloca);
+    return !arg_empty() && paramHasAttr(arg_size() - 1, Attribute::InAlloca);
   }
 
   bool doesNotAccessMemory(unsigned OpNo) const {
@@ -592,7 +597,7 @@ public:
   /// This may be because it has the nonnull attribute, or because at least
   /// one byte is dereferenceable and the pointer is in addrspace(0).
   bool isReturnNonNull() const {
-    if (paramHasAttr(0, Attribute::NonNull))
+    if (hasRetAttr(Attribute::NonNull))
       return true;
     else if (getDereferenceableBytes(0) > 0 &&
              getType()->getPointerAddressSpace() == 0)

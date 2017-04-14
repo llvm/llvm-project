@@ -2619,7 +2619,7 @@ void Verifier::verifyCallSite(CallSite CS) {
   // make sure the underlying alloca/parameter it comes from has a swifterror as
   // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
-    if (CS.paramHasAttr(i+1, Attribute::SwiftError)) {
+    if (CS.paramHasAttr(i, Attribute::SwiftError)) {
       Value *SwiftErrorArg = CS.getArgument(i);
       if (auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
         Assert(AI->isSwiftError(),
@@ -3114,7 +3114,7 @@ void Verifier::verifySwiftErrorCallSite(CallSite CS,
   for (CallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end();
        I != E; ++I, ++Idx) {
     if (*I == SwiftErrorVal) {
-      Assert(CS.paramHasAttr(Idx+1, Attribute::SwiftError),
+      Assert(CS.paramHasAttr(Idx, Attribute::SwiftError),
              "swifterror value when used in a callsite should be marked "
              "with swifterror attribute",
               SwiftErrorVal, CS);

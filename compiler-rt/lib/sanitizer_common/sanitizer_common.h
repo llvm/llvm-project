@@ -392,12 +392,16 @@ const int kMaxSummaryLength = 1024;
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
 // and pass it to __sanitizer_report_error_summary.
-void ReportErrorSummary(const char *error_message);
+// If alt_tool_name is provided, it's used in place of SanitizerToolName.
+void ReportErrorSummary(const char *error_message,
+                        const char *alt_tool_name = nullptr);
 // Same as above, but construct error_message as:
 //   error_type file:line[:column][ function]
-void ReportErrorSummary(const char *error_type, const AddressInfo &info);
+void ReportErrorSummary(const char *error_type, const AddressInfo &info,
+                        const char *alt_tool_name = nullptr);
 // Same as above, but obtains AddressInfo by symbolizing top stack trace frame.
-void ReportErrorSummary(const char *error_type, const StackTrace *trace);
+void ReportErrorSummary(const char *error_type, const StackTrace *trace,
+                        const char *alt_tool_name = nullptr);
 
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
