@@ -332,9 +332,6 @@ public:
 
   CompilerType GetNSErrorType(Error &error);
 
-  CompilerType
-  CreateProtocolCompositionType(const std::vector<CompilerType> &protocols);
-
   CompilerType CreateMetatypeType(CompilerType instance_type);
 
   CompilerType BindGenericType(CompilerType type,
