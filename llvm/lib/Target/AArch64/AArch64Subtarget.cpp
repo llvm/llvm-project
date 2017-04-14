@@ -59,6 +59,8 @@ void AArch64Subtarget::initializeProperties() {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
+    // Enable 64-bit vectorization in SLP.
+    MinVectorRegisterBitWidth = 64;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
