@@ -4756,24 +4756,6 @@ CompilerType SwiftASTContext::GetNSErrorType(Error &error) {
   return GetTypeFromMangledTypename(SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError").c_str(), error);
 }
 
-CompilerType SwiftASTContext::CreateProtocolCompositionType(
-    const std::vector<CompilerType> &protocols) {
-  VALID_OR_RETURN(CompilerType());
-
-  std::vector<swift::Type> protocol_types;
-  for (const auto &protocol : protocols) {
-    if (auto swift_type = GetSwiftType(protocol))
-      protocol_types.push_back(swift::Type(swift_type));
-    else
-      return CompilerType();
-  }
-  return CompilerType(
-      GetASTContext(),
-      swift::ProtocolCompositionType::get(
-          *GetASTContext(), llvm::ArrayRef<swift::Type>(protocol_types))
-          .getPointer());
-}
-
 CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
   VALID_OR_RETURN(CompilerType());
 
