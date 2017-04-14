@@ -73,6 +73,7 @@ protected:
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
+  unsigned MinVectorRegisterBitWidth = 128;
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
@@ -175,6 +176,10 @@ public:
   bool requiresStrictAlign() const { return StrictAlign; }
 
   bool isXRaySupported() const override { return true; }
+
+  unsigned getMinVectorRegisterBitWidth() const {
+    return MinVectorRegisterBitWidth;
+  }
 
   bool isX18Reserved() const { return ReserveX18; }
   bool hasFPARMv8() const { return HasFPARMv8; }
