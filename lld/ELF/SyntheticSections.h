@@ -63,7 +63,6 @@ struct CieRecord {
 
 // Section for .eh_frame.
 template <class ELFT> class EhFrameSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
@@ -97,7 +96,7 @@ private:
   template <class RelTy>
   bool isFdeLive(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
 
-  uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
+  uint64_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
   std::vector<CieRecord *> Cies;
 
@@ -106,8 +105,6 @@ private:
 };
 
 template <class ELFT> class GotSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
   GotSection();
   void writeTo(uint8_t *Buf) override;
@@ -118,10 +115,10 @@ public:
   void addEntry(SymbolBody &Sym);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  uintX_t getGlobalDynAddr(const SymbolBody &B) const;
-  uintX_t getGlobalDynOffset(const SymbolBody &B) const;
+  uint64_t getGlobalDynAddr(const SymbolBody &B) const;
+  uint64_t getGlobalDynOffset(const SymbolBody &B) const;
 
-  uintX_t getTlsIndexVA() { return this->getVA() + TlsIndexOff; }
+  uint64_t getTlsIndexVA() { return this->getVA() + TlsIndexOff; }
   uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
   // Flag to force GOT to be in output if we have relocations
@@ -131,7 +128,7 @@ public:
 private:
   size_t NumEntries = 0;
   uint32_t TlsIndexOff = -1;
-  uintX_t Size = 0;
+  uint64_t Size = 0;
 };
 
 // .note.gnu.build-id section.
@@ -341,7 +338,6 @@ template <class ELFT> class DynamicSection final : public SyntheticSection {
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
 
   // The .dynamic section contains information for the dynamic linker.
   // The section consists of fixed size entries, which consist of
@@ -377,13 +373,12 @@ public:
 private:
   void addEntries();
   void add(Entry E) { Entries.push_back(E); }
-  uintX_t Size = 0;
+  uint64_t Size = 0;
 };
 
 template <class ELFT> class RelocationSection final : public SyntheticSection {
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::uint uintX_t;
 
 public:
   RelocationSection(StringRef Name, bool Sort);
@@ -409,7 +404,6 @@ struct SymbolTableEntry {
 template <class ELFT> class SymbolTableSection final : public SyntheticSection {
 public:
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
 
   SymbolTableSection(StringTableSection &StrTabSec);
 
@@ -545,8 +539,6 @@ private:
 // http://www.airs.com/blog/archives/460 (".eh_frame")
 // http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
 template <class ELFT> class EhFrameHeader final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
   EhFrameHeader();
   void writeTo(uint8_t *Buf) override;

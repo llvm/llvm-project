@@ -950,7 +950,7 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   if (const MemRegion *region = lhs.getAsRegion()) {
     rhs = convertToArrayIndex(rhs).castAs<NonLoc>();
     SVal index = UnknownVal();
-    const MemRegion *superR = nullptr;
+    const SubRegion *superR = nullptr;
     // We need to know the type of the pointer in order to add an integer to it.
     // Depending on the type, different amount of bytes is added.
     QualType elementType;
@@ -959,13 +959,13 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       assert(op == BO_Add || op == BO_Sub);
       index = evalBinOpNN(state, op, elemReg->getIndex(), rhs,
                           getArrayIndexType());
-      superR = elemReg->getSuperRegion();
+      superR = cast<SubRegion>(elemReg->getSuperRegion());
       elementType = elemReg->getElementType();
     }
     else if (isa<SubRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
       index = (op == BO_Add) ? rhs : evalMinus(rhs);
-      superR = region;
+      superR = cast<SubRegion>(region);
       // TODO: Is this actually reliable? Maybe improving our MemRegion
       // hierarchy to provide typed regions for all non-void pointers would be
       // better. For instance, we cannot extend this towards LocAsInteger

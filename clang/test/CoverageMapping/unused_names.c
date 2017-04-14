@@ -3,7 +3,7 @@
 // RUN: FileCheck -check-prefix=SYSHEADER -input-file %t %s
 
 // CHECK-DAG: @__profc_bar
-// CHECK-DAG: @__llvm_prf_nm = private constant {{.*}}, section "{{.*}}__llvm_prf_names"
+// CHECK-DAG: @__llvm_prf_nm = private constant {{.*}}, section "{{.*__llvm_prf_names|.*lprfn}}"
 
 // These are never instantiated, so we shouldn't get counters for them.
 //

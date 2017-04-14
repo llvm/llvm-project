@@ -160,7 +160,7 @@ public:
   /// valid only if Failed flag is set to false.
   SVal attemptDownCast(SVal Base, QualType DerivedPtrType, bool &Failed);
 
-  const ElementRegion *GetElementZeroRegion(const MemRegion *R, QualType T);
+  const ElementRegion *GetElementZeroRegion(const SubRegion *R, QualType T);
 
   /// castRegion - Used by ExprEngine::VisitCast to handle casts from
   ///  a MemRegion* to a specific location type.  'R' is the region being
@@ -259,8 +259,9 @@ public:
   virtual void iterBindings(Store store, BindingsHandler& f) = 0;
 
 protected:
-  const MemRegion *MakeElementRegion(const MemRegion *baseRegion,
-                                     QualType pointeeTy, uint64_t index = 0);
+  const ElementRegion *MakeElementRegion(const SubRegion *baseRegion,
+                                         QualType pointeeTy,
+                                         uint64_t index = 0);
 
   /// CastRetrievedVal - Used by subclasses of StoreManager to implement
   ///  implicit casts that arise from loads from regions that are reinterpreted

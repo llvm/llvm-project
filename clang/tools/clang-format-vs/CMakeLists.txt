@@ -6,11 +6,6 @@ if (BUILD_CLANG_FORMAT_VS_PLUGIN)
       "${CMAKE_CURRENT_SOURCE_DIR}/ClangFormat/clang-format.exe"
       DEPENDS clang-format)
 
-  add_custom_target(clang_format_license
-      ${CMAKE_COMMAND} -E copy_if_different
-      "${CLANG_SOURCE_DIR}/LICENSE.TXT"
-      "${CMAKE_CURRENT_SOURCE_DIR}/ClangFormat/license.txt")
-
   # Build number added to Clang version to ensure that new VSIX can be upgraded
   string(TIMESTAMP CLANG_FORMAT_VSIX_BUILD %y%m%d%H%M UTC)
 
@@ -34,5 +29,5 @@ if (BUILD_CLANG_FORMAT_VS_PLUGIN)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${CMAKE_CURRENT_SOURCE_DIR}/ClangFormat/bin/Release/ClangFormat.vsix"
       "${LLVM_TOOLS_BINARY_DIR}/ClangFormat.vsix"
-      DEPENDS clang_format_exe_for_vsix clang_format_license)
+      DEPENDS clang_format_exe_for_vsix)
 endif()
