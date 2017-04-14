@@ -5695,7 +5695,7 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
       swift::ProtocolCompositionType *t =
           swift_can_type->getAs<swift::ProtocolCompositionType>();
       protocol_info.m_is_class_only = t->requiresClass();
-      protocol_info.m_num_protocols = t->getProtocols().size();
+      protocol_info.m_num_protocols = t->getMembers().size();
       protocol_info.m_num_payload_words = 3;
       protocol_info.m_is_objc = false;
       protocol_info.m_is_errortype = false;
