@@ -79,16 +79,16 @@ static void MaybeReportErrorSummary(Location Loc, ErrorType Type) {
       AI.line = SLoc.getLine();
       AI.column = SLoc.getColumn();
       AI.function = internal_strdup("");  // Avoid printing ?? as function name.
-      ReportErrorSummary(ErrorKind, AI);
+      ReportErrorSummary(ErrorKind, AI, GetSanititizerToolName());
       AI.Clear();
       return;
     }
   } else if (Loc.isSymbolizedStack()) {
     const AddressInfo &AI = Loc.getSymbolizedStack()->info;
-    ReportErrorSummary(ErrorKind, AI);
+    ReportErrorSummary(ErrorKind, AI, GetSanititizerToolName());
     return;
   }
-  ReportErrorSummary(ErrorKind);
+  ReportErrorSummary(ErrorKind, GetSanititizerToolName());
 }
 
 namespace {
