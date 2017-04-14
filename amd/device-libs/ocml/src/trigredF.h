@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define SMALL_BOUND 0x1.921eecp+16f
+#define SMALL_BOUND 0x1.0p+17f
 
 #if defined EXTRA_PRECISION
 extern int MATH_PRIVATE(trigredsmall)(__private float *r, __private float *rr, float x);
