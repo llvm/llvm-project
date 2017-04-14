@@ -238,7 +238,7 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
 }
 
 void MCObjectStreamer::EmitInstruction(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
+                                       const MCSubtargetInfo &STI, bool) {
   MCStreamer::EmitInstruction(Inst, STI);
 
   MCSection *Sec = getCurrentSectionOnly();

@@ -88,18 +88,6 @@ class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
   let has_vdst = 0;
 }
 
-class DS_1A_Off8_NORET<string opName> : DS_Pseudo<opName,
-  (outs),
-  (ins VGPR_32:$addr, offset0:$offset0, offset1:$offset1, gds:$gds),
-  "$addr $offset0$offset1$gds"> {
-
-  let has_data0 = 0;
-  let has_data1 = 0;
-  let has_vdst  = 0;
-  let has_offset = 0;
-  let AsmMatchConverter = "cvtDSOffset01";
-}
-
 class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
@@ -450,8 +438,8 @@ def DS_XOR_SRC2_B64   : DS_1A<"ds_xor_src2_b64">;
 def DS_MIN_SRC2_F64   : DS_1A<"ds_min_src2_f64">;
 def DS_MAX_SRC2_F64   : DS_1A<"ds_max_src2_f64">;
 
-def DS_WRITE_SRC2_B32 : DS_1A_Off8_NORET<"ds_write_src2_b32">;
-def DS_WRITE_SRC2_B64 : DS_1A_Off8_NORET<"ds_write_src2_b64">;
+def DS_WRITE_SRC2_B32 : DS_1A<"ds_write_src2_b32">;
+def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
 
 let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
 def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32">;

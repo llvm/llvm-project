@@ -123,6 +123,10 @@ static const char *const CodeViewLineTablesGroupDescription =
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
+static cl::opt<bool>
+    PrintSchedule("print-schedule", cl::Hidden, cl::init(false),
+                  cl::desc("Print 'sched: [latency:throughput]' in .s output"));
+
 char AsmPrinter::ID = 0;
 
 typedef DenseMap<GCStrategy*, std::unique_ptr<GCMetadataPrinter>> gcp_map_type;
@@ -720,7 +724,8 @@ void AsmPrinter::EmitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
+static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
+                         AsmPrinter *AP) {
   const MachineFunction *MF = MI.getParent()->getParent();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
@@ -728,6 +733,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   int FI;
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
+  bool Commented = false;
 
   // We assume a single instruction only has a spill or reload, not
   // both.
@@ -735,24 +741,39 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Reload\n";
+      CommentOS << MMO->getSize() << "-byte Reload";
+      Commented = true;
     }
   } else if (TII->hasLoadFromStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI))
-      CommentOS << MMO->getSize() << "-byte Folded Reload\n";
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      CommentOS << MMO->getSize() << "-byte Folded Reload";
+      Commented = true;
+    }
   } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Spill\n";
+      CommentOS << MMO->getSize() << "-byte Spill";
+      Commented = true;
     }
   } else if (TII->hasStoreToStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI))
-      CommentOS << MMO->getSize() << "-byte Folded Spill\n";
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      CommentOS << MMO->getSize() << "-byte Folded Spill";
+      Commented = true;
+    }
   }
 
   // Check for spill-induced copies
-  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
-    CommentOS << " Reload Reuse\n";
+  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse)) {
+    Commented = true;
+    CommentOS << " Reload Reuse";
+  }
+
+  if (Commented && AP->EnablePrintSchedInfo)
+    // If any comment was added above and we need sched info comment then
+    // add this new comment just after the above comment w/o "\n" between them.
+    CommentOS << " " << MF->getSubtarget().getSchedInfoStr(MI) << "\n";
+  else if (Commented)
+    CommentOS << "\n";
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -966,7 +987,7 @@ void AsmPrinter::EmitFunctionBody() {
       }
 
       if (isVerbose())
-        emitComments(MI, OutStreamer->GetCommentOS());
+        emitComments(MI, OutStreamer->GetCommentOS(), this);
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
@@ -1383,6 +1404,11 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   if (isVerbose())
     LI = &getAnalysis<MachineLoopInfo>();
+
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  EnablePrintSchedInfo = PrintSchedule.getNumOccurrences()
+                             ? PrintSchedule
+                             : STI.supportPrintSchedInfo();
 }
 
 namespace {

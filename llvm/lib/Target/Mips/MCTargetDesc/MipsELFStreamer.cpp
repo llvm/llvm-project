@@ -20,7 +20,7 @@
 using namespace llvm;
 
 void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
-                                      const MCSubtargetInfo &STI) {
+                                      const MCSubtargetInfo &STI, bool) {
   MCELFStreamer::EmitInstruction(Inst, STI);
 
   MCContext &Context = getContext();
