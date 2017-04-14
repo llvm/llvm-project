@@ -117,6 +117,50 @@ static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
   return true;
 }
 
+/// IVUseShouldUsePostIncValue - We have discovered a "User" of an IV expression
+/// and now we need to decide whether the user should use the preinc or post-inc
+/// value.  If this user should use the post-inc version of the IV, return true.
+///
+/// Choosing wrong here can break dominance properties (if we choose to use the
+/// post-inc value when we cannot) or it can end up adding extra live-ranges to
+/// the loop, resulting in reg-reg copies (if we use the pre-inc value when we
+/// should use the post-inc value).
+static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
+                                       const Loop *L, DominatorTree *DT) {
+  // If the user is in the loop, use the preinc value.
+  if (L->contains(User))
+    return false;
+
+  BasicBlock *LatchBlock = L->getLoopLatch();
+  if (!LatchBlock)
+    return false;
+
+  // Ok, the user is outside of the loop.  If it is dominated by the latch
+  // block, use the post-inc value.
+  if (DT->dominates(LatchBlock, User->getParent()))
+    return true;
+
+  // There is one case we have to be careful of: PHI nodes.  These little guys
+  // can live in blocks that are not dominated by the latch block, but (since
+  // their uses occur in the predecessor block, not the block the PHI lives in)
+  // should still use the post-inc value.  Check for this case now.
+  PHINode *PN = dyn_cast<PHINode>(User);
+  if (!PN || !Operand)
+    return false; // not a phi, not dominated by latch block.
+
+  // Look at all of the uses of Operand by the PHI node.  If any use corresponds
+  // to a block that is not dominated by the latch block, give up and use the
+  // preincremented value.
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+    if (PN->getIncomingValue(i) == Operand &&
+        !DT->dominates(LatchBlock, PN->getIncomingBlock(i)))
+      return false;
+
+  // Okay, all uses of Operand by PN are in predecessor blocks that really are
+  // dominated by the latch block.  Use the post-incremented value.
+  return true;
+}
+
 /// AddUsersImpl - Inspect the specified instruction.  If it is a
 /// reducible SCEV, recursively add its users to the IVUsesByStride set and
 /// return true.  Otherwise, return false.
@@ -207,10 +251,26 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       // The regular return value here is discarded; instead of recording
       // it, we just recompute it when we need it.
       const SCEV *OriginalISE = ISE;
-      ISE = TransformForPostIncUse(NormalizeAutodetect,
-                                   ISE, User, I,
-                                   NewUse.PostIncLoops,
-                                   *SE, *DT);
+
+      auto NormalizePred = [&](const SCEVAddRecExpr *AR) {
+        // We only allow affine AddRecs to be normalized, otherwise we would not
+        // be able to correctly denormalize.
+        // e.g. {1,+,3,+,2} == {-2,+,1,+,2} + {3,+,2}
+        // Normalized form:   {-2,+,1,+,2}
+        // Denormalized form: {1,+,3,+,2}
+        //
+        // However, denormalization would use a different step expression than
+        // normalization (see getPostIncExpr), generating the wrong final
+        // expression: {-2,+,1,+,2} + {1,+,2} => {-1,+,3,+,2}
+        auto *L = AR->getLoop();
+        bool Result =
+            AR->isAffine() && IVUseShouldUsePostIncValue(User, I, L, DT);
+        if (Result)
+          NewUse.PostIncLoops.insert(L);
+        return Result;
+      };
+
+      ISE = normalizeForPostIncUseIf(ISE, NormalizePred, *SE);
 
       // PostIncNormalization effectively simplifies the expression under
       // pre-increment assumptions. Those assumptions (no wrapping) might not
@@ -218,8 +278,7 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       // transformation is invertible.
       if (OriginalISE != ISE) {
         const SCEV *DenormalizedISE =
-          TransformForPostIncUse(Denormalize, ISE, User, I,
-              NewUse.PostIncLoops, *SE, *DT);
+            denormalizeForPostIncUse(ISE, NewUse.PostIncLoops, *SE);
 
         // If we normalized the expression, but denormalization doesn't give the
         // original one, discard this user.
@@ -337,11 +396,8 @@ const SCEV *IVUsers::getReplacementExpr(const IVStrideUse &IU) const {
 
 /// getExpr - Return the expression for the use.
 const SCEV *IVUsers::getExpr(const IVStrideUse &IU) const {
-  return
-    TransformForPostIncUse(Normalize, getReplacementExpr(IU),
-                           IU.getUser(), IU.getOperandValToReplace(),
-                           const_cast<PostIncLoopSet &>(IU.getPostIncLoops()),
-                           *SE, *DT);
+  return normalizeForPostIncUse(getReplacementExpr(IU), IU.getPostIncLoops(),
+                                *SE);
 }
 
 static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {

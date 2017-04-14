@@ -12245,18 +12245,19 @@ void DAGCombiner::getStoreMergeCandidates(
       if (!(MemVT.isInteger() && MemVT.bitsEq(Other->getMemoryVT()) &&
             isa<ConstantFPSDNode>(Other->getValue())))
         return false;
-    Ptr = BaseIndexOffset::match(Other->getBasePtr(), DAG);
-    if (!Ptr.equalBaseIndex(BasePtr))
-      return false;
     if (IsLoadSrc)
-      return isa<LoadSDNode>(Other->getValue());
+      if (!isa<LoadSDNode>(Other->getValue()))
+        return false;
     if (IsConstantSrc)
-      return (isa<ConstantSDNode>(Other->getValue()) ||
-              isa<ConstantFPSDNode>(Other->getValue()));
+      if (!(isa<ConstantSDNode>(Other->getValue()) ||
+            isa<ConstantFPSDNode>(Other->getValue())))
+        return false;
     if (IsExtractVecSrc)
-      return (Other->getValue().getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-              Other->getValue().getOpcode() == ISD::EXTRACT_SUBVECTOR);
-    return false;
+      if (!(Other->getValue().getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+            Other->getValue().getOpcode() == ISD::EXTRACT_SUBVECTOR))
+        return false;
+    Ptr = BaseIndexOffset::match(Other->getBasePtr(), DAG);
+    return (Ptr.equalBaseIndex(BasePtr));
   };
   // We looking for a root node which is an ancestor to all mergable
   // stores. We search up through a load, to our root and then down
@@ -12276,23 +12277,25 @@ void DAGCombiner::getStoreMergeCandidates(
 
   SDNode *RootNode = (St->getChain()).getNode();
 
-  auto FindInNode = [&](SDNode *P) {
-    for (auto I = P->use_begin(), E = P->use_end(); I != E; ++I)
+  if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
+    RootNode = Ldn->getChain().getNode();
+    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
+      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) // walk down chain
+        for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
+          if (I2.getOperandNo() == 0)
+            if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I2)) {
+              BaseIndexOffset Ptr;
+              if (CandidateMatch(OtherST, Ptr))
+                StoreNodes.push_back(MemOpLink(OtherST, Ptr.Offset));
+            }
+  } else
+    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
       if (I.getOperandNo() == 0)
         if (StoreSDNode *OtherST = dyn_cast<StoreSDNode>(*I)) {
           BaseIndexOffset Ptr;
           if (CandidateMatch(OtherST, Ptr))
             StoreNodes.push_back(MemOpLink(OtherST, Ptr.Offset));
         }
-  };
-
-  if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
-    RootNode = Ldn->getChain().getNode();
-    for (auto I = RootNode->use_begin(), E = RootNode->use_end(); I != E; ++I)
-      if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) // walk down chain
-        FindInNode(*I);
-  } else
-    FindInNode(RootNode);
 }
 
 // We need to check that merging these stores does not cause a loop

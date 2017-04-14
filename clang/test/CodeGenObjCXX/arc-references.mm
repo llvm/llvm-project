@@ -21,7 +21,7 @@ void test0() {
   // CHECK: call void @_Z6calleev
   callee();
   // CHECK: call void @objc_release
-  // CHECK-NEXT: ret
+  // CHECK: ret
 }
 
 // No lifetime extension when we're binding a reference to an lvalue.
@@ -44,9 +44,9 @@ void test3() {
   const __weak id &ref = strong_id();
   // CHECK-NEXT: call void @_Z6calleev()
   callee();
+  // CHECK-NEXT: call void @objc_destroyWeak
   // CHECK-NEXT: [[PTR:%.*]] = bitcast i8*** [[REF]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTR]])
-  // CHECK-NEXT: call void @objc_destroyWeak
   // CHECK-NEXT: ret void
 }
 

@@ -63,10 +63,20 @@ std::string getInstrProfCountersSectionName(const Module *M = nullptr);
 /// the host machine, nor will segment prefix be added.
 std::string getInstrProfNameSectionName(const Module *M = nullptr);
 
+/// Similar to the above, but used by host tool (e.g, coverage) which has
+/// object format information. The section name returned is not prefixed
+/// with segment name.
+std::string getInstrProfNameSectionNameInObject(bool isCoff);
+
 /// Return the name of the data section containing per-function control
 /// data. If M is null, the target platform is assumed to be the same as
 /// the host machine, and the segment prefix will not be added.
 std::string getInstrProfDataSectionName(const Module *M = nullptr);
+
+/// Similar to the above, but used by host tool (e.g, coverage) which has
+/// object format information. The section name returned is not prefixed
+/// with segment name.
+std::string getInstrProfDataSectionNameInObject(bool isCoff);
 
 /// Return the name of data section containing pointers to value profile
 /// counters/nodes. If M is null, the target platform is assumed to be
@@ -92,6 +102,10 @@ inline StringRef getInstrProfValueRangeProfFuncName() {
 /// Return the name of the section containing function coverage mapping
 /// data.
 std::string getInstrProfCoverageSectionName(const Module *M = nullptr);
+/// Similar to the above, but used by host tool (e.g, coverage) which has
+/// object format information. The section name returned is not prefixed
+/// with segment name.
+std::string getInstrProfCoverageSectionNameInObject(bool isCoff);
 
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }

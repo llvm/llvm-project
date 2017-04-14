@@ -219,7 +219,7 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   assert(F && "Bad assembly?");
 
   auto &BB = F->getEntryBlock();
-  ArrayRef<bool> ExpectedAnswers = {
+  bool ExpectedAnswers[] = {
       true,  // call void @nounwind_readonly(i32* %p)
       true,  // call void @nounwind_argmemonly(i32* %p)
       false, // call void @throws_but_readonly(i32* %p)

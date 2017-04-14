@@ -173,8 +173,11 @@ const char *InstrProfSectNamePrefix[] = {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
-std::string getInstrProfSectionName(const Module *M, InstrProfSectKind Kind) {
+std::string getInstrProfSectionName(bool isCoff, InstrProfSectKind Kind) {
+  return isCoff ? InstrProfSectNameCoff[Kind] : InstrProfSectNameCommon[Kind];
+}
 
+std::string getInstrProfSectionName(const Module *M, InstrProfSectKind Kind) {
   if (!M)
     return InstrProfSectName[Kind];
 
@@ -206,8 +209,16 @@ std::string getInstrProfNameSectionName(const Module *M) {
   return getInstrProfSectionName(M, IPSK_name);
 }
 
+std::string getInstrProfNameSectionNameInObject(bool isCoff) {
+  return getInstrProfSectionName(isCoff, IPSK_name);
+}
+
 std::string getInstrProfDataSectionName(const Module *M) {
   return getInstrProfSectionName(M, IPSK_data);
+}
+
+std::string getInstrProfDataSectionNameInObject(bool isCoff) {
+  return getInstrProfSectionName(isCoff, IPSK_data);
 }
 
 std::string getInstrProfValuesSectionName(const Module *M) {
@@ -220,6 +231,10 @@ std::string getInstrProfVNodesSectionName(const Module *M) {
 
 std::string getInstrProfCoverageSectionName(const Module *M) {
   return getInstrProfSectionName(M, IPSK_covmap);
+}
+
+std::string getInstrProfCoverageSectionNameInObject(bool isCoff) {
+  return getInstrProfSectionName(isCoff, IPSK_covmap);
 }
 
 void SoftInstrProfErrors::addError(instrprof_error IE) {

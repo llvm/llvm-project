@@ -913,10 +913,11 @@ void DataFlowGraph::build(unsigned Options) {
   }
 
   // Add function-entry phi nodes for the live-in registers.
-  for (std::pair<RegisterId,LaneBitmask> P : LiveIns) {
+  //for (std::pair<RegisterId,LaneBitmask> P : LiveIns) {
+  for (auto I = LiveIns.rr_begin(), E = LiveIns.rr_end(); I != E; ++I) {
+    RegisterRef RR = *I;
     NodeAddr<PhiNode*> PA = newPhi(EA);
     uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
-    RegisterRef RR(P.first, P.second);
     NodeAddr<DefNode*> DA = newDef(PA, RR, PhiFlags);
     PA.Addr->addMember(DA, *this);
   }
@@ -993,9 +994,9 @@ RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
     return M.any() ? RegisterRef(AR.Reg, M) : RegisterRef();
   }
 #ifndef NDEBUG
-  RegisterRef NAR = PRI.normalize(AR);
-  RegisterRef NBR = PRI.normalize(BR);
-  assert(NAR.Reg != NBR.Reg);
+//  RegisterRef NAR = PRI.normalize(AR);
+//  RegisterRef NBR = PRI.normalize(BR);
+//  assert(NAR.Reg != NBR.Reg);
 #endif
   // This isn't strictly correct, because the overlap may happen in the
   // part masked out.

@@ -557,7 +557,7 @@ void llvm::thinLTOResolveWeakForLinkerModule(
       // need to add support here for creating either a function or
       // variable declaration, and return the new GlobalValue* for
       // the caller to use.
-      assert(false && "Expected function or variable");
+      llvm_unreachable("Expected function or variable");
   };
 
   auto updateLinkage = [&](GlobalValue &GV) {

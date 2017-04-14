@@ -59,6 +59,19 @@ define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) {
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i32) nounwind readnone
 
 
+define <2 x i64> @test_x86_sse41_movntdqa(<2 x i64>* %a0) {
+; CHECK-LABEL: test_x86_sse41_movntdqa:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movntdqa (%eax), %xmm0
+; CHECK-NEXT:    retl
+  %arg0 = bitcast <2 x i64>* %a0 to i8*
+  %res = call <2 x i64> @llvm.x86.sse41.movntdqa(i8* %arg0)
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.sse41.movntdqa(i8*) nounwind readnone
+
+
 define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: test_x86_sse41_mpsadbw:
 ; CHECK:       ## BB#0:

@@ -1117,7 +1117,7 @@ __m256i test_mm256_srlv_epi64(__m256i a, __m256i b) {
 
 __m256i test_mm256_stream_load_si256(__m256i const *a) {
   // CHECK-LABEL: test_mm256_stream_load_si256
-  // CHECK: call <4 x i64> @llvm.x86.avx2.movntdqa(i8* %{{.*}})
+  // CHECK: load <4 x i64>, <4 x i64>* %{{.*}}, align 32, !nontemporal
   return _mm256_stream_load_si256(a);
 }
 
