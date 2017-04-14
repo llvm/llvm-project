@@ -5,8 +5,8 @@
 struct A {
   // COMMON-LABEL: define linkonce_odr void @_ZN1A10do_nothingEv
   void do_nothing() {
-    // ALIGN-NOT: ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
-    // ALIGN-NOT: and i64 %{{.*}}, 7, !nosanitize
+    // ALIGN: ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: and i64 %{{.*}}, 0, !nosanitize
  
     // NULL: icmp ne %struct.A* %{{.*}}, null, !nosanitize
  
