@@ -5,8 +5,7 @@
 struct A {
   // COMMON-LABEL: define linkonce_odr void @_ZN1A10do_nothingEv
   void do_nothing() {
-    // ALIGN: ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
-    // ALIGN: and i64 %{{.*}}, 0, !nosanitize
+    // ALIGN-NOT: ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
  
     // NULL: icmp ne %struct.A* %{{.*}}, null, !nosanitize
  
@@ -14,7 +13,24 @@ struct A {
   }
 };
 
+struct B {
+  int x;
+
+  // COMMON-LABEL: define linkonce_odr void @_ZN1B10do_nothingEv
+  void do_nothing() {
+    // ALIGN: ptrtoint %struct.B* %{{.*}} to i64, !nosanitize
+    // ALIGN: and i64 %{{.*}}, 3, !nosanitize
+
+    // NULL: icmp ne %struct.B* %{{.*}}, null, !nosanitize
+
+    // OBJSIZE-NOT: call i64 @llvm.objectsize
+  }
+};
+
 void force_irgen() {
   A a;
   a.do_nothing();
+
+  B b;
+  b.do_nothing();
 }

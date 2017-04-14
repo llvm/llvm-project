@@ -133,7 +133,7 @@ struct B {
     // CHECK: call void @__ubsan_handle_type_mismatch
     //
     // Check the result of the conversion before using it.
-    // CHECK: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_type_mismatch
     //
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     B b;
