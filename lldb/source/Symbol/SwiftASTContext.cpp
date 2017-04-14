@@ -5656,45 +5656,7 @@ bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
   if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(
           compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Archetype:
-    case swift::TypeKind::UnboundGeneric:
-      return false;
-    case swift::TypeKind::Paren: {
-      swift::ParenType *paren_type =
-          llvm::dyn_cast<swift::ParenType>(swift_can_type.getPointer());
-      if (paren_type) {
-        CompilerType nested_type(ast->GetASTContext(),
-                                 paren_type->getUnderlyingType().getPointer());
-        return IsFullyRealized(nested_type);
-      }
-      return true;
-    } break;
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericEnum: {
-      for (size_t idx = 0; idx < compiler_type.GetNumTemplateArguments();
-           idx++) {
-        lldb::TemplateArgumentKind kind;
-        CompilerType argtype = compiler_type.GetTemplateArgument(idx, kind);
-        if (!IsFullyRealized(argtype))
-          return false;
-      }
-    }
-      return true;
-    case swift::TypeKind::Tuple:
-      for (uint32_t idx = 0; idx < compiler_type.GetNumFields(); idx++) {
-        std::string name;
-        CompilerType field =
-            compiler_type.GetFieldAtIndex(idx, name, nullptr, nullptr, nullptr);
-        if (IsFullyRealized(field) == false)
-          return false;
-      }
-      return true;
-    default:
-      return true;
-    }
+    return !swift_can_type->hasArchetype();
   }
 
   return false;
