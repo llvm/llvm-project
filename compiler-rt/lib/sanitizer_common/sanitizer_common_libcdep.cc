@@ -47,7 +47,8 @@ void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
 }
 
-void ReportErrorSummary(const char *error_type, const StackTrace *stack) {
+void ReportErrorSummary(const char *error_type, const StackTrace *stack,
+                        const char *alt_tool_name) {
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;
@@ -59,7 +60,7 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack) {
   // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
   uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
   SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
-  ReportErrorSummary(error_type, frame->info);
+  ReportErrorSummary(error_type, frame->info, alt_tool_name);
   frame->ClearAll();
 #endif
 }

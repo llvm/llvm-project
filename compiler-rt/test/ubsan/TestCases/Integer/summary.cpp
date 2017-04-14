@@ -7,7 +7,7 @@
 
 int main() {
   (void)(uint64_t(10000000000000000000ull) + uint64_t(9000000000000000000ull));
-  // CHECK-NOTYPE: SUMMARY: AddressSanitizer: undefined-behavior {{.*}}summary.cpp:[[@LINE-1]]:44
-  // CHECK-TYPE: SUMMARY: AddressSanitizer: unsigned-integer-overflow {{.*}}summary.cpp:[[@LINE-2]]:44
+  // CHECK-NOTYPE: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior {{.*}}summary.cpp:[[@LINE-1]]:44
+  // CHECK-TYPE: SUMMARY: UndefinedBehaviorSanitizer: unsigned-integer-overflow {{.*}}summary.cpp:[[@LINE-2]]:44
   return 0;
 }

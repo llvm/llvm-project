@@ -23,6 +23,10 @@
 
 using namespace __ubsan;
 
+const char *__ubsan::GetSanititizerToolName() {
+  return "UndefinedBehaviorSanitizer";
+}
+
 static enum {
   UBSAN_MODE_UNKNOWN = 0,
   UBSAN_MODE_STANDALONE,
@@ -35,7 +39,7 @@ static void CommonInit() {
 }
 
 static void CommonStandaloneInit() {
-  SanitizerToolName = "UndefinedBehaviorSanitizer";
+  SanitizerToolName = GetSanititizerToolName();
   InitializeFlags();
   CacheBinaryName();
   __sanitizer_set_report_path(common_flags()->log_path);
