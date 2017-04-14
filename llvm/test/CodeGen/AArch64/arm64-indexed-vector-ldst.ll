@@ -6238,3 +6238,84 @@ define void @test_ld1lane_build(i32* %ptr0, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
   store <2 x i32> %sub, <2 x i32>* %out, align 16
   ret void
 }
+
+; CHECK-LABEL: test_ld1lane_build_i16:
+; CHECK-DAG:  ldr h[[REGNUM1:[0-9]+]], [x0]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[1], [x1]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[2], [x2]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[3], [x3]
+; CHECK:      sub.4h v[[REGNUM2:[0-9]+]], v[[REGNUM1]], v0
+; CHECK-NEXT: str d[[REGNUM2]], [x4]
+; CHECK-NEXT: ret
+define void  @test_ld1lane_build_i16(i16* %a, i16* %b, i16* %c, i16* %d, <4 x i16> %e, <4 x i16>* %p) {
+  %ld.a = load i16, i16* %a
+  %ld.b = load i16, i16* %b
+  %ld.c = load i16, i16* %c
+  %ld.d = load i16, i16* %d
+  %v.a = insertelement <4 x i16> undef, i16 %ld.a, i64 0
+  %v.b = insertelement <4 x i16> %v.a, i16 %ld.b, i64 1
+  %v.c = insertelement <4 x i16> %v.b, i16 %ld.c, i64 2
+  %v = insertelement <4 x i16> %v.c, i16 %ld.d, i64 3
+  %sub = sub nsw <4 x i16> %v, %e
+  store <4 x i16> %sub, <4 x i16>* %p
+  ret void
+}
+
+; CHECK-LABEL: test_ld1lane_build_half:
+; CHECK-DAG:  ldr h[[REGNUM1:[0-9]+]], [x0]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[1], [x1]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[2], [x2]
+; CHECK-DAG:  ld1.h { v[[REGNUM1]] }[3], [x3]
+; CHECK-DAG:  fcvtl v[[REGNUM01:[0-9]+]].4s, v0.4h
+; CHECK-DAG:  fcvtl v[[REGNUM11:[0-9]+]].4s, v[[REGNUM1]].4h
+; CHECK:      fsub.4s v[[REGNUM2:[0-9]+]], v[[REGNUM11]], v[[REGNUM01]]
+; CHECK-DAG:  fcvtn v[[REGNUM3:[0-9]+]].4h, v[[REGNUM2]].4s
+; CHECK-NEXT: str d[[REGNUM2]], [x4]
+; CHECK-NEXT: ret
+define void  @test_ld1lane_build_half(half* %a, half* %b, half* %c, half* %d, <4 x half> %e, <4 x half>* %p) {
+  %ld.a = load half, half* %a
+  %ld.b = load half, half* %b
+  %ld.c = load half, half* %c
+  %ld.d = load half, half* %d
+  %v.a = insertelement <4 x half> undef, half %ld.a, i64 0
+  %v.b = insertelement <4 x half> %v.a, half %ld.b, i64 1
+  %v.c = insertelement <4 x half> %v.b, half %ld.c, i64 2
+  %v = insertelement <4 x half> %v.c, half %ld.d, i64 3
+  %sub = fsub <4 x half> %v, %e
+  store <4 x half> %sub, <4 x half>* %p
+  ret void
+}
+
+; CHECK-LABEL: test_ld1lane_build_i8:
+; CHECK-DAG:  ldr b[[REGNUM1:[0-9]+]], [x0]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[1], [x1]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[2], [x2]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[3], [x3]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[4], [x4]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[5], [x5]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[6], [x6]
+; CHECK-DAG:  ld1.b { v[[REGNUM1]] }[7], [x7]
+; CHECK:      sub.8b v[[REGNUM2:[0-9]+]], v[[REGNUM1]], v0
+; CHECK-NEXT: str d[[REGNUM2]], [x
+; CHECK-NEXT: ret
+define void  @test_ld1lane_build_i8(i8* %a, i8* %b, i8* %c, i8* %d, i8* %e, i8* %f, i8* %g, i8* %h, <8 x i8> %v, <8 x i8>* %p) {
+  %ld.a = load i8, i8* %a
+  %ld.b = load i8, i8* %b
+  %ld.c = load i8, i8* %c
+  %ld.d = load i8, i8* %d
+  %ld.e = load i8, i8* %e
+  %ld.f = load i8, i8* %f
+  %ld.g = load i8, i8* %g
+  %ld.h = load i8, i8* %h
+  %v.a = insertelement <8 x i8> undef, i8 %ld.a, i64 0
+  %v.b = insertelement <8 x i8> %v.a,  i8 %ld.b, i64 1
+  %v.c = insertelement <8 x i8> %v.b,  i8 %ld.c, i64 2
+  %v.d = insertelement <8 x i8> %v.c,  i8 %ld.d, i64 3
+  %v.e = insertelement <8 x i8> %v.d,  i8 %ld.e, i64 4
+  %v.f = insertelement <8 x i8> %v.e,  i8 %ld.f, i64 5
+  %v.g = insertelement <8 x i8> %v.f,  i8 %ld.g, i64 6
+  %v1 = insertelement <8 x i8> %v.g,  i8 %ld.h, i64 7
+  %sub = sub nsw <8 x i8> %v1, %v
+  store <8 x i8> %sub, <8 x i8>* %p
+  ret void
+}
