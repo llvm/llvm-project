@@ -35,3 +35,48 @@ typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
 @interface TestGenericDUMP<Element> : Base
 - (Element)element;
 @end
+
+
+enum __attribute__((flag_enum)) FlagEnum {
+  FlagEnumA = 1,
+  FlagEnumB = 2
+};
+
+enum __attribute__((flag_enum)) NewlyFlagEnum {
+  NewlyFlagEnumA = 1,
+  NewlyFlagEnumB = 2
+};
+
+enum APINotedFlagEnum {
+  APINotedFlagEnumA = 1,
+  APINotedFlagEnumB = 2
+};
+
+
+enum __attribute__((enum_extensibility(open))) OpenEnum {
+  OpenEnumA = 1,
+};
+
+enum __attribute__((enum_extensibility(open))) NewlyOpenEnum {
+  NewlyOpenEnumA = 1,
+};
+
+enum __attribute__((enum_extensibility(closed))) NewlyClosedEnum {
+  NewlyClosedEnumA = 1,
+};
+
+enum __attribute__((enum_extensibility(open))) ClosedToOpenEnum {
+  ClosedToOpenEnumA = 1,
+};
+
+enum __attribute__((enum_extensibility(closed))) OpenToClosedEnum {
+  OpenToClosedEnumA = 1,
+};
+
+enum APINotedOpenEnum {
+  APINotedOpenEnumA = 1,
+};
+
+enum APINotedClosedEnum {
+  APINotedClosedEnumA = 1,
+};

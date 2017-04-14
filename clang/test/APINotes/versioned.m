@@ -59,3 +59,72 @@
 // CHECK-UNVERSIONED-NEXT: @interface TestProperties
 // CHECK-VERSIONED-NOT: __attribute__((swift_objc_members)
 // CHECK-VERSIONED: @interface TestProperties
+
+// CHECK-UNVERSIONED-LABEL: enum FlagEnum {
+// CHECK-UNVERSIONED-NEXT:     FlagEnumA = 1,
+// CHECK-UNVERSIONED-NEXT:     FlagEnumB = 2
+// CHECK-UNVERSIONED-NEXT: } __attribute__((flag_enum));
+// CHECK-UNVERSIONED-LABEL: enum NewlyFlagEnum {
+// CHECK-UNVERSIONED-NEXT:     NewlyFlagEnumA = 1,
+// CHECK-UNVERSIONED-NEXT:     NewlyFlagEnumB = 2
+// CHECK-UNVERSIONED-NEXT: } __attribute__((flag_enum));
+// CHECK-UNVERSIONED-LABEL: enum APINotedFlagEnum {
+// CHECK-UNVERSIONED-NEXT:     APINotedFlagEnumA = 1,
+// CHECK-UNVERSIONED-NEXT:     APINotedFlagEnumB = 2
+// CHECK-UNVERSIONED-NEXT: } __attribute__((flag_enum));
+// CHECK-UNVERSIONED-LABEL: enum OpenEnum {
+// CHECK-UNVERSIONED-NEXT:     OpenEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum NewlyOpenEnum {
+// CHECK-UNVERSIONED-NEXT:     NewlyOpenEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum NewlyClosedEnum {
+// CHECK-UNVERSIONED-NEXT:     NewlyClosedEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+// CHECK-UNVERSIONED-LABEL: enum ClosedToOpenEnum {
+// CHECK-UNVERSIONED-NEXT:     ClosedToOpenEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum OpenToClosedEnum {
+// CHECK-UNVERSIONED-NEXT:     OpenToClosedEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+// CHECK-UNVERSIONED-LABEL: enum APINotedOpenEnum {
+// CHECK-UNVERSIONED-NEXT:     APINotedOpenEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum APINotedClosedEnum {
+// CHECK-UNVERSIONED-NEXT:     APINotedClosedEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+
+// CHECK-VERSIONED-LABEL: enum FlagEnum {
+// CHECK-VERSIONED-NEXT:     FlagEnumA = 1,
+// CHECK-VERSIONED-NEXT:     FlagEnumB = 2
+// CHECK-VERSIONED-NEXT: } __attribute__((flag_enum));
+// CHECK-VERSIONED-LABEL: enum NewlyFlagEnum {
+// CHECK-VERSIONED-NEXT:     NewlyFlagEnumA = 1,
+// CHECK-VERSIONED-NEXT:     NewlyFlagEnumB = 2
+// CHECK-VERSIONED-NEXT: };
+// CHECK-VERSIONED-LABEL: enum APINotedFlagEnum {
+// CHECK-VERSIONED-NEXT:     APINotedFlagEnumA = 1,
+// CHECK-VERSIONED-NEXT:     APINotedFlagEnumB = 2
+// CHECK-VERSIONED-NEXT: } __attribute__((flag_enum));
+// CHECK-VERSIONED-LABEL: enum OpenEnum {
+// CHECK-VERSIONED-NEXT:     OpenEnumA = 1
+// CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-VERSIONED-LABEL: enum NewlyOpenEnum {
+// CHECK-VERSIONED-NEXT:     NewlyOpenEnumA = 1
+// CHECK-VERSIONED-NEXT: };
+// CHECK-VERSIONED-LABEL: enum NewlyClosedEnum {
+// CHECK-VERSIONED-NEXT:     NewlyClosedEnumA = 1
+// CHECK-VERSIONED-NEXT: };
+// CHECK-VERSIONED-LABEL: enum ClosedToOpenEnum {
+// CHECK-VERSIONED-NEXT:     ClosedToOpenEnumA = 1
+// CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+// CHECK-VERSIONED-LABEL: enum OpenToClosedEnum {
+// CHECK-VERSIONED-NEXT:     OpenToClosedEnumA = 1
+// CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-VERSIONED-LABEL: enum APINotedOpenEnum {
+// CHECK-VERSIONED-NEXT:     APINotedOpenEnumA = 1
+// CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-VERSIONED-LABEL: enum APINotedClosedEnum {
+// CHECK-VERSIONED-NEXT:     APINotedClosedEnumA = 1
+// CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+

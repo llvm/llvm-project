@@ -261,6 +261,8 @@ namespace {
     Optional<bool> SwiftPrivate;
     Optional<StringRef> SwiftBridge;
     Optional<StringRef> NSErrorDomain;
+    Optional<api_notes::EnumExtensibilityKind> EnumExtensibility;
+    Optional<bool> FlagEnum;
   };
   typedef std::vector<Tag> TagsSeq;
 
@@ -367,6 +369,15 @@ namespace llvm {
         io.enumCase(value, "none",      api_notes::SwiftWrapperKind::None);
         io.enumCase(value, "struct",    api_notes::SwiftWrapperKind::Struct);
         io.enumCase(value, "enum",      api_notes::SwiftWrapperKind::Enum);
+      }
+    };
+
+    template<>
+    struct ScalarEnumerationTraits<api_notes::EnumExtensibilityKind> {
+      static void enumeration(IO &io, api_notes::EnumExtensibilityKind &value) {
+        io.enumCase(value, "none",   api_notes::EnumExtensibilityKind::None);
+        io.enumCase(value, "open",   api_notes::EnumExtensibilityKind::Open);
+        io.enumCase(value, "closed", api_notes::EnumExtensibilityKind::Closed);
       }
     };
 
@@ -505,6 +516,8 @@ namespace llvm {
         io.mapOptional("SwiftName",             t.SwiftName);
         io.mapOptional("SwiftBridge",           t.SwiftBridge);
         io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
+        io.mapOptional("EnumExtensibility",     t.EnumExtensibility);
+        io.mapOptional("FlagEnum",              t.FlagEnum);
       }
     };
 
@@ -928,6 +941,8 @@ namespace {
         TagInfo tagInfo;
         if (convertCommonType(t, tagInfo, t.Name))
           continue;
+        tagInfo.EnumExtensibility = t.EnumExtensibility;
+        tagInfo.setFlagEnum(t.FlagEnum);
 
         Writer->addTag(t.Name, tagInfo, swiftVersion);
       }
@@ -1286,6 +1301,8 @@ namespace {
       Tag tag;
       tag.Name = name;
       handleCommonType(tag, info);
+      tag.EnumExtensibility = info.EnumExtensibility;
+      tag.FlagEnum = info.isFlagEnum();
       auto &items = getTopLevelItems(swiftVersion);
       items.Tags.push_back(tag);
     }
