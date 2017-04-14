@@ -44,7 +44,7 @@ static cl::opt<unsigned> GPSize
    cl::init(8));
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
-                                           const MCSubtargetInfo &STI) {
+                                           const MCSubtargetInfo &STI, bool) {
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);

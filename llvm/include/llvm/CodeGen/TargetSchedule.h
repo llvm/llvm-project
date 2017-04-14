@@ -189,6 +189,10 @@ public:
   /// This is typically one cycle.
   unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefIdx,
                                 const MachineInstr *DepMI) const;
+
+  /// \brief Compute the reciprocal throughput of the given instruction.
+  Optional<double> computeInstrRThroughput(const MachineInstr *MI) const;
+  Optional<double> computeInstrRThroughput(unsigned Opcode) const;
 };
 
 } // end namespace llvm
