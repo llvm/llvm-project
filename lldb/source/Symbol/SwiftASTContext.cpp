@@ -5721,19 +5721,9 @@ bool SwiftASTContext::IsOptionalChain(CompilerType type,
             llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
       if (auto swift_ast = ast->GetASTContext()) {
         swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-        const swift::TypeKind type_kind = swift_can_type->getKind();
-        switch (type_kind) {
-        case swift::TypeKind::BoundGenericEnum: {
-          swift::BoundGenericEnumType *t =
-              swift_can_type->getAs<swift::BoundGenericEnumType>();
-          if (t) {
-            swift::EnumDecl *enum_decl = t->getDecl();
-            return (enum_decl == swift_ast->getOptionalDecl());
-          }
-        } break;
-        default:
-          break;
-        }
+        if (swift_can_type.getAnyOptionalObjectType())
+          return true;
+        return false;
       }
     }
     return false;
