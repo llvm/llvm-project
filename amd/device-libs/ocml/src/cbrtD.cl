@@ -1,7 +1,7 @@
 
 #include "mathD.h"
 
-PUREATTR double
+CONSTATTR INLINEATTR double
 MATH_MANGLE(cbrt)(double x)
 {
     double a = BUILTIN_ABS_F64(x);

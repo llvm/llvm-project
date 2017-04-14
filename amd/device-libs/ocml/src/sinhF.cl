@@ -6,29 +6,25 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathF.h"
-extern PUREATTR float MATH_PRIVATE(sinhcosh)(float y, int which);
 
-PUREATTR float
+#define FLOAT_SPECIALIZATION
+#include "ep.h"
+
+extern CONSTATTR float2 MATH_PRIVATE(epexpep)(float2 x);
+
+CONSTATTR INLINEATTR float
 MATH_MANGLE(sinh)(float x)
 {
     float y = BUILTIN_ABS_F32(x);
-
-    float z;
-    if (y < 0x1.0a2b24p+3f) {
-        z = MATH_PRIVATE(sinhcosh)(y, 0);
-    } else {
-        float t = MATH_MANGLE(exp)(y - 0x1.62e500p-1f);
-        z = MATH_MAD(0x1.a0210ep-18f, t, t);
-    }
+    float2 e = MATH_PRIVATE(epexpep)(sub(y, con(0x1.62e430p-1f, -0x1.05c610p-29f)));
+    float2 s = fsub(e, ldx(rcp(e), -2));
+    float z = s.hi;
 
     if (!FINITE_ONLY_OPT()) {
-        z = y >= 0x1.65a9fap+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
-        z = BUILTIN_CLASS_F32(y, CLASS_QNAN|CLASS_SNAN) | (y < 0x1.0p-14) ? y : z;
-    } else {
-        z =  y < 0x1.0p-14 ? y : z;
+        z = y > 0x1.65a9f8p+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
     }
 
-    z = BUILTIN_COPYSIGN_F32(z, x);
-    return z;
+    z = y < 0x1.0p-12f ? y : z;
+    return BUILTIN_COPYSIGN_F32(z, x);
 }
 
