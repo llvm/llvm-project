@@ -828,7 +828,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
       case Instruction::Call:
       case Instruction::Invoke: {
         CallSite CS(RVI);
-        if (CS.paramHasAttr(0, Attribute::NoAlias))
+        if (CS.hasRetAttr(Attribute::NoAlias))
           break;
         if (CS.getCalledFunction() && SCCNodes.count(CS.getCalledFunction()))
           break;

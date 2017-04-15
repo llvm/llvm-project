@@ -29,6 +29,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -269,6 +270,8 @@ static char isSymbolList64Bit(SymbolicFile &Obj) {
   if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
     return Triple(IRObj->getTargetTriple()).isArch64Bit();
   if (isa<COFFObjectFile>(Obj))
+    return false;
+  if (isa<WasmObjectFile>(Obj))
     return false;
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
     return MachO->is64Bit();
@@ -883,6 +886,13 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(WasmObjectFile &Obj, basic_symbol_iterator I) {
+  uint32_t Flags = I->getFlags();
+  if (Flags & SymbolRef::SF_Executable)
+    return 't';
+  return 'd';
+}
+
 static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
   uint32_t Flags = I->getFlags();
   // FIXME: should we print 'b'? At the IR level we cannot be sure if this
@@ -924,6 +934,8 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
     Ret = getSymbolNMTypeChar(*COFF, I);
   else if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*MachO, I);
+  else if (WasmObjectFile *Wasm = dyn_cast<WasmObjectFile>(&Obj))
+    Ret = getSymbolNMTypeChar(*Wasm, I);
   else
     Ret = getSymbolNMTypeChar(cast<ELFObjectFileBase>(Obj), I);
 

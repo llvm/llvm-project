@@ -202,6 +202,9 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("sse4a.movnt.") || // Added in 3.9
       Name.startswith("avx.movnt.") || // Added in 3.2
       Name.startswith("avx512.storent.") || // Added in 3.9
+      Name == "sse41.movntdqa" || // Added in 5.0
+      Name == "avx2.movntdqa" || // Added in 5.0
+      Name == "avx512.movntdqa" || // Added in 5.0
       Name == "sse2.storel.dq" || // Added in 3.9
       Name.startswith("sse.storeu.") || // Added in 3.9
       Name.startswith("sse2.storeu.") || // Added in 3.9
@@ -1875,6 +1878,20 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                { CI->getArgOperand(0), CI->getArgOperand(1) });
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
+    } else if (IsX86 && Name.endswith(".movntdqa")) {
+      Module *M = F->getParent();
+      MDNode *Node = MDNode::get(
+          C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
+
+      Value *Ptr = CI->getArgOperand(0);
+      VectorType *VTy = cast<VectorType>(CI->getType());
+
+      // Convert the type of the pointer to a pointer to the stored type.
+      Value *BC =
+          Builder.CreateBitCast(Ptr, PointerType::getUnqual(VTy), "cast");
+      LoadInst *LI = Builder.CreateAlignedLoad(BC, VTy->getBitWidth() / 8);
+      LI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      Rep = LI;
     } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
       Value *Arg = CI->getArgOperand(0);
       Value *Neg = Builder.CreateNeg(Arg, "neg");

@@ -83,12 +83,12 @@ public:
       RetTy = ResultTy;
       Callee = Target;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
@@ -107,12 +107,12 @@ public:
       Callee = Call.getCalledValue();
       Symbol = Target;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);

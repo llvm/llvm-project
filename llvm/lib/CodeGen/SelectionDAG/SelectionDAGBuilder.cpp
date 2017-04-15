@@ -5876,8 +5876,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     SDValue ArgNode = getValue(V);
     Entry.Node = ArgNode; Entry.Ty = V->getType();
 
-    // Skip the first return-type Attribute to get to params.
-    Entry.setAttributes(&CS, i - CS.arg_begin() + 1);
+    Entry.setAttributes(&CS, i - CS.arg_begin());
 
     // Use swifterror virtual register as input to the call.
     if (Entry.IsSwiftError && TLI.supportSwiftError()) {
@@ -7340,7 +7339,7 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 
   // Populate the argument list.
   // Attributes for args start at offset 1, after the return attribute.
-  for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs, AttrI = ArgIdx + 1;
+  for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs;
        ArgI != ArgE; ++ArgI) {
     const Value *V = CS->getOperand(ArgI);
 
@@ -7349,7 +7348,7 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
     TargetLowering::ArgListEntry Entry;
     Entry.Node = getValue(V);
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, AttrI);
+    Entry.setAttributes(&CS, ArgIdx);
     Args.push_back(Entry);
   }
 

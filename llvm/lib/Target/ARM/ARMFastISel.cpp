@@ -2351,19 +2351,19 @@ bool ARMFastISel::SelectCall(const Instruction *I,
       break;
 
     ISD::ArgFlagsTy Flags;
-    unsigned AttrInd = i - CS.arg_begin() + 1;
-    if (CS.paramHasAttr(AttrInd, Attribute::SExt))
+    unsigned ArgIdx = i - CS.arg_begin();
+    if (CS.paramHasAttr(ArgIdx, Attribute::SExt))
       Flags.setSExt();
-    if (CS.paramHasAttr(AttrInd, Attribute::ZExt))
+    if (CS.paramHasAttr(ArgIdx, Attribute::ZExt))
       Flags.setZExt();
 
     // FIXME: Only handle *easy* calls for now.
-    if (CS.paramHasAttr(AttrInd, Attribute::InReg) ||
-        CS.paramHasAttr(AttrInd, Attribute::StructRet) ||
-        CS.paramHasAttr(AttrInd, Attribute::SwiftSelf) ||
-        CS.paramHasAttr(AttrInd, Attribute::SwiftError) ||
-        CS.paramHasAttr(AttrInd, Attribute::Nest) ||
-        CS.paramHasAttr(AttrInd, Attribute::ByVal))
+    if (CS.paramHasAttr(ArgIdx, Attribute::InReg) ||
+        CS.paramHasAttr(ArgIdx, Attribute::StructRet) ||
+        CS.paramHasAttr(ArgIdx, Attribute::SwiftSelf) ||
+        CS.paramHasAttr(ArgIdx, Attribute::SwiftError) ||
+        CS.paramHasAttr(ArgIdx, Attribute::Nest) ||
+        CS.paramHasAttr(ArgIdx, Attribute::ByVal))
       return false;
 
     Type *ArgTy = (*i)->getType();

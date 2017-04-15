@@ -21,7 +21,7 @@ define i32 @test1(i64 %a) {
 
 define <2 x i32> @xor_two_vector_bitcasts(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: @xor_two_vector_bitcasts(
-; CHECK-NEXT:    [[T31:%.*]] = xor <1 x i64> %a, %b
+; CHECK-NEXT:    [[T31:%.*]] = xor <1 x i64> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = bitcast <1 x i64> [[T31]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
@@ -35,8 +35,8 @@ define <2 x i32> @xor_two_vector_bitcasts(<1 x i64> %a, <1 x i64> %b) {
 
 define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
 ; CHECK-LABEL: @xor_bitcast_vec_to_vec(
-; CHECK-NEXT:    [[T21:%.*]] = xor <1 x i64> %a, <i64 8589934593>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <1 x i64> [[T21]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <1 x i64> [[A:%.*]], <i64 8589934593>
+; CHECK-NEXT:    [[T2:%.*]] = bitcast <1 x i64> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast <1 x i64> %a to <2 x i32>
@@ -48,8 +48,8 @@ define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
 
 define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
 ; CHECK-LABEL: @and_bitcast_vec_to_int(
-; CHECK-NEXT:    [[T21:%.*]] = and <2 x i32> %a, <i32 3, i32 0>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <2 x i32> [[T21]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 3, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[T2]]
 ;
   %t1 = bitcast <2 x i32> %a to i64
@@ -61,8 +61,8 @@ define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
 
 define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 ; CHECK-LABEL: @or_bitcast_int_to_vec(
-; CHECK-NEXT:    [[T21:%.*]] = or i64 %a, 8589934593
-; CHECK-NEXT:    [[T2:%.*]] = bitcast i64 [[T21]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], 8589934593
+; CHECK-NEXT:    [[T2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast i64 %a to <2 x i32>
@@ -74,8 +74,8 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> %b to <4 x i32>
-; CHECK-NEXT:    [[BC3:%.*]] = and <4 x i32> [[TMP1]], %a
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[BC3:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[BC3]]
 ;
   %bc1 = bitcast <4 x i32> %a to <2 x i64>
@@ -91,8 +91,8 @@ define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
 
 define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast_to_fp(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x float> %a to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> %b to <2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[BC2]], [[BC1]]
 ; CHECK-NEXT:    [[BC3:%.*]] = bitcast <2 x i64> [[AND]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[BC3]]
@@ -108,8 +108,8 @@ define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 
 define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_or_bitcast(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast i128 %a to <2 x i64>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[BC1]], %b
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast i128 [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[BC1]], [[B:%.*]]
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[OR]] to i128
 ; CHECK-NEXT:    ret i128 [[BC2]]
 ;
@@ -123,8 +123,8 @@ define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
 
 define <4 x i32> @bitcast_xor_bitcast(<4 x i32> %a, i128 %b) {
 ; CHECK-LABEL: @bitcast_xor_bitcast(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> %a to i128
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC1]], %b
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[A:%.*]] to i128
+; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC1]], [[B:%.*]]
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast i128 [[XOR]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[BC2]]
 ;
@@ -138,8 +138,8 @@ define <4 x i32> @bitcast_xor_bitcast(<4 x i32> %a, i128 %b) {
 
 define <4 x float> @bitcast_vector_select(<4 x float> %x, <2 x i64> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @bitcast_vector_select(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %y to <4 x float>
-; CHECK-NEXT:    [[T7:%.*]] = select <4 x i1> %cmp, <4 x float> %x, <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x float>
+; CHECK-NEXT:    [[T7:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x float> [[X:%.*]], <4 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
   %t4 = bitcast <4 x float> %x to <4 x i32>
@@ -151,8 +151,8 @@ define <4 x float> @bitcast_vector_select(<4 x float> %x, <2 x i64> %y, <4 x i1>
 
 define float @bitcast_scalar_select_of_scalars(float %x, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: @bitcast_scalar_select_of_scalars(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 %y to float
-; CHECK-NEXT:    [[T7:%.*]] = select i1 %cmp, float %x, float [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[T7:%.*]] = select i1 [[CMP:%.*]], float [[X:%.*]], float [[TMP1]]
 ; CHECK-NEXT:    ret float [[T7]]
 ;
   %t4 = bitcast float %x to i32
@@ -166,8 +166,8 @@ define float @bitcast_scalar_select_of_scalars(float %x, i32 %y, i1 %cmp) {
 
 define float @bitcast_scalar_select_type_mismatch1(float %x, <4 x i8> %y, i1 %cmp) {
 ; CHECK-LABEL: @bitcast_scalar_select_type_mismatch1(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast float %x to <4 x i8>
-; CHECK-NEXT:    [[T6:%.*]] = select i1 %cmp, <4 x i8> [[T4]], <4 x i8> %y
+; CHECK-NEXT:    [[T4:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[CMP:%.*]], <4 x i8> [[T4]], <4 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = bitcast <4 x i8> [[T6]] to float
 ; CHECK-NEXT:    ret float [[T7]]
 ;
@@ -182,8 +182,8 @@ define float @bitcast_scalar_select_type_mismatch1(float %x, <4 x i8> %y, i1 %cm
 
 define <4 x i8> @bitcast_scalar_select_type_mismatch2(<4 x i8> %x, float %y, i1 %cmp) {
 ; CHECK-LABEL: @bitcast_scalar_select_type_mismatch2(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <4 x i8> %x to float
-; CHECK-NEXT:    [[T6:%.*]] = select i1 %cmp, float [[T4]], float %y
+; CHECK-NEXT:    [[T4:%.*]] = bitcast <4 x i8> [[X:%.*]] to float
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[CMP:%.*]], float [[T4]], float [[Y:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = bitcast float [[T6]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[T7]]
 ;
@@ -195,8 +195,8 @@ define <4 x i8> @bitcast_scalar_select_type_mismatch2(<4 x i8> %x, float %y, i1 
 
 define <4 x float> @bitcast_scalar_select_of_vectors(<4 x float> %x, <2 x i64> %y, i1 %cmp) {
 ; CHECK-LABEL: @bitcast_scalar_select_of_vectors(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %y to <4 x float>
-; CHECK-NEXT:    [[T7:%.*]] = select i1 %cmp, <4 x float> %x, <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x float>
+; CHECK-NEXT:    [[T7:%.*]] = select i1 [[CMP:%.*]], <4 x float> [[X:%.*]], <4 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
   %t4 = bitcast <4 x float> %x to <4 x i32>
@@ -210,9 +210,9 @@ define <4 x float> @bitcast_scalar_select_of_vectors(<4 x float> %x, <2 x i64> %
 
 define float @bitcast_vector_select_no_fold1(float %x, <2 x i16> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @bitcast_vector_select_no_fold1(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast float %x to <4 x i8>
-; CHECK-NEXT:    [[T5:%.*]] = bitcast <2 x i16> %y to <4 x i8>
-; CHECK-NEXT:    [[T6:%.*]] = select <4 x i1> %cmp, <4 x i8> [[T4]], <4 x i8> [[T5]]
+; CHECK-NEXT:    [[T4:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[T5:%.*]] = bitcast <2 x i16> [[Y:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[T6:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[T4]], <4 x i8> [[T5]]
 ; CHECK-NEXT:    [[T7:%.*]] = bitcast <4 x i8> [[T6]] to float
 ; CHECK-NEXT:    ret float [[T7]]
 ;
@@ -227,9 +227,9 @@ define float @bitcast_vector_select_no_fold1(float %x, <2 x i16> %y, <4 x i1> %c
 
 define <2 x float> @bitcast_vector_select_no_fold2(<2 x float> %x, <4 x i16> %y, <8 x i1> %cmp) {
 ; CHECK-LABEL: @bitcast_vector_select_no_fold2(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <2 x float> %x to <8 x i8>
-; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x i16> %y to <8 x i8>
-; CHECK-NEXT:    [[T6:%.*]] = select <8 x i1> %cmp, <8 x i8> [[T4]], <8 x i8> [[T5]]
+; CHECK-NEXT:    [[T4:%.*]] = bitcast <2 x float> [[X:%.*]] to <8 x i8>
+; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x i16> [[Y:%.*]] to <8 x i8>
+; CHECK-NEXT:    [[T6:%.*]] = select <8 x i1> [[CMP:%.*]], <8 x i8> [[T4]], <8 x i8> [[T5]]
 ; CHECK-NEXT:    [[T7:%.*]] = bitcast <8 x i8> [[T6]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[T7]]
 ;
@@ -244,8 +244,8 @@ define <2 x float> @bitcast_vector_select_no_fold2(<2 x float> %x, <4 x i16> %y,
 ; rdar://7892780
 define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> %A, i32 0
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> %B to <2 x float>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[B:%.*]] to <2 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i32 0
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -266,8 +266,8 @@ define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; rdar://7892780
 define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> %A, i32 1
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> %B to <4 x float>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i32 2
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -290,7 +290,7 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 
 define float @bitcast_extelt1(<2 x float> %A) {
 ; CHECK-LABEL: @bitcast_extelt1(
-; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x float> %A, i32 0
+; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
 ; CHECK-NEXT:    ret float [[BC2]]
 ;
   %bc1 = bitcast <2 x float> %A to <2 x i32>
@@ -303,7 +303,7 @@ define float @bitcast_extelt1(<2 x float> %A) {
 
 define i64 @bitcast_extelt2(<4 x float> %A) {
 ; CHECK-LABEL: @bitcast_extelt2(
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x float> %A to <2 x i64>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x i64> [[BC]], i32 1
 ; CHECK-NEXT:    ret i64 [[BC2]]
 ;
@@ -317,7 +317,7 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
 
 define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt3(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> %A to <1 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <1 x i64>
 ; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i32 0
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[BC2]]
@@ -332,7 +332,7 @@ define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 
 define double @bitcast_extelt4(i128 %A) {
 ; CHECK-LABEL: @bitcast_extelt4(
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 %A to <2 x double>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[A:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x double> [[BC]], i32 0
 ; CHECK-NEXT:    ret double [[BC2]]
 ;
@@ -344,8 +344,8 @@ define double @bitcast_extelt4(i128 %A) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 %A, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 %B, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %tmp38 = zext i32 %A to i64
@@ -359,8 +359,8 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 ; rdar://8360454
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float %A, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float %B, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp37 = bitcast float %A to i32
@@ -375,7 +375,7 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float undef>, float %A, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float undef>, float [[A:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32
@@ -422,7 +422,7 @@ define i32 @All111(i32 %in) {
 
 define <2 x i16> @BitcastInsert(i32 %a) {
 ; CHECK-LABEL: @BitcastInsert(
-; CHECK-NEXT:    [[R:%.*]] = bitcast i32 %a to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = bitcast i32 [[A:%.*]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %v = insertelement <1 x i32> undef, i32 %a, i32 0
@@ -433,7 +433,7 @@ define <2 x i16> @BitcastInsert(i32 %a) {
 ; PR17293
 define <2 x i64> @test7(<2 x i8*>* %arg) nounwind {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i8*>* %arg to <2 x i64>*
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i8*>* [[ARG:%.*]] to <2 x i64>*
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[CAST]], align 16
 ; CHECK-NEXT:    ret <2 x i64> [[LOAD]]
 ;
@@ -452,25 +452,24 @@ define i8 @test8() {
 
 @g = internal unnamed_addr global i32 undef
 
-; CHECK-LABEL: @constant_fold_vector_to_double(
-; CHECK: store volatile double 1.000000e+00,
-; CHECK: store volatile double 1.000000e+00,
-; CHECK: store volatile double 1.000000e+00,
-; CHECK: store volatile double 1.000000e+00,
-
-; CHECK: store volatile double 0xFFFFFFFFFFFFFFFF,
-; CHECK: store volatile double 0x162E000004D2,
-
-; CHECK: store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (i32* @g to i32)> to double),
-; CHECK: store volatile double 0x400000003F800000,
-
-; CHECK: store volatile double 0.000000e+00,
-; CHECK: store volatile double 0.000000e+00,
-; CHECK: store volatile double 0.000000e+00,
-; CHECK: store volatile double 0.000000e+00,
-; CHECK: store volatile double 0.000000e+00,
-; CHECK: store volatile double 0.000000e+00,
 define void @constant_fold_vector_to_double() {
+; CHECK-LABEL: @constant_fold_vector_to_double(
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0xFFFFFFFFFFFFFFFF, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0x162E000004D2, double* undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (i32* @g to i32)> to double), double* undef, align 8
+; CHECK-NEXT:    store volatile double 0x400000003F800000, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    ret void
+;
   store volatile double bitcast (<1 x i64> <i64 4607182418800017408> to double), double* undef
   store volatile double bitcast (<2 x i32> <i32 0, i32 1072693248> to double), double* undef
   store volatile double bitcast (<4 x i16> <i16 0, i16 0, i16 0, i16 16368> to double), double* undef
@@ -491,12 +490,14 @@ define void @constant_fold_vector_to_double() {
   ret void
 }
 
-; CHECK-LABEL: @constant_fold_vector_to_float(
-; CHECK: store volatile float 1.000000e+00,
-; CHECK: store volatile float 1.000000e+00,
-; CHECK: store volatile float 1.000000e+00,
-; CHECK: store volatile float 1.000000e+00,
 define void @constant_fold_vector_to_float() {
+; CHECK-LABEL: @constant_fold_vector_to_float(
+; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
+; CHECK-NEXT:    ret void
+;
   store volatile float bitcast (<1 x i32> <i32 1065353216> to float), float* undef
   store volatile float bitcast (<2 x i16> <i16 0, i16 16256> to float), float* undef
   store volatile float bitcast (<4 x i8> <i8 0, i8 0, i8 128, i8 63> to float), float* undef
@@ -505,10 +506,12 @@ define void @constant_fold_vector_to_float() {
   ret void
 }
 
-; CHECK-LABEL: @constant_fold_vector_to_half(
-; CHECK: store volatile half 0xH4000,
-; CHECK: store volatile half 0xH4000,
 define void @constant_fold_vector_to_half() {
+; CHECK-LABEL: @constant_fold_vector_to_half(
+; CHECK-NEXT:    store volatile half 0xH4000, half* undef, align 2
+; CHECK-NEXT:    store volatile half 0xH4000, half* undef, align 2
+; CHECK-NEXT:    ret void
+;
   store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), half* undef
   store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), half* undef
   ret void

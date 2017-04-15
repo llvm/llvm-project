@@ -1572,6 +1572,11 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
       if (Instruction *R = FoldOpIntoSelect(I, SI))
         return R;
 
+    // Try to fold constant sub into PHI values.
+    if (PHINode *PN = dyn_cast<PHINode>(Op1))
+      if (Instruction *R = foldOpIntoPhi(I, PN))
+        return R;
+
     // C-(X+C2) --> (C-C2)-X
     Constant *C2;
     if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))

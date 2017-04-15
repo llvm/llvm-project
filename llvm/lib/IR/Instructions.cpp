@@ -380,13 +380,23 @@ void CallInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
   setAttributes(PAL);
 }
 
-bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
+bool CallInst::hasRetAttr(Attribute::AttrKind Kind) const {
+  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
+    return true;
 
-  if (Attrs.hasAttribute(i, Kind))
+  // Look at the callee, if available.
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
+  return false;
+}
+
+bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
+  assert(i < getNumArgOperands() && "Param index out of bounds!");
+
+  if (Attrs.hasParamAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, Kind);
+    return F->getAttributes().hasParamAttribute(i, Kind);
   return false;
 }
 
@@ -400,8 +410,10 @@ bool CallInst::dataOperandHasImpliedAttr(unsigned i,
   // question is a call argument; or be indirectly implied by the kind of its
   // containing operand bundle, if the operand is a bundle operand.
 
+  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
+  // indices.
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, Kind);
+    return paramHasAttr(i - 1, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either a call argument or an operand bundle!");
@@ -691,13 +703,23 @@ Value *InvokeInst::getReturnedArgOperand() const {
   return nullptr;
 }
 
-bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
+bool InvokeInst::hasRetAttr(Attribute::AttrKind Kind) const {
+  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
+    return true;
 
-  if (Attrs.hasAttribute(i, Kind))
+  // Look at the callee, if available.
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
+  return false;
+}
+
+bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
+  assert(i < getNumArgOperands() && "Param index out of bounds!");
+
+  if (Attrs.hasParamAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, Kind);
+    return F->getAttributes().hasParamAttribute(i, Kind);
   return false;
 }
 
@@ -711,8 +733,10 @@ bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
   // question is an invoke argument; or be indirectly implied by the kind of its
   // containing operand bundle, if the operand is a bundle operand.
 
+  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
+  // indices.
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, Kind);
+    return paramHasAttr(i - 1, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either an invoke argument or an operand bundle!");

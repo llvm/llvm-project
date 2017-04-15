@@ -785,12 +785,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                     [IntrNoMem, Commutative]>;
 }
 
-// Cacheability support ops
-let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse41_movntdqa        : GCCBuiltin<"__builtin_ia32_movntdqa">,
-          Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty], [IntrReadMem]>;
-}
-
 // Test instruction with bitwise comparison.
 let TargetPrefix = "x86" in { // All intrinsics start with "llvm.x86.".
   def int_x86_sse41_ptestz          : GCCBuiltin<"__builtin_ia32_ptestz128">,
@@ -2346,8 +2340,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_mpsadbw : GCCBuiltin<"__builtin_ia32_mpsadbw256">,
               Intrinsic<[llvm_v16i16_ty], [llvm_v32i8_ty, llvm_v32i8_ty,
                          llvm_i8_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx2_movntdqa : GCCBuiltin<"__builtin_ia32_movntdqa256">,
-              Intrinsic<[llvm_v4i64_ty], [llvm_ptr_ty], [IntrReadMem]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6345,10 +6337,6 @@ let TargetPrefix = "x86" in {
         GCCBuiltin<"__builtin_ia32_cmpsd_mask">,
               Intrinsic<[llvm_i8_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                          llvm_i32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_movntdqa :
-        GCCBuiltin<"__builtin_ia32_movntdqa512">,
-            Intrinsic<[llvm_v8i64_ty], [llvm_ptr_ty], [IntrReadMem]>;
 }
 
 //===----------------------------------------------------------------------===//

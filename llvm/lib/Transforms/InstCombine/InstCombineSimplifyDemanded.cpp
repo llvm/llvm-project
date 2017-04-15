@@ -170,7 +170,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   default:
     computeKnownBits(I, KnownZero, KnownOne, Depth, CxtI);
     break;
-  case Instruction::And:
+  case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
     if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnownZero, RHSKnownOne,
                              Depth + 1) ||
@@ -180,11 +180,15 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!(RHSKnownZero & RHSKnownOne) && "Bits known to be one AND zero?");
     assert(!(LHSKnownZero & LHSKnownOne) && "Bits known to be one AND zero?");
 
+    // Output known-0 are known to be clear if zero in either the LHS | RHS.
+    APInt IKnownZero = RHSKnownZero | LHSKnownZero;
+    // Output known-1 bits are only known if set in both the LHS & RHS.
+    APInt IKnownOne = RHSKnownOne & LHSKnownOne;
+
     // If the client is only demanding bits that we know, return the known
     // constant.
-    if ((DemandedMask & ((RHSKnownZero | LHSKnownZero)|
-                         (RHSKnownOne & LHSKnownOne))) == DemandedMask)
-      return Constant::getIntegerValue(VTy, RHSKnownOne & LHSKnownOne);
+    if ((DemandedMask & (IKnownZero|IKnownOne)) == DemandedMask)
+      return Constant::getIntegerValue(VTy, IKnownOne);
 
     // If all of the demanded bits are known 1 on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
@@ -199,12 +203,11 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (ShrinkDemandedConstant(I, 1, DemandedMask & ~LHSKnownZero))
       return I;
 
-    // Output known-1 bits are only known if set in both the LHS & RHS.
-    KnownOne = RHSKnownOne & LHSKnownOne;
-    // Output known-0 are known to be clear if zero in either the LHS | RHS.
-    KnownZero = RHSKnownZero | LHSKnownZero;
+    KnownZero = std::move(IKnownZero);
+    KnownOne  = std::move(IKnownOne);
     break;
-  case Instruction::Or:
+  }
+  case Instruction::Or: {
     // If either the LHS or the RHS are One, the result is One.
     if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnownZero, RHSKnownOne,
                              Depth + 1) ||
@@ -214,11 +217,15 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!(RHSKnownZero & RHSKnownOne) && "Bits known to be one AND zero?");
     assert(!(LHSKnownZero & LHSKnownOne) && "Bits known to be one AND zero?");
 
+    // Output known-0 bits are only known if clear in both the LHS & RHS.
+    APInt IKnownZero = RHSKnownZero & LHSKnownZero;
+    // Output known-1 are known to be set if set in either the LHS | RHS.
+    APInt IKnownOne = RHSKnownOne | LHSKnownOne;
+
     // If the client is only demanding bits that we know, return the known
     // constant.
-    if ((DemandedMask & ((RHSKnownZero & LHSKnownZero)|
-                         (RHSKnownOne | LHSKnownOne))) == DemandedMask)
-      return Constant::getIntegerValue(VTy, RHSKnownOne | LHSKnownOne);
+    if ((DemandedMask & (IKnownZero|IKnownOne)) == DemandedMask)
+      return Constant::getIntegerValue(VTy, IKnownOne);
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
@@ -242,11 +249,10 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (ShrinkDemandedConstant(I, 1, DemandedMask))
       return I;
 
-    // Output known-0 bits are only known if clear in both the LHS & RHS.
-    KnownZero = RHSKnownZero & LHSKnownZero;
-    // Output known-1 are known to be set if set in either the LHS | RHS.
-    KnownOne = RHSKnownOne | LHSKnownOne;
+    KnownZero = std::move(IKnownZero);
+    KnownOne  = std::move(IKnownOne);
     break;
+  }
   case Instruction::Xor: {
     if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnownZero, RHSKnownOne,
                              Depth + 1) ||
@@ -329,9 +335,9 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
 
     // Output known-0 bits are known if clear or set in both the LHS & RHS.
-    KnownZero= (RHSKnownZero & LHSKnownZero) | (RHSKnownOne & LHSKnownOne);
+    KnownZero = std::move(IKnownZero);
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
-    KnownOne = (RHSKnownZero & LHSKnownOne) | (RHSKnownOne & LHSKnownZero);
+    KnownOne  = std::move(IKnownOne);
     break;
   }
   case Instruction::Select:
@@ -763,18 +769,22 @@ Value *InstCombiner::SimplifyMultipleUseDemandedBits(Instruction *I,
   // do simplifications that apply to *just* the one user if we know that
   // this instruction has a simpler value in that context.
   switch (I->getOpcode()) {
-  case Instruction::And:
+  case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
     computeKnownBits(I->getOperand(1), RHSKnownZero, RHSKnownOne, Depth + 1,
                      CxtI);
     computeKnownBits(I->getOperand(0), LHSKnownZero, LHSKnownOne, Depth + 1,
                      CxtI);
 
+    // Output known-0 are known to be clear if zero in either the LHS | RHS.
+    APInt IKnownZero = RHSKnownZero | LHSKnownZero;
+    // Output known-1 bits are only known if set in both the LHS & RHS.
+    APInt IKnownOne = RHSKnownOne & LHSKnownOne;
+
     // If the client is only demanding bits that we know, return the known
     // constant.
-    if ((DemandedMask & ((RHSKnownZero | LHSKnownZero)|
-                         (RHSKnownOne & LHSKnownOne))) == DemandedMask)
-      return Constant::getIntegerValue(ITy, RHSKnownOne & LHSKnownOne);
+    if ((DemandedMask & (IKnownZero|IKnownOne)) == DemandedMask)
+      return Constant::getIntegerValue(ITy, IKnownOne);
 
     // If all of the demanded bits are known 1 on one side, return the other.
     // These bits cannot contribute to the result of the 'and' in this
@@ -786,13 +796,11 @@ Value *InstCombiner::SimplifyMultipleUseDemandedBits(Instruction *I,
         (DemandedMask & ~RHSKnownZero))
       return I->getOperand(1);
 
-    // Output known-1 bits are only known if set in both the LHS & RHS.
-    KnownOne = RHSKnownOne & LHSKnownOne;
-    // Output known-0 are known to be clear if zero in either the LHS | RHS.
-    KnownZero = RHSKnownZero | LHSKnownZero;
+    KnownZero = std::move(IKnownZero);
+    KnownOne  = std::move(IKnownOne);
     break;
-
-  case Instruction::Or:
+  }
+  case Instruction::Or: {
     // We can simplify (X|Y) -> X or Y in the user's context if we know that
     // only bits from X or Y are demanded.
 
@@ -802,11 +810,15 @@ Value *InstCombiner::SimplifyMultipleUseDemandedBits(Instruction *I,
     computeKnownBits(I->getOperand(0), LHSKnownZero, LHSKnownOne, Depth + 1,
                      CxtI);
 
+    // Output known-0 bits are only known if clear in both the LHS & RHS.
+    APInt IKnownZero = RHSKnownZero & LHSKnownZero;
+    // Output known-1 are known to be set if set in either the LHS | RHS.
+    APInt IKnownOne = RHSKnownOne | LHSKnownOne;
+
     // If the client is only demanding bits that we know, return the known
     // constant.
-    if ((DemandedMask & ((RHSKnownZero & LHSKnownZero)|
-                         (RHSKnownOne | LHSKnownOne))) == DemandedMask)
-      return Constant::getIntegerValue(ITy, RHSKnownOne | LHSKnownOne);
+    if ((DemandedMask & (IKnownZero|IKnownOne)) == DemandedMask)
+      return Constant::getIntegerValue(ITy, IKnownOne);
 
     // If all of the demanded bits are known zero on one side, return the
     // other.  These bits cannot contribute to the result of the 'or' in this
@@ -827,12 +839,10 @@ Value *InstCombiner::SimplifyMultipleUseDemandedBits(Instruction *I,
         (DemandedMask & (~LHSKnownZero)))
       return I->getOperand(1);
 
-    // Output known-0 bits are only known if clear in both the LHS & RHS.
-    KnownZero = RHSKnownZero & LHSKnownZero;
-    // Output known-1 are known to be set if set in either the LHS | RHS.
-    KnownOne = RHSKnownOne | LHSKnownOne;
+    KnownZero = std::move(IKnownZero);
+    KnownOne  = std::move(IKnownOne);
     break;
-
+  }
   case Instruction::Xor: {
     // We can simplify (X^Y) -> X or Y in the user's context if we know that
     // only bits from X or Y are demanded.
