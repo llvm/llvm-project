@@ -42,7 +42,7 @@ TEST(IndirectionUtilsTest, MakeStub) {
   EXPECT_TRUE(Call->isTailCall()) << "Indirect call from stub should be tail call.";
   EXPECT_TRUE(Call->hasStructRetAttr())
     << "makeStub should propagate sret attr on 1st argument.";
-  EXPECT_TRUE(Call->paramHasAttr(2U, Attribute::ByVal))
+  EXPECT_TRUE(Call->paramHasAttr(1U, Attribute::ByVal))
     << "makeStub should propagate byval attr on 2nd argument.";
 }
 

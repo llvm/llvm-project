@@ -313,7 +313,7 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
     // Try to mark pointer typed parameters as non-null.  We skip the
     // relatively expensive analysis for constants which are obviously either
     // null or non-null to start with.
-    if (Type && !CS.paramHasAttr(ArgNo + 1, Attribute::NonNull) &&
+    if (Type && !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
         !isa<Constant>(V) && 
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),

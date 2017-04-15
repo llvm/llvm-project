@@ -51,13 +51,13 @@ protected:
     return ScalarEvolution(F, TLI, *AC, *DT, *LI);
   }
 
-  void runWithFunctionAndSE(
+  void runWithSE(
       Module &M, StringRef FuncName,
-      function_ref<void(Function &F, ScalarEvolution &SE)> Test) {
+      function_ref<void(Function &F, LoopInfo &LI, ScalarEvolution &SE)> Test) {
     auto *F = M.getFunction(FuncName);
     ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
     ScalarEvolution SE = buildSE(*F);
-    Test(*F, SE);
+    Test(*F, *LI, SE);
   }
 };
 
@@ -419,7 +419,7 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
   assert(M && "Could not parse module?");
   assert(!verifyModule(*M) && "Must have been well formed!");
 
-  runWithFunctionAndSE(*M, "f_1", [&](Function &F, ScalarEvolution &SE) {
+  runWithSE(*M, "f_1", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     auto *IV0 = getInstructionByName(F, "iv0");
     auto *IV0Inc = getInstructionByName(F, "iv0.inc");
 
@@ -460,11 +460,12 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
   };
 
   for (StringRef FuncName : {"f_2", "f_3", "f_4"})
-    runWithFunctionAndSE(*M, FuncName, [&](Function &F, ScalarEvolution &SE) {
-      CheckCommutativeMulExprs(SE, SE.getSCEV(getInstructionByName(F, "x")),
-                               SE.getSCEV(getInstructionByName(F, "y")),
-                               SE.getSCEV(getInstructionByName(F, "z")));
-    });
+    runWithSE(
+        *M, FuncName, [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+          CheckCommutativeMulExprs(SE, SE.getSCEV(getInstructionByName(F, "x")),
+                                   SE.getSCEV(getInstructionByName(F, "y")),
+                                   SE.getSCEV(getInstructionByName(F, "z")));
+        });
 }
 
 TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
@@ -645,7 +646,7 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
   assert(M && "Could not parse module?");
   assert(!verifyModule(*M) && "Must have been well formed!");
 
-  runWithFunctionAndSE(*M, "f_1", [&](Function &F, ScalarEvolution &SE) {
+  runWithSE(*M, "f_1", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     auto &I0 = GetInstByName(F, "iv0");
     auto &I1 = *I0.getNextNode();
 

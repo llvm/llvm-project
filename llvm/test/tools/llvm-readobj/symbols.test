@@ -2,6 +2,8 @@ RUN: llvm-readobj -t %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
 RUN: llvm-readobj -t %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
+RUN: llvm-readobj -t %p/Inputs/trivial.obj.wasm \
+RUN:   | FileCheck %s -check-prefix WASM
 
 COFF:      Symbols [
 COFF-NEXT:   Symbol {
@@ -68,3 +70,22 @@ ELF-NEXT:     Type: Object (0x1)
 ELF-NEXT:     Other: 0
 ELF-NEXT:     Section: .rodata.str1.1 (0x5)
 ELF-NEXT:   }
+
+WASM:      Symbols [
+WASM-NEXT:   Symbol {
+WASM-NEXT:     Name: bar
+WASM-NEXT:     Type: GLOBAL_IMPORT (0x2)
+WASM-NEXT:   }
+WASM-NEXT:   Symbol {
+WASM-NEXT:     Name: baz
+WASM-NEXT:     Type: GLOBAL_IMPORT (0x2)
+WASM-NEXT:   }
+WASM-NEXT:   Symbol {
+WASM-NEXT:     Name: foo
+WASM-NEXT:     Type: FUNCTION_EXPORT (0x1)
+WASM-NEXT:   }
+WASM-NEXT:   Symbol {
+WASM-NEXT:     Name: foo
+WASM-NEXT:     Type: DEBUG_FUNCTION_NAME (0x4)
+WASM-NEXT:   }
+WASM-NEXT: ]

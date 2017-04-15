@@ -26,10 +26,9 @@ RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 RUN:   | FileCheck %s -check-prefix COFF-IMPORTLIB
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-lanai \
 RUN:   | FileCheck %s -check-prefix ELF-LANAI
-# trivial.obj.wasm was generated using wast2wasm which is part of the wabt
-# project (https://github.com/WebAssembly/wabt) using the following command:
-# $ wast2wasm --debug-names ./test/roundtrip/generate-some-names.txt -o \
-#   trivial.obj.wasm
+# trivial.obj.wasm was generated using the following command:
+# echo "extern int bar, baz; int foo() { return bar + baz + (int)&foo; }" | \
+# ./bin/clang -c -o trivial.obj.wasm -target wasm32-unknown-unknown-wasm -x c -
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
 

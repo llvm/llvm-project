@@ -637,7 +637,7 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
 static bool isWriteOnlyParam(ImmutableCallSite CS, unsigned ArgIdx,
                              const TargetLibraryInfo &TLI) {
-  if (CS.paramHasAttr(ArgIdx + 1, Attribute::WriteOnly))
+  if (CS.paramHasAttr(ArgIdx, Attribute::WriteOnly))
     return true;
 
   // We can bound the aliasing properties of memset_pattern16 just as we can
@@ -666,10 +666,10 @@ ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
   if (isWriteOnlyParam(CS, ArgIdx, TLI))
     return MRI_Mod;
 
-  if (CS.paramHasAttr(ArgIdx + 1, Attribute::ReadOnly))
+  if (CS.paramHasAttr(ArgIdx, Attribute::ReadOnly))
     return MRI_Ref;
 
-  if (CS.paramHasAttr(ArgIdx + 1, Attribute::ReadNone))
+  if (CS.paramHasAttr(ArgIdx, Attribute::ReadNone))
     return MRI_NoModRef;
 
   return AAResultBase::getArgModRefInfo(CS, ArgIdx);

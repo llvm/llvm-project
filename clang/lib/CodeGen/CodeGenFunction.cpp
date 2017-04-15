@@ -963,13 +963,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
       CXXThisValue = CXXABIThisValue;
     }
 
-    // Null-check the 'this' pointer once per function, if it's available.
+    // Check the 'this' pointer once per function, if it's available.
     if (CXXThisValue) {
       SanitizerSet SkippedChecks;
-      SkippedChecks.set(SanitizerKind::Alignment, true);
       SkippedChecks.set(SanitizerKind::ObjectSize, true);
-      EmitTypeCheck(TCK_Load, Loc, CXXThisValue, MD->getThisType(getContext()),
-                    /*Alignment=*/CharUnits::Zero(), SkippedChecks);
+      QualType ThisTy = MD->getThisType(getContext());
+      EmitTypeCheck(TCK_Load, Loc, CXXThisValue, ThisTy,
+                    getContext().getTypeAlignInChars(ThisTy->getPointeeType()),
+                    SkippedChecks);
     }
   }
 

@@ -274,12 +274,12 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
       return NV;
 
   // If we are casting a PHI, then fold the cast into the PHI.
-  if (isa<PHINode>(Src)) {
+  if (auto *PN = dyn_cast<PHINode>(Src)) {
     // Don't do this if it would create a PHI node with an illegal type from a
     // legal type.
     if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
         shouldChangeType(CI.getType(), Src->getType()))
-      if (Instruction *NV = FoldOpIntoPhi(CI))
+      if (Instruction *NV = foldOpIntoPhi(CI, PN))
         return NV;
   }
 

@@ -45,21 +45,6 @@ define <4 x i32> @test5(<4 x i32> %A) {
   ret <4 x i32> %2
 }
 
-; Check that we combine "if x!=0 && x!=-1" into "if x+1u>1"
-define i32 @test6(i64 %x) nounwind {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[X_OFF:%.*]] = add i64 %x, 1
-; CHECK-NEXT:    [[X_CMP:%.*]] = icmp ugt i64 [[X_OFF]], 1
-; CHECK-NEXT:    [[LAND_EXT:%.*]] = zext i1 [[X_CMP]] to i32
-; CHECK-NEXT:    ret i32 [[LAND_EXT]]
-;
-  %cmp1 = icmp ne i64 %x, -1
-  %not.cmp = icmp ne i64 %x, 0
-  %.cmp1 = and i1 %cmp1, %not.cmp
-  %land.ext = zext i1 %.cmp1 to i32
-  ret i32 %land.ext
-}
-
 define i1 @test7(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 %i, 0

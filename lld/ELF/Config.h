@@ -125,7 +125,6 @@ struct Configuration {
   bool OptRemarksWithHotness;
   bool Pie;
   bool PrintGcSections;
-  bool Rela;
   bool Relocatable;
   bool SaveTemps;
   bool SingleRoRx;

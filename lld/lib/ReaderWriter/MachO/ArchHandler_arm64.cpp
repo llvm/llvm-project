@@ -51,11 +51,7 @@ public:
       canBypassGOT = true;
       return true;
     case delta32ToGOT:
-      canBypassGOT = false;
-      return true;
     case unwindCIEToPersonalityFunction:
-      canBypassGOT = false;
-      return true;
     case imageOffsetGot:
       canBypassGOT = false;
       return true;

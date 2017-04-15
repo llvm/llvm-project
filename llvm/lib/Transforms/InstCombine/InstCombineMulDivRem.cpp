@@ -1455,16 +1455,16 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
       if (SelectInst *SI = dyn_cast<SelectInst>(Op0I)) {
         if (Instruction *R = FoldOpIntoSelect(I, SI))
           return R;
-      } else if (isa<PHINode>(Op0I)) {
+      } else if (auto *PN = dyn_cast<PHINode>(Op0I)) {
         using namespace llvm::PatternMatch;
         const APInt *Op1Int;
         if (match(Op1, m_APInt(Op1Int)) && !Op1Int->isMinValue() &&
             (I.getOpcode() == Instruction::URem ||
              !Op1Int->isMinSignedValue())) {
-          // FoldOpIntoPhi will speculate instructions to the end of the PHI's
+          // foldOpIntoPhi will speculate instructions to the end of the PHI's
           // predecessor blocks, so do this only if we know the srem or urem
           // will not fault.
-          if (Instruction *NV = FoldOpIntoPhi(I))
+          if (Instruction *NV = foldOpIntoPhi(I, PN))
             return NV;
         }
       }

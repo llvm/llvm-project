@@ -246,13 +246,15 @@ bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
 
 RegisterAggr &RegisterAggr::insert(RegisterRef RR) {
   if (PhysicalRegisterInfo::isRegMaskId(RR.Reg)) {
-    // XXX SLOW
+    BitVector PU(PRI.getTRI().getNumRegUnits()); // Preserved units.
     const uint32_t *MB = PRI.getRegMaskBits(RR.Reg);
     for (unsigned i = 1, e = PRI.getTRI().getNumRegs(); i != e; ++i) {
-      if (MB[i/32] & (1u << (i%32)))
+      if (!(MB[i/32] & (1u << (i%32))))
         continue;
-      insert(RegisterRef(i, LaneBitmask::getAll()));
+      for (MCRegUnitIterator U(i, &PRI.getTRI()); U.isValid(); ++U)
+        PU.set(*U);
     }
+    Units |= PU.flip();
     return *this;
   }
 

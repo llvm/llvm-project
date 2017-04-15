@@ -43,6 +43,7 @@ public:
 private:
   InstrProfOptions Options;
   Module *M;
+  Triple TT;
   const TargetLibraryInfo *TLI;
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1];
@@ -63,20 +64,6 @@ private:
   int64_t MemOPSizeRangeStart;
   // The end value of precise value profile range for memory intrinsic sizes.
   int64_t MemOPSizeRangeLast;
-
-  bool isMachO() const;
-
-  /// Get the section name for the counter variables.
-  std::string getCountersSection() const;
-
-  /// Get the section name for the name variables.
-  std::string getNameSection() const;
-
-  /// Get the section name for the profile data variables.
-  std::string getDataSection() const;
-
-  /// Get the section name for the coverage mapping data.
-  std::string getCoverageSection() const;
 
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);

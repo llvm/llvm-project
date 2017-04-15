@@ -176,7 +176,10 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
   if (PartialItem == ".")
     PartialItem = llvm::StringRef();
 
-  assert(!SearchDir.empty());
+  if (SearchDir.empty()) {
+    llvm::sys::fs::current_path(Storage);
+    SearchDir = Storage;
+  }
   assert(!PartialItem.contains(path::get_separator()));
 
   // SearchDir now contains the directory to search in, and Prefix contains the

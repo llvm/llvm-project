@@ -301,9 +301,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     CallLoc = CE->getExprLoc();
 
   SanitizerSet SkippedChecks;
-  if (const auto *CMCE = dyn_cast<CXXMemberCallExpr>(CE))
-    if (IsDeclRefOrWrappedCXXThis(CMCE->getImplicitObjectArgument()))
+  if (const auto *CMCE = dyn_cast<CXXMemberCallExpr>(CE)) {
+    auto *IOA = CMCE->getImplicitObjectArgument();
+    bool IsImplicitObjectCXXThis = IsWrappedCXXThis(IOA);
+    if (IsImplicitObjectCXXThis)
+      SkippedChecks.set(SanitizerKind::Alignment, true);
+    if (IsImplicitObjectCXXThis || isa<DeclRefExpr>(IOA))
       SkippedChecks.set(SanitizerKind::Null, true);
+  }
   EmitTypeCheck(
       isa<CXXConstructorDecl>(CalleeDecl) ? CodeGenFunction::TCK_ConstructorCall
                                           : CodeGenFunction::TCK_MemberCall,
