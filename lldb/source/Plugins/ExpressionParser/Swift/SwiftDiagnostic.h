@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#include "swift/Basic/DiagnosticConsumer.h"
+#include "swift/AST/DiagnosticConsumer.h"
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
