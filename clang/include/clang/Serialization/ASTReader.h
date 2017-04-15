@@ -984,14 +984,26 @@ private:
   /// \brief The generation number of each identifier, which keeps track of
   /// the last time we loaded information about this identifier.
   llvm::DenseMap<IdentifierInfo *, unsigned> IdentifierGeneration;
-  
-  /// \brief Contains declarations and definitions that will be
+
+  class InterestingDecl {
+    Decl *D;
+    bool DeclHasPendingBody;
+
+  public:
+    InterestingDecl(Decl *D, bool HasBody)
+        : D(D), DeclHasPendingBody(HasBody) {}
+    Decl *getDecl() { return D; }
+    /// Whether the declaration has a pending body.
+    bool hasPendingBody() { return DeclHasPendingBody; }
+  };
+
+  /// \brief Contains declarations and definitions that could be
   /// "interesting" to the ASTConsumer, when we get that AST consumer.
   ///
   /// "Interesting" declarations are those that have data that may
   /// need to be emitted, such as inline function definitions or
   /// Objective-C protocols.
-  std::deque<Decl *> InterestingDecls;
+  std::deque<InterestingDecl> PotentiallyInterestingDecls;
 
   /// \brief The list of redeclaration chains that still need to be 
   /// reconstructed, and the local offset to the corresponding list
