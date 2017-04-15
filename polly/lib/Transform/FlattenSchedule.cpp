@@ -29,8 +29,10 @@ namespace {
 /// Prints the schedule for each statements on a new line.
 void printSchedule(raw_ostream &OS, const isl::union_map &Schedule,
                    int indent) {
-  foreachElt(Schedule,
-             [&OS, indent](isl::map Map) { OS.indent(indent) << Map << "\n"; });
+  Schedule.foreach_map([&OS, indent](isl::map Map) -> isl::stat {
+    OS.indent(indent) << Map << "\n";
+    return isl::stat::ok;
+  });
 }
 
 /// Flatten the schedule stored in an polly::Scop.

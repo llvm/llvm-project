@@ -299,36 +299,40 @@ TEST(Isl, Foreach) {
 
   {
     auto NumBMaps = 0;
-    foreachElt(TestMap, [&](isl::basic_map BMap) {
+    TestMap.foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
       EXPECT_EQ(BMap, TestBMap);
       NumBMaps++;
+      return isl::stat::ok;
     });
     EXPECT_EQ(1, NumBMaps);
   }
 
   {
     auto NumBSets = 0;
-    foreachElt(TestSet, [&](isl::basic_set BSet) {
+    TestSet.foreach_basic_set([&](isl::basic_set BSet) -> isl::stat {
       EXPECT_EQ(BSet, TestBSet);
       NumBSets++;
+      return isl::stat::ok;
     });
     EXPECT_EQ(1, NumBSets);
   }
 
   {
     auto NumMaps = 0;
-    foreachElt(TestUMap, [&](isl::map Map) {
+    TestUMap.foreach_map([&](isl::map Map) -> isl::stat {
       EXPECT_EQ(Map, TestMap);
       NumMaps++;
+      return isl::stat::ok;
     });
     EXPECT_EQ(1, NumMaps);
   }
 
   {
     auto NumSets = 0;
-    foreachElt(TestUSet, [&](isl::set Set) {
+    TestUSet.foreach_set([&](isl::set Set) -> isl::stat {
       EXPECT_EQ(Set, TestSet);
       NumSets++;
+      return isl::stat::ok;
     });
     EXPECT_EQ(1, NumSets);
   }
@@ -336,32 +340,32 @@ TEST(Isl, Foreach) {
   {
     auto UPwAff = isl::union_pw_aff(TestUSet, isl::val::zero(Ctx.get()));
     auto NumPwAffs = 0;
-    foreachElt(UPwAff, [&](isl::pw_aff PwAff) {
+    UPwAff.foreach_pw_aff([&](isl::pw_aff PwAff) -> isl::stat {
       EXPECT_TRUE(PwAff.is_cst());
       NumPwAffs++;
+      return isl::stat::ok;
     });
     EXPECT_EQ(1, NumPwAffs);
   }
 
   {
     auto NumBMaps = 0;
-    EXPECT_EQ(
-        isl_stat_error,
-        foreachEltWithBreak(TestMap, [&](isl::basic_map BMap) -> isl_stat {
-          EXPECT_EQ(BMap, TestBMap);
-          NumBMaps++;
-          return isl_stat_error;
-        }));
+    EXPECT_EQ(isl::stat::error,
+              TestMap.foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
+                EXPECT_EQ(BMap, TestBMap);
+                NumBMaps++;
+                return isl::stat::error;
+              }));
     EXPECT_EQ(1, NumBMaps);
   }
 
   {
     auto NumMaps = 0;
-    EXPECT_EQ(isl_stat_error,
-              foreachEltWithBreak(TestUMap, [&](isl::map Map) -> isl_stat {
+    EXPECT_EQ(isl::stat::error,
+              TestUMap.foreach_map([&](isl::map Map) -> isl::stat {
                 EXPECT_EQ(Map, TestMap);
                 NumMaps++;
-                return isl_stat_error;
+                return isl::stat::error;
               }));
     EXPECT_EQ(1, NumMaps);
   }
@@ -369,13 +373,12 @@ TEST(Isl, Foreach) {
   {
     auto TestPwAff = isl::pw_aff(TestSet, isl::val::zero(Ctx.get()));
     auto NumPieces = 0;
-    foreachPieceWithBreak(TestPwAff,
-                          [&](isl::set Domain, isl::aff Aff) -> isl_stat {
-                            EXPECT_EQ(Domain, TestSet);
-                            EXPECT_TRUE(Aff.is_cst());
-                            NumPieces++;
-                            return isl_stat_error;
-                          });
+    TestPwAff.foreach_piece([&](isl::set Domain, isl::aff Aff) -> isl::stat {
+      EXPECT_EQ(Domain, TestSet);
+      EXPECT_TRUE(Aff.is_cst());
+      NumPieces++;
+      return isl::stat::error;
+    });
     EXPECT_EQ(1, NumPieces);
   }
 }

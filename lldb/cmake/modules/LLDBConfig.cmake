@@ -270,8 +270,8 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLDB_VERSION
 message(STATUS "LLDB version: ${LLDB_VERSION}")
 
 include_directories(BEFORE
-  ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
@@ -281,6 +281,17 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN ".svn" EXCLUDE
+    PATTERN ".cmake" EXCLUDE
+    PATTERN "Config.h" EXCLUDE
+    )
+
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
+    COMPONENT lldb_headers
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
+    PATTERN ".cmake" EXCLUDE
     )
 endif()
 
@@ -421,3 +432,18 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
 endif()
 
 find_package(Backtrace)
+
+check_include_file(termios.h HAVE_TERMIOS_H)
+
+# These checks exist in LLVM's configuration, so I want to match the LLVM names
+# so that the check isn't duplicated, but we translate them into the LLDB names
+# so that I don't have to change all the uses at the moment.
+set(LLDB_CONFIG_TERMIOS_SUPPORTED ${HAVE_TERMIOS_H})
+if(NOT UNIX)
+  set(LLDB_DISABLE_POSIX 1)
+endif()
+
+# This should be done at the end
+configure_file(
+  ${LLDB_INCLUDE_ROOT}/lldb/Host/Config.h.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/include/lldb/Host/Config.h)

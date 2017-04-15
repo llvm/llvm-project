@@ -66,7 +66,7 @@ bool EmulationStateARM::LoadPseudoRegistersFromFrame(StackFrame &frame) {
 
 bool EmulationStateARM::StorePseudoRegisterValue(uint32_t reg_num,
                                                  uint64_t value) {
-  if ((dwarf_r0 <= reg_num) && (reg_num <= dwarf_cpsr))
+  if (reg_num <= dwarf_cpsr)
     m_gpr[reg_num - dwarf_r0] = (uint32_t)value;
   else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
     uint32_t idx = reg_num - dwarf_s0;
@@ -89,7 +89,7 @@ uint64_t EmulationStateARM::ReadPseudoRegisterValue(uint32_t reg_num,
   uint64_t value = 0;
   success = true;
 
-  if ((dwarf_r0 <= reg_num) && (reg_num <= dwarf_cpsr))
+  if (reg_num <= dwarf_cpsr)
     value = m_gpr[reg_num - dwarf_r0];
   else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
     uint32_t idx = reg_num - dwarf_s0;

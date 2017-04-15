@@ -67,11 +67,6 @@ struct UserArea {
 #include "RegisterInfos_x86_64.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
-static std::vector<lldb_private::RegisterInfo> &GetSharedRegisterInfoVector() {
-  static std::vector<lldb_private::RegisterInfo> register_infos;
-  return register_infos;
-}
-
 static const RegisterInfo *
 PrivateGetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
