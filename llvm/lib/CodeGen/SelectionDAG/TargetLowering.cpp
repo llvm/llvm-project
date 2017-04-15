@@ -98,18 +98,19 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
 /// \brief Set CallLoweringInfo attribute flags based on a call instruction
 /// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(ImmutableCallSite *CS,
-                                                     unsigned AttrIdx) {
-  IsSExt = CS->paramHasAttr(AttrIdx, Attribute::SExt);
-  IsZExt = CS->paramHasAttr(AttrIdx, Attribute::ZExt);
-  IsInReg = CS->paramHasAttr(AttrIdx, Attribute::InReg);
-  IsSRet = CS->paramHasAttr(AttrIdx, Attribute::StructRet);
-  IsNest = CS->paramHasAttr(AttrIdx, Attribute::Nest);
-  IsByVal = CS->paramHasAttr(AttrIdx, Attribute::ByVal);
-  IsInAlloca = CS->paramHasAttr(AttrIdx, Attribute::InAlloca);
-  IsReturned = CS->paramHasAttr(AttrIdx, Attribute::Returned);
-  IsSwiftSelf = CS->paramHasAttr(AttrIdx, Attribute::SwiftSelf);
-  IsSwiftError = CS->paramHasAttr(AttrIdx, Attribute::SwiftError);
-  Alignment  = CS->getParamAlignment(AttrIdx);
+                                                     unsigned ArgIdx) {
+  IsSExt = CS->paramHasAttr(ArgIdx, Attribute::SExt);
+  IsZExt = CS->paramHasAttr(ArgIdx, Attribute::ZExt);
+  IsInReg = CS->paramHasAttr(ArgIdx, Attribute::InReg);
+  IsSRet = CS->paramHasAttr(ArgIdx, Attribute::StructRet);
+  IsNest = CS->paramHasAttr(ArgIdx, Attribute::Nest);
+  IsByVal = CS->paramHasAttr(ArgIdx, Attribute::ByVal);
+  IsInAlloca = CS->paramHasAttr(ArgIdx, Attribute::InAlloca);
+  IsReturned = CS->paramHasAttr(ArgIdx, Attribute::Returned);
+  IsSwiftSelf = CS->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftError = CS->paramHasAttr(ArgIdx, Attribute::SwiftError);
+  // FIXME: getParamAlignment is off by one from argument index.
+  Alignment  = CS->getParamAlignment(ArgIdx + 1);
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a

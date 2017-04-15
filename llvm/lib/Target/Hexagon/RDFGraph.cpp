@@ -1289,20 +1289,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     return true;
   };
 
-  // Collect a set of registers that this instruction implicitly uses
-  // or defines. Implicit operands from an instruction will be ignored
-  // unless they are listed here.
-  RegisterSet ImpUses, ImpDefs;
-  if (const uint16_t *ImpD = In.getDesc().getImplicitDefs())
-    while (uint16_t R = *ImpD++)
-      ImpDefs.insert(RegisterRef(R));
-  if (const uint16_t *ImpU = In.getDesc().getImplicitUses())
-    while (uint16_t R = *ImpU++)
-      ImpUses.insert(RegisterRef(R));
-
   bool IsCall = isCall(In);
-  bool NeedsImplicit = IsCall || In.isInlineAsm() || In.isReturn();
-  bool IsPredicated = TII.isPredicated(In);
   unsigned NumOps = In.getNumOperands();
 
   // Avoid duplicate implicit defs. This will not detect cases of implicit
@@ -1364,8 +1351,6 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (!R || !TargetRegisterInfo::isPhysicalRegister(R) || DoneDefs.test(R))
       continue;
     RegisterRef RR = makeRegRef(Op);
-    if (!NeedsImplicit && !ImpDefs.count(RR))
-      continue;
     uint16_t Flags = NodeAttrs::None;
     if (TOI.isPreserving(In, OpN)) {
       Flags |= NodeAttrs::Preserving;
@@ -1393,14 +1378,6 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
       continue;
     unsigned R = Op.getReg();
     if (!R || !TargetRegisterInfo::isPhysicalRegister(R))
-      continue;
-    RegisterRef RR = makeRegRef(Op);
-    // Add implicit uses on return and call instructions, and on predicated
-    // instructions regardless of whether or not they appear in the instruction
-    // descriptor's list.
-    bool Implicit = Op.isImplicit();
-    bool TakeImplicit = NeedsImplicit || IsPredicated;
-    if (Implicit && !TakeImplicit && !ImpUses.count(RR))
       continue;
     uint16_t Flags = NodeAttrs::None;
     if (Op.isUndef())

@@ -133,7 +133,8 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
   //
   //   .section   .eh_frame,"a",@progbits
 
-  if (Name == getInstrProfCoverageSectionNameInObject(false /*not coff*/))
+  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::ELF,
+                                      /*AddSegmentInfo=*/false))
     return SectionKind::getMetadata();
 
   if (Name.empty() || Name[0] != '.') return K;

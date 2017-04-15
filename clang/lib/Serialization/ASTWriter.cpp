@@ -4186,6 +4186,11 @@ void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
 
 /// \brief Write the state of 'pragma pack' at the end of the module.
 void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
+  // Don't serialize pragma pack state for modules, since it should only take
+  // effect on a per-submodule basis.
+  if (WritingModule)
+    return;
+
   RecordData Record;
   Record.push_back(SemaRef.PackStack.CurrentValue);
   AddSourceLocation(SemaRef.PackStack.CurrentPragmaLocation, Record);

@@ -84,7 +84,6 @@ public:
   const ArrayRef<uint8_t>& code() const { return CodeSection; }
   uint32_t startFunction() const { return StartFunction; }
 
-protected:
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;

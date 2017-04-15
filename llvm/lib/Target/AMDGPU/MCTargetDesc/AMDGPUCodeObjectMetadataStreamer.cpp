@@ -478,9 +478,14 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
     BaseTypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
   StringRef AccQual;
-  Node = Func->getMetadata("kernel_arg_access_qual");
-  if (Node && ArgNo < Node->getNumOperands())
-    AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Arg.getType()->isPointerTy() && Arg.onlyReadsMemory() &&
+      Arg.hasNoAliasAttr()) {
+    AccQual = "read_only";
+  } else {
+    Node = Func->getMetadata("kernel_arg_access_qual");
+    if (Node && ArgNo < Node->getNumOperands())
+      AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  }
 
   StringRef Name;
   Node = Func->getMetadata("kernel_arg_name");

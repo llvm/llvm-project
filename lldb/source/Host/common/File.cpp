@@ -307,7 +307,7 @@ void File::Clear() {
 
 Error File::GetFileSpec(FileSpec &file_spec) const {
   Error error;
-#ifdef LLDB_CONFIG_FCNTL_GETPATH_SUPPORTED
+#ifdef F_GETPATH
   if (IsValid()) {
     char path[PATH_MAX];
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)

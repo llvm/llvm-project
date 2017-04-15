@@ -724,6 +724,61 @@ Value *InstCombiner::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder->CreateICmp(NewPred, Input, RangeEnd);
 }
 
+static Value *
+foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
+                                     bool JoinedByAnd,
+                                     InstCombiner::BuilderTy *Builder) {
+  Value *X = LHS->getOperand(0);  if (X != RHS->getOperand(0))
+    return nullptr;
+
+  // FIXME: This should use m_APInt and work with splat vector constants.
+  auto *LHSC = dyn_cast<ConstantInt>(LHS->getOperand(1));
+  auto *RHSC = dyn_cast<ConstantInt>(RHS->getOperand(1));
+  if (!LHSC || !RHSC)
+    return nullptr;
+
+  // We only handle (X != C1 && X != C2) and (X == C1 || X == C2).
+  ICmpInst::Predicate Pred = LHS->getPredicate();
+  if (Pred !=  RHS->getPredicate())
+    return nullptr;
+  if (JoinedByAnd && Pred != ICmpInst::ICMP_NE)
+    return nullptr;
+  if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  // The larger unsigned constant goes on the right.
+  if (LHSC->getValue().ugt(RHSC->getValue()))
+    std::swap(LHSC, RHSC);
+
+  APInt Xor = LHSC->getValue() ^ RHSC->getValue();
+  if (Xor.isPowerOf2()) {
+    // If LHSC and RHSC differ by only one bit, then set that bit in X and
+    // compare against the larger constant:
+    // (X == C1 || X == C2) --> (X | (C1 ^ C2)) == C2
+    // (X != C1 && X != C2) --> (X | (C1 ^ C2)) != C2
+    // We choose an 'or' with a Pow2 constant rather than the inverse mask with
+    // 'and' because that may lead to smaller codegen from a smaller constant.
+    Value *Or = Builder->CreateOr(X, ConstantInt::get(X->getType(), Xor));
+    return Builder->CreateICmp(Pred, Or, RHSC);
+  }
+
+  // Special case: get the ordering right when the values wrap around zero.
+  // Ie, we assumed the constants were unsigned when swapping earlier.
+  if (LHSC->getValue() == 0 && RHSC->getValue().isAllOnesValue())
+    std::swap(LHSC, RHSC);
+
+  if (LHSC == SubOne(RHSC)) {
+    // (X == 13 || X == 14) --> X - 13 <=u 1
+    // (X != 13 && X != 14) --> X - 13  >u 1
+    // An 'add' is the canonical IR form, so favor that over a 'sub'.
+    Value *Add = Builder->CreateAdd(X, ConstantExpr::getNeg(LHSC));
+    auto NewPred = JoinedByAnd ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
+    return Builder->CreateICmp(NewPred, Add, ConstantInt::get(X->getType(), 1));
+  }
+
+  return nullptr;
+}
+
 /// Fold (icmp)&(icmp) if possible.
 Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -823,6 +878,9 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   if (!PredicatesFoldable(PredL, PredR))
     return nullptr;
 
+  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, true, Builder))
+    return V;
+
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;
   if (CmpInst::isSigned(PredL) ||
@@ -877,17 +935,8 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     case ICmpInst::ICMP_SGT: // (X != 13 & X s> 15) -> X s> 15
       return RHS;
     case ICmpInst::ICMP_NE:
-      // Special case to get the ordering right when the values wrap around
-      // zero. Ie, we assumed the constants were unsigned when swapping earlier.
-      if (LHSC->getValue() == 0 && RHSC->getValue().isAllOnesValue())
-        std::swap(LHSC, RHSC);
-      if (LHSC == SubOne(RHSC)) {
-        // (X != 13 & X != 14) -> X-13 >u 1
-        // An 'add' is the canonical IR form, so favor that over a 'sub'.
-        Value *Add = Builder->CreateAdd(LHS0, ConstantExpr::getNeg(LHSC));
-        return Builder->CreateICmpUGT(Add, ConstantInt::get(Add->getType(), 1));
-      }
-      break; // (X != 13 & X != 15) -> no change
+      // Potential folds for this case should already be handled.
+      break;
     }
     break;
   case ICmpInst::ICMP_ULT:
@@ -1742,6 +1791,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (!PredicatesFoldable(PredL, PredR))
     return nullptr;
 
+  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, false, Builder))
+    return V;
+
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;
   if (CmpInst::isSigned(PredL) ||
@@ -1772,31 +1824,8 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     default:
       llvm_unreachable("Unknown integer condition code!");
     case ICmpInst::ICMP_EQ:
-      if (LHS->getOperand(0) == RHS->getOperand(0)) {
-        // if LHSC and RHSC differ only by one bit:
-        // (A == C1 || A == C2) -> (A | (C1 ^ C2)) == C2
-        assert(LHSC->getValue().ult(RHSC->getValue()));
-
-        APInt Xor = LHSC->getValue() ^ RHSC->getValue();
-        if (Xor.isPowerOf2()) {
-          Value *C = Builder->getInt(Xor);
-          Value *Or = Builder->CreateOr(LHS->getOperand(0), C);
-          return Builder->CreateICmp(ICmpInst::ICMP_EQ, Or, RHSC);
-        }
-      }
-
-      // Special case to get the ordering right when the values wrap around
-      // zero. Ie, we assumed the constants were unsigned when swapping earlier.
-      if (LHSC->getValue() == 0 && RHSC->getValue().isAllOnesValue())
-        std::swap(LHSC, RHSC);
-      if (LHSC == SubOne(RHSC)) {
-        // (X == 13 | X == 14) -> X-13 <=u 1
-        // An 'add' is the canonical IR form, so favor that over a 'sub'.
-        Value *Add = Builder->CreateAdd(LHS0, ConstantExpr::getNeg(LHSC));
-        return Builder->CreateICmpULE(Add, ConstantInt::get(Add->getType(), 1));
-      }
-
-      break;                 // (X == 13 | X == 15) -> no change
+      // Potential folds for this case should already be handled.
+      break;
     case ICmpInst::ICMP_UGT: // (X == 13 | X u> 14) -> no change
     case ICmpInst::ICMP_SGT: // (X == 13 | X s> 14) -> no change
       break;

@@ -649,13 +649,15 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
                                 : support::endianness::big;
 
   // Look for the sections that we are interested in.
-  bool IsCoff = (dyn_cast<COFFObjectFile>(OF.get()) != nullptr);
+  auto ObjFormat = OF->getTripleObjectFormat();
   auto NamesSection =
-      lookupSection(*OF, getInstrProfNameSectionNameInObject(IsCoff));
+      lookupSection(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
+                                                 /*AddSegmentInfo=*/false));
   if (auto E = NamesSection.takeError())
     return E;
   auto CoverageSection =
-      lookupSection(*OF, getInstrProfCoverageSectionNameInObject(IsCoff));
+      lookupSection(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
+                                                 /*AddSegmentInfo=*/false));
   if (auto E = CoverageSection.takeError())
     return E;
 

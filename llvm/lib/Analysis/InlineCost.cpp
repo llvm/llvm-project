@@ -583,8 +583,7 @@ bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
 }
 
 bool CallAnalyzer::paramHasAttr(Argument *A, Attribute::AttrKind Attr) {
-  unsigned ArgNo = A->getArgNo();
-  return CandidateCS.paramHasAttr(ArgNo + 1, Attr);
+  return CandidateCS.paramHasAttr(A->getArgNo(), Attr);
 }
 
 bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {

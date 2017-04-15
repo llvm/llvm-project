@@ -14,6 +14,7 @@
 #ifndef LLVM_OBJECT_BINARY_H
 #define LLVM_OBJECT_BINARY_H
 
+#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -132,6 +133,16 @@ public:
   bool isLittleEndian() const {
     return !(TypeID == ID_ELF32B || TypeID == ID_ELF64B ||
              TypeID == ID_MachO32B || TypeID == ID_MachO64B);
+  }
+
+  Triple::ObjectFormatType getTripleObjectFormat() const {
+    if (isCOFF())
+      return Triple::COFF;
+    if (isMachO())
+      return Triple::MachO;
+    if (isELF())
+      return Triple::ELF;
+    return Triple::UnknownObjectFormat;
   }
 };
 

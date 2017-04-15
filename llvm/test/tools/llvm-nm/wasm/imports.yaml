@@ -1,0 +1,25 @@
+# RUN: yaml2obj < %s | llvm-nm - | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           foo
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           bar
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   false
+
+# CHECK:    U bar
+# CHECK:    U foo

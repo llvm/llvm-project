@@ -569,7 +569,7 @@ private:
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
   /// only possible if all operands to the PHI are constants).
-  Instruction *FoldOpIntoPhi(Instruction &I);
+  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
 
   /// Given an instruction with a select as one operand and a constant as the
   /// other operand, try to fold the binary operator into the select arguments.
