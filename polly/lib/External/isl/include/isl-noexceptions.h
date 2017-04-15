@@ -1,8 +1,7 @@
 /// These are automatically generated C++ bindings for isl.
 ///
-///
 /// isl is a library for computing with integer sets and maps described by
-/// Presburger formula. On top of this, isl provides various tools for
+/// Presburger formulas. On top of this, isl provides various tools for
 /// Polyhedral compilation ranging from dependence analysis over scheduling
 /// to AST generation.
 
@@ -24,6 +23,88 @@
 
 #include <functional>
 #include <string>
+
+namespace isl {
+
+inline namespace noexceptions {
+
+#define ISLPP_STRINGIZE_(X) #X
+#define ISLPP_STRINGIZE(X) ISLPP_STRINGIZE_(X)
+
+#define ISLPP_ASSERT(test, message)                          \
+  do {                                                       \
+    if (test)                                                \
+      break;                                                 \
+    fputs("Assertion \"" #test "\" failed at " __FILE__      \
+      ":" ISLPP_STRINGIZE(__LINE__) "\n  " message "\n",     \
+      stderr);                                               \
+  } while (0)
+
+class boolean {
+private:
+  isl_bool val;
+
+  friend isl::boolean manage(isl_bool val);
+  explicit boolean(isl_bool val): val(val) {}
+public:
+  boolean()
+      : val(isl_bool_error) {}
+
+  /* implicit */ boolean(bool val)
+      : val(val ? isl_bool_true : isl_bool_false) {}
+
+  bool is_error() const { return val == isl_bool_error; }
+  bool is_false() const { return val == isl_bool_false; }
+  bool is_true() const { return val == isl_bool_true; }
+
+  explicit operator bool() const {
+    ISLPP_ASSERT(!is_error(), "IMPLEMENTATION ERROR: Unhandled error state");
+    return is_true();
+  }
+
+  boolean operator!() const {
+    if (is_error())
+      return *this;
+    return !is_true();
+  }
+};
+
+inline isl::boolean manage(isl_bool val) {
+  return isl::boolean(val);
+}
+
+class ctx {
+  isl_ctx *ptr;
+public:
+  /* implicit */ ctx(isl_ctx *ctx)
+      : ptr(ctx) {}
+  isl_ctx *release() {
+    auto tmp = ptr;
+    ptr = nullptr;
+    return tmp;
+  }
+  isl_ctx *get() {
+    return ptr;
+  }
+};
+
+enum class stat {
+  ok = isl_stat_ok,
+  error = isl_stat_error
+};
+
+enum class dim {
+  cst = isl_dim_cst,
+  param = isl_dim_param,
+  in = isl_dim_in,
+  out = isl_dim_out,
+  set = isl_dim_set,
+  div = isl_dim_div,
+  all = isl_dim_all
+};
+
+}
+} // namespace isl
 
 namespace isl {
 
@@ -58,84 +139,6 @@ class union_pw_aff;
 class union_pw_multi_aff;
 class union_set;
 class val;
-
-#define ISLPP_STRINGIZE_(X) #X
-#define ISLPP_STRINGIZE(X) ISLPP_STRINGIZE_(X)
-
-#define ISLPP_ASSERT(test, message)                          \
-  do {                                                       \
-    if (test)                                                \
-      break;                                                 \
-    fputs("Assertion \"" #test "\" failed at " __FILE__      \
-          ":" ISLPP_STRINGIZE(__LINE__) "\n  " message "\n", \
-          stderr);                                           \
-  } while (0)
-
-class boolean {
-private:
-  friend isl::boolean manage(isl_bool val);
-
-  isl_bool val;
-
-public:
-  boolean()
-      : val(isl_bool_error) {}
-  /* implicit */ boolean(bool val)
-      : val(val ? isl_bool_true : isl_bool_false) {}
-
-  bool is_error() const { return val == isl_bool_error; }
-  bool is_false_or_error() const { return val != isl_bool_true; }
-  bool is_true_or_error() const { return val != isl_bool_false; }
-  bool is_no_error() const { return val != isl_bool_error; }
-  bool is_false_no_error() const { return val == isl_bool_false; }
-  bool is_true_no_error() const { return val == isl_bool_true; }
-
-  explicit operator bool() const {
-    ISLPP_ASSERT(is_no_error(), "IMPLEMENTATION ERROR: Unhandled error state");
-    return is_true_no_error();
-  }
-
-  boolean operator!() const {
-    if (is_error())
-      return boolean();
-    return !is_true_no_error();
-  }
-};
-
-inline isl::boolean manage(isl_bool val) {
-  return isl::boolean(val);
-}
-
-class ctx {
-  isl_ctx *ptr;
-
-public:
-  /* implicit */ ctx(isl_ctx *ctx)
-      : ptr(ctx) {}
-  isl_ctx *release() {
-    auto tmp = ptr;
-    ptr = nullptr;
-    return tmp;
-  }
-  isl_ctx *get() {
-    return ptr;
-  }
-};
-
-enum class stat {
-  ok = isl_stat_ok,
-  error = isl_stat_error,
-};
-
-enum class dim {
-  cst = isl_dim_cst,
-  param = isl_dim_param,
-  in = isl_dim_in,
-  out = isl_dim_out,
-  set = isl_dim_set,
-  div = isl_dim_div,
-  all = isl_dim_all
-};
 
 // declarations for isl::aff
 inline isl::aff manage(__isl_take isl_aff *ptr);
@@ -482,7 +485,7 @@ public:
   inline isl::map flatten() const;
   inline isl::map flatten_domain() const;
   inline isl::map flatten_range() const;
-  inline isl::stat foreach_basic_map(std::function<isl::stat(isl::basic_map)> &&fn) const;
+  inline isl::stat foreach_basic_map(const std::function<isl::stat(isl::basic_map)> &fn) const;
   static inline isl::map from_range(isl::set set);
   inline isl::map gist(isl::map context) const;
   inline isl::map gist_domain(isl::set context) const;
@@ -728,7 +731,7 @@ public:
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::pw_aff add(isl::pw_aff pwaff2) const;
-  inline isl::stat foreach_piece(std::function<isl::stat(isl::set, isl::aff)> &&fn) const;
+  inline isl::stat foreach_piece(const std::function<isl::stat(isl::set, isl::aff)> &fn) const;
   inline isl::space get_space() const;
   inline isl::boolean is_cst() const;
   inline isl::pw_aff mul(isl::pw_aff pwaff2) const;
@@ -932,7 +935,7 @@ public:
   inline isl::pw_aff dim_max(int pos) const;
   inline isl::pw_aff dim_min(int pos) const;
   inline isl::set flatten() const;
-  inline isl::stat foreach_basic_set(std::function<isl::stat(isl::basic_set)> &&fn) const;
+  inline isl::stat foreach_basic_set(const std::function<isl::stat(isl::basic_set)> &fn) const;
   inline isl::set gist(isl::set context) const;
   inline isl::map identity() const;
   inline isl::set intersect(isl::set set2) const;
@@ -1082,10 +1085,10 @@ public:
   inline /* implicit */ union_map();
   inline /* implicit */ union_map(const isl::union_map &obj);
   inline /* implicit */ union_map(std::nullptr_t);
+  inline explicit union_map(isl::ctx ctx, const std::string &str);
   inline explicit union_map(isl::union_pw_aff upa);
   inline /* implicit */ union_map(isl::basic_map bmap);
   inline /* implicit */ union_map(isl::map map);
-  inline explicit union_map(isl::ctx ctx, const std::string &str);
   inline isl::union_map &operator=(isl::union_map obj);
   inline ~union_map();
   inline __isl_give isl_union_map *copy() const &;
@@ -1117,7 +1120,7 @@ public:
   inline isl::union_map factor_range() const;
   inline isl::union_map fixed_power(isl::val exp) const;
   inline isl::union_map flat_range_product(isl::union_map umap2) const;
-  inline isl::stat foreach_map(std::function<isl::stat(isl::map)> &&fn) const;
+  inline isl::stat foreach_map(const std::function<isl::stat(isl::map)> &fn) const;
   static inline isl::union_map from(isl::union_pw_multi_aff upma);
   static inline isl::union_map from(isl::multi_union_pw_aff mupa);
   static inline isl::union_map from_domain_and_range(isl::union_set domain, isl::union_set range);
@@ -1188,7 +1191,7 @@ public:
   inline std::string to_str() const;
   inline isl::union_pw_aff add(isl::union_pw_aff upa2) const;
   static inline isl::union_pw_aff empty(isl::space space);
-  inline isl::stat foreach_pw_aff(std::function<isl::stat(isl::pw_aff)> &&fn) const;
+  inline isl::stat foreach_pw_aff(const std::function<isl::stat(isl::pw_aff)> &fn) const;
   inline isl::space get_space() const;
   inline isl::union_pw_aff pullback(isl::union_pw_multi_aff upma) const;
   inline isl::union_pw_aff sub(isl::union_pw_aff upa2) const;
@@ -1271,8 +1274,8 @@ public:
   inline isl::union_set coalesce() const;
   inline isl::union_set compute_divs() const;
   inline isl::union_set detect_equalities() const;
-  inline isl::stat foreach_point(std::function<isl::stat(isl::point)> &&fn) const;
-  inline isl::stat foreach_set(std::function<isl::stat(isl::set)> &&fn) const;
+  inline isl::stat foreach_point(const std::function<isl::stat(isl::point)> &fn) const;
+  inline isl::stat foreach_set(const std::function<isl::stat(isl::set)> &fn) const;
   inline isl::union_set gist(isl::union_set context) const;
   inline isl::union_set gist_params(isl::set set) const;
   inline isl::union_map identity() const;
@@ -2302,6 +2305,7 @@ bool local_space::is_null() const {
   return ptr == nullptr;
 }
 
+
 // implementations for isl::map
 isl::map manage(__isl_take isl_map *ptr) {
   return map(ptr);
@@ -2457,13 +2461,13 @@ isl::map map::flatten_range() const {
   return manage(res);
 }
 
-isl::stat map::foreach_basic_map(std::function<isl::stat(isl::basic_map)> &&fn) const {
+isl::stat map::foreach_basic_map(const std::function<isl::stat(isl::basic_map)> &fn) const {
   auto fn_lambda = [](isl_basic_map *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::basic_map)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_map_foreach_basic_map(get(), fn_lambda, &fn);
+  auto res = isl_map_foreach_basic_map(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
@@ -3272,13 +3276,13 @@ isl::pw_aff pw_aff::add(isl::pw_aff pwaff2) const {
   return manage(res);
 }
 
-isl::stat pw_aff::foreach_piece(std::function<isl::stat(isl::set, isl::aff)> &&fn) const {
+isl::stat pw_aff::foreach_piece(const std::function<isl::stat(isl::set, isl::aff)> &fn) const {
   auto fn_lambda = [](isl_set *arg_0, isl_aff *arg_1, void *arg_2) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::set, isl::aff)> *)arg_2;
-    isl::stat ret = (*func)(isl::manage(arg_0), isl::manage(arg_1));
+    stat ret = (*func) (isl::manage(arg_0), isl::manage(arg_1));
     return isl_stat(ret);
   };
-  auto res = isl_pw_aff_foreach_piece(get(), fn_lambda, &fn);
+  auto res = isl_pw_aff_foreach_piece(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
@@ -3947,13 +3951,13 @@ isl::set set::flatten() const {
   return manage(res);
 }
 
-isl::stat set::foreach_basic_set(std::function<isl::stat(isl::basic_set)> &&fn) const {
+isl::stat set::foreach_basic_set(const std::function<isl::stat(isl::basic_set)> &fn) const {
   auto fn_lambda = [](isl_basic_set *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::basic_set)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_set_foreach_basic_set(get(), fn_lambda, &fn);
+  auto res = isl_set_foreach_basic_set(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
@@ -4423,6 +4427,11 @@ union_map::union_map(std::nullptr_t)
 union_map::union_map(__isl_take isl_union_map *ptr)
     : ptr(ptr) {}
 
+union_map::union_map(isl::ctx ctx, const std::string &str) {
+  auto res = isl_union_map_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 union_map::union_map(isl::union_pw_aff upa) {
   auto res = isl_union_map_from_union_pw_aff(upa.release());
   ptr = res;
@@ -4435,11 +4444,6 @@ union_map::union_map(isl::basic_map bmap) {
 
 union_map::union_map(isl::map map) {
   auto res = isl_union_map_from_map(map.release());
-  ptr = res;
-}
-
-union_map::union_map(isl::ctx ctx, const std::string &str) {
-  auto res = isl_union_map_read_from_str(ctx.release(), str.c_str());
   ptr = res;
 }
 
@@ -4597,13 +4601,13 @@ isl::union_map union_map::flat_range_product(isl::union_map umap2) const {
   return manage(res);
 }
 
-isl::stat union_map::foreach_map(std::function<isl::stat(isl::map)> &&fn) const {
+isl::stat union_map::foreach_map(const std::function<isl::stat(isl::map)> &fn) const {
   auto fn_lambda = [](isl_map *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::map)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_map_foreach_map(get(), fn_lambda, &fn);
+  auto res = isl_union_map_foreach_map(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
@@ -4887,13 +4891,13 @@ isl::union_pw_aff union_pw_aff::empty(isl::space space) {
   return manage(res);
 }
 
-isl::stat union_pw_aff::foreach_pw_aff(std::function<isl::stat(isl::pw_aff)> &&fn) const {
+isl::stat union_pw_aff::foreach_pw_aff(const std::function<isl::stat(isl::pw_aff)> &fn) const {
   auto fn_lambda = [](isl_pw_aff *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::pw_aff)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_pw_aff_foreach_pw_aff(get(), fn_lambda, &fn);
+  auto res = isl_union_pw_aff_foreach_pw_aff(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
@@ -5167,23 +5171,23 @@ isl::union_set union_set::detect_equalities() const {
   return manage(res);
 }
 
-isl::stat union_set::foreach_point(std::function<isl::stat(isl::point)> &&fn) const {
+isl::stat union_set::foreach_point(const std::function<isl::stat(isl::point)> &fn) const {
   auto fn_lambda = [](isl_point *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::point)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_set_foreach_point(get(), fn_lambda, &fn);
+  auto res = isl_union_set_foreach_point(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
-isl::stat union_set::foreach_set(std::function<isl::stat(isl::set)> &&fn) const {
+isl::stat union_set::foreach_set(const std::function<isl::stat(isl::set)> &fn) const {
   auto fn_lambda = [](isl_set *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::set)> *)arg_1;
-    isl::stat ret = (*func)(isl::manage(arg_0));
+    stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_set_foreach_set(get(), fn_lambda, &fn);
+  auto res = isl_union_set_foreach_set(get(), fn_lambda, (void *) &fn);
   return isl::stat(res);
 }
 
