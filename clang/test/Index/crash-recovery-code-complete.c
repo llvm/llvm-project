@@ -10,5 +10,6 @@
 
 // FIXME: Please investigate abnormal path in MemoryBuffer.
 // REQUIRES: can-remove-opened-file
+// UNSUPPORTED: libstdcxx-safe-mode
 
 #warning parsing original file

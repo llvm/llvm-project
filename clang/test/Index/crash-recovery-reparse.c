@@ -7,5 +7,6 @@
 // CHECK-REPARSE-SOURCE-CRASH: Unable to reparse translation unit
 //
 // REQUIRES: crash-recovery
+// UNSUPPORTED: libstdcxx-safe-mode
 
 #warning parsing original file

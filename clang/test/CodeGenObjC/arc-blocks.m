@@ -532,8 +532,6 @@ void test13(id x) {
   // CHECK-NEXT: [[T0:%.*]] = load void ()*, void ()** [[B]]
   // CHECK-NEXT: [[T1:%.*]] = bitcast void ()* [[T0]] to i8*
   // CHECK-NEXT: call void @objc_release(i8* [[T1]])
-  // CHECK-NEXT: [[BPTR2:%.*]] = bitcast void ()** [[B]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[BPTR2]])
 
   // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T0]]
@@ -541,7 +539,9 @@ void test13(id x) {
   // CHECK-NEXT: call void @objc_release(i8* [[T0]])
   // CHECK-NEXT: br label
 
-  // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]]
+  // CHECK:      [[BPTR2:%.*]] = bitcast void ()** [[B]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[BPTR2]])
+  // CHECK-NEXT:      [[T0:%.*]] = load i8*, i8** [[X]]
   // CHECK-NEXT: call void @objc_release(i8* [[T0]])
   // CHECK-NEXT: ret void
 }
