@@ -138,103 +138,45 @@ const std::error_category &llvm::instrprof_category() {
 
 namespace {
 
-enum InstrProfSectKind {
-#define INSTR_PROF_SECT_ENTRY(Kind, SectName, SectNameCommon, SectNameCoff,    \
-                              Prefix)                                          \
-  Kind,
-#include "llvm/ProfileData/InstrProfData.inc"
-};
-
-const char *InstrProfSectName[] = {
-#define INSTR_PROF_SECT_ENTRY(Kind, SectName, SectNameCommon, SectNameCoff,    \
-                              Prefix)                                          \
-  SectName,
-#include "llvm/ProfileData/InstrProfData.inc"
-};
-
 const char *InstrProfSectNameCommon[] = {
-#define INSTR_PROF_SECT_ENTRY(Kind, SectName, SectNameCommon, SectNameCoff,    \
-                              Prefix)                                          \
+#define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix)      \
   SectNameCommon,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
 const char *InstrProfSectNameCoff[] = {
-#define INSTR_PROF_SECT_ENTRY(Kind, SectName, SectNameCommon, SectNameCoff,    \
-                              Prefix)                                          \
+#define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix)      \
   SectNameCoff,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
 const char *InstrProfSectNamePrefix[] = {
-#define INSTR_PROF_SECT_ENTRY(Kind, SectName, SectNameCommon, SectNameCoff,    \
-                              Prefix)                                          \
+#define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix)      \
   Prefix,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
-
-std::string getInstrProfSectionName(bool isCoff, InstrProfSectKind Kind) {
-  return isCoff ? InstrProfSectNameCoff[Kind] : InstrProfSectNameCommon[Kind];
-}
-
-std::string getInstrProfSectionName(const Module *M, InstrProfSectKind Kind) {
-  if (!M)
-    return InstrProfSectName[Kind];
-
-  bool AddSegment = Triple(M->getTargetTriple()).isOSBinFormatMachO();
-  std::string SectName;
-  if (Triple(M->getTargetTriple()).isOSBinFormatCOFF())
-    SectName = InstrProfSectNameCoff[Kind];
-  else
-    SectName = InstrProfSectNameCommon[Kind];
-
-  if (AddSegment) {
-    SectName = InstrProfSectNamePrefix[Kind] + SectName;
-    if (Kind == IPSK_data) {
-      SectName += ",regular,live_support";
-    }
-  }
-  return SectName;
-}
 
 } // namespace
 
 namespace llvm {
 
-std::string getInstrProfCountersSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_cnts);
-}
+std::string getInstrProfSectionName(InstrProfSectKind IPSK,
+                                    Triple::ObjectFormatType OF,
+                                    bool AddSegmentInfo) {
+  std::string SectName;
 
-std::string getInstrProfNameSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_name);
-}
+  if (OF == Triple::MachO && AddSegmentInfo)
+    SectName = InstrProfSectNamePrefix[IPSK];
 
-std::string getInstrProfNameSectionNameInObject(bool isCoff) {
-  return getInstrProfSectionName(isCoff, IPSK_name);
-}
+  if (OF == Triple::COFF)
+    SectName += InstrProfSectNameCoff[IPSK];
+  else
+    SectName += InstrProfSectNameCommon[IPSK];
 
-std::string getInstrProfDataSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_data);
-}
+  if (OF == Triple::MachO && IPSK == IPSK_data && AddSegmentInfo)
+    SectName += ",regular,live_support";
 
-std::string getInstrProfDataSectionNameInObject(bool isCoff) {
-  return getInstrProfSectionName(isCoff, IPSK_data);
-}
-
-std::string getInstrProfValuesSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_vals);
-}
-
-std::string getInstrProfVNodesSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_vnodes);
-}
-
-std::string getInstrProfCoverageSectionName(const Module *M) {
-  return getInstrProfSectionName(M, IPSK_covmap);
-}
-
-std::string getInstrProfCoverageSectionNameInObject(bool isCoff) {
-  return getInstrProfSectionName(isCoff, IPSK_covmap);
+  return SectName;
 }
 
 void SoftInstrProfErrors::addError(instrprof_error IE) {

@@ -87,6 +87,9 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// The called function.
   Function &F;
 
+  // Cache the DataLayout since we use it a lot.
+  const DataLayout &DL;
+
   /// The candidate callsite being analyzed. Please do not use this to do
   /// analysis in the caller function; we want the inline cost query to be
   /// easily cacheable. Instead, use the cover function paramHasAttr.
@@ -217,17 +220,17 @@ public:
                ProfileSummaryInfo *PSI, Function &Callee, CallSite CSArg,
                const InlineParams &Params)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
-        PSI(PSI), F(Callee), CandidateCS(CSArg), Params(Params),
-        Threshold(Params.DefaultThreshold), Cost(0), IsCallerRecursive(false),
-        IsRecursiveCall(false), ExposesReturnsTwice(false),
-        HasDynamicAlloca(false), ContainsNoDuplicateCall(false),
-        HasReturn(false), HasIndirectBr(false), HasFrameEscape(false),
-        AllocatedSize(0), NumInstructions(0), NumVectorInstructions(0),
-        FiftyPercentVectorBonus(0), TenPercentVectorBonus(0), VectorBonus(0),
-        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
-        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
-        NumInstructionsSimplified(0), SROACostSavings(0),
-        SROACostSavingsLost(0) {}
+        PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()),
+        CandidateCS(CSArg), Params(Params), Threshold(Params.DefaultThreshold),
+        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
+        ExposesReturnsTwice(false), HasDynamicAlloca(false),
+        ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
+        HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
+        NumVectorInstructions(0), FiftyPercentVectorBonus(0),
+        TenPercentVectorBonus(0), VectorBonus(0), NumConstantArgs(0),
+        NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
+        NumConstantPtrDiffs(0), NumInstructionsSimplified(0),
+        SROACostSavings(0), SROACostSavingsLost(0) {}
 
   bool analyzeCall(CallSite CS);
 
@@ -304,7 +307,6 @@ void CallAnalyzer::accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
 /// Returns false if unable to compute the offset for any reason. Respects any
 /// simplified values known during the analysis of this callsite.
 bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
   unsigned IntPtrWidth = DL.getPointerSizeInBits();
   assert(IntPtrWidth == Offset.getBitWidth());
 
@@ -354,7 +356,6 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   if (I.isArrayAllocation()) {
     Constant *Size = SimplifiedValues.lookup(I.getArraySize());
     if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
-      const DataLayout &DL = F.getParent()->getDataLayout();
       Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(), DL.getTypeAllocSize(Ty), AllocatedSize);
@@ -364,7 +365,6 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
 
   // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
-    const DataLayout &DL = F.getParent()->getDataLayout();
     Type *Ty = I.getAllocatedType();
     AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty), AllocatedSize);
   }
@@ -505,7 +505,6 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   // Track base/offset pairs when converted to a plain integer provided the
   // integer is large enough to represent the pointer.
   unsigned IntegerSize = I.getType()->getScalarSizeInBits();
-  const DataLayout &DL = F.getParent()->getDataLayout();
   if (IntegerSize >= DL.getPointerSizeInBits()) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
@@ -539,7 +538,6 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   // modifications provided the integer is not too large.
   Value *Op = I.getOperand(0);
   unsigned IntegerSize = Op->getType()->getScalarSizeInBits();
-  const DataLayout &DL = F.getParent()->getDataLayout();
   if (IntegerSize <= DL.getPointerSizeInBits()) {
     std::pair<Value *, APInt> BaseAndOffset = ConstantOffsetPtrs.lookup(Op);
     if (BaseAndOffset.first)
@@ -571,7 +569,6 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
 bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
   Value *Operand = I.getOperand(0);
   if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        const DataLayout &DL = F.getParent()->getDataLayout();
         return ConstantFoldInstOperands(&I, COps[0], DL);
       }))
     return true;
@@ -777,7 +774,6 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   auto Evaluate = [&](SmallVectorImpl<Constant *> &COps) {
     Value *SimpleV = nullptr;
-    const DataLayout &DL = F.getParent()->getDataLayout();
     if (auto FI = dyn_cast<FPMathOperator>(&I))
       SimpleV = SimplifyFPBinOp(I.getOpcode(), COps[0], COps[1],
                                 FI->getFastMathFlags(), DL);
@@ -1105,19 +1101,10 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // is expensive or the function has the "use-soft-float" attribute, this may
     // eventually become a library call. Treat the cost as such.
     if (I->getType()->isFloatingPointTy()) {
-      bool hasSoftFloatAttr = false;
-
       // If the function has the "use-soft-float" attribute, mark it as
       // expensive.
-      if (F.hasFnAttribute("use-soft-float")) {
-        Attribute Attr = F.getFnAttribute("use-soft-float");
-        StringRef Val = Attr.getValueAsString();
-        if (Val == "true")
-          hasSoftFloatAttr = true;
-      }
-
       if (TTI.getFPOpCost(I->getType()) == TargetTransformInfo::TCC_Expensive ||
-          hasSoftFloatAttr)
+          (F.getFnAttribute("use-soft-float").getValueAsString() == "true"))
         Cost += InlineConstants::CallPenalty;
     }
 
@@ -1162,7 +1149,6 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
   if (!V->getType()->isPointerTy())
     return nullptr;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
   unsigned IntPtrWidth = DL.getPointerSizeInBits();
   APInt Offset = APInt::getNullValue(IntPtrWidth);
 
@@ -1219,7 +1205,6 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
 
   FiftyPercentVectorBonus = 3 * Threshold / 2;
   TenPercentVectorBonus = 3 * Threshold / 4;
-  const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Track whether the post-inlining function would have more than one basic
   // block. A single basic block is often intended for inlining. Balloon the

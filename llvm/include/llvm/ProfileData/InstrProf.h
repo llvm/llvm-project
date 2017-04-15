@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -53,40 +54,19 @@ class Instruction;
 class MDNode;
 class Module;
 
-/// Return the name of data section containing profile counter variables.
-/// If M is null, the target platform is assumed to be the same as
-/// the host machine, and the segment prefix will not be added.
-std::string getInstrProfCountersSectionName(const Module *M = nullptr);
+enum InstrProfSectKind {
+#define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
 
-/// Return the name of data section containing names of instrumented
-/// functions. If M is null, the target platform is assumed to be the same as
-/// the host machine, nor will segment prefix be added.
-std::string getInstrProfNameSectionName(const Module *M = nullptr);
-
-/// Similar to the above, but used by host tool (e.g, coverage) which has
-/// object format information. The section name returned is not prefixed
-/// with segment name.
-std::string getInstrProfNameSectionNameInObject(bool isCoff);
-
-/// Return the name of the data section containing per-function control
-/// data. If M is null, the target platform is assumed to be the same as
-/// the host machine, and the segment prefix will not be added.
-std::string getInstrProfDataSectionName(const Module *M = nullptr);
-
-/// Similar to the above, but used by host tool (e.g, coverage) which has
-/// object format information. The section name returned is not prefixed
-/// with segment name.
-std::string getInstrProfDataSectionNameInObject(bool isCoff);
-
-/// Return the name of data section containing pointers to value profile
-/// counters/nodes. If M is null, the target platform is assumed to be
-/// the same as the host machine, and the segment prefix will not be added.
-std::string getInstrProfValuesSectionName(const Module *M = nullptr);
-
-/// Return the name of data section containing nodes holdling value
-/// profiling data. If M is null, the target platform is assumed to be
-/// the same as the host machine, and the segment prefix will not be added.
-std::string getInstrProfVNodesSectionName(const Module *M = nullptr);
+/// Return the name of the profile section corresponding to \p IPSK.
+///
+/// The name of the section depends on the object format type \p OF. If
+/// \p AddSegmentInfo is true, a segment prefix and additional linker hints may
+/// be added to the section name (this is the default).
+std::string getInstrProfSectionName(InstrProfSectKind IPSK,
+                                    Triple::ObjectFormatType OF,
+                                    bool AddSegmentInfo = true);
 
 /// Return the name profile runtime entry point to do value profiling
 /// for a given site.

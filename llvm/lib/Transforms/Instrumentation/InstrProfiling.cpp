@@ -140,30 +140,6 @@ llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options) {
   return new InstrProfilingLegacyPass(Options);
 }
 
-bool InstrProfiling::isMachO() const {
-  return Triple(M->getTargetTriple()).isOSBinFormatMachO();
-}
-
-/// Get the section name for the counter variables.
-std::string InstrProfiling::getCountersSection() const {
-  return getInstrProfCountersSectionName(M);
-}
-
-/// Get the section name for the name variables.
-std::string InstrProfiling::getNameSection() const {
-  return getInstrProfNameSectionName(M);
-}
-
-/// Get the section name for the profile data variables.
-std::string InstrProfiling::getDataSection() const {
-  return getInstrProfDataSectionName(M);
-}
-
-/// Get the section name for the coverage mapping data.
-std::string InstrProfiling::getCoverageSection() const {
-  return getInstrProfCoverageSectionName(M);
-}
-
 static InstrProfIncrementInst *castToIncrementInst(Instruction *Instr) {
   InstrProfIncrementInst *Inc = dyn_cast<InstrProfIncrementInstStep>(Instr);
   if (Inc)
@@ -182,6 +158,7 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   UsedVars.clear();
   getMemOPSizeRangeFromOption(MemOPSizeRange, MemOPSizeRangeStart,
                               MemOPSizeRangeLast);
+  TT = Triple(M.getTargetTriple());
 
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
@@ -442,7 +419,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
                          Constant::getNullValue(CounterTy),
                          getVarName(Inc, getInstrProfCountersVarPrefix()));
   CounterPtr->setVisibility(NamePtr->getVisibility());
-  CounterPtr->setSection(getCountersSection());
+  CounterPtr->setSection(
+      getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
   CounterPtr->setAlignment(8);
   CounterPtr->setComdat(ProfileVarsComdat);
 
@@ -462,7 +440,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
                              Constant::getNullValue(ValuesTy),
                              getVarName(Inc, getInstrProfValuesVarPrefix()));
       ValuesVar->setVisibility(NamePtr->getVisibility());
-      ValuesVar->setSection(getInstrProfValuesSectionName(M));
+      ValuesVar->setSection(
+          getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
       ValuesVar->setAlignment(8);
       ValuesVar->setComdat(ProfileVarsComdat);
       ValuesPtrExpr =
@@ -495,7 +474,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
                                   ConstantStruct::get(DataTy, DataVals),
                                   getVarName(Inc, getInstrProfDataVarPrefix()));
   Data->setVisibility(NamePtr->getVisibility());
-  Data->setSection(getDataSection());
+  Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(INSTR_PROF_DATA_ALIGNMENT);
   Data->setComdat(ProfileVarsComdat);
 
@@ -557,7 +536,8 @@ void InstrProfiling::emitVNodes() {
   auto *VNodesVar = new GlobalVariable(
       *M, VNodesTy, false, GlobalValue::PrivateLinkage,
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
-  VNodesVar->setSection(getInstrProfVNodesSectionName(M));
+  VNodesVar->setSection(
+      getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
   UsedVars.push_back(VNodesVar);
 }
 
@@ -580,7 +560,8 @@ void InstrProfiling::emitNameData() {
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
   NamesSize = CompressedNameStr.size();
-  NamesVar->setSection(getNameSection());
+  NamesVar->setSection(
+      getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
   UsedVars.push_back(NamesVar);
 
   for (auto *NamePtr : ReferencedNames)
@@ -676,7 +657,6 @@ void InstrProfiling::emitInitialization() {
     GlobalVariable *ProfileNameVar = new GlobalVariable(
         *M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
         ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
-    Triple TT(M->getTargetTriple());
     if (TT.supportsCOMDAT()) {
       ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
       ProfileNameVar->setComdat(M->getOrInsertComdat(

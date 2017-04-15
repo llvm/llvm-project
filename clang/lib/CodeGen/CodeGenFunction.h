@@ -2077,9 +2077,8 @@ public:
   llvm::BlockAddress *GetAddrOfLabel(const LabelDecl *L);
   llvm::BasicBlock *GetIndirectGotoBlock();
 
-  /// Check if \p E is a reference, or a C++ "this" pointer wrapped in value-
-  /// preserving casts.
-  static bool IsDeclRefOrWrappedCXXThis(const Expr *E);
+  /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
+  static bool IsWrappedCXXThis(const Expr *E);
 
   /// EmitNullInitialization - Generate code to set a value of the given type to
   /// null, If the type contains data member pointers, they will be initialized

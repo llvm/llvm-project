@@ -48,18 +48,16 @@ int convertForTestingMain(int argc, const char *argv[]) {
   // Look for the sections that we are interested in.
   int FoundSectionCount = 0;
   SectionRef ProfileNames, CoverageMapping;
+  auto ObjFormat = OF->getTripleObjectFormat();
   for (const auto &Section : OF->sections()) {
     StringRef Name;
     if (Section.getName(Name))
       return 1;
-    // TODO: with the current getInstrProfXXXSectionName interfaces, the
-    // the  host tool is limited to read coverage section on
-    // binaries with compatible profile section naming scheme as the host
-    // platform. Currently, COFF format binaries have different section
-    // naming scheme from the all the rest.
-    if (Name == llvm::getInstrProfNameSectionName()) {
+    if (Name == llvm::getInstrProfSectionName(IPSK_name, ObjFormat,
+                                              /*AddSegmentInfo=*/false)) {
       ProfileNames = Section;
-    } else if (Name == llvm::getInstrProfCoverageSectionName()) {
+    } else if (Name == llvm::getInstrProfSectionName(
+                           IPSK_covmap, ObjFormat, /*AddSegmentInfo=*/false)) {
       CoverageMapping = Section;
     } else
       continue;
