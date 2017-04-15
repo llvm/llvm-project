@@ -74,8 +74,8 @@ private:
   SymbolAssignment *readAssignment(StringRef Name);
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
   uint32_t readFill();
+  uint32_t parseFill(StringRef Tok);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  uint32_t readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   StringMatcher readFilePatterns();
@@ -557,9 +557,8 @@ Expr ScriptParser::readAssertExpr() {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
 uint32_t ScriptParser::readFill() {
   expect("(");
-  uint32_t V = readOutputSectionFiller(next());
+  uint32_t V = parseFill(next());
   expect(")");
-  expect(";");
   return V;
 }
 
@@ -621,9 +620,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   Cmd->Phdrs = readOutputSectionPhdrs();
 
   if (consume("="))
-    Cmd->Filler = readOutputSectionFiller(next());
+    Cmd->Filler = parseFill(next());
   else if (peek().startswith("="))
-    Cmd->Filler = readOutputSectionFiller(next().drop_front());
+    Cmd->Filler = parseFill(next().drop_front());
 
   // Consume optional comma following output section command.
   consume(",");
@@ -631,14 +630,14 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   return Cmd;
 }
 
-// Read "=<number>" where <number> is an octal/decimal/hexadecimal number.
+// Parses a given string as a octal/decimal/hexadecimal number and
+// returns it as a big-endian number. Used for `=<fillexp>`.
 // https://sourceware.org/binutils/docs/ld/Output-Section-Fill.html
 //
-// ld.gold is not fully compatible with ld.bfd. ld.bfd handles
-// hexstrings as blobs of arbitrary sizes, while ld.gold handles them
-// as 32-bit big-endian values. We will do the same as ld.gold does
-// because it's simpler than what ld.bfd does.
-uint32_t ScriptParser::readOutputSectionFiller(StringRef Tok) {
+// When reading a hexstring, ld.bfd handles it as a blob of arbitrary
+// size, while ld.gold always handles it as a 32-bit big-endian number.
+// We are compatible with ld.gold because it's easier to implement.
+uint32_t ScriptParser::parseFill(StringRef Tok) {
   uint32_t V = 0;
   if (Tok.getAsInteger(0, V))
     setError("invalid filler expression: " + Tok);

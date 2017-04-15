@@ -2542,14 +2542,6 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text);
 }
 
-LLVM_ATTRIBUTE_ALWAYS_INLINE
-static size_t nextWordLength(llvm::StringRef S) {
-  size_t pos = S.find_first_of(' ');
-  if (pos == llvm::StringRef::npos)
-    return S.size();
-  return pos;
-}
-
 void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
                                         llvm::StringRef separator,
                                         llvm::StringRef help_text,
@@ -2567,6 +2559,11 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
   llvm::StringRef text = text_strm.GetString();
 
   uint32_t chars_left = max_columns;
+
+  auto nextWordLength = [](llvm::StringRef S) {
+    size_t pos = S.find_first_of(' ');
+    return pos == llvm::StringRef::npos ? S.size() : pos;
+  };
 
   while (!text.empty()) {
     if (text.front() == '\n' ||

@@ -38,7 +38,7 @@ Language "English"
 Country  "USA"
 LangId   "1033"
 Version  "2"
-Revision "20160714"
+Revision "20161216"
 
 
 
@@ -388,8 +388,8 @@ OBSOLETE                     "%1$s: granularity=core will be used."
 EnvLockWarn                  "%1$s must be set prior to first OMP lock call or critical section; ignored."
 FutexNotSupported            "futex system call not supported; %1$s=%2$s ignored."
 AffGranUsing                 "%1$s: granularity=%2$s will be used."
-AffHWSubsetInvalid           "%1$s: invalid value \"%2$s\", valid format is \"Ns[@N],Nc[@N],Nt "
-                             "(nSockets@offset, nCores@offset, nTthreads per core)\"."
+AffHWSubsetInvalid           "%1$s: invalid value \"%2$s\", valid format is \"N<item>[@N][,...][,Nt] "
+                             "(<item> can be S, N, L2, C, T  for Socket, NUMA Node, L2 Cache, Core, Thread)\"."
 AffHWSubsetUnsupported       "KMP_HW_SUBSET ignored: unsupported architecture."
 AffHWSubsetManyCores         "KMP_HW_SUBSET ignored: too many cores requested."
 SyntaxErrorUsing             "%1$s: syntax error, using %2$s."
@@ -411,6 +411,10 @@ AffHwlocErrorOccurred        "%1$s: Hwloc failed in %2$s. Relying on internal af
 EnvSerialWarn                "%1$s must be set prior to OpenMP runtime library initialization; ignored."
 EnvVarDeprecated             "%1$s variable deprecated, please use %2$s instead."
 RedMethodNotSupported        "KMP_FORCE_REDUCTION: %1$s method is not supported; using critical."
+AffHWSubsetNoHWLOC           "KMP_HW_SUBSET ignored: unsupported item requested for non-HWLOC topology method (KMP_TOPOLOGY_METHOD)"
+AffHWSubsetManyNodes         "KMP_HW_SUBSET ignored: too many NUMA Nodes requested."
+AffHWSubsetManyTiles         "KMP_HW_SUBSET ignored: too many L2 Caches requested."
+AffHWSubsetManyProcs         "KMP_HW_SUBSET ignored: too many Procs requested."
 
 
 # --------------------------------------------------------------------------------------------------

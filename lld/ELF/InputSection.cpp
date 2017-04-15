@@ -551,7 +551,6 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
 // function as a performance optimization.
 template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
-  typedef typename ELFT::uint uintX_t;
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->IsMips64EL);
     uint64_t Offset = getOffset(Rel.r_offset);
@@ -569,10 +568,10 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       return;
     }
 
-    uintX_t AddrLoc = this->OutSec->Addr + Offset;
+    uint64_t AddrLoc = this->OutSec->Addr + Offset;
     uint64_t SymVA = 0;
     if (!Sym.isTls() || Out::TlsPhdr)
-      SymVA = SignExtend64<sizeof(uintX_t) * 8>(
+      SymVA = SignExtend64<sizeof(typename ELFT::uint) * 8>(
           getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
@@ -596,14 +595,13 @@ void InputSectionBase::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     return;
   }
 
-  typedef typename ELFT::uint uintX_t;
-  const unsigned Bits = sizeof(uintX_t) * 8;
+  const unsigned Bits = sizeof(typename ELFT::uint) * 8;
   for (const Relocation &Rel : Relocations) {
     uint64_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
 
-    uintX_t AddrLoc = getOutputSection()->Addr + Offset;
+    uint64_t AddrLoc = getOutputSection()->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64<Bits>(
         getRelocTargetVA<ELFT>(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr));
@@ -663,11 +661,9 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
     return;
   }
 
-  // Copy section contents from source object file to output file.
-  ArrayRef<uint8_t> Data = this->Data;
+  // Copy section contents from source object file to output file
+  // and then apply relocations.
   memcpy(Buf + OutSecOff, Data.data(), Data.size());
-
-  // Iterate over all relocation sections that apply to this section.
   uint8_t *BufEnd = Buf + OutSecOff + Data.size();
   this->relocate<ELFT>(Buf, BufEnd);
 }

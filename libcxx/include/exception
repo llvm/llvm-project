@@ -202,46 +202,54 @@ struct __nested
     _LIBCPP_INLINE_VISIBILITY explicit __nested(const _Tp& __t) : _Tp(__t) {}
 };
 
-template <class _Tp>
-_LIBCPP_NORETURN
-void
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-throw_with_nested(_Tp&& __t, typename enable_if<
-                  is_class<typename remove_reference<_Tp>::type>::value &&
-                  !is_base_of<nested_exception, typename remove_reference<_Tp>::type>::value
-                  && !__libcpp_is_final<typename remove_reference<_Tp>::type>::value
-                                    >::type* = 0)
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-throw_with_nested (_Tp& __t, typename enable_if<
-                  is_class<_Tp>::value && !is_base_of<nested_exception, _Tp>::value
-                                    >::type* = 0)
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-{
 #ifndef _LIBCPP_NO_EXCEPTIONS
-    throw __nested<typename remove_reference<_Tp>::type>(_VSTD::forward<_Tp>(__t));
-#else
-    ((void)__t);
-    // FIXME: Make this abort.
+template <class _Tp, class _Up, bool>
+struct __throw_with_nested;
+
+template <class _Tp, class _Up>
+struct __throw_with_nested<_Tp, _Up, true> {
+    _LIBCPP_NORETURN static inline _LIBCPP_ALWAYS_INLINE void
+    #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    __do_throw(_Tp&& __t)
+    #else
+    __do_throw (_Tp& __t)
+    #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    {
+        throw __nested<_Up>(_VSTD::forward<_Tp>(__t));
+    }
+};
+
+template <class _Tp, class _Up>
+struct __throw_with_nested<_Tp, _Up, false> {
+    _LIBCPP_NORETURN static inline _LIBCPP_ALWAYS_INLINE void
+    #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    __do_throw(_Tp&& __t)
+    #else
+    __do_throw (_Tp& __t)
+    #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    {
+        throw _VSTD::forward<_Tp>(__t);
+    }
+};
 #endif
-}
 
 template <class _Tp>
 _LIBCPP_NORETURN
 void
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-throw_with_nested(_Tp&& __t, typename enable_if<
-                  !is_class<typename remove_reference<_Tp>::type>::value ||
-                  is_base_of<nested_exception, typename remove_reference<_Tp>::type>::value
-                  || __libcpp_is_final<typename remove_reference<_Tp>::type>::value
-                                    >::type* = 0)
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-throw_with_nested (_Tp& __t, typename enable_if<
-                  !is_class<_Tp>::value || is_base_of<nested_exception, _Tp>::value
-                                    >::type* = 0)
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+throw_with_nested(_Tp&& __t)
+#else
+throw_with_nested (_Tp& __t)
+#endif // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
-    throw _VSTD::forward<_Tp>(__t);
+    typedef typename decay<_Tp>::type _Up;
+    static_assert( is_copy_constructible<_Up>::value, "type thrown must be CopyConstructible");
+    __throw_with_nested<_Tp, _Up,
+        is_class<_Up>::value &&
+        !is_base_of<nested_exception, _Up>::value &&
+        !__libcpp_is_final<_Up>::value>::
+            __do_throw(_VSTD::forward<_Tp>(__t));
 #else
     ((void)__t);
     // FIXME: Make this abort

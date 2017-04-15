@@ -1874,6 +1874,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_TLS_LDO32:
   case R_ARM_TLS_LE32:
   case R_ARM_TLS_TPOFF32:
+  case R_ARM_TLS_DTPOFF32:
     write32le(Loc, Val);
     break;
   case R_ARM_TLS_DTPMOD32:

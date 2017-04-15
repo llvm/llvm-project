@@ -107,6 +107,16 @@ int main()
             assert(i == 7);
         }
     }
+    {
+        try
+        {
+            std::throw_with_nested("String literal");
+            assert(false);
+        }
+        catch (const char * s)
+        {
+        }
+    }
 #if TEST_STD_VER > 11
     {
         try

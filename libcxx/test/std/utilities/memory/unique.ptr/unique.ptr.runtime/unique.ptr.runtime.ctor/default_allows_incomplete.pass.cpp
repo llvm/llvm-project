@@ -36,7 +36,7 @@ public:
 
 void check(int i);
 
-template <class D = std::default_delete<A>>
+template <class D = std::default_delete<A> >
 struct B {
   std::unique_ptr<A[], D> a_;
   B();

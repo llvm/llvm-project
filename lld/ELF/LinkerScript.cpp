@@ -68,8 +68,13 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   Sym->Binding = STB_GLOBAL;
   ExprValue Value = Cmd->Expression();
   SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
+
+  // We want to set symbol values early if we can. This allows us to use symbols
+  // as variables in linker scripts. Doing so allows us to write expressions
+  // like this: `alignment = 16; . = ALIGN(., alignment)`
+  uint64_t SymValue = Value.isAbsolute() ? Value.getValue() : 0;
   replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
-                              STT_NOTYPE, 0, 0, Sec, nullptr);
+                              STT_NOTYPE, SymValue, 0, Sec, nullptr);
   return Sym->body();
 }
 
@@ -627,7 +632,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // '.' is assigned to, but creating these section should not have any bad
   // consequeces and gives us a section to put the symbol in.
   uint64_t Flags = SHF_ALLOC;
-  uint32_t Type = SHT_NOBITS;
+  uint32_t Type = SHT_PROGBITS;
   for (BaseCommand *Base : Opt.Commands) {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
     if (!Cmd)

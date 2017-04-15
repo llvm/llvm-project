@@ -52,20 +52,20 @@ bool isVariableDim(const isl::basic_map &BMap) {
 
 /// Whether Map's first out dimension is no constant nor piecewise constant.
 bool isVariableDim(const isl::map &Map) {
-  return foreachEltWithBreak(Map, [](isl::basic_map BMap) -> isl_stat {
+  return Map.foreach_basic_map([](isl::basic_map BMap) -> isl::stat {
     if (isVariableDim(BMap))
-      return isl_stat_error;
-    return isl_stat_ok;
-  });
+      return isl::stat::error;
+    return isl::stat::ok;
+  }) == isl::stat::ok;
 }
 
 /// Whether UMap's first out dimension is no (piecewise) constant.
 bool isVariableDim(const isl::union_map &UMap) {
-  return foreachEltWithBreak(UMap, [](isl::map Map) -> isl_stat {
+  return UMap.foreach_map([](isl::map Map) -> isl::stat {
     if (isVariableDim(Map))
-      return isl_stat_error;
-    return isl_stat_ok;
-  });
+      return isl::stat::error;
+    return isl::stat::ok;
+  }) == isl::stat::ok;
 }
 
 /// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
@@ -74,39 +74,39 @@ bool isVariableDim(const isl::union_map &UMap) {
 isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
   assert(!Max || !Min);
   isl::val Result;
-  foreachPieceWithBreak(PwAff, [=, &Result](isl::set Set, isl::aff Aff) {
+  PwAff.foreach_piece([=, &Result](isl::set Set, isl::aff Aff) -> isl::stat {
     if (Result && Result.is_nan())
-      return isl_stat_ok;
+      return isl::stat::ok;
 
     // TODO: If Min/Max, we can also determine a minimum/maximum value if
     // Set is constant-bounded.
     if (!Aff.is_cst()) {
       Result = isl::val::nan(Aff.get_ctx());
-      return isl_stat_error;
+      return isl::stat::error;
     }
 
     auto ThisVal = Aff.get_constant();
     if (!Result) {
       Result = ThisVal;
-      return isl_stat_ok;
+      return isl::stat::ok;
     }
 
     if (Result.eq(ThisVal))
-      return isl_stat_ok;
+      return isl::stat::ok;
 
     if (Max && ThisVal.gt(Result)) {
       Result = ThisVal;
-      return isl_stat_ok;
+      return isl::stat::ok;
     }
 
     if (Min && ThisVal.lt(Result)) {
       Result = ThisVal;
-      return isl_stat_ok;
+      return isl::stat::ok;
     }
 
     // Not compatible
     Result = isl::val::nan(Aff.get_ctx());
-    return isl_stat_error;
+    return isl::stat::error;
   });
   return Result;
 }
@@ -117,11 +117,12 @@ isl::union_pw_aff subtract(isl::union_pw_aff UPwAff, isl::val Val) {
     return UPwAff;
 
   auto Result = isl::union_pw_aff::empty(UPwAff.get_space());
-  foreachElt(UPwAff, [=, &Result](isl::pw_aff PwAff) {
+  UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
     auto ValAff =
         isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
     auto Subtracted = PwAff.sub(ValAff);
     Result = Result.union_add(isl::union_pw_aff(Subtracted));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -132,11 +133,12 @@ isl::union_pw_aff multiply(isl::union_pw_aff UPwAff, isl::val Val) {
     return UPwAff;
 
   auto Result = isl::union_pw_aff::empty(UPwAff.get_space());
-  foreachElt(UPwAff, [=, &Result](isl::pw_aff PwAff) {
+  UPwAff.foreach_pw_aff([=, &Result](isl::pw_aff PwAff) -> isl::stat {
     auto ValAff =
         isl::pw_aff(isl::set::universe(PwAff.get_space().domain()), Val);
     auto Multiplied = PwAff.mul(ValAff);
     Result = Result.union_add(Multiplied);
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -152,9 +154,10 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
                     have no effect on schedule ranges */
 
   auto Result = isl::union_map::empty(UMap.get_space());
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     auto Outprojected = Map.project_out(isl::dim::out, first, n);
     Result = Result.add_map(Outprojected);
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -166,8 +169,9 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
 /// number of dimensions is not supported by the other code in this file.
 size_t scheduleScatterDims(const isl::union_map &Schedule) {
   unsigned Dims = 0;
-  foreachElt(Schedule, [&Dims](isl::map Map) {
+  Schedule.foreach_map([&Dims](isl::map Map) -> isl::stat {
     Dims = std::max(Dims, Map.dim(isl::dim::out));
+    return isl::stat::ok;
   });
   return Dims;
 }
@@ -175,11 +179,12 @@ size_t scheduleScatterDims(const isl::union_map &Schedule) {
 /// Return the @p pos' range dimension, converted to an isl_union_pw_aff.
 isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
   auto SingleUMap = isl::union_map::empty(UMap.get_space());
-  foreachElt(UMap, [=, &SingleUMap](isl::map Map) {
+  UMap.foreach_map([=, &SingleUMap](isl::map Map) -> isl::stat {
     auto MapDims = Map.dim(isl::dim::out);
     auto SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
     SingleUMap = SingleUMap.add_map(SingleMap);
+    return isl::stat::ok;
   });
 
   auto UAff = isl::union_pw_multi_aff(SingleUMap);
