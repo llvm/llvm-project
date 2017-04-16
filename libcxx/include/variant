@@ -53,16 +53,16 @@ namespace std {
 
     // 20.7.2.4, modifiers
     template <class T, class... Args>
-    void emplace(Args&&...);
+    T& emplace(Args&&...);
 
     template <class T, class U, class... Args>
-    void emplace(initializer_list<U>, Args&&...);
+    T& emplace(initializer_list<U>, Args&&...);
 
     template <size_t I, class... Args>
-    void emplace(Args&&...);
+    variant_alternative_t<I, variant>& emplace(Args&&...);
 
     template <size_t I, class U, class...  Args>
-    void emplace(initializer_list<U>, Args&&...);
+    variant_alternative_t<I, variant>& emplace(initializer_list<U>, Args&&...);
 
     // 20.7.2.5, value status
     constexpr bool valueless_by_exception() const noexcept;
@@ -764,9 +764,10 @@ public:
 protected:
   template <size_t _Ip, class _Tp, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY
-  static void __construct_alt(__alt<_Ip, _Tp>& __a, _Args&&... __args) {
-    ::new (_VSTD::addressof(__a))
+  static _Tp& __construct_alt(__alt<_Ip, _Tp>& __a, _Args&&... __args) {
+    ::new ((void*)_VSTD::addressof(__a))
         __alt<_Ip, _Tp>(in_place, _VSTD::forward<_Args>(__args)...);
+    return __a.__value;
   }
 
   template <class _Rhs>
@@ -876,11 +877,12 @@ public:
 
   template <size_t _Ip, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY
-  void __emplace(_Args&&... __args) {
+  auto& __emplace(_Args&&... __args) {
     this->__destroy();
-    this->__construct_alt(__access::__base::__get_alt<_Ip>(*this),
+    auto& __res = this->__construct_alt(__access::__base::__get_alt<_Ip>(*this),
                           _VSTD::forward<_Args>(__args)...);
     this->__index = _Ip;
+    return __res;
   }
 
 protected:
@@ -1218,8 +1220,8 @@ public:
       class _Tp = variant_alternative_t<_Ip, variant<_Types...>>,
       enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  void emplace(_Args&&... __args) {
-    __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
+  _Tp& emplace(_Args&&... __args) {
+    return __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1231,8 +1233,8 @@ public:
       enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>,
                   int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  void emplace(initializer_list<_Up> __il, _Args&&... __args) {
-    __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
+  _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
+    return __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1242,8 +1244,8 @@ public:
           __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,
       enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  void emplace(_Args&&... __args) {
-    __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
+  _Tp& emplace(_Args&&... __args) {
+    return __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1255,8 +1257,8 @@ public:
       enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>,
                   int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
-  void emplace(initializer_list<_Up> __il, _Args&&... __args) {
-    __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
+  _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
+    return __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
   }
 
   inline _LIBCPP_INLINE_VISIBILITY

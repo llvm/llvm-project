@@ -99,13 +99,7 @@ template <class IncompleteT = IncompleteType,
           class Del = std::default_delete<IncompleteT>, class... Args>
 void doIncompleteTypeTest(int expect_alive, Args&&... ctor_args) {
   using ValueT = typename std::remove_all_extents<IncompleteT>::type;
-
-
-  if (expect_alive == 0)
-    checkNumIncompleteTypeAlive(0);
-  else
-    checkNumIncompleteTypeAlive(expect_alive);
-
+  checkNumIncompleteTypeAlive(expect_alive);
   {
     StoresIncomplete<IncompleteT, Del> sptr(std::forward<Args>(ctor_args)...);
     checkNumIncompleteTypeAlive(expect_alive);

@@ -728,13 +728,13 @@ static Value *
 foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
                                      bool JoinedByAnd,
                                      InstCombiner::BuilderTy *Builder) {
-  Value *X = LHS->getOperand(0);  if (X != RHS->getOperand(0))
+  Value *X = LHS->getOperand(0);
+  if (X != RHS->getOperand(0))
     return nullptr;
 
-  // FIXME: This should use m_APInt and work with splat vector constants.
-  auto *LHSC = dyn_cast<ConstantInt>(LHS->getOperand(1));
-  auto *RHSC = dyn_cast<ConstantInt>(RHS->getOperand(1));
-  if (!LHSC || !RHSC)
+  const APInt *C1, *C2;
+  if (!match(LHS->getOperand(1), m_APInt(C1)) ||
+      !match(RHS->getOperand(1), m_APInt(C2)))
     return nullptr;
 
   // We only handle (X != C1 && X != C2) and (X == C1 || X == C2).
@@ -747,10 +747,10 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
     return nullptr;
 
   // The larger unsigned constant goes on the right.
-  if (LHSC->getValue().ugt(RHSC->getValue()))
-    std::swap(LHSC, RHSC);
+  if (C1->ugt(*C2))
+    std::swap(C1, C2);
 
-  APInt Xor = LHSC->getValue() ^ RHSC->getValue();
+  APInt Xor = *C1 ^ *C2;
   if (Xor.isPowerOf2()) {
     // If LHSC and RHSC differ by only one bit, then set that bit in X and
     // compare against the larger constant:
@@ -759,19 +759,19 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
     // We choose an 'or' with a Pow2 constant rather than the inverse mask with
     // 'and' because that may lead to smaller codegen from a smaller constant.
     Value *Or = Builder->CreateOr(X, ConstantInt::get(X->getType(), Xor));
-    return Builder->CreateICmp(Pred, Or, RHSC);
+    return Builder->CreateICmp(Pred, Or, ConstantInt::get(X->getType(), *C2));
   }
 
   // Special case: get the ordering right when the values wrap around zero.
   // Ie, we assumed the constants were unsigned when swapping earlier.
-  if (LHSC->getValue() == 0 && RHSC->getValue().isAllOnesValue())
-    std::swap(LHSC, RHSC);
+  if (*C1 == 0 && C2->isAllOnesValue())
+    std::swap(C1, C2);
 
-  if (LHSC == SubOne(RHSC)) {
+  if (*C1 == *C2 - 1) {
     // (X == 13 || X == 14) --> X - 13 <=u 1
     // (X != 13 && X != 14) --> X - 13  >u 1
     // An 'add' is the canonical IR form, so favor that over a 'sub'.
-    Value *Add = Builder->CreateAdd(X, ConstantExpr::getNeg(LHSC));
+    Value *Add = Builder->CreateAdd(X, ConstantInt::get(X->getType(), -(*C1)));
     auto NewPred = JoinedByAnd ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
     return Builder->CreateICmp(NewPred, Add, ConstantInt::get(X->getType(), 1));
   }
@@ -807,6 +807,9 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 
   // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/false))
+    return V;
+
+  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, true, Builder))
     return V;
 
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
@@ -877,9 +880,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   // We can't fold (ugt x, C) & (sgt x, C2).
   if (!PredicatesFoldable(PredL, PredR))
     return nullptr;
-
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, true, Builder))
-    return V;
 
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;
@@ -1754,6 +1754,9 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/true))
     return V;
 
+  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, false, Builder))
+    return V;
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSC || !RHSC)
     return nullptr;
@@ -1790,9 +1793,6 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // We can't fold (ugt x, C) | (sgt x, C2).
   if (!PredicatesFoldable(PredL, PredR))
     return nullptr;
-
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, false, Builder))
-    return V;
 
   // Ensure that the larger constant is on the RHS.
   bool ShouldSwap;

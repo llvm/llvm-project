@@ -37,6 +37,11 @@ TEST(APIntTest, i64_ArithmeticRightShiftNegative) {
   EXPECT_EQ(neg_one, neg_one.ashr(7));
 }
 
+TEST(APIntTest, i64_LogicalRightShiftNegative) {
+  const APInt neg_one(128, static_cast<uint64_t>(-1), true);
+  EXPECT_EQ(0, neg_one.lshr(257));
+}
+
 TEST(APIntTest, i128_NegativeCount) {
   APInt Minus3(128, static_cast<uint64_t>(-3), true);
   EXPECT_EQ(126u, Minus3.countLeadingOnes());
