@@ -2,6 +2,7 @@ BasedOnStyle: LLVM
 
 ---
 Language: Cpp
+Standard: Cpp03
 
 AlwaysBreakTemplateDeclarations: true
 PointerAlignment: Left

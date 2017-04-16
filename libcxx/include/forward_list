@@ -478,14 +478,14 @@ protected:
     __forward_list_base(const allocator_type& __a)
         : __before_begin_(__begin_node(), __node_allocator(__a)) {}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 public:
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_base(__forward_list_base&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_base(__forward_list_base&& __x, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 private:
     __forward_list_base(const __forward_list_base&);
@@ -539,7 +539,7 @@ private:
         {__alloc() = _VSTD::move(__x.__alloc());}
 };
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 inline
@@ -563,7 +563,7 @@ __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x,
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 __forward_list_base<_Tp, _Alloc>::~__forward_list_base()
@@ -656,32 +656,33 @@ public:
                      >::type* = nullptr);
     forward_list(const forward_list& __x);
     forward_list(const forward_list& __x, const allocator_type& __a);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+    forward_list& operator=(const forward_list& __x);
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     forward_list(forward_list&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<base>::value)
         : base(_VSTD::move(__x)) {}
     forward_list(forward_list&& __x, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     forward_list(initializer_list<value_type> __il);
     forward_list(initializer_list<value_type> __il, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-    // ~forward_list() = default;
-
-    forward_list& operator=(const forward_list& __x);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     forward_list& operator=(forward_list&& __x)
         _NOEXCEPT_(
              __node_traits::propagate_on_container_move_assignment::value &&
              is_nothrow_move_assignable<allocator_type>::value);
-#endif
-#ifndef  _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     _LIBCPP_INLINE_VISIBILITY
     forward_list& operator=(initializer_list<value_type> __il);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+    _LIBCPP_INLINE_VISIBILITY
+    void assign(initializer_list<value_type> __il);
+#endif  // _LIBCPP_CXX03_LANG
+
+    // ~forward_list() = default;
 
     template <class _InputIterator>
         typename enable_if
@@ -691,10 +692,6 @@ public:
         >::type
         assign(_InputIterator __f, _InputIterator __l);
     void assign(size_type __n, const value_type& __v);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    void assign(initializer_list<value_type> __il);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT
@@ -745,27 +742,26 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_reference front() const {return base::__before_begin()->__next_->__value_;}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 #if _LIBCPP_STD_VER > 14
     template <class... _Args> reference emplace_front(_Args&&... __args);
 #else
     template <class... _Args> void      emplace_front(_Args&&... __args);
 #endif
-#endif
     void push_front(value_type&& __v);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     void push_front(const value_type& __v);
 
     void pop_front();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     template <class... _Args>
         iterator emplace_after(const_iterator __p, _Args&&... __args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+
     iterator insert_after(const_iterator __p, value_type&& __v);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    iterator insert_after(const_iterator __p, initializer_list<value_type> __il)
+        {return insert_after(__p, __il.begin(), __il.end());}
+#endif  // _LIBCPP_CXX03_LANG
     iterator insert_after(const_iterator __p, const value_type& __v);
     iterator insert_after(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIterator>
@@ -776,10 +772,6 @@ public:
             iterator
         >::type
         insert_after(const_iterator __p, _InputIterator __f, _InputIterator __l);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    iterator insert_after(const_iterator __p, initializer_list<value_type> __il)
-        {return insert_after(__p, __il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     iterator erase_after(const_iterator __p);
     iterator erase_after(const_iterator __f, const_iterator __l);
@@ -799,7 +791,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {base::clear();}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void splice_after(const_iterator __p, forward_list&& __x);
     _LIBCPP_INLINE_VISIBILITY
@@ -807,7 +799,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void splice_after(const_iterator __p, forward_list&& __x,
                       const_iterator __f, const_iterator __l);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     void splice_after(const_iterator __p, forward_list& __x);
     void splice_after(const_iterator __p, forward_list& __x, const_iterator __i);
     void splice_after(const_iterator __p, forward_list& __x,
@@ -817,14 +809,14 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void unique() {unique(__equal_to<value_type>());}
     template <class _BinaryPredicate> void unique(_BinaryPredicate __binary_pred);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void merge(forward_list&& __x) {merge(__x, __less<value_type>());}
     template <class _Compare>
         _LIBCPP_INLINE_VISIBILITY
         void merge(forward_list&& __x, _Compare __comp)
         {merge(__x, _VSTD::move(__comp));}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void merge(forward_list& __x) {merge(__x, __less<value_type>());}
     template <class _Compare> void merge(forward_list& __x, _Compare __comp);
@@ -835,11 +827,11 @@ public:
 
 private:
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     void __move_assign(forward_list& __x, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
     void __move_assign(forward_list& __x, false_type);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     template <class _Compare>
         static
@@ -955,8 +947,19 @@ forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x,
     insert_after(cbefore_begin(), __x.begin(), __x.end());
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+template <class _Tp, class _Alloc>
+forward_list<_Tp, _Alloc>&
+forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
+{
+    if (this != &__x)
+    {
+        base::__copy_assign_alloc(__x);
+        assign(__x.begin(), __x.end());
+    }
+    return *this;
+}
 
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x,
                                         const allocator_type& __a)
@@ -968,10 +971,6 @@ forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x,
         insert_after(cbefore_begin(), _Ip(__x.begin()), _Ip(__x.end()));
     }
 }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(initializer_list<value_type> __il)
@@ -986,22 +985,6 @@ forward_list<_Tp, _Alloc>::forward_list(initializer_list<value_type> __il,
 {
     insert_after(cbefore_begin(), __il.begin(), __il.end());
 }
-
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
-template <class _Tp, class _Alloc>
-forward_list<_Tp, _Alloc>&
-forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
-{
-    if (this != &__x)
-    {
-        base::__copy_assign_alloc(__x);
-        assign(__x.begin(), __x.end());
-    }
-    return *this;
-}
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp, class _Alloc>
 void
@@ -1040,10 +1023,6 @@ forward_list<_Tp, _Alloc>::operator=(forward_list&& __x)
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
 template <class _Tp, class _Alloc>
 inline
 forward_list<_Tp, _Alloc>&
@@ -1053,7 +1032,7 @@ forward_list<_Tp, _Alloc>::operator=(initializer_list<value_type> __il)
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 template <class _InputIterator>
@@ -1090,7 +1069,7 @@ forward_list<_Tp, _Alloc>::assign(size_type __n, const value_type& __v)
         erase_after(__i, __e);
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 inline
@@ -1099,11 +1078,6 @@ forward_list<_Tp, _Alloc>::assign(initializer_list<value_type> __il)
 {
     assign(__il.begin(), __il.end());
 }
-
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
@@ -1126,8 +1100,6 @@ forward_list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
 template <class _Tp, class _Alloc>
 void
 forward_list<_Tp, _Alloc>::push_front(value_type&& __v)
@@ -1140,7 +1112,7 @@ forward_list<_Tp, _Alloc>::push_front(value_type&& __v)
     base::__before_begin()->__next_ = __h.release();
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void
@@ -1165,8 +1137,7 @@ forward_list<_Tp, _Alloc>::pop_front()
     __node_traits::deallocate(__a, __p, 1);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
@@ -1184,8 +1155,6 @@ forward_list<_Tp, _Alloc>::emplace_after(const_iterator __p, _Args&&... __args)
     return iterator(__r->__next_);
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
 template <class _Tp, class _Alloc>
 typename forward_list<_Tp, _Alloc>::iterator
 forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, value_type&& __v)
@@ -1200,7 +1169,7 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, value_type&& __v)
     return iterator(__r->__next_);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 typename forward_list<_Tp, _Alloc>::iterator
@@ -1468,7 +1437,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1499,7 +1468,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
     splice_after(__p, __x, __f, __l);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void
