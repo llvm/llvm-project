@@ -36,6 +36,11 @@ void check_allocator(unsigned n, Allocator const &alloc = Allocator())
 
 int main()
 {
+    { // test that the ctor is explicit
+      typedef std::forward_list<DefaultOnly> C;
+      static_assert((std::is_constructible<C, size_t>::value), "");
+      static_assert((!std::is_convertible<size_t, C>::value), "");
+    }
     {
         typedef DefaultOnly T;
         typedef std::forward_list<T> C;

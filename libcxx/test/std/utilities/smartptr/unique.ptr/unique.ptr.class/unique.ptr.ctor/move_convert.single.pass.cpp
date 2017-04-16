@@ -22,7 +22,7 @@
 #include <utility>
 #include <cassert>
 
-#include "deleter_types.h"
+#include "test_macros.h"
 #include "unique_ptr_test_helper.h"
 
 // test converting move ctor.  Should only require a MoveConstructible deleter, or if
@@ -135,7 +135,34 @@ void test_sfinae() {
   }
 }
 
+void test_noexcept() {
+  {
+    typedef std::unique_ptr<A> APtr;
+    typedef std::unique_ptr<B> BPtr;
+    static_assert(std::is_nothrow_constructible<APtr, BPtr>::value, "");
+  }
+  {
+    typedef std::unique_ptr<A, Deleter<A> > APtr;
+    typedef std::unique_ptr<B, Deleter<B> > BPtr;
+    static_assert(std::is_nothrow_constructible<APtr, BPtr>::value, "");
+  }
+  {
+    typedef std::unique_ptr<A, NCDeleter<A>&> APtr;
+    typedef std::unique_ptr<B, NCDeleter<A>&> BPtr;
+    static_assert(std::is_nothrow_constructible<APtr, BPtr>::value, "");
+  }
+  {
+    typedef std::unique_ptr<A, const NCConstDeleter<A>&> APtr;
+    typedef std::unique_ptr<B, const NCConstDeleter<A>&> BPtr;
+    static_assert(std::is_nothrow_constructible<APtr, BPtr>::value, "");
+  }
+}
+
 int main() {
+  {
+    test_sfinae();
+    test_noexcept();
+  }
   {
     typedef std::unique_ptr<A> APtr;
     typedef std::unique_ptr<B> BPtr;
@@ -218,5 +245,4 @@ int main() {
     }
     checkNoneAlive();
   }
-  test_sfinae();
 }

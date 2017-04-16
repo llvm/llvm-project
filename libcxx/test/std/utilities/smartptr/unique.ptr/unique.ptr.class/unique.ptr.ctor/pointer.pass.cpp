@@ -35,8 +35,6 @@
 #include "test_macros.h"
 #include "unique_ptr_test_helper.h"
 
-#include "test_workarounds.h" // For TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES
-
 // unique_ptr(pointer) ctor should only require default Deleter ctor
 
 template <bool IsArray>
@@ -47,8 +45,14 @@ void test_pointer() {
   {
     using U1 = std::unique_ptr<ValueT>;
     using U2 = std::unique_ptr<ValueT, Deleter<ValueT> >;
+
+    // Test for noexcept
     static_assert(std::is_nothrow_constructible<U1, A*>::value, "");
     static_assert(std::is_nothrow_constructible<U2, A*>::value, "");
+
+    // Test for explicit
+    static_assert(!std::is_convertible<A*, U1>::value, "");
+    static_assert(!std::is_convertible<A*, U2>::value, "");
   }
 #endif
   {
@@ -103,7 +107,7 @@ struct GenericDeleter {
 
 template <class T>
 void test_sfinae() {
-#if TEST_STD_VER >= 11 && !defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
+#if TEST_STD_VER >= 11
   { // the constructor does not participate in overload resultion when
     // the deleter is a pointer type
     using U = std::unique_ptr<T, void (*)(void*)>;

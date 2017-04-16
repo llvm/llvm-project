@@ -17,25 +17,14 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 
-#include "test_workarounds.h" // For TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES
 
-// default unique_ptr ctor should only require default Deleter ctor
-class DefaultDeleter {
-  int state_;
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 11
+_LIBCPP_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr_single(nullptr);
+_LIBCPP_SAFE_STATIC std::unique_ptr<int[]> global_static_unique_ptr_runtime(nullptr);
+#endif
 
-  DefaultDeleter(DefaultDeleter&);
-  DefaultDeleter& operator=(DefaultDeleter&);
-
-public:
-  DefaultDeleter() : state_(5) {}
-
-  int state() const { return state_; }
-
-  void operator()(void*) {}
-};
 
 #if TEST_STD_VER >= 11
 struct NonDefaultDeleter {
@@ -46,15 +35,6 @@ struct NonDefaultDeleter {
 
 template <class VT>
 void test_basic() {
-  {
-    std::unique_ptr<VT> p(nullptr);
-    assert(p.get() == 0);
-  }
-  {
-    std::unique_ptr<VT, DefaultDeleter> p(nullptr);
-    assert(p.get() == 0);
-    assert(p.get_deleter().state() == 5);
-  }
 #if TEST_STD_VER >= 11
   {
     using U1 = std::unique_ptr<VT>;
@@ -65,11 +45,20 @@ void test_basic() {
                   "");
   }
 #endif
+  {
+    std::unique_ptr<VT> p(nullptr);
+    assert(p.get() == 0);
+  }
+  {
+    std::unique_ptr<VT, NCDeleter<VT> > p(nullptr);
+    assert(p.get() == 0);
+    assert(p.get_deleter().state() == 0);
+  }
 }
 
 template <class VT>
 void test_sfinae() {
-#if TEST_STD_VER >= 11 && !defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
+#if TEST_STD_VER >= 11
   { // the constructor does not participate in overload resultion when
     // the deleter is a pointer type
     using U = std::unique_ptr<VT, void (*)(void*)>;

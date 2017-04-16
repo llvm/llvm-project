@@ -29,8 +29,6 @@
 #include "test_macros.h"
 #include "unique_ptr_test_helper.h"
 
-#include "test_workarounds.h" // For TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES
-
 bool my_free_called = false;
 
 void my_free(void*) { my_free_called = true; }
@@ -56,7 +54,7 @@ struct NoCopyMoveDeleter : DeleterBase {
 
 template <bool IsArray>
 void test_sfinae() {
-#if TEST_STD_VER >= 11 && !defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
+#if TEST_STD_VER >= 11
   typedef typename std::conditional<!IsArray, int, int[]>::type VT;
   {
     using D = CopyOnlyDeleter;
@@ -137,13 +135,13 @@ void test_noexcept() {
 }
 
 void test_sfinae_runtime() {
-#if TEST_STD_VER >= 11 && !defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
+#if TEST_STD_VER >= 11
   {
     using D = CopyOnlyDeleter;
     using U = std::unique_ptr<A[], D>;
-    static_assert(std::is_constructible<U, A*, D const&>::value, "");
-    static_assert(std::is_constructible<U, A*, D&>::value, "");
-    static_assert(std::is_constructible<U, A*, D&&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D const&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D&&>::value, "");
 
     static_assert(!std::is_constructible<U, B*, D const&>::value, "");
     static_assert(!std::is_constructible<U, B*, D&>::value, "");
@@ -158,7 +156,7 @@ void test_sfinae_runtime() {
     using U = std::unique_ptr<A[], D>;
     static_assert(!std::is_constructible<U, A*, D const&>::value, "");
     static_assert(!std::is_constructible<U, A*, D&>::value, "");
-    static_assert(std::is_constructible<U, A*, D&&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D&&>::value, "");
 
     static_assert(!std::is_constructible<U, B*, D const&>::value, "");
     static_assert(!std::is_constructible<U, B*, D&>::value, "");
@@ -181,7 +179,7 @@ void test_sfinae_runtime() {
     using D = NoCopyMoveDeleter;
     using U = std::unique_ptr<A[], D&>;
     static_assert(!std::is_constructible<U, A*, D const&>::value, "");
-    static_assert(std::is_constructible<U, A*, D&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D&>::value, "");
     static_assert(!std::is_constructible<U, A*, D&&>::value, "");
     static_assert(!std::is_constructible<U, A*, const D&&>::value, "");
 
@@ -193,8 +191,8 @@ void test_sfinae_runtime() {
   {
     using D = NoCopyMoveDeleter;
     using U = std::unique_ptr<A[], const D&>;
-    static_assert(std::is_constructible<U, A*, D const&>::value, "");
-    static_assert(std::is_constructible<U, A*, D&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D const&>::value, "");
+    static_assert(std::is_nothrow_constructible<U, A*, D&>::value, "");
     static_assert(!std::is_constructible<U, A*, D&&>::value, "");
     static_assert(!std::is_constructible<U, A*, const D&&>::value, "");
 
@@ -291,15 +289,38 @@ void test_basic_single() {
   }
 }
 
+template <bool IsArray>
+void test_nullptr() {
+#if TEST_STD_VER >= 11
+  typedef typename std::conditional<!IsArray, A, A[]>::type VT;
+  {
+    std::unique_ptr<VT, Deleter<VT> > u(nullptr, Deleter<VT>{});
+    assert(u.get() == nullptr);
+  }
+  {
+    NCDeleter<VT> d;
+    std::unique_ptr<VT, NCDeleter<VT>& > u(nullptr, d);
+    assert(u.get() == nullptr);
+  }
+  {
+    NCConstDeleter<VT> d;
+    std::unique_ptr<VT, NCConstDeleter<VT> const& > u(nullptr, d);
+    assert(u.get() == nullptr);
+  }
+#endif
+}
+
 int main() {
   {
     test_basic</*IsArray*/ false>();
+    test_nullptr<false>();
     test_basic_single();
     test_sfinae<false>();
     test_noexcept<false>();
   }
   {
     test_basic</*IsArray*/ true>();
+    test_nullptr<true>();
     test_sfinae<true>();
     test_sfinae_runtime();
     test_noexcept<true>();
