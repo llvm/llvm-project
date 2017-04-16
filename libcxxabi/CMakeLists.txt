@@ -275,6 +275,7 @@ macro(add_target_flags_if condition var)
   if (${condition})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
+    list(APPEND LIBCXXABI_COMPILE_FLAGS ${var})
     list(APPEND LIBCXXABI_LINK_FLAGS ${var})
   endif()
 endmacro()
@@ -287,9 +288,9 @@ set(LIBCXXABI_LINK_FLAGS "")
 # Configure target flags
 add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
 add_target_flags_if(LIBCXXABI_TARGET_TRIPLE
-          "-target ${LIBCXXABI_TARGET_TRIPLE}")
+          "--target=${LIBCXXABI_TARGET_TRIPLE}")
 add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
-         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
+         "--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
 add_target_flags_if(LIBCXXABI_SYSROOT
           "--sysroot=${LIBCXXABI_SYSROOT}")
 

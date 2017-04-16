@@ -77,4 +77,7 @@ void test_sfinae() {
   }
 }
 
-int main() { test_sfinae(); }
+
+int main() {
+  test_sfinae();
+}

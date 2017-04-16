@@ -19,17 +19,11 @@
 
 #include <memory>
 
-#include "test_workarounds.h"
-
 struct Deleter {
   void operator()(int* p) const { delete p; }
 };
 
 int main() {
-#if defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
-// expected-error@memory:* {{static_assert failed "rvalue deleter bound to reference"}}
-#else
-// expected-error@+2 {{call to deleted constructor of 'std::unique_ptr<int, const Deleter &>}}
-#endif
+  // expected-error@+1 {{call to deleted constructor of 'std::unique_ptr<int, const Deleter &>}}
   std::unique_ptr<int, const Deleter&> s((int*)nullptr, Deleter());
 }

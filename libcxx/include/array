@@ -316,7 +316,7 @@ get(const array<_Tp, _Size>& __a) _NOEXCEPT
     return __a.__elems_[_Ip];
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <size_t _Ip, class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -336,7 +336,7 @@ get(const array<_Tp, _Size>&& __a) _NOEXCEPT
     return _VSTD::move(__a.__elems_[_Ip]);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

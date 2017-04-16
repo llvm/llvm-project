@@ -35,8 +35,8 @@ void test_basic() {
   Deleter d;
   assert(d.state() == 0);
   {
-    std::unique_ptr<T, Deleter&> p(0, d);
-    assert(p.get() == 0);
+    std::unique_ptr<T, Deleter&> p(nullptr, d);
+    assert(p.get() == nullptr);
     assert(&p.get_deleter() == &d);
   }
   assert(d.state() == 0);
