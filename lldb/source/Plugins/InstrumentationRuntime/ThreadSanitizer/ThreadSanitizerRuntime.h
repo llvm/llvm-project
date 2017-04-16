@@ -77,7 +77,8 @@ private:
                                      std::string &global_name,
                                      std::string &filename, uint32_t &line);
 
-  lldb::addr_t GetFirstNonInternalFramePc(StructuredData::ObjectSP trace);
+  lldb::addr_t GetFirstNonInternalFramePc(StructuredData::ObjectSP trace,
+                                          bool skip_one_frame = false);
 };
 
 } // namespace lldb_private
