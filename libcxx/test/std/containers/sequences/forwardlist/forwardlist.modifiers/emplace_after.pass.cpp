@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <forward_list>
 
 // template <class... Args>
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef Emplaceable T;
         typedef std::forward_list<T> C;
@@ -52,7 +53,6 @@ int main()
         assert(*next(c.begin(), 3) == Emplaceable(2, 3.5));
         assert(distance(c.begin(), c.end()) == 4);
     }
-#if TEST_STD_VER >= 11
     {
         typedef Emplaceable T;
         typedef std::forward_list<T, min_allocator<T>> C;
@@ -84,6 +84,4 @@ int main()
         assert(*next(c.begin(), 3) == Emplaceable(2, 3.5));
         assert(distance(c.begin(), c.end()) == 4);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

@@ -18,7 +18,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 
 //=============================================================================
@@ -139,13 +138,37 @@ void test_basic() {
   assert(A::count == 0);
 }
 
+template <class VT>
+void test_noexcept() {
+#if TEST_STD_VER >= 11
+  {
+    typedef std::unique_ptr<VT> U;
+    static_assert(std::is_nothrow_move_constructible<U>::value, "");
+  }
+  {
+    typedef std::unique_ptr<VT, Deleter<VT> > U;
+    static_assert(std::is_nothrow_move_constructible<U>::value, "");
+  }
+  {
+    typedef std::unique_ptr<VT, NCDeleter<VT> &> U;
+    static_assert(std::is_nothrow_move_constructible<U>::value, "");
+  }
+  {
+    typedef std::unique_ptr<VT, const NCConstDeleter<VT> &> U;
+    static_assert(std::is_nothrow_move_constructible<U>::value, "");
+  }
+#endif
+}
+
 int main() {
   {
     test_basic</*IsArray*/ false>();
     test_sfinae<int>();
+    test_noexcept<int>();
   }
   {
     test_basic</*IsArray*/ true>();
     test_sfinae<int[]>();
+    test_noexcept<int[]>();
   }
 }

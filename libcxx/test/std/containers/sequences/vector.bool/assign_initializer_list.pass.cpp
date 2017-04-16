@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // void assign(initializer_list<value_type> il);
@@ -18,7 +20,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
     std::vector<bool> d;
     d.assign({true, false, false, true});
@@ -28,7 +29,6 @@ int main()
     assert(d[2] == false);
     assert(d[3] == true);
     }
-#if TEST_STD_VER >= 11
     {
     std::vector<bool, min_allocator<bool>> d;
     d.assign({true, false, false, true});
@@ -38,6 +38,4 @@ int main()
     assert(d[2] == false);
     assert(d[3] == true);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

@@ -3,7 +3,7 @@ function(find_compiler_rt_library name dest)
     message(FATAL_ERROR "LIBCXX_COMPILE_FLAGS must be defined when using this function")
   endif()
   set(dest "" PARENT_SCOPE)
-  set(CLANG_COMMAND ${CMAKE_CXX_COMPILER} ${TARGET_TRIPLE} ${LIBCXX_COMPILE_FLAGS}
+  set(CLANG_COMMAND ${CMAKE_CXX_COMPILER} ${LIBCXX_COMPILE_FLAGS}
       "--rtlib=compiler-rt" "--print-libgcc-file-name")
   if (CMAKE_CXX_COMPILER_ID MATCHES Clang AND CMAKE_CXX_COMPILER_TARGET)
     list(APPEND CLANG_COMMAND "--target=${CMAKE_CXX_COMPILER_TARGET}")

@@ -31,8 +31,6 @@
 #include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 
-#include "test_workarounds.h" // For TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES
-
 #if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 11
 _LIBCPP_SAFE_STATIC std::unique_ptr<int> global_static_unique_ptr_single;
 _LIBCPP_SAFE_STATIC std::unique_ptr<int[]> global_static_unique_ptr_runtime;
@@ -47,7 +45,7 @@ struct NonDefaultDeleter {
 
 template <class ElemType>
 void test_sfinae() {
-#if TEST_STD_VER >= 11 && !defined(TEST_WORKAROUND_UPCOMING_UNIQUE_PTR_CHANGES)
+#if TEST_STD_VER >= 11
   { // the constructor does not participate in overload resultion when
     // the deleter is a pointer type
     using U = std::unique_ptr<ElemType, void (*)(void*)>;

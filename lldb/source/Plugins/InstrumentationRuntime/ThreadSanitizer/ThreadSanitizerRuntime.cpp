@@ -524,6 +524,8 @@ ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
     return "Lock order inversion (potential deadlock)";
   } else if (description == "external-race") {
     return "Race on a library object";
+  } else if (description == "swift-access-race") {
+    return "Swift access race";
   }
 
   // for unknown report codes just show the code
@@ -581,27 +583,31 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
 }
 
 addr_t ThreadSanitizerRuntime::GetFirstNonInternalFramePc(
-    StructuredData::ObjectSP trace) {
+    StructuredData::ObjectSP trace, bool skip_one_frame) {
   ProcessSP process_sp = GetProcessSP();
   ModuleSP runtime_module_sp = GetRuntimeModuleSP();
 
-  addr_t result = 0;
-  trace->GetAsArray()->ForEach([process_sp, runtime_module_sp,
-                                &result](StructuredData::Object *o) -> bool {
-    addr_t addr = o->GetIntegerValue();
+  StructuredData::Array *trace_array = trace->GetAsArray();
+  for (int i = 0; i < trace_array->GetSize(); i++) {
+    if (skip_one_frame && i == 0)
+      continue;
+
+    addr_t addr;
+    if (!trace_array->GetItemAtIndexAsInteger(i, addr))
+      continue;
+
     lldb_private::Address so_addr;
     if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(
             addr, so_addr))
-      return true;
+      continue;
 
     if (so_addr.GetModule() == runtime_module_sp)
-      return true;
+      continue;
 
-    result = addr;
-    return false;
-  });
+    return addr;
+  }
 
-  return result;
+  return 0;
 }
 
 std::string
@@ -612,6 +618,10 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
                             ->GetValueForKey("description")
                             ->GetAsString()
                             ->GetValue();
+  bool skip_one_frame =
+      report->GetObjectForDotSeparatedPath("issue_type")->GetStringValue() ==
+      "external-race";
+
   addr_t pc = 0;
   if (report->GetAsDictionary()
           ->GetValueForKey("mops")
@@ -622,7 +632,8 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
                                         ->GetAsArray()
                                         ->GetItemAtIndex(0)
                                         ->GetAsDictionary()
-                                        ->GetValueForKey("trace"));
+                                        ->GetValueForKey("trace"),
+                                    skip_one_frame);
 
   if (report->GetAsDictionary()
           ->GetValueForKey("stacks")
@@ -633,7 +644,8 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
                                         ->GetAsArray()
                                         ->GetItemAtIndex(0)
                                         ->GetAsDictionary()
-                                        ->GetValueForKey("trace"));
+                                        ->GetValueForKey("trace"),
+                                    skip_one_frame);
 
   if (pc != 0) {
     summary = summary + " in " + GetSymbolNameFromAddress(process_sp, pc);
@@ -949,9 +961,18 @@ static std::string GenerateThreadName(const std::string &path,
       addr_string = "";
     }
 
-    result = Sprintf("%s%s of size %d%s by thread %d",
-                     is_atomic ? "atomic " : "", is_write ? "write" : "read",
-                     size, addr_string.c_str(), thread_id);
+    if (main_info->GetObjectForDotSeparatedPath("issue_type")
+            ->GetStringValue() == "external-race") {
+      result = Sprintf("%s access by thread %d",
+                       is_write ? "mutating" : "read-only", thread_id);
+    } else if (main_info->GetObjectForDotSeparatedPath("issue_type")
+                   ->GetStringValue() == "swift-access-race") {
+      result = Sprintf("modifying access by thread %d", thread_id);
+    } else {
+      result = Sprintf("%s%s of size %d%s by thread %d",
+                       is_atomic ? "atomic " : "", is_write ? "write" : "read",
+                       size, addr_string.c_str(), thread_id);
+    }
   }
 
   if (path == "threads") {
