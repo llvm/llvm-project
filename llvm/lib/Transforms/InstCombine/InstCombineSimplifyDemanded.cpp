@@ -120,14 +120,14 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   const APInt *C;
   if (match(V, m_APInt(C))) {
     // We know all of the bits for a scalar constant or a splat vector constant!
-    KnownOne = *C & DemandedMask;
-    KnownZero = ~KnownOne & DemandedMask;
+    KnownOne = *C;
+    KnownZero = ~KnownOne;
     return nullptr;
   }
   if (isa<ConstantPointerNull>(V)) {
     // We know all of the bits for a constant!
     KnownOne.clearAllBits();
-    KnownZero = DemandedMask;
+    KnownZero.setAllBits();
     return nullptr;
   }
 
