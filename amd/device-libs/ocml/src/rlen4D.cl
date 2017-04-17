@@ -8,7 +8,7 @@
 #include "mathD.h"
 
 CONSTATTR INLINEATTR double
-MATH_MANGLE(len4)(double x, double y, double z, double w)
+MATH_MANGLE(rlen4)(double x, double y, double z, double w)
 {
     double a = BUILTIN_ABS_F64(x);
     double b = BUILTIN_ABS_F64(y);
@@ -36,18 +36,24 @@ MATH_MANGLE(len4)(double x, double y, double z, double w)
     c = BUILTIN_FLDEXP_F64(c, -e);
     d = BUILTIN_FLDEXP_F64(d, -e);
 
-    double ret = BUILTIN_FLDEXP_F64(MATH_FAST_SQRT(MATH_MAD(a, a, MATH_MAD(b, b, MATH_MAD(c, c, d*d)))), e);
-    ret = a == 0.0 ? 0.0 : ret;
+    double l2 = MATH_MAD(a, a, MATH_MAD(b, b, MATH_MAD(c, c, d*d)));
+    double v = BUILTIN_RSQRT_F64(l2);
+    double u = MATH_MAD(-l2*v, v, 1.0);
+    v = MATH_MAD(v*u, MATH_MAD(u, 0.375, 0.5), v);
+    double ret = BUILTIN_FLDEXP_F64(v, -e);
 
     if (!FINITE_ONLY_OPT()) {
+        ret = a == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+
         ret = (BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN) |
                BUILTIN_CLASS_F64(y, CLASS_QNAN|CLASS_SNAN) |
                BUILTIN_CLASS_F64(z, CLASS_QNAN|CLASS_SNAN) |
                BUILTIN_CLASS_F64(w, CLASS_QNAN|CLASS_SNAN)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+
         ret = (BUILTIN_CLASS_F64(x, CLASS_PINF|CLASS_NINF) |
                BUILTIN_CLASS_F64(y, CLASS_PINF|CLASS_NINF) |
                BUILTIN_CLASS_F64(z, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(w, CLASS_PINF|CLASS_NINF)) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+               BUILTIN_CLASS_F64(w, CLASS_PINF|CLASS_NINF)) ? 0.0 : ret;
     }
 
     return ret;

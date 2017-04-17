@@ -23,16 +23,13 @@ MATH_MANGLE(len3)(double x, double y, double z)
     b         = BUILTIN_MAX_F64(b1, c1);
     c         = BUILTIN_MIN_F64(b1, c1);
 
-    int e;
-    e = BUILTIN_FREXP_EXP_F64(a) - 1;
-    e = BUILTIN_CLAMP_S32(e, -1022, 1022);
+    int e = BUILTIN_FREXP_EXP_F64(a);
     a = BUILTIN_FLDEXP_F64(a, -e);
     b = BUILTIN_FLDEXP_F64(b, -e);
     c = BUILTIN_FLDEXP_F64(c, -e);
 
-    double ret = MATH_FAST_SQRT(MATH_MAD(a, a, MATH_MAD(b, b, c*c)));
+    double ret = BUILTIN_FLDEXP_F64(MATH_FAST_SQRT(MATH_MAD(a, a, MATH_MAD(b, b, c*c))), e);
     ret = a == 0.0 ? 0.0 : ret;
-    ret = BUILTIN_FLDEXP_F64(ret, e);
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN) |
