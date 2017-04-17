@@ -35,6 +35,11 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    UseNonLazyBind("aarch64-enable-nonlazybind",
+                   cl::desc("Call nonlazybind functions via direct GOT load"),
+                   cl::init(false), cl::Hidden);
+
 AArch64Subtarget &
 AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
                                                   StringRef CPUString) {
@@ -153,7 +158,7 @@ unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (F && F->hasFnAttribute(Attribute::NonLazyBind) &&
+  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
       !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
