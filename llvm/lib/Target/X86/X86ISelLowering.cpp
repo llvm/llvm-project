@@ -35922,14 +35922,11 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (Subtarget.is64Bit()) {
         Res.first = X86::RAX;
         Res.second = &X86::GR64_ADRegClass;
-      } else if (Subtarget.is32Bit()) {
+      } else {
+        assert((Subtarget.is32Bit() || Subtarget.is16Bit()) &&
+               "Expecting 64, 32 or 16 bit subtarget");
         Res.first = X86::EAX;
         Res.second = &X86::GR32_ADRegClass;
-      } else if (Subtarget.is16Bit()) {
-        Res.first = X86::AX;
-        Res.second = &X86::GR16_ADRegClass;
-      } else {
-        llvm_unreachable("Expecting 64, 32 or 16 bit subtarget");
       }
       return Res;
     }

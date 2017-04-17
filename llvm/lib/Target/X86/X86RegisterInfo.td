@@ -438,7 +438,6 @@ def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
                                           (add LOW32_ADDR_ACCESS, RBP)>;
 
 // A class to support the 'A' assembler constraint: [ER]AX then [ER]DX.
-def GR16_AD : RegisterClass<"X86", [i16], 16, (add AX, DX)>;
 def GR32_AD : RegisterClass<"X86", [i32], 32, (add EAX, EDX)>;
 def GR64_AD : RegisterClass<"X86", [i64], 64, (add RAX, RDX)>;
 

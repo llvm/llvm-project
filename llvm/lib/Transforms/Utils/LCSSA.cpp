@@ -214,13 +214,9 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
     // Post process PHI instructions that were inserted into another disjoint
     // loop and update their exits properly.
-    for (auto *PostProcessPN : PostProcessPHIs) {
-      if (PostProcessPN->use_empty())
-        continue;
-
-      // Reprocess each PHI instruction.
-      Worklist.push_back(PostProcessPN);
-    }
+    for (auto *PostProcessPN : PostProcessPHIs)
+      if (!PostProcessPN->use_empty())
+        Worklist.push_back(PostProcessPN);
 
     // Keep track of PHI nodes that we want to remove because they did not have
     // any uses rewritten.
@@ -241,7 +237,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 // Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
 static void computeBlocksDominatingExits(
     Loop &L, DominatorTree &DT, SmallVector<BasicBlock *, 8> &ExitBlocks,
-    SmallPtrSet<BasicBlock *, 8> &BlocksDominatingExits) {
+    SmallSetVector<BasicBlock *, 8> &BlocksDominatingExits) {
   SmallVector<BasicBlock *, 8> BBWorklist;
 
   // We start from the exit blocks, as every block trivially dominates itself
@@ -279,7 +275,7 @@ static void computeBlocksDominatingExits(
     if (!L.contains(IDomBB))
       continue;
 
-    if (BlocksDominatingExits.insert(IDomBB).second)
+    if (BlocksDominatingExits.insert(IDomBB))
       BBWorklist.push_back(IDomBB);
   }
 }
@@ -293,7 +289,7 @@ bool llvm::formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
   if (ExitBlocks.empty())
     return false;
 
-  SmallPtrSet<BasicBlock *, 8> BlocksDominatingExits;
+  SmallSetVector<BasicBlock *, 8> BlocksDominatingExits;
 
   // We want to avoid use-scanning leveraging dominance informations.
   // If a block doesn't dominate any of the loop exits, the none of the values
