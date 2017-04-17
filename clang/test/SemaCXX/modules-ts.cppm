@@ -18,7 +18,8 @@ static int m; // ok, internal linkage, so no redefinition error
 int n;
 #if TEST == 3
 // expected-error@-2 {{redefinition of '}}
-// expected-note@-3 {{previous}}
+// expected-note@-3 {{unguarded header; consider using #ifdef guards or #pragma once}}
+// expected-note@modules-ts.cppm:1 {{included multiple times, additional include site here}}
 #endif
 
 #if TEST == 0
