@@ -727,8 +727,10 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
                                                    "examing the current "
                                                    "thread's stack frames.",
                              "frame <subcommand> [<subcommand-options>]") {
-  LoadSubCommand("diagnose",
-                 CommandObjectSP(new CommandObjectFrameDiagnose(interpreter)));
+  if (false) {
+    LoadSubCommand("diagnose",
+        CommandObjectSP(new CommandObjectFrameDiagnose(interpreter)));
+  }
   LoadSubCommand("info",
                  CommandObjectSP(new CommandObjectFrameInfo(interpreter)));
   LoadSubCommand("select",
