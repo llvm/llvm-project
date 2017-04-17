@@ -72,6 +72,32 @@ static const uint32_t UR_TAKEN_WEIGHT = 1;
 /// easily subsume it.
 static const uint32_t UR_NONTAKEN_WEIGHT = 1024*1024 - 1;
 
+/// \brief Returns the branch probability for unreachable edge according to
+/// heuristic.
+///
+/// This is the branch probability being taken to a block that terminates
+/// (eventually) in unreachable. These are predicted as unlikely as possible.
+static BranchProbability getUnreachableProbability(uint64_t UnreachableCount) {
+  assert(UnreachableCount > 0 && "UnreachableCount must be > 0");
+  return BranchProbability::getBranchProbability(
+      UR_TAKEN_WEIGHT,
+      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * UnreachableCount);
+}
+
+/// \brief Returns the branch probability for reachable edge according to
+/// heuristic.
+///
+/// This is the branch probability not being taken toward a block that
+/// terminates (eventually) in unreachable. Such a branch is essentially never
+/// taken. Set the weight to an absurdly high value so that nested loops don't
+/// easily subsume it.
+static BranchProbability getReachableProbability(uint64_t ReachableCount) {
+  assert(ReachableCount > 0 && "ReachableCount must be > 0");
+  return BranchProbability::getBranchProbability(
+      UR_NONTAKEN_WEIGHT,
+      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * ReachableCount);
+}
+
 /// \brief Weight for a branch taken going into a cold block.
 ///
 /// This is the weight for a branch taken toward a block marked
@@ -208,12 +234,8 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
     return true;
   }
 
-  auto UnreachableProb = BranchProbability::getBranchProbability(
-      UR_TAKEN_WEIGHT, (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
-                           uint64_t(UnreachableEdges.size()));
-  auto ReachableProb = BranchProbability::getBranchProbability(
-      UR_NONTAKEN_WEIGHT,
-      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * uint64_t(ReachableEdges.size()));
+  auto UnreachableProb = getUnreachableProbability(UnreachableEdges.size());
+  auto ReachableProb = getReachableProbability(ReachableEdges.size());
 
   for (unsigned SuccIdx : UnreachableEdges)
     setEdgeProbability(BB, SuccIdx, UnreachableProb);
@@ -224,10 +246,12 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
 }
 
 // Propagate existing explicit probabilities from either profile data or
-// 'expect' intrinsic processing.
+// 'expect' intrinsic processing. Examine metadata against unreachable
+// heuristic. The probability of the edge coming to unreachable block is
+// set to min of metadata and unreachable heuristic.
 bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
-  if (TI->getNumSuccessors() == 1)
+  if (TI->getNumSuccessors() <= 1)
     return false;
   if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
     return false;
@@ -249,6 +273,8 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   // be scaled to fit in 32 bits.
   uint64_t WeightSum = 0;
   SmallVector<uint32_t, 2> Weights;
+  SmallVector<unsigned, 2> UnreachableIdxs;
+  SmallVector<unsigned, 2> ReachableIdxs;
   Weights.reserve(TI->getNumSuccessors());
   for (unsigned i = 1, e = WeightsNode->getNumOperands(); i != e; ++i) {
     ConstantInt *Weight =
@@ -259,6 +285,10 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
            "Too many bits for uint32_t");
     Weights.push_back(Weight->getZExtValue());
     WeightSum += Weights.back();
+    if (PostDominatedByUnreachable.count(TI->getSuccessor(i - 1)))
+      UnreachableIdxs.push_back(i - 1);
+    else
+      ReachableIdxs.push_back(i - 1);
   }
   assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
 
@@ -267,19 +297,51 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   uint64_t ScalingFactor =
       (WeightSum > UINT32_MAX) ? WeightSum / UINT32_MAX + 1 : 1;
 
-  WeightSum = 0;
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-    Weights[i] /= ScalingFactor;
-    WeightSum += Weights[i];
+  if (ScalingFactor > 1) {
+    WeightSum = 0;
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      Weights[i] /= ScalingFactor;
+      WeightSum += Weights[i];
+    }
   }
 
-  if (WeightSum == 0) {
+  if (WeightSum == 0 || ReachableIdxs.size() == 0) {
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      setEdgeProbability(BB, i, {1, e});
-  } else {
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      setEdgeProbability(BB, i, {Weights[i], static_cast<uint32_t>(WeightSum)});
+      Weights[i] = 1;
+    WeightSum = TI->getNumSuccessors();
   }
+
+  // Set the probability.
+  SmallVector<BranchProbability, 2> BP;
+  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
+    BP.push_back({ Weights[i], static_cast<uint32_t>(WeightSum) });
+
+  // Examine the metadata against unreachable heuristic.
+  // If the unreachable heuristic is more strong then we use it for this edge.
+  if (UnreachableIdxs.size() > 0 && ReachableIdxs.size() > 0) {
+    auto ToDistribute = BranchProbability::getZero();
+    auto UnreachableProb = getUnreachableProbability(UnreachableIdxs.size());
+    for (auto i : UnreachableIdxs)
+      if (UnreachableProb < BP[i]) {
+        ToDistribute += BP[i] - UnreachableProb;
+        BP[i] = UnreachableProb;
+      }
+
+    // If we modified the probability of some edges then we must distribute
+    // the difference between reachable blocks.
+    if (ToDistribute > BranchProbability::getZero()) {
+      BranchProbability PerEdge = ToDistribute / ReachableIdxs.size();
+      for (auto i : ReachableIdxs) {
+        BP[i] += PerEdge;
+        ToDistribute -= PerEdge;
+      }
+      // Tail goes to the first reachable edge.
+      BP[ReachableIdxs[0]] += ToDistribute;
+    }
+  }
+
+  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
+    setEdgeProbability(BB, i, BP[i]);
 
   assert(WeightSum <= UINT32_MAX &&
          "Expected weights to scale down to 32 bits");
@@ -698,9 +760,9 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI) {
     DEBUG(dbgs() << "Computing probabilities for " << BB->getName() << "\n");
     updatePostDominatedByUnreachable(BB);
     updatePostDominatedByColdCall(BB);
-    if (calcUnreachableHeuristics(BB))
-      continue;
     if (calcMetadataWeights(BB))
+      continue;
+    if (calcUnreachableHeuristics(BB))
       continue;
     if (calcColdCallHeuristics(BB))
       continue;

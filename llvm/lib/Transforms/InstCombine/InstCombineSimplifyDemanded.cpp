@@ -644,13 +644,13 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           KnownOne |= ~LowBits;
 
         assert(!(KnownZero & KnownOne) && "Bits known to be one AND zero?");
+        break;
       }
     }
 
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero.
-    if (DemandedMask.isNegative() && KnownZero.isNonNegative()) {
-      APInt LHSKnownZero(BitWidth, 0), LHSKnownOne(BitWidth, 0);
+    if (DemandedMask.isNegative()) {
       computeKnownBits(I->getOperand(0), LHSKnownZero, LHSKnownOne, Depth + 1,
                        CxtI);
       // If it's known zero, our sign bit is also zero.

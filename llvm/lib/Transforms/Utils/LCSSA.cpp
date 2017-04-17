@@ -214,13 +214,9 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
     // Post process PHI instructions that were inserted into another disjoint
     // loop and update their exits properly.
-    for (auto *PostProcessPN : PostProcessPHIs) {
-      if (PostProcessPN->use_empty())
-        continue;
-
-      // Reprocess each PHI instruction.
-      Worklist.push_back(PostProcessPN);
-    }
+    for (auto *PostProcessPN : PostProcessPHIs)
+      if (!PostProcessPN->use_empty())
+        Worklist.push_back(PostProcessPN);
 
     // Keep track of PHI nodes that we want to remove because they did not have
     // any uses rewritten.
