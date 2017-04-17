@@ -41,7 +41,7 @@ void test_empty_dictionary() {
 
   // CHECK-WITH-EMPTY-COLLECTIONS-LABEL: define void @test_empty_dictionary
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITH-EMPTY-COLLECTIONS: load {{.*}} @__NSDictionary0__
+  // CHECK-WITH-EMPTY-COLLECTIONS: load {{.*}} @__NSDictionary0__{{.*}}!invariant.load
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITH-EMPTY-COLLECTIONS: {{call.*objc_retain\(}}
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
