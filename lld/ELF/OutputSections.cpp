@@ -16,6 +16,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -81,6 +82,55 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   if (AOut != BOut)
     return AOut->SectionIndex < BOut->SectionIndex;
   return LA->OutSecOff < LB->OutSecOff;
+}
+
+// Compressed sections has header which we create in this function.
+// Format is explaned here:
+// https://docs.oracle.com/cd/E53394_01/html/E54813/section_compression.html
+template <class ELFT>
+static std::vector<uint8_t> createHeader(size_t Size, uint32_t Alignment) {
+  const endianness E = ELFT::TargetEndianness;
+
+  std::vector<uint8_t> Ret(sizeof(typename ELFT::Chdr));
+  uint8_t *Buf = &Ret[0];
+  write32<E>(Buf, ELFCOMPRESS_ZLIB);
+  Buf += 4;
+
+  if (Config->Is64) {
+    Buf += sizeof(Elf64_Word); // Skip ch_reserved field.
+    write64<E>(Buf, Size);
+    Buf += sizeof(ELFT::Chdr::ch_size);
+    write64<E>(Buf, Alignment);
+    Buf += sizeof(ELFT::Chdr::ch_addralign);
+  } else {
+    write32<E>(Buf, Size);
+    Buf += sizeof(ELFT::Chdr::ch_size);
+    write32<E>(Buf, Alignment);
+    Buf += sizeof(ELFT::Chdr::ch_addralign);
+  }
+
+  return Ret;
+}
+
+template <class ELFT> void OutputSection::maybeCompress() {
+  // If -compress-debug-sections is specified, we compress output debug
+  // sections.
+  if (!Config->CompressDebugSections || !Name.startswith(".debug_") ||
+      (Flags & SHF_ALLOC))
+    return;
+
+  this->Flags |= SHF_COMPRESSED;
+  CompressedHeader = createHeader<ELFT>(this->Size, this->Alignment);
+
+  // Here we write relocated content of sections and compress it.
+  std::vector<uint8_t> Data(this->Size);
+  this->writeTo<ELFT>(&Data[0]);
+
+  if (Error E = zlib::compress(StringRef((char *)Data.data(), Data.size()),
+                               CompressedData))
+    fatal("compress failed: " + llvm::toString(std::move(E)));
+
+  this->Size = this->CompressedHeader.size() + this->CompressedData.size();
 }
 
 template <class ELFT> void OutputSection::finalize() {
@@ -244,6 +294,15 @@ uint32_t OutputSection::getFiller() {
 
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
+
+  // We may have already rendered compressed content when using
+  // -compress-debug-sections option. Write it together with header.
+  if (!CompressedData.empty()) {
+    memcpy(Buf, CompressedHeader.data(), CompressedHeader.size());
+    Buf += CompressedHeader.size();
+    memcpy(Buf, CompressedData.data(), CompressedData.size());
+    return;
+  }
 
   // Write leading padding.
   uint32_t Filler = getFiller();
@@ -421,6 +480,11 @@ template void OutputSection::finalize<ELF32LE>();
 template void OutputSection::finalize<ELF32BE>();
 template void OutputSection::finalize<ELF64LE>();
 template void OutputSection::finalize<ELF64BE>();
+
+template void OutputSection::maybeCompress<ELF32LE>();
+template void OutputSection::maybeCompress<ELF32BE>();
+template void OutputSection::maybeCompress<ELF64LE>();
+template void OutputSection::maybeCompress<ELF64BE>();
 
 template void OutputSection::writeTo<ELF32LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);

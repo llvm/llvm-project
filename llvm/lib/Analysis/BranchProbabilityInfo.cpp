@@ -205,7 +205,11 @@ BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
 /// unreachable-terminated block as extremely unlikely.
 bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
-  if (TI->getNumSuccessors() == 0)
+  assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
+
+  // Return false here so that edge weights for InvokeInst could be decided
+  // in calcInvokeHeuristics().
+  if (isa<InvokeInst>(TI))
     return false;
 
   SmallVector<unsigned, 4> UnreachableEdges;
@@ -217,14 +221,8 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
     else
       ReachableEdges.push_back(I.getSuccessorIndex());
 
-  // Skip probabilities if this block has a single successor or if all were
-  // reachable.
-  if (TI->getNumSuccessors() == 1 || UnreachableEdges.empty())
-    return false;
-
-  // Return false here so that edge weights for InvokeInst could be decided
-  // in calcInvokeHeuristics().
-  if (isa<InvokeInst>(TI))
+  // Skip probabilities if all were reachable.
+  if (UnreachableEdges.empty())
     return false;
 
   if (ReachableEdges.empty()) {
@@ -251,8 +249,7 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
 // set to min of metadata and unreachable heuristic.
 bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
-  if (TI->getNumSuccessors() <= 1)
-    return false;
+  assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
   if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
     return false;
 
@@ -359,7 +356,11 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 /// Return false, otherwise.
 bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
-  if (TI->getNumSuccessors() == 0)
+  assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
+
+  // Return false here so that edge weights for InvokeInst could be decided
+  // in calcInvokeHeuristics().
+  if (isa<InvokeInst>(TI))
     return false;
 
   // Determine which successors are post-dominated by a cold block.
@@ -371,13 +372,8 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
     else
       NormalEdges.push_back(I.getSuccessorIndex());
 
-  // Return false here so that edge weights for InvokeInst could be decided
-  // in calcInvokeHeuristics().
-  if (isa<InvokeInst>(TI))
-    return false;
-
-  // Skip probabilities if this block has a single successor.
-  if (TI->getNumSuccessors() == 1 || ColdEdges.empty())
+  // Skip probabilities if no cold edges.
+  if (ColdEdges.empty())
     return false;
 
   if (NormalEdges.empty()) {
@@ -760,6 +756,9 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI) {
     DEBUG(dbgs() << "Computing probabilities for " << BB->getName() << "\n");
     updatePostDominatedByUnreachable(BB);
     updatePostDominatedByColdCall(BB);
+    // If there is no at least two successors, no sense to set probability.
+    if (BB->getTerminator()->getNumSuccessors() < 2)
+      continue;
     if (calcMetadataWeights(BB))
       continue;
     if (calcUnreachableHeuristics(BB))
