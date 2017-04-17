@@ -225,6 +225,16 @@ define i32 @test19(i32 %x) {
   ret i32 %A
 }
 
+define <2 x i32> @test19vec(<2 x i32> %x) {
+; CHECK-LABEL: @test19vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[A:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+  %A = udiv <2 x i32> <i32 1, i32 1>, %x
+  ret <2 x i32> %A
+}
+
 define i32 @test20(i32 %x) {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 %x, 1
@@ -234,6 +244,17 @@ define i32 @test20(i32 %x) {
 ;
   %A = sdiv i32 1, %x
   ret i32 %A
+}
+
+define <2 x i32> @test20vec(<2 x i32> %x) {
+; CHECK-LABEL: @test20vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+  %A = sdiv <2 x i32> <i32 1, i32 1>, %x
+  ret <2 x i32> %A
 }
 
 define i32 @test21(i32 %a) {
@@ -388,6 +409,17 @@ define i32 @test35(i32 %A) {
   ret i32 %mul
 }
 
+define <2 x i32> @test35vec(<2 x i32> %A) {
+; CHECK-LABEL: @test35vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[MUL:%.*]] = udiv exact <2 x i32> [[AND]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
+  %mul = sdiv exact <2 x i32> %and, <i32 2147483647, i32 2147483647>
+  ret <2 x i32> %mul
+}
+
 define i32 @test36(i32 %A) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %A, 2147483647
@@ -400,13 +432,10 @@ define i32 @test36(i32 %A) {
   ret i32 %mul
 }
 
-; FIXME: Vector should get same transform as scalar.
-
 define <2 x i32> @test36vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test36vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i32> <i32 1, i32 1>, %A
-; CHECK-NEXT:    [[MUL:%.*]] = sdiv exact <2 x i32> [[AND]], [[SHL]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[MUL:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>

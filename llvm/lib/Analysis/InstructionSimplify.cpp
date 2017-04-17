@@ -75,20 +75,16 @@ static Value *SimplifyXorInst(Value *, Value *, const Query &, unsigned);
 static Value *SimplifyCastInst(unsigned, Value *, Type *,
                                const Query &, unsigned);
 
-/// For a boolean type, or a vector of boolean type, return false, or
-/// a vector with every element false, as appropriate for the type.
+/// For a boolean type or a vector of boolean type, return false or a vector
+/// with every element false.
 static Constant *getFalse(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) &&
-         "Expected i1 type or a vector of i1!");
-  return Constant::getNullValue(Ty);
+  return ConstantInt::getFalse(Ty);
 }
 
-/// For a boolean type, or a vector of boolean type, return true, or
-/// a vector with every element true, as appropriate for the type.
+/// For a boolean type or a vector of boolean type, return true or a vector
+/// with every element true.
 static Constant *getTrue(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) &&
-         "Expected i1 type or a vector of i1!");
-  return Constant::getAllOnesValue(Ty);
+  return ConstantInt::getTrue(Ty);
 }
 
 /// isSameCompare - Is V equivalent to the comparison "LHS Pred RHS"?

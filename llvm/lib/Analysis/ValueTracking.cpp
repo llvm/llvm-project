@@ -1178,19 +1178,16 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
           KnownOne |= ~LowBits;
 
         assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
+        break;
       }
     }
 
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero.
-    if (KnownZero.isNonNegative()) {
-      APInt LHSKnownZero(BitWidth, 0), LHSKnownOne(BitWidth, 0);
-      computeKnownBits(I->getOperand(0), LHSKnownZero, LHSKnownOne, Depth + 1,
-                       Q);
-      // If it's known zero, our sign bit is also zero.
-      if (LHSKnownZero.isNegative())
-        KnownZero.setSignBit();
-    }
+    computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
+    // If it's known zero, our sign bit is also zero.
+    if (KnownZero2.isNegative())
+      KnownZero.setSignBit();
 
     break;
   case Instruction::URem: {

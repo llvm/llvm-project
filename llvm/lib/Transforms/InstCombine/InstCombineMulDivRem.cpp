@@ -944,22 +944,21 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
-  if (ConstantInt *One = dyn_cast<ConstantInt>(Op0)) {
-    if (One->isOne() && !I.getType()->isIntegerTy(1)) {
-      bool isSigned = I.getOpcode() == Instruction::SDiv;
-      if (isSigned) {
-        // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
-        // result is one, if Op1 is -1 then the result is minus one, otherwise
-        // it's zero.
-        Value *Inc = Builder->CreateAdd(Op1, One);
-        Value *Cmp = Builder->CreateICmpULT(
-                         Inc, ConstantInt::get(I.getType(), 3));
-        return SelectInst::Create(Cmp, Op1, ConstantInt::get(I.getType(), 0));
-      } else {
-        // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
-        // result is one, otherwise it's zero.
-        return new ZExtInst(Builder->CreateICmpEQ(Op1, One), I.getType());
-      }
+  if (match(Op0, m_One())) {
+    assert(!I.getType()->getScalarType()->isIntegerTy(1) &&
+           "i1 divide not removed?");
+    if (I.getOpcode() == Instruction::SDiv) {
+      // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
+      // result is one, if Op1 is -1 then the result is minus one, otherwise
+      // it's zero.
+      Value *Inc = Builder->CreateAdd(Op1, Op0);
+      Value *Cmp = Builder->CreateICmpULT(
+                       Inc, ConstantInt::get(I.getType(), 3));
+      return SelectInst::Create(Cmp, Op1, ConstantInt::get(I.getType(), 0));
+    } else {
+      // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
+      // result is one, otherwise it's zero.
+      return new ZExtInst(Builder->CreateICmpEQ(Op1, Op0), I.getType());
     }
   }
 
@@ -1238,25 +1237,23 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a udiv.
-  if (I.getType()->isIntegerTy()) {
-    APInt Mask(APInt::getSignBit(I.getType()->getPrimitiveSizeInBits()));
-    if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
-      if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
-        // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set
-        auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
-        BO->setIsExact(I.isExact());
-        return BO;
-      }
+  APInt Mask(APInt::getSignBit(I.getType()->getScalarSizeInBits()));
+  if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
+    if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
+      // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set
+      auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
+      BO->setIsExact(I.isExact());
+      return BO;
+    }
 
-      if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
-        // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
-        // Safe because the only negative value (1 << Y) can take on is
-        // INT_MIN, and X sdiv INT_MIN == X udiv INT_MIN == 0 if X doesn't have
-        // the sign bit set.
-        auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
-        BO->setIsExact(I.isExact());
-        return BO;
-      }
+    if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
+      // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
+      // Safe because the only negative value (1 << Y) can take on is
+      // INT_MIN, and X sdiv INT_MIN == X udiv INT_MIN == 0 if X doesn't have
+      // the sign bit set.
+      auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
+      BO->setIsExact(I.isExact());
+      return BO;
     }
   }
 
@@ -1546,13 +1543,11 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.
-  if (I.getType()->isIntegerTy()) {
-    APInt Mask(APInt::getSignBit(I.getType()->getPrimitiveSizeInBits()));
-    if (MaskedValueIsZero(Op1, Mask, 0, &I) &&
-        MaskedValueIsZero(Op0, Mask, 0, &I)) {
-      // X srem Y -> X urem Y, iff X and Y don't have sign bit set
-      return BinaryOperator::CreateURem(Op0, Op1, I.getName());
-    }
+  APInt Mask(APInt::getSignBit(I.getType()->getScalarSizeInBits()));
+  if (MaskedValueIsZero(Op1, Mask, 0, &I) &&
+      MaskedValueIsZero(Op0, Mask, 0, &I)) {
+    // X srem Y -> X urem Y, iff X and Y don't have sign bit set
+    return BinaryOperator::CreateURem(Op0, Op1, I.getName());
   }
 
   // If it's a constant vector, flip any negative values positive.

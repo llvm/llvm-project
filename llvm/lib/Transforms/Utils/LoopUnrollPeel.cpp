@@ -82,7 +82,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // its only back edge. If there is such Phi, peeling 1 iteration from the
   // loop is profitable, because starting from 2nd iteration we will have an
   // invariant instead of this Phi.
-  if (LoopSize <= UP.Threshold) {
+  // First, check that we can peel at least one iteration.
+  if (2 * LoopSize <= UP.Threshold && UnrollPeelMaxCount > 0) {
     BasicBlock *BackEdge = L->getLoopLatch();
     assert(BackEdge && "Loop is not in simplified form?");
     BasicBlock *Header = L->getHeader();
