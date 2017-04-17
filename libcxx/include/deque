@@ -968,13 +968,12 @@ protected:
 public:
     ~__deque_base();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
     __deque_base(__deque_base&& __c)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
     __deque_base(__deque_base&& __c, const allocator_type& __a);
+#endif  // _LIBCPP_CXX03_LANG
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     void swap(__deque_base& __c)
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT;
@@ -1108,7 +1107,7 @@ __deque_base<_Tp, _Allocator>::~__deque_base()
         __alloc_traits::deallocate(__alloc(), *__i, __block_size);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 __deque_base<_Tp, _Allocator>::__deque_base(__deque_base&& __c)
@@ -1140,7 +1139,7 @@ __deque_base<_Tp, _Allocator>::__deque_base(__deque_base&& __c, const allocator_
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 void
@@ -1230,18 +1229,16 @@ public:
               typename enable_if<__is_input_iterator<_InputIter>::value>::type* = 0);
     deque(const deque& __c);
     deque(const deque& __c, const allocator_type& __a);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    deque(initializer_list<value_type> __il);
-    deque(initializer_list<value_type> __il, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     deque& operator=(const deque& __c);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
+    deque(initializer_list<value_type> __il);
+    deque(initializer_list<value_type> __il, const allocator_type& __a);
+
     _LIBCPP_INLINE_VISIBILITY
     deque& operator=(initializer_list<value_type> __il) {assign(__il); return *this;}
-#endif   // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     deque(deque&& __c) _NOEXCEPT_(is_nothrow_move_constructible<__base>::value);
     _LIBCPP_INLINE_VISIBILITY
@@ -1250,7 +1247,10 @@ public:
     deque& operator=(deque&& __c)
         _NOEXCEPT_(__alloc_traits::propagate_on_container_move_assignment::value &&
                    is_nothrow_move_assignable<allocator_type>::value);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+    _LIBCPP_INLINE_VISIBILITY
+    void assign(initializer_list<value_type> __il) {assign(__il.begin(), __il.end());}
+#endif  // _LIBCPP_CXX03_LANG
 
     template <class _InputIter>
         void assign(_InputIter __f, _InputIter __l,
@@ -1260,10 +1260,6 @@ public:
         void assign(_RAIter __f, _RAIter __l,
                     typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
     void assign(size_type __n, const value_type& __v);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    void assign(initializer_list<value_type> __il) {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT;
@@ -1340,8 +1336,7 @@ public:
     // 23.2.2.3 modifiers:
     void push_front(const value_type& __v);
     void push_back(const value_type& __v);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 #if _LIBCPP_STD_VER > 14
     template <class... _Args> reference emplace_front(_Args&&... __args);
     template <class... _Args> reference emplace_back (_Args&&... __args);
@@ -1350,11 +1345,16 @@ public:
     template <class... _Args> void      emplace_back (_Args&&... __args);
 #endif
     template <class... _Args> iterator emplace(const_iterator __p, _Args&&... __args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+
     void push_front(value_type&& __v);
     void push_back(value_type&& __v);
     iterator insert(const_iterator __p, value_type&& __v);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __p, initializer_list<value_type> __il)
+        {return insert(__p, __il.begin(), __il.end());}
+#endif  // _LIBCPP_CXX03_LANG
+
     iterator insert(const_iterator __p, const value_type& __v);
     iterator insert(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIter>
@@ -1368,11 +1368,7 @@ public:
     template <class _BiIter>
         iterator insert(const_iterator __p, _BiIter __f, _BiIter __l,
                          typename enable_if<__is_bidirectional_iterator<_BiIter>::value>::type* = 0);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    iterator insert(const_iterator __p, initializer_list<value_type> __il)
-        {return insert(__p, __il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     void pop_front();
     void pop_back();
     iterator erase(const_iterator __p);
@@ -1527,7 +1523,19 @@ deque<_Tp, _Allocator>::deque(const deque& __c, const allocator_type& __a)
     __append(__c.begin(), __c.end());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+template <class _Tp, class _Allocator>
+deque<_Tp, _Allocator>&
+deque<_Tp, _Allocator>::operator=(const deque& __c)
+{
+    if (this != &__c)
+    {
+        __copy_assign_alloc(__c);
+        assign(__c.begin(), __c.end());
+    }
+    return *this;
+}
+
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(initializer_list<value_type> __il)
@@ -1541,22 +1549,6 @@ deque<_Tp, _Allocator>::deque(initializer_list<value_type> __il, const allocator
 {
     __append(__il.begin(), __il.end());
 }
-
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
-template <class _Tp, class _Allocator>
-deque<_Tp, _Allocator>&
-deque<_Tp, _Allocator>::operator=(const deque& __c)
-{
-    if (this != &__c)
-    {
-        __copy_assign_alloc(__c);
-        assign(__c.begin(), __c.end());
-    }
-    return *this;
-}
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp, class _Allocator>
 inline
@@ -1613,7 +1605,7 @@ deque<_Tp, _Allocator>::__move_assign(deque& __c, true_type)
     __base::__move_assign(__c);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 template <class _InputIter>
@@ -1809,8 +1801,20 @@ deque<_Tp, _Allocator>::push_back(const value_type& __v)
     ++__base::size();
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+template <class _Tp, class _Allocator>
+void
+deque<_Tp, _Allocator>::push_front(const value_type& __v)
+{
+    allocator_type& __a = __base::__alloc();
+    if (__front_spare() == 0)
+        __add_front_capacity();
+    // __front_spare() >= 1
+    __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), __v);
+    --__base::__start_;
+    ++__base::size();
+}
 
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp, class _Allocator>
 void
 deque<_Tp, _Allocator>::push_back(value_type&& __v)
@@ -1822,8 +1826,6 @@ deque<_Tp, _Allocator>::push_back(value_type&& __v)
     __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()), _VSTD::move(__v));
     ++__base::size();
 }
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
@@ -1846,24 +1848,6 @@ deque<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp, class _Allocator>
-void
-deque<_Tp, _Allocator>::push_front(const value_type& __v)
-{
-    allocator_type& __a = __base::__alloc();
-    if (__front_spare() == 0)
-        __add_front_capacity();
-    // __front_spare() >= 1
-    __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), __v);
-    --__base::__start_;
-    ++__base::size();
-}
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp, class _Allocator>
 void
 deque<_Tp, _Allocator>::push_front(value_type&& __v)
@@ -1877,7 +1861,6 @@ deque<_Tp, _Allocator>::push_front(value_type&& __v)
     ++__base::size();
 }
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
@@ -1900,8 +1883,121 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+template <class _Tp, class _Allocator>
+typename deque<_Tp, _Allocator>::iterator
+deque<_Tp, _Allocator>::insert(const_iterator __p, value_type&& __v)
+{
+    size_type __pos = __p - __base::begin();
+    size_type __to_end = __base::size() - __pos;
+    allocator_type& __a = __base::__alloc();
+    if (__pos < __to_end)
+    {   // insert by shifting things backward
+        if (__front_spare() == 0)
+            __add_front_capacity();
+        // __front_spare() >= 1
+        if (__pos == 0)
+        {
+            __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), _VSTD::move(__v));
+            --__base::__start_;
+            ++__base::size();
+        }
+        else
+        {
+            iterator __b = __base::begin();
+            iterator __bm1 = _VSTD::prev(__b);
+            __alloc_traits::construct(__a, _VSTD::addressof(*__bm1), _VSTD::move(*__b));
+            --__base::__start_;
+            ++__base::size();
+            if (__pos > 1)
+                __b = _VSTD::move(_VSTD::next(__b), __b + __pos, __b);
+            *__b = _VSTD::move(__v);
+        }
+    }
+    else
+    {   // insert by shifting things forward
+        if (__back_spare() == 0)
+            __add_back_capacity();
+        // __back_capacity >= 1
+        size_type __de = __base::size() - __pos;
+        if (__de == 0)
+        {
+            __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()), _VSTD::move(__v));
+            ++__base::size();
+        }
+        else
+        {
+            iterator __e = __base::end();
+            iterator __em1 = _VSTD::prev(__e);
+            __alloc_traits::construct(__a, _VSTD::addressof(*__e), _VSTD::move(*__em1));
+            ++__base::size();
+            if (__de > 1)
+                __e = _VSTD::move_backward(__e - __de, __em1, __e);
+            *--__e = _VSTD::move(__v);
+        }
+    }
+    return __base::begin() + __pos;
+}
+
+template <class _Tp, class _Allocator>
+template <class... _Args>
+typename deque<_Tp, _Allocator>::iterator
+deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
+{
+    size_type __pos = __p - __base::begin();
+    size_type __to_end = __base::size() - __pos;
+    allocator_type& __a = __base::__alloc();
+    if (__pos < __to_end)
+    {   // insert by shifting things backward
+        if (__front_spare() == 0)
+            __add_front_capacity();
+        // __front_spare() >= 1
+        if (__pos == 0)
+        {
+            __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), _VSTD::forward<_Args>(__args)...);
+            --__base::__start_;
+            ++__base::size();
+        }
+        else
+        {
+            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
+            iterator __b = __base::begin();
+            iterator __bm1 = _VSTD::prev(__b);
+            __alloc_traits::construct(__a, _VSTD::addressof(*__bm1), _VSTD::move(*__b));
+            --__base::__start_;
+            ++__base::size();
+            if (__pos > 1)
+                __b = _VSTD::move(_VSTD::next(__b), __b + __pos, __b);
+            *__b = _VSTD::move(__tmp.get());
+        }
+    }
+    else
+    {   // insert by shifting things forward
+        if (__back_spare() == 0)
+            __add_back_capacity();
+        // __back_capacity >= 1
+        size_type __de = __base::size() - __pos;
+        if (__de == 0)
+        {
+            __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()), _VSTD::forward<_Args>(__args)...);
+            ++__base::size();
+        }
+        else
+        {
+            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
+            iterator __e = __base::end();
+            iterator __em1 = _VSTD::prev(__e);
+            __alloc_traits::construct(__a, _VSTD::addressof(*__e), _VSTD::move(*__em1));
+            ++__base::size();
+            if (__de > 1)
+                __e = _VSTD::move_backward(__e - __de, __em1, __e);
+            *--__e = _VSTD::move(__tmp.get());
+        }
+    }
+    return __base::begin() + __pos;
+}
+
+#endif  // _LIBCPP_CXX03_LANG
+
 
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator
@@ -1963,126 +2059,6 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, const value_type& __v)
     }
     return __base::begin() + __pos;
 }
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::insert(const_iterator __p, value_type&& __v)
-{
-    size_type __pos = __p - __base::begin();
-    size_type __to_end = __base::size() - __pos;
-    allocator_type& __a = __base::__alloc();
-    if (__pos < __to_end)
-    {   // insert by shifting things backward
-        if (__front_spare() == 0)
-            __add_front_capacity();
-        // __front_spare() >= 1
-        if (__pos == 0)
-        {
-            __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), _VSTD::move(__v));
-            --__base::__start_;
-            ++__base::size();
-        }
-        else
-        {
-            iterator __b = __base::begin();
-            iterator __bm1 = _VSTD::prev(__b);
-            __alloc_traits::construct(__a, _VSTD::addressof(*__bm1), _VSTD::move(*__b));
-            --__base::__start_;
-            ++__base::size();
-            if (__pos > 1)
-                __b = _VSTD::move(_VSTD::next(__b), __b + __pos, __b);
-            *__b = _VSTD::move(__v);
-        }
-    }
-    else
-    {   // insert by shifting things forward
-        if (__back_spare() == 0)
-            __add_back_capacity();
-        // __back_capacity >= 1
-        size_type __de = __base::size() - __pos;
-        if (__de == 0)
-        {
-            __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()), _VSTD::move(__v));
-            ++__base::size();
-        }
-        else
-        {
-            iterator __e = __base::end();
-            iterator __em1 = _VSTD::prev(__e);
-            __alloc_traits::construct(__a, _VSTD::addressof(*__e), _VSTD::move(*__em1));
-            ++__base::size();
-            if (__de > 1)
-                __e = _VSTD::move_backward(__e - __de, __em1, __e);
-            *--__e = _VSTD::move(__v);
-        }
-    }
-    return __base::begin() + __pos;
-}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Tp, class _Allocator>
-template <class... _Args>
-typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
-{
-    size_type __pos = __p - __base::begin();
-    size_type __to_end = __base::size() - __pos;
-    allocator_type& __a = __base::__alloc();
-    if (__pos < __to_end)
-    {   // insert by shifting things backward
-        if (__front_spare() == 0)
-            __add_front_capacity();
-        // __front_spare() >= 1
-        if (__pos == 0)
-        {
-            __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), _VSTD::forward<_Args>(__args)...);
-            --__base::__start_;
-            ++__base::size();
-        }
-        else
-        {
-            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
-            iterator __b = __base::begin();
-            iterator __bm1 = _VSTD::prev(__b);
-            __alloc_traits::construct(__a, _VSTD::addressof(*__bm1), _VSTD::move(*__b));
-            --__base::__start_;
-            ++__base::size();
-            if (__pos > 1)
-                __b = _VSTD::move(_VSTD::next(__b), __b + __pos, __b);
-            *__b = _VSTD::move(__tmp.get());
-        }
-    }
-    else
-    {   // insert by shifting things forward
-        if (__back_spare() == 0)
-            __add_back_capacity();
-        // __back_capacity >= 1
-        size_type __de = __base::size() - __pos;
-        if (__de == 0)
-        {
-            __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()), _VSTD::forward<_Args>(__args)...);
-            ++__base::size();
-        }
-        else
-        {
-            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
-            iterator __e = __base::end();
-            iterator __em1 = _VSTD::prev(__e);
-            __alloc_traits::construct(__a, _VSTD::addressof(*__e), _VSTD::move(*__em1));
-            ++__base::size();
-            if (__de > 1)
-                __e = _VSTD::move_backward(__e - __de, __em1, __e);
-            *--__e = _VSTD::move(__tmp.get());
-        }
-    }
-    return __base::begin() + __pos;
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator

@@ -1291,7 +1291,6 @@ void MemorySSA::buildMemorySSA() {
   // could just look up the memory access for every possible instruction in the
   // stream.
   SmallPtrSet<BasicBlock *, 32> DefiningBlocks;
-  SmallPtrSet<BasicBlock *, 32> DefUseBlocks;
   // Go through each block, figure out where defs occur, and chain together all
   // the accesses.
   for (BasicBlock &B : F) {
@@ -1316,8 +1315,6 @@ void MemorySSA::buildMemorySSA() {
     }
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
-    if (Accesses)
-      DefUseBlocks.insert(&B);
   }
   placePHINodes(DefiningBlocks, BBNumbers);
 

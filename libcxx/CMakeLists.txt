@@ -370,9 +370,9 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 add_target_flags_if(LIBCXX_BUILD_32_BITS "-m32")
-add_target_flags_if(LIBCXX_TARGET_TRIPLE "-target ${LIBCXX_TARGET_TRIPLE}")
+add_target_flags_if(LIBCXX_TARGET_TRIPLE "--target=${LIBCXX_TARGET_TRIPLE}")
 add_target_flags_if(LIBCXX_SYSROOT "--sysroot=${LIBCXX_SYSROOT}")
-add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}")
+add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
 if (LIBCXX_TARGET_TRIPLE)
   set(TARGET_TRIPLE "${LIBCXX_TARGET_TRIPLE}")
 endif()

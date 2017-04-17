@@ -1188,7 +1188,7 @@ void APInt::lshrInPlace(unsigned shiftAmt) {
 
   // Fill in first Words - ShiftFullWords by shifting.
   lshrWords(pVal, pVal + ShiftFullWords, Words - ShiftFullWords,
-            shiftAmt - (ShiftFullWords * APINT_BITS_PER_WORD));
+            shiftAmt % APINT_BITS_PER_WORD);
 
   // The remaining high words are all zero.
   for (unsigned I = Words - ShiftFullWords; I != Words; ++I)

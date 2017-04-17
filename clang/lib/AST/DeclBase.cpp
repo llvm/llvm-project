@@ -861,6 +861,21 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   return Ty->getAs<FunctionType>();
 }
 
+bool Decl::isThisDeclarationADefinition() const {
+  if (auto *TD = dyn_cast<TagDecl>(this))
+    return TD->isThisDeclarationADefinition();
+  if (auto *FD = dyn_cast<FunctionDecl>(this))
+    return FD->isThisDeclarationADefinition();
+  if (auto *VD = dyn_cast<VarDecl>(this))
+    return VD->isThisDeclarationADefinition();
+  if (auto *CTD = dyn_cast<ClassTemplateDecl>(this))
+    return CTD->isThisDeclarationADefinition();
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
+    return FTD->isThisDeclarationADefinition();
+  if (auto *VTD = dyn_cast<VarTemplateDecl>(this))
+    return VTD->isThisDeclarationADefinition();
+  return false;
+}
 
 /// Starting at a given context (a Decl or DeclContext), look for a
 /// code context that is not a closure (a lambda, block, etc.).

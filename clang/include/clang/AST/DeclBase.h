@@ -417,6 +417,8 @@ public:
     return const_cast<Decl*>(this)->getTranslationUnitDecl();
   }
 
+  bool isThisDeclarationADefinition() const;
+
   bool isInAnonymousNamespace() const;
 
   bool isInStdNamespace() const;

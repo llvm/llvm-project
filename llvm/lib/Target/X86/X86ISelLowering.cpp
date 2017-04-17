@@ -35917,10 +35917,17 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return Res;
     }
 
-    // 'A' means EAX + EDX.
+    // 'A' means [ER]AX + [ER]DX.
     if (Constraint == "A") {
-      Res.first = X86::EAX;
-      Res.second = &X86::GR32_ADRegClass;
+      if (Subtarget.is64Bit()) {
+        Res.first = X86::RAX;
+        Res.second = &X86::GR64_ADRegClass;
+      } else {
+        assert((Subtarget.is32Bit() || Subtarget.is16Bit()) &&
+               "Expecting 64, 32 or 16 bit subtarget");
+        Res.first = X86::EAX;
+        Res.second = &X86::GR32_ADRegClass;
+      }
       return Res;
     }
     return Res;

@@ -19,6 +19,7 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Threads.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -1215,6 +1216,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
+
+  // Some sections may require compression. That happens for
+  // debug sections when --compress-debug-sections option used.
+  parallelForEach(OutputSections.begin(), OutputSections.end(),
+                  [](OutputSection *S) { S->maybeCompress<ELFT>(); });
 
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab},

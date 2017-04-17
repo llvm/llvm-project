@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=4 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-threshold=8 | FileCheck %s
 
 define i32 @invariant_backedge_1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @invariant_backedge_1

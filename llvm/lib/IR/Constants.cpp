@@ -518,27 +518,19 @@ ConstantInt *ConstantInt::getFalse(LLVMContext &Context) {
 }
 
 Constant *ConstantInt::getTrue(Type *Ty) {
-  VectorType *VTy = dyn_cast<VectorType>(Ty);
-  if (!VTy) {
-    assert(Ty->isIntegerTy(1) && "True must be i1 or vector of i1.");
-    return ConstantInt::getTrue(Ty->getContext());
-  }
-  assert(VTy->getElementType()->isIntegerTy(1) &&
-         "True must be vector of i1 or i1.");
-  return ConstantVector::getSplat(VTy->getNumElements(),
-                                  ConstantInt::getTrue(Ty->getContext()));
+  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  ConstantInt *TrueC = ConstantInt::getTrue(Ty->getContext());
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getNumElements(), TrueC);
+  return TrueC;
 }
 
 Constant *ConstantInt::getFalse(Type *Ty) {
-  VectorType *VTy = dyn_cast<VectorType>(Ty);
-  if (!VTy) {
-    assert(Ty->isIntegerTy(1) && "False must be i1 or vector of i1.");
-    return ConstantInt::getFalse(Ty->getContext());
-  }
-  assert(VTy->getElementType()->isIntegerTy(1) &&
-         "False must be vector of i1 or i1.");
-  return ConstantVector::getSplat(VTy->getNumElements(),
-                                  ConstantInt::getFalse(Ty->getContext()));
+  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  ConstantInt *FalseC = ConstantInt::getFalse(Ty->getContext());
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getNumElements(), FalseC);
+  return FalseC;
 }
 
 // Get a ConstantInt from an APInt.

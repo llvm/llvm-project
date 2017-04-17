@@ -516,8 +516,8 @@ private:
            isl_bool_true);
     auto Universe = give(isl_union_set_union(Occupied.copy(), Unused.copy()));
 
-    assert(Known.domain().is_subset(Universe).is_true_or_error());
-    assert(Written.domain().is_subset(Universe).is_true_or_error());
+    assert(!Known.domain().is_subset(Universe).is_false());
+    assert(!Written.domain().is_subset(Universe).is_false());
 #endif
   }
 

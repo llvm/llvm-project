@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // iterator insert(const_iterator p, initializer_list<value_type> il);
@@ -18,7 +20,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
     std::vector<bool> d(10, true);
     std::vector<bool>::iterator i = d.insert(d.cbegin() + 2, {false, true, true, false});
@@ -39,7 +40,6 @@ int main()
     assert(d[12] == true);
     assert(d[13] == true);
     }
-#if TEST_STD_VER >= 11
     {
     std::vector<bool, min_allocator<bool>> d(10, true);
     std::vector<bool, min_allocator<bool>>::iterator i = d.insert(d.cbegin() + 2, {false, true, true, false});
@@ -60,6 +60,4 @@ int main()
     assert(d[12] == true);
     assert(d[13] == true);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }
