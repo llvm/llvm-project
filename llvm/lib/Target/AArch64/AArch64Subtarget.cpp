@@ -143,6 +143,23 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   return AArch64II::MO_NO_FLAG;
 }
 
+unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
+    const GlobalValue *GV, const TargetMachine &TM) const {
+  // MachO large model always goes via a GOT, because we don't have the
+  // relocations available to do anything else..
+  if (TM.getCodeModel() == CodeModel::Large && isTargetMachO() &&
+      !GV->hasInternalLinkage())
+    return AArch64II::MO_GOT;
+
+  // NonLazyBind goes via GOT unless we know it's available locally.
+  auto *F = dyn_cast<Function>(GV);
+  if (F && F->hasFnAttribute(Attribute::NonLazyBind) &&
+      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+    return AArch64II::MO_GOT;
+
+  return AArch64II::MO_NO_FLAG;
+}
+
 /// This function returns the name of a function which has an interface
 /// like the non-standard bzero function, if such a function exists on
 /// the current subtarget and it is considered prefereable over
