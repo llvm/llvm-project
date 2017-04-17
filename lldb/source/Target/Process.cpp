@@ -1297,7 +1297,7 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
                                       start_frame, num_frames,
                                       num_frames_with_source,
                                       stop_format);
-          if (curr_thread_stop_info_sp) {
+          if (false && curr_thread_stop_info_sp) {
             lldb::addr_t crashing_address;
             ValueObjectSP valobj_sp = StopInfo::GetCrashingDereference(
                 curr_thread_stop_info_sp, &crashing_address);
