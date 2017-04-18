@@ -79,6 +79,9 @@ public:
 
   unsigned size() const;
   void shrinkTo(unsigned N);
+
+  /// Perform bitcode upgrades on llvm.dbg.* calls.
+  void upgradeDebugIntrinsics(Function &F);
 };
 }
 

@@ -70,7 +70,7 @@ entry:
 
 ; <label>:28                                      ; preds = %22, %entry
   store i32 %0, i32* %3, align 4
-  call void @llvm.dbg.declare(metadata %struct.A* %agg.result, metadata !24, metadata !DIExpression(DW_OP_deref)), !dbg !25
+  call void @llvm.dbg.declare(metadata %struct.A* %agg.result, metadata !24, metadata !DIExpression()), !dbg !25
   call void @_ZN1AC1Ev(%struct.A* %agg.result), !dbg !25
   store i64 1172321806, i64* %4, !dbg !26
   %29 = inttoptr i64 %10 to i32*, !dbg !26

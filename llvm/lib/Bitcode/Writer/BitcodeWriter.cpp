@@ -1740,9 +1740,8 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
   Record.reserve(N->getElements().size() + 1);
-
-  const uint64_t HasOpFragmentFlag = 1 << 1;
-  Record.push_back((uint64_t)N->isDistinct() | HasOpFragmentFlag);
+  const uint64_t Version = 2 << 1;
+  Record.push_back((uint64_t)N->isDistinct() | Version);
   Record.append(N->elements_begin(), N->elements_end());
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
