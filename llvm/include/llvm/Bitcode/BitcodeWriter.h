@@ -15,6 +15,7 @@
 #define LLVM_BITCODE_BITCODEWRITER_H
 
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include <string>
 
 namespace llvm {
@@ -26,11 +27,24 @@ namespace llvm {
     SmallVectorImpl<char> &Buffer;
     std::unique_ptr<BitstreamWriter> Stream;
 
+    StringTableBuilder StrtabBuilder{StringTableBuilder::RAW};
+    bool WroteStrtab = false;
+
+    void writeBlob(unsigned Block, unsigned Record, StringRef Blob);
+
    public:
     /// Create a BitcodeWriter that writes to Buffer.
     BitcodeWriter(SmallVectorImpl<char> &Buffer);
 
     ~BitcodeWriter();
+
+    /// Write the bitcode file's string table. This must be called exactly once
+    /// after all modules have been written.
+    void writeStrtab();
+
+    /// Copy the string table for another module into this bitcode file. This
+    /// should be called after copying the module itself into the bitcode file.
+    void copyStrtab(StringRef Strtab);
 
     /// Write the specified module to the buffer specified at construction time.
     ///

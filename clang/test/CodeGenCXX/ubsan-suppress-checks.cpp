@@ -2,6 +2,20 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
 
+// CHECK-LABEL: define void @_Z22load_non_null_pointersv
+void load_non_null_pointers() {
+  int var;
+  var = *&var;
+
+  int arr[1];
+  arr[0] = arr[0];
+
+  char c = "foo"[0];
+
+  // CHECK-NOT: icmp ne {{.*}}, null, !nosanitize
+  // CHECK: ret void
+}
+
 struct A {
   int foo;
 
@@ -29,8 +43,7 @@ struct A {
     };
     f();
 
-    // LAMBDA: icmp ne %class.anon* %[[FUNCVAR:.*]], null, !nosanitize
-    // LAMBDA: %[[LAMBDAINT:[0-9]+]] = ptrtoint %class.anon* %[[FUNCVAR]] to i64, !nosanitize
+    // LAMBDA: %[[LAMBDAINT:[0-9]+]] = ptrtoint %class.anon* %[[FUNCVAR:.*]] to i64, !nosanitize
     // LAMBDA: and i64 %[[LAMBDAINT]], 7, !nosanitize
     // LAMBDA: call void @__ubsan_handle_type_mismatch
 
@@ -127,8 +140,8 @@ struct A {
 struct B {
   operator A*() const { return nullptr; }
 
-  // CHECK-LABEL: define linkonce_odr i32 @_ZN1B11load_memberEv
-  static int load_member() {
+  // CHECK-LABEL: define linkonce_odr i32 @_ZN1B11load_memberEPS_
+  static int load_member(B *bp) {
     // Check &b before converting it to an A*.
     // CHECK: call void @__ubsan_handle_type_mismatch
     //
@@ -136,8 +149,7 @@ struct B {
     // NULL: call void @__ubsan_handle_type_mismatch
     //
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
-    B b;
-    return static_cast<A *>(b)->load_member();
+    return static_cast<A *>(*bp)->load_member();
     // CHECK: ret i32
   }
 };
@@ -210,7 +222,7 @@ void force_irgen() {
   A::call_through_reference(*a);
   A::call_through_pointer(a);
 
-  B::load_member();
+  B::load_member(nullptr);
 
   Base *b = new Derived;
   b->load_member_1();
@@ -218,4 +230,6 @@ void force_irgen() {
   Derived *d;
   d->load_member_2();
   d->load_member_3();
+
+  load_non_null_pointers();
 }

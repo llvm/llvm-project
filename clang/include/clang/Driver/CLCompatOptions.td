@@ -172,6 +172,12 @@ def _SLASH_Zc_trigraphs : CLFlag<"Zc:trigraphs">,
   HelpText<"Enable trigraphs">, Alias<ftrigraphs>;
 def _SLASH_Zc_trigraphs_off : CLFlag<"Zc:trigraphs-">,
   HelpText<"Disable trigraphs (default)">, Alias<fno_trigraphs>;
+def _SLASH_Zc_twoPhase : CLFlag<"Zc:twoPhase">,
+  HelpText<"Enable two-phase name lookup in templates">,
+  Alias<fno_delayed_template_parsing>;
+def _SLASH_Zc_twoPhase_ : CLFlag<"Zc:twoPhase-">,
+  HelpText<"Disable two-phase name lookup in templates">,
+  Alias<fdelayed_template_parsing>;
 def _SLASH_Z7 : CLFlag<"Z7">,
   HelpText<"Enable CodeView debug information in object files">;
 def _SLASH_Zd : CLFlag<"Zd">,

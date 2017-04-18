@@ -15,7 +15,7 @@
 #endif
 
 extern "C" int __tsan_get_alloc_stack(void *addr, void **trace, size_t size,
-                                      int *thread_id, void *os_id);
+                                      int *thread_id, uint64_t *os_id);
 
 char *mem;
 void alloc_func() { mem = (char *)malloc(10); }
@@ -49,7 +49,7 @@ int main() {
   void *trace[100];
   size_t num_frames = 100;
   int thread_id;
-  void *thread_os_id;
+  uint64_t *thread_os_id;
   num_frames =
       __tsan_get_alloc_stack(mem, trace, num_frames, &thread_id, &thread_os_id);
 
@@ -58,7 +58,7 @@ int main() {
   // CHECK: alloc stack retval ok
   fprintf(stderr, "thread id = %d\n", thread_id);
   // CHECK: thread id = 1
-  fprintf(stderr, "thread os id = 0x%llx\n", (uint64_t)thread_os_id);
+  fprintf(stderr, "thread os id = 0x%llx\n", thread_os_id);
   // CHECK: thread os id = [[THREAD_OS_ID]]
   fprintf(stderr, "%p\n", trace[0]);
   // CHECK: [[ALLOC_FRAME_0:0x[0-9a-f]+]]

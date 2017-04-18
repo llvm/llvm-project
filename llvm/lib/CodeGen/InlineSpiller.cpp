@@ -888,20 +888,10 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
     // Debug values are not allowed to affect codegen.
     if (MI->isDebugValue()) {
       // Modify DBG_VALUE now that the value is in a spill slot.
-      bool IsIndirect = MI->isIndirectDebugValue();
-      uint64_t Offset = IsIndirect ? MI->getOperand(1).getImm() : 0;
-      const MDNode *Var = MI->getDebugVariable();
-      const MDNode *Expr = MI->getDebugExpression();
-      DebugLoc DL = MI->getDebugLoc();
-      DEBUG(dbgs() << "Modifying debug info due to spill:" << "\t" << *MI);
       MachineBasicBlock *MBB = MI->getParent();
-      assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
-             "Expected inlined-at fields to agree");
-      BuildMI(*MBB, MBB->erase(MI), DL, TII.get(TargetOpcode::DBG_VALUE))
-          .addFrameIndex(StackSlot)
-          .addImm(Offset)
-          .addMetadata(Var)
-          .addMetadata(Expr);
+      DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);
+      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot);
+      MBB->erase(MI);
       continue;
     }
 

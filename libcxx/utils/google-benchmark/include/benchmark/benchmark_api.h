@@ -155,18 +155,28 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "macros.h"
 
 #if defined(BENCHMARK_HAS_CXX11)
 #include <type_traits>
+#include <initializer_list>
 #include <utility>
+#endif
+
+#if defined(_MSC_VER)
+#include <intrin.h> // for _ReadWriteBarrier
 #endif
 
 namespace benchmark {
 class BenchmarkReporter;
 
 void Initialize(int* argc, char** argv);
+
+// Report to stdout all arguments in 'argv' as unrecognized except the first.
+// Returns true there is at least on unrecognized argument (i.e. 'argc' > 1).
+bool ReportUnrecognizedArguments(int argc, char** argv);
 
 // Generate a list of benchmarks matching the specified --benchmark_filter flag
 // and if --benchmark_list_tests is specified return after printing the name
@@ -197,19 +207,6 @@ class Benchmark;
 class BenchmarkImp;
 class BenchmarkFamilies;
 
-template <class T>
-struct Voider {
-  typedef void type;
-};
-
-template <class T, class = void>
-struct EnableIfString {};
-
-template <class T>
-struct EnableIfString<T, typename Voider<typename T::basic_string>::type> {
-  typedef int type;
-};
-
 void UseCharPointer(char const volatile*);
 
 // Take ownership of the pointer and register the benchmark. Return the
@@ -222,11 +219,16 @@ BENCHMARK_UNUSED static int stream_init_anchor = InitializeStreams();
 
 }  // end namespace internal
 
+
+#if !defined(__GNUC__) || defined(__pnacl__) || defined(EMSCRIPTN)
+# define BENCHMARK_HAS_NO_INLINE_ASSEMBLY
+#endif
+
 // The DoNotOptimize(...) function can be used to prevent a value or
 // expression from being optimized away by the compiler. This function is
 // intended to add little to no overhead.
 // See: https://youtu.be/nXaxk27zwlk?t=2441
-#if defined(__GNUC__)
+#ifndef BENCHMARK_HAS_NO_INLINE_ASSEMBLY
 template <class Tp>
 inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   asm volatile("" : : "g"(value) : "memory");
@@ -236,13 +238,56 @@ inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
 inline BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
   asm volatile("" : : : "memory");
 }
+#elif defined(_MSC_VER)
+template <class Tp>
+inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
+  internal::UseCharPointer(&reinterpret_cast<char const volatile&>(value));
+  _ReadWriteBarrier();
+}
+
+inline BENCHMARK_ALWAYS_INLINE void ClobberMemory() {
+  _ReadWriteBarrier();
+}
 #else
 template <class Tp>
 inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   internal::UseCharPointer(&reinterpret_cast<char const volatile&>(value));
 }
-// FIXME Add ClobberMemory() for non-gnu compilers
+// FIXME Add ClobberMemory() for non-gnu and non-msvc compilers
 #endif
+
+
+
+// This class is used for user-defined counters.
+class Counter {
+public:
+
+  enum Flags {
+    kDefaults   = 0,
+    // Mark the counter as a rate. It will be presented divided
+    // by the duration of the benchmark.
+    kIsRate     = 1,
+    // Mark the counter as a thread-average quantity. It will be
+    // presented divided by the number of threads.
+    kAvgThreads = 2,
+    // Mark the counter as a thread-average rate. See above.
+    kAvgThreadsRate = kIsRate|kAvgThreads
+  };
+
+  double value;
+  Flags  flags;
+
+  BENCHMARK_ALWAYS_INLINE
+  Counter(double v = 0., Flags f = kDefaults) : value(v), flags(f) {}
+
+  BENCHMARK_ALWAYS_INLINE operator double const& () const { return value; }
+  BENCHMARK_ALWAYS_INLINE operator double      & ()       { return value; }
+
+};
+
+// This is the container for the user-defined counters.
+typedef std::map<std::string, Counter> UserCounters;
+
 
 // TimeUnit is passed to a benchmark in order to specify the order of magnitude
 // for the measured time.
@@ -393,13 +438,7 @@ class State {
   // REQUIRES: a benchmark has exited its KeepRunning loop.
   void SetLabel(const char* label);
 
-  // Allow the use of std::string without actually including <string>.
-  // This function does not participate in overload resolution unless StringType
-  // has the nested typename `basic_string`. This typename should be provided
-  // as an injected class name in the case of std::string.
-  template <class StringType>
-  void SetLabel(StringType const& str,
-                typename internal::EnableIfString<StringType>::type = 1) {
+  void BENCHMARK_ALWAYS_INLINE SetLabel(const std::string& str) {
     this->SetLabel(str.c_str());
   }
 
@@ -434,6 +473,8 @@ class State {
   bool error_occurred_;
 
  public:
+  // Container for user-defined counters.
+  UserCounters counters;
   // Index of the executing thread. Values from [0, threads).
   const int thread_index;
   // Number of threads concurrently executing the benchmark.
@@ -536,8 +577,16 @@ class Benchmark {
 
   // Set the minimum amount of time to use when running this benchmark. This
   // option overrides the `benchmark_min_time` flag.
-  // REQUIRES: `t > 0`
+  // REQUIRES: `t > 0` and `Iterations` has not been called on this benchmark.
   Benchmark* MinTime(double t);
+
+  // Specify the amount of iterations that should be run by this benchmark.
+  // REQUIRES: 'n > 0' and `MinTime` has not been called on this benchmark.
+  //
+  // NOTE: This function should only be used when *exact* iteration control is
+  //   needed and never to control or limit how long a benchmark runs, where
+  // `--benchmark_min_time=N` or `MinTime(...)` should be used instead.
+  Benchmark* Iterations(size_t n);
 
   // Specify the amount of times to repeat this benchmark. This option overrides
   // the `benchmark_repetitions` flag.
@@ -627,6 +676,7 @@ class Benchmark {
   TimeUnit time_unit_;
   int range_multiplier_;
   double min_time_;
+  size_t iterations_;
   int repetitions_;
   bool use_real_time_;
   bool use_manual_time_;
@@ -858,6 +908,7 @@ class Fixture : public internal::Benchmark {
 #define BENCHMARK_MAIN()                   \
   int main(int argc, char** argv) {        \
     ::benchmark::Initialize(&argc, argv);  \
+    if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1; \
     ::benchmark::RunSpecifiedBenchmarks(); \
   }
 

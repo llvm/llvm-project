@@ -666,5 +666,95 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
   });
 }
 
+// Expect the call of getZeroExtendExpr will not cost exponential time.
+TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  // Generate a function like below:
+  // define void @foo() {
+  // entry:
+  //   br label %for.cond
+  //
+  // for.cond:
+  //   %0 = phi i64 [ 100, %entry ], [ %dec, %for.inc ]
+  //   %cmp = icmp sgt i64 %0, 90
+  //   br i1 %cmp, label %for.inc, label %for.cond1
+  //
+  // for.inc:
+  //   %dec = add nsw i64 %0, -1
+  //   br label %for.cond
+  //
+  // for.cond1:
+  //   %1 = phi i64 [ 100, %for.cond ], [ %dec5, %for.inc2 ]
+  //   %cmp3 = icmp sgt i64 %1, 90
+  //   br i1 %cmp3, label %for.inc2, label %for.cond4
+  //
+  // for.inc2:
+  //   %dec5 = add nsw i64 %1, -1
+  //   br label %for.cond1
+  //
+  // ......
+  //
+  // for.cond89:
+  //   %19 = phi i64 [ 100, %for.cond84 ], [ %dec94, %for.inc92 ]
+  //   %cmp93 = icmp sgt i64 %19, 90
+  //   br i1 %cmp93, label %for.inc92, label %for.end
+  //
+  // for.inc92:
+  //   %dec94 = add nsw i64 %19, -1
+  //   br label %for.cond89
+  //
+  // for.end:
+  //   %gep = getelementptr i8, i8* null, i64 %dec
+  //   %gep6 = getelementptr i8, i8* %gep, i64 %dec5
+  //   ......
+  //   %gep95 = getelementptr i8, i8* %gep91, i64 %dec94
+  //   ret void
+  // }
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
+
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *CondBB = BasicBlock::Create(Context, "for.cond", F);
+  BasicBlock *EndBB = BasicBlock::Create(Context, "for.end", F);
+  BranchInst::Create(CondBB, EntryBB);
+  BasicBlock *PrevBB = EntryBB;
+
+  Type *I64Ty = Type::getInt64Ty(Context);
+  Type *I8Ty = Type::getInt8Ty(Context);
+  Type *I8PtrTy = Type::getInt8PtrTy(Context);
+  Value *Accum = Constant::getNullValue(I8PtrTy);
+  int Iters = 20;
+  for (int i = 0; i < Iters; i++) {
+    BasicBlock *IncBB = BasicBlock::Create(Context, "for.inc", F, EndBB);
+    auto *PN = PHINode::Create(I64Ty, 2, "", CondBB);
+    PN->addIncoming(ConstantInt::get(Context, APInt(64, 100)), PrevBB);
+    auto *Cmp = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_SGT, PN,
+                                ConstantInt::get(Context, APInt(64, 90)), "cmp",
+                                CondBB);
+    BasicBlock *NextBB;
+    if (i != Iters - 1)
+      NextBB = BasicBlock::Create(Context, "for.cond", F, EndBB);
+    else
+      NextBB = EndBB;
+    BranchInst::Create(IncBB, NextBB, Cmp, CondBB);
+    auto *Dec = BinaryOperator::CreateNSWAdd(
+        PN, ConstantInt::get(Context, APInt(64, -1)), "dec", IncBB);
+    PN->addIncoming(Dec, IncBB);
+    BranchInst::Create(CondBB, IncBB);
+
+    Accum = GetElementPtrInst::Create(I8Ty, Accum, Dec, "gep", EndBB);
+
+    PrevBB = CondBB;
+    CondBB = NextBB;
+  }
+  ReturnInst::Create(Context, nullptr, EndBB);
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *S = SE.getSCEV(Accum);
+  Type *I128Ty = Type::getInt128Ty(Context);
+  SE.getZeroExtendExpr(S, I128Ty);
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

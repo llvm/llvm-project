@@ -923,6 +923,8 @@
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
+		AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF3A4AD01EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp */; };
+		AF3A4AD31EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */; };
 		AF415AE71D949E4400FCE0D4 /* x86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF415AE51D949E4400FCE0D4 /* x86AssemblyInspectionEngine.cpp */; };
 		AF415AE81D949E4400FCE0D4 /* x86AssemblyInspectionEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = AF415AE61D949E4400FCE0D4 /* x86AssemblyInspectionEngine.h */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
@@ -2937,6 +2939,8 @@
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		AF37E10917C861F20061E18E /* ProcessRunLock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessRunLock.cpp; sourceTree = "<group>"; };
+		AF3A4AD01EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteDarwinDevice.cpp; sourceTree = "<group>"; };
+		AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteDarwinDevice.h; sourceTree = "<group>"; };
 		AF3F54AE1B3BA59C00186E73 /* CrashReason.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CrashReason.cpp; sourceTree = "<group>"; };
 		AF3F54AF1B3BA59C00186E73 /* CrashReason.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrashReason.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
@@ -5426,6 +5430,8 @@
 				9455630D1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
 				26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */,
 				26C5577C132575AD008FD8FE /* PlatformMacOSX.h */,
+				AF3A4AD01EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp */,
+				AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */,
 				AF8AD6331BEC28C400150209 /* PlatformRemoteAppleTV.cpp */,
 				AF8AD6341BEC28C400150209 /* PlatformRemoteAppleTV.h */,
 				AF8AD6351BEC28C400150209 /* PlatformRemoteAppleWatch.cpp */,
@@ -6469,6 +6475,7 @@
 			files = (
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
+				AF3A4AD31EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
 				AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */,
 				267F685A1CC02EBE0086832B /* RegisterInfos_s390x.h in Headers */,
@@ -7284,6 +7291,7 @@
 				AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
+				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
 				2689008013353E2200698AC0 /* CommandInterpreter.cpp in Sources */,
 				AF77E0A41A033D360096C0EA /* RegisterContextPOSIX_powerpc.cpp in Sources */,
 				4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */,

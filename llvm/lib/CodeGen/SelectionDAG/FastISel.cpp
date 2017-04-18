@@ -1164,9 +1164,11 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
              "Expected inlined-at fields to agree");
       if (Op->isReg()) {
         Op->setIsDebug(true);
+        // A dbg.declare describes the address of a source variable, so lower it
+        // into an indirect DBG_VALUE.
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-                TII.get(TargetOpcode::DBG_VALUE), false, Op->getReg(), 0,
-                DI->getVariable(), DI->getExpression());
+                TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
+                Op->getReg(), 0, DI->getVariable(), DI->getExpression());
       } else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE))

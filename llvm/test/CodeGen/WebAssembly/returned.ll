@@ -47,3 +47,34 @@ define void @test_constant_arg() {
   ret void
 }
 declare i32* @returns_arg(i32* returned)
+
+; Test that the optimization isn't performed on arguments without the
+; "returned" attribute.
+
+; CHECK-LABEL: test_other_skipped:
+; CHECK-NEXT: .param   i32, i32, f64{{$}}
+; CHECK-NEXT: {{^}} i32.call     $drop=, do_something@FUNCTION, $0, $1, $2{{$}}
+; CHECK-NEXT: {{^}} call     do_something_with_i32@FUNCTION, $1{{$}}
+; CHECK-NEXT: {{^}} call     do_something_with_double@FUNCTION, $2{{$}}
+declare i32 @do_something(i32 returned, i32, double)
+declare void @do_something_with_i32(i32)
+declare void @do_something_with_double(double)
+define void @test_other_skipped(i32 %a, i32 %b, double %c) {
+    %call = call i32 @do_something(i32 %a, i32 %b, double %c)
+    call void @do_something_with_i32(i32 %b)
+    call void @do_something_with_double(double %c)
+    ret void
+}
+
+; Test that the optimization is performed on arguments other than the first.
+
+; CHECK-LABEL: test_second_arg:
+; CHECK-NEXT: .param   i32, i32{{$}}
+; CHECK-NEXT: .result  i32{{$}}
+; CHECK-NEXT: {{^}} i32.call     $push0=, do_something_else@FUNCTION, $0, $1{{$}}
+; CHECK-NEXT: return   $pop0{{$}}
+declare i32 @do_something_else(i32, i32 returned)
+define i32 @test_second_arg(i32 %a, i32 %b) {
+    %call = call i32 @do_something_else(i32 %a, i32 %b)
+    ret i32 %b
+}

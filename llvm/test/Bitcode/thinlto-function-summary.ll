@@ -2,9 +2,19 @@
 ; RUN: opt -passes=name-anon-globals -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
-; Check the value ids in the summary entries against the
-; same in the ValueSumbolTable, to ensure the ordering is stable.
-; Also check the linkage field on the summary entries.
+; BC: <SOURCE_FILENAME
+; "h"
+; BC-NEXT: <GLOBALVAR {{.*}} op0=0 op1=1
+; "foo"
+; BC-NEXT: <FUNCTION op0=1 op1=3
+; "bar"
+; BC-NEXT: <FUNCTION op0=4 op1=3
+; "anon.[32 chars].0"
+; BC-NEXT: <FUNCTION op0=7 op1=39
+; "variadic"
+; BC-NEXT: <FUNCTION op0=46 op1=8
+; "f"
+; BC-NEXT: <ALIAS op0=54 op1=1
 ; BC: <GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <VERSION
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
@@ -13,13 +23,8 @@
 ; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=16
 ; BC-NEXT: <ALIAS {{.*}} op0=5 op1=0 op2=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
-; BC-NEXT: <VALUE_SYMTAB
-; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'variadic'
-; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
-; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
-; BC-NEXT: <ENTRY {{.*}} op0=5 {{.*}}> record string = 'f'
-; BC-NEXT: <ENTRY {{.*}} record string = 'h'
-; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
+; BC: <STRTAB_BLOCK
+; BC-NEXT: blob data = 'hfoobaranon.{{................................}}.0variadicf'
 
 
 ; RUN: opt -name-anon-globals -module-summary < %s | llvm-dis | FileCheck %s

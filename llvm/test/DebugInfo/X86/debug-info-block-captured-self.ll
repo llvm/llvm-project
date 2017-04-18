@@ -107,5 +107,5 @@ define internal void @"__24-[Main initWithContext:]_block_invoke_2"(i8* %.block_
 !106 = !DILocation(line: 40, scope: !42)
 !107 = !DIFile(filename: "llvm/tools/clang/test/CodeGenObjC/debug-info-block-captured-self.m", directory: "")
 !108 = !{i32 1, !"Debug Info Version", i32 3}
-!109 = !DIExpression(DW_OP_deref, DW_OP_plus, 32)
-!110 = !DIExpression(DW_OP_deref, DW_OP_plus, 32)
+!109 = !DIExpression(DW_OP_plus, 32, DW_OP_deref)
+!110 = !DIExpression(DW_OP_plus, 32, DW_OP_deref)

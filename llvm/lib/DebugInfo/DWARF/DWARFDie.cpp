@@ -290,10 +290,12 @@ uint64_t DWARFDie::getDeclLine() const {
 }
 
 void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
-                              uint32_t &CallColumn) const {
+                              uint32_t &CallColumn,
+                              uint32_t &CallDiscriminator) const {
   CallFile = toUnsigned(find(DW_AT_call_file), 0);
   CallLine = toUnsigned(find(DW_AT_call_line), 0);
   CallColumn = toUnsigned(find(DW_AT_call_column), 0);
+  CallDiscriminator = toUnsigned(find(DW_AT_GNU_discriminator), 0);
 }
 
 void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,

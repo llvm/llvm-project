@@ -80,6 +80,7 @@ set(Tests
   BogusInitializeTest
   BufferOverflowOnInput
   CallerCalleeTest
+  CleanseTest
   CounterTest
   CustomCrossOverAndMutateTest
   CustomCrossOverTest

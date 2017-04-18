@@ -1282,12 +1282,6 @@ Slash:
       Size += EscapedNewLineSize;
       Ptr  += EscapedNewLineSize;
 
-      // If the char that we finally got was a \n, then we must have had
-      // something like \<newline><newline>.  We don't want to consume the
-      // second newline.
-      if (*Ptr == '\n' || *Ptr == '\r' || *Ptr == '\0')
-        return ' ';
-
       // Use slow version to accumulate a correct size field.
       return getCharAndSizeSlow(Ptr, Size, Tok);
     }
@@ -1337,12 +1331,6 @@ Slash:
       // Found backslash<whitespace><newline>.  Parse the char after it.
       Size += EscapedNewLineSize;
       Ptr  += EscapedNewLineSize;
-
-      // If the char that we finally got was a \n, then we must have had
-      // something like \<newline><newline>.  We don't want to consume the
-      // second newline.
-      if (*Ptr == '\n' || *Ptr == '\r' || *Ptr == '\0')
-        return ' ';
 
       // Use slow version to accumulate a correct size field.
       return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
@@ -2070,8 +2058,11 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
   // Scan over the body of the comment.  The common case, when scanning, is that
   // the comment contains normal ascii characters with nothing interesting in
   // them.  As such, optimize for this case with the inner loop.
+  //
+  // This loop terminates with CurPtr pointing at the newline (or end of buffer)
+  // character that ends the line comment.
   char C;
-  do {
+  while (true) {
     C = *CurPtr;
     // Skip over characters in the fast loop.
     while (C != 0 &&                // Potentially EOF.
@@ -2097,6 +2088,8 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
         break; // This is a newline, we're done.
 
       // If there was space between the backslash and newline, warn about it.
+      // FIXME: This warning is bogus if trigraphs are disabled and the line
+      // ended with '?' '?' '\\' '\n'.
       if (HasSpace && !isLexingRawMode())
         Diag(EscapePtr, diag::backslash_newline_space);
     }
@@ -2140,9 +2133,9 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
         }
     }
 
-    if (CurPtr == BufferEnd+1) { 
-      --CurPtr; 
-      break; 
+    if (C == '\r' || C == '\n' || CurPtr == BufferEnd + 1) {
+      --CurPtr;
+      break;
     }
 
     if (C == '\0' && isCodeCompletionPoint(CurPtr-1)) {
@@ -2150,8 +2143,7 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
       cutOffLexing();
       return false;
     }
-
-  } while (C != '\n' && C != '\r');
+  }
 
   // Found but did not consume the newline.  Notify comment handlers about the
   // comment unless we're in a #if 0 block.

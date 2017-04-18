@@ -57,6 +57,22 @@ Error NativeRegisterContextNetBSD::WriteFPR() {
   return DoWriteFPR(buf);
 }
 
+Error NativeRegisterContextNetBSD::ReadDBR() {
+  void *buf = GetDBRBuffer();
+  if (!buf)
+    return Error("DBR buffer is NULL");
+
+  return DoReadDBR(buf);
+}
+
+Error NativeRegisterContextNetBSD::WriteDBR() {
+  void *buf = GetDBRBuffer();
+  if (!buf)
+    return Error("DBR buffer is NULL");
+
+  return DoWriteDBR(buf);
+}
+
 Error NativeRegisterContextNetBSD::DoReadGPR(void *buf) {
   return NativeProcessNetBSD::PtraceWrapper(PT_GETREGS, GetProcessPid(), buf,
                                             m_thread.GetID());
@@ -74,6 +90,16 @@ Error NativeRegisterContextNetBSD::DoReadFPR(void *buf) {
 
 Error NativeRegisterContextNetBSD::DoWriteFPR(void *buf) {
   return NativeProcessNetBSD::PtraceWrapper(PT_SETFPREGS, GetProcessPid(), buf,
+                                            m_thread.GetID());
+}
+
+Error NativeRegisterContextNetBSD::DoReadDBR(void *buf) {
+  return NativeProcessNetBSD::PtraceWrapper(PT_GETDBREGS, GetProcessPid(), buf,
+                                            m_thread.GetID());
+}
+
+Error NativeRegisterContextNetBSD::DoWriteDBR(void *buf) {
+  return NativeProcessNetBSD::PtraceWrapper(PT_SETDBREGS, GetProcessPid(), buf,
                                             m_thread.GetID());
 }
 

@@ -46,6 +46,11 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
+// Designates that a Phi is estimated to become invariant after an "infinite"
+// number of loop iterations (i.e. only may become an invariant if the loop is
+// fully unrolled).
+static const unsigned InfiniteIterationsToInvariance = UINT_MAX;
+
 // Check whether we are capable of peeling this loop.
 static bool canPeel(Loop *L) {
   // Make sure the loop is in simplified form
@@ -66,10 +71,62 @@ static bool canPeel(Loop *L) {
   return true;
 }
 
+// This function calculates the number of iterations after which the given Phi
+// becomes an invariant. The pre-calculated values are memorized in the map. The
+// function (shortcut is I) is calculated according to the following definition:
+// Given %x = phi <Inputs from above the loop>, ..., [%y, %back.edge].
+//   If %y is a loop invariant, then I(%x) = 1.
+//   If %y is a Phi from the loop header, I(%x) = I(%y) + 1.
+//   Otherwise, I(%x) is infinite.
+// TODO: Actually if %y is an expression that depends only on Phi %z and some
+//       loop invariants, we can estimate I(%x) = I(%z) + 1. The example
+//       looks like:
+//         %x = phi(0, %a),  <-- becomes invariant starting from 3rd iteration.
+//         %y = phi(0, 5),
+//         %a = %y + 1.
+static unsigned calculateIterationsToInvariance(
+    PHINode *Phi, Loop *L, BasicBlock *BackEdge,
+    SmallDenseMap<PHINode *, unsigned> &IterationsToInvariance) {
+  assert(Phi->getParent() == L->getHeader() &&
+         "Non-loop Phi should not be checked for turning into invariant.");
+  assert(BackEdge == L->getLoopLatch() && "Wrong latch?");
+  // If we already know the answer, take it from the map.
+  auto I = IterationsToInvariance.find(Phi);
+  if (I != IterationsToInvariance.end())
+    return I->second;
+
+  // Otherwise we need to analyze the input from the back edge.
+  Value *Input = Phi->getIncomingValueForBlock(BackEdge);
+  // Place infinity to map to avoid infinite recursion for cycled Phis. Such
+  // cycles can never stop on an invariant.
+  IterationsToInvariance[Phi] = InfiniteIterationsToInvariance;
+  unsigned ToInvariance = InfiniteIterationsToInvariance;
+
+  if (L->isLoopInvariant(Input))
+    ToInvariance = 1u;
+  else if (PHINode *IncPhi = dyn_cast<PHINode>(Input)) {
+    // Only consider Phis in header block.
+    if (IncPhi->getParent() != L->getHeader())
+      return InfiniteIterationsToInvariance;
+    // If the input becomes an invariant after X iterations, then our Phi
+    // becomes an invariant after X + 1 iterations.
+    unsigned InputToInvariance = calculateIterationsToInvariance(
+        IncPhi, L, BackEdge, IterationsToInvariance);
+    if (InputToInvariance != InfiniteIterationsToInvariance)
+      ToInvariance = InputToInvariance + 1u;
+  }
+
+  // If we found that this Phi lies in an invariant chain, update the map.
+  if (ToInvariance != InfiniteIterationsToInvariance)
+    IterationsToInvariance[Phi] = ToInvariance;
+  return ToInvariance;
+}
+
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::UnrollingPreferences &UP,
                             unsigned &TripCount) {
+  assert(LoopSize > 0 && "Zero loop size is not allowed!");
   UP.PeelCount = 0;
   if (!canPeel(L))
     return;
@@ -78,31 +135,37 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (!L->empty())
     return;
 
-  // Try to find a Phi node that has the same loop invariant as an input from
-  // its only back edge. If there is such Phi, peeling 1 iteration from the
-  // loop is profitable, because starting from 2nd iteration we will have an
-  // invariant instead of this Phi.
+  // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
+  // iterations of the loop. For this we compute the number for iterations after
+  // which every Phi is guaranteed to become an invariant, and try to peel the
+  // maximum number of iterations among these values, thus turning all those
+  // Phis into invariants.
   // First, check that we can peel at least one iteration.
   if (2 * LoopSize <= UP.Threshold && UnrollPeelMaxCount > 0) {
+    // Store the pre-calculated values here.
+    SmallDenseMap<PHINode *, unsigned> IterationsToInvariance;
+    // Now go through all Phis to calculate their the number of iterations they
+    // need to become invariants.
+    unsigned DesiredPeelCount = 0;
     BasicBlock *BackEdge = L->getLoopLatch();
     assert(BackEdge && "Loop is not in simplified form?");
-    BasicBlock *Header = L->getHeader();
-    // Iterate over Phis to find one with invariant input on back edge.
-    bool FoundCandidate = false;
-    PHINode *Phi;
-    for (auto BI = Header->begin(); isa<PHINode>(&*BI); ++BI) {
-      Phi = cast<PHINode>(&*BI);
-      Value *Input = Phi->getIncomingValueForBlock(BackEdge);
-      if (L->isLoopInvariant(Input)) {
-        FoundCandidate = true;
-        break;
-      }
+    for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
+      PHINode *Phi = cast<PHINode>(&*BI);
+      unsigned ToInvariance = calculateIterationsToInvariance(
+          Phi, L, BackEdge, IterationsToInvariance);
+      if (ToInvariance != InfiniteIterationsToInvariance)
+        DesiredPeelCount = std::max(DesiredPeelCount, ToInvariance);
     }
-    if (FoundCandidate) {
-      DEBUG(dbgs() << "Peel one iteration to get rid of " << *Phi
-                   << " because starting from 2nd iteration it is always"
-                   << " an invariant\n");
-      UP.PeelCount = 1;
+    if (DesiredPeelCount > 0) {
+      // Pay respect to limitations implied by loop size and the max peel count.
+      unsigned MaxPeelCount = UnrollPeelMaxCount;
+      MaxPeelCount = std::min(MaxPeelCount, UP.Threshold / LoopSize - 1);
+      DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
+      // Consider max peel count limitation.
+      assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
+      DEBUG(dbgs() << "Peel " << DesiredPeelCount << " iteration(s) to turn"
+                   << " some Phis into invariants.\n");
+      UP.PeelCount = DesiredPeelCount;
       return;
     }
   }

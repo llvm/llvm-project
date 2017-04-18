@@ -589,51 +589,12 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
   ATS.finishAttributeSection();
 }
 
-static bool isV8M(const ARMSubtarget *Subtarget) {
-  // Note that v8M Baseline is a subset of v6T2!
-  return (Subtarget->hasV8MBaselineOps() && !Subtarget->hasV6T2Ops()) ||
-         Subtarget->hasV8MMainlineOps();
-}
-
 //===----------------------------------------------------------------------===//
 // Helper routines for EmitStartOfAsmFile() and EmitEndOfAsmFile()
 // FIXME:
 // The following seem like one-off assembler flags, but they actually need
 // to appear in the .ARM.attributes section in ELF.
 // Instead of subclassing the MCELFStreamer, we do the work here.
-
-static ARMBuildAttrs::CPUArch getArchForCPU(StringRef CPU,
-                                            const ARMSubtarget *Subtarget) {
-  if (CPU == "xscale")
-    return ARMBuildAttrs::v5TEJ;
-
-  if (Subtarget->hasV8Ops()) {
-    if (Subtarget->isRClass())
-      return ARMBuildAttrs::v8_R;
-    return ARMBuildAttrs::v8_A;
-  } else if (Subtarget->hasV8MMainlineOps())
-    return ARMBuildAttrs::v8_M_Main;
-  else if (Subtarget->hasV7Ops()) {
-    if (Subtarget->isMClass() && Subtarget->hasDSP())
-      return ARMBuildAttrs::v7E_M;
-    return ARMBuildAttrs::v7;
-  } else if (Subtarget->hasV6T2Ops())
-    return ARMBuildAttrs::v6T2;
-  else if (Subtarget->hasV8MBaselineOps())
-    return ARMBuildAttrs::v8_M_Base;
-  else if (Subtarget->hasV6MOps())
-    return ARMBuildAttrs::v6S_M;
-  else if (Subtarget->hasV6Ops())
-    return ARMBuildAttrs::v6;
-  else if (Subtarget->hasV5TEOps())
-    return ARMBuildAttrs::v5TE;
-  else if (Subtarget->hasV5TOps())
-    return ARMBuildAttrs::v5T;
-  else if (Subtarget->hasV4TOps())
-    return ARMBuildAttrs::v4T;
-  else
-    return ARMBuildAttrs::v4;
-}
 
 // Returns true if all functions have the same function attribute value.
 // It also returns true when the module has no functions.
@@ -671,89 +632,8 @@ void ARMAsmPrinter::emitAttributes() {
       static_cast<const ARMBaseTargetMachine &>(TM);
   const ARMSubtarget STI(TT, CPU, ArchFS, ATM, ATM.isLittleEndian());
 
-  const std::string &CPUString = STI.getCPUString();
-
-  if (!StringRef(CPUString).startswith("generic")) {
-    // FIXME: remove krait check when GNU tools support krait cpu
-    if (STI.isKrait()) {
-      ATS.emitTextAttribute(ARMBuildAttrs::CPU_name, "cortex-a9");
-      // We consider krait as a "cortex-a9" + hwdiv CPU
-      // Enable hwdiv through ".arch_extension idiv"
-      if (STI.hasDivide() || STI.hasDivideInARMMode())
-        ATS.emitArchExtension(ARM::AEK_HWDIV | ARM::AEK_HWDIVARM);
-    } else
-      ATS.emitTextAttribute(ARMBuildAttrs::CPU_name, CPUString);
-  }
-
-  ATS.emitAttribute(ARMBuildAttrs::CPU_arch, getArchForCPU(CPUString, &STI));
-
-  // Tag_CPU_arch_profile must have the default value of 0 when "Architecture
-  // profile is not applicable (e.g. pre v7, or cross-profile code)".
-  if (STI.hasV7Ops() || isV8M(&STI)) {
-    if (STI.isAClass()) {
-      ATS.emitAttribute(ARMBuildAttrs::CPU_arch_profile,
-                        ARMBuildAttrs::ApplicationProfile);
-    } else if (STI.isRClass()) {
-      ATS.emitAttribute(ARMBuildAttrs::CPU_arch_profile,
-                        ARMBuildAttrs::RealTimeProfile);
-    } else if (STI.isMClass()) {
-      ATS.emitAttribute(ARMBuildAttrs::CPU_arch_profile,
-                        ARMBuildAttrs::MicroControllerProfile);
-    }
-  }
-
-  ATS.emitAttribute(ARMBuildAttrs::ARM_ISA_use,
-                    STI.hasARMOps() ? ARMBuildAttrs::Allowed
-                                    : ARMBuildAttrs::Not_Allowed);
-  if (isV8M(&STI)) {
-    ATS.emitAttribute(ARMBuildAttrs::THUMB_ISA_use,
-                      ARMBuildAttrs::AllowThumbDerived);
-  } else if (STI.isThumb1Only()) {
-    ATS.emitAttribute(ARMBuildAttrs::THUMB_ISA_use, ARMBuildAttrs::Allowed);
-  } else if (STI.hasThumb2()) {
-    ATS.emitAttribute(ARMBuildAttrs::THUMB_ISA_use,
-                      ARMBuildAttrs::AllowThumb32);
-  }
-
-  if (STI.hasNEON()) {
-    /* NEON is not exactly a VFP architecture, but GAS emit one of
-     * neon/neon-fp-armv8/neon-vfpv4/vfpv3/vfpv2 for .fpu parameters */
-    if (STI.hasFPARMv8()) {
-      if (STI.hasCrypto())
-        ATS.emitFPU(ARM::FK_CRYPTO_NEON_FP_ARMV8);
-      else
-        ATS.emitFPU(ARM::FK_NEON_FP_ARMV8);
-    } else if (STI.hasVFP4())
-      ATS.emitFPU(ARM::FK_NEON_VFPV4);
-    else
-      ATS.emitFPU(STI.hasFP16() ? ARM::FK_NEON_FP16 : ARM::FK_NEON);
-    // Emit Tag_Advanced_SIMD_arch for ARMv8 architecture
-    if (STI.hasV8Ops())
-      ATS.emitAttribute(ARMBuildAttrs::Advanced_SIMD_arch,
-                        STI.hasV8_1aOps() ? ARMBuildAttrs::AllowNeonARMv8_1a:
-                                            ARMBuildAttrs::AllowNeonARMv8);
-  } else {
-    if (STI.hasFPARMv8())
-      // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
-      // FPU, but there are two different names for it depending on the CPU.
-      ATS.emitFPU(STI.hasD16()
-                  ? (STI.isFPOnlySP() ? ARM::FK_FPV5_SP_D16 : ARM::FK_FPV5_D16)
-                  : ARM::FK_FP_ARMV8);
-    else if (STI.hasVFP4())
-      ATS.emitFPU(STI.hasD16()
-                  ? (STI.isFPOnlySP() ? ARM::FK_FPV4_SP_D16 : ARM::FK_VFPV4_D16)
-                  : ARM::FK_VFPV4);
-    else if (STI.hasVFP3())
-      ATS.emitFPU(STI.hasD16()
-                  // +d16
-                  ? (STI.isFPOnlySP()
-                     ? (STI.hasFP16() ? ARM::FK_VFPV3XD_FP16 : ARM::FK_VFPV3XD)
-                     : (STI.hasFP16() ? ARM::FK_VFPV3_D16_FP16 : ARM::FK_VFPV3_D16))
-                  // -d16
-                  : (STI.hasFP16() ? ARM::FK_VFPV3_FP16 : ARM::FK_VFPV3));
-    else if (STI.hasVFP2())
-      ATS.emitFPU(ARM::FK_VFPV2);
-  }
+  // Emit build attributes for the available hardware.
+  ATS.emitTargetAttributes(STI);
 
   // RW data addressing.
   if (isPositionIndependent()) {
@@ -846,31 +726,14 @@ void ARMAsmPrinter::emitAttributes() {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
                       ARMBuildAttrs::AllowIEEE754);
 
-  if (STI.allowsUnalignedMem())
-    ATS.emitAttribute(ARMBuildAttrs::CPU_unaligned_access,
-                      ARMBuildAttrs::Allowed);
-  else
-    ATS.emitAttribute(ARMBuildAttrs::CPU_unaligned_access,
-                      ARMBuildAttrs::Not_Allowed);
-
   // FIXME: add more flags to ARMBuildAttributes.h
   // 8-bytes alignment stuff.
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_needed, 1);
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
-  // ABI_HardFP_use attribute to indicate single precision FP.
-  if (STI.isFPOnlySP())
-    ATS.emitAttribute(ARMBuildAttrs::ABI_HardFP_use,
-                      ARMBuildAttrs::HardFPSinglePrecision);
-
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
   if (STI.isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
-
-  // FIXME: Should we signal R9 usage?
-
-  if (STI.hasFP16())
-    ATS.emitAttribute(ARMBuildAttrs::FP_HP_extension, ARMBuildAttrs::AllowHPFP);
 
   // FIXME: To support emitting this build attribute as GCC does, the
   // -mfp16-format option and associated plumbing must be
@@ -878,21 +741,6 @@ void ARMAsmPrinter::emitAttributes() {
   // attribute should be emitted with value 1.
   ATS.emitAttribute(ARMBuildAttrs::ABI_FP_16bit_format,
                     ARMBuildAttrs::FP16FormatIEEE);
-
-  if (STI.hasMPExtension())
-    ATS.emitAttribute(ARMBuildAttrs::MPextension_use, ARMBuildAttrs::AllowMP);
-
-  // Hardware divide in ARM mode is part of base arch, starting from ARMv8.
-  // If only Thumb hwdiv is present, it must also be in base arch (ARMv7-R/M).
-  // It is not possible to produce DisallowDIV: if hwdiv is present in the base
-  // arch, supplying -hwdiv downgrades the effective arch, via ClearImpliedBits.
-  // AllowDIVExt is only emitted if hwdiv isn't available in the base arch;
-  // otherwise, the default value (AllowDIVIfExists) applies.
-  if (STI.hasDivideInARMMode() && !STI.hasV8Ops())
-    ATS.emitAttribute(ARMBuildAttrs::DIV_use, ARMBuildAttrs::AllowDIVExt);
-
-  if (STI.hasDSP() && isV8M(&STI))
-    ATS.emitAttribute(ARMBuildAttrs::DSP_extension, ARMBuildAttrs::Allowed);
 
   if (MMI) {
     if (const Module *SourceModule = MMI->getModule()) {
@@ -930,16 +778,6 @@ void ARMAsmPrinter::emitAttributes() {
   else
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9IsGPR);
-
-  if (STI.hasTrustZone() && STI.hasVirtualization())
-    ATS.emitAttribute(ARMBuildAttrs::Virtualization_use,
-                      ARMBuildAttrs::AllowTZVirtualization);
-  else if (STI.hasTrustZone())
-    ATS.emitAttribute(ARMBuildAttrs::Virtualization_use,
-                      ARMBuildAttrs::AllowTZ);
-  else if (STI.hasVirtualization())
-    ATS.emitAttribute(ARMBuildAttrs::Virtualization_use,
-                      ARMBuildAttrs::AllowVirtualization);
 }
 
 //===----------------------------------------------------------------------===//

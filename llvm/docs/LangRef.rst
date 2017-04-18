@@ -4380,7 +4380,7 @@ referenced LLVM variable relates to the source language variable.
 
 The current supported vocabulary is limited:
 
-- ``DW_OP_deref`` dereferences the working expression.
+- ``DW_OP_deref`` dereferences the top of the expression stack.
 - ``DW_OP_plus, 93`` adds ``93`` to the working expression.
 - ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable fragment from the working expression. Note
@@ -4396,12 +4396,17 @@ DIExpression nodes that contain a ``DW_OP_stack_value`` operator are standalone
 location descriptions that describe constant values. This form is used to
 describe global constants that have been optimized away. All other expressions
 are modifiers to another location: A debug intrinsic ties a location and a
-DIExpression together. Contrary to DWARF expressions, a DIExpression always
-describes the *value* of a source variable and never its *address*. In DWARF
-terminology, a DIExpression can always be considered an implicit location
-description regardless whether it contains a ``DW_OP_stack_value`` or not.
+DIExpression together.
 
-.. code-block:: text
+DWARF specifies three kinds of simple location descriptions: Register, memory,
+and implicit location descriptions. Register and memory location descriptions
+describe the *location* of a source variable (in the sense that a debugger might
+modify its value), whereas implicit locations describe merely the *value* of a
+source variable. DIExpressions also follow this model: A DIExpression that
+doesn't have a trailing ``DW_OP_stack_value`` will describe an *address* when
+combined with a concrete location.
+
+.. code-block:: llvm
 
     !0 = !DIExpression(DW_OP_deref)
     !1 = !DIExpression(DW_OP_plus, 3)

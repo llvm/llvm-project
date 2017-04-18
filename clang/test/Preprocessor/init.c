@@ -2378,6 +2378,9 @@
 // ARM-NETBSD:#define __arm__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // ARM-NONE-EABI: #define __ELF__ 1
 
 // No MachO targets use the full EABI, even if AAPCS is used.

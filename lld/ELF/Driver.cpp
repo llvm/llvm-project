@@ -45,6 +45,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -564,12 +565,25 @@ static std::vector<StringRef> getLines(MemoryBufferRef MB) {
   return Ret;
 }
 
+static bool getCompressDebugSections(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_compress_debug_sections)) {
+    StringRef S = Arg->getValue();
+    if (S == "none")
+      return false;
+    if (S == "zlib")
+      return zlib::isAvailable();
+    error("unknown --compress-debug-sections value: " + S);
+  }
+  return false;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->CompressDebugSections = getCompressDebugSections(Args);
   Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
                                 !Args.hasArg(OPT_relocatable));
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);

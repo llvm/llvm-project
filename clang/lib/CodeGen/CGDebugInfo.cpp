@@ -3466,17 +3466,17 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
   // functions there won't be an implicit param at arg1 and
   // otherwise it is 'self' or 'this'.
   if (isa<ImplicitParamDecl>(VD) && ArgNo && *ArgNo == 1)
-    Flags |= llvm::DINode::FlagObjectPointer;
-  if (auto *Arg = dyn_cast<llvm::Argument>(Storage))
-    if (Arg->getType()->isPointerTy() && !Arg->hasByValAttr() &&
-        !VD->getType()->isPointerType())
-      Expr.push_back(llvm::dwarf::DW_OP_deref);
+  Flags |= llvm::DINode::FlagObjectPointer;
 
+  // Note: Older versions of clang used to emit byval references with an extra
+  // DW_OP_deref, because they referenced the IR arg directly instead of
+  // referencing an alloca. Newer versions of LLVM don't treat allocas
+  // differently from other function arguments when used in a dbg.declare.
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-
   StringRef Name = VD->getName();
   if (!Name.empty()) {
     if (VD->hasAttr<BlocksAttr>()) {
+      // Here, we need an offset *into* the alloca.
       CharUnits offset = CharUnits::fromQuantity(32);
       Expr.push_back(llvm::dwarf::DW_OP_plus);
       // offset of __forwarding field
@@ -3488,22 +3488,7 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
       // offset of x field
       offset = CGM.getContext().toCharUnitsFromBits(XOffset);
       Expr.push_back(offset.getQuantity());
-
-      // Create the descriptor for the variable.
-      auto *D = ArgNo
-                    ? DBuilder.createParameterVariable(Scope, VD->getName(),
-                                                       *ArgNo, Unit, Line, Ty)
-                    : DBuilder.createAutoVariable(Scope, VD->getName(), Unit,
-                                                  Line, Ty, Align);
-
-      // Insert an llvm.dbg.declare into the current block.
-      DBuilder.insertDeclare(
-          Storage, D, DBuilder.createExpression(Expr),
-          llvm::DebugLoc::get(Line, Column, Scope, CurInlinedAt),
-          Builder.GetInsertBlock());
-      return;
-    } else if (isa<VariableArrayType>(VD->getType()))
-      Expr.push_back(llvm::dwarf::DW_OP_deref);
+    }
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
@@ -3606,8 +3591,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
           ->getElementOffset(blockInfo.getCapture(VD).getIndex()));
 
   SmallVector<int64_t, 9> addr;
-  if (isa<llvm::AllocaInst>(Storage))
-    addr.push_back(llvm::dwarf::DW_OP_deref);
+  addr.push_back(llvm::dwarf::DW_OP_deref);
   addr.push_back(llvm::dwarf::DW_OP_plus);
   addr.push_back(offset.getQuantity());
   if (isByRef) {
@@ -3633,12 +3617,11 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   // Insert an llvm.dbg.declare into the current block.
   auto DL =
       llvm::DebugLoc::get(Line, Column, LexicalBlockStack.back(), CurInlinedAt);
+  auto *Expr = DBuilder.createExpression(addr);
   if (InsertPoint)
-    DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(addr), DL,
-                           InsertPoint);
+    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint);
   else
-    DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(addr), DL,
-                           Builder.GetInsertBlock());
+    DBuilder.insertDeclare(Storage, D, Expr, DL, Builder.GetInsertBlock());
 }
 
 void CGDebugInfo::EmitDeclareOfArgVariable(const VarDecl *VD, llvm::Value *AI,

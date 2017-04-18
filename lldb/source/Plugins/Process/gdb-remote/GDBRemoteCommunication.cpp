@@ -1310,12 +1310,20 @@ void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)
-    : m_gdb_comm(gdb_comm) {
-  m_saved_timeout = m_gdb_comm.SetPacketTimeout(timeout);
+  : m_gdb_comm(gdb_comm), m_timeout_modified(false) {
+    auto curr_timeout = gdb_comm.GetPacketTimeout();
+    // Only update the timeout if the timeout is greater than the current
+    // timeout. If the current timeout is larger, then just use that.
+    if (curr_timeout < timeout) {
+      m_timeout_modified = true;
+      m_saved_timeout = m_gdb_comm.SetPacketTimeout(timeout);
+    }
 }
 
 GDBRemoteCommunication::ScopedTimeout::~ScopedTimeout() {
-  m_gdb_comm.SetPacketTimeout(m_saved_timeout);
+  // Only restore the timeout if we set it in the constructor.
+  if (m_timeout_modified)
+    m_gdb_comm.SetPacketTimeout(m_saved_timeout);
 }
 
 // This function is called via the Communications class read thread when bytes

@@ -128,6 +128,7 @@ public:
   virtual void emitArch(unsigned Arch);
   virtual void emitArchExtension(unsigned ArchExt);
   virtual void emitObjectArch(unsigned Arch);
+  void emitTargetAttributes(const MCSubtargetInfo &STI);
   virtual void finishAttributeSection();
   virtual void emitInst(uint32_t Inst, char Suffix = '\0');
 

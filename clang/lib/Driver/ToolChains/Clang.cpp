@@ -4996,6 +4996,19 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::x86_64:
     AddX86TargetArgs(Args, CmdArgs);
     break;
+
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    // This isn't in AddARMTargetArgs because we want to do this for assembly
+    // only, not C/C++.
+    if (Args.hasFlag(options::OPT_mdefault_build_attributes,
+                     options::OPT_mno_default_build_attributes, true)) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-arm-add-build-attributes");
+    }
+    break;
   }
 
   // Consume all the warning flags. Usually this would be handled more

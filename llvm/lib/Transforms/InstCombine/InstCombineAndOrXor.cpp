@@ -2078,7 +2078,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       Value *NOr = Builder->CreateOr(A, Op1);
       NOr->takeName(Op0);
       return BinaryOperator::CreateXor(NOr,
-                                       cast<Instruction>(Op0)->getOperand(1));
+                                       ConstantInt::get(NOr->getType(), *C));
     }
 
     // Y|(X^C) -> (X|Y)^C iff Y&C == 0
@@ -2087,7 +2087,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       Value *NOr = Builder->CreateOr(A, Op0);
       NOr->takeName(Op0);
       return BinaryOperator::CreateXor(NOr,
-                                       cast<Instruction>(Op1)->getOperand(1));
+                                       ConstantInt::get(NOr->getType(), *C));
     }
   }
 

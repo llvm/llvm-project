@@ -26,7 +26,6 @@
 extern "C" {
 #endif
 
-typedef struct LLVMOpaqueMetadata *LLVMMetadataRef;
 struct LLVMDebugLocMetadata{
     unsigned Line;
     unsigned Col;
@@ -57,16 +56,6 @@ struct LLVMDebugLocMetadata LLVMGetCurrentDebugLocation2(LLVMBuilderRef Bref);
 void LLVMSetSubprogram(LLVMValueRef Fn, LLVMMetadataRef SP);
 
 #ifdef __cplusplus
-}
-
-namespace llvm {
-
-DEFINE_ISA_CONVERSION_FUNCTIONS(Metadata, LLVMMetadataRef)
-
-inline Metadata **unwrap(LLVMMetadataRef *Vals) {
-  return reinterpret_cast<Metadata**>(Vals);
-}
-
 }
 
 #endif

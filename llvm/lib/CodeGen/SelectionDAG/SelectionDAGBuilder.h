@@ -928,7 +928,7 @@ private:
   /// instruction selection, they will be inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
                                 DIExpression *Expr, DILocation *DL,
-                                int64_t Offset, bool IsIndirect,
+                                int64_t Offset, bool IsDbgDeclare,
                                 const SDValue &N);
 
   /// Return the next block after MBB, or nullptr if there is none.

@@ -863,6 +863,19 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count) {
   return LLVMMDNodeInContext(LLVMGetGlobalContext(), Vals, Count);
 }
 
+LLVMValueRef LLVMMetadataAsValue(LLVMContextRef C, LLVMMetadataRef MD) {
+  return wrap(MetadataAsValue::get(*unwrap(C), unwrap(MD)));
+}
+
+LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef Val) {
+  auto *V = unwrap(Val);
+  if (auto *C = dyn_cast<Constant>(V))
+    return wrap(ConstantAsMetadata::get(C));
+  if (auto *MAV = dyn_cast<MetadataAsValue>(V))
+    return wrap(MAV->getMetadata());
+  return wrap(ValueAsMetadata::get(V));
+}
+
 const char *LLVMGetMDString(LLVMValueRef V, unsigned *Length) {
   if (const auto *MD = dyn_cast<MetadataAsValue>(unwrap(V)))
     if (const MDString *S = dyn_cast<MDString>(MD->getMetadata())) {

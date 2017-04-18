@@ -2079,17 +2079,12 @@ struct __compressed_pair_elem {
   typedef const _Tp& const_reference;
 
 #ifndef _LIBCPP_CXX03_LANG
-  template <bool _Dummy = true, class = typename enable_if<
-      __dependent_type<is_default_constructible<_Tp>, _Dummy>::value
-    >::type
-  >
-  _LIBCPP_CONSTEXPR __compressed_pair_elem()
-      _NOEXCEPT_(is_nothrow_default_constructible<_Tp>::value)
-    : __value_() {}
+  constexpr __compressed_pair_elem() : __value_() {}
 
   template <class _Up, class = typename enable_if<
-                           !is_same<__compressed_pair_elem, _Up>::value>::type>
-  _LIBCPP_CONSTEXPR explicit
+      !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
+  >::type>
+  constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_(_VSTD::forward<_Up>(__u)){};
 
@@ -2118,11 +2113,12 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   typedef _Tp __value_type;
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR __compressed_pair_elem() = default;
+  constexpr __compressed_pair_elem() = default;
 
   template <class _Up, class = typename enable_if<
-                           !is_same<__compressed_pair_elem, _Up>::value>::type>
-  _LIBCPP_CONSTEXPR explicit
+        !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
+  >::type>
+  constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_type(_VSTD::forward<_Up>(__u)){};
 
@@ -2161,8 +2157,14 @@ class __compressed_pair : private __compressed_pair_elem<_T1, 0>,
 
 public:
 #ifndef _LIBCPP_CXX03_LANG
+  template <bool _Dummy = true,
+      class = typename enable_if<
+          __dependent_type<is_default_constructible<_T1>, _Dummy>::value &&
+          __dependent_type<is_default_constructible<_T2>, _Dummy>::value
+      >::type
+  >
   _LIBCPP_INLINE_VISIBILITY
-  __compressed_pair() = default;
+  constexpr __compressed_pair() {}
 
   template <class _Tp, typename enable_if<!is_same<typename decay<_Tp>::type,
                                                    __compressed_pair>::value,
@@ -2734,7 +2736,7 @@ public:
   >
   _LIBCPP_INLINE_VISIBILITY
   unique_ptr(unique_ptr<_Up, _Ep>&& __u) noexcept
-      : __ptr_(__u.release(), _VSTD::forward<deleter_type>(__u.get_deleter())) {
+      : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {
   }
 
   template <class _Up, class _Ep,

@@ -41,6 +41,20 @@
       "real_time": 110,
       "cpu_time": 110,
       "time_unit": "ns"
+    },
+    {
+      "name": "BM_100xSlower",
+      "iterations": 1000,
+      "real_time": 10000,
+      "cpu_time": 10000,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_100xFaster",
+      "iterations": 1000,
+      "real_time": 100,
+      "cpu_time": 100,
+      "time_unit": "ns"
     }
   ]
 }

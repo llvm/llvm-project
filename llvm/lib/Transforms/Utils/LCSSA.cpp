@@ -85,6 +85,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     UsesToRewrite.clear();
 
     Instruction *I = Worklist.pop_back_val();
+    assert(!I->getType()->isTokenTy() && "Tokens shouldn't be in the worklist");
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
     assert(L && "Instruction belongs to a BB that's not part of a loop");
@@ -94,13 +95,6 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     const SmallVectorImpl<BasicBlock *> &ExitBlocks = LoopExitBlocks[L];
 
     if (ExitBlocks.empty())
-      continue;
-
-    // Tokens cannot be used in PHI nodes, so we skip over them.
-    // We can run into tokens which are live out of a loop with catchswitch
-    // instructions in Windows EH if the catchswitch has one catchpad which
-    // is inside the loop and another which is not.
-    if (I->getType()->isTokenTy())
       continue;
 
     for (Use &U : I->uses()) {
@@ -309,6 +303,13 @@ bool llvm::formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
       if (I.use_empty() ||
           (I.hasOneUse() && I.user_back()->getParent() == BB &&
            !isa<PHINode>(I.user_back())))
+        continue;
+
+      // Tokens cannot be used in PHI nodes, so we skip over them.
+      // We can run into tokens which are live out of a loop with catchswitch
+      // instructions in Windows EH if the catchswitch has one catchpad which
+      // is inside the loop and another which is not.
+      if (I.getType()->isTokenTy())
         continue;
 
       Worklist.push_back(&I);

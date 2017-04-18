@@ -75,7 +75,9 @@ bool ReadIntFromFile(const char* file, long* value) {
     char line[1024];
     char* err;
     memset(line, '\0', sizeof(line));
-    CHECK(read(fd, line, sizeof(line) - 1));
+    ssize_t read_err = read(fd, line, sizeof(line) - 1);
+    ((void)read_err); // prevent unused warning
+    CHECK(read_err >= 0);
     const long temp_value = strtol(line, &err, 10);
     if (line[0] != '\0' && (*err == '\n' || *err == '\0')) {
       *value = temp_value;
@@ -295,8 +297,13 @@ void InitializeSystemInfo() {
       (size == sizeof(cpu_freq))) {
     cpuinfo_cycles_per_second = cpu_freq;
   } else {
+    #if defined BENCHMARK_OS_IOS
+    fprintf(stderr, "CPU frequency cannot be detected. \n");
+    cpuinfo_cycles_per_second = 0;
+    #else
     fprintf(stderr, "%s\n", strerror(errno));
     std::exit(EXIT_FAILURE);
+    #endif
   }
 #else
   // Generic cycles per second counter
