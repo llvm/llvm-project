@@ -89,25 +89,21 @@ bool IsForwardDeclaration(Decl *D) {
   }
 }
 
+template <typename CallbackType>
 void ForEachMatchingDC(
     const DeclContext *DC,
     llvm::ArrayRef<ExternalASTMerger::ImporterPair> Importers,
-    std::function<void(const ExternalASTMerger::ImporterPair &IP,
-                       Source<const DeclContext *> SourceDC)>
-        Callback) {
+    CallbackType Callback) {
   for (const ExternalASTMerger::ImporterPair &IP : Importers) {
-    Source<TranslationUnitDecl *> SourceTU(
-        IP.Forward->getFromContext().getTranslationUnitDecl());
-    Source<const DeclContext *> SourceDC =
-        LookupSameContext(SourceTU, DC, *IP.Reverse);
-    if (SourceDC.get()) {
+    Source<TranslationUnitDecl *> SourceTU =
+        IP.Forward->getFromContext().getTranslationUnitDecl();
+    if (auto SourceDC = LookupSameContext(SourceTU, DC, *IP.Reverse))
       Callback(IP, SourceDC);
-    }
   }
 }
 
 bool HasDeclOfSameType(llvm::ArrayRef<Candidate> Decls, const Candidate &C) {
-  return std::any_of(Decls.begin(), Decls.end(), [&C](const Candidate &D) {
+  return llvm::any_of(Decls, [&](const Candidate &D) {
     return C.first.get()->getKind() == D.first.get()->getKind();
   });
 }
@@ -139,15 +135,15 @@ bool ExternalASTMerger::FindExternalVisibleDeclsByName(const DeclContext *DC,
     }
   };
 
-  ForEachMatchingDC(DC, Importers, [Name, &FilterFoundDecl](
-                                       const ImporterPair &IP,
-                                       Source<const DeclContext *> SourceDC) {
-    DeclarationName FromName = IP.Reverse->Import(Name);
-    DeclContextLookupResult Result = SourceDC.get()->lookup(FromName);
-    for (NamedDecl *FromD : Result) {
-      FilterFoundDecl(std::make_pair(FromD, IP.Forward.get()));
-    }
-  });
+  ForEachMatchingDC(
+      DC, Importers,
+      [&](const ImporterPair &IP, Source<const DeclContext *> SourceDC) {
+        DeclarationName FromName = IP.Reverse->Import(Name);
+        DeclContextLookupResult Result = SourceDC.get()->lookup(FromName);
+        for (NamedDecl *FromD : Result) {
+          FilterFoundDecl(std::make_pair(FromD, IP.Forward.get()));
+        }
+      });
 
   llvm::ArrayRef<Candidate> DeclsToReport =
       CompleteDecls.empty() ? ForwardDecls : CompleteDecls;
@@ -170,15 +166,14 @@ void ExternalASTMerger::FindExternalLexicalDecls(
     const DeclContext *DC, llvm::function_ref<bool(Decl::Kind)> IsKindWeWant,
     SmallVectorImpl<Decl *> &Result) {
   ForEachMatchingDC(
-      DC, Importers, [DC, IsKindWeWant](const ImporterPair &IP,
-                                        Source<const DeclContext *> SourceDC) {
+      DC, Importers,
+      [&](const ImporterPair &IP, Source<const DeclContext *> SourceDC) {
         for (const Decl *SourceDecl : SourceDC.get()->decls()) {
           if (IsKindWeWant(SourceDecl->getKind())) {
             Decl *ImportedDecl =
                 IP.Forward->Import(const_cast<Decl *>(SourceDecl));
             assert(ImportedDecl->getDeclContext() == DC);
             (void)ImportedDecl;
-            (void)DC;
           }
         }
       });

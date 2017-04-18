@@ -654,6 +654,18 @@ float badly_specialized_coro_handle() { // expected-error {{std::experimental::c
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
+namespace std {
+  struct nothrow_t {};
+  constexpr nothrow_t nothrow = {};
+}
+
+using SizeT = decltype(sizeof(int));
+
+void* operator new(SizeT __sz, const std::nothrow_t&) noexcept;
+void  operator delete(void* __p, const std::nothrow_t&) noexcept;
+
+
+
 struct promise_on_alloc_failure_tag {};
 
 template<>
@@ -694,3 +706,43 @@ coro<T> dependent_private_alloc_failure_handler(T) {
 }
 template coro<bad_promise_11> dependent_private_alloc_failure_handler(bad_promise_11);
 // expected-note@-1 {{requested here}}
+
+struct bad_promise_12 {
+  coro<bad_promise_12> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void unhandled_exception();
+  void return_void();
+  static coro<bad_promise_12> get_return_object_on_allocation_failure();
+
+  static void* operator new(SizeT);
+  // expected-error@-1 2 {{'operator new' is required to have a non-throwing noexcept specification when the promise type declares 'get_return_object_on_allocation_failure()'}}
+};
+coro<bad_promise_12> throwing_in_class_new() { // expected-note {{call to 'operator new' implicitly required by coroutine function here}}
+  co_return;
+}
+
+template <class T>
+coro<T> dependent_throwing_in_class_new(T) { // expected-note {{call to 'operator new' implicitly required by coroutine function here}}
+   co_return;
+}
+template coro<bad_promise_12> dependent_throwing_in_class_new(bad_promise_12); // expected-note {{requested here}}
+
+
+struct good_promise_13 {
+  coro<good_promise_13> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void unhandled_exception();
+  void return_void();
+  static coro<good_promise_13> get_return_object_on_allocation_failure();
+};
+coro<good_promise_13> uses_nothrow_new() {
+  co_return;
+}
+
+template <class T>
+coro<T> dependent_uses_nothrow_new(T) {
+   co_return;
+}
+template coro<good_promise_13> dependent_uses_nothrow_new(good_promise_13);

@@ -1,12 +1,12 @@
 // RUN: %clang %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=address
 // RUN: %test_debuginfo %s %t.out
-//
-
+// REQUIRES: not_asan
+//           Zorg configures the ASAN stage2 bots to not build the asan
+//           compiler-rt. Only run this test on non-asanified configurations.
+void b();
 struct S {
   int a[8];
 };
-
-void b();
 
 int f(struct S s, unsigned i) {
   // DEBUGGER: break 16
