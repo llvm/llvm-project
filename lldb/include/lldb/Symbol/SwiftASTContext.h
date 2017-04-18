@@ -498,10 +498,6 @@ public:
     bool m_is_objc;
     bool m_is_anyobject;
     bool m_is_errortype;
-
-    bool IsOneWordStorage() const {
-      return m_is_class_only || m_is_objc || m_is_anyobject || m_is_errortype;
-    }
   };
 
   static bool GetProtocolTypeInfo(const CompilerType &type,
