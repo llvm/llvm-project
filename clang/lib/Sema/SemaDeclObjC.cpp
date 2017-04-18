@@ -995,8 +995,6 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
     }
   }
   
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
   PushOnScopeChains(IDecl, TUScope);
 
