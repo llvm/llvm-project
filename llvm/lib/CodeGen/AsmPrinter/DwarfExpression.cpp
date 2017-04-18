@@ -43,6 +43,11 @@ void DwarfExpression::addRegIndirect(int DwarfReg, int Offset) {
   emitSigned(Offset);
 }
 
+void DwarfExpression::addFBReg(int Offset) {
+  emitOp(dwarf::DW_OP_fbreg);
+  emitSigned(Offset);
+}
+
 void DwarfExpression::addOpPiece(unsigned SizeInBits, unsigned OffsetInBits) {
   if (!SizeInBits)
     return;
@@ -72,33 +77,21 @@ void DwarfExpression::addAnd(unsigned Mask) {
   emitOp(dwarf::DW_OP_and);
 }
 
-bool DwarfExpression::addMachineRegIndirect(const TargetRegisterInfo &TRI,
-                                            unsigned MachineReg, int Offset) {
-  if (isFrameRegister(TRI, MachineReg)) {
-    // If variable offset is based in frame register then use fbreg.
-    emitOp(dwarf::DW_OP_fbreg);
-    emitSigned(Offset);
-    return true;
-  }
-
-  int DwarfReg = TRI.getDwarfRegNum(MachineReg, false);
-  if (DwarfReg < 0)
-    return false;
-
-  addRegIndirect(DwarfReg, Offset);
-  return true;
-}
-
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     unsigned MachineReg, unsigned MaxSize) {
-  if (!TRI.isPhysicalRegister(MachineReg))
+  if (!TRI.isPhysicalRegister(MachineReg)) {
+    if (isFrameRegister(TRI, MachineReg)) {
+      DwarfRegs.push_back({-1, 0, nullptr});
+      return true;
+    }
     return false;
+  }
 
   int Reg = TRI.getDwarfRegNum(MachineReg, false);
 
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
-    addReg(Reg);
+    DwarfRegs.push_back({Reg, 0, nullptr});
     return true;
   }
 
@@ -110,7 +103,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       unsigned Idx = TRI.getSubRegIndex(*SR, MachineReg);
       unsigned Size = TRI.getSubRegIdxSize(Idx);
       unsigned RegOffset = TRI.getSubRegIdxOffset(Idx);
-      addReg(Reg, "super-register");
+      DwarfRegs.push_back({Reg, 0, "super-register"});
       // Use a DW_OP_bit_piece to describe the sub-register.
       setSubRegisterPiece(Size, RegOffset);
       return true;
@@ -140,17 +133,17 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     // If this sub-register has a DWARF number and we haven't covered
     // its range, emit a DWARF piece for it.
     if (Reg >= 0 && Intersection.any()) {
-      addReg(Reg, "sub-register");
+      // Emit a piece for any gap in the coverage.
+      if (Offset > CurPos)
+        DwarfRegs.push_back({-1, Offset - CurPos, nullptr});
+      DwarfRegs.push_back(
+          {Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"});
       if (Offset >= MaxSize)
 	break;
-      // emit a piece for the any gap in the coverage.
-      if (Offset > CurPos)
-        addOpPiece(Offset - CurPos);
-      addOpPiece(std::min<unsigned>(Size, MaxSize - Offset));
-      CurPos = Offset + Size;
 
       // Mark it as emitted.
       Coverage.set(Offset, Offset + Size);
+      CurPos = Offset + Size;
     }
   }
 
@@ -194,18 +187,38 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
                                               unsigned MachineReg,
                                               unsigned FragmentOffsetInBits) {
-  if (!ExprCursor)
-    return addMachineReg(TRI, MachineReg);
+  auto Fragment = ExprCursor.getFragmentInfo();
+  if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U))
+    return false;
 
-  // Pattern-match combinations for which more efficient representations exist
-  // first.
-  bool ValidReg = false;
+  bool HasComplexExpression = false;
   auto Op = ExprCursor.peek();
+  if (Op && Op->getOp() != dwarf::DW_OP_LLVM_fragment)
+    HasComplexExpression = true;
+
+  // Handle simple register locations.
+  if (!HasComplexExpression) {
+    for (auto &Reg : DwarfRegs) {
+      if (Reg.DwarfRegNo >= 0)
+        addReg(Reg.DwarfRegNo, Reg.Comment);
+      addOpPiece(Reg.Size);
+    }
+    DwarfRegs.clear();
+    return true;
+  }
+
+  assert(DwarfRegs.size() == 1);
+  auto Reg = DwarfRegs[0];
+  bool FBReg = isFrameRegister(TRI, MachineReg); 
+  assert(Reg.Size == 0 && "subregister has same size as superregister");
+
+  // Pattern-match combinations for which more efficient representations exist.
   switch (Op->getOp()) {
   default: {
-    auto Fragment = ExprCursor.getFragmentInfo();
-    ValidReg = addMachineReg(TRI, MachineReg,
-			     Fragment ? Fragment->SizeInBits : ~1U);
+    if (FBReg)
+      addFBReg(0);
+    else
+      addReg(Reg.DwarfRegNo, 0);
     break;
   }
   case dwarf::DW_OP_plus:
@@ -214,22 +227,30 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     // [DW_OP_reg,Offset,DW_OP_minus,DW_OP_deref] --> [DW_OP_breg,-Offset].
     auto N = ExprCursor.peekNext();
     if (N && N->getOp() == dwarf::DW_OP_deref) {
-      unsigned Offset = Op->getArg(0);
-      ValidReg = addMachineRegIndirect(
-          TRI, MachineReg, Op->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
+      int Offset = Op->getArg(0);
+      int SignedOffset = (Op->getOp() == dwarf::DW_OP_plus) ? Offset : -Offset;
+      if (FBReg)
+        addFBReg(SignedOffset);
+      else
+        addRegIndirect(Reg.DwarfRegNo, SignedOffset);
+
       ExprCursor.consume(2);
-    } else
-      ValidReg = addMachineReg(TRI, MachineReg);
+      break;
+    }
+    addReg(Reg.DwarfRegNo, 0);
     break;
   }
   case dwarf::DW_OP_deref:
     // [DW_OP_reg,DW_OP_deref] --> [DW_OP_breg].
-    ValidReg = addMachineRegIndirect(TRI, MachineReg);
+    if (FBReg)
+      addFBReg(0);
+    else
+      addRegIndirect(Reg.DwarfRegNo, 0);
     ExprCursor.take();
     break;
   }
-
-  return ValidReg;
+  DwarfRegs.clear();
+  return true;
 }
 
 void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
@@ -308,6 +329,7 @@ void DwarfExpression::maskSubRegister() {
 
 
 void DwarfExpression::finalize() {
+  assert(DwarfRegs.size() == 0 && "dwarf registers not emitted");
   // Emit any outstanding DW_OP_piece operations to mask out subregisters.
   if (SubRegisterSizeInBits == 0)
     return;
