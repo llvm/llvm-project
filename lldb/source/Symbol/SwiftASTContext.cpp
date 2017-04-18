@@ -5438,14 +5438,8 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
   if (compiler_type.IsValid() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-    auto ref_type =
-        swift::dyn_cast_or_null<swift::ReferenceStorageType>(
-            swift_can_type);
-    if (ref_type) {
-      auto referent_can_type = ref_type.getReferentType();
-      return CompilerType(GetASTContext(), referent_can_type.getPointer());
-    } else
-      return compiler_type;
+    auto ref_type = swift_can_type->getReferenceStorageReferent();
+    return CompilerType(GetASTContext(), ref_type);
   }
 
   return CompilerType();
@@ -5734,9 +5728,7 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::WeakStorage:
     swift_flags |=
         CompilerType(GetASTContext(),
-                     swift_can_type->getAs<swift::ReferenceStorageType>()
-                         ->getReferentType()
-                         .getPointer())
+                     swift_can_type->getReferenceStorageReferent())
             .GetTypeInfo(pointee_or_element_clang_type);
     break;
   case swift::TypeKind::BoundGenericEnum:
@@ -5844,10 +5836,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift::cast<swift::ReferenceStorageType>(
-                            swift_can_type)
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetTypeClass();
   case swift::TypeKind::GenericTypeParam:
     return lldb::eTypeClassOther;
@@ -6437,9 +6426,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetEncoding(count);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6526,9 +6513,7 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetFormat();
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6609,9 +6594,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetNumChildren(omit_empty_base_classes);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6731,9 +6714,7 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetNumFields();
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6849,9 +6830,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetFieldAtIndex(idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
                          is_bitfield_ptr);
   case swift::TypeKind::GenericTypeParam:
@@ -7200,27 +7179,24 @@ bool SwiftASTContext::IsNonTriviallyManagedReferenceType(
       strategy = NonTriviallyManagedReferenceStrategy::eUnmanaged;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     case swift::TypeKind::UnownedStorage: {
       strategy = NonTriviallyManagedReferenceStrategy::eUnowned;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     case swift::TypeKind::WeakStorage: {
       strategy = NonTriviallyManagedReferenceStrategy::eWeak;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     }
@@ -7316,9 +7292,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetChildCompilerTypeAtIndex(
             exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
             ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
@@ -7503,13 +7477,13 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
     case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinVector:
+      break;
+
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
       return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
+                          swift_can_type->getReferenceStorageReferent())
           .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
                                          child_indexes);
     case swift::TypeKind::GenericTypeParam:
@@ -7664,9 +7638,7 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
       return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
+                          swift_can_type->getReferenceStorageReferent())
           .GetIndexOfChildWithName(name, omit_empty_base_classes);
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
@@ -8110,9 +8082,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .DumpTypeValue(s, format, data, byte_offset, byte_size,
                        bitfield_bit_size, bitfield_bit_offset, exe_scope,
                        is_base_class);
