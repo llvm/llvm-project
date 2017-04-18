@@ -12,6 +12,8 @@
 
 #include "lldb/lldb-enumerations.h"
 
+#include <stdint.h>
+
 namespace lldb_private {
 
 namespace endian {

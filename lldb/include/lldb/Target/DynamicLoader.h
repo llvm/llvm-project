@@ -12,9 +12,37 @@
 
 // Project includes
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/UUID.h"
 #include "lldb/Utility/Error.h"
-#include "lldb/lldb-private.h"
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/UUID.h"
+#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-forward.h"              // for ModuleSP, ThreadPlanSP
+#include "lldb/lldb-private-enumerations.h" // for LazyBool, LazyBool::eLaz...
+#include "lldb/lldb-types.h"                // for addr_t
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for int64_t
+namespace lldb_private {
+class ModuleList;
+}
+namespace lldb_private {
+class Process;
+}
+namespace lldb_private {
+class SectionList;
+}
+namespace lldb_private {
+class Symbol;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class SymbolContextList;
+}
+namespace lldb_private {
+class Thread;
+}
 
 namespace lldb_private {
 

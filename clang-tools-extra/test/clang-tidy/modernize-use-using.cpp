@@ -155,8 +155,9 @@ namespace my_space {
 }
 
 #define lol 4
-typedef unsigned Map[lol]; 
+typedef unsigned Map[lol];
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef unsigned Map[lol];
 
 typedef void (*fun_type)();
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'

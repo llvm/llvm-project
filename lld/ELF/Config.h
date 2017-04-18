@@ -104,6 +104,7 @@ struct Configuration {
   bool Bsymbolic;
   bool BsymbolicFunctions;
   bool ColorDiagnostics = false;
+  bool CompressDebugSections;
   bool DefineCommon;
   bool Demangle = true;
   bool DisableVerify;
@@ -125,7 +126,6 @@ struct Configuration {
   bool OptRemarksWithHotness;
   bool Pie;
   bool PrintGcSections;
-  bool Rela;
   bool Relocatable;
   bool SaveTemps;
   bool SingleRoRx;

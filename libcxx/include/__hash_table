@@ -1402,7 +1402,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const hasher& __hf,
                                                        const key_equal& __eql,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, __hf),
       __p3_(1.0f, __eql)
 {
@@ -1411,7 +1411,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const hasher& __hf,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0),
       __p3_(1.0f)
 {
@@ -1423,7 +1423,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u)
           __bucket_list_deleter(allocator_traits<__pointer_allocator>::
               select_on_container_copy_construction(
                   __u.__bucket_list_.get_deleter().__alloc()), 0)),
-      __p1_(allocator_traits<__node_allocator>::
+      __p1_(__second_tag(), allocator_traits<__node_allocator>::
           select_on_container_copy_construction(__u.__node_alloc())),
       __p2_(0, __u.hash_function()),
       __p3_(__u.__p3_)
@@ -1434,7 +1434,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, __u.hash_function()),
       __p3_(__u.__p3_)
 {
@@ -1468,7 +1468,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, _VSTD::move(__u.hash_function())),
       __p3_(_VSTD::move(__u.__p3_))
 {

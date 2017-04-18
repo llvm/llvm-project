@@ -8,6 +8,13 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
 endif()
 
+# Add path for custom modules
+set(CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  ${CMAKE_MODULE_PATH}
+  )
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxxabi)
 
@@ -124,6 +131,7 @@ endif()
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(HandleCompilerRT)
 
 # Define options.
 option(LIBCXXABI_ENABLE_EXCEPTIONS "Use exceptions." ON)
@@ -267,6 +275,7 @@ macro(add_target_flags_if condition var)
   if (${condition})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
+    list(APPEND LIBCXXABI_COMPILE_FLAGS ${var})
     list(APPEND LIBCXXABI_LINK_FLAGS ${var})
   endif()
 endmacro()
@@ -279,9 +288,9 @@ set(LIBCXXABI_LINK_FLAGS "")
 # Configure target flags
 add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
 add_target_flags_if(LIBCXXABI_TARGET_TRIPLE
-          "-target ${LIBCXXABI_TARGET_TRIPLE}")
+          "--target=${LIBCXXABI_TARGET_TRIPLE}")
 add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
-         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
+         "--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
 add_target_flags_if(LIBCXXABI_SYSROOT
           "--sysroot=${LIBCXXABI_SYSROOT}")
 

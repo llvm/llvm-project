@@ -7,13 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FreeBSD9-STABLE requires this to know about size_t in cxxabi.h
-#include <cstddef>
+#include "lldb/Core/Mangled.h"
+
 #if defined(_WIN32)
-#include "lldb/Host/windows/windows.h"
+#include <windows.h>
+
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
+
+#include <mutex>   // for mutex, loc...
+#include <string>  // for string
+#include <utility> // for pair
+
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
 // Provide a fast-path demangler implemented in FastDemangle.cpp until it can
@@ -22,15 +30,16 @@
 #include "lldb/Utility/FastDemangle.h"
 #include "llvm/Demangle/Demangle.h"
 #else
+// FreeBSD9-STABLE requires this to know about size_t in cxxabi.
+#include <cstddef>
 #include <cxxabi.h>
 #endif
 
 #include "swift/Demangling/Demangle.h"
 #include "llvm/ADT/DenseMap.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Mangled.h"
+
 #include "lldb/Core/Timer.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
@@ -41,8 +50,13 @@
 #include <ctype.h>
 #include <functional>
 #include <mutex>
-#include <stdlib.h>
-#include <string.h>
+#include "lldb/lldb-enumerations.h" // for LanguageType
+
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
+
+#include "llvm/ADT/StringRef.h"    // for StringRef
+#include "llvm/Support/Compiler.h" // for LLVM_PRETT...
 
 using namespace lldb_private;
 

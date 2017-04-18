@@ -115,7 +115,7 @@ struct Configuration {
   unsigned LTOOptLevel = 2;
 
   // Used for /opt:lldltojobs=N
-  unsigned LTOJobs = 1;
+  unsigned LTOJobs = 0;
   // Used for /opt:lldltopartitions=N
   unsigned LTOPartitions = 1;
 
@@ -160,6 +160,7 @@ struct Configuration {
   bool TerminalServerAware = true;
   bool LargeAddressAware = false;
   bool HighEntropyVA = false;
+  bool AppContainer = false;
 
   // This is for debugging.
   bool DebugPdb = false;

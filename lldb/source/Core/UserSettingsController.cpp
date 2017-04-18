@@ -1,5 +1,4 @@
-//====-- UserSettingsController.cpp ------------------------------*- C++
-//-*-===//
+//====-- UserSettingsController.cpp ------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,17 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-#include <string.h>
-
 #include "lldb/Core/UserSettingsController.h"
-#include "lldb/Interpreter/CommandInterpreter.h"
+
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Error.h"
-#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
+
+#include <memory> // for shared_ptr
+
+namespace lldb_private {
+class CommandInterpreter;
+}
+namespace lldb_private {
+class ConstString;
+}
+namespace lldb_private {
+class ExecutionContext;
+}
+namespace lldb_private {
+class Property;
+}
 
 using namespace lldb;
 using namespace lldb_private;

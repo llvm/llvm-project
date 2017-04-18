@@ -172,7 +172,6 @@ public:
 private:
   void parse() override;
 
-  llvm::BumpPtrAllocator Alloc;
   llvm::BumpPtrAllocator StringAllocAux;
   llvm::StringSaver StringAlloc;
 
@@ -195,7 +194,6 @@ private:
   void parse() override;
 
   std::vector<SymbolBody *> SymbolBodies;
-  llvm::BumpPtrAllocator Alloc;
 };
 } // namespace coff
 

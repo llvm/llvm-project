@@ -9,22 +9,40 @@
 
 #include "lldb/Core/SourceManager.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h"      // for Address
+#include "lldb/Core/AddressRange.h" // for AddressRange
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/FormatEntity.h" // for FormatEntity
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/LineEntry.h" // for LineEntry
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/PathMappingList.h" // for PathMappingList
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-enumerations.h" // for StopShowColumn::eStopSho...
+
+#include "llvm/ADT/Twine.h" // for Twine
+
+#include <memory>
+#include <utility> // for pair
+
+#include <assert.h> // for assert
+#include <stdio.h>  // for size_t, NULL, snprintf
+
+namespace lldb_private {
+class ExecutionContext;
+}
+namespace lldb_private {
+class ValueObject;
+}
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,9 +93,9 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !file_sp->GetFileSpec().Exists()) {
     if (target_sp)
-      file_sp.reset(new File(file_spec, target_sp.get()));
+      file_sp = std::make_shared<File>(file_spec, target_sp.get());
     else
-      file_sp.reset(new File(file_spec, debugger_sp));
+      file_sp = std::make_shared<File>(file_spec, debugger_sp);
 
     if (debugger_sp)
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);

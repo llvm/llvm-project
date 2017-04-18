@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Connection.h"
 
 #if defined(_WIN32)
@@ -18,6 +14,8 @@
 #endif
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
+
+#include <string.h> // for strstr
 
 using namespace lldb_private;
 

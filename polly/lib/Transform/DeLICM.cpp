@@ -469,19 +469,43 @@ private:
   /// implicitly defined as the complement of #Occupied.
   isl::union_set Unused;
 
-  /// { [Element[] -> Scatter[]] }
+  /// { [Element[] -> Zone[]] -> ValInst[] }
+  /// Maps to the known content for each array element at any interval.
+  ///
+  /// Any element/interval can map to multiple known elements. This is due to
+  /// multiple llvm::Value referring to the same content. Examples are
+  ///
+  /// - A value stored and loaded again. The LoadInst represents the same value
+  /// as the StoreInst's value operand.
+  ///
+  /// - A PHINode is equal to any one of the incoming values. In case of
+  /// LCSSA-form, it is always equal to its single incoming value.
+  ///
+  /// Two Knowledges are considered not conflicting if at least one of the known
+  /// values match. Not known values are not stored as an unnamed tuple (as
+  /// #Written does), but maps to nothing.
+  ///
+  ///  Known values are usually just defined for #Occupied elements. Knowing
+  ///  #Unused contents has no advantage as it can be overwritten.
+  isl::union_map Known;
+
+  /// { [Element[] -> Scatter[]] -> ValInst[] }
   /// The write actions currently in the scop or that would be added when
-  /// mapping a scalar.
-  isl::union_set Written;
+  /// mapping a scalar. Maps to the value that is written.
+  ///
+  /// Written values that cannot be identified are represented by an unknown
+  /// ValInst[] (an unnamed tuple of 0 dimension). It conflicts with itself.
+  isl::union_map Written;
 
   /// Check whether this Knowledge object is well-formed.
   void checkConsistency() const {
 #ifndef NDEBUG
     // Default-initialized object
-    if (!Occupied && !Unused && !Written)
+    if (!Occupied && !Unused && !Known && !Written)
       return;
 
     assert(Occupied || Unused);
+    assert(Known);
     assert(Written);
 
     // If not all fields are defined, we cannot derived the universe.
@@ -491,8 +515,9 @@ private:
     assert(isl_union_set_is_disjoint(Occupied.keep(), Unused.keep()) ==
            isl_bool_true);
     auto Universe = give(isl_union_set_union(Occupied.copy(), Unused.copy()));
-    assert(isl_union_set_is_subset(Written.keep(), Universe.keep()) ==
-           isl_bool_true);
+
+    assert(!Known.domain().is_subset(Universe).is_false());
+    assert(!Written.domain().is_subset(Universe).is_false());
 #endif
   }
 
@@ -505,12 +530,22 @@ public:
   Knowledge(isl::union_set Occupied, isl::union_set Unused,
             isl::union_set Written)
       : Occupied(std::move(Occupied)), Unused(std::move(Unused)),
-        Written(std::move(Written)) {
+        Known(isl::manage(
+            isl_union_map_empty(isl_union_set_get_space(Written.keep())))),
+        Written(isl::manage(isl_union_map_from_domain(Written.take()))) {
+    checkConsistency();
+  }
+
+  /// Create a new object with the given members.
+  Knowledge(isl::union_set Occupied, isl::union_set Unused,
+            isl::union_map Known, isl::union_map Written)
+      : Occupied(std::move(Occupied)), Unused(std::move(Unused)),
+        Known(std::move(Known)), Written(std::move(Written)) {
     checkConsistency();
   }
 
   /// Return whether this object was not default-constructed.
-  bool isUsable() const { return (Occupied || Unused) && Written; }
+  bool isUsable() const { return (Occupied || Unused) && Known && Written; }
 
   /// Print the content of this object to @p OS.
   void print(llvm::raw_ostream &OS, unsigned Indent = 0) const {
@@ -523,6 +558,7 @@ public:
         OS.indent(Indent) << "Unused:   " << Unused << "\n";
       else
         OS.indent(Indent) << "Unused:   <Everything else not in Occupied>\n";
+      OS.indent(Indent) << "Known:    " << Known << "\n";
       OS.indent(Indent) << "Written : " << Written << '\n';
     } else {
       OS.indent(Indent) << "Invalid knowledge\n";
@@ -542,7 +578,8 @@ public:
                         "That.Occupied.copy()));`");
 
     Unused = give(isl_union_set_subtract(Unused.take(), That.Occupied.copy()));
-    Written = give(isl_union_set_union(Written.take(), That.Written.take()));
+    Known = give(isl_union_map_union(Known.take(), That.Known.copy()));
+    Written = give(isl_union_map_union(Written.take(), That.Written.take()));
 
     checkConsistency();
   }
@@ -608,11 +645,13 @@ public:
     // Knowledge to check this property also for accesses to MemoryKind::Array.
     auto ProposedFixedDefs =
         convertZoneToTimepoints(Proposed.Occupied, true, false);
-    if (isl_union_set_is_disjoint(Existing.Written.keep(),
+    auto ExistingWrittenDomain =
+        isl::manage(isl_union_map_domain(Existing.Written.copy()));
+    if (isl_union_set_is_disjoint(ExistingWrittenDomain.keep(),
                                   ProposedFixedDefs.keep()) != isl_bool_true) {
       if (OS) {
         auto ConflictingWrites = give(isl_union_set_intersect(
-            Existing.Written.copy(), ProposedFixedDefs.copy()));
+            ExistingWrittenDomain.copy(), ProposedFixedDefs.copy()));
         OS->indent(Indent) << "Proposed writes into range used by existing\n";
         OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
                            << "\n";
@@ -623,12 +662,14 @@ public:
     // Do the new writes in Proposed only overwrite unused values in Existing?
     auto ExistingAvailableDefs =
         convertZoneToTimepoints(Existing.Unused, true, false);
-    if (isl_union_set_is_subset(Proposed.Written.keep(),
+    auto ProposedWrittenDomain =
+        isl::manage(isl_union_map_domain(Proposed.Written.copy()));
+    if (isl_union_set_is_subset(ProposedWrittenDomain.keep(),
                                 ExistingAvailableDefs.keep()) !=
         isl_bool_true) {
       if (OS) {
         auto ConflictingWrites = give(isl_union_set_subtract(
-            Proposed.Written.copy(), ExistingAvailableDefs.copy()));
+            ProposedWrittenDomain.copy(), ExistingAvailableDefs.copy()));
         OS->indent(Indent)
             << "Proposed a lifetime where there is an Existing write into it\n";
         OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
@@ -639,11 +680,12 @@ public:
 
     // Does Proposed write at the same time as Existing already does (order of
     // writes is undefined)?
-    if (isl_union_set_is_disjoint(Existing.Written.keep(),
-                                  Proposed.Written.keep()) != isl_bool_true) {
+    if (isl_union_set_is_disjoint(ExistingWrittenDomain.keep(),
+                                  ProposedWrittenDomain.keep()) !=
+        isl_bool_true) {
       if (OS) {
         auto ConflictingWrites = give(isl_union_set_intersect(
-            Existing.Written.copy(), Proposed.Written.copy()));
+            ExistingWrittenDomain.copy(), ProposedWrittenDomain.copy()));
         OS->indent(Indent) << "Proposed writes at the same time as an already "
                               "Existing write\n";
         OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
@@ -1465,8 +1507,7 @@ private:
       ProcessAllIncoming(TargetStmt);
 
     auto AnyMapped = false;
-    auto &DL =
-        S->getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+    auto &DL = S->getRegion().getEntry()->getModule()->getDataLayout();
     auto StoreSize =
         DL.getTypeAllocSize(TargetStoreMA->getAccessValue()->getType());
 
@@ -1773,17 +1814,16 @@ INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
 INITIALIZE_PASS_END(DeLICM, "polly-delicm", "Polly - DeLICM/DePRE", false,
                     false)
 
-bool polly::isConflicting(isl::union_set ExistingOccupied,
-                          isl::union_set ExistingUnused,
-                          isl::union_set ExistingWrites,
-                          isl::union_set ProposedOccupied,
-                          isl::union_set ProposedUnused,
-                          isl::union_set ProposedWrites, llvm::raw_ostream *OS,
-                          unsigned Indent) {
+bool polly::isConflicting(
+    isl::union_set ExistingOccupied, isl::union_set ExistingUnused,
+    isl::union_map ExistingKnown, isl::union_map ExistingWrites,
+    isl::union_set ProposedOccupied, isl::union_set ProposedUnused,
+    isl::union_map ProposedKnown, isl::union_map ProposedWrites,
+    llvm::raw_ostream *OS, unsigned Indent) {
   Knowledge Existing(std::move(ExistingOccupied), std::move(ExistingUnused),
-                     std::move(ExistingWrites));
+                     std::move(ExistingKnown), std::move(ExistingWrites));
   Knowledge Proposed(std::move(ProposedOccupied), std::move(ProposedUnused),
-                     std::move(ProposedWrites));
+                     std::move(ProposedKnown), std::move(ProposedWrites));
 
   return Knowledge::isConflicting(Existing, Proposed, OS, Indent);
 }

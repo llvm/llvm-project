@@ -193,6 +193,10 @@ public:
 
     CDeleter() : state_(0) {}
     explicit CDeleter(int s) : state_(s) {}
+    template <class U>
+        CDeleter(const CDeleter<U>& d)
+            : state_(d.state()) {}
+
     ~CDeleter() {assert(state_ >= 0); state_ = -1;}
 
     int state() const {return state_;}

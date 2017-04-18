@@ -36,6 +36,7 @@
 
 using namespace llvm;
 using namespace llvm::ELF;
+using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
@@ -73,8 +74,8 @@ private:
   SymbolAssignment *readAssignment(StringRef Name);
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
   uint32_t readFill();
+  uint32_t parseFill(StringRef Tok);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  uint32_t readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   StringMatcher readFilePatterns();
@@ -242,25 +243,26 @@ void ScriptParser::addFile(StringRef S) {
     SmallString<128> PathData;
     StringRef Path = (Config->Sysroot + S).toStringRef(PathData);
     if (sys::fs::exists(Path)) {
-      Driver->addFile(Saver.save(Path));
+      Driver->addFile(Saver.save(Path), /*WithLOption=*/false);
       return;
     }
   }
 
   if (sys::path::is_absolute(S)) {
-    Driver->addFile(S);
+    Driver->addFile(S, /*WithLOption=*/false);
   } else if (S.startswith("=")) {
     if (Config->Sysroot.empty())
-      Driver->addFile(S.substr(1));
+      Driver->addFile(S.substr(1), /*WithLOption=*/false);
     else
-      Driver->addFile(Saver.save(Config->Sysroot + "/" + S.substr(1)));
+      Driver->addFile(Saver.save(Config->Sysroot + "/" + S.substr(1)),
+                      /*WithLOption=*/false);
   } else if (S.startswith("-l")) {
     Driver->addLibrary(S.substr(2));
   } else if (sys::fs::exists(S)) {
-    Driver->addFile(S);
+    Driver->addFile(S, /*WithLOption=*/false);
   } else {
     if (Optional<std::string> Path = findFromSearchPaths(S))
-      Driver->addFile(Saver.save(*Path));
+      Driver->addFile(Saver.save(*Path), /*WithLOption=*/true);
     else
       setError("unable to find " + S);
   }
@@ -555,9 +557,8 @@ Expr ScriptParser::readAssertExpr() {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
 uint32_t ScriptParser::readFill() {
   expect("(");
-  uint32_t V = readOutputSectionFiller(next());
+  uint32_t V = parseFill(next());
   expect(")");
-  expect(";");
   return V;
 }
 
@@ -619,9 +620,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   Cmd->Phdrs = readOutputSectionPhdrs();
 
   if (consume("="))
-    Cmd->Filler = readOutputSectionFiller(next());
+    Cmd->Filler = parseFill(next());
   else if (peek().startswith("="))
-    Cmd->Filler = readOutputSectionFiller(next().drop_front());
+    Cmd->Filler = parseFill(next().drop_front());
 
   // Consume optional comma following output section command.
   consume(",");
@@ -629,19 +630,21 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   return Cmd;
 }
 
-// Read "=<number>" where <number> is an octal/decimal/hexadecimal number.
+// Parses a given string as a octal/decimal/hexadecimal number and
+// returns it as a big-endian number. Used for `=<fillexp>`.
 // https://sourceware.org/binutils/docs/ld/Output-Section-Fill.html
 //
-// ld.gold is not fully compatible with ld.bfd. ld.bfd handles
-// hexstrings as blobs of arbitrary sizes, while ld.gold handles them
-// as 32-bit big-endian values. We will do the same as ld.gold does
-// because it's simpler than what ld.bfd does.
-uint32_t ScriptParser::readOutputSectionFiller(StringRef Tok) {
-  uint32_t V;
-  if (!Tok.getAsInteger(0, V))
-    return V;
-  setError("invalid filler expression: " + Tok);
-  return 0;
+// When reading a hexstring, ld.bfd handles it as a blob of arbitrary
+// size, while ld.gold always handles it as a 32-bit big-endian number.
+// We are compatible with ld.gold because it's easier to implement.
+uint32_t ScriptParser::parseFill(StringRef Tok) {
+  uint32_t V = 0;
+  if (Tok.getAsInteger(0, V))
+    setError("invalid filler expression: " + Tok);
+
+  uint32_t Buf;
+  write32be(&Buf, V);
+  return Buf;
 }
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
@@ -1098,12 +1101,7 @@ uint64_t ScriptParser::readMemoryAssignment(StringRef S1, StringRef S2,
     return 0;
   }
   expect("=");
-
-  // TODO: Fully support constant expressions.
-  if (Optional<uint64_t> Val = parseInt(next()))
-    return *Val;
-  setError("nonconstant expression for " + S1);
-  return 0;
+  return readExpr()().getValue();
 }
 
 // Parse the MEMORY command as specified in:

@@ -344,8 +344,7 @@ bool ScopDetection::addOverApproximatedRegion(Region *AR,
 bool ScopDetection::onlyValidRequiredInvariantLoads(
     InvariantLoadsSetTy &RequiredILS, DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
-  const DataLayout &DL =
-      CurRegion.getEntry()->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = CurRegion.getEntry()->getModule()->getDataLayout();
 
   if (!PollyInvariantLoadHoisting && !RequiredILS.empty())
     return false;

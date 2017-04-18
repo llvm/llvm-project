@@ -29,7 +29,6 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
@@ -308,7 +307,7 @@ void File::Clear() {
 
 Error File::GetFileSpec(FileSpec &file_spec) const {
   Error error;
-#ifdef LLDB_CONFIG_FCNTL_GETPATH_SUPPORTED
+#ifdef F_GETPATH
   if (IsValid()) {
     char path[PATH_MAX];
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)

@@ -9,28 +9,44 @@
 
 #include "lldb/Core/ValueObjectVariable.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h"      // for Address
+#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
+#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectList.h"
-
+#include "lldb/Expression/DWARFExpression.h" // for DWARFExpression
+#include "lldb/Symbol/Declaration.h"         // for Declaration
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
-
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataExtractor.h"     // for DataExtractor
+#include "lldb/Utility/Error.h"             // for Error
+#include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressTy...
+#include "lldb/lldb-types.h"                // for addr_t
 
+#include "llvm/ADT/StringRef.h" // for StringRef
+
+#include <assert.h> // for assert
+#include <memory>   // for shared_ptr
+
+namespace lldb_private {
+class ExecutionContextScope;
+}
+namespace lldb_private {
+class StackFrame;
+}
+namespace lldb_private {
+struct RegisterInfo;
+}
 using namespace lldb_private;
 
 lldb::ValueObjectSP

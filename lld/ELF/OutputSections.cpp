@@ -16,6 +16,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -83,6 +84,55 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   return LA->OutSecOff < LB->OutSecOff;
 }
 
+// Compressed sections has header which we create in this function.
+// Format is explaned here:
+// https://docs.oracle.com/cd/E53394_01/html/E54813/section_compression.html
+template <class ELFT>
+static std::vector<uint8_t> createHeader(size_t Size, uint32_t Alignment) {
+  const endianness E = ELFT::TargetEndianness;
+
+  std::vector<uint8_t> Ret(sizeof(typename ELFT::Chdr));
+  uint8_t *Buf = &Ret[0];
+  write32<E>(Buf, ELFCOMPRESS_ZLIB);
+  Buf += 4;
+
+  if (Config->Is64) {
+    Buf += sizeof(Elf64_Word); // Skip ch_reserved field.
+    write64<E>(Buf, Size);
+    Buf += sizeof(ELFT::Chdr::ch_size);
+    write64<E>(Buf, Alignment);
+    Buf += sizeof(ELFT::Chdr::ch_addralign);
+  } else {
+    write32<E>(Buf, Size);
+    Buf += sizeof(ELFT::Chdr::ch_size);
+    write32<E>(Buf, Alignment);
+    Buf += sizeof(ELFT::Chdr::ch_addralign);
+  }
+
+  return Ret;
+}
+
+template <class ELFT> void OutputSection::maybeCompress() {
+  // If -compress-debug-sections is specified, we compress output debug
+  // sections.
+  if (!Config->CompressDebugSections || !Name.startswith(".debug_") ||
+      (Flags & SHF_ALLOC))
+    return;
+
+  this->Flags |= SHF_COMPRESSED;
+  CompressedHeader = createHeader<ELFT>(this->Size, this->Alignment);
+
+  // Here we write relocated content of sections and compress it.
+  std::vector<uint8_t> Data(this->Size);
+  this->writeTo<ELFT>(&Data[0]);
+
+  if (Error E = zlib::compress(StringRef((char *)Data.data(), Data.size()),
+                               CompressedData))
+    fatal("compress failed: " + llvm::toString(std::move(E)));
+
+  this->Size = this->CompressedHeader.size() + this->CompressedData.size();
+}
+
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
@@ -111,9 +161,8 @@ template <class ELFT> void OutputSection::finalize() {
   this->Info = S->OutSec->SectionIndex;
 }
 
-void OutputSection::addSection(InputSectionBase *C) {
-  assert(C->Live);
-  auto *S = cast<InputSection>(C);
+void OutputSection::addSection(InputSection *S) {
+  assert(S->Live);
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
@@ -222,28 +271,63 @@ void OutputSection::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors);
 }
 
-// Fill [Buf, Buf + Size) with Filler. Filler is written in big
-// endian order. This is used for linker script "=fillexp" command.
+// Fill [Buf, Buf + Size) with Filler.
+// This is used for linker script "=fillexp" command.
 static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
-  uint8_t V[4];
-  write32be(V, Filler);
   size_t I = 0;
   for (; I + 4 < Size; I += 4)
-    memcpy(Buf + I, V, 4);
-  memcpy(Buf + I, V, Size - I);
+    memcpy(Buf + I, &Filler, 4);
+  memcpy(Buf + I, &Filler, Size - I);
+}
+
+uint32_t OutputSection::getFiller() {
+  // Determine what to fill gaps between InputSections with, as specified by the
+  // linker script. If nothing is specified and this is an executable section,
+  // fall back to trap instructions to prevent bad diassembly and detect invalid
+  // jumps to padding.
+  if (Optional<uint32_t> Filler = Script->getFiller(Name))
+    return *Filler;
+  if (Flags & SHF_EXECINSTR)
+    return Target->TrapInstr;
+  return 0;
 }
 
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
-  if (uint32_t Filler = Script->getFiller(this->Name))
-    fill(Buf, this->Size, Filler);
 
-  parallelForEach(Sections.begin(), Sections.end(),
-                  [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); });
+  // We may have already rendered compressed content when using
+  // -compress-debug-sections option. Write it together with header.
+  if (!CompressedData.empty()) {
+    memcpy(Buf, CompressedHeader.data(), CompressedHeader.size());
+    Buf += CompressedHeader.size();
+    memcpy(Buf, CompressedData.data(), CompressedData.size());
+    return;
+  }
+
+  // Write leading padding.
+  uint32_t Filler = getFiller();
+  if (Filler)
+    fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
+
+  parallelFor(0, Sections.size(), [=](size_t I) {
+    InputSection *Sec = Sections[I];
+    Sec->writeTo<ELFT>(Buf);
+
+    // Fill gaps between sections.
+    if (Filler) {
+      uint8_t *Start = Buf + Sec->OutSecOff + Sec->getSize();
+      uint8_t *End;
+      if (I + 1 == Sections.size())
+        End = Buf + Size;
+      else
+        End = Buf + Sections[I + 1]->OutSecOff;
+      fill(Start, End - Start, Filler);
+    }
+  });
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script->writeDataBytes(this->Name, Buf);
+  Script->writeDataBytes(Name, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {
@@ -358,7 +442,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     OutputSections.push_back(Sec);
   }
 
-  Sec->addSection(IS);
+  Sec->addSection(cast<InputSection>(IS));
 }
 
 OutputSectionFactory::~OutputSectionFactory() {}
@@ -387,9 +471,6 @@ uint64_t elf::getHeaderSize() {
   return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
 }
 
-namespace lld {
-namespace elf {
-
 template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
@@ -400,10 +481,12 @@ template void OutputSection::finalize<ELF32BE>();
 template void OutputSection::finalize<ELF64LE>();
 template void OutputSection::finalize<ELF64BE>();
 
+template void OutputSection::maybeCompress<ELF32LE>();
+template void OutputSection::maybeCompress<ELF32BE>();
+template void OutputSection::maybeCompress<ELF64LE>();
+template void OutputSection::maybeCompress<ELF64BE>();
+
 template void OutputSection::writeTo<ELF32LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);
-
-}
-}

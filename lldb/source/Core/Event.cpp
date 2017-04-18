@@ -7,21 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <algorithm>
+#include "lldb/Core/Event.h"
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/Event.h"
-#include "lldb/Core/State.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h" // for StreamString
+#include "lldb/lldb-enumerations.h"    // for Format::eFormatBytes
+
+#include <algorithm>
+
+#include <ctype.h> // for isprint
 
 using namespace lldb;
 using namespace lldb_private;

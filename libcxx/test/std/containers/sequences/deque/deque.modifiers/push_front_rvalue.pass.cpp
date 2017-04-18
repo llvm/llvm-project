@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <deque>
 
 // void push_front(value_type&& v);
@@ -18,7 +20,6 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class C>
 C
@@ -66,11 +67,9 @@ testN(int start, int N)
     test(c1, -10);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng)/sizeof(rng[0]);
@@ -78,7 +77,6 @@ int main()
         for (int j = 0; j < N; ++j)
             testN<std::deque<MoveOnly> >(rng[i], rng[j]);
     }
-#if TEST_STD_VER >= 11
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng)/sizeof(rng[0]);
@@ -86,6 +84,4 @@ int main()
         for (int j = 0; j < N; ++j)
             testN<std::deque<MoveOnly, min_allocator<MoveOnly>> >(rng[i], rng[j]);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

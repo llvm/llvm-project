@@ -10,27 +10,84 @@
 #ifndef liblldb_Module_h_
 #define liblldb_Module_h_
 
-#include "lldb/Symbol/SymbolContextScope.h"
-
-// Project includes
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/ModuleSpec.h" // for ModuleSpec
+#include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/Error.h"       // for Error
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
+#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-enumerations.h" // for LanguageType, SymbolType
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h" // for addr_t, offset_t
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
-// C Includes
-// C++ Includes
 #include <atomic>
+#include <memory> // for enable_shared_from_this
 #include <mutex>
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, uint64_t
 #include <string>
 #include <vector>
+
+namespace lldb_private {
+class CompilerDeclContext;
+}
+namespace lldb_private {
+class Function;
+}
+namespace lldb_private {
+class Log;
+}
+namespace lldb_private {
+class ObjectFile;
+}
+namespace lldb_private {
+class RegularExpression;
+}
+namespace lldb_private {
+class SectionList;
+}
+namespace lldb_private {
+class Stream;
+}
+namespace lldb_private {
+class Symbol;
+}
+namespace lldb_private {
+class SymbolContext;
+}
+namespace lldb_private {
+class SymbolContextList;
+}
+namespace lldb_private {
+class SymbolFile;
+}
+namespace lldb_private {
+class SymbolVendor;
+}
+namespace lldb_private {
+class Symtab;
+}
+namespace lldb_private {
+class Target;
+}
+namespace lldb_private {
+class TypeList;
+}
+namespace lldb_private {
+class TypeMap;
+}
+namespace lldb_private {
+class VariableList;
+}
 
 namespace lldb_private {
 

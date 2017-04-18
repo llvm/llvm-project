@@ -24,24 +24,46 @@ namespace {
 /// Get the universes of all spaces in @p USet.
 isl::union_set unionSpace(const isl::union_set &USet) {
   auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](isl::set Set) {
+  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
     auto Space = give(isl_set_get_space(Set.keep()));
     auto Universe = give(isl_set_universe(Space.take()));
     Result = give(isl_union_set_add_set(Result.take(), Universe.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
 
-void completeLifetime(isl::union_set Universe, isl::union_set &Unknown,
+void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
+                      isl::union_set &Occupied, isl::union_map &Known,
                       isl::union_set &Undef) {
-  if (!Unknown) {
+  auto ParamSpace = give(isl_union_set_get_space(Universe.keep()));
+
+  if (OccupiedAndKnown) {
+    assert(!Occupied);
+    assert(!Known);
+
+    Known = isl::union_map::empty(ParamSpace);
+    Occupied = OccupiedAndKnown.domain();
+    OccupiedAndKnown.foreach_map([&Known](isl::map Map) -> isl::stat {
+      if (isl_map_has_tuple_name(Map.keep(), isl_dim_out) != isl_bool_true)
+        return isl::stat::ok;
+      Known = give(isl_union_map_add_map(Known.take(), Map.take()));
+      return isl::stat::ok;
+    });
+  }
+
+  if (!Occupied) {
     assert(Undef);
-    Unknown = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
+    Occupied = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
   }
 
   if (!Undef) {
-    assert(Unknown);
-    Undef = give(isl_union_set_subtract(Universe.copy(), Unknown.copy()));
+    assert(Occupied);
+    Undef = give(isl_union_set_subtract(Universe.copy(), Occupied.copy()));
+  }
+
+  if (!Known) { // By default, nothing is known.
+    Known = isl::union_map::empty(ParamSpace);
   }
 }
 
@@ -49,7 +71,7 @@ typedef struct {
   const char *OccupiedStr;
   const char *UndefStr;
   const char *WrittenStr;
-} Knowledge;
+} KnowledgeStr;
 
 isl::union_set parseSetOrNull(isl_ctx *Ctx, const char *Str) {
   if (!Str)
@@ -57,7 +79,107 @@ isl::union_set parseSetOrNull(isl_ctx *Ctx, const char *Str) {
   return isl::union_set(Ctx, Str);
 }
 
-bool checkIsConflictingNonsymmetric(Knowledge Existing, Knowledge Proposed) {
+isl::union_map parseMapOrNull(isl_ctx *Ctx, const char *Str) {
+  if (!Str)
+    return nullptr;
+  return isl::union_map(Ctx, Str);
+}
+
+bool checkIsConflictingNonsymmetricCommon(
+    isl_ctx *Ctx, isl::union_map ExistingOccupiedAndKnown,
+    isl::union_set ExistingUnused, isl::union_map ExistingWritten,
+    isl::union_map ProposedOccupiedAndKnown, isl::union_set ProposedUnused,
+    isl::union_map ProposedWritten) {
+  // Determine universe (set of all possible domains).
+  auto Universe = give(isl_union_set_empty(isl_space_params_alloc(Ctx, 0)));
+  if (ExistingOccupiedAndKnown)
+    Universe = give(isl_union_set_union(
+        Universe.take(), ExistingOccupiedAndKnown.domain().take()));
+  if (ExistingUnused)
+    Universe =
+        give(isl_union_set_union(Universe.take(), ExistingUnused.copy()));
+  if (ExistingWritten)
+    Universe = give(
+        isl_union_set_union(Universe.take(), ExistingWritten.domain().take()));
+  if (ProposedOccupiedAndKnown)
+    Universe = give(isl_union_set_union(
+        Universe.take(), ProposedOccupiedAndKnown.domain().take()));
+  if (ProposedUnused)
+    Universe =
+        give(isl_union_set_union(Universe.take(), ProposedUnused.copy()));
+  if (ProposedWritten)
+    Universe = give(
+        isl_union_set_union(Universe.take(), ProposedWritten.domain().take()));
+
+  Universe = unionSpace(Universe);
+
+  // Add a space the universe that does not occur anywhere else to ensure
+  // robustness. Use &NewId to ensure that this Id is unique.
+  isl::id NewId = give(isl_id_alloc(Ctx, "Unrelated", &NewId));
+  // The space must contains at least one dimension to allow order
+  // modifications.
+  auto NewSpace = give(isl_space_set_alloc(Ctx, 0, 1));
+  NewSpace =
+      give(isl_space_set_tuple_id(NewSpace.take(), isl_dim_set, NewId.copy()));
+  auto NewSet = give(isl_set_universe(NewSpace.take()));
+  Universe = give(isl_union_set_add_set(Universe.take(), NewSet.take()));
+
+  // Using the universe, fill missing data.
+  isl::union_set ExistingOccupied;
+  isl::union_map ExistingKnown;
+  completeLifetime(Universe, ExistingOccupiedAndKnown, ExistingOccupied,
+                   ExistingKnown, ExistingUnused);
+
+  isl::union_set ProposedOccupied;
+  isl::union_map ProposedKnown;
+  completeLifetime(Universe, ProposedOccupiedAndKnown, ProposedOccupied,
+                   ProposedKnown, ProposedUnused);
+
+  auto Result = isConflicting(ExistingOccupied, ExistingUnused, ExistingKnown,
+                              ExistingWritten, ProposedOccupied, ProposedUnused,
+                              ProposedKnown, ProposedWritten);
+
+  // isConflicting does not require ExistingOccupied nor ProposedUnused and are
+  // implicitly assumed to be the remainder elements. Test the implicitness as
+  // well.
+  EXPECT_EQ(Result,
+            isConflicting(ExistingOccupied, ExistingUnused, ExistingKnown,
+                          ExistingWritten, ProposedOccupied, {}, ProposedKnown,
+                          ProposedWritten));
+  EXPECT_EQ(Result,
+            isConflicting({}, ExistingUnused, ExistingKnown, ExistingWritten,
+                          ProposedOccupied, ProposedUnused, ProposedKnown,
+                          ProposedWritten));
+  EXPECT_EQ(Result, isConflicting({}, ExistingUnused, ExistingKnown,
+                                  ExistingWritten, ProposedOccupied, {},
+                                  ProposedKnown, ProposedWritten));
+
+  return Result;
+}
+
+bool checkIsConflictingNonsymmetricKnown(KnowledgeStr Existing,
+                                         KnowledgeStr Proposed) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Parse knowledge.
+  auto ExistingOccupiedAndKnown =
+      parseMapOrNull(Ctx.get(), Existing.OccupiedStr);
+  auto ExistingUnused = parseSetOrNull(Ctx.get(), Existing.UndefStr);
+  auto ExistingWritten = parseMapOrNull(Ctx.get(), Existing.WrittenStr);
+
+  auto ProposedOccupiedAndKnown =
+      parseMapOrNull(Ctx.get(), Proposed.OccupiedStr);
+  auto ProposedUnused = parseSetOrNull(Ctx.get(), Proposed.UndefStr);
+  auto ProposedWritten = parseMapOrNull(Ctx.get(), Proposed.WrittenStr);
+
+  return checkIsConflictingNonsymmetricCommon(
+      Ctx.get(), ExistingOccupiedAndKnown, ExistingUnused, ExistingWritten,
+      ProposedOccupiedAndKnown, ProposedUnused, ProposedWritten);
+}
+
+bool checkIsConflictingNonsymmetric(KnowledgeStr Existing,
+                                    KnowledgeStr Proposed) {
   std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
                                                         &isl_ctx_free);
 
@@ -70,68 +192,31 @@ bool checkIsConflictingNonsymmetric(Knowledge Existing, Knowledge Proposed) {
   auto ProposedUnused = parseSetOrNull(Ctx.get(), Proposed.UndefStr);
   auto ProposedWritten = parseSetOrNull(Ctx.get(), Proposed.WrittenStr);
 
-  // Determine universe (set of all possible domains).
-  auto Universe =
-      give(isl_union_set_empty(isl_space_params_alloc(Ctx.get(), 0)));
-  if (ExistingOccupied)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ExistingOccupied.copy()));
-  if (ExistingUnused)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ExistingUnused.copy()));
-  if (ExistingWritten)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ExistingWritten.copy()));
-  if (ProposedOccupied)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ProposedOccupied.copy()));
-  if (ProposedUnused)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ProposedUnused.copy()));
-  if (ProposedWritten)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ProposedWritten.copy()));
-  Universe = unionSpace(Universe);
-
-  // Add a space the universe that does not occur anywhere else to ensure
-  // robustness. Use &NewId to ensure that this Id is unique.
-  isl::id NewId = give(isl_id_alloc(Ctx.get(), "Unrelated", &NewId));
-  // The space must contains at least one dimension to allow order
-  // modifications.
-  auto NewSpace = give(isl_space_set_alloc(Ctx.get(), 0, 1));
-  NewSpace =
-      give(isl_space_set_tuple_id(NewSpace.take(), isl_dim_set, NewId.copy()));
-  auto NewSet = give(isl_set_universe(NewSpace.take()));
-  Universe = give(isl_union_set_add_set(Universe.take(), NewSet.take()));
-
-  // Using the universe, fill missing data.
-  completeLifetime(Universe, ExistingOccupied, ExistingUnused);
-  completeLifetime(Universe, ProposedOccupied, ProposedUnused);
-
-  auto Result =
-      isConflicting(ExistingOccupied, ExistingUnused, ExistingWritten,
-                    ProposedOccupied, ProposedUnused, ProposedWritten);
-
-  // isConflicting does not require ExistingOccupied nor ProposedUnused and are
-  // implicitly assumed to be the remainder elements. Test the implicitness as
-  // well.
-  EXPECT_EQ(Result,
-            isConflicting(ExistingOccupied, ExistingUnused, ExistingWritten,
-                          ProposedOccupied, {}, ProposedWritten));
-  EXPECT_EQ(Result,
-            isConflicting({}, ExistingUnused, ExistingWritten, ProposedOccupied,
-                          ProposedUnused, ProposedWritten));
-  EXPECT_EQ(Result, isConflicting({}, ExistingUnused, ExistingWritten,
-                                  ProposedOccupied, {}, ProposedWritten));
-
-  return Result;
+  return checkIsConflictingNonsymmetricCommon(
+      Ctx.get(),
+      isl::manage(isl_union_map_from_domain(ExistingOccupied.take())),
+      ExistingUnused,
+      isl::manage(isl_union_map_from_domain(ExistingWritten.take())),
+      isl::manage(isl_union_map_from_domain(ProposedOccupied.take())),
+      ProposedUnused,
+      isl::manage(isl_union_map_from_domain(ProposedWritten.take())));
 }
 
-bool checkIsConflicting(Knowledge Existing, Knowledge Proposed) {
+bool checkIsConflicting(KnowledgeStr Existing, KnowledgeStr Proposed) {
   auto Forward = checkIsConflictingNonsymmetric(Existing, Proposed);
   auto Backward = checkIsConflictingNonsymmetric(Proposed, Existing);
 
   // isConflicting should be symmetric.
+  EXPECT_EQ(Forward, Backward);
+
+  return Forward || Backward;
+}
+
+bool checkIsConflictingKnown(KnowledgeStr Existing, KnowledgeStr Proposed) {
+  auto Forward = checkIsConflictingNonsymmetricKnown(Existing, Proposed);
+  auto Backward = checkIsConflictingNonsymmetricKnown(Proposed, Existing);
+
+  // checkIsConflictingKnown should be symmetric.
   EXPECT_EQ(Forward, Backward);
 
   return Forward || Backward;

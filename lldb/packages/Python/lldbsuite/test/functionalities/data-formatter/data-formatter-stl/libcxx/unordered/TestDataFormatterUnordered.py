@@ -22,6 +22,7 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
         ns = 'ndk' if lldbplatformutil.target_is_android() else ''
         self.namespace = 'std::__' + ns + '1'
 
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)

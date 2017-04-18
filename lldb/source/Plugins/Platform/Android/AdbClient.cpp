@@ -24,6 +24,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timeout.h"
 
 #include <limits.h>
 

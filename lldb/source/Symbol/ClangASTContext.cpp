@@ -4526,7 +4526,8 @@ ClangASTContext::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
       const clang::ObjCInterfaceType *objc_interface_type =
           objc_class_type->getInterfaceType();
       if (objc_interface_type &&
-          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+          GetCompleteType(static_cast<lldb::opaque_compiler_type_t>(
+              const_cast<clang::ObjCInterfaceType *>(objc_interface_type)))) {
         clang::ObjCInterfaceDecl *class_interface_decl =
             objc_interface_type->getDecl();
         if (class_interface_decl) {
@@ -4634,7 +4635,8 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
       const clang::ObjCInterfaceType *objc_interface_type =
           objc_class_type->getInterfaceType();
       if (objc_interface_type &&
-          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+          GetCompleteType(static_cast<lldb::opaque_compiler_type_t>(
+              const_cast<clang::ObjCInterfaceType *>(objc_interface_type)))) {
         clang::ObjCInterfaceDecl *class_interface_decl =
             objc_interface_type->getDecl();
         if (class_interface_decl) {
@@ -5742,7 +5744,8 @@ uint32_t ClangASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
     const clang::ObjCInterfaceType *objc_interface_type =
         objc_class_type->getInterfaceType();
     if (objc_interface_type &&
-        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        GetCompleteType(static_cast<lldb::opaque_compiler_type_t>(
+            const_cast<clang::ObjCInterfaceType *>(objc_interface_type)))) {
       clang::ObjCInterfaceDecl *class_interface_decl =
           objc_interface_type->getDecl();
       if (class_interface_decl) {
@@ -5889,7 +5892,8 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
     const clang::ObjCInterfaceType *objc_interface_type =
         objc_class_type->getInterfaceType();
     if (objc_interface_type &&
-        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        GetCompleteType(static_cast<lldb::opaque_compiler_type_t>(
+            const_cast<clang::ObjCInterfaceType *>(objc_interface_type)))) {
       clang::ObjCInterfaceDecl *class_interface_decl =
           objc_interface_type->getDecl();
       if (class_interface_decl) {

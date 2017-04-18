@@ -860,11 +860,10 @@ public:
     list(const list& __c, const allocator_type& __a);
     _LIBCPP_INLINE_VISIBILITY
     list& operator=(const list& __c);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     list(initializer_list<value_type> __il);
     list(initializer_list<value_type> __il, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
     _LIBCPP_INLINE_VISIBILITY
     list(list&& __c)
         _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
@@ -875,22 +874,20 @@ public:
         _NOEXCEPT_(
             __node_alloc_traits::propagate_on_container_move_assignment::value &&
             is_nothrow_move_assignable<__node_allocator>::value);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     _LIBCPP_INLINE_VISIBILITY
     list& operator=(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end()); return *this;}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+    _LIBCPP_INLINE_VISIBILITY
+    void assign(initializer_list<value_type> __il)
+        {assign(__il.begin(), __il.end());}
+#endif  // _LIBCPP_CXX03_LANG
 
     template <class _InpIter>
         void assign(_InpIter __f, _InpIter __l,
              typename enable_if<__is_input_iterator<_InpIter>::value>::type* = 0);
     void assign(size_type __n, const value_type& __x);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    void assign(initializer_list<value_type> __il)
-        {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT;
@@ -964,10 +961,10 @@ public:
         return base::__end_.__prev_->__as_node()->__value_;
     }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     void push_front(value_type&& __x);
     void push_back(value_type&& __x);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+
     template <class... _Args>
 #if _LIBCPP_STD_VER > 14
        reference emplace_front(_Args&&... __args);
@@ -982,9 +979,13 @@ public:
 #endif
     template <class... _Args>
         iterator emplace(const_iterator __p, _Args&&... __args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+
     iterator insert(const_iterator __p, value_type&& __x);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __p, initializer_list<value_type> __il)
+        {return insert(__p, __il.begin(), __il.end());}
+#endif  // _LIBCPP_CXX03_LANG
 
     void push_front(const value_type& __x);
     void push_back(const value_type& __x);
@@ -994,11 +995,6 @@ public:
     template <class _InpIter>
         iterator insert(const_iterator __p, _InpIter __f, _InpIter __l,
              typename enable_if<__is_input_iterator<_InpIter>::value>::type* = 0);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    iterator insert(const_iterator __p, initializer_list<value_type> __il)
-        {return insert(__p, __il.begin(), __il.end());}
-#endif   // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
@@ -1022,22 +1018,18 @@ public:
     void resize(size_type __n, const value_type& __x);
 
     void splice(const_iterator __p, list& __c);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void splice(const_iterator __p, list&& __c) {splice(__p, __c);}
-#endif
-    void splice(const_iterator __p, list& __c, const_iterator __i);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     void splice(const_iterator __p, list&& __c, const_iterator __i)
         {splice(__p, __c, __i);}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    void splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     void splice(const_iterator __p, list&& __c, const_iterator __f, const_iterator __l)
         {splice(__p, __c, __f, __l);}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
+    void splice(const_iterator __p, list& __c, const_iterator __i);
+    void splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l);
 
     void remove(const value_type& __x);
     template <class _Pred> void remove_if(_Pred __pred);
@@ -1047,17 +1039,17 @@ public:
         void unique(_BinaryPred __binary_pred);
     _LIBCPP_INLINE_VISIBILITY
     void merge(list& __c);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void merge(list&& __c) {merge(__c);}
-#endif
-    template <class _Comp>
-        void merge(list& __c, _Comp __comp);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
     template <class _Comp>
     _LIBCPP_INLINE_VISIBILITY
         void merge(list&& __c, _Comp __comp) {merge(__c, __comp);}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
+    template <class _Comp>
+        void merge(list& __c, _Comp __comp);
+
     _LIBCPP_INLINE_VISIBILITY
     void sort();
     template <class _Comp>
@@ -1146,7 +1138,7 @@ list<_Tp, _Alloc>::list(size_type __n)
     __get_db()->__insert_c(this);
 #endif
     for (; __n > 0; --__n)
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
         emplace_back();
 #else
         push_back(value_type());
@@ -1161,11 +1153,7 @@ list<_Tp, _Alloc>::list(size_type __n, const allocator_type& __a) : base(__a)
     __get_db()->__insert_c(this);
 #endif
     for (; __n > 0; --__n)
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
         emplace_back();
-#else
-        push_back(value_type());
-#endif
 }
 #endif
 
@@ -1239,7 +1227,7 @@ list<_Tp, _Alloc>::list(const list& __c, const allocator_type& __a)
         push_back(*__i);
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 list<_Tp, _Alloc>::list(initializer_list<value_type> __il, const allocator_type& __a)
@@ -1263,23 +1251,6 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il)
             __e = __il.end(); __i != __e; ++__i)
         push_back(*__i);
 }
-
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
-template <class _Tp, class _Alloc>
-inline
-list<_Tp, _Alloc>&
-list<_Tp, _Alloc>::operator=(const list& __c)
-{
-    if (this != &__c)
-    {
-        base::__copy_assign_alloc(__c);
-        assign(__c.begin(), __c.end());
-    }
-    return *this;
-}
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp, class _Alloc>
 inline
@@ -1346,7 +1317,20 @@ list<_Tp, _Alloc>::__move_assign(list& __c, true_type)
     splice(end(), __c);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
+
+template <class _Tp, class _Alloc>
+inline
+list<_Tp, _Alloc>&
+list<_Tp, _Alloc>::operator=(const list& __c)
+{
+    if (this != &__c)
+    {
+        base::__copy_assign_alloc(__c);
+        assign(__c.begin(), __c.end());
+    }
+    return *this;
+}
 
 template <class _Tp, class _Alloc>
 template <class _InpIter>
@@ -1576,7 +1560,7 @@ list<_Tp, _Alloc>::push_back(const value_type& __x)
     __hold.release();
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void
@@ -1603,8 +1587,6 @@ list<_Tp, _Alloc>::push_back(value_type&& __x)
     ++base::__sz();
     __hold.release();
 }
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
@@ -1677,8 +1659,6 @@ list<_Tp, _Alloc>::emplace(const_iterator __p, _Args&&... __args)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
 template <class _Tp, class _Alloc>
 typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, value_type&& __x)
@@ -1704,7 +1684,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, value_type&& __x)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void

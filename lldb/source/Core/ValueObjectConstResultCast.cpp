@@ -9,10 +9,15 @@
 
 #include "lldb/Core/ValueObjectConstResultCast.h"
 
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectList.h"
-
-#include "lldb/Symbol/ClangASTContext.h"
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class ValueObject;
+}
 
 using namespace lldb_private;
 

@@ -127,10 +127,9 @@ int main(int argc, const char **argv) {
   move::ClangMoveContext Context{Spec, Tool.getReplacements(),
                                  InitialDirectory.str(), Style, DumpDecls};
   move::DeclarationReporter Reporter;
-  auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
-      &Context, &Reporter);
-
-  int CodeStatus = Tool.run(Factory.get());
+  move::ClangMoveActionFactory Factory(&Context, &Reporter);
+  
+  int CodeStatus = Tool.run(&Factory);
   if (CodeStatus)
     return CodeStatus;
 

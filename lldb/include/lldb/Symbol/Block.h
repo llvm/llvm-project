@@ -21,6 +21,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <forward_list>
 
 // forward_list& operator=(forward_list&& x);
@@ -21,7 +23,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef MoveOnly T;
         typedef test_allocator<T> A;
@@ -159,7 +160,6 @@ int main()
         assert(c1.get_allocator() == A(10));
         assert(c0.empty());
     }
-#if TEST_STD_VER >= 11
     {
         typedef MoveOnly T;
         typedef min_allocator<T> A;
@@ -194,6 +194,4 @@ int main()
         assert(c1.get_allocator() == A());
         assert(c0.empty());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

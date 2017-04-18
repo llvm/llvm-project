@@ -616,7 +616,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (Args.filtered_begin(OPT_INPUT) == Args.filtered_end())
+  if (!Args.hasArgNoClaim(OPT_INPUT))
     fatal("no input files");
 
   // Construct search path list.
@@ -673,6 +673,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->DynamicBase = false;
     }
   }
+
+  if (Args.hasArg(OPT_appcontainer))
+    Config->AppContainer = true;
 
   // Handle /machine
   if (auto *Arg = Args.getLastArg(OPT_machine))
@@ -914,7 +917,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Set default image name if neither /out or /def set it.
   if (Config->OutputFile.empty()) {
     Config->OutputFile =
-        getOutputPath((*Args.filtered_begin(OPT_INPUT))->getValue());
+        getOutputPath((*Args.filtered(OPT_INPUT).begin())->getValue());
   }
 
   // Put the PDB next to the image if no /pdb flag was passed.

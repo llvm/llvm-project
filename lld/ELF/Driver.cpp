@@ -45,6 +45,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -153,7 +154,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
 
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
-void LinkerDriver::addFile(StringRef Path) {
+void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   using namespace sys::fs;
 
   Optional<MemoryBufferRef> Buffer = readFile(Path);
@@ -184,6 +185,19 @@ void LinkerDriver::addFile(StringRef Path) {
       return;
     }
     Files.push_back(createSharedFile(MBRef));
+
+    // DSOs usually have DT_SONAME tags in their ELF headers, and the
+    // sonames are used to identify DSOs. But if they are missing,
+    // they are identified by filenames. We don't know whether the new
+    // file has a DT_SONAME or not because we haven't parsed it yet.
+    // Here, we set the default soname for the file because we might
+    // need it later.
+    //
+    // If a file was specified by -lfoo, the directory part is not
+    // significant, as a user did not specify it. This behavior is
+    // compatible with GNU.
+    Files.back()->DefaultSoName =
+        WithLOption ? sys::path::filename(Path) : Path;
     return;
   default:
     if (InLib)
@@ -196,7 +210,7 @@ void LinkerDriver::addFile(StringRef Path) {
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef Name) {
   if (Optional<std::string> Path = searchLibrary(Name))
-    addFile(*Path);
+    addFile(*Path, /*WithLOption=*/true);
   else
     error("unable to find library -l" + Name);
 }
@@ -551,12 +565,25 @@ static std::vector<StringRef> getLines(MemoryBufferRef MB) {
   return Ret;
 }
 
+static bool getCompressDebugSections(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_compress_debug_sections)) {
+    StringRef S = Arg->getValue();
+    if (S == "none")
+      return false;
+    if (S == "zlib")
+      return zlib::isAvailable();
+    error("unknown --compress-debug-sections value: " + S);
+  }
+  return false;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->CompressDebugSections = getCompressDebugSections(Args);
   Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
                                 !Args.hasArg(OPT_relocatable));
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
@@ -713,6 +740,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->DefaultSymbolVersion = VER_NDX_LOCAL;
   }
 
+  if (getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false))
+    Config->DefaultSymbolVersion = VER_NDX_GLOBAL;
+
   if (auto *Arg = Args.getLastArg(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       readVersionScript(*Buffer);
@@ -759,7 +789,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       addLibrary(Arg->getValue());
       break;
     case OPT_INPUT:
-      addFile(Arg->getValue());
+      addFile(Arg->getValue(), /*WithLOption=*/false);
       break;
     case OPT_alias_script_T:
     case OPT_script:

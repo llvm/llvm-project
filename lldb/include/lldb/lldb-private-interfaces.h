@@ -16,6 +16,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
+#include "lldb/lldb-private-enumerations.h"
+
 #include <set>
 
 namespace lldb_private {

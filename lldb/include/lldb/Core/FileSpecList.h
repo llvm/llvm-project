@@ -12,8 +12,14 @@
 #if defined(__cplusplus)
 
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-private.h"
+
 #include <vector>
+
+#include <stddef.h> // for size_t
+
+namespace lldb_private {
+class Stream;
+}
 
 namespace lldb_private {
 

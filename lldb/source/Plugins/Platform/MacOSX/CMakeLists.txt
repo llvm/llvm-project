@@ -5,6 +5,7 @@ list(APPEND PLUGIN_PLATFORM_MACOSX_SOURCES
   PlatformRemoteiOS.cpp
   PlatformRemoteAppleTV.cpp
   PlatformRemoteAppleWatch.cpp
+  PlatformRemoteDarwinDevice.cpp
   )
 
 list(APPEND PLUGIN_PLATFORM_MACOSX_DARWIN_ONLY_SOURCES

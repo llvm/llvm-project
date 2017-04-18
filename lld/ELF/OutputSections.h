@@ -77,14 +77,20 @@ public:
   uint64_t Addr = 0;
   uint32_t ShName = 0;
 
-  void addSection(InputSectionBase *C);
+  void addSection(InputSection *S);
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
+  uint32_t getFiller();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void finalize();
+  template <class ELFT> void maybeCompress();
   void assignOffsets();
   std::vector<InputSection *> Sections;
+
+  // Used for implementation of --compress-debug-sections option.
+  llvm::SmallVector<char, 1> CompressedData;
+  std::vector<uint8_t> CompressedHeader;
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;

@@ -10,12 +10,26 @@
 #ifndef liblldb_ValueObjectConstResultCast_h_
 #define liblldb_ValueObjectConstResultCast_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectConstResultImpl.h"
+#include "lldb/Symbol/CompilerType.h" // for CompilerType
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/lldb-defines.h"        // for DISALLOW_COPY_AND_...
+#include "lldb/lldb-forward.h"        // for ValueObjectSP
+#include "lldb/lldb-types.h"          // for addr_t
+
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t, int32_t
+
+namespace lldb_private {
+class DataExtractor;
+}
+namespace lldb_private {
+class Error;
+}
+namespace lldb_private {
+class ValueObject;
+}
 
 namespace lldb_private {
 

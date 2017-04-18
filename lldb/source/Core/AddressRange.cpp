@@ -8,10 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/Module.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/FileSpec.h"    // for FileSpec
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
+
+#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+
+#include <memory> // for shared_ptr
+
+#include <inttypes.h> // for PRIx64
+
+namespace lldb_private {
+class SectionList;
+}
 
 using namespace lldb;
 using namespace lldb_private;

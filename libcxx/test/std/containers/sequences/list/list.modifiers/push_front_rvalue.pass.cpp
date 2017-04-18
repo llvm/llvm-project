@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <list>
 
 // void push_front(value_type&& x);
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     std::list<MoveOnly> l1;
     l1.push_front(MoveOnly(1));
@@ -30,7 +31,6 @@ int main()
     assert(l1.front() == MoveOnly(2));
     assert(l1.back() == MoveOnly(1));
     }
-#if TEST_STD_VER >= 11
     {
     std::list<MoveOnly, min_allocator<MoveOnly>> l1;
     l1.push_front(MoveOnly(1));
@@ -41,6 +41,4 @@ int main()
     assert(l1.front() == MoveOnly(2));
     assert(l1.back() == MoveOnly(1));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

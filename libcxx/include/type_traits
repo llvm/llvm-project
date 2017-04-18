@@ -97,6 +97,7 @@ namespace std
     template <class T> struct is_polymorphic;
     template <class T> struct is_abstract;
     template <class T> struct is_final; // C++14
+    template <class T> struct is_aggregate; // C++17
 
     template <class T, class... Args> struct is_constructible;
     template <class T>                struct is_default_constructible;
@@ -286,6 +287,8 @@ namespace std
         = is_abstract<T>::value;                                         // C++17
       template <class T> constexpr bool is_final_v
         = is_final<T>::value;                                            // C++17
+      template <class T> constexpr bool is_aggregate_v
+        = is_aggregate<T>::value;                                        // C++17
       template <class T> constexpr bool is_signed_v
         = is_signed<T>::value;                                           // C++17
       template <class T> constexpr bool is_unsigned_v
@@ -1272,11 +1275,13 @@ template <class _Tp> using remove_all_extents_t = typename remove_all_extents<_T
 
 // decay
 
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS decay
-{
-private:
-    typedef typename remove_reference<_Tp>::type _Up;
+template <class _Up, bool>
+struct __decay {
+    typedef typename remove_cv<_Up>::type type;
+};
+
+template <class _Up>
+struct __decay<_Up, true> {
 public:
     typedef typename conditional
                      <
@@ -1289,6 +1294,15 @@ public:
                               typename remove_cv<_Up>::type
                          >::type
                      >::type type;
+};
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS decay
+{
+private:
+    typedef typename remove_reference<_Tp>::type _Up;
+public:
+    typedef typename __decay<_Up, __is_referenceable<_Up>::value>::type type;
 };
 
 #if _LIBCPP_STD_VER > 11
@@ -1324,6 +1338,19 @@ is_final : public integral_constant<bool, __is_final(_Tp)> {};
 template <class _Tp> _LIBCPP_CONSTEXPR bool is_final_v
     = is_final<_Tp>::value;
 #endif
+
+// is_aggregate
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
+is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
+
+#if !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+constexpr bool is_aggregate_v = is_aggregate<_Tp>::value;
+#endif
+
+#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
 
 // is_base_of
 
@@ -1987,9 +2014,7 @@ struct _LIBCPP_TEMPLATE_VIS common_type {};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
-{
-    typedef typename common_type<_Tp, _Tp>::type type;
-};
+    : public common_type<_Tp, _Tp> {};
 
 // bullet 3 - sizeof...(Tp) == 2
 

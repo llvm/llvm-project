@@ -3,13 +3,46 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 
+check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
+
+if (NOT LIBUNWIND_USE_COMPILER_RT)
+  check_library_exists(gcc_s __gcc_personality_v0 "" LIBUNWIND_HAS_GCC_S_LIB)
+endif()
+
+# libunwind is built with -nodefaultlibs, so we want all our checks to also
+# use this option, otherwise we may end up with an inconsistency between
+# the flags we think we require during configuration (if the checks are
+# performed without -nodefaultlibs) and the flags that are actually
+# required during compilation (which has the -nodefaultlibs). libc is
+# required for the link to go through. We remove sanitizers from the
+# configuration checks to avoid spurious link errors.
+check_c_compiler_flag(-nodefaultlibs LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
+if (LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+  if (LIBUNWIND_HAS_C_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES c)
+  endif ()
+  if (LIBUNWIND_USE_COMPILER_RT)
+    list(APPEND CMAKE_REQUIRED_FLAGS -rtlib=compiler-rt)
+    find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBUNWIND_BUILTINS_LIBRARY}")
+  elseif (LIBUNWIND_HAS_GCC_S_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
+  endif ()
+  if (CMAKE_C_FLAGS MATCHES -fsanitize OR CMAKE_CXX_FLAGS MATCHES -fsanitize)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
+  endif ()
+  if (CMAKE_C_FLAGS MATCHES -fsanitize-coverage OR CMAKE_CXX_FLAGS MATCHES -fsanitize-coverage)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters")
+  endif ()
+endif ()
+
 # Check compiler flags
 check_c_compiler_flag(-funwind-tables         LIBUNWIND_HAS_FUNWIND_TABLES)
 check_cxx_compiler_flag(-fPIC                 LIBUNWIND_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fno-exceptions       LIBUNWIND_HAS_NO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti             LIBUNWIND_HAS_NO_RTTI_FLAG)
 check_cxx_compiler_flag(-fstrict-aliasing     LIBUNWIND_HAS_FSTRICT_ALIASING_FLAG)
-check_cxx_compiler_flag(-nodefaultlibs        LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
 check_cxx_compiler_flag(-nostdinc++           LIBUNWIND_HAS_NOSTDINCXX_FLAG)
 check_cxx_compiler_flag(-Wall                 LIBUNWIND_HAS_WALL_FLAG)
 check_cxx_compiler_flag(-W                    LIBUNWIND_HAS_W_FLAG)
@@ -44,7 +77,6 @@ if(LIBUNWIND_HAS_STD_CXX11)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 
-check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 check_library_exists(dl dladdr "" LIBUNWIND_HAS_DL_LIB)
 check_library_exists(pthread pthread_once "" LIBUNWIND_HAS_PTHREAD_LIB)
 

@@ -56,6 +56,7 @@ add_lldb_library(lldbCore
     swiftBasic
     swiftFrontend
     swiftSerialization
+    clangAST
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression
@@ -68,7 +69,6 @@ add_lldb_library(lldbCore
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjectFileJIT
-    lldbPluginExpressionParserClang
 
   LINK_COMPONENTS
     Support

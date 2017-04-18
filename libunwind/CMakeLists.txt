@@ -8,6 +8,13 @@ if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
 endif()
 
+# Add path for custom modules
+set(CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  ${CMAKE_MODULE_PATH}
+  )
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libunwind)
 
@@ -111,6 +118,7 @@ endif()
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(HandleCompilerRT)
 
 # Define options.
 option(LIBUNWIND_BUILD_32_BITS "Build 32 bit libunwind" ${LLVM_BUILD_32_BITS})
@@ -122,6 +130,7 @@ option(LIBUNWIND_ENABLE_STATIC "Build libunwind as a static library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
 option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
+option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
 
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
@@ -171,21 +180,25 @@ macro(add_target_flags_if condition var)
   if (${condition})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
-    list(APPEND LINUNWIND_COMPILE_FLAGS ${var})
+    list(APPEND LIBUNWIND_COMPILE_FLAGS ${var})
     list(APPEND LIBUNWIND_LINK_FLAGS ${var})
   endif()
 endmacro()
 
 add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 add_target_flags_if(LIBUNWIND_TARGET_TRIPLE
-          "-target ${LIBUNWIND_TARGET_TRIPLE}")
+          "--target=${LIBUNWIND_TARGET_TRIPLE}")
 add_target_flags_if(LIBUNWIND_GCC_TOOLCHAIN
-          "-gcc-toolchain ${LIBUNWIND_GCC_TOOLCHAIN}")
+          "--gcc-toolchain=${LIBUNWIND_GCC_TOOLCHAIN}")
 add_target_flags_if(LIBUNWIND_SYSROOT
           "--sysroot=${LIBUNWIND_SYSROOT}")
 
 # Configure compiler.
 include(config-ix)
+
+if (LIBUNWIND_USE_COMPILER_RT)
+  list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
+endif()
 
 #===============================================================================
 # Setup Compiler Flags

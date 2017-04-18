@@ -68,8 +68,13 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   Sym->Binding = STB_GLOBAL;
   ExprValue Value = Cmd->Expression();
   SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
+
+  // We want to set symbol values early if we can. This allows us to use symbols
+  // as variables in linker scripts. Doing so allows us to write expressions
+  // like this: `alignment = 16; . = ALIGN(., alignment)`
+  uint64_t SymValue = Value.isAbsolute() ? Value.getValue() : 0;
   replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
-                              STT_NOTYPE, 0, 0, Sec, nullptr);
+                              STT_NOTYPE, SymValue, 0, Sec, nullptr);
   return Sym->body();
 }
 
@@ -332,8 +337,7 @@ LinkerScript::createInputSectionList(OutputSectionCommand &OutCmd) {
       continue;
 
     Cmd->Sections = computeInputSections(Cmd);
-    for (InputSectionBase *S : Cmd->Sections)
-      Ret.push_back(static_cast<InputSectionBase *>(S));
+    Ret.insert(Ret.end(), Cmd->Sections.begin(), Cmd->Sections.end());
   }
 
   return Ret;
@@ -533,8 +537,7 @@ findSection(StringRef Name, const std::vector<OutputSection *> &Sections) {
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned. Otherwise, a nullptr is returned.
-MemoryRegion *LinkerScript::findMemoryRegion(OutputSectionCommand *Cmd,
-                                             OutputSection *Sec) {
+MemoryRegion *LinkerScript::findMemoryRegion(OutputSectionCommand *Cmd) {
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!Cmd->MemoryRegionName.empty()) {
@@ -551,6 +554,7 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSectionCommand *Cmd,
   if (Opt.MemoryRegions.empty())
     return nullptr;
 
+  OutputSection *Sec = Cmd->Sec;
   // See if a region can be found by matching section flags.
   for (auto &Pair : Opt.MemoryRegions) {
     MemoryRegion &M = Pair.second;
@@ -567,7 +571,7 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSectionCommand *Cmd,
 // This function assigns offsets to input sections and an output section
 // for a single sections command (e.g. ".text { *(.text); }").
 void LinkerScript::assignOffsets(OutputSectionCommand *Cmd) {
-  OutputSection *Sec = findSection(Cmd->Name, *OutputSections);
+  OutputSection *Sec = Cmd->Sec;
   if (!Sec)
     return;
 
@@ -579,12 +583,7 @@ void LinkerScript::assignOffsets(OutputSectionCommand *Cmd) {
     LMAOffset = [=] { return Cmd->LMAExpr().getValue() - D; };
   }
 
-  // Handle align (e.g. ".foo : ALIGN(16) { ... }").
-  if (Cmd->AlignExpr)
-    Sec->updateAlignment(Cmd->AlignExpr().getValue());
-
-  // Try and find an appropriate memory region to assign offsets in.
-  CurMemRegion = findMemoryRegion(Cmd, Sec);
+  CurMemRegion = Cmd->MemRegion;
   if (CurMemRegion)
     Dot = CurMemRegion->Offset;
   switchTo(Sec);
@@ -614,7 +613,7 @@ void LinkerScript::removeEmptyCommands() {
   auto Pos = std::remove_if(
       Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
         if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-          return !findSection(Cmd->Name, *OutputSections);
+          return !Cmd->Sec;
         return false;
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
@@ -633,12 +632,13 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // '.' is assigned to, but creating these section should not have any bad
   // consequeces and gives us a section to put the symbol in.
   uint64_t Flags = SHF_ALLOC;
-  uint32_t Type = SHT_NOBITS;
+  uint32_t Type = SHT_PROGBITS;
   for (BaseCommand *Base : Opt.Commands) {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
     if (!Cmd)
       continue;
     if (OutputSection *Sec = findSection(Cmd->Name, *OutputSections)) {
+      Cmd->Sec = Sec;
       Flags = Sec->Flags;
       Type = Sec->Type;
       continue;
@@ -649,11 +649,22 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
     auto *OutSec = make<OutputSection>(Cmd->Name, Type, Flags);
     OutputSections->push_back(OutSec);
+    Cmd->Sec = OutSec;
   }
 }
 
 void LinkerScript::adjustSectionsAfterSorting() {
   placeOrphanSections();
+
+  // Try and find an appropriate memory region to assign offsets in.
+  for (BaseCommand *Base : Opt.Commands) {
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base)) {
+      Cmd->MemRegion = findMemoryRegion(Cmd);
+      // Handle align (e.g. ".foo : ALIGN(16) { ... }").
+      if (Cmd->AlignExpr)
+	Cmd->Sec->updateAlignment(Cmd->AlignExpr().getValue());
+    }
+  }
 
   // If output section command doesn't specify any segments,
   // and we haven't previously assigned any section to segment,
@@ -764,7 +775,9 @@ void LinkerScript::placeOrphanSections() {
       return Cmd && Cmd->Name == Name;
     });
     if (Pos == E) {
-      Opt.Commands.insert(CmdIter, make<OutputSectionCommand>(Name));
+      auto *Cmd = make<OutputSectionCommand>(Name);
+      Cmd->Sec = Sec;
+      Opt.Commands.insert(CmdIter, Cmd);
       ++CmdIndex;
       continue;
     }
@@ -862,12 +875,12 @@ bool LinkerScript::ignoreInterpSection() {
   return true;
 }
 
-uint32_t LinkerScript::getFiller(StringRef Name) {
+Optional<uint32_t> LinkerScript::getFiller(StringRef Name) {
   for (BaseCommand *Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       if (Cmd->Name == Name)
         return Cmd->Filler;
-  return 0;
+  return None;
 }
 
 static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {

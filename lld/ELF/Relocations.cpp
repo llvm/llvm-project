@@ -79,12 +79,6 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   return Msg + S.getObjMsg<ELFT>(Off);
 }
 
-static bool refersToGotEntry(RelExpr Expr) {
-  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
-                        R_GOT_FROM_END>(Expr);
-}
-
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   // In case of MIPS GP-relative relocations always resolve to a definition
   // in a regular input file, ignoring the one-definition rule. So we,
@@ -101,50 +95,96 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   return Body.isPreemptible();
 }
 
-// This function is similar to the `handleTlsRelocation`. ARM and MIPS do not
-// support any relaxations for TLS relocations so by factoring out ARM and MIPS
+// This function is similar to the `handleTlsRelocation`. MIPS does not
+// support any relaxations for TLS relocations so by factoring out MIPS
 // handling in to the separate function we can simplify the code and do not
-// pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
-template <class ELFT, class GOT>
-static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
-                                           SymbolBody &Body,
-                                           InputSectionBase &C, uint64_t Offset,
-                                           int64_t Addend, RelExpr Expr) {
-  auto addModuleReloc = [&](uint64_t Off, bool LD) {
-    // The Dynamic TLS Module Index Relocation can be statically resolved to 1
-    // if we know that we are linking an executable. For ARM we resolve the
-    // relocation when writing the Got. MIPS has a custom Got implementation
-    // that writes the Module index in directly.
-    if (!Body.isPreemptible() && !Config->Pic && Config->EMachine == EM_ARM)
-      Got->Relocations.push_back(
-          {R_ABS, Target->TlsModuleIndexRel, Off, 0, &Body});
-    else {
-      SymbolBody *Dest = LD ? nullptr : &Body;
-      In<ELFT>::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
-    }
-  };
-
-  if (isRelExprOneOf<R_MIPS_TLSLD, R_TLSLD_PC>(Expr)) {
-    if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
-      addModuleReloc(Got->getTlsIndexOff(), true);
+// pollute other `handleTlsRelocation` by MIPS `ifs` statements.
+// Mips has a custom MipsGotSection that handles the writing of GOT entries
+// without dynamic relocations.
+template <class ELFT>
+static unsigned handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                        InputSectionBase &C, uint64_t Offset,
+                                        int64_t Addend, RelExpr Expr) {
+  if (Expr == R_MIPS_TLSLD) {
+    if (In<ELFT>::MipsGot->addTlsIndex() && Config->Pic)
+      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::MipsGot,
+                                   In<ELFT>::MipsGot->getTlsIndexOff(), false,
+                                   nullptr, 0});
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSGD, R_TLSGD_PC, R_MIPS_TLSGD>(Expr)) {
-    if (Got->addDynTlsEntry(Body) &&
-        (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
-      uint64_t Off = Got->getGlobalDynOffset(Body);
-      addModuleReloc(Off, false);
+  if (Expr == R_MIPS_TLSGD) {
+    if (In<ELFT>::MipsGot->addDynTlsEntry(Body) && Body.isPreemptible()) {
+      uint64_t Off = In<ELFT>::MipsGot->getGlobalDynOffset(Body);
+      In<ELFT>::RelaDyn->addReloc(
+          {Target->TlsModuleIndexRel, In<ELFT>::MipsGot, Off, false, &Body, 0});
       if (Body.isPreemptible())
-        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
+        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::MipsGot,
                                      Off + Config->Wordsize, false, &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
+  return 0;
+}
 
+// This function is similar to the `handleMipsTlsRelocation`. ARM also does not
+// support any relaxations for TLS relocations. ARM is logically similar to Mips
+// in how it handles TLS, but Mips uses its own custom GOT which handles some
+// of the cases that ARM uses GOT relocations for.
+//
+// We look for TLS global dynamic and local dynamic relocations, these may
+// require the generation of a pair of GOT entries that have associated
+// dynamic relocations. When the results of the dynamic relocations can be
+// resolved at static link time we do so. This is necessary for static linking
+// as there will be no dynamic loader to resolve them at load-time.
+//
+// The pair of GOT entries created are of the form
+// GOT[e0] Module Index (Used to find pointer to TLS block at run-time)
+// GOT[e1] Offset of symbol in TLS block
+template <class ELFT>
+static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                       InputSectionBase &C, uint64_t Offset,
+                                       int64_t Addend, RelExpr Expr) {
+  // The Dynamic TLS Module Index Relocation for a symbol defined in an
+  // executable is always 1. If the target Symbol is not preemtible then
+  // we know the offset into the TLS block at static link time.
+  bool NeedDynId = Body.isPreemptible() || Config->Shared;
+  bool NeedDynOff = Body.isPreemptible();
+
+  auto AddTlsReloc = [&](uint64_t Off, uint32_t Type, SymbolBody *Dest,
+                         bool Dyn) {
+    if (Dyn)
+      In<ELFT>::RelaDyn->addReloc({Type, In<ELFT>::Got, Off, false, Dest, 0});
+    else
+      In<ELFT>::Got->Relocations.push_back({R_ABS, Type, Off, 0, Dest});
+  };
+
+  // Local Dynamic is for access to module local TLS variables, while still
+  // being suitable for being dynamically loaded via dlopen.
+  // GOT[e0] is the module index, with a special value of 0 for the current
+  // module. GOT[e1] is unused. There only needs to be one module index entry.
+  if (Expr == R_TLSLD_PC && In<ELFT>::Got->addTlsIndex()) {
+    AddTlsReloc(In<ELFT>::Got->getTlsIndexOff(), Target->TlsModuleIndexRel,
+                NeedDynId ? nullptr : &Body, NeedDynId);
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    return 1;
+  }
+
+  // Global Dynamic is the most general purpose access model. When we know
+  // the module index and offset of symbol in TLS block we can fill these in
+  // using static GOT relocations.
+  if (Expr == R_TLSGD_PC) {
+    if (In<ELFT>::Got->addDynTlsEntry(Body)) {
+      uint64_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
+      AddTlsReloc(Off, Target->TlsModuleIndexRel, &Body, NeedDynId);
+      AddTlsReloc(Off + Config->Wordsize, Target->TlsOffsetRel, &Body,
+                  NeedDynOff);
+    }
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    return 1;
+  }
   return 0;
 }
 
@@ -160,11 +200,9 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
     return 0;
 
   if (Config->EMachine == EM_ARM)
-    return handleNoRelaxTlsRelocation<ELFT>(In<ELFT>::Got, Type, Body, C,
-                                            Offset, Addend, Expr);
+    return handleARMTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
   if (Config->EMachine == EM_MIPS)
-    return handleNoRelaxTlsRelocation<ELFT>(In<ELFT>::MipsGot, Type, Body, C,
-                                            Offset, Addend, Expr);
+    return handleMipsTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
 
   bool IsPreemptible = isPreemptible(Body, Type);
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
@@ -284,8 +322,18 @@ static bool isAbsoluteValue(const SymbolBody &Body) {
   return isAbsolute(Body) || Body.isTls();
 }
 
+// Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
   return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC>(Expr);
+}
+
+// Returns true if Expr refers a GOT entry. Note that this function
+// returns false for TLS variables even though they need GOT, because
+// TLS variables uses GOT differently than the regular variables.
+static bool needsGot(RelExpr Expr) {
+  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
+                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
+                        R_GOT_FROM_END>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -801,7 +849,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
       reportUndefined<ELFT>(Body, Sec, Rel.r_offset);
 
-    RelExpr Expr = Target->getRelExpr(Type, Body);
+    RelExpr Expr =
+        Target->getRelExpr(Type, Body, Sec.Data.begin() + Rel.r_offset);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
@@ -843,7 +892,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     }
 
     // Create a GOT slot if a relocation needs GOT.
-    if (refersToGotEntry(Expr)) {
+    if (needsGot(Expr)) {
       if (Config->EMachine == EM_MIPS) {
         // MIPS ABI has special rules to process GOT entries and doesn't
         // require relocation entries for them. A special case is TLS
@@ -861,8 +910,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       }
     }
 
-    if (!needsPlt(Expr) && !refersToGotEntry(Expr) &&
-        isPreemptible(Body, Type)) {
+    if (!needsPlt(Expr) && !needsGot(Expr) && isPreemptible(Body, Type)) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))

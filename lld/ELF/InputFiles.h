@@ -93,6 +93,10 @@ public:
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint8_t OSABI = 0;
 
+  // For SharedKind inputs, the string to use in DT_NEEDED when the library
+  // has no soname.
+  std::string DefaultSoName;
+
   // Cache for toString(). Only toString() should use this member.
   mutable std::string ToStringCache;
 
@@ -142,7 +146,6 @@ template <class ELFT> class ObjectFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::Word Elf_Word;
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
@@ -156,7 +159,6 @@ public:
 
   ArrayRef<SymbolBody *> getSymbols();
   ArrayRef<SymbolBody *> getLocalSymbols();
-  ArrayRef<SymbolBody *> getNonLocalSymbols();
 
   explicit ObjectFile(MemoryBufferRef M);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
@@ -258,18 +260,13 @@ private:
 
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(MemoryBufferRef M, uint64_t OffsetInArchive);
+  BitcodeFile(MemoryBufferRef M, StringRef ArchiveName,
+              uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   template <class ELFT>
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   std::unique_ptr<llvm::lto::InputFile> Obj;
-
-  // If this file is in an archive, the member contains the offset of
-  // the file in the archive. Otherwise, it's just zero. We store this
-  // field so that we can pass it to lib/LTO in order to disambiguate
-  // between objects.
-  uint64_t OffsetInArchive;
 
 private:
   std::vector<Symbol *> Symbols;
@@ -284,7 +281,6 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::Verdef Elf_Verdef;
   typedef typename ELFT::Versym Elf_Versym;
-  typedef typename ELFT::Word Elf_Word;
 
   std::vector<StringRef> Undefs;
   StringRef SoName;
@@ -292,7 +288,7 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   const Elf_Shdr *VerdefSec = nullptr;
 
 public:
-  StringRef getSoName() const { return SoName; }
+  StringRef getSoName() const;
   const Elf_Shdr *getSection(const Elf_Sym &Sym) const;
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }
 

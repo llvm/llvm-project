@@ -6,6 +6,9 @@
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 
+# RUN: llvm-pdbdump raw -modules -section-map -section-headers -section-contribs \
+# RUN:   -tpi-records %t.pdb | FileCheck -check-prefix RAW %s
+
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
@@ -111,46 +114,9 @@
 # CHECK-NEXT:       BuildInfo:
 # CHECK-NEXT:         ArgIndices:      [ 4098, 4099, 4106, 4104, 4102 ]
 
-# RAW:      FileHeaders {
-# RAW-NEXT:   BlockSize: 4096
-# RAW-NEXT:   FreeBlockMap: 1
-# RAW-NEXT:   NumBlocks: 10
-# RAW-NEXT:   NumDirectoryBytes: 48
-# RAW-NEXT:   Unknown1: 0
-# RAW-NEXT:   BlockMapAddr: 3
-# RAW-NEXT:   NumDirectoryBlocks: 1
-# RAW-NEXT:   DirectoryBlocks: [9]
-# RAW-NEXT:   NumStreams: 6
-# RAW-NEXT: }
-# RAW-NEXT: Streams [
-# RAW-NEXT:   Stream 0: [Old MSF Directory] (0 bytes)
-# RAW-NEXT:   Stream 1: [PDB Stream] (48 bytes)
-# RAW-NEXT:   Stream 2: [TPI Stream] (736 bytes)
-# RAW-NEXT:   Stream 3: [DBI Stream] (390 bytes)
-# RAW-NEXT:   Stream 4: [IPI Stream] (56 bytes)
-# RAW-NEXT:   Stream 5: [Section Header Data] (160 bytes)
-# RAW-NEXT: ]
-# RAW-NEXT: Msf Free Pages: []
-# RAW-NEXT: Orphaned Pages: []
-# RAW-NEXT: Multiply Used Pages: []
-# RAW-NEXT: Use After Free Pages: []
-# RAW-NEXT: StreamBlocks [
-# RAW-NEXT:   Stream 0: []
-# RAW-NEXT:   Stream 1: [5]
-# RAW-NEXT:   Stream 2: [7]
-# RAW-NEXT:   Stream 3: [6]
-# RAW-NEXT:   Stream 4: [8]
-# RAW-NEXT:   Stream 5: [4]
-# RAW-NEXT: ]
-# RAW-NEXT: PDB Stream {
-# RAW-NEXT:   Version: 20000404
-# RAW-NEXT:   Signature: 0x0
-# RAW-NEXT:   Age: 1
-# RAW-NEXT:   Guid: {7EBCCC79-C488-0267-C898-06D7E94A8A10}
-# RAW-NEXT: }
-# RAW-NEXT: Type Info Stream (TPI) {
+# RAW:      Type Info Stream (TPI) {
 # RAW-NEXT:   TPI Version: 20040203
-# RAW-NEXT:   Record count: 17
+# RAW-NEXT:   Record count: 5
 # RAW-NEXT:   Records [
 # RAW-NEXT:     {
 # RAW-NEXT:       ArgList (0x1000) {
@@ -205,126 +171,9 @@
 # RAW-NEXT:         ArgListType: (<no type>) (0x1003)
 # RAW-NEXT:       }
 # RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       FuncId (0x1005) {
-# RAW-NEXT:         TypeLeafKind: LF_FUNC_ID (0x1601)
-# RAW-NEXT:         ParentScope: 0x0
-# RAW-NEXT:         FunctionType: int (<no type>) (0x1004)
-# RAW-NEXT:         Name: main
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       FuncId (0x1006) {
-# RAW-NEXT:         TypeLeafKind: LF_FUNC_ID (0x1601)
-# RAW-NEXT:         ParentScope: 0x0
-# RAW-NEXT:         FunctionType: int () (0x1001)
-# RAW-NEXT:         Name: foo
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x1007) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: D:\b
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x1008) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: C:\vs14\VC\BIN\amd64\cl.exe
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x1009) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared"
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringList (0x100A) {
-# RAW-NEXT:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
-# RAW-NEXT:         NumStrings: 1
-# RAW-NEXT:         Strings [
-# RAW-NEXT:           String: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" (0x1009)
-# RAW-NEXT:         ]
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x100B) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: (-Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared") (0x100A)
-# RAW-NEXT:         StringData:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x100C) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: ret42-main.c
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x100D) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: D:\b\vc140.pdb
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       BuildInfo (0x100E) {
-# RAW-NEXT:         TypeLeafKind: LF_BUILDINFO (0x1603)
-# RAW-NEXT:         NumArgs: 5
-# RAW-NEXT:         Arguments [
-# RAW-NEXT:           ArgType: D:\b (0x1007)
-# RAW-NEXT:           ArgType: C:\vs14\VC\BIN\amd64\cl.exe (0x1008)
-# RAW-NEXT:           ArgType: ret42-main.c (0x100C)
-# RAW-NEXT:           ArgType: D:\b\vc140.pdb (0x100D)
-# RAW-NEXT:           ArgType:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X (0x100B)
-# RAW-NEXT:         ]
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       StringId (0x100F) {
-# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
-# RAW-NEXT:         Id: 0x0
-# RAW-NEXT:         StringData: ret42-sub.c
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     {
-# RAW-NEXT:       BuildInfo (0x1010) {
-# RAW-NEXT:         TypeLeafKind: LF_BUILDINFO (0x1603)
-# RAW-NEXT:         NumArgs: 5
-# RAW-NEXT:         Arguments [
-# RAW-NEXT:           ArgType: D:\b (0x1007)
-# RAW-NEXT:           ArgType: C:\vs14\VC\BIN\amd64\cl.exe (0x1008)
-# RAW-NEXT:           ArgType: ret42-sub.c (0x100F)
-# RAW-NEXT:           ArgType: D:\b\vc140.pdb (0x100D)
-# RAW-NEXT:           ArgType:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X (0x100B)
-# RAW-NEXT:         ]
-# RAW-NEXT:       }
-# RAW-NEXT:     }
-# RAW-NEXT:     Hash {
-# RAW-NEXT:       Number of Hash Buckets: 4096
-# RAW-NEXT:       Hash Key Size: 4
-# RAW-NEXT:       Values: []
-# RAW-NEXT:       Type Index Offsets: []
-# RAW-NEXT:       Hash Adjustments: []
-# RAW-NEXT:     }
-# RAW-NEXT:   ]
-# RAW-NEXT: }
-# RAW-NEXT: Type Info Stream (IPI) {
-# RAW-NEXT:   IPI Version: 20040203
-# RAW-NEXT:   Record count: 0
-# RAW-NEXT:   Records [
-# RAW-NEXT:     Hash {
-# RAW-NEXT:       Number of Hash Buckets: 4096
-# RAW-NEXT:       Hash Key Size: 4
-# RAW-NEXT:       Values: []
-# RAW-NEXT:       Type Index Offsets: []
-# RAW-NEXT:       Hash Adjustments: []
-# RAW-NEXT:     }
+# RAW-NEXT:     TypeIndexOffsets [
+# RAW-NEXT:       Index: 0x1000, Offset: 0
+# RAW-NEXT:     ]
 # RAW-NEXT:   ]
 # RAW-NEXT: }
 # RAW-NEXT: DBI Stream {
@@ -342,18 +191,16 @@
 # RAW-NEXT:   Modules [
 # RAW-NEXT:     {
 # RAW-NEXT:       Name: * Linker *
-# RAW-NEXT:       Debug Stream Index: 65535
+# RAW-NEXT:       Debug Stream Index: 9
 # RAW-NEXT:       Object File Name:
 # RAW-NEXT:       Num Files: 0
 # RAW-NEXT:       Source File Name Idx: 0
 # RAW-NEXT:       Pdb File Name Idx: 0
 # RAW-NEXT:       Line Info Byte Size: 0
 # RAW-NEXT:       C13 Line Info Byte Size: 0
-# RAW-NEXT:       Symbol Byte Size: 0
+# RAW-NEXT:       Symbol Byte Size: 4
 # RAW-NEXT:       Type Server Index: 0
 # RAW-NEXT:       Has EC Info: No
-# RAW-NEXT:       0 Contributing Source Files [
-# RAW-NEXT:       ]
 # RAW-NEXT:     }
 # RAW-NEXT:   ]
 # RAW-NEXT: }
@@ -481,7 +328,7 @@
 # RAW-NEXT:     SecName: 65535
 # RAW-NEXT:     ClassName: 65535
 # RAW-NEXT:     Offset: 0
-# RAW-NEXT:     SecByteLength: 101
+# RAW-NEXT:     SecByteLength:
 # RAW-NEXT:   }
 # RAW-NEXT:   Entry {
 # RAW-NEXT:     Flags [ (0x208)
@@ -497,8 +344,6 @@
 # RAW-NEXT:     SecByteLength: 4294967295
 # RAW-NEXT:   }
 # RAW-NEXT: ]
-# RAW-NEXT: Globals Stream not present
-# RAW-NEXT: Publics Stream not present
 # RAW-NEXT: Section Headers [
 # RAW-NEXT:   {
 # RAW-NEXT:     Name: .pdata
@@ -548,7 +393,7 @@
 # RAW-NEXT:   }
 # RAW-NEXT:   {
 # RAW-NEXT:     Name: .rdata
-# RAW-NEXT:     Virtual Size: 101
+# RAW-NEXT:     Virtual Size:
 # RAW-NEXT:     Virtual Address: 16384
 # RAW-NEXT:     Size of Raw Data: 512
 # RAW-NEXT:     File Pointer to Raw Data: 2560
@@ -561,6 +406,4 @@
 # RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
 # RAW-NEXT:     ]
 # RAW-NEXT:   }
-# RAW-NEXT: ]
-# RAW-NEXT: New FPO [
 # RAW-NEXT: ]

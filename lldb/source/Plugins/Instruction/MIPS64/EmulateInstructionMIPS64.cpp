@@ -1,5 +1,4 @@
-//===-- EmulateInstructionMIPS64.cpp -------------------------------*- C++
-//-*-===//
+//===-- EmulateInstructionMIPS64.cpp -----------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,6 +15,7 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ConstString.h"

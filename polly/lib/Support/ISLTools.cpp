@@ -89,9 +89,10 @@ isl::map polly::beforeScatter(isl::map Map, bool Strict) {
 
 isl::union_map polly::beforeScatter(isl::union_map UMap, bool Strict) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     auto After = beforeScatter(Map, Strict);
     Result = give(isl_union_map_add_map(Result.take(), After.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -105,9 +106,10 @@ isl::map polly::afterScatter(isl::map Map, bool Strict) {
 
 isl::union_map polly::afterScatter(const isl::union_map &UMap, bool Strict) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     auto After = afterScatter(Map, Strict);
     Result = give(isl_union_map_add_map(Result.take(), After.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -158,8 +160,9 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
 
 unsigned polly::getNumScatterDims(const isl::union_map &Schedule) {
   unsigned Dims = 0;
-  foreachElt(Schedule, [&Dims](isl::map Map) {
+  Schedule.foreach_map([&Dims](isl::map Map) -> isl::stat {
     Dims = std::max(Dims, isl_map_dim(Map.keep(), isl_dim_out));
+    return isl::stat::ok;
   });
   return Dims;
 }
@@ -176,13 +179,14 @@ isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
 isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
                                       bool RestrictDomain) {
   auto Result = give(isl_union_map_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](isl::set Set) {
+  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
     auto IdentityMap = give(isl_map_identity(
         isl_space_map_from_set(isl_set_get_space(Set.keep()))));
     if (RestrictDomain)
       IdentityMap =
           give(isl_map_intersect_domain(IdentityMap.take(), Set.take()));
     Result = give(isl_union_map_add_map(Result.take(), IdentityMap.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -198,9 +202,10 @@ isl::map polly::reverseDomain(isl::map Map) {
 
 isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     auto Reversed = reverseDomain(std::move(Map));
     Result = give(isl_union_map_add_map(Result.take(), Reversed.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -219,9 +224,10 @@ isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
 
 isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
   auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](isl::set Set) {
+  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
     auto Shifted = shiftDim(Set, Pos, Amount);
     Result = give(isl_union_set_add_set(Result.take(), Shifted.take()));
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -259,9 +265,10 @@ isl::union_map polly::shiftDim(isl::union_map UMap, isl::dim Dim, int Pos,
                                int Amount) {
   auto Result = isl::union_map::empty(UMap.get_space());
 
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     auto Shifted = shiftDim(Map, Dim, Pos, Amount);
     Result = std::move(Result).add_map(Shifted);
+    return isl::stat::ok;
   });
   return Result;
 }
@@ -475,9 +482,10 @@ isl::map polly::distributeDomain(isl::map Map) {
 
 isl::union_map polly::distributeDomain(isl::union_map UMap) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](isl::map Map) {
+  UMap.foreach_map([=, &Result](isl::map Map) {
     auto Distributed = distributeDomain(Map);
     Result = give(isl_union_map_add_map(Result.take(), Distributed.copy()));
+    return isl::stat::ok;
   });
   return Result;
 }

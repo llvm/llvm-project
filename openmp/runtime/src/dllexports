@@ -351,7 +351,7 @@ kmpc_set_defaults                           224
     %ifdef OMP_30
         __kmpc_omp_taskyield                235
     %endif # OMP_30
-    __kmpc_place_threads                    236
+#    __kmpc_place_threads                    236
 %endif
 
 # OpenMP 4.0 entry points

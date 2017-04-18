@@ -10,27 +10,27 @@
 #ifndef liblldb_IOHandler_h_
 #define liblldb_IOHandler_h_
 
-// C Includes
-#include <string.h>
+#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Host/Predicate.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/lldb-defines.h"  // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-forward.h"  // for IOHandlerSP, StreamFileSP
+#include "llvm/ADT/StringRef.h" // for StringRef
 
-// C++ Includes
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Flags.h"
+#include <stdint.h> // for uint32_t
+#include <stdio.h>  // for FILE
 
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Host/Predicate.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-public.h"
+namespace lldb_private {
+class Debugger;
+}
 
 namespace curses {
 class Application;

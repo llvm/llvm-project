@@ -16,7 +16,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
@@ -177,11 +176,6 @@ void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
 template <class ELFT>
 elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
-
-template <class ELFT>
-ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getNonLocalSymbols() {
-  return makeArrayRef(this->SymbolBodies).slice(this->FirstNonLocal);
-}
 
 template <class ELFT>
 ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getLocalSymbols() {
@@ -625,13 +619,20 @@ SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
       toString(this));
 }
 
+template <class ELFT> StringRef SharedFile<ELFT>::getSoName() const {
+  if (SoName.empty())
+    return this->DefaultSoName;
+  return SoName;
+}
+
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
 template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   const Elf_Shdr *DynamicSec = nullptr;
-
   const ELFFile<ELFT> Obj = this->getObj();
   ArrayRef<Elf_Shdr> Sections = check(Obj.sections(), toString(this));
+
+  // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     default:
@@ -658,14 +659,9 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   if (this->VersymSec && this->Symbols.empty())
     error("SHT_GNU_versym should be associated with symbol table");
 
-  // DSOs are identified by soname, and they usually contain
-  // DT_SONAME tag in their header. But if they are missing,
-  // filenames are used as default sonames.
-  SoName = sys::path::filename(this->getName());
-
+  // Search for a DT_SONAME tag to initialize this->SoName.
   if (!DynamicSec)
     return;
-
   ArrayRef<Elf_Dyn> Arr =
       check(Obj.template getSectionContentsAsArray<Elf_Dyn>(DynamicSec),
             toString(this));
@@ -763,15 +759,13 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   }
 }
 
-static ELFKind getBitcodeELFKind(MemoryBufferRef MB) {
-  Triple T(check(getBitcodeTargetTriple(MB), MB.getBufferIdentifier()));
+static ELFKind getBitcodeELFKind(const Triple &T) {
   if (T.isLittleEndian())
     return T.isArch64Bit() ? ELF64LEKind : ELF32LEKind;
   return T.isArch64Bit() ? ELF64BEKind : ELF32BEKind;
 }
 
-static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
-  Triple T(check(getBitcodeTargetTriple(MB), MB.getBufferIdentifier()));
+static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   switch (T.getArch()) {
   case Triple::aarch64:
     return EM_AARCH64;
@@ -792,15 +786,32 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   case Triple::x86_64:
     return EM_X86_64;
   default:
-    fatal(MB.getBufferIdentifier() +
-          ": could not infer e_machine from bitcode target triple " + T.str());
+    fatal(Path + ": could not infer e_machine from bitcode target triple " +
+          T.str());
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef MB, uint64_t OffsetInArchive)
-    : InputFile(BitcodeKind, MB), OffsetInArchive(OffsetInArchive) {
-  EKind = getBitcodeELFKind(MB);
-  EMachine = getBitcodeMachineKind(MB);
+BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
+                         uint64_t OffsetInArchive)
+    : InputFile(BitcodeKind, MB) {
+  this->ArchiveName = ArchiveName;
+
+  // Here we pass a new MemoryBufferRef which is identified by ArchiveName
+  // (the fully resolved path of the archive) + member name + offset of the
+  // member in the archive.
+  // ThinLTO uses the MemoryBufferRef identifier to access its internal
+  // data structures and if two archives define two members with the same name,
+  // this causes a collision which result in only one of the objects being
+  // taken into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage).
+  MemoryBufferRef MBRef(MB.getBuffer(),
+                        Saver.save(ArchiveName + MB.getBufferIdentifier() +
+                                   utostr(OffsetInArchive)));
+  Obj = check(lto::InputFile::create(MBRef), toString(this));
+
+  Triple T(Obj->getTargetTriple());
+  EKind = getBitcodeELFKind(T);
+  EMachine = getBitcodeMachineKind(MB.getBufferIdentifier(), T);
 }
 
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
@@ -848,20 +859,6 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 
 template <class ELFT>
 void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
-
-  // Here we pass a new MemoryBufferRef which is identified by ArchiveName
-  // (the fully resolved path of the archive) + member name + offset of the
-  // member in the archive.
-  // ThinLTO uses the MemoryBufferRef identifier to access its internal
-  // data structures and if two archives define two members with the same name,
-  // this causes a collision which result in only one of the objects being
-  // taken into consideration at LTO time (which very likely causes undefined
-  // symbols later in the link stage).
-  MemoryBufferRef MBRef(MB.getBuffer(),
-                        Saver.save(ArchiveName + MB.getBufferIdentifier() +
-                                   utostr(OffsetInArchive)));
-  Obj = check(lto::InputFile::create(MBRef), toString(this));
-
   std::vector<bool> KeptComdats;
   for (StringRef S : Obj->getComdatTable())
     KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
@@ -934,8 +931,9 @@ static bool isBitcode(MemoryBufferRef MB) {
 
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F = isBitcode(MB) ? make<BitcodeFile>(MB, OffsetInArchive)
-                               : createELFFile<ObjectFile>(MB);
+  InputFile *F = isBitcode(MB)
+                     ? make<BitcodeFile>(MB, ArchiveName, OffsetInArchive)
+                     : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
   return F;
 }

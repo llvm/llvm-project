@@ -9,16 +9,25 @@
 
 #include "lldb/Core/AddressResolverName.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Address.h"      // for Address, operator==
+#include "lldb/Core/AddressRange.h" // for AddressRange
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Logging.h"   // for GetLogIfAllCategoriesSet, LIB...
+#include "lldb/Utility/Stream.h"    // for Stream
+#include "lldb/lldb-enumerations.h" // for SymbolType::eSymbolTypeCode
+#include "lldb/lldb-forward.h"      // for ModuleSP
+#include "lldb/lldb-types.h"        // for addr_t
+#include "llvm/ADT/StringRef.h"     // for StringRef
+
+#include <memory> // for shared_ptr
+#include <string> // for string
+#include <vector> // for vector
+
+#include <stdint.h> // for uint32_t
 
 using namespace lldb;
 using namespace lldb_private;

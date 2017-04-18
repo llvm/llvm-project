@@ -1,39 +1,5 @@
 include_directories(.)
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-include_directories(
-  Plugins/Process/Linux
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "FreeBSD" )
-include_directories(
-  Plugins/Process/FreeBSD
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-include_directories(
-  Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "OpenBSD" )
-include_directories(
-  Plugins/Process/POSIX
-  )
-endif ()
-
-# Keep track of whether this is a buildbot build.
-set(LLDB_IS_BUILDBOT_BUILD FALSE CACHE BOOL
-  "Indicate whether this is a buildbot build")
-
-# Keep track of when we did this build.  Note incremental
-# builds could get burnt by this.
-string(TIMESTAMP INTERNAL_BUILD_DATE "%Y-%m-%d")
-
 set(lldbBase_SOURCES
     lldb.cpp
   )

@@ -10,17 +10,14 @@
 #ifndef liblldb_File_h_
 #define liblldb_File_h_
 
-// C Includes
-// C++ Includes
+#include "lldb/Host/IOObject.h"
+#include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/lldb-private.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/types.h>
-
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Host/IOObject.h"
-#include "lldb/Host/PosixApi.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
