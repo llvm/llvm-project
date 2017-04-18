@@ -72,7 +72,7 @@ INLINE uptr GetPageSizeCached() {
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 // Threads
-uptr GetTid();
+tid_t GetTid();
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
@@ -717,7 +717,7 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
-  void addAddressRange(uptr beg, uptr end, bool executable);
+  void addAddressRange(uptr beg, uptr end, bool executable, bool readable);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
@@ -732,9 +732,14 @@ class LoadedModule {
     uptr beg;
     uptr end;
     bool executable;
+    bool readable;
 
-    AddressRange(uptr beg, uptr end, bool executable)
-        : next(nullptr), beg(beg), end(end), executable(executable) {}
+    AddressRange(uptr beg, uptr end, bool executable, bool readable)
+        : next(nullptr),
+          beg(beg),
+          end(end),
+          executable(executable),
+          readable(readable) {}
   };
 
   const IntrusiveList<AddressRange> &ranges() const { return ranges_; }

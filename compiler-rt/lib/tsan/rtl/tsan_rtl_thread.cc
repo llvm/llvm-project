@@ -236,7 +236,7 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, uptr os_id, bool workerthread) {
+void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;

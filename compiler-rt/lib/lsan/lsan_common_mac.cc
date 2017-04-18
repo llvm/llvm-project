@@ -22,6 +22,8 @@
 
 #include <pthread.h>
 
+#include <mach/mach.h>
+
 namespace __lsan {
 
 typedef struct {
@@ -106,15 +108,39 @@ void ProcessGlobalRegions(Frontier *frontier) {
 
     for (const __sanitizer::LoadedModule::AddressRange &range :
          modules[i].ranges()) {
-      if (range.executable) continue;
+      if (range.executable || !range.readable) continue;
 
       ScanGlobalRange(range.beg, range.end, frontier);
     }
   }
 }
 
+// libxpc stashes some pointers in the Kernel Alloc Once page,
+// make sure not to report those as leaks.
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  CHECK(0 && "unimplemented");
+  mach_port_name_t port;
+  if (task_for_pid(mach_task_self(), internal_getpid(), &port)
+      != KERN_SUCCESS) {
+    return;
+  }
+
+  unsigned depth = 1;
+  vm_size_t size = 0;
+  vm_address_t address = 0;
+  kern_return_t err = KERN_SUCCESS;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+
+  while (err == KERN_SUCCESS) {
+    struct vm_region_submap_info_64 info;
+    err = vm_region_recurse_64(port, &address, &size, &depth,
+                               (vm_region_info_t)&info, &count);
+    if (info.user_tag == VM_MEMORY_OS_ALLOC_ONCE) {
+      ScanRangeForPointers(address, address + size, frontier,
+                           "GLOBAL", kReachable);
+      return;
+    }
+    address += size;
+  }
 }
 
 void DoStopTheWorld(StopTheWorldCallback callback, void *argument) {

@@ -45,7 +45,7 @@ class ThreadContext : public ThreadContextBase {
 
 void InitializeThreadRegistry();
 
-void ThreadStart(u32 tid, uptr os_id);
+void ThreadStart(u32 tid, tid_t os_id);
 void ThreadFinish();
 u32 ThreadCreate(u32 tid, uptr uid, bool detached);
 void ThreadJoin(u32 tid);

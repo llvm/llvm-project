@@ -39,4 +39,10 @@ void BM_template1(benchmark::State& state) {
 BENCHMARK_TEMPLATE(BM_template1, long);
 BENCHMARK_TEMPLATE1(BM_template1, int);
 
+void BM_counters(benchmark::State& state) {
+    BM_empty(state);
+    state.counters["Foo"] = 2;
+}
+BENCHMARK(BM_counters);
+
 BENCHMARK_MAIN()

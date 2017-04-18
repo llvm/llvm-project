@@ -193,10 +193,10 @@ bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
 void LockThreadRegistry();
 void UnlockThreadRegistry();
-bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);
-void ForEachExtraStackRange(uptr os_id, RangeIteratorCallback callback,
+void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg);
 // If called from the main thread, updates the main thread's TID in the thread
 // registry. We need this to handle processes that fork() without a subsequent
