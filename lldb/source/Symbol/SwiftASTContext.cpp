@@ -449,7 +449,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
 
       for (auto decl : t_decl->getMembers()) {
         // Find ivars that aren't properties
-        if (swift::isa<VarDecl>(decl)) {
+        if (swift::isa<swift::VarDecl>(decl)) {
           swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
           if (var_decl->hasStorage() && !var_decl->isStatic()) {
             MemberInfo member_info(MemberType::Field);
