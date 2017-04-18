@@ -20,6 +20,8 @@
 
 #define HAVE_PPOLL 0
 
+#define HAVE_SIGACTION 1
+
 #else
 
 #error This file is only used by the Xcode build.
