@@ -46,6 +46,9 @@ namespace llvm {
     ArrayRef<uint8_t> Buffer;
     StringRef ModuleIdentifier;
 
+    // The string table used to interpret this module.
+    StringRef Strtab;
+
     // The bitstream location of the IDENTIFICATION_BLOCK.
     uint64_t IdentificationBit;
 
@@ -70,6 +73,7 @@ namespace llvm {
     StringRef getBuffer() const {
       return StringRef((const char *)Buffer.begin(), Buffer.size());
     }
+    StringRef getStrtab() const { return Strtab; }
 
     StringRef getModuleIdentifier() const { return ModuleIdentifier; }
 

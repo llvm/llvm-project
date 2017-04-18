@@ -1159,8 +1159,20 @@ public:
   const SCEV *getConstant(const APInt &Val);
   const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
   const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty);
+
+  typedef SmallDenseMap<std::pair<const SCEV *, Type *>, const SCEV *, 8>
+      ExtendCacheTy;
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty);
+  const SCEV *getZeroExtendExprCached(const SCEV *Op, Type *Ty,
+                                      ExtendCacheTy &Cache);
+  const SCEV *getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
+                                    ExtendCacheTy &Cache);
+
   const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty);
+  const SCEV *getSignExtendExprCached(const SCEV *Op, Type *Ty,
+                                      ExtendCacheTy &Cache);
+  const SCEV *getSignExtendExprImpl(const SCEV *Op, Type *Ty,
+                                    ExtendCacheTy &Cache);
   const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
   const SCEV *getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,

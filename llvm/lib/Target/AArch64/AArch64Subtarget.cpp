@@ -35,6 +35,11 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    UseNonLazyBind("aarch64-enable-nonlazybind",
+                   cl::desc("Call nonlazybind functions via direct GOT load"),
+                   cl::init(false), cl::Hidden);
+
 AArch64Subtarget &
 AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
                                                   StringRef CPUString) {
@@ -150,6 +155,23 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   // The small code model's direct accesses use ADRP, which cannot
   // necessarily produce the value 0 (if the code is above 4GB).
   if (useSmallAddressing() && GV->hasExternalWeakLinkage())
+    return AArch64II::MO_GOT;
+
+  return AArch64II::MO_NO_FLAG;
+}
+
+unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
+    const GlobalValue *GV, const TargetMachine &TM) const {
+  // MachO large model always goes via a GOT, because we don't have the
+  // relocations available to do anything else..
+  if (TM.getCodeModel() == CodeModel::Large && isTargetMachO() &&
+      !GV->hasInternalLinkage())
+    return AArch64II::MO_GOT;
+
+  // NonLazyBind goes via GOT unless we know it's available locally.
+  auto *F = dyn_cast<Function>(GV);
+  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
+      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
   return AArch64II::MO_NO_FLAG;

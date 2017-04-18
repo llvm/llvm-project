@@ -55,7 +55,7 @@ private:
 
     uint32_t NumVGPR = 0;
     uint32_t NumSGPR = 0;
-    uint32_t LDSSize;
+    uint32_t LDSSize = 0;
     bool FlatUsed = false;
 
     // Number of SGPRs that meets number of waves per execution unit request.
@@ -85,11 +85,11 @@ private:
 
     // Bonus information for debugging.
     bool VCCUsed = false;
-    uint64_t CodeLen = 0;
 
     SIProgramInfo() = default;
   };
 
+  uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF) const;
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;

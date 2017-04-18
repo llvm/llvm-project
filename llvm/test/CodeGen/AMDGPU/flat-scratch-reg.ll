@@ -44,12 +44,12 @@ entry:
 ; HSA-VI-NOXNACK: is_xnack_enabled = 0
 ; HSA-VI-XNACK: is_xnack_enabled = 1
 
-; CI: ; NumSgprs: 8
-; VI-NOXNACK: ; NumSgprs: 8
-; VI-XNACK: ; NumSgprs: 12
-; HSA-CI: ; NumSgprs: 8
-; HSA-VI-NOXNACK: ; NumSgprs: 8
-; HSA-VI-XNACK: ; NumSgprs: 12
+; CI: ; NumSgprs: 12
+; VI-NOXNACK: ; NumSgprs: 14
+; VI-XNACK: ; NumSgprs: 14
+; HSA-CI: ; NumSgprs: 12
+; HSA-VI-NOXNACK: ; NumSgprs: 14
+; HSA-VI-XNACK: ; NumSgprs: 14
 define amdgpu_kernel void @no_vcc_flat() {
 entry:
   call void asm sideeffect "", "~{SGPR7},~{FLAT_SCR}"()
@@ -60,14 +60,49 @@ entry:
 ; HSA-NOXNACK: is_xnack_enabled = 0
 ; HSA-XNACK: is_xnack_enabled = 1
 
-; CI: ; NumSgprs: 10
-; VI-NOXNACK: ; NumSgprs: 10
-; VI-XNACK: ; NumSgprs: 12
-; HSA-CI: ; NumSgprs: 10
-; HSA-VI-NOXNACK: ; NumSgprs: 10
-; HSA-VI-XNACK: ; NumSgprs: 12
+; CI: ; NumSgprs: 12
+; VI-NOXNACK: ; NumSgprs: 14
+; VI-XNACK: ; NumSgprs: 14
+; HSA-CI: ; NumSgprs: 12
+; HSA-VI-NOXNACK: ; NumSgprs: 14
+; HSA-VI-XNACK: ; NumSgprs: 14
 define amdgpu_kernel void @vcc_flat() {
 entry:
   call void asm sideeffect "", "~{SGPR7},~{VCC},~{FLAT_SCR}"()
   ret void
 }
+
+; Make sure used SGPR count for flat_scr is correct when there is no
+; scratch usage and implicit flat uses.
+
+; GCN-LABEL: {{^}}use_flat_scr:
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+define amdgpu_kernel void @use_flat_scr() #0 {
+entry:
+  call void asm sideeffect "; clobber ", "~{FLAT_SCR}"()
+  ret void
+}
+
+; GCN-LABEL: {{^}}use_flat_scr_lo:
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+define amdgpu_kernel void @use_flat_scr_lo() #0 {
+entry:
+  call void asm sideeffect "; clobber ", "~{FLAT_SCR_LO}"()
+  ret void
+}
+
+; GCN-LABEL: {{^}}use_flat_scr_hi:
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
+define amdgpu_kernel void @use_flat_scr_hi() #0 {
+entry:
+  call void asm sideeffect "; clobber ", "~{FLAT_SCR_HI}"()
+  ret void
+}
+
+attributes #0 = { nounwind }

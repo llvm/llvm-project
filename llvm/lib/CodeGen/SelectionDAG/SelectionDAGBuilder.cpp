@@ -4674,7 +4674,7 @@ static unsigned getUnderlyingArgReg(const SDValue &N) {
 /// At the end of instruction selection, they will be inserted to the entry BB.
 bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
-    DILocation *DL, int64_t Offset, bool IsIndirect, const SDValue &N) {
+    DILocation *DL, int64_t Offset, bool IsDbgDeclare, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
   if (!Arg)
     return false;
@@ -4688,6 +4688,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (!Variable->getScope()->getSubprogram()->describes(MF.getFunction()))
     return false;
 
+  bool IsIndirect = false;
   Optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.
   if (int FI = FuncInfo.getArgumentFrameIndex(Arg))
@@ -4701,15 +4702,19 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       if (PR)
         Reg = PR;
     }
-    if (Reg)
+    if (Reg) {
       Op = MachineOperand::CreateReg(Reg, false);
+      IsIndirect = IsDbgDeclare;
+    }
   }
 
   if (!Op) {
     // Check if ValueMap has reg number.
     DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
-    if (VMI != FuncInfo.ValueMap.end())
+    if (VMI != FuncInfo.ValueMap.end()) {
       Op = MachineOperand::CreateReg(VMI->second, false);
+      IsIndirect = IsDbgDeclare;
+    }
   }
 
   if (!Op && N.getNode())
@@ -4955,8 +4960,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, false,
-                                 N);
+        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true, N);
         return nullptr;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
@@ -4966,7 +4970,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, false,
+      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
                                     N)) {
         // If variable is pinned by a alloca in dominating bb then
         // use StaticAllocaMap.

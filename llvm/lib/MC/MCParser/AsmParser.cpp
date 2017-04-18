@@ -1755,8 +1755,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_8BYTE:
       return parseDirectiveValue(IDVal, 8);
     case DK_DC_A:
-      return parseDirectiveValue(IDVal,
-                                 getContext().getAsmInfo()->getPointerSize());
+      return parseDirectiveValue(
+          IDVal, getContext().getAsmInfo()->getCodePointerSize());
     case DK_OCTA:
       return parseDirectiveOctaValue(IDVal);
     case DK_SINGLE:

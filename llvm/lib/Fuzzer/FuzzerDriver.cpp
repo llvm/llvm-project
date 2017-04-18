@@ -289,6 +289,66 @@ static std::string GetDedupTokenFromFile(const std::string &Path) {
   return S.substr(Beg, End - Beg);
 }
 
+int CleanseCrashInput(const std::vector<std::string> &Args,
+                       const FuzzingOptions &Options) {
+  if (Inputs->size() != 1 || !Flags.exact_artifact_path) {
+    Printf("ERROR: -cleanse_crash should be given one input file and"
+          " -exact_artifact_path\n");
+    exit(1);
+  }
+  std::string InputFilePath = Inputs->at(0);
+  std::string OutputFilePath = Flags.exact_artifact_path;
+  std::string BaseCmd =
+      CloneArgsWithoutX(Args, "cleanse_crash", "cleanse_crash");
+
+  auto InputPos = BaseCmd.find(" " + InputFilePath + " ");
+  assert(InputPos != std::string::npos);
+  BaseCmd.erase(InputPos, InputFilePath.size() + 1);
+
+  auto LogFilePath = DirPlusFile(
+      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
+  auto TmpFilePath = DirPlusFile(
+      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".repro");
+  auto LogFileRedirect = " > " + LogFilePath + " 2>&1 ";
+
+  auto Cmd = BaseCmd + " " + TmpFilePath + LogFileRedirect;
+
+  std::string CurrentFilePath = InputFilePath;
+  auto U = FileToVector(CurrentFilePath);
+  size_t Size = U.size();
+
+  const std::vector<uint8_t> ReplacementBytes = {' ', 0xff};
+  for (int NumAttempts = 0; NumAttempts < 5; NumAttempts++) {
+    bool Changed = false;
+    for (size_t Idx = 0; Idx < Size; Idx++) {
+      Printf("CLEANSE[%d]: Trying to replace byte %zd of %zd\n", NumAttempts,
+             Idx, Size);
+      uint8_t OriginalByte = U[Idx];
+      if (ReplacementBytes.end() != std::find(ReplacementBytes.begin(),
+                                              ReplacementBytes.end(),
+                                              OriginalByte))
+        continue;
+      for (auto NewByte : ReplacementBytes) {
+        U[Idx] = NewByte;
+        WriteToFile(U, TmpFilePath);
+        auto ExitCode = ExecuteCommand(Cmd);
+        RemoveFile(TmpFilePath);
+        if (!ExitCode) {
+          U[Idx] = OriginalByte;
+        } else {
+          Changed = true;
+          Printf("CLEANSE: Replaced byte %zd with 0x%x\n", Idx, NewByte);
+          WriteToFile(U, OutputFilePath);
+          break;
+        }
+      }
+    }
+    if (!Changed) break;
+  }
+  RemoveFile(LogFilePath);
+  return 0;
+}
+
 int MinimizeCrashInput(const std::vector<std::string> &Args,
                        const FuzzingOptions &Options) {
   if (Inputs->size() != 1) {
@@ -582,6 +642,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   if (Flags.minimize_crash_internal_step)
     return MinimizeCrashInputInternalStep(F, Corpus);
+
+  if (Flags.cleanse_crash)
+    return CleanseCrashInput(Args, Options);
 
   if (auto Name = Flags.run_equivalence_server) {
     SMR.Destroy(Name);

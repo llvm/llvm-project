@@ -635,12 +635,12 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         // If LHS is non-negative or has all low bits zero, then the upper bits
         // are all zero.
-        if (LHSKnownZero.isNegative() || ((LHSKnownZero & LowBits) == LowBits))
+        if (LHSKnownZero.isSignBitSet() || ((LHSKnownZero & LowBits) == LowBits))
           KnownZero |= ~LowBits;
 
         // If LHS is negative and not all low bits are zero, then the upper bits
         // are all one.
-        if (LHSKnownOne.isNegative() && ((LHSKnownOne & LowBits) != 0))
+        if (LHSKnownOne.isSignBitSet() && ((LHSKnownOne & LowBits) != 0))
           KnownOne |= ~LowBits;
 
         assert(!(KnownZero & KnownOne) && "Bits known to be one AND zero?");
@@ -650,11 +650,11 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero.
-    if (DemandedMask.isNegative()) {
+    if (DemandedMask.isSignBitSet()) {
       computeKnownBits(I->getOperand(0), LHSKnownZero, LHSKnownOne, Depth + 1,
                        CxtI);
       // If it's known zero, our sign bit is also zero.
-      if (LHSKnownZero.isNegative())
+      if (LHSKnownZero.isSignBitSet())
         KnownZero.setSignBit();
     }
     break;
@@ -1641,7 +1641,52 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       UndefElts.setHighBits(VWidth / 2);
       break;
     case Intrinsic::amdgcn_buffer_load:
-    case Intrinsic::amdgcn_buffer_load_format: {
+    case Intrinsic::amdgcn_buffer_load_format:
+    case Intrinsic::amdgcn_image_sample:
+    case Intrinsic::amdgcn_image_sample_cl:
+    case Intrinsic::amdgcn_image_sample_d:
+    case Intrinsic::amdgcn_image_sample_d_cl:
+    case Intrinsic::amdgcn_image_sample_l:
+    case Intrinsic::amdgcn_image_sample_b:
+    case Intrinsic::amdgcn_image_sample_b_cl:
+    case Intrinsic::amdgcn_image_sample_lz:
+    case Intrinsic::amdgcn_image_sample_cd:
+    case Intrinsic::amdgcn_image_sample_cd_cl:
+
+    case Intrinsic::amdgcn_image_sample_c:
+    case Intrinsic::amdgcn_image_sample_c_cl:
+    case Intrinsic::amdgcn_image_sample_c_d:
+    case Intrinsic::amdgcn_image_sample_c_d_cl:
+    case Intrinsic::amdgcn_image_sample_c_l:
+    case Intrinsic::amdgcn_image_sample_c_b:
+    case Intrinsic::amdgcn_image_sample_c_b_cl:
+    case Intrinsic::amdgcn_image_sample_c_lz:
+    case Intrinsic::amdgcn_image_sample_c_cd:
+    case Intrinsic::amdgcn_image_sample_c_cd_cl:
+
+    case Intrinsic::amdgcn_image_sample_o:
+    case Intrinsic::amdgcn_image_sample_cl_o:
+    case Intrinsic::amdgcn_image_sample_d_o:
+    case Intrinsic::amdgcn_image_sample_d_cl_o:
+    case Intrinsic::amdgcn_image_sample_l_o:
+    case Intrinsic::amdgcn_image_sample_b_o:
+    case Intrinsic::amdgcn_image_sample_b_cl_o:
+    case Intrinsic::amdgcn_image_sample_lz_o:
+    case Intrinsic::amdgcn_image_sample_cd_o:
+    case Intrinsic::amdgcn_image_sample_cd_cl_o:
+
+    case Intrinsic::amdgcn_image_sample_c_o:
+    case Intrinsic::amdgcn_image_sample_c_cl_o:
+    case Intrinsic::amdgcn_image_sample_c_d_o:
+    case Intrinsic::amdgcn_image_sample_c_d_cl_o:
+    case Intrinsic::amdgcn_image_sample_c_l_o:
+    case Intrinsic::amdgcn_image_sample_c_b_o:
+    case Intrinsic::amdgcn_image_sample_c_b_cl_o:
+    case Intrinsic::amdgcn_image_sample_c_lz_o:
+    case Intrinsic::amdgcn_image_sample_c_cd_o:
+    case Intrinsic::amdgcn_image_sample_c_cd_cl_o:
+
+    case Intrinsic::amdgcn_image_getlod: {
       if (VWidth == 1 || !DemandedElts.isMask())
         return nullptr;
 
@@ -1656,8 +1701,17 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       Type *NewTy = (NewNumElts == 1) ? EltTy :
         VectorType::get(EltTy, NewNumElts);
 
-      Function *NewIntrin = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
-                                                      NewTy);
+      auto IID = II->getIntrinsicID();
+
+      bool IsBuffer = IID == Intrinsic::amdgcn_buffer_load ||
+                      IID == Intrinsic::amdgcn_buffer_load_format;
+
+      Function *NewIntrin = IsBuffer ?
+        Intrinsic::getDeclaration(M, IID, NewTy) :
+        // Samplers have 3 mangled types.
+        Intrinsic::getDeclaration(M, IID,
+                                  { NewTy, II->getArgOperand(0)->getType(),
+                                      II->getArgOperand(1)->getType()});
 
       SmallVector<Value *, 5> Args;
       for (unsigned I = 0, E = II->getNumArgOperands(); I != E; ++I)
@@ -1669,6 +1723,29 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       CallInst *NewCall = Builder->CreateCall(NewIntrin, Args);
       NewCall->takeName(II);
       NewCall->copyMetadata(*II);
+
+      if (!IsBuffer) {
+        ConstantInt *DMask = dyn_cast<ConstantInt>(NewCall->getArgOperand(3));
+        if (DMask) {
+          unsigned DMaskVal = DMask->getZExtValue() & 0xf;
+
+          unsigned PopCnt = 0;
+          unsigned NewDMask = 0;
+          for (unsigned I = 0; I < 4; ++I) {
+            const unsigned Bit = 1 << I;
+            if (!!(DMaskVal & Bit)) {
+              if (++PopCnt > NewNumElts)
+                break;
+
+              NewDMask |= Bit;
+            }
+          }
+
+          NewCall->setArgOperand(3, ConstantInt::get(DMask->getType(), NewDMask));
+        }
+      }
+
+
       if (NewNumElts == 1) {
         return Builder->CreateInsertElement(UndefValue::get(V->getType()),
                                             NewCall, static_cast<uint64_t>(0));

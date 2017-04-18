@@ -2586,7 +2586,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
     Value *NewAllocaPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset)),
         AI->getType());
-    replaceDbgDeclareForAlloca(AI, NewAllocaPtr, DIB, /*Deref=*/true);
+    replaceDbgDeclareForAlloca(AI, NewAllocaPtr, DIB, /*Deref=*/false);
     AI->replaceAllUsesWith(NewAllocaPtr);
   }
 

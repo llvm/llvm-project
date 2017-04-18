@@ -3086,7 +3086,7 @@ static bool mergeConditionalStores(BranchInst *PBI, BranchInst *QBI) {
   if ((PTB && !HasOnePredAndOneSucc(PTB, PBI->getParent(), QBI->getParent())) ||
       (QTB && !HasOnePredAndOneSucc(QTB, QBI->getParent(), PostBB)))
     return false;
-  if (PostBB->getNumUses() != 2 || QBI->getParent()->getNumUses() != 2)
+  if (!PostBB->hasNUses(2) || !QBI->getParent()->hasNUses(2))
     return false;
 
   // OK, this is a sequence of two diamonds or triangles.

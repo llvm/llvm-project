@@ -22,7 +22,7 @@
 
 namespace llvm {
 namespace bitc {
-// The only top-level block type defined is for a module.
+// The only top-level block types are MODULE, IDENTIFICATION and STRTAB.
 enum BlockIDs {
   // Blocks
   MODULE_BLOCK_ID = FIRST_APPLICATION_BLOCKID,
@@ -52,7 +52,9 @@ enum BlockIDs {
 
   OPERAND_BUNDLE_TAGS_BLOCK_ID,
 
-  METADATA_KIND_BLOCK_ID
+  METADATA_KIND_BLOCK_ID,
+
+  STRTAB_BLOCK_ID,
 };
 
 /// Identification block contains a string that describes the producer details,
@@ -232,6 +234,10 @@ enum GlobalValueSummarySymtabCodes {
   // llvm.type.checked.load intrinsic with all constant integer arguments.
   // [typeid, offset, n x arg]
   FS_TYPE_CHECKED_LOAD_CONST_VCALL = 15,
+  // Assigns a GUID to a value ID. This normally appears only in combined
+  // summaries, but it can also appear in per-module summaries for PGO data.
+  // [valueid, guid]
+  FS_VALUE_GUID = 16,
 };
 
 enum MetadataCodes {
@@ -548,6 +554,10 @@ enum ComdatSelectionKindCodes {
   COMDAT_SELECTION_KIND_LARGEST = 3,
   COMDAT_SELECTION_KIND_NO_DUPLICATES = 4,
   COMDAT_SELECTION_KIND_SAME_SIZE = 5,
+};
+
+enum StrtabCodes {
+  STRTAB_BLOB = 1,
 };
 
 } // End bitc namespace

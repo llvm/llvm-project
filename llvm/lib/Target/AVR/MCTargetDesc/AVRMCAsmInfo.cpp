@@ -26,4 +26,5 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT) {
   UseIntegratedAssembler = true;
 }
 
+
 } // end of namespace llvm

@@ -570,8 +570,14 @@ bool CodeGenPrepare::splitIndirectCriticalEdges(Function &F) {
     ValueToValueMapTy VMap;
     BasicBlock *DirectSucc = CloneBasicBlock(Target, VMap, ".clone", &F);
 
-    for (BasicBlock *Pred : OtherPreds)
-      Pred->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
+    for (BasicBlock *Pred : OtherPreds) {
+      // If the target is a loop to itself, then the terminator of the split
+      // block needs to be updated.
+      if (Pred == Target)
+        BodyBlock->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
+      else
+        Pred->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
+    }
 
     // Ok, now fix up the PHIs. We know the two blocks only have PHIs, and that
     // they are clones, so the number of PHIs are the same.

@@ -413,6 +413,11 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             unsigned Reg, unsigned Offset,
                             const MDNode *Variable, const MDNode *Expr);
 
+/// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
+MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
+                                    MachineBasicBlock::iterator I,
+                                    const MachineInstr &Orig, int FrameIndex);
+
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;
 }

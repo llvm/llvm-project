@@ -38,7 +38,7 @@ define amdgpu_kernel void @use_too_many_sgprs_bonaire() #1 {
   ret void
 }
 
-; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_bonaire_flat_scr
+; ERROR: error: scalar registers limit of 104 exceeded (108) in use_too_many_sgprs_bonaire_flat_scr
 define amdgpu_kernel void @use_too_many_sgprs_bonaire_flat_scr() #1 {
   call void asm sideeffect "", "~{SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7}" ()
   call void asm sideeffect "", "~{SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15}" ()

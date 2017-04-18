@@ -43,6 +43,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
@@ -207,6 +208,12 @@ protected:
   /// nest. When this happens, the two blocks are guaranteed to execute
   /// the same number of times.
   EquivalenceClassMap EquivalenceClass;
+
+  /// Map from function name to Function *. Used to find the function from
+  /// the function name. If the function name contains suffix, additional
+  /// entry is added to map from the stripped name to the function if there
+  /// is one-to-one mapping.
+  StringMap<Function *> SymbolMap;
 
   /// \brief Dominance, post-dominance and loop information.
   std::unique_ptr<DominatorTree> DT;
@@ -689,7 +696,10 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I)) {
           auto CalleeFunctionName = FS->getName();
           const char *Reason = "Callee function not available";
-          CalledFunction = F.getParent()->getFunction(CalleeFunctionName);
+          auto R = SymbolMap.find(CalleeFunctionName);
+          if (R == SymbolMap.end())
+            continue;
+          CalledFunction = R->getValue();
           if (CalledFunction && isLegalToPromote(I, CalledFunction, &Reason)) {
             // The indirect target was promoted and inlined in the profile, as a
             // result, we do not have profile info for the branch probability.
@@ -1413,6 +1423,26 @@ bool SampleProfileLoader::runOnModule(Module &M) {
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();
+
+  // Populate the symbol map.
+  for (const auto &N_F : M.getValueSymbolTable()) {
+    std::string OrigName = N_F.getKey();
+    Function *F = dyn_cast<Function>(N_F.getValue());
+    if (F == nullptr)
+      continue;
+    SymbolMap[OrigName] = F;
+    auto pos = OrigName.find('.');
+    if (pos != std::string::npos) {
+      std::string NewName = OrigName.substr(0, pos);
+      auto r = SymbolMap.insert(std::make_pair(NewName, F));
+      // Failiing to insert means there is already an entry in SymbolMap,
+      // thus there are multiple functions that are mapped to the same
+      // stripped name. In this case of name conflicting, set the value
+      // to nullptr to avoid confusion.
+      if (!r.second)
+        r.first->second = nullptr;
+    }
+  }
 
   bool retval = false;
   for (auto &F : M)
