@@ -984,6 +984,7 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
   if (AttrList)
     ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   ProcessAPINotes(IDecl);
+  AddPragmaAttributes(TUScope, IDecl);
 
   if (PrevIDecl) {
     // Class already seen. Was it a definition?
@@ -1179,7 +1180,8 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
   if (AttrList)
     ProcessDeclAttributeList(TUScope, PDecl, AttrList);
   ProcessAPINotes(PDecl);
-  
+  AddPragmaAttributes(TUScope, PDecl);
+
   // Merge attributes from previous declarations.
   if (PrevDecl)
     mergeDeclAttributes(PDecl, PrevDecl);
@@ -1711,7 +1713,8 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
     if (attrList)
       ProcessDeclAttributeList(TUScope, PDecl, attrList);
     ProcessAPINotes(PDecl);
-    
+    AddPragmaAttributes(TUScope, PDecl);
+
     if (PrevDecl)
       mergeDeclAttributes(PDecl, PrevDecl);
 
@@ -1810,6 +1813,7 @@ ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
 
   if (AttrList)
     ProcessDeclAttributeList(TUScope, CDecl, AttrList);
+  AddPragmaAttributes(TUScope, CDecl);
 
   CheckObjCDeclScope(CDecl);
   return ActOnObjCContainerStartDefinition(CDecl);
@@ -1959,6 +1963,7 @@ Decl *Sema::ActOnStartClassImplementation(
                                       ClassName, /*typeParamList=*/nullptr,
                                       /*PrevDecl=*/nullptr, ClassLoc,
                                       true);
+    AddPragmaAttributes(TUScope, IDecl);
     IDecl->startDefinition();
     if (SDecl) {
       IDecl->setSuperClass(Context.getTrivialTypeSourceInfo(
@@ -4404,6 +4409,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // Apply the attributes to the parameter.
     ProcessDeclAttributeList(TUScope, Param, ArgInfo[i].ArgAttrs);
     ProcessAPINotes(Param);
+    AddPragmaAttributes(TUScope, Param);
 
     if (Param->hasAttr<BlocksAttr>()) {
       Diag(Param->getLocation(), diag::err_block_on_nonlocal);
@@ -4435,6 +4441,7 @@ Decl *Sema::ActOnMethodDeclaration(
   if (AttrList)
     ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
   ProcessAPINotes(ObjCMethod);
+  AddPragmaAttributes(TUScope, ObjCMethod);
 
   // Add the method now.
   const ObjCMethodDecl *PrevMethod = nullptr;
