@@ -21,6 +21,7 @@
 
 // CHECK: ![[INCTYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "incomplete"
 // CHECK-SAME:                                   DIFlagFwdDecl
+// CHECK: ![[EXPR]] = !DIExpression()
 
 template<typename T> struct Identity {
   typedef T Type;
@@ -117,7 +118,6 @@ struct foo {
 // For some reason function arguments ended up down here
 // CHECK: ![[F]] = !DILocalVariable(name: "f", arg: 1, scope: ![[FUNC]]
 // CHECK-SAME:                      type: ![[FOO]]
-// CHECK: ![[EXPR]] = !DIExpression(DW_OP_deref)
 foo func(foo f) {
   return f; // reference 'f' for now because otherwise we hit another bug
 }
