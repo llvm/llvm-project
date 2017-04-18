@@ -16,6 +16,7 @@
 #include <cerrno>
 #include <csignal>
 #include <vector>
+#include <time.h>
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
@@ -32,13 +33,6 @@
 #endif
 
 #if !HAVE_PPOLL && !HAVE_SYS_EVENT_H
-
-#ifdef LLVM_ON_WIN32
-struct timespec {
-  time_t       tv_sec;
-  suseconds_t  tv_nsec;
-};
-#endif
 
 int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
           const sigset_t *) {
@@ -160,7 +154,6 @@ void MainLoop::UnregisterSignal(int signo) {
 
 Error MainLoop::Run() {
   std::vector<int> signals;
-  sigset_t sigmask;
   m_terminate_request = false;
   signals.reserve(m_signals.size());
   
@@ -172,6 +165,7 @@ Error MainLoop::Run() {
   std::vector<struct kevent> events;
   events.reserve(m_read_fds.size() + m_signals.size());
 #else
+  sigset_t sigmask;
   std::vector<struct pollfd> read_fds;
   read_fds.reserve(m_read_fds.size());
 #endif

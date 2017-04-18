@@ -138,7 +138,8 @@ PHIExpression::~PHIExpression() = default;
 // It also wants to hand us SCC's that are unrelated to the phi node we ask
 // about, and have us process them there or risk redoing work.
 // Graph traits over a filter iterator also doesn't work that well here.
-// This SCC finder is specialized to walk use-def chains, and only follows instructions,
+// This SCC finder is specialized to walk use-def chains, and only follows
+// instructions,
 // not generic values (arguments, etc).
 struct TarjanSCC {
 
@@ -170,8 +171,10 @@ private:
           Root[I] = std::min(Root.lookup(I), Root.lookup(Op));
       }
     }
-    // See if we really were the root of a component, by seeing if we still have our DFSNumber.
-    // If we do, we are the root of the component, and we have completed a component. If we do not,
+    // See if we really were the root of a component, by seeing if we still have
+    // our DFSNumber.
+    // If we do, we are the root of the component, and we have completed a
+    // component. If we do not,
     // we are not the root of a component, and belong on the component stack.
     if (Root.lookup(I) == OurDFS) {
       unsigned ComponentID = Components.size();
@@ -2519,14 +2522,11 @@ void NewGVN::verifyMemoryCongruency() const {
   auto ReachableAccessPred =
       [&](const std::pair<const MemoryAccess *, CongruenceClass *> Pair) {
         bool Result = ReachableBlocks.count(Pair.first->getBlock());
-        if (!Result)
+        if (!Result || MSSA->isLiveOnEntryDef(Pair.first) ||
+            MemoryToDFSNum(Pair.first) == 0)
           return false;
-        if (MSSA->isLiveOnEntryDef(Pair.first))
-          return true;
         if (auto *MemDef = dyn_cast<MemoryDef>(Pair.first))
           return !isInstructionTriviallyDead(MemDef->getMemoryInst());
-        if (MemoryToDFSNum(Pair.first) == 0)
-          return false;
         return true;
       };
 

@@ -512,10 +512,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
   }
 
-  if (MFI->NumUserSGPRs > STM.getMaxNumUserSGPRs()) {
+  if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
     LLVMContext &Ctx = MF.getFunction()->getContext();
     DiagnosticInfoResourceLimit Diag(*MF.getFunction(), "user SGPRs",
-                                     MFI->NumUserSGPRs, DS_Error);
+                                     MFI->getNumUserSGPRs(), DS_Error);
     Ctx.diagnose(Diag);
   }
 
@@ -572,7 +572,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   }
 
   unsigned LDSSpillSize =
-    MFI->LDSWaveSpillSize * MFI->getMaxFlatWorkGroupSize();
+    MFI->getLDSWaveSpillSize() * MFI->getMaxFlatWorkGroupSize();
 
   ProgInfo.LDSSize = MFI->getLDSSize() + LDSSpillSize;
   ProgInfo.LDSBlocks =

@@ -37,6 +37,7 @@ enum AllocType : uint8_t {
   CallocLike         = 1<<2, // allocates + bzero
   ReallocLike        = 1<<3, // reallocates
   StrDupLike         = 1<<4,
+  MallocOrCallocLike = MallocLike | CallocLike,
   AllocLike          = MallocLike | CallocLike | StrDupLike,
   AnyAlloc           = AllocLike | ReallocLike
 };
@@ -77,8 +78,8 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 
-static Function *getCalledFunction(const Value *V, bool LookThroughBitCast,
-                                   bool &IsNoBuiltin) {
+static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast,
+                                         bool &IsNoBuiltin) {
   // Don't care about intrinsics in this case.
   if (isa<IntrinsicInst>(V))
     return nullptr;
@@ -86,13 +87,13 @@ static Function *getCalledFunction(const Value *V, bool LookThroughBitCast,
   if (LookThroughBitCast)
     V = V->stripPointerCasts();
 
-  CallSite CS(const_cast<Value*>(V));
+  ImmutableCallSite CS(V);
   if (!CS.getInstruction())
     return nullptr;
 
   IsNoBuiltin = CS.isNoBuiltin();
 
-  Function *Callee = CS.getCalledFunction();
+  const Function *Callee = CS.getCalledFunction();
   if (!Callee || !Callee->isDeclaration())
     return nullptr;
   return Callee;
@@ -217,6 +218,14 @@ bool llvm::isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 bool llvm::isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                           bool LookThroughBitCast) {
   return getAllocationData(V, CallocLike, TLI, LookThroughBitCast).hasValue();
+}
+
+/// \brief Tests if a value is a call or invoke to a library function that
+/// allocates memory similiar to malloc or calloc.
+bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                                  bool LookThroughBitCast) {
+  return getAllocationData(V, MallocOrCallocLike, TLI,
+                           LookThroughBitCast).hasValue();
 }
 
 /// \brief Tests if a value is a call or invoke to a library function that

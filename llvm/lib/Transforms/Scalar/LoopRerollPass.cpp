@@ -852,7 +852,7 @@ collectPossibleRoots(Instruction *Base, std::map<int64_t,Instruction*> &Roots) {
   for (auto &KV : Roots) {
     if (KV.first == 0)
       continue;
-    if (KV.second->getNumUses() != NumBaseUses) {
+    if (!KV.second->hasNUses(NumBaseUses)) {
       DEBUG(dbgs() << "LRR: Aborting - Root and Base #users not the same: "
             << "#Base=" << NumBaseUses << ", #Root=" <<
             KV.second->getNumUses() << "\n");
@@ -867,7 +867,7 @@ void LoopReroll::DAGRootTracker::
 findRootsRecursive(Instruction *I, SmallInstructionSet SubsumedInsts) {
   // Does the user look like it could be part of a root set?
   // All its users must be simple arithmetic ops.
-  if (I->getNumUses() > IL_MaxRerollIterations)
+  if (I->hasNUsesOrMore(IL_MaxRerollIterations + 1))
     return;
 
   if (I != IV && findRootsBase(I, SubsumedInsts))

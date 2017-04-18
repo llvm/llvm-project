@@ -49,4 +49,13 @@ TEST(Attributes, Ordering) {
   EXPECT_NE(SetA, SetB);
 }
 
+TEST(Attributes, AddAttributes) {
+  LLVMContext C;
+  AttributeList AL;
+  AttrBuilder B;
+  B.addAttribute(Attribute::NoReturn);
+  AL = AL.addAttributes(C, AttributeList::FunctionIndex, AttributeSet::get(C, B));
+  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+}
+
 } // end anonymous namespace

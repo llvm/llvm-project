@@ -808,7 +808,7 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
   // well.  Or alternatively, replace all of this with inaccessiblememonly once
   // that's implemented fully. 
   auto *Inst = CS.getInstruction();
-  if (isMallocLikeFn(Inst, &TLI) || isCallocLikeFn(Inst, &TLI)) {
+  if (isMallocOrCallocLikeFn(Inst, &TLI)) {
     // Be conservative if the accessed pointer may alias the allocation -
     // fallback to the generic handling below.
     if (getBestAAResults().alias(MemoryLocation(Inst), Loc) == NoAlias)
@@ -925,9 +925,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
                                             const DataLayout &DL) {
 
   assert(GEP1->getPointerOperand()->stripPointerCasts() ==
-         GEP2->getPointerOperand()->stripPointerCasts() &&
-         GEP1->getPointerOperand()->getType() ==
-         GEP2->getPointerOperand()->getType() &&
+             GEP2->getPointerOperand()->stripPointerCasts() &&
+         GEP1->getPointerOperandType() == GEP2->getPointerOperandType() &&
          "Expected GEPs with the same pointer operand");
 
   // Try to determine whether GEP1 and GEP2 index through arrays, into structs,
@@ -1186,9 +1185,8 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     // just the same underlying object), see if that tells us anything about
     // the resulting pointers.
     if (GEP1->getPointerOperand()->stripPointerCasts() ==
-        GEP2->getPointerOperand()->stripPointerCasts() &&
-        GEP1->getPointerOperand()->getType() ==
-        GEP2->getPointerOperand()->getType()) {
+            GEP2->getPointerOperand()->stripPointerCasts() &&
+        GEP1->getPointerOperandType() == GEP2->getPointerOperandType()) {
       AliasResult R = aliasSameBasePointerGEPs(GEP1, V1Size, GEP2, V2Size, DL);
       // If we couldn't find anything interesting, don't abandon just yet.
       if (R != MayAlias)

@@ -593,7 +593,7 @@ private:
   }
 
   bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
-  bool mayBeEmittedAsTailCall(CallInst *CI) const override;
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
                               ISD::MemIndexedMode &AM, bool &IsInc,
                               SelectionDAG &DAG) const;

@@ -988,6 +988,9 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
   if (!AS.hasAttributes())
     return *this;
 
+  if (!pImpl)
+    return AttributeList::get(C, {{Index, AS}});
+
 #ifndef NDEBUG
   // FIXME it is not obvious how this should work for alignment. For now, say
   // we can't change a known alignment.
