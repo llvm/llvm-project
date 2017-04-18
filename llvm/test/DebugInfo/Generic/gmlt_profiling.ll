@@ -1,9 +1,6 @@
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -O0 -filetype=obj < %S/gmlt_profiling.ll | llvm-dwarfdump - | FileCheck %S/gmlt_profiling.ll
 
-; There's a darwin specific test in X86/gmlt, so it's okay to XFAIL this here.
-; XFAIL: darwin
-
 ; CHECK: .debug_info
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
