@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class map
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
     typedef std::pair<const int, double> V;
     typedef test_compare<std::less<int> > C;
@@ -42,7 +43,6 @@ int main()
     assert(*next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     }
-#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     typedef test_compare<std::less<int> > C;
@@ -64,6 +64,4 @@ int main()
     assert(*next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

@@ -101,6 +101,7 @@
 		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */; };
+		D6631CA91E848FE9006A7B11 /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D6631CA81E848FE9006A7B11 /* SocketAddress.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -219,6 +220,7 @@
 		AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PseudoTerminal.cpp; sourceTree = "<group>"; };
 		AF67AC000D34604D0022D128 /* PseudoTerminal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PseudoTerminal.h; sourceTree = "<group>"; };
 		AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Genealogy.cpp; sourceTree = "<group>"; };
+		D6631CA81E848FE9006A7B11 /* SocketAddress.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SocketAddress.cpp; path = ../../source/Host/common/SocketAddress.cpp; sourceTree = "<group>"; };
 		ED128B7918E1F163003F6A7B /* libpmenergy.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpmenergy.dylib; path = usr/lib/libpmenergy.dylib; sourceTree = SDKROOT; };
 		ED128B7A18E1F163003F6A7B /* libpmsample.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpmsample.dylib; path = usr/lib/libpmsample.dylib; sourceTree = SDKROOT; };
 		EF88788B0D9C7558001831DA /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
@@ -251,6 +253,7 @@
 		08FB7794FE84155DC02AAC07 /* dbgnub */ = {
 			isa = PBXGroup;
 			children = (
+				D6631CA81E848FE9006A7B11 /* SocketAddress.cpp */,
 				26ACA3330D3E94F200A2120B /* Framework */,
 				26C637D50C71334A0024798E /* source */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
@@ -577,6 +580,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D6631CA91E848FE9006A7B11 /* SocketAddress.cpp in Sources */,
 				26CE05A7115C360D0022F371 /* DNBError.cpp in Sources */,
 				26CE05A8115C36170022F371 /* DNBThreadResumeActions.cpp in Sources */,
 				26CE05A9115C36250022F371 /* debugserver.cpp in Sources */,

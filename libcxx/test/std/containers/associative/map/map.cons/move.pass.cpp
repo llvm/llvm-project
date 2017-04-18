@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class map
@@ -22,7 +24,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     typedef std::pair<const int, double> V;
     {
         typedef test_compare<std::less<int> > C;
@@ -69,7 +70,6 @@ int main()
         assert(mo.size() == 0);
         assert(distance(mo.begin(), mo.end()) == 0);
     }
-#if TEST_STD_VER >= 11
     {
         typedef test_compare<std::less<int> > C;
         typedef min_allocator<V> A;
@@ -115,6 +115,4 @@ int main()
         assert(mo.size() == 0);
         assert(distance(mo.begin(), mo.end()) == 0);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

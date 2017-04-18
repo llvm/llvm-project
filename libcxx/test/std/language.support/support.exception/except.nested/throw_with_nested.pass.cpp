@@ -113,7 +113,7 @@ int main()
             std::throw_with_nested("String literal");
             assert(false);
         }
-        catch (const char * s)
+        catch (const char *)
         {
         }
     }

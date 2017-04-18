@@ -634,7 +634,7 @@ void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
   std::vector<TemporaryFile> Temps;
   for (StringRef S : Objects) {
     Temps.emplace_back("lto", "obj", S);
-    Rsp += quote(Temps.back().Path) + " ";
+    Rsp += quote(Temps.back().Path) + "\n";
   }
 
   log("link.exe " + Rsp);

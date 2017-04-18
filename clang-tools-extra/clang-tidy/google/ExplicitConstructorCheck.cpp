@@ -91,6 +91,8 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Conversion =
       Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
+    if (Conversion->isOutOfLine())
+      return;
     SourceLocation Loc = Conversion->getLocation();
     // Ignore all macros until we learn to ignore specific ones (e.g. used in
     // gmock to define matchers).
