@@ -10,6 +10,8 @@ void load_non_null_pointers() {
   int arr[1];
   arr[0] = arr[0];
 
+  char c = "foo"[0];
+
   // CHECK-NOT: icmp ne {{.*}}, null, !nosanitize
   // CHECK: ret void
 }
