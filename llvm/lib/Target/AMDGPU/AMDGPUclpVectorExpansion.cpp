@@ -425,13 +425,6 @@ static int getAndPassVecSize(StringRef &Str) {
   return Res;
 } // getAndPassVecSize
 
-static bool canHandled(an_typedes_t TypeDes, const an_typedes_t *Array) {
-  int Idx = 0;
-  while (Array[Idx] != 0 && Array[Idx] != TypeDes)
-    ++Idx;
-  return (Array[Idx] != tdInvalid);
-} // canHandled
-
 // data structure to collect use of builtin functions
 struct a_funcuse_t {
   Function *LlvmFunc;
@@ -676,6 +669,13 @@ void AMDGPUclpVectorExpansion::checkExpansionInfo() {
 
   DEBUG(dbgs() << "checkExpansionInfo end\n");
 } // AMDGPUclpVectorExpansion::checkExpansionInfo
+
+static bool canHandled(an_typedes_t TypeDes, const an_typedes_t *Array) {
+  int Idx = 0;
+  while (Array[Idx] != 0 && Array[Idx] != TypeDes)
+    ++Idx;
+  return (Array[Idx] != tdInvalid);
+} // canHandled
 
 bool AMDGPUclpVectorExpansion::canHandlePattern(const a_builtinfunc *Table) {
   int Lead1 = Table->LeaderId;
