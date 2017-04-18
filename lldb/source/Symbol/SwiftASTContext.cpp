@@ -22,6 +22,7 @@
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
+#include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/IRGenOptions.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/NameLookup.h"
@@ -370,8 +371,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
         break;
       is_protocol = true;
       uint32_t num_children = protocol_info.m_num_storage_words;
-      if (protocol_info.IsOneWordStorage())
-        protocol_info.m_num_protocols = 0;
 
       for (uint32_t idx = 0; idx < num_children; idx++) {
         MemberInfo member_info(MemberType::Field);
@@ -381,18 +380,22 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
         member_info.byte_offset = idx * member_info.byte_size;
         member_info.is_fragile = false;
         StreamString child_name_stream;
-        if (protocol_info.IsOneWordStorage())
-          child_name_stream.Printf("instance_type");
+
+        // Opaque existentials have m_num_payload_words != 0.
+        if (idx < protocol_info.m_num_payload_words)
+          child_name_stream.Printf("payload_data_%u", idx);
         else {
-          if (idx < protocol_info.m_num_payload_words)
-            child_name_stream.Printf("payload_data_%u", idx);
-          else {
-            int l_idx = idx - protocol_info.m_num_payload_words;
-            if (l_idx == 0)
-              child_name_stream.Printf("instance_type");
-            else
-              child_name_stream.Printf("protocol_witness_%u", l_idx - 1);
-          }
+          // After the payload, the first word is either the instance itself
+          // (for class or error existentials) or a metadata pointer
+          // (for opaque existentials).
+          //
+          // Class and opaque existentials have zero or more witness tables.
+          // Error existentials always store their witness table inline.
+          int l_idx = idx - protocol_info.m_num_payload_words;
+          if (l_idx == 0)
+            child_name_stream.Printf("instance_type");
+          else
+            child_name_stream.Printf("protocol_witness_%u", l_idx - 1);
         }
         member_info.name = ConstString(child_name_stream.GetData());
         member_infos_sp->member_infos.push_back(member_info);
@@ -5659,47 +5662,38 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
   if (auto ast =
           llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Protocol: {
-      swift::ProtocolType *t = swift_can_type->getAs<swift::ProtocolType>();
-      protocol_info.m_is_class_only = t->getDecl()->requiresClass();
-      protocol_info.m_num_protocols = 1;
-      protocol_info.m_num_payload_words = 3;
-      protocol_info.m_is_objc = t->getDecl()->isObjC();
-      protocol_info.m_is_anyobject = (t->getDecl() ==
-                                      ast->GetASTContext()->getProtocol(
-                                          swift::KnownProtocolKind::AnyObject));
-      protocol_info.m_is_errortype =
-          (t->getDecl() == ast->GetASTContext()->getErrorDecl());
-      protocol_info.m_num_payload_words =
-          (protocol_info.m_is_errortype ? 0 : 3);
-      if (protocol_info.IsOneWordStorage()) // @objc protocols only wrap an
-                                            // ISA/metadata pointer
-        protocol_info.m_num_storage_words = 1;
-      else
-        protocol_info.m_num_storage_words =
-            (protocol_info.m_is_class_only ? 0 : 1) +
-            protocol_info.m_num_protocols + 3;
-      return true;
-    }
-    case swift::TypeKind::ProtocolComposition: {
-      swift::ProtocolCompositionType *t =
-          swift_can_type->getAs<swift::ProtocolCompositionType>();
-      protocol_info.m_is_class_only = t->requiresClass();
-      protocol_info.m_num_protocols = t->getMembers().size();
-      protocol_info.m_num_payload_words = 3;
-      protocol_info.m_is_objc = false;
-      protocol_info.m_is_errortype = false;
-      protocol_info.m_is_anyobject = false;
-      protocol_info.m_num_storage_words =
-          (protocol_info.m_is_class_only ? 0 : 1) +
-          protocol_info.m_num_protocols + 3;
-      return true;
-    }
-    default:
+    if (!swift_can_type.isExistentialType())
       return false;
+
+    swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
+    protocol_info.m_is_class_only = layout.requiresClass;
+    protocol_info.m_num_protocols = layout.getProtocols().size();
+    protocol_info.m_is_objc = layout.isObjC();
+    protocol_info.m_is_anyobject = layout.isAnyObject();
+    protocol_info.m_is_errortype = layout.isErrorExistential();
+
+    unsigned num_witness_tables = 0;
+    for (auto protoTy : layout.getProtocols()) {
+      if (!protoTy->getDecl()->isObjC())
+        num_witness_tables++;
     }
+
+    if (layout.isErrorExistential()) {
+      // Error existential -- instance pointer only
+      protocol_info.m_num_payload_words = 0;
+      protocol_info.m_num_storage_words = 1;
+    } else if (layout.requiresClass) {
+      // Class-constrained existential -- instance pointer plus witness tables
+      protocol_info.m_num_payload_words = 0;
+      protocol_info.m_num_storage_words = 1 + num_witness_tables;
+    } else {
+      // Opaque existential -- three words of inline storage, metadata and
+      // witness tables
+      protocol_info.m_num_payload_words = 3;
+      protocol_info.m_num_storage_words = 3 + 1 + num_witness_tables;
+    }
+
+    return true;
   }
 
   return false;
