@@ -8445,6 +8445,7 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
     Namespc->setInvalidDecl();
   
   ProcessDeclAttributeList(DeclRegionScope, Namespc, AttrList);
+  AddPragmaAttributes(DeclRegionScope, Namespc);
   ProcessAPINotes(Namespc);
 
   // FIXME: Should we be merging attributes?
@@ -9933,6 +9934,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
     NewTD->setInvalidDecl();
 
   ProcessDeclAttributeList(S, NewTD, AttrList);
+  AddPragmaAttributes(S, NewTD);
   ProcessAPINotes(NewTD);
 
   CheckTypedefForVariablyModifiedType(S, NewTD);

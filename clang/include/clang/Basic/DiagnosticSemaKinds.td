@@ -750,6 +750,25 @@ def err_pragma_loop_compatibility : Error<
 def err_pragma_loop_precedes_nonloop : Error<
   "expected a for, while, or do-while loop to follow '%0'">;
 
+def err_pragma_attribute_matcher_subrule_contradicts_rule : Error<
+  "redundant attribute subject matcher sub-rule '%0'; '%1' already matches "
+  "those declarations">;
+def err_pragma_attribute_matcher_negated_subrule_contradicts_subrule : Error<
+  "negated attribute subject matcher sub-rule '%0' contradicts sub-rule '%1'">;
+def err_pragma_attribute_invalid_matchers : Error<
+  "attribute %0 can't be applied to %1">;
+def err_pragma_attribute_stack_mismatch : Error<
+  "'#pragma clang attribute pop' with no matching '#pragma clang attribute push'">;
+def warn_pragma_attribute_unused : Warning<
+  "unused attribute %0 in '#pragma clang attribute push' region">,
+  InGroup<PragmaClangAttribute>;
+def note_pragma_attribute_region_ends_here : Note<
+  "'#pragma clang attribute push' regions ends here">;
+def err_pragma_attribute_no_pop_eof : Error<"unterminated "
+  "'#pragma clang attribute push' at end of file">;
+def note_pragma_attribute_applied_decl_here : Note<
+  "when applied to this declaration">;
+
 /// Objective-C parser diagnostics
 def err_duplicate_class_def : Error<
   "duplicate interface definition for class %0">;

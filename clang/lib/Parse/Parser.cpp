@@ -610,6 +610,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     ConsumeToken();
     return false;
 
+  case tok::annot_pragma_attribute:
+    HandlePragmaAttribute();
+    return false;
+
   case tok::eof:
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)

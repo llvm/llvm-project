@@ -790,6 +790,9 @@ ANNOTATION(pragma_loop_hint)
 
 ANNOTATION(pragma_fp)
 
+// Annotation for the attribute pragma directives - #pragma clang attribute ...
+ANNOTATION(pragma_attribute)
+
 // Annotations for module import translated from #include etc.
 ANNOTATION(module_include)
 ANNOTATION(module_begin)

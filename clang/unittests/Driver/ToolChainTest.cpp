@@ -142,4 +142,4 @@ TEST(ToolChainTest, DefaultDriverMode) {
   EXPECT_TRUE(CLDriver.IsCLMode());
 }
 
-} // end anonymous namespace
+} // end anonymous namespace.

@@ -7204,6 +7204,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   if (const AttributeList *Attrs = PD.getAttributes())
     ProcessDeclAttributeList(S, D, Attrs);
 
+  // Apply additional attributes specified by '#pragma clang attribute'.
+  AddPragmaAttributes(S, D);
+
   // Look for API notes that map to attributes.
   ProcessAPINotes(D);
 }
