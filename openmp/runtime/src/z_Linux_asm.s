@@ -109,8 +109,28 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if KMP_OS_LINUX && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
 
+# if KMP_OS_DARWIN
+#  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
+#  define KMP_LABEL(x) L_##x             // form the name of label
+
+.macro ALIGN
+	.align $0
+.endmacro
+
+.macro DEBUG_INFO
+/* Not sure what .size does in icc, not sure if we need to do something
+   similar for OS X*.
+*/
+.endmacro
+
+.macro PROC
+	ALIGN  4
+	.globl KMP_PREFIX_UNDERSCORE($0)
+KMP_PREFIX_UNDERSCORE($0):
+.endmacro
+# else // KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Linux* OS symbols
 // Format labels so that they don't override function names in gdb's backtraces
 #  define KMP_LABEL(x) .L_##x         // local label hidden from backtraces
@@ -133,8 +153,9 @@ KMP_PREFIX_UNDERSCORE(\proc):
 KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
 .endm
+# endif // KMP_OS_DARWIN
 
-#endif // KMP_OS_LINUX && KMP_ARCH_AARCH64
+#endif // (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
 
 // -----------------------------------------------------------------------
 // data
@@ -1441,7 +1462,7 @@ KMP_LABEL(kmp_1_exit):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if KMP_OS_LINUX && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
 
 //------------------------------------------------------------------------
 //
@@ -1553,7 +1574,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* KMP_OS_LINUX && KMP_ARCH_AARCH64 */
+#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64 */
 
 #if KMP_ARCH_PPC64
 

@@ -180,16 +180,16 @@ macro(add_target_flags_if condition var)
   if (${condition})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
-    list(APPEND LINUNWIND_COMPILE_FLAGS ${var})
+    list(APPEND LIBUNWIND_COMPILE_FLAGS ${var})
     list(APPEND LIBUNWIND_LINK_FLAGS ${var})
   endif()
 endmacro()
 
 add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 add_target_flags_if(LIBUNWIND_TARGET_TRIPLE
-          "-target ${LIBUNWIND_TARGET_TRIPLE}")
+          "--target=${LIBUNWIND_TARGET_TRIPLE}")
 add_target_flags_if(LIBUNWIND_GCC_TOOLCHAIN
-          "-gcc-toolchain ${LIBUNWIND_GCC_TOOLCHAIN}")
+          "--gcc-toolchain=${LIBUNWIND_GCC_TOOLCHAIN}")
 add_target_flags_if(LIBUNWIND_SYSROOT
           "--sysroot=${LIBUNWIND_SYSROOT}")
 

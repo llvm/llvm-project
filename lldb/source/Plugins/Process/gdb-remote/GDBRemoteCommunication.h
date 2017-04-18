@@ -89,6 +89,10 @@ public:
   private:
     GDBRemoteCommunication &m_gdb_comm;
     std::chrono::seconds m_saved_timeout;
+    // Don't ever reduce the timeout for a packet, only increase it. If the
+    // requested timeout if less than the current timeout, we don't set it
+    // and won't need to restore it.
+    bool m_timeout_modified;
   };
 
   GDBRemoteCommunication(const char *comm_name, const char *listener_name);
