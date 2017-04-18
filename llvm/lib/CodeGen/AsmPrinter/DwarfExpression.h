@@ -84,6 +84,16 @@ public:
 /// entry.
 class DwarfExpression {
 protected:
+  /// Holds information about all subregisters comprising a register location.
+  struct Register {
+    int DwarfRegNo;
+    unsigned Size;
+    const char *Comment;
+  };
+
+  /// The register location, if any.
+  SmallVector<Register, 2> DwarfRegs;
+
   /// Current Fragment Offset in Bits.
   uint64_t OffsetInBits = 0;
   unsigned DwarfVersion;
@@ -102,13 +112,6 @@ protected:
   /// Add masking operations to stencil out a subregister.
   void maskSubRegister();
 
-public:
-  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
-  virtual ~DwarfExpression() {};
-
-  /// This needs to be called last to commit any pending changes.
-  void finalize();
-
   /// Output a dwarf operand and an optional assembler comment.
   virtual void emitOp(uint8_t Op, const char *Comment = nullptr) = 0;
   /// Emit a raw signed value.
@@ -119,10 +122,31 @@ public:
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
-  /// Emit a dwarf register operation.
+  /// Emit a DW_OP_reg operation.
   void addReg(int DwarfReg, const char *Comment = nullptr);
-  /// Emit an (double-)indirect dwarf register operation.
-  void addRegIndirect(int DwarfReg, int Offset);
+  /// Emit a DW_OP_breg operation.
+  void addBReg(int DwarfReg, int Offset);
+  /// Emit DW_OP_fbreg <Offset>.
+  void addFBReg(int Offset);
+
+  /// Emit a partial DWARF register operation.
+  ///
+  /// \param MachineReg           The register number.
+  /// \param MaxSize              If the register must be composed from
+  ///                             sub-registers this is an upper bound
+  ///                             for how many bits the emitted DW_OP_piece
+  ///                             may cover.
+  ///
+  /// If size and offset is zero an operation for the entire register is
+  /// emitted: Some targets do not provide a DWARF register number for every
+  /// register.  If this is the case, this function will attempt to emit a DWARF
+  /// register by emitting a fragment of a super-register or by piecing together
+  /// multiple subregisters that alias the register.
+  ///
+  /// \return false if no DWARF register exists for MachineReg.
+  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                     unsigned MaxSize = ~1U);
+
 
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
   /// \param OffsetInBits    This is an optional offset into the location that
@@ -147,28 +171,12 @@ public:
   /// expression.  See PR21176 for more details.
   void addStackValue();
 
-  /// Emit an indirect dwarf register operation for the given machine register.
-  /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
-                             int Offset = 0);
+  ~DwarfExpression() = default;
+public:
+  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
 
-  /// Emit a partial DWARF register operation.
-  ///
-  /// \param MachineReg           The register number.
-  /// \param MaxSize              If the register must be composed from
-  ///                             sub-registers this is an upper bound
-  ///                             for how many bits the emitted DW_OP_piece
-  ///                             may cover.
-  ///
-  /// If size and offset is zero an operation for the entire register is
-  /// emitted: Some targets do not provide a DWARF register number for every
-  /// register.  If this is the case, this function will attempt to emit a DWARF
-  /// register by emitting a fragment of a super-register or by piecing together
-  /// multiple subregisters that alias the register.
-  ///
-  /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
-                     unsigned MaxSize = ~1U);
+  /// This needs to be called last to commit any pending changes.
+  void finalize();
 
   /// Emit a signed constant.
   void addSignedConstant(int64_t Value);
@@ -203,33 +211,32 @@ public:
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
-class DebugLocDwarfExpression : public DwarfExpression {
+class DebugLocDwarfExpression final : public DwarfExpression {
   ByteStreamer &BS;
-
-public:
-  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
-      : DwarfExpression(DwarfVersion), BS(BS) {}
 
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
+public:
+  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
+      : DwarfExpression(DwarfVersion), BS(BS) {}
 };
 
 /// DwarfExpression implementation for singular DW_AT_location.
-class DIEDwarfExpression : public DwarfExpression {
+class DIEDwarfExpression final : public DwarfExpression {
 const AsmPrinter &AP;
   DwarfUnit &DU;
   DIELoc &DIE;
 
-public:
-  DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
+public:
+  DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
   DIELoc *finalize() {
     DwarfExpression::finalize();
     return &DIE;
