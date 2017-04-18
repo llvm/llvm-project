@@ -8,7 +8,6 @@ add_lldb_library(lldbCore
   Broadcaster.cpp
   Communication.cpp
   Connection.cpp
-  CxaDemangle.cpp
   Debugger.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp

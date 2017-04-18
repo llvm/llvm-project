@@ -1,6 +1,7 @@
 add_lldb_library(lldbUtility
   Baton.cpp
   ConstString.cpp
+  CxaDemangle.cpp
   DataBufferHeap.cpp
   DataBufferLLVM.cpp
   DataEncoder.cpp
