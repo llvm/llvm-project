@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <stack>
 
 // stack()
@@ -24,10 +26,8 @@
 
 int main()
 {
-#if defined(_LIBCPP_VERSION)
     {
         typedef std::stack<MoveOnly> C;
         static_assert(std::is_nothrow_default_constructible<C>::value, "");
     }
-#endif // _LIBCPP_VERSION
 }

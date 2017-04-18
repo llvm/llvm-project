@@ -122,11 +122,11 @@ Error UDPSocket::Connect(llvm::StringRef name) {
 }
 
 Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
-  return Error(g_not_supported_error);
+  return Error("%s", g_not_supported_error);
 }
 
 Error UDPSocket::Accept(Socket *&socket) {
-  return Error(g_not_supported_error);
+  return Error("%s", g_not_supported_error);
 }
 
 Error UDPSocket::CreateSocket() {

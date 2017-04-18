@@ -1171,6 +1171,8 @@ const char *Lexer::SkipEscapedNewLines(const char *P) {
       // If not a trigraph for escape, bail out.
       if (P[1] != '?' || P[2] != '/')
         return P;
+      // FIXME: Take LangOpts into account; the language might not
+      // support trigraphs.
       AfterEscape = P+3;
     } else {
       return P;
@@ -2079,17 +2081,17 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
         HasSpace = true;
       }
 
-      if (*EscapePtr == '\\') // Escaped newline.
+      if (*EscapePtr == '\\')
+        // Escaped newline.
         CurPtr = EscapePtr;
       else if (EscapePtr[0] == '/' && EscapePtr[-1] == '?' &&
-               EscapePtr[-2] == '?') // Trigraph-escaped newline.
+               EscapePtr[-2] == '?' && LangOpts.Trigraphs)
+        // Trigraph-escaped newline.
         CurPtr = EscapePtr-2;
       else
         break; // This is a newline, we're done.
 
       // If there was space between the backslash and newline, warn about it.
-      // FIXME: This warning is bogus if trigraphs are disabled and the line
-      // ended with '?' '?' '\\' '\n'.
       if (HasSpace && !isLexingRawMode())
         Diag(EscapePtr, diag::backslash_newline_space);
     }

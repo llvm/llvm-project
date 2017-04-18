@@ -24,23 +24,9 @@ enum SubjectMatchRule {
 
 const char *getSubjectMatchRuleSpelling(SubjectMatchRule Rule);
 
-using ParsedSubjectMatchRuleSet = llvm::DenseMap<SubjectMatchRule, SourceRange>;
+using ParsedSubjectMatchRuleSet = llvm::DenseMap<int, SourceRange>;
 
 } // end namespace attr
 } // end namespace clang
-
-namespace llvm {
-
-template <>
-struct DenseMapInfo<clang::attr::SubjectMatchRule> : DenseMapInfo<int> {
-  static inline clang::attr::SubjectMatchRule getEmptyKey() {
-    return (clang::attr::SubjectMatchRule)DenseMapInfo<int>::getEmptyKey();
-  }
-  static inline clang::attr::SubjectMatchRule getTombstoneKey() {
-    return (clang::attr::SubjectMatchRule)DenseMapInfo<int>::getTombstoneKey();
-  }
-};
-
-} // end namespace llvm
 
 #endif

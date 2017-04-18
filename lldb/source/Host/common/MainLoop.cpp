@@ -15,7 +15,6 @@
 #include <cassert>
 #include <cerrno>
 #include <csignal>
-#include <sys/select.h>
 #include <vector>
 
 #if HAVE_SYS_EVENT_H
@@ -34,7 +33,14 @@
 
 #if !HAVE_PPOLL && !HAVE_SYS_EVENT_H
 
-int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *timeout_ts,
+#ifdef LLVM_ON_WIN32
+struct timespec {
+  time_t       tv_sec;
+  suseconds_t  tv_nsec;
+};
+#endif
+
+int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
           const sigset_t *) {
   int timeout =
       (timeout_ts == nullptr)

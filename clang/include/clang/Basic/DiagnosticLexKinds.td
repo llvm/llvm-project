@@ -594,8 +594,6 @@ def err_mmap_expected_mmap_file : Error<"expected a module map file name">;
 def err_mmap_module_redefinition : Error<
   "redefinition of module '%0'">;
 def note_mmap_prev_definition : Note<"previously defined here">;
-def err_mmap_umbrella_dir_not_found : Error<
-  "umbrella directory '%0' not found">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
 def err_mmap_module_id : Error<
@@ -655,6 +653,9 @@ def note_implicit_top_level_module_import_here : Note<
   "submodule of top-level module '%0' implicitly imported here">;
 def warn_uncovered_module_header : Warning<
   "umbrella header for module '%0' does not include header '%1'">, 
+  InGroup<IncompleteUmbrella>;
+def warn_mmap_umbrella_dir_not_found : Warning<
+  "umbrella directory '%0' not found">,
   InGroup<IncompleteUmbrella>;
 def err_expected_id_building_module : Error<
   "expected a module name in '__building_module' expression">;
