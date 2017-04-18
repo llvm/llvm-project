@@ -311,20 +311,15 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
     case swift::TypeKind::BuiltinUnknownObject:
     case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::Metatype:
     case swift::TypeKind::Module:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ArraySlice:
     case swift::TypeKind::LValue:
     case swift::TypeKind::UnboundGeneric:
     case swift::TypeKind::Enum:
@@ -435,7 +430,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
 
           for (auto decl : nominal_decl->getMembers()) {
             if (decl->getKind() == swift::DeclKind::Var) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
+              swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
               if (var_decl->hasStorage() && !var_decl->isStatic()) {
                 MemberInfo member_info(MemberType::Field);
                 member_info.clang_type = CompilerType(
@@ -496,7 +491,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
           for (auto decl : t_decl->getMembers()) {
             // Find ivars that aren't properties
             if (decl->getKind() == swift::DeclKind::Var) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
+              swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
               if (var_decl->hasStorage() && !var_decl->isStatic()) {
                 MemberInfo member_info(MemberType::Field);
                 swift::Type member_type = swift_can_type->getTypeOfMember(
@@ -521,15 +516,17 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
       }
     } break;
 
-    case swift::TypeKind::Dictionary: {
-      swift::DictionaryType *t =
-          llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-      if (t)
-        return GetCachedMemberInfo(t->getSinglyDesugaredType());
-    } break;
-
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::Archetype:
+      break;
+
+    case swift::TypeKind::Optional:
+    case swift::TypeKind::ImplicitlyUnwrappedOptional:
+    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::Paren:
+    case swift::TypeKind::Dictionary:
+    case swift::TypeKind::ArraySlice:
+      assert(false && "Not a canonical type");
       break;
     }
     if (!member_infos_sp->member_infos.empty()) {
@@ -828,22 +825,20 @@ GetFunctionArgumentTuple(const CompilerType &compiler_type) {
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(
         GetCanonicalSwiftType(compiler_type.GetOpaqueQualType()));
-    swift::AnyFunctionType *func =
-        llvm::dyn_cast_or_null<swift::AnyFunctionType>(
-            swift_can_type.getPointer());
+    auto func =
+        swift::dyn_cast_or_null<swift::AnyFunctionType>(
+            swift_can_type);
     if (func) {
-      swift::TypeBase *input = func->getInput().getPointer();
-      if (!input)
-        return CompilerType();
+      auto input = func.getInput();
       // See comment in swift::AnyFunctionType for rationale here:
       // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
       // is not a tuple, that must mean there is only 1 input.
-      swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
+      auto tuple = swift::dyn_cast<swift::TupleType>(input);
       if (tuple)
         return CompilerType(compiler_type.GetTypeSystem(), tuple);
       else
-        return CompilerType(compiler_type.GetTypeSystem(), input);
+        return CompilerType(compiler_type.GetTypeSystem(), input.getPointer());
     }
   }
   return CompilerType();
@@ -4189,7 +4184,7 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
   if (decl) {
     switch (decl->getKind()) {
     case swift::DeclKind::TypeAlias: {
-      swift::TypeAliasDecl *alias_decl = llvm::cast<swift::TypeAliasDecl>(decl);
+      swift::TypeAliasDecl *alias_decl = swift::cast<swift::TypeAliasDecl>(decl);
       if (alias_decl->hasInterfaceType()) {
         swift::Type swift_type = alias_decl->getDeclaredInterfaceType();
         return CompilerType(ast, swift_type.getPointer());
@@ -4201,7 +4196,7 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
     case swift::DeclKind::Struct:
     case swift::DeclKind::Protocol:
     case swift::DeclKind::Class: {
-      swift::NominalTypeDecl *nominal_decl = llvm::cast<swift::NominalTypeDecl>(decl);
+      swift::NominalTypeDecl *nominal_decl = swift::cast<swift::NominalTypeDecl>(decl);
       if (nominal_decl->hasInterfaceType()) {
         swift::Type swift_type = nominal_decl->getDeclaredType();
         return CompilerType(ast, swift_type.getPointer());
@@ -4242,7 +4237,7 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
 
 static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {
   if (swift::ValueDecl *value_decl =
-          llvm::dyn_cast_or_null<swift::ValueDecl>(decl))
+          swift::dyn_cast_or_null<swift::ValueDecl>(decl))
     return ValueDeclToType(value_decl, ast);
   return CompilerType();
 }
@@ -4272,7 +4267,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
 
     case swift::DeclKind::TypeAlias: {
       swift::TypeAliasDecl *alias_decl =
-          llvm::dyn_cast_or_null<swift::TypeAliasDecl>(decl);
+          swift::cast<swift::TypeAliasDecl>(decl);
       if (alias_decl->hasInterfaceType()) {
         swift::Type swift_type = alias_decl->getDeclaredInterfaceType();
         return CompilerType(ast, swift_type.getPointer());
@@ -4283,7 +4278,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::Class:
     case swift::DeclKind::Protocol: {
       swift::NominalTypeDecl *nominal_decl =
-          llvm::dyn_cast_or_null<swift::NominalTypeDecl>(decl);
+          swift::cast<swift::NominalTypeDecl>(decl);
       if (nominal_decl->hasInterfaceType()) {
         swift::Type swift_type = nominal_decl->getDeclaredType();
         return CompilerType(ast, swift_type.getPointer());
@@ -4417,7 +4412,7 @@ size_t SwiftASTContext::FindTypes(const char *name,
         [](CompilerType type) -> CompilerType { return type; },
         [this](swift::Decl *decl) -> CompilerType {
           if (swift::ValueDecl *value_decl =
-                  llvm::dyn_cast_or_null<swift::ValueDecl>(decl)) {
+                  swift::dyn_cast_or_null<swift::ValueDecl>(decl)) {
             if (value_decl->hasInterfaceType()) {
               swift::Type swift_type = value_decl->getInterfaceType();
               swift::MetatypeType *meta_type =
@@ -4783,7 +4778,7 @@ SwiftASTContext::BindGenericType(CompilerType type,
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
     case swift::TypeKind::UnboundGeneric: {
-      auto nominal_type_decl = llvm::cast<swift::NominalTypeDecl>(
+      auto nominal_type_decl = swift::cast<swift::NominalTypeDecl>(
           swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
       swift::DeclContext *parent_decl = nominal_type_decl->getParent();
       swift::Type parent_type;
@@ -5048,11 +5043,11 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     }
   }
 
-  if (auto metatype_type = llvm::dyn_cast_or_null<swift::MetatypeType>(
-          swift_can_type.getPointer())) {
-    if (metatype_type && ((false == metatype_type->hasRepresentation()) ||
-                          (swift::MetatypeRepresentation::Thin ==
-                           metatype_type->getRepresentation())))
+  if (auto metatype_type = swift::dyn_cast_or_null<swift::MetatypeType>(
+          swift_can_type)) {
+    if (!metatype_type->hasRepresentation() ||
+        (swift::MetatypeRepresentation::Thin ==
+         metatype_type->getRepresentation()))
       m_is_zero_size = true;
   } else if (auto enum_decl = swift_can_type->getEnumOrBoundGenericEnum()) {
     size_t num_nopayload = 0, num_payload = 0;
@@ -5073,7 +5068,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     auto members = struct_decl->getMembers();
     for (const auto &member : members) {
       if (swift::VarDecl *var_decl =
-              llvm::dyn_cast_or_null<swift::VarDecl>(member)) {
+              swift::dyn_cast<swift::VarDecl>(member)) {
         if (!var_decl->isStatic() && var_decl->hasStorage()) {
           has_storage = true;
           break;
@@ -5081,8 +5076,8 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
       }
     }
     m_is_zero_size = !has_storage;
-  } else if (auto tuple_type = llvm::dyn_cast_or_null<swift::TupleType>(
-                 swift_can_type.getPointer())) {
+  } else if (auto tuple_type = swift::dyn_cast_or_null<swift::TupleType>(
+                 swift_can_type)) {
     m_is_zero_size = (tuple_type->getNumElements() == 0);
   }
 }
@@ -5182,8 +5177,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::ExistentialMetatype:
     case swift::TypeKind::Metatype:
       return false;
-    case swift::TypeKind::Dictionary:
-      return true;
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
@@ -5191,17 +5184,8 @@ bool SwiftASTContext::IsAggregateType(void *type) {
           swift_can_type->getAs<swift::ReferenceStorageType>()
               ->getReferentType()
               .getPointer());
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
-    case swift::TypeKind::NameAlias:
-      break;
-    case swift::TypeKind::Paren:
-      return IsAggregateType(
-          llvm::cast<swift::ParenType>(swift_can_type.getPointer())
-              ->getCanonicalType()
-              .getPointer());
     case swift::TypeKind::Error:
     case swift::TypeKind::BuiltinInteger:
     case swift::TypeKind::BuiltinFloat:
@@ -5223,7 +5207,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::TypeVariable:
       return false;
     case swift::TypeKind::Tuple:
-    case swift::TypeKind::ArraySlice:
     case swift::TypeKind::BoundGenericClass:
     case swift::TypeKind::BoundGenericEnum:
     case swift::TypeKind::BoundGenericStruct:
@@ -5240,6 +5223,15 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
       return false;
+
+    case swift::TypeKind::Optional:
+    case swift::TypeKind::ImplicitlyUnwrappedOptional:
+    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::Paren:
+    case swift::TypeKind::Dictionary:
+    case swift::TypeKind::ArraySlice:
+      assert(false && "Not a canonical type");
+      break;
     }
   }
 
@@ -5289,18 +5281,16 @@ uint32_t SwiftASTContext::IsHomogeneousAggregate(void *type,
 size_t SwiftASTContext::GetNumberOfFunctionArguments(void *type) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    swift::AnyFunctionType *func =
-        llvm::dyn_cast_or_null<swift::AnyFunctionType>(
-            swift_can_type.getPointer());
+    auto func =
+        swift::dyn_cast_or_null<swift::AnyFunctionType>(
+            swift_can_type);
     if (func) {
-      swift::TypeBase *input = func->getInput().getPointer();
-      if (!input)
-        return 0;
+      auto input = func.getInput();
       // See comment in swift::AnyFunctionType for rationale here:
       // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
       // is not a tuple, that must mean there is only 1 input.
-      swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
+      auto tuple = swift::dyn_cast<swift::TupleType>(input);
       if (tuple)
         return tuple->getNumElements();
       else
@@ -5316,22 +5306,20 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    swift::AnyFunctionType *func =
-        llvm::dyn_cast_or_null<swift::AnyFunctionType>(
-            swift_can_type.getPointer());
+    auto func =
+        swift::dyn_cast<swift::AnyFunctionType>(
+            swift_can_type);
     if (func) {
-      swift::TypeBase *input = func->getInput().getPointer();
-      if (!input)
-        return CompilerType();
+      auto input = func.getInput();
       // See comment in swift::AnyFunctionType for rationale here:
       // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
       // is not a tuple, that must mean there is only 1 input.
-      swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
+      auto tuple = swift::dyn_cast<swift::TupleType>(input);
       if (tuple) {
         if (index < tuple->getNumElements())
           return CompilerType(GetASTContext(),
-                              tuple->getElementType(index).getPointer());
+                              tuple->getElementType(index));
       } else
         return CompilerType(GetASTContext(), input);
     }
@@ -5370,14 +5358,7 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
     case swift::TypeKind::BuiltinBridgeObject:
       return true;
     case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::NameAlias:
       return false;
-    case swift::TypeKind::Paren:
-      return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                               swift_can_type.getPointer())
-                                               ->getCanonicalType()
-                                               .getPointer())
-          .IsPointerType(pointee_type);
     case swift::TypeKind::Tuple:
       return false;
     case swift::TypeKind::UnmanagedStorage:
@@ -5388,13 +5369,10 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
                               ->getReferentType()
                               .getPointer())
           .IsPointerType(pointee_type);
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::Enum:
     case swift::TypeKind::Struct:
-    case swift::TypeKind::Dictionary:
       return false;
     case swift::TypeKind::Class:
     case swift::TypeKind::BoundGenericClass:
@@ -5411,7 +5389,6 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
     case swift::TypeKind::Archetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ArraySlice:
     case swift::TypeKind::ProtocolComposition:
     case swift::TypeKind::DynamicSelf:
     case swift::TypeKind::SILBox:
@@ -5426,6 +5403,14 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::Unresolved:
       return false;
+
+    case swift::TypeKind::Optional:
+    case swift::TypeKind::ImplicitlyUnwrappedOptional:
+    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::Paren:
+    case swift::TypeKind::Dictionary:
+    case swift::TypeKind::ArraySlice:
+      assert(false && "Not a canonical type");
     }
   }
   if (pointee_type)
@@ -5589,7 +5574,7 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
     return false;
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (llvm::dyn_cast<swift::ArchetypeType>(
+    if (swift::isa<swift::ArchetypeType>(
         (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
       // Hack: Just assume if we have an archetype as the type of 'self',
       // it's going to be a protocol 'Self' type.
@@ -5632,16 +5617,12 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
   if (compiler_type.IsValid() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-    swift::ReferenceStorageType *ref_type =
-        llvm::dyn_cast_or_null<swift::ReferenceStorageType>(
-            swift_can_type.getPointer());
+    auto ref_type =
+        swift::dyn_cast_or_null<swift::ReferenceStorageType>(
+            swift_can_type);
     if (ref_type) {
-      swift::TypeBase *referent_type = ref_type->getReferentType().getPointer();
-      if (referent_type) {
-        swift::CanType referent_can_type(
-            referent_type->getCanonicalType());
-        return CompilerType(GetASTContext(), referent_can_type.getPointer());
-      }
+      auto referent_can_type = ref_type.getReferentType();
+      return CompilerType(GetASTContext(), referent_can_type.getPointer());
     } else
       return compiler_type;
   }
@@ -5810,11 +5791,11 @@ ConstString SwiftASTContext::GetTypeName(void *type) {
     swift::Type normalized_type =
         swift_type.transform([](swift::Type type) -> swift::Type {
           if (swift::SyntaxSugarType *syntax_sugar_type =
-                  llvm::dyn_cast<swift::SyntaxSugarType>(type.getPointer())) {
+                  swift::dyn_cast<swift::SyntaxSugarType>(type.getPointer())) {
             return syntax_sugar_type->getSinglyDesugaredType();
           }
           if (swift::DictionaryType *dictionary_type =
-                  llvm::dyn_cast<swift::DictionaryType>(type.getPointer())) {
+                  swift::dyn_cast<swift::DictionaryType>(type.getPointer())) {
             return dictionary_type->getSinglyDesugaredType();
           }
           return type;
@@ -5932,17 +5913,6 @@ SwiftASTContext::GetTypeInfo(void *type,
     // TODO: OR in eTypeIsFloat or eTypeIsInteger as needed
     return eTypeIsBuiltIn | eTypeHasChildren | eTypeIsVector;
     break;
-  case swift::TypeKind::NameAlias:
-    swift_flags |= eTypeIsTypedef;
-    break;
-  case swift::TypeKind::Paren:
-    swift_flags |=
-        CompilerType(GetASTContext(),
-                     llvm::cast<swift::ParenType>(swift_can_type.getPointer())
-                         ->getCanonicalType()
-                         .getPointer())
-            .GetTypeInfo(pointee_or_element_clang_type);
-    break;
 
   case swift::TypeKind::Tuple:
     swift_flags |= eTypeHasChildren | eTypeIsTuple;
@@ -5957,12 +5927,6 @@ SwiftASTContext::GetTypeInfo(void *type,
                          .getPointer())
             .GetTypeInfo(pointee_or_element_clang_type);
     break;
-  case swift::TypeKind::Optional:
-    swift_flags |= eTypeHasChildren;
-    break; // TODO: verify if this is a pointer?
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
-    swift_flags |= eTypeHasChildren;
-    break; // TODO: as above
   case swift::TypeKind::BoundGenericEnum:
     swift_flags |= eTypeIsGeneric | eTypeIsBound;
   case swift::TypeKind::Enum: {
@@ -5976,7 +5940,6 @@ SwiftASTContext::GetTypeInfo(void *type,
       swift_flags |= eTypeIsEnumeration;
   } break;
 
-  case swift::TypeKind::Dictionary:
   case swift::TypeKind::BoundGenericStruct:
     swift_flags |= eTypeIsGeneric | eTypeIsBound;
   case swift::TypeKind::Struct:
@@ -6003,14 +5966,6 @@ SwiftASTContext::GetTypeInfo(void *type,
     swift_flags |=
         eTypeHasValue | eTypeIsScalar | eTypeIsPointer | eTypeIsArchetype;
     break;
-  case swift::TypeKind::ArraySlice:
-    // TODO: extract element type
-    //                if (pointee_or_element_clang_type)
-    //                    pointee_or_element_clang_type->SetClangType(m_ast,
-    //                    llvm::cast<clang::ArrayType>(qual_type.getTypePtr())
-    //                        ->getElementType());
-    swift_flags |= eTypeHasChildren | eTypeIsArray;
-    break;
 
   case swift::TypeKind::LValue:
     if (pointee_or_element_clang_type)
@@ -6023,6 +5978,15 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
   return swift_flags;
@@ -6062,29 +6026,17 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinVector:
     return lldb::eTypeClassVector;
-  case swift::TypeKind::NameAlias:
-    return lldb::eTypeClassTypedef;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetTypeClass();
   case swift::TypeKind::Tuple:
     return lldb::eTypeClassArray;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        llvm::cast<swift::ReferenceStorageType>(
-                            swift_can_type.getPointer())
+                        swift::cast<swift::ReferenceStorageType>(
+                            swift_can_type)
                             ->getReferentType()
                             .getPointer())
         .GetTypeClass();
-  case swift::TypeKind::Optional:
-    return lldb::eTypeClassEnumeration;
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
-    return lldb::eTypeClassEnumeration;
   case swift::TypeKind::GenericTypeParam:
     return lldb::eTypeClassOther;
   case swift::TypeKind::DependentMember:
@@ -6107,8 +6059,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassFunction;
   case swift::TypeKind::GenericFunction:
     return lldb::eTypeClassFunction;
-  case swift::TypeKind::ArraySlice:
-    return lldb::eTypeClassArray;
   case swift::TypeKind::ProtocolComposition:
     return lldb::eTypeClassOther;
   case swift::TypeKind::LValue:
@@ -6120,8 +6070,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::BoundGenericEnum:
     return lldb::eTypeClassUnion;
   case swift::TypeKind::BoundGenericStruct:
-    return lldb::eTypeClassStruct;
-  case swift::TypeKind::Dictionary:
     return lldb::eTypeClassStruct;
   case swift::TypeKind::TypeVariable:
     return lldb::eTypeClassOther;
@@ -6139,6 +6087,15 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassOther;
   case swift::TypeKind::Unresolved:
     return lldb::eTypeClassOther;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
+    break;
   }
 
   return lldb::eTypeClassOther;
@@ -6161,7 +6118,7 @@ CompilerType SwiftASTContext::GetArrayElementType(void *type,
     switch (type_kind) {
     case swift::TypeKind::ArraySlice: {
       swift::ArraySliceType *array_slice_type =
-          llvm::dyn_cast<swift::ArraySliceType>(swift_type.getPointer());
+          swift::dyn_cast<swift::ArraySliceType>(swift_type.getPointer());
       if (!array_slice_type)
         break;
       swift::Type baseType(array_slice_type->getBaseType());
@@ -6223,11 +6180,11 @@ CompilerType SwiftASTContext::GetInstanceType(void *type) {
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype: {
-    swift::AnyMetatypeType *metatype_type =
-        llvm::dyn_cast<swift::AnyMetatypeType>(swift_can_type.getPointer());
+    auto metatype_type =
+        swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
     if (metatype_type)
       return CompilerType(GetASTContext(),
-                          metatype_type->getInstanceType().getPointer());
+                          metatype_type.getInstanceType().getPointer());
     return CompilerType();
   }
   default:
@@ -6244,57 +6201,22 @@ CompilerType SwiftASTContext::GetFullyUnqualifiedType(void *type) {
 }
 
 int SwiftASTContext::GetFunctionArgumentCount(void *type) {
-  if (type) {
-    const swift::AnyFunctionType *func = llvm::dyn_cast<swift::AnyFunctionType>(
-        GetCanonicalSwiftType(type).getPointer());
-    if (func) {
-      swift::Type arg_type = func->getInput();
-      if (arg_type) {
-        swift::TupleType *tuple_type =
-            llvm::dyn_cast<swift::TupleType>(arg_type.getPointer());
-        if (tuple_type) {
-          return tuple_type->getNumElements();
-        }
-      }
-    }
-  }
-  return -1;
+  return GetNumberOfFunctionArguments(type);
 }
 
 CompilerType SwiftASTContext::GetFunctionArgumentTypeAtIndex(void *type,
                                                              size_t idx) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (type) {
-    const swift::AnyFunctionType *func = llvm::dyn_cast<swift::AnyFunctionType>(
-        GetCanonicalSwiftType(type).getPointer());
-    if (func) {
-      swift::Type arg_type = func->getInput();
-      if (arg_type) {
-        swift::TupleType *tuple_type =
-            llvm::dyn_cast<swift::TupleType>(arg_type.getPointer());
-        if (tuple_type) {
-          if (tuple_type->getNumElements()) {
-            return CompilerType(GetASTContext(),
-                                tuple_type->getElementType(idx).getPointer());
-          }
-        } else {
-          return CompilerType(GetASTContext(), arg_type);
-        }
-      }
-    }
-  }
-  return CompilerType();
+  return GetFunctionArgumentAtIndex(type, idx);
 }
 
 CompilerType SwiftASTContext::GetFunctionReturnType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
   if (type) {
-    const swift::AnyFunctionType *func = llvm::dyn_cast<swift::AnyFunctionType>(
-        GetCanonicalSwiftType(type).getPointer());
+    auto func = swift::dyn_cast<swift::AnyFunctionType>(
+        GetCanonicalSwiftType(type));
     if (func)
-      return CompilerType(GetASTContext(), func->getResult().getPointer());
+      return CompilerType(GetASTContext(), func.getResult().getPointer());
   }
   return CompilerType();
 }
@@ -6304,60 +6226,21 @@ size_t SwiftASTContext::GetNumMemberFunctions(void *type) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericEnum: {
-      swift::BoundGenericType *bound_type =
-          llvm::dyn_cast_or_null<swift::BoundGenericType>(
-              swift_can_type.getPointer());
-      if (bound_type) {
-        swift::NominalTypeDecl *nominal_decl = bound_type->getDecl();
-        if (nominal_decl) {
-          auto iter = nominal_decl->getMembers().begin();
-          auto end = nominal_decl->getMembers().end();
-          for (; iter != end; iter++) {
-            switch (iter->getKind()) {
-            case swift::DeclKind::Constructor:
-            case swift::DeclKind::Destructor:
-            case swift::DeclKind::Func:
-              num_functions += 1;
-              break;
-            default:
-              break;
-            }
-          }
+    auto nominal_decl = swift_can_type.getAnyNominal();
+    if (nominal_decl) {
+      auto iter = nominal_decl->getMembers().begin();
+      auto end = nominal_decl->getMembers().end();
+      for (; iter != end; iter++) {
+        switch (iter->getKind()) {
+        case swift::DeclKind::Constructor:
+        case swift::DeclKind::Destructor:
+        case swift::DeclKind::Func:
+          num_functions += 1;
+          break;
+        default:
+          break;
         }
       }
-    } break;
-    case swift::TypeKind::Class:
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Enum: {
-      swift::NominalType *nominal_type =
-          llvm::dyn_cast_or_null<swift::NominalType>(
-              swift_can_type.getPointer());
-      if (nominal_type) {
-        swift::NominalTypeDecl *nominal_decl = nominal_type->getDecl();
-        if (nominal_decl) {
-          auto iter = nominal_decl->getMembers().begin();
-          auto end = nominal_decl->getMembers().end();
-          for (; iter != end; iter++) {
-            switch (iter->getKind()) {
-            case swift::DeclKind::Constructor:
-            case swift::DeclKind::Destructor:
-            case swift::DeclKind::Func:
-              num_functions += 1;
-              break;
-            default:
-              break;
-            }
-          }
-        }
-      }
-    } break;
-    default:
-      break;
     }
   }
   return num_functions;
@@ -6374,140 +6257,61 @@ TypeMemberFunctionImpl SwiftASTContext::GetMemberFunctionAtIndex(void *type,
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BoundGenericEnum: {
-      swift::BoundGenericType *bound_type =
-          llvm::dyn_cast_or_null<swift::BoundGenericType>(
-              swift_can_type.getPointer());
-      if (bound_type) {
-        swift::NominalTypeDecl *nominal_decl = bound_type->getDecl();
-        if (nominal_decl) {
-          auto iter = nominal_decl->getMembers().begin();
-          auto end = nominal_decl->getMembers().end();
-          for (; iter != end; iter++) {
-            auto decl_kind = iter->getKind();
-            switch (decl_kind) {
-            case swift::DeclKind::Constructor:
-            case swift::DeclKind::Destructor:
-            case swift::DeclKind::Func: {
-              if (idx == 0) {
-                swift::AbstractFunctionDecl *abstract_func_decl =
-                    llvm::dyn_cast_or_null<swift::AbstractFunctionDecl>(*iter);
-                if (abstract_func_decl) {
-                  switch (decl_kind) {
-                  case swift::DeclKind::Constructor:
+    auto nominal_decl = swift_can_type.getAnyNominal();
+    if (nominal_decl) {
+      auto iter = nominal_decl->getMembers().begin();
+      auto end = nominal_decl->getMembers().end();
+      for (; iter != end; iter++) {
+        auto decl_kind = iter->getKind();
+        switch (decl_kind) {
+        case swift::DeclKind::Constructor:
+        case swift::DeclKind::Destructor:
+        case swift::DeclKind::Func: {
+          if (idx == 0) {
+            swift::AbstractFunctionDecl *abstract_func_decl =
+                llvm::dyn_cast_or_null<swift::AbstractFunctionDecl>(*iter);
+            if (abstract_func_decl) {
+              switch (decl_kind) {
+              case swift::DeclKind::Constructor:
+                name.clear();
+                kind = lldb::eMemberFunctionKindConstructor;
+                the_decl_we_care_about = abstract_func_decl;
+                break;
+              case swift::DeclKind::Destructor:
+                name.clear();
+                kind = lldb::eMemberFunctionKindDestructor;
+                the_decl_we_care_about = abstract_func_decl;
+                break;
+              case swift::DeclKind::Func:
+              default: // I know that this can only be one of three kinds
+                       // since I am here..
+              {
+                swift::FuncDecl *func_decl =
+                    llvm::dyn_cast<swift::FuncDecl>(*iter);
+                if (func_decl) {
+                  if (func_decl->getName().empty())
                     name.clear();
-                    kind = lldb::eMemberFunctionKindConstructor;
-                    the_decl_we_care_about = abstract_func_decl;
-                    break;
-                  case swift::DeclKind::Destructor:
-                    name.clear();
-                    kind = lldb::eMemberFunctionKindDestructor;
-                    the_decl_we_care_about = abstract_func_decl;
-                    break;
-                  case swift::DeclKind::Func:
-                  default: // I know that this can only be one of three kinds
-                           // since I am here..
-                  {
-                    swift::FuncDecl *func_decl =
-                        llvm::dyn_cast<swift::FuncDecl>(*iter);
-                    if (func_decl) {
-                      if (func_decl->getName().empty())
-                        name.clear();
-                      else
-                        name.assign(func_decl->getName().get());
-                      if (func_decl->isStatic())
-                        kind = lldb::eMemberFunctionKindStaticMethod;
-                      else
-                        kind = lldb::eMemberFunctionKindInstanceMethod;
-                      the_decl_we_care_about = func_decl;
-                    }
-                  }
-                  }
-                  result_type =
-                      CompilerType(GetASTContext(),
-                                   abstract_func_decl->getInterfaceType().getPointer());
+                  else
+                    name.assign(func_decl->getName().get());
+                  if (func_decl->isStatic())
+                    kind = lldb::eMemberFunctionKindStaticMethod;
+                  else
+                    kind = lldb::eMemberFunctionKindInstanceMethod;
+                  the_decl_we_care_about = func_decl;
                 }
-              } else
-                --idx;
-            } break;
-            default:
-              break;
+              }
+              }
+              result_type =
+                  CompilerType(GetASTContext(),
+                               abstract_func_decl->getInterfaceType().getPointer());
             }
-          }
+          } else
+            --idx;
+        } break;
+        default:
+          break;
         }
       }
-    } break;
-    case swift::TypeKind::Class:
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Enum: {
-      swift::NominalType *nominal_type =
-          llvm::dyn_cast_or_null<swift::NominalType>(
-              swift_can_type.getPointer());
-      if (nominal_type) {
-        swift::NominalTypeDecl *nominal_decl = nominal_type->getDecl();
-        if (nominal_decl) {
-          auto iter = nominal_decl->getMembers().begin();
-          auto end = nominal_decl->getMembers().end();
-          for (; iter != end; iter++) {
-            auto decl_kind = iter->getKind();
-            switch (decl_kind) {
-            case swift::DeclKind::Constructor:
-            case swift::DeclKind::Destructor:
-            case swift::DeclKind::Func: {
-              if (idx == 0) {
-                swift::AbstractFunctionDecl *abstract_func_decl =
-                    llvm::dyn_cast_or_null<swift::AbstractFunctionDecl>(*iter);
-                if (abstract_func_decl) {
-                  switch (decl_kind) {
-                  case swift::DeclKind::Constructor:
-                    name.clear();
-                    kind = lldb::eMemberFunctionKindConstructor;
-                    the_decl_we_care_about = abstract_func_decl;
-                    break;
-                  case swift::DeclKind::Destructor:
-                    name.clear();
-                    kind = lldb::eMemberFunctionKindDestructor;
-                    the_decl_we_care_about = abstract_func_decl;
-                    break;
-                  case swift::DeclKind::Func:
-                  default: // I know that this can only be one of three kinds
-                           // since I am here..
-                  {
-                    swift::FuncDecl *func_decl =
-                        llvm::dyn_cast<swift::FuncDecl>(*iter);
-                    if (func_decl) {
-                      if (func_decl->getName().empty())
-                        name.clear();
-                      else
-                        name.assign(func_decl->getName().get());
-                      if (func_decl->isStatic())
-                        kind = lldb::eMemberFunctionKindStaticMethod;
-                      else
-                        kind = lldb::eMemberFunctionKindInstanceMethod;
-                      the_decl_we_care_about = func_decl;
-                    }
-                  }
-                  }
-                  result_type =
-                      CompilerType(GetASTContext(),
-                                   abstract_func_decl->getInterfaceType().getPointer());
-                }
-              } else
-                --idx;
-            } break;
-            default:
-              break;
-            }
-          }
-        }
-      }
-    } break;
-    default:
-      break;
     }
   }
 
@@ -6573,18 +6377,11 @@ CompilerType SwiftASTContext::GetTypedefedType(void *type) {
 
   if (type) {
     swift::Type swift_type(::GetSwiftType(type));
-    const swift::TypeKind type_kind = swift_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::NameAlias: {
-      swift::NameAliasType *name_alias_type =
-          llvm::dyn_cast_or_null<swift::NameAliasType>(swift_type.getPointer());
-      if (name_alias_type) {
-        return CompilerType(GetASTContext(),
-                            name_alias_type->getSinglyDesugaredType());
-      }
-    } break;
-    default:
-      break;
+    swift::NameAliasType *name_alias_type =
+        swift::dyn_cast<swift::NameAliasType>(swift_type.getPointer());
+    if (name_alias_type) {
+      return CompilerType(GetASTContext(),
+                          name_alias_type->getSinglyDesugaredType());
     }
   }
 
@@ -6722,7 +6519,7 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
   const swift::irgen::TypeInfo *type_info = GetSwiftTypeInfo(type);
   if (type_info) {
     if (type_info->isFixedSize())
-      return llvm::cast<const swift::irgen::FixedTypeInfo>(type_info);
+      return swift::cast<const swift::irgen::FixedTypeInfo>(type_info);
   }
   return nullptr;
 }
@@ -6821,14 +6618,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
     return lldb::eEncodingUint;
 
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
     break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetEncoding(count);
   case swift::TypeKind::Tuple:
     break;
   case swift::TypeKind::UnmanagedStorage:
@@ -6839,8 +6629,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
                             ->getReferentType()
                             .getPointer())
         .GetEncoding(count);
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     break;
@@ -6858,10 +6646,8 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
     break;
 
   case swift::TypeKind::Struct:
-  case swift::TypeKind::Dictionary:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Module:
-  case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
     break;
   case swift::TypeKind::LValue:
@@ -6875,6 +6661,15 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
   count = 0;
@@ -6912,14 +6707,7 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
     return eFormatHex;
 
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
     break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetFormat();
   case swift::TypeKind::Tuple:
     break;
   case swift::TypeKind::UnmanagedStorage:
@@ -6930,8 +6718,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
                             ->getReferentType()
                             .getPointer())
         .GetFormat();
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     break;
@@ -6945,11 +6731,9 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
     return lldb::eFormatAddressInfo;
 
   case swift::TypeKind::Struct:
-  case swift::TypeKind::Dictionary:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
-  case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
     break;
   case swift::TypeKind::LValue:
@@ -6964,6 +6748,15 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
   // We don't know hot to display this type...
@@ -6992,7 +6785,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
   case swift::TypeKind::Module:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
@@ -7001,12 +6793,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::InOut:
     break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetNumChildren(omit_empty_base_classes);
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
@@ -7015,8 +6801,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
                             ->getReferentType()
                             .getPointer())
         .GetNumChildren(omit_empty_base_classes);
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     break;
@@ -7027,25 +6811,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
     if (cached_enum_info)
       return cached_enum_info->GetNumElementsWithPayload();
   } break;
-
-  case swift::TypeKind::ArraySlice: {
-    swift::ArraySliceType *array_slice_type =
-        llvm::dyn_cast<swift::ArraySliceType>(swift_can_type.getPointer());
-    if (array_slice_type) {
-      CompilerType desugared_type(GetASTContext(),
-                                  array_slice_type->getDesugaredType());
-      return desugared_type.GetNumChildren(omit_empty_base_classes);
-    }
-  } break;
-
-  case swift::TypeKind::Dictionary: {
-    swift::DictionaryType *t =
-        llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-    if (t)
-      return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-          .GetNumChildren(omit_empty_base_classes);
-    break;
-  }
 
   case swift::TypeKind::Tuple:
   case swift::TypeKind::Struct:
@@ -7089,6 +6854,15 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
 
@@ -7140,14 +6914,7 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
     break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetNumFields();
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
@@ -7158,8 +6925,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
         .GetNumFields();
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
     break;
 
   case swift::TypeKind::Enum:
@@ -7168,15 +6933,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
     if (cached_enum_info)
       return cached_enum_info->GetNumElementsWithPayload();
   } break;
-
-  case swift::TypeKind::Dictionary: {
-    swift::DictionaryType *t =
-        llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-    if (t)
-      return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-          .GetNumFields();
-    break;
-  }
 
   case swift::TypeKind::Tuple:
   case swift::TypeKind::Struct:
@@ -7205,7 +6961,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::Archetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::ArraySlice:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::TypeVariable:
@@ -7215,6 +6970,15 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
 
@@ -7268,15 +7032,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::BuiltinUnknownObject:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
     break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetFieldAtIndex(idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
-                         is_bitfield_ptr);
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
@@ -7288,8 +7044,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
                          is_bitfield_ptr);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
     break;
 
   case swift::TypeKind::Enum:
@@ -7309,16 +7063,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
       return enum_element_info->payload_type;
     }
   } break;
-
-  case swift::TypeKind::Dictionary: {
-    swift::DictionaryType *t =
-        llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-    if (t)
-      return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-          .GetFieldAtIndex(idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
-                           is_bitfield_ptr);
-    break;
-  }
 
   case swift::TypeKind::Tuple:
   case swift::TypeKind::Struct:
@@ -7358,7 +7102,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::Archetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::ArraySlice:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::TypeVariable:
@@ -7368,6 +7111,15 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
 
@@ -7405,30 +7157,17 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 1;
   case swift::TypeKind::BuiltinVector:
     return 0;
-  case swift::TypeKind::NameAlias:
-    return 0;
-    break;
-  case swift::TypeKind::Paren:
-    return GetNumPointeeChildren(
-        llvm::cast<swift::ParenType>(swift_can_type.getPointer())
-            ->getCanonicalType()
-            .getPointer());
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return GetNumPointeeChildren(
-        llvm::cast<swift::ReferenceStorageType>(swift_can_type.getPointer())
-            ->getReferentType()
+        swift::cast<swift::ReferenceStorageType>(swift_can_type)
             .getPointer());
   case swift::TypeKind::Tuple:
     return 0;
   case swift::TypeKind::GenericTypeParam:
     return 0;
   case swift::TypeKind::DependentMember:
-    return 0;
-  case swift::TypeKind::Optional:
-    return 0;
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
     return 0;
   case swift::TypeKind::Enum:
     return 0;
@@ -7440,8 +7179,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 0;
   case swift::TypeKind::Metatype:
     return 0;
-  case swift::TypeKind::Dictionary:
-    return 0;
   case swift::TypeKind::Module:
     return 0;
   case swift::TypeKind::Archetype:
@@ -7449,8 +7186,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Function:
     return 0;
   case swift::TypeKind::GenericFunction:
-    return 0;
-  case swift::TypeKind::ArraySlice:
     return 0;
   case swift::TypeKind::ProtocolComposition:
     return 0;
@@ -7481,6 +7216,13 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Unresolved:
     return 0;
 
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
 
@@ -7702,19 +7444,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
-    break;
-  case swift::TypeKind::Paren:
-    return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                             swift_can_type.getPointer())
-                                             ->getCanonicalType()
-                                             .getPointer())
-        .GetChildCompilerTypeAtIndex(
-            exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-            ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-            child_bitfield_bit_size, child_bitfield_bit_offset,
-            child_is_base_class, child_is_deref_of_parent, valobj,
-            language_flags);
+
   //            case swift::TypeKind::Tuple:
   //                {
   //                    swift::TupleType *tuple_type =
@@ -7785,8 +7515,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
             language_flags);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
     break;
 
   case swift::TypeKind::Enum:
@@ -7812,21 +7540,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         return element_info->payload_type;
     }
   } break;
-
-  case swift::TypeKind::Dictionary: {
-    swift::DictionaryType *t =
-        llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-
-    if (t)
-      return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-          .GetChildCompilerTypeAtIndex(
-              exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-              ignore_array_bounds, child_name, child_byte_size,
-              child_byte_offset, child_bitfield_bit_size,
-              child_bitfield_bit_offset, child_is_base_class,
-              child_is_deref_of_parent, valobj, language_flags);
-    break;
-  }
 
   case swift::TypeKind::Tuple:
   case swift::TypeKind::Struct:
@@ -7877,8 +7590,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Archetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::ArraySlice:
     break;
+
   case swift::TypeKind::LValue:
     if (idx < GetNumChildren(type, omit_empty_base_classes)) {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
@@ -7909,6 +7622,15 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
   return CompilerType();
@@ -7969,15 +7691,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
     case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::NameAlias:
-      break;
-    case swift::TypeKind::Paren:
-      return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                               swift_can_type.getPointer())
-                                               ->getCanonicalType()
-                                               .getPointer())
-          .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
-                                         child_indexes);
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
@@ -7989,8 +7702,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
                                          child_indexes);
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
       break;
 
     case swift::TypeKind::Enum:
@@ -8009,17 +7720,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
         }
       }
     } break;
-
-    case swift::TypeKind::Dictionary: {
-      swift::DictionaryType *t =
-          llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-
-      if (t)
-        return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-            .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
-                                           child_indexes);
-      break;
-    }
 
     case swift::TypeKind::Tuple: {
       // For tuples only always look for the member by number first as a tuple
@@ -8088,7 +7788,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Archetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ArraySlice:
       break;
     case swift::TypeKind::LValue: {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
@@ -8110,6 +7809,16 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
       break;
+
+    case swift::TypeKind::Optional:
+    case swift::TypeKind::ImplicitlyUnwrappedOptional:
+    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::Paren:
+    case swift::TypeKind::Dictionary:
+    case swift::TypeKind::ArraySlice:
+      assert(false && "Not a canonical type");
+      break;
+
     }
   }
   return 0;
@@ -8138,14 +7847,7 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::BuiltinUnknownObject:
     case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::NameAlias:
       break;
-    case swift::TypeKind::Paren:
-      return CompilerType(GetASTContext(), llvm::cast<swift::ParenType>(
-                                               swift_can_type.getPointer())
-                                               ->getCanonicalType()
-                                               .getPointer())
-          .GetIndexOfChildWithName(name, omit_empty_base_classes);
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
@@ -8156,8 +7858,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
           .GetIndexOfChildWithName(name, omit_empty_base_classes);
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
       break;
 
     case swift::TypeKind::Enum:
@@ -8174,16 +7874,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
         }
       }
     } break;
-
-    case swift::TypeKind::Dictionary: {
-      swift::DictionaryType *t =
-          llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-
-      if (t)
-        return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-            .GetIndexOfChildWithName(name, omit_empty_base_classes);
-      break;
-    }
 
     case swift::TypeKind::Tuple: {
       swift::TupleType *tuple_type = swift_can_type->getAs<swift::TupleType>();
@@ -8235,7 +7925,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::Archetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ArraySlice:
       break;
     case swift::TypeKind::LValue: {
       CompilerType pointee_type(GetNonReferenceType(type));
@@ -8256,6 +7945,15 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::SILBlockStorage:
     case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
+      break;
+
+    case swift::TypeKind::Optional:
+    case swift::TypeKind::ImplicitlyUnwrappedOptional:
+    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::Paren:
+    case swift::TypeKind::Dictionary:
+    case swift::TypeKind::ArraySlice:
+      assert(false && "Not a canonical type");
       break;
     }
   }
@@ -8591,34 +8289,10 @@ bool SwiftASTContext::DumpTypeValue(
                      bitfield_bit_offset, exe_scope);
   } break;
   case swift::TypeKind::BuiltinVector:
-  case swift::TypeKind::NameAlias:
     break;
-  case swift::TypeKind::Paren:
-    s->PutChar('(');
-    CompilerType(GetASTContext(),
-                 llvm::cast<swift::ParenType>(swift_can_type.getPointer())
-                     ->getCanonicalType()
-                     .getPointer())
-        .DumpTypeValue(s, format, data, byte_offset, byte_size,
-                       bitfield_bit_size, bitfield_bit_offset, exe_scope,
-                       is_base_class);
-    s->PutChar(')');
-    return true;
 
   case swift::TypeKind::Tuple:
     break;
-
-  case swift::TypeKind::Dictionary: {
-    swift::DictionaryType *t =
-        llvm::dyn_cast<swift::DictionaryType>(swift_can_type.getPointer());
-
-    if (t)
-      return CompilerType(GetASTContext(), t->getSinglyDesugaredType())
-          .DumpTypeValue(s, format, data, byte_offset, byte_size,
-                         bitfield_bit_size, bitfield_bit_offset, exe_scope,
-                         is_base_class);
-    break;
-  }
 
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -8649,8 +8323,6 @@ bool SwiftASTContext::DumpTypeValue(
       s->Printf("<unknown type>");
   } break;
 
-  case swift::TypeKind::Optional:
-  case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::GenericTypeParam:
@@ -8665,7 +8337,6 @@ bool SwiftASTContext::DumpTypeValue(
   } break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::BoundGenericStruct:
@@ -8676,6 +8347,15 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
+    break;
+
+  case swift::TypeKind::Optional:
+  case swift::TypeKind::ImplicitlyUnwrappedOptional:
+  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::Paren:
+  case swift::TypeKind::Dictionary:
+  case swift::TypeKind::ArraySlice:
+    assert(false && "Not a canonical type");
     break;
   }
 
@@ -8908,19 +8588,17 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::Function: {
       swift::AnyFunctionType *any_function_type =
-          swift_can_type->getAs<swift::AnyFunctionType>();
-      if (any_function_type) {
-        std::string buffer;
-        llvm::raw_string_ostream ostream(buffer);
-        const swift::PrintOptions &print_options(
-            SwiftASTContext::GetUserVisibleTypePrintingOptions(
-                print_help_if_available));
+          swift_can_type->castTo<swift::AnyFunctionType>();
+      std::string buffer;
+      llvm::raw_string_ostream ostream(buffer);
+      const swift::PrintOptions &print_options(
+          SwiftASTContext::GetUserVisibleTypePrintingOptions(
+              print_help_if_available));
 
-        any_function_type->print(ostream, print_options);
-        ostream.flush();
-        if (buffer.empty() == false)
-          s->Printf("%s\n", buffer.c_str());
-      }
+      any_function_type->print(ostream, print_options);
+      ostream.flush();
+      if (buffer.empty() == false)
+        s->Printf("%s\n", buffer.c_str());
     } break;
     case swift::TypeKind::Tuple: {
       swift::TupleType *tuple_type = swift_can_type->getAs<swift::TupleType>();
