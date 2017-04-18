@@ -62,7 +62,7 @@ Improvements to clang-tidy
 
   Finds modification of the ``std`` or ``posix`` namespace.
 
-- Improved `cppcoreguidelines-no-malloc 
+- Improved `cppcoreguidelines-no-malloc
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html>`_ check
 
   Allow custom memory management functions to be considered as well.
@@ -94,6 +94,12 @@ Improvements to clang-tidy
 
 - Support clang-formatting of the code around applied fixes (``-format-style``
   command-line option).
+
+- New `performance-inefficient-vector-operation
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html>`_ check
+
+  Finds possible inefficient vector operations in for loops that may cause
+  unnecessary memory reallocations.
 
 Improvements to include-fixer
 -----------------------------

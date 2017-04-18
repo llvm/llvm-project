@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 \
+// RUN:    -Wno-coroutine-missing-unhandled-exception -emit-llvm %s -o - -disable-llvm-passes \
+// RUN:   | FileCheck %s
 
 namespace std {
 namespace experimental {
@@ -19,8 +21,19 @@ struct coroutine_handle<void> {
   coroutine_handle(coroutine_handle<PromiseType>) {}
 };
 
-}
-}
+} // end namespace experimental
+
+struct nothrow_t {};
+constexpr nothrow_t nothrow = {};
+
+} // end namespace std
+
+// Required when get_return_object_on_allocation_failure() is defined by
+// the promise.
+using SizeT = decltype(sizeof(int));
+void* operator new(SizeT __sz, const std::nothrow_t&) noexcept;
+void  operator delete(void* __p, const std::nothrow_t&) noexcept;
+
 
 struct suspend_always {
   bool await_ready() { return false; }
@@ -133,7 +146,7 @@ struct promise_on_alloc_failure_tag {};
 template<>
 struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
-    int get_return_object() {}
+    int get_return_object() { return 0; }
     suspend_always initial_suspend() { return {}; }
     suspend_always final_suspend() { return {}; }
     void return_void() {}
@@ -145,7 +158,7 @@ struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
 extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[MEM:.+]] = call i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 

@@ -141,7 +141,8 @@ void MemoryMappingLayout::DumpListOfModules(
     uptr base_address = (i ? cur_beg : 0) - cur_offset;
     LoadedModule cur_module;
     cur_module.set(cur_name, base_address);
-    cur_module.addAddressRange(cur_beg, cur_end, prot & kProtectionExecute);
+    cur_module.addAddressRange(cur_beg, cur_end, prot & kProtectionExecute,
+                               prot & kProtectionRead);
     modules->push_back(cur_module);
   }
 }

@@ -61,9 +61,29 @@ public:
   /// that also works with less standard-compliant compilers
   void swap(Use &RHS);
 
+  /// Pointer traits for the UserRef PointerIntPair. This ensures we always
+  /// use the LSB regardless of pointer alignment on different targets.
+  struct UserRefPointerTraits {
+    static inline void *getAsVoidPointer(User *P) { return P; }
+    static inline User *getFromVoidPointer(void *P) {
+      return (User *)P;
+    }
+    enum { NumLowBitsAvailable = 1 };
+  };
+
   // A type for the word following an array of hung-off Uses in memory, which is
   // a pointer back to their User with the bottom bit set.
-  typedef PointerIntPair<User *, 1, unsigned> UserRef;
+  typedef PointerIntPair<User *, 1, unsigned, UserRefPointerTraits> UserRef;
+
+  /// Pointer traits for the Prev PointerIntPair. This ensures we always use
+  /// the two LSBs regardless of pointer alignment on different targets.
+  struct PrevPointerTraits {
+    static inline void *getAsVoidPointer(Use **P) { return P; }
+    static inline Use **getFromVoidPointer(void *P) {
+      return (Use **)P;
+    }
+    enum { NumLowBitsAvailable = 2 };
+  };
 
 private:
   /// Destructor - Only for zap()
@@ -115,7 +135,7 @@ private:
 
   Value *Val;
   Use *Next;
-  PointerIntPair<Use **, 2, PrevPtrTag> Prev;
+  PointerIntPair<Use **, 2, PrevPtrTag, PrevPointerTraits> Prev;
 
   void setPrev(Use **NewPrev) { Prev.setPointer(NewPrev); }
 

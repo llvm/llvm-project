@@ -292,15 +292,15 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   KnownOne = PossibleSumOne & Known;
 
   // Are we still trying to solve for the sign bit?
-  if (!Known.isNegative()) {
+  if (!Known.isSignBitSet()) {
     if (NSW) {
       // Adding two non-negative numbers, or subtracting a negative number from
       // a non-negative one, can't wrap into negative.
-      if (LHSKnownZero.isNegative() && KnownZero2.isNegative())
+      if (LHSKnownZero.isSignBitSet() && KnownZero2.isSignBitSet())
         KnownZero.setSignBit();
       // Adding two negative numbers, or subtracting a non-negative number from
       // a negative one, can't wrap into non-negative.
-      else if (LHSKnownOne.isNegative() && KnownOne2.isNegative())
+      else if (LHSKnownOne.isSignBitSet() && KnownOne2.isSignBitSet())
         KnownOne.setSignBit();
     }
   }
@@ -322,10 +322,10 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
       // The product of a number with itself is non-negative.
       isKnownNonNegative = true;
     } else {
-      bool isKnownNonNegativeOp1 = KnownZero.isNegative();
-      bool isKnownNonNegativeOp0 = KnownZero2.isNegative();
-      bool isKnownNegativeOp1 = KnownOne.isNegative();
-      bool isKnownNegativeOp0 = KnownOne2.isNegative();
+      bool isKnownNonNegativeOp1 = KnownZero.isSignBitSet();
+      bool isKnownNonNegativeOp0 = KnownZero2.isSignBitSet();
+      bool isKnownNegativeOp1 = KnownOne.isSignBitSet();
+      bool isKnownNegativeOp0 = KnownOne2.isSignBitSet();
       // The product of two numbers with the same sign is non-negative.
       isKnownNonNegative = (isKnownNegativeOp1 && isKnownNegativeOp0) ||
         (isKnownNonNegativeOp1 && isKnownNonNegativeOp0);
@@ -361,9 +361,9 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   // which case we prefer to follow the result of the direct computation,
   // though as the program is invoking undefined behaviour we can choose
   // whatever we like here.
-  if (isKnownNonNegative && !KnownOne.isNegative())
+  if (isKnownNonNegative && !KnownOne.isSignBitSet())
     KnownZero.setSignBit();
-  else if (isKnownNegative && !KnownZero.isNegative())
+  else if (isKnownNegative && !KnownZero.isSignBitSet())
     KnownOne.setSignBit();
 }
 
@@ -707,7 +707,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       APInt RHSKnownZero(BitWidth, 0), RHSKnownOne(BitWidth, 0);
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
 
-      if (RHSKnownZero.isNegative()) {
+      if (RHSKnownZero.isSignBitSet()) {
         // We know that the sign bit is zero.
         KnownZero.setSignBit();
       }
@@ -718,7 +718,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       APInt RHSKnownZero(BitWidth, 0), RHSKnownOne(BitWidth, 0);
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
 
-      if (RHSKnownOne.isAllOnesValue() || RHSKnownZero.isNegative()) {
+      if (RHSKnownOne.isAllOnesValue() || RHSKnownZero.isSignBitSet()) {
         // We know that the sign bit is zero.
         KnownZero.setSignBit();
       }
@@ -729,7 +729,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       APInt RHSKnownZero(BitWidth, 0), RHSKnownOne(BitWidth, 0);
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
 
-      if (RHSKnownOne.isNegative()) {
+      if (RHSKnownOne.isSignBitSet()) {
         // We know that the sign bit is one.
         KnownOne.setSignBit();
       }
@@ -740,7 +740,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       APInt RHSKnownZero(BitWidth, 0), RHSKnownOne(BitWidth, 0);
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
 
-      if (RHSKnownZero.isAllOnesValue() || RHSKnownOne.isNegative()) {
+      if (RHSKnownZero.isAllOnesValue() || RHSKnownOne.isSignBitSet()) {
         // We know that the sign bit is one.
         KnownOne.setSignBit();
       }
@@ -990,23 +990,23 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     unsigned MaxHighZeros = 0;
     if (SPF == SPF_SMAX) {
       // If both sides are negative, the result is negative.
-      if (KnownOne.isNegative() && KnownOne2.isNegative())
+      if (KnownOne.isSignBitSet() && KnownOne2.isSignBitSet())
         // We can derive a lower bound on the result by taking the max of the
         // leading one bits.
         MaxHighOnes =
             std::max(KnownOne.countLeadingOnes(), KnownOne2.countLeadingOnes());
       // If either side is non-negative, the result is non-negative.
-      else if (KnownZero.isNegative() || KnownZero2.isNegative())
+      else if (KnownZero.isSignBitSet() || KnownZero2.isSignBitSet())
         MaxHighZeros = 1;
     } else if (SPF == SPF_SMIN) {
       // If both sides are non-negative, the result is non-negative.
-      if (KnownZero.isNegative() && KnownZero2.isNegative())
+      if (KnownZero.isSignBitSet() && KnownZero2.isSignBitSet())
         // We can derive an upper bound on the result by taking the max of the
         // leading zero bits.
         MaxHighZeros = std::max(KnownZero.countLeadingOnes(),
                                 KnownZero2.countLeadingOnes());
       // If either side is negative, the result is negative.
-      else if (KnownOne.isNegative() || KnownOne2.isNegative())
+      else if (KnownOne.isSignBitSet() || KnownOne2.isSignBitSet())
         MaxHighOnes = 1;
     } else if (SPF == SPF_UMAX) {
       // We can derive a lower bound on the result by taking the max of the
@@ -1092,14 +1092,14 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
       KZResult.setLowBits(ShiftAmt); // Low bits known 0.
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
-      if (NSW && KnownZero.isNegative())
+      if (NSW && KnownZero.isSignBitSet())
         KZResult.setSignBit();
       return KZResult;
     };
 
     auto KOF = [NSW](const APInt &KnownOne, unsigned ShiftAmt) {
       APInt KOResult = KnownOne << ShiftAmt;
-      if (NSW && KnownOne.isNegative())
+      if (NSW && KnownOne.isSignBitSet())
         KOResult.setSignBit();
       return KOResult;
     };
@@ -1169,12 +1169,12 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
 
         // If the first operand is non-negative or has all low bits zero, then
         // the upper bits are all zero.
-        if (KnownZero2.isNegative() || ((KnownZero2 & LowBits) == LowBits))
+        if (KnownZero2.isSignBitSet() || ((KnownZero2 & LowBits) == LowBits))
           KnownZero |= ~LowBits;
 
         // If the first operand is negative and not all low bits are zero, then
         // the upper bits are all one.
-        if (KnownOne2.isNegative() && ((KnownOne2 & LowBits) != 0))
+        if (KnownOne2.isSignBitSet() && ((KnownOne2 & LowBits) != 0))
           KnownOne |= ~LowBits;
 
         assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
@@ -1186,7 +1186,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     // remainder is zero.
     computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
     // If it's known zero, our sign bit is also zero.
-    if (KnownZero2.isNegative())
+    if (KnownZero2.isSignBitSet())
       KnownZero.setSignBit();
 
     break;
@@ -1328,24 +1328,24 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
             // (add non-negative, non-negative) --> non-negative
             // (add negative, negative) --> negative
             if (Opcode == Instruction::Add) {
-              if (KnownZero2.isNegative() && KnownZero3.isNegative())
+              if (KnownZero2.isSignBitSet() && KnownZero3.isSignBitSet())
                 KnownZero.setSignBit();
-              else if (KnownOne2.isNegative() && KnownOne3.isNegative())
+              else if (KnownOne2.isSignBitSet() && KnownOne3.isSignBitSet())
                 KnownOne.setSignBit();
             }
 
             // (sub nsw non-negative, negative) --> non-negative
             // (sub nsw negative, non-negative) --> negative
             else if (Opcode == Instruction::Sub && LL == I) {
-              if (KnownZero2.isNegative() && KnownOne3.isNegative())
+              if (KnownZero2.isSignBitSet() && KnownOne3.isSignBitSet())
                 KnownZero.setSignBit();
-              else if (KnownOne2.isNegative() && KnownZero3.isNegative())
+              else if (KnownOne2.isSignBitSet() && KnownZero3.isSignBitSet())
                 KnownOne.setSignBit();
             }
 
             // (mul nsw non-negative, non-negative) --> non-negative
-            else if (Opcode == Instruction::Mul && KnownZero2.isNegative() &&
-                     KnownZero3.isNegative())
+            else if (Opcode == Instruction::Mul && KnownZero2.isSignBitSet() &&
+                     KnownZero3.isSignBitSet())
               KnownZero.setSignBit();
           }
 
@@ -1611,8 +1611,8 @@ void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
   APInt ZeroBits(BitWidth, 0);
   APInt OneBits(BitWidth, 0);
   computeKnownBits(V, ZeroBits, OneBits, Depth, Q);
-  KnownOne = OneBits.isNegative();
-  KnownZero = ZeroBits.isNegative();
+  KnownOne = OneBits.isSignBitSet();
+  KnownZero = ZeroBits.isSignBitSet();
 }
 
 /// Return true if the given value is known to have exactly one
@@ -2238,7 +2238,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 
         // If we are subtracting one from a positive number, there is no carry
         // out of the result.
-        if (KnownZero.isNegative())
+        if (KnownZero.isSignBitSet())
           return Tmp;
       }
 
@@ -2262,7 +2262,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 
         // If the input is known to be positive (the sign bit is known clear),
         // the output of the NEG has the same number of sign bits as the input.
-        if (KnownZero.isNegative())
+        if (KnownZero.isSignBitSet())
           return Tmp2;
 
         // Otherwise, we treat this like a SUB.
@@ -2319,10 +2319,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 
   // If we know that the sign bit is either zero or one, determine the number of
   // identical bits in the top of the input value.
-  if (KnownZero.isNegative())
+  if (KnownZero.isSignBitSet())
     return std::max(FirstAnswer, KnownZero.countLeadingOnes());
 
-  if (KnownOne.isNegative())
+  if (KnownOne.isSignBitSet())
     return std::max(FirstAnswer, KnownOne.countLeadingOnes());
 
   // computeKnownBits gave us no extra information about the top bits.

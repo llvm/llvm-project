@@ -774,14 +774,12 @@ APInt APInt::reverseBits() const {
   }
 
   APInt Val(*this);
-  APInt Reversed(*this);
-  int S = BitWidth - 1;
+  APInt Reversed(BitWidth, 0);
+  unsigned S = BitWidth;
 
-  const APInt One(BitWidth, 1);
-
-  for ((Val = Val.lshr(1)); Val != 0; (Val = Val.lshr(1))) {
+  for (; Val != 0; Val.lshrInPlace(1)) {
     Reversed <<= 1;
-    Reversed |= (Val & One);
+    Reversed |= Val[0];
     --S;
   }
 
@@ -1140,59 +1138,18 @@ APInt APInt::lshr(const APInt &shiftAmt) const {
   return lshr((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
-/// Perform a logical right-shift from Src to Dst of Words words, by Shift,
-/// which must be less than 64. If the source and destination ranges overlap,
-/// we require that Src >= Dst (put another way, we require that the overall
-/// operation is a right shift on the combined range).
-static void lshrWords(APInt::WordType *Dst, APInt::WordType *Src,
-                      unsigned Words, unsigned Shift) {
-  assert(Shift < APInt::APINT_BITS_PER_WORD);
-
-  if (!Words)
-    return;
-
-  if (Shift == 0) {
-    std::memmove(Dst, Src, Words * APInt::APINT_WORD_SIZE);
-    return;
-  }
-
-  uint64_t Low = Src[0];
-  for (unsigned I = 1; I != Words; ++I) {
-    uint64_t High = Src[I];
-    Dst[I - 1] =
-        (Low >> Shift) | (High << (APInt::APINT_BITS_PER_WORD - Shift));
-    Low = High;
-  }
-  Dst[Words - 1] = Low >> Shift;
-}
-
 /// Logical right-shift this APInt by shiftAmt.
 /// @brief Logical right-shift function.
-void APInt::lshrInPlace(unsigned shiftAmt) {
+void APInt::lshrInPlace(unsigned ShiftAmt) {
   if (isSingleWord()) {
-    if (shiftAmt >= BitWidth)
+    if (ShiftAmt >= BitWidth)
       VAL = 0;
     else
-      VAL >>= shiftAmt;
+      VAL >>= ShiftAmt;
     return;
   }
 
-  // Don't bother performing a no-op shift.
-  if (!shiftAmt)
-    return;
-
-  // Find number of complete words being shifted out and zeroed.
-  const unsigned Words = getNumWords();
-  const unsigned ShiftFullWords =
-      std::min(shiftAmt / APINT_BITS_PER_WORD, Words);
-
-  // Fill in first Words - ShiftFullWords by shifting.
-  lshrWords(pVal, pVal + ShiftFullWords, Words - ShiftFullWords,
-            shiftAmt % APINT_BITS_PER_WORD);
-
-  // The remaining high words are all zero.
-  for (unsigned I = Words - ShiftFullWords; I != Words; ++I)
-    pVal[I] = 0;
+  return tcShiftRight(pVal, getNumWords(), ShiftAmt);
 }
 
 /// Left-shift this APInt by shiftAmt.
@@ -1202,60 +1159,9 @@ APInt APInt::shl(const APInt &shiftAmt) const {
   return shl((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
-APInt APInt::shlSlowCase(unsigned shiftAmt) const {
-  // If all the bits were shifted out, the result is 0. This avoids issues
-  // with shifting by the size of the integer type, which produces undefined
-  // results. We define these "undefined results" to always be 0.
-  if (shiftAmt == BitWidth)
-    return APInt(BitWidth, 0);
-
-  // If none of the bits are shifted out, the result is *this. This avoids a
-  // lshr by the words size in the loop below which can produce incorrect
-  // results. It also avoids the expensive computation below for a common case.
-  if (shiftAmt == 0)
-    return *this;
-
-  // Create some space for the result.
-  uint64_t * val = new uint64_t[getNumWords()];
-
-  // If we are shifting less than a word, do it the easy way
-  if (shiftAmt < APINT_BITS_PER_WORD) {
-    uint64_t carry = 0;
-    for (unsigned i = 0; i < getNumWords(); i++) {
-      val[i] = pVal[i] << shiftAmt | carry;
-      carry = pVal[i] >> (APINT_BITS_PER_WORD - shiftAmt);
-    }
-    APInt Result(val, BitWidth);
-    Result.clearUnusedBits();
-    return Result;
-  }
-
-  // Compute some values needed by the remaining shift algorithms
-  unsigned wordShift = shiftAmt % APINT_BITS_PER_WORD;
-  unsigned offset = shiftAmt / APINT_BITS_PER_WORD;
-
-  // If we are shifting whole words, just move whole words
-  if (wordShift == 0) {
-    for (unsigned i = 0; i < offset; i++)
-      val[i] = 0;
-    for (unsigned i = offset; i < getNumWords(); i++)
-      val[i] = pVal[i-offset];
-    APInt Result(val, BitWidth);
-    Result.clearUnusedBits();
-    return Result;
-  }
-
-  // Copy whole words from this to Result.
-  unsigned i = getNumWords() - 1;
-  for (; i > offset; --i)
-    val[i] = pVal[i-offset] << wordShift |
-             pVal[i-offset-1] >> (APINT_BITS_PER_WORD - wordShift);
-  val[offset] = pVal[0] << wordShift;
-  for (i = 0; i < offset; ++i)
-    val[i] = 0;
-  APInt Result(val, BitWidth);
-  Result.clearUnusedBits();
-  return Result;
+void APInt::shlSlowCase(unsigned ShiftAmt) {
+  tcShiftLeft(pVal, getNumWords(), ShiftAmt);
+  clearUnusedBits();
 }
 
 // Calculate the rotate amount modulo the bit width.
@@ -2698,63 +2604,58 @@ int APInt::tcDivide(WordType *lhs, const WordType *rhs,
   return false;
 }
 
-/* Shift a bignum left COUNT bits in-place.  Shifted in bits are zero.
-   There are no restrictions on COUNT.  */
-void APInt::tcShiftLeft(WordType *dst, unsigned parts, unsigned count) {
-  if (count) {
-    /* Jump is the inter-part jump; shift is is intra-part shift.  */
-    unsigned jump = count / APINT_BITS_PER_WORD;
-    unsigned shift = count % APINT_BITS_PER_WORD;
+/// Shift a bignum left Cound bits in-place. Shifted in bits are zero. There are
+/// no restrictions on Count.
+void APInt::tcShiftLeft(WordType *Dst, unsigned Words, unsigned Count) {
+  // Don't bother performing a no-op shift.
+  if (!Count)
+    return;
 
-    while (parts > jump) {
-      WordType part;
+  /* WordShift is the inter-part shift; BitShift is is intra-part shift.  */
+  unsigned WordShift = std::min(Count / APINT_BITS_PER_WORD, Words);
+  unsigned BitShift = Count % APINT_BITS_PER_WORD;
 
-      parts--;
-
-      /* dst[i] comes from the two parts src[i - jump] and, if we have
-         an intra-part shift, src[i - jump - 1].  */
-      part = dst[parts - jump];
-      if (shift) {
-        part <<= shift;
-        if (parts >= jump + 1)
-          part |= dst[parts - jump - 1] >> (APINT_BITS_PER_WORD - shift);
-      }
-
-      dst[parts] = part;
+  // Fastpath for moving by whole words.
+  if (BitShift == 0) {
+    std::memmove(Dst + WordShift, Dst, (Words - WordShift) * APINT_WORD_SIZE);
+  } else {
+    while (Words-- > WordShift) {
+      Dst[Words] = Dst[Words - WordShift] << BitShift;
+      if (Words > WordShift)
+        Dst[Words] |=
+          Dst[Words - WordShift - 1] >> (APINT_BITS_PER_WORD - BitShift);
     }
-
-    while (parts > 0)
-      dst[--parts] = 0;
   }
+
+  // Fill in the remainder with 0s.
+  std::memset(Dst, 0, WordShift * APINT_WORD_SIZE);
 }
 
-/* Shift a bignum right COUNT bits in-place.  Shifted in bits are
-   zero.  There are no restrictions on COUNT.  */
-void APInt::tcShiftRight(WordType *dst, unsigned parts, unsigned count) {
-  if (count) {
-    /* Jump is the inter-part jump; shift is is intra-part shift.  */
-    unsigned jump = count / APINT_BITS_PER_WORD;
-    unsigned shift = count % APINT_BITS_PER_WORD;
+/// Shift a bignum right Count bits in-place. Shifted in bits are zero. There
+/// are no restrictions on Count.
+void APInt::tcShiftRight(WordType *Dst, unsigned Words, unsigned Count) {
+  // Don't bother performing a no-op shift.
+  if (!Count)
+    return;
 
-    /* Perform the shift.  This leaves the most significant COUNT bits
-       of the result at zero.  */
-    for (unsigned i = 0; i < parts; i++) {
-      WordType part;
+  // WordShift is the inter-part shift; BitShift is is intra-part shift.
+  unsigned WordShift = std::min(Count / APINT_BITS_PER_WORD, Words);
+  unsigned BitShift = Count % APINT_BITS_PER_WORD;
 
-      if (i + jump >= parts) {
-        part = 0;
-      } else {
-        part = dst[i + jump];
-        if (shift) {
-          part >>= shift;
-          if (i + jump + 1 < parts)
-            part |= dst[i + jump + 1] << (APINT_BITS_PER_WORD - shift);
-        }
-      }
-
-      dst[i] = part;
+  unsigned WordsToMove = Words - WordShift;
+  // Fastpath for moving by whole words.
+  if (BitShift == 0) {
+    std::memmove(Dst, Dst + WordShift, WordsToMove * APINT_WORD_SIZE);
+  } else {
+    for (unsigned i = 0; i != WordsToMove; ++i) {
+      Dst[i] = Dst[i + WordShift] >> BitShift;
+      if (i + 1 != WordsToMove)
+        Dst[i] |= Dst[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift);
     }
   }
+
+  // Fill in the remainder with 0s.
+  std::memset(Dst + WordsToMove, 0, WordShift * APINT_WORD_SIZE);
 }
 
 /* Bitwise and of two bignums.  */

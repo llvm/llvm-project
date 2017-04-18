@@ -363,6 +363,7 @@ void splitAndWriteThinLTOBitcode(
   W.writeModule(&M, /*ShouldPreserveUseListOrder=*/false, &Index,
                 /*GenerateHash=*/true, &ModHash);
   W.writeModule(MergedM.get());
+  W.writeStrtab();
   OS << Buffer;
 
   // If a minimized bitcode module was requested for the thin link,
@@ -375,6 +376,7 @@ void splitAndWriteThinLTOBitcode(
     W2.writeModule(&M, /*ShouldPreserveUseListOrder=*/false, &Index,
                    /*GenerateHash=*/false, &ModHash);
     W2.writeModule(MergedM.get());
+    W2.writeStrtab();
     *ThinLinkOS << Buffer;
   }
 }

@@ -252,9 +252,8 @@ bool FileExists(const char *filename) {
   return S_ISREG(st.st_mode);
 }
 
-uptr GetTid() {
-  // FIXME: This can potentially get truncated on 32-bit, where uptr is 4 bytes.
-  uint64_t tid;
+tid_t GetTid() {
+  tid_t tid;
   pthread_threadid_np(nullptr, &tid);
   return tid;
 }

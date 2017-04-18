@@ -29,6 +29,34 @@ define void @test_inline(i64* (i32*)*, i32* %x) !dbg !3 {
   ret void
 }
 
+; CHECK-LABEL: @test_inline_strip
+; If the indirect call is promoted and inlined in profile, and the callee name
+; is stripped we should promote and inline it.
+define void @test_inline_strip(i64* (i32*)*, i32* %x) !dbg !3 {
+  %2 = alloca i64* (i32*)*
+  store i64* (i32*)* %0, i64* (i32*)** %2
+  %3 = load i64* (i32*)*, i64* (i32*)** %2
+; CHECK: icmp {{.*}} @foo_inline_strip.suffix
+; CHECK: if.true.direct_targ:
+; CHECK-NOT: call
+; CHECK: if.false.orig_indirect:
+; CHECK: call
+  call i64* %3(i32* %x), !dbg !5
+  ret void
+}
+
+; CHECK-LABEL: @test_inline_strip_conflict
+; If the indirect call is promoted and inlined in profile, and the callee name
+; is stripped, but have more than 1 potential match, we should not promote.
+define void @test_inline_strip_conflict(i64* (i32*)*, i32* %x) !dbg !3 {
+  %2 = alloca i64* (i32*)*
+  store i64* (i32*)* %0, i64* (i32*)** %2
+  %3 = load i64* (i32*)*, i64* (i32*)** %2
+; CHECK-NOT: if.true.direct_targ:
+  call i64* %3(i32* %x), !dbg !5
+  ret void
+}
+
 ; CHECK-LABEL: @test_noinline
 ; If the indirect call target is not available, we should not promote it.
 define void @test_noinline(void ()*) !dbg !3 {
@@ -44,6 +72,22 @@ define void @test_noinline(void ()*) !dbg !3 {
 @x = global i32 0, align 4
 
 define i32* @foo_inline1(i32* %x) !dbg !3 {
+  ret i32* %x
+}
+
+define i32* @foo_inline_strip.suffix(i32* %x) !dbg !3 {
+  ret i32* %x
+}
+
+define i32* @foo_inline_strip_conflict.suffix1(i32* %x) !dbg !3 {
+  ret i32* %x
+}
+
+define i32* @foo_inline_strip_conflict.suffix2(i32* %x) !dbg !3 {
+  ret i32* %x
+}
+
+define i32* @foo_inline_strip_conflict.suffix3(i32* %x) !dbg !3 {
   ret i32* %x
 }
 

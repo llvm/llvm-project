@@ -168,7 +168,7 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
     // and the current Label.
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
     MCOS->EmitDwarfAdvanceLineAddr(LineDelta, LastLabel, Label,
-                                   asmInfo->getPointerSize());
+                                   asmInfo->getCodePointerSize());
 
     Discriminator = 0;
     LastLine = LineEntry.getLine();
@@ -188,7 +188,7 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
 
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
   MCOS->EmitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
-                                 AsmInfo->getPointerSize());
+                                 AsmInfo->getCodePointerSize());
 }
 
 //
@@ -594,7 +594,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // Figure the padding after the header before the table of address and size
   // pairs who's values are PointerSize'ed.
   const MCAsmInfo *asmInfo = context.getAsmInfo();
-  int AddrSize = asmInfo->getPointerSize();
+  int AddrSize = asmInfo->getCodePointerSize();
   int Pad = 2 * AddrSize - (Length & (2 * AddrSize - 1));
   if (Pad == 2 * AddrSize)
     Pad = 0;
@@ -677,7 +677,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The DWARF v5 header has unit type, address size, abbrev offset.
   // Earlier versions have abbrev offset, address size.
   const MCAsmInfo &AsmInfo = *context.getAsmInfo();
-  int AddrSize = AsmInfo.getPointerSize();
+  int AddrSize = AsmInfo.getCodePointerSize();
   if (context.getDwarfVersion() >= 5) {
     MCOS->EmitIntValue(dwarf::DW_UT_compile, 1);
     MCOS->EmitIntValue(AddrSize, 1);
@@ -823,7 +823,7 @@ static void EmitGenDwarfRanges(MCStreamer *MCOS) {
   auto &Sections = context.getGenDwarfSectionSyms();
 
   const MCAsmInfo *AsmInfo = context.getAsmInfo();
-  int AddrSize = AsmInfo->getPointerSize();
+  int AddrSize = AsmInfo->getCodePointerSize();
 
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRangesSection());
 
@@ -981,7 +981,7 @@ static unsigned getSizeForEncoding(MCStreamer &streamer,
   default: llvm_unreachable("Unknown Encoding");
   case dwarf::DW_EH_PE_absptr:
   case dwarf::DW_EH_PE_signed:
-    return context.getAsmInfo()->getPointerSize();
+    return context.getAsmInfo()->getCodePointerSize();
   case dwarf::DW_EH_PE_udata2:
   case dwarf::DW_EH_PE_sdata2:
     return 2;
@@ -1318,7 +1318,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCSymbol *personality,
 
   if (CIEVersion >= 4) {
     // Address Size
-    Streamer.EmitIntValue(context.getAsmInfo()->getPointerSize(), 1);
+    Streamer.EmitIntValue(context.getAsmInfo()->getCodePointerSize(), 1);
 
     // Segment Descriptor Size
     Streamer.EmitIntValue(0, 1);
@@ -1384,7 +1384,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCSymbol *personality,
   InitialCFAOffset = CFAOffset;
 
   // Padding
-  Streamer.EmitValueToAlignment(IsEH ? 4 : MAI->getPointerSize());
+  Streamer.EmitValueToAlignment(IsEH ? 4 : MAI->getCodePointerSize());
 
   Streamer.EmitLabel(sectionEnd);
   return *sectionStart;
@@ -1453,7 +1453,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   // The size of a .eh_frame section has to be a multiple of the alignment
   // since a null CIE is interpreted as the end. Old systems overaligned
   // .eh_frame, so we do too and account for it in the last FDE.
-  unsigned Align = LastInSection ? asmInfo->getPointerSize() : PCSize;
+  unsigned Align = LastInSection ? asmInfo->getCodePointerSize() : PCSize;
   Streamer.EmitValueToAlignment(Align);
 
   Streamer.EmitLabel(fdeEnd);
@@ -1514,6 +1514,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
 
   MCContext &Context = Streamer.getContext();
   const MCObjectFileInfo *MOFI = Context.getObjectFileInfo();
+  const MCAsmInfo *AsmInfo = Context.getAsmInfo();
   FrameEmitterImpl Emitter(IsEH, Streamer);
   ArrayRef<MCDwarfFrameInfo> FrameArray = Streamer.getDwarfFrameInfos();
 
@@ -1525,7 +1526,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       if (Frame.CompactUnwindEncoding == 0) continue;
       if (!SectionEmitted) {
         Streamer.SwitchSection(MOFI->getCompactUnwindSection());
-        Streamer.EmitValueToAlignment(Context.getAsmInfo()->getPointerSize());
+        Streamer.EmitValueToAlignment(AsmInfo->getCodePointerSize());
         SectionEmitted = true;
       }
       NeedsEHFrameSection |=

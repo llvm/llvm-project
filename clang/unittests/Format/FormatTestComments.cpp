@@ -2018,7 +2018,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
             format("#define MACRO(V)\\\n"
                    "V(Rt2)  /* one more char */ \\\n"
                    "V(Rs) /* than here  */    \\\n"
-                   "/* comment 3 */         \\\n",
+                   "/* comment 3 */\n",
                    getLLVMStyleWithColumns(40)));
   EXPECT_EQ("int i = f(abc, // line 1\n"
             "          d,   // line 2\n"

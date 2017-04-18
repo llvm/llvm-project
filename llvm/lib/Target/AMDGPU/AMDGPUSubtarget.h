@@ -415,9 +415,11 @@ public:
     return 0;
   }
 
+  // Scratch is allocated in 256 dword per wave blocks for the entire
+  // wavefront. When viewed from the perspecive of an arbitrary workitem, this
+  // is 4-byte aligned.
   unsigned getStackAlignment() const {
-    // Scratch is allocated in 256 dword per wave blocks.
-    return 4 * 256 / getWavefrontSize();
+    return 4;
   }
 
   bool enableMachineScheduler() const override {

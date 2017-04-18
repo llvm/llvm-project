@@ -54,6 +54,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -452,6 +453,7 @@ class MetadataLoader::MetadataLoaderImpl {
   bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
   bool NeedUpgradeToDIGlobalVariableExpression = false;
+  bool NeedDeclareExpressionUpgrade = false;
 
   /// True if metadata is being parsed for a module being ThinLTO imported.
   bool IsImporting = false;
@@ -511,6 +513,26 @@ class MetadataLoader::MetadataLoaderImpl {
     }
   }
 
+  /// Remove a leading DW_OP_deref from DIExpressions in a dbg.declare that
+  /// describes a function argument.
+  void upgradeDeclareExpressions(Function &F) {
+    if (!NeedDeclareExpressionUpgrade)
+      return;
+
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+          if (auto *DIExpr = DDI->getExpression())
+            if (DIExpr->startsWithDeref() &&
+                dyn_cast_or_null<Argument>(DDI->getAddress())) {
+              SmallVector<uint64_t, 8> Ops;
+              Ops.append(std::next(DIExpr->elements_begin()),
+                         DIExpr->elements_end());
+              auto *E = DIExpression::get(Context, Ops);
+              DDI->setOperand(2, MetadataAsValue::get(Context, E));
+            }
+  }
+
   void upgradeDebugInfo() {
     upgradeCUSubprograms();
     upgradeCUVariables();
@@ -565,6 +587,7 @@ public:
 
   unsigned size() const { return MetadataList.size(); }
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
+  void upgradeDebugIntrinsics(Function &F) { upgradeDeclareExpressions(F); }
 };
 
 static Error error(const Twine &Message) {
@@ -1520,12 +1543,32 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
-    bool HasOpFragment = Record[0] & 2;
+    uint64_t Version = Record[0] >> 1;
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
-    if (!HasOpFragment)
-      if (unsigned N = Elts.size())
-        if (N >= 3 && Elts[N - 3] == dwarf::DW_OP_bit_piece)
-          Elts[N - 3] = dwarf::DW_OP_LLVM_fragment;
+    unsigned N = Elts.size();
+    // Perform various upgrades.
+    switch (Version) {
+    case 0:
+      if (N >= 3 && Elts[N - 3] == dwarf::DW_OP_bit_piece)
+        Elts[N - 3] = dwarf::DW_OP_LLVM_fragment;
+      LLVM_FALLTHROUGH;
+    case 1:
+      // Move DW_OP_deref to the end.
+      if (N && Elts[0] == dwarf::DW_OP_deref) {
+        auto End = Elts.end();
+        if (Elts.size() >= 3 && *std::prev(End, 3) == dwarf::DW_OP_LLVM_fragment)
+          End = std::prev(End, 3);
+        std::move(std::next(Elts.begin()), End, Elts.begin());
+        *std::prev(End) = dwarf::DW_OP_deref;
+      }
+      NeedDeclareExpressionUpgrade = true;
+      LLVM_FALLTHROUGH;
+    case 2:
+      // Up-to-date!
+      break;
+    default:
+      return error("Invalid record");
+    }
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIExpression, (Context, makeArrayRef(Record).slice(1))),
@@ -1858,3 +1901,7 @@ bool MetadataLoader::isStrippingTBAA() { return Pimpl->isStrippingTBAA(); }
 
 unsigned MetadataLoader::size() const { return Pimpl->size(); }
 void MetadataLoader::shrinkTo(unsigned N) { return Pimpl->shrinkTo(N); }
+
+void MetadataLoader::upgradeDebugIntrinsics(Function &F) {
+  return Pimpl->upgradeDebugIntrinsics(F);
+}

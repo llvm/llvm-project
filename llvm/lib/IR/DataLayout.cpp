@@ -608,11 +608,8 @@ unsigned DataLayout::getPointerSize(unsigned AS) const {
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "This should only be called with a pointer or pointer vector type");
-
-  if (Ty->isPointerTy())
-    return getTypeSizeInBits(Ty);
-
-  return getTypeSizeInBits(Ty->getScalarType());
+  Ty = Ty->getScalarType();
+  return getPointerSizeInBits(cast<PointerType>(Ty)->getAddressSpace());
 }
 
 /*!

@@ -49,6 +49,8 @@ FUZZER_FLAG_STRING(load_coverage_summary, "Experimental:"
 FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
   " crash input. Use with -runs=N or -max_total_time=N to limit "
   "the number attempts")
+FUZZER_FLAG_INT(cleanse_crash, 0, "If 1, tries to cleanse the provided"
+  " crash input to make it contain fewer original bytes.")
 FUZZER_FLAG_INT(minimize_crash_internal_step, 0, "internal flag")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")

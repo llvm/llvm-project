@@ -2232,6 +2232,9 @@ public:
   expr_op_iterator expr_op_end() const {
     return expr_op_iterator(elements_end());
   }
+  iterator_range<expr_op_iterator> expr_ops() const {
+    return {expr_op_begin(), expr_op_end()};
+  }
   /// @}
 
   bool isValid() const;
@@ -2240,7 +2243,7 @@ public:
     return MD->getMetadataID() == DIExpressionKind;
   }
 
-  /// Is the first element a DW_OP_deref?.
+  /// Return whether the first element a DW_OP_deref.
   bool startsWithDeref() const {
     return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
   }

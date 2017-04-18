@@ -90,7 +90,7 @@ struct ReportLocation {
 
 struct ReportThread {
   int id;
-  uptr os_id;
+  tid_t os_id;
   bool running;
   bool workerthread;
   char *name;

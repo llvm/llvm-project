@@ -54,7 +54,7 @@ FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
 
 void OptimizeReturned::visitCallSite(CallSite CS) {
   for (unsigned i = 0, e = CS.getNumArgOperands(); i < e; ++i)
-    if (CS.paramHasAttr(0, Attribute::Returned)) {
+    if (CS.paramHasAttr(i, Attribute::Returned)) {
       Instruction *Inst = CS.getInstruction();
       Value *Arg = CS.getArgOperand(i);
       // Ignore constants, globals, undef, etc.

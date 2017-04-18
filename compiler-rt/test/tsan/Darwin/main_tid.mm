@@ -8,7 +8,7 @@
 extern "C" {
 void __tsan_on_report(void *report);
 int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
-                             unsigned long *os_id, int *running,
+                             uint64_t *os_id, int *running,
                              const char **name, int *parent_tid, void **trace,
                              unsigned long trace_size);
 }
@@ -17,7 +17,7 @@ void __tsan_on_report(void *report) {
   fprintf(stderr, "__tsan_on_report(%p)\n", report);
 
   int tid;
-  unsigned long os_id;
+  uint64_t os_id;
   int running;
   const char *name;
   int parent_tid;

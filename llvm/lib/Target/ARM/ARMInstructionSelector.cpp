@@ -299,6 +299,10 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
+  case G_SUB:
+    I.setDesc(TII.get(ARM::SUBrr));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
   case G_FADD:
     if (!selectFAdd(MIB, TII, MRI))
       return false;

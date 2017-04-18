@@ -582,3 +582,28 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 ; CHECK-NEXT: movq	%rcx, 40(%rdi)
 ; CHECK-NEXT: retq
 }
+
+
+
+; Don't let a non-consecutive store thwart merging of the last two.
+define void @almost_consecutive_stores(i8* %p) {
+  store i8 0, i8* %p
+  %p1 = getelementptr i8, i8* %p, i64 42
+  store i8 1, i8* %p1
+  %p2 = getelementptr i8, i8* %p, i64 2
+  store i8 2, i8* %p2
+  %p3 = getelementptr i8, i8* %p, i64 3
+  store i8 3, i8* %p3
+  ret void
+; CHECK-LABEL: almost_consecutive_stores
+; CHECK-DAG: movb	$0, (%rdi)
+; CHECK-DAG: movb	$1, 42(%rdi)
+; CHECK-DAG: movb	$2, 2(%rdi)
+; CHECK-DAG: movb	$3, 3(%rdi)
+; CHECK: retq
+
+; We should able to merge the final two stores into a 16-bit store
+; FIXMECHECK-DAG: movw $770, 2(%rdi)
+
+
+}

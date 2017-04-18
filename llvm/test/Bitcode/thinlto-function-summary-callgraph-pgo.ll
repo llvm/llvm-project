@@ -10,31 +10,27 @@
 ; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-pgo.1.bc  | FileCheck %s --check-prefix=OLD
 ; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-pgo-combined.1.bc  | FileCheck %s --check-prefix=OLD-COMBINED
 
+; CHECK: <SOURCE_FILENAME
+; CHECK-NEXT: <FUNCTION
+; "func"
+; CHECK-NEXT: <FUNCTION op0=4 op1=4
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
-; See if the call to func is registered, using the expected callsite count
-; and hotness type, with value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[FUNCID:[0-9]+]] op5=2/>
+; See if the call to func is registered, using the expected hotness type.
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=1 op5=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
-; CHECK-NEXT:  <VALUE_SYMTAB
-; CHECK-NEXT:    <FNENTRY {{.*}} record string = 'main'
-; External function func should have entry with value id FUNCID
-; CHECK-NEXT:    <ENTRY {{.*}} op0=[[FUNCID]] {{.*}} record string = 'func'
-; CHECK-NEXT:  </VALUE_SYMTAB>
+; CHECK: <STRTAB_BLOCK
+; CHECK-NEXT: blob data = 'mainfunc'
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION
+; COMBINED-NEXT:    <VALUE_GUID op0=[[FUNCID:[0-9]+]] op1=7289175272376759421/>
+; COMBINED-NEXT:    <VALUE_GUID
 ; COMBINED-NEXT:    <COMBINED
-; See if the call to func is registered, using the expected callsite count
-; and hotness type, with value id matching the subsequent value symbol table.
+; See if the call to func is registered, using the expected hotness type.
 ; op6=2 which is hotnessType::None.
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[FUNCID:[0-9]+]] op6=2/>
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[FUNCID]] op6=2/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
-; COMBINED-NEXT:  <VALUE_SYMTAB
-; Entry for function func should have entry with value id FUNCID
-; COMBINED-NEXT:    <COMBINED_ENTRY {{.*}} op0=[[FUNCID]] op1=7289175272376759421/>
-; COMBINED-NEXT:    <COMBINED
-; COMBINED-NEXT:  </VALUE_SYMTAB>
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
