@@ -1,9 +1,9 @@
-// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- -format-style=llvm -- -fno-ms-extensions
-// FIXME: This may work with -target x86_64-win32.
+// RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- -format-style=llvm --
+
+namespace std {
 
 typedef int size_t;
 
-namespace std {
 template <class T>
 class vector {
  public:
@@ -73,7 +73,7 @@ void f(std::vector<int>& t) {
   {
     std::vector<int> v;
     // CHECK-FIXES: v.reserve(t.size());
-    for (size_t i = 0; i < t.size(); ++i) {
+    for (std::size_t i = 0; i < t.size(); ++i) {
       v.push_back(t[i]);
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called
     }
@@ -81,7 +81,7 @@ void f(std::vector<int>& t) {
   {
     std::vector<int> v;
     // CHECK-FIXES: v.reserve(t.size() - 1);
-    for (size_t i = 0; i < t.size() - 1; ++i) {
+    for (std::size_t i = 0; i < t.size() - 1; ++i) {
       v.push_back(t[i]);
     } // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called
   }
@@ -152,7 +152,7 @@ void f(std::vector<int>& t) {
     std::vector<int> v;
     // CHECK-FIXES-NOT: v.reserve(t.size());
     // v isn't referenced in for-loop body.
-    for (size_t i = 0; i < t.size(); ++i) {
+    for (std::size_t i = 0; i < t.size(); ++i) {
       t.push_back(i);
     }
   }
@@ -161,7 +161,7 @@ void f(std::vector<int>& t) {
     int k;
     // CHECK-FIXES-NOT: v.reserve(10);
     // For-loop isn't a fixable loop.
-    for (size_t i = 0; k < 10; ++i) {
+    for (std::size_t i = 0; k < 10; ++i) {
       v.push_back(t[i]);
     }
   }
@@ -177,7 +177,7 @@ void f(std::vector<int>& t) {
     int k;
     // CHECK-FIXES-NOT: v.reserve(10);
     // For-loop isn't a fixable loop.
-    for (size_t i = 0; i < 10; ++k) {
+    for (std::size_t i = 0; i < 10; ++k) {
       v.push_back(t[i]);
     }
   }

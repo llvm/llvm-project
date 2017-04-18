@@ -655,42 +655,62 @@ protected:
         if (num_variables > 0) {
           for (size_t i = 0; i < num_variables; i++) {
             var_sp = variable_list->GetVariableAtIndex(i);
-            bool dump_variable = true;
-            std::string scope_string;
-            if (dump_variable && m_option_variable.show_scope)
-              scope_string = GetScopeString(var_sp).str();
+            switch (var_sp->GetScope())
+            {
+              case eValueTypeVariableGlobal:
+                if  (!m_option_variable.show_globals)
+                  continue;
+                break;
+              case eValueTypeVariableStatic:
+                if (!m_option_variable.show_globals)
+                  continue;
+                break;
+              case eValueTypeVariableArgument:
+                if (!m_option_variable.show_args)
+                  continue;
+                break;
+              case eValueTypeVariableLocal:
+                if (!m_option_variable.show_locals)
+                  continue;
+                break;
+              default:
+                continue;
+                break;
+                
+            }
+          std::string scope_string;
+          if (m_option_variable.show_scope)
+            scope_string = GetScopeString(var_sp).str();
 
-            if (dump_variable) {
-              // Use the variable object code to make sure we are
-              // using the same APIs as the public API will be
-              // using...
-              valobj_sp = frame->GetValueObjectForFrameVariable(
-                  var_sp, m_varobj_options.use_dynamic);
-              if (valobj_sp) {
-                // When dumping all variables, don't print any variables
-                // that are not in scope to avoid extra unneeded output
-                if (valobj_sp->IsInScope()) {
-                  if (!valobj_sp->GetTargetSP()
-                           ->GetDisplayRuntimeSupportValues() &&
-                      valobj_sp->IsRuntimeSupportValue())
-                    continue;
+            // Use the variable object code to make sure we are
+            // using the same APIs as the public API will be
+            // using...
+            valobj_sp = frame->GetValueObjectForFrameVariable(
+                var_sp, m_varobj_options.use_dynamic);
+            if (valobj_sp) {
+              // When dumping all variables, don't print any variables
+              // that are not in scope to avoid extra unneeded output
+              if (valobj_sp->IsInScope()) {
+                if (!valobj_sp->GetTargetSP()
+                         ->GetDisplayRuntimeSupportValues() &&
+                    valobj_sp->IsRuntimeSupportValue())
+                  continue;
 
-                  if (!scope_string.empty())
-                    s.PutCString(scope_string);
+                if (!scope_string.empty())
+                  s.PutCString(scope_string);
 
-                  if (m_option_variable.show_decl &&
-                      var_sp->GetDeclaration().GetFile()) {
-                    var_sp->GetDeclaration().DumpStopContext(&s, false);
-                    s.PutCString(": ");
-                  }
-
-                  options.SetFormat(format);
-                  options.SetVariableFormatDisplayLanguage(
-                      valobj_sp->GetPreferredDisplayLanguage());
-                  options.SetRootValueObjectName(
-                      var_sp ? var_sp->GetName().AsCString() : nullptr);
-                  valobj_sp->Dump(result.GetOutputStream(), options);
+                if (m_option_variable.show_decl &&
+                    var_sp->GetDeclaration().GetFile()) {
+                  var_sp->GetDeclaration().DumpStopContext(&s, false);
+                  s.PutCString(": ");
                 }
+
+                options.SetFormat(format);
+                options.SetVariableFormatDisplayLanguage(
+                    valobj_sp->GetPreferredDisplayLanguage());
+                options.SetRootValueObjectName(
+                    var_sp ? var_sp->GetName().AsCString() : nullptr);
+                valobj_sp->Dump(result.GetOutputStream(), options);
               }
             }
           }
