@@ -444,6 +444,8 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
 endif()
 
 find_package(Backtrace)
+check_symbol_exists(ppoll poll.h HAVE_PPOLL)
+check_symbol_exists(sigaction signal.h HAVE_SIGACTION)
 
 check_include_file(termios.h HAVE_TERMIOS_H)
 

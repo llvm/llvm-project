@@ -15,6 +15,7 @@ add_host_subdirectory(common
   common/HostThread.cpp
   common/IOObject.cpp
   common/LockFileBase.cpp
+  common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeBreakpoint.cpp
   common/NativeBreakpointList.cpp
@@ -85,7 +86,6 @@ else()
     posix/HostProcessPosix.cpp
     posix/HostThreadPosix.cpp
     posix/LockFilePosix.cpp
-    posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
     )

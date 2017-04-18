@@ -67,7 +67,7 @@ static Error DeleteForwardPortWithAdb(uint16_t local_port,
 
 static Error FindUnusedPort(uint16_t &port) {
   Error error;
-  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(false, error));
+  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(true, false));
   if (error.Fail())
     return error;
 

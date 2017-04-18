@@ -62,8 +62,7 @@ Error Acceptor::Listen(int backlog) {
 
 Error Acceptor::Accept(const bool child_processes_inherit, Connection *&conn) {
   Socket *conn_socket = nullptr;
-  auto error = m_listener_socket_up->Accept(
-      StringRef(m_name), child_processes_inherit, conn_socket);
+  auto error = m_listener_socket_up->Accept(conn_socket);
   if (error.Success())
     conn = new ConnectionFileDescriptor(conn_socket);
 
