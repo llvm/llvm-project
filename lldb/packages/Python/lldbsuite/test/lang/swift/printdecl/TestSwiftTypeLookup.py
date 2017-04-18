@@ -125,11 +125,11 @@ class TestSwiftTypeLookup(TestBase):
         # check that we print comment text (and let you get rid of it)
         self.expect(
             'type lookup Int',
-            substrs=['Create an instance'],
+            substrs=['Creates a new instance'],
             matching=False)
         self.expect(
             'type lookup --show-help -- Int',
-            substrs=['Create an instance'],
+            substrs=['Creates a new instance'],
             matching=True)
         self.expect(
             'type lookup foo',

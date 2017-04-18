@@ -5669,6 +5669,8 @@ bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
   if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(
           compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
+    if (swift::isa<swift::MetatypeType>(swift_can_type))
+      return true;
     return !swift_can_type->hasArchetype();
   }
 
