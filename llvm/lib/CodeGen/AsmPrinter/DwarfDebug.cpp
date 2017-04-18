@@ -1229,7 +1229,7 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
   // is still needed as we need its source location.
-  if (!Asm->TM.Options.DebugInfoForProfiling &&
+  if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
