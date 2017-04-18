@@ -545,9 +545,15 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, Fragment.FI, FrameReg);
     DwarfExpr.addFragmentOffset(Fragment.Expr);
-    DwarfExpr.addMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                    FrameReg, Offset);
-    DwarfExpr.addExpression(Fragment.Expr);
+    SmallVector<uint64_t, 8> Ops;
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(Offset);
+    Ops.push_back(dwarf::DW_OP_deref);
+    Ops.append(Fragment.Expr->elements_begin(), Fragment.Expr->elements_end());
+    DIExpressionCursor Expr(Ops);
+    DwarfExpr.addMachineRegExpression(
+        *Asm->MF->getSubtarget().getRegisterInfo(), Expr, FrameReg);
+    DwarfExpr.addExpression(std::move(Expr));
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
 
@@ -767,22 +773,22 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
                                   const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-  DIEDwarfExpression Expr(*Asm, *this, *Loc);
+  DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
 
-  bool validReg;
-  if (Location.isReg())
-    validReg = Expr.addMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                  Location.getReg());
-  else
-    validReg =
-        Expr.addMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                   Location.getReg(), Location.getOffset());
-
-  if (!validReg)
+  SmallVector<uint64_t, 8> Ops;
+  if (Location.isIndirect()) {
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(Location.getOffset());
+    Ops.push_back(dwarf::DW_OP_deref);
+  }
+  DIExpressionCursor Cursor(Ops);
+  const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+  if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
+  DwarfExpr.addExpression(std::move(Cursor));
 
   // Now attach the location information to the DIE.
-  addBlock(Die, Attribute, Expr.finalize());
+  addBlock(Die, Attribute, DwarfExpr.finalize());
 }
 
 /// Start with the address based on the location provided, and generate the
@@ -794,23 +800,24 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
                                          const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  const DIExpression *Expr = DV.getSingleExpression();
-  DIExpressionCursor ExprCursor(Expr);
+  const DIExpression *DIExpr = DV.getSingleExpression();
+  DwarfExpr.addFragmentOffset(DIExpr);
+
+  SmallVector<uint64_t, 8> Ops;
+  if (Location.isIndirect()) {
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(Location.getOffset());
+    Ops.push_back(dwarf::DW_OP_deref);
+  }
+  Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+  DIExpressionCursor Cursor(Ops);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
-  auto Reg = Location.getReg();
-  DwarfExpr.addFragmentOffset(Expr);
-  bool ValidReg =
-      Location.getOffset()
-          ? DwarfExpr.addMachineRegIndirect(TRI, Reg, Location.getOffset())
-          : DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Reg);
-
-  if (!ValidReg)
+  if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
-
-  DwarfExpr.addExpression(std::move(ExprCursor));
+  DwarfExpr.addExpression(std::move(Cursor));
 
   // Now attach the location information to the DIE.
-  addBlock(Die, Attribute, Loc);
+  addBlock(Die, Attribute, DwarfExpr.finalize());
 }
 
 /// Add a Dwarf loclistptr attribute data and value.
