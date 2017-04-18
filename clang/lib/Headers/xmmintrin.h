@@ -2540,7 +2540,7 @@ void _mm_setcsr(unsigned int __i);
 ///    A 128-bit vector of [4 x float].
 /// \param mask
 ///    An immediate value containing an 8-bit value specifying which elements to
-///    copy from \ a and \a b. \n
+///    copy from \a a and \a b. \n
 ///    Bits [3:0] specify the values copied from operand \a a. \n
 ///    Bits [7:4] specify the values copied from operand \a b. \n
 ///    The destinations within the 128-bit destination are assigned values as
