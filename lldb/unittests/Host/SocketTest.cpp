@@ -44,8 +44,7 @@ protected:
                            const char *listen_remote_address,
                            bool child_processes_inherit, Socket **accept_socket,
                            Error *error) {
-    *error = listen_socket->Accept(listen_remote_address,
-                                   child_processes_inherit, *accept_socket);
+    *error = listen_socket->Accept(*accept_socket);
   }
 
   template <typename SocketType>
@@ -56,7 +55,7 @@ protected:
     bool child_processes_inherit = false;
     Error error;
     std::unique_ptr<SocketType> listen_socket_up(
-        new SocketType(child_processes_inherit, error));
+        new SocketType(true, child_processes_inherit));
     EXPECT_FALSE(error.Fail());
     error = listen_socket_up->Listen(listen_remote_address, 5);
     EXPECT_FALSE(error.Fail());
@@ -70,7 +69,7 @@ protected:
 
     std::string connect_remote_address = get_connect_addr(*listen_socket_up);
     std::unique_ptr<SocketType> connect_socket_up(
-        new SocketType(child_processes_inherit, error));
+        new SocketType(true, child_processes_inherit));
     EXPECT_FALSE(error.Fail());
     error = connect_socket_up->Connect(connect_remote_address);
     EXPECT_FALSE(error.Fail());
@@ -140,6 +139,20 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_STREQ("*", host_str.c_str());
   EXPECT_STREQ("65535", port_str.c_str());
   EXPECT_EQ(65535, port);
+  EXPECT_TRUE(error.Success());
+
+  EXPECT_TRUE(
+      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port, &error));
+  EXPECT_STREQ("::1", host_str.c_str());
+  EXPECT_STREQ("12345", port_str.c_str());
+  EXPECT_EQ(12345, port);
+  EXPECT_TRUE(error.Success());
+
+  EXPECT_TRUE(
+      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345", host_str, port_str, port, &error));
+  EXPECT_STREQ("abcd:12fg:AF58::1", host_str.c_str());
+  EXPECT_STREQ("12345", port_str.c_str());
+  EXPECT_EQ(12345, port);
   EXPECT_TRUE(error.Success());
 }
 

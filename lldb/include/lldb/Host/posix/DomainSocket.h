@@ -15,22 +15,20 @@
 namespace lldb_private {
 class DomainSocket : public Socket {
 public:
-  DomainSocket(bool child_processes_inherit, Error &error);
+  DomainSocket(bool should_close, bool child_processes_inherit);
 
   Error Connect(llvm::StringRef name) override;
   Error Listen(llvm::StringRef name, int backlog) override;
-  Error Accept(llvm::StringRef name, bool child_processes_inherit,
-               Socket *&socket) override;
+  Error Accept(Socket *&socket) override;
 
 protected:
-  DomainSocket(SocketProtocol protocol, bool child_processes_inherit,
-               Error &error);
+  DomainSocket(SocketProtocol protocol, bool child_processes_inherit);
 
   virtual size_t GetNameOffset() const;
   virtual void DeleteSocketFile(llvm::StringRef name);
 
 private:
-  DomainSocket(NativeSocket socket);
+  DomainSocket(NativeSocket socket, const DomainSocket &listen_socket);
 };
 }
 

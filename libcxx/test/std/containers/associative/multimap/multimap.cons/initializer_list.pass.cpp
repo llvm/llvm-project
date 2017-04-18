@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class multimap
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
     typedef std::multimap<int, double> C;
     typedef C::value_type V;
@@ -49,7 +50,6 @@ int main()
     assert(*++i == V(3, 1.5));
     assert(*++i == V(3, 2));
     }
-#if TEST_STD_VER >= 11
     {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> C;
     typedef C::value_type V;
@@ -78,6 +78,4 @@ int main()
     assert(*++i == V(3, 1.5));
     assert(*++i == V(3, 2));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

@@ -78,7 +78,6 @@ void test_sfinae() {
   using DA = NCConvertingDeleter<A[]>;        // non-copyable deleters
   using DAC = NCConvertingDeleter<const A[]>; // non-copyable deleters
 
-  using DB = NCConvertingDeleter<B[]>;
   using UA = std::unique_ptr<A[]>;
   using UAC = std::unique_ptr<const A[]>;
   using UAD = std::unique_ptr<A[], DA>;
