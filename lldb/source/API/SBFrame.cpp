@@ -40,6 +40,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -1387,6 +1388,32 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
     }
   }
   return eLanguageTypeUnknown;
+}
+
+bool SBFrame::IsSwiftThunk() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  
+  StackFrame *frame = nullptr;
+  Target *target = exe_ctx.GetTargetPtr();
+  Process *process = exe_ctx.GetProcessPtr();
+  if (target && process) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process->GetRunLock())) {
+      frame = exe_ctx.GetFramePtr();
+      if (frame) {
+        SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
+        if (!runtime)
+          return false;
+        SymbolContext sc;
+        sc = frame->GetSymbolContext(eSymbolContextSymbol);
+        if (!sc.symbol)
+          return false;
+        return runtime->IsSymbolARuntimeThunk(*sc.symbol);
+      }
+    }
+  }
+  return false;
 }
 
 const char *SBFrame::GetFunctionName() const {

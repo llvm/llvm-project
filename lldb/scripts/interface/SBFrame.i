@@ -142,7 +142,9 @@ public:
     lldb::LanguageType
     GuessLanguage() const;
 
-    %feature("docstring", "
+    bool IsSwiftThunk() const;
+         
+   %feature("docstring", "
     /// Return true if this frame represents an inlined function.
     ///
     /// See also GetFunctionName().
