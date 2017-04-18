@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -march=x86-64 -o - %s -filetype=obj \
+; RUN: llc -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
 ; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; A single FI location. This used to trigger an assertion in debug libstdc++.
 ; CHECK: DW_TAG_formal_parameter
