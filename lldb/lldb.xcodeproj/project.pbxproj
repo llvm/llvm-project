@@ -985,19 +985,6 @@
 		AEB0E4591BD6E9F800B24093 /* LLVMUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEB0E4581BD6E9F800B24093 /* LLVMUserExpression.cpp */; };
 		AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEEA34041AC88A7400AB639D /* TypeSystem.cpp */; };
 		AF061F87182C97ED00B6A19C /* RegisterContextHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF061F85182C97ED00B6A19C /* RegisterContextHistory.cpp */; };
-		AF0639A91BEC2D2500EA1B29 /* PlatformDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */; };
-		AF0639AA1BEC2D2500EA1B29 /* PlatformDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639931BEC2D2500EA1B29 /* PlatformDarwin.h */; };
-		AF0639AB1BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639941BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp */; };
-		AF0639AC1BEC2D2500EA1B29 /* PlatformDarwinKernel.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639951BEC2D2500EA1B29 /* PlatformDarwinKernel.h */; };
-		AF0639AD1BEC2D2500EA1B29 /* PlatformiOSSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639961BEC2D2500EA1B29 /* PlatformiOSSimulator.cpp */; };
-		AF0639AE1BEC2D2500EA1B29 /* PlatformiOSSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639971BEC2D2500EA1B29 /* PlatformiOSSimulator.h */; };
-		AF0639AF1BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639981BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h */; };
-		AF0639B01BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = AF0639991BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.mm */; };
-		AF0639B11BEC2D2500EA1B29 /* PlatformMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF06399A1BEC2D2500EA1B29 /* PlatformMacOSX.cpp */; };
-		AF0639B21BEC2D2500EA1B29 /* PlatformMacOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = AF06399B1BEC2D2500EA1B29 /* PlatformMacOSX.h */; };
-		AF0639B51BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF06399E1BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.cpp */; };
-		AF0639B71BEC2D2500EA1B29 /* PlatformRemoteiOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0639A01BEC2D2500EA1B29 /* PlatformRemoteiOS.cpp */; };
-		AF0639B81BEC2D2500EA1B29 /* PlatformRemoteiOS.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0639A11BEC2D2500EA1B29 /* PlatformRemoteiOS.h */; };
 		AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0C112718580CD800C4C45B /* QueueItem.cpp */; };
 		AF0E22F018A09FB20009B7D1 /* AppleGetItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0E22EE18A09FB20009B7D1 /* AppleGetItemInfoHandler.cpp */; };
 		AF0EBBE8185940FB0059E52F /* SBQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0EBBE6185940FB0059E52F /* SBQueue.cpp */; };
@@ -1019,6 +1006,30 @@
 		AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */; };
 		AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */; };
 		AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */; };
+		AF29A1401EA5A0A90080447E /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1281EA5A0A90080447E /* PlatformAppleSimulator.cpp */; };
+		AF29A1411EA5A0A90080447E /* PlatformAppleSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1291EA5A0A90080447E /* PlatformAppleSimulator.h */; };
+		AF29A1421EA5A0A90080447E /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A12A1EA5A0A90080447E /* PlatformAppleTVSimulator.cpp */; };
+		AF29A1431EA5A0A90080447E /* PlatformAppleTVSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A12B1EA5A0A90080447E /* PlatformAppleTVSimulator.h */; };
+		AF29A1441EA5A0A90080447E /* PlatformAppleWatchSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A12C1EA5A0A90080447E /* PlatformAppleWatchSimulator.cpp */; };
+		AF29A1451EA5A0A90080447E /* PlatformAppleWatchSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A12D1EA5A0A90080447E /* PlatformAppleWatchSimulator.h */; };
+		AF29A1461EA5A0A90080447E /* PlatformDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A12E1EA5A0A90080447E /* PlatformDarwin.cpp */; };
+		AF29A1471EA5A0A90080447E /* PlatformDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A12F1EA5A0A90080447E /* PlatformDarwin.h */; };
+		AF29A1481EA5A0A90080447E /* PlatformDarwinKernel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1301EA5A0A90080447E /* PlatformDarwinKernel.cpp */; };
+		AF29A1491EA5A0A90080447E /* PlatformDarwinKernel.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1311EA5A0A90080447E /* PlatformDarwinKernel.h */; };
+		AF29A14A1EA5A0A90080447E /* PlatformiOSSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1321EA5A0A90080447E /* PlatformiOSSimulator.cpp */; };
+		AF29A14B1EA5A0A90080447E /* PlatformiOSSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1331EA5A0A90080447E /* PlatformiOSSimulator.h */; };
+		AF29A14C1EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1341EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.h */; };
+		AF29A14D1EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1351EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */; };
+		AF29A14E1EA5A0A90080447E /* PlatformMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1361EA5A0A90080447E /* PlatformMacOSX.cpp */; };
+		AF29A14F1EA5A0A90080447E /* PlatformMacOSX.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1371EA5A0A90080447E /* PlatformMacOSX.h */; };
+		AF29A1501EA5A0A90080447E /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A1381EA5A0A90080447E /* PlatformRemoteAppleTV.cpp */; };
+		AF29A1511EA5A0A90080447E /* PlatformRemoteAppleTV.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A1391EA5A0A90080447E /* PlatformRemoteAppleTV.h */; };
+		AF29A1521EA5A0A90080447E /* PlatformRemoteAppleWatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A13A1EA5A0A90080447E /* PlatformRemoteAppleWatch.cpp */; };
+		AF29A1531EA5A0A90080447E /* PlatformRemoteAppleWatch.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A13B1EA5A0A90080447E /* PlatformRemoteAppleWatch.h */; };
+		AF29A1541EA5A0A90080447E /* PlatformRemoteDarwinDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A13C1EA5A0A90080447E /* PlatformRemoteDarwinDevice.cpp */; };
+		AF29A1551EA5A0A90080447E /* PlatformRemoteDarwinDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A13D1EA5A0A90080447E /* PlatformRemoteDarwinDevice.h */; };
+		AF29A1561EA5A0A90080447E /* PlatformRemoteiOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF29A13E1EA5A0A90080447E /* PlatformRemoteiOS.cpp */; };
+		AF29A1571EA5A0A90080447E /* PlatformRemoteiOS.h in Headers */ = {isa = PBXBuildFile; fileRef = AF29A13F1EA5A0A90080447E /* PlatformRemoteiOS.h */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
@@ -1026,9 +1037,7 @@
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
 		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF3B27A91AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
-		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
 		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
-		AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */; };
 		AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */; };
 		AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E08D1A033C700096C0EA /* ABISysV_ppc.cpp */; };
 		AF77E0931A033C7F0096C0EA /* ABISysV_ppc64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E0911A033C7F0096C0EA /* ABISysV_ppc64.cpp */; };
@@ -1039,13 +1048,11 @@
 		AF9107EE168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
-		AFA87A331BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
 		AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
 		AFCB2BBD1BF577F40018B553 /* PythonExceptionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */; };
 		AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */ = {isa = PBXBuildFile; fileRef = AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */; };
-		AFCFF8231BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */; };
 		AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 940B02F419DC96CB00AD0F52 /* SBExecutionContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AFDD168919A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDD168719A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp */; };
 		AFEC3362194A8ABA00FF05C6 /* StructuredData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */; };
@@ -3116,25 +3123,6 @@
 		AF061F86182C97ED00B6A19C /* RegisterContextHistory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextHistory.h; path = Utility/RegisterContextHistory.h; sourceTree = "<group>"; };
 		AF061F89182C980000B6A19C /* HistoryThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryThread.h; path = Utility/HistoryThread.h; sourceTree = "<group>"; };
 		AF061F8A182C980000B6A19C /* HistoryUnwind.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryUnwind.h; path = Utility/HistoryUnwind.h; sourceTree = "<group>"; };
-		AF06398A1BEC2D2500EA1B29 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		AF06398B1BEC2D2500EA1B29 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
-		AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleTVSimulator.h; sourceTree = "<group>"; };
-		AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleWatchSimulator.h; sourceTree = "<group>"; };
-		AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwin.cpp; sourceTree = "<group>"; };
-		AF0639931BEC2D2500EA1B29 /* PlatformDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwin.h; sourceTree = "<group>"; };
-		AF0639941BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwinKernel.cpp; sourceTree = "<group>"; };
-		AF0639951BEC2D2500EA1B29 /* PlatformDarwinKernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwinKernel.h; sourceTree = "<group>"; };
-		AF0639961BEC2D2500EA1B29 /* PlatformiOSSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformiOSSimulator.cpp; sourceTree = "<group>"; };
-		AF0639971BEC2D2500EA1B29 /* PlatformiOSSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulator.h; sourceTree = "<group>"; };
-		AF0639981BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulatorCoreSimulatorSupport.h; sourceTree = "<group>"; };
-		AF0639991BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PlatformiOSSimulatorCoreSimulatorSupport.mm; sourceTree = "<group>"; };
-		AF06399A1BEC2D2500EA1B29 /* PlatformMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformMacOSX.cpp; sourceTree = "<group>"; };
-		AF06399B1BEC2D2500EA1B29 /* PlatformMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformMacOSX.h; sourceTree = "<group>"; };
-		AF06399E1BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleWatch.cpp; sourceTree = "<group>"; };
-		AF06399F1BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleWatch.h; sourceTree = "<group>"; };
-		AF0639A01BEC2D2500EA1B29 /* PlatformRemoteiOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteiOS.cpp; sourceTree = "<group>"; };
-		AF0639A11BEC2D2500EA1B29 /* PlatformRemoteiOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteiOS.h; sourceTree = "<group>"; };
 		AF0C112718580CD800C4C45B /* QueueItem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = QueueItem.cpp; path = source/Target/QueueItem.cpp; sourceTree = "<group>"; };
 		AF0E22EE18A09FB20009B7D1 /* AppleGetItemInfoHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetItemInfoHandler.cpp; sourceTree = "<group>"; };
 		AF0E22EF18A09FB20009B7D1 /* AppleGetItemInfoHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleGetItemInfoHandler.h; sourceTree = "<group>"; };
@@ -3166,6 +3154,30 @@
 		AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderDarwin.h; sourceTree = "<group>"; };
 		AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderMacOS.cpp; sourceTree = "<group>"; };
 		AF2907BE1D3F082400E10654 /* DynamicLoaderMacOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderMacOS.h; sourceTree = "<group>"; };
+		AF29A1281EA5A0A90080447E /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
+		AF29A1291EA5A0A90080447E /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
+		AF29A12A1EA5A0A90080447E /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
+		AF29A12B1EA5A0A90080447E /* PlatformAppleTVSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleTVSimulator.h; sourceTree = "<group>"; };
+		AF29A12C1EA5A0A90080447E /* PlatformAppleWatchSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleWatchSimulator.cpp; sourceTree = "<group>"; };
+		AF29A12D1EA5A0A90080447E /* PlatformAppleWatchSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleWatchSimulator.h; sourceTree = "<group>"; };
+		AF29A12E1EA5A0A90080447E /* PlatformDarwin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwin.cpp; sourceTree = "<group>"; };
+		AF29A12F1EA5A0A90080447E /* PlatformDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwin.h; sourceTree = "<group>"; };
+		AF29A1301EA5A0A90080447E /* PlatformDarwinKernel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformDarwinKernel.cpp; sourceTree = "<group>"; };
+		AF29A1311EA5A0A90080447E /* PlatformDarwinKernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformDarwinKernel.h; sourceTree = "<group>"; };
+		AF29A1321EA5A0A90080447E /* PlatformiOSSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformiOSSimulator.cpp; sourceTree = "<group>"; };
+		AF29A1331EA5A0A90080447E /* PlatformiOSSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulator.h; sourceTree = "<group>"; };
+		AF29A1341EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulatorCoreSimulatorSupport.h; sourceTree = "<group>"; };
+		AF29A1351EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PlatformiOSSimulatorCoreSimulatorSupport.mm; sourceTree = "<group>"; };
+		AF29A1361EA5A0A90080447E /* PlatformMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformMacOSX.cpp; sourceTree = "<group>"; };
+		AF29A1371EA5A0A90080447E /* PlatformMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformMacOSX.h; sourceTree = "<group>"; };
+		AF29A1381EA5A0A90080447E /* PlatformRemoteAppleTV.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleTV.cpp; sourceTree = "<group>"; };
+		AF29A1391EA5A0A90080447E /* PlatformRemoteAppleTV.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleTV.h; sourceTree = "<group>"; };
+		AF29A13A1EA5A0A90080447E /* PlatformRemoteAppleWatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleWatch.cpp; sourceTree = "<group>"; };
+		AF29A13B1EA5A0A90080447E /* PlatformRemoteAppleWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleWatch.h; sourceTree = "<group>"; };
+		AF29A13C1EA5A0A90080447E /* PlatformRemoteDarwinDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteDarwinDevice.cpp; sourceTree = "<group>"; };
+		AF29A13D1EA5A0A90080447E /* PlatformRemoteDarwinDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteDarwinDevice.h; sourceTree = "<group>"; };
+		AF29A13E1EA5A0A90080447E /* PlatformRemoteiOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteiOS.cpp; sourceTree = "<group>"; };
+		AF29A13F1EA5A0A90080447E /* PlatformRemoteiOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteiOS.h; sourceTree = "<group>"; };
 		AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITLoaderGDB.cpp; sourceTree = "<group>"; };
 		AF2BCA6A18C7EFDE005B4526 /* JITLoaderGDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITLoaderGDB.h; sourceTree = "<group>"; };
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
@@ -3190,11 +3202,9 @@
 		AF45E1FD1BF57C8D000563EB /* PythonTestSuite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PythonTestSuite.h; sourceTree = "<group>"; };
 		AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetThreadItemInfoHandler.cpp; sourceTree = "<group>"; };
 		AF45FDE418A1F3AC0007051C /* AppleGetThreadItemInfoHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleGetThreadItemInfoHandler.h; sourceTree = "<group>"; };
-		AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
 		AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCClassDescriptorV2.cpp; sourceTree = "<group>"; };
 		AF46AE6919A708EC008BD829 /* AppleObjCClassDescriptorV2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCClassDescriptorV2.h; sourceTree = "<group>"; };
 		AF507D3A1A846296007249DC /* NativeWatchpointList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeWatchpointList.cpp; sourceTree = "<group>"; };
-		AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
 		AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFilePDB.cpp; path = PDB/SymbolFilePDB.cpp; sourceTree = "<group>"; };
 		AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFilePDB.h; path = PDB/SymbolFilePDB.h; sourceTree = "<group>"; };
 		AF68D2541255416E002FF25B /* RegisterContextLLDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextLLDB.cpp; path = Utility/RegisterContextLLDB.cpp; sourceTree = "<group>"; };
@@ -3223,15 +3233,12 @@
 		AF9472701B575E5F0063D65C /* ValueObjectConstResultCast.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResultCast.h; path = include/lldb/Core/ValueObjectConstResultCast.h; sourceTree = "<group>"; };
 		AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SystemRuntimeMacOSX.cpp; sourceTree = "<group>"; };
 		AF9B8F32182DB52900DA866F /* SystemRuntimeMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemRuntimeMacOSX.h; sourceTree = "<group>"; };
-		AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleTV.cpp; sourceTree = "<group>"; };
-		AFA87A321BEC2D6700A7424F /* PlatformRemoteAppleTV.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleTV.h; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
 		AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectLanguage.cpp; path = source/Commands/CommandObjectLanguage.cpp; sourceTree = "<group>"; };
 		AFC234071AF85CE000CDE8B6 /* CommandObjectLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectLanguage.h; path = source/Commands/CommandObjectLanguage.h; sourceTree = "<group>"; };
 		AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PythonExceptionState.cpp; path = ScriptInterpreter/Python/PythonExceptionState.cpp; sourceTree = "<group>"; };
 		AFCB2BBC1BF577F40018B553 /* PythonExceptionState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PythonExceptionState.h; path = ScriptInterpreter/Python/PythonExceptionState.h; sourceTree = "<group>"; };
-		AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleWatchSimulator.cpp; sourceTree = "<group>"; };
 		AFDD168719A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCTypeEncodingParser.cpp; sourceTree = "<group>"; };
 		AFDD168819A6FDE40075888E /* AppleObjCTypeEncodingParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCTypeEncodingParser.h; sourceTree = "<group>"; };
 		AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StructuredData.cpp; path = source/Core/StructuredData.cpp; sourceTree = "<group>"; };
@@ -3398,6 +3405,7 @@
 				2321F9331BDD326500BA9A93 /* unittests */,
 				236102941CF389BE00B8E0B9 /* cmake */,
 				23CB14E21D66CA2200EDDDE1 /* Frameworks */,
+				AFBD2E8A1EA59EAE00C5B193 /* Recovered References */,
 			);
 			name = lldb;
 			sourceTree = "<group>";
@@ -5673,30 +5681,30 @@
 		26C5577F132575C8008FD8FE /* MacOSX */ = {
 			isa = PBXGroup;
 			children = (
-				AF06398A1BEC2D2500EA1B29 /* CMakeLists.txt */,
-				AF06398B1BEC2D2500EA1B29 /* Makefile */,
-				AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */,
-				AF06398D1BEC2D2500EA1B29 /* PlatformAppleSimulator.h */,
-				AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */,
-				AF06398F1BEC2D2500EA1B29 /* PlatformAppleTVSimulator.h */,
-				AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */,
-				AF0639911BEC2D2500EA1B29 /* PlatformAppleWatchSimulator.h */,
-				AF0639921BEC2D2500EA1B29 /* PlatformDarwin.cpp */,
-				AF0639931BEC2D2500EA1B29 /* PlatformDarwin.h */,
-				AF0639941BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp */,
-				AF0639951BEC2D2500EA1B29 /* PlatformDarwinKernel.h */,
-				AF0639961BEC2D2500EA1B29 /* PlatformiOSSimulator.cpp */,
-				AF0639971BEC2D2500EA1B29 /* PlatformiOSSimulator.h */,
-				AF0639981BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h */,
-				AF0639991BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
-				AF06399A1BEC2D2500EA1B29 /* PlatformMacOSX.cpp */,
-				AF06399B1BEC2D2500EA1B29 /* PlatformMacOSX.h */,
-				AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */,
-				AFA87A321BEC2D6700A7424F /* PlatformRemoteAppleTV.h */,
-				AF06399E1BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.cpp */,
-				AF06399F1BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.h */,
-				AF0639A01BEC2D2500EA1B29 /* PlatformRemoteiOS.cpp */,
-				AF0639A11BEC2D2500EA1B29 /* PlatformRemoteiOS.h */,
+				AF29A1281EA5A0A90080447E /* PlatformAppleSimulator.cpp */,
+				AF29A1291EA5A0A90080447E /* PlatformAppleSimulator.h */,
+				AF29A12A1EA5A0A90080447E /* PlatformAppleTVSimulator.cpp */,
+				AF29A12B1EA5A0A90080447E /* PlatformAppleTVSimulator.h */,
+				AF29A12C1EA5A0A90080447E /* PlatformAppleWatchSimulator.cpp */,
+				AF29A12D1EA5A0A90080447E /* PlatformAppleWatchSimulator.h */,
+				AF29A12E1EA5A0A90080447E /* PlatformDarwin.cpp */,
+				AF29A12F1EA5A0A90080447E /* PlatformDarwin.h */,
+				AF29A1301EA5A0A90080447E /* PlatformDarwinKernel.cpp */,
+				AF29A1311EA5A0A90080447E /* PlatformDarwinKernel.h */,
+				AF29A1321EA5A0A90080447E /* PlatformiOSSimulator.cpp */,
+				AF29A1331EA5A0A90080447E /* PlatformiOSSimulator.h */,
+				AF29A1341EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.h */,
+				AF29A1351EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
+				AF29A1361EA5A0A90080447E /* PlatformMacOSX.cpp */,
+				AF29A1371EA5A0A90080447E /* PlatformMacOSX.h */,
+				AF29A1381EA5A0A90080447E /* PlatformRemoteAppleTV.cpp */,
+				AF29A1391EA5A0A90080447E /* PlatformRemoteAppleTV.h */,
+				AF29A13A1EA5A0A90080447E /* PlatformRemoteAppleWatch.cpp */,
+				AF29A13B1EA5A0A90080447E /* PlatformRemoteAppleWatch.h */,
+				AF29A13C1EA5A0A90080447E /* PlatformRemoteDarwinDevice.cpp */,
+				AF29A13D1EA5A0A90080447E /* PlatformRemoteDarwinDevice.h */,
+				AF29A13E1EA5A0A90080447E /* PlatformRemoteiOS.cpp */,
+				AF29A13F1EA5A0A90080447E /* PlatformRemoteiOS.h */,
 			);
 			path = MacOSX;
 			sourceTree = "<group>";
@@ -6662,6 +6670,14 @@
 			name = "SysV-ppc64";
 			sourceTree = "<group>";
 		};
+		AFBD2E8A1EA59EAE00C5B193 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				94164A5D1B828D9A00DCA4B6 /* CompilerType.cpp */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		E769331B1A94D10E00C73337 /* lldb-server */ = {
 			isa = PBXGroup;
 			children = (
@@ -6769,29 +6785,35 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AF0639AA1BEC2D2500EA1B29 /* PlatformDarwin.h in Headers */,
-				AF0639B21BEC2D2500EA1B29 /* PlatformMacOSX.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
+				AF29A1531EA5A0A90080447E /* PlatformRemoteAppleWatch.h in Headers */,
 				AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */,
 				267F685A1CC02EBE0086832B /* RegisterInfos_s390x.h in Headers */,
 				267F68541CC02E920086832B /* RegisterContextLinux_s390x.h in Headers */,
+				AF29A1411EA5A0A90080447E /* PlatformAppleSimulator.h in Headers */,
 				267F68501CC02E270086832B /* RegisterContextPOSIXCore_s390x.h in Headers */,
+				AF29A1551EA5A0A90080447E /* PlatformRemoteDarwinDevice.h in Headers */,
+				AF29A1571EA5A0A90080447E /* PlatformRemoteiOS.h in Headers */,
+				AF29A1491EA5A0A90080447E /* PlatformDarwinKernel.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
 				238F2BA11D2C835A001FF92A /* StructuredDataPlugin.h in Headers */,
+				AF29A1431EA5A0A90080447E /* PlatformAppleTVSimulator.h in Headers */,
 				238F2BA91D2C85FA001FF92A /* StructuredDataDarwinLog.h in Headers */,
+				AF29A1451EA5A0A90080447E /* PlatformAppleWatchSimulator.h in Headers */,
 				257906651BD5AFD000178368 /* Acceptor.h in Headers */,
+				AF29A14B1EA5A0A90080447E /* PlatformiOSSimulator.h in Headers */,
 				238F2BA21D2C835A001FF92A /* SystemRuntime.h in Headers */,
+				AF29A1511EA5A0A90080447E /* PlatformRemoteAppleTV.h in Headers */,
+				AF29A14C1EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.h in Headers */,
+				AF29A1471EA5A0A90080447E /* PlatformDarwin.h in Headers */,
 				260A63171861008E00FECF8E /* IOHandler.h in Headers */,
-				AF0639AE1BEC2D2500EA1B29 /* PlatformiOSSimulator.h in Headers */,
-				AF0639B81BEC2D2500EA1B29 /* PlatformRemoteiOS.h in Headers */,
-				AF0639AF1BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.h in Headers */,
-				AF0639AC1BEC2D2500EA1B29 /* PlatformDarwinKernel.h in Headers */,
 				267F68581CC02EAE0086832B /* RegisterContextPOSIX_s390x.h in Headers */,
 				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */,
+				AF29A14F1EA5A0A90080447E /* PlatformMacOSX.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
 			);
@@ -7555,11 +7577,9 @@
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
 				26474CCD18D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp in Sources */,
 				AEB0E4591BD6E9F800B24093 /* LLVMUserExpression.cpp in Sources */,
-				AF0639B01BEC2D2500EA1B29 /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */,
 				2689FFEF13353DB600698AC0 /* Breakpoint.cpp in Sources */,
 				267A47FB1B1411C40021A5BC /* NativeRegisterContext.cpp in Sources */,
 				2689FFF113353DB600698AC0 /* BreakpointID.cpp in Sources */,
-				AF0639B11BEC2D2500EA1B29 /* PlatformMacOSX.cpp in Sources */,
 				AF77E0A91A033D740096C0EA /* RegisterContextPOSIXCore_powerpc.cpp in Sources */,
 				2689FFF313353DB600698AC0 /* BreakpointIDList.cpp in Sources */,
 				2689FFF513353DB600698AC0 /* BreakpointList.cpp in Sources */,
@@ -7613,7 +7633,6 @@
 				2689001B13353DDE00698AC0 /* CommandObjectHelp.cpp in Sources */,
 				23F4034D1926E0F60046DC9B /* NativeRegisterContextRegisterInfo.cpp in Sources */,
 				964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */,
-				AF0639AD1BEC2D2500EA1B29 /* PlatformiOSSimulator.cpp in Sources */,
 				94B638531B8F8E6C004FE1E4 /* Language.cpp in Sources */,
 				2689001D13353DDE00698AC0 /* CommandObjectLog.cpp in Sources */,
 				AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */,
@@ -7636,6 +7655,7 @@
 				2666ADC61B3CB675001FAFD3 /* DynamicLoaderHexagonDYLD.cpp in Sources */,
 				3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */,
 				26BC179918C7F2B300D2196D /* JITLoader.cpp in Sources */,
+				AF29A1421EA5A0A90080447E /* PlatformAppleTVSimulator.cpp in Sources */,
 				4999FD071BC355630014BA69 /* SwiftREPLMaterializer.cpp in Sources */,
 				4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */,
 				2689002713353DDE00698AC0 /* CommandObjectTarget.cpp in Sources */,
@@ -7676,6 +7696,7 @@
 				2689003D13353E0400698AC0 /* Event.cpp in Sources */,
 				26B75B441AD6E29A001F7A57 /* MipsLinuxSignals.cpp in Sources */,
 				2689003E13353E0400698AC0 /* FileSpecList.cpp in Sources */,
+				AF29A1461EA5A0A90080447E /* PlatformDarwin.cpp in Sources */,
 				2689004113353E0400698AC0 /* Listener.cpp in Sources */,
 				269DDD4A1B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp in Sources */,
 				2689004213353E0400698AC0 /* Log.cpp in Sources */,
@@ -7690,7 +7711,6 @@
 				2689004813353E0400698AC0 /* RegularExpression.cpp in Sources */,
 				2689004913353E0400698AC0 /* Scalar.cpp in Sources */,
 				263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */,
-				AF0639A91BEC2D2500EA1B29 /* PlatformDarwin.cpp in Sources */,
 				2689004A13353E0400698AC0 /* SearchFilter.cpp in Sources */,
 				2689004B13353E0400698AC0 /* Section.cpp in Sources */,
 				4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */,
@@ -7730,7 +7750,6 @@
 				2689005D13353E0400698AC0 /* VMRange.cpp in Sources */,
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
 				3FDFED0F19B7D269009756A7 /* ThisThread.cpp in Sources */,
-				AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */,
 				2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */,
 				2689006013353E0E00698AC0 /* ClangExpressionDeclMap.cpp in Sources */,
 				2689006113353E0E00698AC0 /* ClangExpressionParser.cpp in Sources */,
@@ -7766,6 +7785,7 @@
 				257E47171AA56C2000A62F81 /* ModuleCache.cpp in Sources */,
 				948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
+				AF29A1401EA5A0A90080447E /* PlatformAppleSimulator.cpp in Sources */,
 				237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */,
 				942612F01B94D33200EF842E /* SwiftLanguage.cpp in Sources */,
 				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
@@ -7795,8 +7815,8 @@
 				26BF51F61B3C754400016294 /* ABISysV_i386.cpp in Sources */,
 				2689008313353E2200698AC0 /* CommandObjectMultiword.cpp in Sources */,
 				2689008413353E2200698AC0 /* CommandObjectRegexCommand.cpp in Sources */,
-				AFCFF8231BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp in Sources */,
 				2689008513353E2200698AC0 /* CommandReturnObject.cpp in Sources */,
+				AF29A14A1EA5A0A90080447E /* PlatformiOSSimulator.cpp in Sources */,
 				6D95DC001B9DC057000E318A /* DIERef.cpp in Sources */,
 				AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */,
 				3FDFE53519A29327009756A7 /* HostInfoBase.cpp in Sources */,
@@ -7824,7 +7844,6 @@
 				2689009E13353E4200698AC0 /* GDBRemoteRegisterContext.cpp in Sources */,
 				9694FA711B32AA64005EBB16 /* ABISysV_mips.cpp in Sources */,
 				2689009F13353E4200698AC0 /* ProcessGDBRemote.cpp in Sources */,
-				AF0639B71BEC2D2500EA1B29 /* PlatformRemoteiOS.cpp in Sources */,
 				268900A013353E4200698AC0 /* ProcessGDBRemoteLog.cpp in Sources */,
 				268900A113353E4200698AC0 /* ThreadGDBRemote.cpp in Sources */,
 				AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */,
@@ -7891,6 +7910,7 @@
 				268900D813353E6F00698AC0 /* Function.cpp in Sources */,
 				268900D913353E6F00698AC0 /* FuncUnwinders.cpp in Sources */,
 				268900DA13353E6F00698AC0 /* LineEntry.cpp in Sources */,
+				AF29A1481EA5A0A90080447E /* PlatformDarwinKernel.cpp in Sources */,
 				268900DB13353E6F00698AC0 /* LineTable.cpp in Sources */,
 				268900DC13353E6F00698AC0 /* ObjectFile.cpp in Sources */,
 				268900DD13353E6F00698AC0 /* Symbol.cpp in Sources */,
@@ -7904,6 +7924,7 @@
 				3FDFED2719BA6D96009756A7 /* HostNativeThreadBase.cpp in Sources */,
 				268900E313353E6F00698AC0 /* TypeList.cpp in Sources */,
 				268900E413353E6F00698AC0 /* UnwindPlan.cpp in Sources */,
+				AF29A1501EA5A0A90080447E /* PlatformRemoteAppleTV.cpp in Sources */,
 				942F521F1BC44E6D0004C182 /* CF.cpp in Sources */,
 				268900E513353E6F00698AC0 /* UnwindTable.cpp in Sources */,
 				268900E613353E6F00698AC0 /* Variable.cpp in Sources */,
@@ -7928,11 +7949,11 @@
 				268900F013353E6F00698AC0 /* Process.cpp in Sources */,
 				948C86D21B97764D00F3CAC3 /* SwiftBasicTypes.cpp in Sources */,
 				AFDD168919A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp in Sources */,
+				AF29A14D1EA5A0A90080447E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */,
 				26BC17AD18C7F4CB00D2196D /* RegisterContextPOSIXCore_mips64.cpp in Sources */,
 				3F8169191ABA2419001DA9DF /* ConvertEnum.cpp in Sources */,
 				268900F113353E6F00698AC0 /* RegisterContext.cpp in Sources */,
 				6D55BAED1A8CD0A800A70529 /* PlatformAndroid.cpp in Sources */,
-				AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */,
 				268900F213353E6F00698AC0 /* SectionLoadList.cpp in Sources */,
 				268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */,
 				268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */,
@@ -7958,6 +7979,7 @@
 				268900FF13353E6F00698AC0 /* ThreadPlanShouldStopHere.cpp in Sources */,
 				2579065F1BD0488D00178368 /* DomainSocket.cpp in Sources */,
 				2689010013353E6F00698AC0 /* ThreadPlanStepInstruction.cpp in Sources */,
+				AF29A1521EA5A0A90080447E /* PlatformRemoteAppleWatch.cpp in Sources */,
 				232CB61B191E00CD00EF39FC /* NativeThreadProtocol.cpp in Sources */,
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,
 				2689010213353E6F00698AC0 /* ThreadPlanStepOverBreakpoint.cpp in Sources */,
@@ -7986,6 +8008,7 @@
 				2689011013353E8200698AC0 /* SharingPtr.cpp in Sources */,
 				2689011113353E8200698AC0 /* StringExtractor.cpp in Sources */,
 				6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */,
+				AF29A1541EA5A0A90080447E /* PlatformRemoteDarwinDevice.cpp in Sources */,
 				2689011213353E8200698AC0 /* StringExtractorGDBRemote.cpp in Sources */,
 				2689011313353E8200698AC0 /* PseudoTerminal.cpp in Sources */,
 				26BC17AB18C7F4CB00D2196D /* ProcessElfCore.cpp in Sources */,
@@ -8039,7 +8062,6 @@
 				940B80181BA9EED3008A39CB /* ObjCRuntimeSyntheticProvider.cpp in Sources */,
 				2686536C1370ACB200D186A3 /* OptionGroupBoolean.cpp in Sources */,
 				268653701370AE7200D186A3 /* OptionGroupUInt64.cpp in Sources */,
-				AFA87A331BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp in Sources */,
 				264A12FC1372522000875C42 /* EmulateInstructionARM64.cpp in Sources */,
 				264A1300137252C700875C42 /* ARM64_DWARF_Registers.cpp in Sources */,
 				26DB3E161379E7AD0080DC73 /* ABIMacOSX_arm.cpp in Sources */,
@@ -8076,7 +8098,6 @@
 				23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */,
 				8C26C4261C3EA5F90031DF7C /* ThreadSanitizerRuntime.cpp in Sources */,
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
-				AF0639AB1BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
 				26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */,
 				26957D9A13D381C900670048 /* RegisterContextDarwin_i386.cpp in Sources */,
@@ -8137,6 +8158,7 @@
 				23D0658F1D4A7BEE0008EDE6 /* RenderScriptExpressionOpts.cpp in Sources */,
 				945215DF17F639EE00521C0B /* ValueObjectPrinter.cpp in Sources */,
 				26EFB61B1BFE8D3E00544801 /* PlatformNetBSD.cpp in Sources */,
+				AF29A14E1EA5A0A90080447E /* PlatformMacOSX.cpp in Sources */,
 				260CC64815D0440D002BF2E0 /* OptionValueArgs.cpp in Sources */,
 				260CC64915D0440D002BF2E0 /* OptionValueArray.cpp in Sources */,
 				23A452301DC00D5D00E44395 /* RegisterContextMinidump_x86_64.cpp in Sources */,
@@ -8144,10 +8166,10 @@
 				260CC64B15D0440D002BF2E0 /* OptionValueProperties.cpp in Sources */,
 				3FDFED0C19B7C8E7009756A7 /* ThisThread.cpp in Sources */,
 				6D86CEA01B440F8500A7FBFA /* CommandObjectBugreport.cpp in Sources */,
-				AF0639B51BEC2D2500EA1B29 /* PlatformRemoteAppleWatch.cpp in Sources */,
 				260CC64C15D0440D002BF2E0 /* OptionValueDictionary.cpp in Sources */,
 				49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */,
 				4C848DF818D2869F00EC6DD0 /* StringPrinter.cpp in Sources */,
+				AF29A1561EA5A0A90080447E /* PlatformRemoteiOS.cpp in Sources */,
 				260CC64D15D0440D002BF2E0 /* OptionValueEnumeration.cpp in Sources */,
 				AE7F56291B8FE418001377A8 /* GoASTContext.cpp in Sources */,
 				260CC64E15D0440D002BF2E0 /* OptionValueFileSpec.cpp in Sources */,
@@ -8196,6 +8218,7 @@
 				94CB257116B0A4270059775D /* TypeSummary.cpp in Sources */,
 				94CB257216B0A4270059775D /* TypeSynthetic.cpp in Sources */,
 				94CB257416B1D3880059775D /* FormatCache.cpp in Sources */,
+				AF29A1441EA5A0A90080447E /* PlatformAppleWatchSimulator.cpp in Sources */,
 				A36FF33C17D8E94600244D40 /* OptionParser.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
