@@ -403,117 +403,58 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     } break;
 
     case swift::TypeKind::Struct:
-    case swift::TypeKind::Class: {
-      swift::ClassDecl *class_decl =
-          swift_can_type->getClassOrBoundGenericClass();
-      swift::NominalType *nominal_type =
-          swift_can_type->getAs<swift::NominalType>();
-      if (nominal_type) {
-        swift::NominalTypeDecl *nominal_decl = nominal_type->getDecl();
-        if (nominal_decl) {
-          if (class_decl) {
-            is_class = true;
-            swift::Type superclass_type(class_decl->getSuperclass());
-            if (superclass_type) {
-              MemberInfo member_info(MemberType::BaseClass);
-              member_info.clang_type =
-                  CompilerType(GetASTContext(), superclass_type.getPointer());
-              member_info.byte_size =
-                  member_info.clang_type.GetByteSize(nullptr);
-              member_info.is_fragile = false;
-              member_info.name.SetCString(
-                  member_info.clang_type.GetTypeName().AsCString(
-                      "<no type name>"));
-              field_type_infos.push_back(
-                  GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-              assert(field_type_infos.back() != nullptr);
-              member_infos_sp->member_infos.push_back(member_info);
-            }
-          }
-
-          for (auto decl : nominal_decl->getMembers()) {
-            if (swift::isa<swift::VarDecl>(decl)) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
-              if (var_decl->hasStorage() && !var_decl->isStatic()) {
-                MemberInfo member_info(MemberType::Field);
-                member_info.clang_type = CompilerType(
-                    GetASTContext(), var_decl->getInterfaceType().getPointer());
-                member_info.byte_size =
-                    member_info.clang_type.GetByteSize(nullptr);
-                member_info.is_fragile =
-                    is_class; // Class fields are all fragile...
-                const char *child_name_cstr = var_decl->getName().get();
-                if (child_name_cstr)
-                  member_info.name.SetCString(child_name_cstr);
-                field_type_infos.push_back(
-                    GetSwiftTypeInfo(nominal_type, var_decl));
-                assert(field_type_infos.back() != nullptr);
-                member_infos_sp->member_infos.push_back(member_info);
-              }
-            }
-          }
-        }
-      }
-    } break;
-
+    case swift::TypeKind::Class:
     case swift::TypeKind::BoundGenericStruct:
     case swift::TypeKind::BoundGenericClass: {
-      swift::ClassDecl *class_decl =
-          swift_can_type->getClassOrBoundGenericClass();
-      swift::BoundGenericType *t =
-          swift_can_type->getAs<swift::BoundGenericType>();
-      if (t) {
-        swift::NominalTypeDecl *t_decl = t->getDecl();
-        if (t_decl) {
-          if (class_decl) {
-            is_class = true;
-            swift::LazyResolver *const lazy_resolver = nullptr;
-            swift::Type superclass_type(t->getSuperclass(lazy_resolver));
-            if (superclass_type) {
-              MemberInfo member_info(MemberType::BaseClass);
-              member_info.clang_type =
-                  CompilerType(GetASTContext(), superclass_type.getPointer());
-              member_info.byte_size =
-                  member_info.clang_type.GetByteSize(nullptr);
-              // Showing somemodule.sometype<A> is confusing to the user because
-              // it will show the *unboud* archetype name even though the type
-              // is actually properly bound (or it should!) and since one cannot
-              // overload a class on the number of generic arguments,
-              // somemodule.sometype is just as unique.
-              member_info.name.SetCString(
-                  member_info.clang_type.GetUnboundType()
-                      .GetTypeName()
-                      .AsCString("<no type name>"));
-              field_type_infos.push_back(
-                  GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-              assert(field_type_infos.back() != nullptr);
-              member_infos_sp->member_infos.push_back(member_info);
-            }
-          }
+      auto t_decl = swift_can_type.getAnyNominal();
+      auto class_decl = swift::dyn_cast<swift::ClassDecl>(t_decl);
+      if (class_decl) {
+        is_class = true;
+        swift::LazyResolver *const lazy_resolver = nullptr;
+        swift::Type superclass_type(swift_can_type->getSuperclass(lazy_resolver));
+        if (superclass_type) {
+          MemberInfo member_info(MemberType::BaseClass);
+          member_info.clang_type =
+              CompilerType(GetASTContext(), superclass_type.getPointer());
+          member_info.byte_size =
+              member_info.clang_type.GetByteSize(nullptr);
+          // Showing somemodule.sometype<A> is confusing to the user because
+          // it will show the *unboud* archetype name even though the type
+          // is actually properly bound (or it should!) and since one cannot
+          // overload a class on the number of generic arguments,
+          // somemodule.sometype is just as unique.
+          member_info.name.SetCString(
+              member_info.clang_type.GetUnboundType()
+                  .GetTypeName()
+                  .AsCString("<no type name>"));
+          field_type_infos.push_back(
+              GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
+          assert(field_type_infos.back() != nullptr);
+          member_infos_sp->member_infos.push_back(member_info);
+        }
+      }
 
-          for (auto decl : t_decl->getMembers()) {
-            // Find ivars that aren't properties
-            if (swift::isa<swift::VarDecl>(decl)) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
-              if (var_decl->hasStorage() && !var_decl->isStatic()) {
-                MemberInfo member_info(MemberType::Field);
-                swift::Type member_type = swift_can_type->getTypeOfMember(
-                    t_decl->getModuleContext(), var_decl, nullptr);
-                member_info.clang_type =
-                    CompilerType(GetASTContext(), member_type.getPointer());
-                member_info.byte_size =
-                    member_info.clang_type.GetByteSize(nullptr);
-                member_info.is_fragile =
-                    is_class; // Class fields are all fragile...
-                const char *child_name_cstr = var_decl->getName().get();
-                if (child_name_cstr)
-                  member_info.name.SetCString(child_name_cstr);
-                field_type_infos.push_back(GetSwiftTypeInfo(
-                    member_info.clang_type.GetOpaqueQualType()));
-                assert(field_type_infos.back() != nullptr);
-                member_infos_sp->member_infos.push_back(member_info);
-              }
-            }
+      for (auto decl : t_decl->getMembers()) {
+        // Find ivars that aren't properties
+        if (swift::isa<VarDecl>(decl)) {
+          swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
+          if (var_decl->hasStorage() && !var_decl->isStatic()) {
+            MemberInfo member_info(MemberType::Field);
+            swift::Type member_type = swift_can_type->getTypeOfMember(
+                t_decl->getModuleContext(), var_decl, nullptr);
+            member_info.clang_type =
+                CompilerType(GetASTContext(), member_type.getPointer());
+            member_info.byte_size =
+                member_info.clang_type.GetByteSize(nullptr);
+            member_info.is_fragile =
+                is_class; // Class fields are all fragile...
+            const char *child_name_cstr = var_decl->getName().get();
+            if (child_name_cstr)
+              member_info.name.SetCString(child_name_cstr);
+            field_type_infos.push_back(GetSwiftTypeInfo(
+                member_info.clang_type.GetOpaqueQualType()));
+            assert(field_type_infos.back() != nullptr);
+            member_infos_sp->member_infos.push_back(member_info);
           }
         }
       }
