@@ -12,12 +12,3 @@ int *f1() {
 // CHECK-SAME: getelementptr inbounds (%struct.A, %struct.A* null, i32 0, i32 1)
   return &((struct A *)0)->b;
 }
-
-// CHECK-LABEL: @f2
-int f2() {
-// CHECK: __ubsan_handle_type_mismatch
-// CHECK: load
-// CHECK-SAME: getelementptr inbounds (%struct.A, %struct.A* null, i32 0, i32 1)
-// CHECK: ret
-  return ((struct A *)0)->b;
-}
