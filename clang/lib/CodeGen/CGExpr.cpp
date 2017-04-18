@@ -532,6 +532,15 @@ bool CodeGenFunction::sanitizePerformTypeCheck() const {
          SanOpts.has(SanitizerKind::Vptr);
 }
 
+/// Check if a runtime null check for \p Ptr can be omitted.
+static bool canOmitPointerNullCheck(llvm::Value *Ptr) {
+  // Note: do not perform any constant-folding in this function. That is best
+  // left to the IR builder.
+
+  // Pointers to alloca'd memory are non-null.
+  return isa<llvm::AllocaInst>(Ptr->stripPointerCastsNoFollowAliases());
+}
+
 void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
                                     llvm::Value *Ptr, QualType Ty,
                                     CharUnits Alignment,
@@ -553,7 +562,8 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   bool AllowNullPointers = TCK == TCK_DowncastPointer || TCK == TCK_Upcast ||
                            TCK == TCK_UpcastToVirtualBase;
   if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
-      !SkippedChecks.has(SanitizerKind::Null)) {
+      !SkippedChecks.has(SanitizerKind::Null) &&
+      !canOmitPointerNullCheck(Ptr)) {
     // The glvalue must not be an empty glvalue.
     llvm::Value *IsNonNull = Builder.CreateIsNotNull(Ptr);
 
