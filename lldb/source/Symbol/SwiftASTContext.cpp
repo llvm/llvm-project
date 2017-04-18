@@ -403,117 +403,58 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     } break;
 
     case swift::TypeKind::Struct:
-    case swift::TypeKind::Class: {
-      swift::ClassDecl *class_decl =
-          swift_can_type->getClassOrBoundGenericClass();
-      swift::NominalType *nominal_type =
-          swift_can_type->getAs<swift::NominalType>();
-      if (nominal_type) {
-        swift::NominalTypeDecl *nominal_decl = nominal_type->getDecl();
-        if (nominal_decl) {
-          if (class_decl) {
-            is_class = true;
-            swift::Type superclass_type(class_decl->getSuperclass());
-            if (superclass_type) {
-              MemberInfo member_info(MemberType::BaseClass);
-              member_info.clang_type =
-                  CompilerType(GetASTContext(), superclass_type.getPointer());
-              member_info.byte_size =
-                  member_info.clang_type.GetByteSize(nullptr);
-              member_info.is_fragile = false;
-              member_info.name.SetCString(
-                  member_info.clang_type.GetTypeName().AsCString(
-                      "<no type name>"));
-              field_type_infos.push_back(
-                  GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-              assert(field_type_infos.back() != nullptr);
-              member_infos_sp->member_infos.push_back(member_info);
-            }
-          }
-
-          for (auto decl : nominal_decl->getMembers()) {
-            if (swift::isa<swift::VarDecl>(decl)) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
-              if (var_decl->hasStorage() && !var_decl->isStatic()) {
-                MemberInfo member_info(MemberType::Field);
-                member_info.clang_type = CompilerType(
-                    GetASTContext(), var_decl->getInterfaceType().getPointer());
-                member_info.byte_size =
-                    member_info.clang_type.GetByteSize(nullptr);
-                member_info.is_fragile =
-                    is_class; // Class fields are all fragile...
-                const char *child_name_cstr = var_decl->getName().get();
-                if (child_name_cstr)
-                  member_info.name.SetCString(child_name_cstr);
-                field_type_infos.push_back(
-                    GetSwiftTypeInfo(nominal_type, var_decl));
-                assert(field_type_infos.back() != nullptr);
-                member_infos_sp->member_infos.push_back(member_info);
-              }
-            }
-          }
-        }
-      }
-    } break;
-
+    case swift::TypeKind::Class:
     case swift::TypeKind::BoundGenericStruct:
     case swift::TypeKind::BoundGenericClass: {
-      swift::ClassDecl *class_decl =
-          swift_can_type->getClassOrBoundGenericClass();
-      swift::BoundGenericType *t =
-          swift_can_type->getAs<swift::BoundGenericType>();
-      if (t) {
-        swift::NominalTypeDecl *t_decl = t->getDecl();
-        if (t_decl) {
-          if (class_decl) {
-            is_class = true;
-            swift::LazyResolver *const lazy_resolver = nullptr;
-            swift::Type superclass_type(t->getSuperclass(lazy_resolver));
-            if (superclass_type) {
-              MemberInfo member_info(MemberType::BaseClass);
-              member_info.clang_type =
-                  CompilerType(GetASTContext(), superclass_type.getPointer());
-              member_info.byte_size =
-                  member_info.clang_type.GetByteSize(nullptr);
-              // Showing somemodule.sometype<A> is confusing to the user because
-              // it will show the *unboud* archetype name even though the type
-              // is actually properly bound (or it should!) and since one cannot
-              // overload a class on the number of generic arguments,
-              // somemodule.sometype is just as unique.
-              member_info.name.SetCString(
-                  member_info.clang_type.GetUnboundType()
-                      .GetTypeName()
-                      .AsCString("<no type name>"));
-              field_type_infos.push_back(
-                  GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
-              assert(field_type_infos.back() != nullptr);
-              member_infos_sp->member_infos.push_back(member_info);
-            }
-          }
+      auto t_decl = swift_can_type.getAnyNominal();
+      auto class_decl = swift::dyn_cast<swift::ClassDecl>(t_decl);
+      if (class_decl) {
+        is_class = true;
+        swift::LazyResolver *const lazy_resolver = nullptr;
+        swift::Type superclass_type(swift_can_type->getSuperclass(lazy_resolver));
+        if (superclass_type) {
+          MemberInfo member_info(MemberType::BaseClass);
+          member_info.clang_type =
+              CompilerType(GetASTContext(), superclass_type.getPointer());
+          member_info.byte_size =
+              member_info.clang_type.GetByteSize(nullptr);
+          // Showing somemodule.sometype<A> is confusing to the user because
+          // it will show the *unboud* archetype name even though the type
+          // is actually properly bound (or it should!) and since one cannot
+          // overload a class on the number of generic arguments,
+          // somemodule.sometype is just as unique.
+          member_info.name.SetCString(
+              member_info.clang_type.GetUnboundType()
+                  .GetTypeName()
+                  .AsCString("<no type name>"));
+          field_type_infos.push_back(
+              GetSwiftTypeInfo(member_info.clang_type.GetOpaqueQualType()));
+          assert(field_type_infos.back() != nullptr);
+          member_infos_sp->member_infos.push_back(member_info);
+        }
+      }
 
-          for (auto decl : t_decl->getMembers()) {
-            // Find ivars that aren't properties
-            if (swift::isa<swift::VarDecl>(decl)) {
-              swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
-              if (var_decl->hasStorage() && !var_decl->isStatic()) {
-                MemberInfo member_info(MemberType::Field);
-                swift::Type member_type = swift_can_type->getTypeOfMember(
-                    t_decl->getModuleContext(), var_decl, nullptr);
-                member_info.clang_type =
-                    CompilerType(GetASTContext(), member_type.getPointer());
-                member_info.byte_size =
-                    member_info.clang_type.GetByteSize(nullptr);
-                member_info.is_fragile =
-                    is_class; // Class fields are all fragile...
-                const char *child_name_cstr = var_decl->getName().get();
-                if (child_name_cstr)
-                  member_info.name.SetCString(child_name_cstr);
-                field_type_infos.push_back(GetSwiftTypeInfo(
-                    member_info.clang_type.GetOpaqueQualType()));
-                assert(field_type_infos.back() != nullptr);
-                member_infos_sp->member_infos.push_back(member_info);
-              }
-            }
+      for (auto decl : t_decl->getMembers()) {
+        // Find ivars that aren't properties
+        if (swift::isa<VarDecl>(decl)) {
+          swift::VarDecl *var_decl = swift::cast<swift::VarDecl>(decl);
+          if (var_decl->hasStorage() && !var_decl->isStatic()) {
+            MemberInfo member_info(MemberType::Field);
+            swift::Type member_type = swift_can_type->getTypeOfMember(
+                t_decl->getModuleContext(), var_decl, nullptr);
+            member_info.clang_type =
+                CompilerType(GetASTContext(), member_type.getPointer());
+            member_info.byte_size =
+                member_info.clang_type.GetByteSize(nullptr);
+            member_info.is_fragile =
+                is_class; // Class fields are all fragile...
+            const char *child_name_cstr = var_decl->getName().get();
+            if (child_name_cstr)
+              member_info.name.SetCString(child_name_cstr);
+            field_type_infos.push_back(GetSwiftTypeInfo(
+                member_info.clang_type.GetOpaqueQualType()));
+            assert(field_type_infos.back() != nullptr);
+            member_infos_sp->member_infos.push_back(member_info);
           }
         }
       }
@@ -5169,67 +5110,10 @@ bool SwiftASTContext::IsArrayType(void *type, CompilerType *element_type_ptr,
 bool SwiftASTContext::IsAggregateType(void *type) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::Metatype:
-      return false;
-    case swift::TypeKind::UnmanagedStorage:
-    case swift::TypeKind::UnownedStorage:
-    case swift::TypeKind::WeakStorage:
-      return IsAggregateType(
-          swift_can_type->getAs<swift::ReferenceStorageType>()
-              ->getReferentType()
-              .getPointer());
-    case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Error:
-    case swift::TypeKind::BuiltinInteger:
-    case swift::TypeKind::BuiltinFloat:
-    case swift::TypeKind::BuiltinRawPointer:
-    case swift::TypeKind::BuiltinNativeObject:
-    case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinUnknownObject:
-    case swift::TypeKind::BuiltinBridgeObject:
-    case swift::TypeKind::Protocol:
-    case swift::TypeKind::Module:
-    case swift::TypeKind::Archetype:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ProtocolComposition:
-      break;
-    case swift::TypeKind::LValue:
-      break;
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::TypeVariable:
-      return false;
-    case swift::TypeKind::Tuple:
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::BuiltinVector:
-    case swift::TypeKind::Class:
-    case swift::TypeKind::Struct:
-    case swift::TypeKind::Enum:
-      return true;
-
-    case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
-    case swift::TypeKind::Unresolved:
-      return false;
-
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
-    case swift::TypeKind::Dictionary:
-    case swift::TypeKind::ArraySlice:
-      assert(false && "Not a canonical type");
-      break;
-    }
+    auto referent_type = swift_can_type->getReferenceStorageReferent();
+    return (referent_type->is<swift::TupleType>() ||
+            referent_type->is<swift::BuiltinVectorType>() ||
+            referent_type->getAnyNominal());
   }
 
   return false;
@@ -5342,74 +5226,14 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Error:
-    case swift::TypeKind::BuiltinInteger:
-    case swift::TypeKind::BuiltinFloat:
-      return false;
-    case swift::TypeKind::BuiltinRawPointer:
-    case swift::TypeKind::BuiltinNativeObject:
-    case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinUnknownObject:
-    case swift::TypeKind::BuiltinBridgeObject:
-      return true;
-    case swift::TypeKind::BuiltinVector:
-      return false;
-    case swift::TypeKind::Tuple:
-      return false;
-    case swift::TypeKind::UnmanagedStorage:
-    case swift::TypeKind::UnownedStorage:
-    case swift::TypeKind::WeakStorage:
-      return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
-          .IsPointerType(pointee_type);
-    case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Enum:
-    case swift::TypeKind::Struct:
-      return false;
-    case swift::TypeKind::Class:
-    case swift::TypeKind::BoundGenericClass:
-      return false; // Do we return true for classes since instances are usually
-                    // pointers???
-    case swift::TypeKind::Protocol:
-      return false;
-
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::Metatype:
-      return false;
-
-    case swift::TypeKind::Module:
-    case swift::TypeKind::Archetype:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ProtocolComposition:
-    case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
-      break;
-    case swift::TypeKind::LValue:
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::TypeVariable:
-    case swift::TypeKind::Unresolved:
-      return false;
-
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
-    case swift::TypeKind::Dictionary:
-    case swift::TypeKind::ArraySlice:
-      assert(false && "Not a canonical type");
-    }
+    auto referent_type = swift_can_type->getReferenceStorageReferent();
+    return (referent_type->is<swift::BuiltinRawPointerType>() ||
+            referent_type->is<swift::BuiltinNativeObjectType>() ||
+            referent_type->is<swift::BuiltinUnsafeValueBufferType>() ||
+            referent_type->is<swift::BuiltinUnknownObjectType>() ||
+            referent_type->is<swift::BuiltinBridgeObjectType>());
   }
+
   if (pointee_type)
     pointee_type->Clear();
   return false;
@@ -5614,14 +5438,8 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
   if (compiler_type.IsValid() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-    auto ref_type =
-        swift::dyn_cast_or_null<swift::ReferenceStorageType>(
-            swift_can_type);
-    if (ref_type) {
-      auto referent_can_type = ref_type.getReferentType();
-      return CompilerType(GetASTContext(), referent_can_type.getPointer());
-    } else
-      return compiler_type;
+    auto ref_type = swift_can_type->getReferenceStorageReferent();
+    return CompilerType(GetASTContext(), ref_type);
   }
 
   return CompilerType();
@@ -5910,9 +5728,7 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::WeakStorage:
     swift_flags |=
         CompilerType(GetASTContext(),
-                     swift_can_type->getAs<swift::ReferenceStorageType>()
-                         ->getReferentType()
-                         .getPointer())
+                     swift_can_type->getReferenceStorageReferent())
             .GetTypeInfo(pointee_or_element_clang_type);
     break;
   case swift::TypeKind::BoundGenericEnum:
@@ -6020,10 +5836,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift::cast<swift::ReferenceStorageType>(
-                            swift_can_type)
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetTypeClass();
   case swift::TypeKind::GenericTypeParam:
     return lldb::eTypeClassOther;
@@ -6613,9 +6426,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetEncoding(count);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6702,9 +6513,7 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetFormat();
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6785,9 +6594,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetNumChildren(omit_empty_base_classes);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -6907,9 +6714,7 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetNumFields();
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
@@ -7025,9 +6830,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetFieldAtIndex(idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
                          is_bitfield_ptr);
   case swift::TypeKind::GenericTypeParam:
@@ -7376,27 +7179,24 @@ bool SwiftASTContext::IsNonTriviallyManagedReferenceType(
       strategy = NonTriviallyManagedReferenceStrategy::eUnmanaged;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     case swift::TypeKind::UnownedStorage: {
       strategy = NonTriviallyManagedReferenceStrategy::eUnowned;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     case swift::TypeKind::WeakStorage: {
       strategy = NonTriviallyManagedReferenceStrategy::eWeak;
       if (underlying_type)
         *underlying_type = CompilerType(
-            ast, swift_can_type->getAs<swift::ReferenceStorageType>()
-                     ->getReferentType()
-                     .getPointer());
+            ast, swift_can_type->getReferenceStorageReferent()
+              .getPointer());
     }
       return true;
     }
@@ -7492,9 +7292,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .GetChildCompilerTypeAtIndex(
             exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
             ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
@@ -7679,13 +7477,13 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
     case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinVector:
+      break;
+
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
       return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
+                          swift_can_type->getReferenceStorageReferent())
           .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
                                          child_indexes);
     case swift::TypeKind::GenericTypeParam:
@@ -7840,9 +7638,7 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
       return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
+                          swift_can_type->getReferenceStorageReferent())
           .GetIndexOfChildWithName(name, omit_empty_base_classes);
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
@@ -8286,9 +8082,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
-                        swift_can_type->getAs<swift::ReferenceStorageType>()
-                            ->getReferentType()
-                            .getPointer())
+                        swift_can_type->getReferenceStorageReferent())
         .DumpTypeValue(s, format, data, byte_offset, byte_size,
                        bitfield_bit_size, bitfield_bit_offset, exe_scope,
                        is_base_class);
