@@ -5226,74 +5226,14 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::Error:
-    case swift::TypeKind::BuiltinInteger:
-    case swift::TypeKind::BuiltinFloat:
-      return false;
-    case swift::TypeKind::BuiltinRawPointer:
-    case swift::TypeKind::BuiltinNativeObject:
-    case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinUnknownObject:
-    case swift::TypeKind::BuiltinBridgeObject:
-      return true;
-    case swift::TypeKind::BuiltinVector:
-      return false;
-    case swift::TypeKind::Tuple:
-      return false;
-    case swift::TypeKind::UnmanagedStorage:
-    case swift::TypeKind::UnownedStorage:
-    case swift::TypeKind::WeakStorage:
-      return CompilerType(GetASTContext(),
-                          swift_can_type->getAs<swift::ReferenceStorageType>()
-                              ->getReferentType()
-                              .getPointer())
-          .IsPointerType(pointee_type);
-    case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::DependentMember:
-    case swift::TypeKind::Enum:
-    case swift::TypeKind::Struct:
-      return false;
-    case swift::TypeKind::Class:
-    case swift::TypeKind::BoundGenericClass:
-      return false; // Do we return true for classes since instances are usually
-                    // pointers???
-    case swift::TypeKind::Protocol:
-      return false;
-
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::Metatype:
-      return false;
-
-    case swift::TypeKind::Module:
-    case swift::TypeKind::Archetype:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::ProtocolComposition:
-    case swift::TypeKind::DynamicSelf:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
-      break;
-    case swift::TypeKind::LValue:
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::BoundGenericStruct:
-    case swift::TypeKind::TypeVariable:
-    case swift::TypeKind::Unresolved:
-      return false;
-
-    case swift::TypeKind::Optional:
-    case swift::TypeKind::ImplicitlyUnwrappedOptional:
-    case swift::TypeKind::NameAlias:
-    case swift::TypeKind::Paren:
-    case swift::TypeKind::Dictionary:
-    case swift::TypeKind::ArraySlice:
-      assert(false && "Not a canonical type");
-    }
+    auto referent_type = swift_can_type->getReferenceStorageReferent();
+    return (referent_type->is<swift::BuiltinRawPointerType>() ||
+            referent_type->is<swift::BuiltinNativeObjectType>() ||
+            referent_type->is<swift::BuiltinUnsafeValueBufferType>() ||
+            referent_type->is<swift::BuiltinUnknownObjectType>() ||
+            referent_type->is<swift::BuiltinBridgeObjectType>());
   }
+
   if (pointee_type)
     pointee_type->Clear();
   return false;
