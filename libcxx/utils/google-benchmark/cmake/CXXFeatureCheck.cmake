@@ -10,7 +10,7 @@
 #
 # include(CXXFeatureCheck)
 # cxx_feature_check(STD_REGEX)
-# Requires CMake 2.6+
+# Requires CMake 2.8.12+
 
 if(__cxx_feature_check)
   return()

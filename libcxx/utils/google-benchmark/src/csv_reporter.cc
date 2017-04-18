@@ -24,6 +24,7 @@
 
 #include "string_util.h"
 #include "timers.h"
+#include "check.h"
 
 // File format reference: http://edoceo.com/utilitas/csv-file-format.
 
@@ -38,21 +39,51 @@ std::vector<std::string> elements = {
 
 bool CSVReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
-
-  std::ostream& Out = GetOutputStream();
-  for (auto B = elements.begin(); B != elements.end();) {
-    Out << *B++;
-    if (B != elements.end()) Out << ",";
-  }
-  Out << "\n";
   return true;
 }
 
-void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
-  for (const auto& run : reports) PrintRunData(run);
+void CSVReporter::ReportRuns(const std::vector<Run> & reports) {
+  std::ostream& Out = GetOutputStream();
+
+  if (!printed_header_) {
+    // save the names of all the user counters
+    for (const auto& run : reports) {
+      for (const auto& cnt : run.counters) {
+        user_counter_names_.insert(cnt.first);
+      }
+    }
+
+    // print the header
+    for (auto B = elements.begin(); B != elements.end();) {
+      Out << *B++;
+      if (B != elements.end()) Out << ",";
+    }
+    for (auto B = user_counter_names_.begin(); B != user_counter_names_.end();) {
+      Out << ",\"" << *B++ << "\"";
+    }
+    Out << "\n";
+
+    printed_header_ = true;
+  } else {
+    // check that all the current counters are saved in the name set
+    for (const auto& run : reports) {
+      for (const auto& cnt : run.counters) {
+        CHECK(user_counter_names_.find(cnt.first) != user_counter_names_.end())
+              << "All counters must be present in each run. "
+              << "Counter named \"" << cnt.first
+              << "\" was not in a run after being added to the header";
+      }
+    }
+  }
+
+  // print results for each run
+  for (const auto& run : reports) {
+    PrintRunData(run);
+  }
+
 }
 
-void CSVReporter::PrintRunData(const Run& run) {
+void CSVReporter::PrintRunData(const Run & run) {
   std::ostream& Out = GetOutputStream();
 
   // Field with embedded double-quote characters must be doubled and the field
@@ -102,6 +133,13 @@ void CSVReporter::PrintRunData(const Run& run) {
     Out << "\"" << label << "\"";
   }
   Out << ",,";  // for error_occurred and error_message
+
+  // Print user counters
+  for (const auto &ucn : user_counter_names_) {
+    auto it = run.counters.find(ucn);
+    CHECK(it != run.counters.end());
+    Out << "," << it->second;
+  }
   Out << '\n';
 }
 

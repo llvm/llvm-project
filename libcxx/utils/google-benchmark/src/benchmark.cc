@@ -37,6 +37,7 @@
 #include "colorprint.h"
 #include "commandlineflags.h"
 #include "complexity.h"
+#include "counter.h"
 #include "log.h"
 #include "mutex.h"
 #include "re.h"
@@ -145,6 +146,7 @@ class ThreadManager {
     std::string report_label_;
     std::string error_message_;
     bool has_error_ = false;
+    UserCounters counters;
   };
   GUARDED_BY(GetBenchmarkMutex()) Result results;
 
@@ -249,6 +251,7 @@ BenchmarkReporter::Run CreateRunReport(
     report.complexity_n = results.complexity_n;
     report.complexity = b.complexity;
     report.complexity_lambda = b.complexity_lambda;
+    report.counters = results.counters;
   }
   return report;
 }
@@ -272,6 +275,7 @@ void RunInThread(const benchmark::internal::Benchmark::Instance* b,
     results.bytes_processed += st.bytes_processed();
     results.items_processed += st.items_processed();
     results.complexity_n += st.complexity_length_n();
+    internal::Increment(&results.counters, st.counters);
   }
   manager->NotifyThreadComplete();
 }
@@ -281,7 +285,8 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
     std::vector<BenchmarkReporter::Run>* complexity_reports) {
   std::vector<BenchmarkReporter::Run> reports;  // return value
 
-  size_t iters = 1;
+  const bool has_explicit_iteration_count = b.iterations != 0;
+  size_t iters = has_explicit_iteration_count ? b.iterations : 1;
   std::unique_ptr<internal::ThreadManager> manager;
   std::vector<std::thread> pool(b.threads - 1);
   const int repeats =
@@ -291,7 +296,7 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
       (b.report_mode == internal::RM_Unspecified
            ? FLAGS_benchmark_report_aggregates_only
            : b.report_mode == internal::RM_ReportAggregatesOnly);
-  for (int i = 0; i < repeats; i++) {
+  for (int repetition_num = 0; repetition_num < repeats; repetition_num++) {
     for (;;) {
       // Try benchmark
       VLOG(2) << "Running " << b.name << " for " << iters << "\n";
@@ -327,10 +332,20 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
 
       const double min_time =
           !IsZero(b.min_time) ? b.min_time : FLAGS_benchmark_min_time;
-      // If this was the first run, was elapsed time or cpu time large enough?
-      // If this is not the first run, go with the current value of iter.
-      if ((i > 0) || results.has_error_ || (iters >= kMaxIterations) ||
-          (seconds >= min_time) || (results.real_time_used >= 5 * min_time)) {
+
+      // Determine if this run should be reported; Either it has
+      // run for a sufficient amount of time or because an error was reported.
+      const bool should_report =  repetition_num > 0
+        || has_explicit_iteration_count // An exact iteration count was requested
+        || results.has_error_
+        || iters >= kMaxIterations
+        || seconds >= min_time // the elapsed time is large enough
+        // CPU time is specified but the elapsed real time greatly exceeds the
+        // minimum time. Note that user provided timers are except from this
+        // sanity check.
+        || ((results.real_time_used >= 5 * min_time) && !b.use_manual_time);
+
+      if (should_report) {
         BenchmarkReporter::Run report =
             CreateRunReport(b, results, iters, seconds);
         if (!report.error_occurred && b.complexity != oNone)
@@ -386,6 +401,7 @@ State::State(size_t max_iters, const std::vector<int>& ranges, int thread_i,
       items_processed_(0),
       complexity_n_(0),
       error_occurred_(false),
+      counters(),
       thread_index(thread_i),
       threads(n_threads),
       max_iterations(max_iters),
@@ -634,7 +650,7 @@ void ParseCommandLineFlags(int* argc, char** argv) {
         // TODO: Remove this.
         ParseStringFlag(argv[i], "color_print", &FLAGS_benchmark_color) ||
         ParseInt32Flag(argv[i], "v", &FLAGS_v)) {
-      for (int j = i; j != *argc; ++j) argv[j] = argv[j + 1];
+      for (int j = i; j != *argc - 1; ++j) argv[j] = argv[j + 1];
 
       --(*argc);
       --i;
@@ -662,6 +678,13 @@ int InitializeStreams() {
 void Initialize(int* argc, char** argv) {
   internal::ParseCommandLineFlags(argc, argv);
   internal::LogLevel() = FLAGS_v;
+}
+
+bool ReportUnrecognizedArguments(int argc, char** argv) {
+  for (int i = 1; i < argc; ++i) {
+    fprintf(stderr, "%s: error: unrecognized command-line flag: %s\n", argv[0], argv[i]);
+  }
+  return argc > 1;
 }
 
 }  // end namespace benchmark
