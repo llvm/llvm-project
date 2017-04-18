@@ -22,8 +22,8 @@ MATH_MANGLE(hypot)(half x, half y)
         d2 = fx*fx + fy*fy;
     }
 
-    float d = BUILTIN_SQRT_F32(d2);
-    half ret = (half)d;
+    half ret = (half)BUILTIN_SQRT_F32(d2);
+
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
               BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) ?

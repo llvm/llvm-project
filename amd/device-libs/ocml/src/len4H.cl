@@ -22,8 +22,8 @@ MATH_MANGLE(len4)(half x, half y, half z, half w)
         d2 = BUILTIN_MAD_F32(fx, fx, BUILTIN_MAD_F32(fy, fy, BUILTIN_MAD_F32(fz, fz, fw*fw)));
     }
 
-    float d = BUILTIN_SQRT_F32(d2);
-    half ret = (half)d;
+    half ret = (half)BUILTIN_SQRT_F32(d2);
+
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
                BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) |
