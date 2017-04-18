@@ -2254,12 +2254,13 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
   MemoryAccessToClass[MSSA->getLiveOnEntryDef()] =
       createMemoryClass(MSSA->getLiveOnEntryDef());
 
-  for (auto &B : F) {
+  for (auto DTN : nodes(DT)) {
+    BasicBlock *BB = DTN->getBlock();
     // All MemoryAccesses are equivalent to live on entry to start. They must
     // be initialized to something so that initial changes are noticed. For
     // the maximal answer, we initialize them all to be the same as
     // liveOnEntry.
-    auto *MemoryBlockDefs = MSSA->getBlockDefs(&B);
+    auto *MemoryBlockDefs = MSSA->getBlockDefs(BB);
     if (MemoryBlockDefs)
       for (const auto &Def : *MemoryBlockDefs) {
         MemoryAccessToClass[&Def] = TOPClass;
@@ -2274,7 +2275,7 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
         if (MD && isa<StoreInst>(MD->getMemoryInst()))
           TOPClass->incStoreCount();
       }
-    for (auto &I : B) {
+    for (auto &I : *BB) {
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.
       if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
@@ -2719,23 +2720,11 @@ bool NewGVN::runGVN() {
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  auto DFI = df_begin(DT->getRootNode());
-  for (auto DFE = df_end(DT->getRootNode()); DFI != DFE; ++DFI) {
-    BasicBlock *B = DFI->getBlock();
+  for (auto DTN : depth_first(DT->getRootNode())) {
+    BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
     ICount += BlockRange.second - BlockRange.first;
-  }
-
-  // Handle forward unreachable blocks and figure out which blocks
-  // have single preds.
-  for (auto &B : F) {
-    // Assign numbers to unreachable blocks.
-    if (!DFI.nodeVisited(DT->getNode(&B))) {
-      const auto &BlockRange = assignDFSNumbers(&B, ICount);
-      BlockInstRange.insert({&B, BlockRange});
-      ICount += BlockRange.second - BlockRange.first;
-    }
   }
 
   TouchedInstructions.resize(ICount);

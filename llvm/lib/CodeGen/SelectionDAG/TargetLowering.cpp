@@ -929,8 +929,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                KnownZero, KnownOne, TLO, Depth+1))
         return true;
       assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-      KnownZero = KnownZero.lshr(ShAmt);
-      KnownOne  = KnownOne.lshr(ShAmt);
+      KnownZero.lshrInPlace(ShAmt);
+      KnownOne.lshrInPlace(ShAmt);
 
       KnownZero.setHighBits(ShAmt);  // High bits known zero.
     }
@@ -970,8 +970,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                KnownZero, KnownOne, TLO, Depth+1))
         return true;
       assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-      KnownZero = KnownZero.lshr(ShAmt);
-      KnownOne  = KnownOne.lshr(ShAmt);
+      KnownZero.lshrInPlace(ShAmt);
+      KnownOne.lshrInPlace(ShAmt);
 
       // Handle the sign bit, adjusted to where it is now in the mask.
       APInt SignBit = APInt::getSignBit(BitWidth).lshr(ShAmt);
@@ -1207,7 +1207,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 
         APInt HighBits = APInt::getHighBitsSet(OperandBitWidth,
                                                OperandBitWidth - BitWidth);
-        HighBits = HighBits.lshr(ShAmt->getZExtValue()).trunc(BitWidth);
+        HighBits.lshrInPlace(ShAmt->getZExtValue());
+        HighBits = HighBits.trunc(BitWidth);
 
         if (ShAmt->getZExtValue() < BitWidth && !(HighBits & NewMask)) {
           // None of the shifted in bits are needed.  Add a truncate of the
@@ -2055,7 +2056,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         } else {
           ShiftBits = C1.countTrailingZeros();
         }
-        NewC = NewC.lshr(ShiftBits);
+        NewC.lshrInPlace(ShiftBits);
         if (ShiftBits && NewC.getMinSignedBits() <= 64 &&
           isLegalICmpImmediate(NewC.getSExtValue())) {
           auto &DL = DAG.getDataLayout();

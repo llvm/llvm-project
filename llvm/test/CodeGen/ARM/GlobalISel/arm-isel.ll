@@ -67,6 +67,33 @@ entry:
   ret i32 %sum
 }
 
+define i8 @test_sub_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_sub_i8:
+; CHECK: sub r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = sub i8 %x, %y
+  ret i8 %sum
+}
+
+define i16 @test_sub_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_sub_i16:
+; CHECK: sub r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = sub i16 %x, %y
+  ret i16 %sum
+}
+
+define i32 @test_sub_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_sub_i32:
+; CHECK: sub r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = sub i32 %x, %y
+  ret i32 %sum
+}
+
 define i32 @test_stack_args_i32(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) {
 ; CHECK-LABEL: test_stack_args_i32:
 ; CHECK: add [[P5ADDR:r[0-9]+]], sp, #4

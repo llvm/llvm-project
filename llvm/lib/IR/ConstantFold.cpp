@@ -223,7 +223,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
     APInt V = CI->getValue();
     if (ByteStart)
-      V = V.lshr(ByteStart*8);
+      V.lshrInPlace(ByteStart*8);
     V = V.trunc(ByteSize*8);
     return ConstantInt::get(CI->getContext(), V);
   }

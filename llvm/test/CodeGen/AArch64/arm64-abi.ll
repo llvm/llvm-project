@@ -43,9 +43,7 @@ entry:
 ; CHECK-LABEL: i8i16caller
 ; The 8th, 9th, 10th and 11th arguments are passed at sp, sp+2, sp+4, sp+5.
 ; They are i8, i16, i8 and i8.
-; CHECK-DAG: strb {{w[0-9]+}}, [sp, #5]
-; CHECK-DAG: strb {{w[0-9]+}}, [sp, #4]
-; CHECK-DAG: strh {{w[0-9]+}}, [sp, #2]
+; CHECK-DAG: stur {{w[0-9]+}}, [sp, #2]
 ; CHECK-DAG: strb {{w[0-9]+}}, [sp]
 ; CHECK: bl
 ; FAST-LABEL: i8i16caller

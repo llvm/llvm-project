@@ -81,11 +81,9 @@ void test_sfinae() {
   using DB = NCConvertingDeleter<B[]>;
   using UA = std::unique_ptr<A[]>;
   using UAC = std::unique_ptr<const A[]>;
-  using UB = std::unique_ptr<B[]>;
   using UAD = std::unique_ptr<A[], DA>;
   using UACD = std::unique_ptr<const A[], DAC>;
 
-  using UBD = std::unique_ptr<B[], DB>;
   { // cannot move from an lvalue
     static_assert(std::is_assignable<UAC, UA&&>::value, "");
     static_assert(!std::is_assignable<UAC, UA&>::value, "");

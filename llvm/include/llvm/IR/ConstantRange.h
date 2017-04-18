@@ -41,17 +41,14 @@ namespace llvm {
 class MDNode;
 
 /// This class represents a range of values.
-///
 class ConstantRange {
   APInt Lower, Upper;
 
 public:
   /// Initialize a full (the default) or empty set for the specified bit width.
-  ///
   explicit ConstantRange(uint32_t BitWidth, bool isFullSet = true);
 
   /// Initialize a range to hold the single specified value.
-  ///
   ConstantRange(APInt Value);
 
   /// @brief Initialize a range of values explicitly. This will assert out if
@@ -119,46 +116,36 @@ public:
   bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
 
   /// Return the lower value for this range.
-  ///
   const APInt &getLower() const { return Lower; }
 
   /// Return the upper value for this range.
-  ///
   const APInt &getUpper() const { return Upper; }
 
   /// Get the bit width of this ConstantRange.
-  ///
   uint32_t getBitWidth() const { return Lower.getBitWidth(); }
 
   /// Return true if this set contains all of the elements possible
   /// for this data-type.
-  ///
   bool isFullSet() const;
 
   /// Return true if this set contains no members.
-  ///
   bool isEmptySet() const;
 
   /// Return true if this set wraps around the top of the range.
   /// For example: [100, 8).
-  ///
   bool isWrappedSet() const;
 
   /// Return true if this set wraps around the INT_MIN of
   /// its bitwidth. For example: i8 [120, 140).
-  ///
   bool isSignWrappedSet() const;
 
   /// Return true if the specified value is in the set.
-  ///
   bool contains(const APInt &Val) const;
 
   /// Return true if the other range is a subset of this one.
-  ///
   bool contains(const ConstantRange &CR) const;
 
   /// If this set contains a single element, return it, otherwise return null.
-  ///
   const APInt *getSingleElement() const {
     if (Upper == Lower + 1)
       return &Lower;
@@ -174,35 +161,27 @@ public:
   }
 
   /// Return true if this set contains exactly one member.
-  ///
   bool isSingleElement() const { return getSingleElement() != nullptr; }
 
   /// Return the number of elements in this set.
-  ///
   APInt getSetSize() const;
 
   /// Compare set size of this range with the range CR.
-  ///
   bool isSizeStrictlySmallerThanOf(const ConstantRange &CR) const;
 
   /// Return the largest unsigned value contained in the ConstantRange.
-  ///
   APInt getUnsignedMax() const;
 
   /// Return the smallest unsigned value contained in the ConstantRange.
-  ///
   APInt getUnsignedMin() const;
 
   /// Return the largest signed value contained in the ConstantRange.
-  ///
   APInt getSignedMax() const;
 
   /// Return the smallest signed value contained in the ConstantRange.
-  ///
   APInt getSignedMin() const;
 
   /// Return true if this range is equal to another range.
-  ///
   bool operator==(const ConstantRange &CR) const {
     return Lower == CR.Lower && Upper == CR.Upper;
   }
@@ -213,8 +192,8 @@ public:
   /// Subtract the specified constant from the endpoints of this constant range.
   ConstantRange subtract(const APInt &CI) const;
 
-  /// \brief Subtract the specified range from this range (aka relative
-  /// complement of the sets).
+  /// Subtract the specified range from this range (aka relative complement of
+  /// the sets).
   ConstantRange difference(const ConstantRange &CR) const;
 
   /// Return the range that results from the intersection of
@@ -223,7 +202,6 @@ public:
   /// smallest possible set size that does so.  Because there may be two
   /// intersections with the same set size, A.intersectWith(B) might not
   /// be equal to B.intersectWith(A).
-  ///
   ConstantRange intersectWith(const ConstantRange &CR) const;
 
   /// Return the range that results from the union of this range
@@ -231,7 +209,6 @@ public:
   /// elements of both sets, but may contain more.  For example, [3, 9) union
   /// [12,15) is [3, 15), which includes 9, 10, and 11, which were not included
   /// in either set before.
-  ///
   ConstantRange unionWith(const ConstantRange &CR) const;
 
   /// Return a new range representing the possible values resulting
@@ -331,15 +308,12 @@ public:
   ConstantRange lshr(const ConstantRange &Other) const;
 
   /// Return a new range that is the logical not of the current set.
-  ///
   ConstantRange inverse() const;
 
   /// Print out the bounds to a stream.
-  ///
   void print(raw_ostream &OS) const;
 
   /// Allow printing from a debugger easily.
-  ///
   void dump() const;
 };
 

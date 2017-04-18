@@ -1093,7 +1093,7 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
     APInt Mult(W, i);
     unsigned TwoFactors = Mult.countTrailingZeros();
     T += TwoFactors;
-    Mult = Mult.lshr(TwoFactors);
+    Mult.lshrInPlace(TwoFactors);
     OddFactorial *= Mult;
   }
 

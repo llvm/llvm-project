@@ -2004,7 +2004,7 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     for (unsigned I = 0, E = DL.getTypeAllocSize(CPV->getType()); I < E; ++I) {
       uint8_t Byte = Val.getLoBits(8).getZExtValue();
       aggBuffer->addBytes(&Byte, 1, 1);
-      Val = Val.lshr(8);
+      Val.lshrInPlace(8);
     }
     return;
   }

@@ -557,7 +557,7 @@ bool LoopReroll::isLoopControlIV(Loop *L, Instruction *IV) {
             Instruction *UUser = dyn_cast<Instruction>(UU);
             // Skip SExt if we are extending an nsw value
             // TODO: Allow ZExt too
-            if (BO->hasNoSignedWrap() && UUser && UUser->getNumUses() == 1 &&
+            if (BO->hasNoSignedWrap() && UUser && UUser->hasOneUse() &&
                 isa<SExtInst>(UUser))
               UUser = dyn_cast<Instruction>(*(UUser->user_begin()));
             if (!isCompareUsedByBranch(UUser))
