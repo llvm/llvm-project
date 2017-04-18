@@ -51,7 +51,6 @@ The currently supported control are
   * `unsafe_math_opt` - lower accuracy results may be produced with higher performance
   * `daz_opt` - subnormal values consumed and produced may be flushed to zero
   * `correctly_rounded_sqrt32` - float square root must be correctly rounded
-  * `amd_opt` - use AMD device specific instructions
   * `ISA_version` - an integer representation of the ISA version of the target device
 
 ### Versioning
@@ -62,8 +61,6 @@ OCML ships as a single LLVM-IR bitcode file named
 
 where `{LLVM rev}` is the version of LLVM used to create the file, of the
 form X.Y, e.g. 3.8, and `{OCML rev}` is the OCML library version of the form X.Y, currently 0.9.
-
-// Should OCML include a constant string with the version in the bitcode as well?
 
 ### Tables
 
@@ -100,22 +97,23 @@ be correctly rounded.
 | add_{rm} | add with specific rounding mode | c | c | c |
 | asin | arc sine | 4 | 4 | 2 |
 | asinh | arc hyperbolic sin | 4 | 4 | 2 |
-| asinpi | arc sine / π | 5 | 5 | 2 |
+| asinpi | arc sine / pi | 5 | 5 | 2 |
 | atan2 | two argument arc tangent | 6 | 6 | 2 |
-| atan2pi | two argument arc tangent / π | 6 | 6 | 2 |
+| atan2pi | two argument arc tangent / pi | 6 | 6 | 2 |
 | atan | single argument arc tangent | 5 | 5 | 2 |
 | atanh | arc hyperbolic tangent | 5 | 5 | 2 |
-| atanpi | single argument arc tangent / π | 5 | 5 | 2 |
+| atanpi | single argument arc tangent / pi | 5 | 5 | 2 |
 | cbrt | cube root | 2 | 2 | 2 |
 | ceil | round upwards to integer | c | c | c |
 | copysign | copy sign of second argument to absolute value of first | 0 | 0 | 0 |
 | cos | cosine | 4 | 4 | 2 |
 | cosh | hyperbolic cosine | 4 | 4 | 2 |
-| cospi | cosine, argument is first multiplied by π | 4 | 4 | 2 |
+| cospi | cosine of argument times pi | 4 | 4 | 2 |
 | div_{rm} | correctly rounded division with specific rounding mode | c | c | c |
 | erf | error function | 16 | 16 | 4 |
 | erfc | complementary error function | 16 | 16 | 4 |
 | erfcinv | inverse complementary error function | 7 | 8 | 3 |
+| erfcx | scaled error function | 6 | 6 | 2 |
 | erfinv | inverse error function | 3 | 8 | 2 |
 | exp10 | 10x | 3 | 3 | 2 |
 | exp2 | 2x | 3 | 3 | 2 |
@@ -132,13 +130,15 @@ be correctly rounded.
 | fract | fractional part | c | c | c |
 | frexp | extract significand and exponent | 0 | 0 | 0 |
 | hypot | length, with overflow control | 4 | 4 | 2 |
+| i0 | modified Bessel function of the first kind, order 0, I0 | 6 | 6 | 2 |
+| i1 | modified Bessel function of the first kind, order 1, I1 | 6 | 6 | 2 |
 | ilogb | extract exponent | 0 | 0 | 0 |
 | isfinite | tests finiteness | - | - | - |
 | isinf | test for Inf | - | - | - |
 | isnan | test for NaN | - | - | - |
 | isnormal | test for normal | - | - | - |
-| j0 | Bessel function of the first kind, order 0, J0 | 2 (<12) | 6 (<12) | 6 (<12) |
-| j1 | Bessel function of the first kind, order 1, J1 | 2 (<12) | 6 (<12) | 6 (<12) |
+| j0 | Bessel function of the first kind, order 0, J0 | 6 (<12) | 6 (<12) | 2 (<12) |
+| j1 | Bessel function of the first kind, order 1, J1 | 6 (<12) | 6 (<12) | 2 (<12) |
 | ldexp | multiply by 2 raised to an integral power | c | c | c |
 | len3 | three argument hypot | 2 | 2 | 2|
 | len4 | four argument hypot | 2 | 2 | 2|
@@ -157,6 +157,8 @@ be correctly rounded.
 | modf | extract integer and fraction | 0 | 0 | 0 |
 | mul_{rm} | multiply with specific rounding mode | c | c | c |
 | nan | produce a NaN with a specific payload | 0 | 0 | 0 |
+| ncdf | standard normal cumulateive distribution function | 16 | 16 | 4 |
+| ncdfinv | inverse standard normal cumulative distribution function | 16 | 16 | 4 |
 | nearbyint | round to nearest integer (see also rint) | 0 | 0 | 0 |
 | nextafter | next closest value above or below | 0 | 0 | 0 |
 | pow | general power | 16 | 16 | 4 |
@@ -165,7 +167,10 @@ be correctly rounded.
 | rcbrt | reciprocal cube root | 2 | 2 | 2 |
 | remainder | floating point remainder | 0 | 0 | 0 |
 | remquo | floating point remainder and lowest integral quotient bits | 0 | 0 | 0 |
+| rhypot | reciprocal hypot | 2 | 2 | 2 |
 | rint | round to nearest integer | c | c | c |
+| rlen3 | reciprocal len3 | 2 | 2 | 2 |
+| rlen4 | reciprocal len4 | 2 | 2 | 2 |
 | rootn | nth root | 16 | 16 | 4 |
 | round | round to integer, always away from 0 | c | c | c |
 | rsqrt | reciprocal square root | 2 | 2 | 1 |
@@ -174,13 +179,14 @@ be correctly rounded.
 | signbit | nonzero if argument has sign bit set | - | - | - |
 | sin | sine function | 4 | 4 | 2 |
 | sincos | simultaneous sine and cosine evaluation | 4 | 4 | 2 |
+| sincospi | sincos function of argument times pi | 4 | 4 | 2 |
 | sinh | hyperbolic sin | 4 | 4 | 2 |
-| sinpi | sine function, argument is first multiplied by π | 4 | 4 | 2 |
+| sinpi | sine of argument times pi | 4 | 4 | 2 |
 | sqrt | square root | 3/c | 3/c | c |
 | sub_{rm} | subtract with specific rounding mode | c | c | c |
 | tan | tangent | 5 | 5 | 2 |
 | tanh | hyperbolic tangent | 5 | 5 | 2 |
-| tanpi | tangent, argument is first multiplied by pi | 6 | 6 | 2 |
+| tanpi | tangent of argument times pi | 6 | 6 | 2 |
 | tgamma | true Γ function | 16 | 16 | 4 |
 | trunc | round to integer, towards zero | c | c | c |
 | y0 | Bessel function of the second kind, order 0, Y0 | 2 (<12) | 6 (<12) | 6 (<12) |
