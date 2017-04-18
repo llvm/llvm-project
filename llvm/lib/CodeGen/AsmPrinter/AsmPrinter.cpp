@@ -755,9 +755,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
-  bool Deref = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
-  int64_t Offset = Deref ? MI->getOperand(1).getImm() : 0;
-
+  bool Deref = false;
+  bool MemLoc = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
+  int64_t Offset = MemLoc ? MI->getOperand(1).getImm() : 0;
   for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
     uint64_t Op = Expr->getElement(i);
     if (Op == dwarf::DW_OP_LLVM_fragment) {
@@ -765,7 +765,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       break;
     } else if (Deref) {
       // We currently don't support extra Offsets or derefs after the first
-      // one. Bail out early instead of emitting an incorrect comment
+      // one. Bail out early instead of emitting an incorrect comment.
       OS << " [complex expression]";
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
@@ -820,12 +820,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
     }
-    if (Deref)
+    if (MemLoc || Deref)
       OS << '[';
     OS << PrintReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
   }
 
-  if (Deref)
+  if (MemLoc || Deref)
     OS << '+' << Offset << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.

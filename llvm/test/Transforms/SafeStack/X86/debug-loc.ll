@@ -37,10 +37,10 @@ entry:
 
 ; CHECK-DAG: ![[VAR_ARG]] = !DILocalVariable(name: "zzz"
 ; 100 aligned up to 8
-; CHECK-DAG: ![[EXPR_ARG]] = !DIExpression(DW_OP_deref, DW_OP_minus, 104
+; CHECK-DAG: ![[EXPR_ARG]] = !DIExpression(DW_OP_minus, 104)
 
 ; CHECK-DAG: ![[VAR_LOCAL]] = !DILocalVariable(name: "xxx"
-; CHECK-DAG: ![[EXPR_LOCAL]] = !DIExpression(DW_OP_deref, DW_OP_minus, 208
+; CHECK-DAG: ![[EXPR_LOCAL]] = !DIExpression(DW_OP_minus, 208)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
