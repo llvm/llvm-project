@@ -204,7 +204,7 @@ SOPP Instruction Examples
 For full list of supported instructions, refer to "SOPP Instructions" in ISA Manual.
 
 Unless otherwise mentioned, little verification is performed on the operands
-of SOPP Instrucitons, so it is up to the programmer to be familiar with the
+of SOPP Instructions, so it is up to the programmer to be familiar with the
 range or acceptable values.
 
 Vector ALU Instruction Examples
