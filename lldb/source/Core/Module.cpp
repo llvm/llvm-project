@@ -56,11 +56,9 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
-<<<<<<< HEAD
 #include "swift/Basic/LangOptions.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Serialization/Validation.h"
-=======
 #include "llvm/ADT/STLExtras.h"    // for make_unique
 #include "llvm/Support/Compiler.h" // for LLVM_PRETT...
 #include "llvm/Support/FileSystem.h"
@@ -82,7 +80,6 @@ class CompilerDeclContext;
 namespace lldb_private {
 class VariableList;
 }
->>>>>>> public/master
 
 using namespace lldb;
 using namespace lldb_private;
