@@ -8,7 +8,7 @@
 #include "mathH.h"
 
 CONSTATTR INLINEATTR half
-MATH_MANGLE(len3)(half x, half y, half z)
+MATH_MANGLE(rlen3)(half x, half y, half z)
 {
     float fx = (float)x;
     float fy = (float)y;
@@ -21,12 +21,12 @@ MATH_MANGLE(len3)(half x, half y, half z)
         d2 = BUILTIN_MAD_F32(fx, fx, BUILTIN_MAD_F32(fy, fy, fz*fz));
     }
 
-    half ret = (half)BUILTIN_SQRT_F32(d2);
+    half ret = (half)BUILTIN_RSQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
                BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F16(z, CLASS_PINF|CLASS_NINF)) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+               BUILTIN_CLASS_F16(z, CLASS_PINF|CLASS_NINF)) ? 0.0h : ret;
     }
 
     return ret;
