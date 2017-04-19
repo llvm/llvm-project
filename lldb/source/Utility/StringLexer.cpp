@@ -73,10 +73,6 @@ void StringLexer::PutBack(Size s) {
   m_position -= s;
 }
 
-bool StringLexer::HasAny(Character c) {
-  return m_data.find(c, m_position) != std::string::npos;
-}
-
 std::string StringLexer::GetUnlexed() {
   return std::string(m_data, m_position);
 }

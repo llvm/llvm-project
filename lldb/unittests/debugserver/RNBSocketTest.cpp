@@ -53,20 +53,9 @@ static void ServerCallbackv4(const void *baton, in_port_t port) {
 }
 
 void TestSocketListen(const char *addr) {
-  // Skip IPv6 tests if there isn't a valid interafce
-  auto addresses = lldb_private::SocketAddress::GetAddressInfo(addr, NULL);
-  if (addresses.size() == 0)
-    return;
-
-  char addr_wrap[256];
-  if (addresses.front().GetFamily() == AF_INET6)
-    sprintf(addr_wrap, "[%s]", addr);
-  else
-    sprintf(addr_wrap, "%s", addr);
-
   RNBSocket server_socket;
   auto result =
-      server_socket.Listen(addr, 0, ServerCallbackv4, (const void *)addr_wrap);
+      server_socket.Listen(addr, 0, ServerCallbackv4, (const void *)addr);
   ASSERT_TRUE(result == rnb_success);
   result = server_socket.Write(hello.c_str(), hello.length());
   ASSERT_TRUE(result == rnb_success);
@@ -82,19 +71,9 @@ void TestSocketListen(const char *addr) {
 
 TEST(RNBSocket, LoopBackListenIPv4) { TestSocketListen("127.0.0.1"); }
 
-TEST(RNBSocket, LoopBackListenIPv6) { TestSocketListen("::1"); }
-
 void TestSocketConnect(const char *addr) {
-  // Skip IPv6 tests if there isn't a valid interafce
-  auto addresses = lldb_private::SocketAddress::GetAddressInfo(addr, NULL);
-  if (addresses.size() == 0)
-    return;
-
   char addr_wrap[256];
-  if (addresses.front().GetFamily() == AF_INET6)
-    sprintf(addr_wrap, "[%s]:0", addr);
-  else
-    sprintf(addr_wrap, "%s:0", addr);
+  sprintf(addr_wrap, "%s:0", addr);
 
   Socket *server_socket;
   Predicate<uint16_t> port_predicate;
@@ -117,7 +96,7 @@ void TestSocketConnect(const char *addr) {
     ASSERT_EQ(bye, goodbye);
   } else {
     Socket *connected_socket;
-    err = server_socket->Accept(connected_socket);
+    err = server_socket->Accept(addr_wrap, false, connected_socket);
     if (err.Fail()) {
       llvm::errs() << err.AsCString();
       abort();
@@ -152,5 +131,3 @@ void TestSocketConnect(const char *addr) {
 }
 
 TEST(RNBSocket, LoopBackConnectIPv4) { TestSocketConnect("127.0.0.1"); }
-
-TEST(RNBSocket, LoopBackConnectIPv6) { TestSocketConnect("::1"); }

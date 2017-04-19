@@ -62,7 +62,6 @@ set(lldbDebugserverCommonSources
   StdStringExtractor.cpp
   # JSON reader depends on the following LLDB-common files
   ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
-  ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
   # end JSON reader dependencies
   libdebugserver.cpp
   PseudoTerminal.cpp
