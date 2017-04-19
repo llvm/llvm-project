@@ -291,15 +291,9 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
 /// as assignCalleeSavedSpillSlots() hasn't run at this point. Instead we use
 /// this to produce a conservative estimate that we check in an assert() later.
 static int getMaxFPOffset(const Function &F, const ARMFunctionInfo &AFI) {
-  // We may end up saving a lot of registers that are higher numbered than the
-  // r7 used for FP in thumb.
-  if (F.hasFnAttribute("interrupt") ||
-      F.getCallingConv() == CallingConv::CXX_FAST_TLS)
-    return -AFI.getArgRegsSaveSize() - (8 * 4);
-
-  // Usually it is just the link register and the FP itself (and in rare cases
-  // r12?) saved to reach FP.
-  return -AFI.getArgRegsSaveSize() - 12;
+  // This is a conservative estimation: Assume the frame pointer being r7 and
+  // pc("r15") up to r8 getting spilled before (= 8 registers).
+  return -AFI.getArgRegsSaveSize() - (8 * 4);
 }
 
 void ARMFrameLowering::emitPrologue(MachineFunction &MF,
