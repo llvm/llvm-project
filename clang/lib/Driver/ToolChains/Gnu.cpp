@@ -586,36 +586,14 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       bool WantPthread = Args.hasArg(options::OPT_pthread) ||
                          Args.hasArg(options::OPT_pthreads);
 
-      if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                       options::OPT_fno_openmp, false)) {
+      // FIXME: Only pass GompNeedsRT = true for platforms with libgomp that
+      // require librt. Most modern Linux platforms do, but some may not.
+      if (addOpenMPRuntime(CmdArgs, ToolChain, Args,
+                           JA.isHostOffloading(Action::OFK_OpenMP),
+                           /* GompNeedsRT= */ true))
         // OpenMP runtimes implies pthreads when using the GNU toolchain.
         // FIXME: Does this really make sense for all GNU toolchains?
         WantPthread = true;
-
-        // Also link the particular OpenMP runtimes.
-        switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
-        case Driver::OMPRT_OMP:
-          CmdArgs.push_back("-lomp");
-          break;
-        case Driver::OMPRT_GOMP:
-          CmdArgs.push_back("-lgomp");
-
-          // FIXME: Exclude this for platforms with libgomp that don't require
-          // librt. Most modern Linux platforms require it, but some may not.
-          CmdArgs.push_back("-lrt");
-          break;
-        case Driver::OMPRT_IOMP5:
-          CmdArgs.push_back("-liomp5");
-          break;
-        case Driver::OMPRT_Unknown:
-          // Already diagnosed.
-          break;
-        }
-        if (JA.isHostOffloading(Action::OFK_OpenMP))
-          CmdArgs.push_back("-lomptarget");
-
-        addArchSpecificRPath(ToolChain, Args, CmdArgs);
-      }
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 

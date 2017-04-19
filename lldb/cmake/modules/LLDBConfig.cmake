@@ -432,11 +432,8 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
 endif()
 
 find_package(Backtrace)
-check_symbol_exists(ppoll poll.h HAVE_PPOLL)
-check_symbol_exists(sigaction signal.h HAVE_SIGACTION)
 
 check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file(sys/event.h HAVE_SYS_EVENT_H)
 
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names

@@ -665,6 +665,7 @@
 		26FFC19D14FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19714FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp */; };
 		304B2E461CAAA57B007829FE /* ClangUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */; };
 		30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */ = {isa = PBXBuildFile; fileRef = 3032B1B91CAAA400004BE1AB /* ClangUtil.h */; };
+		30DED5DE1B4ECB49004CC508 /* MainLoopPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */; };
 		332CCB181AFF41620034D4C4 /* SBLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 3392EBB71AFF402200858B9F /* SBLanguageRuntime.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33E5E8411A672A240024ED68 /* StringConvert.cpp */; };
 		3F8160A61AB9F7DD001DA9DF /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8160A51AB9F7DD001DA9DF /* Logging.cpp */; };
@@ -977,7 +978,6 @@
 		B2A58724143119D50092BFBA /* SBWatchpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2A58723143119D50092BFBA /* SBWatchpoint.cpp */; };
 		B2B7CCEB15D1BD6700EEFB57 /* CommandObjectWatchpointCommand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2B7CCEA15D1BD6600EEFB57 /* CommandObjectWatchpointCommand.cpp */; };
 		B2B7CCF015D1C20F00EEFB57 /* WatchpointOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2B7CCEF15D1C20F00EEFB57 /* WatchpointOptions.cpp */; };
-		D67521381EA17C4200439694 /* MainLoop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D67521351EA17C3900439694 /* MainLoop.cpp */; };
 		E769331C1A94D15400C73337 /* lldb-gdbserver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D6F3F4183E7F9300194858 /* lldb-gdbserver.cpp */; };
 		E769331E1A94D18100C73337 /* lldb-server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E769331D1A94D18100C73337 /* lldb-server.cpp */; };
 		E7723D441AC4A7FB002BA082 /* RegisterContextPOSIXCore_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E7723D421AC4A7FB002BA082 /* RegisterContextPOSIXCore_arm64.cpp */; };
@@ -2319,6 +2319,7 @@
 		26FFC19814FC072100087D58 /* DynamicLoaderPOSIXDYLD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderPOSIXDYLD.h; sourceTree = "<group>"; };
 		3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangUtil.cpp; path = source/Symbol/ClangUtil.cpp; sourceTree = "<group>"; };
 		3032B1B91CAAA400004BE1AB /* ClangUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangUtil.h; path = include/lldb/Symbol/ClangUtil.h; sourceTree = "<group>"; };
+		30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoopPosix.cpp; sourceTree = "<group>"; };
 		33064C991A5C7A330033D415 /* UriParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UriParser.cpp; path = source/Utility/UriParser.cpp; sourceTree = "<group>"; };
 		3392EBB71AFF402200858B9F /* SBLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBLanguageRuntime.h; path = include/lldb/API/SBLanguageRuntime.h; sourceTree = "<group>"; };
 		33E5E8411A672A240024ED68 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringConvert.cpp; sourceTree = "<group>"; };
@@ -3050,7 +3051,6 @@
 		B2B7CCED15D1BFB700EEFB57 /* WatchpointOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WatchpointOptions.h; path = include/lldb/Breakpoint/WatchpointOptions.h; sourceTree = "<group>"; };
 		B2B7CCEF15D1C20F00EEFB57 /* WatchpointOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WatchpointOptions.cpp; path = source/Breakpoint/WatchpointOptions.cpp; sourceTree = "<group>"; };
 		B2D3033612EFA5C500F84EB3 /* InstructionUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InstructionUtils.h; path = Utility/InstructionUtils.h; sourceTree = "<group>"; };
-		D67521351EA17C3900439694 /* MainLoop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoop.cpp; sourceTree = "<group>"; };
 		E73A15A41B548EC500786197 /* GDBRemoteSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GDBRemoteSignals.cpp; path = Utility/GDBRemoteSignals.cpp; sourceTree = "<group>"; };
 		E73A15A51B548EC500786197 /* GDBRemoteSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GDBRemoteSignals.h; path = Utility/GDBRemoteSignals.h; sourceTree = "<group>"; };
 		E769331D1A94D18100C73337 /* lldb-server.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "lldb-server.cpp"; path = "tools/lldb-server/lldb-server.cpp"; sourceTree = "<group>"; };
@@ -5667,6 +5667,7 @@
 			children = (
 				2579065E1BD0488D00178368 /* DomainSocket.cpp */,
 				255EFF751AFABA950069F277 /* LockFilePosix.cpp */,
+				30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */,
 				AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */,
 				3FDFDDC5199D37ED009756A7 /* FileSystem.cpp */,
 				3FDFE53019A292F0009756A7 /* HostInfoPosix.cpp */,
@@ -5901,7 +5902,6 @@
 		69A01E1A1236C5D400C660B5 /* common */ = {
 			isa = PBXGroup;
 			children = (
-				D67521351EA17C3900439694 /* MainLoop.cpp */,
 				2579065A1BD0488100178368 /* TCPSocket.cpp */,
 				2579065B1BD0488100178368 /* UDPSocket.cpp */,
 				255EFF731AFABA720069F277 /* LockFileBase.cpp */,
@@ -7292,7 +7292,6 @@
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
-				D67521381EA17C4200439694 /* MainLoop.cpp in Sources */,
 				2689008013353E2200698AC0 /* CommandInterpreter.cpp in Sources */,
 				AF77E0A41A033D360096C0EA /* RegisterContextPOSIX_powerpc.cpp in Sources */,
 				4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */,
@@ -7785,6 +7784,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30DED5DE1B4ECB49004CC508 /* MainLoopPosix.cpp in Sources */,
 				E769331C1A94D15400C73337 /* lldb-gdbserver.cpp in Sources */,
 				26DC6A1D1337FECA00FF7998 /* lldb-platform.cpp in Sources */,
 				E769331E1A94D18100C73337 /* lldb-server.cpp in Sources */,

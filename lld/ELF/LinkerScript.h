@@ -256,6 +256,7 @@ public:
   bool isDefined(StringRef S);
 
   std::vector<OutputSection *> *OutputSections;
+  void fabricateDefaultCommands(bool AllocateHeader);
   void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();

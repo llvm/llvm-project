@@ -413,6 +413,56 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   CurOutSec = nullptr;
 }
 
+void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
+  std::vector<BaseCommand *> Commands;
+
+  // Define start address
+  uint64_t StartAddr = Config->ImageBase;
+  if (AllocateHeader)
+    StartAddr += elf::getHeaderSize();
+
+  // The Sections with -T<section> are sorted in order of ascending address
+  // we must use this if it is lower than StartAddr as calls to setDot() must
+  // be monotonically increasing
+  if (!Config->SectionStartMap.empty()) {
+    uint64_t LowestSecStart = Config->SectionStartMap.begin()->second;
+    StartAddr = std::min(StartAddr, LowestSecStart);
+  }
+  Commands.push_back(
+      make<SymbolAssignment>(".", [=] { return StartAddr; }, ""));
+
+  // For each OutputSection that needs a VA fabricate an OutputSectionCommand
+  // with an InputSectionDescription describing the InputSections
+  for (OutputSection *Sec : *OutputSections) {
+    if (!(Sec->Flags & SHF_ALLOC))
+      continue;
+
+    auto I = Config->SectionStartMap.find(Sec->Name);
+    if (I != Config->SectionStartMap.end())
+      Commands.push_back(
+          make<SymbolAssignment>(".", [=] { return I->second; }, ""));
+
+    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
+    OSCmd->Sec = Sec;
+    if (Sec->PageAlign)
+      OSCmd->AddrExpr = [=] {
+        return alignTo(Script->getDot(), Config->MaxPageSize);
+      };
+    Commands.push_back(OSCmd);
+    if (Sec->Sections.size()) {
+      auto *ISD = make<InputSectionDescription>("");
+      OSCmd->Commands.push_back(ISD);
+      for (InputSection *ISec : Sec->Sections) {
+        ISD->Sections.push_back(ISec);
+        ISec->Assigned = true;
+      }
+    }
+  }
+  // SECTIONS commands run before other non SECTIONS commands
+  Commands.insert(Commands.end(), Opt.Commands.begin(), Opt.Commands.end());
+  Opt.Commands = std::move(Commands);
+}
+
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   for (InputSectionBase *S : InputSections)
