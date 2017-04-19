@@ -343,36 +343,66 @@ void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
     clearDIEs(true);
 }
 
-DWARFDie
-DWARFUnit::getSubprogramForAddress(uint64_t Address) {
-  extractDIEsIfNeeded(false);
-  for (const DWARFDebugInfoEntry &D : DieArray) {
-    DWARFDie DIE(this, &D);
-    if (DIE.isSubprogramDIE() &&
-        DIE.addressRangeContainsAddress(Address)) {
-      return DIE;
+void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
+  if (Die.isSubroutineDIE()) {
+    for (const auto &R : Die.getAddressRanges()) {
+      // Ignore 0-sized ranges.
+      if (R.first == R.second)
+        continue;
+      auto B = AddrDieMap.upper_bound(R.first);
+      if (B != AddrDieMap.begin() && R.first < (--B)->second.first) {
+        // The range is a sub-range of existing ranges, we need to split the
+        // existing range.
+        if (R.second < B->second.first)
+          AddrDieMap[R.second] = B->second;
+        if (R.first > B->first)
+          AddrDieMap[B->first].first = R.first;
+      }
+      AddrDieMap[R.first] = std::make_pair(R.second, Die);
     }
   }
-  return DWARFDie();
+  // Parent DIEs are added to the AddrDieMap prior to the Children DIEs to
+  // simplify the logic to update AddrDieMap. The child's range will always
+  // be equal or smaller than the parent's range. With this assumption, when
+  // adding one range into the map, it will at most split a range into 3
+  // sub-ranges.
+  for (DWARFDie Child = Die.getFirstChild(); Child; Child = Child.getSibling())
+    updateAddressDieMap(Child);
+}
+
+DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
+  extractDIEsIfNeeded(false);
+  if (AddrDieMap.empty())
+    updateAddressDieMap(getUnitDIE());
+  auto R = AddrDieMap.upper_bound(Address);
+  if (R == AddrDieMap.begin())
+    return DWARFDie();
+  // upper_bound's previous item contains Address.
+  --R;
+  assert(Address <= R->second.first);
+  return R->second.second;
 }
 
 void
 DWARFUnit::getInlinedChainForAddress(uint64_t Address,
                                      SmallVectorImpl<DWARFDie> &InlinedChain) {
-  // First, find a subprogram that contains the given address (the root
+  // First, find the subroutine that contains the given address (the leaf
   // of inlined chain).
-  DWARFDie SubprogramDIE;
+  DWARFDie SubroutineDIE;
   // Try to look for subprogram DIEs in the DWO file.
   parseDWO();
   if (DWO)
-    SubprogramDIE = DWO->getUnit()->getSubprogramForAddress(Address);
+    SubroutineDIE = DWO->getUnit()->getSubroutineForAddress(Address);
   else
-    SubprogramDIE = getSubprogramForAddress(Address);
+    SubroutineDIE = getSubroutineForAddress(Address);
 
-  // Get inlined chain rooted at this subprogram DIE.
-  if (SubprogramDIE)
-    SubprogramDIE.getInlinedChainForAddress(Address, InlinedChain);
-  else
+  if (SubroutineDIE) {
+    while (SubroutineDIE) {
+      if (SubroutineDIE.isSubroutineDIE())
+        InlinedChain.push_back(SubroutineDIE);
+      SubroutineDIE  = SubroutineDIE.getParent();
+    }
+  } else
     InlinedChain.clear();
 }
 

@@ -12506,39 +12506,52 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
   // When extracting multiple vector elements, try to store them
   // in one vector store rather than a sequence of scalar stores.
   if (IsExtractVecSrc) {
-    LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
-    unsigned FirstStoreAS = FirstInChain->getAddressSpace();
-    unsigned FirstStoreAlign = FirstInChain->getAlignment();
-    unsigned NumStoresToMerge = 0;
-    bool IsVec = MemVT.isVector();
-    for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
-      StoreSDNode *St  = cast<StoreSDNode>(StoreNodes[i].MemNode);
-      unsigned StoreValOpcode = St->getValue().getOpcode();
-      // This restriction could be loosened.
-      // Bail out if any stored values are not elements extracted from a vector.
-      // It should be possible to handle mixed sources, but load sources need
-      // more careful handling (see the block of code below that handles
-      // consecutive loads).
-      if (StoreValOpcode != ISD::EXTRACT_VECTOR_ELT &&
-          StoreValOpcode != ISD::EXTRACT_SUBVECTOR)
-        return false;
+    bool RV = false;
+    while (StoreNodes.size() >= 2) {
+      LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
+      unsigned FirstStoreAS = FirstInChain->getAddressSpace();
+      unsigned FirstStoreAlign = FirstInChain->getAlignment();
+      unsigned NumStoresToMerge = 0;
+      bool IsVec = MemVT.isVector();
+      for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
+        StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
+        unsigned StoreValOpcode = St->getValue().getOpcode();
+        // This restriction could be loosened.
+        // Bail out if any stored values are not elements extracted from a
+        // vector. It should be possible to handle mixed sources, but load
+        // sources need more careful handling (see the block of code below that
+        // handles consecutive loads).
+        if (StoreValOpcode != ISD::EXTRACT_VECTOR_ELT &&
+            StoreValOpcode != ISD::EXTRACT_SUBVECTOR)
+          return false;
 
-      // Find a legal type for the vector store.
-      unsigned Elts = i + 1;
-      if (IsVec) {
-        // When merging vector stores, get the total number of elements.
-        Elts *= MemVT.getVectorNumElements();
+        // Find a legal type for the vector store.
+        unsigned Elts = i + 1;
+        if (IsVec) {
+          // When merging vector stores, get the total number of elements.
+          Elts *= MemVT.getVectorNumElements();
+        }
+        EVT Ty =
+            EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(), Elts);
+        bool IsFast;
+        if (TLI.isTypeLegal(Ty) &&
+            TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
+                                   FirstStoreAlign, &IsFast) &&
+            IsFast)
+          NumStoresToMerge = i + 1;
       }
-      EVT Ty = EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(), Elts);
-      bool IsFast;
-      if (TLI.isTypeLegal(Ty) &&
-          TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
-                                 FirstStoreAlign, &IsFast) && IsFast)
-        NumStoresToMerge = i + 1;
-    }
 
-    return MergeStoresOfConstantsOrVecElts(StoreNodes, MemVT, NumStoresToMerge,
-                                           false, true);
+      bool Merged = MergeStoresOfConstantsOrVecElts(
+          StoreNodes, MemVT, NumStoresToMerge, false, true);
+      if (!Merged)
+        break;
+      // Remove merged stores for next iteration.
+      StoreNodes.erase(StoreNodes.begin(),
+                       StoreNodes.begin() + NumStoresToMerge);
+      RV = true;
+      NumConsecutiveStores -= NumStoresToMerge;
+    }
+    return RV;
   }
 
   // Below we handle the case of multiple consecutive stores that

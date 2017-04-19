@@ -3796,6 +3796,8 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   Type *GEPTy = PointerType::get(LastType, AS);
   if (VectorType *VT = dyn_cast<VectorType>(Ops[0]->getType()))
     GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+  else if (VectorType *VT = dyn_cast<VectorType>(Ops[1]->getType()))
+    GEPTy = VectorType::get(GEPTy, VT->getNumElements());
 
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);

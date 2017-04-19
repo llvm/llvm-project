@@ -252,13 +252,6 @@ public:
   void getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
                       uint32_t &CallColumn, uint32_t &CallDiscriminator) const;
   
-  /// Get inlined chain for a given address, rooted at the current DIE.
-  /// Returns empty chain if address is not contained in address range
-  /// of current DIE.
-  void
-  getInlinedChainForAddress(const uint64_t Address,
-                            SmallVectorImpl<DWARFDie> &InlinedChain) const;
-
   class attribute_iterator;
 
   /// Get an iterator range to all attributes in the current DIE only.

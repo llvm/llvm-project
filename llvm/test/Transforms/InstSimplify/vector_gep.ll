@@ -62,3 +62,27 @@ define <16 x i32*> @test6() {
   %VectorGep = getelementptr [24 x [42 x [3 x i32]]], [24 x [42 x [3 x i32]]]* @v, i64 0, i64 0, <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, i64 0
   ret <16 x i32*> %VectorGep
 }
+
+; PR32697
+; CHECK-LABEL: tinkywinky(
+; CHECK-NEXT: ret <4 x i8*> undef
+define <4 x i8*> @tinkywinky() {
+  %patatino = getelementptr i8, i8* undef, <4 x i64> undef
+  ret <4 x i8*> %patatino
+}
+
+; PR32697
+; CHECK-LABEL: dipsy(
+; CHECK-NEXT: ret <4 x i8*> undef
+define <4 x i8*> @dipsy() {
+  %patatino = getelementptr i8, <4 x i8 *> undef, <4 x i64> undef
+  ret <4 x i8*> %patatino
+}
+
+; PR32697
+; CHECK-LABEL: laalaa(
+; CHECK-NEXT: ret <4 x i8*> undef
+define <4 x i8*> @laalaa() {
+  %patatino = getelementptr i8, <4 x i8 *> undef, i64 undef
+  ret <4 x i8*> %patatino
+}
