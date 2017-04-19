@@ -281,25 +281,25 @@ APInt ConstantRange::getUnsignedMin() const {
 APInt ConstantRange::getSignedMax() const {
   APInt SignedMax(APInt::getSignedMaxValue(getBitWidth()));
   if (!isWrappedSet()) {
-    if (getLower().sle(getUpper() - 1))
-      return getUpper() - 1;
-    return SignedMax;
+    APInt UpperMinusOne = getUpper() - 1;
+    if (getLower().sle(UpperMinusOne))
+      return UpperMinusOne;
+    return APInt::getSignedMaxValue(getBitWidth());
   }
   if (getLower().isNegative() == getUpper().isNegative())
-    return SignedMax;
+    return APInt::getSignedMaxValue(getBitWidth());
   return getUpper() - 1;
 }
 
 APInt ConstantRange::getSignedMin() const {
-  APInt SignedMin(APInt::getSignedMinValue(getBitWidth()));
   if (!isWrappedSet()) {
     if (getLower().sle(getUpper() - 1))
       return getLower();
-    return SignedMin;
+    return APInt::getSignedMinValue(getBitWidth());
   }
   if ((getUpper() - 1).slt(getLower())) {
-    if (getUpper() != SignedMin)
-      return SignedMin;
+    if (!getUpper().isMinSignedValue())
+      return APInt::getSignedMinValue(getBitWidth());
   }
   return getLower();
 }

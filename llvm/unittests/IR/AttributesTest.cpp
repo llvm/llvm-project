@@ -56,6 +56,11 @@ TEST(Attributes, AddAttributes) {
   B.addAttribute(Attribute::NoReturn);
   AL = AL.addAttributes(C, AttributeList::FunctionIndex, AttributeSet::get(C, B));
   EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+  B.clear();
+  B.addAttribute(Attribute::SExt);
+  AL = AL.addAttributes(C, AttributeList::ReturnIndex, B);
+  EXPECT_TRUE(AL.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt));
+  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
 }
 
 } // end anonymous namespace

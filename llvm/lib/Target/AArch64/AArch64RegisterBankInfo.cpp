@@ -482,7 +482,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg())
+    if (!MO.isReg() || !MO.getReg())
       continue;
 
     LLT Ty = MRI.getType(MO.getReg());
@@ -537,7 +537,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
-    if (MI.getOperand(Idx).isReg()) {
+    if (MI.getOperand(Idx).isReg() && MI.getOperand(Idx).getReg()) {
       auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
       if (!Mapping->isValid())
         return InstructionMapping();

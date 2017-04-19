@@ -2069,12 +2069,15 @@ public:
 #ifndef NDEBUG
     OS << " with assertions";
 #endif
+#if LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
     std::string CPU = sys::getHostCPUName();
     if (CPU == "generic")
       CPU = "(unknown)";
     OS << ".\n"
        << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
-       << "  Host CPU: " << CPU << '\n';
+       << "  Host CPU: " << CPU;
+#endif
+    OS << '\n';
   }
   void operator=(bool OptionWasSpecified) {
     if (!OptionWasSpecified)

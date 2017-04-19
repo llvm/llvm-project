@@ -512,6 +512,9 @@ set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "share/doc/llvm/ocaml-html"
 option (LLVM_BUILD_EXTERNAL_COMPILER_RT
   "Build compiler-rt as an external project." OFF)
 
+option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
+  "Show target and host info when tools are invoked with --version." ON)
+
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
 # list of LLVM components. All component names handled by llvm-config are valid.

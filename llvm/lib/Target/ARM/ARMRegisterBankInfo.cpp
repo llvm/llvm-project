@@ -220,6 +220,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case G_ADD:
   case G_SUB:
+  case G_MUL:
   case G_SEXT:
   case G_ZEXT:
   case G_GEP:

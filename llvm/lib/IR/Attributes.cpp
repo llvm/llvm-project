@@ -984,23 +984,23 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
 }
 
 AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
-                                           AttributeSet AS) const {
-  if (!AS.hasAttributes())
+                                           const AttrBuilder &B) const {
+  if (!B.hasAttributes())
     return *this;
 
   if (!pImpl)
-    return AttributeList::get(C, {{Index, AS}});
+    return AttributeList::get(C, {{Index, AttributeSet::get(C, B)}});
 
 #ifndef NDEBUG
   // FIXME it is not obvious how this should work for alignment. For now, say
   // we can't change a known alignment.
   unsigned OldAlign = getParamAlignment(Index);
-  unsigned NewAlign = AS.getAlignment();
+  unsigned NewAlign = B.getAlignment();
   assert((!OldAlign || !NewAlign || OldAlign == NewAlign) &&
          "Attempt to change alignment!");
 #endif
 
-  SmallVector<std::pair<unsigned, AttributeSet>, 4> AttrSet;
+  SmallVector<IndexAttrPair, 4> AttrVec;
   uint64_t NumAttrs = pImpl->getNumSlots();
   unsigned I;
 
@@ -1008,31 +1008,25 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
   for (I = 0; I < NumAttrs; ++I) {
     if (getSlotIndex(I) >= Index)
       break;
-    AttrSet.emplace_back(getSlotIndex(I), pImpl->getSlotNode(I));
+    AttrVec.emplace_back(getSlotIndex(I), pImpl->getSlotNode(I));
   }
 
+  AttrBuilder NewAttrs;
   if (I < NumAttrs && getSlotIndex(I) == Index) {
-    // We need to merge two AttributeSets.
-    AttributeSet Merged = AttributeSet::get(
-        C, AttrBuilder(pImpl->getSlotNode(I)).merge(AttrBuilder(AS)));
-    AttrSet.emplace_back(Index, Merged);
+    // We need to merge the attribute sets.
+    NewAttrs.merge(pImpl->getSlotNode(I));
     ++I;
-  } else {
-    // Otherwise, there were no attributes at this position in the original
-    // list. Add the set as is.
-    AttrSet.emplace_back(Index, AS);
   }
+  NewAttrs.merge(B);
+
+  // Add the new or merged attribute set at this index.
+  AttrVec.emplace_back(Index, AttributeSet::get(C, NewAttrs));
 
   // Add the remaining entries.
   for (; I < NumAttrs; ++I)
-    AttrSet.emplace_back(getSlotIndex(I), pImpl->getSlotNode(I));
+    AttrVec.emplace_back(getSlotIndex(I), pImpl->getSlotNode(I));
 
-  return get(C, AttrSet);
-}
-
-AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
-                                           const AttrBuilder &B) const {
-  return get(C, Index, AttributeSet::get(C, B));
+  return get(C, AttrVec);
 }
 
 AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,

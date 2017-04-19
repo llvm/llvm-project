@@ -34,14 +34,11 @@ namespace llvm {
 template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitingBlocks(SmallVectorImpl<BlockT *> &ExitingBlocks) const {
-  typedef GraphTraits<BlockT*> BlockTraits;
-  for (block_iterator BI = block_begin(), BE = block_end(); BI != BE; ++BI)
-    for (typename BlockTraits::ChildIteratorType I =
-           BlockTraits::child_begin(*BI), E = BlockTraits::child_end(*BI);
-         I != E; ++I)
-      if (!contains(*I)) {
+  for (const auto BB : blocks())
+    for (const auto Succ : children<BlockT*>(BB))
+      if (!contains(Succ)) {
         // Not in current loop? It must be an exit block.
-        ExitingBlocks.push_back(*BI);
+        ExitingBlocks.push_back(BB);
         break;
       }
 }
@@ -63,14 +60,11 @@ BlockT *LoopBase<BlockT, LoopT>::getExitingBlock() const {
 template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitBlocks(SmallVectorImpl<BlockT*> &ExitBlocks) const {
-  typedef GraphTraits<BlockT*> BlockTraits;
-  for (block_iterator BI = block_begin(), BE = block_end(); BI != BE; ++BI)
-    for (typename BlockTraits::ChildIteratorType I =
-           BlockTraits::child_begin(*BI), E = BlockTraits::child_end(*BI);
-         I != E; ++I)
-      if (!contains(*I))
+  for (const auto BB : blocks())
+    for (const auto Succ : children<BlockT*>(BB))
+      if (!contains(Succ))
         // Not in current loop? It must be an exit block.
-        ExitBlocks.push_back(*I);
+        ExitBlocks.push_back(Succ);
 }
 
 /// getExitBlock - If getExitBlocks would return exactly one block,
@@ -88,14 +82,11 @@ BlockT *LoopBase<BlockT, LoopT>::getExitBlock() const {
 template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const {
-  typedef GraphTraits<BlockT*> BlockTraits;
-  for (block_iterator BI = block_begin(), BE = block_end(); BI != BE; ++BI)
-    for (typename BlockTraits::ChildIteratorType I =
-           BlockTraits::child_begin(*BI), E = BlockTraits::child_end(*BI);
-         I != E; ++I)
-      if (!contains(*I))
+  for (const auto BB : blocks())
+    for (const auto Succ : children<BlockT*>(BB))
+      if (!contains(Succ))
         // Not in current loop? It must be an exit block.
-        ExitEdges.push_back(Edge(*BI, *I));
+        ExitEdges.emplace_back(BB, Succ);
 }
 
 /// getLoopPreheader - If there is a preheader for this loop, return it.  A
@@ -134,15 +125,11 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
 
   // Loop over the predecessors of the header node...
   BlockT *Header = getHeader();
-  typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-  for (typename InvBlockTraits::ChildIteratorType PI =
-         InvBlockTraits::child_begin(Header),
-         PE = InvBlockTraits::child_end(Header); PI != PE; ++PI) {
-    typename InvBlockTraits::NodeRef N = *PI;
-    if (!contains(N)) {     // If the block is not in the loop...
-      if (Out && Out != N)
+  for (const auto Pred : children<Inverse<BlockT*>>(Header)) {
+    if (!contains(Pred)) {     // If the block is not in the loop...
+      if (Out && Out != Pred)
         return nullptr;     // Multiple predecessors outside the loop
-      Out = N;
+      Out = Pred;
     }
   }
 
@@ -156,17 +143,11 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
 template<class BlockT, class LoopT>
 BlockT *LoopBase<BlockT, LoopT>::getLoopLatch() const {
   BlockT *Header = getHeader();
-  typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-  typename InvBlockTraits::ChildIteratorType PI =
-    InvBlockTraits::child_begin(Header);
-  typename InvBlockTraits::ChildIteratorType PE =
-    InvBlockTraits::child_end(Header);
   BlockT *Latch = nullptr;
-  for (; PI != PE; ++PI) {
-    typename InvBlockTraits::NodeRef N = *PI;
-    if (contains(N)) {
+  for (const auto Pred : children<Inverse<BlockT*>>(Header)) {
+    if (contains(Pred)) {
       if (Latch) return nullptr;
-      Latch = N;
+      Latch = Pred;
     }
   }
 
@@ -394,11 +375,9 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT*> Backedges,
       // within this subloop tree itself. Note that a predecessor may directly
       // reach another subloop that is not yet discovered to be a subloop of
       // this loop, which we must traverse.
-      for (typename InvBlockTraits::ChildIteratorType PI =
-             InvBlockTraits::child_begin(PredBB),
-             PE = InvBlockTraits::child_end(PredBB); PI != PE; ++PI) {
-        if (LI->getLoopFor(*PI) != Subloop)
-          ReverseCFGWorklist.push_back(*PI);
+      for (const auto Pred : children<Inverse<BlockT*>>(PredBB)) {
+        if (LI->getLoopFor(Pred) != Subloop)
+          ReverseCFGWorklist.push_back(Pred);
       }
     }
   }
@@ -482,13 +461,7 @@ analyze(const DominatorTreeBase<BlockT> &DomTree) {
     SmallVector<BlockT *, 4> Backedges;
 
     // Check each predecessor of the potential loop header.
-    typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-    for (typename InvBlockTraits::ChildIteratorType PI =
-           InvBlockTraits::child_begin(Header),
-           PE = InvBlockTraits::child_end(Header); PI != PE; ++PI) {
-
-      BlockT *Backedge = *PI;
-
+    for (const auto Backedge : children<Inverse<BlockT*>>(Header)) {
       // If Header dominates predBB, this is a new loop. Collect the backedges.
       if (DomTree.dominates(Header, Backedge)
           && DomTree.isReachableFromEntry(Backedge)) {

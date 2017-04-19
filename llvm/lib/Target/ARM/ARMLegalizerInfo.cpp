@@ -43,7 +43,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({Op, 1, p0}, Legal);
   }
 
-  for (unsigned Op : {G_ADD, G_SUB})
+  for (unsigned Op : {G_ADD, G_SUB, G_MUL})
     for (auto Ty : {s1, s8, s16, s32})
       setAction({Op, Ty}, Legal);
 
