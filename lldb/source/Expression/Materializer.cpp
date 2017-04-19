@@ -484,6 +484,12 @@ public:
       valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to
                                                   // the dynamic type
     }
+    
+    if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift &&
+        valobj_type.GetByteSize(frame_sp.get()) == 0) {
+      // We don't need to materialize empty structs in Swift.
+      return;
+    }
 
     if (m_is_reference) {
       DataExtractor valobj_extractor;
