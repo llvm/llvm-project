@@ -28,6 +28,10 @@ public:
   static char ID;
   explicit AMDGPULowerKernelCalls();
 
+  StringRef getPassName() const override {
+    return "AMDGPU Lower Kernel Calls";
+  }
+
 private:
   bool runOnModule(Module &M) override;
 };
