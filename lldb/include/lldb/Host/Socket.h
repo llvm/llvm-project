@@ -57,7 +57,8 @@ public:
 
   virtual Error Connect(llvm::StringRef name) = 0;
   virtual Error Listen(llvm::StringRef name, int backlog) = 0;
-  virtual Error Accept(Socket *&socket) = 0;
+  virtual Error Accept(llvm::StringRef name, bool child_processes_inherit,
+                       Socket *&socket) = 0;
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented
@@ -102,8 +103,7 @@ public:
                                 int32_t &port, Error *error_ptr);
 
 protected:
-  Socket(SocketProtocol protocol, bool should_close,
-         bool m_child_process_inherit);
+  Socket(NativeSocket socket, SocketProtocol protocol, bool should_close);
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 
@@ -117,7 +117,6 @@ protected:
 
   SocketProtocol m_protocol;
   NativeSocket m_socket;
-  bool m_child_processes_inherit;
 };
 
 } // namespace lldb_private
