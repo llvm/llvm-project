@@ -13,7 +13,7 @@ void *test_incorrect_param_type(float a) __attribute__((alloc_align(1))); // exp
 void *test_bad_param_type(void) __attribute((alloc_align(1.1))); // expected-error {{'alloc_align' attribute requires parameter 1 to be an integer constant}}
 
 // argument count
-void *test_no_fn_proto() __attribute__((alloc_align)); // expected-error {{'alloc_align' attribute takes one argument}}
-void *test_no_fn_proto() __attribute__((alloc_align())); // expected-error {{'alloc_align' attribute takes one argument}}
-void *test_no_fn_proto() __attribute__((alloc_align(32, 45, 37))); // expected-error {{'alloc_align' attribute takes one argument}}
+void *test_no_fn_proto(int x, int y) __attribute__((alloc_align)); // expected-error {{'alloc_align' attribute takes one argument}}
+void *test_no_fn_proto(int x, int y) __attribute__((alloc_align())); // expected-error {{'alloc_align' attribute takes one argument}}
+void *test_no_fn_proto(int x, int y) __attribute__((alloc_align(32, 45, 37))); // expected-error {{'alloc_align' attribute takes one argument}}
 
