@@ -1105,7 +1105,7 @@ public:
         void __assign_unique(_InputIterator __first, _InputIterator __last);
     template <class _InputIterator>
         void __assign_multi(_InputIterator __first, _InputIterator __last);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     __tree(__tree&& __t)
         _NOEXCEPT_(
             is_nothrow_move_constructible<__node_allocator>::value &&
@@ -1116,7 +1116,7 @@ public:
             __node_traits::propagate_on_container_move_assignment::value &&
             is_nothrow_move_assignable<value_compare>::value &&
             is_nothrow_move_assignable<__node_allocator>::value);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif // _LIBCPP_CXX03_LANG
 
     ~__tree();
 
@@ -1675,7 +1675,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     __begin_node() = __end_node();
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t)
@@ -1805,7 +1805,7 @@ __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::~__tree()

@@ -2826,7 +2826,7 @@ public:
     static _LIBCPP_CONSTEXPR const size_t block_size = __p;
     static _LIBCPP_CONSTEXPR const size_t used_block = __r;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const result_type _Min = _Engine::_Min;
     static const result_type _Max = _Engine::_Max;
 #else
@@ -2845,11 +2845,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(const _Engine& __e)
         : __e_(__e), __n_(0) {}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)), __n_(0) {}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
     template<class _Sseq>
@@ -3014,7 +3014,7 @@ private:
                 result_type,
                 _Engine_result_type
         >::type _Working_result_type;
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min
                                           + _Working_result_type(1);
 #else
@@ -3055,11 +3055,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(const _Engine& __e)
         : __e_(__e) {}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)) {}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
     template<class _Sseq>
@@ -3264,7 +3264,7 @@ public:
     // engine characteristics
     static _LIBCPP_CONSTEXPR const size_t table_size = __k;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const result_type _Min = _Engine::_Min;
     static const result_type _Max = _Engine::_Max;
 #else
@@ -3285,11 +3285,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(const _Engine& __e)
         : __e_(__e) {__init();}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)) {__init();}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(result_type __sd) : __e_(__sd) {__init();}
     template<class _Sseq>
@@ -3526,11 +3526,11 @@ public:
     // constructors
     _LIBCPP_INLINE_VISIBILITY
     seed_seq() _NOEXCEPT {}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _Tp>
         _LIBCPP_INLINE_VISIBILITY
         seed_seq(initializer_list<_Tp> __il) {init(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
@@ -3637,7 +3637,7 @@ generate_canonical(_URNG& __g)
 {
     const size_t _Dt = numeric_limits<_RealType>::digits;
     const size_t __b = _Dt < __bits ? _Dt : __bits;
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     const size_t __logR = __log2<uint64_t, _URNG::_Max - _URNG::_Min + uint64_t(1)>::value;
 #else
     const size_t __logR = __log2<uint64_t, _URNG::max() - _URNG::min() + uint64_t(1)>::value;
@@ -5851,11 +5851,11 @@ public:
             _LIBCPP_INLINE_VISIBILITY
             param_type(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {__init();}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         _LIBCPP_INLINE_VISIBILITY
         param_type(initializer_list<double> __wl)
             : __p_(__wl.begin(), __wl.end()) {__init();}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, double __xmin, double __xmax,
                        _UnaryOperation __fw);
@@ -5898,11 +5898,11 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         discrete_distribution(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     discrete_distribution(initializer_list<double> __wl)
         : __p_(__wl) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         discrete_distribution(size_t __nw, double __xmin, double __xmax,
@@ -6079,10 +6079,10 @@ public:
         template<class _InputIteratorB, class _InputIteratorW>
             param_type(_InputIteratorB __fB, _InputIteratorB __lB,
                        _InputIteratorW __fW);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, result_type __xmin, result_type __xmax,
                        _UnaryOperation __fw);
@@ -6132,13 +6132,13 @@ public:
                                         _InputIteratorW __fW)
         : __p_(__fB, __lB, __fW) {}
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         piecewise_constant_distribution(initializer_list<result_type> __bl,
                                         _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
@@ -6268,7 +6268,7 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6293,7 +6293,7 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6402,10 +6402,10 @@ public:
         template<class _InputIteratorB, class _InputIteratorW>
             param_type(_InputIteratorB __fB, _InputIteratorB __lB,
                        _InputIteratorW __fW);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, result_type __xmin, result_type __xmax,
                        _UnaryOperation __fw);
@@ -6455,13 +6455,13 @@ public:
                                       _InputIteratorW __fW)
         : __p_(__fB, __lB, __fW) {}
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         piecewise_linear_distribution(initializer_list<result_type> __bl,
                                       _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
@@ -6595,7 +6595,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6620,7 +6620,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>

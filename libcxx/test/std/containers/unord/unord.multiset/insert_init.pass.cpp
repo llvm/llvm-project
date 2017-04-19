@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_set>
 
 // template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef std::unordered_multiset<int> C;
         typedef int P;
@@ -44,7 +45,6 @@ int main()
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multiset<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;
@@ -66,6 +66,4 @@ int main()
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }
