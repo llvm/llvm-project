@@ -332,9 +332,6 @@ public:
 
   CompilerType GetNSErrorType(Error &error);
 
-  CompilerType
-  CreateProtocolCompositionType(const std::vector<CompilerType> &protocols);
-
   CompilerType CreateMetatypeType(CompilerType instance_type);
 
   CompilerType BindGenericType(CompilerType type,
@@ -501,10 +498,6 @@ public:
     bool m_is_objc;
     bool m_is_anyobject;
     bool m_is_errortype;
-
-    bool IsOneWordStorage() const {
-      return m_is_class_only || m_is_objc || m_is_anyobject || m_is_errortype;
-    }
   };
 
   static bool GetProtocolTypeInfo(const CompilerType &type,
