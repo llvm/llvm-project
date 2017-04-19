@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_set>
 
 // template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
@@ -24,7 +26,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::unordered_set<Emplaceable> C;
         typedef std::pair<C::iterator, bool> R;
@@ -44,7 +45,6 @@ int main()
         assert(*r.first == Emplaceable(5, 6));
         assert(!r.second);
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<Emplaceable, std::hash<Emplaceable>,
                       std::equal_to<Emplaceable>, min_allocator<Emplaceable>> C;
@@ -65,6 +65,4 @@ int main()
         assert(*r.first == Emplaceable(5, 6));
         assert(!r.second);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

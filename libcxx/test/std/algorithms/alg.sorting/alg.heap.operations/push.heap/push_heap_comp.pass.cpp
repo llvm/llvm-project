@@ -19,8 +19,9 @@
 #include <functional>
 #include <random>
 #include <cassert>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
+
+#include "test_macros.h"
 
 struct indirect_less
 {
@@ -28,8 +29,6 @@ struct indirect_less
     bool operator()(const P& x, const P& y)
         {return *x < *y;}
 };
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 std::mt19937 randomness;
 
@@ -51,7 +50,7 @@ int main()
 {
     test(1000);
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     {
     const int N = 1000;
     std::unique_ptr<int>* ia = new std::unique_ptr<int> [N];
@@ -65,5 +64,5 @@ int main()
     }
     delete [] ia;
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 }

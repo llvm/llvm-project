@@ -53,7 +53,7 @@ template<class E> const E* end(initializer_list<E> il) noexcept; // constexpr in
 namespace std  // purposefully not versioned
 {
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Ep>
 class _LIBCPP_TEMPLATE_VIS initializer_list
@@ -111,7 +111,7 @@ end(initializer_list<_Ep> __il) _NOEXCEPT
     return __il.end();
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // !defined(_LIBCPP_CXX03_LANG)
 
 }  // std
 

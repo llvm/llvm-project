@@ -32,7 +32,10 @@
 #define POLL poll
 #endif
 
-#if !HAVE_PPOLL && !HAVE_SYS_EVENT_H
+#if SIGNAL_POLLING_UNSUPPORTED
+#ifdef LLVM_ON_WIN32
+typedef int sigset_t;
+#endif
 
 int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
           const sigset_t *) {
@@ -137,6 +140,10 @@ void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
 }
 
 void MainLoop::UnregisterSignal(int signo) {
+#if SIGNAL_POLLING_UNSUPPORTED
+  error.SetErrorString("Signal polling is not supported on this platform.");
+  return nullptr;
+#else
   // We undo the actions of RegisterSignal on a best-effort basis.
   auto it = m_signals.find(signo);
   assert(it != m_signals.end());
@@ -150,6 +157,7 @@ void MainLoop::UnregisterSignal(int signo) {
                   nullptr);
 
   m_signals.erase(it);
+#endif
 }
 
 Error MainLoop::Run() {
@@ -198,8 +206,16 @@ Error MainLoop::Run() {
 
 #else
     read_fds.clear();
+
+#if !SIGNAL_POLLING_UNSUPPORTED
     if (int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask))
       return Error("pthread_sigmask failed with error %d\n", ret);
+
+    for (const auto &sig : m_signals) {
+      signals.push_back(sig.first);
+      sigdelset(&sigmask, sig.first);
+    }
+#endif
 
     for (const auto &fd : m_read_fds) {
       struct pollfd pfd;
@@ -207,11 +223,6 @@ Error MainLoop::Run() {
       pfd.events = POLLIN;
       pfd.revents = 0;
       read_fds.push_back(pfd);
-    }
-
-    for (const auto &sig : m_signals) {
-      signals.push_back(sig.first);
-      sigdelset(&sigmask, sig.first);
     }
 
     if (ppoll(read_fds.data(), read_fds.size(), nullptr, &sigmask) == -1 &&

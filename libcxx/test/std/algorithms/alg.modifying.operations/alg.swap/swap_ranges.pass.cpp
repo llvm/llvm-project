@@ -16,10 +16,9 @@
 
 #include <algorithm>
 #include <cassert>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
-#endif
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template<class Iter1, class Iter2>
@@ -38,8 +37,7 @@ test()
     assert(j[2] == 3);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#if TEST_STD_VER >= 11
 template<class Iter1, class Iter2>
 void
 test1()
@@ -59,8 +57,7 @@ test1()
     assert(*j[1] == 2);
     assert(*j[2] == 3);
 }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif // TEST_STD_VER >= 11
 
 void test2()
 {
@@ -131,8 +128,7 @@ int main()
     test<int*, random_access_iterator<int*> >();
     test<int*, int*>();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#if TEST_STD_VER >= 11
     test1<forward_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
@@ -152,8 +148,7 @@ int main()
     test1<std::unique_ptr<int>*, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, random_access_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, std::unique_ptr<int>*>();
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif // TEST_STD_VER >= 11
 
     test2();
 }

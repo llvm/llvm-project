@@ -19,6 +19,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -26,7 +28,7 @@ int main()
     std::chrono::microseconds us = ms;
     assert(us.count() == 1000);
     }
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     {
     constexpr std::chrono::milliseconds ms(1);
     constexpr std::chrono::microseconds us = ms;

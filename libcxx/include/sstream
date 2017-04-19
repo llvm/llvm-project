@@ -212,12 +212,10 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
     explicit basic_stringbuf(const string_type& __s,
                              ios_base::openmode __wch = ios_base::in | ios_base::out);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     basic_stringbuf(basic_stringbuf&& __rhs);
-#endif
 
     // 27.8.1.2 Assign and swap:
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     basic_stringbuf& operator=(basic_stringbuf&& __rhs);
 #endif
     void swap(basic_stringbuf& __rhs);
@@ -255,7 +253,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::basic_stringbuf(const string_type&
     str(__s);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_stringbuf<_CharT, _Traits, _Allocator>::basic_stringbuf(basic_stringbuf&& __rhs)
@@ -346,7 +344,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 void
@@ -641,13 +639,13 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
     explicit basic_istringstream(const string_type& __s,
                                  ios_base::openmode __wch = ios_base::in);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_istringstream(basic_istringstream&& __rhs);
 
     // 27.8.2.2 Assign and swap:
     basic_istringstream& operator=(basic_istringstream&& __rhs);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     void swap(basic_istringstream& __rhs);
 
@@ -675,7 +673,7 @@ basic_istringstream<_CharT, _Traits, _Allocator>::basic_istringstream(const stri
 {
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_istringstream<_CharT, _Traits, _Allocator>::basic_istringstream(basic_istringstream&& __rhs)
@@ -694,7 +692,7 @@ basic_istringstream<_CharT, _Traits, _Allocator>::operator=(basic_istringstream&
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 void basic_istringstream<_CharT, _Traits, _Allocator>::swap(basic_istringstream& __rhs)
@@ -758,13 +756,13 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
     explicit basic_ostringstream(const string_type& __s,
                                  ios_base::openmode __wch = ios_base::out);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostringstream(basic_ostringstream&& __rhs);
 
     // 27.8.2.2 Assign and swap:
     basic_ostringstream& operator=(basic_ostringstream&& __rhs);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     void swap(basic_ostringstream& __rhs);
 
@@ -792,7 +790,7 @@ basic_ostringstream<_CharT, _Traits, _Allocator>::basic_ostringstream(const stri
 {
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_ostringstream<_CharT, _Traits, _Allocator>::basic_ostringstream(basic_ostringstream&& __rhs)
@@ -811,7 +809,7 @@ basic_ostringstream<_CharT, _Traits, _Allocator>::operator=(basic_ostringstream&
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 void
@@ -877,13 +875,13 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
     explicit basic_stringstream(const string_type& __s,
                                 ios_base::openmode __wch = ios_base::in | ios_base::out);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_stringstream(basic_stringstream&& __rhs);
 
     // 27.8.2.2 Assign and swap:
     basic_stringstream& operator=(basic_stringstream&& __rhs);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     void swap(basic_stringstream& __rhs);
 
@@ -911,7 +909,7 @@ basic_stringstream<_CharT, _Traits, _Allocator>::basic_stringstream(const string
 {
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_stringstream<_CharT, _Traits, _Allocator>::basic_stringstream(basic_stringstream&& __rhs)
@@ -930,7 +928,7 @@ basic_stringstream<_CharT, _Traits, _Allocator>::operator=(basic_stringstream&& 
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
 void
