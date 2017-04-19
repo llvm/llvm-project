@@ -313,7 +313,7 @@ default outputs a ``ModuleID``:
       ret i32 0
   }
 
-``ModuleID`` can unexpetedly match against ``CHECK`` lines.  For example:
+``ModuleID`` can unexpectedly match against ``CHECK`` lines.  For example:
 
 .. code-block:: llvm
 

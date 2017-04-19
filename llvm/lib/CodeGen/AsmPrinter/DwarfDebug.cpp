@@ -1229,7 +1229,7 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
   // is still needed as we need its source location.
-  if (!Asm->TM.Options.DebugInfoForProfiling &&
+  if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
@@ -1527,18 +1527,15 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
     MachineLocation Location = Value.getLoc();
-
     SmallVector<uint64_t, 8> Ops;
-    // FIXME: Should this condition be Location.isIndirect() instead?
-    if (Location.getOffset()) {
+    if (Location.isIndirect() && Location.getOffset()) {
       Ops.push_back(dwarf::DW_OP_plus);
       Ops.push_back(Location.getOffset());
-      Ops.push_back(dwarf::DW_OP_deref);
     }
     Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
     DIExpressionCursor Cursor(Ops);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
-    if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+    if (!DwarfExpr.addMachineLocExpression(TRI, Cursor, Location))
       return;
     return DwarfExpr.addExpression(std::move(Cursor));
   } else if (Value.isConstantFP()) {

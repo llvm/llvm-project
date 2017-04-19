@@ -864,7 +864,7 @@ completing the walk over the archive they could use the ``joinErrors`` utility:
 
 The ``joinErrors`` routine builds a special error type called ``ErrorList``,
 which holds a list of user defined errors. The ``handleErrors`` routine
-recognizes this type and will attempt to handle each of the contained erorrs in
+recognizes this type and will attempt to handle each of the contained errors in
 order. If all contained errors can be handled, ``handleErrors`` will return
 ``Error::success()``, otherwise ``handleErrors`` will concatenate the remaining
 errors and return the resulting ``ErrorList``.

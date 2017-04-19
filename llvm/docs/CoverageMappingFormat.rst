@@ -21,7 +21,7 @@ to know how it works under the hood. A prior knowledge of how Clang's profile
 guided optimization works is useful, but not required.
 
 We start by showing how to use LLVM and Clang for code coverage analysis,
-then we briefly desribe LLVM's code coverage mapping format and the
+then we briefly describe LLVM's code coverage mapping format and the
 way that Clang and LLVM's code coverage tool work with this format. After
 the basics are down, more advanced features of the coverage mapping format
 are discussed - such as the data structures, LLVM IR representation and
