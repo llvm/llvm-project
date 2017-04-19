@@ -284,6 +284,24 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
   }
 }
 
+/// We need the offset of the frame pointer relative to other MachineFrameInfo
+/// offsets which are encoded relative to SP at function begin.
+/// See also emitPrologue() for how the FP is set up.
+/// Unfortunately we cannot determine this value in determineCalleeSaves() yet
+/// as assignCalleeSavedSpillSlots() hasn't run at this point. Instead we use
+/// this to produce a conservative estimate that we check in an assert() later.
+static int getMaxFPOffset(const Function &F, const ARMFunctionInfo &AFI) {
+  // We may end up saving a lot of registers that are higher numbered than the
+  // r7 used for FP in thumb.
+  if (F.hasFnAttribute("interrupt") ||
+      F.getCallingConv() == CallingConv::CXX_FAST_TLS)
+    return -AFI.getArgRegsSaveSize() - (8 * 4);
+
+  // Usually it is just the link register and the FP itself (and in rare cases
+  // r12?) saved to reach FP.
+  return -AFI.getArgRegsSaveSize() - 12;
+}
+
 void ARMFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -394,8 +412,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned DPRCSOffset = GPRCS2Offset - DPRGapSize - DPRCSSize;
   int FramePtrOffsetInPush = 0;
   if (HasFP) {
-    FramePtrOffsetInPush =
-        MFI.getObjectOffset(FramePtrSpillFI) + ArgRegsSaveSize;
+    int FPOffset = MFI.getObjectOffset(FramePtrSpillFI);
+    assert(getMaxFPOffset(*MF.getFunction(), *AFI) <= FPOffset &&
+           "Max FP estimation is wrong");
+    FramePtrOffsetInPush = FPOffset + ArgRegsSaveSize;
     AFI->setFramePtrSpillOffset(MFI.getObjectOffset(FramePtrSpillFI) +
                                 NumBytes);
   }
@@ -1633,24 +1653,38 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   //        worth the effort and added fragility?
   unsigned EstimatedStackSize =
       MFI.estimateStackSize(MF) + 4 * (NumGPRSpills + NumFPRSpills);
-  if (hasFP(MF)) {
+
+  // Determine biggest (positive) SP offset in MachineFrameInfo.
+  int MaxFixedOffset = 0;
+  for (int I = MFI.getObjectIndexBegin(); I < 0; ++I) {
+    int MaxObjectOffset = MFI.getObjectOffset(I) + MFI.getObjectSize(I);
+    MaxFixedOffset = std::max(MaxFixedOffset, MaxObjectOffset);
+  }
+
+  bool HasFP = hasFP(MF);
+  if (HasFP) {
     if (AFI->hasStackFrame())
       EstimatedStackSize += 4;
   } else {
     // If FP is not used, SP will be used to access arguments, so count the
     // size of arguments into the estimation.
-    EstimatedStackSize += MF.getInfo<ARMFunctionInfo>()->getArgumentStackSize();
+    EstimatedStackSize += MaxFixedOffset;
   }
   EstimatedStackSize += 16; // For possible paddings.
 
-  bool BigStack = EstimatedStackSize >= estimateRSStackSizeLimit(MF, this) ||
-                  MFI.hasVarSizedObjects() ||
-                  (MFI.adjustsStack() && !canSimplifyCallFramePseudos(MF));
+  unsigned EstimatedRSStackSizeLimit = estimateRSStackSizeLimit(MF, this);
+  int MaxFPOffset = getMaxFPOffset(*MF.getFunction(), *AFI);
+  bool BigFrameOffsets = EstimatedStackSize >= EstimatedRSStackSizeLimit ||
+    MFI.hasVarSizedObjects() ||
+    (MFI.adjustsStack() && !canSimplifyCallFramePseudos(MF)) ||
+    // For large argument stacks fp relative addressed may overflow.
+    (HasFP && (MaxFixedOffset - MaxFPOffset) >= (int)EstimatedRSStackSizeLimit);
   bool ExtraCSSpill = false;
-  if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
+  if (BigFrameOffsets ||
+      !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (hasFP(MF)) {
+    if (HasFP) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
@@ -1721,7 +1755,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       }
 
       // r7 can be used if it is not being used as the frame pointer.
-      if (!hasFP(MF)) {
+      if (!HasFP) {
         if (SavedRegs.test(ARM::R7)) {
           --RegDeficit;
           DEBUG(dbgs() << "%R7 is saved low register, RegDeficit = "
@@ -1831,7 +1865,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // callee-saved register or reserve a special spill slot to facilitate
     // register scavenging. Thumb1 needs a spill slot for stack pointer
     // adjustments also, even when the frame itself is small.
-    if (BigStack && !ExtraCSSpill) {
+    if (BigFrameOffsets && !ExtraCSSpill) {
       // If any non-reserved CS register isn't spilled, just spill one or two
       // extra. That should take care of it!
       unsigned NumExtras = TargetAlign / 4;
