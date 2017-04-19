@@ -2337,6 +2337,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.getAllArgValues(OPT_fxray_always_instrument);
   Opts.XRayNeverInstrumentFiles =
       Args.getAllArgValues(OPT_fxray_never_instrument);
+
+  // -fallow-editor-placeholders
+  Opts.AllowEditorPlaceholders = Args.hasArg(OPT_fallow_editor_placeholders);
 }
 
 static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,

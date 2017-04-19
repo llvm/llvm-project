@@ -39,7 +39,6 @@ namespace clang {
   class VarDecl;
 
 namespace CodeGen {
-typedef SmallVector<llvm::AttributeList, 8> AttributeListType;
 
 /// Abstract information about a function or function prototype.
 class CGCalleeInfo {

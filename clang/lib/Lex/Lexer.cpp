@@ -2716,6 +2716,37 @@ bool Lexer::HandleEndOfConflictMarker(const char *CurPtr) {
   return false;
 }
 
+static const char *findPlaceholderEnd(const char *CurPtr,
+                                      const char *BufferEnd) {
+  if (CurPtr == BufferEnd)
+    return nullptr;
+  BufferEnd -= 1; // Scan until the second last character.
+  for (; CurPtr != BufferEnd; ++CurPtr) {
+    if (CurPtr[0] == '#' && CurPtr[1] == '>')
+      return CurPtr + 2;
+  }
+  return nullptr;
+}
+
+bool Lexer::lexEditorPlaceholder(Token &Result, const char *CurPtr) {
+  assert(CurPtr[-1] == '<' && CurPtr[0] == '#' && "Not a placeholder!");
+  if (!PP || LexingRawMode)
+    return false;
+  const char *End = findPlaceholderEnd(CurPtr + 1, BufferEnd);
+  if (!End)
+    return false;
+  const char *Start = CurPtr - 1;
+  if (!LangOpts.AllowEditorPlaceholders)
+    Diag(Start, diag::err_placeholder_in_source);
+  Result.startToken();
+  FormTokenWithChars(Result, End, tok::raw_identifier);
+  Result.setRawIdentifierData(Start);
+  PP->LookUpIdentifierInfo(Result);
+  Result.setFlag(Token::IsEditorPlaceholder);
+  BufferPtr = End;
+  return true;
+}
+
 bool Lexer::isCodeCompletionPoint(const char *CurPtr) const {
   if (PP && PP->isCodeCompletionEnabled()) {
     SourceLocation Loc = FileLoc.getLocWithOffset(CurPtr-BufferStart);
@@ -3473,6 +3504,8 @@ LexNextToken:
     } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
+    } else if (Char == '#' && lexEditorPlaceholder(Result, CurPtr)) {
+      return true;
     } else {
       Kind = tok::less;
     }

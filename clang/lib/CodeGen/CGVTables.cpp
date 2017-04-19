@@ -379,12 +379,9 @@ void CodeGenFunction::EmitMustTailThunk(const CXXMethodDecl *MD,
 
   // Apply the standard set of call attributes.
   unsigned CallingConv;
-  CodeGen::AttributeListType AttributeList;
-  CGM.ConstructAttributeList(CalleePtr->getName(),
-                             *CurFnInfo, MD, AttributeList,
+  llvm::AttributeList Attrs;
+  CGM.ConstructAttributeList(CalleePtr->getName(), *CurFnInfo, MD, Attrs,
                              CallingConv, /*AttrOnCallSite=*/true);
-  llvm::AttributeList Attrs =
-      llvm::AttributeList::get(getLLVMContext(), AttributeList);
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 

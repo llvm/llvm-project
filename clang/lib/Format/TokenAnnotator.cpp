@@ -796,10 +796,11 @@ private:
     while (CurrentToken) {
       FormatToken *Tok = CurrentToken;
       next();
-      if (Tok->isOneOf(Keywords.kw___has_include,
-                       Keywords.kw___has_include_next)) {
+      if (Tok->is(tok::l_paren))
+        parseParens();
+      else if (Tok->isOneOf(Keywords.kw___has_include,
+                       Keywords.kw___has_include_next))
         parseHasInclude();
-      }
     }
     return Type;
   }

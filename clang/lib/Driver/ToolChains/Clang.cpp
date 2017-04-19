@@ -2306,6 +2306,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstrict_return, options::OPT_fno_strict_return,
                     true))
     CmdArgs.push_back("-fno-strict-return");
+  if (Args.hasFlag(options::OPT_fallow_editor_placeholders,
+                   options::OPT_fno_allow_editor_placeholders, false))
+    CmdArgs.push_back("-fallow-editor-placeholders");
   if (Args.hasFlag(options::OPT_fstrict_vtable_pointers,
                    options::OPT_fno_strict_vtable_pointers,
                    false))

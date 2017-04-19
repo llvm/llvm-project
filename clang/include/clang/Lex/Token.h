@@ -84,6 +84,7 @@ public:
     StringifiedInMacro = 0x100, // This string or character literal is formed by
                                 // macro stringizing or charizing operator.
     CommaAfterElided = 0x200, // The comma following this token was elided (MS).
+    IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -298,6 +299,13 @@ public:
 
   /// Returns true if the comma after this token was elided.
   bool commaAfterElided() const { return getFlag(CommaAfterElided); }
+
+  /// Returns true if this token is an editor placeholder.
+  ///
+  /// Editor placeholders are produced by the code-completion engine and are
+  /// represented as characters between '<#' and '#>' in the source code. The
+  /// lexer uses identifier tokens to represent placeholders.
+  bool isEditorPlaceholder() const { return getFlag(IsEditorPlaceholder); }
 };
 
 /// \brief Information about the conditional stack (\#if directives)
