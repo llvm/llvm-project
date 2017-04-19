@@ -35,6 +35,7 @@
 #if SIGNAL_POLLING_UNSUPPORTED
 #ifdef LLVM_ON_WIN32
 typedef int sigset_t;
+typedef int siginfo_t;
 #endif
 
 int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
