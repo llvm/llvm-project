@@ -85,7 +85,7 @@ template <class _Tp> struct __tuple_like<const volatile _Tp> : public __tuple_li
 
 // tuple specializations
 
-#if !defined(_LIBCPP_HAS_NO_VARIADICS)
+#ifndef _LIBCPP_CXX03_LANG
 
 template <size_t...> struct __tuple_indices {};
 
@@ -189,7 +189,8 @@ template <size_t _Ip, class ..._Tp>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
 get(const tuple<_Tp...>&&) _NOEXCEPT;
-#endif
+
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 // pair specializations
 
@@ -205,7 +206,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&
 get(const pair<_T1, _T2>&) _NOEXCEPT;
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+#ifndef _LIBCPP_CXX03_LANG
 template <size_t _Ip, class _T1, class _T2>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
@@ -233,7 +234,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 const _Tp&
 get(const array<_Tp, _Size>&) _NOEXCEPT;
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+#ifndef _LIBCPP_CXX03_LANG
 template <size_t _Ip, class _Tp, size_t _Size>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp&&
@@ -245,8 +246,7 @@ const _Tp&&
 get(const array<_Tp, _Size>&&) _NOEXCEPT;
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_VARIADICS)
-
+#ifndef _LIBCPP_CXX03_LANG
 
 // __tuple_types
 
@@ -468,9 +468,6 @@ template <size_t _Ip, class ..._Tp>
 using tuple_element_t = typename tuple_element <_Ip, _Tp...>::type;
 #endif
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-#ifndef _LIBCPP_CXX03_LANG
 template <bool _IsTuple, class _SizeTrait, size_t _Expected>
 struct __tuple_like_with_size_imp : false_type {};
 
@@ -495,7 +492,7 @@ struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
     template <class ...>
     static constexpr bool __enable_assign() { return false; }
 };
-#endif
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 #if _LIBCPP_STD_VER > 14
 

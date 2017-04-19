@@ -16,41 +16,41 @@
 #include "../builtins/assembly.h"
 
 .macro SAVE_REGISTERS
-	subq $200, %rsp
-	movupd	%xmm0, 184(%rsp)
-	movupd	%xmm1, 168(%rsp)
-	movupd	%xmm2, 152(%rsp)
-	movupd	%xmm3, 136(%rsp)
-	movupd	%xmm4, 120(%rsp)
-	movupd	%xmm5, 104(%rsp)
-	movupd	%xmm6, 88(%rsp)
-	movupd	%xmm7, 72(%rsp)
-	movq	%rdi, 64(%rsp)
-	movq	%rax, 56(%rsp)
-	movq	%rdx, 48(%rsp)
-	movq	%rsi, 40(%rsp)
-	movq	%rcx, 32(%rsp)
-	movq	%r8, 24(%rsp)
-	movq	%r9, 16(%rsp)
+	subq $184, %rsp
+	movupd	%xmm0, 168(%rsp)
+	movupd	%xmm1, 152(%rsp)
+	movupd	%xmm2, 136(%rsp)
+	movupd	%xmm3, 120(%rsp)
+	movupd	%xmm4, 104(%rsp)
+	movupd	%xmm5, 88(%rsp)
+	movupd	%xmm6, 72(%rsp)
+	movupd	%xmm7, 56(%rsp)
+	movq	%rdi, 48(%rsp)
+	movq	%rax, 40(%rsp)
+	movq	%rdx, 32(%rsp)
+	movq	%rsi, 24(%rsp)
+	movq	%rcx, 16(%rsp)
+	movq	%r8, 8(%rsp)
+	movq	%r9, 0(%rsp)
 .endm
 
 .macro RESTORE_REGISTERS
-	movupd	184(%rsp), %xmm0
-	movupd	168(%rsp), %xmm1
-	movupd	152(%rsp), %xmm2
-	movupd	136(%rsp), %xmm3
-	movupd	120(%rsp), %xmm4
-	movupd	104(%rsp), %xmm5
-	movupd	88(%rsp) , %xmm6
-	movupd	72(%rsp) , %xmm7
-	movq	64(%rsp), %rdi
-	movq	56(%rsp), %rax
-	movq	48(%rsp), %rdx
-	movq	40(%rsp), %rsi
-	movq	32(%rsp), %rcx
-	movq	24(%rsp), %r8
-	movq	16(%rsp), %r9
-	addq	$200, %rsp
+	movupd	168(%rsp), %xmm0
+	movupd	152(%rsp), %xmm1
+	movupd	136(%rsp), %xmm2
+	movupd	120(%rsp), %xmm3
+	movupd	104(%rsp), %xmm4
+	movupd	88(%rsp), %xmm5
+	movupd	72(%rsp) , %xmm6
+	movupd	56(%rsp) , %xmm7
+	movq	48(%rsp), %rdi
+	movq	40(%rsp), %rax
+	movq	32(%rsp), %rdx
+	movq	24(%rsp), %rsi
+	movq	16(%rsp), %rcx
+	movq	8(%rsp), %r8
+	movq	0(%rsp), %r9
+	addq	$184, %rsp
 .endm
 
 	.text
@@ -67,6 +67,7 @@ __xray_FunctionEntry:
 	pushq %rbp
 	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
+	.cfi_def_cfa_offset 200
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
@@ -98,12 +99,12 @@ __xray_FunctionExit:
 	// returning.
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
-	subq	$56, %rsp
-	.cfi_def_cfa_offset 32
-	movupd	%xmm0, 40(%rsp)
-	movupd	%xmm1, 24(%rsp)
-	movq	%rax, 16(%rsp)
-	movq	%rdx, 8(%rsp)
+	subq	$48, %rsp
+	.cfi_def_cfa_offset 64
+	movupd	%xmm0, 32(%rsp)
+	movupd	%xmm1, 16(%rsp)
+	movq	%rax, 8(%rsp)
+	movq	%rdx, 0(%rsp)
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
 	testq %rax,%rax
 	je	.Ltmp2
@@ -113,11 +114,11 @@ __xray_FunctionExit:
 	callq	*%rax
 .Ltmp2:
 	// Restore the important registers.
-	movupd	40(%rsp), %xmm0
-	movupd	24(%rsp), %xmm1
-	movq	16(%rsp), %rax
-	movq	8(%rsp), %rdx
-	addq	$56, %rsp
+	movupd	32(%rsp), %xmm0
+	movupd	16(%rsp), %xmm1
+	movq	8(%rsp), %rax
+	movq	0(%rsp), %rdx
+	addq	$48, %rsp
 	popq	%rbp
 	retq
 .Ltmp3:
@@ -138,6 +139,7 @@ __xray_FunctionTailExit:
 	pushq %rbp
 	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
+	.cfi_def_cfa_offset 200
 
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
 	testq %rax,%rax
@@ -165,6 +167,7 @@ __xray_ArgLoggerEntry:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
+	.cfi_def_cfa_offset 200
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
 	movq	_ZN6__xray13XRayArgLoggerE(%rip), %rax

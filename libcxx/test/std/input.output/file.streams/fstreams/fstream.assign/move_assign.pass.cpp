@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <fstream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     std::string temp = get_temp_file_name();
     {
         std::fstream fso(temp.c_str(), std::ios_base::in | std::ios_base::out
@@ -46,5 +47,4 @@ int main()
         assert(x == 3.25);
     }
     std::remove(temp.c_str());
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

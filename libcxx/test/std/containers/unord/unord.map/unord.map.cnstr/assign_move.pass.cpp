@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_map>
 
 // template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
@@ -29,7 +31,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef test_allocator<std::pair<const int, std::string> > A;
         typedef std::unordered_map<int, std::string,
@@ -167,7 +168,6 @@ int main()
         assert(c.max_load_factor() == 1);
         assert(c0.size() == 0);
     }
-#if TEST_STD_VER >= 11
     {
         typedef min_allocator<std::pair<const int, std::string> > A;
         typedef std::unordered_map<int, std::string,
@@ -214,18 +214,4 @@ int main()
         assert(c.max_load_factor() == 1);
         assert(c0.size() == 0);
     }
-#endif
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::unordered_map<int, int> s1 = {{1, 1}, {2, 2}, {3, 3}};
-        std::unordered_map<int, int>::iterator i = s1.begin();
-        std::pair<const int, int> k = *i;
-        std::unordered_map<int, int> s2;
-        s2 = std::move(s1);
-        assert(*i == k);
-        s2.erase(i);
-        assert(s2.size() == 2);
-    }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

@@ -7,23 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <mutex>
+// <initializer_list>
 
-// struct once_flag;
+// Test that the file can be included in C++03
 
-// constexpr once_flag() noexcept;
-
-#include <mutex>
-#include "test_macros.h"
+#include <initializer_list>
 
 int main()
 {
-    {
-    std::once_flag f;
-    }
-#if TEST_STD_VER >= 11
-    {
-    constexpr std::once_flag f;
-    }
-#endif
 }

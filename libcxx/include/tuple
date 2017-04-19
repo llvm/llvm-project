@@ -148,7 +148,7 @@ template <class... Types>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 
 // __tuple_leaf
@@ -1345,9 +1345,6 @@ template <class ..._Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc>
     : true_type {};
 
-#endif // _LIBCPP_HAS_NO_VARIADICS
-
-#ifndef _LIBCPP_CXX03_LANG
 template <class _T1, class _T2>
 template <class... _Args1, class... _Args2, size_t ..._I1, size_t ..._I2>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1358,7 +1355,6 @@ pair<_T1, _T2>::pair(piecewise_construct_t,
       second(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...)
 {
 }
-#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
@@ -1403,6 +1399,8 @@ _LIBCPP_NOEXCEPT_RETURN(
 #undef _LIBCPP_NOEXCEPT_RETURN
 
 #endif // _LIBCPP_STD_VER > 14
+
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
 

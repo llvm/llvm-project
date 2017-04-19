@@ -798,8 +798,7 @@ public:
         _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
         : __data_(__size, __a) {}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __bucket_list_deallocator(__bucket_list_deallocator&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -807,8 +806,7 @@ public:
     {
         __x.size() = 0;
     }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     size_type& size() _NOEXCEPT {return __data_.first();}
