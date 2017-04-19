@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <queue>
 
 // priority_queue(priority_queue&&)
@@ -14,8 +16,6 @@
 //                 is_nothrow_move_constructible<Compare>::value);
 
 // This tests a conforming extension
-
-// UNSUPPORTED: c++98, c++03
 
 #include <queue>
 #include <cassert>
