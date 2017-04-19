@@ -193,14 +193,10 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   }
 }
 
-bool DwarfExpression::addMachineLocExpression(const TargetRegisterInfo &TRI,
+bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
-                                              MachineLocation Loc,
+                                              unsigned MachineReg,
                                               unsigned FragmentOffsetInBits) {
-  if (Loc.isIndirect())
-    LocationKind = Memory;
-
-  unsigned MachineReg = Loc.getReg();
   auto Fragment = ExprCursor.getFragmentInfo();
   if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U))
     return false;
