@@ -71,42 +71,35 @@ void Sema::ActOnTranslationUnitScope(Scope *S) {
 }
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
-           TranslationUnitKind TUKind,
-           CodeCompleteConsumer *CodeCompleter)
-  : ExternalSource(nullptr),
-    isMultiplexExternalSource(false), FPFeatures(pp.getLangOpts()),
-    LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
-    Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-    CollectStats(false), CodeCompleter(CodeCompleter),
-    CurContext(nullptr), OriginalLexicalContext(nullptr),
-    MSStructPragmaOn(false),
-    MSPointerToMemberRepresentationMethod(
-        LangOpts.getMSPointerToMemberRepresentationMethod()),
-    VtorDispStack(MSVtorDispAttr::Mode(LangOpts.VtorDispMode)),
-    PackStack(0), DataSegStack(nullptr), BSSSegStack(nullptr),
-    ConstSegStack(nullptr), CodeSegStack(nullptr), CurInitSeg(nullptr),
-    VisContext(nullptr),
-    IsBuildingRecoveryCallExpr(false),
-    Cleanup{}, LateTemplateParser(nullptr),
-    LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
-    StdExperimentalNamespaceCache(nullptr), StdInitializerList(nullptr),
-    CXXTypeInfoDecl(nullptr), MSVCGuidDecl(nullptr),
-    NSNumberDecl(nullptr), NSValueDecl(nullptr),
-    NSStringDecl(nullptr), StringWithUTF8StringMethod(nullptr),
-    ValueWithBytesObjCTypeMethod(nullptr),
-    NSArrayDecl(nullptr), ArrayWithObjectsMethod(nullptr),
-    NSDictionaryDecl(nullptr), DictionaryWithObjectsMethod(nullptr),
-    GlobalNewDeleteDeclared(false),
-    TUKind(TUKind),
-    NumSFINAEErrors(0),
-    CachedFakeTopLevelModule(nullptr),
-    AccessCheckingSFINAE(false), InNonInstantiationSFINAEContext(false),
-    NonInstantiationEntries(0), ArgumentPackSubstitutionIndex(-1),
-    CurrentInstantiationScope(nullptr), DisableTypoCorrection(false),
-    TyposCorrected(0), AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
-    VarDataSharingAttributesStack(nullptr), CurScope(nullptr),
-    Ident_super(nullptr), Ident___float128(nullptr)
-{
+           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
+    : ExternalSource(nullptr), isMultiplexExternalSource(false),
+      FPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
+      Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
+      SourceMgr(PP.getSourceManager()), CollectStats(false),
+      CodeCompleter(CodeCompleter), CurContext(nullptr),
+      OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
+      MSPointerToMemberRepresentationMethod(
+          LangOpts.getMSPointerToMemberRepresentationMethod()),
+      VtorDispStack(MSVtorDispAttr::Mode(LangOpts.VtorDispMode)), PackStack(0),
+      DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
+      CodeSegStack(nullptr), CurInitSeg(nullptr), VisContext(nullptr),
+      PragmaAttributeCurrentTargetDecl(nullptr),
+      IsBuildingRecoveryCallExpr(false), Cleanup{}, LateTemplateParser(nullptr),
+      LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
+      StdExperimentalNamespaceCache(nullptr), StdInitializerList(nullptr),
+      CXXTypeInfoDecl(nullptr), MSVCGuidDecl(nullptr), NSNumberDecl(nullptr),
+      NSValueDecl(nullptr), NSStringDecl(nullptr),
+      StringWithUTF8StringMethod(nullptr),
+      ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
+      ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
+      DictionaryWithObjectsMethod(nullptr), GlobalNewDeleteDeclared(false),
+      TUKind(TUKind), NumSFINAEErrors(0), CachedFakeTopLevelModule(nullptr),
+      AccessCheckingSFINAE(false), InNonInstantiationSFINAEContext(false),
+      NonInstantiationEntries(0), ArgumentPackSubstitutionIndex(-1),
+      CurrentInstantiationScope(nullptr), DisableTypoCorrection(false),
+      TyposCorrected(0), AnalysisWarnings(*this),
+      ThreadSafetyDeclCache(nullptr), VarDataSharingAttributesStack(nullptr),
+      CurScope(nullptr), Ident_super(nullptr), Ident___float128(nullptr) {
   TUScope = nullptr;
 
   LoadedExternalKnownNamespaces = false;
@@ -730,6 +723,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
     CheckDelayedMemberExceptionSpecs();
   }
+
+  DiagnoseUnterminatedPragmaAttribute();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.

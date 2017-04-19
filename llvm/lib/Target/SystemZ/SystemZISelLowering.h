@@ -454,7 +454,7 @@ public:
                               MachineBasicBlock *BB) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
-  bool mayBeEmittedAsTailCall(CallInst *CI) const override;
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,

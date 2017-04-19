@@ -40,12 +40,12 @@ define i16 @varargs2(i8* nocapture %x, ...) {
 declare void @var1223(i16, ...)
 define void @varargcall() {
 ; CHECK-LABEL: varargcall:
-; CHECK: ldi [[REG1:r[0-9]+]], 191
-; CHECK: ldi [[REG2:r[0-9]+]], 223
-; CHECK: push [[REG2]]
-; CHECK: push [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 189
 ; CHECK: ldi [[REG2:r[0-9]+]], 205
+; CHECK: push [[REG2]]
+; CHECK: push [[REG1]]
+; CHECK: ldi [[REG1:r[0-9]+]], 191
+; CHECK: ldi [[REG2:r[0-9]+]], 223
 ; CHECK: push [[REG2]]
 ; CHECK: push [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 205

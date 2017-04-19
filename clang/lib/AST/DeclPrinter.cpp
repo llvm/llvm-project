@@ -478,6 +478,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   if (D->isFunctionTemplateSpecialization())
     Out << "template<> ";
+  else if (!D->getDescribedFunctionTemplate()) {
+    for (unsigned I = 0, NumTemplateParams = D->getNumTemplateParameterLists();
+         I < NumTemplateParams; ++I)
+      printTemplateParameters(D->getTemplateParameterList(I));
+  }
 
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
@@ -1055,6 +1060,12 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 
 void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   prettyPrintPragmas(D->getTemplatedDecl());
+  // Print any leading template parameter lists.
+  if (const FunctionDecl *FD = D->getTemplatedDecl()) {
+    for (unsigned I = 0, NumTemplateParams = FD->getNumTemplateParameterLists();
+         I < NumTemplateParams; ++I)
+      printTemplateParameters(FD->getTemplateParameterList(I));
+  }
   VisitRedeclarableTemplateDecl(D);
 
   // Never print "instantiations" for deduction guides (they don't really

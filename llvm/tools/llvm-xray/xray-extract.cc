@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "func-id-helper.h"
 #include "xray-registry.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
@@ -45,10 +46,18 @@ static cl::opt<std::string>
 static cl::alias ExtractOutput2("o", cl::aliasopt(ExtractOutput),
                                 cl::desc("Alias for -output"),
                                 cl::sub(Extract));
+static cl::opt<bool> ExtractSymbolize("symbolize", cl::value_desc("symbolize"),
+                                      cl::init(false),
+                                      cl::desc("symbolize functions"),
+                                      cl::sub(Extract));
+static cl::alias ExtractSymbolize2("s", cl::aliasopt(ExtractSymbolize),
+                                   cl::desc("alias for -symbolize"),
+                                   cl::sub(Extract));
 
 namespace {
 
-void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS) {
+void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
+                  FuncIdConversionHelper &FH) {
   // First we translate the sleds into the YAMLXRaySledEntry objects in a deque.
   std::vector<YAMLXRaySledEntry> YAMLSleds;
   auto Sleds = Map.sleds();
@@ -58,7 +67,8 @@ void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS) {
     if (!FuncId)
       return;
     YAMLSleds.push_back({*FuncId, Sled.Address, Sled.Function, Sled.Kind,
-                         Sled.AlwaysInstrument});
+                         Sled.AlwaysInstrument,
+                         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : ""});
   }
   Output Out(OS, nullptr, 0);
   Out << YAMLSleds;
@@ -80,6 +90,13 @@ static CommandRegistration Unused(&Extract, []() -> Error {
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + ExtractOutput + "' for writing.", EC);
-  exportAsYAML(*InstrumentationMapOrError, OS);
+  const auto &FunctionAddresses =
+      InstrumentationMapOrError->getFunctionAddresses();
+  symbolize::LLVMSymbolizer::Options Opts(
+      symbolize::FunctionNameKind::LinkageName, true, true, false, "");
+  symbolize::LLVMSymbolizer Symbolizer(Opts);
+  llvm::xray::FuncIdConversionHelper FuncIdHelper(ExtractInput, Symbolizer,
+                                                  FunctionAddresses);
+  exportAsYAML(*InstrumentationMapOrError, OS, FuncIdHelper);
   return Error::success();
 });

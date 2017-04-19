@@ -628,6 +628,9 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                                    CXXScopeSpec *SS,
                                    ParsedType &SuggestedType,
                                    bool AllowClassTemplates) {
+  // Don't report typename errors for editor placeholders.
+  if (II->isEditorPlaceholder())
+    return;
   // We don't have anything to suggest (yet).
   SuggestedType = nullptr;
 
@@ -13674,6 +13677,7 @@ CreateNewDecl:
 
   if (Attr)
     ProcessDeclAttributeList(S, New, Attr);
+  AddPragmaAttributes(S, New);
 
   // If this has an identifier, add it to the scope stack.
   if (TUK == TUK_Friend) {
@@ -15185,6 +15189,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
 
   // Process attributes.
   if (Attr) ProcessDeclAttributeList(S, New, Attr);
+  AddPragmaAttributes(S, New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());

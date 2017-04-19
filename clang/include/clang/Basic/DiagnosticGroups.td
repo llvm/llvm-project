@@ -461,7 +461,9 @@ def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 def UnknownPragmas : DiagGroup<"unknown-pragmas">;
 def IgnoredPragmas : DiagGroup<"ignored-pragmas", [IgnoredPragmaIntrinsic]>;
-def Pragmas : DiagGroup<"pragmas", [UnknownPragmas, IgnoredPragmas]>;
+def PragmaClangAttribute : DiagGroup<"pragma-clang-attribute">;
+def Pragmas : DiagGroup<"pragmas", [UnknownPragmas, IgnoredPragmas,
+                                    PragmaClangAttribute]>;
 def UnknownWarningOption : DiagGroup<"unknown-warning-option">;
 def NSobjectAttribute : DiagGroup<"NSObject-attribute">;
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;

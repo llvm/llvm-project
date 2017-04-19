@@ -272,14 +272,14 @@ swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::v
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 typename conditional
 <
     !is_nothrow_move_constructible<_Tp>::value && is_copy_constructible<_Tp>::value,
     const _Tp&,
     _Tp&&
 >::type
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else  // _LIBCPP_CXX03_LANG
 const _Tp&
 #endif
 move_if_noexcept(_Tp& __x) _NOEXCEPT
@@ -293,7 +293,7 @@ template <class _Tp>                        void as_const(const _Tp&&) = delete;
 #endif
 
 struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { };
-#if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_UTILITY)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_UTILITY)
 extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_t();
 #else
 constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
@@ -608,8 +608,7 @@ swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
     __x.swap(__y);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp>
 struct __make_pair_return_impl
@@ -638,7 +637,7 @@ make_pair(_T1&& __t1, _T2&& __t2)
                (_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2));
 }
 
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -648,7 +647,7 @@ make_pair(_T1 __x, _T2 __y)
     return pair<_T1, _T2>(__x, __y);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _T1, class _T2>
   class _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
@@ -685,8 +684,7 @@ struct __get_pair<0>
     const _T1&
     get(const pair<_T1, _T2>& __p) _NOEXCEPT {return __p.first;}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
     template <class _T1, class _T2>
     static
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -698,8 +696,7 @@ struct __get_pair<0>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const _T1&&
     get(const pair<_T1, _T2>&& __p) _NOEXCEPT {return _VSTD::forward<const _T1>(__p.first);}
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 };
 
 template <>
@@ -717,8 +714,7 @@ struct __get_pair<1>
     const _T2&
     get(const pair<_T1, _T2>& __p) _NOEXCEPT {return __p.second;}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
     template <class _T1, class _T2>
     static
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -730,8 +726,7 @@ struct __get_pair<1>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const _T2&&
     get(const pair<_T1, _T2>&& __p) _NOEXCEPT {return _VSTD::forward<const _T2>(__p.second);}
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 };
 
 template <size_t _Ip, class _T1, class _T2>
@@ -750,8 +745,7 @@ get(const pair<_T1, _T2>& __p) _NOEXCEPT
     return __get_pair<_Ip>::get(__p);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
 template <size_t _Ip, class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
@@ -767,8 +761,7 @@ get(const pair<_T1, _T2>&& __p) _NOEXCEPT
 {
     return __get_pair<_Ip>::get(_VSTD::move(__p));
 }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 11
 template <class _T1, class _T2>

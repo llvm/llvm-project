@@ -143,10 +143,9 @@ public:
 
   void writeNodes() {
     // Loop over the graph, printing it out...
-    for (node_iterator I = GTraits::nodes_begin(G), E = GTraits::nodes_end(G);
-         I != E; ++I)
-      if (!isNodeHidden(*I))
-        writeNode(*I);
+    for (const auto Node : nodes<GraphType>(G))
+      if (!isNodeHidden(Node))
+        writeNode(Node);
   }
 
   bool isNodeHidden(NodeRef Node) {

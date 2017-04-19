@@ -2,7 +2,7 @@
 // object is indirectly leaked. Only external pointers count.
 // RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"use_stacks=0" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE:"use_stacks=0" not %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>

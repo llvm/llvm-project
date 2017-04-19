@@ -99,7 +99,8 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
 
 void InefficientVectorOperationCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
+  auto* Context = Result.Context;
+  if (Context->getDiagnostics().hasUncompilableErrorOccurred())
     return;
 
   const SourceManager &SM = *Result.SourceManager;
@@ -113,7 +114,7 @@ void InefficientVectorOperationCheck::check(
 
   llvm::SmallPtrSet<const DeclRefExpr *, 16> AllVectorVarRefs =
       utils::decl_ref_expr::allDeclRefExprs(*VectorVarDecl, *LoopParent,
-                                            *Result.Context);
+                                            *Context);
   for (const auto *Ref : AllVectorVarRefs) {
     // Skip cases where there are usages (defined as DeclRefExpr that refers to
     // "v") of vector variable `v` before the for loop. We consider these usages
@@ -128,19 +129,19 @@ void InefficientVectorOperationCheck::check(
     }
   }
 
-  llvm::StringRef LoopEndSource = clang::Lexer::getSourceText(
+  llvm::StringRef LoopEndSource = Lexer::getSourceText(
       CharSourceRange::getTokenRange(LoopEndExpr->getSourceRange()), SM,
-      clang::LangOptions());
-  llvm::StringRef VectorVarName = clang::Lexer::getSourceText(
+      Context->getLangOpts());
+  llvm::StringRef VectorVarName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           PushBackCall->getImplicitObjectArgument()->getSourceRange()),
-      SM, clang::LangOptions());
+      SM, Context->getLangOpts());
   std::string ReserveStmt =
       (VectorVarName + ".reserve(" + LoopEndSource + ");\n").str();
 
   diag(PushBackCall->getLocStart(),
        "'push_back' is called inside a loop; "
-       "consider pre-allocating the vector capacity before the loop.")
+       "consider pre-allocating the vector capacity before the loop")
       << FixItHint::CreateInsertion(ForLoop->getLocStart(), ReserveStmt);
 }
 

@@ -195,7 +195,7 @@ namespace HexagonISD {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
-    bool mayBeEmittedAsTailCall(CallInst *CI) const override;
+    bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

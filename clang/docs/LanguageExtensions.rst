@@ -2346,3 +2346,178 @@ statements in C)
 The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
 enabled for the translation unit with the ``-ffp-contract=fast`` flag.
+
+Specifying an attribute for multiple declarations (#pragma clang attribute)
+===========================================================================
+
+The ``#pragma clang attribute`` directive can be used to apply an attribute to
+multiple declarations. The ``#pragma clang attribute push`` variation of the
+directive pushes a new attribute to the attribute stack. The declarations that
+follow the pragma receive the attributes that are on the attribute stack, until
+the stack is cleared using a ``#pragma clang attribute pop`` directive. Multiple
+push directives can be nested inside each other.
+
+The attributes that are used in the ``#pragma clang attribute`` directives
+can be written using the GNU-style syntax:
+
+.. code-block:: c++
+
+  #pragma clang attribute push(__attribute__((annotate("custom"))), apply_to = function)
+
+  void function(); // The function now has the annotate("custom") attribute
+
+  #pragma clang attribute pop
+
+The attributes can also be written using the C++11 style syntax:
+
+.. code-block:: c++
+
+  #pragma clang attribute push([[noreturn]], apply_to = function)
+
+  void function(); // The function now has the [[noreturn]] attribute
+
+  #pragma clang attribute pop
+
+The ``__declspec`` style syntax is also supported:
+
+.. code-block:: c++
+
+  #pragma clang attribute push(__declspec(dllexport), apply_to = function)
+
+  void function(); // The function now has the __declspec(dllexport) attribute
+
+  #pragma clang attribute pop
+
+A single push directive accepts only one attribute regardless of the syntax
+used.
+
+Subject Match Rules
+-------------------
+
+The set of declarations that receive a single attribute from the attribute stack
+depends on the subject match rules that were specified in the pragma. Subject
+match rules are specified after the attribute. The compiler expects an
+identifier that corresponds to the subject set specifier. The ``apply_to``
+specifier is currently the only supported subject set specifier. It allows you
+to specify match rules that form a subset of the attribute's allowed subject
+set, i.e. the compiler doesn't require all of the attribute's subjects. For
+example, an attribute like ``[[nodiscard]]`` whose subject set includes
+``enum``, ``record`` and ``hasType(functionType)``, requires the presence of at
+least one of these rules after ``apply_to``:
+
+.. code-block:: c++
+
+  #pragma clang attribute push([[nodiscard]], apply_to = enum)
+
+  enum Enum1 { A1, B1 }; // The enum will receive [[nodiscard]]
+
+  struct Record1 { }; // The struct will *not* receive [[nodiscard]]
+
+  #pragma clang attribute pop
+
+  #pragma clang attribute push([[nodiscard]], apply_to = any(record, enum))
+
+  enum Enum2 { A2, B2 }; // The enum will receive [[nodiscard]]
+
+  struct Record2 { }; // The struct *will* receive [[nodiscard]]
+
+  #pragma clang attribute pop
+
+  // This is an error, since [[nodiscard]] can't be applied to namespaces:
+  #pragma clang attribute push([[nodiscard]], apply_to = any(record, namespace))
+
+  #pragma clang attribute pop
+
+Multiple match rules can be specified using the ``any`` match rule, as shown
+in the example above. The ``any`` rule applies attributes to all declarations
+that are matched by at least one of the rules in the ``any``. It doesn't nest
+and can't be used inside the other match rules. Redundant match rules or rules
+that conflict with one another should not be used inside of ``any``.
+
+Clang supports the following match rules:
+
+- ``function``: Can be used to apply attributes to functions. This includes C++
+  member functions, static functions, operators, and constructors/destructors.
+
+- ``function(is_member)``: Can be used to apply attributes to C++ member
+  functions. This includes members like static functions, operators, and
+  constructors/destructors.
+
+- ``hasType(functionType)``: Can be used to apply attributes to functions, C++
+  member functions, and variables/fields whose type is a function pointer. It
+  does not apply attributes to Objective-C methods or blocks.
+
+- ``type_alias``: Can be used to apply attributes to ``typedef`` declarations
+  and C++11 type aliases.
+
+- ``record``: Can be used to apply attributes to ``struct``, ``class``, and
+  ``union`` declarations.
+
+- ``record(unless(is_union))``: Can be used to apply attributes only to
+  ``struct`` and ``class`` declarations.
+
+- ``enum``: Can be be used to apply attributes to enumeration declarations.
+
+- ``enum_constant``: Can be used to apply attributes to enumerators.
+
+- ``variable``: Can be used to apply attributes to variables, including
+  local variables, parameters, global variables, and static member variables.
+  It does not apply attributes to instance member variables or Objective-C
+  ivars.
+
+- ``variable(is_thread_local)``: Can be used to apply attributes to thread-local
+  variables only.
+
+- ``variable(is_global)``: Can be used to apply attributes to global variables
+  only.
+
+- ``variable(is_parameter)``: Can be used to apply attributes to parameters
+  only.
+
+- ``variable(unless(is_parameter))``: Can be used to apply attributes to all
+  the variables that are not parameters.
+
+- ``field``: Can be used to apply attributes to non-static member variables
+  in a record. This includes Objective-C ivars.
+
+- ``namespace``: Can be used to apply attributes to ``namespace`` declarations.
+
+- ``objc_interface``: Can be used to apply attributes to ``@interface``
+  declarations.
+
+- ``objc_protocol``: Can be used to apply attributes to ``@protocol``
+  declarations.
+
+- ``objc_category``: Can be used to apply attributes to category declarations,
+  including class extensions.
+
+- ``objc_method``: Can be used to apply attributes to Objective-C methods,
+  including instance and class methods. Implicit methods like implicit property
+  getters and setters do not receive the attribute.
+
+- ``objc_method(is_instance)``: Can be used to apply attributes to Objective-C
+  instance methods.
+
+- ``objc_property``: Can be used to apply attributes to ``@property``
+  declarations.
+
+- ``block``: Can be used to apply attributes to block declarations. This does
+  not include variables/fields of block pointer type.
+
+The use of ``unless`` in match rules is currently restricted to a strict set of
+sub-rules that are used by the supported attributes. That means that even though
+``variable(unless(is_parameter))`` is a valid match rule,
+``variable(unless(is_thread_local))`` is not.
+
+Supported Attributes
+--------------------
+
+Not all attributes can be used with the ``#pragma clang attribute`` directive.
+Notably, statement attributes like ``[[fallthrough]]`` or type attributes
+like ``address_space`` aren't supported by this directive. You can determine
+whether or not an attribute is supported by the pragma by referring to the
+:doc:`individual documentation for that attribute <AttributeReference>`.
+
+The attributes are applied to all matching declarations individually, even when
+the attribute is semantically incorrect. The attributes that aren't applied to
+any declaration are not verified semantically.

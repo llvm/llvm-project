@@ -285,28 +285,30 @@ void toolchains::MinGW::findGccLibDir() {
   }
 }
 
+llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
+  llvm::SmallVector<llvm::SmallString<32>, 2> Gccs;
+  Gccs.emplace_back(getTriple().getArchName());
+  Gccs[0] += "-w64-mingw32-gcc";
+  Gccs.emplace_back("mingw32-gcc");
+  // Please do not add "gcc" here
+  for (StringRef CandidateGcc : Gccs)
+    if (llvm::ErrorOr<std::string> GPPName = llvm::sys::findProgramByName(CandidateGcc))
+      return GPPName;
+  return make_error_code(std::errc::no_such_file_or_directory);
+}
+
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
-// In Windows there aren't any standard install locations, we search
-// for gcc on the PATH. In Linux the base is always /usr.
-#ifdef LLVM_ON_WIN32
   if (getDriver().SysRoot.size())
     Base = getDriver().SysRoot;
-  else if (llvm::ErrorOr<std::string> GPPName =
-               llvm::sys::findProgramByName("gcc"))
+  else if (llvm::ErrorOr<std::string> GPPName = findGcc())
     Base = llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get()));
   else
     Base = llvm::sys::path::parent_path(getDriver().getInstalledDir());
-#else
-  if (getDriver().SysRoot.size())
-    Base = getDriver().SysRoot;
-  else
-    Base = "/usr";
-#endif
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir();

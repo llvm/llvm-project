@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_map>
 
 // template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
@@ -29,7 +31,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef std::unordered_map<int, std::string,
                                    test_hash<std::hash<int> >,
@@ -61,7 +62,6 @@ int main()
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::unordered_map<int, std::string,
                                    test_hash<std::hash<int> >,
@@ -158,7 +158,5 @@ int main()
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
-#endif
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif // TEST_STD_VER > 11
 }

@@ -568,11 +568,10 @@ static std::vector<StringRef> getLines(MemoryBufferRef MB) {
 static bool getCompressDebugSections(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_compress_debug_sections)) {
     StringRef S = Arg->getValue();
-    if (S == "none")
-      return false;
     if (S == "zlib")
       return zlib::isAvailable();
-    error("unknown --compress-debug-sections value: " + S);
+    if (S != "none")
+      error("unknown --compress-debug-sections value: " + S);
   }
   return false;
 }

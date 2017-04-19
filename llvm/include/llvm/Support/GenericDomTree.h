@@ -276,32 +276,25 @@ protected:
 
   // NewBB is split and now it has one successor. Update dominator tree to
   // reflect this change.
-  template <class N, class GraphT>
-  void Split(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-             typename GraphT::NodeRef NewBB) {
+  template <class N>
+  void Split(typename GraphTraits<N>::NodeRef NewBB) {
+    using GraphT = GraphTraits<N>;
+    using NodeRef = typename GraphT::NodeRef;
     assert(std::distance(GraphT::child_begin(NewBB),
                          GraphT::child_end(NewBB)) == 1 &&
            "NewBB should have a single successor!");
-    typename GraphT::NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
+    NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    std::vector<typename GraphT::NodeRef> PredBlocks;
-    typedef GraphTraits<Inverse<N>> InvTraits;
-    for (typename InvTraits::ChildIteratorType
-             PI = InvTraits::child_begin(NewBB),
-             PE = InvTraits::child_end(NewBB);
-         PI != PE; ++PI)
-      PredBlocks.push_back(*PI);
+    std::vector<NodeRef> PredBlocks;
+    for (const auto Pred : children<Inverse<N>>(NewBB))
+      PredBlocks.push_back(Pred);
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
     bool NewBBDominatesNewBBSucc = true;
-    for (typename InvTraits::ChildIteratorType
-             PI = InvTraits::child_begin(NewBBSucc),
-             E = InvTraits::child_end(NewBBSucc);
-         PI != E; ++PI) {
-      typename InvTraits::NodeRef ND = *PI;
-      if (ND != NewBB && !DT.dominates(NewBBSucc, ND) &&
-          DT.isReachableFromEntry(ND)) {
+    for (const auto Pred : children<Inverse<N>>(NewBBSucc)) {
+      if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
+          isReachableFromEntry(Pred)) {
         NewBBDominatesNewBBSucc = false;
         break;
       }
@@ -312,7 +305,7 @@ protected:
     NodeT *NewBBIDom = nullptr;
     unsigned i = 0;
     for (i = 0; i < PredBlocks.size(); ++i)
-      if (DT.isReachableFromEntry(PredBlocks[i])) {
+      if (isReachableFromEntry(PredBlocks[i])) {
         NewBBIDom = PredBlocks[i];
         break;
       }
@@ -324,18 +317,18 @@ protected:
       return;
 
     for (i = i + 1; i < PredBlocks.size(); ++i) {
-      if (DT.isReachableFromEntry(PredBlocks[i]))
-        NewBBIDom = DT.findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
+      if (isReachableFromEntry(PredBlocks[i]))
+        NewBBIDom = findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
     }
 
     // Create the new dominator tree node... and set the idom of NewBB.
-    DomTreeNodeBase<NodeT> *NewBBNode = DT.addNewBlock(NewBB, NewBBIDom);
+    DomTreeNodeBase<NodeT> *NewBBNode = addNewBlock(NewBB, NewBBIDom);
 
     // If NewBB strictly dominates other blocks, then it is now the immediate
     // dominator of NewBBSucc.  Update the dominator tree as appropriate.
     if (NewBBDominatesNewBBSucc) {
-      DomTreeNodeBase<NodeT> *NewBBSuccNode = DT.getNode(NewBBSucc);
-      DT.changeImmediateDominator(NewBBSuccNode, NewBBNode);
+      DomTreeNodeBase<NodeT> *NewBBSuccNode = getNode(NewBBSucc);
+      changeImmediateDominator(NewBBSuccNode, NewBBNode);
     }
   }
 
@@ -379,7 +372,7 @@ public:
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
       return true;
 
-    for (const auto &DomTreeNode : this->DomTreeNodes) {
+    for (const auto &DomTreeNode : DomTreeNodes) {
       NodeT *BB = DomTreeNode.first;
       typename DomTreeNodeMapType::const_iterator OI =
           OtherDomTreeNodes.find(BB);
@@ -663,10 +656,9 @@ public:
   /// tree to reflect this change.
   void splitBlock(NodeT *NewBB) {
     if (this->IsPostDominators)
-      this->Split<Inverse<NodeT *>, GraphTraits<Inverse<NodeT *>>>(*this,
-                                                                   NewBB);
+      Split<Inverse<NodeT *>>(NewBB);
     else
-      this->Split<NodeT *, GraphTraits<NodeT *>>(*this, NewBB);
+      Split<NodeT *>(NewBB);
   }
 
   /// print - Convert to human readable form
@@ -677,7 +669,7 @@ public:
       o << "Inorder PostDominator Tree: ";
     else
       o << "Inorder Dominator Tree: ";
-    if (!this->DFSInfoValid)
+    if (!DFSInfoValid)
       o << "DFSNumbers invalid: " << SlowQueries << " slow queries.";
     o << "\n";
 
@@ -712,12 +704,12 @@ protected:
     // immediate dominator.
     NodeT *IDom = getIDom(BB);
 
-    assert(IDom || this->DomTreeNodes[nullptr]);
+    assert(IDom || DomTreeNodes[nullptr]);
     DomTreeNodeBase<NodeT> *IDomNode = getNodeForBlock(IDom);
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return (this->DomTreeNodes[BB] = IDomNode->addChild(
+    return (DomTreeNodes[BB] = IDomNode->addChild(
                 llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode))).get();
   }
 
@@ -780,7 +772,7 @@ public:
   template <class FT> void recalculate(FT &F) {
     typedef GraphTraits<FT *> TraitsTy;
     reset();
-    this->Vertex.push_back(nullptr);
+    Vertex.push_back(nullptr);
 
     if (!this->IsPostDominators) {
       // Initialize root

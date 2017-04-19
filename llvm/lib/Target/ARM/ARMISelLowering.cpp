@@ -2633,7 +2633,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   return true;
 }
 
-bool ARMTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+bool ARMTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!Subtarget->supportsTailCall())
     return false;
 

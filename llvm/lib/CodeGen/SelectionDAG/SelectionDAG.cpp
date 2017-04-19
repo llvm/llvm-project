@@ -2330,8 +2330,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                        Depth + 1);
-      KnownZero = KnownZero.lshr(*ShAmt);
-      KnownOne  = KnownOne.lshr(*ShAmt);
+      KnownZero.lshrInPlace(*ShAmt);
+      KnownOne.lshrInPlace(*ShAmt);
       // High bits are known zero.
       KnownZero.setHighBits(ShAmt->getZExtValue());
     }
@@ -2340,12 +2340,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                        Depth + 1);
-      KnownZero = KnownZero.lshr(*ShAmt);
-      KnownOne  = KnownOne.lshr(*ShAmt);
+      KnownZero.lshrInPlace(*ShAmt);
+      KnownOne.lshrInPlace(*ShAmt);
       // If we know the value of the sign bit, then we know it is copied across
       // the high bits by the shift amount.
       APInt SignBit = APInt::getSignBit(BitWidth);
-      SignBit = SignBit.lshr(*ShAmt);  // Adjust to where it is now in the mask.
+      SignBit.lshrInPlace(*ShAmt);  // Adjust to where it is now in the mask.
       if (KnownZero.intersects(SignBit)) {
         KnownZero.setHighBits(ShAmt->getZExtValue());// New bits are known zero.
       } else if (KnownOne.intersects(SignBit)) {

@@ -59,6 +59,7 @@ struct YAMLXRaySledEntry {
   yaml::Hex64 Function;
   SledEntry::FunctionKinds Kind;
   bool AlwaysInstrument;
+  std::string FunctionName;
 };
 
 /// The InstrumentationMap represents the computed function id's and indicated
@@ -115,6 +116,7 @@ template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
     IO.mapRequired("function", Entry.Function);
     IO.mapRequired("kind", Entry.Kind);
     IO.mapRequired("always-instrument", Entry.AlwaysInstrument);
+    IO.mapOptional("function-name", Entry.FunctionName);
   }
 
   static constexpr bool flow = true;

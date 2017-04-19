@@ -1,5 +1,4 @@
-# REQUIRES: x86
-# REQUIRES: zlib
+# REQUIRES: x86, zlib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --compress-debug-sections=zlib

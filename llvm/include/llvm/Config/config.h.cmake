@@ -386,6 +386,9 @@
 /* LLVM version information */
 #cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
 
+/* Whether tools show host and target info when invoked with --version */
+#cmakedefine01 LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
+
 /* Major version of the LLVM API */
 #define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
 

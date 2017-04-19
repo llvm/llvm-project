@@ -428,7 +428,7 @@ private:
   SDValue SoftenFloatRes_BITCAST(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_BUILD_PAIR(SDNode *N);
   SDValue SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo);
-  SDValue SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N);
+  SDValue SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_FABS(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);

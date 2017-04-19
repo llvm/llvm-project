@@ -197,8 +197,7 @@ public:
         continue;
 
       // Only progagate the value if they are of the same type.
-      if (Store->getPointerOperand()->getType() !=
-          Load->getPointerOperand()->getType())
+      if (Store->getPointerOperandType() != Load->getPointerOperandType())
         continue;
 
       Candidates.emplace_front(Load, Store);

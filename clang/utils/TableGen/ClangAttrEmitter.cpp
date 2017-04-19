@@ -12,13 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -1522,6 +1524,334 @@ static void emitClangAttrLateParsedList(RecordKeeper &Records, raw_ostream &OS) 
   OS << "#endif // CLANG_ATTR_LATE_PARSED_LIST\n\n";
 }
 
+static bool hasGNUorCXX11Spelling(const Record &Attribute) {
+  std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
+  for (const auto &I : Spellings) {
+    if (I.variety() == "GNU" || I.variety() == "CXX11")
+      return true;
+  }
+  return false;
+}
+
+namespace {
+
+struct AttributeSubjectMatchRule {
+  const Record *MetaSubject;
+  const Record *Constraint;
+
+  AttributeSubjectMatchRule(const Record *MetaSubject, const Record *Constraint)
+      : MetaSubject(MetaSubject), Constraint(Constraint) {
+    assert(MetaSubject && "Missing subject");
+  }
+
+  bool isSubRule() const { return Constraint != nullptr; }
+
+  std::vector<Record *> getSubjects() const {
+    return (Constraint ? Constraint : MetaSubject)
+        ->getValueAsListOfDefs("Subjects");
+  }
+
+  std::vector<Record *> getLangOpts() const {
+    if (Constraint) {
+      // Lookup the options in the sub-rule first, in case the sub-rule
+      // overrides the rules options.
+      std::vector<Record *> Opts = Constraint->getValueAsListOfDefs("LangOpts");
+      if (!Opts.empty())
+        return Opts;
+    }
+    return MetaSubject->getValueAsListOfDefs("LangOpts");
+  }
+
+  // Abstract rules are used only for sub-rules
+  bool isAbstractRule() const { return getSubjects().empty(); }
+
+  std::string getName() const {
+    return (Constraint ? Constraint : MetaSubject)->getValueAsString("Name");
+  }
+
+  bool isNegatedSubRule() const {
+    assert(isSubRule() && "Not a sub-rule");
+    return Constraint->getValueAsBit("Negated");
+  }
+
+  std::string getSpelling() const {
+    std::string Result = MetaSubject->getValueAsString("Name");
+    if (isSubRule()) {
+      Result += '(';
+      if (isNegatedSubRule())
+        Result += "unless(";
+      Result += getName();
+      if (isNegatedSubRule())
+        Result += ')';
+      Result += ')';
+    }
+    return Result;
+  }
+
+  std::string getEnumValueName() const {
+    std::string Result =
+        "SubjectMatchRule_" + MetaSubject->getValueAsString("Name");
+    if (isSubRule()) {
+      Result += "_";
+      if (isNegatedSubRule())
+        Result += "not_";
+      Result += Constraint->getValueAsString("Name");
+    }
+    if (isAbstractRule())
+      Result += "_abstract";
+    return Result;
+  }
+
+  std::string getEnumValue() const { return "attr::" + getEnumValueName(); }
+
+  static const char *EnumName;
+};
+
+const char *AttributeSubjectMatchRule::EnumName = "attr::SubjectMatchRule";
+
+struct PragmaClangAttributeSupport {
+  std::vector<AttributeSubjectMatchRule> Rules;
+  llvm::DenseMap<const Record *, AttributeSubjectMatchRule> SubjectsToRules;
+
+  PragmaClangAttributeSupport(RecordKeeper &Records);
+
+  bool isAttributedSupported(const Record &Attribute);
+
+  void emitMatchRuleList(raw_ostream &OS);
+
+  std::string generateStrictConformsTo(const Record &Attr, raw_ostream &OS);
+
+  void generateParsingHelpers(raw_ostream &OS);
+};
+
+} // end anonymous namespace
+
+PragmaClangAttributeSupport::PragmaClangAttributeSupport(
+    RecordKeeper &Records) {
+  std::vector<Record *> MetaSubjects =
+      Records.getAllDerivedDefinitions("AttrSubjectMatcherRule");
+  auto MapFromSubjectsToRules = [this](const Record *SubjectContainer,
+                                       const Record *MetaSubject,
+                                       const Record *Constraint = nullptr) {
+    Rules.emplace_back(MetaSubject, Constraint);
+    std::vector<Record *> ApplicableSubjects =
+        SubjectContainer->getValueAsListOfDefs("Subjects");
+    for (const auto *Subject : ApplicableSubjects) {
+      bool Inserted =
+          SubjectsToRules.try_emplace(Subject, MetaSubject, Constraint).second;
+      if (!Inserted) {
+        PrintFatalError("Attribute subject match rules should not represent"
+                        "same attribute subjects.");
+      }
+    }
+  };
+  for (const auto *MetaSubject : MetaSubjects) {
+    MapFromSubjectsToRules(MetaSubject, MetaSubject);
+    std::vector<Record *> Constraints =
+        MetaSubject->getValueAsListOfDefs("Constraints");
+    for (const auto *Constraint : Constraints)
+      MapFromSubjectsToRules(Constraint, MetaSubject, Constraint);
+  }
+}
+
+static PragmaClangAttributeSupport &
+getPragmaAttributeSupport(RecordKeeper &Records) {
+  static PragmaClangAttributeSupport Instance(Records);
+  return Instance;
+}
+
+void PragmaClangAttributeSupport::emitMatchRuleList(raw_ostream &OS) {
+  OS << "#ifndef ATTR_MATCH_SUB_RULE\n";
+  OS << "#define ATTR_MATCH_SUB_RULE(Value, Spelling, IsAbstract, Parent, "
+        "IsNegated) "
+     << "ATTR_MATCH_RULE(Value, Spelling, IsAbstract)\n";
+  OS << "#endif\n";
+  for (const auto &Rule : Rules) {
+    OS << (Rule.isSubRule() ? "ATTR_MATCH_SUB_RULE" : "ATTR_MATCH_RULE") << '(';
+    OS << Rule.getEnumValueName() << ", \"" << Rule.getSpelling() << "\", "
+       << Rule.isAbstractRule();
+    if (Rule.isSubRule())
+      OS << ", "
+         << AttributeSubjectMatchRule(Rule.MetaSubject, nullptr).getEnumValue()
+         << ", " << Rule.isNegatedSubRule();
+    OS << ")\n";
+  }
+  OS << "#undef ATTR_MATCH_SUB_RULE\n";
+}
+
+bool PragmaClangAttributeSupport::isAttributedSupported(
+    const Record &Attribute) {
+  if (Attribute.getValueAsBit("ForcePragmaAttributeSupport"))
+    return true;
+  // Opt-out rules:
+  // FIXME: The documentation check should be moved before
+  // the ForcePragmaAttributeSupport check after annotate is documented.
+  // No documentation present.
+  if (Attribute.isValueUnset("Documentation"))
+    return false;
+  std::vector<Record *> Docs = Attribute.getValueAsListOfDefs("Documentation");
+  if (Docs.empty())
+    return false;
+  if (Docs.size() == 1 && Docs[0]->getName() == "Undocumented")
+    return false;
+  // An attribute requires delayed parsing (LateParsed is on)
+  if (Attribute.getValueAsBit("LateParsed"))
+    return false;
+  // An attribute has no GNU/CXX11 spelling
+  if (!hasGNUorCXX11Spelling(Attribute))
+    return false;
+  // An attribute subject list has a subject that isn't covered by one of the
+  // subject match rules or has no subjects at all.
+  if (Attribute.isValueUnset("Subjects"))
+    return false;
+  const Record *SubjectObj = Attribute.getValueAsDef("Subjects");
+  std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
+  if (Subjects.empty())
+    return false;
+  for (const auto *Subject : Subjects) {
+    if (SubjectsToRules.find(Subject) == SubjectsToRules.end())
+      return false;
+  }
+  return true;
+}
+
+std::string
+PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
+                                                      raw_ostream &OS) {
+  if (!isAttributedSupported(Attr))
+    return "nullptr";
+  // Generate a function that constructs a set of matching rules that describe
+  // to which declarations the attribute should apply to.
+  std::string FnName = "matchRulesFor" + Attr.getName().str();
+  std::stringstream SS;
+  SS << "static void " << FnName << "(llvm::SmallVectorImpl<std::pair<"
+     << AttributeSubjectMatchRule::EnumName
+     << ", bool>> &MatchRules, const LangOptions &LangOpts) {\n";
+  if (Attr.isValueUnset("Subjects")) {
+    SS << "}\n\n";
+    OS << SS.str();
+    return FnName;
+  }
+  const Record *SubjectObj = Attr.getValueAsDef("Subjects");
+  std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
+  for (const auto *Subject : Subjects) {
+    auto It = SubjectsToRules.find(Subject);
+    assert(It != SubjectsToRules.end() &&
+           "This attribute is unsupported by #pragma clang attribute");
+    AttributeSubjectMatchRule Rule = It->getSecond();
+    // The rule might be language specific, so only subtract it from the given
+    // rules if the specific language options are specified.
+    std::vector<Record *> LangOpts = Rule.getLangOpts();
+    SS << "  MatchRules.push_back(std::make_pair(" << Rule.getEnumValue()
+       << ", /*IsSupported=*/";
+    if (!LangOpts.empty()) {
+      for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
+        std::string Part = (*I)->getValueAsString("Name");
+        if ((*I)->getValueAsBit("Negated"))
+          SS << "!";
+        SS << "LangOpts." + Part;
+        if (I + 1 != E)
+          SS << " || ";
+      }
+    } else
+      SS << "true";
+    SS << "));\n";
+  }
+  SS << "}\n\n";
+  OS << SS.str();
+  return FnName;
+}
+
+void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
+  // Generate routines that check the names of sub-rules.
+  OS << "Optional<attr::SubjectMatchRule> "
+        "defaultIsAttributeSubjectMatchSubRuleFor(StringRef, bool) {\n";
+  OS << "  return None;\n";
+  OS << "}\n\n";
+
+  std::map<const Record *, std::vector<AttributeSubjectMatchRule>>
+      SubMatchRules;
+  for (const auto &Rule : Rules) {
+    if (!Rule.isSubRule())
+      continue;
+    SubMatchRules[Rule.MetaSubject].push_back(Rule);
+  }
+
+  for (const auto &SubMatchRule : SubMatchRules) {
+    OS << "Optional<attr::SubjectMatchRule> isAttributeSubjectMatchSubRuleFor_"
+       << SubMatchRule.first->getValueAsString("Name")
+       << "(StringRef Name, bool IsUnless) {\n";
+    OS << "  if (IsUnless)\n";
+    OS << "    return "
+          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+    for (const auto &Rule : SubMatchRule.second) {
+      if (Rule.isNegatedSubRule())
+        OS << "    Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
+           << ").\n";
+    }
+    OS << "    Default(None);\n";
+    OS << "  return "
+          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+    for (const auto &Rule : SubMatchRule.second) {
+      if (!Rule.isNegatedSubRule())
+        OS << "  Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
+           << ").\n";
+    }
+    OS << "  Default(None);\n";
+    OS << "}\n\n";
+  }
+
+  // Generate the function that checks for the top-level rules.
+  OS << "std::pair<Optional<attr::SubjectMatchRule>, "
+        "Optional<attr::SubjectMatchRule> (*)(StringRef, "
+        "bool)> isAttributeSubjectMatchRule(StringRef Name) {\n";
+  OS << "  return "
+        "llvm::StringSwitch<std::pair<Optional<attr::SubjectMatchRule>, "
+        "Optional<attr::SubjectMatchRule> (*) (StringRef, "
+        "bool)>>(Name).\n";
+  for (const auto &Rule : Rules) {
+    if (Rule.isSubRule())
+      continue;
+    std::string SubRuleFunction;
+    if (SubMatchRules.count(Rule.MetaSubject))
+      SubRuleFunction = "isAttributeSubjectMatchSubRuleFor_" + Rule.getName();
+    else
+      SubRuleFunction = "defaultIsAttributeSubjectMatchSubRuleFor";
+    OS << "  Case(\"" << Rule.getName() << "\", std::make_pair("
+       << Rule.getEnumValue() << ", " << SubRuleFunction << ")).\n";
+  }
+  OS << "  Default(std::make_pair(None, "
+        "defaultIsAttributeSubjectMatchSubRuleFor));\n";
+  OS << "}\n\n";
+
+  // Generate the function that checks for the submatch rules.
+  OS << "const char *validAttributeSubjectMatchSubRules("
+     << AttributeSubjectMatchRule::EnumName << " Rule) {\n";
+  OS << "  switch (Rule) {\n";
+  for (const auto &SubMatchRule : SubMatchRules) {
+    OS << "  case "
+       << AttributeSubjectMatchRule(SubMatchRule.first, nullptr).getEnumValue()
+       << ":\n";
+    OS << "  return \"'";
+    bool IsFirst = true;
+    for (const auto &Rule : SubMatchRule.second) {
+      if (!IsFirst)
+        OS << ", '";
+      IsFirst = false;
+      if (Rule.isNegatedSubRule())
+        OS << "unless(";
+      OS << Rule.getName();
+      if (Rule.isNegatedSubRule())
+        OS << ')';
+      OS << "'";
+    }
+    OS << "\";\n";
+  }
+  OS << "  default: return nullptr;\n";
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 template <typename Fn>
 static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
@@ -2107,6 +2437,17 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 
   Hierarchy.emitUndefs(OS);
   OS << "#undef PRAGMA_SPELLING_ATTR\n";
+}
+
+// Emits the enumeration list for attributes.
+void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader(
+      "List of all attribute subject matching rules that Clang recognizes", OS);
+  PragmaClangAttributeSupport &PragmaAttributeSupport =
+      getPragmaAttributeSupport(Records);
+  emitDefaultDefine(OS, "ATTR_MATCH_RULE", nullptr);
+  PragmaAttributeSupport.emitMatchRuleList(OS);
+  OS << "#undef ATTR_MATCH_RULE\n";
 }
 
 // Emits the code to read an attribute from a precompiled header.
@@ -2704,9 +3045,13 @@ static std::string GetSubjectWithSuffix(const Record *R) {
   return B + "Decl";
 }
 
+static std::string functionNameForCustomAppertainsTo(const Record &Subject) {
+  return "is" + Subject.getName().str();
+}
+
 static std::string GenerateCustomAppertainsTo(const Record &Subject,
                                               raw_ostream &OS) {
-  std::string FnName = "is" + Subject.getName().str();
+  std::string FnName = functionNameForCustomAppertainsTo(Subject);
 
   // If this code has already been generated, simply return the previous
   // instance of it.
@@ -2789,6 +3134,42 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
 
   OS << SS.str();
   return FnName;
+}
+
+static void
+emitAttributeMatchRules(PragmaClangAttributeSupport &PragmaAttributeSupport,
+                        raw_ostream &OS) {
+  OS << "static bool checkAttributeMatchRuleAppliesTo(const Decl *D, "
+     << AttributeSubjectMatchRule::EnumName << " rule) {\n";
+  OS << "  switch (rule) {\n";
+  for (const auto &Rule : PragmaAttributeSupport.Rules) {
+    if (Rule.isAbstractRule()) {
+      OS << "  case " << Rule.getEnumValue() << ":\n";
+      OS << "    assert(false && \"Abstract matcher rule isn't allowed\");\n";
+      OS << "    return false;\n";
+      continue;
+    }
+    std::vector<Record *> Subjects = Rule.getSubjects();
+    assert(!Subjects.empty() && "Missing subjects");
+    OS << "  case " << Rule.getEnumValue() << ":\n";
+    OS << "    return ";
+    for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
+      // If the subject has custom code associated with it, use the function
+      // that was generated for GenerateAppertainsTo to check if the declaration
+      // is valid.
+      if ((*I)->isSubClassOf("SubsetSubject"))
+        OS << functionNameForCustomAppertainsTo(**I) << "(D)";
+      else
+        OS << "isa<" << GetSubjectWithSuffix(*I) << ">(D)";
+
+      if (I + 1 != E)
+        OS << " || ";
+    }
+    OS << ";\n";
+  }
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"Invalid match rule\");\nreturn false;\n";
+  OS << "}\n\n";
 }
 
 static void GenerateDefaultLangOptRequirements(raw_ostream &OS) {
@@ -2949,6 +3330,9 @@ static bool IsKnownToGCC(const Record &Attr) {
 void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Parsed attribute helpers", OS);
 
+  PragmaClangAttributeSupport &PragmaAttributeSupport =
+      getPragmaAttributeSupport(Records);
+
   // Get the list of parsed attributes, and accept the optional list of
   // duplicates due to the ParseKind.
   ParsedAttrMap Dupes;
@@ -2982,10 +3366,13 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     SS << ", " << I->second->isSubClassOf("TypeAttr");
     SS << ", " << I->second->isSubClassOf("StmtAttr");
     SS << ", " << IsKnownToGCC(*I->second);
+    SS << ", " << PragmaAttributeSupport.isAttributedSupported(*I->second);
     SS << ", " << GenerateAppertainsTo(*I->second, OS);
     SS << ", " << GenerateLangOptRequirements(*I->second, OS);
     SS << ", " << GenerateTargetRequirements(*I->second, Dupes, OS);
     SS << ", " << GenerateSpellingIndexToSemanticSpelling(*I->second, OS);
+    SS << ", "
+       << PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
     SS << " }";
 
     if (I + 1 != E)
@@ -2997,6 +3384,9 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "static const ParsedAttrInfo AttrInfoMap[AttributeList::UnknownAttribute + 1] = {\n";
   OS << SS.str();
   OS << "};\n\n";
+
+  // Generate the attribute match rules.
+  emitAttributeMatchRules(PragmaAttributeSupport, OS);
 }
 
 // Emits the kind list of parsed attributes
@@ -3136,6 +3526,11 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
   emitClangAttrLateParsedList(Records, OS);
 }
 
+void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
+                                                        raw_ostream &OS) {
+  getPragmaAttributeSupport(Records).generateParsingHelpers(OS);
+}
+
 class DocumentationData {
 public:
   const Record *Documentation;
@@ -3167,8 +3562,8 @@ enum SpellingKind {
   Pragma = 1 << 5
 };
 
-static void WriteDocumentation(const DocumentationData &Doc,
-                               raw_ostream &OS) {
+static void WriteDocumentation(RecordKeeper &Records,
+                               const DocumentationData &Doc, raw_ostream &OS) {
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
@@ -3250,7 +3645,7 @@ static void WriteDocumentation(const DocumentationData &Doc,
   // List what spelling syntaxes the attribute supports.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"__declspec\", \"Keyword\",";
-  OS << " \"Pragma\"\n\n";
+  OS << " \"Pragma\", \"Pragma clang attribute\"\n\n";
   OS << "   \"";
   if (SupportedSpellings & GNU) OS << "X";
   OS << "\",\"";
@@ -3261,6 +3656,9 @@ static void WriteDocumentation(const DocumentationData &Doc,
   if (SupportedSpellings & Keyword) OS << "X";
   OS << "\", \"";
   if (SupportedSpellings & Pragma) OS << "X";
+  OS << "\", \"";
+  if (getPragmaAttributeSupport(Records).isAttributedSupported(*Doc.Attribute))
+    OS << "X";
   OS << "\"\n\n";
 
   // If the attribute is deprecated, print a message about it, and possibly
@@ -3327,7 +3725,40 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
     // Walk over each of the attributes in the category and write out their
     // documentation.
     for (const auto &Doc : I.second)
-      WriteDocumentation(Doc, OS);
+      WriteDocumentation(Records, Doc, OS);
+  }
+}
+
+void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
+                                                raw_ostream &OS) {
+  PragmaClangAttributeSupport Support = getPragmaAttributeSupport(Records);
+  ParsedAttrMap Attrs = getParsedAttrList(Records);
+  unsigned NumAttrs = 0;
+  for (const auto &I : Attrs) {
+    if (Support.isAttributedSupported(*I.second))
+      ++NumAttrs;
+  }
+  OS << "#pragma clang attribute supports " << NumAttrs << " attributes:\n";
+  for (const auto &I : Attrs) {
+    if (!Support.isAttributedSupported(*I.second))
+      continue;
+    OS << I.first;
+    if (I.second->isValueUnset("Subjects")) {
+      OS << " ()\n";
+      continue;
+    }
+    const Record *SubjectObj = I.second->getValueAsDef("Subjects");
+    std::vector<Record *> Subjects =
+        SubjectObj->getValueAsListOfDefs("Subjects");
+    OS << " (";
+    for (const auto &Subject : llvm::enumerate(Subjects)) {
+      if (Subject.index())
+        OS << ", ";
+      OS << Support.SubjectsToRules.find(Subject.value())
+                ->getSecond()
+                .getEnumValueName();
+    }
+    OS << ")\n";
   }
 }
 

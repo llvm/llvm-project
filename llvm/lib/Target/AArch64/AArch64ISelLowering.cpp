@@ -10391,7 +10391,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
 // call. This will cause the optimizers to attempt to move, or duplicate,
 // return instructions to help enable tail call optimizations for this
 // instruction.
-bool AArch64TargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
 }
 

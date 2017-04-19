@@ -661,8 +661,10 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
-      KnownZero |= RHSKnownZero.lshr(C->getZExtValue());
-      KnownOne  |= RHSKnownOne.lshr(C->getZExtValue());
+      RHSKnownZero.lshrInPlace(C->getZExtValue());
+      KnownZero |= RHSKnownZero;
+      RHSKnownOne.lshrInPlace(C->getZExtValue());
+      KnownOne  |= RHSKnownOne;
     // assume(~(v << c) = a)
     } else if (match(Arg, m_c_ICmp(Pred, m_Not(m_Shl(m_V, m_ConstantInt(C))),
                                    m_Value(A))) &&
@@ -672,8 +674,10 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       computeKnownBits(A, RHSKnownZero, RHSKnownOne, Depth+1, Query(Q, I));
       // For those bits in RHS that are known, we can propagate them inverted
       // to known bits in V shifted to the right by C.
-      KnownZero |= RHSKnownOne.lshr(C->getZExtValue());
-      KnownOne  |= RHSKnownZero.lshr(C->getZExtValue());
+      RHSKnownOne.lshrInPlace(C->getZExtValue());
+      KnownZero |= RHSKnownOne;
+      RHSKnownZero.lshrInPlace(C->getZExtValue());
+      KnownOne  |= RHSKnownZero;
     // assume(v >> c = a)
     } else if (match(Arg,
                      m_c_ICmp(Pred, m_CombineOr(m_LShr(m_V, m_ConstantInt(C)),
@@ -1111,10 +1115,11 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   }
   case Instruction::LShr: {
     // (ushr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KZF = [BitWidth](const APInt &KnownZero, unsigned ShiftAmt) {
-      return KnownZero.lshr(ShiftAmt) |
-             // High bits known zero.
-             APInt::getHighBitsSet(BitWidth, ShiftAmt);
+    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
+      APInt KZResult = KnownZero.lshr(ShiftAmt);
+      // High bits known zero.
+      KZResult.setHighBits(ShiftAmt);
+      return KZResult;
     };
 
     auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {

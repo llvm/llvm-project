@@ -841,10 +841,9 @@ void CodeGenModule::SetLLVMFunctionAttributes(const Decl *D,
                                               const CGFunctionInfo &Info,
                                               llvm::Function *F) {
   unsigned CallingConv;
-  AttributeListType AttributeList;
-  ConstructAttributeList(F->getName(), Info, D, AttributeList, CallingConv,
-                         false);
-  F->setAttributes(llvm::AttributeList::get(getLLVMContext(), AttributeList));
+  llvm::AttributeList PAL;
+  ConstructAttributeList(F->getName(), Info, D, PAL, CallingConv, false);
+  F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
 

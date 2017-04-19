@@ -33,9 +33,12 @@ void EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
                        const std::string &N, const std::string &S);
 
 void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
+                                                        raw_ostream &OS);
 void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS);
@@ -71,6 +74,9 @@ void EmitNeonTest2(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS);
+
+void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
+                                                raw_ostream &OS);
 
 } // end namespace clang
 

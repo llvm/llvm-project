@@ -14,13 +14,14 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../rep.h"
 
 int main()
 {
     assert(std::chrono::duration_values<int>::zero() == 0);
     assert(std::chrono::duration_values<Rep>::zero() == 0);
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     static_assert(std::chrono::duration_values<int>::zero() == 0, "");
     static_assert(std::chrono::duration_values<Rep>::zero() == 0, "");
 #endif

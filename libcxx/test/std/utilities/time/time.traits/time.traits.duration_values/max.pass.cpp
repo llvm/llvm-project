@@ -15,6 +15,7 @@
 #include <limits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../rep.h"
 
 int main()
@@ -25,7 +26,7 @@ int main()
            std::numeric_limits<double>::max());
     assert(std::chrono::duration_values<Rep>::max() ==
            std::numeric_limits<Rep>::max());
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     static_assert(std::chrono::duration_values<int>::max() ==
            std::numeric_limits<int>::max(), "");
     static_assert(std::chrono::duration_values<double>::max() ==

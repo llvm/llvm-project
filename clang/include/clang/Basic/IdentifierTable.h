@@ -355,6 +355,19 @@ public:
       RecomputeNeedsHandleIdentifier();
   }
 
+  /// Return true if this identifier is an editor placeholder.
+  ///
+  /// Editor placeholders are produced by the code-completion engine and are
+  /// represented as characters between '<#' and '#>' in the source code. An
+  /// example of auto-completed call with a placeholder parameter is shown
+  /// below:
+  /// \code
+  ///   function(<#int x#>);
+  /// \endcode
+  bool isEditorPlaceholder() const {
+    return getName().startswith("<#") && getName().endswith("#>");
+  }
+
   /// \brief Provide less than operator for lexicographical sorting.
   bool operator<(const IdentifierInfo &RHS) const {
     return getName() < RHS.getName();

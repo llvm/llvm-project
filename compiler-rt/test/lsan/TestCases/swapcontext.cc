@@ -3,8 +3,8 @@
 
 // RUN: %clangxx_lsan %s -o %t
 // RUN: LSAN_BASE="detect_leaks=1"
-// RUN: LSAN_OPTIONS=$LSAN_BASE %run %t 2>&1
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE %run %t 2>&1
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s
 // UNSUPPORTED: arm
 
 #include <stdio.h>

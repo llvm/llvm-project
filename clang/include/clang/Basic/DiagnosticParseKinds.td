@@ -979,6 +979,43 @@ def err_pragma_optimize_invalid_argument : Error<
   "expected 'on' or 'off'">;
 def err_pragma_optimize_extra_argument : Error<
   "unexpected extra argument '%0' to '#pragma clang optimize'">;
+// - #pragma clang attribute
+def err_pragma_attribute_expected_push_pop : Error<
+  "expected 'push' or 'pop' after '#pragma clang attribute'">;
+def err_pragma_attribute_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma clang attribute'; "
+  "expected 'push' or 'pop'">;
+def err_pragma_attribute_expected_attribute : Error<
+  "expected an attribute after '('">;
+def err_pragma_attribute_expected_attribute_name : Error<
+  "expected identifier that represents an attribute name">;
+def err_pragma_attribute_extra_tokens_after_attribute : Error<
+  "extra tokens after attribute in a '#pragma clang attribute push'">;
+def err_pragma_attribute_unsupported_attribute : Error<
+  "attribute %0 is not supported by '#pragma clang attribute'">;
+def err_pragma_attribute_multiple_attributes : Error<
+  "more than one attribute specified in '#pragma clang attribute push'">;
+def err_pragma_attribute_expected_attribute_syntax : Error<
+  "expected an attribute that is specified using the GNU, C++11 or '__declspec'"
+  " syntax">;
+def note_pragma_attribute_use_attribute_kw : Note<"use the GNU '__attribute__' "
+  "syntax">;
+def err_pragma_attribute_invalid_subject_set_specifier : Error<
+  "expected attribute subject set specifier 'apply_to'">;
+def err_pragma_attribute_expected_subject_identifier : Error<
+  "expected an identifier that corresponds to an attribute subject rule">;
+def err_pragma_attribute_unknown_subject_rule : Error<
+  "unknown attribute subject rule '%0'">;
+def err_pragma_attribute_expected_subject_sub_identifier : Error<
+  "expected an identifier that corresponds to an attribute subject matcher "
+  "sub-rule; '%0' matcher %select{does not support sub-rules|supports the "
+  "following sub-rules: %2|}1">;
+def err_pragma_attribute_unknown_subject_sub_rule : Error<
+  "%select{invalid use of|unknown}2 attribute subject matcher sub-rule '%0'; "
+  "'%1' matcher %select{does not support sub-rules|supports the following "
+  "sub-rules: %3}2">;
+def err_pragma_attribute_duplicate_subject : Error<
+  "duplicate attribute subject matcher '%0'">;
 
 def err_opencl_unroll_hint_on_non_loop : Error<
   "OpenCL only supports 'opencl_unroll_hint' attribute on for, while, and do statements">;

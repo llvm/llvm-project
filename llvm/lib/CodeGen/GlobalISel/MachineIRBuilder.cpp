@@ -592,7 +592,7 @@ MachineInstrBuilder MachineIRBuilder::buildInsertVectorElement(unsigned Res,
   LLT EltTy = MRI->getType(Elt);
   LLT IdxTy = MRI->getType(Idx);
   assert(ResTy.isVector() && ValTy.isVector() && "invalid operand type");
-  assert(EltTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert(IdxTy.isScalar() && "invalid operand type");
   assert(ResTy.getNumElements() == ValTy.getNumElements() && "type mismatch");
   assert(ResTy.getElementType() == EltTy && "type mismatch");
 #endif
@@ -612,7 +612,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtractVectorElement(unsigned Res,
   LLT ValTy = MRI->getType(Val);
   LLT IdxTy = MRI->getType(Idx);
   assert(ValTy.isVector() && "invalid operand type");
-  assert(ResTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert((ResTy.isScalar() || ResTy.isPointer()) && "invalid operand type");
+  assert(IdxTy.isScalar() && "invalid operand type");
   assert(ValTy.getElementType() == ResTy && "type mismatch");
 #endif
 

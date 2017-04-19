@@ -1580,7 +1580,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
           GenericValue Elt;
           Elt.IntVal = Elt.IntVal.zext(SrcBitSize);
           Elt.IntVal = TempSrc.AggregateVal[i].IntVal;
-          Elt.IntVal = Elt.IntVal.lshr(ShiftAmt);
+          Elt.IntVal.lshrInPlace(ShiftAmt);
           // it could be DstBitSize == SrcBitSize, so check it
           if (DstBitSize < SrcBitSize)
             Elt.IntVal = Elt.IntVal.trunc(DstBitSize);

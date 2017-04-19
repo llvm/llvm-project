@@ -1,9 +1,9 @@
 // Test that statically allocated thread-specific storage is included in the root set.
 // RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"use_tls=1" %run %t 2>&1
-// RUN: LSAN_OPTIONS="" %run %t 2>&1
+// RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t 2>&1
+// RUN: %env_lsan_opts="" %run %t 2>&1
 
 #include <assert.h>
 #include <pthread.h>
