@@ -87,6 +87,8 @@ void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
 
 AllocatorCache *GetAllocatorCache() { return &get_tls_val(true)->cache; }
 
+LoadedModule *GetLinker() { return nullptr; }
+
 // Required on Linux for initialization of TLS behavior, but should not be
 // required on Darwin.
 void InitializePlatformSpecificModules() {

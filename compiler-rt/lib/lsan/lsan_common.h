@@ -212,6 +212,10 @@ uptr PointsIntoChunk(void *p);
 uptr GetUserBegin(uptr chunk);
 // Helper for __lsan_ignore_object().
 IgnoreObjectResult IgnoreObjectLocked(const void *p);
+
+// Return the linker module, if valid for the platform.
+LoadedModule *GetLinker();
+
 // Wrapper for chunk metadata operations.
 class LsanMetadata {
  public:
