@@ -1633,13 +1633,14 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   //        worth the effort and added fragility?
   unsigned EstimatedStackSize =
       MFI.estimateStackSize(MF) + 4 * (NumGPRSpills + NumFPRSpills);
-  if (hasFP(MF)) {
+  bool HasFP = hasFP(MF);
+  if (HasFP) {
     if (AFI->hasStackFrame())
       EstimatedStackSize += 4;
   } else {
     // If FP is not used, SP will be used to access arguments, so count the
     // size of arguments into the estimation.
-    EstimatedStackSize += MF.getInfo<ARMFunctionInfo>()->getArgumentStackSize();
+    EstimatedStackSize += AFI->getArgumentStackSize();
   }
   EstimatedStackSize += 16; // For possible paddings.
 
@@ -1650,7 +1651,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (hasFP(MF)) {
+    if (HasFP) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
@@ -1721,7 +1722,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       }
 
       // r7 can be used if it is not being used as the frame pointer.
-      if (!hasFP(MF)) {
+      if (!HasFP) {
         if (SavedRegs.test(ARM::R7)) {
           --RegDeficit;
           DEBUG(dbgs() << "%R7 is saved low register, RegDeficit = "
