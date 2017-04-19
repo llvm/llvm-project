@@ -28,7 +28,7 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple) {
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 
   if (isV9) {
-    PointerSize = CalleeSaveStackSlotSize = 8;
+    CodePointerSize = CalleeSaveStackSlotSize = 8;
   }
 
   Data16bitsDirective = "\t.half\t";

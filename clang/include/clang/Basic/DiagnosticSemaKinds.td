@@ -750,6 +750,25 @@ def err_pragma_loop_compatibility : Error<
 def err_pragma_loop_precedes_nonloop : Error<
   "expected a for, while, or do-while loop to follow '%0'">;
 
+def err_pragma_attribute_matcher_subrule_contradicts_rule : Error<
+  "redundant attribute subject matcher sub-rule '%0'; '%1' already matches "
+  "those declarations">;
+def err_pragma_attribute_matcher_negated_subrule_contradicts_subrule : Error<
+  "negated attribute subject matcher sub-rule '%0' contradicts sub-rule '%1'">;
+def err_pragma_attribute_invalid_matchers : Error<
+  "attribute %0 can't be applied to %1">;
+def err_pragma_attribute_stack_mismatch : Error<
+  "'#pragma clang attribute pop' with no matching '#pragma clang attribute push'">;
+def warn_pragma_attribute_unused : Warning<
+  "unused attribute %0 in '#pragma clang attribute push' region">,
+  InGroup<PragmaClangAttribute>;
+def note_pragma_attribute_region_ends_here : Note<
+  "'#pragma clang attribute push' regions ends here">;
+def err_pragma_attribute_no_pop_eof : Error<"unterminated "
+  "'#pragma clang attribute push' at end of file">;
+def note_pragma_attribute_applied_decl_here : Note<
+  "when applied to this declaration">;
+
 /// Objective-C parser diagnostics
 def err_duplicate_class_def : Error<
   "duplicate interface definition for class %0">;
@@ -8854,6 +8873,11 @@ def err_coroutine_invalid_func_context : Error<
 def err_implied_coroutine_type_not_found : Error<
   "%0 type was not found; include <experimental/coroutine> before defining "
   "a coroutine">;
+def err_implicit_coroutine_std_nothrow_type_not_found : Error<
+  "std::nothrow was not found; include <new> before defining a coroutine which "
+  "uses get_return_object_on_allocation_failure()">;
+def err_malformed_std_nothrow : Error<
+  "std::nothrow must be a valid variable declaration">;
 def err_malformed_std_coroutine_handle : Error<
   "std::experimental::coroutine_handle must be a class template">;
 def err_coroutine_handle_missing_member : Error<
@@ -8873,16 +8897,21 @@ def err_coroutine_promise_return_ill_formed : Error<
   "%0 declares both 'return_value' and 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
-def note_coroutine_promise_call_implicitly_required : Note<
+def note_coroutine_promise_suspend_implicitly_required : Note<
   "call to '%select{initial_suspend|final_suspend}0' implicitly "
   "required by the %select{initial suspend point|final suspend point}0">;
 def err_coroutine_promise_unhandled_exception_required : Error<
   "%0 is required to declare the member 'unhandled_exception()'">;
 def warn_coroutine_promise_unhandled_exception_required_with_exceptions : Warning<
   "%0 is required to declare the member 'unhandled_exception()' when exceptions are enabled">,
-  InGroup<Coroutine>;
+  InGroup<CoroutineMissingUnhandledException>;
 def err_coroutine_promise_get_return_object_on_allocation_failure : Error<
   "%0: 'get_return_object_on_allocation_failure()' must be a static member function">;
+def err_coroutine_promise_new_requires_nothrow : Error<
+  "%0 is required to have a non-throwing noexcept specification when the promise "
+   "type declares 'get_return_object_on_allocation_failure()'">;
+def note_coroutine_promise_call_implicitly_required : Note<
+  "call to %0 implicitly required by coroutine function here">;
 }
 
 let CategoryName = "Documentation Issue" in {

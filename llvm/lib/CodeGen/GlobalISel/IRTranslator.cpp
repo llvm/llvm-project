@@ -381,18 +381,19 @@ bool IRTranslator::translateInsertValue(const User &U,
   uint64_t Offset = 8 * DL->getIndexedOffsetInType(Src->getType(), Indices);
 
   unsigned Res = getOrCreateVReg(U);
-  const Value &Inserted = *U.getOperand(1);
-  MIRBuilder.buildInsert(Res, getOrCreateVReg(*Src), getOrCreateVReg(Inserted),
-                         Offset);
+  unsigned Inserted = getOrCreateVReg(*U.getOperand(1));
+  MIRBuilder.buildInsert(Res, getOrCreateVReg(*Src), Inserted, Offset);
 
   return true;
 }
 
 bool IRTranslator::translateSelect(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  MIRBuilder.buildSelect(getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
-                         getOrCreateVReg(*U.getOperand(1)),
-                         getOrCreateVReg(*U.getOperand(2)));
+  unsigned Res = getOrCreateVReg(U);
+  unsigned Tst = getOrCreateVReg(*U.getOperand(0));
+  unsigned Op0 = getOrCreateVReg(*U.getOperand(1));
+  unsigned Op1 = getOrCreateVReg(*U.getOperand(2));
+  MIRBuilder.buildSelect(Res, Tst, Op0, Op1);
   return true;
 }
 
@@ -984,9 +985,11 @@ bool IRTranslator::translateInsertElement(const User &U,
     ValToVReg[&U] = Elt;
     return true;
   }
-  MIRBuilder.buildInsertVectorElement(
-      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
-      getOrCreateVReg(*U.getOperand(1)), getOrCreateVReg(*U.getOperand(2)));
+  unsigned Res = getOrCreateVReg(U);
+  unsigned Val = getOrCreateVReg(*U.getOperand(0));
+  unsigned Elt = getOrCreateVReg(*U.getOperand(1));
+  unsigned Idx = getOrCreateVReg(*U.getOperand(2));
+  MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
   return true;
 }
 
@@ -999,9 +1002,10 @@ bool IRTranslator::translateExtractElement(const User &U,
     ValToVReg[&U] = Elt;
     return true;
   }
-  MIRBuilder.buildExtractVectorElement(getOrCreateVReg(U),
-                                       getOrCreateVReg(*U.getOperand(0)),
-                                       getOrCreateVReg(*U.getOperand(1)));
+  unsigned Res = getOrCreateVReg(U);
+  unsigned Val = getOrCreateVReg(*U.getOperand(0));
+  unsigned Idx = getOrCreateVReg(*U.getOperand(1));
+  MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
   return true;
 }
 

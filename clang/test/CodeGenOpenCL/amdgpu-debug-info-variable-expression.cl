@@ -1,6 +1,5 @@
 // RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
 
-// CHECK-DAG: ![[NONE:[0-9]+]] = !DIExpression()
 // CHECK-DAG: ![[LOCAL:[0-9]+]] = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 // CHECK-DAG: ![[PRIVATE:[0-9]+]] = !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)
 
@@ -82,7 +81,7 @@ kernel void kernel1(
   int *FuncVar4 = Tmp1;
 
   // CHECK-DAG: ![[FUNCVAR5:[0-9]+]] = !DILocalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)** {{.*}}, metadata ![[FUNCVAR5]], metadata ![[NONE]]), !dbg !{{[0-9]+}}
+  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)** {{.*}}, metadata ![[FUNCVAR5]], metadata ![[NONE:[0-9]+]]), !dbg !{{[0-9]+}}
   global int *constant FuncVar5 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR6:[0-9]+]] = !DILocalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(2)** {{.*}}, metadata ![[FUNCVAR6]], metadata ![[NONE]]), !dbg !{{[0-9]+}}

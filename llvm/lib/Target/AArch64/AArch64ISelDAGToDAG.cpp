@@ -1865,7 +1865,7 @@ static void getUsefulBitsFromBitfieldMoveOpd(SDValue Op, APInt &UsefulBits,
     OpUsefulBits = OpUsefulBits.shl(OpUsefulBits.getBitWidth() - Imm);
     getUsefulBits(Op, OpUsefulBits, Depth + 1);
     // The interesting part was at zero in the argument
-    OpUsefulBits = OpUsefulBits.lshr(OpUsefulBits.getBitWidth() - Imm);
+    OpUsefulBits.lshrInPlace(OpUsefulBits.getBitWidth() - Imm);
   }
 
   UsefulBits &= OpUsefulBits;
@@ -1894,13 +1894,13 @@ static void getUsefulBitsFromOrWithShiftedReg(SDValue Op, APInt &UsefulBits,
     uint64_t ShiftAmt = AArch64_AM::getShiftValue(ShiftTypeAndValue);
     Mask = Mask.shl(ShiftAmt);
     getUsefulBits(Op, Mask, Depth + 1);
-    Mask = Mask.lshr(ShiftAmt);
+    Mask.lshrInPlace(ShiftAmt);
   } else if (AArch64_AM::getShiftType(ShiftTypeAndValue) == AArch64_AM::LSR) {
     // Shift Right
     // We do not handle AArch64_AM::ASR, because the sign will change the
     // number of useful bits
     uint64_t ShiftAmt = AArch64_AM::getShiftValue(ShiftTypeAndValue);
-    Mask = Mask.lshr(ShiftAmt);
+    Mask.lshrInPlace(ShiftAmt);
     getUsefulBits(Op, Mask, Depth + 1);
     Mask = Mask.shl(ShiftAmt);
   } else
@@ -1954,7 +1954,7 @@ static void getUsefulBitsFromBFM(SDValue Op, SDValue Orig, APInt &UsefulBits,
     if (Op.getOperand(1) == Orig) {
       // Copy the bits from the result to the zero bits.
       Mask = ResultUsefulBits & OpUsefulBits;
-      Mask = Mask.lshr(LSB);
+      Mask.lshrInPlace(LSB);
     }
 
     if (Op.getOperand(0) == Orig)

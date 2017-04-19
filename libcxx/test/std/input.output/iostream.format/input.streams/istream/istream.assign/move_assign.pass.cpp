@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <istream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -17,7 +19,6 @@
 #include <istream>
 #include <cassert>
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class CharT>
 struct testbuf
@@ -37,11 +38,9 @@ struct test_istream
         {base::operator=(std::move(s)); return *this;}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         testbuf<char> sb1;
         testbuf<char> sb2;
@@ -88,5 +87,4 @@ int main()
         assert(is2.precision() == 6);
         assert(is2.getloc().name() == "C");
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

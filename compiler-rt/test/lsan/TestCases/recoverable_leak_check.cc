@@ -1,8 +1,8 @@
 // Test for on-demand leak checking.
 // RUN: LSAN_BASE="detect_leaks=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE %run %t foo 2>&1 | FileCheck %s
-// RUN: LSAN_OPTIONS=$LSAN_BASE %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <stdio.h>

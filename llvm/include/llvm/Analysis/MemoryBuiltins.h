@@ -54,6 +54,11 @@ bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);
 
 /// \brief Tests if a value is a call or invoke to a library function that
+/// allocates memory similar to malloc or calloc.
+bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                            bool LookThroughBitCast = false);
+
+/// \brief Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);

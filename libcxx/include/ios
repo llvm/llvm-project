@@ -657,7 +657,7 @@ protected:
 
     _LIBCPP_INLINE_VISIBILITY 
     void move(basic_ios& __rhs);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_ALWAYS_INLINE
     void move(basic_ios&& __rhs) {move(__rhs);}
 #endif

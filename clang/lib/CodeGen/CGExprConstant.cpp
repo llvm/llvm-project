@@ -201,7 +201,7 @@ void ConstStructBuilder::AppendBitField(const FieldDecl *Field,
       unsigned NewFieldWidth = FieldSize - BitsInPreviousByte;
 
       if (CGM.getDataLayout().isBigEndian()) {
-        Tmp = Tmp.lshr(NewFieldWidth);
+        Tmp.lshrInPlace(NewFieldWidth);
         Tmp = Tmp.trunc(BitsInPreviousByte);
 
         // We want the remaining high bits.
@@ -210,7 +210,7 @@ void ConstStructBuilder::AppendBitField(const FieldDecl *Field,
         Tmp = Tmp.trunc(BitsInPreviousByte);
 
         // We want the remaining low bits.
-        FieldValue = FieldValue.lshr(BitsInPreviousByte);
+        FieldValue.lshrInPlace(BitsInPreviousByte);
         FieldValue = FieldValue.trunc(NewFieldWidth);
       }
     }
@@ -273,7 +273,7 @@ void ConstStructBuilder::AppendBitField(const FieldDecl *Field,
       // We want the low bits.
       Tmp = FieldValue.trunc(CharWidth);
 
-      FieldValue = FieldValue.lshr(CharWidth);
+      FieldValue.lshrInPlace(CharWidth);
     }
 
     Elements.push_back(llvm::ConstantInt::get(CGM.getLLVMContext(), Tmp));

@@ -111,6 +111,8 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
     C.getTargetInfo().getMaxPointerWidth());
   Int8PtrTy = Int8Ty->getPointerTo(0);
   Int8PtrPtrTy = Int8PtrTy->getPointerTo(0);
+  AllocaInt8PtrTy = Int8Ty->getPointerTo(
+      M.getDataLayout().getAllocaAddrSpace());
 
   RuntimeCC = getTargetCodeGenInfo().getABIInfo().getRuntimeCC();
   BuiltinCC = getTargetCodeGenInfo().getABIInfo().getBuiltinCC();
@@ -839,10 +841,9 @@ void CodeGenModule::SetLLVMFunctionAttributes(const Decl *D,
                                               const CGFunctionInfo &Info,
                                               llvm::Function *F) {
   unsigned CallingConv;
-  AttributeListType AttributeList;
-  ConstructAttributeList(F->getName(), Info, D, AttributeList, CallingConv,
-                         false);
-  F->setAttributes(llvm::AttributeList::get(getLLVMContext(), AttributeList));
+  llvm::AttributeList PAL;
+  ConstructAttributeList(F->getName(), Info, D, PAL, CallingConv, false);
+  F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
 

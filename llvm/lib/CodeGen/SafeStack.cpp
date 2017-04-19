@@ -550,7 +550,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
     // Replace alloc with the new location.
     replaceDbgDeclare(Arg, BasePointer, BasePointer->getNextNode(), DIB,
-                      /*Deref=*/true, -Offset);
+                      /*Deref=*/false, -Offset);
     Arg->replaceAllUsesWith(NewArg);
     IRB.SetInsertPoint(cast<Instruction>(NewArg)->getNextNode());
     IRB.CreateMemCpy(Off, Arg, Size, Arg->getParamAlignment());
@@ -565,7 +565,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    replaceDbgDeclareForAlloca(AI, BasePointer, DIB, /*Deref=*/true, -Offset);
+    replaceDbgDeclareForAlloca(AI, BasePointer, DIB, /*Deref=*/false, -Offset);
     replaceDbgValueForAlloca(AI, BasePointer, DIB, -Offset);
 
     // Replace uses of the alloca with the new location.
@@ -655,7 +655,7 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     if (AI->hasName() && isa<Instruction>(NewAI))
       NewAI->takeName(AI);
 
-    replaceDbgDeclareForAlloca(AI, NewAI, DIB, /*Deref=*/true);
+    replaceDbgDeclareForAlloca(AI, NewAI, DIB, /*Deref=*/false);
     AI->replaceAllUsesWith(NewAI);
     AI->eraseFromParent();
   }

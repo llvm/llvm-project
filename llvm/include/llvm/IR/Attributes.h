@@ -357,9 +357,6 @@ public:
                               AttributeList Attrs) const;
 
   AttributeList addAttributes(LLVMContext &C, unsigned Index,
-                              AttributeSet AS) const;
-
-  AttributeList addAttributes(LLVMContext &C, unsigned Index,
                               const AttrBuilder &B) const;
 
   /// \brief Remove the specified attribute at the specified index from this

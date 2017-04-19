@@ -42,7 +42,7 @@ public:
     // messed up in random places by 4 bytes. .debug_line
     // section will be parsable, but with odd offsets and
     // line numbers, etc.
-    PointerSize = 8;
+    CodePointerSize = 8;
   }
 };
 }

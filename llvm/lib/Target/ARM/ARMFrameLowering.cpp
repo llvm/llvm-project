@@ -1958,7 +1958,7 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
     // ADJCALLSTACKUP   -> add, sp, sp, amount
     MachineInstr &Old = *I;
     DebugLoc dl = Old.getDebugLoc();
-    unsigned Amount = Old.getOperand(0).getImm();
+    unsigned Amount = TII.getFrameSize(Old);
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
@@ -1976,14 +1976,11 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
       ARMCC::CondCodes Pred =
           (PIdx == -1) ? ARMCC::AL
                        : (ARMCC::CondCodes)Old.getOperand(PIdx).getImm();
+      unsigned PredReg = TII.getFramePred(Old);
       if (Opc == ARM::ADJCALLSTACKDOWN || Opc == ARM::tADJCALLSTACKDOWN) {
-        // Note: PredReg is operand 2 for ADJCALLSTACKDOWN.
-        unsigned PredReg = Old.getOperand(2).getReg();
         emitSPUpdate(isARM, MBB, I, dl, TII, -Amount, MachineInstr::NoFlags,
                      Pred, PredReg);
       } else {
-        // Note: PredReg is operand 3 for ADJCALLSTACKUP.
-        unsigned PredReg = Old.getOperand(3).getReg();
         assert(Opc == ARM::ADJCALLSTACKUP || Opc == ARM::tADJCALLSTACKUP);
         emitSPUpdate(isARM, MBB, I, dl, TII, Amount, MachineInstr::NoFlags,
                      Pred, PredReg);

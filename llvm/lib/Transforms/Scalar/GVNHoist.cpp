@@ -45,6 +45,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1010,6 +1011,7 @@ public:
     AU.addRequired<MemorySSAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
 } // namespace
@@ -1026,6 +1028,7 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<MemorySSAAnalysis>();
+  PA.preserve<GlobalsAA>();
   return PA;
 }
 

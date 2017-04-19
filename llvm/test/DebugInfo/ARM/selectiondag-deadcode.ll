@@ -13,7 +13,7 @@ _ZN7Vector39NormalizeEv.exit:                     ; preds = %1, %0
   ; and SelectionDAGISel crashes.  It should definitely not
   ; crash. Drop the dbg_value instead.
   ; CHECK-NOT: "matrix"
-  tail call void @llvm.dbg.declare(metadata %class.Matrix3.0.6.10* %agg.result, metadata !45, metadata !DIExpression(DW_OP_deref))
+  tail call void @llvm.dbg.declare(metadata %class.Matrix3.0.6.10* %agg.result, metadata !45, metadata !DIExpression())
   %2 = getelementptr inbounds %class.Matrix3.0.6.10, %class.Matrix3.0.6.10* %agg.result, i32 0, i32 0, i32 8
   ret void
 }

@@ -94,6 +94,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
               MCFixupKind(WebAssembly::fixup_code_global_index), MI.getLoc()));
           ++MCNumFixups;
           encodeULEB128(uint64_t(MO.getImm()), OS);
+        } else if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+          encodeSLEB128(int64_t(MO.getImm()), OS);
         } else {
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }

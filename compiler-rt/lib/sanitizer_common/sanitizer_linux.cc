@@ -384,7 +384,7 @@ bool FileExists(const char *filename) {
   return S_ISREG(st.st_mode);
 }
 
-uptr GetTid() {
+tid_t GetTid() {
 #if SANITIZER_FREEBSD
   return (uptr)pthread_self();
 #else

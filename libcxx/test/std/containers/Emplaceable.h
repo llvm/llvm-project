@@ -10,7 +10,10 @@
 #ifndef EMPLACEABLE_H
 #define EMPLACEABLE_H
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#include <utility>
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 11
 
 class Emplaceable
 {
@@ -49,6 +52,5 @@ struct hash<Emplaceable>
 
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#endif  // TEST_STD_VER >= 11
 #endif  // EMPLACEABLE_H

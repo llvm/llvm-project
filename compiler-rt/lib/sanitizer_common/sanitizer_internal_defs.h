@@ -152,6 +152,12 @@ typedef u32 operator_new_size_type;
 # endif
 #endif
 
+#if SANITIZER_MAC
+// On Darwin, thread IDs are 64-bit even on 32-bit systems.
+typedef u64 tid_t;
+#else
+typedef uptr tid_t;
+#endif
 
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers to avoid portability issues.

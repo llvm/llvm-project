@@ -10,8 +10,8 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// template <class T> constexpr bool operator==(const optional<T>& x, const T& v);
-// template <class T> constexpr bool operator==(const T& v, const optional<T>& x);
+// template <class T, class U> constexpr bool operator==(const optional<T>& x, const U& v);
+// template <class T, class U> constexpr bool operator==(const U& v, const optional<T>& x);
 
 #include <optional>
 

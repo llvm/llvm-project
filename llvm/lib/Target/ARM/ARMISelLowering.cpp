@@ -2633,7 +2633,7 @@ bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   return true;
 }
 
-bool ARMTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+bool ARMTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!Subtarget->supportsTailCall())
     return false;
 
@@ -13052,7 +13052,9 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   //     rem = a - b * div
   //     return {div, rem}
   // This should be lowered into UDIV/SDIV + MLS later on.
-  if (Subtarget->hasDivide() && Op->getValueType(0).isSimple() &&
+  bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivide()
+                                        : Subtarget->hasDivideInARMMode();
+  if (hasDivide && Op->getValueType(0).isSimple() &&
       Op->getSimpleValueType(0) == MVT::i32) {
     unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
     const SDValue Dividend = Op->getOperand(0);

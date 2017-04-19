@@ -422,7 +422,8 @@ protected:
   // When we if-convert we need to create edge masks. We have to cache values
   // so that we don't end up with exponential recursion/IR.
   typedef DenseMap<std::pair<BasicBlock *, BasicBlock *>, VectorParts>
-      EdgeMaskCache;
+      EdgeMaskCacheTy;
+  typedef DenseMap<BasicBlock *, VectorParts> BlockMaskCacheTy;
 
   /// Create an empty loop, based on the loop ranges of the old loop.
   void createEmptyLoop();
@@ -785,7 +786,8 @@ protected:
   /// Store instructions that should be predicated, as a pair
   ///   <StoreInst, Predicate>
   SmallVector<std::pair<Instruction *, Value *>, 4> PredicatedInstructions;
-  EdgeMaskCache MaskCache;
+  EdgeMaskCacheTy EdgeMaskCache;
+  BlockMaskCacheTy BlockMaskCache;
   /// Trip count of the original loop.
   Value *TripCount;
   /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
@@ -4560,8 +4562,8 @@ InnerLoopVectorizer::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
 
   // Look for cached value.
   std::pair<BasicBlock *, BasicBlock *> Edge(Src, Dst);
-  EdgeMaskCache::iterator ECEntryIt = MaskCache.find(Edge);
-  if (ECEntryIt != MaskCache.end())
+  EdgeMaskCacheTy::iterator ECEntryIt = EdgeMaskCache.find(Edge);
+  if (ECEntryIt != EdgeMaskCache.end())
     return ECEntryIt->second;
 
   VectorParts SrcMask = createBlockInMask(Src);
@@ -4580,11 +4582,11 @@ InnerLoopVectorizer::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
     for (unsigned part = 0; part < UF; ++part)
       EdgeMask[part] = Builder.CreateAnd(EdgeMask[part], SrcMask[part]);
 
-    MaskCache[Edge] = EdgeMask;
+    EdgeMaskCache[Edge] = EdgeMask;
     return EdgeMask;
   }
 
-  MaskCache[Edge] = SrcMask;
+  EdgeMaskCache[Edge] = SrcMask;
   return SrcMask;
 }
 
@@ -4592,10 +4594,17 @@ InnerLoopVectorizer::VectorParts
 InnerLoopVectorizer::createBlockInMask(BasicBlock *BB) {
   assert(OrigLoop->contains(BB) && "Block is not a part of a loop");
 
+  // Look for cached value.
+  BlockMaskCacheTy::iterator BCEntryIt = BlockMaskCache.find(BB);
+  if (BCEntryIt != BlockMaskCache.end())
+    return BCEntryIt->second;
+
   // Loop incoming mask is all-one.
   if (OrigLoop->getHeader() == BB) {
     Value *C = ConstantInt::get(IntegerType::getInt1Ty(BB->getContext()), 1);
-    return getVectorValue(C);
+    const VectorParts &BlockMask = getVectorValue(C);
+    BlockMaskCache[BB] = BlockMask;
+    return BlockMask;
   }
 
   // This is the block mask. We OR all incoming edges, and with zero.
@@ -4609,6 +4618,7 @@ InnerLoopVectorizer::createBlockInMask(BasicBlock *BB) {
       BlockMask[part] = Builder.CreateOr(BlockMask[part], EM[part]);
   }
 
+  BlockMaskCache[BB] = BlockMask;
   return BlockMask;
 }
 

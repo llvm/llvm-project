@@ -1591,7 +1591,7 @@ Instruction *InstCombiner::commonPointerCastTransforms(CastInst &CI) {
         // GEP into CI would undo canonicalizing addrspacecast with different
         // pointer types, causing infinite loops.
         (!isa<AddrSpaceCastInst>(CI) ||
-          GEP->getType() == GEP->getPointerOperand()->getType())) {
+         GEP->getType() == GEP->getPointerOperandType())) {
       // Changing the cast operand is usually not a good idea but it is safe
       // here because the pointer operand is being replaced with another
       // pointer operand so the opcode doesn't need to change.

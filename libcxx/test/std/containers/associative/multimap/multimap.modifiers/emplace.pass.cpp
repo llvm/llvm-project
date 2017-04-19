@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class multimap
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::multimap<int, DefaultOnly> M;
         typedef M::iterator R;
@@ -84,7 +85,6 @@ int main()
         assert(m.begin()->first == 2);
         assert(m.begin()->second == 3.5);
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::multimap<int, DefaultOnly, std::less<int>, min_allocator<std::pair<const int, DefaultOnly>>> M;
         typedef M::iterator R;
@@ -145,6 +145,4 @@ int main()
         assert(m.begin()->first == 2);
         assert(m.begin()->second == 3.5);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

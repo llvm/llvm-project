@@ -214,6 +214,12 @@ bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
     Report("Missing rdtscp support.\n");
     return false;
   }
+  // Also check whether we can determine the CPU frequency, since if we cannot,
+  // we should use the emulated TSC instead.
+  if (!getTSCFrequency()) {
+    Report("Unable to determine CPU frequency.\n");
+    return false;
+  }
   return true;
 }
 

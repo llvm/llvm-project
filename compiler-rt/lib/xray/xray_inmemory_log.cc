@@ -79,15 +79,19 @@ static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
   int F = getLogFD();
   if (F == -1)
     return -1;
+
+  // Test for required CPU features and cache the cycle frequency
+  static bool TSCSupported = probeRequiredCPUFeatures();
+  static uint64_t CycleFrequency = TSCSupported ? getTSCFrequency()
+                                   : __xray::NanosecondsPerSecond;
+
   // Since we're here, we get to write the header. We set it up so that the
   // header will only be written once, at the start, and let the threads
   // logging do writes which just append.
   XRayFileHeader Header;
   Header.Version = 1;
   Header.Type = FileTypes::NAIVE_LOG;
-  Header.CycleFrequency = probeRequiredCPUFeatures()
-                              ? getTSCFrequency()
-                              : __xray::NanosecondsPerSecond;
+  Header.CycleFrequency = CycleFrequency;
 
   // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
   // before setting the values in the header.

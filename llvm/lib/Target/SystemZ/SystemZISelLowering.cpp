@@ -829,7 +829,7 @@ bool SystemZTargetLowering::allowTruncateForTailCall(Type *FromType,
   return isTruncateFree(FromType, ToType);
 }
 
-bool SystemZTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
+bool SystemZTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
 }
 

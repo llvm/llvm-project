@@ -467,6 +467,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
       if (pos >= 0 && Text[pos] == '\r')
         --pos;
       // See whether there is an odd number of '\' before this.
+      // FIXME: This is wrong. A '\' followed by a newline is always removed,
+      // regardless of whether there is another '\' before it.
+      // FIXME: Newlines can also be escaped by a '?' '?' '/' trigraph.
       unsigned count = 0;
       for (; pos >= 0; --pos, ++count)
         if (Text[pos] != '\\')

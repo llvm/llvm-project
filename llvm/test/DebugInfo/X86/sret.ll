@@ -1,10 +1,22 @@
 ; RUN: llc -split-dwarf=Enable -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s --check-prefix=CHECK-DWO
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
-; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
-; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
+; CHECK-DWO: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
+; CHECK-DWO: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x51ac5644b1937aa1)
+
+; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; CHECK: _ZN1B9AInstanceEv
+; CHECK: DW_TAG_variable  
+; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000)
+; CHECK-NEXT:   DW_AT_name {{.*}}"a"
+; CHECK: .debug_loc contents:
+; CHECK: 0x00000000: Beginning address offset:
+; CHECK-NEXT:                Ending address offset:
+; CHECK-NEXT:                 Location description: 75 00
+;                                                   rdi+0
 
 %class.A = type { i32 (...)**, i32 }
 %class.B = type { i8 }
@@ -98,7 +110,7 @@ entry:
   call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !89, metadata !DIExpression()), !dbg !91
   %this1 = load %class.B*, %class.B** %this.addr
   store i1 false, i1* %nrvo, !dbg !92
-  call void @llvm.dbg.declare(metadata %class.A* %agg.result, metadata !93, metadata !DIExpression(DW_OP_deref)), !dbg !92
+  call void @llvm.dbg.declare(metadata %class.A* %agg.result, metadata !93, metadata !DIExpression()), !dbg !92
   call void @_ZN1AC1Ei(%class.A* %agg.result, i32 12), !dbg !92
   store i1 true, i1* %nrvo, !dbg !94
   store i32 1, i32* %cleanup.dest.slot

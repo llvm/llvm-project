@@ -89,8 +89,8 @@ public:
   std::vector<InputSection *> Sections;
 
   // Used for implementation of --compress-debug-sections option.
+  std::vector<uint8_t> ZDebugHeader;
   llvm::SmallVector<char, 1> CompressedData;
-  std::vector<uint8_t> CompressedHeader;
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;

@@ -579,7 +579,7 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
     return InliningInfo;
   }
 
-  uint32_t CallFile = 0, CallLine = 0, CallColumn = 0;
+  uint32_t CallFile = 0, CallLine = 0, CallColumn = 0, CallDiscriminator = 0;
   for (uint32_t i = 0, n = InlinedChain.size(); i != n; i++) {
     DWARFDie &FunctionDIE = InlinedChain[i];
     DILineInfo Frame;
@@ -605,10 +605,12 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
                                         Spec.FLIKind, Frame.FileName);
         Frame.Line = CallLine;
         Frame.Column = CallColumn;
+        Frame.Discriminator = CallDiscriminator;
       }
       // Get call file/line/column of a current DIE.
       if (i + 1 < n) {
-        FunctionDIE.getCallerFrame(CallFile, CallLine, CallColumn);
+        FunctionDIE.getCallerFrame(CallFile, CallLine, CallColumn,
+                                   CallDiscriminator);
       }
     }
     InliningInfo.addFrame(Frame);

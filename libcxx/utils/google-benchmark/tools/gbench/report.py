@@ -92,7 +92,7 @@ def generate_difference_report(json1, json2, use_color=True):
                 return BC_WHITE
             else:
                 return BC_CYAN
-        fmt_str = "{}{:<{}s}{endc}    {}{:+.2f}{endc}         {}{:+.2f}{endc}         {:4d}         {:4d}"
+        fmt_str = "{}{:<{}s}{endc}{}{:+9.2f}{endc}{}{:+14.2f}{endc}{:14d}{:14d}"
         tres = calculate_change(bn['real_time'], other_bench['real_time'])
         cpures = calculate_change(bn['cpu_time'], other_bench['cpu_time'])
         output_strs += [color_format(use_color, fmt_str,
@@ -121,19 +121,22 @@ class TestReportDifference(unittest.TestCase):
 
     def test_basic(self):
         expect_lines = [
-            ['BM_SameTimes', '+0.00', '+0.00'],
-            ['BM_2xFaster', '-0.50', '-0.50'],
-            ['BM_2xSlower', '+1.00', '+1.00'],
-            ['BM_10PercentFaster', '-0.10', '-0.10'],
-            ['BM_10PercentSlower', '+0.10', '+0.10']
+            ['BM_SameTimes', '+0.00', '+0.00', '10', '10'],
+            ['BM_2xFaster', '-0.50', '-0.50', '50', '25'],
+            ['BM_2xSlower', '+1.00', '+1.00', '50', '100'],
+            ['BM_10PercentFaster', '-0.10', '-0.10', '100', '90'],
+            ['BM_10PercentSlower', '+0.10', '+0.10', '100', '110'],
+            ['BM_100xSlower', '+99.00', '+99.00', '100', '10000'],
+            ['BM_100xFaster', '-0.99', '-0.99', '10000', '100'],
         ]
         json1, json2 = self.load_results()
-        output_lines = generate_difference_report(json1, json2, use_color=False)
-        print output_lines
+        output_lines_with_header = generate_difference_report(json1, json2, use_color=False)
+        output_lines = output_lines_with_header[2:]
+        print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
         for i in xrange(0, len(output_lines)):
             parts = [x for x in output_lines[i].split(' ') if x]
-            self.assertEqual(len(parts), 3)
+            self.assertEqual(len(parts), 5)
             self.assertEqual(parts, expect_lines[i])
 
 

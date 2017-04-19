@@ -16,6 +16,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaInternal.h"
@@ -160,12 +161,16 @@ struct ParsedAttrInfo {
   unsigned IsType : 1;
   unsigned IsStmt : 1;
   unsigned IsKnownToGCC : 1;
+  unsigned IsSupportedByPragmaAttribute : 1;
 
   bool (*DiagAppertainsToDecl)(Sema &S, const AttributeList &Attr,
                                const Decl *);
   bool (*DiagLangOpts)(Sema &S, const AttributeList &Attr);
   bool (*ExistsInTarget)(const TargetInfo &Target);
   unsigned (*SpellingIndexToSemanticSpelling)(const AttributeList &Attr);
+  void (*GetPragmaAttributeMatchRules)(
+      llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
+      const LangOptions &LangOpts);
 };
 
 namespace {
@@ -192,6 +197,18 @@ bool AttributeList::diagnoseAppertainsTo(Sema &S, const Decl *D) const {
   return getInfo(*this).DiagAppertainsToDecl(S, *this, D);
 }
 
+bool AttributeList::appliesToDecl(const Decl *D,
+                                  attr::SubjectMatchRule MatchRule) const {
+  return checkAttributeMatchRuleAppliesTo(D, MatchRule);
+}
+
+void AttributeList::getMatchRules(
+    const LangOptions &LangOpts,
+    SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &MatchRules)
+    const {
+  return getInfo(*this).GetPragmaAttributeMatchRules(MatchRules, LangOpts);
+}
+
 bool AttributeList::diagnoseLangOpts(Sema &S) const {
   return getInfo(*this).DiagLangOpts(S, *this);
 }
@@ -214,6 +231,10 @@ bool AttributeList::existsInTarget(const TargetInfo &Target) const {
 
 bool AttributeList::isKnownToGCC() const {
   return getInfo(*this).IsKnownToGCC;
+}
+
+bool AttributeList::isSupportedByPragmaAttribute() const {
+  return getInfo(*this).IsSupportedByPragmaAttribute;
 }
 
 unsigned AttributeList::getSemanticSpelling() const {

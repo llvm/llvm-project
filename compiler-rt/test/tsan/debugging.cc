@@ -2,6 +2,7 @@
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@ int __tsan_get_report_mop(void *report, unsigned long idx, int *tid,
                           void **addr, int *size, int *write, int *atomic,
                           void **trace, unsigned long trace_size);
 int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
-                             unsigned long *os_id, int *running,
+                             uint64_t *os_id, int *running,
                              const char **name, int *parent_tid, void **trace,
                              unsigned long trace_size);
 }
@@ -90,7 +91,7 @@ void __tsan_on_report(void *report) {
   fprintf(stderr, "thread_count = %d\n", thread_count);
   // CHECK: thread_count = 2
 
-  unsigned long os_id;
+  uint64_t os_id;
   int running;
   const char *name;
   int parent_tid;

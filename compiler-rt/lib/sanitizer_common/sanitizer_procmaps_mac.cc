@@ -262,7 +262,8 @@ void MemoryMappingLayout::DumpListOfModules(
       cur_module->set(cur_name, cur_beg, cur_arch, cur_uuid,
                       current_instrumented_);
     }
-    cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute);
+    cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute,
+                                prot & kProtectionRead);
   }
 }
 

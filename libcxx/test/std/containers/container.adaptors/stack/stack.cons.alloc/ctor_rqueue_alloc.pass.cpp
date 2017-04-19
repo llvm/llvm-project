@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <stack>
 
 // template <class Alloc>
@@ -18,7 +20,6 @@
 #include "test_allocator.h"
 #include "MoveOnly.h"
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class C>
 C
@@ -47,14 +48,11 @@ struct test
     allocator_type get_allocator() {return this->c.get_allocator();}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test<MoveOnly> q(make<C>(5), test_allocator<MoveOnly>(4));
     test<MoveOnly> q2(std::move(q), test_allocator<MoveOnly>(5));
     assert(q2.get_allocator() == test_allocator<MoveOnly>(5));
     assert(q2.size() == 5);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

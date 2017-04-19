@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // PR5057
 namespace test0 {
   namespace std {
@@ -68,12 +68,17 @@ namespace test3 {
   Foo<int> foo;
 
   template<typename T, T Value> struct X2a;
-  template<typename T, int Size> struct X2b;    // expected-note {{previous non-type template parameter with type 'int' is here}}
+
+  template<typename T, int Size> struct X2b;
 
   template<typename T>
   class X3 {
     template<typename U, U Value> friend struct X2a;
-    template<typename U, T Value> friend struct X2b; // expected-error {{template non-type parameter has a different type 'long' in template redeclaration}} 
+
+    // FIXME: the redeclaration note ends up here because redeclaration
+    // lookup ends up finding the friend target from X3<int>.
+    template<typename U, T Value> friend struct X2b; // expected-error {{template non-type parameter has a different type 'long' in template redeclaration}} \
+      // expected-note {{previous non-type template parameter with type 'int' is here}}
   };
 
   X3<int> x3i; // okay
@@ -292,11 +297,14 @@ namespace PR12585 {
   int n = C::D<void*>().f();
 
   struct F {
-    template<int> struct G; // expected-note {{previous}}
+    template<int> struct G;
   };
   template<typename T> struct H {
+    // FIXME: As with cases above, the note here is on an unhelpful declaration,
+    // and should point to the declaration of G within F.
     template<T> friend struct F::G; // \
-      // expected-error {{different type 'char' in template redeclaration}}
+      // expected-error {{different type 'char' in template redeclaration}} \
+      // expected-note {{previous}}
   };
   H<int> h1; // ok
   H<char> h2; // expected-note {{instantiation}}
@@ -320,12 +328,4 @@ namespace rdar12350696 {
     A<int> b;
     foo(b); // expected-note {{in instantiation}}
   }
-}
-namespace PR30994 {
-  void f();
-  struct A {
-    [[deprecated]] friend void f() {} // \
-      expected-note {{has been explicitly marked deprecated here}}
-  };
-  void g() { f(); } // expected-warning {{is deprecated}}
 }

@@ -13,6 +13,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "asan_testing.h"
 
 class X {
@@ -70,7 +71,7 @@ void test_push_back() {
 }
 
 void test_emplace_back() {
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#if TEST_STD_VER >= 11
   std::vector<X> v;
   v.reserve(2);
   v.push_back(X(2));
@@ -83,7 +84,7 @@ void test_emplace_back() {
   }
   assert(v.size() == 1);
   assert(is_contiguous_container_asan_correct(v));
-#endif // _LIBCPP_HAS_NO_VARIADICS
+#endif
 }
 
 void test_insert_range() {
@@ -121,7 +122,7 @@ void test_insert() {
 }
 
 void test_emplace() {
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#if TEST_STD_VER >= 11
   std::vector<X> v;
   v.reserve(3);
   v.insert(v.end(), X(1));
@@ -135,7 +136,7 @@ void test_emplace() {
   }
   assert(v.size() == 2);
   assert(is_contiguous_container_asan_correct(v));
-#endif // _LIBCPP_HAS_NO_VARIADICS
+#endif
 }
 
 void test_insert_range2() {

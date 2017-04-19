@@ -834,9 +834,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
-  bool Deref = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
-  int64_t Offset = Deref ? MI->getOperand(1).getImm() : 0;
-
+  bool Deref = false;
+  bool MemLoc = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
+  int64_t Offset = MemLoc ? MI->getOperand(1).getImm() : 0;
   for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
     uint64_t Op = Expr->getElement(i);
     if (Op == dwarf::DW_OP_LLVM_fragment) {
@@ -844,7 +844,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       break;
     } else if (Deref) {
       // We currently don't support extra Offsets or derefs after the first
-      // one. Bail out early instead of emitting an incorrect comment
+      // one. Bail out early instead of emitting an incorrect comment.
       OS << " [complex expression]";
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
@@ -899,12 +899,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
     }
-    if (Deref)
+    if (MemLoc || Deref)
       OS << '[';
     OS << PrintReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
   }
 
-  if (Deref)
+  if (MemLoc || Deref)
     OS << '+' << Offset << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
@@ -1356,7 +1356,7 @@ bool AsmPrinter::doFinalization(Module &M) {
         OutContext.getOrCreateSymbol(StringRef("__morestack_addr"));
     OutStreamer->EmitLabel(AddrSymbol);
 
-    unsigned PtrSize = M.getDataLayout().getPointerSize(0);
+    unsigned PtrSize = MAI->getCodePointerSize();
     OutStreamer->EmitSymbolValue(GetExternalSymbolSymbol("__morestack"),
                                  PtrSize);
   }
@@ -2246,7 +2246,7 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
       //       chu[nk1 chu][nk2 chu] ... [nkN-1 chunkN]
       ExtraBits = Realigned.getRawData()[0] &
         (((uint64_t)-1) >> (64 - ExtraBitsSize));
-      Realigned = Realigned.lshr(ExtraBitsSize);
+      Realigned.lshrInPlace(ExtraBitsSize);
     } else
       ExtraBits = Realigned.getRawData()[BitWidth / 64];
   }
@@ -2781,7 +2781,7 @@ void AsmPrinter::emitXRayTable() {
   // before the function's end, we assume that this is happening after
   // the last return instruction.
 
-  auto WordSizeBytes = TM.getPointerSize();
+  auto WordSizeBytes = MAI->getCodePointerSize();
   MCSymbol *Tmp = OutContext.createTempSymbol("xray_synthetic_", true);
   OutStreamer->EmitCodeAlignment(16);
   OutStreamer->EmitSymbolValue(Tmp, WordSizeBytes, false);

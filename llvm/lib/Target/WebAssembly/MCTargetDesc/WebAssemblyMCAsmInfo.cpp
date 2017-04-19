@@ -22,7 +22,7 @@ using namespace llvm;
 WebAssemblyMCAsmInfoELF::~WebAssemblyMCAsmInfoELF() {}
 
 WebAssemblyMCAsmInfoELF::WebAssemblyMCAsmInfoELF(const Triple &T) {
-  PointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
+  CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?
 
@@ -55,7 +55,7 @@ WebAssemblyMCAsmInfoELF::WebAssemblyMCAsmInfoELF(const Triple &T) {
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() {}
 
 WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
-  PointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
+  CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?
 

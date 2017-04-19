@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <queue>
 
 // queue(queue&&)
@@ -14,7 +16,6 @@
 
 // This tests a conforming extension
 
-// UNSUPPORTED: c++98, c++03
 
 #include <queue>
 #include <cassert>
@@ -29,5 +30,5 @@ int main()
         typedef std::queue<MoveOnly> C;
         static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
-#endif // _LIBCPP_VERSION
+#endif
 }

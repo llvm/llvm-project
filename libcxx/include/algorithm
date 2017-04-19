@@ -2548,7 +2548,7 @@ min(const _Tp& __a, const _Tp& __b)
     return _VSTD::min(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2566,7 +2566,7 @@ min(initializer_list<_Tp> __t)
     return *_VSTD::min_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 // max_element
 
@@ -2613,7 +2613,7 @@ max(const _Tp& __a, const _Tp& __b)
     return _VSTD::max(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2631,7 +2631,7 @@ max(initializer_list<_Tp> __t)
     return *_VSTD::max_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 // clamp
@@ -2732,7 +2732,7 @@ minmax(const _Tp& __a, const _Tp& __b)
     return _VSTD::minmax(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2779,7 +2779,7 @@ minmax(initializer_list<_Tp> __t)
     return _VSTD::minmax(__t, __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 // random_shuffle
 
@@ -2837,7 +2837,7 @@ private:
     _Engine_result_type __mask0_;
     _Engine_result_type __mask1_;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min
                                           + _Working_result_type(1);
 #else
@@ -3080,7 +3080,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
                _RandomNumberGenerator&& __rand)
 #else
                _RandomNumberGenerator& __rand)
@@ -3173,7 +3173,7 @@ _SampleIterator sample(_PopulationIterator __first,
 
 template<class _RandomAccessIterator, class _UniformRandomNumberGenerator>
     void shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
                  _UniformRandomNumberGenerator&& __g)
 #else
                  _UniformRandomNumberGenerator& __g)

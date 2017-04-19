@@ -14,6 +14,7 @@
 
 #include "benchmark/reporter.h"
 #include "complexity.h"
+#include "counter.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -34,6 +35,7 @@ namespace benchmark {
 
 bool ConsoleReporter::ReportContext(const Context& context) {
   name_field_width_ = context.name_field_width;
+  printed_header_ = false;
 
   PrintBasicContext(&GetErrorStream(), context);
 
@@ -45,16 +47,32 @@ bool ConsoleReporter::ReportContext(const Context& context) {
     color_output_ = false;
   }
 #endif
-  std::string str =
-      FormatString("%-*s %13s %13s %10s\n", static_cast<int>(name_field_width_),
-                   "Benchmark", "Time", "CPU", "Iterations");
-  GetOutputStream() << str << std::string(str.length() - 1, '-') << "\n";
 
   return true;
 }
 
+void ConsoleReporter::PrintHeader(const Run& run) {
+  std::string str =
+      FormatString("%-*s %13s %13s %10s\n", static_cast<int>(name_field_width_),
+                   "Benchmark", "Time", "CPU", "Iterations");
+  if(!run.counters.empty()) {
+    str += " UserCounters...";
+  }
+  std::string line = std::string(str.length(), '-');
+  GetOutputStream() << line << "\n" << str << line << "\n";
+}
+
 void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
-  for (const auto& run : reports) PrintRunData(run);
+  for (const auto& run : reports) {
+    // print the header if none was printed yet
+    if (!printed_header_) {
+      printed_header_ = true;
+      PrintHeader(run);
+    }
+    // As an alternative to printing the headers like this, we could sort
+    // the benchmarks by header and then print like that.
+    PrintRunData(run);
+  }
 }
 
 static void IgnoreColorPrint(std::ostream& out, LogColor, const char* fmt,
@@ -112,6 +130,11 @@ void ConsoleReporter::PrintRunData(const Run& result) {
 
   if (!result.report_big_o && !result.report_rms) {
     printer(Out, COLOR_CYAN, "%10lld", result.iterations);
+  }
+
+  for (auto& c : result.counters) {
+    auto const& s = HumanReadableNumber(c.second.value);
+    printer(Out, COLOR_DEFAULT, " %s=%s", c.first.c_str(), s.c_str());
   }
 
   if (!rate.empty()) {

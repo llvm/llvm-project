@@ -770,6 +770,12 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     Args.AddLastArg(CmdArgs, options::OPT_mfpu_EQ);
     break;
   }
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be: {
+    Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
+    Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);
+    break;
+  }
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:

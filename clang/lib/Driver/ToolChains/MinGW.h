@@ -93,6 +93,7 @@ private:
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
   void findGccLibDir();
+  llvm::ErrorOr<std::string> findGcc();
 };
 
 } // end namespace toolchains

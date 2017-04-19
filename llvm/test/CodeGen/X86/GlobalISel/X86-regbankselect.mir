@@ -106,6 +106,10 @@
     ret void
   }
 
+  define void @trunc_check() {
+    ret void
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -629,6 +633,30 @@ body:             |
     %1(s16) = G_CONSTANT i16 16
     %2(s32) = G_CONSTANT i32 32
     %3(s64) = G_CONSTANT i64 64
+    RET 0
+
+...
+---
+name:            trunc_check
+alignment:       4
+legalized:       true
+# CHECK-LABEL: name:            trunc_check
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s8) = G_TRUNC %0(s32)
+    %3(s16) = G_TRUNC %0(s32)
     RET 0
 
 ...

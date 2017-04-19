@@ -266,6 +266,8 @@ LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
 
 LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
 
+LANGOPT(AllowEditorPlaceholders, 1, 0, "allow editor placeholders in source")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

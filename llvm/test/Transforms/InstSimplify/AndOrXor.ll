@@ -376,26 +376,6 @@ define i1 @or_icmp3(i32 %x, i32 %y) {
   ret i1 %3
 }
 
-define i1 @disjoint_cmps(i32 %A) {
-; CHECK-LABEL: @disjoint_cmps(
-; CHECK-NEXT:    ret i1 false
-;
-  %B = icmp eq i32 %A, 1
-  %C = icmp sge i32 %A, 3
-  %D = and i1 %B, %C
-  ret i1 %D
-}
-
-define i1 @disjoint_cmps2(i32 %X) {
-; CHECK-LABEL: @disjoint_cmps2(
-; CHECK-NEXT:    ret i1 false
-;
-  %a = icmp ult i32 %X, 31
-  %b = icmp slt i32 %X, 0
-  %c = and i1 %a, %b
-  ret i1 %c
-}
-
 ; PR27869 - Look through casts to eliminate cmps and bitwise logic.
 
 define i32 @and_of_zexted_icmps(i32 %i) {

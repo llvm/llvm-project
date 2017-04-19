@@ -65,8 +65,8 @@ protected:
   // Properties to be set by the target writer, used to configure asm printer.
   //
 
-  /// Pointer size in bytes.  Default is 4.
-  unsigned PointerSize = 4;
+  /// Code pointer size in bytes.  Default is 4.
+  unsigned CodePointerSize = 4;
 
   /// Size of the stack slot reserved for callee-saved registers, in bytes.
   /// Default is same as pointer size.
@@ -384,8 +384,8 @@ public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
 
-  /// Get the pointer size in bytes.
-  unsigned getPointerSize() const { return PointerSize; }
+  /// Get the code pointer size in bytes.
+  unsigned getCodePointerSize() const { return CodePointerSize; }
 
   /// Get the callee-saved register stack slot
   /// size in bytes.

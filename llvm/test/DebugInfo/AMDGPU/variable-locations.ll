@@ -19,7 +19,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x05> 03 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
 @GlobA = common addrspace(1) global i32 0, align 4, !dbg !0
 
 ; CHECK: {{.*}}DW_TAG_variable
@@ -28,7 +28,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x05> 03 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
 @GlobB = common addrspace(1) global i32 0, align 4, !dbg !6
 
 define amdgpu_kernel void @kernel1(

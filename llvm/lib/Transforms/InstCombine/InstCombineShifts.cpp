@@ -370,7 +370,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
         MaskV <<= Op1C->getZExtValue();
       else {
         assert(I.getOpcode() == Instruction::LShr && "Unknown logical shift");
-        MaskV = MaskV.lshr(Op1C->getZExtValue());
+        MaskV.lshrInPlace(Op1C->getZExtValue());
       }
 
       // shift1 & 0x00FF

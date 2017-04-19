@@ -4,7 +4,7 @@
 //
 // CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface
 // CHECK-PRECOMPILE-SAME: -o {{.*}}.pcm
-// CHECK-PRECOMPILE-SAME: -x c++-module
+// CHECK-PRECOMPILE-SAME: -x c++
 // CHECK-PRECOMPILE-SAME: modules-ts.cpp
 
 // Check compiling a .pcm file to a .o file.

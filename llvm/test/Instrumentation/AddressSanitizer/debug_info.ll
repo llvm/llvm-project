@@ -24,9 +24,9 @@ entry:
 ;   CHECK: entry:
 ; Verify that llvm.dbg.declare calls are in the entry basic block.
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata ![[OPDEREF:[0-9]+]])
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata ![[EMPTY:[0-9]+]])
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata ![[OPDEREF:[0-9]+]])
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata ![[EMPTY:[0-9]+]])
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
@@ -47,7 +47,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 ; Verify that debug descriptors for argument and local variable will be replaced
 ; with descriptors that end with OpDeref (encoded as 2).
 ;   CHECK: ![[ARG_ID]] = !DILocalVariable(name: "p", arg: 1,{{.*}} line: 1
-;   CHECK: ![[OPDEREF]] = !DIExpression(DW_OP_deref)
+;   CHECK: ![[EMPTY]] = !DIExpression()
 ;   CHECK: ![[VAR_ID]] = !DILocalVariable(name: "r",{{.*}} line: 2
 ; Verify that there are no more variable descriptors.
 ;   CHECK-NOT: !DILocalVariable(tag: DW_TAG_arg_variable

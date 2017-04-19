@@ -247,8 +247,10 @@ public:
   /// DW_AT_call_line attribute in this DIE.
   /// \param CallColumn filled in with non-zero if successful, zero if there is
   /// no DW_AT_call_column attribute in this DIE.
+  /// \param CallDiscriminator filled in with non-zero if successful, zero if
+  /// there is no DW_AT_GNU_discriminator attribute in this DIE.
   void getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
-                      uint32_t &CallColumn) const;
+                      uint32_t &CallColumn, uint32_t &CallDiscriminator) const;
   
   /// Get inlined chain for a given address, rooted at the current DIE.
   /// Returns empty chain if address is not contained in address range

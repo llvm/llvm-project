@@ -86,6 +86,10 @@ public:
     FeatureBits = FeatureBits_;
   }
 
+  bool hasFeature(unsigned Feature) const {
+    return FeatureBits[Feature];
+  }
+
 protected:
   /// Initialize the scheduling model and feature bits.
   ///

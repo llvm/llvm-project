@@ -16,6 +16,7 @@
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/MC/MachineLocation.h"
 
 namespace llvm {
 
@@ -102,12 +103,17 @@ protected:
   unsigned SubRegisterSizeInBits = 0;
   unsigned SubRegisterOffsetInBits = 0;
 
+  /// The kind of location description being produced.
+  enum { Unknown = 0, Register, Memory, Implicit } LocationKind = Unknown;
+
   /// Push a DW_OP_piece / DW_OP_bit_piece for emitting later, if one is needed
   /// to represent a subregister.
   void setSubRegisterPiece(unsigned SizeInBits, unsigned OffsetInBits) {
     SubRegisterSizeInBits = SizeInBits;
     SubRegisterOffsetInBits = OffsetInBits;
   }
+
+  void setMemoryLocationKind();
 
   /// Add masking operations to stencil out a subregister.
   void maskSubRegister();
@@ -122,7 +128,8 @@ protected:
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
-  /// Emit a DW_OP_reg operation.
+  /// Emit a DW_OP_reg operation. Note that this is only legal inside a DWARF
+  /// register location description.
   void addReg(int DwarfReg, const char *Comment = nullptr);
   /// Emit a DW_OP_breg operation.
   void addBReg(int DwarfReg, int Offset);
@@ -194,8 +201,8 @@ public:
   ///                                 fragment inside the entire variable.
   /// \return                         false if no DWARF register exists
   ///                                 for MachineReg.
-  bool addMachineRegExpression(const TargetRegisterInfo &TRI,
-                               DIExpressionCursor &Expr, unsigned MachineReg,
+  bool addMachineLocExpression(const TargetRegisterInfo &TRI,
+                               DIExpressionCursor &Expr, MachineLocation Loc,
                                unsigned FragmentOffsetInBits = 0);
   /// Emit all remaining operations in the DIExpressionCursor.
   ///

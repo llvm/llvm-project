@@ -1,39 +1,97 @@
 #static volatile int do_mul;
-#static volatile int do_inc;
+#static volatile int x, v;
 #
-#int main () {
-#  int x = 1;
-#  if (do_mul) x *= 2; else x /= 2;
-#  return do_inc ? ++x : --x;
+#int foo () {
+#  if (do_mul) x *= v; else x /= v;
+#  return x;
 #}
-#Build as : clang -g -O2 discrim.c -o discrim
+#
+#int main() {
+#  return foo() + foo();
+#}
+#Build as : clang -gmlt -fdebug-info-for-profiling -O2 discrim.c -o discrim
 
 RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/discrim.inp | FileCheck %s
 
 #CHECK: some text
 
-#CHECK: 0x4004f2
-#CHECK-NEXT: main
+#CHECK: 0x400590
+#CHECK-NEXT: foo
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
 #CHECK-NEXT: Function start line: 4
-#CHECK-NEXT: Line: 6
+#CHECK-NEXT: Line: 9
+#CHECK-NEXT: Column: 0
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
+
+#CHECK: 0x4005a5
+#CHECK-NEXT: foo
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
+#CHECK-NEXT: Line: 5
+#CHECK-NEXT: Column: 17
+#CHECK-NEXT: Discriminator: 2
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
+
+#CHECK: 0x4005ad
+#CHECK-NEXT: foo
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
+#CHECK-NEXT: Line: 0
+#CHECK-NEXT: Column: 30
+#CHECK-NEXT: Discriminator: 4
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
+
+#CHECK: 0x4005b9
+#CHECK-NEXT: foo
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
+#CHECK-NEXT: Line: 5
 #CHECK-NEXT: Column: 7
-#CHECK-NOT: Discriminator: 0
-
-#CHECK: 0x400509
 #CHECK-NEXT: main
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
-#CHECK-NEXT: Function start line: 4
-#CHECK-NEXT: Line: 7
-#CHECK-NEXT: Column: 3
-#CHECK-NEXT: Discriminator: 1
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
+#CHECK-NEXT: Discriminator: 2
 
-#CHECK: 0x40050d
-#CHECK-NEXT: main
+#CHECK: 0x4005ce
+#CHECK-NEXT: foo
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
 #CHECK-NEXT: Function start line: 4
-#CHECK-NEXT: Line: 7
-#CHECK-NEXT: Column: 3
+#CHECK-NEXT: Line: 5
+#CHECK-NEXT: Column: 17
+#CHECK-NEXT: Discriminator: 2
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
+#CHECK-NEXT: Discriminator: 2
+
+#CHECK: 0x4005d4
+#CHECK-NEXT: foo
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
+#CHECK-NEXT: Line: 5
+#CHECK-NEXT: Column: 30
+#CHECK-NEXT: Discriminator: 4
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 9
+#CHECK-NEXT: Line: 10
+#CHECK-NEXT: Column: 0
 #CHECK-NEXT: Discriminator: 2
 
 #CHECK: some more text

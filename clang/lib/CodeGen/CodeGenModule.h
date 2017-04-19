@@ -1020,11 +1020,12 @@ public:
   /// \param CalleeInfo - The callee information these attributes are being
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
-  /// \param PAL [out] - On return, the attribute list to use.
+  /// \param Attrs [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
-                              CGCalleeInfo CalleeInfo, AttributeListType &PAL,
-                              unsigned &CallingConv, bool AttrOnCallSite);
+                              CGCalleeInfo CalleeInfo,
+                              llvm::AttributeList &Attrs, unsigned &CallingConv,
+                              bool AttrOnCallSite);
 
   /// Adds attributes to F according to our CodeGenOptions and LangOptions, as
   /// though we had emitted it ourselves.  We remove any attributes on F that

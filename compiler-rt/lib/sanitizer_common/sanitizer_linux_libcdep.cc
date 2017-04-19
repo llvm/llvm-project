@@ -447,7 +447,9 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
       uptr cur_beg = info->dlpi_addr + phdr->p_vaddr;
       uptr cur_end = cur_beg + phdr->p_memsz;
       bool executable = phdr->p_flags & PF_X;
-      cur_module.addAddressRange(cur_beg, cur_end, executable);
+      bool readable = phdr->p_flags & PF_R;
+      cur_module.addAddressRange(cur_beg, cur_end, executable,
+                                 readable);
     }
   }
   data->modules->push_back(cur_module);

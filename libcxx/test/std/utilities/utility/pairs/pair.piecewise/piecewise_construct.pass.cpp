@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <utility>
 
 // template <class T1, class T2> struct pair
@@ -42,7 +44,6 @@ public:
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_VARIADICS
     std::pair<A, B> p(std::piecewise_construct,
                       std::make_tuple(4, 'a'),
                       std::make_tuple(3.5, 6u, 2u));
@@ -51,5 +52,4 @@ int main()
     assert(p.second.get_d() == 3.5);
     assert(p.second.get_u1() == 6u);
     assert(p.second.get_u2() == 2u);
-#endif
 }
