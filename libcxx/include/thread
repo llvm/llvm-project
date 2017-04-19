@@ -95,7 +95,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <system_error>
 #include <chrono>
 #include <__mutex_base>
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 #include <tuple>
 #endif
 #include <__threading_support>
@@ -291,7 +291,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     template <class _Fp, class ..._Args,
               class = typename enable_if
               <
@@ -300,19 +300,19 @@ public:
              >
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         explicit thread(_Fp&& __f, _Args&&... __args);
-#else  // _LIBCPP_HAS_NO_VARIADICS
+#else  // _LIBCPP_CXX03_LANG
     template <class _Fp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     explicit thread(_Fp __f);
 #endif
     ~thread();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = _LIBCPP_NULL_THREAD;}
     _LIBCPP_INLINE_VISIBILITY
     thread& operator=(thread&& __t) _NOEXCEPT;
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
@@ -329,7 +329,7 @@ public:
     static unsigned hardware_concurrency() _NOEXCEPT;
 };
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _TSp, class _Fp, class ..._Args, size_t ..._Indices>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -369,7 +369,18 @@ thread::thread(_Fp&& __f, _Args&&... __args)
         __throw_system_error(__ec, "thread constructor failed");
 }
 
-#else  // _LIBCPP_HAS_NO_VARIADICS
+inline
+thread&
+thread::operator=(thread&& __t) _NOEXCEPT
+{
+    if (!__libcpp_thread_isnull(&__t_))
+        terminate();
+    __t_ = __t.__t_;
+    __t.__t_ = _LIBCPP_NULL_THREAD;
+    return *this;
+}
+
+#else  // _LIBCPP_CXX03_LANG
 
 template <class _Fp>
 struct __thread_invoke_pair {
@@ -404,22 +415,7 @@ thread::thread(_Fp __f)
         __throw_system_error(__ec, "thread constructor failed");
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-inline
-thread&
-thread::operator=(thread&& __t) _NOEXCEPT
-{
-    if (!__libcpp_thread_isnull(&__t_))
-        terminate();
-    __t_ = __t.__t_;
-    __t.__t_ = _LIBCPP_NULL_THREAD;
-    return *this;
-}
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 inline _LIBCPP_INLINE_VISIBILITY
 void swap(thread& __x, thread& __y) _NOEXCEPT {__x.swap(__y);}

@@ -596,14 +596,8 @@ define void @almost_consecutive_stores(i8* %p) {
   store i8 3, i8* %p3
   ret void
 ; CHECK-LABEL: almost_consecutive_stores
-; CHECK-DAG: movb	$0, (%rdi)
-; CHECK-DAG: movb	$1, 42(%rdi)
-; CHECK-DAG: movb	$2, 2(%rdi)
-; CHECK-DAG: movb	$3, 3(%rdi)
+; CHECK-DAG: movb $0, (%rdi)
+; CHECK-DAG: movb $1, 42(%rdi)
+; CHECK-DAG: movw $770, 2(%rdi)
 ; CHECK: retq
-
-; We should able to merge the final two stores into a 16-bit store
-; FIXMECHECK-DAG: movw $770, 2(%rdi)
-
-
 }

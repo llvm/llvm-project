@@ -197,11 +197,11 @@ protected:
     _LIBCPP_INLINE_VISIBILITY
     size_t __hash_code() const _NOEXCEPT;
 private:
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     void __init(unsigned long long __v, false_type) _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     void __init(unsigned long long __v, true_type) _NOEXCEPT;
-#endif  // _LIBCPP_HAS_NO_CONSTEXPR
+#endif  // _LIBCPP_CXX03_LANG
     unsigned long to_ulong(false_type) const;
     _LIBCPP_INLINE_VISIBILITY
     unsigned long to_ulong(true_type) const;
@@ -217,16 +217,16 @@ template <size_t _N_words, size_t _Size>
 inline
 _LIBCPP_CONSTEXPR
 __bitset<_N_words, _Size>::__bitset() _NOEXCEPT
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     : __first_{0}
 #endif
 {
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     _VSTD::fill_n(__first_, _N_words, __storage_type(0));
 #endif
 }
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
 
 template <size_t _N_words, size_t _Size>
 void
@@ -249,13 +249,13 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT
     _VSTD::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
 }
 
-#endif  // _LIBCPP_HAS_NO_CONSTEXPR
+#endif  // _LIBCPP_CXX03_LANG
 
 template <size_t _N_words, size_t _Size>
 inline
 _LIBCPP_CONSTEXPR
 __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
 #if __SIZEOF_SIZE_T__ == 8
     : __first_{__v}
 #elif __SIZEOF_SIZE_T__ == 4
@@ -265,7 +265,7 @@ __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
 #endif
 #endif
 {
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     __init(__v, integral_constant<bool, sizeof(unsigned long long) == sizeof(__storage_type)>());
 #endif
 }

@@ -1207,7 +1207,7 @@ namespace llvm {
 
     bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
-    bool mayBeEmittedAsTailCall(CallInst *CI) const override;
+    bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
     EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                             ISD::NodeType ExtendKind) const override;

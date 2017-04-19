@@ -138,7 +138,8 @@ PHIExpression::~PHIExpression() = default;
 // It also wants to hand us SCC's that are unrelated to the phi node we ask
 // about, and have us process them there or risk redoing work.
 // Graph traits over a filter iterator also doesn't work that well here.
-// This SCC finder is specialized to walk use-def chains, and only follows instructions,
+// This SCC finder is specialized to walk use-def chains, and only follows
+// instructions,
 // not generic values (arguments, etc).
 struct TarjanSCC {
 
@@ -170,8 +171,10 @@ private:
           Root[I] = std::min(Root.lookup(I), Root.lookup(Op));
       }
     }
-    // See if we really were the root of a component, by seeing if we still have our DFSNumber.
-    // If we do, we are the root of the component, and we have completed a component. If we do not,
+    // See if we really were the root of a component, by seeing if we still have
+    // our DFSNumber.
+    // If we do, we are the root of the component, and we have completed a
+    // component. If we do not,
     // we are not the root of a component, and belong on the component stack.
     if (Root.lookup(I) == OurDFS) {
       unsigned ComponentID = Components.size();
@@ -2254,12 +2257,13 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
   MemoryAccessToClass[MSSA->getLiveOnEntryDef()] =
       createMemoryClass(MSSA->getLiveOnEntryDef());
 
-  for (auto &B : F) {
+  for (auto DTN : nodes(DT)) {
+    BasicBlock *BB = DTN->getBlock();
     // All MemoryAccesses are equivalent to live on entry to start. They must
     // be initialized to something so that initial changes are noticed. For
     // the maximal answer, we initialize them all to be the same as
     // liveOnEntry.
-    auto *MemoryBlockDefs = MSSA->getBlockDefs(&B);
+    auto *MemoryBlockDefs = MSSA->getBlockDefs(BB);
     if (MemoryBlockDefs)
       for (const auto &Def : *MemoryBlockDefs) {
         MemoryAccessToClass[&Def] = TOPClass;
@@ -2274,7 +2278,7 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
         if (MD && isa<StoreInst>(MD->getMemoryInst()))
           TOPClass->incStoreCount();
       }
-    for (auto &I : B) {
+    for (auto &I : *BB) {
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.
       if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
@@ -2518,14 +2522,11 @@ void NewGVN::verifyMemoryCongruency() const {
   auto ReachableAccessPred =
       [&](const std::pair<const MemoryAccess *, CongruenceClass *> Pair) {
         bool Result = ReachableBlocks.count(Pair.first->getBlock());
-        if (!Result)
+        if (!Result || MSSA->isLiveOnEntryDef(Pair.first) ||
+            MemoryToDFSNum(Pair.first) == 0)
           return false;
-        if (MSSA->isLiveOnEntryDef(Pair.first))
-          return true;
         if (auto *MemDef = dyn_cast<MemoryDef>(Pair.first))
           return !isInstructionTriviallyDead(MemDef->getMemoryInst());
-        if (MemoryToDFSNum(Pair.first) == 0)
-          return false;
         return true;
       };
 
@@ -2719,23 +2720,11 @@ bool NewGVN::runGVN() {
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  auto DFI = df_begin(DT->getRootNode());
-  for (auto DFE = df_end(DT->getRootNode()); DFI != DFE; ++DFI) {
-    BasicBlock *B = DFI->getBlock();
+  for (auto DTN : depth_first(DT->getRootNode())) {
+    BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
     ICount += BlockRange.second - BlockRange.first;
-  }
-
-  // Handle forward unreachable blocks and figure out which blocks
-  // have single preds.
-  for (auto &B : F) {
-    // Assign numbers to unreachable blocks.
-    if (!DFI.nodeVisited(DT->getNode(&B))) {
-      const auto &BlockRange = assignDFSNumbers(&B, ICount);
-      BlockInstRange.insert({&B, BlockRange});
-      ICount += BlockRange.second - BlockRange.first;
-    }
   }
 
   TouchedInstructions.resize(ICount);

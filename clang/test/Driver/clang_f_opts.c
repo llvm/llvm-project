@@ -494,3 +494,8 @@
 // RUN: %clang -### -S -fdebug-info-for-profiling -fno-debug-info-for-profiling %s 2>&1 | FileCheck -check-prefix=CHECK-NO-PROFILE-DEBUG %s
 // CHECK-PROFILE-DEBUG: -fdebug-info-for-profiling
 // CHECK-NO-PROFILE-DEBUG-NOT: -fdebug-info-for-profiling
+
+// RUN: %clang -### -S -fallow-editor-placeholders %s 2>&1 | FileCheck -check-prefix=CHECK-ALLOW-PLACEHOLDERS %s
+// RUN: %clang -### -S -fno-allow-editor-placeholders %s 2>&1 | FileCheck -check-prefix=CHECK-NO-ALLOW-PLACEHOLDERS %s
+// CHECK-ALLOW-PLACEHOLDERS: -fallow-editor-placeholders
+// CHECK-NO-ALLOW-PLACEHOLDERS-NOT: -fallow-editor-placeholders

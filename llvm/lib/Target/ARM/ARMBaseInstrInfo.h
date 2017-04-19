@@ -404,6 +404,29 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   bool isSwiftFastImmShift(const MachineInstr *MI) const;
+
+  /// Returns predicate register associated with the given frame instruction.
+  unsigned getFramePred(const MachineInstr &MI) const {
+    assert(isFrameInstr(MI));
+    if (isFrameSetup(MI))
+      // Operands of ADJCALLSTACKDOWN:
+      // - argument declared in ADJCALLSTACKDOWN pattern:
+      // 0 - frame size
+      // 1 - predicate code (like ARMCC::AL)
+      // - added by predOps:
+      // 2 - predicate reg
+      return MI.getOperand(2).getReg();
+    assert(MI.getOpcode() == ARM::ADJCALLSTACKUP ||
+           MI.getOpcode() == ARM::tADJCALLSTACKUP);
+    // Operands of ADJCALLSTACKUP:
+    // - argument declared in ADJCALLSTACKUP pattern:
+    // 0 - frame size
+    // 1 - arg of CALLSEQ_END
+    // 2 - predicate code
+    // - added by predOps:
+    // 3 - predicate reg
+    return MI.getOperand(3).getReg();
+  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the

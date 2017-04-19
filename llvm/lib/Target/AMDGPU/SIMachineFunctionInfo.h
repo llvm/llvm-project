@@ -133,15 +133,13 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   AMDGPUBufferPseudoSourceValue BufferPSV;
   AMDGPUImagePseudoSourceValue ImagePSV;
 
-public:
-  // FIXME: Make private
+private:
   unsigned LDSWaveSpillSize;
   unsigned ScratchOffsetReg;
   unsigned NumUserSGPRs;
   unsigned NumSystemSGPRs;
   bool HasFlatLocalCasts;
 
-private:
   bool HasSpilledSGPRs;
   bool HasSpilledVGPRs;
   bool HasNonSpillStackObjects;
@@ -380,6 +378,14 @@ public:
     return PrivateMemoryPtrUserSGPR;
   }
 
+  bool hasFlatLocalCasts() const {
+    return HasFlatLocalCasts;
+  }
+
+  void setHasFlatLocalCasts(bool FlatLocalCasts) {
+    HasFlatLocalCasts = FlatLocalCasts;
+  }
+
   bool hasSpilledSGPRs() const {
     return HasSpilledSGPRs;
   }
@@ -534,6 +540,10 @@ public:
       return AMDGPU::VGPR2;
     }
     llvm_unreachable("unexpected dimension");
+  }
+
+  unsigned getLDSWaveSpillSize() const {
+    return LDSWaveSpillSize;
   }
 
   const AMDGPUBufferPseudoSourceValue *getBufferPSV() const {

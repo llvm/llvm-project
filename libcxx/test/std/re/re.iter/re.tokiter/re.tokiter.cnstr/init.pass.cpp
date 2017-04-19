@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <regex>
 
 // class regex_token_iterator<BidirectionalIterator, charT, traits>
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         std::regex phone_numbers("\\d{3}-(\\d{4})");
         const char phone_book[] = "start 555-1234, 555-2345, 555-3456 end";
@@ -61,5 +62,4 @@ int main()
         ++i;
         assert(i == std::cregex_token_iterator());
     }
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

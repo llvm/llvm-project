@@ -191,6 +191,9 @@ private:
   /// out-of-line slow case for shl
   void shlSlowCase(unsigned ShiftAmt);
 
+  /// out-of-line slow case for lshr.
+  void lshrSlowCase(unsigned ShiftAmt);
+
   /// out-of-line slow case for operator=
   APInt &AssignSlowCase(const APInt &RHS);
 
@@ -889,7 +892,16 @@ public:
   }
 
   /// Logical right-shift this APInt by ShiftAmt in place.
-  void lshrInPlace(unsigned ShiftAmt);
+  void lshrInPlace(unsigned ShiftAmt) {
+    if (isSingleWord()) {
+      if (ShiftAmt >= BitWidth)
+        VAL = 0;
+      else
+        VAL >>= ShiftAmt;
+      return;
+    }
+    lshrSlowCase(ShiftAmt);
+  }
 
   /// \brief Left-shift function.
   ///
@@ -914,7 +926,14 @@ public:
   /// \brief Logical right-shift function.
   ///
   /// Logical right-shift this APInt by shiftAmt.
-  APInt lshr(const APInt &shiftAmt) const;
+  APInt lshr(const APInt &ShiftAmt) const {
+    APInt R(*this);
+    R.lshrInPlace(ShiftAmt);
+    return R;
+  }
+
+  /// Logical right-shift this APInt by ShiftAmt in place.
+  void lshrInPlace(const APInt &ShiftAmt);
 
   /// \brief Left-shift function.
   ///

@@ -649,8 +649,24 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   CmdArgs.push_back("-x");
   if (Args.hasArg(options::OPT_rewrite_objc))
     CmdArgs.push_back(types::getTypeName(types::TY_PP_ObjCXX));
-  else
-    CmdArgs.push_back(types::getTypeName(Input.getType()));
+  else {
+    // Map the driver type to the frontend type. This is mostly an identity
+    // mapping, except that the distinction between module interface units
+    // and other source files does not exist at the frontend layer.
+    const char *ClangType;
+    switch (Input.getType()) {
+    case types::TY_CXXModule:
+      ClangType = "c++";
+      break;
+    case types::TY_PP_CXXModule:
+      ClangType = "c++-cpp-output";
+      break;
+    default:
+      ClangType = types::getTypeName(Input.getType());
+      break;
+    }
+    CmdArgs.push_back(ClangType);
+  }
 }
 
 static void appendUserToPath(SmallVectorImpl<char> &Result) {
@@ -2290,6 +2306,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fstrict_return, options::OPT_fno_strict_return,
                     true))
     CmdArgs.push_back("-fno-strict-return");
+  if (Args.hasFlag(options::OPT_fallow_editor_placeholders,
+                   options::OPT_fno_allow_editor_placeholders, false))
+    CmdArgs.push_back("-fallow-editor-placeholders");
   if (Args.hasFlag(options::OPT_fstrict_vtable_pointers,
                    options::OPT_fno_strict_vtable_pointers,
                    false))

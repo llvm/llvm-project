@@ -68,6 +68,7 @@ X86GenRegisterBankInfo::PartialMappingIdx
 X86GenRegisterBankInfo::getPartialMappingIdx(const LLT &Ty, bool isFP) {
   if ((Ty.isScalar() && !isFP) || Ty.isPointer()) {
     switch (Ty.getSizeInBits()) {
+    case 1:
     case 8:
       return PMI_GPR8;
     case 16:

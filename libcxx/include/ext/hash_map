@@ -331,7 +331,7 @@ public:
           __second_constructed(false)
         {}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_node_destructor(__hash_node_destructor<allocator_type>&& __x)
         : __na_(__x.__na_),
@@ -340,7 +340,7 @@ public:
         {
             __x.__value_constructed = false;
         }
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_node_destructor(const __hash_node_destructor<allocator_type>& __x)
         : __na_(__x.__na_),
@@ -349,7 +349,7 @@ public:
         {
             const_cast<bool&>(__x.__value_constructed) = false;
         }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     void operator()(pointer __p)

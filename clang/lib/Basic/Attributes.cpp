@@ -1,4 +1,5 @@
 #include "clang/Basic/Attributes.h"
+#include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/StringSwitch.h"
 using namespace clang;
@@ -14,4 +15,14 @@ int clang::hasAttribute(AttrSyntax Syntax, const IdentifierInfo *Scope,
 #include "clang/Basic/AttrHasAttributeImpl.inc"
 
   return 0;
+}
+
+const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
+  switch (Rule) {
+#define ATTR_MATCH_RULE(NAME, SPELLING, IsAbstract)                            \
+  case attr::NAME:                                                             \
+    return SPELLING;
+#include "clang/Basic/AttrSubMatchRulesList.inc"
+  }
+  llvm_unreachable("Invalid subject match rule");
 }

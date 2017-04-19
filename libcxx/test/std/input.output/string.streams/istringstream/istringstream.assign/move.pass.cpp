@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <sstream>
 
 // template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT> >
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         std::istringstream ss0(" 123 456");
         std::istringstream ss;
@@ -82,5 +83,4 @@ int main()
         s1 >> s;
         assert(s == L"Dddddddddddddddddd");
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

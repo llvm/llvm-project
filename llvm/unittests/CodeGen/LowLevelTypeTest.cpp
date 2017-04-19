@@ -171,6 +171,7 @@ TEST(LowLevelTypeTest, Pointer) {
 
   for (unsigned AS : {0U, 1U, 127U, 0xffffU}) {
     const LLT Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+    const LLT VTy = LLT::vector(4, Ty);
 
     // Test kind.
     ASSERT_TRUE(Ty.isValid());
@@ -179,16 +180,26 @@ TEST(LowLevelTypeTest, Pointer) {
     ASSERT_FALSE(Ty.isScalar());
     ASSERT_FALSE(Ty.isVector());
 
+    ASSERT_TRUE(VTy.isValid());
+    ASSERT_TRUE(VTy.isVector());
+    ASSERT_TRUE(VTy.getElementType().isPointer());
+
     // Test addressspace.
     EXPECT_EQ(AS, Ty.getAddressSpace());
+    EXPECT_EQ(AS, VTy.getElementType().getAddressSpace());
 
     // Test equality operators.
     EXPECT_TRUE(Ty == Ty);
     EXPECT_FALSE(Ty != Ty);
+    EXPECT_TRUE(VTy == VTy);
+    EXPECT_FALSE(VTy != VTy);
 
     // Test Type->LLT conversion.
     Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
     EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
+    Type *IRVTy =
+        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), 4);
+    EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
   }
 }
 

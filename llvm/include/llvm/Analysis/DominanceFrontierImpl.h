@@ -174,12 +174,10 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // Visit each block only once.
     if (visited.insert(currentBB).second) {
       // Loop over CFG successors to calculate DFlocal[currentNode]
-      for (auto SI = BlockTraits::child_begin(currentBB),
-                SE = BlockTraits::child_end(currentBB);
-           SI != SE; ++SI) {
+      for (const auto Succ : children<BlockT *>(currentBB)) {
         // Does Node immediately dominate this successor?
-        if (DT[*SI]->getIDom() != currentNode)
-          S.insert(*SI);
+        if (DT[Succ]->getIDom() != currentNode)
+          S.insert(Succ);
       }
     }
 

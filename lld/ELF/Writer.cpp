@@ -1217,8 +1217,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
 
-  // Some sections may require compression. That happens for
-  // debug sections when --compress-debug-sections option used.
+  // If -compressed-debug-sections is specified, we need to compress
+  // .debug_* sections. Do it right now because it changes the size of
+  // output sections.
   parallelForEach(OutputSections.begin(), OutputSections.end(),
                   [](OutputSection *S) { S->maybeCompress<ELFT>(); });
 

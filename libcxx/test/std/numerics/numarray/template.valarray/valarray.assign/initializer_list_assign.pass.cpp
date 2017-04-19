@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <valarray>
 
 // template<class T> class valarray;
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef int T;
         T a[] = {1, 2, 3, 4, 5};
@@ -54,5 +55,4 @@ int main()
                 assert(v2[i][j] == a[i][j]);
         }
     }
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

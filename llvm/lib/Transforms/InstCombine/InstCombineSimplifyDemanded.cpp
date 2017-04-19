@@ -546,8 +546,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                Depth + 1))
         return I;
       assert(!(KnownZero & KnownOne) && "Bits known to be one AND zero?");
-      KnownZero = KnownZero.lshr(ShiftAmt);
-      KnownOne  = KnownOne.lshr(ShiftAmt);
+      KnownZero.lshrInPlace(ShiftAmt);
+      KnownOne.lshrInPlace(ShiftAmt);
       if (ShiftAmt)
         KnownZero.setHighBits(ShiftAmt);  // high bits known zero.
     }
@@ -590,13 +590,13 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       assert(!(KnownZero & KnownOne) && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now.
       APInt HighBits(APInt::getHighBitsSet(BitWidth, ShiftAmt));
-      KnownZero = KnownZero.lshr(ShiftAmt);
-      KnownOne  = KnownOne.lshr(ShiftAmt);
+      KnownZero.lshrInPlace(ShiftAmt);
+      KnownOne.lshrInPlace(ShiftAmt);
 
       // Handle the sign bits.
       APInt SignBit(APInt::getSignBit(BitWidth));
       // Adjust to where it is now in the mask.
-      SignBit = SignBit.lshr(ShiftAmt);
+      SignBit.lshrInPlace(ShiftAmt);
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.

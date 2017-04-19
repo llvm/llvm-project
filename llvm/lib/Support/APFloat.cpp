@@ -3442,7 +3442,7 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
   // Ignore trailing binary zeros.
   int trailingZeros = significand.countTrailingZeros();
   exp += trailingZeros;
-  significand = significand.lshr(trailingZeros);
+  significand.lshrInPlace(trailingZeros);
 
   // Change the exponent from 2^e to 10^e.
   if (exp == 0) {

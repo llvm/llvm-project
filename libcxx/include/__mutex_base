@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mutex
 {
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 #else
     __libcpp_mutex_t __m_;
@@ -42,7 +42,7 @@ class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mut
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     constexpr mutex() _NOEXCEPT = default;
 #else
     mutex() _NOEXCEPT {__m_ = (__libcpp_mutex_t)_LIBCPP_MUTEX_INITIALIZER;}
@@ -66,7 +66,7 @@ struct _LIBCPP_TYPE_VIS defer_lock_t {};
 struct _LIBCPP_TYPE_VIS try_to_lock_t {};
 struct _LIBCPP_TYPE_VIS adopt_lock_t {};
 
-#if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_MUTEX)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_MUTEX)
 
 extern const defer_lock_t  defer_lock;
 extern const try_to_lock_t try_to_lock;
@@ -150,7 +150,7 @@ private:
     unique_lock& operator=(unique_lock const&); // = delete;
 
 public:
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     unique_lock(unique_lock&& __u) _NOEXCEPT
         : __m_(__u.__m_), __owns_(__u.__owns_)
@@ -167,7 +167,7 @@ public:
             return *this;
         }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     void lock();
     bool try_lock();
@@ -279,7 +279,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 class _LIBCPP_TYPE_VIS condition_variable
 {
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 #else
     __libcpp_condvar_t __cv_;
@@ -287,7 +287,7 @@ class _LIBCPP_TYPE_VIS condition_variable
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     constexpr condition_variable() _NOEXCEPT = default;
 #else
     condition_variable() _NOEXCEPT {__cv_ = (__libcpp_condvar_t)_LIBCPP_CONDVAR_INITIALIZER;}

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // template<class E>
 // class initializer_list
 // {
@@ -26,12 +28,10 @@ struct A {};
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     static_assert((std::is_same<std::initializer_list<A>::value_type, A>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::reference, const A&>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::const_reference, const A&>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::size_type, std::size_t>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::iterator, const A*>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::const_iterator, const A*>::value), "");
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

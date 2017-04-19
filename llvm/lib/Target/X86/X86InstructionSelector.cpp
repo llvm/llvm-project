@@ -67,6 +67,8 @@ private:
                         MachineFunction &MF) const;
   bool selectConstant(MachineInstr &I, MachineRegisterInfo &MRI,
                       MachineFunction &MF) const;
+  bool selectTrunc(MachineInstr &I, MachineRegisterInfo &MRI,
+                   MachineFunction &MF) const;
 
   const X86Subtarget &STI;
   const X86InstrInfo &TII;
@@ -99,6 +101,10 @@ X86InstructionSelector::X86InstructionSelector(const X86Subtarget &STI,
 static const TargetRegisterClass *
 getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) {
   if (RB.getID() == X86::GPRRegBankID) {
+    if (Ty.getSizeInBits() <= 8)
+      return &X86::GR8RegClass;
+    if (Ty.getSizeInBits() == 16)
+      return &X86::GR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &X86::GR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -206,6 +212,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectFrameIndex(I, MRI, MF))
     return true;
   if (selectConstant(I, MRI, MF))
+    return true;
+  if (selectTrunc(I, MRI, MF))
     return true;
 
   return selectImpl(I);
@@ -507,6 +515,59 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
 
   I.setDesc(TII.get(NewOpc));
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}
+
+bool X86InstructionSelector::selectTrunc(MachineInstr &I,
+                                         MachineRegisterInfo &MRI,
+                                         MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_TRUNC)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const unsigned SrcReg = I.getOperand(1).getReg();
+
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg);
+
+  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+  if (DstRB.getID() != SrcRB.getID()) {
+    DEBUG(dbgs() << "G_TRUNC input/output on different banks\n");
+    return false;
+  }
+
+  if (DstRB.getID() != X86::GPRRegBankID)
+    return false;
+
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(DstTy, DstRB);
+  if (!DstRC)
+    return false;
+
+  const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(SrcTy, SrcRB);
+  if (!SrcRC)
+    return false;
+
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    return false;
+  }
+
+  if (DstRC == SrcRC) {
+    // Nothing to be done
+  } else if (DstRC == &X86::GR32RegClass) {
+    I.getOperand(1).setSubReg(X86::sub_32bit);
+  } else if (DstRC == &X86::GR16RegClass) {
+    I.getOperand(1).setSubReg(X86::sub_16bit);
+  } else if (DstRC == &X86::GR8RegClass) {
+    I.getOperand(1).setSubReg(X86::sub_8bit);
+  } else {
+    return false;
+  }
+
+  I.setDesc(TII.get(X86::COPY));
+  return true;
 }
 
 InstructionSelector *

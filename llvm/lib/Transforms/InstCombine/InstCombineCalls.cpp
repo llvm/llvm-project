@@ -839,7 +839,8 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // Length bits.
     if (CI0) {
       APInt Elt = CI0->getValue();
-      Elt = Elt.lshr(Index).zextOrTrunc(Length);
+      Elt.lshrInPlace(Index);
+      Elt = Elt.zextOrTrunc(Length);
       return LowConstantHighUndef(Elt.getZExtValue());
     }
 
@@ -1036,7 +1037,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
     // The PD variants uses bit 1 to select per-lane element index, so
     // shift down to convert to generic shuffle mask index.
     if (IsPD)
-      Index = Index.lshr(1);
+      Index.lshrInPlace(1);
 
     // The _256 variants are a bit trickier since the mask bits always index
     // into the corresponding 128 half. In order to convert to a generic

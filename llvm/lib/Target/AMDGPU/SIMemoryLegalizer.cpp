@@ -457,7 +457,7 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: M0 initialization should be done during ISel.
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  if (MFI.HasFlatLocalCasts) {
+  if (MFI.hasFlatLocalCasts()) {
     MachineBasicBlock &MBB = *MF.begin();
     MachineInstr &MI = *MBB.begin();
     BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)

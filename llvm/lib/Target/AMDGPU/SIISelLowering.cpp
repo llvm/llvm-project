@@ -2470,7 +2470,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   // flat -> local/private
   if (ASC->getSrcAddressSpace() == AMDGPUASI.FLAT_ADDRESS) {
     unsigned DestAS = ASC->getDestAddressSpace();
-    MFI.HasFlatLocalCasts = DestAS == AMDGPUAS::LOCAL_ADDRESS;
+    MFI.setHasFlatLocalCasts(DestAS == AMDGPUASI.LOCAL_ADDRESS);
 
     if (DestAS == AMDGPUASI.LOCAL_ADDRESS ||
         DestAS == AMDGPUASI.PRIVATE_ADDRESS) {
@@ -2487,7 +2487,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   // local/private -> flat
   if (ASC->getDestAddressSpace() == AMDGPUASI.FLAT_ADDRESS) {
     unsigned SrcAS = ASC->getSrcAddressSpace();
-    MFI.HasFlatLocalCasts = SrcAS == AMDGPUAS::LOCAL_ADDRESS;
+    MFI.setHasFlatLocalCasts(SrcAS == AMDGPUASI.LOCAL_ADDRESS);
 
     if (SrcAS == AMDGPUASI.LOCAL_ADDRESS ||
         SrcAS == AMDGPUASI.PRIVATE_ADDRESS) {

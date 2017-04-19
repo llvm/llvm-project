@@ -124,7 +124,7 @@ unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
   unsigned RegCount = ST.getMaxNumSGPRs(MF);
   unsigned Reg;
 
-  // Try to place it in a hole after PrivateSegmentbufferReg.
+  // Try to place it in a hole after PrivateSegmentBufferReg.
   if (RegCount & 3) {
     // We cannot put the segment buffer in (Idx - 4) ... (Idx - 1) due to
     // alignment constraints, so we have a hole where can put the wave offset.

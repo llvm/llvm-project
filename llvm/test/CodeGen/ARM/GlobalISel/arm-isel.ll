@@ -1,4 +1,4 @@
-; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v6 -global-isel %s -o - | FileCheck %s
 
 define void @test_void_return() {
 ; CHECK-LABEL: test_void_return:
@@ -91,6 +91,33 @@ define i32 @test_sub_i32(i32 %x, i32 %y) {
 ; CHECK: bx lr
 entry:
   %sum = sub i32 %x, %y
+  ret i32 %sum
+}
+
+define i8 @test_mul_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_mul_i8:
+; CHECK: mul r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = mul i8 %x, %y
+  ret i8 %sum
+}
+
+define i16 @test_mul_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_mul_i16:
+; CHECK: mul r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = mul i16 %x, %y
+  ret i16 %sum
+}
+
+define i32 @test_mul_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_mul_i32:
+; CHECK: mul r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = mul i32 %x, %y
   ret i32 %sum
 }
 
