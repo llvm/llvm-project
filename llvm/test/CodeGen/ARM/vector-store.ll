@@ -256,3 +256,13 @@ define void @truncstore_v4i32tov4i8_fake_update(<4 x i8>** %ptr, <4 x i32> %val)
         store <4 x i8>* %inc, <4 x i8>** %ptr
 	ret void
 }
+
+define <4 x i32>* @test_vst1_1reg(<4 x i32>* %ptr.in, <4 x i32>* %ptr.out) {
+; CHECK-LABEL: test_vst1_1reg:
+; CHECK: movs [[INC:r[0-9]+]], #32
+; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r1], [[INC]]
+  %val = load <4 x i32>, <4 x i32>* %ptr.in
+  store <4 x i32> %val, <4 x i32>* %ptr.out
+  %next = getelementptr <4 x i32>, <4 x i32>* %ptr.out, i32 2
+  ret <4 x i32>* %next
+}
