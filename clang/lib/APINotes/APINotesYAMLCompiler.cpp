@@ -160,6 +160,18 @@ namespace {
     /// Treat as an initializer.
     AsInitializer
   };
+  
+  /// Syntactic sugar for EnumExtensibility and FlagEnum
+  enum class EnumConvenienceAliasKind {
+    /// EnumExtensibility: none, FlagEnum: false
+    None,
+    /// EnumExtensibility: open, FlagEnum: false
+    CFEnum,
+    /// EnumExtensibility: open, FlagEnum: true
+    CFOptions,
+    /// EnumExtensibility: closed, FlagEnum: false
+    CFClosedEnum
+  };
 
   struct AvailabilityItem {
     APIAvailability Mode = APIAvailability::Available;
@@ -263,6 +275,7 @@ namespace {
     Optional<StringRef> NSErrorDomain;
     Optional<api_notes::EnumExtensibilityKind> EnumExtensibility;
     Optional<bool> FlagEnum;
+    Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   };
   typedef std::vector<Tag> TagsSeq;
 
@@ -378,6 +391,21 @@ namespace llvm {
         io.enumCase(value, "none",   api_notes::EnumExtensibilityKind::None);
         io.enumCase(value, "open",   api_notes::EnumExtensibilityKind::Open);
         io.enumCase(value, "closed", api_notes::EnumExtensibilityKind::Closed);
+      }
+    };
+
+    template<>
+    struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
+      static void enumeration(IO &io, EnumConvenienceAliasKind &value) {
+        io.enumCase(value, "none",      EnumConvenienceAliasKind::None);
+        io.enumCase(value, "CFEnum",    EnumConvenienceAliasKind::CFEnum);
+        io.enumCase(value, "NSEnum",    EnumConvenienceAliasKind::CFEnum);
+        io.enumCase(value, "CFOptions", EnumConvenienceAliasKind::CFOptions);
+        io.enumCase(value, "NSOptions", EnumConvenienceAliasKind::CFOptions);
+        io.enumCase(value, "CFClosedEnum",
+                    EnumConvenienceAliasKind::CFClosedEnum);
+        io.enumCase(value, "NSClosedEnum",
+                    EnumConvenienceAliasKind::CFClosedEnum);
       }
     };
 
@@ -518,6 +546,7 @@ namespace llvm {
         io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
         io.mapOptional("EnumExtensibility",     t.EnumExtensibility);
         io.mapOptional("FlagEnum",              t.FlagEnum);
+        io.mapOptional("EnumKind",              t.EnumConvenienceKind);
       }
     };
 
@@ -941,8 +970,41 @@ namespace {
         TagInfo tagInfo;
         if (convertCommonType(t, tagInfo, t.Name))
           continue;
-        tagInfo.EnumExtensibility = t.EnumExtensibility;
-        tagInfo.setFlagEnum(t.FlagEnum);
+
+        if (t.EnumConvenienceKind) {
+          if (t.EnumExtensibility) {
+            emitError(llvm::Twine(
+                "cannot mix EnumKind and EnumExtensibility (for ") + t.Name +
+                ")");
+            continue;
+          }
+          if (t.FlagEnum) {
+            emitError(llvm::Twine("cannot mix EnumKind and FlagEnum (for ") +
+                t.Name + ")");
+            continue;
+          }
+          switch (t.EnumConvenienceKind.getValue()) {
+          case EnumConvenienceAliasKind::None:
+            tagInfo.EnumExtensibility = EnumExtensibilityKind::None;
+            tagInfo.setFlagEnum(false);
+            break;
+          case EnumConvenienceAliasKind::CFEnum:
+            tagInfo.EnumExtensibility = EnumExtensibilityKind::Open;
+            tagInfo.setFlagEnum(false);
+            break;
+          case EnumConvenienceAliasKind::CFOptions:
+            tagInfo.EnumExtensibility = EnumExtensibilityKind::Open;
+            tagInfo.setFlagEnum(true);
+            break;
+          case EnumConvenienceAliasKind::CFClosedEnum:
+            tagInfo.EnumExtensibility = EnumExtensibilityKind::Closed;
+            tagInfo.setFlagEnum(false);
+            break;
+          }
+        } else {
+          tagInfo.EnumExtensibility = t.EnumExtensibility;
+          tagInfo.setFlagEnum(t.FlagEnum);          
+        }
 
         Writer->addTag(t.Name, tagInfo, swiftVersion);
       }
