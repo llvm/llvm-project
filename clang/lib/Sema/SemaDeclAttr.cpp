@@ -2445,12 +2445,6 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
   assert(checkAttributeAtMostNumArgs(S, Attr, 3) &&
          "Invalid number of arguments in an external_source_symbol attribute");
 
-  if (!isa<NamedDecl>(D)) {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
-        << Attr.getName() << ExpectedNamedDecl;
-    return;
-  }
-
   StringRef Language;
   if (const auto *SE = dyn_cast_or_null<StringLiteral>(Attr.getArgAsExpr(0)))
     Language = SE->getString();
@@ -6106,18 +6100,21 @@ static void handleOpenCLNoSVMAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 static bool handleCommonAttributeFeatures(Sema &S, Scope *scope, Decl *D,
                                           const AttributeList &Attr) {
   // Several attributes carry different semantics than the parsing requires, so
-  // those are opted out of the common handling.
+  // those are opted out of the common argument checks.
   //
   // We also bail on unknown and ignored attributes because those are handled
   // as part of the target-specific handling logic.
-  if (Attr.hasCustomParsing() ||
-      Attr.getKind() == AttributeList::UnknownAttribute)
+  if (Attr.getKind() == AttributeList::UnknownAttribute)
     return false;
-
   // Check whether the attribute requires specific language extensions to be
   // enabled.
   if (!Attr.diagnoseLangOpts(S))
     return true;
+  // Check whether the attribute appertains to the given subject.
+  if (!Attr.diagnoseAppertainsTo(S, D))
+    return true;
+  if (Attr.hasCustomParsing())
+    return false;
 
   if (Attr.getMinArgs() == Attr.getMaxArgs()) {
     // If there are no optional arguments, then checking for the argument count
@@ -6133,10 +6130,6 @@ static bool handleCommonAttributeFeatures(Sema &S, Scope *scope, Decl *D,
              !checkAttributeAtMostNumArgs(S, Attr, Attr.getMaxArgs()))
       return true;
   }
-
-  // Check whether the attribute appertains to the given subject.
-  if (!Attr.diagnoseAppertainsTo(S, D))
-    return true;
 
   return false;
 }
