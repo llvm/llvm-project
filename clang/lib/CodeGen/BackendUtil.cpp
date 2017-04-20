@@ -559,7 +559,9 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {
   case LangOptions::FPC_Off:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Strict;
+    // Preserve any contraction performed by the front-end.  (Strict performs
+    // splitting of the muladd instrinsic in the backend.)
+    Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPC_On:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
