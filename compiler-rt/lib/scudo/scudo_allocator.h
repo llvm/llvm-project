@@ -41,8 +41,7 @@ enum ChunkState : u8 {
 // using functions such as GetBlockBegin, that is fairly costly. Our first
 // implementation used the MetaData as well, which offers the advantage of
 // being stored away from the chunk itself, but accessing it was costly as
-// well. The header will be atomically loaded and stored using the 16-byte
-// primitives offered by the platform (likely requires cmpxchg16b support).
+// well. The header will be atomically loaded and stored.
 typedef u64 PackedHeader;
 struct UnpackedHeader {
   u64 Checksum    : 16;

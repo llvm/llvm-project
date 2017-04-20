@@ -23,14 +23,12 @@ class GCoreTestCase(TestBase):
     _x86_64_pid = 5669
 
     @skipIf(oslist=['windows'])
-    @skipIfDarwin # <rdar://problem/31380097>, fails started happening with r299199
     @skipIf(triple='^mips')
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid)
 
     @skipIf(oslist=['windows'])
-    @skipIfDarwin # <rdar://problem/31380097>, fails started happening with r299199
     @skipIf(triple='^mips')
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""

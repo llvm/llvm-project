@@ -88,8 +88,11 @@ class ScudoLargeMmapAllocator {
     // The primary adds the whole class size to the stats when allocating a
     // chunk, so we will do something similar here. But we will not account for
     // the guard pages.
-    Stats->Add(AllocatorStatAllocated, MapSize - 2 * PageSize);
-    Stats->Add(AllocatorStatMapped, MapSize - 2 * PageSize);
+    {
+      SpinMutexLock l(&StatsMutex);
+      Stats->Add(AllocatorStatAllocated, MapSize - 2 * PageSize);
+      Stats->Add(AllocatorStatMapped, MapSize - 2 * PageSize);
+    }
 
     return reinterpret_cast<void *>(UserBeg);
   }
@@ -112,8 +115,11 @@ class ScudoLargeMmapAllocator {
 
   void Deallocate(AllocatorStats *Stats, void *Ptr) {
     SecondaryHeader *Header = getHeader(Ptr);
-    Stats->Sub(AllocatorStatAllocated, Header->MapSize - 2 * PageSize);
-    Stats->Sub(AllocatorStatMapped, Header->MapSize - 2 * PageSize);
+    {
+      SpinMutexLock l(&StatsMutex);
+      Stats->Sub(AllocatorStatAllocated, Header->MapSize - 2 * PageSize);
+      Stats->Sub(AllocatorStatMapped, Header->MapSize - 2 * PageSize);
+    }
     UnmapOrDie(reinterpret_cast<void *>(Header->MapBeg), Header->MapSize);
   }
 
@@ -127,7 +133,7 @@ class ScudoLargeMmapAllocator {
 
   uptr GetActuallyAllocatedSize(void *Ptr) {
     SecondaryHeader *Header = getHeader(Ptr);
-    // Deduct PageSize as MapEnd includes the trailing guard page.
+    // Deduct PageSize as MapSize includes the trailing guard page.
     uptr MapEnd = Header->MapBeg + Header->MapSize - PageSize;
     return MapEnd - reinterpret_cast<uptr>(Ptr);
   }
@@ -182,6 +188,7 @@ class ScudoLargeMmapAllocator {
   const uptr SecondaryHeaderSize = sizeof(SecondaryHeader);
   const uptr HeadersSize = SecondaryHeaderSize + AlignedChunkHeaderSize;
   uptr PageSize;
+  SpinMutex StatsMutex;
   atomic_uint8_t MayReturnNull;
 };
 
