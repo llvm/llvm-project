@@ -111,7 +111,8 @@ class Configuration(object):
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
         if self.is_windows:
-            return name + '.lib'
+            assert name == 'c++'  # Only allow libc++ to use this function for now.
+            return 'lib' + name + '.lib'
         else:
             return 'lib' + name + '.a'
 
@@ -241,7 +242,7 @@ class Configuration(object):
         flags = []
         compile_flags = _prefixed_env_list('INCLUDE', '-isystem')
         link_flags = _prefixed_env_list('LIB', '-L')
-        for path in _list_env_var('LIB'):
+        for path in _split_env_var('LIB'):
             self.add_path(self.exec_env, path)
         return CXXCompiler(clang_path, flags=flags,
                            compile_flags=compile_flags,
@@ -412,6 +413,9 @@ class Configuration(object):
 
         if self.is_windows:
             self.config.available_features.add('windows')
+            if self.cxx_stdlib_under_test == 'libc++':
+                # LIBCXX-WINDOWS-FIXME is a
+                self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
         # Attempt to detect the glibc version by querying for __GLIBC__
         # in 'features.h'.
@@ -478,6 +482,8 @@ class Configuration(object):
             self.cxx.flags += ['-m32']
         # Use verbose output for better errors
         self.cxx.flags += ['-v']
+        if self.is_windows:
+            self.cxx.link_flags += ['-Wl,-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
             self.cxx.flags += ['--sysroot', sysroot]

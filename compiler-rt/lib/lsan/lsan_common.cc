@@ -83,12 +83,9 @@ static SuppressionContext *GetSuppressionContext() {
   return suppression_ctx;
 }
 
-struct RootRegion {
-  const void *begin;
-  uptr size;
-};
+static InternalMmapVector<RootRegion> *root_regions;
 
-InternalMmapVector<RootRegion> *root_regions;
+InternalMmapVector<RootRegion> const *GetRootRegions() { return root_regions; }
 
 void InitializeRootRegions() {
   CHECK(!root_regions);
@@ -291,23 +288,29 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   }
 }
 
-static void ProcessRootRegion(Frontier *frontier, uptr root_begin,
-                              uptr root_end) {
-  MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
+                    uptr region_begin, uptr region_end, uptr prot) {
+  uptr intersection_begin = Max(root_region.begin, region_begin);
+  uptr intersection_end = Min(region_end, root_region.begin + root_region.size);
+  if (intersection_begin >= intersection_end) return;
+  bool is_readable = prot & MemoryMappingLayout::kProtectionRead;
+  LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
+               root_region.begin, root_region.begin + root_region.size,
+               region_begin, region_end,
+               is_readable ? "readable" : "unreadable");
+  if (is_readable)
+    ScanRangeForPointers(intersection_begin, intersection_end, frontier, "ROOT",
+                         kReachable);
+}
+
+static void ProcessRootRegion(Frontier *frontier,
+                              const RootRegion &root_region) {
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   uptr begin, end, prot;
   while (proc_maps.Next(&begin, &end,
                         /*offset*/ nullptr, /*filename*/ nullptr,
                         /*filename_size*/ 0, &prot)) {
-    uptr intersection_begin = Max(root_begin, begin);
-    uptr intersection_end = Min(end, root_end);
-    if (intersection_begin >= intersection_end) continue;
-    bool is_readable = prot & MemoryMappingLayout::kProtectionRead;
-    LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
-                 root_begin, root_end, begin, end,
-                 is_readable ? "readable" : "unreadable");
-    if (is_readable)
-      ScanRangeForPointers(intersection_begin, intersection_end, frontier,
-                           "ROOT", kReachable);
+    ScanRootRegion(frontier, root_region, begin, end, prot);
   }
 }
 
@@ -316,9 +319,7 @@ static void ProcessRootRegions(Frontier *frontier) {
   if (!flags()->use_root_regions) return;
   CHECK(root_regions);
   for (uptr i = 0; i < root_regions->size(); i++) {
-    RootRegion region = (*root_regions)[i];
-    uptr begin_addr = reinterpret_cast<uptr>(region.begin);
-    ProcessRootRegion(frontier, begin_addr, begin_addr + region.size);
+    ProcessRootRegion(frontier, (*root_regions)[i]);
   }
 }
 
@@ -775,7 +776,7 @@ void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
   BlockingMutexLock l(&global_mutex);
   CHECK(root_regions);
-  RootRegion region = {begin, size};
+  RootRegion region = {reinterpret_cast<uptr>(begin), size};
   root_regions->push_back(region);
   VReport(1, "Registered root region at %p of size %llu\n", begin, size);
 #endif // CAN_SANITIZE_LEAKS
@@ -789,7 +790,7 @@ void __lsan_unregister_root_region(const void *begin, uptr size) {
   bool removed = false;
   for (uptr i = 0; i < root_regions->size(); i++) {
     RootRegion region = (*root_regions)[i];
-    if (region.begin == begin && region.size == size) {
+    if (region.begin == reinterpret_cast<uptr>(begin) && region.size == size) {
       removed = true;
       uptr last_index = root_regions->size() - 1;
       (*root_regions)[i] = (*root_regions)[last_index];

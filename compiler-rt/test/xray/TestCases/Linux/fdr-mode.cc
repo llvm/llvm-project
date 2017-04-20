@@ -1,4 +1,6 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
+// RUN: rm fdr-logging-test-* || true
+// RUN: rm fdr-unwrite-test-* || true
 // RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false xray_logfile_base=fdr-logging-test- xray_fdr_log=true verbosity=1 xray_fdr_log_func_duration_threshold_us=0" %run %t 2>&1 | FileCheck %s
 // RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false xray_logfile_base=fdr-unwrite-test- xray_fdr_log=true verbosity=1 xray_fdr_log_func_duration_threshold_us=5000" %run %t 2>&1 | FileCheck %s
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t "`ls fdr-logging-test-* | head -1`" | FileCheck %s --check-prefix=TRACE
@@ -7,6 +9,7 @@
 // RUN: rm fdr-unwrite-test-*
 // FIXME: Make llvm-xray work on non-x86_64 as well.
 // REQUIRES: x86_64-linux
+// REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"
 #include <cassert>

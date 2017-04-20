@@ -118,6 +118,15 @@ typedef InternalMmapVector<uptr> Frontier;
 void InitializePlatformSpecificModules();
 void ProcessGlobalRegions(Frontier *frontier);
 void ProcessPlatformSpecificAllocations(Frontier *frontier);
+
+struct RootRegion {
+  uptr begin;
+  uptr size;
+};
+
+InternalMmapVector<RootRegion> const *GetRootRegions();
+void ScanRootRegion(Frontier *frontier, RootRegion const &region,
+                    uptr region_begin, uptr region_end, uptr prot);
 // Run stoptheworld while holding any platform-specific locks.
 void DoStopTheWorld(StopTheWorldCallback callback, void* argument);
 

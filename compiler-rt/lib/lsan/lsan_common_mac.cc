@@ -117,8 +117,6 @@ void ProcessGlobalRegions(Frontier *frontier) {
   }
 }
 
-// libxpc stashes some pointers in the Kernel Alloc Once page,
-// make sure not to report those as leaks.
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   mach_port_name_t port;
   if (task_for_pid(mach_task_self(), internal_getpid(), &port)
@@ -132,21 +130,42 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   kern_return_t err = KERN_SUCCESS;
   mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
+  InternalMmapVector<RootRegion> const *root_regions = GetRootRegions();
+
   while (err == KERN_SUCCESS) {
     struct vm_region_submap_info_64 info;
     err = vm_region_recurse_64(port, &address, &size, &depth,
                                (vm_region_info_t)&info, &count);
+
+    uptr end_address = address + size;
+
+    // libxpc stashes some pointers in the Kernel Alloc Once page,
+    // make sure not to report those as leaks.
     if (info.user_tag == VM_MEMORY_OS_ALLOC_ONCE) {
-      ScanRangeForPointers(address, address + size, frontier,
-                           "GLOBAL", kReachable);
-      return;
+      ScanRangeForPointers(address, end_address, frontier, "GLOBAL",
+                           kReachable);
     }
-    address += size;
+
+    // This additional root region scan is required on Darwin in order to
+    // detect root regions contained within mmap'd memory regions, because
+    // the Darwin implementation of sanitizer_procmaps traverses images
+    // as loaded by dyld, and not the complete set of all memory regions.
+    //
+    // TODO(fjricci) - remove this once sanitizer_procmaps_mac has the same
+    // behavior as sanitizer_procmaps_linux and traverses all memory regions
+    if (flags()->use_root_regions) {
+      for (uptr i = 0; i < root_regions->size(); i++) {
+        ScanRootRegion(frontier, (*root_regions)[i], address, end_address,
+                       info.protection);
+      }
+    }
+
+    address = end_address;
   }
 }
 
 void DoStopTheWorld(StopTheWorldCallback callback, void *argument) {
-  CHECK(0 && "unimplemented");
+  StopTheWorld(callback, argument);
 }
 
 } // namespace __lsan
