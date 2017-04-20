@@ -23,7 +23,38 @@ template <> class [[deprecated]] X<int> {}; // expected-note {{'X<int>' has been
 X<char> x1;
 X<int> x2; // expected-warning {{'X<int>' is deprecated}}
 
-template <typename T> class [[deprecated]] X2 {};
+template <typename T> class [[deprecated]] X2 {}; //expected-note {{'X2<char>' has been explicitly marked deprecated here}}
 template <> class X2<int> {};
-X2<char> x3; // FIXME: no warning!
-X2<int> x4;
+X2<char> x3; // expected-warning {{'X2<char>' is deprecated}}
+X2<int> x4; // No warning, the specialization removes it.
+
+template <typename T> class [[deprecated]] X3; //expected-note {{'X3<char>' has been explicitly marked deprecated here}}
+template <> class X3<int>;
+X3<char> *x5; // expected-warning {{'X3<char>' is deprecated}}
+X3<int> *x6; // No warning, the specialization removes it.
+
+template <typename T> struct A;
+A<int> *p;
+template <typename T> struct [[deprecated]] A;//expected-note {{'A<int>' has been explicitly marked deprecated here}} expected-note {{'A<float>' has been explicitly marked deprecated here}}
+A<int> *q; // expected-warning {{'A<int>' is deprecated}}
+A<float> *r; // expected-warning {{'A<float>' is deprecated}}
+
+template <typename T> struct B;
+B<int> *p2;
+template <typename T> struct [[deprecated]] B;//expected-note {{'B<int>' has been explicitly marked deprecated here}} expected-note {{'B<float>' has been explicitly marked deprecated here}}
+B<int> *q2; // expected-warning {{'B<int>' is deprecated}}
+B<float> *r2; // expected-warning {{'B<float>' is deprecated}}
+
+template <typename T> 
+T some_func(T t) {
+  struct [[deprecated]] FunS{}; // expected-note {{'FunS' has been explicitly marked deprecated here}}
+  FunS f;// expected-warning {{'FunS' is deprecated}}
+
+}
+
+template <typename T>
+[[deprecated]]T some_func2(T t) {
+  struct FunS2{};
+  FunS2 f;// No warning, entire function is deprecated, so usage here should be fine.
+
+}
