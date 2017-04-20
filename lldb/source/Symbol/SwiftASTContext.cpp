@@ -423,8 +423,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
       auto class_decl = swift::dyn_cast<swift::ClassDecl>(t_decl);
       if (class_decl) {
         is_class = true;
-        swift::LazyResolver *const lazy_resolver = nullptr;
-        swift::Type superclass_type(swift_can_type->getSuperclass(lazy_resolver));
+        swift::Type superclass_type(swift_can_type->getSuperclass());
         if (superclass_type) {
           MemberInfo member_info(MemberType::BaseClass);
           member_info.clang_type =
