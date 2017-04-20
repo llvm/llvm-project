@@ -415,11 +415,6 @@ class Attr {
   // Set to true if this attribute can be duplicated on a subject when merging
   // attributes. By default, attributes are not merged.
   bit DuplicatesAllowedWhileMerging = 0;
-<<<<<<< HEAD
-=======
-  // Set to true if this attribute meaningful when applied to or inherited 
-  // in a class template definition.
-  bit MeaningfulToClassTemplateDefinition = 0;
   // Set to true if this attribute can be used with '#pragma clang attribute'.
   // By default, when this value is false, an attribute is supported by the
   // '#pragma clang attribute' only when:
@@ -428,7 +423,6 @@ class Attr {
   //   match rules.
   // - It has GNU/CXX11 spelling and doesn't require delayed parsing.
   bit ForcePragmaAttributeSupport = 0;
->>>>>>> 4bbde6cf2a... Add #pragma clang attribute
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
