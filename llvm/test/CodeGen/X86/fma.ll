@@ -46,7 +46,7 @@ define float @test_f32(float %a, float %b, float %c) #0 {
 ;
 ; AVX51264-LABEL: test_f32:
 ; AVX51264:       ## BB#0: ## %entry
-; AVX51264-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0x71,0xa9,0xc2]
+; AVX51264-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0xa9,0xc2]
 ; AVX51264-NEXT:    retq ## encoding: [0xc3]
 entry:
   %call = call float @llvm.fma.f32(float %a, float %b, float %c)
@@ -91,7 +91,7 @@ define double @test_f64(double %a, double %b, double %c) #0 {
 ;
 ; AVX51264-LABEL: test_f64:
 ; AVX51264:       ## BB#0: ## %entry
-; AVX51264-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0xf1,0xa9,0xc2]
+; AVX51264-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf1,0xa9,0xc2]
 ; AVX51264-NEXT:    retq ## encoding: [0xc3]
 entry:
   %call = call double @llvm.fma.f64(double %a, double %b, double %c)
