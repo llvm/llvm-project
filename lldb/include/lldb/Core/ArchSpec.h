@@ -625,6 +625,7 @@ public:
 
 protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;
+  void UpdateCore();
 
   llvm::Triple m_triple;
   Core m_core = kCore_invalid;

@@ -24,8 +24,7 @@ class LibCxxAtomicTestCase(TestBase):
         return var
 
     @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
-    @skipIfLinux  # bugs.swift.org/SR-800
+    @add_test_categories(["libc++"])
     def test(self):
         """Test that std::atomic as defined by libc++ is correctly printed by LLDB"""
         self.build()

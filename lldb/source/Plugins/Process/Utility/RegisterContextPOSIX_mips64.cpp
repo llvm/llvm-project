@@ -55,9 +55,10 @@ RegisterContextPOSIX_mips64::RegisterContextPOSIX_mips64(
       m_registers_count[i] = reg_set_ptr->num_registers;
   }
 
-  assert(m_num_registers == m_registers_count[gpr_registers_count] +
-                            m_registers_count[fpr_registers_count] +
-                            m_registers_count[msa_registers_count]);
+  assert(m_num_registers ==
+         static_cast<uint32_t>(m_registers_count[gpr_registers_count] +
+                               m_registers_count[fpr_registers_count] +
+                               m_registers_count[msa_registers_count]));
 
   // elf-core yet to support ReadFPR()
   ProcessSP base = CalculateProcess();

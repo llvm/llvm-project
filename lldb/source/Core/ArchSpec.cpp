@@ -834,19 +834,7 @@ lldb::ByteOrder ArchSpec::GetByteOrder() const {
 
 bool ArchSpec::SetTriple(const llvm::Triple &triple) {
   m_triple = triple;
-
-  llvm::StringRef arch_name(m_triple.getArchName());
-  const CoreDefinition *core_def = FindCoreDefinition(arch_name);
-  if (core_def) {
-    m_core = core_def->core;
-    // Set the byte order to the default byte order for an architecture.
-    // This can be modified if needed for cases when cores handle both
-    // big and little endian
-    m_byte_order = core_def->default_byte_order;
-  } else {
-    Clear();
-  }
-
+  UpdateCore();
   return IsValid();
 }
 
@@ -994,8 +982,10 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     GetTriple().setVendor(other.GetTriple().getVendor());
   if (TripleOSIsUnspecifiedUnknown() && !other.TripleOSIsUnspecifiedUnknown())
     GetTriple().setOS(other.GetTriple().getOS());
-  if (GetTriple().getArch() == llvm::Triple::UnknownArch)
+  if (GetTriple().getArch() == llvm::Triple::UnknownArch) {
     GetTriple().setArch(other.GetTriple().getArch());
+    UpdateCore();
+  }
   if (GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
       !TripleVendorWasSpecified()) {
     if (other.TripleVendorWasSpecified())
@@ -1188,6 +1178,20 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     return true;
   }
   return false;
+}
+
+void ArchSpec::UpdateCore() {
+  llvm::StringRef arch_name(m_triple.getArchName());
+  const CoreDefinition *core_def = FindCoreDefinition(arch_name);
+  if (core_def) {
+    m_core = core_def->core;
+    // Set the byte order to the default byte order for an architecture.
+    // This can be modified if needed for cases when cores handle both
+    // big and little endian
+    m_byte_order = core_def->default_byte_order;
+  } else {
+    Clear();
+  }
 }
 
 //===----------------------------------------------------------------------===//
