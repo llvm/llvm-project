@@ -1862,6 +1862,14 @@ static unsigned getVLDSTRegisterUpdateOpcode(unsigned Opc) {
   return Opc; // If not one we handle, return it unchanged.
 }
 
+/// Returns true if the given increment is a Constant known to be equal to the
+/// access size performed by a NEON load/store. This means the "[rN]!" form can
+/// be used.
+static bool isPerfectIncrement(SDValue Inc, EVT VecTy, unsigned NumVecs) {
+  auto C = dyn_cast<ConstantSDNode>(Inc);
+  return C && C->getZExtValue() == VecTy.getSizeInBits() / 8 * NumVecs;
+}
+
 void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
                                 const uint16_t *DOpcodes,
                                 const uint16_t *QOpcodes0,
@@ -1929,13 +1937,13 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
       SDValue Inc = N->getOperand(AddrOpIdx + 1);
       // FIXME: VLD1/VLD2 fixed increment doesn't need Reg0. Remove the reg0
       // case entirely when the rest are updated to that form, too.
-      if ((NumVecs <= 2) && !isa<ConstantSDNode>(Inc.getNode()))
+      bool IsImmUpdate = isPerfectIncrement(Inc, VT, NumVecs);
+      if ((NumVecs <= 2) && !IsImmUpdate)
         Opc = getVLDSTRegisterUpdateOpcode(Opc);
       // FIXME: We use a VLD1 for v1i64 even if the pseudo says vld2/3/4, so
       // check for that explicitly too. Horribly hacky, but temporary.
-      if ((NumVecs > 2 && !isVLDfixed(Opc)) ||
-          !isa<ConstantSDNode>(Inc.getNode()))
-        Ops.push_back(isa<ConstantSDNode>(Inc.getNode()) ? Reg0 : Inc);
+      if ((NumVecs > 2 && !isVLDfixed(Opc)) || !IsImmUpdate)
+        Ops.push_back(IsImmUpdate ? Reg0 : Inc);
     }
     Ops.push_back(Pred);
     Ops.push_back(Reg0);
@@ -2083,11 +2091,12 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
       SDValue Inc = N->getOperand(AddrOpIdx + 1);
       // FIXME: VST1/VST2 fixed increment doesn't need Reg0. Remove the reg0
       // case entirely when the rest are updated to that form, too.
-      if (NumVecs <= 2 && !isa<ConstantSDNode>(Inc.getNode()))
+      bool IsImmUpdate = isPerfectIncrement(Inc, VT, NumVecs);
+      if (NumVecs <= 2 && !IsImmUpdate)
         Opc = getVLDSTRegisterUpdateOpcode(Opc);
       // FIXME: We use a VST1 for v1i64 even if the pseudo says vld2/3/4, so
       // check for that explicitly too. Horribly hacky, but temporary.
-      if  (!isa<ConstantSDNode>(Inc.getNode()))
+      if  (!IsImmUpdate)
         Ops.push_back(Inc);
       else if (NumVecs > 2 && !isVSTfixed(Opc))
         Ops.push_back(Reg0);
@@ -2217,7 +2226,9 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   Ops.push_back(Align);
   if (isUpdating) {
     SDValue Inc = N->getOperand(AddrOpIdx + 1);
-    Ops.push_back(isa<ConstantSDNode>(Inc.getNode()) ? Reg0 : Inc);
+    bool IsImmUpdate =
+        isPerfectIncrement(Inc, VT.getVectorElementType(), NumVecs);
+    Ops.push_back(IsImmUpdate ? Reg0 : Inc);
   }
 
   SDValue SuperReg;
@@ -2321,9 +2332,11 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool isUpdating, unsigned NumVecs,
     // fixed-stride update instructions don't have an explicit writeback
     // operand. It's implicit in the opcode itself.
     SDValue Inc = N->getOperand(2);
-    if (NumVecs <= 2 && !isa<ConstantSDNode>(Inc.getNode()))
+    bool IsImmUpdate =
+        isPerfectIncrement(Inc, VT.getVectorElementType(), NumVecs);
+    if (NumVecs <= 2 && !IsImmUpdate)
       Opc = getVLDSTRegisterUpdateOpcode(Opc);
-    if (!isa<ConstantSDNode>(Inc.getNode()))
+    if (!IsImmUpdate)
       Ops.push_back(Inc);
     // FIXME: VLD3 and VLD4 haven't been updated to that form yet.
     else if (NumVecs > 2)

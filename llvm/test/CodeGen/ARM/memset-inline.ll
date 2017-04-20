@@ -13,10 +13,10 @@ entry:
 define void @t2() nounwind ssp {
 entry:
 ; CHECK-LABEL: t2:
-; CHECK: add.w r1, r0, #10
 ; CHECK: vmov.i32 {{q[0-9]+}}, #0x0
-; CHECK: vst1.16 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
-; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
+; CHECK: movs r1, #10
+; CHECK: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2], r1
+; CHECK: vst1.16 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2]
   %buf = alloca [26 x i8], align 1
   %0 = getelementptr inbounds [26 x i8], [26 x i8]* %buf, i32 0, i32 0
   call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 26, i32 1, i1 false)
