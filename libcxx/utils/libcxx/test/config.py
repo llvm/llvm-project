@@ -414,7 +414,11 @@ class Configuration(object):
         if self.is_windows:
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
-                # LIBCXX-WINDOWS-FIXME is a
+                # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
+                # initial Windows failures until they can be properly diagnosed
+                # and fixed. This allows easier detection of new test failures
+                # and regressions. Note: New failures should not be suppressed
+                # using this feature.
                 self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
         # Attempt to detect the glibc version by querying for __GLIBC__
@@ -482,8 +486,6 @@ class Configuration(object):
             self.cxx.flags += ['-m32']
         # Use verbose output for better errors
         self.cxx.flags += ['-v']
-        if self.is_windows:
-            self.cxx.link_flags += ['-Wl,-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
             self.cxx.flags += ['--sysroot', sysroot]
