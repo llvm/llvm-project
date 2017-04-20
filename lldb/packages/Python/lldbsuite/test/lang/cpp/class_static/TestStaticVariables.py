@@ -60,10 +60,9 @@ class StaticVariableTestCase(TestBase):
         compiler=["gcc"],
         bugnumber="Compiler emits incomplete debug info")
     @expectedFailureAll(
-        oslist=['linux'])
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber='llvm.org/pr20550 failing on FreeBSD-11')
+        compiler=["clang"],
+        compiler_version=["<", "3.8"],
+        bugnumber='llvm.org/pr20550')
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test Python APIs on file and class static variables."""
@@ -102,11 +101,11 @@ class StaticVariableTestCase(TestBase):
             if name == 'g_points':
                 self.assertTrue(
                     val.GetValueType() == lldb.eValueTypeVariableStatic)
-                self.assertTrue(val.GetNumChildren() == 2)
+                self.assertEqual(val.GetNumChildren(), 2)
             elif name == 'A::g_points':
                 self.assertTrue(
                     val.GetValueType() == lldb.eValueTypeVariableGlobal)
-                self.assertTrue(val.GetNumChildren() == 2)
+                self.assertEqual(val.GetNumChildren(), 2)
                 child1 = val.GetChildAtIndex(1)
                 self.DebugSBValue(child1)
                 child1_x = child1.GetChildAtIndex(0)

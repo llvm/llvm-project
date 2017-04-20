@@ -30,8 +30,7 @@ class LibcxxListDataFormatterTestCase(TestBase):
         self.line4 = line_number('main.cpp',
                                  '// Set fourth break point at this line.')
 
-    @skipIf(compiler="gcc")
-    @skipIfWindows  # libc++ not ported to Windows yet
+    @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

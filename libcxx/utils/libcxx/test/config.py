@@ -111,7 +111,8 @@ class Configuration(object):
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
         if self.is_windows:
-            return name + '.lib'
+            assert name == 'c++'  # Only allow libc++ to use this function for now.
+            return 'lib' + name + '.lib'
         else:
             return 'lib' + name + '.a'
 
@@ -412,6 +413,9 @@ class Configuration(object):
 
         if self.is_windows:
             self.config.available_features.add('windows')
+            if self.cxx_stdlib_under_test == 'libc++':
+                # LIBCXX-WINDOWS-FIXME is a
+                self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
         # Attempt to detect the glibc version by querying for __GLIBC__
         # in 'features.h'.
