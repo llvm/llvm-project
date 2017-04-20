@@ -879,6 +879,10 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
 
   default:
   dont_know:
+    if (Tok.isEditorPlaceholder()) {
+      ConsumeToken();
+      return nullptr;
+    }
     // We can't tell whether this is a function-definition or declaration yet.
     return ParseDeclarationOrFunctionDefinition(attrs, DS);
   }
@@ -1707,6 +1711,8 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
           return false;
         }
       }
+      if (Tok.isEditorPlaceholder())
+        return true;
 
       Diag(Tok.getLocation(), diag::err_expected_qualified_after_typename);
       return true;

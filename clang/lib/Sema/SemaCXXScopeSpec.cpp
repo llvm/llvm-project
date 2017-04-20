@@ -480,6 +480,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
                                        NamedDecl *ScopeLookupResult,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon) {
+  if (IdInfo.Identifier->isEditorPlaceholder())
+    return true;
   LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
                      LookupNestedNameSpecifierName);
   QualType ObjectType = GetTypeFromParser(IdInfo.ObjectType);
