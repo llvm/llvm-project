@@ -345,6 +345,128 @@ TYPED_TEST(BitVectorTest, BinOps) {
   EXPECT_FALSE(B.anyCommon(A));
 }
 
+typedef std::vector<std::pair<int, int>> RangeList;
+
+template <typename VecType>
+static inline VecType createBitVector(uint32_t Size,
+                                      const RangeList &setRanges) {
+  VecType V;
+  V.resize(Size);
+  for (auto &R : setRanges)
+    V.set(R.first, R.second);
+  return V;
+}
+
+TYPED_TEST(BitVectorTest, ShiftOpsSingleWord) {
+  // Test that shift ops work when the desired shift amount is less
+  // than one word.
+
+  // 1. Case where the number of bits in the BitVector also fit into a single
+  // word.
+  TypeParam A = createBitVector<TypeParam>(12, {{2, 4}, {8, 10}});
+  TypeParam B = A;
+
+  EXPECT_EQ(4U, A.count());
+  EXPECT_TRUE(A.test(2));
+  EXPECT_TRUE(A.test(3));
+  EXPECT_TRUE(A.test(8));
+  EXPECT_TRUE(A.test(9));
+
+  A >>= 1;
+  EXPECT_EQ(createBitVector<TypeParam>(12, {{1, 3}, {7, 9}}), A);
+
+  A <<= 1;
+  EXPECT_EQ(B, A);
+
+  A >>= 10;
+  EXPECT_EQ(createBitVector<TypeParam>(12, {}), A);
+
+  A = B;
+  A <<= 10;
+  EXPECT_EQ(createBitVector<TypeParam>(12, {}), A);
+
+  // 2. Case where the number of bits in the BitVector do not fit into a single
+  // word.
+
+  // 31----------------------------------------------------------------------0
+  // XXXXXXXX XXXXXXXX XXXXXXXX 00000111 | 11111110 00000000 00001111 11111111
+  A = createBitVector<TypeParam>(40, {{0, 12}, {25, 35}});
+  EXPECT_EQ(40U, A.size());
+  EXPECT_EQ(22U, A.count());
+
+  // 2a. Make sure that left shifting some 1 bits out of the vector works.
+  //   31----------------------------------------------------------------------0
+  // Before:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 00000111 | 11111110 00000000 00001111 11111111
+  // After:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 11111100 | 00000000 00011111 11111110 00000000
+  A <<= 9;
+  EXPECT_EQ(createBitVector<TypeParam>(40, {{9, 21}, {34, 40}}), A);
+
+  // 2b. Make sure that keeping the number of one bits unchanged works.
+  //   31----------------------------------------------------------------------0
+  // Before:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 11111100 | 00000000 00011111 11111110 00000000
+  // After:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 00000011 | 11110000 00000000 01111111 11111000
+  A >>= 6;
+  EXPECT_EQ(createBitVector<TypeParam>(40, {{3, 15}, {28, 34}}), A);
+
+  // 2c. Make sure that right shifting some 1 bits out of the vector works.
+  //   31----------------------------------------------------------------------0
+  // Before:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 00000011 | 11110000 00000000 01111111 11111000
+  // After:
+  //   XXXXXXXX XXXXXXXX XXXXXXXX 00000000 | 00000000 11111100 00000000 00011111
+  A >>= 10;
+  EXPECT_EQ(createBitVector<TypeParam>(40, {{0, 5}, {18, 24}}), A);
+
+  // 3. Big test.
+  A = createBitVector<TypeParam>(300, {{1, 30}, {60, 95}, {200, 275}});
+  A <<= 29;
+  EXPECT_EQ(createBitVector<TypeParam>(
+                300, {{1 + 29, 30 + 29}, {60 + 29, 95 + 29}, {200 + 29, 300}}),
+            A);
+}
+
+TYPED_TEST(BitVectorTest, ShiftOpsMultiWord) {
+  // Test that shift ops work when the desired shift amount is greater than or
+  // equal to the size of a single word.
+  auto A = createBitVector<TypeParam>(300, {{1, 30}, {60, 95}, {200, 275}});
+
+  // Make a copy so we can re-use it later.
+  auto B = A;
+
+  // 1. Shift left by an exact multiple of the word size.  This should invoke
+  // only a memmove and no per-word bit operations.
+  A <<= 64;
+  auto Expected = createBitVector<TypeParam>(
+      300, {{1 + 64, 30 + 64}, {60 + 64, 95 + 64}, {200 + 64, 300}});
+  EXPECT_EQ(Expected, A);
+
+  // 2. Shift left by a non multiple of the word size.  This should invoke both
+  // a memmove and per-word bit operations.
+  A = B;
+  A <<= 93;
+  EXPECT_EQ(createBitVector<TypeParam>(
+                300, {{1 + 93, 30 + 93}, {60 + 93, 95 + 93}, {200 + 93, 300}}),
+            A);
+
+  // 1. Shift right by an exact multiple of the word size.  This should invoke
+  // only a memmove and no per-word bit operations.
+  A = B;
+  A >>= 64;
+  EXPECT_EQ(
+      createBitVector<TypeParam>(300, {{0, 95 - 64}, {200 - 64, 275 - 64}}), A);
+
+  // 2. Shift left by a non multiple of the word size.  This should invoke both
+  // a memmove and per-word bit operations.
+  A = B;
+  A >>= 93;
+  EXPECT_EQ(
+      createBitVector<TypeParam>(300, {{0, 95 - 93}, {200 - 93, 275 - 93}}), A);
+}
+
 TYPED_TEST(BitVectorTest, RangeOps) {
   TypeParam A;
   A.resize(256);

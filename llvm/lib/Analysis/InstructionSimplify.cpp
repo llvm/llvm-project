@@ -568,11 +568,11 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Ty);
 
-  // add nsw/nuw (xor Y, signbit), signbit --> Y
+  // add nsw/nuw (xor Y, signmask), signmask --> Y
   // The no-wrapping add guarantees that the top bit will be set by the add.
   // Therefore, the xor must be clearing the already set sign bit of Y.
-  if ((isNSW || isNUW) && match(Op1, m_SignBit()) &&
-      match(Op0, m_Xor(m_Value(Y), m_SignBit())))
+  if ((isNSW || isNUW) && match(Op1, m_SignMask()) &&
+      match(Op0, m_Xor(m_Value(Y), m_SignMask())))
     return Y;
 
   /// i1 add -> xor.
@@ -2819,7 +2819,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
             return ConstantInt::getTrue(RHS->getContext());
         }
       }
-      if (CIVal->isSignBit() && *CI2Val == 1) {
+      if (CIVal->isSignMask() && *CI2Val == 1) {
         if (Pred == ICmpInst::ICMP_UGT)
           return ConstantInt::getFalse(RHS->getContext());
         if (Pred == ICmpInst::ICMP_ULE)

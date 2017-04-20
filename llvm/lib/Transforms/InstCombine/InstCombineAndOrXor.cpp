@@ -2480,8 +2480,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
             Constant *NegOp0CI = ConstantExpr::getNeg(Op0CI);
             return BinaryOperator::CreateSub(SubOne(NegOp0CI),
                                              Op0I->getOperand(0));
-          } else if (RHSC->getValue().isSignBit()) {
-            // (X + C) ^ signbit -> (X + C + signbit)
+          } else if (RHSC->getValue().isSignMask()) {
+            // (X + C) ^ signmask -> (X + C + signmask)
             Constant *C = Builder->getInt(RHSC->getValue() + Op0CI->getValue());
             return BinaryOperator::CreateAdd(Op0I->getOperand(0), C);
 

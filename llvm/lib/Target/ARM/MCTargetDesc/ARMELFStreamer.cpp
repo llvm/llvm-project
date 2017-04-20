@@ -464,7 +464,7 @@ public:
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
 
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
-    LastMappingSymbols[getPreviousSection().first] = std::move(LastEMSInfo);
+    LastMappingSymbols[getCurrentSection().first] = std::move(LastEMSInfo);
     MCELFStreamer::ChangeSection(Section, Subsection);
     auto LastMappingSymbol = LastMappingSymbols.find(Section);
     if (LastMappingSymbol != LastMappingSymbols.end()) {

@@ -14,6 +14,8 @@
 #ifndef LLVM_ADT_BITVECTOR_H
 #define LLVM_ADT_BITVECTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -455,6 +457,105 @@ public:
     return *this;
   }
 
+  BitVector &operator>>=(unsigned N) {
+    assert(N <= Size);
+    if (LLVM_UNLIKELY(empty() || N == 0))
+      return *this;
+
+    unsigned NumWords = NumBitWords(Size);
+    assert(NumWords >= 1);
+
+    wordShr(N / BITWORD_SIZE);
+
+    unsigned BitDistance = N % BITWORD_SIZE;
+    if (BitDistance == 0)
+      return *this;
+
+    // When the shift size is not a multiple of the word size, then we have
+    // a tricky situation where each word in succession needs to extract some
+    // of the bits from the next word and or them into this word while
+    // shifting this word to make room for the new bits.  This has to be done
+    // for every word in the array.
+
+    // Since we're shifting each word right, some bits will fall off the end
+    // of each word to the right, and empty space will be created on the left.
+    // The final word in the array will lose bits permanently, so starting at
+    // the beginning, work forwards shifting each word to the right, and
+    // OR'ing in the bits from the end of the next word to the beginning of
+    // the current word.
+
+    // Example:
+    //   Starting with {0xAABBCCDD, 0xEEFF0011, 0x22334455} and shifting right
+    //   by 4 bits.
+    // Step 1: Word[0] >>= 4           ; 0x0ABBCCDD
+    // Step 2: Word[0] |= 0x10000000   ; 0x1ABBCCDD
+    // Step 3: Word[1] >>= 4           ; 0x0EEFF001
+    // Step 4: Word[1] |= 0x50000000   ; 0x5EEFF001
+    // Step 5: Word[2] >>= 4           ; 0x02334455
+    // Result: { 0x1ABBCCDD, 0x5EEFF001, 0x02334455 }
+    const BitWord Mask = maskTrailingOnes<BitWord>(BitDistance);
+    const unsigned LSH = BITWORD_SIZE - BitDistance;
+
+    for (unsigned I = 0; I < NumWords - 1; ++I) {
+      Bits[I] >>= BitDistance;
+      Bits[I] |= (Bits[I + 1] & Mask) << LSH;
+    }
+
+    Bits[NumWords - 1] >>= BitDistance;
+
+    return *this;
+  }
+
+  BitVector &operator<<=(unsigned N) {
+    assert(N <= Size);
+    if (LLVM_UNLIKELY(empty() || N == 0))
+      return *this;
+
+    unsigned NumWords = NumBitWords(Size);
+    assert(NumWords >= 1);
+
+    wordShl(N / BITWORD_SIZE);
+
+    unsigned BitDistance = N % BITWORD_SIZE;
+    if (BitDistance == 0)
+      return *this;
+
+    // When the shift size is not a multiple of the word size, then we have
+    // a tricky situation where each word in succession needs to extract some
+    // of the bits from the previous word and or them into this word while
+    // shifting this word to make room for the new bits.  This has to be done
+    // for every word in the array.  This is similar to the algorithm outlined
+    // in operator>>=, but backwards.
+
+    // Since we're shifting each word left, some bits will fall off the end
+    // of each word to the left, and empty space will be created on the right.
+    // The first word in the array will lose bits permanently, so starting at
+    // the end, work backwards shifting each word to the left, and OR'ing
+    // in the bits from the end of the next word to the beginning of the
+    // current word.
+
+    // Example:
+    //   Starting with {0xAABBCCDD, 0xEEFF0011, 0x22334455} and shifting left
+    //   by 4 bits.
+    // Step 1: Word[2] <<= 4           ; 0x23344550
+    // Step 2: Word[2] |= 0x0000000E   ; 0x2334455E
+    // Step 3: Word[1] <<= 4           ; 0xEFF00110
+    // Step 4: Word[1] |= 0x0000000A   ; 0xEFF0011A
+    // Step 5: Word[0] <<= 4           ; 0xABBCCDD0
+    // Result: { 0xABBCCDD0, 0xEFF0011A, 0x2334455E }
+    const BitWord Mask = maskLeadingOnes<BitWord>(BitDistance);
+    const unsigned RSH = BITWORD_SIZE - BitDistance;
+
+    for (int I = NumWords - 1; I > 0; --I) {
+      Bits[I] <<= BitDistance;
+      Bits[I] |= (Bits[I - 1] & Mask) >> RSH;
+    }
+    Bits[0] <<= BitDistance;
+    clear_unused_bits();
+
+    return *this;
+  }
+
   // Assignment operator.
   const BitVector &operator=(const BitVector &RHS) {
     if (this == &RHS) return *this;
@@ -538,6 +639,54 @@ public:
   }
 
 private:
+  /// \brief Perform a logical left shift of \p Count words by moving everything
+  /// \p Count words to the right in memory.
+  ///
+  /// While confusing, words are stored from least significant at Bits[0] to
+  /// most significant at Bits[NumWords-1].  A logical shift left, however,
+  /// moves the current least significant bit to a higher logical index, and
+  /// fills the previous least significant bits with 0.  Thus, we actually
+  /// need to move the bytes of the memory to the right, not to the left.
+  /// Example:
+  ///   Words = [0xBBBBAAAA, 0xDDDDFFFF, 0x00000000, 0xDDDD0000]
+  /// represents a BitVector where 0xBBBBAAAA contain the least significant
+  /// bits.  So if we want to shift the BitVector left by 2 words, we need to
+  /// turn this into 0x00000000 0x00000000 0xBBBBAAAA 0xDDDDFFFF by using a
+  /// memmove which moves right, not left.
+  void wordShl(uint32_t Count) {
+    if (Count == 0)
+      return;
+
+    uint32_t NumWords = NumBitWords(Size);
+
+    auto Src = ArrayRef<BitWord>(Bits, NumWords).drop_back(Count);
+    auto Dest = MutableArrayRef<BitWord>(Bits, NumWords).drop_front(Count);
+
+    // Since we always move Word-sized chunks of data with src and dest both
+    // aligned to a word-boundary, we don't need to worry about endianness
+    // here.
+    std::memmove(Dest.begin(), Src.begin(), Dest.size() * sizeof(BitWord));
+    std::memset(Bits, 0, Count * sizeof(BitWord));
+    clear_unused_bits();
+  }
+
+  /// \brief Perform a logical right shift of \p Count words by moving those
+  /// words to the left in memory.  See wordShl for more information.
+  ///
+  void wordShr(uint32_t Count) {
+    if (Count == 0)
+      return;
+
+    uint32_t NumWords = NumBitWords(Size);
+
+    auto Src = ArrayRef<BitWord>(Bits, NumWords).drop_front(Count);
+    auto Dest = MutableArrayRef<BitWord>(Bits, NumWords).drop_back(Count);
+    assert(Dest.size() == Src.size());
+
+    std::memmove(Dest.begin(), Src.begin(), Dest.size() * sizeof(BitWord));
+    std::memset(Dest.end(), 0, Count * sizeof(BitWord));
+  }
+
   int next_unset_in_word(int WordIndex, BitWord Word) const {
     unsigned Result = WordIndex * BITWORD_SIZE + countTrailingOnes(Word);
     return Result < size() ? Result : -1;

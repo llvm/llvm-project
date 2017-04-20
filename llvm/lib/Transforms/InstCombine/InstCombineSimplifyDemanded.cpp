@@ -38,7 +38,7 @@ static bool ShrinkDemandedConstant(Instruction *I, unsigned OpNo,
 
   // If there are no bits set that aren't demanded, nothing to do.
   Demanded = Demanded.zextOrTrunc(C->getBitWidth());
-  if ((~Demanded & *C) == 0)
+  if (C->isSubsetOf(Demanded))
     return false;
 
   // This instruction is producing bits that are not demanded. Shrink the RHS.
@@ -117,27 +117,16 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       KnownOne.getBitWidth() == BitWidth &&
       "Value *V, DemandedMask, KnownZero and KnownOne "
       "must have same BitWidth");
-  const APInt *C;
-  if (match(V, m_APInt(C))) {
-    // We know all of the bits for a scalar constant or a splat vector constant!
-    KnownOne = *C;
-    KnownZero = ~KnownOne;
-    return nullptr;
-  }
-  if (isa<ConstantPointerNull>(V)) {
-    // We know all of the bits for a constant!
-    KnownOne.clearAllBits();
-    KnownZero.setAllBits();
+
+  if (isa<Constant>(V)) {
+    computeKnownBits(V, KnownZero, KnownOne, Depth, CxtI);
     return nullptr;
   }
 
   KnownZero.clearAllBits();
   KnownOne.clearAllBits();
-  if (DemandedMask == 0) {   // Not demanding any bits from V.
-    if (isa<UndefValue>(V))
-      return nullptr;
+  if (DemandedMask == 0)     // Not demanding any bits from V.
     return UndefValue::get(VTy);
-  }
 
   if (Depth == 6)        // Limit search depth.
     return nullptr;
@@ -566,7 +555,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     // If the sign bit is the only bit demanded by this ashr, then there is no
     // need to do it, the shift doesn't change the high bit.
-    if (DemandedMask.isSignBit())
+    if (DemandedMask.isSignMask())
       return I->getOperand(0);
 
     if (ConstantInt *SA = dyn_cast<ConstantInt>(I->getOperand(1))) {
@@ -594,9 +583,9 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       KnownOne.lshrInPlace(ShiftAmt);
 
       // Handle the sign bits.
-      APInt SignBit(APInt::getSignBit(BitWidth));
+      APInt SignMask(APInt::getSignMask(BitWidth));
       // Adjust to where it is now in the mask.
-      SignBit.lshrInPlace(ShiftAmt);
+      SignMask.lshrInPlace(ShiftAmt);
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
@@ -607,7 +596,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                             SA, I->getName());
         NewVal->setIsExact(cast<BinaryOperator>(I)->isExact());
         return InsertNewInstWith(NewVal, *I);
-      } else if ((KnownOne & SignBit) != 0) { // New bits are known one.
+      } else if ((KnownOne & SignMask) != 0) { // New bits are known one.
         KnownOne |= HighBits;
       }
     }
@@ -624,7 +613,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           return I->getOperand(0);
 
         APInt LowBits = RA - 1;
-        APInt Mask2 = LowBits | APInt::getSignBit(BitWidth);
+        APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
         if (SimplifyDemandedBits(I, 0, Mask2, LHSKnownZero, LHSKnownOne,
                                  Depth + 1))
           return I;

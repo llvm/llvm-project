@@ -24,6 +24,8 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
+#include <iterator>
+
 #define DEBUG_TYPE "legalizer"
 
 using namespace llvm;
@@ -161,7 +163,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // convergence for performance reasons.
   bool Changed = false;
   MachineBasicBlock::iterator NextMI;
-  for (auto &MBB : MF)
+  for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); MI = NextMI) {
       // Get the next Instruction before we try to legalize, because there's a
       // good chance MI will be deleted.
@@ -171,18 +173,21 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // and are assumed to be legal.
       if (!isPreISelGenericOpcode(MI->getOpcode()))
         continue;
+      unsigned NumNewInsns = 0;
       SmallVector<MachineInstr *, 4> WorkList;
-      Helper.MIRBuilder.recordInsertions(
-          [&](MachineInstr *MI) { WorkList.push_back(MI); });
+      Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
+        ++NumNewInsns;
+        WorkList.push_back(MI);
+      });
       WorkList.push_back(&*MI);
 
+      bool Changed = false;
       LegalizerHelper::LegalizeResult Res;
       unsigned Idx = 0;
       do {
         Res = Helper.legalizeInstrStep(*WorkList[Idx]);
         // Error out if we couldn't legalize this instruction. We may want to
-        // fall
-        // back to DAG ISel instead in the future.
+        // fall back to DAG ISel instead in the future.
         if (Res == LegalizerHelper::UnableToLegalize) {
           Helper.MIRBuilder.stopRecordingInsertions();
           if (Res == LegalizerHelper::UnableToLegalize) {
@@ -194,10 +199,21 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         }
         Changed |= Res == LegalizerHelper::Legalized;
         ++Idx;
+
+#ifndef NDEBUG
+        if (NumNewInsns) {
+          DEBUG(dbgs() << ".. .. Emitted " << NumNewInsns << " insns\n");
+          for (auto I = WorkList.end() - NumNewInsns, E = WorkList.end();
+               I != E; ++I)
+            DEBUG(dbgs() << ".. .. New MI: "; (*I)->print(dbgs()));
+          NumNewInsns = 0;
+        }
+#endif
       } while (Idx < WorkList.size());
 
       Helper.MIRBuilder.stopRecordingInsertions();
     }
+  }
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();

@@ -1640,9 +1640,9 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   if (match(V, m_Shl(m_One(), m_Value())))
     return true;
 
-  // (signbit) >>l X is clearly a power of two if the one is not shifted off the
-  // bottom.  If it is shifted off the bottom then the result is undefined.
-  if (match(V, m_LShr(m_SignBit(), m_Value())))
+  // (signmask) >>l X is clearly a power of two if the one is not shifted off
+  // the bottom.  If it is shifted off the bottom then the result is undefined.
+  if (match(V, m_LShr(m_SignMask(), m_Value())))
     return true;
 
   // The remaining tests are all recursive, so bail out if we hit the limit.

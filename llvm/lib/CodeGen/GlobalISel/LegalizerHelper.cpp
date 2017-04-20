@@ -24,7 +24,7 @@
 
 #include <sstream>
 
-#define DEBUG_TYPE "legalize-mir"
+#define DEBUG_TYPE "legalizer"
 
 using namespace llvm;
 
@@ -35,24 +35,34 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF)
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
+  DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
+
   auto Action = LI.getAction(MI, MRI);
   switch (std::get<0>(Action)) {
   case LegalizerInfo::Legal:
+    DEBUG(dbgs() << ".. Already legal\n");
     return AlreadyLegal;
   case LegalizerInfo::Libcall:
+    DEBUG(dbgs() << ".. Convert to libcall\n");
     return libcall(MI);
   case LegalizerInfo::NarrowScalar:
+    DEBUG(dbgs() << ".. Narrow scalar\n");
     return narrowScalar(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::WidenScalar:
+    DEBUG(dbgs() << ".. Widen scalar\n");
     return widenScalar(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::Lower:
+    DEBUG(dbgs() << ".. Lower\n");
     return lower(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::FewerElements:
+    DEBUG(dbgs() << ".. Reduce number of elements\n");
     return fewerElementsVector(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::Custom:
+    DEBUG(dbgs() << ".. Custom legalization\n");
     return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
                                                   : UnableToLegalize;
   default:
+    DEBUG(dbgs() << ".. Unable to legalize\n");
     return UnableToLegalize;
   }
 }

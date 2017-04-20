@@ -97,6 +97,13 @@ typedef struct LLVMOpaqueMetadata *LLVMMetadataRef;
 typedef struct LLVMOpaqueBuilder *LLVMBuilderRef;
 
 /**
+ * Represents an LLVM debug info builder.
+ *
+ * This models llvm::DIBuilder.
+ */
+typedef struct LLVMOpaqueDIBuilder *LLVMDIBuilderRef;
+
+/**
  * Interface used to provide a module to JIT or interpreter.
  * This is now just a synonym for llvm::Module, but we have to keep using the
  * different type to keep binary compatibility.

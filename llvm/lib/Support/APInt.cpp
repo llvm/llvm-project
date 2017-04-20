@@ -730,6 +730,14 @@ bool APInt::intersectsSlowCase(const APInt &RHS) const {
   return false;
 }
 
+bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
+  for (unsigned i = 0, e = getNumWords(); i != e; ++i)
+    if ((pVal[i] & ~RHS.pVal[i]) != 0)
+      return false;
+
+  return true;
+}
+
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 16 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)

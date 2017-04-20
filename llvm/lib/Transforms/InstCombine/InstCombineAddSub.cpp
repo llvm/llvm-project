@@ -1044,14 +1044,14 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
   const APInt *RHSC;
   if (match(RHS, m_APInt(RHSC))) {
-    if (RHSC->isSignBit()) {
+    if (RHSC->isSignMask()) {
       // If wrapping is not allowed, then the addition must set the sign bit:
-      // X + (signbit) --> X | signbit
+      // X + (signmask) --> X | signmask
       if (I.hasNoSignedWrap() || I.hasNoUnsignedWrap())
         return BinaryOperator::CreateOr(LHS, RHS);
 
       // If wrapping is allowed, then the addition flips the sign bit of LHS:
-      // X + (signbit) --> X ^ signbit
+      // X + (signmask) --> X ^ signmask
       return BinaryOperator::CreateXor(LHS, RHS);
     }
 
@@ -1120,9 +1120,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
           return BinaryOperator::CreateSub(ConstantExpr::getAdd(XorRHS, CI),
                                            XorLHS);
       }
-      // (X + signbit) + C could have gotten canonicalized to (X ^ signbit) + C,
-      // transform them into (X + (signbit ^ C))
-      if (XorRHS->getValue().isSignBit())
+      // (X + signmask) + C could have gotten canonicalized to (X^signmask) + C,
+      // transform them into (X + (signmask ^ C))
+      if (XorRHS->getValue().isSignMask())
         return BinaryOperator::CreateAdd(XorLHS,
                                          ConstantExpr::getXor(XorRHS, CI));
     }
