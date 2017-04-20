@@ -14,6 +14,9 @@
 //===----------------------------------
 // Atomic fences
 //===----------------------------------
+let AddedComplexity = 15, Size = 0 in
+def CompilerBarrier : Pseudo<(outs), (ins i32imm:$ordering),
+                             [(atomic_fence imm:$ordering, 0)]>, Sched<[]>;
 def : Pat<(atomic_fence (i64 4), (imm)), (DMB (i32 0x9))>;
 def : Pat<(atomic_fence (imm), (imm)), (DMB (i32 0xb))>;
 
