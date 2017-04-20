@@ -241,7 +241,7 @@ class Configuration(object):
         flags = []
         compile_flags = _prefixed_env_list('INCLUDE', '-isystem')
         link_flags = _prefixed_env_list('LIB', '-L')
-        for path in _list_env_var('LIB'):
+        for path in _split_env_var('LIB'):
             self.add_path(self.exec_env, path)
         return CXXCompiler(clang_path, flags=flags,
                            compile_flags=compile_flags,
@@ -478,6 +478,8 @@ class Configuration(object):
             self.cxx.flags += ['-m32']
         # Use verbose output for better errors
         self.cxx.flags += ['-v']
+        if self.is_windows:
+            self.cxx.link_flags += ['-Wl,-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
             self.cxx.flags += ['--sysroot', sysroot]

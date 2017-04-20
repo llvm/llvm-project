@@ -41,8 +41,6 @@ public:
 
   bool HasAtLeast(Size s);
 
-  bool HasAny(Character c);
-
   std::string GetUnlexed();
 
   // This will assert if there are less than s characters preceding the cursor.
