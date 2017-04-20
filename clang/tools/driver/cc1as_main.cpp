@@ -506,12 +506,12 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // FIXME: Remove this, one day.
   if (!Asm.LLVMArgs.empty()) {
     unsigned NumArgs = Asm.LLVMArgs.size();
-    const char **Args = new const char*[NumArgs + 2];
+    auto Args = llvm::make_unique<const char*[]>(NumArgs + 2);
     Args[0] = "clang (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args);
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
   // Execute the invocation, unless there were parsing errors.

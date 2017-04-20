@@ -2605,10 +2605,11 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
                                                 == TSK_ExplicitSpecialization)
         continue;
 
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+      if ((Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+           Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment()) &&
           TSK == TSK_ExplicitInstantiationDeclaration) {
-        // In MSVC mode, explicit instantiation decl of the outer class doesn't
-        // affect the inner class.
+        // In MSVC and Windows Itanium mode, explicit instantiation decl of the
+        // outer class doesn't affect the inner class.
         continue;
       }
 

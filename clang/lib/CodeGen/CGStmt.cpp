@@ -1166,7 +1166,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S) {
       if (Rem)
         Rem--;
       SwitchInsn->addCase(Builder.getInt(LHS), CaseDest);
-      LHS++;
+      ++LHS;
     }
     return;
   }

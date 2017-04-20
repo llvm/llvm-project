@@ -3794,6 +3794,10 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     AddDeferredUnusedCoverageMapping(D);
     break;
 
+  case Decl::CXXDeductionGuide:
+    // Function-like, but does not result in code emission.
+    break;
+
   case Decl::Var:
   case Decl::Decomposition:
     // Skip variable templates

@@ -213,3 +213,38 @@ namespace transform_params {
   };
   D d(Y<0, 1, 2>{});
 }
+
+namespace variadic {
+  int arr3[3], arr4[4];
+
+  // PR32673
+  template<typename T> struct A {
+    template<typename ...U> A(T, U...);
+  };
+  A a(1, 2, 3);
+
+  template<typename T> struct B {
+    template<int ...N> B(T, int (&...r)[N]);
+  };
+  B b(1, arr3, arr4);
+
+  template<typename T> struct C {
+    template<template<typename> typename ...U> C(T, U<int>...);
+  };
+  C c(1, a, b);
+
+  template<typename ...U> struct X {
+    template<typename T> X(T, U...);
+  };
+  X x(1, 2, 3);
+
+  template<int ...N> struct Y {
+    template<typename T> Y(T, int (&...r)[N]);
+  };
+  Y y(1, arr3, arr4);
+
+  template<template<typename> typename ...U> struct Z {
+    template<typename T> Z(T, U<int>...);
+  };
+  Z z(1, a, b);
+}

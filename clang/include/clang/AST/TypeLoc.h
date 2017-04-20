@@ -1544,7 +1544,11 @@ class DependentSizedArrayTypeLoc :
     public InheritingConcreteTypeLoc<ArrayTypeLoc,
                                      DependentSizedArrayTypeLoc,
                                      DependentSizedArrayType> {
-
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    ArrayTypeLoc::initializeLocal(Context, Loc);
+    setSizeExpr(getTypePtr()->getSizeExpr());
+  }
 };
 
 class VariableArrayTypeLoc :

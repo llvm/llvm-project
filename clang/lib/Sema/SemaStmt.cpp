@@ -1783,6 +1783,7 @@ StmtResult
 Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
                                  Stmt *First, Expr *collection,
                                  SourceLocation RParenLoc) {
+  getCurFunction()->setHasBranchProtectedScope();
 
   ExprResult CollectionExprResult =
     CheckObjCForCollectionOperand(ForLoc, collection);

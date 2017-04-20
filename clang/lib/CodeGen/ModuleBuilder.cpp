@@ -197,7 +197,7 @@ namespace {
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
       // instantiable.
-      if (!MD->getParent()->getDescribedClassTemplate())
+      if (!MD->getParent()->isDependentContext())
         Builder->AddDeferredUnusedCoverageMapping(MD);
     }
 

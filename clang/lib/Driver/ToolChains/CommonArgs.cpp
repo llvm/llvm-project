@@ -261,6 +261,12 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     arm::getARMArchCPUFromArgs(Args, MArch, MCPU, FromAs);
     return arm::getARMTargetCPU(MCPU, MArch, T);
   }
+
+  case llvm::Triple::avr:
+    if (const Arg *A = Args.getLastArg(options::OPT_mmcu_EQ))
+      return A->getValue();
+    return "";
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
