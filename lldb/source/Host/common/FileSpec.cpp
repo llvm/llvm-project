@@ -1135,6 +1135,15 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
           // Don't resolve the file type or path
           FileSpec child_path_spec(child_path, false);
 
+        // The dirent from readdir() didn't give us a file type; see if 
+        // stat() can do better.
+        if (file_type == eFileTypeUnknown)
+        {
+            FileSpec::FileType file_type_from_stat = child_path_spec.GetFileType ();
+            if (file_type_from_stat != eFileTypeInvalid)
+                file_type = file_type_from_stat;
+        }
+
           EnumerateDirectoryResult result =
               callback(file_type, child_path_spec);
 
