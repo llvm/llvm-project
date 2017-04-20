@@ -183,6 +183,17 @@ private:
   Sema &Actions;
 };
 
+/// PragmaAttributeHandler - "\#pragma clang attribute ...".
+struct PragmaAttributeHandler : public PragmaHandler {
+  PragmaAttributeHandler(AttributeFactory &AttrFactory)
+      : PragmaHandler("attribute"), AttributesForPragmaAttribute(AttrFactory) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &FirstToken) override;
+
+  /// A pool of attributes that were parsed in \#pragma clang attribute.
+  ParsedAttributes AttributesForPragmaAttribute;
+};
+
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
@@ -275,6 +286,9 @@ void Parser::initializePragmaHandlers() {
 
   FPHandler.reset(new PragmaFPHandler());
   PP.AddPragmaHandler("clang", FPHandler.get());
+
+  AttributePragmaHandler.reset(new PragmaAttributeHandler(AttrFactory));
+  PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
 }
 
 void Parser::resetPragmaHandlers() {
@@ -356,6 +370,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", FPHandler.get());
   FPHandler.reset();
+
+  PP.RemovePragmaHandler("clang", AttributePragmaHandler.get());
+  AttributePragmaHandler.reset();
 }
 
 /// \brief Handle the annotation token produced for #pragma unused(...)
@@ -964,6 +981,422 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   Hint.Range = SourceRange(Info->PragmaName.getLocation(),
                            Info->Toks.back().getLocation());
   return true;
+}
+
+namespace {
+struct PragmaAttributeInfo {
+  enum ActionType { Push, Pop };
+  ParsedAttributes &Attributes;
+  ActionType Action;
+  ArrayRef<Token> Tokens;
+
+  PragmaAttributeInfo(ParsedAttributes &Attributes) : Attributes(Attributes) {}
+};
+
+#include "clang/Parse/AttrSubMatchRulesParserStringSwitches.inc"
+
+} // end anonymous namespace
+
+static StringRef getIdentifier(const Token &Tok) {
+  if (Tok.is(tok::identifier))
+    return Tok.getIdentifierInfo()->getName();
+  const char *S = tok::getKeywordSpelling(Tok.getKind());
+  if (!S)
+    return "";
+  return S;
+}
+
+static bool isAbstractAttrMatcherRule(attr::SubjectMatchRule Rule) {
+  using namespace attr;
+  switch (Rule) {
+#define ATTR_MATCH_RULE(Value, Spelling, IsAbstract)                           \
+  case Value:                                                                  \
+    return IsAbstract;
+#include "clang/Basic/AttrSubMatchRulesList.inc"
+  }
+  llvm_unreachable("Invalid attribute subject match rule");
+  return false;
+}
+
+static void diagnoseExpectedAttributeSubjectSubRule(
+    Parser &PRef, attr::SubjectMatchRule PrimaryRule, StringRef PrimaryRuleName,
+    SourceLocation SubRuleLoc) {
+  auto Diagnostic =
+      PRef.Diag(SubRuleLoc,
+                diag::err_pragma_attribute_expected_subject_sub_identifier)
+      << PrimaryRuleName;
+  if (const char *SubRules = validAttributeSubjectMatchSubRules(PrimaryRule))
+    Diagnostic << /*SubRulesSupported=*/1 << SubRules;
+  else
+    Diagnostic << /*SubRulesSupported=*/0;
+}
+
+static void diagnoseUnknownAttributeSubjectSubRule(
+    Parser &PRef, attr::SubjectMatchRule PrimaryRule, StringRef PrimaryRuleName,
+    StringRef SubRuleName, SourceLocation SubRuleLoc) {
+
+  auto Diagnostic =
+      PRef.Diag(SubRuleLoc, diag::err_pragma_attribute_unknown_subject_sub_rule)
+      << SubRuleName << PrimaryRuleName;
+  if (const char *SubRules = validAttributeSubjectMatchSubRules(PrimaryRule))
+    Diagnostic << /*SubRulesSupported=*/1 << SubRules;
+  else
+    Diagnostic << /*SubRulesSupported=*/0;
+}
+
+bool Parser::ParsePragmaAttributeSubjectMatchRuleSet(
+    attr::ParsedSubjectMatchRuleSet &SubjectMatchRules, SourceLocation &AnyLoc,
+    SourceLocation &LastMatchRuleEndLoc) {
+  bool IsAny = false;
+  BalancedDelimiterTracker AnyParens(*this, tok::l_paren);
+  if (getIdentifier(Tok) == "any") {
+    AnyLoc = ConsumeToken();
+    IsAny = true;
+    if (AnyParens.expectAndConsume())
+      return true;
+  }
+
+  do {
+    // Parse the subject matcher rule.
+    StringRef Name = getIdentifier(Tok);
+    if (Name.empty()) {
+      Diag(Tok, diag::err_pragma_attribute_expected_subject_identifier);
+      return true;
+    }
+    std::pair<Optional<attr::SubjectMatchRule>,
+              Optional<attr::SubjectMatchRule> (*)(StringRef, bool)>
+        Rule = isAttributeSubjectMatchRule(Name);
+    if (!Rule.first) {
+      Diag(Tok, diag::err_pragma_attribute_unknown_subject_rule) << Name;
+      return true;
+    }
+    attr::SubjectMatchRule PrimaryRule = *Rule.first;
+    SourceLocation RuleLoc = ConsumeToken();
+
+    BalancedDelimiterTracker Parens(*this, tok::l_paren);
+    if (isAbstractAttrMatcherRule(PrimaryRule)) {
+      if (Parens.expectAndConsume())
+        return true;
+    } else if (Parens.consumeOpen()) {
+      if (!SubjectMatchRules
+               .insert(
+                   std::make_pair(PrimaryRule, SourceRange(RuleLoc, RuleLoc)))
+               .second)
+        Diag(RuleLoc, diag::err_pragma_attribute_duplicate_subject)
+            << Name
+            << FixItHint::CreateRemoval(SourceRange(
+                   RuleLoc, Tok.is(tok::comma) ? Tok.getLocation() : RuleLoc));
+      LastMatchRuleEndLoc = RuleLoc;
+      continue;
+    }
+
+    // Parse the sub-rules.
+    StringRef SubRuleName = getIdentifier(Tok);
+    if (SubRuleName.empty()) {
+      diagnoseExpectedAttributeSubjectSubRule(*this, PrimaryRule, Name,
+                                              Tok.getLocation());
+      return true;
+    }
+    attr::SubjectMatchRule SubRule;
+    if (SubRuleName == "unless") {
+      SourceLocation SubRuleLoc = ConsumeToken();
+      BalancedDelimiterTracker Parens(*this, tok::l_paren);
+      if (Parens.expectAndConsume())
+        return true;
+      SubRuleName = getIdentifier(Tok);
+      if (SubRuleName.empty()) {
+        diagnoseExpectedAttributeSubjectSubRule(*this, PrimaryRule, Name,
+                                                SubRuleLoc);
+        return true;
+      }
+      auto SubRuleOrNone = Rule.second(SubRuleName, /*IsUnless=*/true);
+      if (!SubRuleOrNone) {
+        std::string SubRuleUnlessName = "unless(" + SubRuleName.str() + ")";
+        diagnoseUnknownAttributeSubjectSubRule(*this, PrimaryRule, Name,
+                                               SubRuleUnlessName, SubRuleLoc);
+        return true;
+      }
+      SubRule = *SubRuleOrNone;
+      ConsumeToken();
+      if (Parens.consumeClose())
+        return true;
+    } else {
+      auto SubRuleOrNone = Rule.second(SubRuleName, /*IsUnless=*/false);
+      if (!SubRuleOrNone) {
+        diagnoseUnknownAttributeSubjectSubRule(*this, PrimaryRule, Name,
+                                               SubRuleName, Tok.getLocation());
+        return true;
+      }
+      SubRule = *SubRuleOrNone;
+      ConsumeToken();
+    }
+    SourceLocation RuleEndLoc = Tok.getLocation();
+    LastMatchRuleEndLoc = RuleEndLoc;
+    if (Parens.consumeClose())
+      return true;
+    if (!SubjectMatchRules
+             .insert(std::make_pair(SubRule, SourceRange(RuleLoc, RuleEndLoc)))
+             .second) {
+      Diag(RuleLoc, diag::err_pragma_attribute_duplicate_subject)
+          << attr::getSubjectMatchRuleSpelling(SubRule)
+          << FixItHint::CreateRemoval(SourceRange(
+                 RuleLoc, Tok.is(tok::comma) ? Tok.getLocation() : RuleEndLoc));
+      continue;
+    }
+  } while (IsAny && TryConsumeToken(tok::comma));
+
+  if (IsAny)
+    if (AnyParens.consumeClose())
+      return true;
+
+  return false;
+}
+
+namespace {
+
+/// Describes the stage at which attribute subject rule parsing was interruped.
+enum class MissingAttributeSubjectRulesRecoveryPoint {
+  Comma,
+  ApplyTo,
+  Equals,
+  Any,
+  None,
+};
+
+MissingAttributeSubjectRulesRecoveryPoint
+getAttributeSubjectRulesRecoveryPointForToken(const Token &Tok) {
+  if (const auto *II = Tok.getIdentifierInfo()) {
+    if (II->isStr("apply_to"))
+      return MissingAttributeSubjectRulesRecoveryPoint::ApplyTo;
+    if (II->isStr("any"))
+      return MissingAttributeSubjectRulesRecoveryPoint::Any;
+  }
+  if (Tok.is(tok::equal))
+    return MissingAttributeSubjectRulesRecoveryPoint::Equals;
+  return MissingAttributeSubjectRulesRecoveryPoint::None;
+}
+
+/// Creates a diagnostic for the attribute subject rule parsing diagnostic that
+/// suggests the possible attribute subject rules in a fix-it together with
+/// any other missing tokens.
+DiagnosticBuilder createExpectedAttributeSubjectRulesTokenDiagnostic(
+    unsigned DiagID, AttributeList &Attribute,
+    MissingAttributeSubjectRulesRecoveryPoint Point, Parser &PRef) {
+  SourceLocation Loc = PRef.getEndOfPreviousToken();
+  if (Loc.isInvalid())
+    Loc = PRef.getCurToken().getLocation();
+  auto Diagnostic = PRef.Diag(Loc, DiagID);
+  std::string FixIt;
+  MissingAttributeSubjectRulesRecoveryPoint EndPoint =
+      getAttributeSubjectRulesRecoveryPointForToken(PRef.getCurToken());
+  if (Point == MissingAttributeSubjectRulesRecoveryPoint::Comma)
+    FixIt = ", ";
+  if (Point <= MissingAttributeSubjectRulesRecoveryPoint::ApplyTo &&
+      EndPoint > MissingAttributeSubjectRulesRecoveryPoint::ApplyTo)
+    FixIt += "apply_to";
+  if (Point <= MissingAttributeSubjectRulesRecoveryPoint::Equals &&
+      EndPoint > MissingAttributeSubjectRulesRecoveryPoint::Equals)
+    FixIt += " = ";
+  SourceRange FixItRange(Loc);
+  if (EndPoint == MissingAttributeSubjectRulesRecoveryPoint::None) {
+    // Gather the subject match rules that are supported by the attribute.
+    SmallVector<std::pair<attr::SubjectMatchRule, bool>, 4> SubjectMatchRuleSet;
+    Attribute.getMatchRules(PRef.getLangOpts(), SubjectMatchRuleSet);
+    if (SubjectMatchRuleSet.empty()) {
+      // FIXME: We can emit a "fix-it" with a subject list placeholder when
+      // placeholders will be supported by the fix-its.
+      return Diagnostic;
+    }
+    FixIt += "any(";
+    bool NeedsComma = false;
+    for (const auto &I : SubjectMatchRuleSet) {
+      // Ensure that the missing rule is reported in the fix-it only when it's
+      // supported in the current language mode.
+      if (!I.second)
+        continue;
+      if (NeedsComma)
+        FixIt += ", ";
+      else
+        NeedsComma = true;
+      FixIt += attr::getSubjectMatchRuleSpelling(I.first);
+    }
+    FixIt += ")";
+    // Check if we need to remove the range
+    PRef.SkipUntil(tok::eof, Parser::StopBeforeMatch);
+    FixItRange.setEnd(PRef.getCurToken().getLocation());
+  }
+  if (FixItRange.getBegin() == FixItRange.getEnd())
+    Diagnostic << FixItHint::CreateInsertion(FixItRange.getBegin(), FixIt);
+  else
+    Diagnostic << FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(FixItRange), FixIt);
+  return Diagnostic;
+}
+
+} // end anonymous namespace
+
+void Parser::HandlePragmaAttribute() {
+  assert(Tok.is(tok::annot_pragma_attribute) &&
+         "Expected #pragma attribute annotation token");
+  SourceLocation PragmaLoc = Tok.getLocation();
+  auto *Info = static_cast<PragmaAttributeInfo *>(Tok.getAnnotationValue());
+  if (Info->Action == PragmaAttributeInfo::Pop) {
+    ConsumeToken();
+    Actions.ActOnPragmaAttributePop(PragmaLoc);
+    return;
+  }
+  // Parse the actual attribute with its arguments.
+  assert(Info->Action == PragmaAttributeInfo::Push &&
+         "Unexpected #pragma attribute command");
+  PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false);
+  ConsumeToken();
+
+  ParsedAttributes &Attrs = Info->Attributes;
+  Attrs.clearListOnly();
+
+  auto SkipToEnd = [this]() {
+    SkipUntil(tok::eof, StopBeforeMatch);
+    ConsumeToken();
+  };
+
+  if (Tok.is(tok::l_square) && NextToken().is(tok::l_square)) {
+    // Parse the CXX11 style attribute.
+    ParseCXX11AttributeSpecifier(Attrs);
+  } else if (Tok.is(tok::kw___attribute)) {
+    ConsumeToken();
+    if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after,
+                         "attribute"))
+      return SkipToEnd();
+    if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after, "("))
+      return SkipToEnd();
+
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_pragma_attribute_expected_attribute_name);
+      SkipToEnd();
+      return;
+    }
+    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    SourceLocation AttrNameLoc = ConsumeToken();
+
+    if (Tok.isNot(tok::l_paren))
+      Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                   AttributeList::AS_GNU);
+    else
+      ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
+                            /*ScopeName=*/nullptr,
+                            /*ScopeLoc=*/SourceLocation(),
+                            AttributeList::AS_GNU,
+                            /*Declarator=*/nullptr);
+
+    if (ExpectAndConsume(tok::r_paren))
+      return SkipToEnd();
+    if (ExpectAndConsume(tok::r_paren))
+      return SkipToEnd();
+  } else if (Tok.is(tok::kw___declspec)) {
+    ParseMicrosoftDeclSpecs(Attrs);
+  } else {
+    Diag(Tok, diag::err_pragma_attribute_expected_attribute_syntax);
+    if (Tok.getIdentifierInfo()) {
+      // If we suspect that this is an attribute suggest the use of
+      // '__attribute__'.
+      if (AttributeList::getKind(Tok.getIdentifierInfo(), /*ScopeName=*/nullptr,
+                                 AttributeList::AS_GNU) !=
+          AttributeList::UnknownAttribute) {
+        SourceLocation InsertStartLoc = Tok.getLocation();
+        ConsumeToken();
+        if (Tok.is(tok::l_paren)) {
+          ConsumeAnyToken();
+          SkipUntil(tok::r_paren, StopBeforeMatch);
+          if (Tok.isNot(tok::r_paren))
+            return SkipToEnd();
+        }
+        Diag(Tok, diag::note_pragma_attribute_use_attribute_kw)
+            << FixItHint::CreateInsertion(InsertStartLoc, "__attribute__((")
+            << FixItHint::CreateInsertion(Tok.getEndLoc(), "))");
+      }
+    }
+    SkipToEnd();
+    return;
+  }
+
+  if (!Attrs.getList() || Attrs.getList()->isInvalid()) {
+    SkipToEnd();
+    return;
+  }
+
+  // Ensure that we don't have more than one attribute.
+  if (Attrs.getList()->getNext()) {
+    SourceLocation Loc = Attrs.getList()->getNext()->getLoc();
+    Diag(Loc, diag::err_pragma_attribute_multiple_attributes);
+    SkipToEnd();
+    return;
+  }
+
+  if (!Attrs.getList()->isSupportedByPragmaAttribute()) {
+    Diag(PragmaLoc, diag::err_pragma_attribute_unsupported_attribute)
+        << Attrs.getList()->getName();
+    SkipToEnd();
+    return;
+  }
+  AttributeList &Attribute = *Attrs.getList();
+
+  // Parse the subject-list.
+  if (!TryConsumeToken(tok::comma)) {
+    createExpectedAttributeSubjectRulesTokenDiagnostic(
+        diag::err_expected, Attribute,
+        MissingAttributeSubjectRulesRecoveryPoint::Comma, *this)
+        << tok::comma;
+    SkipToEnd();
+    return;
+  }
+
+  if (Tok.isNot(tok::identifier)) {
+    createExpectedAttributeSubjectRulesTokenDiagnostic(
+        diag::err_pragma_attribute_invalid_subject_set_specifier, Attribute,
+        MissingAttributeSubjectRulesRecoveryPoint::ApplyTo, *this);
+    SkipToEnd();
+    return;
+  }
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (!II->isStr("apply_to")) {
+    createExpectedAttributeSubjectRulesTokenDiagnostic(
+        diag::err_pragma_attribute_invalid_subject_set_specifier, Attribute,
+        MissingAttributeSubjectRulesRecoveryPoint::ApplyTo, *this);
+    SkipToEnd();
+    return;
+  }
+  ConsumeToken();
+
+  if (!TryConsumeToken(tok::equal)) {
+    createExpectedAttributeSubjectRulesTokenDiagnostic(
+        diag::err_expected, Attribute,
+        MissingAttributeSubjectRulesRecoveryPoint::Equals, *this)
+        << tok::equal;
+    SkipToEnd();
+    return;
+  }
+
+  attr::ParsedSubjectMatchRuleSet SubjectMatchRules;
+  SourceLocation AnyLoc, LastMatchRuleEndLoc;
+  if (ParsePragmaAttributeSubjectMatchRuleSet(SubjectMatchRules, AnyLoc,
+                                              LastMatchRuleEndLoc)) {
+    SkipToEnd();
+    return;
+  }
+
+  // Tokens following an ill-formed attribute will remain in the token stream
+  // and must be removed.
+  if (Tok.isNot(tok::eof)) {
+    Diag(Tok, diag::err_pragma_attribute_extra_tokens_after_attribute);
+    SkipToEnd();
+    return;
+  }
+
+  // Consume the eof terminator token.
+  ConsumeToken();
+
+  Actions.ActOnPragmaAttributePush(Attribute, PragmaLoc,
+                                   std::move(SubjectMatchRules));
 }
 
 // #pragma GCC visibility comes in two variants:
@@ -2394,4 +2827,105 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
   if (!Tok.is(tok::eod))
     PP.Diag(FirstTok.getLocation(),
             diag::warn_pragma_force_cuda_host_device_bad_arg);
+}
+
+/// \brief Handle the #pragma clang attribute directive.
+///
+/// The syntax is:
+/// \code
+///  #pragma clang attribute push(attribute, subject-set)
+///  #pragma clang attribute pop
+/// \endcode
+///
+/// The subject-set clause defines the set of declarations which receive the
+/// attribute. Its exact syntax is described in the LanguageExtensions document
+/// in Clang's documentation.
+///
+/// This directive instructs the compiler to begin/finish applying the specified
+/// attribute to the set of attribute-specific declarations in the active range
+/// of the pragma.
+void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
+                                          PragmaIntroducerKind Introducer,
+                                          Token &FirstToken) {
+  Token Tok;
+  PP.Lex(Tok);
+  auto *Info = new (PP.getPreprocessorAllocator())
+      PragmaAttributeInfo(AttributesForPragmaAttribute);
+
+  // Parse the 'push' or 'pop'.
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_push_pop);
+    return;
+  }
+  const auto *II = Tok.getIdentifierInfo();
+  if (II->isStr("push"))
+    Info->Action = PragmaAttributeInfo::Push;
+  else if (II->isStr("pop"))
+    Info->Action = PragmaAttributeInfo::Pop;
+  else {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_invalid_argument)
+        << PP.getSpelling(Tok);
+    return;
+  }
+  PP.Lex(Tok);
+
+  // Parse the actual attribute.
+  if (Info->Action == PragmaAttributeInfo::Push) {
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+      return;
+    }
+    PP.Lex(Tok);
+
+    // Lex the attribute tokens.
+    SmallVector<Token, 16> AttributeTokens;
+    int OpenParens = 1;
+    while (Tok.isNot(tok::eod)) {
+      if (Tok.is(tok::l_paren))
+        OpenParens++;
+      else if (Tok.is(tok::r_paren)) {
+        OpenParens--;
+        if (OpenParens == 0)
+          break;
+      }
+
+      AttributeTokens.push_back(Tok);
+      PP.Lex(Tok);
+    }
+
+    if (AttributeTokens.empty()) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_attribute);
+      return;
+    }
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+      return;
+    }
+    SourceLocation EndLoc = Tok.getLocation();
+    PP.Lex(Tok);
+
+    // Terminate the attribute for parsing.
+    Token EOFTok;
+    EOFTok.startToken();
+    EOFTok.setKind(tok::eof);
+    EOFTok.setLocation(EndLoc);
+    AttributeTokens.push_back(EOFTok);
+
+    Info->Tokens =
+        llvm::makeArrayRef(AttributeTokens).copy(PP.getPreprocessorAllocator());
+  }
+
+  if (Tok.isNot(tok::eod))
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "clang attribute";
+
+  // Generate the annotated pragma token.
+  auto TokenArray = llvm::make_unique<Token[]>(1);
+  TokenArray[0].startToken();
+  TokenArray[0].setKind(tok::annot_pragma_attribute);
+  TokenArray[0].setLocation(FirstToken.getLocation());
+  TokenArray[0].setAnnotationEndLoc(FirstToken.getLocation());
+  TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
+  PP.EnterTokenStream(std::move(TokenArray), 1,
+                      /*DisableMacroExpansion=*/false);
 }

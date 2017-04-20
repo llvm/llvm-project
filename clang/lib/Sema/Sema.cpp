@@ -86,7 +86,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     VtorDispStack(MSVtorDispAttr::Mode(LangOpts.VtorDispMode)),
     PackStack(0), DataSegStack(nullptr), BSSSegStack(nullptr),
     ConstSegStack(nullptr), CodeSegStack(nullptr), CurInitSeg(nullptr),
-    VisContext(nullptr),
+    VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
     IsBuildingRecoveryCallExpr(false),
     Cleanup{}, LateTemplateParser(nullptr),
     LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
@@ -732,6 +732,8 @@ void Sema::ActOnEndOfTranslationUnit() {
     CheckDelayedMemberExceptionSpecs();
   }
 
+  DiagnoseUnterminatedPragmaAttribute();
+
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
   // FIXME: This is wrong for TUKind == TU_Prefix. In that case, we need to
@@ -1103,6 +1105,8 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
     PrintInstantiationStack();
     LastTemplateInstantiationErrorContext = ActiveTemplateInstantiations.back();
   }
+  if (PragmaAttributeCurrentTargetDecl)
+    PrintPragmaAttributeInstantiationPoint();
 }
 
 Sema::SemaDiagnosticBuilder

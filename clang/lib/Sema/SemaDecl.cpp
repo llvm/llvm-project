@@ -13573,6 +13573,7 @@ CreateNewDecl:
 
   if (Attr)
     ProcessDeclAttributeList(S, New, Attr);
+  AddPragmaAttributes(S, New);
 
   // Set the lexical context. If the tag has a C++ scope specifier, the
   // lexical context will be different from the semantic context.
@@ -15102,6 +15103,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
 
   // Process attributes.
   if (Attr) ProcessDeclAttributeList(S, New, Attr);
+  AddPragmaAttributes(S, New);
 
   ProcessAPINotes(New);
 
