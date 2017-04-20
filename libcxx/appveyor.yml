@@ -1,0 +1,97 @@
+version: '{build}'
+
+shallow_clone: true
+
+os:
+  - Visual Studio 2015
+
+build:
+  verbosity: detailed
+
+branches:
+  only:
+    - master
+
+configuration:
+  - Debug
+
+environment:
+  matrix:
+    - COMPILER: Clang-CL 4.0
+
+install:
+  ############################################################################
+  # All external dependencies are installed in C:\projects\deps
+  ############################################################################
+  - mkdir C:\projects\deps
+  - cd C:\projects\deps
+
+  ############################################################################
+  # Install Ninja
+  ############################################################################
+  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.6.0/ninja-win.zip"
+  - appveyor DownloadFile %NINJA_URL% -FileName ninja.zip
+  - 7z x ninja.zip -oC:\projects\deps\ninja > nul
+  - set PATH=C:\projects\deps\ninja;%PATH%
+  - ninja --version
+
+  ############################################################################
+  # Install a recent CMake
+  ############################################################################
+  - set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-win64-x64.zip"
+  - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
+  - 7z x cmake.zip -oC:\projects\deps > nul
+  - move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
+  - set PATH=C:\projects\deps\cmake\bin;%PATH%
+  - cmake --version
+
+  ############################################################################
+  # Setup the path to Clang-cl
+  ############################################################################
+  - set PATH="C:\Program Files\LLVM\bin";%PATH%
+  - clang-cl -v
+
+  ############################################################################
+  # Setup the cached copy of LLVM
+  ############################################################################
+  - if exist llvm (git -C llvm pull --rebase=true --ff-only)
+  - if not exist llvm (git clone --depth=1 http://llvm.org/git/llvm.git)
+
+
+before_build:
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+  - cd C:\projects\libcxx
+
+build_script:
+  - md C:\projects\build-libcxx
+  - cd C:\projects\build-libcxx
+  - echo %configuration%
+
+  #############################################################################
+  # Configuration Step
+  #############################################################################
+  - cmake -G Ninja %extra_cmake_flags%
+    -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
+    "-DCMAKE_BUILD_TYPE=%configuration%"
+    "-DLLVM_PATH=C:\projects\deps\llvm" -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    -DLLVM_LIT_ARGS="-sv --no-progress-bar --show-xfail --show-unsupported"
+    C:\projects\libcxx
+
+  #############################################################################
+  # Build Step
+  #############################################################################
+  - ninja
+
+test_script:
+  - ninja check-cxx
+
+on_failure:
+  - appveyor PushArtifact CMakeFiles/CMakeOutput.log
+  - appveyor PushArtifact CMakeFiles/CMakeError.log
+
+artifacts:
+  - path: '_build/CMakeFiles/*.log'
+    name: logs
+
+cache:
+  - C:\projects\deps\llvm

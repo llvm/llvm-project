@@ -478,6 +478,8 @@ class Configuration(object):
             self.cxx.flags += ['-m32']
         # Use verbose output for better errors
         self.cxx.flags += ['-v']
+        if self.is_windows:
+            self.cxx.link_flags += ['-Wl,-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
             self.cxx.flags += ['--sysroot', sysroot]
