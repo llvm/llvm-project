@@ -25,6 +25,7 @@ list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
 include(AddLLVM)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
+option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
 list(APPEND CMAKE_OCL_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
@@ -41,7 +42,11 @@ add_subdirectory(ocml)
 add_subdirectory(ockl)
 add_subdirectory(opencl)
 add_subdirectory(openmp)
+
+if(BUILD_HC_LIB)
 add_subdirectory(hc)
+endif(BUILD_HC_LIB)
+
 add_subdirectory(test/opencl)
 add_subdirectory(test/opencl_conformance)
 
