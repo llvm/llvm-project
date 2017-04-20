@@ -45,4 +45,22 @@ define double @constant_fold_fmuladd_f64() #0 {
   ret double %x
 }
 
+; PR32177
+
+; CHECK-LABEL: @constant_fold_frem_f32
+; CHECK-NEXT: ret float 0x41A61B2000000000
+define float @constant_fold_frem_f32() #0 {
+  %x = frem float 0x43cbfcd960000000, 0xc1e2b34a00000000
+  ret float %x
+}
+
+; PR3316
+
+; CHECK-LABEL: @constant_fold_frem_f64
+; CHECK-NEXT: ret double 0.000000e+00
+define double @constant_fold_frem_f64() {
+  %x = frem double 0x43E0000000000000, 1.000000e+00
+  ret double %x
+}
+
 attributes #0 = { nounwind readnone }

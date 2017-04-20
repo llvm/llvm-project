@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-eabi -mattr=+neon %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm-eabi -mattr=+neon %s -o - -verify-machineinstrs | FileCheck %s
 
 %struct.__neon_int8x8x2_t = type { <8 x i8>, <8 x i8> }
 %struct.__neon_int8x8x3_t = type { <8 x i8>,  <8 x i8>, <8 x i8> }

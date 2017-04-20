@@ -670,14 +670,14 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
     for (APInt I = NUWRegion.getLower(), E = NUWRegion.getUpper(); I != E;
          ++I) {
       bool Overflow = false;
-      I.uadd_ov(C, Overflow);
+      (void)I.uadd_ov(C, Overflow);
       EXPECT_FALSE(Overflow);
     }
 
     for (APInt I = NSWRegion.getLower(), E = NSWRegion.getUpper(); I != E;
          ++I) {
       bool Overflow = false;
-      I.sadd_ov(C, Overflow);
+      (void)I.sadd_ov(C, Overflow);
       EXPECT_FALSE(Overflow);
     }
 
@@ -685,10 +685,10 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
          ++I) {
       bool Overflow = false;
 
-      I.sadd_ov(C, Overflow);
+      (void)I.sadd_ov(C, Overflow);
       EXPECT_FALSE(Overflow);
 
-      I.uadd_ov(C, Overflow);
+      (void)I.uadd_ov(C, Overflow);
       EXPECT_FALSE(Overflow);
     }
   }

@@ -3558,14 +3558,14 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
   // We know the multiply operation doesn't overflow if the maximum values for
   // each operand will not overflow after we multiply them together.
   bool MaxOverflow;
-  LHSMax.umul_ov(RHSMax, MaxOverflow);
+  (void)LHSMax.umul_ov(RHSMax, MaxOverflow);
   if (!MaxOverflow)
     return OverflowResult::NeverOverflows;
 
   // We know it always overflows if multiplying the smallest possible values for
   // the operands also results in overflow.
   bool MinOverflow;
-  LHSKnownOne.umul_ov(RHSKnownOne, MinOverflow);
+  (void)LHSKnownOne.umul_ov(RHSKnownOne, MinOverflow);
   if (MinOverflow)
     return OverflowResult::AlwaysOverflows;
 

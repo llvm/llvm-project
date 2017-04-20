@@ -43,10 +43,8 @@ define i1 @foo(i32 %i) {
 define <4 x i32> @hidden_not_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: hidden_not_v4i32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vspltisw 3, 15
-; CHECK-NEXT:    vspltisw 4, 6
-; CHECK-NEXT:    xxlxor 0, 34, 35
-; CHECK-NEXT:    xxland 34, 0, 36
+; CHECK-NEXT:    vspltisw 3, 6
+; CHECK-NEXT:    xxlandc 34, 35, 34
 ; CHECK-NEXT:    blr
   %xor = xor <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
   %and = and <4 x i32> %xor, <i32 6, i32 6, i32 6, i32 6>

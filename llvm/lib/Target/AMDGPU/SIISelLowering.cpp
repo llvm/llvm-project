@@ -461,6 +461,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ZERO_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::SIGN_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
+  } else {
+    setOperationAction(ISD::SELECT, MVT::v2i16, Custom);
+    setOperationAction(ISD::SELECT, MVT::v2f16, Custom);
+  }
+
+  for (MVT VT : { MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8 }) {
+    setOperationAction(ISD::SELECT, VT, Custom);
   }
 
   setTargetDAGCombine(ISD::FADD);
@@ -2190,6 +2197,28 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       break;
     }
+  }
+  case ISD::SELECT: {
+    SDLoc SL(N);
+    EVT VT = N->getValueType(0);
+    EVT NewVT = getEquivalentMemType(*DAG.getContext(), VT);
+    SDValue LHS = DAG.getNode(ISD::BITCAST, SL, NewVT, N->getOperand(1));
+    SDValue RHS = DAG.getNode(ISD::BITCAST, SL, NewVT, N->getOperand(2));
+
+    EVT SelectVT = NewVT;
+    if (NewVT.bitsLT(MVT::i32)) {
+      LHS = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, LHS);
+      RHS = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, RHS);
+      SelectVT = MVT::i32;
+    }
+
+    SDValue NewSelect = DAG.getNode(ISD::SELECT, SL, SelectVT,
+                                    N->getOperand(0), LHS, RHS);
+
+    if (NewVT != SelectVT)
+      NewSelect = DAG.getNode(ISD::TRUNCATE, SL, NewVT, NewSelect);
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, VT, NewSelect));
+    return;
   }
   default:
     break;

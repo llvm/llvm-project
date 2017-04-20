@@ -210,7 +210,7 @@ bool llvm::ARM::getHWDivFeatures(unsigned HWDivKind,
   else
     Features.push_back("-hwdiv-arm");
 
-  if (HWDivKind & ARM::AEK_HWDIV)
+  if (HWDivKind & ARM::AEK_HWDIVTHUMB)
     Features.push_back("+hwdiv");
   else
     Features.push_back("-hwdiv");

@@ -149,8 +149,8 @@ TEST(TargetParserTest, testARMCPU) {
   EXPECT_TRUE(testARMCPU("cortex-a5", "armv7-a", "neon-vfpv4",
                          ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP, "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-a7", "armv7-a", "neon-vfpv4",
-                         ARM::AEK_HWDIV | ARM::AEK_HWDIVARM | ARM::AEK_MP |
-                         ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP,
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM | ARM::AEK_MP |
+                             ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP,
                          "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-a8", "armv7-a", "neon",
                          ARM::AEK_SEC | ARM::AEK_DSP, "7-A"));
@@ -158,104 +158,111 @@ TEST(TargetParserTest, testARMCPU) {
                          ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP, "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-a12", "armv7-a", "neon-vfpv4",
                          ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
                          "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-a15", "armv7-a", "neon-vfpv4",
                          ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
                          "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-a17", "armv7-a", "neon-vfpv4",
                          ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
                          "7-A"));
   EXPECT_TRUE(testARMCPU("krait", "armv7-a", "neon-vfpv4",
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-A"));
   EXPECT_TRUE(testARMCPU("cortex-r4", "armv7-r", "none",
-                         ARM::AEK_HWDIV | ARM::AEK_DSP, "7-R"));
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "7-R"));
   EXPECT_TRUE(testARMCPU("cortex-r4f", "armv7-r", "vfpv3-d16",
-                         ARM::AEK_HWDIV | ARM::AEK_DSP, "7-R"));
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "7-R"));
   EXPECT_TRUE(testARMCPU("cortex-r5", "armv7-r", "vfpv3-d16",
-                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV |
-                         ARM::AEK_DSP, "7-R"));
+                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
+                         "7-R"));
   EXPECT_TRUE(testARMCPU("cortex-r7", "armv7-r", "vfpv3-d16-fp16",
-                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV |
-                         ARM::AEK_DSP, "7-R"));
+                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
+                         "7-R"));
   EXPECT_TRUE(testARMCPU("cortex-r8", "armv7-r", "vfpv3-d16-fp16",
-                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV |
-                         ARM::AEK_DSP, "7-R"));
+                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
+                         "7-R"));
   EXPECT_TRUE(testARMCPU("cortex-r52", "armv8-r", "neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_MP | ARM::AEK_VIRT |
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
                          "8-R"));
-  EXPECT_TRUE(testARMCPU("sc300", "armv7-m", "none",
-                         ARM::AEK_HWDIV, "7-M"));
-  EXPECT_TRUE(testARMCPU("cortex-m3", "armv7-m", "none",
-                         ARM::AEK_HWDIV, "7-M"));
+  EXPECT_TRUE(
+      testARMCPU("sc300", "armv7-m", "none", ARM::AEK_HWDIVTHUMB, "7-M"));
+  EXPECT_TRUE(
+      testARMCPU("cortex-m3", "armv7-m", "none", ARM::AEK_HWDIVTHUMB, "7-M"));
   EXPECT_TRUE(testARMCPU("cortex-m4", "armv7e-m", "fpv4-sp-d16",
-                         ARM::AEK_HWDIV | ARM::AEK_DSP, "7E-M"));
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "7E-M"));
   EXPECT_TRUE(testARMCPU("cortex-m7", "armv7e-m", "fpv5-d16",
-                         ARM::AEK_HWDIV | ARM::AEK_DSP, "7E-M"));
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "7E-M"));
   EXPECT_TRUE(testARMCPU("cortex-a32", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-a53", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-a72", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-a73", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cyclone", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("exynos-m1", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("exynos-m2", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIV | ARM::AEK_DSP,
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
   EXPECT_TRUE(testARMCPU("cortex-m23", "armv8-m.base", "none",
-                         ARM::AEK_HWDIV, "8-M.Baseline"));
+                         ARM::AEK_HWDIVTHUMB, "8-M.Baseline"));
   EXPECT_TRUE(testARMCPU("cortex-m33", "armv8-m.main", "fpv5-sp-d16",
-                         ARM::AEK_HWDIV | ARM::AEK_DSP, "8-M.Mainline"));
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "8-M.Mainline"));
   EXPECT_TRUE(testARMCPU("iwmmxt", "iwmmxt", "none",
                          ARM::AEK_NONE, "iwmmxt"));
   EXPECT_TRUE(testARMCPU("xscale", "xscale", "none",
                          ARM::AEK_NONE, "xscale"));
   EXPECT_TRUE(testARMCPU("swift", "armv7s", "neon-vfpv4",
-                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP,
+                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S"));
 }
 
@@ -454,7 +461,7 @@ TEST(TargetParserTest, ARMFPURestriction) {
 TEST(TargetParserTest, ARMExtensionFeatures) {
   std::vector<StringRef> Features;
   unsigned Extensions = ARM::AEK_CRC | ARM::AEK_CRYPTO | ARM::AEK_DSP |
-                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_MP |
+                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_MP |
                         ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS;
 
   for (unsigned i = 0; i <= Extensions; i++)

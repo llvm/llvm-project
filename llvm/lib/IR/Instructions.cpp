@@ -1855,7 +1855,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     return false;
   
   // Mask must be vector of i32.
-  VectorType *MaskTy = dyn_cast<VectorType>(Mask->getType());
+  auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
   if (!MaskTy || !MaskTy->getElementType()->isIntegerTy(32))
     return false;
 
@@ -1863,10 +1863,10 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (isa<UndefValue>(Mask) || isa<ConstantAggregateZero>(Mask))
     return true;
 
-  if (const ConstantVector *MV = dyn_cast<ConstantVector>(Mask)) {
+  if (const auto *MV = dyn_cast<ConstantVector>(Mask)) {
     unsigned V1Size = cast<VectorType>(V1->getType())->getNumElements();
     for (Value *Op : MV->operands()) {
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
+      if (auto *CI = dyn_cast<ConstantInt>(Op)) {
         if (CI->uge(V1Size*2))
           return false;
       } else if (!isa<UndefValue>(Op)) {
@@ -1876,8 +1876,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     return true;
   }
   
-  if (const ConstantDataSequential *CDS =
-        dyn_cast<ConstantDataSequential>(Mask)) {
+  if (const auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     unsigned V1Size = cast<VectorType>(V1->getType())->getNumElements();
     for (unsigned i = 0, e = MaskTy->getNumElements(); i != e; ++i)
       if (CDS->getElementAsInteger(i) >= V1Size*2)
@@ -1889,7 +1888,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   // used as the shuffle mask. When this occurs, the shuffle mask will
   // fall into this case and fail. To avoid this error, do this bit of
   // ugliness to allow such a mask pass.
-  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(Mask))
+  if (const auto *CE = dyn_cast<ConstantExpr>(Mask))
     if (CE->getOpcode() == Instruction::UserOp1)
       return true;
 
@@ -1898,7 +1897,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
 
 int ShuffleVectorInst::getMaskValue(Constant *Mask, unsigned i) {
   assert(i < Mask->getType()->getVectorNumElements() && "Index out of range");
-  if (ConstantDataSequential *CDS =dyn_cast<ConstantDataSequential>(Mask))
+  if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask))
     return CDS->getElementAsInteger(i);
   Constant *C = Mask->getAggregateElement(i);
   if (isa<UndefValue>(C))
@@ -1910,7 +1909,7 @@ void ShuffleVectorInst::getShuffleMask(Constant *Mask,
                                        SmallVectorImpl<int> &Result) {
   unsigned NumElts = Mask->getType()->getVectorNumElements();
   
-  if (ConstantDataSequential *CDS=dyn_cast<ConstantDataSequential>(Mask)) {
+  if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     for (unsigned i = 0; i != NumElts; ++i)
       Result.push_back(CDS->getElementAsInteger(i));
     return;

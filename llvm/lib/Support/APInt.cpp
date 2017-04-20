@@ -125,16 +125,16 @@ APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
   fromString(numbits, Str, radix);
 }
 
-APInt& APInt::AssignSlowCase(const APInt& RHS) {
+void APInt::AssignSlowCase(const APInt& RHS) {
   // Don't do anything for X = X
   if (this == &RHS)
-    return *this;
+    return;
 
   if (BitWidth == RHS.getBitWidth()) {
     // assume same bit-width single-word case is already handled
     assert(!isSingleWord());
     memcpy(pVal, RHS.pVal, getNumWords() * APINT_WORD_SIZE);
-    return *this;
+    return;
   }
 
   if (isSingleWord()) {
@@ -154,7 +154,7 @@ APInt& APInt::AssignSlowCase(const APInt& RHS) {
     memcpy(pVal, RHS.pVal, RHS.getNumWords() * APINT_WORD_SIZE);
   }
   BitWidth = RHS.BitWidth;
-  return clearUnusedBits();
+  clearUnusedBits();
 }
 
 /// This method 'profiles' an APInt for use with FoldingSet.
@@ -339,19 +339,16 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
-APInt& APInt::AndAssignSlowCase(const APInt& RHS) {
+void APInt::AndAssignSlowCase(const APInt& RHS) {
   tcAnd(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
-APInt& APInt::OrAssignSlowCase(const APInt& RHS) {
+void APInt::OrAssignSlowCase(const APInt& RHS) {
   tcOr(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
-APInt& APInt::XorAssignSlowCase(const APInt& RHS) {
+void APInt::XorAssignSlowCase(const APInt& RHS) {
   tcXor(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
 APInt APInt::operator*(const APInt& RHS) const {
@@ -365,14 +362,6 @@ APInt APInt::operator*(const APInt& RHS) const {
 
 bool APInt::EqualSlowCase(const APInt& RHS) const {
   return std::equal(pVal, pVal + getNumWords(), RHS.pVal);
-}
-
-bool APInt::EqualSlowCase(uint64_t Val) const {
-  unsigned n = getActiveBits();
-  if (n <= APINT_BITS_PER_WORD)
-    return pVal[0] == Val;
-  else
-    return false;
 }
 
 bool APInt::ult(const APInt& RHS) const {
@@ -731,6 +720,14 @@ unsigned APInt::countPopulationSlowCase() const {
   for (unsigned i = 0; i < getNumWords(); ++i)
     Count += llvm::countPopulation(pVal[i]);
   return Count;
+}
+
+bool APInt::intersectsSlowCase(const APInt &RHS) const {
+  for (unsigned i = 0, e = getNumWords(); i != e; ++i)
+    if ((pVal[i] & RHS.pVal[i]) != 0)
+      return true;
+
+  return false;
 }
 
 APInt APInt::byteSwap() const {

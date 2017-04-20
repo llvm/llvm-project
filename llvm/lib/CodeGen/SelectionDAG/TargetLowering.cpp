@@ -574,7 +574,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // using the bits from the RHS.  Below, we use knowledge about the RHS to
     // simplify the LHS, here we're using information from the LHS to simplify
     // the RHS.
-    if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *RHSC = isConstOrConstSplat(Op.getOperand(1))) {
       SDValue Op0 = Op.getOperand(0);
       APInt LHSZero, LHSOne;
       // Do not increment Depth here; that can cause an infinite loop.
@@ -715,7 +715,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // If the RHS is a constant, see if we can simplify it.
     // for XOR, we prefer to force bits to 1 if they will make a -1.
     // If we can't force bits, try to shrink the constant.
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
       APInt Expanded = C->getAPIntValue() | (~NewMask);
       // If we can expand it to have all bits set, do it.
       if (Expanded.isAllOnesValue()) {
@@ -839,7 +839,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         SDValue InnerOp = InOp.getNode()->getOperand(0);
         EVT InnerVT = InnerOp.getValueType();
         unsigned InnerBits = InnerVT.getSizeInBits();
-        if (ShAmt < InnerBits && NewMask.lshr(InnerBits) == 0 &&
+        if (ShAmt < InnerBits && NewMask.getActiveBits() <= InnerBits &&
             isTypeDesirableForOp(ISD::SHL, InnerVT)) {
           EVT ShTy = getShiftAmountTy(InnerVT, DL);
           if (!APInt(BitWidth, ShAmt).isIntN(ShTy.getSizeInBits()))
@@ -861,12 +861,12 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
             InnerOp.getOpcode() == ISD::SRL &&
             InnerOp.hasOneUse() &&
             isa<ConstantSDNode>(InnerOp.getOperand(1))) {
-          uint64_t InnerShAmt = cast<ConstantSDNode>(InnerOp.getOperand(1))
+          unsigned InnerShAmt = cast<ConstantSDNode>(InnerOp.getOperand(1))
             ->getZExtValue();
           if (InnerShAmt < ShAmt &&
               InnerShAmt < InnerBits &&
-              NewMask.lshr(InnerBits - InnerShAmt + ShAmt) == 0 &&
-              NewMask.trunc(ShAmt) == 0) {
+              NewMask.getActiveBits() <= (InnerBits - InnerShAmt + ShAmt) &&
+              NewMask.countTrailingZeros() >= ShAmt) {
             SDValue NewSA =
               TLO.DAG.getConstant(ShAmt - InnerShAmt, dl,
                                   Op.getOperand(1).getValueType());
@@ -1205,21 +1205,23 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                       getShiftAmountTy(Op.getValueType(), DL));
         }
 
-        APInt HighBits = APInt::getHighBitsSet(OperandBitWidth,
-                                               OperandBitWidth - BitWidth);
-        HighBits.lshrInPlace(ShAmt->getZExtValue());
-        HighBits = HighBits.trunc(BitWidth);
+        if (ShAmt->getZExtValue() < BitWidth) {
+          APInt HighBits = APInt::getHighBitsSet(OperandBitWidth,
+                                                 OperandBitWidth - BitWidth);
+          HighBits.lshrInPlace(ShAmt->getZExtValue());
+          HighBits = HighBits.trunc(BitWidth);
 
-        if (ShAmt->getZExtValue() < BitWidth && !(HighBits & NewMask)) {
-          // None of the shifted in bits are needed.  Add a truncate of the
-          // shift input, then shift it.
-          SDValue NewTrunc = TLO.DAG.getNode(ISD::TRUNCATE, dl,
-                                             Op.getValueType(),
-                                             In.getOperand(0));
-          return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl,
-                                                   Op.getValueType(),
-                                                   NewTrunc,
-                                                   Shift));
+          if (!(HighBits & NewMask)) {
+            // None of the shifted in bits are needed.  Add a truncate of the
+            // shift input, then shift it.
+            SDValue NewTrunc = TLO.DAG.getNode(ISD::TRUNCATE, dl,
+                                               Op.getValueType(),
+                                               In.getOperand(0));
+            return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl,
+                                                     Op.getValueType(),
+                                                     NewTrunc,
+                                                     Shift));
+          }
         }
         break;
       }

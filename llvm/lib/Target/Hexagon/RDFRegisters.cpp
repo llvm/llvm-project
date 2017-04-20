@@ -69,6 +69,19 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
       for (const MachineOperand &Op : In.operands())
         if (Op.isRegMask())
           RegMasks.insert(Op.getRegMask());
+
+  MaskInfos.resize(RegMasks.size()+1);
+  for (uint32_t M = 1, NM = RegMasks.size(); M <= NM; ++M) {
+    BitVector PU(TRI.getNumRegUnits());
+    const uint32_t *MB = RegMasks.get(M);
+    for (unsigned i = 1, e = TRI.getNumRegs(); i != e; ++i) {
+      if (!(MB[i/32] & (1u << (i%32))))
+        continue;
+      for (MCRegUnitIterator U(i, &TRI); U.isValid(); ++U)
+        PU.set(*U);
+    }
+    MaskInfos[M].Units = PU.flip();
+  }
 }
 
 RegisterRef PhysicalRegisterInfo::normalize(RegisterRef RR) const {
@@ -201,17 +214,8 @@ bool PhysicalRegisterInfo::aliasMM(RegisterRef RM, RegisterRef RN) const {
 
 
 bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
-  if (PhysicalRegisterInfo::isRegMaskId(RR.Reg)) {
-    // XXX SLOW
-    const uint32_t *MB = PRI.getRegMaskBits(RR.Reg);
-    for (unsigned i = 1, e = PRI.getTRI().getNumRegs(); i != e; ++i) {
-      if (MB[i/32] & (1u << (i%32)))
-        continue;
-      if (hasAliasOf(RegisterRef(i, LaneBitmask::getAll())))
-        return true;
-    }
-    return false;
-  }
+  if (PhysicalRegisterInfo::isRegMaskId(RR.Reg))
+    return Units.anyCommon(PRI.getMaskUnits(RR.Reg));
 
   for (MCRegUnitMaskIterator U(RR.Reg, &PRI.getTRI()); U.isValid(); ++U) {
     std::pair<uint32_t,LaneBitmask> P = *U;
@@ -224,15 +228,8 @@ bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
 
 bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
   if (PhysicalRegisterInfo::isRegMaskId(RR.Reg)) {
-    // XXX SLOW
-    const uint32_t *MB = PRI.getRegMaskBits(RR.Reg);
-    for (unsigned i = 1, e = PRI.getTRI().getNumRegs(); i != e; ++i) {
-      if (MB[i/32] & (1u << (i%32)))
-        continue;
-      if (!hasCoverOf(RegisterRef(i, LaneBitmask::getAll())))
-        return false;
-    }
-    return true;
+    BitVector T(PRI.getMaskUnits(RR.Reg));
+    return T.reset(Units).none();
   }
 
   for (MCRegUnitMaskIterator U(RR.Reg, &PRI.getTRI()); U.isValid(); ++U) {
@@ -246,15 +243,7 @@ bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
 
 RegisterAggr &RegisterAggr::insert(RegisterRef RR) {
   if (PhysicalRegisterInfo::isRegMaskId(RR.Reg)) {
-    BitVector PU(PRI.getTRI().getNumRegUnits()); // Preserved units.
-    const uint32_t *MB = PRI.getRegMaskBits(RR.Reg);
-    for (unsigned i = 1, e = PRI.getTRI().getNumRegs(); i != e; ++i) {
-      if (!(MB[i/32] & (1u << (i%32))))
-        continue;
-      for (MCRegUnitIterator U(i, &PRI.getTRI()); U.isValid(); ++U)
-        PU.set(*U);
-    }
-    Units |= PU.flip();
+    Units |= PRI.getMaskUnits(RR.Reg);
     return *this;
   }
 

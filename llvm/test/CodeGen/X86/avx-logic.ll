@@ -274,16 +274,13 @@ entry:
 define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 ; AVX-LABEL: and_xor_splat1_v4i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [1,1,1,1]
-; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandnps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: and_xor_splat1_v4i32:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
-; AVX512-NEXT:    vxorps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %and = and <4 x i32> %xor, <i32 1, i32 1, i32 1, i32 1>
@@ -293,16 +290,13 @@ define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 define <4 x i64> @and_xor_splat1_v4i64(<4 x i64> %x) nounwind {
 ; AVX-LABEL: and_xor_splat1_v4i64:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [1,1,1,1]
-; AVX-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: and_xor_splat1_v4i64:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm1
-; AVX512-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vandnps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %xor = xor <4 x i64> %x, <i64 1, i64 1, i64 1, i64 1>
   %and = and <4 x i64> %xor, <i64 1, i64 1, i64 1, i64 1>

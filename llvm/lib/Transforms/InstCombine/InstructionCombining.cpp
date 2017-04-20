@@ -148,9 +148,9 @@ static bool MaintainNoSignedWrap(BinaryOperator &I, Value *B, Value *C) {
 
   bool Overflow = false;
   if (Opcode == Instruction::Add)
-    BVal->sadd_ov(*CVal, Overflow);
+    (void)BVal->sadd_ov(*CVal, Overflow);
   else
-    BVal->ssub_ov(*CVal, Overflow);
+    (void)BVal->ssub_ov(*CVal, Overflow);
 
   return !Overflow;
 }

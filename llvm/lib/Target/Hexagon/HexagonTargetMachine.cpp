@@ -111,6 +111,7 @@ namespace llvm {
   extern char &HexagonExpandCondsetsID;
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
+  void initializeHexagonOptAddrModePass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
 
   FunctionPass *createHexagonBitSimplify();
@@ -152,6 +153,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
   initializeHexagonLoopIdiomRecognizePass(*PassRegistry::getPassRegistry());
+  initializeHexagonOptAddrModePass(*PassRegistry::getPassRegistry());
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,

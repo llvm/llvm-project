@@ -253,17 +253,6 @@ void Fuzzer::RssLimitCallback() {
 
 void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
   size_t ExecPerSec = execPerSec();
-  if (Options.OutputCSV) {
-    static bool csvHeaderPrinted = false;
-    if (!csvHeaderPrinted) {
-      csvHeaderPrinted = true;
-      Printf("runs,block_cov,bits,cc_cov,corpus,execs_per_sec,tbms,reason\n");
-    }
-    Printf("%zd,%zd,%zd,%zd,%s\n", TotalNumberOfRuns,
-           TPC.GetTotalPCCoverage(),
-           Corpus.size(), ExecPerSec, Where);
-  }
-
   if (!Options.Verbosity)
     return;
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);

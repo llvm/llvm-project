@@ -255,8 +255,6 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag>
   [(set i32:$vdst,
    (node (DS1Addr1Offset i32:$addr, i16:$offset), i32:$data0))] > {
 
-  let LGKM_CNT = 0;
-
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;

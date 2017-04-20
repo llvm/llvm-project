@@ -379,31 +379,27 @@ DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
     return DWARFDie();
   // upper_bound's previous item contains Address.
   --R;
-  assert(Address <= R->second.first);
+  if (Address >= R->second.first)
+    return DWARFDie();
   return R->second.second;
 }
 
 void
 DWARFUnit::getInlinedChainForAddress(uint64_t Address,
                                      SmallVectorImpl<DWARFDie> &InlinedChain) {
-  // First, find the subroutine that contains the given address (the leaf
-  // of inlined chain).
-  DWARFDie SubroutineDIE;
+  assert(InlinedChain.empty());
   // Try to look for subprogram DIEs in the DWO file.
   parseDWO();
-  if (DWO)
-    SubroutineDIE = DWO->getUnit()->getSubroutineForAddress(Address);
-  else
-    SubroutineDIE = getSubroutineForAddress(Address);
+  // First, find the subroutine that contains the given address (the leaf
+  // of inlined chain).
+  DWARFDie SubroutineDIE =
+      (DWO ? DWO->getUnit() : this)->getSubroutineForAddress(Address);
 
-  if (SubroutineDIE) {
-    while (SubroutineDIE) {
-      if (SubroutineDIE.isSubroutineDIE())
-        InlinedChain.push_back(SubroutineDIE);
-      SubroutineDIE  = SubroutineDIE.getParent();
-    }
-  } else
-    InlinedChain.clear();
+  while (SubroutineDIE) {
+    if (SubroutineDIE.isSubroutineDIE())
+      InlinedChain.push_back(SubroutineDIE);
+    SubroutineDIE  = SubroutineDIE.getParent();
+  }
 }
 
 const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,

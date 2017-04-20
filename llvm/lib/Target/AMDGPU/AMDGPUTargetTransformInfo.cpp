@@ -426,16 +426,23 @@ static bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 
   // Arguments to compute shaders are never a source of divergence.
-  if (!AMDGPU::isShader(F->getCallingConv()))
+  CallingConv::ID CC = F->getCallingConv();
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
     return true;
-
-  // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
-  if (F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
-      F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal))
-    return true;
-
-  // Everything else is in VGPRs.
-  return false;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
+    // Everything else is in VGPRs.
+    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
+           F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal);
+  default:
+    // TODO: Should calls support inreg for SGPR inputs?
+    return false;
+  }
 }
 
 ///

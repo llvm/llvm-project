@@ -850,11 +850,9 @@ define <4 x i32> @hidden_not_v4i32(<4 x i32> %x) nounwind {
 ; CHECK-LABEL: hidden_not_v4i32:
 ; CHECK:       @ BB#0:
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vmov.i32 q8, #0xf
+; CHECK-NEXT:    vmov.i32 q8, #0x6
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vmov.i32 q10, #0x6
-; CHECK-NEXT:    veor q8, q9, q8
-; CHECK-NEXT:    vand q8, q8, q10
+; CHECK-NEXT:    vbic q8, q8, q9
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr

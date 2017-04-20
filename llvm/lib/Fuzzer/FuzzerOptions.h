@@ -45,7 +45,6 @@ struct FuzzingOptions {
   std::string ExitOnItem;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
-  bool OutputCSV = false;
   bool PrintNewCovPcs = false;
   bool PrintFinalStats = false;
   bool PrintCorpusStats = false;

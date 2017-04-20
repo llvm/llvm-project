@@ -18,6 +18,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <cstring>
 #include <type_traits>
 #include <limits>
@@ -196,6 +197,21 @@ template <typename T> T findFirstSet(T Val, ZeroBehavior ZB = ZB_Max) {
     return std::numeric_limits<T>::max();
 
   return countTrailingZeros(Val, ZB_Undefined);
+}
+
+/// \brief Create a bitmask with the N right-most bits set to 1, and all other
+/// bits set to 0.  Only unsigned types are allowed.
+template <typename T> T maskTrailingOnes(unsigned N) {
+  static_assert(std::is_unsigned<T>::value, "Invalid type!");
+  const unsigned Bits = CHAR_BIT * sizeof(T);
+  assert(N <= Bits && "Invalid bit index");
+  return N == 0 ? 0 : (T(-1) >> (Bits - N));
+}
+
+/// \brief Create a bitmask with the N left-most bits set to 1, and all other
+/// bits set to 0.  Only unsigned types are allowed.
+template <typename T> T maskLeadingOnes(unsigned N) {
+  return ~maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
 /// \brief Get the index of the last set bit starting from the least

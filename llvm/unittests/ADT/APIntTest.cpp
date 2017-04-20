@@ -2021,7 +2021,7 @@ TEST(APIntTest, LogicalRightShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt neg_one(128, static_cast<uint64_t>(-1), true);
-  EXPECT_EQ(0, neg_one.lshr(257));
+  EXPECT_EQ(0, neg_one.lshr(128));
 }
 
 TEST(APIntTest, LeftShift) {
@@ -2054,7 +2054,7 @@ TEST(APIntTest, LeftShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt neg_one(128, static_cast<uint64_t>(-1), true);
-  EXPECT_EQ(0, neg_one.shl(257));
+  EXPECT_EQ(0, neg_one.shl(128));
 }
 
 } // end anonymous namespace

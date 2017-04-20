@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
@@ -92,4 +93,20 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                                     MI.getDebugLoc(), MI.getParent());
   R << Msg << ": " << ore::MNV("Inst", MI);
   reportGISelFailure(MF, TPC, MORE, R);
+}
+
+Optional<int64_t> llvm::getConstantVRegVal(unsigned VReg,
+                                           const MachineRegisterInfo &MRI) {
+  MachineInstr *MI = MRI.getVRegDef(VReg);
+  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return None;
+
+  if (MI->getOperand(1).isImm())
+    return MI->getOperand(1).getImm();
+
+  if (MI->getOperand(1).isCImm() &&
+      MI->getOperand(1).getCImm()->getBitWidth() <= 64)
+    return MI->getOperand(1).getCImm()->getSExtValue();
+
+  return None;
 }

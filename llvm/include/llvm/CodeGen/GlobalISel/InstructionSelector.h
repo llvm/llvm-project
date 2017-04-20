@@ -62,9 +62,6 @@ protected:
                                         const TargetRegisterInfo &TRI,
                                         const RegisterBankInfo &RBI) const;
 
-  Optional<int64_t> getConstantVRegVal(unsigned VReg,
-                                       const MachineRegisterInfo &MRI) const;
-
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                          const MachineRegisterInfo &MRI) const;
 

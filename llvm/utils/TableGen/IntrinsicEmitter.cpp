@@ -84,14 +84,11 @@ void IntrinsicEmitter::run(raw_ostream &OS) {
   // Emit the intrinsic parameter attributes.
   EmitAttributes(Ints, OS);
 
-  // Individual targets don't need GCC builtin name mappings.
-  if (!TargetOnly) {
-    // Emit code to translate GCC builtins into LLVM intrinsics.
-    EmitIntrinsicToBuiltinMap(Ints, true, OS);
+  // Emit code to translate GCC builtins into LLVM intrinsics.
+  EmitIntrinsicToBuiltinMap(Ints, true, OS);
 
-    // Emit code to translate MS builtins into LLVM intrinsics.
-    EmitIntrinsicToBuiltinMap(Ints, false, OS);
-  }
+  // Emit code to translate MS builtins into LLVM intrinsics.
+  EmitIntrinsicToBuiltinMap(Ints, false, OS);
 
   EmitSuffix(OS);
 }
@@ -756,6 +753,17 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
        << "Builtin(const char "
        << "*TargetPrefixStr, StringRef BuiltinNameStr) {\n";
   }
+
+  if (Table.Empty()) {
+    OS << "  return ";
+    if (!TargetPrefix.empty())
+      OS << "(" << TargetPrefix << "Intrinsic::ID)";
+    OS << "Intrinsic::not_intrinsic;\n";
+    OS << "}\n";
+    OS << "#endif\n\n";
+    return;
+  }
+
   OS << "  static const char BuiltinNames[] = {\n";
   Table.EmitCharArray(OS);
   OS << "  };\n\n";

@@ -15,10 +15,11 @@
 #define LLVM_OBJECT_BINARY_H
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/Object/Error.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
+#include <memory>
+#include <utility>
 
 namespace llvm {
 
@@ -29,9 +30,6 @@ namespace object {
 
 class Binary {
 private:
-  Binary() = delete;
-  Binary(const Binary &other) = delete;
-
   unsigned int TypeID;
 
 protected:
@@ -80,6 +78,8 @@ protected:
   }
 
 public:
+  Binary() = delete;
+  Binary(const Binary &other) = delete;
   virtual ~Binary();
 
   StringRef getData() const;
@@ -173,7 +173,7 @@ OwningBinary<T>::OwningBinary(std::unique_ptr<T> Bin,
                               std::unique_ptr<MemoryBuffer> Buf)
     : Bin(std::move(Bin)), Buf(std::move(Buf)) {}
 
-template <typename T> OwningBinary<T>::OwningBinary() {}
+template <typename T> OwningBinary<T>::OwningBinary() = default;
 
 template <typename T>
 OwningBinary<T>::OwningBinary(OwningBinary &&Other)
@@ -201,7 +201,9 @@ template <typename T> const T* OwningBinary<T>::getBinary() const {
 }
 
 Expected<OwningBinary<Binary>> createBinary(StringRef Path);
-}
-}
 
-#endif
+} // end namespace object
+
+} // end namespace llvm
+
+#endif // LLVM_OBJECT_BINARY_H

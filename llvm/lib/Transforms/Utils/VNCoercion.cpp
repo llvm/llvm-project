@@ -24,6 +24,11 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   if (DL.getTypeSizeInBits(StoredVal->getType()) < DL.getTypeSizeInBits(LoadTy))
     return false;
 
+  // Don't coerce non-integral pointers to integers or vice versa.
+  if (DL.isNonIntegralPointerType(StoredVal->getType()) !=
+      DL.isNonIntegralPointerType(LoadTy))
+    return false;
+
   return true;
 }
 

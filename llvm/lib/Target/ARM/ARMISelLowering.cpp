@@ -852,7 +852,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (!Subtarget->hasV6Ops())
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
 
-  bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivide()
+  bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivideInThumbMode()
                                         : Subtarget->hasDivideInARMMode();
   if (!hasDivide) {
     // These are expanded into libcalls if the cpu doesn't have HW divider.
@@ -860,7 +860,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV,  MVT::i32, LibCall);
   }
 
-  if (Subtarget->isTargetWindows() && !Subtarget->hasDivide()) {
+  if (Subtarget->isTargetWindows() && !Subtarget->hasDivideInThumbMode()) {
     setOperationAction(ISD::SDIV, MVT::i32, Custom);
     setOperationAction(ISD::UDIV, MVT::i32, Custom);
 
@@ -3347,6 +3347,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(NewOpc, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::arm_neon_vtbl1:
+    return DAG.getNode(ARMISD::VTBL1, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::arm_neon_vtbl2:
+    return DAG.getNode(ARMISD::VTBL2, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
 
@@ -11688,34 +11694,6 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static void computeKnownBits(SelectionDAG &DAG, SDValue Op, APInt &KnownZero,
-                             APInt &KnownOne) {
-  if (Op.getOpcode() == ARMISD::BFI) {
-    // Conservatively, we can recurse down the first operand
-    // and just mask out all affected bits.
-    computeKnownBits(DAG, Op.getOperand(0), KnownZero, KnownOne);
-
-    // The operand to BFI is already a mask suitable for removing the bits it
-    // sets.
-    ConstantSDNode *CI = cast<ConstantSDNode>(Op.getOperand(2));
-    const APInt &Mask = CI->getAPIntValue();
-    KnownZero &= Mask;
-    KnownOne &= Mask;
-    return;
-  }
-  if (Op.getOpcode() == ARMISD::CMOV) {
-    APInt KZ2(KnownZero.getBitWidth(), 0);
-    APInt KO2(KnownOne.getBitWidth(), 0);
-    computeKnownBits(DAG, Op.getOperand(0), KnownZero, KnownOne);
-    computeKnownBits(DAG, Op.getOperand(1), KZ2, KO2);
-
-    KnownZero &= KZ2;
-    KnownOne &= KO2;
-    return;
-  }
-  return DAG.computeKnownBits(Op, KnownZero, KnownOne);
-}
-
 SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &DAG) const {
   // If we have a CMOV, OR and AND combination such as:
   //   if (x & CN)
@@ -11777,7 +11755,7 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   // Lastly, can we determine that the bits defined by OrCI
   // are zero in Y?
   APInt KnownZero, KnownOne;
-  computeKnownBits(DAG, Y, KnownZero, KnownOne);
+  DAG.computeKnownBits(Y, KnownZero, KnownOne);
   if ((OrCI & KnownZero) != OrCI)
     return SDValue();
 
@@ -12657,6 +12635,19 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     }
   }
+  case ARMISD::BFI: {
+    // Conservatively, we can recurse down the first operand
+    // and just mask out all affected bits.
+    DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+
+    // The operand to BFI is already a mask suitable for removing the bits it
+    // sets.
+    ConstantSDNode *CI = cast<ConstantSDNode>(Op.getOperand(2));
+    const APInt &Mask = CI->getAPIntValue();
+    KnownZero &= Mask;
+    KnownOne &= Mask;
+    return;
+  }
   }
 }
 
@@ -13052,7 +13043,7 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   //     rem = a - b * div
   //     return {div, rem}
   // This should be lowered into UDIV/SDIV + MLS later on.
-  bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivide()
+  bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivideInThumbMode()
                                         : Subtarget->hasDivideInARMMode();
   if (hasDivide && Op->getValueType(0).isSimple() &&
       Op->getSimpleValueType(0) == MVT::i32) {

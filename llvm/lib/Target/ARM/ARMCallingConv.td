@@ -273,9 +273,9 @@ def CSR_iOS_SwiftError : CalleeSavedRegs<(sub CSR_iOS, R8)>;
 def CSR_iOS_ThisReturn : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
                                          (sub CSR_AAPCS_ThisReturn, R9))>;
 
-def CSR_iOS_TLSCall : CalleeSavedRegs<(add LR, SP,
-                                           (sequence "R%u", 12, 1),
-                                           (sequence "D%u", 31, 0))>;
+def CSR_iOS_TLSCall
+    : CalleeSavedRegs<(add LR, SP, (sub(sequence "R%u", 12, 1), R9, R12),
+                      (sequence "D%u", 31, 0))>;
 
 // C++ TLS access function saves all registers except SP. Try to match
 // the order of CSRs in CSR_iOS.

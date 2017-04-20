@@ -51,6 +51,8 @@ namespace rdf {
       return F - Map.begin() + 1;
     }
 
+    uint32_t size() const { return Map.size(); }
+
     typedef typename std::vector<T>::const_iterator const_iterator;
     const_iterator begin() const { return Map.begin(); }
     const_iterator end() const { return Map.end(); }
@@ -107,6 +109,9 @@ namespace rdf {
     RegisterRef getRefForUnit(uint32_t U) const {
       return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
     }
+    const BitVector &getMaskUnits(RegisterId MaskId) const {
+      return MaskInfos[TargetRegisterInfo::stackSlot2Index(MaskId)].Units;
+    }
 
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
@@ -118,11 +123,15 @@ namespace rdf {
       RegisterId Reg = 0;
       LaneBitmask Mask;
     };
+    struct MaskInfo {
+      BitVector Units;
+    };
 
     const TargetRegisterInfo &TRI;
+    IndexedSet<const uint32_t*> RegMasks;
     std::vector<RegInfo> RegInfos;
     std::vector<UnitInfo> UnitInfos;
-    IndexedSet<const uint32_t*> RegMasks;
+    std::vector<MaskInfo> MaskInfos;
 
     bool aliasRR(RegisterRef RA, RegisterRef RB) const;
     bool aliasRM(RegisterRef RR, RegisterRef RM) const;
@@ -135,7 +144,7 @@ namespace rdf {
         : Units(pri.getTRI().getNumRegUnits()), PRI(pri) {}
     RegisterAggr(const RegisterAggr &RG) = default;
 
-    bool empty() const { return Units.empty(); }
+    bool empty() const { return Units.none(); }
     bool hasAliasOf(RegisterRef RR) const;
     bool hasCoverOf(RegisterRef RR) const;
     static bool isCoverOf(RegisterRef RA, RegisterRef RB,

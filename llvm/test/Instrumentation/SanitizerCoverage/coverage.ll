@@ -5,9 +5,7 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=0  -S | FileCheck %s --check-prefix=CHECK_WITH_CHECK
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=1  -S | FileCheck %s --check-prefix=CHECK_WITH_CHECK
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-block-threshold=10 -S | FileCheck %s --check-prefix=CHECK3
-; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -S | FileCheck %s --check-prefix=CHECK4
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-8bit-counters=1  -S | FileCheck %s --check-prefix=CHECK-8BIT
 
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=10 \
 ; RUN:      -S | FileCheck %s --check-prefix=CHECK2
@@ -81,25 +79,6 @@ entry:
 ; CHECK3-NOT: call void @__sanitizer_cov
 ; CHECK3: ret void
 
-; test -sanitizer-coverage-8bit-counters=1
-; CHECK-8BIT-LABEL: define void @foo
-
-; CHECK-8BIT: [[V11:%[0-9]*]] = load i8{{.*}}!nosanitize
-; CHECK-8BIT: [[V12:%[0-9]*]] = add i8 [[V11]], 1
-; CHECK-8BIT: store i8 [[V12]]{{.*}}!nosanitize
-; CHECK-8BIT: [[V21:%[0-9]*]] = load i8{{.*}}!nosanitize
-; CHECK-8BIT: [[V22:%[0-9]*]] = add i8 [[V21]], 1
-; CHECK-8BIT: store i8 [[V22]]{{.*}}!nosanitize
-; CHECK-8BIT: [[V31:%[0-9]*]] = load i8{{.*}}!nosanitize
-; CHECK-8BIT: [[V32:%[0-9]*]] = add i8 [[V31]], 1
-; CHECK-8BIT: store i8 [[V32]]{{.*}}!nosanitize
-; CHECK-8BIT: [[V41:%[0-9]*]] = load i8{{.*}}!nosanitize
-; CHECK-8BIT: [[V42:%[0-9]*]] = add i8 [[V41]], 1
-; CHECK-8BIT: store i8 [[V42]]{{.*}}!nosanitize
-
-; CHECK-8BIT: ret void
-
-
 %struct.StructWithVptr = type { i32 (...)** }
 
 define void @CallViaVptr(%struct.StructWithVptr* %foo) uwtable sanitize_address {
@@ -112,13 +91,6 @@ entry:
   tail call void asm sideeffect "", ""()
   ret void
 }
-
-; We expect to see two calls to __sanitizer_cov_indir_call16
-; with different values of second argument.
-; CHECK4-LABEL: define void @CallViaVptr
-; CHECK4: call void @__sanitizer_cov_indir_call16({{.*}},[[CACHE:.*]])
-; CHECK4-NOT: call void @__sanitizer_cov_indir_call16({{.*}},[[CACHE]])
-; CHECK4: ret void
 
 ; CHECK_TRACE_PC-LABEL: define void @foo
 ; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
@@ -134,10 +106,6 @@ define void @call_unreachable() uwtable sanitize_address {
 entry:
   unreachable
 }
-
-; CHECK4-LABEL: define void @call_unreachable
-; CHECK4-NOT: __sanitizer_cov
-; CHECK4: unreachable
 
 ; CHECKPRUNE-LABEL: define void @foo
 ; CHECKPRUNE: call void @__sanitizer_cov

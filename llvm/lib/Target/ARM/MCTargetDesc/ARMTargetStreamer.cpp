@@ -131,9 +131,9 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
       emitTextAttribute(ARMBuildAttrs::CPU_name, "cortex-a9");
       // We consider krait as a "cortex-a9" + hwdiv CPU
       // Enable hwdiv through ".arch_extension idiv"
-      if (STI.hasFeature(ARM::FeatureHWDiv) ||
+      if (STI.hasFeature(ARM::FeatureHWDivThumb) ||
           STI.hasFeature(ARM::FeatureHWDivARM))
-        emitArchExtension(ARM::AEK_HWDIV | ARM::AEK_HWDIVARM);
+        emitArchExtension(ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM);
     } else {
       emitTextAttribute(ARMBuildAttrs::CPU_name, CPUString);
     }

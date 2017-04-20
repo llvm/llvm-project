@@ -34631,7 +34631,7 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   ShrinkMode Mode;
-  if (!canReduceVMulWidth(MulOp.getNode(), DAG, Mode))
+  if (!canReduceVMulWidth(MulOp.getNode(), DAG, Mode) || Mode == MULU16)
     return SDValue();
 
   EVT VT = N->getValueType(0);

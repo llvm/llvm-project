@@ -160,7 +160,6 @@ private:
   std::vector<ValueInfo> RefEdgeList;
 
 protected:
-  /// GlobalValueSummary constructor.
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
       : Kind(K), Flags(Flags), OriginalName(0), RefEdgeList(std::move(Refs)) {}
 
@@ -221,7 +220,6 @@ class AliasSummary : public GlobalValueSummary {
   GlobalValueSummary *AliaseeSummary;
 
 public:
-  /// Summary constructors.
   AliasSummary(GVFlags Flags, std::vector<ValueInfo> Refs)
       : GlobalValueSummary(AliasKind, Flags, std::move(Refs)) {}
 
@@ -297,7 +295,6 @@ private:
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
 public:
-  /// Summary constructors.
   FunctionSummary(GVFlags Flags, unsigned NumInsts, std::vector<ValueInfo> Refs,
                   std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
@@ -418,7 +415,6 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
 class GlobalVarSummary : public GlobalValueSummary {
 
 public:
-  /// Summary constructors.
   GlobalVarSummary(GVFlags Flags, std::vector<ValueInfo> Refs)
       : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)) {}
 

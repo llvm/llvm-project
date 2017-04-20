@@ -68,23 +68,6 @@ bool InstructionSelector::constrainSelectedInstRegOperands(
   return true;
 }
 
-Optional<int64_t>
-InstructionSelector::getConstantVRegVal(unsigned VReg,
-                                        const MachineRegisterInfo &MRI) const {
-  MachineInstr *MI = MRI.getVRegDef(VReg);
-  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
-    return None;
-
-  if (MI->getOperand(1).isImm())
-    return MI->getOperand(1).getImm();
-
-  if (MI->getOperand(1).isCImm() &&
-      MI->getOperand(1).getCImm()->getBitWidth() <= 64)
-    return MI->getOperand(1).getCImm()->getSExtValue();
-
-  return None;
-}
-
 bool InstructionSelector::isOperandImmEqual(
     const MachineOperand &MO, int64_t Value,
     const MachineRegisterInfo &MRI) const {

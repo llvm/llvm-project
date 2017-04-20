@@ -508,7 +508,8 @@ namespace rdf {
   static_assert(sizeof(NodeBase) <= NodeAllocator::NodeMemSize,
         "NodeBase must be at most NodeAllocator::NodeMemSize bytes");
 
-  typedef std::vector<NodeAddr<NodeBase*>> NodeList;
+//  typedef std::vector<NodeAddr<NodeBase*>> NodeList;
+  typedef SmallVector<NodeAddr<NodeBase*>,4> NodeList;
   typedef std::set<NodeId> NodeSet;
 
   struct RefNode : public NodeBase {
