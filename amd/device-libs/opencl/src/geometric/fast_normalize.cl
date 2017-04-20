@@ -12,7 +12,7 @@ ATTR float##N \
 fast_normalize(float##N p) \
 { \
     float l2 = dot(p, p); \
-    float##N n = p * half_sqrt(l2); \
+    float##N n = p * half_rsqrt(l2); \
     return l2 == 0.0f ? p : n; \
 }
 
