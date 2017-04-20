@@ -80,7 +80,8 @@ public:
 
   bool indexDecl(const Decl *D);
 
-  void indexTagDecl(const TagDecl *D);
+  void indexTagDecl(const TagDecl *D,
+                    ArrayRef<SymbolRelation> Relations = None);
 
   void indexTypeSourceInfo(TypeSourceInfo *TInfo, const NamedDecl *Parent,
                            const DeclContext *DC = nullptr,

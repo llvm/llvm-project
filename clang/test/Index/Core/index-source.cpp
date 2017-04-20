@@ -50,6 +50,12 @@ public:
   // CHECK-NEXT: RelChild | TemplCls | c:@ST>1#T@TemplCls
 };
 
+template<>
+class TemplCls<double> {
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | TemplCls | c:@S@TemplCls>#d | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK: RelSpecialization | TemplCls | c:@ST>1#T@TemplCls
+};
+
 TemplCls<int> gtv(0);
 // CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | TemplCls | c:@ST>1#T@TemplCls | <no-cgname> | Ref,RelCont | rel: 1
 
@@ -91,3 +97,17 @@ int gvi = tmplVar<int>;
 // CHECK: [[@LINE+2]]:5 | variable/C | gvf | c:@gvf | _gvf | Def | rel: 0
 // CHECK: [[@LINE+1]]:11 | variable(Gen)/C++ | tmplVar | c:index-source.cpp@VT>1#T@tmplVar | __ZL7tmplVar | Ref,Read,RelCont | rel: 1
 int gvf = tmplVar<float>;
+
+template<typename A, typename B>
+class PartialSpecilizationClass { };
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Def | rel: 0
+
+template<typename B>
+class PartialSpecilizationClass<int, B *> { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TPS)/C++ | PartialSpecilizationClass | c:@SP>1#T@PartialSpecilizationClass>#I#*t0.0 | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
+
+template<>
+class PartialSpecilizationClass<int, int> { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#I#I | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass

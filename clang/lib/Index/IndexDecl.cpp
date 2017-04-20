@@ -495,8 +495,18 @@ public:
                                            ClassTemplateSpecializationDecl *D) {
     // FIXME: Notify subsequent callbacks if info comes from implicit
     // instantiation.
-    if (D->isThisDeclarationADefinition())
-      IndexCtx.indexTagDecl(D);
+    if (D->isThisDeclarationADefinition()) {
+      llvm::PointerUnion<ClassTemplateDecl *,
+                         ClassTemplatePartialSpecializationDecl *>
+          Template = D->getSpecializedTemplateOrPartial();
+      const Decl *SpecializationOf =
+          Template.is<ClassTemplateDecl *>()
+              ? (Decl *)Template.get<ClassTemplateDecl *>()
+              : Template.get<ClassTemplatePartialSpecializationDecl *>();
+      IndexCtx.indexTagDecl(
+          D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
+                            SpecializationOf));
+    }
     return true;
   }
 
