@@ -440,12 +440,12 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
     //    variable(is_parameter).
     //  - a sub-rule and a sibling that's negated. E.g.
     //    variable(is_thread_local) and variable(unless(is_parameter))
-    llvm::SmallDenseMap<attr::SubjectMatchRule,
-                        std::pair<attr::SubjectMatchRule, SourceRange>, 2>
+    llvm::SmallDenseMap<int, std::pair<int, SourceRange>, 2>
         RulesToFirstSpecifiedNegatedSubRule;
     for (const auto &Rule : Rules) {
+      attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
       Optional<attr::SubjectMatchRule> ParentRule =
-          getParentAttrMatcherRule(Rule.first);
+          getParentAttrMatcherRule(MatchRule);
       if (!ParentRule)
         continue;
       auto It = Rules.find(*ParentRule);
@@ -453,7 +453,7 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
         // A sub-rule contradicts a parent rule.
         Diag(Rule.second.getBegin(),
              diag::err_pragma_attribute_matcher_subrule_contradicts_rule)
-            << attr::getSubjectMatchRuleSpelling(Rule.first)
+            << attr::getSubjectMatchRuleSpelling(MatchRule)
             << attr::getSubjectMatchRuleSpelling(*ParentRule) << It->second
             << FixItHint::CreateRemoval(
                    replacementRangeForListElement(*this, Rule.second));
@@ -461,14 +461,15 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
         // declarations that receive the attribute.
         continue;
       }
-      if (isNegatedAttrMatcherSubRule(Rule.first))
+      if (isNegatedAttrMatcherSubRule(MatchRule))
         RulesToFirstSpecifiedNegatedSubRule.insert(
             std::make_pair(*ParentRule, Rule));
     }
     bool IgnoreNegatedSubRules = false;
     for (const auto &Rule : Rules) {
+      attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
       Optional<attr::SubjectMatchRule> ParentRule =
-          getParentAttrMatcherRule(Rule.first);
+          getParentAttrMatcherRule(MatchRule);
       if (!ParentRule)
         continue;
       auto It = RulesToFirstSpecifiedNegatedSubRule.find(*ParentRule);
@@ -479,8 +480,9 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
             It->second.second.getBegin(),
             diag::
                 err_pragma_attribute_matcher_negated_subrule_contradicts_subrule)
-            << attr::getSubjectMatchRuleSpelling(It->second.first)
-            << attr::getSubjectMatchRuleSpelling(Rule.first) << Rule.second
+            << attr::getSubjectMatchRuleSpelling(
+                   attr::SubjectMatchRule(It->second.first))
+            << attr::getSubjectMatchRuleSpelling(MatchRule) << Rule.second
             << FixItHint::CreateRemoval(
                    replacementRangeForListElement(*this, It->second.second));
         // Keep going but ignore all of the negated sub-rules.
@@ -491,11 +493,11 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
 
     if (!IgnoreNegatedSubRules) {
       for (const auto &Rule : Rules)
-        SubjectMatchRules.push_back(Rule.first);
+        SubjectMatchRules.push_back(attr::SubjectMatchRule(Rule.first));
     } else {
       for (const auto &Rule : Rules) {
-        if (!isNegatedAttrMatcherSubRule(Rule.first))
-          SubjectMatchRules.push_back(Rule.first);
+        if (!isNegatedAttrMatcherSubRule(attr::SubjectMatchRule(Rule.first)))
+          SubjectMatchRules.push_back(attr::SubjectMatchRule(Rule.first));
       }
     }
     Rules.clear();
@@ -516,7 +518,7 @@ void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
         << Attribute.getName();
     SmallVector<attr::SubjectMatchRule, 2> ExtraRules;
     for (const auto &Rule : Rules) {
-      ExtraRules.push_back(Rule.first);
+      ExtraRules.push_back(attr::SubjectMatchRule(Rule.first));
       Diagnostic << FixItHint::CreateRemoval(
           replacementRangeForListElement(*this, Rule.second));
     }
