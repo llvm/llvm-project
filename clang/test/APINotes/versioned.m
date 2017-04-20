@@ -128,3 +128,25 @@
 // CHECK-VERSIONED-NEXT:     APINotedClosedEnumA = 1
 // CHECK-VERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
 
+// These don't actually have versioned information, so we just check them once.
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeCFEnum {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeCFEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeNSEnum {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeNSEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open")));
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeCFOptions {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeCFOptionsA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open"))) __attribute__((flag_enum));
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeNSOptions {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeNSOptionsA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("open"))) __attribute__((flag_enum));
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeCFClosedEnum {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeCFClosedEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+// CHECK-UNVERSIONED-LABEL: enum SoonToBeNSClosedEnum {
+// CHECK-UNVERSIONED-NEXT:     SoonToBeNSClosedEnumA = 1
+// CHECK-UNVERSIONED-NEXT: } __attribute__((enum_extensibility("closed")));
+// CHECK-UNVERSIONED-LABEL: enum UndoAllThatHasBeenDoneToMe {
+// CHECK-UNVERSIONED-NEXT:     UndoAllThatHasBeenDoneToMeA = 1
+// CHECK-UNVERSIONED-NEXT: };

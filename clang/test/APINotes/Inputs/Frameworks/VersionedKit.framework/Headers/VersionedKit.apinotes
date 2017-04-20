@@ -22,6 +22,20 @@ Tags:
     EnumExtensibility: open
   - Name: APINotedClosedEnum
     EnumExtensibility: closed
+  - Name: SoonToBeCFEnum
+    EnumKind: CFEnum
+  - Name: SoonToBeNSEnum
+    EnumKind: NSEnum
+  - Name: SoonToBeCFOptions
+    EnumKind: CFOptions
+  - Name: SoonToBeNSOptions
+    EnumKind: NSOptions
+  - Name: SoonToBeCFClosedEnum
+    EnumKind: CFClosedEnum
+  - Name: SoonToBeNSClosedEnum
+    EnumKind: NSClosedEnum
+  - Name: UndoAllThatHasBeenDoneToMe
+    EnumKind: none
 SwiftVersions:
   - Version: 3.0
     Classes:

@@ -63,3 +63,24 @@ Globals:
     AvailabilityMsg: iOSOnly
   - Name:            globalVar2
     Nullability:     O
+Tags:
+# CHECK: cannot mix EnumKind and FlagEnum (for FlagAndEnumKind)
+  - Name: FlagAndEnumKind
+    FlagEnum: true
+    EnumKind: CFOptions
+# CHECK: cannot mix EnumKind and FlagEnum (for FlagAndEnumKind2)
+  - Name: FlagAndEnumKind2
+    EnumKind: CFOptions
+    FlagEnum: false
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind)
+  - Name: ExtensibilityAndEnumKind
+    EnumExtensibility: open
+    EnumKind: CFOptions
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind2)
+  - Name: ExtensibilityAndEnumKind2
+    EnumKind: CFOptions
+    EnumExtensibility: closed
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind3)
+  - Name: ExtensibilityAndEnumKind3
+    EnumKind: none
+    EnumExtensibility: none

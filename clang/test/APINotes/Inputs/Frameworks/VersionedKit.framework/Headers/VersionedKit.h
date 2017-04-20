@@ -80,3 +80,26 @@ enum APINotedOpenEnum {
 enum APINotedClosedEnum {
   APINotedClosedEnumA = 1,
 };
+
+
+enum SoonToBeCFEnum {
+  SoonToBeCFEnumA = 1
+};
+enum SoonToBeNSEnum {
+  SoonToBeNSEnumA = 1
+};
+enum SoonToBeCFOptions {
+  SoonToBeCFOptionsA = 1
+};
+enum SoonToBeNSOptions {
+  SoonToBeNSOptionsA = 1
+};
+enum SoonToBeCFClosedEnum {
+  SoonToBeCFClosedEnumA = 1
+};
+enum SoonToBeNSClosedEnum {
+  SoonToBeNSClosedEnumA = 1
+};
+enum UndoAllThatHasBeenDoneToMe {
+  UndoAllThatHasBeenDoneToMeA = 1
+} __attribute__((flag_enum)) __attribute__((enum_extensibility(closed)));
