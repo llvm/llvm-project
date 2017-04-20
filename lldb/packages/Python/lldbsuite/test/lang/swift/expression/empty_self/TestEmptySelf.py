@@ -1,4 +1,4 @@
-# TestSwiftPORecursiveBehavior.py
+# TestEmptySelf.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -9,6 +9,8 @@
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
 
-lldbinline.MakeInlineTest(__file__, globals(), lldbinline.expectedFailureAll)
+import lldbsuite.test.lldbinline as lldbinline
+import lldbsuite.test.lldbtest as lldbtest
+
+lldbinline.MakeInlineTest(__file__, globals(), [])
