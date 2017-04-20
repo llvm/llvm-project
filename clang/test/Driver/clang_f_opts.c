@@ -482,3 +482,8 @@
 // RUN: %clang -### -S -fno-strict-return %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-RETURN %s
 // CHECK-STRICT-RETURN-NOT: "-fno-strict-return"
 // CHECK-NO-STRICT-RETURN: "-fno-strict-return"
+
+// RUN: %clang -### -S -fallow-editor-placeholders %s 2>&1 | FileCheck -check-prefix=CHECK-ALLOW-PLACEHOLDERS %s
+// RUN: %clang -### -S -fno-allow-editor-placeholders %s 2>&1 | FileCheck -check-prefix=CHECK-NO-ALLOW-PLACEHOLDERS %s
+// CHECK-ALLOW-PLACEHOLDERS: -fallow-editor-placeholders
+// CHECK-NO-ALLOW-PLACEHOLDERS-NOT: -fallow-editor-placeholders
