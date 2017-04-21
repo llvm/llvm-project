@@ -231,10 +231,11 @@ public:
   }
 
   bool VisitTypedefNameDecl(const TypedefNameDecl *D) {
-    if (!D->isTransparentTag())
+    if (!D->isTransparentTag()) {
       if (!IndexCtx.handleDecl(D))
         return false;
-    IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
+      IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
+    }
     return true;
   }
 
