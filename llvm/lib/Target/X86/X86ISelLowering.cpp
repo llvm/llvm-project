@@ -29425,7 +29425,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     APInt KnownZero, KnownOne;
     TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
                                           DCI.isBeforeLegalizeOps());
-    if (TLO.ShrinkDemandedConstant(Cond, DemandedMask) ||
+    if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
         TLI.SimplifyDemandedBits(Cond, DemandedMask, KnownZero, KnownOne,
                                  TLO)) {
       // If we changed the computation somewhere in the DAG, this change
@@ -32829,7 +32829,7 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (TLO.ShrinkDemandedConstant(Op1, DemandedMask) ||
+    if (TLI.ShrinkDemandedConstant(Op1, DemandedMask, TLO) ||
         TLI.SimplifyDemandedBits(Op1, DemandedMask, KnownZero, KnownOne, TLO))
       DCI.CommitTargetLoweringOpt(TLO);
   }
