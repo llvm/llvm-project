@@ -17,6 +17,7 @@
 import Darwin
 #endif
 
+@discardableResult
 func repl_main() -> Int
 {
     return 0
