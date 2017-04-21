@@ -67,6 +67,10 @@ categoriesList = None
 useCategories = False
 # Categories we want to skip
 skipCategories = ["darwin-log", "frame-diagnose"]
+skipCategories = []
+if platform.system() == 'Linux':
+    skipCategories.append('watchpoints')
+
 # use this to track per-category failures
 failuresPerCategory = {}
 
