@@ -489,12 +489,6 @@ public:
       valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to
                                                   // the dynamic type
     }
-    
-    if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift &&
-        valobj_type.GetByteSize(frame_sp.get()) == 0) {
-      // We don't need to materialize empty structs in Swift.
-      return;
-    }
 
     if (m_is_reference) {
       DataExtractor valobj_extractor;
@@ -551,6 +545,11 @@ public:
         Error extract_error;
         valobj_sp->GetData(data, extract_error);
         if (!extract_error.Success()) {
+          if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift &&
+              valobj_type.GetByteSize(frame_sp.get()) == 0) {
+            // We don't need to materialize empty structs in Swift.
+            return;
+          }
           err.SetErrorStringWithFormat("couldn't get the value of %s: %s",
                                        m_variable_sp->GetName().AsCString(),
                                        extract_error.AsCString());
