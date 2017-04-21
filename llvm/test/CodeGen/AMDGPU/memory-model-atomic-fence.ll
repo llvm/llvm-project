@@ -3,8 +3,10 @@
 
 ; FUNC-LABEL: {{^}}system_acquire
 ; GCN: BB#0
-; SI:  buffer_wbinvl1{{$}}
-; VI:  buffer_wbinvl1_vol{{$}}
+; SI:  s_waitcnt vmcnt(0){{$}}
+; SI-NEXT:  buffer_wbinvl1{{$}}
+; VI:  s_waitcnt vmcnt(0){{$}}
+; VI-NEXT:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
 define void @system_acquire() {
   fence acquire
@@ -44,8 +46,10 @@ define void @system_seq_cst() {
 
 ; FUNC-LABEL: {{^}}agent_acquire
 ; GCN: BB#0
-; SI:  buffer_wbinvl1{{$}}
-; VI:  buffer_wbinvl1_vol{{$}}
+; SI:  s_waitcnt vmcnt(0){{$}}
+; SI-NEXT:  buffer_wbinvl1{{$}}
+; VI:  s_waitcnt vmcnt(0){{$}}
+; VI-NEXT:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
 define void @agent_acquire() {
   fence syncscope(2) acquire

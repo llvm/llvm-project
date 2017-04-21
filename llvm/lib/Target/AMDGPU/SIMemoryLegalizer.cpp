@@ -243,7 +243,8 @@ bool SIMemoryLegalizer::expandAtomicFence(MachineBasicBlock::iterator &MI) {
   switch (SynchScope) {
   case AMDGPUSynchronizationScope::System:
   case AMDGPUSynchronizationScope::Agent: {
-    if (Ordering == AtomicOrdering::Release ||
+    if (Ordering == AtomicOrdering::Acquire ||
+        Ordering == AtomicOrdering::Release ||
         Ordering == AtomicOrdering::AcquireRelease ||
         Ordering == AtomicOrdering::SequentiallyConsistent)
       Changed |= insertWaitcntVmcnt0(MI);
