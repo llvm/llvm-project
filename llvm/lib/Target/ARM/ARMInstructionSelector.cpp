@@ -47,12 +47,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   unsigned SrcReg = I.getOperand(1).getReg();
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   (void)SrcSize;
-  assert((DstSize == SrcSize ||
-          // Copies are a means to setup initial types, the number of
-          // bits may not exactly match.
-          (TargetRegisterInfo::isPhysicalRegister(SrcReg) &&
-           DstSize <= SrcSize)) &&
-         "Copy with different width?!");
+  // We use copies for trunc, so it's ok for the size of the destination to be
+  // smaller (the higher bits will just be undefined).
+  assert(DstSize <= SrcSize && "Copy with different width?!");
 
   assert((RegBank->getID() == ARM::GPRRegBankID ||
           RegBank->getID() == ARM::FPRRegBankID) &&
@@ -293,6 +290,28 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
       return false;
     }
     break;
+  }
+  case G_TRUNC: {
+    // The high bits are undefined, so there's nothing special to do, just
+    // treat it as a copy.
+    auto SrcReg = I.getOperand(1).getReg();
+    auto DstReg = I.getOperand(0).getReg();
+
+    const auto &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
+    const auto &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+
+    if (SrcRegBank.getID() != DstRegBank.getID()) {
+      DEBUG(dbgs() << "G_TRUNC operands on different register banks\n");
+      return false;
+    }
+
+    if (SrcRegBank.getID() != ARM::GPRRegBankID) {
+      DEBUG(dbgs() << "G_TRUNC on non-GPR not supported yet\n");
+      return false;
+    }
+
+    I.setDesc(TII.get(COPY));
+    return selectCopy(I, TII, MRI, TRI, RBI);
   }
   case G_ADD:
   case G_GEP:

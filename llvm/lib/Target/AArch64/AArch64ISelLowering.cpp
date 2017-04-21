@@ -3418,11 +3418,75 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
+SDValue AArch64TargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
+                                             SelectionDAG &DAG,
+                                             unsigned Flag) const {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
+}
+
+SDValue AArch64TargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
+                                             SelectionDAG &DAG,
+                                             unsigned Flag) const {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flag);
+}
+
+SDValue AArch64TargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
+                                             SelectionDAG &DAG,
+                                             unsigned Flag) const {
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlignment(),
+                                   N->getOffset(), Flag);
+}
+
+SDValue AArch64TargetLowering::getTargetNode(BlockAddressSDNode* N, EVT Ty,
+                                             SelectionDAG &DAG,
+                                             unsigned Flag) const {
+  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, 0, Flag);
+}
+
+// (loadGOT sym)
+template <class NodeTy>
+SDValue AArch64TargetLowering::getGOT(NodeTy *N, SelectionDAG &DAG) const {
+  DEBUG(dbgs() << "AArch64TargetLowering::getGOT\n");
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  SDValue GotAddr = getTargetNode(N, Ty, DAG, AArch64II::MO_GOT);
+  // FIXME: Once remat is capable of dealing with instructions with register
+  // operands, expand this into two nodes instead of using a wrapper node.
+  return DAG.getNode(AArch64ISD::LOADgot, DL, Ty, GotAddr);
+}
+
+// (wrapper %highest(sym), %higher(sym), %hi(sym), %lo(sym))
+template <class NodeTy>
+SDValue AArch64TargetLowering::getAddrLarge(NodeTy *N, SelectionDAG &DAG)
+  const {
+  DEBUG(dbgs() << "AArch64TargetLowering::getAddrLarge\n");
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const unsigned char MO_NC = AArch64II::MO_NC;
+  return DAG.getNode(
+        AArch64ISD::WrapperLarge, DL, Ty,
+        getTargetNode(N, Ty, DAG, AArch64II::MO_G3),
+        getTargetNode(N, Ty, DAG, AArch64II::MO_G2 | MO_NC),
+        getTargetNode(N, Ty, DAG, AArch64II::MO_G1 | MO_NC),
+        getTargetNode(N, Ty, DAG, AArch64II::MO_G0 | MO_NC));
+}
+
+// (addlow (adrp %hi(sym)) %lo(sym))
+template <class NodeTy>
+SDValue AArch64TargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG) const {
+  DEBUG(dbgs() << "AArch64TargetLowering::getAddr\n");
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  SDValue Hi = getTargetNode(N, Ty, DAG, AArch64II::MO_PAGE);
+  SDValue Lo = getTargetNode(N, Ty, DAG,
+                             AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, Ty, Hi);
+  return DAG.getNode(AArch64ISD::ADDlow, DL, Ty, ADRP, Lo);
+}
+
 SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
-  const GlobalAddressSDNode *GN = cast<GlobalAddressSDNode>(Op);
+  GlobalAddressSDNode *GN = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = GN->getGlobal();
   unsigned char OpFlags =
       Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
@@ -3430,32 +3494,15 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
          "unexpected offset in global node");
 
-  // This also catched the large code model case for Darwin.
+  // This also catches the large code model case for Darwin.
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
-    SDValue GotAddr = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
-    // FIXME: Once remat is capable of dealing with instructions with register
-    // operands, expand this into two nodes instead of using a wrapper node.
-    return DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, GotAddr);
+    return getGOT(GN, DAG);
   }
 
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
-    const unsigned char MO_NC = AArch64II::MO_NC;
-    return DAG.getNode(
-        AArch64ISD::WrapperLarge, DL, PtrVT,
-        DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_G3),
-        DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_G2 | MO_NC),
-        DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_G1 | MO_NC),
-        DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, AArch64II::MO_G0 | MO_NC));
+    return getAddrLarge(GN, DAG);
   } else {
-    // Use ADRP/ADD or ADRP/LDR for everything else: the small model on ELF and
-    // the only correct model on Darwin.
-    SDValue Hi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
-                                            OpFlags | AArch64II::MO_PAGE);
-    unsigned char LoFlags = OpFlags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC;
-    SDValue Lo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, LoFlags);
-
-    SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, Hi);
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, Lo);
+    return getAddr(GN, DAG);
   }
 }
 
@@ -4232,90 +4279,37 @@ SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
   // Jump table entries as PC relative offsets. No additional tweaking
   // is necessary here. Just get the address of the jump table.
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
 
   if (getTargetMachine().getCodeModel() == CodeModel::Large &&
       !Subtarget->isTargetMachO()) {
-    const unsigned char MO_NC = AArch64II::MO_NC;
-    return DAG.getNode(
-        AArch64ISD::WrapperLarge, DL, PtrVT,
-        DAG.getTargetJumpTable(JT->getIndex(), PtrVT, AArch64II::MO_G3),
-        DAG.getTargetJumpTable(JT->getIndex(), PtrVT, AArch64II::MO_G2 | MO_NC),
-        DAG.getTargetJumpTable(JT->getIndex(), PtrVT, AArch64II::MO_G1 | MO_NC),
-        DAG.getTargetJumpTable(JT->getIndex(), PtrVT,
-                               AArch64II::MO_G0 | MO_NC));
+    return getAddrLarge(JT, DAG);
   }
-
-  SDValue Hi =
-      DAG.getTargetJumpTable(JT->getIndex(), PtrVT, AArch64II::MO_PAGE);
-  SDValue Lo = DAG.getTargetJumpTable(JT->getIndex(), PtrVT,
-                                      AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-  SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, Hi);
-  return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, Lo);
+  return getAddr(JT, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
                                                  SelectionDAG &DAG) const {
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
 
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     // Use the GOT for the large code model on iOS.
     if (Subtarget->isTargetMachO()) {
-      SDValue GotAddr = DAG.getTargetConstantPool(
-          CP->getConstVal(), PtrVT, CP->getAlignment(), CP->getOffset(),
-          AArch64II::MO_GOT);
-      return DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, GotAddr);
+      return getGOT(CP, DAG);
     }
-
-    const unsigned char MO_NC = AArch64II::MO_NC;
-    return DAG.getNode(
-        AArch64ISD::WrapperLarge, DL, PtrVT,
-        DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlignment(),
-                                  CP->getOffset(), AArch64II::MO_G3),
-        DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlignment(),
-                                  CP->getOffset(), AArch64II::MO_G2 | MO_NC),
-        DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlignment(),
-                                  CP->getOffset(), AArch64II::MO_G1 | MO_NC),
-        DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlignment(),
-                                  CP->getOffset(), AArch64II::MO_G0 | MO_NC));
+    return getAddrLarge(CP, DAG);
   } else {
-    // Use ADRP/ADD or ADRP/LDR for everything else: the small memory model on
-    // ELF, the only valid one on Darwin.
-    SDValue Hi =
-        DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlignment(),
-                                  CP->getOffset(), AArch64II::MO_PAGE);
-    SDValue Lo = DAG.getTargetConstantPool(
-        CP->getConstVal(), PtrVT, CP->getAlignment(), CP->getOffset(),
-        AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-
-    SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, Hi);
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, Lo);
+    return getAddr(CP, DAG);
   }
 }
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
+  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
   if (getTargetMachine().getCodeModel() == CodeModel::Large &&
       !Subtarget->isTargetMachO()) {
-    const unsigned char MO_NC = AArch64II::MO_NC;
-    return DAG.getNode(
-        AArch64ISD::WrapperLarge, DL, PtrVT,
-        DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_G3),
-        DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_G2 | MO_NC),
-        DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_G1 | MO_NC),
-        DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_G0 | MO_NC));
+    return getAddrLarge(BA, DAG);
   } else {
-    SDValue Hi = DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_PAGE);
-    SDValue Lo = DAG.getTargetBlockAddress(BA, PtrVT, 0, AArch64II::MO_PAGEOFF |
-                                                             AArch64II::MO_NC);
-    SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, Hi);
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, Lo);
+    return getAddr(BA, DAG);
   }
 }
 

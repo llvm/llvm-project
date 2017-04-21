@@ -778,7 +778,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
   // so this isn't a real bug. On the other hand, the program may have undefined
   // behavior, or we might have a bug in the compiler. We can't assert/crash, so
   // clear out the known bits, try to warn the user, and hope for the best.
-  if ((KnownZero & KnownOne) != 0) {
+  if (KnownZero.intersects(KnownOne)) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();
 
@@ -860,7 +860,8 @@ static void computeKnownBitsFromShiftOperator(
 
   computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
 
-  KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+  KnownZero.setAllBits();
+  KnownOne.setAllBits();
   for (unsigned ShiftAmt = 0; ShiftAmt < BitWidth; ++ShiftAmt) {
     // Combine the shifted known input bits only for those shift amounts
     // compatible with its known constraints.
@@ -888,7 +889,7 @@ static void computeKnownBitsFromShiftOperator(
   // return anything we'd like, but we need to make sure the sets of known bits
   // stay disjoint (it should be better for some other code to actually
   // propagate the undef than to pick a value here using known bits).
-  if ((KnownZero & KnownOne) != 0) {
+  if (KnownZero.intersects(KnownOne)) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();
   }

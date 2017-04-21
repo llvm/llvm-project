@@ -39,11 +39,16 @@ using namespace llvm;
 
 namespace {
 
+#define GET_GLOBALISEL_PREDICATE_BITSET
+#include "X86GenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATE_BITSET
+
 class X86InstructionSelector : public InstructionSelector {
 public:
-  X86InstructionSelector(const X86Subtarget &STI,
+  X86InstructionSelector(const X86TargetMachine &TM, const X86Subtarget &STI,
                          const X86RegisterBankInfo &RBI);
 
+  void beginFunction(const MachineFunction &MF) override;
   bool select(MachineInstr &I) const override;
 
 private:
@@ -70,10 +75,17 @@ private:
   bool selectTrunc(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
 
+  const X86TargetMachine &TM;
   const X86Subtarget &STI;
   const X86InstrInfo &TII;
   const X86RegisterInfo &TRI;
   const X86RegisterBankInfo &RBI;
+  bool OptForSize;
+  bool OptForMinSize;
+
+  PredicateBitset AvailableFeatures;
+  PredicateBitset computeAvailableFeatures(const MachineFunction *MF,
+                                           const X86Subtarget *Subtarget) const;
 
 #define GET_GLOBALISEL_TEMPORARIES_DECL
 #include "X86GenGlobalISel.inc"
@@ -86,10 +98,12 @@ private:
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_IMPL
 
-X86InstructionSelector::X86InstructionSelector(const X86Subtarget &STI,
+X86InstructionSelector::X86InstructionSelector(const X86TargetMachine &TM,
+                                               const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
-    : InstructionSelector(), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI)
+    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
+      TRI(*STI.getRegisterInfo()), RBI(RBI), OptForSize(false),
+      OptForMinSize(false), AvailableFeatures()
 #define GET_GLOBALISEL_TEMPORARIES_INIT
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -179,6 +193,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   }
   I.setDesc(TII.get(X86::COPY));
   return true;
+}
+
+void X86InstructionSelector::beginFunction(const MachineFunction &MF) {
+  OptForSize = MF.getFunction()->optForSize();
+  OptForMinSize = MF.getFunction()->optForMinSize();
+  AvailableFeatures = computeAvailableFeatures(&MF, &STI);
 }
 
 bool X86InstructionSelector::select(MachineInstr &I) const {
@@ -571,7 +591,8 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
 }
 
 InstructionSelector *
-llvm::createX86InstructionSelector(X86Subtarget &Subtarget,
+llvm::createX86InstructionSelector(const X86TargetMachine &TM,
+                                   X86Subtarget &Subtarget,
                                    X86RegisterBankInfo &RBI) {
-  return new X86InstructionSelector(Subtarget, RBI);
+  return new X86InstructionSelector(TM, Subtarget, RBI);
 }

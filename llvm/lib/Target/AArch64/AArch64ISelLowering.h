@@ -508,6 +508,18 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue getTargetNode(GlobalAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+  SDValue getTargetNode(JumpTableSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+  SDValue getTargetNode(ConstantPoolSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+  SDValue getTargetNode(BlockAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+  template <class NodeTy> SDValue getGOT(NodeTy *N, SelectionDAG &DAG) const;
+  template <class NodeTy>
+  SDValue getAddrLarge(NodeTy *N, SelectionDAG &DAG) const;
+  template <class NodeTy> SDValue getAddr(NodeTy *N, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;

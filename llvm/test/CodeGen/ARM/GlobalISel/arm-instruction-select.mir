@@ -5,6 +5,8 @@
   define void @test_sext_s8() { ret void }
   define void @test_zext_s16() { ret void }
 
+  define void @test_trunc_s32_16() { ret void }
+
   define void @test_add_s8() { ret void }
   define void @test_add_s16() { ret void }
   define void @test_add_s32() { ret void }
@@ -137,6 +139,34 @@ body:             |
 
     %r0 = COPY %1(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_trunc_s32_16
+# CHECK-LABEL: name: test_trunc_s32_16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s16)
+    ; CHECK: %r0 = COPY [[VREGTRUNC]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0

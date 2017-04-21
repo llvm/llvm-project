@@ -364,44 +364,20 @@ bool APInt::EqualSlowCase(const APInt& RHS) const {
   return std::equal(pVal, pVal + getNumWords(), RHS.pVal);
 }
 
-bool APInt::ult(const APInt& RHS) const {
+int APInt::compare(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord())
-    return VAL < RHS.VAL;
+    return VAL < RHS.VAL ? -1 : VAL > RHS.VAL;
 
-  // Get active bit length of both operands
-  unsigned n1 = getActiveBits();
-  unsigned n2 = RHS.getActiveBits();
-
-  // If magnitude of LHS is less than RHS, return true.
-  if (n1 < n2)
-    return true;
-
-  // If magnitude of RHS is greater than LHS, return false.
-  if (n2 < n1)
-    return false;
-
-  // If they both fit in a word, just compare the low order word
-  if (n1 <= APINT_BITS_PER_WORD && n2 <= APINT_BITS_PER_WORD)
-    return pVal[0] < RHS.pVal[0];
-
-  // Otherwise, compare all words
-  unsigned topWord = whichWord(std::max(n1,n2)-1);
-  for (int i = topWord; i >= 0; --i) {
-    if (pVal[i] > RHS.pVal[i])
-      return false;
-    if (pVal[i] < RHS.pVal[i])
-      return true;
-  }
-  return false;
+  return tcCompare(pVal, RHS.pVal, getNumWords());
 }
 
-bool APInt::slt(const APInt& RHS) const {
+int APInt::compareSigned(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord()) {
     int64_t lhsSext = SignExtend64(VAL, BitWidth);
     int64_t rhsSext = SignExtend64(RHS.VAL, BitWidth);
-    return lhsSext < rhsSext;
+    return lhsSext < rhsSext ? -1 : lhsSext > rhsSext;
   }
 
   bool lhsNeg = isNegative();
@@ -409,11 +385,11 @@ bool APInt::slt(const APInt& RHS) const {
 
   // If the sign bits don't match, then (LHS < RHS) if LHS is negative
   if (lhsNeg != rhsNeg)
-    return lhsNeg;
+    return lhsNeg ? -1 : 1;
 
   // Otherwise we can just use an unsigned comparison, because even negative
   // numbers compare correctly this way if both have the same signed-ness.
-  return ult(RHS);
+  return tcCompare(pVal, RHS.pVal, getNumWords());
 }
 
 void APInt::setBit(unsigned bitPosition) {
@@ -2684,10 +2660,8 @@ int APInt::tcCompare(const WordType *lhs, const WordType *rhs,
                      unsigned parts) {
   while (parts) {
     parts--;
-    if (lhs[parts] == rhs[parts])
-      continue;
-
-    return (lhs[parts] > rhs[parts]) ? 1 : -1;
+    if (lhs[parts] != rhs[parts])
+      return (lhs[parts] > rhs[parts]) ? 1 : -1;
   }
 
   return 0;

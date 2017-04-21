@@ -40,6 +40,30 @@ entry:
   ret i16 %x
 }
 
+define void @test_trunc_i32_i16(i32 %v, i16 *%p) {
+; CHECK-LABEL: test_trunc_i32_i16:
+; The trunc doesn't result in any instructions, but we
+; expect the store to be explicitly 16-bit.
+; CHECK: strh r0, [r1]
+; CHECK: bx lr
+entry:
+  %v16 = trunc i32 %v to i16
+  store i16 %v16, i16 *%p
+  ret void
+}
+
+define void @test_trunc_i32_i8(i32 %v, i8 *%p) {
+; CHECK-LABEL: test_trunc_i32_i8:
+; The trunc doesn't result in any instructions, but we
+; expect the store to be explicitly 8-bit.
+; CHECK: strb r0, [r1]
+; CHECK: bx lr
+entry:
+  %v8 = trunc i32 %v to i8
+  store i8 %v8, i8 *%p
+  ret void
+}
+
 define i8 @test_add_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_add_i8:
 ; CHECK: add r0, r0, r1

@@ -86,7 +86,7 @@ def : WriteRes<WriteSTP,   [FalkorUnitST, FalkorUnitSD]>
 def : WriteRes<WriteAdr,   [FalkorUnitXYZ]> { let Latency = 1; }
 def : WriteRes<WriteLDIdx, [FalkorUnitLD]> { let Latency = 5; }
 def : WriteRes<WriteSTIdx, [FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 0; let NumMicroOps = 3; }
+      { let Latency = 0; let NumMicroOps = 2; }
 def : WriteRes<WriteF,     [FalkorUnitVXVY, FalkorUnitVXVY]>
       { let Latency = 3; let NumMicroOps = 2; }
 def : WriteRes<WriteFCmp,  [FalkorUnitVXVY]> { let Latency = 2; }

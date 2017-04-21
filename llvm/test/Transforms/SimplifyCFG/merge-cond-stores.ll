@@ -37,23 +37,17 @@ end:
 }
 
 ; This is the same as test_simple, but the branch target order has been swapped
-; TODO: This test should succeed and end up if-converted.
 define void @test_simple_commuted(i32* %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_simple_commuted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X1:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[X1]], label [[YES1:%.*]], label [[FALLTHROUGH:%.*]]
-; CHECK:       yes1:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[FALLTHROUGH]]
-; CHECK:       fallthrough:
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
-; CHECK-NEXT:    br i1 [[X2]], label [[YES2:%.*]], label [[END:%.*]]
-; CHECK:       yes2:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[X1]], [[X2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:         [[DOT:%.*]] = zext i1 [[X2]] to i32
+; CHECK-NEXT:    store i32 [[DOT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:         ret void
 ;
 entry:
   %x1 = icmp eq i32 %a, 0
