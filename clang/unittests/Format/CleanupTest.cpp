@@ -292,7 +292,7 @@ protected:
   }
 
   inline std::string apply(StringRef Code,
-                           const tooling::Replacements Replaces) {
+                           const tooling::Replacements &Replaces) {
     auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
     EXPECT_TRUE(static_cast<bool>(CleanReplaces))
         << llvm::toString(CleanReplaces.takeError()) << "\n";
@@ -302,8 +302,7 @@ protected:
   }
 
   inline std::string formatAndApply(StringRef Code,
-                                    const tooling::Replacements Replaces) {
-
+                                    const tooling::Replacements &Replaces) {
     auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
     EXPECT_TRUE(static_cast<bool>(CleanReplaces))
         << llvm::toString(CleanReplaces.takeError()) << "\n";
