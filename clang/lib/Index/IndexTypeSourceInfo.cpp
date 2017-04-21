@@ -210,6 +210,8 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 
 void IndexingContext::indexTagDecl(const TagDecl *D,
                                    ArrayRef<SymbolRelation> Relations) {
+  if (!shouldIndex(D))
+    return;
   if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalSymbol(D))
     return;
 

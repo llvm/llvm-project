@@ -14,6 +14,13 @@
 using namespace clang;
 using namespace index;
 
+#define TRY_DECL(D,CALL_EXPR)                                                  \
+  do {                                                                         \
+    if (!IndexCtx.shouldIndex(D)) return true;                                 \
+    if (!CALL_EXPR)                                                            \
+      return false;                                                            \
+  } while (0)
+
 #define TRY_TO(CALL_EXPR)                                                      \
   do {                                                                         \
     if (!CALL_EXPR)                                                            \
@@ -120,8 +127,7 @@ public:
                                D->getDeclContext(), 0);
     }
 
-    if (!IndexCtx.handleDecl(D, MethodLoc, Roles, Relations))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D, MethodLoc, Roles, Relations));
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
     bool hasIBActionAndFirst = D->hasAttr<IBActionAttr>();
     for (const auto *I : D->parameters()) {
@@ -153,8 +159,7 @@ public:
       }
     }
 
-    if (!IndexCtx.handleDecl(D, Roles, Relations))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D, Roles, Relations));
     handleDeclarator(D);
 
     if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
@@ -189,16 +194,14 @@ public:
   }
 
   bool VisitVarDecl(const VarDecl *D) {
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     IndexCtx.indexBody(D->getInit(), D);
     return true;
   }
 
   bool VisitFieldDecl(const FieldDecl *D) {
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     if (D->isBitField())
       IndexCtx.indexBody(D->getBitWidth(), D);
@@ -212,8 +215,7 @@ public:
       // handled in VisitObjCPropertyImplDecl
       return true;
     }
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     return true;
   }
@@ -224,16 +226,14 @@ public:
   }
 
   bool VisitEnumConstantDecl(const EnumConstantDecl *D) {
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     IndexCtx.indexBody(D->getInitExpr(), D);
     return true;
   }
 
   bool VisitTypedefNameDecl(const TypedefNameDecl *D) {
     if (!D->isTransparentTag()) {
-      if (!IndexCtx.handleDecl(D))
-        return false;
+      TRY_DECL(D, IndexCtx.handleDecl(D));
       IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
     }
     return true;
@@ -273,7 +273,7 @@ public:
 
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
     if (D->isThisDeclarationADefinition()) {
-      TRY_TO(IndexCtx.handleDecl(D));
+      TRY_DECL(D, IndexCtx.handleDecl(D));
       SourceLocation SuperLoc = D->getSuperClassLoc();
       if (auto *SuperD = D->getSuperClass()) {
         bool hasSuperTypedef = false;
@@ -304,7 +304,7 @@ public:
 
   bool VisitObjCProtocolDecl(const ObjCProtocolDecl *D) {
     if (D->isThisDeclarationADefinition()) {
-      TRY_TO(IndexCtx.handleDecl(D));
+      TRY_DECL(D, IndexCtx.handleDecl(D));
       TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
                                        /*superLoc=*/SourceLocation()));
       TRY_TO(IndexCtx.indexDeclContext(D));
@@ -323,8 +323,7 @@ public:
     if (Class->isImplicitInterfaceDecl())
       IndexCtx.handleDecl(Class);
 
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
 
     // Visit implicit @synthesize property implementations first as their
     // location is reported at the name of the @implementation block. This
@@ -343,6 +342,8 @@ public:
   }
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
+    if (!IndexCtx.shouldIndex(D))
+      return true;
     const ObjCInterfaceDecl *C = D->getClassInterface();
     if (!C)
       return true;
@@ -371,8 +372,7 @@ public:
     SourceLocation CategoryLoc = D->getCategoryNameLoc();
     if (!CategoryLoc.isValid())
       CategoryLoc = D->getLocation();
-    if (!IndexCtx.handleDecl(D, CategoryLoc))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D, CategoryLoc));
     IndexCtx.indexDeclContext(D);
     return true;
   }
@@ -394,8 +394,7 @@ public:
     if (ObjCMethodDecl *MD = D->getSetterMethodDecl())
       if (MD->getLexicalDeclContext() == D->getLexicalDeclContext())
         handleObjCMethod(MD, D);
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     if (IBOutletCollectionAttr *attr = D->getAttr<IBOutletCollectionAttr>())
       IndexCtx.indexTypeSourceInfo(attr->getInterfaceLoc(), D,
                                    D->getLexicalDeclContext(), false, true);
@@ -416,8 +415,7 @@ public:
       Loc = Container->getLocation();
       Roles |= (SymbolRoleSet)SymbolRole::Implicit;
     }
-    if (!IndexCtx.handleDecl(D, Loc, Roles, Relations))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D, Loc, Roles, Relations));
 
     if (D->getPropertyImplementation() == ObjCPropertyImplDecl::Dynamic)
       return true;
@@ -451,8 +449,7 @@ public:
         } else if (D->getLocation() == IvarLoc) {
           IvarRoles = (SymbolRoleSet)SymbolRole::Implicit;
         }
-        if(!IndexCtx.handleDecl(IvarD, IvarLoc, IvarRoles))
-          return false;
+        TRY_DECL(IvarD, IndexCtx.handleDecl(IvarD, IvarLoc, IvarRoles));
       } else {
         IndexCtx.handleReference(IvarD, D->getPropertyIvarDeclLoc(), nullptr,
                                  D->getDeclContext(), SymbolRoleSet());
@@ -462,8 +459,7 @@ public:
   }
 
   bool VisitNamespaceDecl(const NamespaceDecl *D) {
-    if (!IndexCtx.handleDecl(D))
-      return false;
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     IndexCtx.indexDeclContext(D);
     return true;
   }

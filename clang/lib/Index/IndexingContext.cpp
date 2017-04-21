@@ -17,6 +17,17 @@
 using namespace clang;
 using namespace index;
 
+static bool isGeneratedDecl(const Decl *D) {
+  if (auto *attr = D->getAttr<ExternalSourceSymbolAttr>()) {
+    return attr->getGeneratedDeclaration();
+  }
+  return false;
+}
+
+bool IndexingContext::shouldIndex(const Decl *D) {
+  return !isGeneratedDecl(D);
+}
+
 bool IndexingContext::shouldIndexFunctionLocalSymbols() const {
   return IndexOpts.IndexFunctionLocals;
 }
