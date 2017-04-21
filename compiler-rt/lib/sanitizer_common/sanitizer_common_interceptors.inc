@@ -307,7 +307,7 @@ INTERCEPTOR(SIZE_T, strnlen, const char *s, SIZE_T maxlen) {
 INTERCEPTOR(char*, textdomain, const char *domainname) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, textdomain, domainname);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, domainname, 0);
+  if (domainname) COMMON_INTERCEPTOR_READ_STRING(ctx, domainname, 0);
   char *domain = REAL(textdomain)(domainname);
   if (domain) {
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(domain, REAL(strlen)(domain) + 1);

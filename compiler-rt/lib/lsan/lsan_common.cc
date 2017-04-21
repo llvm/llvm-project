@@ -68,6 +68,14 @@ ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
+static const char kStdSuppressions[] =
+#if SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+  // The actual string allocation happens here (for more details refer to the
+  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT definition).
+  "leak:*_dl_map_object_deps*";
+#else
+  "";
+#endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -76,6 +84,7 @@ void InitializeSuppressions() {
   suppression_ctx->ParseFromFile(flags()->suppressions);
   if (&__lsan_default_suppressions)
     suppression_ctx->Parse(__lsan_default_suppressions());
+  suppression_ctx->Parse(kStdSuppressions);
 }
 
 static SuppressionContext *GetSuppressionContext() {

@@ -22,13 +22,10 @@ extern "C" const char* __asan_default_options() {
   // turn symbolization off to speed up testing, especially when not running
   // with llvm-symbolizer but with atos.
   return "symbolize=false:abort_on_error=0:log_to_syslog=0";
-#elif SANITIZER_PPC || defined(__thumb__)
+#elif SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
   // On PowerPC and ARM Thumb, a couple tests involving pthread_exit fail due to
-  // leaks detected by LSan. pthread_exit tries to perform unwinding that leads
-  // to dlopen'ing libgcc_s.so. dlopen mallocs "libgcc_s.so" string which
-  // confuses LSan, it fails to realize that this allocation happens in dynamic
-  // linker and should be ignored.  Symbolized leak report is required to define
-  // a suppression for this known problem.
+  // leaks detected by LSan. Symbolized leak report is required to apply a
+  // suppression for this known problem.
   return "";
 #else
   // Let's turn symbolization off to speed up testing (more than 3 times speedup

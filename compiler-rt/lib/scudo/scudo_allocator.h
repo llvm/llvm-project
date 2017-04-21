@@ -44,15 +44,17 @@ enum ChunkState : u8 {
 // well. The header will be atomically loaded and stored.
 typedef u64 PackedHeader;
 struct UnpackedHeader {
-  u64 Checksum    : 16;
-  u64 UnusedBytes : 20; // Needed for reallocation purposes.
-  u64 State       : 2;  // available, allocated, or quarantined
-  u64 AllocType   : 2;  // malloc, new, new[], or memalign
-  u64 Offset      : 16; // Offset from the beginning of the backend
-                        // allocation to the beginning of the chunk itself,
-                        // in multiples of MinAlignment. See comment about
-                        // its maximum value and test in init().
-  u64 Salt        : 8;
+  u64 Checksum          : 16;
+  u64 SizeOrUnusedBytes : 19; // Size for Primary backed allocations, amount of
+                              // unused bytes in the chunk for Secondary ones.
+  u64 FromPrimary       : 1;
+  u64 State             : 2;  // available, allocated, or quarantined
+  u64 AllocType         : 2;  // malloc, new, new[], or memalign
+  u64 Offset            : 16; // Offset from the beginning of the backend
+                              // allocation to the beginning of the chunk
+                              // itself, in multiples of MinAlignment. See
+                              /// comment about its maximum value and in init().
+  u64 Salt              : 8;
 };
 
 typedef atomic_uint64_t AtomicPackedHeader;

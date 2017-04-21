@@ -55,7 +55,7 @@ struct A {
 
 #ifdef SHARED_LIB
 
-#include "../utils.h"
+#include "../../utils.h"
 struct B {
   virtual void f();
 };

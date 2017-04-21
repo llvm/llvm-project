@@ -341,14 +341,14 @@ struct ScudoAllocator {
       dieWithMessage("ERROR: the maximum possible offset doesn't fit in the "
                      "header\n");
     }
-    // Verify that we can fit the maximum amount of unused bytes in the header.
-    // Given that the Secondary fits the allocation to a page, the worst case
-    // scenario happens in the Primary. It will depend on the second to last
-    // and last class sizes, as well as the dynamic base for the Primary. The
-    // following is an over-approximation that works for our needs.
-    uptr MaxUnusedBytes = SizeClassMap::kMaxSize - 1 - AlignedChunkHeaderSize;
-    Header.UnusedBytes = MaxUnusedBytes;
-    if (Header.UnusedBytes != MaxUnusedBytes) {
+    // Verify that we can fit the maximum size or amount of unused bytes in the
+    // header. Given that the Secondary fits the allocation to a page, the worst
+    // case scenario happens in the Primary. It will depend on the second to
+    // last and last class sizes, as well as the dynamic base for the Primary.
+    // The following is an over-approximation that works for our needs.
+    uptr MaxSizeOrUnusedBytes = SizeClassMap::kMaxSize - 1;
+    Header.SizeOrUnusedBytes = MaxSizeOrUnusedBytes;
+    if (Header.SizeOrUnusedBytes != MaxSizeOrUnusedBytes) {
       dieWithMessage("ERROR: the maximum possible unused bytes doesn't fit in "
                      "the header\n");
     }
@@ -428,11 +428,9 @@ struct ScudoAllocator {
         NeededSize -= Alignment;
     }
 
-    uptr ActuallyAllocatedSize = BackendAllocator.GetActuallyAllocatedSize(
-        reinterpret_cast<void *>(AllocBeg));
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && FromPrimary)
-       memset(Ptr, 0, ActuallyAllocatedSize);
+       memset(Ptr, 0, BackendAllocator.GetActuallyAllocatedSize(Ptr));
 
     uptr UserBeg = AllocBeg + AlignedChunkHeaderSize;
     if (!IsAligned(UserBeg, Alignment))
@@ -443,8 +441,18 @@ struct ScudoAllocator {
     uptr Offset = UserBeg - AlignedChunkHeaderSize - AllocBeg;
     Header.Offset = Offset >> MinAlignmentLog;
     Header.AllocType = Type;
-    Header.UnusedBytes = ActuallyAllocatedSize - Offset -
-        AlignedChunkHeaderSize - Size;
+    if (FromPrimary) {
+      Header.FromPrimary = FromPrimary;
+      Header.SizeOrUnusedBytes = Size;
+    } else {
+      // The secondary fits the allocations to a page, so the amount of unused
+      // bytes is the difference between the end of the user allocation and the
+      // next page boundary.
+      uptr PageSize = GetPageSizeCached();
+      uptr TrailingBytes = (UserBeg + Size) & (PageSize - 1);
+      if (TrailingBytes)
+        Header.SizeOrUnusedBytes = PageSize - TrailingBytes;
+    }
     Header.Salt = static_cast<u8>(Prng.getNext());
     getScudoChunk(UserBeg)->storeHeader(&Header);
     void *UserPtr = reinterpret_cast<void *>(UserBeg);
@@ -482,8 +490,8 @@ struct ScudoAllocator {
         }
       }
     }
-    uptr UsableSize = Chunk->getUsableSize(&OldHeader);
-    uptr Size = UsableSize - OldHeader.UnusedBytes;
+    uptr Size = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
+        Chunk->getUsableSize(&OldHeader) - OldHeader.SizeOrUnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {
         dieWithMessage("ERROR: invalid sized delete on chunk at address %p\n",
@@ -495,14 +503,19 @@ struct ScudoAllocator {
     NewHeader.State = ChunkQuarantine;
     Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
 
+    // If a small memory amount was allocated with a larger alignment, we want
+    // to take that into account. Otherwise the Quarantine would be filled with
+    // tiny chunks, taking a lot of VA memory. This an approximation of the
+    // usable size, that allows us to not call GetActuallyAllocatedSize.
+    uptr LiableSize = Size + (OldHeader.Offset << MinAlignment);
     if (LIKELY(!ThreadTornDown)) {
       AllocatorQuarantine.Put(&ThreadQuarantineCache,
-                              QuarantineCallback(&Cache), Chunk, UsableSize);
+                              QuarantineCallback(&Cache), Chunk, LiableSize);
     } else {
       SpinMutexLock l(&FallbackMutex);
       AllocatorQuarantine.Put(&FallbackQuarantineCache,
                               QuarantineCallback(&FallbackAllocatorCache),
-                              Chunk, UsableSize);
+                              Chunk, LiableSize);
     }
   }
 
@@ -529,9 +542,12 @@ struct ScudoAllocator {
     }
     uptr UsableSize = Chunk->getUsableSize(&OldHeader);
     UnpackedHeader NewHeader = OldHeader;
-    // The new size still fits in the current chunk.
-    if (NewSize <= UsableSize) {
-      NewHeader.UnusedBytes = UsableSize - NewSize;
+    // The new size still fits in the current chunk, and the size difference
+    // is reasonable.
+    if (NewSize <= UsableSize &&
+        (UsableSize - NewSize) < (SizeClassMap::kMaxSize / 2)) {
+      NewHeader.SizeOrUnusedBytes =
+                OldHeader.FromPrimary ? NewSize : UsableSize - NewSize;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
       return OldPtr;
     }
@@ -539,7 +555,8 @@ struct ScudoAllocator {
     // old one.
     void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
     if (NewPtr) {
-      uptr OldSize = UsableSize - OldHeader.UnusedBytes;
+      uptr OldSize = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
+          UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);

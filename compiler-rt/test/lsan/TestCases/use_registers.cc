@@ -1,5 +1,5 @@
 // Test that registers of running threads are included in the root set.
-// RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_stacks=0"
+// RUN: LSAN_BASE="report_objects=1:use_stacks=0"
 // RUN: %clangxx_lsan -pthread %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=0" not %run %t 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=1" %run %t 2>&1
