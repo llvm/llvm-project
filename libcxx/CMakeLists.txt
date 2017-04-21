@@ -120,21 +120,19 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
     NO_DEFAULT_PATH
   )
-  if ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
-      IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
+  if (LIBCXX_TARGETING_MSVC)
+    # FIXME: Figure out how to configure the ABI library on Windows.
+    set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
+  elseif ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
+          IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
+  elseif (APPLE)
+    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
+    set(LIBCXX_CXX_ABI_SYSTEM 1)
   else()
-    if (LIBCXX_TARGETING_MSVC)
-      # FIXME: Figure out how to configure the ABI library on Windows.
-      set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
-    elseif(APPLE)
-      set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-      set(LIBCXX_CXX_ABI_SYSTEM 1)
-    else()
-      set(LIBCXX_CXX_ABI_LIBNAME "default")
-    endif()
+    set(LIBCXX_CXX_ABI_LIBNAME "default")
   endif()
 else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")

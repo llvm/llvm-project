@@ -46,6 +46,15 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
   return false;
 }
 
+static StringRef GetExternalSourceContainer(const NamedDecl *D) {
+  if (!D)
+    return StringRef();
+  if (auto *attr = D->getAttr<ExternalSourceSymbolAttr>()) {
+    return attr->getDefinedIn();
+  }
+  return StringRef();
+}
+
 namespace {
 class USRGenerator : public ConstDeclVisitor<USRGenerator> {
   SmallVectorImpl<char> &Buf;
@@ -116,6 +125,8 @@ public:
     return D->getParentFunctionOrMethod() != nullptr;
   }
 
+  void GenExtSymbolContainer(const NamedDecl *D);
+
   /// Generate the string component containing the location of the
   ///  declaration.
   bool GenLoc(const Decl *D, bool IncludeOffset);
@@ -127,13 +138,14 @@ public:
   /// itself.
 
   /// Generate a USR for an Objective-C class.
-  void GenObjCClass(StringRef cls) {
-    generateUSRForObjCClass(cls, Out);
+  void GenObjCClass(StringRef cls, StringRef ext) {
+    generateUSRForObjCClass(cls, Out, ext);
   }
 
   /// Generate a USR for an Objective-C class category.
-  void GenObjCCategory(StringRef cls, StringRef cat) {
-    generateUSRForObjCCategory(cls, cat, Out);
+  void GenObjCCategory(StringRef cls, StringRef cat,
+                       StringRef clsExt, StringRef catExt) {
+    generateUSRForObjCCategory(cls, cat, Out, clsExt, catExt);
   }
 
   /// Generate a USR fragment for an Objective-C property.
@@ -142,8 +154,8 @@ public:
   }
 
   /// Generate a USR for an Objective-C protocol.
-  void GenObjCProtocol(StringRef prot) {
-    generateUSRForObjCProtocol(prot, Out);
+  void GenObjCProtocol(StringRef prot, StringRef ext) {
+    generateUSRForObjCProtocol(prot, Out, ext);
   }
 
   void VisitType(QualType T);
@@ -204,7 +216,11 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
+  const unsigned StartSize = Buf.size();
   VisitDeclContext(D->getDeclContext());
+  if (Buf.size() == StartSize)
+    GenExtSymbolContainer(D);
+
   bool IsTemplate = false;
   if (FunctionTemplateDecl *FunTmpl = D->getDescribedFunctionTemplate()) {
     IsTemplate = true;
@@ -382,7 +398,7 @@ void USRGenerator::VisitObjCContainerDecl(const ObjCContainerDecl *D) {
       llvm_unreachable("Invalid ObjC container.");
     case Decl::ObjCInterface:
     case Decl::ObjCImplementation:
-      GenObjCClass(D->getName());
+      GenObjCClass(D->getName(), GetExternalSourceContainer(D));
       break;
     case Decl::ObjCCategory: {
       const ObjCCategoryDecl *CD = cast<ObjCCategoryDecl>(D);
@@ -402,7 +418,9 @@ void USRGenerator::VisitObjCContainerDecl(const ObjCContainerDecl *D) {
         GenLoc(CD, /*IncludeOffset=*/true);
       }
       else
-        GenObjCCategory(ID->getName(), CD->getName());
+        GenObjCCategory(ID->getName(), CD->getName(),
+                        GetExternalSourceContainer(ID),
+                        GetExternalSourceContainer(CD));
 
       break;
     }
@@ -417,12 +435,16 @@ void USRGenerator::VisitObjCContainerDecl(const ObjCContainerDecl *D) {
         IgnoreResults = true;
         return;
       }
-      GenObjCCategory(ID->getName(), CD->getName());
+      GenObjCCategory(ID->getName(), CD->getName(),
+                      GetExternalSourceContainer(ID),
+                      GetExternalSourceContainer(CD));
       break;
     }
-    case Decl::ObjCProtocol:
-      GenObjCProtocol(cast<ObjCProtocolDecl>(D)->getName());
+    case Decl::ObjCProtocol: {
+      const ObjCProtocolDecl *PD = cast<ObjCProtocolDecl>(D);
+      GenObjCProtocol(PD->getName(), GetExternalSourceContainer(PD));
       break;
+    }
   }
 }
 
@@ -451,6 +473,8 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   if (!isa<EnumDecl>(D) &&
       ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
+
+  GenExtSymbolContainer(D);
 
   D = D->getCanonicalDecl();
   VisitDeclContext(D->getDeclContext());
@@ -542,6 +566,12 @@ void USRGenerator::VisitTypedefDecl(const TypedefDecl *D) {
 
 void USRGenerator::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   GenLoc(D, /*IncludeOffset=*/true);
+}
+
+void USRGenerator::GenExtSymbolContainer(const NamedDecl *D) {
+  StringRef Container = GetExternalSourceContainer(D);
+  if (!Container.empty())
+    Out << "@M@" << Container;
 }
 
 bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
@@ -866,12 +896,27 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
 // USR generation functions.
 //===----------------------------------------------------------------------===//
 
-void clang::index::generateUSRForObjCClass(StringRef Cls, raw_ostream &OS) {
+void clang::index::generateUSRForObjCClass(StringRef Cls, raw_ostream &OS,
+                                           StringRef ExtSymDefinedIn) {
+  if (!ExtSymDefinedIn.empty())
+    OS << "@M@" << ExtSymDefinedIn << '@';
   OS << "objc(cs)" << Cls;
 }
 
 void clang::index::generateUSRForObjCCategory(StringRef Cls, StringRef Cat,
-                                              raw_ostream &OS) {
+                                              raw_ostream &OS,
+                                              StringRef ClsSymDefinedIn,
+                                              StringRef CatSymDefinedIn) {
+  if (!CatSymDefinedIn.empty() || !ClsSymDefinedIn.empty()) {
+    OS << "@M@";
+    if (!CatSymDefinedIn.empty() && !ClsSymDefinedIn.empty())
+      OS << CatSymDefinedIn << '-' << ClsSymDefinedIn;
+    else if (!CatSymDefinedIn.empty())
+      OS << CatSymDefinedIn;
+    else
+      OS << ClsSymDefinedIn;
+    OS << '@';
+  }
   OS << "objc(cy)" << Cls << '@' << Cat;
 }
 
@@ -890,8 +935,18 @@ void clang::index::generateUSRForObjCProperty(StringRef Prop, bool isClassProp,
   OS << (isClassProp ? "(cpy)" : "(py)") << Prop;
 }
 
-void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS) {
+void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS,
+                                              StringRef ExtSymDefinedIn) {
+  if (!ExtSymDefinedIn.empty())
+    OS << "@M@" << ExtSymDefinedIn << '@';
   OS << "objc(pl)" << Prot;
+}
+
+void clang::index::generateUSRForGlobalEnum(StringRef EnumName, raw_ostream &OS,
+                                            StringRef ExtSymDefinedIn) {
+  if (!ExtSymDefinedIn.empty())
+    OS << "@M@" << ExtSymDefinedIn;
+  OS << "@E@" << EnumName;
 }
 
 bool clang::index::generateUSRForDecl(const Decl *D,

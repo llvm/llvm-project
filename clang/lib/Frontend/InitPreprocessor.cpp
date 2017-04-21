@@ -882,14 +882,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // The value written by __atomic_test_and_set.
     // FIXME: This is target-dependent.
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
+  }
 
+  auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
     unsigned InlineWidthBits = TI.getMaxAtomicInlineWidth();
-#define DEFINE_LOCK_FREE_MACRO(TYPE, Type) \
-    Builder.defineMacro("__GCC_ATOMIC_" #TYPE "_LOCK_FREE", \
-                        getLockFreeValue(TI.get##Type##Width(), \
-                                         TI.get##Type##Align(), \
-                                         InlineWidthBits));
+#define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
+  Builder.defineMacro(Prefix + #TYPE "_LOCK_FREE",                             \
+                      getLockFreeValue(TI.get##Type##Width(),                  \
+                                       TI.get##Type##Align(),                  \
+                                       InlineWidthBits));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
     DEFINE_LOCK_FREE_MACRO(CHAR16_T, Char16);
@@ -899,12 +901,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DEFINE_LOCK_FREE_MACRO(INT, Int);
     DEFINE_LOCK_FREE_MACRO(LONG, Long);
     DEFINE_LOCK_FREE_MACRO(LLONG, LongLong);
-    Builder.defineMacro("__GCC_ATOMIC_POINTER_LOCK_FREE",
+    Builder.defineMacro(Prefix + "POINTER_LOCK_FREE",
                         getLockFreeValue(TI.getPointerWidth(0),
                                          TI.getPointerAlign(0),
                                          InlineWidthBits));
 #undef DEFINE_LOCK_FREE_MACRO
-  }
+  };
+  addLockFreeMacros("__CLANG_ATOMIC_");
+  if (!LangOpts.MSVCCompat)
+    addLockFreeMacros("__GCC_ATOMIC_");
 
   if (LangOpts.NoInlineDefine)
     Builder.defineMacro("__NO_INLINE__");

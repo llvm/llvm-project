@@ -311,10 +311,10 @@ class Configuration(object):
             # NOTE: We do not test for the -verify flag directly because
             #   -verify will always exit with non-zero on an empty file.
             self.use_clang_verify = self.cxx.isVerifySupported()
-            if self.use_clang_verify:
-                self.config.available_features.add('verify-support')
             self.lit_config.note(
                 "inferred use_clang_verify as: %r" % self.use_clang_verify)
+        if self.use_clang_verify:
+                self.config.available_features.add('verify-support')
 
     def configure_use_thread_safety(self):
         '''If set, run clang with -verify on failing tests.'''
@@ -414,7 +414,11 @@ class Configuration(object):
         if self.is_windows:
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
-                # LIBCXX-WINDOWS-FIXME is a
+                # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
+                # initial Windows failures until they can be properly diagnosed
+                # and fixed. This allows easier detection of new test failures
+                # and regressions. Note: New failures should not be suppressed
+                # using this feature. (Also see llvm.org/PR32730)
                 self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
         # Attempt to detect the glibc version by querying for __GLIBC__
@@ -482,8 +486,6 @@ class Configuration(object):
             self.cxx.flags += ['-m32']
         # Use verbose output for better errors
         self.cxx.flags += ['-v']
-        if self.is_windows:
-            self.cxx.link_flags += ['-Wl,-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
             self.cxx.flags += ['--sysroot', sysroot]

@@ -10,11 +10,6 @@
 // UNSUPPORTED: libcxxabi-no-threads
 // REQUIRES: linux
 
-// this test will only work if CMake detects a real __cxa_thread_atexit_impl
-// at configure time. This function, however, was added only in glibc 2.18,
-// and there are still plenty of systems only using 2.17 (Ex RHEL 7).
-// XFAIL: libcxxabi-no-cxa-thread-atexit-impl
-
 #include <assert.h>
 #include <cxxabi.h>
 

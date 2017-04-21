@@ -108,13 +108,8 @@ public:
   std::vector<Chunk *> LocalImportChunks;
 
 private:
-  void readArchive();
-  void readObjects();
-
   std::pair<Symbol *, bool> insert(StringRef Name);
   StringRef findByPrefix(StringRef Prefix);
-
-  void addCombinedLTOObject(ObjectFile *Obj);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> Symtab;
 

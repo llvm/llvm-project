@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// exception_ptr has not been implemented on Windows
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <exception>
 
 // typedef unspecified exception_ptr;
