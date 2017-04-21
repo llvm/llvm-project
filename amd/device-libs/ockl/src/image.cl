@@ -640,6 +640,34 @@ OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
     return __llvm_amdgcn_image_sample_l_v4f16_v4f32((float4)(c.x, c.y, c.z, l), LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
+RATTR float4
+OCKL_MANGLE_T(image_gather4r,2D)(TSHARP i, SSHARP s, float2 c)
+{
+    ADJUST_XY(c, i, s);
+    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, false);
+}
+
+RATTR float4
+OCKL_MANGLE_T(image_gather4g,2D)(TSHARP i, SSHARP s, float2 c)
+{
+    ADJUST_XY(c, i, s);
+    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x2, false, false, false, false, false);
+}
+
+RATTR float4
+OCKL_MANGLE_T(image_gather4b,2D)(TSHARP i, SSHARP s, float2 c)
+{
+    ADJUST_XY(c, i, s);
+    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x4, false, false, false, false, false);
+}
+
+RATTR float4
+OCKL_MANGLE_T(image_gather4a,2D)(TSHARP i, SSHARP s, float2 c)
+{
+    ADJUST_XY(c, i, s);
+    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x8, false, false, false, false, false);
+}
+
 // We rely on the fact that the runtime allocates 12 words for the T# or V#
 // and fills words 8, 9, and 10 with the data we need to answer all of the queries
 

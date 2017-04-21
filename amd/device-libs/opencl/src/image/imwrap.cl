@@ -7,6 +7,7 @@
 
 #include "irif.h"
 #include "ockl.h"
+#include "oclc.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_mipmap_image : enable
@@ -237,6 +238,7 @@ static __constant int channel_data_type_map[32] = {
 #define RATTR __attribute__((overloadable, always_inline, pure))
 #define WATTR __attribute__((overloadable, always_inline))
 #define GATTR __attribute__((overloadable, always_inline, const))
+#define FATTR __attribute__((always_inline, pure))
 
 #define SGEN(IT,PT,CT) \
 RATTR IT##_##PT##_pty \
@@ -571,4 +573,136 @@ GNYGEN(_2Da)
 GNYGEN(_2Dd)
 GNYGEN(_2Dad)
 GNYGEN(_3D)
+
+FATTR float4
+amd_fetch4_ff(read_only image2d_t im, float2 coord, int comp)
+{
+    sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
+    switch (comp) {
+    case 1:  return __ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    case 2:  return __ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    case 3:  return __ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    default: return __ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    }
+}
+
+FATTR float4
+amd_fetch4_fsf(read_only image2d_t im, sampler_t s, float2 coord, int comp)
+{
+    switch (comp) {
+    case 1:  return __ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    case 2:  return __ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    case 3:  return __ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    default: return __ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord);
+    }
+}
+
+FATTR float4
+amd_fetch4_fi(read_only image2d_t im, int2 coord, int comp)
+{
+    sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
+    float2 fcoord = convert_float2(coord);
+    switch (comp) {
+    case 1:  return __ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    case 2:  return __ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    case 3:  return __ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    default: return __ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    }
+}
+
+FATTR float4
+amd_fetch4_fsi(read_only image2d_t im, sampler_t s, int2 coord, int comp)
+{
+    float2 fcoord = convert_float2(coord);
+    switch (comp) {
+    case 1:  return __ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    case 2:  return __ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    case 3:  return __ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    default: return __ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord);
+    }
+}
+
+FATTR int4
+amd_fetch4_if(read_only image2d_t im, float2 coord, int comp)
+{
+    sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
+    if (__oclc_ISA_version() < 900) {
+        coord -= 0.5f;
+    }
+    switch (comp) {
+    case 1:  return as_int4(__ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    case 2:  return as_int4(__ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    case 3:  return as_int4(__ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    default: return as_int4(__ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    }
+}
+
+FATTR int4
+amd_fetch4_isf(read_only image2d_t im, sampler_t s, float2 coord, int comp)
+{
+    if (__oclc_ISA_version() < 900) {
+        coord -= 0.5f;
+    }
+    switch (comp) {
+    case 1:  return as_int4(__ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    case 2:  return as_int4(__ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    case 3:  return as_int4(__ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    default: return as_int4(__ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), coord));
+    }
+}
+
+FATTR int4
+amd_fetch4_ii(read_only image2d_t im, int2 coord, int comp)
+{
+    sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
+    float2 fcoord = convert_float2(coord);
+    if (__oclc_ISA_version() < 900) {
+        fcoord -= 0.5f;
+    }
+    switch (comp) {
+    case 1:  return as_int4(__ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    case 2:  return as_int4(__ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    case 3:  return as_int4(__ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    default: return as_int4(__ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    }
+}
+
+FATTR int4
+amd_fetch4_isi(read_only image2d_t im, sampler_t s, int2 coord, int comp)
+{
+    float2 fcoord = convert_float2(coord);
+    if (__oclc_ISA_version() < 900) {
+        fcoord -= 0.5f;
+    }
+    switch (comp) {
+    case 1:  return as_int4(__ockl_image_gather4g_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    case 2:  return as_int4(__ockl_image_gather4b_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    case 3:  return as_int4(__ockl_image_gather4a_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    default: return as_int4(__ockl_image_gather4r_2D(LOWER_ro_2D(im), LOWER_sampler(s), fcoord));
+    }
+}
+
+FATTR uint4
+amd_fetch4_uf(read_only image2d_t im, float2 coord, int comp)
+{
+    return as_uint4(amd_fetch4_if(im, coord, comp));
+}
+
+FATTR uint4
+amd_fetch4_usf(read_only image2d_t im, sampler_t s, float2 coord, int comp)
+{
+    return as_uint4(amd_fetch4_isf(im, s, coord, comp));
+}
+
+FATTR uint4
+amd_fetch4_ui(read_only image2d_t im, int2 coord, int comp)
+{
+    return as_uint4(amd_fetch4_ii(im, coord, comp));
+}
+
+FATTR uint4
+amd_fetch4_usi(read_only image2d_t im, sampler_t s, int2 coord, int comp)
+{
+    return as_uint4(amd_fetch4_isi(im, s, coord, comp));
+}
 
