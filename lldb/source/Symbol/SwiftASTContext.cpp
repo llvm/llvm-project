@@ -990,17 +990,12 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
   assert(swift_ast_ctx);
   if (enum_decl == ast->getImplicitlyUnwrappedOptionalDecl()) {
     swift::EnumDecl *optional_decl = ast->getOptionalDecl();
-    swift::Type optional_type = optional_decl->getDeclaredType();
-    CompilerType optional_compiler_type(ast, optional_type.getPointer());
-    CompilerType iou_compiler_type(ast, swift_can_type.getPointer());
-    lldb::TemplateArgumentKind kind;
-    CompilerType iou_arg_type = iou_compiler_type.GetTemplateArgument(0, kind);
-    std::vector<CompilerType> args = {iou_arg_type};
-    SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
-    CompilerType bound_optional_type =
-        swift_ast_ctx->BindGenericType(optional_compiler_type, args, true);
     swift::CanType bound_optional_can_type =
-        GetCanonicalSwiftType(bound_optional_type.GetOpaqueQualType());
+        swift::BoundGenericType::get(
+            optional_decl,
+            swift::Type(),
+            swift::cast<swift::BoundGenericType>(swift_can_type)
+                ->getGenericArgs())->getCanonicalType();
     return CreateDescriptor(ast, bound_optional_can_type, optional_decl);
   }
   swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
