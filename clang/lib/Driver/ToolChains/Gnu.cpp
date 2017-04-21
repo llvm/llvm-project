@@ -1747,7 +1747,9 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
   static const char *const ARMTriples[] = {"arm-linux-gnueabi",
                                            "arm-linux-androideabi"};
   static const char *const ARMHFTriples[] = {"arm-linux-gnueabihf",
-                                             "armv7hl-redhat-linux-gnueabi"};
+                                             "armv7hl-redhat-linux-gnueabi",
+                                             "armv6hl-suse-linux-gnueabi",
+                                             "armv7hl-suse-linux-gnueabi"};
   static const char *const ARMebLibDirs[] = {"/lib"};
   static const char *const ARMebTriples[] = {"armeb-linux-gnueabi",
                                              "armeb-linux-androideabi"};

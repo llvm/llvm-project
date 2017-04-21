@@ -908,8 +908,8 @@ private:
 class Formatter : public TokenAnalyzer {
 public:
   Formatter(const Environment &Env, const FormatStyle &Style,
-            bool *IncompleteFormat)
-      : TokenAnalyzer(Env, Style), IncompleteFormat(IncompleteFormat) {}
+            FormattingAttemptStatus *Status)
+      : TokenAnalyzer(Env, Style), Status(Status) {}
 
   tooling::Replacements
   analyze(TokenAnnotator &Annotator,
@@ -931,7 +931,7 @@ public:
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
     UnwrappedLineFormatter(&Indenter, &Whitespaces, Style, Tokens.getKeywords(),
-                           IncompleteFormat)
+                           Env.getSourceManager(), Status)
         .format(AnnotatedLines);
     for (const auto &R : Whitespaces.generateReplacements())
       if (Result.add(R))
@@ -1013,7 +1013,7 @@ private:
   }
 
   bool BinPackInconclusiveFunctions;
-  bool *IncompleteFormat;
+  FormattingAttemptStatus *Status;
 };
 
 // This class clean up the erroneous/redundant code around the given ranges in
@@ -1830,7 +1830,8 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
 
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                ArrayRef<tooling::Range> Ranges,
-                               StringRef FileName, bool *IncompleteFormat) {
+                               StringRef FileName,
+                               FormattingAttemptStatus *Status) {
   FormatStyle Expanded = expandPresets(Style);
   if (Expanded.DisableFormat)
     return tooling::Replacements();
@@ -1846,11 +1847,11 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
         auto NewEnv = Environment::CreateVirtualEnvironment(
             *NewCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges));
-        Formatter Format(*NewEnv, Expanded, IncompleteFormat);
+        Formatter Format(*NewEnv, Expanded, Status);
         return Fixes.merge(Format.process());
       }
     }
-    Formatter Format(*Env, Expanded, IncompleteFormat);
+    Formatter Format(*Env, Expanded, Status);
     return Format.process();
   };
 
@@ -1866,7 +1867,7 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
     return reformatAfterApplying(Requoter);
   }
 
-  Formatter Format(*Env, Expanded, IncompleteFormat);
+  Formatter Format(*Env, Expanded, Status);
   return Format.process();
 }
 
@@ -1877,6 +1878,16 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   Cleaner Clean(*Env, Style);
   return Clean.process();
+}
+
+tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
+                               ArrayRef<tooling::Range> Ranges,
+                               StringRef FileName, bool *IncompleteFormat) {
+  FormattingAttemptStatus Status;
+  auto Result = reformat(Style, Code, Ranges, FileName, &Status);
+  if (!Status.FormatComplete)
+    *IncompleteFormat = true;
+  return Result;
 }
 
 tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,

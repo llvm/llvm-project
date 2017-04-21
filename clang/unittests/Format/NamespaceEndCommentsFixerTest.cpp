@@ -23,7 +23,7 @@ class NamespaceEndCommentsFixerTest : public ::testing::Test {
 protected:
   std::string
   fixNamespaceEndComments(llvm::StringRef Code,
-                          std::vector<tooling::Range> Ranges,
+                          const std::vector<tooling::Range> &Ranges,
                           const FormatStyle &Style = getLLVMStyle()) {
     DEBUG(llvm::errs() << "---\n");
     DEBUG(llvm::errs() << Code << "\n\n");

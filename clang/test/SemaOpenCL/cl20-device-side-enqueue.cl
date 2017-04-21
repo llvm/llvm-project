@@ -1,12 +1,14 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir-unknown-unknown" -verify -pedantic -fsyntax-only -DB32
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir64-unknown-unknown" -verify -pedantic -fsyntax-only -Wconversion -DWCONV
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir-unknown-unknown" -verify -pedantic -fsyntax-only -DB32 -DQUALS=
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir-unknown-unknown" -verify -pedantic -fsyntax-only -DB32 -DQUALS="const volatile"
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir64-unknown-unknown" -verify -pedantic -fsyntax-only -Wconversion -DWCONV -DQUALS=
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir64-unknown-unknown" -verify -pedantic -fsyntax-only -Wconversion -DWCONV -DQUALS="const volatile"
 
 typedef struct {int a;} ndrange_t;
 // Diagnostic tests for different overloads of enqueue_kernel from Table 6.13.17.1 of OpenCL 2.0 Spec.
 kernel void enqueue_kernel_tests() {
   queue_t default_queue;
   unsigned flags = 0;
-  ndrange_t ndrange;
+  QUALS ndrange_t ndrange;
   clk_event_t evt;
   clk_event_t event_wait_list;
   clk_event_t event_wait_list2[] = {evt, evt};

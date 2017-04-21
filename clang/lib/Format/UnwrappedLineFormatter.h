@@ -32,9 +32,11 @@ public:
                          WhitespaceManager *Whitespaces,
                          const FormatStyle &Style,
                          const AdditionalKeywords &Keywords,
-                         bool *IncompleteFormat)
+                         const SourceManager &SourceMgr,
+                         FormattingAttemptStatus *Status)
       : Indenter(Indenter), Whitespaces(Whitespaces), Style(Style),
-        Keywords(Keywords), IncompleteFormat(IncompleteFormat) {}
+        Keywords(Keywords), SourceMgr(SourceMgr),
+        Status(Status) {}
 
   /// \brief Format the current block and return the penalty.
   unsigned format(const SmallVectorImpl<AnnotatedLine *> &Lines,
@@ -63,7 +65,8 @@ private:
   WhitespaceManager *Whitespaces;
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
-  bool *IncompleteFormat;
+  const SourceManager &SourceMgr;
+  FormattingAttemptStatus *Status;
 };
 } // end namespace format
 } // end namespace clang
