@@ -236,7 +236,7 @@ class MVT {
     // A class to represent the number of elements in a vector
     //
     // For fixed-length vectors, the total number of elements is equal to 'Min'
-    // For scalable vectors, the total number of elements is a multiple of 'Min'
+    // For scalable vectors, the total number of elements is a multiple of 'Min'
     class ElementCount {
     public:
       unsigned Min;

@@ -31,6 +31,8 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+#define DEBUG_TYPE "dwarfdebug"
+
 //===----------------------------------------------------------------------===//
 // DIEAbbrevData Implementation
 //===----------------------------------------------------------------------===//
@@ -79,15 +81,22 @@ void DIEAbbrev::Emit(const AsmPrinter *AP) const {
                     dwarf::AttributeString(AttrData.getAttribute()).data());
 
     // Emit form type.
+#ifndef NDEBUG
+    // Could be an assertion, but this way we can see the failing form code
+    // easily, which helps track down where it came from.
+    if (!dwarf::isValidFormForVersion(AttrData.getForm(),
+                                      AP->getDwarfVersion())) {
+      DEBUG(dbgs() << "Invalid form " << format("0x%x", AttrData.getForm())
+                   << " for DWARF version " << AP->getDwarfVersion() << "\n");
+      llvm_unreachable("Invalid form for specified DWARF version");
+    }
+#endif
     AP->EmitULEB128(AttrData.getForm(),
                     dwarf::FormEncodingString(AttrData.getForm()).data());
 
     // Emit value for DW_FORM_implicit_const.
-    if (AttrData.getForm() == dwarf::DW_FORM_implicit_const) {
-      assert(AP->getDwarfVersion() >= 5 &&
-            "DW_FORM_implicit_const is supported starting from DWARFv5");
+    if (AttrData.getForm() == dwarf::DW_FORM_implicit_const)
       AP->EmitSLEB128(AttrData.getValue());
-    }
   }
 
   // Mark end of abbreviation.

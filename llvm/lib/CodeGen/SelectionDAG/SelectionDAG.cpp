@@ -639,11 +639,14 @@ void SelectionDAG::DeallocateNode(SDNode *N) {
   // If we have operands, deallocate them.
   removeOperands(N);
 
+  NodeAllocator.Deallocate(AllNodes.remove(N));
+
   // Set the opcode to DELETED_NODE to help catch bugs when node
   // memory is reallocated.
+  // FIXME: There are places in SDag that have grown a dependency on the opcode
+  // value in the released node.
+  __asan_unpoison_memory_region(&N->NodeType, sizeof(N->NodeType));
   N->NodeType = ISD::DELETED_NODE;
-
-  NodeAllocator.Deallocate(AllNodes.remove(N));
 
   // If any of the SDDbgValue nodes refer to this SDNode, invalidate
   // them and forget about that node.
@@ -1826,7 +1829,7 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
       std::max((unsigned)getDataLayout().getPrefTypeAlignment(Ty), minAlign);
 
   int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-  return getFrameIndex(FrameIdx, TLI->getPointerTy(getDataLayout()));
+  return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
 
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
@@ -1839,7 +1842,7 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
 
   MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
   int FrameIdx = MFI.CreateStackObject(Bytes, Align, false);
-  return getFrameIndex(FrameIdx, TLI->getPointerTy(getDataLayout()));
+  return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
 
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,

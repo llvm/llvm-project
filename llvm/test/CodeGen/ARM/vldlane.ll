@@ -150,6 +150,22 @@ define <2 x i32> @vld2lanei32_update(i32** %ptr, <2 x i32>* %B) nounwind {
 	ret <2 x i32> %tmp5
 }
 
+define <2 x i32> @vld2lanei32_odd_update(i32** %ptr, <2 x i32>* %B) nounwind {
+;CHECK-LABEL: vld2lanei32_odd_update:
+;CHECK: mov [[INC:r[0-9]+]], #12
+;CHECK: vld2.32 {d16[1], d17[1]}, [{{r[0-9]+}}], [[INC]]
+	%A = load i32*, i32** %ptr
+	%tmp0 = bitcast i32* %A to i8*
+	%tmp1 = load <2 x i32>, <2 x i32>* %B
+	%tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
+	%tmp3 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 0
+	%tmp4 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 1
+	%tmp5 = add <2 x i32> %tmp3, %tmp4
+	%tmp6 = getelementptr i32, i32* %A, i32 3
+	store i32* %tmp6, i32** %ptr
+	ret <2 x i32> %tmp5
+}
+
 define <2 x float> @vld2lanef(float* %A, <2 x float>* %B) nounwind {
 ;CHECK-LABEL: vld2lanef:
 ;CHECK: vld2.32

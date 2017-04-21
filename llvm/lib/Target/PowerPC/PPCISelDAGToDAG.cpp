@@ -2977,10 +2977,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
             SelectAddrIdxOnly(LD->getBasePtr(), Base, Offset)) {
           SDValue Chain = LD->getChain();
           SDValue Ops[] = { Base, Offset, Chain };
-          SDNode *NewN = CurDAG->SelectNodeTo(N, PPC::LXVDSX,
-                                              N->getValueType(0), Ops);
           MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
           MemOp[0] = LD->getMemOperand();
+          SDNode *NewN = CurDAG->SelectNodeTo(N, PPC::LXVDSX,
+                                              N->getValueType(0), Ops);
           cast<MachineSDNode>(NewN)->setMemRefs(MemOp, MemOp + 1);
           return;
         }

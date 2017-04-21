@@ -1783,6 +1783,14 @@ int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return Offset + FPDelta;
 }
 
+int X86FrameLowering::getFrameIndexReferenceSP(const MachineFunction &MF,
+                                               int FI, unsigned &FrameReg,
+                                               int Adjustment) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  FrameReg = TRI->getStackRegister();
+  return MFI.getObjectOffset(FI) - getOffsetOfLocalArea() + Adjustment;
+}
+
 int
 X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
                                                  int FI, unsigned &FrameReg,
@@ -1839,9 +1847,6 @@ X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   assert(MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta() >= 0 &&
          "we don't handle this case!");
 
-  // Fill in FrameReg output argument.
-  FrameReg = TRI->getStackRegister();
-
   // This is how the math works out:
   //
   //  %rsp grows (i.e. gets lower) left to right. Each box below is
@@ -1866,12 +1871,8 @@ X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   // (C - E) == (C - A) - (B - A) + (B - E)
   //            { Using [1], [2] and [3] above }
   //         == getObjectOffset - LocalAreaOffset + StackSize
-  //
 
-  // Get the Offset from the StackPointer
-  int Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
-
-  return Offset + StackSize;
+  return getFrameIndexReferenceSP(MF, FI, FrameReg, StackSize);
 }
 
 bool X86FrameLowering::assignCalleeSavedSpillSlots(

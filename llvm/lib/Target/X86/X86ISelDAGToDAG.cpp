@@ -1311,8 +1311,9 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       ++Cost;
     // If the base is a register with multiple uses, this
     // transformation may save a mov.
-    if ((AM.BaseType == X86ISelAddressMode::RegBase &&
-         AM.Base_Reg.getNode() &&
+    // FIXME: Don't rely on DELETED_NODEs.
+    if ((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
+         AM.Base_Reg->getOpcode() != ISD::DELETED_NODE &&
          !AM.Base_Reg.getNode()->hasOneUse()) ||
         AM.BaseType == X86ISelAddressMode::FrameIndexBase)
       --Cost;

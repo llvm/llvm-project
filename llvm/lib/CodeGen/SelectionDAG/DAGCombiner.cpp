@@ -16126,11 +16126,14 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   // compared to the size and offset of the access, we may be able to prove they
   // do not alias. This check is conservative for now to catch cases created by
   // splitting vector types.
-  if ((Op0->getOriginalAlignment() == Op1->getOriginalAlignment()) &&
-      (Op0->getSrcValueOffset() != Op1->getSrcValueOffset()) &&
-      (NumBytes0 == NumBytes1) && (Op0->getOriginalAlignment() > NumBytes0)) {
-    int64_t OffAlign0 = Op0->getSrcValueOffset() % Op0->getOriginalAlignment();
-    int64_t OffAlign1 = Op1->getSrcValueOffset() % Op1->getOriginalAlignment();
+  int64_t SrcValOffset0 = Op0->getSrcValueOffset();
+  int64_t SrcValOffset1 = Op1->getSrcValueOffset();
+  unsigned OrigAlignment0 = Op0->getOriginalAlignment();
+  unsigned OrigAlignment1 = Op1->getOriginalAlignment();
+  if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
+      NumBytes0 == NumBytes1 && OrigAlignment0 > NumBytes0) {
+    int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0;
+    int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1;
 
     // There is no overlap between these relatively aligned accesses of similar
     // size. Return no alias.
@@ -16151,10 +16154,9 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   if (UseAA &&
       Op0->getMemOperand()->getValue() && Op1->getMemOperand()->getValue()) {
     // Use alias analysis information.
-    int64_t MinOffset = std::min(Op0->getSrcValueOffset(),
-                                 Op1->getSrcValueOffset());
-    int64_t Overlap0 = NumBytes0 + Op0->getSrcValueOffset() - MinOffset;
-    int64_t Overlap1 = NumBytes1 + Op1->getSrcValueOffset() - MinOffset;
+    int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
+    int64_t Overlap0 = NumBytes0 + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = NumBytes1 + SrcValOffset1 - MinOffset;
     AliasResult AAResult =
         AA.alias(MemoryLocation(Op0->getMemOperand()->getValue(), Overlap0,
                                 UseTBAA ? Op0->getAAInfo() : AAMDNodes()),

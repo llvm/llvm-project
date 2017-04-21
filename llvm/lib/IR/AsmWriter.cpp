@@ -1103,35 +1103,34 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
-    if (&CFP->getValueAPF().getSemantics() == &APFloat::IEEEsingle() ||
-        &CFP->getValueAPF().getSemantics() == &APFloat::IEEEdouble()) {
+    const APFloat &APF = CFP->getValueAPF();
+    if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
+        &APF.getSemantics() == &APFloat::IEEEdouble()) {
       // We would like to output the FP constant value in exponential notation,
       // but we cannot do this if doing so will lose precision.  Check here to
       // make sure that we only output it in exponential format if we can parse
       // the value back and get the same value.
       //
       bool ignored;
-      bool isDouble = &CFP->getValueAPF().getSemantics()==&APFloat::IEEEdouble();
-      bool isInf = CFP->getValueAPF().isInfinity();
-      bool isNaN = CFP->getValueAPF().isNaN();
+      bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
+      bool isInf = APF.isInfinity();
+      bool isNaN = APF.isNaN();
       if (!isInf && !isNaN) {
-        double Val = isDouble ? CFP->getValueAPF().convertToDouble() :
-                                CFP->getValueAPF().convertToFloat();
+        double Val = isDouble ? APF.convertToDouble() : APF.convertToFloat();
         SmallString<128> StrVal;
-        raw_svector_ostream(StrVal) << Val;
-
+        APF.toString(StrVal, 6, 0, false);
         // Check to make sure that the stringized number is not some string like
         // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
         // that the string matches the "[-+]?[0-9]" regex.
         //
-        if ((StrVal[0] >= '0' && StrVal[0] <= '9') ||
-            ((StrVal[0] == '-' || StrVal[0] == '+') &&
-             (StrVal[1] >= '0' && StrVal[1] <= '9'))) {
-          // Reparse stringized version!
-          if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
-            Out << StrVal;
-            return;
-          }
+        assert(((StrVal[0] >= '0' && StrVal[0] <= '9') ||
+                ((StrVal[0] == '-' || StrVal[0] == '+') &&
+                 (StrVal[1] >= '0' && StrVal[1] <= '9'))) &&
+               "[-+]?[0-9] regex does not match!");
+        // Reparse stringized version!
+        if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
+          Out << StrVal;
+          return;
         }
       }
       // Otherwise we could not reparse it to exactly the same value, so we must
@@ -1140,7 +1139,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       // x86, so we must not use these types.
       static_assert(sizeof(double) == sizeof(uint64_t),
                     "assuming that double is 64 bits!");
-      APFloat apf = CFP->getValueAPF();
+      APFloat apf = APF;
       // Floats are represented in ASCII IR as double, convert.
       if (!isDouble)
         apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
@@ -1153,27 +1152,27 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     // These appear as a magic letter identifying the type, then a
     // fixed number of hex digits.
     Out << "0x";
-    APInt API = CFP->getValueAPF().bitcastToAPInt();
-    if (&CFP->getValueAPF().getSemantics() == &APFloat::x87DoubleExtended()) {
+    APInt API = APF.bitcastToAPInt();
+    if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
       Out << 'K';
       Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
                                   /*Upper=*/true);
       Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                   /*Upper=*/true);
       return;
-    } else if (&CFP->getValueAPF().getSemantics() == &APFloat::IEEEquad()) {
+    } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
       Out << 'L';
       Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                   /*Upper=*/true);
       Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
                                   /*Upper=*/true);
-    } else if (&CFP->getValueAPF().getSemantics() == &APFloat::PPCDoubleDouble()) {
+    } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
       Out << 'M';
       Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
                                   /*Upper=*/true);
       Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
                                   /*Upper=*/true);
-    } else if (&CFP->getValueAPF().getSemantics() == &APFloat::IEEEhalf()) {
+    } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
       Out << 'H';
       Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                   /*Upper=*/true);

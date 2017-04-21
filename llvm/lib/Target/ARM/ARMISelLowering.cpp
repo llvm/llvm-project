@@ -3358,8 +3358,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
 
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
                                  const ARMSubtarget *Subtarget) {
-  // FIXME: handle "fence singlethread" more efficiently.
   SDLoc dl(Op);
+  ConstantSDNode *ScopeN = cast<ConstantSDNode>(Op.getOperand(2));
+  auto Scope = static_cast<SynchronizationScope>(ScopeN->getZExtValue());
+  if (Scope == SynchronizationScope::SingleThread)
+    return Op;
+
   if (!Subtarget->hasDataBarrier()) {
     // Some ARMv6 cpus can support data barriers with an mcr instruction.
     // Thumb1 and pre-v6 ARM mode use a libcall instead and should never get
@@ -10873,11 +10877,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
 
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
-    if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint64_t IncVal = CInc->getZExtValue();
-      if (IncVal != NumBytes)
-        continue;
-    } else if (NumBytes >= 3 * 16) {
+    ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode());
+    if (NumBytes >= 3 * 16 && (!CInc || CInc->getZExtValue() != NumBytes)) {
       // VLD3/4 and VST3/4 for 128-bit vectors are implemented with two
       // separate instructions that make it harder to use a non-constant update.
       continue;

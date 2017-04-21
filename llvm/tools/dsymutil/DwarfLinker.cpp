@@ -522,7 +522,8 @@ public:
 
   /// \brief Emit the abbreviation table \p Abbrevs to the
   /// debug_abbrev section.
-  void emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs);
+  void emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
+                   unsigned DwarfVersion);
 
   /// \brief Emit the string table described by \p Pool.
   void emitStrings(const NonRelocatableStringpool &Pool);
@@ -690,8 +691,10 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
 /// \brief Emit the \p Abbrevs array as the shared abbreviation table
 /// for the linked Dwarf file.
 void DwarfStreamer::emitAbbrevs(
-    const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs) {
+    const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
+    unsigned DwarfVersion) {
   MS->SwitchSection(MOFI->getDwarfAbbrevSection());
+  MC->setDwarfVersion(DwarfVersion);
   Asm->emitDwarfAbbrevs(Abbrevs);
 }
 
@@ -1129,6 +1132,12 @@ private:
   /// \brief Called at the end of a debug object link.
   void endDebugObject();
 
+  /// Remembers the newest DWARF version we've seen in a unit.
+  void maybeUpdateMaxDwarfVersion(unsigned Version) {
+    if (MaxDwarfVersion < Version)
+      MaxDwarfVersion = Version;
+  }
+
   /// Keeps track of relocations.
   class RelocationManager {
     struct ValidReloc {
@@ -1430,6 +1439,7 @@ private:
   std::unique_ptr<DwarfStreamer> Streamer;
   uint64_t OutputDebugInfoSize;
   unsigned UnitID; ///< A unique ID that identifies each compile unit.
+  unsigned MaxDwarfVersion = 0;
 
   /// The units of the current debug map object.
   std::vector<std::unique_ptr<CompileUnit>> Units;
@@ -3435,9 +3445,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
         CUDie.dump(outs(), 0);
       }
 
-      if (!registerModuleReference(CUDie, *CU, ModuleMap))
+      if (!registerModuleReference(CUDie, *CU, ModuleMap)) {
         Units.push_back(llvm::make_unique<CompileUnit>(*CU, UnitID++,
                                                        !Options.NoODR, ""));
+        maybeUpdateMaxDwarfVersion(CU->getVersion());
+      }
     }
 
     // Now build the DIE parent links that we will use during the next phase.
@@ -3471,7 +3483,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
 
   // Emit everything that's global.
   if (!Options.NoOutput) {
-    Streamer->emitAbbrevs(Abbreviations);
+    Streamer->emitAbbrevs(Abbreviations, MaxDwarfVersion);
     Streamer->emitStrings(StringPool);
   }
 

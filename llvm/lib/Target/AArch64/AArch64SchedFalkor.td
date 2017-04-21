@@ -79,14 +79,14 @@ def : WriteRes<WriteIM64,  [FalkorUnitX]> { let Latency = 5; }
 def : WriteRes<WriteBr,    [FalkorUnitB]> { let Latency = 1; }
 def : WriteRes<WriteBrReg, [FalkorUnitB]> { let Latency = 1; }
 def : WriteRes<WriteLD,    [FalkorUnitLD]> { let Latency = 3; }
-def : WriteRes<WriteST,    [FalkorUnitLD, FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 3; let NumMicroOps = 3; }
+def : WriteRes<WriteST,    [FalkorUnitST, FalkorUnitSD]>
+      { let Latency = 0; let NumMicroOps = 2; }
 def : WriteRes<WriteSTP,   [FalkorUnitST, FalkorUnitSD]>
       { let Latency = 0; let NumMicroOps = 2; }
-def : WriteRes<WriteAdr,   [FalkorUnitXYZ]> { let Latency = 5; }
+def : WriteRes<WriteAdr,   [FalkorUnitXYZ]> { let Latency = 1; }
 def : WriteRes<WriteLDIdx, [FalkorUnitLD]> { let Latency = 5; }
-def : WriteRes<WriteSTIdx, [FalkorUnitLD, FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 4; let NumMicroOps = 3; }
+def : WriteRes<WriteSTIdx, [FalkorUnitST, FalkorUnitSD]>
+      { let Latency = 0; let NumMicroOps = 3; }
 def : WriteRes<WriteF,     [FalkorUnitVXVY, FalkorUnitVXVY]>
       { let Latency = 3; let NumMicroOps = 2; }
 def : WriteRes<WriteFCmp,  [FalkorUnitVXVY]> { let Latency = 2; }

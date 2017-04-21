@@ -65,14 +65,6 @@ template <typename T> class ArrayRef;
     /// Blocks containing EHPads, allocas, invokes, or vastarts are not valid.
     static bool isBlockValidForExtraction(const BasicBlock &BB);
 
-    /// \brief Create a code extractor for a single basic block.
-    ///
-    /// In this formation, we don't require a dominator tree. The given basic
-    /// block is set up for extraction.
-    CodeExtractor(BasicBlock *BB, bool AggregateArgs = false,
-                  BlockFrequencyInfo *BFI = nullptr,
-                  BranchProbabilityInfo *BPI = nullptr);
-
     /// \brief Create a code extractor for a sequence of blocks.
     ///
     /// Given a sequence of basic blocks where the first block in the sequence
@@ -89,14 +81,6 @@ template <typename T> class ArrayRef;
     /// block sequence of the loop.
     CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
                   BlockFrequencyInfo *BFI = nullptr,
-                  BranchProbabilityInfo *BPI = nullptr);
-
-    /// \brief Create a code extractor for a region node.
-    ///
-    /// Behaves just like the generic code sequence constructor, but uses the
-    /// block sequence of the region node passed in.
-    CodeExtractor(DominatorTree &DT, const RegionNode &RN,
-                  bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr);
 
     /// \brief Perform the extraction, returning the new function.

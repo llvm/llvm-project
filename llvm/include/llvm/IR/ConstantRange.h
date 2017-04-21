@@ -93,7 +93,7 @@ public:
   ///
   /// NB! The returned set does *not* contain **all** possible values of X for
   /// which "X BinOpC Y" does not wrap -- some viable values of X may be
-  /// missing, so you cannot use this to contrain X's range.  E.g. in the last
+  /// missing, so you cannot use this to constrain X's range.  E.g. in the last
   /// example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2), but (-2)
   /// is not in the set returned.
   ///

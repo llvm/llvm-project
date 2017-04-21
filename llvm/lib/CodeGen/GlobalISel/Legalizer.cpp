@@ -223,7 +223,11 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // good chance MI will be deleted.
       NextMI = std::next(MI);
 
-      Changed |= combineExtracts(*MI, MRI, TII);
+      // combineExtracts erases MI.
+      if (combineExtracts(*MI, MRI, TII)) {
+        Changed = true;
+        continue;
+      }
       Changed |= combineMerges(*MI, MRI, TII);
     }
   }

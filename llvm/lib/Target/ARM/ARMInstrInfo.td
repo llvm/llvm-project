@@ -5975,3 +5975,10 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$status),
                              (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }
+
+def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
+                                 [(atomic_fence imm:$ordering, 0)]> {
+  let hasSideEffects = 1;
+  let Size = 0;
+  let AsmString = "@ COMPILER BARRIER";
+}

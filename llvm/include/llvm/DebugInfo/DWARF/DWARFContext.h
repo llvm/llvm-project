@@ -50,6 +50,11 @@ class raw_ostream;
 // entire size of the debug info sections.
 typedef DenseMap<uint64_t, std::pair<uint8_t, int64_t>> RelocAddrMap;
 
+/// Reads a value from data extractor and applies a relocation to the result if
+/// one exists for the given offset.
+uint64_t getRelocatedValue(const DataExtractor &Data, uint32_t Size,
+                           uint32_t *Off, const RelocAddrMap *Relocs);
+
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through pure virtual

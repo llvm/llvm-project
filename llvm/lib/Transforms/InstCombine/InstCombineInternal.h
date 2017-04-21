@@ -551,9 +551,10 @@ private:
                                          unsigned Depth, Instruction *CxtI);
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
-  Value *SimplifyShrShlDemandedBits(Instruction *Lsr, Instruction *Sftl,
-                                    const APInt &DemandedMask, APInt &KnownZero,
-                                    APInt &KnownOne);
+  Value *simplifyShrShlDemandedBits(
+      Instruction *Shr, const APInt &ShrOp1, Instruction *Shl,
+      const APInt &ShlOp1, const APInt &DemandedMask, APInt &KnownZero,
+      APInt &KnownOne);
 
   /// \brief Tries to simplify operands to an integer instruction based on its
   /// demanded bits.

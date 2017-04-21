@@ -56,6 +56,16 @@ typedef DWARFDebugLine::LineTable DWARFLineTable;
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
 typedef DILineInfoSpecifier::FunctionNameKind FunctionNameKind;
 
+uint64_t llvm::getRelocatedValue(const DataExtractor &Data, uint32_t Size,
+                                 uint32_t *Off, const RelocAddrMap *Relocs) {
+  if (!Relocs)
+    return Data.getUnsigned(Off, Size);
+  RelocAddrMap::const_iterator AI = Relocs->find(*Off);
+  if (AI == Relocs->end())
+    return Data.getUnsigned(Off, Size);
+  return Data.getUnsigned(Off, Size) + AI->second.second;
+}
+
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
                              const DWARFSection& Section, StringRef StringSection,
                              bool LittleEndian) {
