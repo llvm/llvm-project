@@ -2323,23 +2323,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(struct_type.GetTypeSystem());
 
-  size_t num_type_args = struct_type.GetNumTemplateArguments();
+  CompilerType resolved_type(
+      DoArchetypeBindingForType(*frame, struct_type, swift_ast_ctx));
+  if (!resolved_type)
+    return false;
 
-  for (size_t i = 0; i < num_type_args; i++) {
-    lldb::TemplateArgumentKind kind;
-    CompilerType type_arg;
-    type_arg = struct_type.GetTemplateArgument(i, kind);
-    if (kind != lldb::eTemplateArgumentKindType || type_arg.IsValid() == false)
-      return false;
-    CompilerType resolved_type_arg(
-        DoArchetypeBindingForType(*frame, type_arg, swift_ast_ctx));
-    if (!resolved_type_arg)
-      return false;
-    generic_args.push_back(resolved_type_arg);
-  }
-
-  class_type_or_name.SetCompilerType(
-      swift_ast_ctx->BindGenericType(struct_type, generic_args, true));
+  class_type_or_name.SetCompilerType(resolved_type);
 
   lldb::addr_t struct_address = in_value.GetPointerValue();
   if (0 == struct_address || LLDB_INVALID_ADDRESS == struct_address)
@@ -2373,22 +2362,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(enum_type.GetTypeSystem());
 
-  size_t num_type_args = enum_type.GetNumTemplateArguments();
-  for (size_t i = 0; i < num_type_args; i++) {
-    lldb::TemplateArgumentKind kind;
-    CompilerType type_arg;
-    type_arg = enum_type.GetTemplateArgument(i, kind);
-    if (kind != lldb::eTemplateArgumentKindType || type_arg.IsValid() == false)
-      return false;
-    CompilerType resolved_type_arg(
-        DoArchetypeBindingForType(*frame, type_arg, swift_ast_ctx));
-    if (!resolved_type_arg)
-      return false;
-    generic_args.push_back(resolved_type_arg);
-  }
+  CompilerType resolved_type(
+      DoArchetypeBindingForType(*frame, enum_type, swift_ast_ctx));
+  if (!resolved_type)
+    return false;
 
-  class_type_or_name.SetCompilerType(
-      swift_ast_ctx->BindGenericType(enum_type, generic_args, true));
+  class_type_or_name.SetCompilerType(resolved_type);
 
   lldb::addr_t enum_address = in_value.GetPointerValue();
   if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address)
