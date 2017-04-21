@@ -31,7 +31,8 @@ bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf);
 
 /// \brief Generate a USR fragment for an Objective-C class.
 void generateUSRForObjCClass(StringRef Cls, raw_ostream &OS,
-                             StringRef ExtSymbolDefinedIn = "");
+                             StringRef ExtSymbolDefinedIn = "",
+                             StringRef CategoryContextExtSymbolDefinedIn = "");
 
 /// \brief Generate a USR fragment for an Objective-C class category.
 void generateUSRForObjCCategory(StringRef Cls, StringRef Cat, raw_ostream &OS,
@@ -57,6 +58,9 @@ void generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS,
 /// Generate USR fragment for a global (non-nested) enum.
 void generateUSRForGlobalEnum(StringRef EnumName, raw_ostream &OS,
                               StringRef ExtSymbolDefinedIn = "");
+
+/// Generate a USR fragment for an enum constant.
+void generateUSRForEnumConstant(StringRef EnumConstantName, raw_ostream &OS);
 
 /// \brief Generate a USR for a macro, including the USR prefix.
 ///
