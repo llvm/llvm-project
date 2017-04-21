@@ -67,6 +67,9 @@ categoriesList = None
 useCategories = False
 # Categories we want to skip
 skipCategories = []
+if platform.system() == 'Linux':
+    skipCategories = ['watchpoints']
+
 # use this to track per-category failures
 failuresPerCategory = {}
 
