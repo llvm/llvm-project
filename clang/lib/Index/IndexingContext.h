@@ -48,6 +48,8 @@ public:
 
   void setASTContext(ASTContext &ctx) { Ctx = &ctx; }
 
+  bool shouldIndex(const Decl *D);
+
   bool shouldSuppressRefs() const {
     return false;
   }
