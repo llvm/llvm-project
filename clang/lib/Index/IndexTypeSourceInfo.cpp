@@ -208,11 +208,12 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
   }
 }
 
-void IndexingContext::indexTagDecl(const TagDecl *D) {
+void IndexingContext::indexTagDecl(const TagDecl *D,
+                                   ArrayRef<SymbolRelation> Relations) {
   if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalSymbol(D))
     return;
 
-  if (handleDecl(D)) {
+  if (handleDecl(D, /*Roles=*/SymbolRoleSet(), Relations)) {
     if (D->isThisDeclarationADefinition()) {
       indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
       if (auto CXXRD = dyn_cast<CXXRecordDecl>(D)) {
