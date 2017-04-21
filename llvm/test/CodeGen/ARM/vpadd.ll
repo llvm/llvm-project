@@ -495,6 +495,15 @@ define <2 x i8> @fromExtendingExtractVectorElt_2i8(<8 x i8> %in) {
   ret <2 x i8> %x
 }
 
+define <2 x i16> @fromExtendingExtractVectorElt_2i16(<8 x i16> %in) {
+; CHECK-LABEL: fromExtendingExtractVectorElt_2i16:
+; CHECK:    vadd.i32
+ %tmp1 = shufflevector <8 x i16> %in, <8 x i16> undef, <2 x i32> <i32 0, i32 2>
+ %tmp2 = shufflevector <8 x i16> %in, <8 x i16> undef, <2 x i32> <i32 1, i32 3>
+ %x = add <2 x i16> %tmp2, %tmp1
+ ret <2 x i16> %x
+}
+
 
 declare <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8>) nounwind readnone
 declare <2 x i32> @llvm.arm.neon.vpaddls.v2i32.v4i16(<4 x i16>) nounwind readnone
