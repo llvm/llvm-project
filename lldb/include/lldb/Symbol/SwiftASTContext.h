@@ -334,10 +334,6 @@ public:
 
   CompilerType CreateMetatypeType(CompilerType instance_type);
 
-  CompilerType BindGenericType(CompilerType type,
-                               std::vector<CompilerType> generic_args,
-                               bool rebind_if_necessary);
-
   bool HasErrors();
 
   // NEVER call this without checking HasFatalErrors() first.

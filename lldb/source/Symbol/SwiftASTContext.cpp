@@ -4698,47 +4698,6 @@ CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
   return CompilerType();
 }
 
-CompilerType
-SwiftASTContext::BindGenericType(CompilerType type,
-                                 std::vector<CompilerType> generic_args,
-                                 bool rebind_if_necessary) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (type.IsValid() &&
-      llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::UnboundGeneric: {
-      auto nominal_type_decl = swift::cast<swift::NominalTypeDecl>(
-          swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
-      swift::DeclContext *parent_decl = nominal_type_decl->getParent();
-      swift::Type parent_type;
-      if (parent_decl->isTypeContext())
-        parent_type = parent_decl->getDeclaredTypeOfContext();
-      std::vector<swift::Type> generic_args_type;
-      for (CompilerType generic_arg : generic_args) {
-        if (!llvm::dyn_cast_or_null<SwiftASTContext>(
-                generic_arg.GetTypeSystem()))
-          return CompilerType();
-        generic_args_type.push_back(GetSwiftType(generic_arg));
-      }
-      return CompilerType(GetASTContext(), swift::BoundGenericType::get(
-                                               nominal_type_decl, parent_type,
-                                               generic_args_type));
-    } break;
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::BoundGenericStruct:
-      if (rebind_if_necessary)
-        return BindGenericType(type.GetUnboundType(), generic_args, false);
-    default:
-      break;
-    }
-  }
-  return CompilerType();
-}
-
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
   SwiftASTContext *swift_ast = GetASTMap().Lookup(ast);
   return swift_ast;
