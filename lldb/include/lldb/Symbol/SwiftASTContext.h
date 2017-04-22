@@ -637,10 +637,6 @@ public:
 
   bool IsMeaninglessWithoutDynamicResolution(void *type) override;
 
-  static bool GetEnumTypeInfo(const CompilerType &type,
-                              uint32_t &num_payload_cases,
-                              uint32_t &num_nopayload_cases);
-
   static bool GetSelectedEnumCase(const CompilerType &type,
                                   const DataExtractor &data, ConstString *name,
                                   bool *has_payload, CompilerType *payload,
@@ -753,8 +749,6 @@ public:
 
   bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
-
-  CompilerType StripRedundantParentheses(void *type);
 
   uint32_t GetNumPointeeChildren(void *type);
 
