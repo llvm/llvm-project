@@ -2057,14 +2057,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     class_type_or_name.SetCompilerType(dyn_type);
     lldb::addr_t val_ptr_addr = in_value.GetPointerValue();
     {
-      // FIXME: this is a question that should be asked of the metadata
-      // but currently the enum nominal type descriptor doesn't know to answer
-      // it
-      uint32_t num_payload_cases = 0;
-      uint32_t num_nopayload_cases = 0;
-      if (SwiftASTContext::GetEnumTypeInfo(dyn_type, num_payload_cases,
-                                           num_nopayload_cases) &&
-          num_payload_cases == 1 && num_nopayload_cases == 1)
+      auto swift_type = GetSwiftType(dyn_type);
+      if (swift_type->getAnyOptionalObjectType())
         val_ptr_addr = GetProcess()->ReadPointerFromMemory(val_ptr_addr, error);
     }
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
