@@ -3,6 +3,12 @@
 // CHECK-LD: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lgcc" "-lc" "-lgcc" "{{.*}}crtend.o"
 
+// Check for --eh-frame-hdr being passed with static linking
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-STATIC-EH %s
+// CHECK-LD-STATIC-EH: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
+// CHECK-LD-STATIC-EH: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bstatic" "-o" "a.out" "{{.*}}rcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lgcc" "-lc" "-lgcc" "{{.*}}crtend.o"
+
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -pg -pthread %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG %s
 // CHECK-PG: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
