@@ -5146,6 +5146,8 @@ public:
       default:
         if (Triple.getOS() == llvm::Triple::NetBSD)
           setABI("apcs-gnu");
+        else if (Triple.getOS() == llvm::Triple::OpenBSD)
+          setABI("aapcs-linux");
         else
           setABI("aapcs");
         break;
