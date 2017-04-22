@@ -5539,33 +5539,17 @@ ConstString SwiftASTContext::GetTypeName(void *type) {
   return ConstString(type_name);
 }
 
-static swift::Type
-TransformUntilStable(swift::Type type,
-                     std::function<swift::Type(swift::Type)> f) {
-  unsigned max_iter = 100;
-  void *ptr = nullptr;
-  do {
-    ptr = type.getPointer();
-    type = type.transform(f);
-  } while ((--max_iter > 0) && (ptr != type.getPointer()));
-  return type;
-}
-
 ConstString SwiftASTContext::GetDisplayTypeName(void *type) {
   std::string type_name(GetTypeName(type).AsCString(""));
 
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
-    swift::Type normalized_type =
-        TransformUntilStable(swift_type, [](swift::Type type) -> swift::Type {
-          return type.getPointer() ? type->getWithoutParens() : type;
-        });
 
     swift::PrintOptions print_options;
     print_options.FullyQualifiedTypes = false;
     print_options.SynthesizeSugarOnTypes = true;
     print_options.FullyQualifiedTypesIfAmbiguous = true;
-    type_name = normalized_type.getString(print_options);
+    type_name = swift_type.getString(print_options);
   }
 
   return ConstString(type_name);
@@ -6163,28 +6147,6 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
       return swift::cast<const swift::irgen::FixedTypeInfo>(type_info);
   }
   return nullptr;
-}
-
-static swift::Type StripRedundantParentheses(swift::Type t) {
-  switch (t->getKind()) {
-  case swift::TypeKind::Paren: {
-    swift::ParenType *paren_type = (swift::ParenType *)t.getPointer();
-    if (!paren_type)
-      return swift::Type();
-    return StripRedundantParentheses(
-        swift::Type(paren_type->getUnderlyingType()));
-  } break;
-  default:
-    return t;
-  }
-}
-
-CompilerType SwiftASTContext::StripRedundantParentheses(void *type) {
-  VALID_OR_RETURN(CompilerType());
-
-  swift::Type swift_type(GetSwiftType(type));
-  swift_type = swift_type.transform(::StripRedundantParentheses);
-  return CompilerType(GetASTContext(), swift_type.getPointer());
 }
 
 uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
@@ -7715,8 +7677,10 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
 }
 
 CompilerType SwiftASTContext::GetTypeForFormatters(void *type) {
-  if (type)
-    return StripRedundantParentheses(type);
+  if (type) {
+    swift::Type swift_type(GetSwiftType(type));
+    return CompilerType(GetASTContext(), swift_type);
+  }
   return CompilerType();
 }
 

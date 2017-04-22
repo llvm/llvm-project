@@ -754,8 +754,6 @@ public:
   bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType StripRedundantParentheses(void *type);
-
   uint32_t GetNumPointeeChildren(void *type);
 
   static bool IsImportedType(const CompilerType &type,
