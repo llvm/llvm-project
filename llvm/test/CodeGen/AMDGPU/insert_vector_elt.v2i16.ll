@@ -216,7 +216,7 @@ define amdgpu_kernel void @v_insertelement_v2i16_0(<2 x i16> addrspace(1)* %out,
 ; CIVI-DAG: v_and_b32_e32 [[ELT1:v[0-9]+]], 0xffff0000, [[VEC]]
 ; CIVI: v_or_b32_e32 [[RES:v[0-9]+]], [[ELT0_SHIFT]], [[ELT1]]
 
-; GFX9-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff{{$}}
+; GFX9-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff0000{{$}}
 ; GFX9-DAG: v_lshrrev_b32_e64 [[ELT0_SHIFT:v[0-9]+]], 16, [[ELT0]]
 ; GFX9: v_and_or_b32 [[RES:v[0-9]+]], [[VEC]], [[MASK]], [[ELT0_SHIFT]]
 

@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
@@ -22,7 +23,9 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Wasm.h"
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <system_error>
 
 using namespace llvm;
@@ -180,7 +183,7 @@ static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
 }
 
 WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
-    : ObjectFile(Binary::ID_Wasm, Buffer), StartFunction(-1) {
+    : ObjectFile(Binary::ID_Wasm, Buffer) {
   ErrorAsOutParameter ErrAsOutParam(&Err);
   Header.Magic = getData().substr(0, 4);
   if (Header.Magic != StringRef("\0asm", 4)) {
@@ -252,7 +255,7 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
       while (Count--) {
         /*uint32_t Index =*/readVaruint32(Ptr);
         StringRef Name = readString(Ptr);
-        if (Name.size())
+        if (!Name.empty())
           Symbols.emplace_back(Name,
                                WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME);
       }

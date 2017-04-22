@@ -93,6 +93,12 @@ unsigned getVmcntBitWidthHi() { return 2; }
 } // end namespace anonymous
 
 namespace llvm {
+
+static cl::opt<bool> EnablePackedInlinableLiterals(
+    "enable-packed-inlinable-literals",
+    cl::desc("Enable packed inlinable literals (v2f16, v2i16)"),
+    cl::init(false));
+
 namespace AMDGPU {
 
 namespace IsaInfo {
@@ -702,6 +708,9 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
 
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   assert(HasInv2Pi);
+
+  if (!EnablePackedInlinableLiterals)
+    return false;
 
   int16_t Lo16 = static_cast<int16_t>(Literal);
   int16_t Hi16 = static_cast<int16_t>(Literal >> 16);

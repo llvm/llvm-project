@@ -669,27 +669,32 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineFunction &MF = *MI.getParent()->getParent();
   const X86FrameLowering *TFI = getFrameLowering(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-
-  // Determine base register and offset.
-  int FIOffset;
   unsigned BasePtr;
-  if (MI.isReturn()) {
-    assert(MF.getFrameInfo().isFixedObjectIndex(FrameIndex) &&
-           "Should only reference fixed stack objects here");
-    FIOffset = TFI->getFrameIndexReferenceSP(MF, FrameIndex, BasePtr, 0);
-  } else {
-    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, BasePtr);
-  }
+
+  unsigned Opc = MI.getOpcode();
+  bool AfterFPPop = Opc == X86::TAILJMPm64 || Opc == X86::TAILJMPm ||
+                    Opc == X86::TCRETURNmi || Opc == X86::TCRETURNmi64;
+
+  if (hasBasePointer(MF))
+    BasePtr = (FrameIndex < 0 ? FramePtr : getBaseRegister());
+  else if (needsStackRealignment(MF))
+    BasePtr = (FrameIndex < 0 ? FramePtr : StackPtr);
+  else if (AfterFPPop)
+    BasePtr = StackPtr;
+  else
+    BasePtr = (TFI->hasFP(MF) ? FramePtr : StackPtr);
 
   // LOCAL_ESCAPE uses a single offset, with no register. It only works in the
   // simple FP case, and doesn't work with stack realignment. On 32-bit, the
   // offset is from the traditional base pointer location.  On 64-bit, the
   // offset is from the SP at the end of the prologue, not the FP location. This
   // matches the behavior of llvm.frameaddress.
-  unsigned Opc = MI.getOpcode();
+  unsigned IgnoredFrameReg;
   if (Opc == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
-    FI.ChangeToImmediate(FIOffset);
+    int Offset;
+    Offset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
+    FI.ChangeToImmediate(Offset);
     return;
   }
 
@@ -704,6 +709,15 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // This must be part of a four operand memory reference.  Replace the
   // FrameIndex with base register.  Add an offset to the offset.
   MI.getOperand(FIOperandNum).ChangeToRegister(MachineBasePtr, false);
+
+  // Now add the frame object offset to the offset from EBP.
+  int FIOffset;
+  if (AfterFPPop) {
+    // Tail call jmp happens after FP is popped.
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    FIOffset = MFI.getObjectOffset(FrameIndex) - TFI->getOffsetOfLocalArea();
+  } else
+    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
 
   if (BasePtr == StackPtr)
     FIOffset += SPAdj;

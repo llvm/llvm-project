@@ -3595,7 +3595,7 @@ void SIInstrInfo::movePackToVALU(SmallVectorImpl<MachineInstr *> &Worklist,
       .addImm(16)
       .add(Src0);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
-      .addImm(0xffff);
+      .addImm(0xffff0000);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_OR_B32), ResultReg)
       .add(Src1)
       .addReg(ImmReg, RegState::Kill)

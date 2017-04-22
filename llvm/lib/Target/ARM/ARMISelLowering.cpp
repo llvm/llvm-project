@@ -9480,11 +9480,11 @@ AddCombineBUILD_VECTORToVPADDL(SDNode *N, SDValue N0, SDValue N1,
       return SDValue();
   }
 
-  // Don't generate vpaddl+vmovn; we'll match it to vpadd later. Also don't try
-  // to handle an i8 -> i32 situation (or similar). vpaddl can only double the
-  // size.
-  if (2 * Vec.getValueType().getVectorElementType().getSizeInBits() !=
-      VT.getVectorElementType().getSizeInBits())
+  // Don't generate vpaddl+vmovn; we'll match it to vpadd later. Also make sure
+  // we're using the entire input vector, otherwise there's a size/legality
+  // mismatch somewhere.
+  if (nextIndex != Vec.getValueType().getVectorNumElements() ||
+      Vec.getValueType().getVectorElementType() == VT.getVectorElementType())
     return SDValue();
 
   // Create VPADDL node.

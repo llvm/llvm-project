@@ -78,6 +78,8 @@ public:
     APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
   };
 
+  static const WordType WORD_MAX = ~WordType(0);
+
 private:
   /// This union is used to store the integer value. When the
   /// integer bit-width <= 64, it uses VAL, otherwise it uses pVal.
@@ -89,6 +91,8 @@ private:
   unsigned BitWidth; ///< The number of bits in this APInt.
 
   friend struct DenseMapAPIntKeyInfo;
+
+  friend class APSInt;
 
   /// \brief Fast internal constructor
   ///
@@ -142,7 +146,7 @@ private:
       return *this;
 
     // Mask out the high bits.
-    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - wordBits);
+    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - wordBits);
     if (isSingleWord())
       VAL &= mask;
     else
@@ -371,7 +375,7 @@ public:
   /// This checks to see if the value has all bits of the APInt are set or not.
   bool isAllOnesValue() const {
     if (isSingleWord())
-      return VAL == UINT64_MAX >> (APINT_BITS_PER_WORD - BitWidth);
+      return VAL == WORD_MAX >> (APINT_BITS_PER_WORD - BitWidth);
     return countPopulationSlowCase() == BitWidth;
   }
 
@@ -453,7 +457,7 @@ public:
     assert(numBits != 0 && "numBits must be non-zero");
     assert(numBits <= BitWidth && "numBits out of range");
     if (isSingleWord())
-      return VAL == (UINT64_MAX >> (APINT_BITS_PER_WORD - numBits));
+      return VAL == (WORD_MAX >> (APINT_BITS_PER_WORD - numBits));
     unsigned Ones = countTrailingOnesSlowCase();
     return (numBits == Ones) &&
            ((Ones + countLeadingZerosSlowCase()) == BitWidth);
@@ -517,7 +521,7 @@ public:
   ///
   /// \returns the all-ones value for an APInt of the specified bit-width.
   static APInt getAllOnesValue(unsigned numBits) {
-    return APInt(numBits, UINT64_MAX, true);
+    return APInt(numBits, WORD_MAX, true);
   }
 
   /// \brief Get the '0' value.
@@ -1294,7 +1298,7 @@ public:
   /// \brief Set every bit to 1.
   void setAllBits() {
     if (isSingleWord())
-      VAL = UINT64_MAX;
+      VAL = WORD_MAX;
     else
       // Set all the bits in all the words.
       memset(pVal, -1, getNumWords() * APINT_WORD_SIZE);
@@ -1324,7 +1328,7 @@ public:
       return;
     }
     if (loBit < APINT_BITS_PER_WORD && hiBit <= APINT_BITS_PER_WORD) {
-      uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
+      uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
       mask <<= loBit;
       if (isSingleWord())
         VAL |= mask;
@@ -1366,7 +1370,7 @@ public:
   /// \brief Toggle every bit to its opposite value.
   void flipAllBits() {
     if (isSingleWord()) {
-      VAL ^= UINT64_MAX;
+      VAL ^= WORD_MAX;
       clearUnusedBits();
     } else {
       flipAllBitsSlowCase();
@@ -1661,7 +1665,7 @@ public:
   /// referencing 2 in a space where 2 does no exist.
   unsigned nearestLogBase2() const {
     // Special case when we have a bitwidth of 1. If VAL is 1, then we
-    // get 0. If VAL is 0, we get UINT64_MAX which gets truncated to
+    // get 0. If VAL is 0, we get WORD_MAX which gets truncated to
     // UINT32_MAX.
     if (BitWidth == 1)
       return VAL - 1;

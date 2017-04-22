@@ -69,7 +69,7 @@ struct Merger {
   size_t Merge(const std::set<uint32_t> &InitialFeatures,
                std::vector<std::string> *NewFiles);
   size_t Merge(std::vector<std::string> *NewFiles) {
-    return Merge({}, NewFiles);
+    return Merge(std::set<uint32_t>{}, NewFiles);
   }
   size_t ApproximateMemoryConsumption() const;
   std::set<uint32_t> AllFeatures() const;

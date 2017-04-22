@@ -3410,9 +3410,11 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   bool Unsafe = DAG.getTarget().Options.UnsafeFPMath;
 
+  if (!Unsafe && VT == MVT::f32 && Subtarget->hasFP32Denormals())
+    return SDValue();
+
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
-    if (Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals()) ||
-        VT == MVT::f16) {
+    if (Unsafe || VT == MVT::f32 || VT == MVT::f16) {
       if (CLHS->isExactlyValue(1.0)) {
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
@@ -4696,7 +4698,7 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                         !DCI.isBeforeLegalizeOps());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLO.ShrinkDemandedConstant(Src, Demanded) ||
+  if (TLI.ShrinkDemandedConstant(Src, Demanded, TLO) ||
       TLI.SimplifyDemandedBits(Src, Demanded, KnownZero, KnownOne, TLO)) {
     DCI.CommitTargetLoweringOpt(TLO);
   }

@@ -1,8 +1,8 @@
-; RUN: llc -split-dwarf=Enable -O0 %s -function-sections -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -function-sections -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-dump=abbrev %t | FileCheck --check-prefix=FUNCTION-SECTIONS %s
 ; RUN: llvm-readobj --relocations %t | FileCheck --check-prefix=FUNCTION-SECTIONS-RELOCS %s
 
-; RUN: llc -split-dwarf=Enable -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-dump=abbrev %t | FileCheck --check-prefix=NO-FUNCTION-SECTIONS %s
 
 ; From:

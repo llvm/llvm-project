@@ -15,7 +15,6 @@
 #define LLVM_ADT_BITVECTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -35,9 +34,8 @@ class BitVector {
   static_assert(BITWORD_SIZE == 64 || BITWORD_SIZE == 32,
                 "Unsupported word size");
 
-  BitWord  *Bits;        // Actual bits.
-  unsigned Size;         // Size of bitvector in bits.
-  unsigned Capacity;     // Number of BitWords allocated in the Bits array.
+  MutableArrayRef<BitWord> Bits; // Actual bits.
+  unsigned Size;                 // Size of bitvector in bits.
 
 public:
   typedef unsigned size_type;
@@ -77,16 +75,14 @@ public:
 
 
   /// BitVector default ctor - Creates an empty bitvector.
-  BitVector() : Size(0), Capacity(0) {
-    Bits = nullptr;
-  }
+  BitVector() : Size(0) {}
 
   /// BitVector ctor - Creates a bitvector of specified number of bits. All
   /// bits are initialized to the specified value.
   explicit BitVector(unsigned s, bool t = false) : Size(s) {
-    Capacity = NumBitWords(s);
-    Bits = (BitWord *)std::malloc(Capacity * sizeof(BitWord));
-    init_words(Bits, Capacity, t);
+    size_t Capacity = NumBitWords(s);
+    Bits = allocate(Capacity);
+    init_words(Bits, t);
     if (t)
       clear_unused_bits();
   }
@@ -94,25 +90,21 @@ public:
   /// BitVector copy ctor.
   BitVector(const BitVector &RHS) : Size(RHS.size()) {
     if (Size == 0) {
-      Bits = nullptr;
-      Capacity = 0;
+      Bits = MutableArrayRef<BitWord>();
       return;
     }
 
-    Capacity = NumBitWords(RHS.size());
-    Bits = (BitWord *)std::malloc(Capacity * sizeof(BitWord));
-    std::memcpy(Bits, RHS.Bits, Capacity * sizeof(BitWord));
+    size_t Capacity = NumBitWords(RHS.size());
+    Bits = allocate(Capacity);
+    std::memcpy(Bits.data(), RHS.Bits.data(), Capacity * sizeof(BitWord));
   }
 
-  BitVector(BitVector &&RHS)
-    : Bits(RHS.Bits), Size(RHS.Size), Capacity(RHS.Capacity) {
-    RHS.Bits = nullptr;
-    RHS.Size = RHS.Capacity = 0;
+  BitVector(BitVector &&RHS) : Bits(RHS.Bits), Size(RHS.Size) {
+    RHS.Bits = MutableArrayRef<BitWord>();
+    RHS.Size = 0;
   }
 
-  ~BitVector() {
-    std::free(Bits);
-  }
+  ~BitVector() { std::free(Bits.data()); }
 
   /// empty - Tests whether there are no bits in this bitvector.
   bool empty() const { return Size == 0; }
@@ -163,6 +155,22 @@ public:
     return -1;
   }
 
+  /// find_last - Returns the index of the last set bit, -1 if none of the bits
+  /// are set.
+  int find_last() const {
+    if (Size == 0)
+      return -1;
+
+    unsigned N = NumBitWords(size());
+    assert(N > 0);
+
+    unsigned i = N - 1;
+    while (i > 0 && Bits[i] == BitWord(0))
+      --i;
+
+    return int((i + 1) * BITWORD_SIZE - countLeadingZeros(Bits[i])) - 1;
+  }
+
   /// find_first_unset - Returns the index of the first unset bit, -1 if all
   /// of the bits are set.
   int find_first_unset() const {
@@ -172,6 +180,30 @@ public:
         return Result < size() ? Result : -1;
       }
     return -1;
+  }
+
+  /// find_last_unset - Returns the index of the last unset bit, -1 if all of
+  /// the bits are set.
+  int find_last_unset() const {
+    if (Size == 0)
+      return -1;
+
+    const unsigned N = NumBitWords(size());
+    assert(N > 0);
+
+    unsigned i = N - 1;
+    BitWord W = Bits[i];
+
+    // The last word in the BitVector has some unused bits, so we need to set
+    // them all to 1 first.  Set them all to 1 so they don't get treated as
+    // valid unset bits.
+    unsigned UnusedCount = BITWORD_SIZE - size() % BITWORD_SIZE;
+    W |= maskLeadingOnes<BitWord>(UnusedCount);
+
+    while (W == ~BitWord(0) && --i > 0)
+      W = Bits[i];
+
+    return int((i + 1) * BITWORD_SIZE - countLeadingOnes(W)) - 1;
   }
 
   /// find_next - Returns the index of the next set bit following the
@@ -228,10 +260,10 @@ public:
 
   /// resize - Grow or shrink the bitvector.
   void resize(unsigned N, bool t = false) {
-    if (N > Capacity * BITWORD_SIZE) {
-      unsigned OldCapacity = Capacity;
+    if (N > getBitCapacity()) {
+      unsigned OldCapacity = Bits.size();
       grow(N);
-      init_words(&Bits[OldCapacity], (Capacity-OldCapacity), t);
+      init_words(Bits.drop_front(OldCapacity), t);
     }
 
     // Set any old unused bits that are now included in the BitVector. This
@@ -248,19 +280,19 @@ public:
   }
 
   void reserve(unsigned N) {
-    if (N > Capacity * BITWORD_SIZE)
+    if (N > getBitCapacity())
       grow(N);
   }
 
   // Set, reset, flip
   BitVector &set() {
-    init_words(Bits, Capacity, true);
+    init_words(Bits, true);
     clear_unused_bits();
     return *this;
   }
 
   BitVector &set(unsigned Idx) {
-    assert(Bits && "Bits never allocated");
+    assert(Bits.data() && "Bits never allocated");
     Bits[Idx / BITWORD_SIZE] |= BitWord(1) << (Idx % BITWORD_SIZE);
     return *this;
   }
@@ -295,7 +327,7 @@ public:
   }
 
   BitVector &reset() {
-    init_words(Bits, Capacity, false);
+    init_words(Bits, false);
     return *this;
   }
 
@@ -562,21 +594,21 @@ public:
 
     Size = RHS.size();
     unsigned RHSWords = NumBitWords(Size);
-    if (Size <= Capacity * BITWORD_SIZE) {
+    if (Size <= getBitCapacity()) {
       if (Size)
-        std::memcpy(Bits, RHS.Bits, RHSWords * sizeof(BitWord));
+        std::memcpy(Bits.data(), RHS.Bits.data(), RHSWords * sizeof(BitWord));
       clear_unused_bits();
       return *this;
     }
 
     // Grow the bitvector to have enough elements.
-    Capacity = RHSWords;
-    assert(Capacity > 0 && "negative capacity?");
-    BitWord *NewBits = (BitWord *)std::malloc(Capacity * sizeof(BitWord));
-    std::memcpy(NewBits, RHS.Bits, Capacity * sizeof(BitWord));
+    unsigned NewCapacity = RHSWords;
+    assert(NewCapacity > 0 && "negative capacity?");
+    auto NewBits = allocate(NewCapacity);
+    std::memcpy(NewBits.data(), RHS.Bits.data(), NewCapacity * sizeof(BitWord));
 
     // Destroy the old bits.
-    std::free(Bits);
+    std::free(Bits.data());
     Bits = NewBits;
 
     return *this;
@@ -585,13 +617,12 @@ public:
   const BitVector &operator=(BitVector &&RHS) {
     if (this == &RHS) return *this;
 
-    std::free(Bits);
+    std::free(Bits.data());
     Bits = RHS.Bits;
     Size = RHS.Size;
-    Capacity = RHS.Capacity;
 
-    RHS.Bits = nullptr;
-    RHS.Size = RHS.Capacity = 0;
+    RHS.Bits = MutableArrayRef<BitWord>();
+    RHS.Size = 0;
 
     return *this;
   }
@@ -599,7 +630,6 @@ public:
   void swap(BitVector &RHS) {
     std::swap(Bits, RHS.Bits);
     std::swap(Size, RHS.Size);
-    std::swap(Capacity, RHS.Capacity);
   }
 
   //===--------------------------------------------------------------------===//
@@ -659,14 +689,14 @@ private:
 
     uint32_t NumWords = NumBitWords(Size);
 
-    auto Src = ArrayRef<BitWord>(Bits, NumWords).drop_back(Count);
-    auto Dest = MutableArrayRef<BitWord>(Bits, NumWords).drop_front(Count);
+    auto Src = Bits.take_front(NumWords).drop_back(Count);
+    auto Dest = Bits.take_front(NumWords).drop_front(Count);
 
     // Since we always move Word-sized chunks of data with src and dest both
     // aligned to a word-boundary, we don't need to worry about endianness
     // here.
     std::memmove(Dest.begin(), Src.begin(), Dest.size() * sizeof(BitWord));
-    std::memset(Bits, 0, Count * sizeof(BitWord));
+    std::memset(Bits.data(), 0, Count * sizeof(BitWord));
     clear_unused_bits();
   }
 
@@ -679,12 +709,17 @@ private:
 
     uint32_t NumWords = NumBitWords(Size);
 
-    auto Src = ArrayRef<BitWord>(Bits, NumWords).drop_front(Count);
-    auto Dest = MutableArrayRef<BitWord>(Bits, NumWords).drop_back(Count);
+    auto Src = Bits.take_front(NumWords).drop_front(Count);
+    auto Dest = Bits.take_front(NumWords).drop_back(Count);
     assert(Dest.size() == Src.size());
 
     std::memmove(Dest.begin(), Src.begin(), Dest.size() * sizeof(BitWord));
     std::memset(Dest.end(), 0, Count * sizeof(BitWord));
+  }
+
+  MutableArrayRef<BitWord> allocate(size_t NumWords) {
+    BitWord *RawBits = (BitWord *)std::malloc(NumWords * sizeof(BitWord));
+    return MutableArrayRef<BitWord>(RawBits, NumWords);
   }
 
   int next_unset_in_word(int WordIndex, BitWord Word) const {
@@ -700,8 +735,8 @@ private:
   void set_unused_bits(bool t = true) {
     //  Set high words first.
     unsigned UsedWords = NumBitWords(Size);
-    if (Capacity > UsedWords)
-      init_words(&Bits[UsedWords], (Capacity-UsedWords), t);
+    if (Bits.size() > UsedWords)
+      init_words(Bits.drop_front(UsedWords), t);
 
     //  Then set any stray high bits of the last used word.
     unsigned ExtraBits = Size % BITWORD_SIZE;
@@ -720,16 +755,17 @@ private:
   }
 
   void grow(unsigned NewSize) {
-    Capacity = std::max(NumBitWords(NewSize), Capacity * 2);
-    assert(Capacity > 0 && "realloc-ing zero space");
-    Bits = (BitWord *)std::realloc(Bits, Capacity * sizeof(BitWord));
-
+    size_t NewCapacity = std::max<size_t>(NumBitWords(NewSize), Bits.size() * 2);
+    assert(NewCapacity > 0 && "realloc-ing zero space");
+    BitWord *NewBits =
+        (BitWord *)std::realloc(Bits.data(), NewCapacity * sizeof(BitWord));
+    Bits = MutableArrayRef<BitWord>(NewBits, NewCapacity);
     clear_unused_bits();
   }
 
-  void init_words(BitWord *B, unsigned NumWords, bool t) {
-    if (NumWords > 0)
-      memset(B, 0 - (int)t, NumWords*sizeof(BitWord));
+  void init_words(MutableArrayRef<BitWord> B, bool t) {
+    if (B.size() > 0)
+      memset(B.data(), 0 - (int)t, B.size() * sizeof(BitWord));
   }
 
   template<bool AddBits, bool InvertMask>
@@ -761,7 +797,8 @@ private:
 
 public:
   /// Return the size (in bytes) of the bit vector.
-  size_t getMemorySize() const { return Capacity * sizeof(BitWord); }
+  size_t getMemorySize() const { return Bits.size() * sizeof(BitWord); }
+  size_t getBitCapacity() const { return Bits.size() * BITWORD_SIZE; }
 };
 
 static inline size_t capacity_in_bytes(const BitVector &X) {

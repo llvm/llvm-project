@@ -54,7 +54,11 @@
 
 
 #ifdef __clang__  // avoid gcc warning.
-#  define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
+#  if __has_attribute(no_sanitize)
+#    define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
+#  else
+#    define ATTRIBUTE_NO_SANITIZE_MEMORY
+#  endif
 #  define ALWAYS_INLINE __attribute__((always_inline))
 #else
 #  define ATTRIBUTE_NO_SANITIZE_MEMORY

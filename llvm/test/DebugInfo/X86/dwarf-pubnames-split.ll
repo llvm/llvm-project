@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -split-dwarf=Enable %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -split-dwarf-file=foo.dwo %s -o - | FileCheck %s
 ; Derived from:
 
 ; int main (void) {

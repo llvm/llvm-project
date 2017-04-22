@@ -100,8 +100,6 @@ public:
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
 
-  int getFrameIndexReferenceSP(const MachineFunction &MF,
-                               int FI, unsigned &SPReg, int Adjustment) const;
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
                                      unsigned &FrameReg,
                                      bool IgnoreSPUpdates) const override;

@@ -588,7 +588,7 @@ addr_t ThreadSanitizerRuntime::GetFirstNonInternalFramePc(
   ModuleSP runtime_module_sp = GetRuntimeModuleSP();
 
   StructuredData::Array *trace_array = trace->GetAsArray();
-  for (int i = 0; i < trace_array->GetSize(); i++) {
+  for (size_t i = 0; i < trace_array->GetSize(); i++) {
     if (skip_one_frame && i == 0)
       continue;
 

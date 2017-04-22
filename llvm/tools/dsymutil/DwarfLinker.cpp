@@ -223,7 +223,7 @@ public:
 
   DIE *getOutputUnitDIE() const {
     if (NewUnit)
-      return &const_cast<DIEUnit &>(*NewUnit).getUnitDie();
+      return &const_cast<BasicDIEUnit &>(*NewUnit).getUnitDie();
     return nullptr;
   }
 
@@ -333,7 +333,7 @@ private:
   DWARFUnit &OrigUnit;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
-  Optional<DIEUnit> NewUnit;
+  Optional<BasicDIEUnit> NewUnit;
 
   uint64_t StartOffset;
   uint64_t NextUnitOffset;

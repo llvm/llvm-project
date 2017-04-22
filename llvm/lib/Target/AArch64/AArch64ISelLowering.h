@@ -255,6 +255,9 @@ public:
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
+  bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+                                    TargetLoweringOpt &TLO) const override;
+
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
 
   /// Returns true if the target allows unaligned memory accesses of the

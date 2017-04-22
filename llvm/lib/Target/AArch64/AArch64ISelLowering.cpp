@@ -91,6 +91,7 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumShiftInserts, "Number of vector shift inserts");
+STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
 
 static cl::opt<bool>
 EnableAArch64SlrGeneration("aarch64-shift-insert-generation", cl::Hidden,
@@ -104,6 +105,12 @@ cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration(
     "aarch64-elf-ldtls-generation", cl::Hidden,
     cl::desc("Allow AArch64 Local Dynamic TLS code generation"),
     cl::init(false));
+
+static cl::opt<bool>
+EnableOptimizeLogicalImm("aarch64-enable-logical-imm", cl::Hidden,
+                         cl::desc("Enable AArch64 logical imm instruction "
+                                  "optimization"),
+                         cl::init(true));
 
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
@@ -785,6 +792,140 @@ EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
   if (!VT.isVector())
     return MVT::i32;
   return VT.changeVectorElementTypeToInteger();
+}
+
+static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
+                               const APInt &Demanded,
+                               TargetLowering::TargetLoweringOpt &TLO,
+                               unsigned NewOpc) {
+  uint64_t OldImm = Imm, NewImm, Enc;
+  uint64_t Mask = ((uint64_t)(-1LL) >> (64 - Size)), OrigMask = Mask;
+
+  // Return if the immediate is already all zeros, all ones, a bimm32 or a
+  // bimm64.
+  if (Imm == 0 || Imm == Mask ||
+      AArch64_AM::isLogicalImmediate(Imm & Mask, Size))
+    return false;
+
+  unsigned EltSize = Size;
+  uint64_t DemandedBits = Demanded.getZExtValue();
+
+  // Clear bits that are not demanded.
+  Imm &= DemandedBits;
+
+  while (true) {
+    // The goal here is to set the non-demanded bits in a way that minimizes
+    // the number of switching between 0 and 1. In order to achieve this goal,
+    // we set the non-demanded bits to the value of the preceding demanded bits.
+    // For example, if we have an immediate 0bx10xx0x1 ('x' indicates a
+    // non-demanded bit), we copy bit0 (1) to the least significant 'x',
+    // bit2 (0) to 'xx', and bit6 (1) to the most significant 'x'.
+    // The final result is 0b11000011.
+    uint64_t NonDemandedBits = ~DemandedBits;
+    uint64_t InvertedImm = ~Imm & DemandedBits;
+    uint64_t RotatedImm =
+        ((InvertedImm << 1) | (InvertedImm >> (EltSize - 1) & 1)) &
+        NonDemandedBits;
+    uint64_t Sum = RotatedImm + NonDemandedBits;
+    bool Carry = NonDemandedBits & ~Sum & (1ULL << (EltSize - 1));
+    uint64_t Ones = (Sum + Carry) & NonDemandedBits;
+    NewImm = (Imm | Ones) & Mask;
+
+    // If NewImm or its bitwise NOT is a shifted mask, it is a bitmask immediate
+    // or all-ones or all-zeros, in which case we can stop searching. Otherwise,
+    // we halve the element size and continue the search.
+    if (isShiftedMask_64(NewImm) || isShiftedMask_64(~(NewImm | ~Mask)))
+      break;
+
+    // We cannot shrink the element size any further if it is 2-bits.
+    if (EltSize == 2)
+      return false;
+
+    EltSize /= 2;
+    Mask >>= EltSize;
+    uint64_t Hi = Imm >> EltSize, DemandedBitsHi = DemandedBits >> EltSize;
+
+    // Return if there is mismatch in any of the demanded bits of Imm and Hi.
+    if (((Imm ^ Hi) & (DemandedBits & DemandedBitsHi) & Mask) != 0)
+      return false;
+
+    // Merge the upper and lower halves of Imm and DemandedBits.
+    Imm |= Hi;
+    DemandedBits |= DemandedBitsHi;
+  }
+
+  ++NumOptimizedImms;
+
+  // Replicate the element across the register width.
+  while (EltSize < Size) {
+    NewImm |= NewImm << EltSize;
+    EltSize *= 2;
+  }
+
+  (void)OldImm;
+  assert(((OldImm ^ NewImm) & Demanded.getZExtValue()) == 0 &&
+         "demanded bits should never be altered");
+  assert(OldImm != NewImm && "the new imm shouldn't be equal to the old imm");
+
+  // Create the new constant immediate node.
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  // If the new constant immediate is all-zeros or all-ones, let the target
+  // independent DAG combine optimize this node.
+  if (NewImm == 0 || NewImm == OrigMask)
+    return TLO.CombineTo(Op.getOperand(1), TLO.DAG.getConstant(NewImm, DL, VT));
+
+  // Otherwise, create a machine node so that target independent DAG combine
+  // doesn't undo this optimization.
+  Enc = AArch64_AM::encodeLogicalImmediate(NewImm, Size);
+  SDValue EncConst = TLO.DAG.getTargetConstant(Enc, DL, VT);
+  SDValue New(
+      TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst), 0);
+
+  return TLO.CombineTo(Op, New);
+}
+
+bool AArch64TargetLowering::targetShrinkDemandedConstant(
+    SDValue Op, const APInt &Demanded, TargetLoweringOpt &TLO) const {
+  // Delay this optimization to as late as possible.
+  if (!TLO.LegalOps)
+    return false;
+
+  if (!EnableOptimizeLogicalImm)
+    return false;
+
+  EVT VT = Op.getValueType();
+  if (VT.isVector())
+    return false;
+
+  unsigned Size = VT.getSizeInBits();
+  assert((Size == 32 || Size == 64) &&
+         "i32 or i64 is expected after legalization.");
+
+  // Exit early if we demand all bits.
+  if (Demanded.countPopulation() == Size)
+    return false;
+
+  unsigned NewOpc;
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case ISD::AND:
+    NewOpc = Size == 32 ? AArch64::ANDWri : AArch64::ANDXri;
+    break;
+  case ISD::OR:
+    NewOpc = Size == 32 ? AArch64::ORRWri : AArch64::ORRXri;
+    break;
+  case ISD::XOR:
+    NewOpc = Size == 32 ? AArch64::EORWri : AArch64::EORXri;
+    break;
+  }
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+  if (!C)
+    return false;
+  uint64_t Imm = C->getZExtValue();
+  return optimizeLogicalImm(Op, Size, Imm, Demanded, TLO, NewOpc);
 }
 
 /// computeKnownBitsForTargetNode - Determine which of the bits specified in

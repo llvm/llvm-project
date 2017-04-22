@@ -28,7 +28,7 @@ class DwarfFile;
 class MCSymbol;
 class LexicalScope;
 
-class DwarfCompileUnit : public DwarfUnit {
+class DwarfCompileUnit final : public DwarfUnit {
   /// A numeric ID unique among all CUs in the module
   unsigned UniqueID;
 

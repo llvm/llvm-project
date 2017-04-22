@@ -117,9 +117,7 @@ private:
   }
 
   // Return the size.
-  size_t getSmallSize() const {
-    return getSmallRawBits() >> SmallNumDataBits;
-  }
+  size_t getSmallSize() const { return getSmallRawBits() >> SmallNumDataBits; }
 
   void setSmallSize(size_t Size) {
     setSmallRawBits(getSmallBits() | (Size << SmallNumDataBits));
@@ -216,6 +214,16 @@ public:
     return getPointer()->find_first();
   }
 
+  int find_last() const {
+    if (isSmall()) {
+      uintptr_t Bits = getSmallBits();
+      if (Bits == 0)
+        return -1;
+      return NumBaseBits - countLeadingZeros(Bits);
+    }
+    return getPointer()->find_last();
+  }
+
   /// Returns the index of the first unset bit, -1 if all of the bits are set.
   int find_first_unset() const {
     if (isSmall()) {
@@ -226,6 +234,17 @@ public:
       return countTrailingOnes(Bits);
     }
     return getPointer()->find_first_unset();
+  }
+
+  int find_last_unset() const {
+    if (isSmall()) {
+      if (count() == getSmallSize())
+        return -1;
+
+      uintptr_t Bits = getSmallBits();
+      return NumBaseBits - countLeadingOnes(Bits);
+    }
+    return getPointer()->find_last_unset();
   }
 
   /// Returns the index of the next set bit following the "Prev" bit.

@@ -3025,7 +3025,7 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return false;
 }
 
-void AArch64InstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+void AArch64InstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(AArch64::HINT);
   NopInst.addOperand(MCOperand::createImm(0));
 }

@@ -1378,7 +1378,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
         auto *DIExpr = DVI->getExpression();
         DIBuilder DIB(M, /*AllowUnresolved*/ false);
-        // GEP offsets are i32 and thus alwaus fit into an int64_t.
+        // GEP offsets are i32 and thus always fit into an int64_t.
         DIExpr = prependDIExpr(DIB, DIExpr, NoDeref, Offset.getSExtValue());
         DVI->setOperand(0, MDWrap(I.getOperand(0)));
         DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));

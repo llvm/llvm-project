@@ -91,14 +91,6 @@ DwarfAccelTables("dwarf-accel-tables", cl::Hidden,
                  cl::init(Default));
 
 static cl::opt<DefaultOnOff>
-SplitDwarf("split-dwarf", cl::Hidden,
-           cl::desc("Output DWARF5 split debug info."),
-           cl::values(clEnumVal(Default, "Default for platform"),
-                      clEnumVal(Enable, "Enabled"),
-                      clEnumVal(Disable, "Disabled")),
-           cl::init(Default));
-
-static cl::opt<DefaultOnOff>
 DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
                  cl::desc("Generate DWARF pubnames and pubtypes sections"),
                  cl::values(clEnumVal(Default, "Default for platform"),
@@ -253,11 +245,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
 
   HasAppleExtensionAttributes = tuneForLLDB();
 
-  // Handle split DWARF. Off by default for now.
-  if (SplitDwarf == Default)
-    HasSplitDwarf = false;
-  else
-    HasSplitDwarf = SplitDwarf == Enable;
+  // Handle split DWARF.
+  HasSplitDwarf = !Asm->TM.Options.MCOptions.SplitDwarfFile.empty();
 
   // Pubnames/pubtypes on by default for GDB.
   if (DwarfPubSections == Default)
@@ -412,7 +401,7 @@ DwarfDebug::constructDwarfCompileUnit(const DICompileUnit *DIUnit) {
   if (useSplitDwarf()) {
     NewCU.setSkeleton(constructSkeletonCU(NewCU));
     NewCU.addString(Die, dwarf::DW_AT_GNU_dwo_name,
-                    DIUnit->getSplitDebugFilename());
+                  Asm->TM.Options.MCOptions.SplitDwarfFile);
   }
 
   // LTO with assembly output shares a single line table amongst multiple CUs.
@@ -1885,7 +1874,7 @@ void DwarfDebug::emitDebugMacinfo() {
 void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
                                   std::unique_ptr<DwarfCompileUnit> NewU) {
   NewU->addString(Die, dwarf::DW_AT_GNU_dwo_name,
-                  U.getCUNode()->getSplitDebugFilename());
+                  Asm->TM.Options.MCOptions.SplitDwarfFile);
 
   if (!CompilationDir.empty())
     NewU->addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);

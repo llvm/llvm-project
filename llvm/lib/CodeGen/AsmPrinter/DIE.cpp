@@ -655,20 +655,12 @@ void DIEEntry::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_ref_addr: {
     // Get the absolute offset for this DIE within the debug info/types section.
     unsigned Addr = Entry->getDebugSectionOffset();
-    if (AP->MAI->doesDwarfUseRelocationsAcrossSections()) {
-      const DwarfDebug *DD = AP->getDwarfDebug();
-      if (DD)
-        assert(!DD->useSplitDwarf() &&
-               "TODO: dwo files can't have relocations.");
-      const DIEUnit *Unit = Entry->getUnit();
-      assert(Unit && "CUDie should belong to a CU.");
-      MCSection *Section = Unit->getSection();
-      if (Section) {
-        const MCSymbol *SectionSym = Section->getBeginSymbol();
-        AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
-        return;
-      }
+    if (const MCSymbol *SectionSym =
+            Entry->getUnit()->getCrossSectionRelativeBaseAddress()) {
+      AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
+      return;
     }
+
     AP->OutStreamer->EmitIntValue(Addr, SizeOf(AP, Form));
     return;
   }

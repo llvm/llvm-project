@@ -1603,3 +1603,11 @@ void DwarfTypeUnit::addGlobalType(const DIType *Ty, const DIE &Die,
                                   const DIScope *Context) {
   getCU().addGlobalTypeUnitType(Ty, Context);
 }
+
+const MCSymbol *DwarfUnit::getCrossSectionRelativeBaseAddress() const {
+  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+    return nullptr;
+  if (isDwoUnit())
+    return nullptr;
+  return getSection()->getBeginSymbol();
+}

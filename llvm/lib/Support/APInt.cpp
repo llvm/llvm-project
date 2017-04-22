@@ -81,7 +81,7 @@ void APInt::initSlowCase(uint64_t val, bool isSigned) {
   pVal[0] = val;
   if (isSigned && int64_t(val) < 0)
     for (unsigned i = 1; i < getNumWords(); ++i)
-      pVal[i] = -1ULL;
+      pVal[i] = WORD_MAX;
   clearUnusedBits();
 }
 
@@ -404,13 +404,13 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   unsigned hiWord = whichWord(hiBit);
 
   // Create an initial mask for the low word with zeros below loBit.
-  uint64_t loMask = UINT64_MAX << whichBit(loBit);
+  uint64_t loMask = WORD_MAX << whichBit(loBit);
 
   // If hiBit is not aligned, we need a high mask.
   unsigned hiShiftAmt = whichBit(hiBit);
   if (hiShiftAmt != 0) {
     // Create a high mask with zeros above hiBit.
-    uint64_t hiMask = UINT64_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
+    uint64_t hiMask = WORD_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
     // If loWord and hiWord are equal, then we combine the masks. Otherwise,
     // set the bits in hiWord.
     if (hiWord == loWord)
@@ -423,7 +423,7 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
 
   // Fill any words between loWord and hiWord with all ones.
   for (unsigned word = loWord + 1; word < hiWord; ++word)
-    pVal[word] = UINT64_MAX;
+    pVal[word] = WORD_MAX;
 }
 
 /// Set the given bit to 0 whose position is given as "bitPosition".
@@ -463,7 +463,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Single word result can be done as a direct bitmask.
   if (isSingleWord()) {
-    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     VAL &= ~(mask << bitPosition);
     VAL |= (subBits.VAL << bitPosition);
     return;
@@ -475,7 +475,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Insertion within a single word can be done as a direct bitmask.
   if (loWord == hi1Word) {
-    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     pVal[loWord] &= ~(mask << loBit);
     pVal[loWord] |= (subBits.VAL << loBit);
     return;
@@ -491,7 +491,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
     // Mask+insert remaining bits.
     unsigned remainingBits = subBitWidth % APINT_BITS_PER_WORD;
     if (remainingBits != 0) {
-      uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - remainingBits);
+      uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - remainingBits);
       pVal[hi1Word] &= ~mask;
       pVal[hi1Word] |= subBits.getWord(subBitWidth - 1);
     }
@@ -658,7 +658,7 @@ unsigned APInt::countLeadingOnes() const {
   unsigned Count = llvm::countLeadingOnes(pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
-      if (pVal[i] == -1ULL)
+      if (pVal[i] == WORD_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
         Count += llvm::countLeadingOnes(pVal[i]);
@@ -684,7 +684,7 @@ unsigned APInt::countTrailingZeros() const {
 unsigned APInt::countTrailingOnesSlowCase() const {
   unsigned Count = 0;
   unsigned i = 0;
-  for (; i < getNumWords() && pVal[i] == -1ULL; ++i)
+  for (; i < getNumWords() && pVal[i] == WORD_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
     Count += llvm::countTrailingOnes(pVal[i]);
@@ -1052,7 +1052,7 @@ APInt APInt::ashr(unsigned shiftAmt) const {
   // issues in the algorithm below.
   if (shiftAmt == BitWidth) {
     if (isNegative())
-      return APInt(BitWidth, -1ULL, true);
+      return APInt(BitWidth, WORD_MAX, true);
     else
       return APInt(BitWidth, 0);
   }
@@ -1077,7 +1077,7 @@ APInt APInt::ashr(unsigned shiftAmt) const {
     // Adjust the top significant word for sign bit fill, if negative
     if (isNegative())
       if (bitsInWord < APINT_BITS_PER_WORD)
-        val[breakWord] |= ~0ULL << bitsInWord; // set high bits
+        val[breakWord] |= WORD_MAX << bitsInWord; // set high bits
   } else {
     // Shift the low order words
     for (unsigned i = 0; i < breakWord; ++i) {
@@ -1097,15 +1097,15 @@ APInt APInt::ashr(unsigned shiftAmt) const {
       if (wordShift > bitsInWord) {
         if (breakWord > 0)
           val[breakWord-1] |=
-            ~0ULL << (APINT_BITS_PER_WORD - (wordShift - bitsInWord));
-        val[breakWord] |= ~0ULL;
+            WORD_MAX << (APINT_BITS_PER_WORD - (wordShift - bitsInWord));
+        val[breakWord] |= WORD_MAX;
       } else
-        val[breakWord] |= (~0ULL << (bitsInWord - wordShift));
+        val[breakWord] |= WORD_MAX << (bitsInWord - wordShift);
     }
   }
 
   // Remaining words are 0 or -1, just assign them.
-  uint64_t fillValue = (isNegative() ? -1ULL : 0);
+  uint64_t fillValue = (isNegative() ? WORD_MAX : 0);
   for (unsigned i = breakWord+1; i < getNumWords(); ++i)
     val[i] = fillValue;
   APInt Result(val, BitWidth);

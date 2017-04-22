@@ -1,4 +1,4 @@
-; RUN: llc -split-dwarf=Enable -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -split-dwarf-file=foo.dwo -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; CHECK-NOT: DW_TAG_subprogram
 

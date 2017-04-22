@@ -9514,7 +9514,7 @@ void X86InstrInfo::setExecutionDomain(MachineInstr &MI, unsigned Domain) const {
 }
 
 /// Return the noop instruction to use for a noop.
-void X86InstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+void X86InstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(X86::NOOP);
 }
 
