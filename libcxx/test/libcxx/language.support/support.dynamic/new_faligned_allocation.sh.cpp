@@ -10,6 +10,10 @@
 // test libc++'s implementation of align_val_t, and the relevent new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
+// Libc++ defers to the underlying MSVC library to provide the new/delete
+// definitions, which does not yet provide aligned allocation
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // REQUIRES: -faligned-allocation
 
 // RUN: %build -faligned-allocation

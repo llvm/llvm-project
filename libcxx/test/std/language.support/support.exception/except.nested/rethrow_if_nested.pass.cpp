@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// exception_ptr has not been implemented on Windows
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // UNSUPPORTED: libcpp-no-exceptions
 // <exception>
 
@@ -43,7 +46,7 @@ class C
 {
 public:
 	virtual ~C() {}
-	C * operator&() const { assert(false); } // should not be called
+	C * operator&() const { assert(false); return nullptr; } // should not be called
 };
 
 class D : private std::nested_exception {};

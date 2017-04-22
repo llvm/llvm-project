@@ -25,6 +25,8 @@ URI URI::fromUri(llvm::StringRef uri) {
   URI Result;
   Result.uri = uri;
   uri.consume_front("file://");
+  // Also trim authority-less URIs
+  uri.consume_front("file:");
   // For Windows paths e.g. /X:
   if (uri.size() > 2 && uri[0] == '/' && uri[2] == ':')
     uri.consume_front("/");
@@ -646,7 +648,7 @@ TextDocumentPositionParams::parse(llvm::yaml::MappingNode *Params) {
     auto *Value =
         dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
     if (!Value)
-      return llvm::None;
+      continue;
 
     llvm::SmallString<10> Storage;
     if (KeyValue == "textDocument") {
