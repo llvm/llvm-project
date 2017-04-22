@@ -7639,6 +7639,8 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
 }
 
 CompilerType SwiftASTContext::GetTypeForFormatters(void *type) {
+  VALID_OR_RETURN(CompilerType());
+
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
     return CompilerType(GetASTContext(), swift_type);
