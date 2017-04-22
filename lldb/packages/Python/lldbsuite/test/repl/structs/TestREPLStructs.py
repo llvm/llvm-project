@@ -19,7 +19,6 @@ class REPLStructsTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
-    @decorators.expectedFailureAll("rdar://problem/23545959")
     def doTest(self):
         self.command('''struct foo {
           var bar : Int

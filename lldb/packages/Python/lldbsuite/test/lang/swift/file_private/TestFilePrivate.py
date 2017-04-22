@@ -46,7 +46,6 @@ class TestFilePrivate(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://23236790")
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()
