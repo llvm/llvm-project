@@ -86,6 +86,12 @@ class SwiftDynamicTypeGenericsTest(TestBase):
                 "(a.OtherClass<Int>) self = 0x",
                 "a.AClass = {}",
                 "v = 1234567"])
+        self.runCmd("continue")
+        self.expect(
+            "frame variable -d run",
+            substrs=[
+                "(a.Outer<Int>.Inner) self ="
+            ])
 
 
 if __name__ == '__main__':
