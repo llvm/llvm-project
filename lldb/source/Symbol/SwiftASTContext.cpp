@@ -990,17 +990,12 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
   assert(swift_ast_ctx);
   if (enum_decl == ast->getImplicitlyUnwrappedOptionalDecl()) {
     swift::EnumDecl *optional_decl = ast->getOptionalDecl();
-    swift::Type optional_type = optional_decl->getDeclaredType();
-    CompilerType optional_compiler_type(ast, optional_type.getPointer());
-    CompilerType iou_compiler_type(ast, swift_can_type.getPointer());
-    lldb::TemplateArgumentKind kind;
-    CompilerType iou_arg_type = iou_compiler_type.GetTemplateArgument(0, kind);
-    std::vector<CompilerType> args = {iou_arg_type};
-    SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
-    CompilerType bound_optional_type =
-        swift_ast_ctx->BindGenericType(optional_compiler_type, args, true);
     swift::CanType bound_optional_can_type =
-        GetCanonicalSwiftType(bound_optional_type.GetOpaqueQualType());
+        swift::BoundGenericType::get(
+            optional_decl,
+            swift::Type(),
+            swift::cast<swift::BoundGenericType>(swift_can_type)
+                ->getGenericArgs())->getCanonicalType();
     return CreateDescriptor(ast, bound_optional_can_type, optional_decl);
   }
   swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
@@ -4703,47 +4698,6 @@ CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
   return CompilerType();
 }
 
-CompilerType
-SwiftASTContext::BindGenericType(CompilerType type,
-                                 std::vector<CompilerType> generic_args,
-                                 bool rebind_if_necessary) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (type.IsValid() &&
-      llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::UnboundGeneric: {
-      auto nominal_type_decl = swift::cast<swift::NominalTypeDecl>(
-          swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
-      swift::DeclContext *parent_decl = nominal_type_decl->getParent();
-      swift::Type parent_type;
-      if (parent_decl->isTypeContext())
-        parent_type = parent_decl->getDeclaredTypeOfContext();
-      std::vector<swift::Type> generic_args_type;
-      for (CompilerType generic_arg : generic_args) {
-        if (!llvm::dyn_cast_or_null<SwiftASTContext>(
-                generic_arg.GetTypeSystem()))
-          return CompilerType();
-        generic_args_type.push_back(GetSwiftType(generic_arg));
-      }
-      return CompilerType(GetASTContext(), swift::BoundGenericType::get(
-                                               nominal_type_decl, parent_type,
-                                               generic_args_type));
-    } break;
-    case swift::TypeKind::BoundGenericClass:
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::BoundGenericStruct:
-      if (rebind_if_necessary)
-        return BindGenericType(type.GetUnboundType(), generic_args, false);
-    default:
-      break;
-    }
-  }
-  return CompilerType();
-}
-
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
   SwiftASTContext *swift_ast = GetASTMap().Lookup(ast);
   return swift_ast;
@@ -5485,7 +5439,8 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
     unsigned num_witness_tables = 0;
     for (auto protoTy : layout.getProtocols()) {
-      if (!protoTy->getDecl()->isObjC())
+      if (!protoTy->getDecl()->isObjC() &&
+          !protoTy->isAnyObject())
         num_witness_tables++;
     }
 
@@ -6261,53 +6216,11 @@ const swift::irgen::TypeInfo *SwiftASTContext::GetSwiftTypeInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
   if (type) {
+    auto &irgen_module = GetIRGenModule();
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    switch (swift_can_type->getKind()) {
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::WeakStorage: {
-      auto &irgen_module = GetIRGenModule();
-      return &irgen_module.getTypeInfo(
-          irgen_module.getLoweredType(swift_can_type));
-    }
-    case swift::TypeKind::Metatype: {
-      swift::MetatypeType *metatype_type =
-          swift_can_type->getAs<swift::MetatypeType>();
-      if (!metatype_type)
-        return nullptr;
-      else
-        return GetSwiftTypeInfo(
-            GetASTContext()->TheRawPointerType.getPointer());
-    }
-    case swift::TypeKind::ExistentialMetatype: {
-      swift::ExistentialMetatypeType *metatype_type =
-          swift_can_type->getAs<swift::ExistentialMetatypeType>();
-      if (!metatype_type)
-        return nullptr;
-      // existential metatypes can't be thin
-      return GetSwiftTypeInfo(GetASTContext()->TheRawPointerType.getPointer());
-    }
-    case swift::TypeKind::Function:
-      return GetSwiftTypeInfo(GetASTContext()->TheEmptyTupleType.getPointer());
-    default:
-      if (swift_can_type->isLegalSILType()) // avoid going the SIL route if it
-                                            // would crash us anyway
-        return &GetIRGenModule().getTypeInfo(
-            swift::SILType::getPrimitiveObjectType(swift_can_type));
-      else {
-        // If you encounter one of these, print out a message - this is
-        // temporary to help us figure out what bases we didn't cover well
-        // enough it should be removed at some point before GM though;
-        // and since we don't know what to do here,
-        printf("GetSwiftTypeInfo() on non-legal SIL type not special cased. "
-               "Name: %s - Kind: %u\n",
-               GetTypeName(type).AsCString("<unknown>"),
-               swift_can_type->getKind());
-        // Go for a pointer - it's probably a reasonable assumption in most
-        // cases
-        return GetSwiftTypeInfo(
-            GetASTContext()->TheRawPointerType.getPointer());
-      }
-    }
+    swift::SILType swift_sil_type = irgen_module.getLoweredType(
+        swift_can_type);
+    return &irgen_module.getTypeInfo(swift_sil_type);
   }
   return nullptr;
 }

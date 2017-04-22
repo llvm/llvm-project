@@ -61,6 +61,17 @@ class Pair <Foo,Bar> {
 	}
 }
 
+struct Outer <Foo> {
+  struct Inner {
+    var field: Foo
+    
+    func print() {
+      Swift.print("hello") //Break here
+    }
+  }
+}
+
+
 func main() {
 	var object : AClass<Int> = OtherClass(3)
 	object.method1(123)
@@ -72,6 +83,9 @@ func main() {
   pair1.print()
   pair2.print()
 	object.method2(5,"hello world")
+
+  let value = Outer<Int>.Inner(field: 10)
+  value.print() 
 }
 
 main()
