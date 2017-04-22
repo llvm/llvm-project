@@ -5927,7 +5927,8 @@ class AArch64TargetInfo : public TargetInfo {
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple), ABI("aapcs") {
-    if (getTriple().getOS() == llvm::Triple::NetBSD) {
+    if (getTriple().getOS() == llvm::Triple::NetBSD ||
+        getTriple().getOS() == llvm::Triple::OpenBSD) {
       WCharType = SignedInt;
 
       // NetBSD apparently prefers consistency across ARM targets to consistency
@@ -8576,6 +8577,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+    case llvm::Triple::OpenBSD:
+      return new OpenBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     default:
       return new AArch64leTargetInfo(Triple, Opts);
     }
