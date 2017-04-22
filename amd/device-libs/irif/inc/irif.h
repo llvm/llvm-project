@@ -427,5 +427,9 @@ extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_f32_v8f32(float8
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_f32_v16f32(float16 c, uint8 t, uint4 s, uint dmask, bool unorm, bool glc, bool slc, bool lwe, bool da)
     __asm("llvm.amdgcn.image.sample.l.f32.v16f32.v8i32");
 
+// image fetch
+extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_v4f32_v2f32(float2 c, uint8 t, uint4 s, uint dmask, bool unorm, bool glc, bool slc, bool lwe, bool da)
+        __asm("llvm.amdgcn.image.gather4.v4f32.v2f32.v8i32");
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // IRIF_H
