@@ -32,7 +32,8 @@
 // new architecture inside sanitizer library.
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC) && \
     (SANITIZER_WORDSIZE == 64) &&                               \
-    (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__))
+    (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) || \
+     defined(__powerpc64__))
 #define CAN_SANITIZE_LEAKS 1
 #elif defined(__i386__) && \
     (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC)

@@ -72,10 +72,11 @@ static const char kStdSuppressions[] =
 #if SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
   // The actual string allocation happens here (for more details refer to the
   // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT definition).
-  "leak:*_dl_map_object_deps*";
-#else
-  "";
+  "leak:*_dl_map_object_deps*\n"
 #endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+  // TLS leak in some glibc versions, described in
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
+  "leak:*tls_get_addr_tail*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);

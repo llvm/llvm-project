@@ -460,6 +460,38 @@ struct ScudoAllocator {
     return UserPtr;
   }
 
+  // Place a chunk in the quarantine. In the event of a zero-sized quarantine,
+  // we directly deallocate the chunk, otherwise the flow would lead to the
+  // chunk being checksummed twice, once before Put and once in Recycle, with
+  // no additional security value.
+  void quarantineOrDeallocateChunk(ScudoChunk *Chunk, UnpackedHeader *Header,
+                                   uptr Size) {
+    bool BypassQuarantine = (AllocatorQuarantine.GetCacheSize() == 0);
+    if (BypassQuarantine) {
+      Chunk->eraseHeader();
+      void *Ptr = Chunk->getAllocBeg(Header);
+      if (LIKELY(!ThreadTornDown)) {
+        getBackendAllocator().Deallocate(&Cache, Ptr);
+      } else {
+        SpinMutexLock Lock(&FallbackMutex);
+        getBackendAllocator().Deallocate(&FallbackAllocatorCache, Ptr);
+      }
+    } else {
+      UnpackedHeader NewHeader = *Header;
+      NewHeader.State = ChunkQuarantine;
+      Chunk->compareExchangeHeader(&NewHeader, Header);
+      if (LIKELY(!ThreadTornDown)) {
+        AllocatorQuarantine.Put(&ThreadQuarantineCache,
+                                QuarantineCallback(&Cache), Chunk, Size);
+      } else {
+        SpinMutexLock l(&FallbackMutex);
+        AllocatorQuarantine.Put(&FallbackQuarantineCache,
+                                QuarantineCallback(&FallbackAllocatorCache),
+                                Chunk, Size);
+      }
+    }
+  }
+
   // Deallocates a Chunk, which means adding it to the delayed free list (or
   // Quarantine).
   void deallocate(void *UserPtr, uptr DeleteSize, AllocType Type) {
@@ -499,24 +531,12 @@ struct ScudoAllocator {
       }
     }
 
-    UnpackedHeader NewHeader = OldHeader;
-    NewHeader.State = ChunkQuarantine;
-    Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
-
     // If a small memory amount was allocated with a larger alignment, we want
     // to take that into account. Otherwise the Quarantine would be filled with
-    // tiny chunks, taking a lot of VA memory. This an approximation of the
+    // tiny chunks, taking a lot of VA memory. This is an approximation of the
     // usable size, that allows us to not call GetActuallyAllocatedSize.
     uptr LiableSize = Size + (OldHeader.Offset << MinAlignment);
-    if (LIKELY(!ThreadTornDown)) {
-      AllocatorQuarantine.Put(&ThreadQuarantineCache,
-                              QuarantineCallback(&Cache), Chunk, LiableSize);
-    } else {
-      SpinMutexLock l(&FallbackMutex);
-      AllocatorQuarantine.Put(&FallbackQuarantineCache,
-                              QuarantineCallback(&FallbackAllocatorCache),
-                              Chunk, LiableSize);
-    }
+    quarantineOrDeallocateChunk(Chunk, &OldHeader, LiableSize);
   }
 
   // Reallocates a chunk. We can save on a new allocation if the new requested
@@ -541,11 +561,11 @@ struct ScudoAllocator {
                      OldPtr);
     }
     uptr UsableSize = Chunk->getUsableSize(&OldHeader);
-    UnpackedHeader NewHeader = OldHeader;
     // The new size still fits in the current chunk, and the size difference
     // is reasonable.
     if (NewSize <= UsableSize &&
         (UsableSize - NewSize) < (SizeClassMap::kMaxSize / 2)) {
+      UnpackedHeader NewHeader = OldHeader;
       NewHeader.SizeOrUnusedBytes =
                 OldHeader.FromPrimary ? NewSize : UsableSize - NewSize;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
@@ -558,17 +578,7 @@ struct ScudoAllocator {
       uptr OldSize = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
-      NewHeader.State = ChunkQuarantine;
-      Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
-      if (LIKELY(!ThreadTornDown)) {
-        AllocatorQuarantine.Put(&ThreadQuarantineCache,
-                                QuarantineCallback(&Cache), Chunk, UsableSize);
-      } else {
-        SpinMutexLock l(&FallbackMutex);
-        AllocatorQuarantine.Put(&FallbackQuarantineCache,
-                                QuarantineCallback(&FallbackAllocatorCache),
-                                Chunk, UsableSize);
-      }
+      quarantineOrDeallocateChunk(Chunk, &OldHeader, UsableSize);
     }
     return NewPtr;
   }
