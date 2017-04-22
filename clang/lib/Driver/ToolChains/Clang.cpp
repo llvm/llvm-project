@@ -2778,8 +2778,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-split-dwarf-inlining");
     if (DebugInfoKind == codegenoptions::NoDebugInfo)
       DebugInfoKind = codegenoptions::LimitedDebugInfo;
-    CmdArgs.push_back("-backend-option");
-    CmdArgs.push_back("-split-dwarf=Enable");
+    CmdArgs.push_back("-enable-split-dwarf");
   }
 
   // After we've dealt with all combinations of things that could

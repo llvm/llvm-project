@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fmodules-ts -std=c++1z -triple=x86_64-linux-gnu -fmodules-codegen -emit-module-interface %s -o %t.pcm
 // RUN: %clang_cc1 -fmodules-ts -std=c++1z -triple=x86_64-linux-gnu %t.pcm -emit-llvm -o - | FileCheck %s
 
-module FooBar;
+export module FooBar;
 
 export {
   // CHECK-LABEL: define i32 @_Z1fv(

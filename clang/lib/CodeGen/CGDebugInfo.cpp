@@ -528,12 +528,14 @@ void CGDebugInfo::CreateCompileUnit() {
   // Create new compile unit.
   // FIXME - Eliminate TheCU.
   TheCU = DBuilder.createCompileUnit(
-      LangTag, DBuilder.createFile(remapDIPath(MainFileName),
-                                   remapDIPath(getCurrentDirname()), CSKind,
-                                   Checksum),
+      LangTag,
+      DBuilder.createFile(remapDIPath(MainFileName),
+                          remapDIPath(getCurrentDirname()), CSKind, Checksum),
       Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
-      CGM.getCodeGenOpts().SplitDwarfFile, EmissionKind, 0 /* DWOid */,
-      CGM.getCodeGenOpts().SplitDwarfInlining,
+      CGM.getCodeGenOpts().EnableSplitDwarf
+          ? ""
+          : CGM.getCodeGenOpts().SplitDwarfFile,
+      EmissionKind, 0 /* DWOid */, CGM.getCodeGenOpts().SplitDwarfInlining,
       CGM.getCodeGenOpts().DebugInfoForProfiling);
 }
 

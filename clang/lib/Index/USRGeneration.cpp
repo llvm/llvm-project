@@ -88,7 +88,8 @@ public:
   void VisitNamespaceAliasDecl(const NamespaceAliasDecl *D);
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
   void VisitClassTemplateDecl(const ClassTemplateDecl *D);
-  void VisitObjCContainerDecl(const ObjCContainerDecl *CD);
+  void VisitObjCContainerDecl(const ObjCContainerDecl *CD,
+                              const ObjCCategoryDecl *CatD = nullptr);
   void VisitObjCMethodDecl(const ObjCMethodDecl *MD);
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
@@ -138,8 +139,10 @@ public:
   /// itself.
 
   /// Generate a USR for an Objective-C class.
-  void GenObjCClass(StringRef cls, StringRef ext) {
-    generateUSRForObjCClass(cls, Out, ext);
+  void GenObjCClass(StringRef cls, StringRef ExtSymDefinedIn,
+                    StringRef CategoryContextExtSymbolDefinedIn) {
+    generateUSRForObjCClass(cls, Out, ExtSymDefinedIn,
+                            CategoryContextExtSymbolDefinedIn);
   }
 
   /// Generate a USR for an Objective-C class category.
@@ -383,7 +386,16 @@ void USRGenerator::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
       IgnoreResults = true;
       return;
     }
-    Visit(ID);
+    auto getCategoryContext = [](const ObjCMethodDecl *D) ->
+                                    const ObjCCategoryDecl * {
+      if (auto *CD = dyn_cast<ObjCCategoryDecl>(D->getDeclContext()))
+        return CD;
+      if (auto *ICD = dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
+        return ICD->getCategoryDecl();
+      return nullptr;
+    };
+    auto *CD = getCategoryContext(D);
+    VisitObjCContainerDecl(ID, CD);
   }
   // Ideally we would use 'GenObjCMethod', but this is such a hot path
   // for Objective-C code that we don't want to use
@@ -392,13 +404,15 @@ void USRGenerator::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
       << DeclarationName(D->getSelector());
 }
 
-void USRGenerator::VisitObjCContainerDecl(const ObjCContainerDecl *D) {
+void USRGenerator::VisitObjCContainerDecl(const ObjCContainerDecl *D,
+                                          const ObjCCategoryDecl *CatD) {
   switch (D->getKind()) {
     default:
       llvm_unreachable("Invalid ObjC container.");
     case Decl::ObjCInterface:
     case Decl::ObjCImplementation:
-      GenObjCClass(D->getName(), GetExternalSourceContainer(D));
+      GenObjCClass(D->getName(), GetExternalSourceContainer(D),
+                   GetExternalSourceContainer(CatD));
       break;
     case Decl::ObjCCategory: {
       const ObjCCategoryDecl *CD = cast<ObjCCategoryDecl>(D);
@@ -896,10 +910,26 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
 // USR generation functions.
 //===----------------------------------------------------------------------===//
 
+static void combineClassAndCategoryExtContainers(StringRef ClsSymDefinedIn,
+                                                 StringRef CatSymDefinedIn,
+                                                 raw_ostream &OS) {
+  if (ClsSymDefinedIn.empty() && CatSymDefinedIn.empty())
+    return;
+  if (CatSymDefinedIn.empty()) {
+    OS << "@M@" << ClsSymDefinedIn << '@';
+    return;
+  }
+  OS << "@CM@" << CatSymDefinedIn << '@';
+  if (ClsSymDefinedIn != CatSymDefinedIn) {
+    OS << ClsSymDefinedIn << '@';
+  }
+}
+
 void clang::index::generateUSRForObjCClass(StringRef Cls, raw_ostream &OS,
-                                           StringRef ExtSymDefinedIn) {
-  if (!ExtSymDefinedIn.empty())
-    OS << "@M@" << ExtSymDefinedIn << '@';
+                                           StringRef ExtSymDefinedIn,
+                                  StringRef CategoryContextExtSymbolDefinedIn) {
+  combineClassAndCategoryExtContainers(ExtSymDefinedIn,
+                                       CategoryContextExtSymbolDefinedIn, OS);
   OS << "objc(cs)" << Cls;
 }
 
@@ -907,16 +937,7 @@ void clang::index::generateUSRForObjCCategory(StringRef Cls, StringRef Cat,
                                               raw_ostream &OS,
                                               StringRef ClsSymDefinedIn,
                                               StringRef CatSymDefinedIn) {
-  if (!CatSymDefinedIn.empty() || !ClsSymDefinedIn.empty()) {
-    OS << "@M@";
-    if (!CatSymDefinedIn.empty() && !ClsSymDefinedIn.empty())
-      OS << CatSymDefinedIn << '-' << ClsSymDefinedIn;
-    else if (!CatSymDefinedIn.empty())
-      OS << CatSymDefinedIn;
-    else
-      OS << ClsSymDefinedIn;
-    OS << '@';
-  }
+  combineClassAndCategoryExtContainers(ClsSymDefinedIn, CatSymDefinedIn, OS);
   OS << "objc(cy)" << Cls << '@' << Cat;
 }
 
@@ -947,6 +968,11 @@ void clang::index::generateUSRForGlobalEnum(StringRef EnumName, raw_ostream &OS,
   if (!ExtSymDefinedIn.empty())
     OS << "@M@" << ExtSymDefinedIn;
   OS << "@E@" << EnumName;
+}
+
+void clang::index::generateUSRForEnumConstant(StringRef EnumConstantName,
+                                              raw_ostream &OS) {
+  OS << '@' << EnumConstantName;
 }
 
 bool clang::index::generateUSRForDecl(const Decl *D,
