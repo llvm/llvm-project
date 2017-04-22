@@ -7568,44 +7568,6 @@ size_t SwiftASTContext::GetNumTemplateArguments(void *type) {
   return 0;
 }
 
-bool SwiftASTContext::GetEnumTypeInfo(const CompilerType &type,
-                                      uint32_t &num_payload_cases,
-                                      uint32_t &num_nopayload_cases) {
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    if (auto *enum_type = swift_can_type->getAs<swift::EnumType>()) {
-      swift::EnumDecl *enum_decl = enum_type->getDecl();
-      auto range = enum_decl->getAllElements();
-      auto iter = range.begin(), end = range.end();
-      for (; iter != end; ++iter) {
-        swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->getArgumentInterfaceType())
-          num_payload_cases++;
-        else
-          num_nopayload_cases++;
-      }
-      return true;
-    }
-    if (auto *bound_generic_enum_type =
-          swift_can_type->getAs<swift::BoundGenericEnumType>()) {
-      swift::EnumDecl *enum_decl = bound_generic_enum_type->getDecl();
-      auto range = enum_decl->getAllElements();
-      auto iter = range.begin(), end = range.end();
-      for (; iter != end; ++iter) {
-        swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->getArgumentInterfaceType())
-          num_payload_cases++;
-        else
-          num_nopayload_cases++;
-      }
-      return true;
-    }
-  }
-
-  return false;
-}
-
 bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
                                           const DataExtractor &data,
                                           ConstString *name, bool *has_payload,
