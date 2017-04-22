@@ -5439,7 +5439,8 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 
     unsigned num_witness_tables = 0;
     for (auto protoTy : layout.getProtocols()) {
-      if (!protoTy->getDecl()->isObjC())
+      if (!protoTy->getDecl()->isObjC() &&
+          !protoTy->isAnyObject())
         num_witness_tables++;
     }
 
