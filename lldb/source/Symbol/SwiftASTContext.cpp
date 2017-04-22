@@ -6216,53 +6216,11 @@ const swift::irgen::TypeInfo *SwiftASTContext::GetSwiftTypeInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
   if (type) {
+    auto &irgen_module = GetIRGenModule();
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    switch (swift_can_type->getKind()) {
-    case swift::TypeKind::BoundGenericEnum:
-    case swift::TypeKind::WeakStorage: {
-      auto &irgen_module = GetIRGenModule();
-      return &irgen_module.getTypeInfo(
-          irgen_module.getLoweredType(swift_can_type));
-    }
-    case swift::TypeKind::Metatype: {
-      swift::MetatypeType *metatype_type =
-          swift_can_type->getAs<swift::MetatypeType>();
-      if (!metatype_type)
-        return nullptr;
-      else
-        return GetSwiftTypeInfo(
-            GetASTContext()->TheRawPointerType.getPointer());
-    }
-    case swift::TypeKind::ExistentialMetatype: {
-      swift::ExistentialMetatypeType *metatype_type =
-          swift_can_type->getAs<swift::ExistentialMetatypeType>();
-      if (!metatype_type)
-        return nullptr;
-      // existential metatypes can't be thin
-      return GetSwiftTypeInfo(GetASTContext()->TheRawPointerType.getPointer());
-    }
-    case swift::TypeKind::Function:
-      return GetSwiftTypeInfo(GetASTContext()->TheEmptyTupleType.getPointer());
-    default:
-      if (swift_can_type->isLegalSILType()) // avoid going the SIL route if it
-                                            // would crash us anyway
-        return &GetIRGenModule().getTypeInfo(
-            swift::SILType::getPrimitiveObjectType(swift_can_type));
-      else {
-        // If you encounter one of these, print out a message - this is
-        // temporary to help us figure out what bases we didn't cover well
-        // enough it should be removed at some point before GM though;
-        // and since we don't know what to do here,
-        printf("GetSwiftTypeInfo() on non-legal SIL type not special cased. "
-               "Name: %s - Kind: %u\n",
-               GetTypeName(type).AsCString("<unknown>"),
-               swift_can_type->getKind());
-        // Go for a pointer - it's probably a reasonable assumption in most
-        // cases
-        return GetSwiftTypeInfo(
-            GetASTContext()->TheRawPointerType.getPointer());
-      }
-    }
+    swift::SILType swift_sil_type = irgen_module.getLoweredType(
+        swift_can_type);
+    return &irgen_module.getTypeInfo(swift_sil_type);
   }
   return nullptr;
 }
