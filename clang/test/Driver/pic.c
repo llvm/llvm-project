@@ -227,6 +227,10 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target i386-pc-openbsd -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target aarch64-unknown-openbsd -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
+// RUN: %clang -c %s -target arm-unknown-openbsd -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target mips64-unknown-openbsd -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target mips64el-unknown-openbsd -### 2>&1 \
