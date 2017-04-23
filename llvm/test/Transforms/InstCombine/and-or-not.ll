@@ -2,55 +2,57 @@
 
 ; PR1510
 
-; These are all equivalent to A^B
+; (a | b) & ~(a & b) --> a ^ b
 
-define i32 @test1(i32 %a, i32 %b) {
-        %tmp3 = or i32 %b, %a           ; <i32> [#uses=1]
-        %tmp3not = xor i32 %tmp3, -1            ; <i32> [#uses=1]
-        %tmp6 = and i32 %b, %a          ; <i32> [#uses=1]
-        %tmp7 = or i32 %tmp6, %tmp3not          ; <i32> [#uses=1]
-        %tmp7not = xor i32 %tmp7, -1            ; <i32> [#uses=1]
-        ret i32 %tmp7not
-
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP7NOT:%.*]] = xor i32 %b, %a
-; CHECK-NEXT:    ret i32 [[TMP7NOT]]
+define i32 @and_to_xor(i32 %a, i32 %b) {
+; CHECK-LABEL: @and_to_xor(
+; CHECK-NEXT:    [[AND2:%.*]] = xor i32 %b, %a
+; CHECK-NEXT:    ret i32 [[AND2]]
+;
+  %or = or i32 %b, %a
+  %and = and i32 %b, %a
+  %not = xor i32 %and, -1
+  %and2 = and i32 %or, %not
+  ret i32 %and2
 }
 
-define i32 @test2(i32 %a, i32 %b) {
-        %tmp3 = or i32 %b, %a           ; <i32> [#uses=1]
-        %tmp6 = and i32 %b, %a          ; <i32> [#uses=1]
-        %tmp6not = xor i32 %tmp6, -1            ; <i32> [#uses=1]
-        %tmp7 = and i32 %tmp3, %tmp6not         ; <i32> [#uses=1]
-        ret i32 %tmp7
-
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 %b, %a
-; CHECK-NEXT:    ret i32 [[TMP7]]
+define <4 x i32> @and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @and_to_xor_vec(
+; CHECK-NEXT:    [[AND2:%.*]] = xor <4 x i32> %a, %b
+; CHECK-NEXT:    ret <4 x i32> [[AND2]]
+;
+  %or = or <4 x i32> %a, %b
+  %and = and <4 x i32> %a, %b
+  %not = xor <4 x i32> %and, < i32 -1, i32 -1, i32 -1, i32 -1 >
+  %and2 = and <4 x i32> %or, %not
+  ret <4 x i32> %and2
 }
 
-define <4 x i32> @test3(<4 x i32> %a, <4 x i32> %b) {
-        %tmp3 = or <4 x i32> %a, %b             ; <<4 x i32>> [#uses=1]
-        %tmp3not = xor <4 x i32> %tmp3, < i32 -1, i32 -1, i32 -1, i32 -1 >              ; <<4 x i32>> [#uses=1]
-        %tmp6 = and <4 x i32> %a, %b            ; <<4 x i32>> [#uses=1]
-        %tmp7 = or <4 x i32> %tmp6, %tmp3not            ; <<4 x i32>> [#uses=1]
-        %tmp7not = xor <4 x i32> %tmp7, < i32 -1, i32 -1, i32 -1, i32 -1 >              ; <<4 x i32>> [#uses=1]
-        ret <4 x i32> %tmp7not
+; ~(~(a | b) | (a & b)) --> (a | b) & ~(a & b) -> a ^ b
 
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP7NOT:%.*]] = xor <4 x i32> %a, %b
-; CHECK-NEXT:    ret <4 x i32> [[TMP7NOT]]
+define i32 @demorgan_plus_and_to_xor(i32 %a, i32 %b) {
+; CHECK-LABEL: @demorgan_plus_and_to_xor(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 %b, %a
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %or = or i32 %b, %a
+  %notor = xor i32 %or, -1
+  %and = and i32 %b, %a
+  %or2 = or i32 %and, %notor
+  %not = xor i32 %or2, -1
+  ret i32 %not
 }
 
-define <4 x i32> @test4(<4 x i32> %a, <4 x i32> %b) {
-        %tmp3 = or <4 x i32> %a, %b             ; <<4 x i32>> [#uses=1]
-        %tmp6 = and <4 x i32> %a, %b            ; <<4 x i32>> [#uses=1]
-        %tmp6not = xor <4 x i32> %tmp6, < i32 -1, i32 -1, i32 -1, i32 -1 >              ; <<4 x i32>> [#uses=1]
-        %tmp7 = and <4 x i32> %tmp3, %tmp6not           ; <<4 x i32>> [#uses=1]
-        ret <4 x i32> %tmp7
-
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i32> %a, %b
-; CHECK-NEXT:    ret <4 x i32> [[TMP7]]
+define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @demorgan_plus_and_to_xor_vec(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i32> %a, %b
+; CHECK-NEXT:    ret <4 x i32> [[NOT]]
+;
+  %or = or <4 x i32> %a, %b
+  %notor = xor <4 x i32> %or, < i32 -1, i32 -1, i32 -1, i32 -1 >
+  %and = and <4 x i32> %a, %b
+  %or2 = or <4 x i32> %and, %notor
+  %not = xor <4 x i32> %or2, < i32 -1, i32 -1, i32 -1, i32 -1 >
+  ret <4 x i32> %not
 }
 

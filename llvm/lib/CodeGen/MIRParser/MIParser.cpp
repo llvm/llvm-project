@@ -1949,8 +1949,7 @@ bool MIParser::getHexUint(APInt &Result) {
     return true;
   StringRef V = S.substr(2);
   APInt A(V.size()*4, V, 16);
-  Result = APInt(A.getActiveBits(),
-                 ArrayRef<uint64_t>(A.getRawData(), A.getNumWords()));
+  Result = A.zextOrTrunc(A.getActiveBits());
   return false;
 }
 

@@ -1201,35 +1201,35 @@ define <2 x i64> @umlsl_lane_2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nou
 ; Scalar FMULX
 define float @fmulxs(float %a, float %b) nounwind {
 ; CHECK-LABEL: fmulxs:
-; CHECKNEXT: fmulx s0, s0, s1
+; CHECK-NEXT: fmulx s0, s0, s1
   %fmulx.i = tail call float @llvm.aarch64.neon.fmulx.f32(float %a, float %b) nounwind
-; CHECKNEXT: ret
+; CHECK-NEXT: ret
   ret float %fmulx.i
 }
 
 define double @fmulxd(double %a, double %b) nounwind {
 ; CHECK-LABEL: fmulxd:
-; CHECKNEXT: fmulx d0, d0, d1
+; CHECK-NEXT: fmulx d0, d0, d1
   %fmulx.i = tail call double @llvm.aarch64.neon.fmulx.f64(double %a, double %b) nounwind
-; CHECKNEXT: ret
+; CHECK-NEXT: ret
   ret double %fmulx.i
 }
 
 define float @fmulxs_lane(float %a, <4 x float> %vec) nounwind {
 ; CHECK-LABEL: fmulxs_lane:
-; CHECKNEXT: fmulx.s s0, s0, v1[3]
+; CHECK-NEXT: fmulx.s s0, s0, v1[3]
   %b = extractelement <4 x float> %vec, i32 3
   %fmulx.i = tail call float @llvm.aarch64.neon.fmulx.f32(float %a, float %b) nounwind
-; CHECKNEXT: ret
+; CHECK-NEXT: ret
   ret float %fmulx.i
 }
 
 define double @fmulxd_lane(double %a, <2 x double> %vec) nounwind {
 ; CHECK-LABEL: fmulxd_lane:
-; CHECKNEXT: fmulx d0, d0, v1[1]
+; CHECK-NEXT: fmulx.d d0, d0, v1[1]
   %b = extractelement <2 x double> %vec, i32 1
   %fmulx.i = tail call double @llvm.aarch64.neon.fmulx.f64(double %a, double %b) nounwind
-; CHECKNEXT: ret
+; CHECK-NEXT: ret
   ret double %fmulx.i
 }
 

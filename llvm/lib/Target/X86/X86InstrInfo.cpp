@@ -6603,28 +6603,36 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
     assert(X86::RFP80RegClass.hasSubClassEq(RC) && "Unknown 10-byte regclass");
     return load ? X86::LD_Fp80m : X86::ST_FpP80m;
   case 16: {
-    assert(X86::VR128XRegClass.hasSubClassEq(RC) && "Unknown 16-byte regclass");
-    // If stack is realigned we can use aligned stores.
-    if (isStackAligned)
-      return load ?
-        (HasVLX    ? X86::VMOVAPSZ128rm :
-         HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX :
-         HasAVX    ? X86::VMOVAPSrm :
-                     X86::MOVAPSrm):
-        (HasVLX    ? X86::VMOVAPSZ128mr :
-         HasAVX512 ? X86::VMOVAPSZ128mr_NOVLX :
-         HasAVX    ? X86::VMOVAPSmr :
-                     X86::MOVAPSmr);
-    else
-      return load ?
-        (HasVLX    ? X86::VMOVUPSZ128rm :
-         HasAVX512 ? X86::VMOVUPSZ128rm_NOVLX :
-         HasAVX    ? X86::VMOVUPSrm :
-                     X86::MOVUPSrm):
-        (HasVLX    ? X86::VMOVUPSZ128mr :
-         HasAVX512 ? X86::VMOVUPSZ128mr_NOVLX :
-         HasAVX    ? X86::VMOVUPSmr :
-                     X86::MOVUPSmr);
+    if (X86::VR128XRegClass.hasSubClassEq(RC)) {
+      // If stack is realigned we can use aligned stores.
+      if (isStackAligned)
+        return load ?
+          (HasVLX    ? X86::VMOVAPSZ128rm :
+           HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX :
+           HasAVX    ? X86::VMOVAPSrm :
+                       X86::MOVAPSrm):
+          (HasVLX    ? X86::VMOVAPSZ128mr :
+           HasAVX512 ? X86::VMOVAPSZ128mr_NOVLX :
+           HasAVX    ? X86::VMOVAPSmr :
+                       X86::MOVAPSmr);
+      else
+        return load ?
+          (HasVLX    ? X86::VMOVUPSZ128rm :
+           HasAVX512 ? X86::VMOVUPSZ128rm_NOVLX :
+           HasAVX    ? X86::VMOVUPSrm :
+                       X86::MOVUPSrm):
+          (HasVLX    ? X86::VMOVUPSZ128mr :
+           HasAVX512 ? X86::VMOVUPSZ128mr_NOVLX :
+           HasAVX    ? X86::VMOVUPSmr :
+                       X86::MOVUPSmr);
+    }
+    if (X86::BNDRRegClass.hasSubClassEq(RC)) {
+      if (STI.is64Bit())
+        return load ? X86::BNDMOVRM64rm : X86::BNDMOVMR64mr;
+      else
+        return load ? X86::BNDMOVRM32rm : X86::BNDMOVMR32mr;
+    }
+    llvm_unreachable("Unknown 16-byte regclass");
   }
   case 32:
     assert(X86::VR256XRegClass.hasSubClassEq(RC) && "Unknown 32-byte regclass");

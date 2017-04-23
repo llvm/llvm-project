@@ -1714,7 +1714,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
               bestWidth = width;
               break;
             }
-            newMask = newMask << width;
+            newMask <<= width;
           }
         }
       }
@@ -2981,7 +2981,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDValue Op1, APInt d,
     Flags.setExact(true);
     Op1 = DAG.getNode(ISD::SRA, dl, Op1.getValueType(), Op1, Amt, &Flags);
     Created.push_back(Op1.getNode());
-    d = d.ashr(ShAmt);
+    d.ashrInPlace(ShAmt);
   }
 
   // Calculate the multiplicative inverse, using Newton's method.

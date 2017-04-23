@@ -67,8 +67,7 @@ private:
   bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
-  bool selectArithImmed(MachineOperand &Root, MachineOperand &Result1,
-                        MachineOperand &Result2) const;
+  ComplexRendererFn selectArithImmed(MachineOperand &Root) const;
 
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
@@ -1329,9 +1328,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 /// SelectArithImmed - Select an immediate value that can be represented as
 /// a 12-bit value shifted left by either 0 or 12.  If so, return true with
 /// Val set to the 12-bit value and Shift set to the shifter operand.
-bool AArch64InstructionSelector::selectArithImmed(
-    MachineOperand &Root, MachineOperand &Result1,
-    MachineOperand &Result2) const {
+InstructionSelector::ComplexRendererFn
+AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   MachineInstr &MI = *Root.getParent();
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -1350,13 +1348,13 @@ bool AArch64InstructionSelector::selectArithImmed(
   else if (Root.isReg()) {
     MachineInstr *Def = MRI.getVRegDef(Root.getReg());
     if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
-      return false;
+      return nullptr;
     MachineOperand &Op1 = Def->getOperand(1);
     if (!Op1.isCImm() || Op1.getCImm()->getBitWidth() > 64)
-      return false;
+      return nullptr;
     Immed = Op1.getCImm()->getZExtValue();
   } else
-    return false;
+    return nullptr;
 
   unsigned ShiftAmt;
 
@@ -1366,14 +1364,10 @@ bool AArch64InstructionSelector::selectArithImmed(
     ShiftAmt = 12;
     Immed = Immed >> 12;
   } else
-    return false;
+    return nullptr;
 
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt);
-  Result1.ChangeToImmediate(Immed);
-  Result1.clearParent();
-  Result2.ChangeToImmediate(ShVal);
-  Result2.clearParent();
-  return true;
+  return [=](MachineInstrBuilder &MIB) { MIB.addImm(Immed).addImm(ShVal); };
 }
 
 namespace llvm {

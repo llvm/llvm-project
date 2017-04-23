@@ -198,6 +198,9 @@ private:
   /// out-of-line slow case for lshr.
   void lshrSlowCase(unsigned ShiftAmt);
 
+  /// out-of-line slow case for ashr.
+  void ashrSlowCase(unsigned ShiftAmt);
+
   /// out-of-line slow case for operator=
   void AssignSlowCase(const APInt &RHS);
 
@@ -876,6 +879,13 @@ public:
     return *this;
   }
 
+  /// \brief Left-shift assignment function.
+  ///
+  /// Shifts *this left by shiftAmt and assigns the result to *this.
+  ///
+  /// \returns *this after shifting left by ShiftAmt
+  APInt &operator<<=(const APInt &ShiftAmt);
+
   /// @}
   /// \name Binary Operators
   /// @{
@@ -898,7 +908,26 @@ public:
   /// \brief Arithmetic right-shift function.
   ///
   /// Arithmetic right-shift this APInt by shiftAmt.
-  APInt ashr(unsigned shiftAmt) const;
+  APInt ashr(unsigned ShiftAmt) const {
+    APInt R(*this);
+    R.ashrInPlace(ShiftAmt);
+    return R;
+  }
+
+  /// Arithmetic right-shift this APInt by ShiftAmt in place.
+  void ashrInPlace(unsigned ShiftAmt) {
+    assert(ShiftAmt <= BitWidth && "Invalid shift amount");
+    if (isSingleWord()) {
+      int64_t SExtVAL = SignExtend64(VAL, BitWidth);
+      if (ShiftAmt == BitWidth)
+        VAL = SExtVAL >> (APINT_BITS_PER_WORD - 1); // undefined
+      else
+        VAL = SExtVAL >> ShiftAmt;
+      clearUnusedBits();
+      return;
+    }
+    ashrSlowCase(ShiftAmt);
+  }
 
   /// \brief Logical right-shift function.
   ///
@@ -940,7 +969,14 @@ public:
   /// \brief Arithmetic right-shift function.
   ///
   /// Arithmetic right-shift this APInt by shiftAmt.
-  APInt ashr(const APInt &shiftAmt) const;
+  APInt ashr(const APInt &ShiftAmt) const {
+    APInt R(*this);
+    R.ashrInPlace(ShiftAmt);
+    return R;
+  }
+
+  /// Arithmetic right-shift this APInt by shiftAmt in place.
+  void ashrInPlace(const APInt &shiftAmt);
 
   /// \brief Logical right-shift function.
   ///
@@ -957,7 +993,11 @@ public:
   /// \brief Left-shift function.
   ///
   /// Left-shift this APInt by shiftAmt.
-  APInt shl(const APInt &shiftAmt) const;
+  APInt shl(const APInt &ShiftAmt) const {
+    APInt R(*this);
+    R <<= ShiftAmt;
+    return R;
+  }
 
   /// \brief Rotate left by rotateAmt.
   APInt rotl(const APInt &rotateAmt) const;

@@ -5343,7 +5343,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
         APInt Mask = APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - c1);
         SDValue Shift;
         if (c2 > c1) {
-          Mask = Mask.shl(c2 - c1);
+          Mask <<= c2 - c1;
           SDLoc DL(N);
           Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0),
                               DAG.getConstant(c2 - c1, DL, N1.getValueType()));

@@ -19,9 +19,11 @@
 #include "llvm/ADT/Optional.h"
 #include <cstdint>
 #include <bitset>
+#include <functional>
 
 namespace llvm {
 class MachineInstr;
+class MachineInstrBuilder;
 class MachineFunction;
 class MachineOperand;
 class MachineRegisterInfo;
@@ -76,6 +78,8 @@ public:
   virtual bool select(MachineInstr &I) const = 0;
 
 protected:
+  typedef std::function<void(MachineInstrBuilder &)> ComplexRendererFn;
+
   InstructionSelector();
 
   /// Mutate the newly-selected instruction \p I to constrain its (possibly

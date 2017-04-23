@@ -66,6 +66,9 @@ struct PartialInlinerLegacyPass : public ModulePass {
 
 Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   // First, verify that this function is an unswitching candidate...
+  if (F->hasAddressTaken())
+    return nullptr;
+
   BasicBlock *EntryBlock = &F->front();
   BranchInst *BR = dyn_cast<BranchInst>(EntryBlock->getTerminator());
   if (!BR || BR->isUnconditional())
@@ -83,25 +86,6 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   }
 
   if (ReturnCount != 1)
-    return nullptr;
-
-  auto canAllUsesBeReplaced = [](Function *F) {
-    std::vector<User *> Users(F->user_begin(), F->user_end());
-    for (User *User : Users) {
-      Function *Callee = nullptr;
-      if (CallInst *CI = dyn_cast<CallInst>(User))
-        Callee = CallSite(CI).getCalledFunction();
-      else if (InvokeInst *II = dyn_cast<InvokeInst>(User))
-        Callee = CallSite(II).getCalledFunction();
-
-      if (Callee != F)
-        return false;
-    }
-
-    return true;
-  };
-
-  if (!canAllUsesBeReplaced(F))
     return nullptr;
 
   // Clone the function, so that we can hack away on it.

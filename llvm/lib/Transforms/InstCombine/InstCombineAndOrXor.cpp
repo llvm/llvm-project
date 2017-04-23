@@ -2399,44 +2399,39 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I))
     return replaceInstUsesWith(I, V);
 
-  // Is this a ~ operation?
-  if (Value *NotOp = dyn_castNotVal(&I)) {
-    if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(NotOp)) {
-      if (Op0I->getOpcode() == Instruction::And ||
-          Op0I->getOpcode() == Instruction::Or) {
-        // ~(~X & Y) --> (X | ~Y) - De Morgan's Law
-        // ~(~X | Y) === (X & ~Y) - De Morgan's Law
-        if (dyn_castNotVal(Op0I->getOperand(1)))
-          Op0I->swapOperands();
-        if (Value *Op0NotVal = dyn_castNotVal(Op0I->getOperand(0))) {
-          Value *NotY =
-            Builder->CreateNot(Op0I->getOperand(1),
-                               Op0I->getOperand(1)->getName()+".not");
-          if (Op0I->getOpcode() == Instruction::And)
-            return BinaryOperator::CreateOr(Op0NotVal, NotY);
-          return BinaryOperator::CreateAnd(Op0NotVal, NotY);
-        }
-
-        // ~(X & Y) --> (~X | ~Y) - De Morgan's Law
-        // ~(X | Y) === (~X & ~Y) - De Morgan's Law
-        if (IsFreeToInvert(Op0I->getOperand(0),
-                           Op0I->getOperand(0)->hasOneUse()) &&
-            IsFreeToInvert(Op0I->getOperand(1),
-                           Op0I->getOperand(1)->hasOneUse())) {
-          Value *NotX =
-            Builder->CreateNot(Op0I->getOperand(0), "notlhs");
-          Value *NotY =
-            Builder->CreateNot(Op0I->getOperand(1), "notrhs");
-          if (Op0I->getOpcode() == Instruction::And)
-            return BinaryOperator::CreateOr(NotX, NotY);
-          return BinaryOperator::CreateAnd(NotX, NotY);
-        }
-
-      } else if (Op0I->getOpcode() == Instruction::AShr) {
-        // ~(~X >>s Y) --> (X >>s Y)
-        if (Value *Op0NotVal = dyn_castNotVal(Op0I->getOperand(0)))
-          return BinaryOperator::CreateAShr(Op0NotVal, Op0I->getOperand(1));
+  // Is this a 'not' (~) fed by a binary operator?
+  BinaryOperator *NotOp;
+  if (match(&I, m_Not(m_BinOp(NotOp)))) {
+    if (NotOp->getOpcode() == Instruction::And ||
+        NotOp->getOpcode() == Instruction::Or) {
+      // ~(~X & Y) --> (X | ~Y) - De Morgan's Law
+      // ~(~X | Y) === (X & ~Y) - De Morgan's Law
+      if (dyn_castNotVal(NotOp->getOperand(1)))
+        NotOp->swapOperands();
+      if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0))) {
+        Value *NotY = Builder->CreateNot(
+            NotOp->getOperand(1), NotOp->getOperand(1)->getName() + ".not");
+        if (NotOp->getOpcode() == Instruction::And)
+          return BinaryOperator::CreateOr(Op0NotVal, NotY);
+        return BinaryOperator::CreateAnd(Op0NotVal, NotY);
       }
+
+      // ~(X & Y) --> (~X | ~Y) - De Morgan's Law
+      // ~(X | Y) === (~X & ~Y) - De Morgan's Law
+      if (IsFreeToInvert(NotOp->getOperand(0),
+                         NotOp->getOperand(0)->hasOneUse()) &&
+          IsFreeToInvert(NotOp->getOperand(1),
+                         NotOp->getOperand(1)->hasOneUse())) {
+        Value *NotX = Builder->CreateNot(NotOp->getOperand(0), "notlhs");
+        Value *NotY = Builder->CreateNot(NotOp->getOperand(1), "notrhs");
+        if (NotOp->getOpcode() == Instruction::And)
+          return BinaryOperator::CreateOr(NotX, NotY);
+        return BinaryOperator::CreateAnd(NotX, NotY);
+      }
+    } else if (NotOp->getOpcode() == Instruction::AShr) {
+      // ~(~X >>s Y) --> (X >>s Y)
+      if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0)))
+        return BinaryOperator::CreateAShr(Op0NotVal, NotOp->getOperand(1));
     }
   }
 

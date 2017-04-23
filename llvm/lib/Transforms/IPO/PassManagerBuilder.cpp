@@ -414,11 +414,14 @@ void PassManagerBuilder::populateModulePassManager(
     else if (!GlobalExtensions->empty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
-    if (PrepareForThinLTO)
-      // Rename anon globals to be able to export them in the summary.
-      MPM.add(createNameAnonGlobalPass());
-
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
+
+    // Rename anon globals to be able to export them in the summary.
+    // This has to be done after we add the extensions to the pass manager
+    // as there could be passes (e.g. Adddress sanitizer) which introduce
+    // new unnamed globals.
+    if (PrepareForThinLTO)
+      MPM.add(createNameAnonGlobalPass());
     return;
   }
 

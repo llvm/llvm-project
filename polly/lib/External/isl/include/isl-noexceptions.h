@@ -2467,7 +2467,7 @@ isl::stat map::foreach_basic_map(const std::function<isl::stat(isl::basic_map)> 
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_map_foreach_basic_map(get(), fn_lambda, (void *) &fn);
+  auto res = isl_map_foreach_basic_map(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -3282,7 +3282,7 @@ isl::stat pw_aff::foreach_piece(const std::function<isl::stat(isl::set, isl::aff
     stat ret = (*func) (isl::manage(arg_0), isl::manage(arg_1));
     return isl_stat(ret);
   };
-  auto res = isl_pw_aff_foreach_piece(get(), fn_lambda, (void *) &fn);
+  auto res = isl_pw_aff_foreach_piece(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -3957,7 +3957,7 @@ isl::stat set::foreach_basic_set(const std::function<isl::stat(isl::basic_set)> 
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_set_foreach_basic_set(get(), fn_lambda, (void *) &fn);
+  auto res = isl_set_foreach_basic_set(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -4607,7 +4607,7 @@ isl::stat union_map::foreach_map(const std::function<isl::stat(isl::map)> &fn) c
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_map_foreach_map(get(), fn_lambda, (void *) &fn);
+  auto res = isl_union_map_foreach_map(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -4897,7 +4897,7 @@ isl::stat union_pw_aff::foreach_pw_aff(const std::function<isl::stat(isl::pw_aff
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_pw_aff_foreach_pw_aff(get(), fn_lambda, (void *) &fn);
+  auto res = isl_union_pw_aff_foreach_pw_aff(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -5177,7 +5177,7 @@ isl::stat union_set::foreach_point(const std::function<isl::stat(isl::point)> &f
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_set_foreach_point(get(), fn_lambda, (void *) &fn);
+  auto res = isl_union_set_foreach_point(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 
@@ -5187,7 +5187,7 @@ isl::stat union_set::foreach_set(const std::function<isl::stat(isl::set)> &fn) c
     stat ret = (*func) (isl::manage(arg_0));
     return isl_stat(ret);
   };
-  auto res = isl_union_set_foreach_set(get(), fn_lambda, (void *) &fn);
+  auto res = isl_union_set_foreach_set(get(), fn_lambda, const_cast<void*>((const void *) &fn));
   return isl::stat(res);
 }
 

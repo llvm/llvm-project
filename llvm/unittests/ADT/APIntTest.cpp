@@ -288,7 +288,7 @@ TEST(APIntTest, i1) {
   EXPECT_EQ(zero, one.shl(1));
   EXPECT_EQ(one, one.shl(0));
   EXPECT_EQ(zero, one.lshr(1));
-  EXPECT_EQ(zero, one.ashr(1));
+  EXPECT_EQ(one, one.ashr(1));
 
   // Rotates.
   EXPECT_EQ(one, one.rotl(0));
@@ -2022,6 +2022,24 @@ TEST(APIntTest, LogicalRightShift) {
   // Ensure we handle large shifts of multi-word.
   const APInt neg_one(128, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(0, neg_one.lshr(128));
+}
+
+TEST(APIntTest, ArithmeticRightShift) {
+  // Ensure we handle large shifts of multi-word.
+  const APInt signmin32(APInt::getSignedMinValue(32));
+  EXPECT_TRUE(signmin32.ashr(32).isAllOnesValue());
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt umax32(APInt::getSignedMaxValue(32));
+  EXPECT_EQ(0, umax32.ashr(32));
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt signmin128(APInt::getSignedMinValue(128));
+  EXPECT_TRUE(signmin128.ashr(128).isAllOnesValue());
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt umax128(APInt::getSignedMaxValue(128));
+  EXPECT_EQ(0, umax128.ashr(128));
 }
 
 TEST(APIntTest, LeftShift) {

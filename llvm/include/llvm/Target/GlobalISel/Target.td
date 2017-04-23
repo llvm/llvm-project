@@ -30,20 +30,12 @@ def s64 : LLT;
 // Definitions that inherit from this may also inherit from
 // GIComplexPatternEquiv to enable the import of SelectionDAG patterns involving
 // those ComplexPatterns.
-class GIComplexOperandMatcher<LLT type, dag operands, string matcherfn> {
+class GIComplexOperandMatcher<LLT type, string matcherfn> {
   // The expected type of the root of the match.
   //
   // TODO: We should probably support, any-type, any-scalar, and multiple types
   //       in the future.
   LLT Type = type;
-
-  // The operands that result from a successful match
-  // Should be of the form '(ops ty1, ty2, ...)' where ty1/ty2 are definitions
-  // that inherit from Operand.
-  //
-  // FIXME: Which definition is used for ty1/ty2 doesn't actually matter at the
-  //        moment. Only the number of operands is used.
-  dag Operands = operands;
 
   // The function that determines whether the operand matches. It should be of
   // the form:
