@@ -250,12 +250,6 @@ endif()
 set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# If building on a 32-bit system, make sure off_t can store offsets > 2GB
-if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
-  add_definitions( -D_LARGEFILE_SOURCE )
-  add_definitions( -D_FILE_OFFSET_BITS=64 )
-endif()
-
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed. CMake would overwrite "
 "the makefiles distributed with LLDB. Please create a directory and run cmake "

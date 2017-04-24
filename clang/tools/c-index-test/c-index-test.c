@@ -3014,6 +3014,7 @@ static const char *getEntityLanguageString(CXIdxEntityLanguage kind) {
   case CXIdxEntityLang_C: return "C";
   case CXIdxEntityLang_ObjC: return "ObjC";
   case CXIdxEntityLang_CXX: return "C++";
+  case CXIdxEntityLang_Swift: return "Swift";
   }
   assert(0 && "Garbage language kind");
   return 0;
