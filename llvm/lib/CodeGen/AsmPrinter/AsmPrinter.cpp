@@ -859,6 +859,16 @@ void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
   if (needsCFIMoves() == CFI_M_None)
     return;
 
+  // If there is no "real" instruction following this CFI instruction, skip
+  // emitting it; it would be beyond the end of the function's FDE range.
+  auto *MBB = MI.getParent();
+  auto I = std::next(MI.getIterator());
+  while (I != MBB->end() && I->isTransient())
+    ++I;
+  if (I == MBB->instr_end() &&
+      MBB->getReverseIterator() == MBB->getParent()->rbegin())
+    return;
+
   const std::vector<MCCFIInstruction> &Instrs = MF->getFrameInstructions();
   unsigned CFIIndex = MI.getOperand(0).getCFIIndex();
   const MCCFIInstruction &CFI = Instrs[CFIIndex];

@@ -23,8 +23,6 @@ entry:
 ; CHECK-FP-NEXT: :
 ; CHECK-FP-NEXT: .cfi_offset %rbp, -16
 ; CHECK-FP-NEXT: movq %rsp, %rbp
-; CHECK-FP-NEXT: :
-; CHECK-FP-NEXT: .cfi_def_cfa_register %rbp
 ; CHECK-FP-NEXT: .cfi_endproc
 
 ; An empty function is perfectly fine on ELF.
@@ -35,9 +33,7 @@ entry:
 ; LINUX-NO-FP-NEXT: .size   func, .L{{.*}}-func
 ; LINUX-NO-FP-NEXT: .cfi_endproc
 
-; A cfi directive can point to the end of a function. It (and in fact the
-; entire body) could be optimized out because of the unreachable, but we
-; don't do it right now.
+; A cfi directive cannot point to the end of a function.
 ; LINUX-FP: func:
 ; LINUX-FP-NEXT: .cfi_startproc
 ; LINUX-FP-NEXT: {{^}}#
@@ -47,8 +43,6 @@ entry:
 ; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT: .cfi_offset %rbp, -16
 ; LINUX-FP-NEXT: movq        %rsp, %rbp
-; LINUX-FP-NEXT:{{^}}.L{{.*}}:{{$}}
-; LINUX-FP-NEXT: .cfi_def_cfa_register %rbp
 ; LINUX-FP-NEXT:{{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT: .size   func, .Lfunc_end0-func
 ; LINUX-FP-NEXT: .cfi_endproc
