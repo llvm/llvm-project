@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c11 -E %s | FileCheck %s
+// RUN: %clang_cc1 -std=c11 -fms-compatibility -E %s | FileCheck %s
 #include <stdatomic.h>
 
 int bool_lock_free = ATOMIC_BOOL_LOCK_FREE;

@@ -50,6 +50,8 @@ FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
   " crash input. Use with -runs=N or -max_total_time=N to limit "
   "the number attempts."
   " Use with -exact_artifact_path to specify the output."
+  " Combine with ASAN_OPTIONS=dedup_token_length=3 (or similar) to ensure that"
+  " the minimized input triggers the same crash."
   )
 FUZZER_FLAG_INT(cleanse_crash, 0, "If 1, tries to cleanse the provided"
   " crash input to make it contain fewer original bytes."
@@ -86,7 +88,6 @@ FUZZER_FLAG_STRING(exact_artifact_path,
                    "as $(exact_artifact_path). This overrides -artifact_prefix "
                    "and will not use checksum in the file name. Do not "
                    "use the same path for several parallel processes.")
-FUZZER_FLAG_INT(output_csv, 0, "Enable pulse output in CSV format.")
 FUZZER_FLAG_INT(print_pcs, 0, "If 1, print out newly covered PCs.")
 FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 FUZZER_FLAG_INT(print_corpus_stats, 0,
@@ -130,3 +131,4 @@ FUZZER_DEPRECATED_FLAG(sync_timeout)
 FUZZER_DEPRECATED_FLAG(test_single_input)
 FUZZER_DEPRECATED_FLAG(drill)
 FUZZER_DEPRECATED_FLAG(truncate_units)
+FUZZER_DEPRECATED_FLAG(output_csv)

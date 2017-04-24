@@ -618,7 +618,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
   {
     unsigned BitWidth =
         DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
-    APInt MinSignedValue = APInt::getSignBit(BitWidth);
+    APInt MinSignedValue = APInt::getSignedMinValue(BitWidth);
     Value *X;
     const APInt *Y, *C;
     bool TrueWhenUnset;

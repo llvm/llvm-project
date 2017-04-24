@@ -1425,7 +1425,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     if (!SRegs[S->Reg])
       continue;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(S->Reg);
-    int FI = MFI.CreateFixedSpillStackObject(RC->getSize(), S->Offset);
+    int FI = MFI.CreateFixedSpillStackObject(TRI->getSpillSize(*RC), S->Offset);
     MinOffset = std::min(MinOffset, S->Offset);
     CSI.push_back(CalleeSavedInfo(S->Reg, FI));
     SRegs[S->Reg] = false;
@@ -1437,11 +1437,12 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     unsigned R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
-    int Off = MinOffset - RC->getSize();
-    unsigned Align = std::min(RC->getAlignment(), getStackAlignment());
+    unsigned Size = TRI->getSpillSize(*RC);
+    int Off = MinOffset - Size;
+    unsigned Align = std::min(TRI->getSpillAlignment(*RC), getStackAlignment());
     assert(isPowerOf2_32(Align));
     Off &= -Align;
-    int FI = MFI.CreateFixedSpillStackObject(RC->getSize(), Off);
+    int FI = MFI.CreateFixedSpillStackObject(Size, Off);
     MinOffset = std::min(MinOffset, Off);
     CSI.push_back(CalleeSavedInfo(R, FI));
     SRegs[R] = false;
@@ -1677,10 +1678,10 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   int FI = MI->getOperand(0).getIndex();
 
   bool Is128B = HST.useHVXDblOps();
-  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
-                     : &Hexagon::VectorRegs128BRegClass;
-  unsigned Size = RC->getSize();
-  unsigned NeedAlign = RC->getAlignment();
+  const auto &RC = !Is128B ? Hexagon::VectorRegsRegClass
+                           : Hexagon::VectorRegs128BRegClass;
+  unsigned Size = HRI.getSpillSize(RC);
+  unsigned NeedAlign = HRI.getSpillAlignment(RC);
   unsigned HasAlign = MFI.getObjectAlignment(FI);
   unsigned StoreOpc;
 
@@ -1734,10 +1735,10 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
   int FI = MI->getOperand(1).getIndex();
 
   bool Is128B = HST.useHVXDblOps();
-  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
-                     : &Hexagon::VectorRegs128BRegClass;
-  unsigned Size = RC->getSize();
-  unsigned NeedAlign = RC->getAlignment();
+  const auto &RC = !Is128B ? Hexagon::VectorRegsRegClass
+                           : Hexagon::VectorRegs128BRegClass;
+  unsigned Size = HRI.getSpillSize(RC);
+  unsigned NeedAlign = HRI.getSpillAlignment(RC);
   unsigned HasAlign = MFI.getObjectAlignment(FI);
   unsigned LoadOpc;
 
@@ -1777,16 +1778,16 @@ bool HexagonFrameLowering::expandStoreVec(MachineBasicBlock &B,
   if (!MI->getOperand(0).isFI())
     return false;
 
+  auto &HRI = *HST.getRegisterInfo();
   DebugLoc DL = MI->getDebugLoc();
   unsigned SrcR = MI->getOperand(2).getReg();
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
   bool Is128B = HST.useHVXDblOps();
-  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
-                     : &Hexagon::VectorRegs128BRegClass;
-
-  unsigned NeedAlign = RC->getAlignment();
+  const auto &RC = !Is128B ? Hexagon::VectorRegsRegClass
+                           : Hexagon::VectorRegs128BRegClass;
+  unsigned NeedAlign = HRI.getSpillAlignment(RC);
   unsigned HasAlign = MFI.getObjectAlignment(FI);
   unsigned StoreOpc;
 
@@ -1815,15 +1816,15 @@ bool HexagonFrameLowering::expandLoadVec(MachineBasicBlock &B,
   if (!MI->getOperand(1).isFI())
     return false;
 
+  auto &HRI = *HST.getRegisterInfo();
   DebugLoc DL = MI->getDebugLoc();
   unsigned DstR = MI->getOperand(0).getReg();
   int FI = MI->getOperand(1).getIndex();
 
   bool Is128B = HST.useHVXDblOps();
-  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
-                     : &Hexagon::VectorRegs128BRegClass;
-
-  unsigned NeedAlign = RC->getAlignment();
+  const auto &RC = !Is128B ? Hexagon::VectorRegsRegClass
+                           : Hexagon::VectorRegs128BRegClass;
+  unsigned NeedAlign = HRI.getSpillAlignment(RC);
   unsigned HasAlign = MFI.getObjectAlignment(FI);
   unsigned LoadOpc;
 
@@ -1932,7 +1933,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (!needToReserveScavengingSpillSlots(MF, HRI, RC))
         continue;
       unsigned Num = RC == &Hexagon::IntRegsRegClass ? NumberScavengerSlots : 1;
-      unsigned S = RC->getSize(), A = RC->getAlignment();
+      unsigned S = HRI.getSpillSize(*RC), A = HRI.getSpillAlignment(*RC);
       for (unsigned i = 0; i < Num; i++) {
         int NewFI = MFI.CreateSpillStackObject(S, A);
         RS->addScavengingFrameIndex(NewFI);

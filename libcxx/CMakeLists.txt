@@ -64,8 +64,12 @@ option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." O
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
-option(LIBCXX_ENABLE_FILESYSTEM
-        "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
+set(ENABLE_FILESYSTEM_DEFAULT ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
+if (WIN32)
+  set(ENABLE_FILESYSTEM_DEFAULT OFF)
+endif()
+option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of libc++experimental.a"
+    ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
 # Benchmark options -----------------------------------------------------------
@@ -116,21 +120,19 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
     NO_DEFAULT_PATH
   )
-  if ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
-      IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
+  if (LIBCXX_TARGETING_MSVC)
+    # FIXME: Figure out how to configure the ABI library on Windows.
+    set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
+  elseif ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
+          IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
+  elseif (APPLE)
+    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
+    set(LIBCXX_CXX_ABI_SYSTEM 1)
   else()
-    if (LIBCXX_TARGETING_MSVC)
-      # FIXME: Figure out how to configure the ABI library on Windows.
-      set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
-    elseif(APPLE)
-      set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-      set(LIBCXX_CXX_ABI_SYSTEM 1)
-    else()
-      set(LIBCXX_CXX_ABI_LIBNAME "default")
-    endif()
+    set(LIBCXX_CXX_ABI_LIBNAME "default")
   endif()
 else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")

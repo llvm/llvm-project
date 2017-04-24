@@ -117,8 +117,9 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // Otherwise, attempt to find a covering set of sub-register numbers.
   // For example, Q0 on ARM is a composition of D0+D1.
   unsigned CurPos = 0;
-  // The size of the register in bits, assuming 8 bits per byte.
-  unsigned RegSize = TRI.getMinimalPhysRegClass(MachineReg)->getSize() * 8;
+  // The size of the register in bits.
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg);
+  unsigned RegSize = TRI.getRegSizeInBits(*RC);
   // Keep track of the bits in the register we already emitted, so we
   // can avoid emitting redundant aliasing subregs.
   SmallBitVector Coverage(RegSize, false);
@@ -193,14 +194,10 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   }
 }
 
-bool DwarfExpression::addMachineLocExpression(const TargetRegisterInfo &TRI,
+bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
-                                              MachineLocation Loc,
+                                              unsigned MachineReg,
                                               unsigned FragmentOffsetInBits) {
-  if (Loc.isIndirect())
-    LocationKind = Memory;
-
-  unsigned MachineReg = Loc.getReg();
   auto Fragment = ExprCursor.getFragmentInfo();
   if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U))
     return false;
@@ -230,8 +227,15 @@ bool DwarfExpression::addMachineLocExpression(const TargetRegisterInfo &TRI,
     return true;
   }
 
-  // FIXME:
   // Don't emit locations that cannot be expressed without DW_OP_stack_value.
+  if (DwarfVersion < 4)
+    if (std::any_of(ExprCursor.begin(), ExprCursor.end(),
+                    [](DIExpression::ExprOperand Op) -> bool {
+                      return Op.getOp() == dwarf::DW_OP_stack_value;
+                    })) {
+      DwarfRegs.clear();
+      return false;
+    }
 
   assert(DwarfRegs.size() == 1);
   auto Reg = DwarfRegs[0];
@@ -340,7 +344,6 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       emitUnsigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_stack_value:
-      assert(LocationKind == Unknown || LocationKind == Implicit);
       LocationKind = Implicit;
       break;
     case dwarf::DW_OP_swap:

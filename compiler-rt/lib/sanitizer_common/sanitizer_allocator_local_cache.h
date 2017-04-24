@@ -180,6 +180,7 @@ struct SizeClassAllocator32LocalCache {
     uptr count;
     uptr max_count;
     uptr class_size;
+    uptr class_id_for_transfer_batch;
     void *batch[2 * TransferBatch::kMaxNumCached];
   };
   PerClass per_class_[kNumClasses];
@@ -188,24 +189,23 @@ struct SizeClassAllocator32LocalCache {
   void InitCache() {
     if (per_class_[1].max_count)
       return;
+    // TransferBatch class is declared in SizeClassAllocator.
+    uptr class_id_for_transfer_batch =
+        SizeClassMap::ClassID(sizeof(TransferBatch));
     for (uptr i = 0; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      c->max_count = 2 * TransferBatch::MaxCached(i);
+      uptr max_cached = TransferBatch::MaxCached(i);
+      c->max_count = 2 * max_cached;
       c->class_size = Allocator::ClassIdToSize(i);
+      // We transfer chunks between central and thread-local free lists in
+      // batches. For small size classes we allocate batches separately. For
+      // large size classes we may use one of the chunks to store the batch.
+      // sizeof(TransferBatch) must be a power of 2 for more efficient
+      // allocation.
+      c->class_id_for_transfer_batch = (c->class_size <
+          TransferBatch::AllocationSizeRequiredForNElements(max_cached)) ?
+              class_id_for_transfer_batch : 0;
     }
-  }
-
-  // TransferBatch class is declared in SizeClassAllocator.
-  // We transfer chunks between central and thread-local free lists in batches.
-  // For small size classes we allocate batches separately.
-  // For large size classes we may use one of the chunks to store the batch.
-  // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
-  static uptr SizeClassForTransferBatch(uptr class_id) {
-    if (Allocator::ClassIdToSize(class_id) <
-        TransferBatch::AllocationSizeRequiredForNElements(
-            TransferBatch::MaxCached(class_id)))
-      return SizeClassMap::ClassID(sizeof(TransferBatch));
-    return 0;
   }
 
   // Returns a TransferBatch suitable for class_id.
@@ -213,7 +213,7 @@ struct SizeClassAllocator32LocalCache {
   // For large size classes simply returns b.
   TransferBatch *CreateBatch(uptr class_id, SizeClassAllocator *allocator,
                              TransferBatch *b) {
-    if (uptr batch_class_id = SizeClassForTransferBatch(class_id))
+    if (uptr batch_class_id = per_class_[class_id].class_id_for_transfer_batch)
       return (TransferBatch*)Allocate(allocator, batch_class_id);
     return b;
   }
@@ -223,7 +223,7 @@ struct SizeClassAllocator32LocalCache {
   // Does notthing for large size classes.
   void DestroyBatch(uptr class_id, SizeClassAllocator *allocator,
                     TransferBatch *b) {
-    if (uptr batch_class_id = SizeClassForTransferBatch(class_id))
+    if (uptr batch_class_id = per_class_[class_id].class_id_for_transfer_batch)
       Deallocate(allocator, batch_class_id, b);
   }
 

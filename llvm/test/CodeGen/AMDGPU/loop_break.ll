@@ -10,7 +10,7 @@
 
 ; OPT: bb4:
 ; OPT: load volatile
-; OPT: xor i1 %cmp1
+; OPT: %cmp1 = icmp sge i32 %tmp, %load
 ; OPT: call i64 @llvm.amdgcn.if.break(
 ; OPT: br label %Flow
 

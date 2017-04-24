@@ -931,6 +931,18 @@ static Instruction *replaceGEPIdxWithZero(InstCombiner &IC, Value *Ptr,
   return nullptr;
 }
 
+static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
+    const Value *GEPI0 = GEPI->getOperand(0);
+    if (isa<ConstantPointerNull>(GEPI0) && GEPI->getPointerAddressSpace() == 0)
+      return true;
+  }
+  if (isa<UndefValue>(Op) ||
+      (isa<ConstantPointerNull>(Op) && LI.getPointerAddressSpace() == 0))
+    return true;
+  return false;
+}
+
 Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
 
@@ -979,27 +991,13 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   if (!LI.isUnordered()) return nullptr;
 
   // load(gep null, ...) -> unreachable
-  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
-    const Value *GEPI0 = GEPI->getOperand(0);
-    // TODO: Consider a target hook for valid address spaces for this xform.
-    if (isa<ConstantPointerNull>(GEPI0) && GEPI->getPointerAddressSpace() == 0){
-      // Insert a new store to null instruction before the load to indicate
-      // that this code is not reachable.  We do this instead of inserting
-      // an unreachable instruction directly because we cannot modify the
-      // CFG.
-      new StoreInst(UndefValue::get(LI.getType()),
-                    Constant::getNullValue(Op->getType()), &LI);
-      return replaceInstUsesWith(LI, UndefValue::get(LI.getType()));
-    }
-  }
-
   // load null/undef -> unreachable
-  // TODO: Consider a target hook for valid address spaces for this xform.
-  if (isa<UndefValue>(Op) ||
-      (isa<ConstantPointerNull>(Op) && LI.getPointerAddressSpace() == 0)) {
-    // Insert a new store to null instruction before the load to indicate that
-    // this code is not reachable.  We do this instead of inserting an
-    // unreachable instruction directly because we cannot modify the CFG.
+  // TODO: Consider a target hook for valid address spaces for this xforms.
+  if (canSimplifyNullLoadOrGEP(LI, Op)) {
+    // Insert a new store to null instruction before the load to indicate
+    // that this code is not reachable.  We do this instead of inserting
+    // an unreachable instruction directly because we cannot modify the
+    // CFG.
     new StoreInst(UndefValue::get(LI.getType()),
                   Constant::getNullValue(Op->getType()), &LI);
     return replaceInstUsesWith(LI, UndefValue::get(LI.getType()));

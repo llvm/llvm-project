@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -std=c++11 -fopenmp -fopenmp-version=45 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
@@ -107,6 +107,41 @@ T tmain(T argc) {
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: a++;
   return T();
+}
+
+void foo(int argc, char **argv) {
+  int b, c, d, e, f, h;
+  static int a;
+// CHECK: static int a;
+  static float g;
+#pragma omp threadprivate(g)
+  [&]() {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
+    // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a)
+    for (int i = 0; i < 2; ++i)
+// CHECK: for (int i = 0; i < 2; ++i)
+      [&]() {
+	  a = 2;
+	  // CHECK: a = 2;
+	}();
+
+  }();
+  [&]() {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute parallel for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) if (argc) num_threads(a) default(shared) shared(e) reduction(+ : h) dist_schedule(static, b)
+    for (int i = 0; i < 10; ++i)
+      for (int j = 0; j < 10; ++j)
+	[&]() {
+	  a++;
+	}();
+    // CHECK: #pragma omp distribute parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) if(argc) num_threads(a) default(shared) shared(e) reduction(+: h) dist_schedule(static, b)
+    // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+    // CHECK-NEXT: for (int j = 0; j < 10; ++j)
+    // CHECK: a++;
+  }();
 }
 
 int main(int argc, char **argv) {

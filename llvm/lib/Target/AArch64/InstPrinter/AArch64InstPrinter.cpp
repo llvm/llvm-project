@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -273,6 +274,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
         << formatImm(SignExtend64(Value, RegWidth));
       return;
     }
+  }
+
+  if (Opcode == AArch64::CompilerBarrier) {
+    O << '\t' << MAI.getCommentString() << " COMPILER BARRIER";
+    printAnnotation(O, Annot);
+    return;
   }
 
   if (!printAliasInstr(MI, STI, O))

@@ -27,6 +27,8 @@ class StringToOffsetTable {
   std::string AggregateString;
 
 public:
+  bool Empty() const { return StringOffset.empty(); }
+
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
     auto IterBool =
         StringOffset.insert(std::make_pair(Str, AggregateString.size()));

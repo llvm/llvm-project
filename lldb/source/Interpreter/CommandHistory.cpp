@@ -47,13 +47,13 @@ CommandHistory::FindString(llvm::StringRef input_str) const {
 
   size_t idx = 0;
   if (input_str.front() == '-') {
-    if (input_str.drop_front(2).getAsInteger(0, idx))
+    if (input_str.drop_front(1).getAsInteger(0, idx))
       return llvm::None;
     if (idx >= m_history.size())
       return llvm::None;
     idx = m_history.size() - idx;
   } else {
-    if (input_str.drop_front().getAsInteger(0, idx))
+    if (input_str.getAsInteger(0, idx))
       return llvm::None;
     if (idx >= m_history.size())
       return llvm::None;

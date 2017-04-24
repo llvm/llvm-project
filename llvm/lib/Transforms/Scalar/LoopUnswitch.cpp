@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass transforms loops that contain branches on loop-invariant conditions
-// to have multiple loops.  For example, it turns the left into the right code:
+// to multiple loops.  For example, it turns the left into the right code:
 //
 //  for (...)                  if (lic)
 //    A                          for (...)

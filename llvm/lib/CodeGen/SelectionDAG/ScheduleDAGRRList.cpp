@@ -1320,6 +1320,18 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
                                RegAdded, LRegs);
 
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
+    if (MCID.hasOptionalDef()) {
+      // Most ARM instructions have an OptionalDef for CPSR, to model the S-bit.
+      // This operand can be either a def of CPSR, if the S bit is set; or a use
+      // of %noreg.  When the OptionalDef is set to a valid register, we need to
+      // handle it in the same way as an ImplicitDef.
+      for (unsigned i = 0; i < MCID.getNumDefs(); ++i)
+        if (MCID.OpInfo[i].isOptionalDef()) {
+          const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
+          unsigned Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
+          CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+        }
+    }
     if (!MCID.ImplicitDefs)
       continue;
     for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)

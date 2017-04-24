@@ -310,6 +310,23 @@ define <4 x i16> @vld2dupi16_update(i16** %ptr) nounwind {
 	ret <4 x i16> %tmp5
 }
 
+define <4 x i16> @vld2dupi16_odd_update(i16** %ptr) nounwind {
+;CHECK-LABEL: vld2dupi16_odd_update:
+;CHECK: mov [[INC:r[0-9]+]], #6
+;CHECK: vld2.16 {d16[], d17[]}, [r1], [[INC]]
+	%A = load i16*, i16** %ptr
+        %A2 = bitcast i16* %A to i8*
+	%tmp0 = tail call %struct.__neon_int4x16x2_t @llvm.arm.neon.vld2lane.v4i16.p0i8(i8* %A2, <4 x i16> undef, <4 x i16> undef, i32 0, i32 2)
+	%tmp1 = extractvalue %struct.__neon_int4x16x2_t %tmp0, 0
+	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> zeroinitializer
+	%tmp3 = extractvalue %struct.__neon_int4x16x2_t %tmp0, 1
+	%tmp4 = shufflevector <4 x i16> %tmp3, <4 x i16> undef, <4 x i32> zeroinitializer
+	%tmp5 = add <4 x i16> %tmp2, %tmp4
+	%tmp6 = getelementptr i16, i16* %A, i32 3
+	store i16* %tmp6, i16** %ptr
+	ret <4 x i16> %tmp5
+}
+
 define <2 x i32> @vld2dupi32(i8* %A) nounwind {
 ;CHECK-LABEL: vld2dupi32:
 ;Check the alignment value.  Max for this instruction is 64 bits:

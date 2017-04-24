@@ -229,3 +229,65 @@ int FooBar();
 - (void) VarArgMeth : (id)arg, ... {}
 @end
 
+/**
+ * blockPointerVariable
+ *
+ * @param i is integer.
+ * @returns integer.
+ */
+int (^blockPointerVariable)(int i);
+
+struct HasFields {
+  /**
+   * blockPointerField
+   *
+   * \param i is integer.
+   * \returns integer.
+   */
+  int (^blockPointerFields)(int i);
+};
+
+// expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
+/**
+ * functionPointerVariable
+ *
+ * \param p not here.
+ * \returns integer.
+ */
+void (^blockPointerVariableThatLeadsNowhere)();
+
+@interface CheckFunctionBlockPointerVars {
+  /**
+   * functionPointerIVar
+   *
+   * @param i is integer.
+   * @returns integer.
+   */
+  int (*functionPointerIVar)(int i);
+
+  /**
+   * blockPointerIVar
+   *
+   * \param i is integer.
+   * \returns integer.
+   */
+  int (^blockPointerIVar)(int i);
+}
+
+/**
+ * functionPointerProperty
+ *
+ * @param i is integer.
+ * @returns integer.
+ */
+@property int (*functionPointerProperty)(int i);
+
+/**
+ * blockPointerProperty
+ *
+ * \param i is integer.
+ * \returns integer.
+ */
+@property int (^blockPointerProperty)(int i);
+
+@end

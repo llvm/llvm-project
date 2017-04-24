@@ -224,36 +224,32 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X64-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,0,2147483648,0]
 ; X64-SSE-NEXT:    movdqa %xmm0, %xmm2
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm2
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [18446744073709551361,18446744073709551361]
-; X64-SSE-NEXT:    movdqa %xmm1, %xmm4
-; X64-SSE-NEXT:    pxor %xmm3, %xmm4
-; X64-SSE-NEXT:    movdqa %xmm4, %xmm5
-; X64-SSE-NEXT:    pcmpgtd %xmm2, %xmm5
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; X64-SSE-NEXT:    pcmpeqd %xmm2, %xmm4
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,1,3,3]
-; X64-SSE-NEXT:    pand %xmm6, %xmm2
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
-; X64-SSE-NEXT:    por %xmm2, %xmm4
-; X64-SSE-NEXT:    movdqa %xmm4, %xmm2
+; X64-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [18446744071562067713,18446744071562067713]
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm4
+; X64-SSE-NEXT:    pcmpgtd %xmm2, %xmm4
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; X64-SSE-NEXT:    pcmpeqd %xmm3, %xmm2
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; X64-SSE-NEXT:    pand %xmm5, %xmm2
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
+; X64-SSE-NEXT:    por %xmm2, %xmm3
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm2
 ; X64-SSE-NEXT:    pandn %xmm0, %xmm2
-; X64-SSE-NEXT:    pand %xmm3, %xmm4
-; X64-SSE-NEXT:    por %xmm2, %xmm4
-; X64-SSE-NEXT:    movdqa %xmm4, %xmm0
-; X64-SSE-NEXT:    pxor %xmm1, %xmm0
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255]
-; X64-SSE-NEXT:    pxor %xmm2, %xmm1
-; X64-SSE-NEXT:    movdqa %xmm0, %xmm3
-; X64-SSE-NEXT:    pcmpgtd %xmm1, %xmm3
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[0,0,2,2]
+; X64-SSE-NEXT:    pand {{.*}}(%rip), %xmm3
+; X64-SSE-NEXT:    por %xmm2, %xmm3
+; X64-SSE-NEXT:    pxor %xmm3, %xmm1
+; X64-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483903,2147483903]
+; X64-SSE-NEXT:    movdqa %xmm1, %xmm2
+; X64-SSE-NEXT:    pcmpgtd %xmm0, %xmm2
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
 ; X64-SSE-NEXT:    pcmpeqd %xmm0, %xmm1
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; X64-SSE-NEXT:    pand %xmm5, %xmm0
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
+; X64-SSE-NEXT:    pand %xmm4, %xmm0
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; X64-SSE-NEXT:    por %xmm0, %xmm1
 ; X64-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE-NEXT:    pandn %xmm4, %xmm0
-; X64-SSE-NEXT:    pand %xmm2, %xmm1
+; X64-SSE-NEXT:    pandn %xmm3, %xmm0
+; X64-SSE-NEXT:    pand {{.*}}(%rip), %xmm1
 ; X64-SSE-NEXT:    por %xmm0, %xmm1
 ; X64-SSE-NEXT:    movd %xmm1, %rax
 ; X64-SSE-NEXT:    xorps %xmm0, %xmm0

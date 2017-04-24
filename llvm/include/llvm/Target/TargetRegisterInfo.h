@@ -93,13 +93,6 @@ public:
     return MC->contains(Reg1, Reg2);
   }
 
-  /// Return the size of the register in bytes, which is also the size
-  /// of a stack slot allocated to hold a spilled copy of this register.
-  unsigned getSize() const { return SpillSize; }
-
-  /// Return the minimum required alignment for a register of this class.
-  unsigned getAlignment() const { return SpillAlignment; }
-
   /// Return the cost of copying a value between two registers in this class.
   /// A negative number means the register class is very expensive
   /// to copy e.g. status flag register classes.
@@ -325,6 +318,23 @@ public:
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static unsigned index2VirtReg(unsigned Index) {
     return Index | (1u << 31);
+  }
+
+  /// Return the size in bits of a register from class RC.
+  unsigned getRegSizeInBits(const TargetRegisterClass &RC) const {
+    return RC.SpillSize * 8;
+  }
+
+  /// Return the size in bytes of the stack slot allocated to hold a spilled
+  /// copy of a register from class RC.
+  unsigned getSpillSize(const TargetRegisterClass &RC) const {
+    return RC.SpillSize;
+  }
+
+  /// Return the minimum required alignment for a spill slot for a register
+  /// of this class.
+  unsigned getSpillAlignment(const TargetRegisterClass &RC) const {
+    return RC.SpillAlignment;
   }
 
   /// Returns the Register Class of a physical register of the given type,

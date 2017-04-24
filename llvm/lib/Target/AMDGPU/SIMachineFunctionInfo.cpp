@@ -25,6 +25,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     TIDReg(AMDGPU::NoRegister),
     ScratchRSrcReg(AMDGPU::NoRegister),
     ScratchWaveOffsetReg(AMDGPU::NoRegister),
+    FrameOffsetReg(AMDGPU::NoRegister),
+    StackPtrOffsetReg(AMDGPU::NoRegister),
     PrivateSegmentBufferUserSGPR(AMDGPU::NoRegister),
     DispatchPtrUserSGPR(AMDGPU::NoRegister),
     QueuePtrUserSGPR(AMDGPU::NoRegister),

@@ -221,8 +221,11 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_ADD:
   case G_SUB:
   case G_MUL:
+  case G_SDIV:
+  case G_UDIV:
   case G_SEXT:
   case G_ZEXT:
+  case G_TRUNC:
   case G_GEP:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.

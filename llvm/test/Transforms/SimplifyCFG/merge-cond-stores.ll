@@ -36,6 +36,39 @@ end:
   ret void
 }
 
+; This is the same as test_simple, but the branch target order has been swapped
+define void @test_simple_commuted(i32* %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @test_simple_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X1:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[X1]], [[X2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:         [[DOT:%.*]] = zext i1 [[X2]] to i32
+; CHECK-NEXT:    store i32 [[DOT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:         ret void
+;
+entry:
+  %x1 = icmp eq i32 %a, 0
+  br i1 %x1, label %yes1, label %fallthrough
+
+yes1:
+  store i32 0, i32* %p
+  br label %fallthrough
+
+fallthrough:
+  %x2 = icmp eq i32 %b, 0
+  br i1 %x2, label %yes2, label %end
+
+yes2:
+  store i32 1, i32* %p
+  br label %end
+
+end:
+  ret void
+}
+
 ; This test should entirely fold away, leaving one large basic block.
 define void @test_recursive(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test_recursive(

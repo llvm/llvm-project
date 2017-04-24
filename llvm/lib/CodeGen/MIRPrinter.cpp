@@ -925,9 +925,6 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
        << CmpInst::getPredicateName(Pred) << ')';
     break;
   }
-  case MachineOperand::MO_Placeholder:
-    OS << "<placeholder>";
-    break;
   }
 }
 

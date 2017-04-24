@@ -32,8 +32,8 @@ OldT2IfCvt("old-thumb2-ifcvt", cl::Hidden,
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI), RI() {}
 
-/// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-void Thumb2InstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+/// Return the noop instruction to use for a noop.
+void Thumb2InstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(ARM::tHINT);
   NopInst.addOperand(MCOperand::createImm(0));
   NopInst.addOperand(MCOperand::createImm(ARMCC::AL));

@@ -353,7 +353,8 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 
 typedef NS_ENUM(AnotherEnum, int) {
 // CHECK-NOT: [[@LINE-1]]:17 | type-alias/C | AnotherEnum |
-// CHECK: [[@LINE-2]]:17 | enum/C | AnotherEnum | [[AnotherEnum_USR:.*]] | {{.*}} | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-2]]:17 | {{.*}} | Ref
+// CHECK: [[@LINE-3]]:17 | enum/C | AnotherEnum | [[AnotherEnum_USR:.*]] | {{.*}} | Def | rel: 0
   AnotherEnumFirst = 0,
   AnotherEnumSecond = 1,
   AnotherEnumThird = 2,

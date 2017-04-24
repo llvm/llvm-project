@@ -3545,6 +3545,52 @@ define i16 @test_pextrw(<8 x i16> %a0) {
   ret i16 %1
 }
 
+define <8 x i16> @test_pinsrw(<8 x i16> %a0, i16 %a1, i16 *%a2) {
+; GENERIC-LABEL: test_pinsrw:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    pinsrw $1, %edi, %xmm0
+; GENERIC-NEXT:    pinsrw $3, (%rsi), %xmm0
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test_pinsrw:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    pinsrw $1, %edi, %xmm0
+; ATOM-NEXT:    pinsrw $3, (%rsi), %xmm0
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; SLM-LABEL: test_pinsrw:
+; SLM:       # BB#0:
+; SLM-NEXT:    pinsrw $1, %edi, %xmm0 # sched: [1:1.00]
+; SLM-NEXT:    pinsrw $3, (%rsi), %xmm0 # sched: [4:1.00]
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_pinsrw:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0 # sched: [1:0.50]
+; SANDY-NEXT:    vpinsrw $3, (%rsi), %xmm0, %xmm0 # sched: [5:0.50]
+; SANDY-NEXT:    retq # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_pinsrw:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpinsrw $3, (%rsi), %xmm0, %xmm0 # sched: [5:1.00]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; BTVER2-LABEL: test_pinsrw:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vpinsrw $3, (%rsi), %xmm0, %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+  %1 = insertelement <8 x i16> %a0, i16 %a1, i32 1
+  %2 = load i16, i16 *%a2
+  %3 = insertelement <8 x i16> %1, i16 %2, i32 3
+  ret <8 x i16> %3
+}
+
 define <4 x i32> @test_pmaddwd(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_pmaddwd:
 ; GENERIC:       # BB#0:

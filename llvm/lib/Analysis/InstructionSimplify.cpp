@@ -568,11 +568,11 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Ty);
 
-  // add nsw/nuw (xor Y, signbit), signbit --> Y
+  // add nsw/nuw (xor Y, signmask), signmask --> Y
   // The no-wrapping add guarantees that the top bit will be set by the add.
   // Therefore, the xor must be clearing the already set sign bit of Y.
-  if ((isNSW || isNUW) && match(Op1, m_SignBit()) &&
-      match(Op0, m_Xor(m_Value(Y), m_SignBit())))
+  if ((isNSW || isNUW) && match(Op1, m_SignMask()) &&
+      match(Op0, m_Xor(m_Value(Y), m_SignMask())))
     return Y;
 
   /// i1 add -> xor.
@@ -1081,7 +1081,7 @@ static Value *SimplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (!isSigned && match(Op0, m_UDiv(m_Value(X), m_ConstantInt(C1))) &&
       match(Op1, m_ConstantInt(C2))) {
     bool Overflow;
-    C1->getValue().umul_ov(C2->getValue(), Overflow);
+    (void)C1->getValue().umul_ov(C2->getValue(), Overflow);
     if (Overflow)
       return Constant::getNullValue(Op0->getType());
   }
@@ -1876,6 +1876,19 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const Query &Q,
   if (match(Op1, m_Not(m_And(m_Value(A), m_Value(B)))) &&
       (A == Op0 || B == Op0))
     return Constant::getAllOnesValue(Op0->getType());
+
+  // (A & ~B) | (A ^ B) -> (A ^ B)
+  // (~B & A) | (A ^ B) -> (A ^ B)
+  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op1, m_Xor(m_Specific(A), m_Specific(B))))
+    return Op1;
+
+  // Commute the 'or' operands.
+  // (A ^ B) | (A & ~B) -> (A ^ B)
+  // (A ^ B) | (~B & A) -> (A ^ B)
+  if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op0, m_Xor(m_Specific(A), m_Specific(B))))
+    return Op0;
 
   if (auto *ICILHS = dyn_cast<ICmpInst>(Op0)) {
     if (auto *ICIRHS = dyn_cast<ICmpInst>(Op1)) {
@@ -2819,7 +2832,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
             return ConstantInt::getTrue(RHS->getContext());
         }
       }
-      if (CIVal->isSignBit() && *CI2Val == 1) {
+      if (CIVal->isSignMask() && *CI2Val == 1) {
         if (Pred == ICmpInst::ICMP_UGT)
           return ConstantInt::getFalse(RHS->getContext());
         if (Pred == ICmpInst::ICMP_ULE)
@@ -3796,6 +3809,8 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   Type *GEPTy = PointerType::get(LastType, AS);
   if (VectorType *VT = dyn_cast<VectorType>(Ops[0]->getType()))
     GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+  else if (VectorType *VT = dyn_cast<VectorType>(Ops[1]->getType()))
+    GEPTy = VectorType::get(GEPTy, VT->getNumElements());
 
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);
@@ -4078,6 +4093,60 @@ Value *llvm::SimplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                             RecursionLimit);
 }
 
+/// For the given destination element of a shuffle, peek through shuffles to
+/// match a root vector source operand that contains that element in the same
+/// vector lane (ie, the same mask index), so we can eliminate the shuffle(s).
+static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
+                                   Constant *Mask, Value *RootVec, int RootElt,
+                                   unsigned MaxRecurse) {
+  if (!MaxRecurse--)
+    return nullptr;
+
+  // Bail out if any mask value is undefined. That kind of shuffle may be
+  // simplified further based on demanded bits or other folds.
+  int MaskVal = ShuffleVectorInst::getMaskValue(Mask, RootElt);
+  if (MaskVal == -1)
+    return nullptr;
+
+  // The mask value chooses which source operand we need to look at next.
+  Value *SourceOp;
+  int InVecNumElts = Op0->getType()->getVectorNumElements();
+  if (MaskVal < InVecNumElts) {
+    RootElt = MaskVal;
+    SourceOp = Op0;
+  } else {
+    RootElt = MaskVal - InVecNumElts;
+    SourceOp = Op1;
+  }
+
+  // If the source operand is a shuffle itself, look through it to find the
+  // matching root vector.
+  if (auto *SourceShuf = dyn_cast<ShuffleVectorInst>(SourceOp)) {
+    return foldIdentityShuffles(
+        DestElt, SourceShuf->getOperand(0), SourceShuf->getOperand(1),
+        SourceShuf->getMask(), RootVec, RootElt, MaxRecurse);
+  }
+
+  // TODO: Look through bitcasts? What if the bitcast changes the vector element
+  // size?
+
+  // The source operand is not a shuffle. Initialize the root vector value for
+  // this shuffle if that has not been done yet.
+  if (!RootVec)
+    RootVec = SourceOp;
+
+  // Give up as soon as a source operand does not match the existing root value.
+  if (RootVec != SourceOp)
+    return nullptr;
+
+  // The element must be coming from the same lane in the source vector
+  // (although it may have crossed lanes in intermediate shuffles).
+  if (RootElt != DestElt)
+    return nullptr;
+
+  return RootVec;
+}
+
 static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
                                         Type *RetTy, const Query &Q,
                                         unsigned MaxRecurse) {
@@ -4122,7 +4191,28 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
         OpShuf->getMask()->getSplatValue())
       return Op1;
 
-  return nullptr;
+  // Don't fold a shuffle with undef mask elements. This may get folded in a
+  // better way using demanded bits or other analysis.
+  // TODO: Should we allow this?
+  for (unsigned i = 0; i != MaskNumElts; ++i)
+    if (ShuffleVectorInst::getMaskValue(Mask, i) == -1)
+      return nullptr;
+
+  // Check if every element of this shuffle can be mapped back to the
+  // corresponding element of a single root vector. If so, we don't need this
+  // shuffle. This handles simple identity shuffles as well as chains of
+  // shuffles that may widen/narrow and/or move elements across lanes and back.
+  Value *RootVec = nullptr;
+  for (unsigned i = 0; i != MaskNumElts; ++i) {
+    // Note that recursion is limited for each vector element, so if any element
+    // exceeds the limit, this will fail to simplify.
+    RootVec = foldIdentityShuffles(i, Op0, Op1, Mask, RootVec, i, MaxRecurse);
+
+    // We can't replace a widening/narrowing shuffle with one of its operands.
+    if (!RootVec || RootVec->getType() != RetTy)
+      return nullptr;
+  }
+  return RootVec;
 }
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.

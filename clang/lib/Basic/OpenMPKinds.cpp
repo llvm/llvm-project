@@ -854,14 +854,10 @@ bool clang::isOpenMPTaskingDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
   return Kind == OMPD_distribute_parallel_for ||
          Kind == OMPD_distribute_parallel_for_simd ||
-         Kind == OMPD_distribute_simd || Kind == OMPD_teams_distribute ||
-         Kind == OMPD_teams_distribute_simd ||
          Kind == OMPD_teams_distribute_parallel_for_simd ||
          Kind == OMPD_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute ||
          Kind == OMPD_target_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute_parallel_for_simd ||
-         Kind == OMPD_target_teams_distribute_simd;
+         Kind == OMPD_target_teams_distribute_parallel_for_simd;
 }
 
 void clang::getOpenMPCaptureRegions(

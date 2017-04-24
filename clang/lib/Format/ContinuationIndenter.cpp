@@ -792,7 +792,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     if (Previous && Previous->is(tok::question))
       State.Stack.back().QuestionColumn = State.Column;
   }
-  if (!Current.opensScope() && !Current.closesScope())
+  if (!Current.opensScope() && !Current.closesScope() &&
+      !Current.is(TT_PointerOrReference))
     State.LowestLevelOnLine =
         std::min(State.LowestLevelOnLine, Current.NestingLevel);
   if (Current.isMemberAccess())

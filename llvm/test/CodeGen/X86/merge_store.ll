@@ -29,17 +29,8 @@ entry:
   ret void
 }
 
-
-
 ;; CHECK-LABEL: indexed-store-merge
-
-;; We should be able to merge the 4 consecutive stores.  
-;; FIXMECHECK: movl	$0, 2(%rsi,%rdi)
-
-;; CHECK: movb	$0, 2(%rsi,%rdi)
-;; CHECK: movb	$0, 3(%rsi,%rdi)
-;; CHECK: movb	$0, 4(%rsi,%rdi)
-;; CHECK: movb	$0, 5(%rsi,%rdi)
+;; CHECK: movl	$0, 2(%rsi,%rdi)
 ;; CHECK: movb	$0, (%rsi)
 define void @indexed-store-merge(i64 %p, i8* %v) {
 entry:

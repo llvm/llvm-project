@@ -59,7 +59,6 @@ private:
   std::vector<PhdrEntry> createPhdrs();
   void removeEmptyPTLoad();
   void addPtArmExid(std::vector<PhdrEntry> &Phdrs);
-  void assignAddresses();
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
@@ -251,13 +250,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    if (Script->Opt.HasSections) {
-      Script->assignAddresses(Phdrs);
-    } else {
+    if (!Script->Opt.HasSections) {
       fixSectionAlignments();
-      assignAddresses();
-      Script->processNonSectionCommands();
+      Script->fabricateDefaultCommands(Config->MaxPageSize);
     }
+    Script->assignAddresses(Phdrs);
 
     // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
     // 0 sized region. This has to be done late since only after assignAddresses
@@ -1507,37 +1504,6 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
       Min = std::min(Min, P.second);
 
   AllocateHeader = allocateHeaders(Phdrs, OutputSections, Min);
-}
-
-// Assign VAs (addresses at run-time) to output sections.
-template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uint64_t VA = Config->ImageBase;
-  uint64_t ThreadBssOffset = 0;
-
-  if (AllocateHeader)
-    VA += getHeaderSize();
-
-  for (OutputSection *Sec : OutputSections) {
-    uint32_t Alignment = Sec->Alignment;
-    if (Sec->PageAlign)
-      Alignment = std::max<uint32_t>(Alignment, Config->MaxPageSize);
-
-    auto I = Config->SectionStartMap.find(Sec->Name);
-    if (I != Config->SectionStartMap.end())
-      VA = I->second;
-
-    // We only assign VAs to allocated sections.
-    if (needsPtLoad(Sec)) {
-      VA = alignTo(VA, Alignment);
-      Sec->Addr = VA;
-      VA += Sec->Size;
-    } else if (Sec->Flags & SHF_TLS && Sec->Type == SHT_NOBITS) {
-      uint64_t TVA = VA + ThreadBssOffset;
-      TVA = alignTo(TVA, Alignment);
-      Sec->Addr = TVA;
-      ThreadBssOffset = TVA - VA + Sec->Size;
-    }
-  }
 }
 
 // Adjusts the file alignment for a given output section and returns

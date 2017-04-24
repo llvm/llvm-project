@@ -56,6 +56,16 @@ typedef DWARFDebugLine::LineTable DWARFLineTable;
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
 typedef DILineInfoSpecifier::FunctionNameKind FunctionNameKind;
 
+uint64_t llvm::getRelocatedValue(const DataExtractor &Data, uint32_t Size,
+                                 uint32_t *Off, const RelocAddrMap *Relocs) {
+  if (!Relocs)
+    return Data.getUnsigned(Off, Size);
+  RelocAddrMap::const_iterator AI = Relocs->find(*Off);
+  if (AI == Relocs->end())
+    return Data.getUnsigned(Off, Size);
+  return Data.getUnsigned(Off, Size) + AI->second.second;
+}
+
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
                              const DWARFSection& Section, StringRef StringSection,
                              bool LittleEndian) {
@@ -212,11 +222,11 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
     // sizes, but for simplicity we just use the address byte size of the last
     // compile unit (there is no easy and fast way to associate address range
     // list and the compile unit it describes).
-    DataExtractor rangesData(getRangeSection(), isLittleEndian(),
+    DataExtractor rangesData(getRangeSection().Data, isLittleEndian(),
                              savedAddressByteSize);
     offset = 0;
     DWARFDebugRangeList rangeList;
-    while (rangeList.extract(rangesData, &offset))
+    while (rangeList.extract(rangesData, &offset, getRangeSection().Relocs))
       rangeList.dump(OS);
   }
 
@@ -722,7 +732,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
       *SectionData = data;
       if (name == "debug_ranges") {
         // FIXME: Use the other dwo range section when we emit it.
-        RangeDWOSection = data;
+        RangeDWOSection.Data = data;
       }
     } else if (name == "debug_types") {
       // Find debug_types data by section rather than name as there are
@@ -763,6 +773,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         .Case("debug_loc", &LocSection.Relocs)
         .Case("debug_info.dwo", &InfoDWOSection.Relocs)
         .Case("debug_line", &LineSection.Relocs)
+        .Case("debug_ranges", &RangeSection.Relocs)
         .Case("apple_names", &AppleNamesSection.Relocs)
         .Case("apple_types", &AppleTypesSection.Relocs)
         .Case("apple_namespaces", &AppleNamespacesSection.Relocs)
@@ -845,7 +856,7 @@ StringRef *DWARFContextInMemory::MapSectionToMember(StringRef Name) {
       .Case("debug_frame", &DebugFrameSection)
       .Case("eh_frame", &EHFrameSection)
       .Case("debug_str", &StringSection)
-      .Case("debug_ranges", &RangeSection)
+      .Case("debug_ranges", &RangeSection.Data)
       .Case("debug_macinfo", &MacinfoSection)
       .Case("debug_pubnames", &PubNamesSection)
       .Case("debug_pubtypes", &PubTypesSection)

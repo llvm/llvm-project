@@ -254,7 +254,9 @@ int main()
         {
             assert(static_cast<bool>(opt) == true);
             assert(Y::dtor_called == false);
-            opt.emplace(1);
+            auto &v = opt.emplace(1);
+            static_assert( std::is_same_v<Y&, decltype(v)>, "" );
+            assert(false);
         }
         catch (int i)
         {

@@ -17,7 +17,9 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -27,9 +29,20 @@
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "partialinlining"
+#define DEBUG_TYPE "partial-inlining"
 
 STATISTIC(NumPartialInlined, "Number of functions partially inlined");
+
+// Command line option to disable partial-inlining. The default is false:
+static cl::opt<bool>
+    DisablePartialInlining("disable-partial-inlining", cl::init(false),
+                           cl::Hidden, cl::desc("Disable partial ininling"));
+
+// Command line option to set the maximum number of partial inlining allowed
+// for the module. The default value of -1 means no limit.
+static cl::opt<int> MaxNumPartialInlining(
+    "max-partial-inlining", cl::init(-1), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Max number of partial inlining. The default is unlimited"));
 
 namespace {
 struct PartialInlinerImpl {
@@ -39,6 +52,12 @@ struct PartialInlinerImpl {
 
 private:
   InlineFunctionInfo IFI;
+  int NumPartialInlining = 0;
+
+  bool IsLimitReached() {
+    return (MaxNumPartialInlining != -1 &&
+            NumPartialInlining >= MaxNumPartialInlining);
+  }
 };
 struct PartialInlinerLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
@@ -66,6 +85,9 @@ struct PartialInlinerLegacyPass : public ModulePass {
 
 Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   // First, verify that this function is an unswitching candidate...
+  if (F->hasAddressTaken())
+    return nullptr;
+
   BasicBlock *EntryBlock = &F->front();
   BranchInst *BR = dyn_cast<BranchInst>(EntryBlock->getTerminator());
   if (!BR || BR->isUnconditional())
@@ -149,11 +171,29 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   // Inline the top-level if test into all callers.
   std::vector<User *> Users(DuplicateFunction->user_begin(),
                             DuplicateFunction->user_end());
-  for (User *User : Users)
+
+  for (User *User : Users) {
+    CallSite CS;
     if (CallInst *CI = dyn_cast<CallInst>(User))
-      InlineFunction(CI, IFI);
+      CS = CallSite(CI);
     else if (InvokeInst *II = dyn_cast<InvokeInst>(User))
-      InlineFunction(II, IFI);
+      CS = CallSite(II);
+    else
+      llvm_unreachable("All uses must be calls");
+
+    if (IsLimitReached())
+      continue;
+    NumPartialInlining++;
+
+    OptimizationRemarkEmitter ORE(CS.getCaller());
+    DebugLoc DLoc = CS.getInstruction()->getDebugLoc();
+    BasicBlock *Block = CS.getParent();
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", DLoc, Block)
+             << ore::NV("Callee", F) << " partially inlined into "
+             << ore::NV("Caller", CS.getCaller()));
+
+    InlineFunction(CS, IFI);
+  }
 
   // Ditch the duplicate, since we're done with it, and rewrite all remaining
   // users (function pointers, etc.) back to the original function.
@@ -166,6 +206,9 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
 }
 
 bool PartialInlinerImpl::run(Module &M) {
+  if (DisablePartialInlining)
+    return false;
+
   std::vector<Function *> Worklist;
   Worklist.reserve(M.size());
   for (Function &F : M)

@@ -81,6 +81,11 @@ Improvements to clang-tidy
   Adds checks that implement the `High Integrity C++ Coding Standard <http://www.codingstandard.com/section/index/>`_ and other safety
   standards. Many checks are aliased to other modules.
 
+- New `modernize-replace-random-shuffle
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-replace-random-shuffle.html>`_ check
+
+  Finds and fixes usage of ``std::random_shuffle`` as the function has been removed from C++17.
+
 - New `modernize-return-braced-init-list
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-return-braced-init-list.html>`_ check
 

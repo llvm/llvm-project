@@ -24,3 +24,16 @@ void testCasting(int i) {
     clang_analyzer_eval(j == 0); // expected-warning{{FALSE}}
   }
 }
+
+enum class EnumBool : bool {
+  F = false,
+  T = true
+};
+
+bool testNoCrashOnSwitchEnumBool(EnumBool E) {
+  switch (E) {
+  case EnumBool::F:
+    return false;
+  }
+  return true;
+}

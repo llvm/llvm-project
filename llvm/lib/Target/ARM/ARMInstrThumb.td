@@ -953,7 +953,7 @@ let isAdd = 1 in {
   /// These opcodes will be converted to the real non-S opcodes by
   /// AdjustInstrPostInstrSelection after giving then an optional CPSR operand.
   let hasPostISelHook = 1, Defs = [CPSR] in {
-    let isCommutable = 1 in
+    let isCommutable = 1, Uses = [CPSR] in
     def tADCS : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                             2, IIC_iALUr,
                             [(set tGPR:$Rdn, CPSR, (ARMadde tGPR:$Rn, tGPR:$Rm,
@@ -1292,6 +1292,7 @@ def tSUBrr :                    // A8.6.212
 /// These opcodes will be converted to the real non-S opcodes by
 /// AdjustInstrPostInstrSelection after giving then an optional CPSR operand.
 let hasPostISelHook = 1, Defs = [CPSR] in {
+  let Uses = [CPSR] in
   def tSBCS : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                           2, IIC_iALUr,
                           [(set tGPR:$Rdn, CPSR, (ARMsube tGPR:$Rn, tGPR:$Rm,

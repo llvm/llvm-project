@@ -404,9 +404,15 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
 
   case loc::ConcreteIntKind:
     // While these seem funny, this can happen through casts.
-    // FIXME: What we should return is the field offset.  For example,
-    //  add the field offset to the integer value.  That way funny things
+    // FIXME: What we should return is the field offset, not base. For example,
+    //  add the field offset to the integer value.  That way things
     //  like this work properly:  &(((struct foo *) 0xa)->f)
+    //  However, that's not easy to fix without reducing our abilities
+    //  to catch null pointer dereference. Eg., ((struct foo *)0x0)->f = 7
+    //  is a null dereference even though we're dereferencing offset of f
+    //  rather than null. Coming up with an approach that computes offsets
+    //  over null pointers properly while still being able to catch null
+    //  dereferences might be worth it.
     return Base;
 
   default:
@@ -431,7 +437,7 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // If the base is an unknown or undefined value, just return it back.
   // FIXME: For absolute pointer addresses, we just return that value back as
   //  well, although in reality we should return the offset added to that
-  //  value.
+  //  value. See also the similar FIXME in getLValueFieldOrIvar().
   if (Base.isUnknownOrUndef() || Base.getAs<loc::ConcreteInt>())
     return Base;
 

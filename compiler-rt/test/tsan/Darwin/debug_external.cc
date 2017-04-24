@@ -17,8 +17,6 @@ int __tsan_get_report_loc(void *report, unsigned long idx, const char **type,
                           unsigned long trace_size);
 int __tsan_get_report_loc_object_type(void *report, unsigned long idx,
                                       const char **object_type);
-void *__tsan_external_register_tag(const char *object_type);
-void __tsan_external_assign_tag(void *addr, void *tag);
 }
 
 void *Thread(void *arg) {

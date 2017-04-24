@@ -250,12 +250,6 @@ endif()
 set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# If building on a 32-bit system, make sure off_t can store offsets > 2GB
-if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
-  add_definitions( -D_LARGEFILE_SOURCE )
-  add_definitions( -D_FILE_OFFSET_BITS=64 )
-endif()
-
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed. CMake would overwrite "
 "the makefiles distributed with LLDB. Please create a directory and run cmake "
@@ -433,7 +427,9 @@ endif()
 
 find_package(Backtrace)
 
+include(CheckIncludeFile)
 check_include_file(termios.h HAVE_TERMIOS_H)
+check_include_file(sys/event.h HAVE_SYS_EVENT_H)
 
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names

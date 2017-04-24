@@ -225,6 +225,12 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::SI_MASKED_UNREACHABLE) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" divergent unreachable");
+      return;
+    }
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);

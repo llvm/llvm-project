@@ -34,14 +34,15 @@ public:
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
+
 private:
   /// A function of this type is used to perform value split action.
-  typedef std::function<void(unsigned, uint64_t)> SplitArgTy;
+  typedef std::function<void(ArrayRef<unsigned>)> SplitArgTy;
 
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
                          SplitArgTy SplitArg) const;
 };
-} // End of namespace llvm;
+} // namespace llvm
 #endif

@@ -16,7 +16,12 @@
 #include "../builtins/assembly.h"
 
 .macro SAVE_REGISTERS
-	subq $184, %rsp
+	subq $192, %rsp
+	.cfi_def_cfa_offset 200
+	// At this point, the stack pointer should be aligned to an 8-byte boundary,
+	// because any call instructions that come after this will add another 8
+	// bytes and therefore align it to 16-bytes.
+	movq %rbp, 184(%rsp)
 	movupd	%xmm0, 168(%rsp)
 	movupd	%xmm1, 152(%rsp)
 	movupd	%xmm2, 136(%rsp)
@@ -35,6 +40,7 @@
 .endm
 
 .macro RESTORE_REGISTERS
+	movq  184(%rsp), %rbp
 	movupd	168(%rsp), %xmm0
 	movupd	152(%rsp), %xmm1
 	movupd	136(%rsp), %xmm2
@@ -50,7 +56,8 @@
 	movq	16(%rsp), %rcx
 	movq	8(%rsp), %r8
 	movq	0(%rsp), %r9
-	addq	$184, %rsp
+	addq	$192, %rsp
+	.cfi_def_cfa_offset 8
 .endm
 
 	.text
@@ -64,10 +71,7 @@
 
 __xray_FunctionEntry:
 	.cfi_startproc
-	pushq %rbp
-	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
-	.cfi_def_cfa_offset 200
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
@@ -81,7 +85,6 @@ __xray_FunctionEntry:
 	callq	*%rax
 .Ltmp0:
 	RESTORE_REGISTERS
-	popq	%rbp
 	retq
 .Ltmp1:
 	.size __xray_FunctionEntry, .Ltmp1-__xray_FunctionEntry
@@ -97,10 +100,9 @@ __xray_FunctionExit:
 	// Save the important registers first. Since we're assuming that this
 	// function is only jumped into, we only preserve the registers for
 	// returning.
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	subq	$48, %rsp
+	subq	$56, %rsp
 	.cfi_def_cfa_offset 64
+	movq  %rbp, 48(%rsp)
 	movupd	%xmm0, 32(%rsp)
 	movupd	%xmm1, 16(%rsp)
 	movq	%rax, 8(%rsp)
@@ -114,12 +116,13 @@ __xray_FunctionExit:
 	callq	*%rax
 .Ltmp2:
 	// Restore the important registers.
+	movq  48(%rsp), %rbp
 	movupd	32(%rsp), %xmm0
 	movupd	16(%rsp), %xmm1
 	movq	8(%rsp), %rax
 	movq	0(%rsp), %rdx
-	addq	$48, %rsp
-	popq	%rbp
+	addq	$56, %rsp
+	.cfi_def_cfa_offset 8
 	retq
 .Ltmp3:
 	.size __xray_FunctionExit, .Ltmp3-__xray_FunctionExit
@@ -136,10 +139,7 @@ __xray_FunctionTailExit:
 	// this is an exit. In the future, we will introduce a new entry type that
 	// differentiates between a normal exit and a tail exit, but we'd have to do
 	// this and increment the version number for the header.
-	pushq %rbp
-	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
-	.cfi_def_cfa_offset 200
 
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
 	testq %rax,%rax
@@ -151,7 +151,6 @@ __xray_FunctionTailExit:
 
 .Ltmp4:
 	RESTORE_REGISTERS
-	popq	%rbp
 	retq
 .Ltmp5:
 	.size __xray_FunctionTailExit, .Ltmp5-__xray_FunctionTailExit
@@ -164,10 +163,7 @@ __xray_FunctionTailExit:
 	.type __xray_ArgLoggerEntry,@function
 __xray_ArgLoggerEntry:
 	.cfi_startproc
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
 	SAVE_REGISTERS
-	.cfi_def_cfa_offset 200
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
 	movq	_ZN6__xray13XRayArgLoggerE(%rip), %rax
@@ -187,7 +183,6 @@ __xray_ArgLoggerEntry:
 
 .Larg1entryFail:
 	RESTORE_REGISTERS
-	popq	%rbp
 	retq
 
 .Larg1entryEnd:

@@ -1,10 +1,19 @@
 ; Test dwarf codegen of DW_OP_minus.
 ; RUN: llc -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -dwarf-version=2 -filetype=obj < %s | llvm-dwarfdump - \
+; RUN:   | FileCheck %s --check-prefix=DWARF2
+; RUN: llc -dwarf-version=3 -filetype=obj < %s | llvm-dwarfdump - \
+; RUN:   | FileCheck %s --check-prefix=DWARF2
 
 ; This was derived manually from:
 ; int inc(int i) {
 ;  return i+1;
 ; }
+
+; DWARF2: .debug_info
+; DWARF2: DW_TAG_formal_parameter
+; DWARF2-NEXT: DW_AT_name {{.*}}"i"
+; DWARF2-NOT:  DW_AT_location
 
 ; CHECK: Beginning address offset: 0x0000000000000000
 ; CHECK:    Ending address offset: 0x0000000000000004

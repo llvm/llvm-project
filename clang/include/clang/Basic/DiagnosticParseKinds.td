@@ -1114,14 +1114,12 @@ def err_pragma_cannot_end_force_cuda_host_device : Error<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_expected_module_interface_decl : Error<
-  "expected module declaration at start of module interface">;
 def err_unexpected_module_decl : Error<
-  "module declaration must be the first declaration in the translation unit">;
+  "module declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
-  "expected a module name after module%select{| import}0">;
-def err_unexpected_module_kind : Error<
-  "unexpected module kind %0; expected 'implementation' or 'partition'">;
+  "expected a module name after '%select{module|import}0'">;
+def err_module_implementation_partition : Error<
+  "module partition must be declared 'export'">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_attribute_not_import_attr : Error<

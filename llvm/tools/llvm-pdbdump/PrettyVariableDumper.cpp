@@ -91,6 +91,14 @@ void VariableDumper::start(const PDBSymbolData &Var, uint32_t Offset) {
   }
 }
 
+void VariableDumper::startVbptr(uint32_t Offset, uint32_t Size) {
+  Printer.NewLine();
+  Printer << "vbptr ";
+
+  WithColor(Printer, PDB_ColorItem::Offset).get()
+      << "+" << format_hex(Offset, 4) << " [sizeof=" << Size << "] ";
+}
+
 void VariableDumper::start(const PDBSymbolTypeVTable &Var, uint32_t Offset) {
   Printer.NewLine();
   Printer << "vfptr ";

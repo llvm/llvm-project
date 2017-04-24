@@ -297,10 +297,14 @@ InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
                                                  &Visited);
   };
 
-  // We only explore address expressions that are reachable from loads and
-  // stores for now because we aim at generating faster loads and stores.
+  // Look at operations that may be interesting accelerate by moving to a known
+  // address space. We aim at generating after loads and stores, but pure
+  // addressing calculations may also be faster.
   for (Instruction &I : instructions(F)) {
-    if (auto *LI = dyn_cast<LoadInst>(&I))
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (!GEP->getType()->isVectorTy())
+        PushPtrOperand(GEP->getPointerOperand());
+    } else if (auto *LI = dyn_cast<LoadInst>(&I))
       PushPtrOperand(LI->getPointerOperand());
     else if (auto *SI = dyn_cast<StoreInst>(&I))
       PushPtrOperand(SI->getPointerOperand());

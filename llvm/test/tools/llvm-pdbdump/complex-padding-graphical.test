@@ -1,0 +1,53 @@
+; RUN: llvm-pdbdump pretty -classes -class-definitions=layout \
+; RUN:     -include-types=Test %p/Inputs/ComplexPaddingTest.pdb > %t
+
+; RUN: FileCheck -input-file=%t %s -check-prefix=DIRECT_VB_ONLY
+; RUN: FileCheck -input-file=%t %s -check-prefix=DIRECT_VB_AND_NON_VB
+; RUN: FileCheck -input-file=%t %s -check-prefix=INDIRECT_VB
+; RUN: FileCheck -input-file=%t %s -check-prefix=INDIRECT_AND_DIRECT_VB
+
+
+; DIRECT_VB_ONLY:      struct TestIVBBase [sizeof = 16]
+; DIRECT_VB_ONLY-NEXT:   : public virtual TestVB {
+; DIRECT_VB_ONLY-NEXT:   vbptr +0x00 [sizeof=4]
+; DIRECT_VB_ONLY-NEXT:   data +0x04 [sizeof=4] int A
+; DIRECT_VB_ONLY-NEXT:   vbase +0x08 [sizeof=8] TestVB
+; DIRECT_VB_ONLY-NEXT:     vfptr +0x08 [sizeof=4]
+; DIRECT_VB_ONLY-NEXT:     data +0x0c [sizeof=4] int X
+; DIRECT_VB_ONLY-NEXT: }
+
+DIRECT_VB_AND_NON_VB:      struct TestVBLayout [sizeof = 24]
+DIRECT_VB_AND_NON_VB-NEXT:   : public TestNVB
+DIRECT_VB_AND_NON_VB-NEXT:   , public virtual TestVB {
+DIRECT_VB_AND_NON_VB-NEXT:   base +0x00 [sizeof=8] TestNVB
+DIRECT_VB_AND_NON_VB-NEXT:     vfptr +0x00 [sizeof=4]
+DIRECT_VB_AND_NON_VB-NEXT:     data +0x04 [sizeof=4] int Y
+DIRECT_VB_AND_NON_VB-NEXT:   vbptr +0x08 [sizeof=4]
+DIRECT_VB_AND_NON_VB-NEXT:   data +0x0c [sizeof=4] int Z
+DIRECT_VB_AND_NON_VB-NEXT:   vbase +0x10 [sizeof=8] TestVB
+DIRECT_VB_AND_NON_VB-NEXT:     vfptr +0x10 [sizeof=4]
+DIRECT_VB_AND_NON_VB-NEXT:     data +0x14 [sizeof=4] int X
+DIRECT_VB_AND_NON_VB-NEXT: }
+
+INDIRECT_VB:      struct TestIVBDerived [sizeof = 20]
+INDIRECT_VB-NEXT:   : public TestIVBBase {
+INDIRECT_VB-NEXT:   base +0x00 [sizeof=8] TestIVBBase
+INDIRECT_VB-NEXT:     vbptr +0x00 [sizeof=4]
+INDIRECT_VB-NEXT:     data +0x04 [sizeof=4] int A
+INDIRECT_VB-NEXT:   data +0x08 [sizeof=4] int B
+INDIRECT_VB-NEXT:   ivbase +0x0c [sizeof=8] TestVB
+INDIRECT_VB-NEXT:     vfptr +0x0c [sizeof=4]
+INDIRECT_VB-NEXT:     data +0x10 [sizeof=4] int X
+INDIRECT_VB-NEXT: }
+
+INDIRECT_AND_DIRECT_VB:      struct TestIVBMergedDerived [sizeof = 20]
+INDIRECT_AND_DIRECT_VB-NEXT:   : public TestIVBBase
+INDIRECT_AND_DIRECT_VB-NEXT:   , public virtual TestVB {
+INDIRECT_AND_DIRECT_VB-NEXT:   base +0x00 [sizeof=8] TestIVBBase
+INDIRECT_AND_DIRECT_VB-NEXT:     vbptr +0x00 [sizeof=4]
+INDIRECT_AND_DIRECT_VB-NEXT:     data +0x04 [sizeof=4] int A
+INDIRECT_AND_DIRECT_VB-NEXT:   data +0x08 [sizeof=4] int B
+INDIRECT_AND_DIRECT_VB-NEXT:   vbase +0x0c [sizeof=8] TestVB
+INDIRECT_AND_DIRECT_VB-NEXT:     vfptr +0x0c [sizeof=4]
+INDIRECT_AND_DIRECT_VB-NEXT:     data +0x10 [sizeof=4] int X
+INDIRECT_AND_DIRECT_VB-NEXT: }

@@ -479,6 +479,10 @@ Export parseExport(StringRef Arg) {
       E.Data = true;
       continue;
     }
+    if (Tok.equals_lower("constant")) {
+      E.Constant = true;
+      continue;
+    }
     if (Tok.equals_lower("private")) {
       E.Private = true;
       continue;

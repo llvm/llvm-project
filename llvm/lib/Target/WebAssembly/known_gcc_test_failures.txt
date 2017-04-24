@@ -1,5 +1,15 @@
 # Tests which are known to fail from the GCC torture test suite.
 
+# Syntax: Each line has a single test to be marked as a 'known failure' (or
+# 'exclusion'. Known failures are expected to fail, and will cause an error if
+# they pass. (Known failures that do not run at all will not cause an
+# error). The format is
+# <name> <attributes> # comment
+#
+# The attributes in this case represent the different arguments used to
+# compiler: 'wasm-s' is for compiling to .s files, and 'wasm-o' for compiling
+# to wasm object files (.o).
+
 # Computed gotos are not supported (Cannot select BlockAddress/BRIND)
 20040302-1.c
 20071210-1.c
@@ -66,3 +76,21 @@ pr41935.c
 920728-1.c
 pr28865.c
 widechar-2.c
+
+# crash: Running pass 'WebAssembly Explicit Locals' on function
+20020107-1.c wasm-o
+20030222-1.c wasm-o
+20071220-1.c wasm-o
+20071220-2.c wasm-o
+990130-1.c wasm-o
+pr38533.c wasm-o
+pr41239.c wasm-o
+pr43385.c wasm-o
+pr43560.c wasm-o
+pr45695.c wasm-o
+pr49279.c wasm-o
+pr49390.c wasm-o
+pr52286.c wasm-o
+
+# fatal error: error in backend: data symbols must have a size set with .size
+921110-1.c wasm-o

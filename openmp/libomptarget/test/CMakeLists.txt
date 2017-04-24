@@ -80,7 +80,6 @@ else()
   add_lit_testsuite(check-libomptarget
     "Running libomptarget tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    ARGS "-j 1"
     DEPENDS omptarget omp
   )
   

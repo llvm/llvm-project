@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test fails because diagnose_if doesn't emit all of the diagnostics
+// when -fdelayed-template-parsing is enabled, like it is on Windows.
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // REQUIRES: verify-support, diagnose-if-support
 // UNSUPPORTED: libcpp-has-no-threads
 

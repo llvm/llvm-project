@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  define i32 @main() {
+  entry:
+    ret i32 0
+  }
+  
+  declare i32 @printf(i8*, ...)
+...
+---
+# CHECK-LABEL: name: main
+name:            main
+alignment:       2
+exposesReturnsTwice: false
+noVRegs:         false
+legalized:       true
+regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+  - { id: 8, class: gpr }
+  - { id: 9, class: gpr }
+  - { id: 10, class: gpr }
+  - { id: 11, class: gpr }
+  - { id: 12, class: gpr }
+  - { id: 13, class: gpr }
+  - { id: 14, class: gpr }
+  - { id: 15, class: gpr }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+# CHECK:     body:
+# CHECK:       %1 = COPY %w0
+# CHECK-NOT:   %2 = ORNWrr %wzr, %1
+# CHECK:       %4 = EONWrr %1, %3
+body:             |
+  bb.1.entry:
+    liveins: %w0
+    %0(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_CONSTANT i32 1
+    %1(s32) = COPY %w0
+    %2(s32) = G_XOR %1, %0
+    %4(s32) = G_XOR %2, %3
+    %w0 = COPY %4(s32)
+...

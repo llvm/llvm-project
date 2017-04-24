@@ -67,6 +67,60 @@ import collections
 
 import clang.enumerations
 
+import sys
+if sys.version_info[0] == 3:
+    # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
+    class c_interop_string(c_char_p):
+
+        def __init__(self, p=None):
+            if p is None:
+                p = ""
+            if isinstance(p, str):
+                p = p.encode("utf8")
+            super(c_char_p, self).__init__(p)
+
+        def __str__(self):
+            return self.value
+
+        @property
+        def value(self):
+            if super(c_char_p, self).value is None:
+                return None
+            return super(c_char_p, self).value.decode("utf8")
+
+        @classmethod
+        def from_param(cls, param):
+            if isinstance(param, str):
+                return cls(param)
+            if isinstance(param, bytes):
+                return cls(param)
+            raise TypeError("Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__))
+
+        @staticmethod
+        def to_python_string(x, *args):
+            return x.value
+
+    def b(x):
+        if isinstance(x, bytes):
+            return x
+        return x.encode('utf8')
+
+    xrange = range
+
+elif sys.version_info[0] == 2:
+    # Python 2 strings are utf8 byte strings, no translation is needed for
+    # C-interop.
+    c_interop_string = c_char_p
+
+    def _to_python_string(x, *args):
+        return x
+
+    c_interop_string.to_python_string = staticmethod(_to_python_string)
+
+    def b(x):
+        return x
+
+
 # ctypes doesn't implicitly convert c_void_p to the appropriate wrapper
 # object. This is a problem, because it means that from_parameter will see an
 # integer and pass the wrong value on platforms where int != void*. Work around
@@ -156,6 +210,7 @@ class _CXString(Structure):
     def from_result(res, fn, args):
         assert isinstance(res, _CXString)
         return conf.lib.clang_getCString(res)
+
 
 class SourceLocation(Structure):
     """
@@ -596,7 +651,7 @@ class CursorKind(BaseEnumeration):
     @staticmethod
     def get_all_kinds():
         """Return all CursorKind enumeration instances."""
-        return filter(None, CursorKind._kinds)
+        return [x for x in CursorKind._kinds if not x is None]
 
     def is_declaration(self):
         """Test if this is a declaration kind."""
@@ -2128,7 +2183,7 @@ class Type(Structure):
         """
         Retrieve the offset of a field in the record.
         """
-        return conf.lib.clang_Type_getOffsetOf(self, c_char_p(fieldname))
+        return conf.lib.clang_Type_getOffsetOf(self, fieldname)
 
     def get_ref_qualifier(self):
         """
@@ -2239,7 +2294,7 @@ class CompletionChunk:
     def spelling(self):
         if self.__kindNumber in SpellingCache:
                 return SpellingCache[self.__kindNumber]
-        return conf.lib.clang_getCompletionChunkText(self.cs, self.key).spelling
+        return conf.lib.clang_getCompletionChunkText(self.cs, self.key)
 
     # We do not use @CachedProperty here, as the manual implementation is
     # apparently still significantly faster. Please profile carefully if you
@@ -2345,7 +2400,7 @@ class CompletionString(ClangObject):
         return " | ".join([str(a) for a in self]) \
                + " || Priority: " + str(self.priority) \
                + " || Availability: " + str(self.availability) \
-               + " || Brief comment: " + str(self.briefComment.spelling)
+               + " || Brief comment: " + str(self.briefComment)
 
 availabilityKinds = {
             0: CompletionChunk.Kind("Available"),
@@ -2542,7 +2597,7 @@ class TranslationUnit(ClangObject):
 
         args_array = None
         if len(args) > 0:
-            args_array = (c_char_p * len(args))(* args)
+            args_array = (c_char_p * len(args))(*[b(x) for x in args])
 
         unsaved_array = None
         if len(unsaved_files) > 0:
@@ -2551,8 +2606,8 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
 
-                unsaved_array[i].name = name
-                unsaved_array[i].contents = contents
+                unsaved_array[i].name = b(name)
+                unsaved_array[i].contents = b(contents)
                 unsaved_array[i].length = len(contents)
 
         ptr = conf.lib.clang_parseTranslationUnit(index, filename, args_array,
@@ -2797,8 +2852,8 @@ class TranslationUnit(ClangObject):
                     print(value)
                 if not isinstance(value, str):
                     raise TypeError('Unexpected unsaved file contents.')
-                unsaved_files_array[i].name = name
-                unsaved_files_array[i].contents = value
+                unsaved_files_array[i].name = b(name)
+                unsaved_files_array[i].contents = b(value)
                 unsaved_files_array[i].length = len(value)
         ptr = conf.lib.clang_codeCompleteAt(self, path, line, column,
                 unsaved_files_array, len(unsaved_files), options)
@@ -2833,7 +2888,7 @@ class File(ClangObject):
     @property
     def name(self):
         """Return the complete file and path name of the file."""
-        return conf.lib.clang_getCString(conf.lib.clang_getFileName(self))
+        return conf.lib.clang_getFileName(self)
 
     @property
     def time(self):
@@ -3064,7 +3119,7 @@ functionList = [
    [c_object_p]),
 
   ("clang_CompilationDatabase_fromDirectory",
-   [c_char_p, POINTER(c_uint)],
+   [c_interop_string, POINTER(c_uint)],
    c_object_p,
    CompilationDatabase.from_result),
 
@@ -3074,7 +3129,7 @@ functionList = [
    CompileCommands.from_result),
 
   ("clang_CompilationDatabase_getCompileCommands",
-   [c_object_p, c_char_p],
+   [c_object_p, c_interop_string],
    c_object_p,
    CompileCommands.from_result),
 
@@ -3109,7 +3164,7 @@ functionList = [
    c_uint),
 
   ("clang_codeCompleteAt",
-   [TranslationUnit, c_char_p, c_int, c_int, c_void_p, c_int, c_int],
+   [TranslationUnit, c_interop_string, c_int, c_int, c_void_p, c_int, c_int],
    POINTER(CCRStructure)),
 
   ("clang_codeCompleteGetDiagnostic",
@@ -3125,7 +3180,7 @@ functionList = [
    c_object_p),
 
   ("clang_createTranslationUnit",
-   [Index, c_char_p],
+   [Index, c_interop_string],
    c_object_p),
 
   ("clang_CXXConstructor_isConvertingConstructor",
@@ -3215,7 +3270,8 @@ functionList = [
 
   ("clang_formatDiagnostic",
    [Diagnostic, c_uint],
-   _CXString),
+   _CXString,
+   _CXString.from_result),
 
   ("clang_getArgType",
    [Type, c_uint],
@@ -3255,7 +3311,8 @@ functionList = [
 
   ("clang_getCompletionBriefComment",
    [c_void_p],
-   _CXString),
+   _CXString,
+   _CXString.from_result),
 
   ("clang_getCompletionChunkCompletionString",
    [c_void_p, c_int],
@@ -3267,7 +3324,8 @@ functionList = [
 
   ("clang_getCompletionChunkText",
    [c_void_p, c_int],
-   _CXString),
+   _CXString,
+   _CXString.from_result),
 
   ("clang_getCompletionPriority",
    [c_void_p],
@@ -3275,7 +3333,8 @@ functionList = [
 
   ("clang_getCString",
    [_CXString],
-   c_char_p),
+   c_interop_string,
+   c_interop_string.to_python_string),
 
   ("clang_getCursor",
    [TranslationUnit, SourceLocation],
@@ -3422,12 +3481,13 @@ functionList = [
    Type.from_result),
 
   ("clang_getFile",
-   [TranslationUnit, c_char_p],
+   [TranslationUnit, c_interop_string],
    c_object_p),
 
   ("clang_getFileName",
    [File],
-   _CXString), # TODO go through _CXString.from_result?
+   _CXString,
+   _CXString.from_result),
 
   ("clang_getFileTime",
    [File],
@@ -3551,7 +3611,8 @@ functionList = [
 
   ("clang_getTUResourceUsageName",
    [c_uint],
-   c_char_p),
+   c_interop_string,
+   c_interop_string.to_python_string),
 
   ("clang_getTypeDeclaration",
    [Type],
@@ -3646,7 +3707,7 @@ functionList = [
    bool),
 
   ("clang_parseTranslationUnit",
-   [Index, c_char_p, c_void_p, c_int, c_void_p, c_int, c_int],
+   [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int],
    c_object_p),
 
   ("clang_reparseTranslationUnit",
@@ -3654,7 +3715,7 @@ functionList = [
    c_int),
 
   ("clang_saveTranslationUnit",
-   [TranslationUnit, c_char_p, c_uint],
+   [TranslationUnit, c_interop_string, c_uint],
    c_int),
 
   ("clang_tokenize",
@@ -3726,7 +3787,7 @@ functionList = [
    Type.from_result),
 
   ("clang_Type_getOffsetOf",
-   [Type, c_char_p],
+   [Type, c_interop_string],
    c_longlong),
 
   ("clang_Type_getSizeOf",
@@ -3785,7 +3846,8 @@ def register_functions(lib, ignore_errors):
     def register(item):
         return register_function(lib, item, ignore_errors)
 
-    map(register, functionList)
+    for f in functionList:
+        register(f)
 
 class Config:
     library_path = None

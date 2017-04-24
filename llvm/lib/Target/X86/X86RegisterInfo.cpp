@@ -137,25 +137,29 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::FR32RegClassID:
     case X86::FR64RegClassID:
       // If AVX-512 isn't supported we should only inflate to these classes.
-      if (!Subtarget.hasAVX512() && Super->getSize() == RC->getSize())
+      if (!Subtarget.hasAVX512() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::VR128RegClassID:
     case X86::VR256RegClassID:
       // If VLX isn't supported we should only inflate to these classes.
-      if (!Subtarget.hasVLX() && Super->getSize() == RC->getSize())
+      if (!Subtarget.hasVLX() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::VR128XRegClassID:
     case X86::VR256XRegClassID:
       // If VLX isn't support we shouldn't inflate to these classes.
-      if (Subtarget.hasVLX() && Super->getSize() == RC->getSize())
+      if (Subtarget.hasVLX() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::FR32XRegClassID:
     case X86::FR64XRegClassID:
       // If AVX-512 isn't support we shouldn't inflate to these classes.
-      if (Subtarget.hasAVX512() && Super->getSize() == RC->getSize())
+      if (Subtarget.hasAVX512() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::GR8RegClassID:
@@ -168,7 +172,7 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::VR512RegClassID:
       // Don't return a super-class that would shrink the spill size.
       // That can happen with the vector and float classes.
-      if (Super->getSize() == RC->getSize())
+      if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
     Super = *I++;
@@ -669,32 +673,28 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineFunction &MF = *MI.getParent()->getParent();
   const X86FrameLowering *TFI = getFrameLowering(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+
+  // Determine base register and offset.
+  int FIOffset;
   unsigned BasePtr;
-
-  unsigned Opc = MI.getOpcode();
-  bool AfterFPPop = Opc == X86::TAILJMPm64 || Opc == X86::TAILJMPm ||
-                    Opc == X86::TCRETURNmi || Opc == X86::TCRETURNmi64;
-
-  if (hasBasePointer(MF))
-    BasePtr = (FrameIndex < 0 ? FramePtr : getBaseRegister());
-  else if (needsStackRealignment(MF))
-    BasePtr = (FrameIndex < 0 ? FramePtr : StackPtr);
-  else if (AfterFPPop)
-    BasePtr = StackPtr;
-  else
-    BasePtr = (TFI->hasFP(MF) ? FramePtr : StackPtr);
+  if (MI.isReturn()) {
+    assert((!needsStackRealignment(MF) ||
+           MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&
+           "Return instruction can only reference SP relative frame objects");
+    FIOffset = TFI->getFrameIndexReferenceSP(MF, FrameIndex, BasePtr, 0);
+  } else {
+    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, BasePtr);
+  }
 
   // LOCAL_ESCAPE uses a single offset, with no register. It only works in the
   // simple FP case, and doesn't work with stack realignment. On 32-bit, the
   // offset is from the traditional base pointer location.  On 64-bit, the
   // offset is from the SP at the end of the prologue, not the FP location. This
   // matches the behavior of llvm.frameaddress.
-  unsigned IgnoredFrameReg;
+  unsigned Opc = MI.getOpcode();
   if (Opc == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
-    int Offset;
-    Offset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
-    FI.ChangeToImmediate(Offset);
+    FI.ChangeToImmediate(FIOffset);
     return;
   }
 
@@ -709,15 +709,6 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // This must be part of a four operand memory reference.  Replace the
   // FrameIndex with base register.  Add an offset to the offset.
   MI.getOperand(FIOperandNum).ChangeToRegister(MachineBasePtr, false);
-
-  // Now add the frame object offset to the offset from EBP.
-  int FIOffset;
-  if (AfterFPPop) {
-    // Tail call jmp happens after FP is popped.
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    FIOffset = MFI.getObjectOffset(FrameIndex) - TFI->getOffsetOfLocalArea();
-  } else
-    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
 
   if (BasePtr == StackPtr)
     FIOffset += SPAdj;

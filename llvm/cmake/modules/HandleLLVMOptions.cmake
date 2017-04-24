@@ -222,6 +222,13 @@ if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
   endif( LLVM_BUILD_32_BITS )
 endif( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
 
+# If building on a GNU specific 32-bit system, make sure off_t is 64 bits
+# so that off_t can stored offset > 2GB
+if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
+  add_definitions( -D_LARGEFILE_SOURCE )
+  add_definitions( -D_FILE_OFFSET_BITS=64 )
+endif()
+
 if( XCODE )
   # For Xcode enable several build settings that correspond to
   # many warnings that are on by default in Clang but are

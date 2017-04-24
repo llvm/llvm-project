@@ -1,6 +1,6 @@
 // If we have LLD, see that things more or less work.
 //
-// REQUIRES: lld
+// REQUIRES: lld-available
 //
 // FIXME: Use -fuse-ld=lld after the old COFF linker is removed.
 // FIXME: Test will fail until we add flags for requesting dwarf or cv.

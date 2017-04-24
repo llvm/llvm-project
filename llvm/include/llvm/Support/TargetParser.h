@@ -75,7 +75,7 @@ enum ArchExtKind : unsigned {
   AEK_CRC = 0x2,
   AEK_CRYPTO = 0x4,
   AEK_FP = 0x8,
-  AEK_HWDIV = 0x10,
+  AEK_HWDIVTHUMB = 0x10,
   AEK_HWDIVARM = 0x20,
   AEK_MP = 0x40,
   AEK_SIMD = 0x80,

@@ -170,7 +170,8 @@ void TestAllForms() {
   CUDie.addAttribute(Attr_DW_FORM_ref8, DW_FORM_ref8, Data8);
 
   const auto Attr_DW_FORM_ref_sig8 = static_cast<dwarf::Attribute>(Attr++);
-  CUDie.addAttribute(Attr_DW_FORM_ref_sig8, DW_FORM_ref_sig8, Data8_2);
+  if (Version >= 4)
+    CUDie.addAttribute(Attr_DW_FORM_ref_sig8, DW_FORM_ref_sig8, Data8_2);
 
   const auto Attr_DW_FORM_ref_udata = static_cast<dwarf::Attribute>(Attr++);
   CUDie.addAttribute(Attr_DW_FORM_ref_udata, DW_FORM_ref_udata, UData[0]);
@@ -185,7 +186,8 @@ void TestAllForms() {
   CUDie.addAttribute(Attr_DW_FORM_flag_false, DW_FORM_flag, false);
 
   const auto Attr_DW_FORM_flag_present = static_cast<dwarf::Attribute>(Attr++);
-  CUDie.addAttribute(Attr_DW_FORM_flag_present, DW_FORM_flag_present);
+  if (Version >= 4)
+    CUDie.addAttribute(Attr_DW_FORM_flag_present, DW_FORM_flag_present);
 
   //----------------------------------------------------------------------
   // Test SLEB128 based forms
@@ -213,8 +215,9 @@ void TestAllForms() {
                      Dwarf32Values[0]);
 
   const auto Attr_DW_FORM_sec_offset = static_cast<dwarf::Attribute>(Attr++);
-  CUDie.addAttribute(Attr_DW_FORM_sec_offset, DW_FORM_sec_offset,
-                     Dwarf32Values[1]);
+  if (Version >= 4)
+    CUDie.addAttribute(Attr_DW_FORM_sec_offset, DW_FORM_sec_offset,
+                       Dwarf32Values[1]);
 
   //----------------------------------------------------------------------
   // Add an address at the end to make sure we can decode this value
@@ -307,7 +310,8 @@ void TestAllForms() {
   EXPECT_EQ(Data2, toReference(DieDG.find(Attr_DW_FORM_ref2), 0));
   EXPECT_EQ(Data4, toReference(DieDG.find(Attr_DW_FORM_ref4), 0));
   EXPECT_EQ(Data8, toReference(DieDG.find(Attr_DW_FORM_ref8), 0));
-  EXPECT_EQ(Data8_2, toReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
+  if (Version >= 4)
+    EXPECT_EQ(Data8_2, toReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
   EXPECT_EQ(UData[0], toReference(DieDG.find(Attr_DW_FORM_ref_udata), 0));
 
   //----------------------------------------------------------------------
@@ -315,7 +319,8 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   EXPECT_EQ(1ULL, toUnsigned(DieDG.find(Attr_DW_FORM_flag_true), 0));
   EXPECT_EQ(0ULL, toUnsigned(DieDG.find(Attr_DW_FORM_flag_false), 1));
-  EXPECT_EQ(1ULL, toUnsigned(DieDG.find(Attr_DW_FORM_flag_present), 0));
+  if (Version >= 4)
+    EXPECT_EQ(1ULL, toUnsigned(DieDG.find(Attr_DW_FORM_flag_present), 0));
 
   //----------------------------------------------------------------------
   // Test SLEB128 based forms
@@ -334,8 +339,9 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   EXPECT_EQ(Dwarf32Values[0],
             toReference(DieDG.find(Attr_DW_FORM_GNU_ref_alt), 0));
-  EXPECT_EQ(Dwarf32Values[1],
-            toSectionOffset(DieDG.find(Attr_DW_FORM_sec_offset), 0));
+  if (Version >= 4)
+    EXPECT_EQ(Dwarf32Values[1],
+              toSectionOffset(DieDG.find(Attr_DW_FORM_sec_offset), 0));
 
   //----------------------------------------------------------------------
   // Add an address at the end to make sure we can decode this value

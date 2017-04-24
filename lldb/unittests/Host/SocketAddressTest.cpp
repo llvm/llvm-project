@@ -12,8 +12,21 @@
 #include "lldb/Host/SocketAddress.h"
 
 namespace {
-class SocketAddressTest : public ::testing::Test {};
-}
+class SocketAddressTest : public testing::Test {
+public:
+  static void SetUpTestCase() {
+#ifdef _MSC_VER
+    WSADATA data;
+    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &data));
+#endif
+  }
+  static void TearDownTestCase() {
+#ifdef _MSC_VER
+    ASSERT_EQ(0, WSACleanup());
+#endif
+  }
+};
+} // namespace
 
 using namespace lldb_private;
 
@@ -32,6 +45,14 @@ TEST_F(SocketAddressTest, Set) {
               sa.GetIPAddress() == "0:0:0:0:0:0:0:1")
       << "Address was: " << sa.GetIPAddress();
   ASSERT_EQ(1139, sa.GetPort());
+}
+
+TEST_F(SocketAddressTest, GetAddressInfo) {
+  auto addr = SocketAddress::GetAddressInfo("127.0.0.1", nullptr, AF_UNSPEC,
+                                            SOCK_STREAM, IPPROTO_TCP);
+  ASSERT_EQ(1u, addr.size());
+  EXPECT_EQ(AF_INET, addr[0].GetFamily());
+  EXPECT_EQ("127.0.0.1", addr[0].GetIPAddress());
 }
 
 #ifdef _WIN32

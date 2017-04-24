@@ -144,6 +144,10 @@ bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
+  const AMDGPUMachineFunction *MFI = MF->getInfo<AMDGPUMachineFunction>();
+  if (!MFI->isEntryFunction())
+    return;
+
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   SIProgramInfo KernelInfo;
   amd_kernel_code_t KernelCode;
@@ -184,9 +188,11 @@ void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
 
   // The starting address of all shader programs must be 256 bytes aligned.
-  MF.setAlignment(8);
+  // Regular functions just need the basic required instruction alignment.
+  MF.setAlignment(MFI->isEntryFunction() ? 8 : 2);
 
   SetupMachineFunction(MF);
 
@@ -220,13 +226,19 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->SwitchSection(CommentSection);
 
     if (STM.getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-      OutStreamer->emitRawComment(" Kernel info:", false);
+      if (MFI->isEntryFunction()) {
+        OutStreamer->emitRawComment(" Kernel info:", false);
+      } else {
+        OutStreamer->emitRawComment(" Function info:", false);
+      }
+
       OutStreamer->emitRawComment(" codeLenInByte = " +
                                   Twine(getFunctionCodeSize(MF)), false);
       OutStreamer->emitRawComment(" NumSgprs: " + Twine(KernelInfo.NumSGPR),
                                   false);
       OutStreamer->emitRawComment(" NumVgprs: " + Twine(KernelInfo.NumVGPR),
                                   false);
+
       OutStreamer->emitRawComment(" FloatMode: " + Twine(KernelInfo.FloatMode),
                                   false);
       OutStreamer->emitRawComment(" IeeeMode: " + Twine(KernelInfo.IEEEMode),
@@ -235,6 +247,9 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                   false);
       OutStreamer->emitRawComment(" LDSByteSize: " + Twine(KernelInfo.LDSSize) +
                                   " bytes/workgroup (compile time only)", false);
+
+      if (!MFI->isEntryFunction())
+        return false;
 
       OutStreamer->emitRawComment(" SGPRBlocks: " +
                                   Twine(KernelInfo.SGPRBlocks), false);

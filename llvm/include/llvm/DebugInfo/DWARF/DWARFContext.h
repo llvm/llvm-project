@@ -50,6 +50,11 @@ class raw_ostream;
 // entire size of the debug info sections.
 typedef DenseMap<uint64_t, std::pair<uint8_t, int64_t>> RelocAddrMap;
 
+/// Reads a value from data extractor and applies a relocation to the result if
+/// one exists for the given offset.
+uint64_t getRelocatedValue(const DataExtractor &Data, uint32_t Size,
+                           uint32_t *Off, const RelocAddrMap *Relocs);
+
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through pure virtual
@@ -216,7 +221,7 @@ public:
   virtual StringRef getEHFrameSection() = 0;
   virtual const DWARFSection &getLineSection() = 0;
   virtual StringRef getStringSection() = 0;
-  virtual StringRef getRangeSection() = 0;
+  virtual const DWARFSection& getRangeSection() = 0;
   virtual StringRef getMacinfoSection() = 0;
   virtual StringRef getPubNamesSection() = 0;
   virtual StringRef getPubTypesSection() = 0;
@@ -231,7 +236,7 @@ public:
   virtual const DWARFSection &getLocDWOSection() = 0;
   virtual StringRef getStringDWOSection() = 0;
   virtual StringRef getStringOffsetDWOSection() = 0;
-  virtual StringRef getRangeDWOSection() = 0;
+  virtual const DWARFSection &getRangeDWOSection() = 0;
   virtual StringRef getAddrSection() = 0;
   virtual const DWARFSection& getAppleNamesSection() = 0;
   virtual const DWARFSection& getAppleTypesSection() = 0;
@@ -271,7 +276,7 @@ class DWARFContextInMemory : public DWARFContext {
   StringRef EHFrameSection;
   DWARFSection LineSection;
   StringRef StringSection;
-  StringRef RangeSection;
+  DWARFSection RangeSection;
   StringRef MacinfoSection;
   StringRef PubNamesSection;
   StringRef PubTypesSection;
@@ -286,7 +291,7 @@ class DWARFContextInMemory : public DWARFContext {
   DWARFSection LocDWOSection;
   StringRef StringDWOSection;
   StringRef StringOffsetDWOSection;
-  StringRef RangeDWOSection;
+  DWARFSection RangeDWOSection;
   StringRef AddrSection;
   DWARFSection AppleNamesSection;
   DWARFSection AppleTypesSection;
@@ -319,7 +324,7 @@ public:
   StringRef getEHFrameSection() override { return EHFrameSection; }
   const DWARFSection &getLineSection() override { return LineSection; }
   StringRef getStringSection() override { return StringSection; }
-  StringRef getRangeSection() override { return RangeSection; }
+  const DWARFSection &getRangeSection() override { return RangeSection; }
   StringRef getMacinfoSection() override { return MacinfoSection; }
   StringRef getPubNamesSection() override { return PubNamesSection; }
   StringRef getPubTypesSection() override { return PubTypesSection; }
@@ -346,7 +351,7 @@ public:
     return StringOffsetDWOSection;
   }
 
-  StringRef getRangeDWOSection() override { return RangeDWOSection; }
+  const DWARFSection &getRangeDWOSection() override { return RangeDWOSection; }
 
   StringRef getAddrSection() override {
     return AddrSection;

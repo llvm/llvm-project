@@ -261,6 +261,12 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     arm::getARMArchCPUFromArgs(Args, MArch, MCPU, FromAs);
     return arm::getARMTargetCPU(MCPU, MArch, T);
   }
+
+  case llvm::Triple::avr:
+    if (const Arg *A = Args.getLastArg(options::OPT_mmcu_EQ))
+      return A->getValue();
+    return "";
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -426,11 +432,12 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
-void tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
-                             const ArgList &Args) {
+bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
+                             const ArgList &Args, bool IsOffloadingHost,
+                             bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false))
-    return;
+    return false;
 
   switch (TC.getDriver().getOpenMPRuntime(Args)) {
   case Driver::OMPRT_OMP:
@@ -438,16 +445,24 @@ void tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
     break;
   case Driver::OMPRT_GOMP:
     CmdArgs.push_back("-lgomp");
+
+    if (GompNeedsRT)
+      CmdArgs.push_back("-lrt");
     break;
   case Driver::OMPRT_IOMP5:
     CmdArgs.push_back("-liomp5");
     break;
   case Driver::OMPRT_Unknown:
     // Already diagnosed.
-    break;
+    return false;
   }
 
+  if (IsOffloadingHost)
+    CmdArgs.push_back("-lomptarget");
+
   addArchSpecificRPath(TC, Args, CmdArgs);
+
+  return true;
 }
 
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
@@ -562,6 +577,17 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("esan");
 }
 
+static void addLibFuzzerRuntime(const ToolChain &TC,
+                                const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+    StringRef ParentDir = llvm::sys::path::parent_path(TC.getDriver().InstalledDir);
+    SmallString<128> P(ParentDir);
+    llvm::sys::path::append(P, "lib", "libLLVMFuzzer.a");
+    CmdArgs.push_back(Args.MakeArgString(P));
+    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+}
+
+
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
@@ -571,6 +597,11 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
+  // Inject libfuzzer dependencies.
+  if (TC.getSanitizerArgs().needsFuzzer()) {
+    addLibFuzzerRuntime(TC, Args, CmdArgs);
+  }
+
   for (auto RT : SharedRuntimes)
     addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
   for (auto RT : HelperStaticRuntimes)

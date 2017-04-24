@@ -440,8 +440,8 @@ void PPCInstrInfo::insertNoop(MachineBasicBlock &MBB,
   BuildMI(MBB, MI, DL, get(Opcode));
 }
 
-/// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-void PPCInstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+/// Return the noop instruction to use for a noop.
+void PPCInstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(PPC::NOP);
 }
 

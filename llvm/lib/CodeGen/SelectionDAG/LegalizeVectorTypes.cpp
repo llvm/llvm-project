@@ -1293,12 +1293,9 @@ void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,
   if ((NumElements & 1) == 0 &&
       SrcVT.getSizeInBits() * 2 < DestVT.getSizeInBits()) {
     LLVMContext &Ctx = *DAG.getContext();
-    EVT NewSrcVT = EVT::getVectorVT(
-        Ctx, EVT::getIntegerVT(
-                 Ctx, SrcVT.getScalarSizeInBits() * 2),
-        NumElements);
-    EVT SplitSrcVT =
-        EVT::getVectorVT(Ctx, SrcVT.getVectorElementType(), NumElements / 2);
+    EVT NewSrcVT = SrcVT.widenIntegerVectorElementType(Ctx);
+    EVT SplitSrcVT = SrcVT.getHalfNumVectorElementsVT(Ctx);
+
     EVT SplitLoVT, SplitHiVT;
     std::tie(SplitLoVT, SplitHiVT) = DAG.GetSplitDestVTs(NewSrcVT);
     if (TLI.isTypeLegal(SrcVT) && !TLI.isTypeLegal(SplitSrcVT) &&
@@ -3012,8 +3009,8 @@ SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
   // Don't touch if this will be scalarized.
   EVT FinalVT = VSelVT;
   while (getTypeAction(FinalVT) == TargetLowering::TypeSplitVector)
-    FinalVT = EVT::getVectorVT(Ctx, FinalVT.getVectorElementType(),
-                               FinalVT.getVectorNumElements() / 2);
+    FinalVT = FinalVT.getHalfNumVectorElementsVT(Ctx);
+
   if (FinalVT.getVectorNumElements() == 1)
     return SDValue();
 

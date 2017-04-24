@@ -231,6 +231,10 @@ public:
   AMDGPUAS getAMDGPUAS() const {
     return AMDGPUASI;
   }
+
+  MVT getFenceOperandTy(const DataLayout &DL) const override {
+    return MVT::i32;
+  }
 };
 
 namespace AMDGPUISD {
@@ -244,6 +248,7 @@ enum NodeType : unsigned {
 
   // Function call.
   CALL,
+  TRAP,
 
   // Masked control flow nodes.
   IF,

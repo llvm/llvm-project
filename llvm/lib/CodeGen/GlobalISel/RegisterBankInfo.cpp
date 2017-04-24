@@ -421,7 +421,7 @@ unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
     RC = MRI.getRegClass(Reg);
   }
   assert(RC && "Unable to deduce the register class");
-  return RC->getSize() * 8;
+  return TRI.getRegSizeInBits(*RC);
 }
 
 //------------------------------------------------------------------------------

@@ -46,6 +46,7 @@ class ColorHelper {
   double MaxIn;
 
   ArrayRef<std::tuple<uint8_t, uint8_t, uint8_t>> ColorMap;
+  ArrayRef<std::tuple<uint8_t, uint8_t, uint8_t>> BoundMap;
 
 public:
   /// Enum of the availible Sequential Color Schemes
@@ -73,9 +74,16 @@ public:
 
   std::string getColorString(double Point) const;
 
+  // Get the Default color, at the moment allways black.
+  std::tuple<uint8_t, uint8_t, uint8_t> getDefaultColorTuple() const {
+    return std::make_tuple(0, 0, 0);
+  }
+
+  std::string getDefaultColorString() const { return "black"; }
+
   // Convert a tuple to a string
   static std::string getColorString(std::tuple<uint8_t, uint8_t, uint8_t> t);
 };
-}
-}
+} // namespace xray
+} // namespace llvm
 #endif
