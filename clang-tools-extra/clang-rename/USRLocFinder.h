@@ -17,9 +17,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_LOC_FINDER_H
 
 #include "clang/AST/AST.h"
-#include "llvm/ADT/StringRef.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
 
