@@ -226,8 +226,15 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     return true;
   }
 
-  // FIXME:
   // Don't emit locations that cannot be expressed without DW_OP_stack_value.
+  if (DwarfVersion < 4)
+    if (std::any_of(ExprCursor.begin(), ExprCursor.end(),
+                    [](DIExpression::ExprOperand Op) -> bool {
+                      return Op.getOp() == dwarf::DW_OP_stack_value;
+                    })) {
+      DwarfRegs.clear();
+      return false;
+    }
 
   assert(DwarfRegs.size() == 1);
   auto Reg = DwarfRegs[0];
