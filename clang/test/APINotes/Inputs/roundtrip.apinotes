@@ -138,6 +138,8 @@ Tags:
     SwiftPrivate:    false
     SwiftName:       SomeEnum
     NSErrorDomain:   some_error_domain
+    EnumExtensibility: closed
+    FlagEnum:        false
   - Name:            NSSomeStruct
     Availability:    available
     AvailabilityMsg: ''
