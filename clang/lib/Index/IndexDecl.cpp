@@ -144,6 +144,53 @@ public:
     return true;
   }
 
+  /// Gather the declarations which the given declaration \D overrides in a
+  /// pseudo-override manner.
+  ///
+  /// Pseudo-overrides occur when a class template specialization declares
+  /// a declaration that has the same name as a similar declaration in the
+  /// non-specialized template.
+  void
+  gatherTemplatePseudoOverrides(const NamedDecl *D,
+                                SmallVectorImpl<SymbolRelation> &Relations) {
+    if (!IndexCtx.getLangOpts().CPlusPlus)
+      return;
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(D->getLexicalDeclContext());
+    if (!CTSD)
+      return;
+    llvm::PointerUnion<ClassTemplateDecl *,
+                       ClassTemplatePartialSpecializationDecl *>
+        Template = CTSD->getSpecializedTemplateOrPartial();
+    if (const auto *CTD = Template.dyn_cast<ClassTemplateDecl *>()) {
+      const CXXRecordDecl *Pattern = CTD->getTemplatedDecl();
+      bool TypeOverride = isa<TypeDecl>(D);
+      for (const NamedDecl *ND : Pattern->lookup(D->getDeclName())) {
+        if (const auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
+          ND = CTD->getTemplatedDecl();
+        if (ND->isImplicit())
+          continue;
+        // Types can override other types.
+        if (!TypeOverride) {
+          if (ND->getKind() != D->getKind())
+            continue;
+        } else if (!isa<TypeDecl>(ND))
+          continue;
+        if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+          const auto *DFD = cast<FunctionDecl>(D);
+          // Function overrides are approximated using the number of parameters.
+          if (FD->getStorageClass() != DFD->getStorageClass() ||
+              FD->getNumParams() != DFD->getNumParams())
+            continue;
+        }
+        Relations.emplace_back(
+            SymbolRoleSet(SymbolRole::RelationOverrideOf) |
+                SymbolRoleSet(SymbolRole::RelationSpecializationOf),
+            ND);
+      }
+    }
+  }
+
   bool VisitFunctionDecl(const FunctionDecl *D) {
     if (D->isDeleted())
       return true;
@@ -158,6 +205,7 @@ public:
         Relations.emplace_back((unsigned)SymbolRole::RelationOverrideOf, *I);
       }
     }
+    gatherTemplatePseudoOverrides(D, Relations);
 
     TRY_DECL(D, IndexCtx.handleDecl(D, Roles, Relations));
     handleDeclarator(D);
@@ -194,14 +242,18 @@ public:
   }
 
   bool VisitVarDecl(const VarDecl *D) {
-    TRY_DECL(D, IndexCtx.handleDecl(D));
+    SmallVector<SymbolRelation, 4> Relations;
+    gatherTemplatePseudoOverrides(D, Relations);
+    TRY_DECL(D, IndexCtx.handleDecl(D, SymbolRoleSet(), Relations));
     handleDeclarator(D);
     IndexCtx.indexBody(D->getInit(), D);
     return true;
   }
 
   bool VisitFieldDecl(const FieldDecl *D) {
-    TRY_DECL(D, IndexCtx.handleDecl(D));
+    SmallVector<SymbolRelation, 4> Relations;
+    gatherTemplatePseudoOverrides(D, Relations);
+    TRY_DECL(D, IndexCtx.handleDecl(D, SymbolRoleSet(), Relations));
     handleDeclarator(D);
     if (D->isBitField())
       IndexCtx.indexBody(D->getBitWidth(), D);
@@ -233,7 +285,9 @@ public:
 
   bool VisitTypedefNameDecl(const TypedefNameDecl *D) {
     if (!D->isTransparentTag()) {
-      TRY_DECL(D, IndexCtx.handleDecl(D));
+      SmallVector<SymbolRelation, 4> Relations;
+      gatherTemplatePseudoOverrides(D, Relations);
+      TRY_DECL(D, IndexCtx.handleDecl(D, SymbolRoleSet(), Relations));
       IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
     }
     return true;
@@ -243,7 +297,9 @@ public:
     // Non-free standing tags are handled in indexTypeSourceInfo.
     if (D->isFreeStanding()) {
       if (D->isThisDeclarationADefinition()) {
-        IndexCtx.indexTagDecl(D);
+        SmallVector<SymbolRelation, 4> Relations;
+        gatherTemplatePseudoOverrides(D, Relations);
+        IndexCtx.indexTagDecl(D, Relations);
       } else {
         auto *Parent = dyn_cast<NamedDecl>(D->getDeclContext());
         return IndexCtx.handleReference(D, D->getLocation(), Parent,

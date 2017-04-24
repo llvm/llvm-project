@@ -28,6 +28,10 @@ bool IndexingContext::shouldIndex(const Decl *D) {
   return !isGeneratedDecl(D);
 }
 
+const LangOptions &IndexingContext::getLangOpts() const {
+  return Ctx->getLangOpts();
+}
+
 bool IndexingContext::shouldIndexFunctionLocalSymbols() const {
   return IndexOpts.IndexFunctionLocals;
 }

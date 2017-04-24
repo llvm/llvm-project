@@ -50,6 +50,8 @@ public:
 
   bool shouldIndex(const Decl *D);
 
+  const LangOptions &getLangOpts() const;
+
   bool shouldSuppressRefs() const {
     return false;
   }
