@@ -111,8 +111,8 @@ class TestCppNsImport(TestBase):
 
         test_result = frame.EvaluateExpression("imported")
         self.assertTrue(
-            test_result.IsValid() and test_result.GetError().Fail(),
-            "imported is ambiguous")
+            test_result.IsValid() and test_result.GetValueAsSigned() == 99,
+            "imported = 99")
 
         test_result = frame.EvaluateExpression("single")
         self.assertTrue(
