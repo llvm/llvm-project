@@ -1056,7 +1056,32 @@ namespace {
   };
 
   /// Used to serialize the on-disk tag table.
-  class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> { };
+  class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
+  public:
+    unsigned getUnversionedInfoSize(const TagInfo &info) {
+      return 1 + getCommonTypeInfoSize(info);
+    }
+
+    void emitUnversionedInfo(raw_ostream &out, const TagInfo &info) {
+      endian::Writer<little> writer(out);
+
+      uint8_t payload = 0;
+      if (auto enumExtensibility = info.EnumExtensibility) {
+        payload |= static_cast<uint8_t>(enumExtensibility.getValue()) + 1;
+        assert((payload < (1 << 2)) && "must fit in two bits");
+      }
+
+      payload <<= 2;
+      if (Optional<bool> value = info.isFlagEnum()) {
+        payload |= 1 << 0;
+        payload |= value.getValue() << 1;
+      }
+
+      writer.write<uint8_t>(payload);
+
+      emitCommonTypeInfo(out, info);
+    }
+  };
 
 } // end anonymous namespace
 
