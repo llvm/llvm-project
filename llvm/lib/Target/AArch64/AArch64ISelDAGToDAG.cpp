@@ -1852,17 +1852,17 @@ static void getUsefulBitsFromBitfieldMoveOpd(SDValue Op, APInt &UsefulBits,
   OpUsefulBits = 1;
 
   if (MSB >= Imm) {
-    OpUsefulBits <<= MSB - Imm + 1;
+    OpUsefulBits = OpUsefulBits.shl(MSB - Imm + 1);
     --OpUsefulBits;
     // The interesting part will be in the lower part of the result
     getUsefulBits(Op, OpUsefulBits, Depth + 1);
     // The interesting part was starting at Imm in the argument
-    OpUsefulBits <<= Imm;
+    OpUsefulBits = OpUsefulBits.shl(Imm);
   } else {
-    OpUsefulBits <<= MSB + 1;
+    OpUsefulBits = OpUsefulBits.shl(MSB + 1);
     --OpUsefulBits;
     // The interesting part will be shifted in the result
-    OpUsefulBits <<= OpUsefulBits.getBitWidth() - Imm;
+    OpUsefulBits = OpUsefulBits.shl(OpUsefulBits.getBitWidth() - Imm);
     getUsefulBits(Op, OpUsefulBits, Depth + 1);
     // The interesting part was at zero in the argument
     OpUsefulBits.lshrInPlace(OpUsefulBits.getBitWidth() - Imm);
@@ -1892,7 +1892,7 @@ static void getUsefulBitsFromOrWithShiftedReg(SDValue Op, APInt &UsefulBits,
   if (AArch64_AM::getShiftType(ShiftTypeAndValue) == AArch64_AM::LSL) {
     // Shift Left
     uint64_t ShiftAmt = AArch64_AM::getShiftValue(ShiftTypeAndValue);
-    Mask <<= ShiftAmt;
+    Mask = Mask.shl(ShiftAmt);
     getUsefulBits(Op, Mask, Depth + 1);
     Mask.lshrInPlace(ShiftAmt);
   } else if (AArch64_AM::getShiftType(ShiftTypeAndValue) == AArch64_AM::LSR) {
@@ -1902,7 +1902,7 @@ static void getUsefulBitsFromOrWithShiftedReg(SDValue Op, APInt &UsefulBits,
     uint64_t ShiftAmt = AArch64_AM::getShiftValue(ShiftTypeAndValue);
     Mask.lshrInPlace(ShiftAmt);
     getUsefulBits(Op, Mask, Depth + 1);
-    Mask <<= ShiftAmt;
+    Mask = Mask.shl(ShiftAmt);
   } else
     return;
 
@@ -1930,13 +1930,13 @@ static void getUsefulBitsFromBFM(SDValue Op, SDValue Orig, APInt &UsefulBits,
     uint64_t Width = MSB - Imm + 1;
     uint64_t LSB = Imm;
 
-    OpUsefulBits <<= Width;
+    OpUsefulBits = OpUsefulBits.shl(Width);
     --OpUsefulBits;
 
     if (Op.getOperand(1) == Orig) {
       // Copy the low bits from the result to bits starting from LSB.
       Mask = ResultUsefulBits & OpUsefulBits;
-      Mask <<= LSB;
+      Mask = Mask.shl(LSB);
     }
 
     if (Op.getOperand(0) == Orig)
@@ -1947,9 +1947,9 @@ static void getUsefulBitsFromBFM(SDValue Op, SDValue Orig, APInt &UsefulBits,
     uint64_t Width = MSB + 1;
     uint64_t LSB = UsefulBits.getBitWidth() - Imm;
 
-    OpUsefulBits <<= Width;
+    OpUsefulBits = OpUsefulBits.shl(Width);
     --OpUsefulBits;
-    OpUsefulBits <<= LSB;
+    OpUsefulBits = OpUsefulBits.shl(LSB);
 
     if (Op.getOperand(1) == Orig) {
       // Copy the bits from the result to the zero bits.

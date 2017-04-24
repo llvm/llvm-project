@@ -2024,24 +2024,6 @@ TEST(APIntTest, LogicalRightShift) {
   EXPECT_EQ(0, neg_one.lshr(128));
 }
 
-TEST(APIntTest, ArithmeticRightShift) {
-  // Ensure we handle large shifts of multi-word.
-  const APInt signmin32(APInt::getSignedMinValue(32));
-  EXPECT_TRUE(signmin32.ashr(32).isAllOnesValue());
-
-  // Ensure we handle large shifts of multi-word.
-  const APInt umax32(APInt::getSignedMaxValue(32));
-  EXPECT_EQ(0, umax32.ashr(32));
-
-  // Ensure we handle large shifts of multi-word.
-  const APInt signmin128(APInt::getSignedMinValue(128));
-  EXPECT_TRUE(signmin128.ashr(128).isAllOnesValue());
-
-  // Ensure we handle large shifts of multi-word.
-  const APInt umax128(APInt::getSignedMaxValue(128));
-  EXPECT_EQ(0, umax128.ashr(128));
-}
-
 TEST(APIntTest, LeftShift) {
   APInt i256(APInt::getLowBitsSet(256, 2));
 
@@ -2102,6 +2084,26 @@ TEST(APIntTest, isSubsetOf) {
   EXPECT_FALSE(i128_2.isSubsetOf(i128_1));
   EXPECT_FALSE(i128_1.isSubsetOf(i128_2));
   EXPECT_TRUE(i128_3.isSubsetOf(i128_3));
+}
+
+TEST(APIntTest, sext) {
+  EXPECT_EQ(0, APInt(1, 0).sext(64));
+  EXPECT_EQ(~uint64_t(0), APInt(1, 1).sext(64));
+
+  APInt i32_max(APInt::getSignedMaxValue(32).sext(63));
+  EXPECT_EQ(32U, i32_max.countLeadingZeros());
+  EXPECT_EQ(0U, i32_max.countTrailingZeros());
+  EXPECT_EQ(31U, i32_max.countPopulation());
+
+  APInt i32_min(APInt::getSignedMinValue(32).sext(63));
+  EXPECT_EQ(32U, i32_min.countLeadingOnes());
+  EXPECT_EQ(31U, i32_min.countTrailingZeros());
+  EXPECT_EQ(32U, i32_min.countPopulation());
+
+  APInt i32_neg1(APInt(32, ~uint64_t(0)).sext(63));
+  EXPECT_EQ(63U, i32_neg1.countLeadingOnes());
+  EXPECT_EQ(0U, i32_neg1.countTrailingZeros());
+  EXPECT_EQ(63U, i32_neg1.countPopulation());
 }
 
 } // end anonymous namespace

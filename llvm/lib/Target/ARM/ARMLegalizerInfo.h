@@ -24,6 +24,9 @@ class ARMSubtarget;
 class ARMLegalizerInfo : public LegalizerInfo {
 public:
   ARMLegalizerInfo(const ARMSubtarget &ST);
+
+  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &MIRBuilder) const override;
 };
 } // End llvm namespace.
 #endif

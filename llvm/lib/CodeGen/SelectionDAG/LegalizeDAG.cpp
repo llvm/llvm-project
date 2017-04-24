@@ -2589,7 +2589,7 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
           DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(I - J, dl, SHVT));
 
     APInt Shift(Sz, 1);
-    Shift <<= J;
+    Shift = Shift.shl(J);
     Tmp2 = DAG.getNode(ISD::AND, dl, VT, Tmp2, DAG.getConstant(Shift, dl, VT));
     Tmp = DAG.getNode(ISD::OR, dl, VT, Tmp, Tmp2);
   }

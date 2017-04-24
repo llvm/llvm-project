@@ -3273,13 +3273,18 @@
 
         dsb #-1
         dsb #16
+        dsb foo
         dmb #-1
         dmb #16
+        dmb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #16
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dsb foo
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #-1
@@ -3287,15 +3292,22 @@
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dmb foo
+// CHECK-ERROR-NEXT:             ^
 
         isb #-1
         isb #16
+        isb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: 'sy' or #imm operand expected
+// CHECK-ERROR-NEXT:        isb foo
+// CHECK-ERROR-NEXT:            ^
 
         msr daifset, x4
         msr spsel, #-1

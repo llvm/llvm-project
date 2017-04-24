@@ -844,7 +844,7 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 
   // Otherwise, we have to shift the mantissa bits up to the right location
   APInt Tmp(width, mantissa);
-  Tmp <<= (unsigned)exp - 52;
+  Tmp = Tmp.shl((unsigned)exp - 52);
   return isNeg ? -Tmp : Tmp;
 }
 
@@ -942,11 +942,8 @@ APInt APInt::trunc(unsigned width) const {
 APInt APInt::sext(unsigned width) const {
   assert(width > BitWidth && "Invalid APInt SignExtend request");
 
-  if (width <= APINT_BITS_PER_WORD) {
-    uint64_t val = VAL << (APINT_BITS_PER_WORD - BitWidth);
-    val = (int64_t)val >> (width - BitWidth);
-    return APInt(width, val >> (APINT_BITS_PER_WORD - width));
-  }
+  if (width <= APINT_BITS_PER_WORD)
+    return APInt(width, SignExtend64(VAL, BitWidth));
 
   APInt Result(getMemory(getNumWords(width)), width);
 
@@ -1029,42 +1026,91 @@ APInt APInt::sextOrSelf(unsigned width) const {
 
 /// Arithmetic right-shift this APInt by shiftAmt.
 /// @brief Arithmetic right-shift function.
-void APInt::ashrInPlace(const APInt &shiftAmt) {
-  ashrInPlace((unsigned)shiftAmt.getLimitedValue(BitWidth));
+APInt APInt::ashr(const APInt &shiftAmt) const {
+  return ashr((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
 /// Arithmetic right-shift this APInt by shiftAmt.
 /// @brief Arithmetic right-shift function.
-void APInt::ashrSlowCase(unsigned ShiftAmt) {
-  // Don't bother performing a no-op shift.
-  if (!ShiftAmt)
-    return;
+APInt APInt::ashr(unsigned shiftAmt) const {
+  assert(shiftAmt <= BitWidth && "Invalid shift amount");
+  // Handle a degenerate case
+  if (shiftAmt == 0)
+    return *this;
 
-  bool Negative = isNegative();
+  // Handle single word shifts with built-in ashr
+  if (isSingleWord()) {
+    if (shiftAmt == BitWidth)
+      // Undefined
+      return APInt(BitWidth,
+                   SignExtend64(VAL, BitWidth) >> (APINT_BITS_PER_WORD - 1));
+    return APInt(BitWidth, SignExtend64(VAL, BitWidth) >> shiftAmt);
+  }
 
-  // WordShift is the inter-part shift; BitShift is is intra-part shift.
-  unsigned Words = getNumWords();
-  unsigned WordShift = std::min(ShiftAmt / APINT_BITS_PER_WORD, Words);
-  unsigned BitShift = ShiftAmt % APINT_BITS_PER_WORD;
+  // If all the bits were shifted out, the result is, technically, undefined.
+  // We return -1 if it was negative, 0 otherwise. We check this early to avoid
+  // issues in the algorithm below.
+  if (shiftAmt == BitWidth) {
+    if (isNegative())
+      return APInt(BitWidth, WORD_MAX, true);
+    else
+      return APInt(BitWidth, 0);
+  }
 
-  unsigned WordsToMove = Words - WordShift;
-  // Fastpath for moving by whole words.
-  if (BitShift == 0) {
-    std::memmove(pVal, pVal + WordShift, WordsToMove * APINT_WORD_SIZE);
+  // Create some space for the result.
+  uint64_t * val = new uint64_t[getNumWords()];
+
+  // Compute some values needed by the following shift algorithms
+  unsigned wordShift = shiftAmt % APINT_BITS_PER_WORD; // bits to shift per word
+  unsigned offset = shiftAmt / APINT_BITS_PER_WORD; // word offset for shift
+  unsigned breakWord = getNumWords() - 1 - offset; // last word affected
+  unsigned bitsInWord = whichBit(BitWidth); // how many bits in last word?
+  if (bitsInWord == 0)
+    bitsInWord = APINT_BITS_PER_WORD;
+
+  // If we are shifting whole words, just move whole words
+  if (wordShift == 0) {
+    // Move the words containing significant bits
+    for (unsigned i = 0; i <= breakWord; ++i)
+      val[i] = pVal[i+offset]; // move whole word
+
+    // Adjust the top significant word for sign bit fill, if negative
+    if (isNegative())
+      if (bitsInWord < APINT_BITS_PER_WORD)
+        val[breakWord] |= WORD_MAX << bitsInWord; // set high bits
   } else {
-    for (unsigned i = 0; i != WordsToMove; ++i) {
-      pVal[i] = pVal[i + WordShift] >> BitShift;
-      if (i + 1 != WordsToMove)
-        pVal[i] |= pVal[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift);
-      else if (Negative)
-        pVal[i] |= WORD_MAX << (APINT_BITS_PER_WORD - BitShift);
+    // Shift the low order words
+    for (unsigned i = 0; i < breakWord; ++i) {
+      // This combines the shifted corresponding word with the low bits from
+      // the next word (shifted into this word's high bits).
+      val[i] = (pVal[i+offset] >> wordShift) |
+               (pVal[i+offset+1] << (APINT_BITS_PER_WORD - wordShift));
+    }
+
+    // Shift the break word. In this case there are no bits from the next word
+    // to include in this word.
+    val[breakWord] = pVal[breakWord+offset] >> wordShift;
+
+    // Deal with sign extension in the break word, and possibly the word before
+    // it.
+    if (isNegative()) {
+      if (wordShift > bitsInWord) {
+        if (breakWord > 0)
+          val[breakWord-1] |=
+            WORD_MAX << (APINT_BITS_PER_WORD - (wordShift - bitsInWord));
+        val[breakWord] |= WORD_MAX;
+      } else
+        val[breakWord] |= WORD_MAX << (bitsInWord - wordShift);
     }
   }
 
-  // Fill in the remainder based on the original sign.
-  std::memset(pVal + WordsToMove, Negative ? -1 : 0,
-              WordShift * APINT_WORD_SIZE);
-  clearUnusedBits();
+  // Remaining words are 0 or -1, just assign them.
+  uint64_t fillValue = (isNegative() ? WORD_MAX : 0);
+  for (unsigned i = breakWord+1; i < getNumWords(); ++i)
+    val[i] = fillValue;
+  APInt Result(val, BitWidth);
+  Result.clearUnusedBits();
+  return Result;
 }
 
 /// Logical right-shift this APInt by shiftAmt.
@@ -1081,10 +1127,9 @@ void APInt::lshrSlowCase(unsigned ShiftAmt) {
 
 /// Left-shift this APInt by shiftAmt.
 /// @brief Left-shift function.
-APInt &APInt::operator<<=(const APInt &shiftAmt) {
+APInt APInt::shl(const APInt &shiftAmt) const {
   // It's undefined behavior in C to shift by BitWidth or greater.
-  *this <<= (unsigned)shiftAmt.getLimitedValue(BitWidth);
-  return *this;
+  return shl((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
 void APInt::shlSlowCase(unsigned ShiftAmt) {

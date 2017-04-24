@@ -6079,24 +6079,74 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
   return getCouldNotCompute();
 }
 
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimitFromCond(const Loop *L,
-                                          Value *ExitCond,
-                                          BasicBlock *TBB,
-                                          BasicBlock *FBB,
-                                          bool ControlsExit,
-                                          bool AllowPredicates) {
+ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCond(
+    const Loop *L, Value *ExitCond, BasicBlock *TBB, BasicBlock *FBB,
+    bool ControlsExit, bool AllowPredicates) {
+  ScalarEvolution::ExitLimitCacheTy Cache(L, TBB, FBB, AllowPredicates);
+  return computeExitLimitFromCondCached(Cache, L, ExitCond, TBB, FBB,
+                                        ControlsExit, AllowPredicates);
+}
+
+Optional<ScalarEvolution::ExitLimit>
+ScalarEvolution::ExitLimitCache::find(const Loop *L, Value *ExitCond,
+                                      BasicBlock *TBB, BasicBlock *FBB,
+                                      bool ControlsExit, bool AllowPredicates) {
+  (void)this->L;
+  (void)this->TBB;
+  (void)this->FBB;
+  (void)this->AllowPredicates;
+
+  assert(this->L == L && this->TBB == TBB && this->FBB == FBB &&
+         this->AllowPredicates == AllowPredicates &&
+         "Variance in assumed invariant key components!");
+  auto Itr = TripCountMap.find({ExitCond, ControlsExit});
+  if (Itr == TripCountMap.end())
+    return None;
+  return Itr->second;
+}
+
+void ScalarEvolution::ExitLimitCache::insert(const Loop *L, Value *ExitCond,
+                                             BasicBlock *TBB, BasicBlock *FBB,
+                                             bool ControlsExit,
+                                             bool AllowPredicates,
+                                             const ExitLimit &EL) {
+  assert(this->L == L && this->TBB == TBB && this->FBB == FBB &&
+         this->AllowPredicates == AllowPredicates &&
+         "Variance in assumed invariant key components!");
+
+  auto InsertResult = TripCountMap.insert({{ExitCond, ControlsExit}, EL});
+  assert(InsertResult.second && "Expected successful insertion!");
+  (void)InsertResult;
+}
+
+ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
+    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, BasicBlock *TBB,
+    BasicBlock *FBB, bool ControlsExit, bool AllowPredicates) {
+
+  if (auto MaybeEL =
+          Cache.find(L, ExitCond, TBB, FBB, ControlsExit, AllowPredicates))
+    return *MaybeEL;
+
+  ExitLimit EL = computeExitLimitFromCondImpl(Cache, L, ExitCond, TBB, FBB,
+                                              ControlsExit, AllowPredicates);
+  Cache.insert(L, ExitCond, TBB, FBB, ControlsExit, AllowPredicates, EL);
+  return EL;
+}
+
+ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
+    ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, BasicBlock *TBB,
+    BasicBlock *FBB, bool ControlsExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(ExitCond)) {
     if (BO->getOpcode() == Instruction::And) {
       // Recurse on the operands of the and.
       bool EitherMayExit = L->contains(TBB);
-      ExitLimit EL0 = computeExitLimitFromCond(L, BO->getOperand(0), TBB, FBB,
-                                               ControlsExit && !EitherMayExit,
-                                               AllowPredicates);
-      ExitLimit EL1 = computeExitLimitFromCond(L, BO->getOperand(1), TBB, FBB,
-                                               ControlsExit && !EitherMayExit,
-                                               AllowPredicates);
+      ExitLimit EL0 = computeExitLimitFromCondCached(
+          Cache, L, BO->getOperand(0), TBB, FBB, ControlsExit && !EitherMayExit,
+          AllowPredicates);
+      ExitLimit EL1 = computeExitLimitFromCondCached(
+          Cache, L, BO->getOperand(1), TBB, FBB, ControlsExit && !EitherMayExit,
+          AllowPredicates);
       const SCEV *BECount = getCouldNotCompute();
       const SCEV *MaxBECount = getCouldNotCompute();
       if (EitherMayExit) {
@@ -6140,12 +6190,12 @@ ScalarEvolution::computeExitLimitFromCond(const Loop *L,
     if (BO->getOpcode() == Instruction::Or) {
       // Recurse on the operands of the or.
       bool EitherMayExit = L->contains(FBB);
-      ExitLimit EL0 = computeExitLimitFromCond(L, BO->getOperand(0), TBB, FBB,
-                                               ControlsExit && !EitherMayExit,
-                                               AllowPredicates);
-      ExitLimit EL1 = computeExitLimitFromCond(L, BO->getOperand(1), TBB, FBB,
-                                               ControlsExit && !EitherMayExit,
-                                               AllowPredicates);
+      ExitLimit EL0 = computeExitLimitFromCondCached(
+          Cache, L, BO->getOperand(0), TBB, FBB, ControlsExit && !EitherMayExit,
+          AllowPredicates);
+      ExitLimit EL1 = computeExitLimitFromCondCached(
+          Cache, L, BO->getOperand(1), TBB, FBB, ControlsExit && !EitherMayExit,
+          AllowPredicates);
       const SCEV *BECount = getCouldNotCompute();
       const SCEV *MaxBECount = getCouldNotCompute();
       if (EitherMayExit) {
@@ -10237,84 +10287,75 @@ void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
   RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
 }
 
-typedef DenseMap<const Loop *, std::string> VerifyMap;
-
-/// replaceSubString - Replaces all occurrences of From in Str with To.
-static void replaceSubString(std::string &Str, StringRef From, StringRef To) {
-  size_t Pos = 0;
-  while ((Pos = Str.find(From, Pos)) != std::string::npos) {
-    Str.replace(Pos, From.size(), To.data(), To.size());
-    Pos += To.size();
-  }
-}
-
-/// getLoopBackedgeTakenCounts - Helper method for verifyAnalysis.
-static void
-getLoopBackedgeTakenCounts(Loop *L, VerifyMap &Map, ScalarEvolution &SE) {
-  std::string &S = Map[L];
-  if (S.empty()) {
-    raw_string_ostream OS(S);
-    SE.getBackedgeTakenCount(L)->print(OS);
-
-    // false and 0 are semantically equivalent. This can happen in dead loops.
-    replaceSubString(OS.str(), "false", "0");
-    // Remove wrap flags, their use in SCEV is highly fragile.
-    // FIXME: Remove this when SCEV gets smarter about them.
-    replaceSubString(OS.str(), "<nw>", "");
-    replaceSubString(OS.str(), "<nsw>", "");
-    replaceSubString(OS.str(), "<nuw>", "");
-  }
-
-  for (auto *R : reverse(*L))
-    getLoopBackedgeTakenCounts(R, Map, SE); // recurse.
-}
-
 void ScalarEvolution::verify() const {
   ScalarEvolution &SE = *const_cast<ScalarEvolution *>(this);
-
-  // Gather stringified backedge taken counts for all loops using SCEV's caches.
-  // FIXME: It would be much better to store actual values instead of strings,
-  //        but SCEV pointers will change if we drop the caches.
-  VerifyMap BackedgeDumpsOld, BackedgeDumpsNew;
-  for (LoopInfo::reverse_iterator I = LI.rbegin(), E = LI.rend(); I != E; ++I)
-    getLoopBackedgeTakenCounts(*I, BackedgeDumpsOld, SE);
-
-  // Gather stringified backedge taken counts for all loops using a fresh
-  // ScalarEvolution object.
   ScalarEvolution SE2(F, TLI, AC, DT, LI);
-  for (LoopInfo::reverse_iterator I = LI.rbegin(), E = LI.rend(); I != E; ++I)
-    getLoopBackedgeTakenCounts(*I, BackedgeDumpsNew, SE2);
 
-  // Now compare whether they're the same with and without caches. This allows
-  // verifying that no pass changed the cache.
-  assert(BackedgeDumpsOld.size() == BackedgeDumpsNew.size() &&
-         "New loops suddenly appeared!");
+  SmallVector<Loop *, 8> LoopStack(LI.begin(), LI.end());
 
-  for (VerifyMap::iterator OldI = BackedgeDumpsOld.begin(),
-                           OldE = BackedgeDumpsOld.end(),
-                           NewI = BackedgeDumpsNew.begin();
-       OldI != OldE; ++OldI, ++NewI) {
-    assert(OldI->first == NewI->first && "Loop order changed!");
+  // Map's SCEV expressions from one ScalarEvolution "universe" to another.
+  struct SCEVMapper : public SCEVRewriteVisitor<SCEVMapper> {
+    const SCEV *visitConstant(const SCEVConstant *Constant) {
+      return SE.getConstant(Constant->getAPInt());
+    }
+    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+      return SE.getUnknown(Expr->getValue());
+    }
 
-    // Compare the stringified SCEVs. We don't care if undef backedgetaken count
-    // changes.
-    // FIXME: We currently ignore SCEV changes from/to CouldNotCompute. This
-    // means that a pass is buggy or SCEV has to learn a new pattern but is
-    // usually not harmful.
-    if (OldI->second != NewI->second &&
-        OldI->second.find("undef") == std::string::npos &&
-        NewI->second.find("undef") == std::string::npos &&
-        OldI->second != "***COULDNOTCOMPUTE***" &&
-        NewI->second != "***COULDNOTCOMPUTE***") {
-      dbgs() << "SCEVValidator: SCEV for loop '"
-             << OldI->first->getHeader()->getName()
-             << "' changed from '" << OldI->second
-             << "' to '" << NewI->second << "'!\n";
+    const SCEV *visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
+      return SE.getCouldNotCompute();
+    }
+    SCEVMapper(ScalarEvolution &SE) : SCEVRewriteVisitor<SCEVMapper>(SE) {}
+  };
+
+  SCEVMapper SCM(SE2);
+
+  while (!LoopStack.empty()) {
+    auto *L = LoopStack.pop_back_val();
+    LoopStack.insert(LoopStack.end(), L->begin(), L->end());
+
+    auto *CurBECount = SCM.visit(
+        const_cast<ScalarEvolution *>(this)->getBackedgeTakenCount(L));
+    auto *NewBECount = SE2.getBackedgeTakenCount(L);
+
+    if (CurBECount == SE2.getCouldNotCompute() ||
+        NewBECount == SE2.getCouldNotCompute()) {
+      // NB! This situation is legal, but is very suspicious -- whatever pass
+      // change the loop to make a trip count go from could not compute to
+      // computable or vice-versa *should have* invalidated SCEV.  However, we
+      // choose not to assert here (for now) since we don't want false
+      // positives.
+      continue;
+    }
+
+    if (containsUndefs(CurBECount) || containsUndefs(NewBECount)) {
+      // SCEV treats "undef" as an unknown but consistent value (i.e. it does
+      // not propagate undef aggressively).  This means we can (and do) fail
+      // verification in cases where a transform makes the trip count of a loop
+      // go from "undef" to "undef+1" (say).  The transform is fine, since in
+      // both cases the loop iterates "undef" times, but SCEV thinks we
+      // increased the trip count of the loop by 1 incorrectly.
+      continue;
+    }
+
+    if (SE.getTypeSizeInBits(CurBECount->getType()) >
+        SE.getTypeSizeInBits(NewBECount->getType()))
+      NewBECount = SE2.getZeroExtendExpr(NewBECount, CurBECount->getType());
+    else if (SE.getTypeSizeInBits(CurBECount->getType()) <
+             SE.getTypeSizeInBits(NewBECount->getType()))
+      CurBECount = SE2.getZeroExtendExpr(CurBECount, NewBECount->getType());
+
+    auto *ConstantDelta =
+        dyn_cast<SCEVConstant>(SE2.getMinusSCEV(CurBECount, NewBECount));
+
+    if (ConstantDelta && ConstantDelta->getAPInt() != 0) {
+      dbgs() << "Trip Count Changed!\n";
+      dbgs() << "Old: " << *CurBECount << "\n";
+      dbgs() << "New: " << *NewBECount << "\n";
+      dbgs() << "Delta: " << *ConstantDelta << "\n";
       std::abort();
     }
   }
-
-  // TODO: Verify more things.
 }
 
 bool ScalarEvolution::invalidate(

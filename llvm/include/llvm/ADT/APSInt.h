@@ -128,7 +128,7 @@ public:
     if (IsUnsigned)
       lshrInPlace(Amt);
     else
-      ashrInPlace(Amt);
+      *this = *this >> Amt;
     return *this;
   }
 

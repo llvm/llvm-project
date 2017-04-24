@@ -7,6 +7,14 @@ entry:
   ret void
 }
 
+define i32 @test_constant_return_i32() {
+; CHECK-LABEL: test_constant_return_i32:
+; CHECK: mov r0, #42
+; CHECK: bx lr
+entry:
+  ret i32 42
+}
+
 define zeroext i1 @test_zext_i1(i1 %x) {
 ; CHECK-LABEL: test_zext_i1
 ; CHECK: and r0, r0, #1

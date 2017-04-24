@@ -158,7 +158,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
   // and the low 64 bits here.
   if (DAG.getDataLayout().isBigEndian() &&
       CN->getValueType(0).getSimpleVT() == llvm::MVT::ppcf128) {
-    APInt Val = CN->getValueAPF().bitcastToAPInt().rotl(64);
+    uint64_t words[2] = { CN->getValueAPF().bitcastToAPInt().getRawData()[1],
+                          CN->getValueAPF().bitcastToAPInt().getRawData()[0] };
+    APInt Val(128, words);
     return DAG.getConstant(Val, SDLoc(CN),
                            TLI.getTypeToTransformTo(*DAG.getContext(),
                                                     CN->getValueType(0)));
@@ -1058,10 +1060,10 @@ void DAGTypeLegalizer::ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo,
   APInt C = cast<ConstantFPSDNode>(N)->getValueAPF().bitcastToAPInt();
   SDLoc dl(N);
   Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 C.extractBits(64, 64)),
+                                 APInt(64, C.getRawData()[1])),
                          dl, NVT);
   Hi = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
-                                 C.extractBits(64, 0)),
+                                 APInt(64, C.getRawData()[0])),
                          dl, NVT);
 }
 

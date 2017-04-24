@@ -1,0 +1,230 @@
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=+hwdiv-arm -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=-hwdiv-arm -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI
+# RUN: llc -mtriple arm-linux-gnu -mattr=+hwdiv-arm -global-isel -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
+# RUN: llc -mtriple arm-linux-gnu -mattr=-hwdiv-arm -global-isel -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT
+--- |
+  define void @test_sdiv_i32() { ret void }
+  define void @test_udiv_i32() { ret void }
+
+  define void @test_sdiv_i16() { ret void }
+  define void @test_udiv_i16() { ret void }
+
+  define void @test_sdiv_i8() { ret void }
+  define void @test_udiv_i8() { ret void }
+...
+---
+name:            test_sdiv_i32
+# CHECK-LABEL: name: test_sdiv_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HWDIV: [[R:%[0-9]+]](s32) = G_SDIV [[X]], [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    %2(s32) = G_SDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_udiv_i32
+# CHECK-LABEL: name: test_udiv_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HWDIV: [[R:%[0-9]+]](s32) = G_UDIV [[X]], [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    %2(s32) = G_UDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sdiv_i16
+# CHECK-LABEL: name: test_sdiv_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s16) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s16) = COPY %r1
+    ; CHECK-DAG: [[X32:%[0-9]+]](s32) = G_SEXT [[X]](s16)
+    ; CHECK-DAG: [[Y32:%[0-9]+]](s32) = G_SEXT [[Y]](s16)
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X32]]
+    ; SOFT-DAG: %r1 = COPY [[Y32]]
+    ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; CHECK: [[R:%[0-9]+]](s16) = G_TRUNC [[R32]]
+    %2(s16) = G_SDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_udiv_i16
+# CHECK-LABEL: name: test_udiv_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s16) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s16) = COPY %r1
+    ; CHECK-DAG: [[X32:%[0-9]+]](s32) = G_ZEXT [[X]](s16)
+    ; CHECK-DAG: [[Y32:%[0-9]+]](s32) = G_ZEXT [[Y]](s16)
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    ; HWDIV: [[R32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X32]]
+    ; SOFT-DAG: %r1 = COPY [[Y32]]
+    ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; CHECK: [[R:%[0-9]+]](s16) = G_TRUNC [[R32]]
+    %2(s16) = G_UDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sdiv_i8
+# CHECK-LABEL: name: test_sdiv_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s8) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s8) = COPY %r1
+    ; CHECK-DAG: [[X32:%[0-9]+]](s32) = G_SEXT [[X]](s8)
+    ; CHECK-DAG: [[Y32:%[0-9]+]](s32) = G_SEXT [[Y]](s8)
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X32]]
+    ; SOFT-DAG: %r1 = COPY [[Y32]]
+    ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; CHECK: [[R:%[0-9]+]](s8) = G_TRUNC [[R32]]
+    %2(s8) = G_SDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_udiv_i8
+# CHECK-LABEL: name: test_udiv_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s8) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s8) = COPY %r1
+    ; CHECK-DAG: [[X32:%[0-9]+]](s32) = G_ZEXT [[X]](s8)
+    ; CHECK-DAG: [[Y32:%[0-9]+]](s32) = G_ZEXT [[Y]](s8)
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    ; HWDIV: [[R32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X32]]
+    ; SOFT-DAG: %r1 = COPY [[Y32]]
+    ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; CHECK: [[R:%[0-9]+]](s8) = G_TRUNC [[R32]]
+    %2(s8) = G_UDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...

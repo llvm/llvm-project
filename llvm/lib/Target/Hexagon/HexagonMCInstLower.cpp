@@ -124,7 +124,7 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       // FP immediates are used only when setting GPRs, so they may be dealt
       // with like regular immediates from this point on.
       auto Expr = HexagonMCExpr::create(
-          MCConstantExpr::create(Val.bitcastToAPInt().getZExtValue(),
+          MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
                                  AP.OutContext),
           AP.OutContext);
       HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);

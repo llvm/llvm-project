@@ -2473,15 +2473,13 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  auto DB = AArch64DB::lookupDBByName(Tok.getString());
-  if (!DB) {
-    TokError("invalid barrier option name");
-    return MatchOperand_ParseFail;
-  }
-
   // The only valid named option for ISB is 'sy'
-  if (Mnemonic == "isb" && DB->Encoding != AArch64DB::sy) {
+  auto DB = AArch64DB::lookupDBByName(Tok.getString());
+  if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy)) {
     TokError("'sy' or #imm operand expected");
+    return MatchOperand_ParseFail;
+  } else if (!DB) {
+    TokError("invalid barrier option name");
     return MatchOperand_ParseFail;
   }
 

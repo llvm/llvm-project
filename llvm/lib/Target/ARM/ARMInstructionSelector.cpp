@@ -332,6 +332,16 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     }
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
+  case G_SDIV:
+    assert(TII.getSubtarget().hasDivideInARMMode() && "Unsupported operation");
+    I.setDesc(TII.get(ARM::SDIV));
+    MIB.add(predOps(ARMCC::AL));
+    break;
+  case G_UDIV:
+    assert(TII.getSubtarget().hasDivideInARMMode() && "Unsupported operation");
+    I.setDesc(TII.get(ARM::UDIV));
+    MIB.add(predOps(ARMCC::AL));
+    break;
   case G_FADD:
     if (!selectFAdd(MIB, TII, MRI))
       return false;
@@ -351,6 +361,18 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
            "Expected constant to live in a GPR");
     I.setDesc(TII.get(ARM::MOVi));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+
+    auto &Val = I.getOperand(1);
+    if (Val.isCImm()) {
+      if (Val.getCImm()->getBitWidth() > 32)
+        return false;
+      Val.ChangeToImmediate(Val.getCImm()->getZExtValue());
+    }
+
+    if (!Val.isImm()) {
+      return false;
+    }
+
     break;
   }
   case G_STORE:

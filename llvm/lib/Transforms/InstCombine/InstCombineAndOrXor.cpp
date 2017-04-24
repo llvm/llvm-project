@@ -1234,6 +1234,56 @@ static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
   return nullptr;
 }
 
+static Instruction *foldAndToXor(BinaryOperator &I,
+                                 InstCombiner::BuilderTy &Builder) {
+  assert(I.getOpcode() == Instruction::And);
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *A, *B;
+
+  // Operand complexity canonicalization guarantees that the 'or' is Op0.
+  // (A | B) & ~(A & B) --> A ^ B
+  // (A | B) & ~(B & A) --> A ^ B
+  if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+      match(Op1, m_Not(m_c_And(m_Specific(A), m_Specific(B)))))
+    return BinaryOperator::CreateXor(A, B);
+
+  // (A | ~B) & (~A | B) --> ~(A ^ B)
+  // (A | ~B) & (B | ~A) --> ~(A ^ B)
+  // (~B | A) & (~A | B) --> ~(A ^ B)
+  // (~B | A) & (B | ~A) --> ~(A ^ B)
+  if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Value(B))))
+    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
+
+  return nullptr;
+}
+
+static Instruction *foldOrToXor(BinaryOperator &I,
+                                InstCombiner::BuilderTy &Builder) {
+  assert(I.getOpcode() == Instruction::Or);
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *A, *B;
+
+  // Operand complexity canonicalization guarantees that the 'and' is Op0.
+  // (A & B) | ~(A | B) --> ~(A ^ B)
+  // (A & B) | ~(B | A) --> ~(A ^ B)
+  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+      match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
+
+  // (A & ~B) | (~A & B) --> A ^ B
+  // (A & ~B) | (B & ~A) --> A ^ B
+  // (~B & A) | (~A & B) --> A ^ B
+  // (~B & A) | (B & ~A) --> A ^ B
+  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B))))
+    return BinaryOperator::CreateXor(A, B);
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -1247,14 +1297,18 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyAndInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
-  // (A|B)&(A|C) -> A|(B&C) etc
-  if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return replaceInstUsesWith(I, V);
-
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(I))
     return &I;
+
+  // Do this before using distributive laws to catch simple and/or/not patterns.
+  if (Instruction *Xor = foldAndToXor(I, *Builder))
+    return Xor;
+
+  // (A|B)&(A|C) -> A|(B&C) etc
+  if (Value *V = SimplifyUsingDistributiveLaws(I))
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyBSwap(I))
     return replaceInstUsesWith(I, V);
@@ -1366,19 +1420,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     return DeMorgan;
 
   {
-    Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-    // (A|B) & ~(A&B) -> A^B
-    if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Not(m_And(m_Value(C), m_Value(D)))) &&
-        ((A == C && B == D) || (A == D && B == C)))
-      return BinaryOperator::CreateXor(A, B);
-
-    // ~(A&B) & (A|B) -> A^B
-    if (match(Op1, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op0, m_Not(m_And(m_Value(C), m_Value(D)))) &&
-        ((A == C && B == D) || (A == D && B == C)))
-      return BinaryOperator::CreateXor(A, B);
-
+    Value *A = nullptr, *B = nullptr, *C = nullptr;
     // A&(A^B) => A & ~B
     {
       Value *tmpOp0 = Op0;
@@ -2037,14 +2079,18 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyOrInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
-  // (A&B)|(A&C) -> A&(B|C) etc
-  if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return replaceInstUsesWith(I, V);
-
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(I))
     return &I;
+
+  // Do this before using distributive laws to catch simple and/or/not patterns.
+  if (Instruction *Xor = foldOrToXor(I, *Builder))
+    return Xor;
+
+  // (A&B)|(A&C) -> A&(B|C) etc
+  if (Value *V = SimplifyUsingDistributiveLaws(I))
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyBSwap(I))
     return replaceInstUsesWith(I, V);
@@ -2181,23 +2227,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       if (Value *V = matchSelectFromAndOr(D, B, C, A, *Builder))
         return replaceInstUsesWith(I, V);
     }
-
-    // ((A&~B)|(~A&B)) -> A^B
-    if ((match(C, m_Not(m_Specific(D))) &&
-         match(B, m_Not(m_Specific(A)))))
-      return BinaryOperator::CreateXor(A, D);
-    // ((~B&A)|(~A&B)) -> A^B
-    if ((match(A, m_Not(m_Specific(D))) &&
-         match(B, m_Not(m_Specific(C)))))
-      return BinaryOperator::CreateXor(C, D);
-    // ((A&~B)|(B&~A)) -> A^B
-    if ((match(C, m_Not(m_Specific(B))) &&
-         match(D, m_Not(m_Specific(A)))))
-      return BinaryOperator::CreateXor(A, B);
-    // ((~B&A)|(B&~A)) -> A^B
-    if ((match(A, m_Not(m_Specific(B))) &&
-         match(D, m_Not(m_Specific(C)))))
-      return BinaryOperator::CreateXor(C, B);
 
     // ((A|B)&1)|(B&-2) -> (A&1) | B
     if (match(A, m_Or(m_Value(V1), m_Specific(B))) ||
@@ -2374,6 +2403,58 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+/// A ^ B can be specified using other logic ops in a variety of patterns. We
+/// can fold these early and efficiently by morphing an existing instruction.
+static Instruction *foldXorToXor(BinaryOperator &I) {
+  assert(I.getOpcode() == Instruction::Xor);
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *A, *B;
+
+  // There are 4 commuted variants for each of the basic patterns.
+
+  // (A & B) ^ (A | B) -> A ^ B
+  // (A & B) ^ (B | A) -> A ^ B
+  // (A | B) ^ (A & B) -> A ^ B
+  // (A | B) ^ (B & A) -> A ^ B
+  if ((match(Op0, m_And(m_Value(A), m_Value(B))) &&
+       match(Op1, m_c_Or(m_Specific(A), m_Specific(B)))) ||
+      (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+       match(Op1, m_c_And(m_Specific(A), m_Specific(B))))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
+  }
+
+  // (A | ~B) ^ (~A | B) -> A ^ B
+  // (~B | A) ^ (~A | B) -> A ^ B
+  // (~A | B) ^ (A | ~B) -> A ^ B
+  // (B | ~A) ^ (A | ~B) -> A ^ B
+  if ((match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
+       match(Op1, m_Or(m_Not(m_Specific(A)), m_Specific(B)))) ||
+      (match(Op0, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
+       match(Op1, m_Or(m_Specific(A), m_Not(m_Specific(B)))))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
+  }
+
+  // (A & ~B) ^ (~A & B) -> A ^ B
+  // (~B & A) ^ (~A & B) -> A ^ B
+  // (~A & B) ^ (A & ~B) -> A ^ B
+  // (B & ~A) ^ (A & ~B) -> A ^ B
+  if ((match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+       match(Op1, m_And(m_Not(m_Specific(A)), m_Specific(B)))) ||
+      (match(Op0, m_c_And(m_Not(m_Value(A)), m_Value(B))) &&
+       match(Op1, m_And(m_Specific(A), m_Not(m_Specific(B)))))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2386,6 +2467,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
   if (Value *V = SimplifyXorInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *NewXor = foldXorToXor(I))
+    return NewXor;
 
   // (A&B)^(A&C) -> A&(B^C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
@@ -2569,40 +2653,6 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
   {
     Value *A, *B, *C, *D;
-    // (A & B)^(A | B) -> A ^ B
-    if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Or(m_Value(C), m_Value(D)))) {
-      if ((A == C && B == D) || (A == D && B == C))
-        return BinaryOperator::CreateXor(A, B);
-    }
-    // (A | B)^(A & B) -> A ^ B
-    if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op1, m_And(m_Value(C), m_Value(D)))) {
-      if ((A == C && B == D) || (A == D && B == C))
-        return BinaryOperator::CreateXor(A, B);
-    }
-    // (A | ~B) ^ (~A | B) -> A ^ B
-    // (~B | A) ^ (~A | B) -> A ^ B
-    if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_Or(m_Not(m_Specific(A)), m_Specific(B))))
-      return BinaryOperator::CreateXor(A, B);
-
-    // (~A | B) ^ (A | ~B) -> A ^ B
-    if (match(Op0, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1, m_Or(m_Specific(A), m_Not(m_Specific(B))))) {
-      return BinaryOperator::CreateXor(A, B);
-    }
-    // (A & ~B) ^ (~A & B) -> A ^ B
-    // (~B & A) ^ (~A & B) -> A ^ B
-    if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_And(m_Not(m_Specific(A)), m_Specific(B))))
-      return BinaryOperator::CreateXor(A, B);
-
-    // (~A & B) ^ (A & ~B) -> A ^ B
-    if (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1, m_And(m_Specific(A), m_Not(m_Specific(B))))) {
-      return BinaryOperator::CreateXor(A, B);
-    }
     // (A ^ C)^(A | B) -> ((~A) & B) ^ C
     if (match(Op0, m_Xor(m_Value(D), m_Value(C))) &&
         match(Op1, m_Or(m_Value(A), m_Value(B)))) {
