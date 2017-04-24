@@ -93,10 +93,6 @@ public:
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint8_t OSABI = 0;
 
-  // For SharedKind inputs, the string to use in DT_NEEDED when the library
-  // has no soname.
-  std::string DefaultSoName;
-
   // Cache for toString(). Only toString() should use this member.
   mutable std::string ToStringCache;
 
@@ -283,12 +279,12 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Versym Elf_Versym;
 
   std::vector<StringRef> Undefs;
-  StringRef SoName;
   const Elf_Shdr *VersymSec = nullptr;
   const Elf_Shdr *VerdefSec = nullptr;
 
 public:
-  StringRef getSoName() const;
+  std::string SoName;
+
   const Elf_Shdr *getSection(const Elf_Sym &Sym) const;
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }
 
@@ -296,7 +292,7 @@ public:
     return F->kind() == Base::SharedKind;
   }
 
-  explicit SharedFile(MemoryBufferRef M);
+  SharedFile(MemoryBufferRef M, StringRef DefaultSoName);
 
   void parseSoName();
   void parseRest();
@@ -329,7 +325,7 @@ public:
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
-InputFile *createSharedFile(MemoryBufferRef MB);
+InputFile *createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName);
 
 } // namespace elf
 } // namespace lld

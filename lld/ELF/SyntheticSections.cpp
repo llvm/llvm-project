@@ -1027,7 +1027,7 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
          In<ELFT>::DynStrTab->addString(Config->RPath)});
   for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
-      add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->getSoName())});
+      add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->SoName)});
   if (!Config->SoName.empty())
     add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
 
@@ -2042,7 +2042,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   // to create one by adding it to our needed list and creating a dynstr entry
   // for the soname.
   if (File->VerdefMap.empty())
-    Needed.push_back({File, In<ELFT>::DynStrTab->addString(File->getSoName())});
+    Needed.push_back({File, In<ELFT>::DynStrTab->addString(File->SoName)});
   typename SharedFile<ELFT>::NeededVer &NV = File->VerdefMap[Ver];
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
