@@ -343,7 +343,6 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       emitUnsigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_stack_value:
-      assert(LocationKind == Unknown || LocationKind == Implicit);
       LocationKind = Implicit;
       break;
     case dwarf::DW_OP_swap:
