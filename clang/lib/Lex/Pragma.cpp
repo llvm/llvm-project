@@ -989,9 +989,9 @@ struct PragmaDebugHandler : public PragmaHandler {
 #ifdef _MSC_VER
     #pragma warning(disable : 4717)
 #endif
-  static void DebugOverflowStack() {
-    void (*volatile Self)() = DebugOverflowStack;
-    Self();
+  static void DebugOverflowStack(void (*P)() = nullptr) {
+    void (*volatile Self)(void(*P)()) = DebugOverflowStack;
+    Self(reinterpret_cast<void(*)()>(Self));
   }
 #ifdef _MSC_VER
     #pragma warning(default : 4717)

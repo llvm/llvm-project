@@ -391,6 +391,31 @@ MemoryAccess *getInputAccessOf(Value *InputVal, ScopStmt *Stmt) {
   return nullptr;
 }
 
+/// Return whether @p Map maps to an unknown value.
+///
+/// @param { [] -> ValInst[] }
+bool isMapToUnknown(const isl::map &Map) {
+  auto Space = give(isl_space_range(isl_map_get_space(Map.keep())));
+  return !isl_map_has_tuple_id(Map.keep(), isl_dim_set) &&
+         !isl_space_is_wrapping(Space.keep()) &&
+         isl_map_dim(Map.keep(), isl_dim_out) == 0;
+}
+
+/// Return only the mappings that map to known values.
+///
+/// @param UMap { [] -> ValInst[] }
+///
+/// @return { [] -> ValInst[] }
+isl::union_map filterKnownValInst(const isl::union_map &UMap) {
+  auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+    if (!isMapToUnknown(Map))
+      Result = give(isl_union_map_add_map(Result.take(), Map.take()));
+    return isl::stat::ok;
+  });
+  return Result;
+}
+
 /// Try to find a 'natural' extension of a mapped to elements outside its
 /// domain.
 ///
@@ -679,17 +704,31 @@ public:
     }
 
     // Does Proposed write at the same time as Existing already does (order of
-    // writes is undefined)?
-    if (isl_union_set_is_disjoint(ExistingWrittenDomain.keep(),
-                                  ProposedWrittenDomain.keep()) !=
-        isl_bool_true) {
+    // writes is undefined)? Writing the same value is permitted.
+    auto BothWritten =
+        Existing.Written.domain().intersect(Proposed.Written.domain());
+    auto ExistingKnownWritten = filterKnownValInst(Existing.Written);
+    auto ProposedKnownWritten = filterKnownValInst(Proposed.Written);
+    auto CommonWritten =
+        ExistingKnownWritten.intersect(ProposedKnownWritten).domain();
+
+    if (!BothWritten.is_subset(CommonWritten)) {
       if (OS) {
-        auto ConflictingWrites = give(isl_union_set_intersect(
-            ExistingWrittenDomain.copy(), ProposedWrittenDomain.copy()));
+        auto Conflicting = BothWritten.subtract(CommonWritten);
+        auto ExistingConflictingWritten =
+            Existing.Written.intersect_domain(Conflicting);
+        auto ProposedConflictingWritten =
+            Proposed.Written.intersect_domain(Conflicting);
+
         OS->indent(Indent) << "Proposed writes at the same time as an already "
                               "Existing write\n";
-        OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
-                           << "\n";
+        OS->indent(Indent) << "Conflicting writes: " << Conflicting << "\n";
+        if (!ExistingConflictingWritten.is_empty())
+          OS->indent(Indent)
+              << "Exiting write:      " << ExistingConflictingWritten << "\n";
+        if (!ProposedConflictingWritten.is_empty())
+          OS->indent(Indent)
+              << "Proposed write:     " << ProposedConflictingWritten << "\n";
       }
       return true;
     }

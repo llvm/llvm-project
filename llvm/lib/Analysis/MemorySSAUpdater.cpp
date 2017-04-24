@@ -29,7 +29,7 @@
 
 #define DEBUG_TYPE "memoryssa"
 using namespace llvm;
-namespace llvm {
+
 // This is the marker algorithm from "Simple and Efficient Construction of
 // Static Single Assignment Form"
 // The simple, non-marker algorithm places phi nodes at any join
@@ -211,8 +211,8 @@ void MemorySSAUpdater::insertUse(MemoryUse *MU) {
 }
 
 // Set every incoming edge {BB, MP->getBlock()} of MemoryPhi MP to NewDef.
-void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
-                               MemoryAccess *NewDef) {
+static void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
+                                      MemoryAccess *NewDef) {
   // Replace any operand with us an incoming block with the new defining
   // access.
   int i = MP->getBasicBlockIndex(BB);
@@ -415,6 +415,7 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
   }
   return MA;
 }
+
 void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
   assert(!MSSA->isLiveOnEntryDef(MA) &&
          "Trying to remove the live on entry def");
@@ -490,5 +491,3 @@ MemoryUseOrDef *MemorySSAUpdater::createMemoryAccessAfter(
                               ++InsertPt->getIterator());
   return NewAccess;
 }
-
-} // namespace llvm

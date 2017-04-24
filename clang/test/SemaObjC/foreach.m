@@ -55,3 +55,27 @@ void test2(NSObject<NSFastEnumeration> *collection) {
   for (obj.prop in collection) { /* expected-error {{selector element is not a valid lvalue}} */
   }
 }
+
+int cond();
+
+void test3(NSObject<NSFastEnumeration> *a0, NSObject<NSFastEnumeration> *a1) {
+  for (id i in a0) { /* expected-note 2 {{jump enters Objective-C fast enumeration loop}} */
+    for (id j in a1) { /* expected-note 2 {{jump enters Objective-C fast enumeration loop}} */
+      (void)i, (void)j;
+label0:
+      if (cond())
+        goto label1;
+    }
+label1:
+    if (cond())
+      goto label0; /* expected-error {{cannot jump from this goto statement to its label}} */
+    if (cond())
+      goto label2;
+  }
+
+label2:
+  if (cond())
+    goto label0; /* expected-error {{cannot jump from this goto statement to its label}} */
+  if (cond())
+    goto label1; /* expected-error{{cannot jump from this goto statement to its label}} */
+}

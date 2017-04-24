@@ -1455,10 +1455,12 @@ void CXXNameMangler::mangleNestedName(const NamedDecl *ND,
   Out << 'N';
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND)) {
     Qualifiers MethodQuals =
-        Qualifiers::fromCVRMask(Method->getTypeQualifiers());
+        Qualifiers::fromCVRUMask(Method->getTypeQualifiers());
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
     MethodQuals.removeRestrict();
+    // __unaligned is not currently mangled in any way, so remove it.
+    MethodQuals.removeUnaligned();
     mangleQualifiers(MethodQuals);
     mangleRefQualifier(Method->getRefQualifier());
   }

@@ -1636,11 +1636,22 @@ private:
   transformFunctionTypeParam(ParmVarDecl *OldParam,
                              MultiLevelTemplateArgumentList &Args) {
     TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
-    TypeSourceInfo *NewDI =
-        Args.getNumLevels()
-            ? SemaRef.SubstType(OldDI, Args, OldParam->getLocation(),
-                                OldParam->getDeclName())
-            : OldDI;
+    TypeSourceInfo *NewDI;
+    if (!Args.getNumLevels())
+      NewDI = OldDI;
+    else if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
+      // Expand out the one and only element in each inner pack.
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
+      NewDI =
+          SemaRef.SubstType(PackTL.getPatternLoc(), Args,
+                            OldParam->getLocation(), OldParam->getDeclName());
+      if (!NewDI) return nullptr;
+      NewDI =
+          SemaRef.CheckPackExpansion(NewDI, PackTL.getEllipsisLoc(),
+                                     PackTL.getTypePtr()->getNumExpansions());
+    } else
+      NewDI = SemaRef.SubstType(OldDI, Args, OldParam->getLocation(),
+                                OldParam->getDeclName());
     if (!NewDI)
       return nullptr;
 

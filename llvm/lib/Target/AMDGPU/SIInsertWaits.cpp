@@ -216,8 +216,8 @@ Counters SIInsertWaits::getHwCounts(MachineInstr &MI) {
 
         // XXX - What if this is a write into a super register?
         const TargetRegisterClass *RC = TII->getOpRegClass(MI, 0);
-        unsigned Size = RC->getSize();
-        Result.Named.LGKM = Size > 4 ? 2 : 1;
+        unsigned Size = TRI->getRegSizeInBits(*RC);
+        Result.Named.LGKM = Size > 32 ? 2 : 1;
       } else {
         // s_dcache_inv etc. do not have a a destination register. Assume we
         // want a wait on these.
@@ -289,12 +289,12 @@ bool SIInsertWaits::isOpRelevant(MachineOperand &Op) {
 
 RegInterval SIInsertWaits::getRegInterval(const TargetRegisterClass *RC,
                                           const MachineOperand &Reg) const {
-  unsigned Size = RC->getSize();
-  assert(Size >= 4);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+  assert(Size >= 32);
 
   RegInterval Result;
   Result.first = TRI->getEncodingValue(Reg.getReg());
-  Result.second = Result.first + Size / 4;
+  Result.second = Result.first + Size / 32;
 
   return Result;
 }

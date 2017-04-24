@@ -72,7 +72,7 @@ void LinePrinter::NewLine() {
 }
 
 bool LinePrinter::IsClassExcluded(const ClassLayout &Class) {
-  if (IsTypeExcluded(Class.getUDTName(), Class.getClassSize()))
+  if (IsTypeExcluded(Class.getName(), Class.getSize()))
     return true;
   if (Class.deepPaddingSize() < opts::pretty::PaddingThreshold)
     return true;

@@ -116,8 +116,11 @@ private:
   bool SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
                          SDValue &VAddr, SDValue &SOffset, SDValue &Offset,
                          SDValue &SLC) const;
-  bool SelectMUBUFScratch(SDValue Addr, SDValue &RSrc, SDValue &VAddr,
-                          SDValue &SOffset, SDValue &ImmOffset) const;
+  bool SelectMUBUFScratchOffen(SDValue Addr, SDValue &RSrc, SDValue &VAddr,
+                               SDValue &SOffset, SDValue &ImmOffset) const;
+  bool SelectMUBUFScratchOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
+                                SDValue &Offset) const;
+
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &SOffset,
                          SDValue &Offset, SDValue &GLC, SDValue &SLC,
                          SDValue &TFE) const;
@@ -953,8 +956,12 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
   return true;
 }
 
+static bool isLegalMUBUFImmOffset(unsigned Imm) {
+  return isUInt<12>(Imm);
+}
+
 static bool isLegalMUBUFImmOffset(const ConstantSDNode *Imm) {
-  return isUInt<12>(Imm->getZExtValue());
+  return isLegalMUBUFImmOffset(Imm->getZExtValue());
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr,
@@ -1076,9 +1083,9 @@ SDValue AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const {
   return N;
 }
 
-bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
-                                            SDValue &VAddr, SDValue &SOffset,
-                                            SDValue &ImmOffset) const {
+bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDValue Addr, SDValue &Rsrc,
+                                                 SDValue &VAddr, SDValue &SOffset,
+                                                 SDValue &ImmOffset) const {
 
   SDLoc DL(Addr);
   MachineFunction &MF = CurDAG->getMachineFunction();
@@ -1087,8 +1094,22 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
   Rsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
   SOffset = CurDAG->getRegister(Info->getScratchWaveOffsetReg(), MVT::i32);
 
-  // (add n0, c1)
+  if (ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
+    unsigned Imm = CAddr->getZExtValue();
+    assert(!isLegalMUBUFImmOffset(Imm) &&
+           "should have been selected by other pattern");
+
+    SDValue HighBits = CurDAG->getTargetConstant(Imm & ~4095, DL, MVT::i32);
+    MachineSDNode *MovHighBits = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
+                                                        DL, MVT::i32, HighBits);
+    VAddr = SDValue(MovHighBits, 0);
+    ImmOffset = CurDAG->getTargetConstant(Imm & 4095, DL, MVT::i16);
+    return true;
+  }
+
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    // (add n0, c1)
+
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
 
@@ -1104,6 +1125,24 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratch(SDValue Addr, SDValue &Rsrc,
   // (node)
   VAddr = foldFrameIndex(Addr);
   ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDValue Addr,
+                                                  SDValue &SRsrc,
+                                                  SDValue &SOffset,
+                                                  SDValue &Offset) const {
+  ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr);
+  if (!CAddr || !isLegalMUBUFImmOffset(CAddr))
+    return false;
+
+  SDLoc DL(Addr);
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+
+  SRsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
+  SOffset = CurDAG->getRegister(Info->getScratchWaveOffsetReg(), MVT::i32);
+  Offset = CurDAG->getTargetConstant(CAddr->getZExtValue(), DL, MVT::i16);
   return true;
 }
 

@@ -778,7 +778,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
   // so this isn't a real bug. On the other hand, the program may have undefined
   // behavior, or we might have a bug in the compiler. We can't assert/crash, so
   // clear out the known bits, try to warn the user, and hope for the best.
-  if ((KnownZero & KnownOne) != 0) {
+  if (KnownZero.intersects(KnownOne)) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();
 
@@ -860,7 +860,8 @@ static void computeKnownBitsFromShiftOperator(
 
   computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
 
-  KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+  KnownZero.setAllBits();
+  KnownOne.setAllBits();
   for (unsigned ShiftAmt = 0; ShiftAmt < BitWidth; ++ShiftAmt) {
     // Combine the shifted known input bits only for those shift amounts
     // compatible with its known constraints.
@@ -888,7 +889,7 @@ static void computeKnownBitsFromShiftOperator(
   // return anything we'd like, but we need to make sure the sets of known bits
   // stay disjoint (it should be better for some other code to actually
   // propagate the undef than to pick a value here using known bits).
-  if ((KnownZero & KnownOne) != 0) {
+  if (KnownZero.intersects(KnownOne)) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();
   }
@@ -1640,9 +1641,9 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   if (match(V, m_Shl(m_One(), m_Value())))
     return true;
 
-  // (signbit) >>l X is clearly a power of two if the one is not shifted off the
-  // bottom.  If it is shifted off the bottom then the result is undefined.
-  if (match(V, m_LShr(m_SignBit(), m_Value())))
+  // (signmask) >>l X is clearly a power of two if the one is not shifted off
+  // the bottom.  If it is shifted off the bottom then the result is undefined.
+  if (match(V, m_LShr(m_SignMask(), m_Value())))
     return true;
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
@@ -3558,14 +3559,14 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
   // We know the multiply operation doesn't overflow if the maximum values for
   // each operand will not overflow after we multiply them together.
   bool MaxOverflow;
-  LHSMax.umul_ov(RHSMax, MaxOverflow);
+  (void)LHSMax.umul_ov(RHSMax, MaxOverflow);
   if (!MaxOverflow)
     return OverflowResult::NeverOverflows;
 
   // We know it always overflows if multiplying the smallest possible values for
   // the operands also results in overflow.
   bool MinOverflow;
-  LHSKnownOne.umul_ov(RHSKnownOne, MinOverflow);
+  (void)LHSKnownOne.umul_ov(RHSKnownOne, MinOverflow);
   if (MinOverflow)
     return OverflowResult::AlwaysOverflows;
 

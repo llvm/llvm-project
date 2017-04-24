@@ -22,7 +22,7 @@ StringRef llvm::dwarf::TagString(unsigned Tag) {
   switch (Tag) {
   default:
     return StringRef();
-#define HANDLE_DW_TAG(ID, NAME)                                                \
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR)                               \
   case DW_TAG_##NAME:                                                          \
     return "DW_TAG_" #NAME;
 #include "llvm/Support/Dwarf.def"
@@ -31,9 +31,32 @@ StringRef llvm::dwarf::TagString(unsigned Tag) {
 
 unsigned llvm::dwarf::getTag(StringRef TagString) {
   return StringSwitch<unsigned>(TagString)
-#define HANDLE_DW_TAG(ID, NAME) .Case("DW_TAG_" #NAME, DW_TAG_##NAME)
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR)                               \
+      .Case("DW_TAG_" #NAME, DW_TAG_##NAME)
 #include "llvm/Support/Dwarf.def"
       .Default(DW_TAG_invalid);
+}
+
+unsigned llvm::dwarf::TagVersion(dwarf::Tag Tag) {
+  switch (Tag) {
+  default:
+    return 0;
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR)                               \
+  case DW_TAG_##NAME:                                                          \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::TagVendor(dwarf::Tag Tag) {
+  switch (Tag) {
+  default:
+    return 0;
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR)                               \
+  case DW_TAG_##NAME:                                                          \
+    return DWARF_VENDOR_##VENDOR;
+#include "llvm/Support/Dwarf.def"
+  }
 }
 
 StringRef llvm::dwarf::ChildrenString(unsigned Children) {
@@ -48,9 +71,31 @@ StringRef llvm::dwarf::AttributeString(unsigned Attribute) {
   switch (Attribute) {
   default:
     return StringRef();
-#define HANDLE_DW_AT(ID, NAME)                                                \
-  case DW_AT_##NAME:                                                          \
+#define HANDLE_DW_AT(ID, NAME, VERSION, VENDOR)                                \
+  case DW_AT_##NAME:                                                           \
     return "DW_AT_" #NAME;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::AttributeVersion(dwarf::Attribute Attribute) {
+  switch (Attribute) {
+  default:
+    return 0;
+#define HANDLE_DW_AT(ID, NAME, VERSION, VENDOR)                                \
+  case DW_AT_##NAME:                                                           \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::AttributeVendor(dwarf::Attribute Attribute) {
+  switch (Attribute) {
+  default:
+    return 0;
+#define HANDLE_DW_AT(ID, NAME, VERSION, VENDOR)                                \
+  case DW_AT_##NAME:                                                           \
+    return DWARF_VENDOR_##VENDOR;
 #include "llvm/Support/Dwarf.def"
   }
 }
@@ -59,9 +104,31 @@ StringRef llvm::dwarf::FormEncodingString(unsigned Encoding) {
   switch (Encoding) {
   default:
     return StringRef();
-#define HANDLE_DW_FORM(ID, NAME)                                                \
-  case DW_FORM_##NAME:                                                          \
+#define HANDLE_DW_FORM(ID, NAME, VERSION, VENDOR)                              \
+  case DW_FORM_##NAME:                                                         \
     return "DW_FORM_" #NAME;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::FormVersion(dwarf::Form Form) {
+  switch (Form) {
+  default:
+    return 0;
+#define HANDLE_DW_FORM(ID, NAME, VERSION, VENDOR)                              \
+  case DW_FORM_##NAME:                                                         \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::FormVendor(dwarf::Form Form) {
+  switch (Form) {
+  default:
+    return 0;
+#define HANDLE_DW_FORM(ID, NAME, VERSION, VENDOR)                              \
+  case DW_FORM_##NAME:                                                         \
+    return DWARF_VENDOR_##VENDOR;
 #include "llvm/Support/Dwarf.def"
   }
 }
@@ -70,7 +137,7 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
   switch (Encoding) {
   default:
     return StringRef();
-#define HANDLE_DW_OP(ID, NAME)                                                 \
+#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
   case DW_OP_##NAME:                                                           \
     return "DW_OP_" #NAME;
 #include "llvm/Support/Dwarf.def"
@@ -81,17 +148,40 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
 
 unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
   return StringSwitch<unsigned>(OperationEncodingString)
-#define HANDLE_DW_OP(ID, NAME) .Case("DW_OP_" #NAME, DW_OP_##NAME)
+#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+      .Case("DW_OP_" #NAME, DW_OP_##NAME)
 #include "llvm/Support/Dwarf.def"
       .Case("DW_OP_LLVM_fragment", DW_OP_LLVM_fragment)
       .Default(0);
+}
+
+unsigned llvm::dwarf::OperationVersion(dwarf::LocationAtom Op) {
+  switch (Op) {
+  default:
+    return 0;
+#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+  case DW_OP_##NAME:                                                           \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::OperationVendor(dwarf::LocationAtom Op) {
+  switch (Op) {
+  default:
+    return 0;
+#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR)                                \
+  case DW_OP_##NAME:                                                           \
+    return DWARF_VENDOR_##VENDOR;
+#include "llvm/Support/Dwarf.def"
+  }
 }
 
 StringRef llvm::dwarf::AttributeEncodingString(unsigned Encoding) {
   switch (Encoding) {
   default:
     return StringRef();
-#define HANDLE_DW_ATE(ID, NAME)                                                \
+#define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR)                               \
   case DW_ATE_##NAME:                                                          \
     return "DW_ATE_" #NAME;
 #include "llvm/Support/Dwarf.def"
@@ -100,9 +190,32 @@ StringRef llvm::dwarf::AttributeEncodingString(unsigned Encoding) {
 
 unsigned llvm::dwarf::getAttributeEncoding(StringRef EncodingString) {
   return StringSwitch<unsigned>(EncodingString)
-#define HANDLE_DW_ATE(ID, NAME) .Case("DW_ATE_" #NAME, DW_ATE_##NAME)
+#define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR)                               \
+      .Case("DW_ATE_" #NAME, DW_ATE_##NAME)
 #include "llvm/Support/Dwarf.def"
       .Default(0);
+}
+
+unsigned llvm::dwarf::AttributeEncodingVersion(dwarf::TypeKind ATE) {
+  switch (ATE) {
+  default:
+    return 0;
+#define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR)                               \
+  case DW_ATE_##NAME:                                                          \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::AttributeEncodingVendor(dwarf::TypeKind ATE) {
+  switch (ATE) {
+  default:
+    return 0;
+#define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR)                               \
+  case DW_ATE_##NAME:                                                          \
+    return DWARF_VENDOR_##VENDOR;
+#include "llvm/Support/Dwarf.def"
+  }
 }
 
 StringRef llvm::dwarf::DecimalSignString(unsigned Sign) {
@@ -169,7 +282,7 @@ StringRef llvm::dwarf::LanguageString(unsigned Language) {
   switch (Language) {
   default:
     return StringRef();
-#define HANDLE_DW_LANG(ID, NAME)                                               \
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
   case DW_LANG_##NAME:                                                         \
     return "DW_LANG_" #NAME;
 #include "llvm/Support/Dwarf.def"
@@ -178,9 +291,32 @@ StringRef llvm::dwarf::LanguageString(unsigned Language) {
 
 unsigned llvm::dwarf::getLanguage(StringRef LanguageString) {
   return StringSwitch<unsigned>(LanguageString)
-#define HANDLE_DW_LANG(ID, NAME) .Case("DW_LANG_" #NAME, DW_LANG_##NAME)
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+  .Case("DW_LANG_" #NAME, DW_LANG_##NAME)
 #include "llvm/Support/Dwarf.def"
       .Default(0);
+}
+
+unsigned llvm::dwarf::LanguageVersion(dwarf::SourceLanguage Lang) {
+  switch (Lang) {
+  default:
+    return 0;
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+  case DW_LANG_##NAME:                                                         \
+    return VERSION;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::LanguageVendor(dwarf::SourceLanguage Lang) {
+  switch (Lang) {
+  default:
+    return 0;
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+  case DW_LANG_##NAME:                                                         \
+    return DWARF_VENDOR_##VENDOR;
+#include "llvm/Support/Dwarf.def"
+  }
 }
 
 StringRef llvm::dwarf::CaseString(unsigned Case) {
@@ -393,4 +529,13 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
   }
 
   return StringRef();
+}
+
+bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
+                                        bool ExtensionsOk) {
+  if (FormVendor(F) == DWARF_VENDOR_DWARF) {
+    unsigned FV = FormVersion(F);
+    return FV > 0 && FV <= Version;
+  }
+  return ExtensionsOk;
 }

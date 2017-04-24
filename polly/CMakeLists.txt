@@ -20,6 +20,11 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   # Add the llvm header path.
   include_directories(${LLVM_INSTALL_ROOT}/include/)
 
+  # Get LLVM's own libraries.
+  execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --libs
+                  OUTPUT_VARIABLE LLVM_LIBS
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
   # Get the system librarys that will link into LLVM.
   execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --system-libs
                   OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
@@ -109,6 +114,9 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
 
   # Make sure the isl c files are built as fPIC
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+
+  # Set directory for polly-isl-test.
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 else ()
   set(LLVM_SOURCE_ROOT "${LLVM_MAIN_SRC_DIR}")
   set(POLLY_GTEST_AVAIL 1)

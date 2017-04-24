@@ -508,9 +508,10 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("PlatformDarwinKernel examining %s",
-                file_spec.GetPath().c_str());
+  Log *log_verbose(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM | LLDB_LOG_OPTION_VERBOSE));
+
+  if (log_verbose)
+      log_verbose->Printf ("PlatformDarwinKernel examining '%s'", file_spec.GetPath().c_str());
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   if (ft == llvm::sys::fs::file_type::regular_file ||
@@ -520,9 +521,21 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
          strncmp(filename.GetCString(), "mach", 4) == 0) &&
         file_spec_extension != g_dsym_suffix) {
       if (KernelHasdSYMSibling(file_spec))
+      {
+        if (log)
+        {
+            log->Printf ("PlatformDarwinKernel registering kernel binary '%s' with dSYM sibling", file_spec.GetPath().c_str());
+        }
         thisp->m_kernel_binaries_with_dsyms.push_back(file_spec);
+      }
       else
+      {
+        if (log)
+        {
+            log->Printf ("PlatformDarwinKernel registering kernel binary '%s', no dSYM", file_spec.GetPath().c_str());
+        }
         thisp->m_kernel_binaries_without_dsyms.push_back(file_spec);
+      }
       return FileSpec::eEnumerateDirectoryResultNext;
     }
   } else if (ft == llvm::sys::fs::file_type::directory_file &&
@@ -556,6 +569,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   if (recurse && file_spec_extension != g_dsym_suffix &&
       file_spec_extension != g_kext_suffix &&
       file_spec_extension != g_bundle_suffix) {
+    if (log_verbose)
+        log_verbose->Printf ("PlatformDarwinKernel descending into directory '%s'", file_spec.GetPath().c_str());
     return FileSpec::eEnumerateDirectoryResultEnter;
   } else {
     return FileSpec::eEnumerateDirectoryResultNext;
@@ -564,6 +579,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
 void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
                                         const FileSpec &file_spec) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   CFCBundle bundle(file_spec.GetPath().c_str());
   CFStringRef bundle_id(bundle.GetIdentifier());
   if (bundle_id && CFGetTypeID(bundle_id) == CFStringGetTypeID()) {
@@ -572,11 +588,23 @@ void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
                            kCFStringEncodingUTF8)) {
       ConstString bundle_conststr(bundle_id_buf);
       if (KextHasdSYMSibling(file_spec))
+      {
+        if (log)
+        {
+            log->Printf ("PlatformDarwinKernel registering kext binary '%s' with dSYM sibling", file_spec.GetPath().c_str());
+        }
         thisp->m_name_to_kext_path_map_with_dsyms.insert(
             std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
+      }
       else
+      {
+        if (log)
+        {
+            log->Printf ("PlatformDarwinKernel registering kext binary '%s', no dSYM", file_spec.GetPath().c_str());
+        }
         thisp->m_name_to_kext_path_map_without_dsyms.insert(
             std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
+      }
     }
   }
 }

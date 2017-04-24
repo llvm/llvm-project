@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include <algorithm>
+#include <iostream>
 
 #include "xray-color-helper.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -42,8 +43,18 @@ static const std::tuple<uint8_t, uint8_t, uint8_t> SequentialMaps[][9] = {
      std::make_tuple(5, 112, 176), std::make_tuple(4, 90, 141),
      std::make_tuple(2, 56, 88)}};
 
+// Sequential Maps extend the last colors given out of range inputs.
+static const std::tuple<uint8_t, uint8_t, uint8_t> SequentialBounds[][2] = {
+    {// The Bounds for the greys color scheme
+     std::make_tuple(255, 255, 255), std::make_tuple(0, 0, 0)},
+    {// The Bounds for the OrRd color Scheme
+     std::make_tuple(255, 247, 236), std::make_tuple(127, 0, 0)},
+    {// The Bounds for the PuBu color Scheme
+     std::make_tuple(255, 247, 251), std::make_tuple(2, 56, 88)}};
+
 ColorHelper::ColorHelper(ColorHelper::SequentialScheme S)
-    : MinIn(0.0), MaxIn(1.0), ColorMap(SequentialMaps[static_cast<int>(S)]) {}
+    : MinIn(0.0), MaxIn(1.0), ColorMap(SequentialMaps[static_cast<int>(S)]),
+      BoundMap(SequentialBounds[static_cast<int>(S)]) {}
 
 // Diverging ColorMaps, which are used to represent information
 // representing differenes, or a range that goes from negative to positive.
@@ -58,8 +69,16 @@ static const std::tuple<uint8_t, uint8_t, uint8_t> DivergingCoeffs[][11] = {
      std::make_tuple(127, 188, 65), std::make_tuple(77, 146, 33),
      std::make_tuple(39, 100, 25)}};
 
+// Diverging maps use out of bounds ranges to show missing data. Missing Right
+// Being below min, and missing left being above max.
+static const std::tuple<uint8_t, uint8_t, uint8_t> DivergingBounds[][2] = {
+    {// The PiYG color scheme has green and red for missing right and left
+     // respectively.
+     std::make_tuple(255, 0, 0), std::make_tuple(0, 255, 0)}};
+
 ColorHelper::ColorHelper(ColorHelper::DivergingScheme S)
-    : MinIn(-1.0), MaxIn(1.0), ColorMap(DivergingCoeffs[static_cast<int>(S)]) {}
+    : MinIn(-1.0), MaxIn(1.0), ColorMap(DivergingCoeffs[static_cast<int>(S)]),
+      BoundMap(DivergingBounds[static_cast<int>(S)]) {}
 
 // Takes a tuple of uint8_ts representing a color in RGB and converts them to
 // HSV represented by a tuple of doubles
@@ -78,12 +97,12 @@ convertToHSV(const std::tuple<uint8_t, uint8_t, uint8_t> &Color) {
 
   double C = Scaled[Max] - Scaled[Min];
 
-  double HPrime = (Scaled[(Max + 1) % 3] - Scaled[(Max + 2) % 3]) / C;
+  double HPrime =
+      (C == 0) ? 0 : (Scaled[(Max + 1) % 3] - Scaled[(Max + 2) % 3]) / C;
   HPrime = HPrime + 2.0 * Max;
 
   double H = (HPrime < 0) ? (HPrime + 6.0) * 60
                           : HPrime * 60; // Scale to between 0 and 360
-
   double V = Scaled[Max];
 
   double S = (V == 0.0) ? 0.0 : C / V;
@@ -164,6 +183,13 @@ interpolateHSV(const std::tuple<double, double, double> &C0,
 std::tuple<uint8_t, uint8_t, uint8_t>
 ColorHelper::getColorTuple(double Point) const {
   assert(!ColorMap.empty() && "ColorMap must not be empty!");
+  assert(!BoundMap.empty() && "BoundMap must not be empty!");
+
+  if (Point < MinIn)
+    return BoundMap[0];
+  if (Point > MaxIn)
+    return BoundMap[1];
+
   size_t MaxIndex = ColorMap.size() - 1;
   double IntervalWidth = MaxIn - MinIn;
   double OffsetP = Point - MinIn;

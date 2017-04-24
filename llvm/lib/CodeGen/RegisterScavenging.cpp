@@ -395,8 +395,8 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   // Find an available scavenging slot with size and alignment matching
   // the requirements of the class RC.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned NeedSize = RC->getSize();
-  unsigned NeedAlign = RC->getAlignment();
+  unsigned NeedSize = TRI->getSpillSize(*RC);
+  unsigned NeedAlign = TRI->getSpillAlignment(*RC);
 
   unsigned SI = Scavenged.size(), Diff = std::numeric_limits<unsigned>::max();
   int FIB = MFI.getObjectIndexBegin(), FIE = MFI.getObjectIndexEnd();

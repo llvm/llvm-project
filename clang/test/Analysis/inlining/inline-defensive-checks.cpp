@@ -71,3 +71,16 @@ void test(int *p1, int *p2) {
   idc(p1);
 	Foo f(p1);
 }
+
+struct Bar {
+  int x;
+};
+void idcBar(Bar *b) {
+  if (b)
+    ;
+}
+void testRefToField(Bar *b) {
+  idcBar(b);
+  int &x = b->x; // no-warning
+  x = 5;
+}

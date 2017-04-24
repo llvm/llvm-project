@@ -15,9 +15,9 @@ define <2 x i1> @test1(<2 x i64> %a) {
 ; The ashr turns into an lshr.
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> %a, <i64 65535, i64 65535>
-; CHECK-NEXT:    [[T:%.*]] = lshr <2 x i64> [[B]], <i64 1, i64 1>
-; CHECK-NEXT:    ret <2 x i64> [[T]]
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> %a, <i64 65534, i64 65534>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact <2 x i64> [[B]], <i64 1, i64 1>
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
   %t = ashr <2 x i64> %b, <i64 1, i64 1>

@@ -469,7 +469,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // this also ensures we shouldn't need a register for the offset when
     // emergency scavenging.
     int ScavengeFI = MFI.CreateFixedObject(
-      AMDGPU::SGPR_32RegClass.getSize(), 0, false);
+      TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
     RS->addScavengingFrameIndex(ScavengeFI);
   }
 }

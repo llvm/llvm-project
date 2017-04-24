@@ -171,6 +171,8 @@ Linux              PowerPC               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
+NetBSD             x86\ :sup:`1`         GCC, Clang
+NetBSD             amd64                 GCC, Clang
 MacOS X\ :sup:`2`  PowerPC               GCC
 MacOS X            x86                   GCC, Clang
 Cygwin/Win32       x86\ :sup:`1, 3`      GCC

@@ -1,0 +1,4 @@
+; RUN: llvm-cvtres /h > %t
+; RUN: FileCheck -input-file=%t %s -check-prefix=HELP_TEST
+
+; HELP_TEST: OVERVIEW: Resource Converter

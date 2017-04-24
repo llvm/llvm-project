@@ -35,7 +35,8 @@ ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
 static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
   EVT VT = TLI.getValueType(DL, T, true);
-  if (!VT.isSimple() || VT.isVector())
+  if (!VT.isSimple() || VT.isVector() ||
+      !(VT.isInteger() || VT.isFloatingPoint()))
     return false;
 
   unsigned VTSize = VT.getSimpleVT().getSizeInBits();

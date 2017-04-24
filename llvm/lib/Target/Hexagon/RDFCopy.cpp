@@ -59,7 +59,7 @@ void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
 
 bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
   bool Changed = false;
-  auto BA = DFG.getFunc().Addr->findBlock(B, DFG);
+  NodeAddr<BlockNode*> BA = DFG.findBlock(B);
 
   for (NodeAddr<InstrNode*> IA : BA.Addr->members(DFG)) {
     if (DFG.IsCode<NodeAttrs::Stmt>(IA)) {

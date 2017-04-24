@@ -86,7 +86,7 @@ ParamCommandComment *Sema::actOnParamCommandStart(
       new (Allocator) ParamCommandComment(LocBegin, LocEnd, CommandID,
                                           CommandMarker);
 
-  if (!isFunctionDecl())
+  if (!isFunctionDecl() && !isFunctionOrBlockPointerVarLikeDecl())
     Diag(Command->getLocation(),
          diag::warn_doc_param_not_attached_to_a_function_decl)
       << CommandMarker
@@ -584,7 +584,7 @@ void Sema::checkReturnsCommand(const BlockCommandComment *Command) {
 
   assert(ThisDeclInfo && "should not call this check on a bare comment");
 
-  if (isFunctionDecl()) {
+  if (isFunctionDecl() || isFunctionOrBlockPointerVarLikeDecl()) {
     if (ThisDeclInfo->ReturnType->isVoidType()) {
       unsigned DiagKind;
       switch (ThisDeclInfo->CommentDecl->getKind()) {
@@ -842,6 +842,30 @@ bool Sema::isFunctionPointerVarDecl() {
     }
   }
   return false;
+}
+
+bool Sema::isFunctionOrBlockPointerVarLikeDecl() {
+  if (!ThisDeclInfo)
+    return false;
+  if (!ThisDeclInfo->IsFilled)
+    inspectThisDecl();
+  if (ThisDeclInfo->getKind() != DeclInfo::VariableKind ||
+      !ThisDeclInfo->CurrentDecl)
+    return false;
+  QualType QT;
+  if (const auto *VD = dyn_cast<DeclaratorDecl>(ThisDeclInfo->CurrentDecl))
+    QT = VD->getType();
+  else if (const auto *PD =
+               dyn_cast<ObjCPropertyDecl>(ThisDeclInfo->CurrentDecl))
+    QT = PD->getType();
+  else
+    return false;
+  // We would like to warn about the 'returns'/'param' commands for
+  // variables that don't directly specify the function type, so type aliases
+  // can be ignored.
+  if (QT->getAs<TypedefType>())
+    return false;
+  return QT->isFunctionPointerType() || QT->isBlockPointerType();
 }
 
 bool Sema::isObjCPropertyDecl() {

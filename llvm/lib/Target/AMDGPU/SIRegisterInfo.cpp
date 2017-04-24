@@ -146,6 +146,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::EXEC);
   reserveRegisterTuples(Reserved, AMDGPU::FLAT_SCR);
 
+  // M0 has to be reserved so that llvm accepts it as a live-in into a block.
+  reserveRegisterTuples(Reserved, AMDGPU::M0);
+
   // Reserve the memory aperture registers.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_LIMIT);
@@ -615,7 +618,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   if (SpillToSMEM && isSGPRClass(RC)) {
     // XXX - if private_element_size is larger than 4 it might be useful to be
     // able to spill wider vmem spills.
-    std::tie(EltSize, ScalarStoreOp) = getSpillEltSize(RC->getSize(), true);
+    std::tie(EltSize, ScalarStoreOp) =
+          getSpillEltSize(getRegSizeInBits(*RC) / 8, true);
   }
 
   ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
@@ -775,7 +779,8 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   if (SpillToSMEM && isSGPRClass(RC)) {
     // XXX - if private_element_size is larger than 4 it might be useful to be
     // able to spill wider vmem spills.
-    std::tie(EltSize, ScalarLoadOp) = getSpillEltSize(RC->getSize(), false);
+    std::tie(EltSize, ScalarLoadOp) =
+          getSpillEltSize(getRegSizeInBits(*RC) / 8, false);
   }
 
   ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
@@ -1038,20 +1043,21 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
 // TODO: It might be helpful to have some target specific flags in
 // TargetRegisterClass to mark which classes are VGPRs to make this trivial.
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
-  switch (RC->getSize()) {
-  case 0: return false;
-  case 1: return false;
-  case 4:
-    return getCommonSubClass(&AMDGPU::VGPR_32RegClass, RC) != nullptr;
-  case 8:
-    return getCommonSubClass(&AMDGPU::VReg_64RegClass, RC) != nullptr;
-  case 12:
-    return getCommonSubClass(&AMDGPU::VReg_96RegClass, RC) != nullptr;
-  case 16:
-    return getCommonSubClass(&AMDGPU::VReg_128RegClass, RC) != nullptr;
+  unsigned Size = getRegSizeInBits(*RC);
+  if (Size < 32)
+    return false;
+  switch (Size) {
   case 32:
-    return getCommonSubClass(&AMDGPU::VReg_256RegClass, RC) != nullptr;
+    return getCommonSubClass(&AMDGPU::VGPR_32RegClass, RC) != nullptr;
   case 64:
+    return getCommonSubClass(&AMDGPU::VReg_64RegClass, RC) != nullptr;
+  case 96:
+    return getCommonSubClass(&AMDGPU::VReg_96RegClass, RC) != nullptr;
+  case 128:
+    return getCommonSubClass(&AMDGPU::VReg_128RegClass, RC) != nullptr;
+  case 256:
+    return getCommonSubClass(&AMDGPU::VReg_256RegClass, RC) != nullptr;
+  case 512:
     return getCommonSubClass(&AMDGPU::VReg_512RegClass, RC) != nullptr;
   default:
     llvm_unreachable("Invalid register class size");
@@ -1060,18 +1066,18 @@ bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
 
 const TargetRegisterClass *SIRegisterInfo::getEquivalentVGPRClass(
                                          const TargetRegisterClass *SRC) const {
-  switch (SRC->getSize()) {
-  case 4:
-    return &AMDGPU::VGPR_32RegClass;
-  case 8:
-    return &AMDGPU::VReg_64RegClass;
-  case 12:
-    return &AMDGPU::VReg_96RegClass;
-  case 16:
-    return &AMDGPU::VReg_128RegClass;
+  switch (getRegSizeInBits(*SRC)) {
   case 32:
-    return &AMDGPU::VReg_256RegClass;
+    return &AMDGPU::VGPR_32RegClass;
   case 64:
+    return &AMDGPU::VReg_64RegClass;
+  case 96:
+    return &AMDGPU::VReg_96RegClass;
+  case 128:
+    return &AMDGPU::VReg_128RegClass;
+  case 256:
+    return &AMDGPU::VReg_256RegClass;
+  case 512:
     return &AMDGPU::VReg_512RegClass;
   default:
     llvm_unreachable("Invalid register class size");
@@ -1080,16 +1086,16 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentVGPRClass(
 
 const TargetRegisterClass *SIRegisterInfo::getEquivalentSGPRClass(
                                          const TargetRegisterClass *VRC) const {
-  switch (VRC->getSize()) {
-  case 4:
-    return &AMDGPU::SGPR_32RegClass;
-  case 8:
-    return &AMDGPU::SReg_64RegClass;
-  case 16:
-    return &AMDGPU::SReg_128RegClass;
+  switch (getRegSizeInBits(*VRC)) {
   case 32:
-    return &AMDGPU::SReg_256RegClass;
+    return &AMDGPU::SGPR_32RegClass;
   case 64:
+    return &AMDGPU::SReg_64RegClass;
+  case 128:
+    return &AMDGPU::SReg_128RegClass;
+  case 256:
+    return &AMDGPU::SReg_256RegClass;
+  case 512:
     return &AMDGPU::SReg_512RegClass;
   default:
     llvm_unreachable("Invalid register class size");
@@ -1354,15 +1360,15 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     const TargetRegisterClass *DstRC,
                                     unsigned DstSubReg,
                                     const TargetRegisterClass *NewRC) const {
-  unsigned SrcSize = SrcRC->getSize();
-  unsigned DstSize = DstRC->getSize();
-  unsigned NewSize = NewRC->getSize();
+  unsigned SrcSize = getRegSizeInBits(*SrcRC);
+  unsigned DstSize = getRegSizeInBits(*DstRC);
+  unsigned NewSize = getRegSizeInBits(*NewRC);
 
   // Do not increase size of registers beyond dword, we would need to allocate
   // adjacent registers and constraint regalloc more than needed.
 
   // Always allow dword coalescing.
-  if (SrcSize <= 4 || DstSize <= 4)
+  if (SrcSize <= 32 || DstSize <= 32)
     return true;
 
   return NewSize <= DstSize || NewSize <= SrcSize;

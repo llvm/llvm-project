@@ -59,8 +59,10 @@ void AddAssemblerKPIC(const ToolChain &ToolChain,
 
 void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
-void addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
-                      const llvm::opt::ArgList &Args);
+/// Returns true, if an OpenMP runtime has been added.
+bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
+                      const llvm::opt::ArgList &Args,
+                      bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileSampleUseArg(const llvm::opt::ArgList &Args);

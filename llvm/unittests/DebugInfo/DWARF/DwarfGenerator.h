@@ -138,7 +138,7 @@ public:
 /// contained inside this class.
 class CompileUnit {
   Generator &DG;
-  DIEUnit DU;
+  BasicDIEUnit DU;
 
 public:
   CompileUnit(Generator &D, uint16_t V, uint8_t A)

@@ -81,7 +81,7 @@ void APInt::initSlowCase(uint64_t val, bool isSigned) {
   pVal[0] = val;
   if (isSigned && int64_t(val) < 0)
     for (unsigned i = 1; i < getNumWords(); ++i)
-      pVal[i] = -1ULL;
+      pVal[i] = WORD_MAX;
   clearUnusedBits();
 }
 
@@ -125,16 +125,16 @@ APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
   fromString(numbits, Str, radix);
 }
 
-APInt& APInt::AssignSlowCase(const APInt& RHS) {
+void APInt::AssignSlowCase(const APInt& RHS) {
   // Don't do anything for X = X
   if (this == &RHS)
-    return *this;
+    return;
 
   if (BitWidth == RHS.getBitWidth()) {
     // assume same bit-width single-word case is already handled
     assert(!isSingleWord());
     memcpy(pVal, RHS.pVal, getNumWords() * APINT_WORD_SIZE);
-    return *this;
+    return;
   }
 
   if (isSingleWord()) {
@@ -154,7 +154,7 @@ APInt& APInt::AssignSlowCase(const APInt& RHS) {
     memcpy(pVal, RHS.pVal, RHS.getNumWords() * APINT_WORD_SIZE);
   }
   BitWidth = RHS.BitWidth;
-  return clearUnusedBits();
+  clearUnusedBits();
 }
 
 /// This method 'profiles' an APInt for use with FoldingSet.
@@ -339,19 +339,16 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
-APInt& APInt::AndAssignSlowCase(const APInt& RHS) {
+void APInt::AndAssignSlowCase(const APInt& RHS) {
   tcAnd(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
-APInt& APInt::OrAssignSlowCase(const APInt& RHS) {
+void APInt::OrAssignSlowCase(const APInt& RHS) {
   tcOr(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
-APInt& APInt::XorAssignSlowCase(const APInt& RHS) {
+void APInt::XorAssignSlowCase(const APInt& RHS) {
   tcXor(pVal, RHS.pVal, getNumWords());
-  return *this;
 }
 
 APInt APInt::operator*(const APInt& RHS) const {
@@ -367,52 +364,20 @@ bool APInt::EqualSlowCase(const APInt& RHS) const {
   return std::equal(pVal, pVal + getNumWords(), RHS.pVal);
 }
 
-bool APInt::EqualSlowCase(uint64_t Val) const {
-  unsigned n = getActiveBits();
-  if (n <= APINT_BITS_PER_WORD)
-    return pVal[0] == Val;
-  else
-    return false;
-}
-
-bool APInt::ult(const APInt& RHS) const {
+int APInt::compare(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord())
-    return VAL < RHS.VAL;
+    return VAL < RHS.VAL ? -1 : VAL > RHS.VAL;
 
-  // Get active bit length of both operands
-  unsigned n1 = getActiveBits();
-  unsigned n2 = RHS.getActiveBits();
-
-  // If magnitude of LHS is less than RHS, return true.
-  if (n1 < n2)
-    return true;
-
-  // If magnitude of RHS is greater than LHS, return false.
-  if (n2 < n1)
-    return false;
-
-  // If they both fit in a word, just compare the low order word
-  if (n1 <= APINT_BITS_PER_WORD && n2 <= APINT_BITS_PER_WORD)
-    return pVal[0] < RHS.pVal[0];
-
-  // Otherwise, compare all words
-  unsigned topWord = whichWord(std::max(n1,n2)-1);
-  for (int i = topWord; i >= 0; --i) {
-    if (pVal[i] > RHS.pVal[i])
-      return false;
-    if (pVal[i] < RHS.pVal[i])
-      return true;
-  }
-  return false;
+  return tcCompare(pVal, RHS.pVal, getNumWords());
 }
 
-bool APInt::slt(const APInt& RHS) const {
+int APInt::compareSigned(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord()) {
     int64_t lhsSext = SignExtend64(VAL, BitWidth);
     int64_t rhsSext = SignExtend64(RHS.VAL, BitWidth);
-    return lhsSext < rhsSext;
+    return lhsSext < rhsSext ? -1 : lhsSext > rhsSext;
   }
 
   bool lhsNeg = isNegative();
@@ -420,11 +385,11 @@ bool APInt::slt(const APInt& RHS) const {
 
   // If the sign bits don't match, then (LHS < RHS) if LHS is negative
   if (lhsNeg != rhsNeg)
-    return lhsNeg;
+    return lhsNeg ? -1 : 1;
 
   // Otherwise we can just use an unsigned comparison, because even negative
   // numbers compare correctly this way if both have the same signed-ness.
-  return ult(RHS);
+  return tcCompare(pVal, RHS.pVal, getNumWords());
 }
 
 void APInt::setBit(unsigned bitPosition) {
@@ -439,13 +404,13 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   unsigned hiWord = whichWord(hiBit);
 
   // Create an initial mask for the low word with zeros below loBit.
-  uint64_t loMask = UINT64_MAX << whichBit(loBit);
+  uint64_t loMask = WORD_MAX << whichBit(loBit);
 
   // If hiBit is not aligned, we need a high mask.
   unsigned hiShiftAmt = whichBit(hiBit);
   if (hiShiftAmt != 0) {
     // Create a high mask with zeros above hiBit.
-    uint64_t hiMask = UINT64_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
+    uint64_t hiMask = WORD_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
     // If loWord and hiWord are equal, then we combine the masks. Otherwise,
     // set the bits in hiWord.
     if (hiWord == loWord)
@@ -458,7 +423,7 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
 
   // Fill any words between loWord and hiWord with all ones.
   for (unsigned word = loWord + 1; word < hiWord; ++word)
-    pVal[word] = UINT64_MAX;
+    pVal[word] = WORD_MAX;
 }
 
 /// Set the given bit to 0 whose position is given as "bitPosition".
@@ -498,7 +463,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Single word result can be done as a direct bitmask.
   if (isSingleWord()) {
-    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     VAL &= ~(mask << bitPosition);
     VAL |= (subBits.VAL << bitPosition);
     return;
@@ -510,7 +475,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Insertion within a single word can be done as a direct bitmask.
   if (loWord == hi1Word) {
-    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     pVal[loWord] &= ~(mask << loBit);
     pVal[loWord] |= (subBits.VAL << loBit);
     return;
@@ -526,7 +491,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
     // Mask+insert remaining bits.
     unsigned remainingBits = subBitWidth % APINT_BITS_PER_WORD;
     if (remainingBits != 0) {
-      uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - remainingBits);
+      uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - remainingBits);
       pVal[hi1Word] &= ~mask;
       pVal[hi1Word] |= subBits.getWord(subBitWidth - 1);
     }
@@ -693,7 +658,7 @@ unsigned APInt::countLeadingOnes() const {
   unsigned Count = llvm::countLeadingOnes(pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
-      if (pVal[i] == -1ULL)
+      if (pVal[i] == WORD_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
         Count += llvm::countLeadingOnes(pVal[i]);
@@ -719,11 +684,12 @@ unsigned APInt::countTrailingZeros() const {
 unsigned APInt::countTrailingOnesSlowCase() const {
   unsigned Count = 0;
   unsigned i = 0;
-  for (; i < getNumWords() && pVal[i] == -1ULL; ++i)
+  for (; i < getNumWords() && pVal[i] == WORD_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
     Count += llvm::countTrailingOnes(pVal[i]);
-  return std::min(Count, BitWidth);
+  assert(Count <= BitWidth);
+  return Count;
 }
 
 unsigned APInt::countPopulationSlowCase() const {
@@ -731,6 +697,22 @@ unsigned APInt::countPopulationSlowCase() const {
   for (unsigned i = 0; i < getNumWords(); ++i)
     Count += llvm::countPopulation(pVal[i]);
   return Count;
+}
+
+bool APInt::intersectsSlowCase(const APInt &RHS) const {
+  for (unsigned i = 0, e = getNumWords(); i != e; ++i)
+    if ((pVal[i] & RHS.pVal[i]) != 0)
+      return true;
+
+  return false;
+}
+
+bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
+  for (unsigned i = 0, e = getNumWords(); i != e; ++i)
+    if ((pVal[i] & ~RHS.pVal[i]) != 0)
+      return false;
+
+  return true;
 }
 
 APInt APInt::byteSwap() const {
@@ -957,43 +939,26 @@ APInt APInt::trunc(unsigned width) const {
 }
 
 // Sign extend to a new width.
-APInt APInt::sext(unsigned width) const {
-  assert(width > BitWidth && "Invalid APInt SignExtend request");
+APInt APInt::sext(unsigned Width) const {
+  assert(Width > BitWidth && "Invalid APInt SignExtend request");
 
-  if (width <= APINT_BITS_PER_WORD) {
-    uint64_t val = VAL << (APINT_BITS_PER_WORD - BitWidth);
-    val = (int64_t)val >> (width - BitWidth);
-    return APInt(width, val >> (APINT_BITS_PER_WORD - width));
-  }
+  if (Width <= APINT_BITS_PER_WORD)
+    return APInt(Width, SignExtend64(VAL, BitWidth));
 
-  APInt Result(getMemory(getNumWords(width)), width);
+  APInt Result(getMemory(getNumWords(Width)), Width);
 
-  // Copy full words.
-  unsigned i;
-  uint64_t word = 0;
-  for (i = 0; i != BitWidth / APINT_BITS_PER_WORD; i++) {
-    word = getRawData()[i];
-    Result.pVal[i] = word;
-  }
+  // Copy words.
+  std::memcpy(Result.pVal, getRawData(), getNumWords() * APINT_WORD_SIZE);
 
-  // Read and sign-extend any partial word.
-  unsigned bits = (0 - BitWidth) % APINT_BITS_PER_WORD;
-  if (bits != 0)
-    word = (int64_t)getRawData()[i] << bits >> bits;
-  else
-    word = (int64_t)word >> (APINT_BITS_PER_WORD - 1);
+  // Sign extend the last word since there may be unused bits in the input.
+  Result.pVal[getNumWords() - 1] =
+      SignExtend64(Result.pVal[getNumWords() - 1],
+                   ((BitWidth - 1) % APINT_BITS_PER_WORD) + 1);
 
-  // Write remaining full words.
-  for (; i != width / APINT_BITS_PER_WORD; i++) {
-    Result.pVal[i] = word;
-    word = (int64_t)word >> (APINT_BITS_PER_WORD - 1);
-  }
-
-  // Write any partial word.
-  bits = (0 - width) % APINT_BITS_PER_WORD;
-  if (bits != 0)
-    Result.pVal[i] = word << bits >> bits;
-
+  // Fill with sign bits.
+  std::memset(Result.pVal + getNumWords(), isNegative() ? -1 : 0,
+              (Result.getNumWords() - getNumWords()) * APINT_WORD_SIZE);
+  Result.clearUnusedBits();
   return Result;
 }
 
@@ -1007,12 +972,11 @@ APInt APInt::zext(unsigned width) const {
   APInt Result(getMemory(getNumWords(width)), width);
 
   // Copy words.
-  unsigned i;
-  for (i = 0; i != getNumWords(); i++)
-    Result.pVal[i] = getRawData()[i];
+  std::memcpy(Result.pVal, getRawData(), getNumWords() * APINT_WORD_SIZE);
 
   // Zero remaining words.
-  memset(&Result.pVal[i], 0, (Result.getNumWords() - i) * APINT_WORD_SIZE);
+  std::memset(Result.pVal + getNumWords(), 0,
+              (Result.getNumWords() - getNumWords()) * APINT_WORD_SIZE);
 
   return Result;
 }
@@ -1047,89 +1011,51 @@ APInt APInt::sextOrSelf(unsigned width) const {
 
 /// Arithmetic right-shift this APInt by shiftAmt.
 /// @brief Arithmetic right-shift function.
-APInt APInt::ashr(const APInt &shiftAmt) const {
-  return ashr((unsigned)shiftAmt.getLimitedValue(BitWidth));
+void APInt::ashrInPlace(const APInt &shiftAmt) {
+  ashrInPlace((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
 /// Arithmetic right-shift this APInt by shiftAmt.
 /// @brief Arithmetic right-shift function.
-APInt APInt::ashr(unsigned shiftAmt) const {
-  assert(shiftAmt <= BitWidth && "Invalid shift amount");
-  // Handle a degenerate case
-  if (shiftAmt == 0)
-    return *this;
+void APInt::ashrSlowCase(unsigned ShiftAmt) {
+  // Don't bother performing a no-op shift.
+  if (!ShiftAmt)
+    return;
 
-  // Handle single word shifts with built-in ashr
-  if (isSingleWord()) {
-    if (shiftAmt == BitWidth)
-      return APInt(BitWidth, 0); // undefined
-    return APInt(BitWidth, SignExtend64(VAL, BitWidth) >> shiftAmt);
-  }
+  // Save the original sign bit for later.
+  bool Negative = isNegative();
 
-  // If all the bits were shifted out, the result is, technically, undefined.
-  // We return -1 if it was negative, 0 otherwise. We check this early to avoid
-  // issues in the algorithm below.
-  if (shiftAmt == BitWidth) {
-    if (isNegative())
-      return APInt(BitWidth, -1ULL, true);
-    else
-      return APInt(BitWidth, 0);
-  }
+  // WordShift is the inter-part shift; BitShift is is intra-part shift.
+  unsigned WordShift = ShiftAmt / APINT_BITS_PER_WORD;
+  unsigned BitShift = ShiftAmt % APINT_BITS_PER_WORD;
 
-  // Create some space for the result.
-  uint64_t * val = new uint64_t[getNumWords()];
+  unsigned WordsToMove = getNumWords() - WordShift;
+  if (WordsToMove != 0) {
+    // Sign extend the last word to fill in the unused bits.
+    pVal[getNumWords() - 1] = SignExtend64(
+        pVal[getNumWords() - 1], ((BitWidth - 1) % APINT_BITS_PER_WORD) + 1);
 
-  // Compute some values needed by the following shift algorithms
-  unsigned wordShift = shiftAmt % APINT_BITS_PER_WORD; // bits to shift per word
-  unsigned offset = shiftAmt / APINT_BITS_PER_WORD; // word offset for shift
-  unsigned breakWord = getNumWords() - 1 - offset; // last word affected
-  unsigned bitsInWord = whichBit(BitWidth); // how many bits in last word?
-  if (bitsInWord == 0)
-    bitsInWord = APINT_BITS_PER_WORD;
+    // Fastpath for moving by whole words.
+    if (BitShift == 0) {
+      std::memmove(pVal, pVal + WordShift, WordsToMove * APINT_WORD_SIZE);
+    } else {
+      // Move the words containing significant bits.
+      for (unsigned i = 0; i != WordsToMove - 1; ++i)
+        pVal[i] = (pVal[i + WordShift] >> BitShift) |
+                  (pVal[i + WordShift + 1] << (APINT_BITS_PER_WORD - BitShift));
 
-  // If we are shifting whole words, just move whole words
-  if (wordShift == 0) {
-    // Move the words containing significant bits
-    for (unsigned i = 0; i <= breakWord; ++i)
-      val[i] = pVal[i+offset]; // move whole word
-
-    // Adjust the top significant word for sign bit fill, if negative
-    if (isNegative())
-      if (bitsInWord < APINT_BITS_PER_WORD)
-        val[breakWord] |= ~0ULL << bitsInWord; // set high bits
-  } else {
-    // Shift the low order words
-    for (unsigned i = 0; i < breakWord; ++i) {
-      // This combines the shifted corresponding word with the low bits from
-      // the next word (shifted into this word's high bits).
-      val[i] = (pVal[i+offset] >> wordShift) |
-               (pVal[i+offset+1] << (APINT_BITS_PER_WORD - wordShift));
-    }
-
-    // Shift the break word. In this case there are no bits from the next word
-    // to include in this word.
-    val[breakWord] = pVal[breakWord+offset] >> wordShift;
-
-    // Deal with sign extension in the break word, and possibly the word before
-    // it.
-    if (isNegative()) {
-      if (wordShift > bitsInWord) {
-        if (breakWord > 0)
-          val[breakWord-1] |=
-            ~0ULL << (APINT_BITS_PER_WORD - (wordShift - bitsInWord));
-        val[breakWord] |= ~0ULL;
-      } else
-        val[breakWord] |= (~0ULL << (bitsInWord - wordShift));
+      // Handle the last word which has no high bits to copy.
+      pVal[WordsToMove - 1] = pVal[WordShift + WordsToMove - 1] >> BitShift;
+      // Sign extend one more time.
+      pVal[WordsToMove - 1] =
+          SignExtend64(pVal[WordsToMove - 1], APINT_BITS_PER_WORD - BitShift);
     }
   }
 
-  // Remaining words are 0 or -1, just assign them.
-  uint64_t fillValue = (isNegative() ? -1ULL : 0);
-  for (unsigned i = breakWord+1; i < getNumWords(); ++i)
-    val[i] = fillValue;
-  APInt Result(val, BitWidth);
-  Result.clearUnusedBits();
-  return Result;
+  // Fill in the remainder based on the original sign.
+  std::memset(pVal + WordsToMove, Negative ? -1 : 0,
+              WordShift * APINT_WORD_SIZE);
+  clearUnusedBits();
 }
 
 /// Logical right-shift this APInt by shiftAmt.
@@ -2603,7 +2529,7 @@ void APInt::tcShiftLeft(WordType *Dst, unsigned Words, unsigned Count) {
   if (!Count)
     return;
 
-  /* WordShift is the inter-part shift; BitShift is is intra-part shift.  */
+  // WordShift is the inter-part shift; BitShift is the intra-part shift.
   unsigned WordShift = std::min(Count / APINT_BITS_PER_WORD, Words);
   unsigned BitShift = Count % APINT_BITS_PER_WORD;
 
@@ -2630,7 +2556,7 @@ void APInt::tcShiftRight(WordType *Dst, unsigned Words, unsigned Count) {
   if (!Count)
     return;
 
-  // WordShift is the inter-part shift; BitShift is is intra-part shift.
+  // WordShift is the inter-part shift; BitShift is the intra-part shift.
   unsigned WordShift = std::min(Count / APINT_BITS_PER_WORD, Words);
   unsigned BitShift = Count % APINT_BITS_PER_WORD;
 
@@ -2679,10 +2605,8 @@ int APInt::tcCompare(const WordType *lhs, const WordType *rhs,
                      unsigned parts) {
   while (parts) {
     parts--;
-    if (lhs[parts] == rhs[parts])
-      continue;
-
-    return (lhs[parts] > rhs[parts]) ? 1 : -1;
+    if (lhs[parts] != rhs[parts])
+      return (lhs[parts] > rhs[parts]) ? 1 : -1;
   }
 
   return 0;

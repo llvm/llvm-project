@@ -2861,7 +2861,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   emitValidateOperandClass(Info, OS);
 
   // Emit the available features compute function.
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
+  SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Info.Target.getName(), ClassName, "ComputeAvailableFeatures",
       Info.SubtargetFeatures, OS);
 

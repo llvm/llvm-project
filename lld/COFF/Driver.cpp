@@ -512,6 +512,23 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
   std::string Rsp = "/nologo\n";
   std::vector<std::string> Temps;
 
+  // Write out archive members that we used in symbol resolution and pass these
+  // to MSVC before any archives, so that MSVC uses the same objects to satisfy
+  // references.
+  for (const auto *O : Symtab.ObjectFiles) {
+    if (O->ParentName.empty())
+      continue;
+    SmallString<128> S;
+    int Fd;
+    if (auto EC = sys::fs::createTemporaryFile(
+            "lld-" + sys::path::filename(O->ParentName), ".obj", Fd, S))
+      fatal(EC, "cannot create a temporary file");
+    raw_fd_ostream OS(Fd, /*shouldClose*/ true);
+    OS << O->MB.getBuffer();
+    Temps.push_back(S.str());
+    Rsp += quote(S) + "\n";
+  }
+
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
     case OPT_linkrepro:

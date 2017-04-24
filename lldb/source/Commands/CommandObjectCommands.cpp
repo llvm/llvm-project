@@ -50,7 +50,11 @@ class CommandObjectCommandsHistory : public CommandObjectParsed {
 public:
   CommandObjectCommandsHistory(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "command history",
-                            "Dump the history of commands in this session.",
+                            "Dump the history of commands in this session.\n"
+                            "Commands in the history list can be run again "
+                            "using \"!<INDEX>\".   \"!-<OFFSET>\" will re-run "
+                            "the command that is <OFFSET> commands from the end"
+                            " of the list (counting the current command).",
                             nullptr),
         m_options() {}
 

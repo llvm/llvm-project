@@ -65,7 +65,6 @@ public:
     MO_CFIIndex,          ///< MCCFIInstruction index.
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
-    MO_Placeholder,       ///< Placeholder for GlobalISel ComplexPattern result.
   };
 
 private:
@@ -765,11 +764,6 @@ public:
   static MachineOperand CreatePredicate(unsigned Pred) {
     MachineOperand Op(MachineOperand::MO_Predicate);
     Op.Contents.Pred = Pred;
-    return Op;
-  }
-
-  static MachineOperand CreatePlaceholder() {
-    MachineOperand Op(MachineOperand::MO_Placeholder);
     return Op;
   }
 

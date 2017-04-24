@@ -230,6 +230,18 @@ public:
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
 
+  /// Return the type for frame index, which is determined by
+  /// the alloca address space specified through the data layout.
+  MVT getFrameIndexTy(const DataLayout &DL) const {
+    return getPointerTy(DL, DL.getAllocaAddrSpace());
+  }
+
+  /// Return the type for operands of fence.
+  /// TODO: Let fence operands be of i32 type and remove this.
+  virtual MVT getFenceOperandTy(const DataLayout &DL) const {
+    return getPointerTy(DL);
+  }
+
   /// EVT is not used in-tree, but is used by out-of-tree target.
   /// A documentation for this function would be nice...
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
@@ -2262,7 +2274,8 @@ protected:
 
   /// Return true if the value types that can be represented by the specified
   /// register class are all legal.
-  bool isLegalRC(const TargetRegisterClass *RC) const;
+  bool isLegalRC(const TargetRegisterInfo &TRI,
+                 const TargetRegisterClass &RC) const;
 
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
@@ -2382,29 +2395,38 @@ public:
       New = N;
       return true;
     }
-
-    /// Check to see if the specified operand of the specified instruction is a
-    /// constant integer.  If so, check to see if there are any bits set in the
-    /// constant that are not demanded.  If so, shrink the constant and return
-    /// true.
-    bool ShrinkDemandedConstant(SDValue Op, const APInt &Demanded);
-
-    /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.  This
-    /// uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
-    /// generalized for targets with other types of implicit widening casts.
-    bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth, const APInt &Demanded,
-                          const SDLoc &dl);
-
-    /// Helper for SimplifyDemandedBits that can simplify an operation with
-    /// multiple uses.  This function uses TLI.SimplifyDemandedBits to
-    /// simplify Operand \p OpIdx of \p User and then updated \p User with
-    /// the simplified version.  No other uses of \p OpIdx are updated.
-    /// If \p User is the only user of \p OpIdx, this function behaves exactly
-    /// like TLI.SimplifyDemandedBits except that it also updates the DAG by
-    /// calling DCI.CommitTargetLoweringOpt.
-    bool SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
-                              const APInt &Demanded, DAGCombinerInfo &DCI);
   };
+
+  /// Check to see if the specified operand of the specified instruction is a
+  /// constant integer.  If so, check to see if there are any bits set in the
+  /// constant that are not demanded.  If so, shrink the constant and return
+  /// true.
+  bool ShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+                              TargetLoweringOpt &TLO) const;
+
+  // Target hook to do target-specific const optimization, which is called by
+  // ShrinkDemandedConstant. This function should return true if the target
+  // doesn't want ShrinkDemandedConstant to further optimize the constant.
+  virtual bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+                                            TargetLoweringOpt &TLO) const {
+    return false;
+  }
+
+  /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.  This
+  /// uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
+  /// generalized for targets with other types of implicit widening casts.
+  bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth, const APInt &Demanded,
+                        TargetLoweringOpt &TLO) const;
+
+  /// Helper for SimplifyDemandedBits that can simplify an operation with
+  /// multiple uses.  This function simplifies operand \p OpIdx of \p User and
+  /// then updates \p User with the simplified version. No other uses of
+  /// \p OpIdx are updated. If \p User is the only user of \p OpIdx, this
+  /// function behaves exactly like function SimplifyDemandedBits declared
+  /// below except that it also updates the DAG by calling
+  /// DCI.CommitTargetLoweringOpt.
+  bool SimplifyDemandedBits(SDNode *User, unsigned OpIdx, const APInt &Demanded,
+                            DAGCombinerInfo &DCI, TargetLoweringOpt &TLO) const;
 
   /// Look at Op.  At this point, we know that only the DemandedMask bits of the
   /// result of Op are ever used downstream.  If we can use this information to

@@ -336,7 +336,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   o << "#endif // NDEBUG\n";
 
   // Emit the available features compute function.
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
+  SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Target.getName(), "MCCodeEmitter", "computeAvailableFeatures",
       SubtargetFeatures, o);
 

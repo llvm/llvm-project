@@ -40,5 +40,6 @@ const char *llvm::getMinimalTypeForEnumBitfield(uint64_t Size) {
   uint64_t MaxIndex = Size;
   if (MaxIndex > 0)
     MaxIndex--;
+  assert(MaxIndex <= 64 && "Too many bits");
   return getMinimalTypeForRange(1ULL << MaxIndex);
 }

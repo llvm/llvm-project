@@ -373,22 +373,22 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
              FixedSlot->Reg != Reg)
         ++FixedSlot;
 
+      unsigned Size = RegInfo->getSpillSize(*RC);
       if (FixedSlot == FixedSpillSlots + NumFixedSpillSlots) {
         // Nope, just spill it anywhere convenient.
-        unsigned Align = RC->getAlignment();
+        unsigned Align = RegInfo->getSpillAlignment(*RC);
         unsigned StackAlign = TFI->getStackAlignment();
 
         // We may not be able to satisfy the desired alignment specification of
         // the TargetRegisterClass if the stack alignment is smaller. Use the
         // min.
         Align = std::min(Align, StackAlign);
-        FrameIdx = MFI.CreateStackObject(RC->getSize(), Align, true);
+        FrameIdx = MFI.CreateStackObject(Size, Align, true);
         if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
         if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
       } else {
         // Spill it to the stack where we must.
-        FrameIdx =
-            MFI.CreateFixedSpillStackObject(RC->getSize(), FixedSlot->Offset);
+        FrameIdx = MFI.CreateFixedSpillStackObject(Size, FixedSlot->Offset);
       }
 
       CS.setFrameIdx(FrameIdx);

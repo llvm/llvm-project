@@ -23,7 +23,6 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 %struct.entry = type { %struct.entry* }
 
-; Function Attrs: nounwind ssp uwtable
 define void @salvage_load(%struct.entry** %queue) local_unnamed_addr #0 !dbg !14 {
 entry:
   %im_not_dead = alloca %struct.entry*
@@ -38,7 +37,6 @@ entry:
   ret void, !dbg !21
 }
 
-; Function Attrs: nounwind ssp uwtable
 define void @salvage_bitcast(%struct.entry* %queue) local_unnamed_addr #0 !dbg !14 {
 entry:
   %im_not_dead = alloca i8*
@@ -53,24 +51,54 @@ entry:
   ret void, !dbg !21
 }
 
-; Function Attrs: nounwind ssp uwtable
-define void @salvage_gep(%struct.entry* %queue, %struct.entry* %end) local_unnamed_addr #0 !dbg !14 {
+define void @salvage_gep0(%struct.entry* %queue, %struct.entry* %end) local_unnamed_addr #0 !dbg !14 {
 entry:
   %im_not_dead = alloca %struct.entry**
   %0 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
   %1 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
   call void @llvm.dbg.value(metadata %struct.entry** %1, i64 0, metadata !18, metadata !20), !dbg !19
-; CHECK: define void @salvage_gep
+; CHECK: define void @salvage_gep0
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue, i64 0,
-; CHECK-SAME:                           metadata ![[GEP_EXPR:[0-9]+]])
+; CHECK-SAME:                           metadata ![[GEP0_EXPR:[0-9]+]])
+  store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
+  ret void, !dbg !21
+}
+
+define void @salvage_gep1(%struct.entry* %queue, %struct.entry* %end) local_unnamed_addr #0 !dbg !14 {
+entry:
+  %im_not_dead = alloca %struct.entry**
+  %0 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
+  %1 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
+  call void @llvm.dbg.value(metadata %struct.entry** %1, i64 0, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !19
+; CHECK: define void @salvage_gep1
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue, i64 0,
+; CHECK-SAME:                           metadata ![[GEP1_EXPR:[0-9]+]])
+  store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
+  ret void, !dbg !21
+}
+
+define void @salvage_gep2(%struct.entry* %queue, %struct.entry* %end) local_unnamed_addr #0 !dbg !14 {
+entry:
+  %im_not_dead = alloca %struct.entry**
+  %0 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
+  %1 = getelementptr inbounds %struct.entry, %struct.entry* %queue, i32 -1, i32 0, !dbg !19
+  call void @llvm.dbg.value(metadata %struct.entry** %1, i64 0, metadata !18, metadata !DIExpression(DW_OP_stack_value)), !dbg !19
+; CHECK: define void @salvage_gep2
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue, i64 0,
+; CHECK-SAME:                           metadata ![[GEP2_EXPR:[0-9]+]])
   store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
   ret void, !dbg !21
 }
 
 ; CHECK: ![[LOAD_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_plus, 0)
 ; CHECK: ![[BITCAST_EXPR]] = !DIExpression(DW_OP_plus, 0)
-; CHECK: ![[GEP_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_plus, 0)
+; CHECK: ![[GEP0_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_plus, 0, DW_OP_stack_value)
+; CHECK: ![[GEP1_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_stack_value,
+; CHECK-SAME:                           DW_OP_LLVM_fragment, 0, 32)
+; CHECK: ![[GEP2_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_stack_value)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1

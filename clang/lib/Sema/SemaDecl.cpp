@@ -13523,7 +13523,8 @@ CreateNewDecl:
     // If this is an undefined enum, warn.
     if (TUK != TUK_Definition && !Invalid) {
       TagDecl *Def;
-      if ((getLangOpts().CPlusPlus11 || getLangOpts().ObjC2) &&
+      if (!EnumUnderlyingIsImplicit &&
+          (getLangOpts().CPlusPlus11 || getLangOpts().ObjC2) &&
           cast<EnumDecl>(New)->isFixed()) {
         // C++0x: 7.2p2: opaque-enum-declaration.
         // Conflicts are diagnosed above. Do nothing.
@@ -15687,30 +15688,41 @@ static void checkModuleImportContext(Sema &S, Module *M,
   }
 }
 
-Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation ModuleLoc,
+Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
+                                           SourceLocation ModuleLoc,
                                            ModuleDeclKind MDK,
                                            ModuleIdPath Path) {
-  // 'module implementation' requires that we are not compiling a module of any
-  // kind. 'module' and 'module partition' require that we are compiling a
-  // module inteface (not a module map).
-  auto CMK = getLangOpts().getCompilingModule();
-  if (MDK == ModuleDeclKind::Implementation
-          ? CMK != LangOptions::CMK_None
-          : CMK != LangOptions::CMK_ModuleInterface) {
+  // A module implementation unit requires that we are not compiling a module
+  // of any kind. A module interface unit requires that we are not compiling a
+  // module map.
+  switch (getLangOpts().getCompilingModule()) {
+  case LangOptions::CMK_None:
+    // It's OK to compile a module interface as a normal translation unit.
+    break;
+
+  case LangOptions::CMK_ModuleInterface:
+    if (MDK != ModuleDeclKind::Implementation)
+      break;
+
+    // We were asked to compile a module interface unit but this is a module
+    // implementation unit. That indicates the 'export' is missing.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
-      << (unsigned)MDK;
+      << FixItHint::CreateInsertion(ModuleLoc, "export ");
+    break;
+
+  case LangOptions::CMK_ModuleMap:
+    Diag(ModuleLoc, diag::err_module_decl_in_module_map_module);
     return nullptr;
   }
 
   // FIXME: Create a ModuleDecl and return it.
 
   // FIXME: Most of this work should be done by the preprocessor rather than
-  // here, in case we look ahead across something where the current
-  // module matters (eg a #include).
+  // here, in order to support macro import.
 
-  // The dots in a module name in the Modules TS are a lie. Unlike Clang's
-  // hierarchical module map modules, the dots here are just another character
-  // that can appear in a module name. Flatten down to the actual module name.
+  // Flatten the dots in a module name. Unlike Clang's hierarchical module map
+  // modules, the dots here are just another character that can appear in a
+  // module name.
   std::string ModuleName;
   for (auto &Piece : Path) {
     if (!ModuleName.empty())
@@ -15735,8 +15747,8 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation ModuleLoc,
   case ModuleDeclKind::Module: {
     // FIXME: Check we're not in a submodule.
 
-    // We can't have imported a definition of this module or parsed a module
-    // map defining it already.
+    // We can't have parsed or imported a definition of this module or parsed a
+    // module map defining it already.
     if (auto *M = Map.findModule(ModuleName)) {
       Diag(Path[0].second, diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())

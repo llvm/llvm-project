@@ -3393,7 +3393,7 @@ namespace {
 }
 
 void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
-                         unsigned FormatMaxPadding) const {
+                         unsigned FormatMaxPadding, bool TruncateZero) const {
   switch (category) {
   case fcInfinity:
     if (isNegative())
@@ -3407,9 +3407,16 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
     if (isNegative())
       Str.push_back('-');
 
-    if (!FormatMaxPadding)
-      append(Str, "0.0E+0");
-    else
+    if (!FormatMaxPadding) {
+      if (TruncateZero)
+        append(Str, "0.0E+0");
+      else {
+        append(Str, "0.0");
+        if (FormatPrecision > 1)
+          Str.append(FormatPrecision - 1, '0');
+        append(Str, "e+00");
+      }
+    } else
       Str.push_back('0');
     return;
 
@@ -3543,12 +3550,16 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
     Str.push_back(buffer[NDigits-1]);
     Str.push_back('.');
-    if (NDigits == 1)
+    if (NDigits == 1 && TruncateZero)
       Str.push_back('0');
     else
       for (unsigned I = 1; I != NDigits; ++I)
         Str.push_back(buffer[NDigits-1-I]);
-    Str.push_back('E');
+    // Fill with zeros up to FormatPrecision.
+    if (!TruncateZero && FormatPrecision > NDigits - 1)
+      Str.append(FormatPrecision - NDigits + 1, '0');
+    // For !TruncateZero we use lower 'e'.
+    Str.push_back(TruncateZero ? 'E' : 'e');
 
     Str.push_back(exp >= 0 ? '+' : '-');
     if (exp < 0) exp = -exp;
@@ -3557,6 +3568,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
       expbuf.push_back((char) ('0' + (exp % 10)));
       exp /= 10;
     } while (exp);
+    // Exponent always at least two digits if we do not truncate zeros.
+    if (!TruncateZero && expbuf.size() < 2)
+      expbuf.push_back('0');
     for (unsigned I = 0, E = expbuf.size(); I != E; ++I)
       Str.push_back(expbuf[E-1-I]);
     return;
@@ -4362,10 +4376,11 @@ bool DoubleAPFloat::isInteger() const {
 
 void DoubleAPFloat::toString(SmallVectorImpl<char> &Str,
                              unsigned FormatPrecision,
-                             unsigned FormatMaxPadding) const {
+                             unsigned FormatMaxPadding,
+                             bool TruncateZero) const {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
   APFloat(semPPCDoubleDoubleLegacy, bitcastToAPInt())
-      .toString(Str, FormatPrecision, FormatMaxPadding);
+      .toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero);
 }
 
 bool DoubleAPFloat::getExactInverse(APFloat *inv) const {

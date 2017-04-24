@@ -1898,12 +1898,13 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MFI.hasVarSizedObjects() || spillsCR(MF) || spillsVRSAVE(MF) ||
       hasNonRISpills(MF) || (hasSpills(MF) && !isInt<16>(StackSize))) {
-    const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
-    const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
-    const TargetRegisterClass *RC = Subtarget.isPPC64() ? G8RC : GPRC;
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(RC->getSize(),
-                                                      RC->getAlignment(),
-                                                      false));
+    const TargetRegisterClass &GPRC = PPC::GPRCRegClass;
+    const TargetRegisterClass &G8RC = PPC::G8RCRegClass;
+    const TargetRegisterClass &RC = Subtarget.isPPC64() ? G8RC : GPRC;
+    const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+    unsigned Size = TRI.getSpillSize(RC);
+    unsigned Align = TRI.getSpillAlignment(RC);
+    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
 
     // Might we have over-aligned allocas?
     bool HasAlVars = MFI.hasVarSizedObjects() &&
@@ -1911,9 +1912,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
 
     // These kinds of spills might need two registers.
     if (spillsCR(MF) || spillsVRSAVE(MF) || HasAlVars)
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(RC->getSize(),
-                                                        RC->getAlignment(),
-                                                        false));
+      RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
 
   }
 }

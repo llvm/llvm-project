@@ -39,8 +39,8 @@ private:
   void prettyPrintClassIntro(const ClassLayout &Class);
   void prettyPrintClassOutro(const ClassLayout &Class);
 
-  bool DumpedAnything = false;
   LinePrinter &Printer;
+  bool DumpedAnything = false;
 };
 }
 }

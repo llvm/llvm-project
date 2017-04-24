@@ -122,9 +122,9 @@ void function();
 #pragma clang attribute push (__attribute__((annotate)) foo) // expected-error {{expected ','}}
 #pragma clang attribute push (__attribute__((annotate)), apply_to=function foo) // expected-error {{extra tokens after attribute in a '#pragma clang attribute push'}}
 
-#pragma clang attribute push (__attribute__((availability(macos, foo=1))), apply_to=function) // expected-error {{'foo' is not an availability stage; use 'introduced', 'deprecated', or 'obsoleted'}}
-// expected-error@-1 {{attribute 'availability' is not supported by '#pragma clang attribute'}}
-#pragma clang attribute push (__attribute__((availability(macos, 1))), apply_to=function) // expected-error {{expected 'introduced', 'deprecated', or 'obsoleted'}}
+#pragma clang attribute push (__attribute__((objc_bridge_related)), apply_to=function)
+// expected-error@-1 {{attribute 'objc_bridge_related' is not supported by '#pragma clang attribute'}}
+#pragma clang attribute push (__attribute__((objc_bridge_related(1))), apply_to=function) // expected-error {{expected a related ObjectiveC class name, e.g., 'NSColor'}}
 
 #pragma clang attribute push (__attribute__((used)), apply_to=function) // expected-error {{attribute 'used' is not supported by '#pragma clang attribute'}}
 

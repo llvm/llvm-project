@@ -1698,21 +1698,18 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-// NOTE: this only has a subset of the full frame index logic. In
-// particular, the FI < 0 and AfterFPPop logic is handled in
-// X86RegisterInfo::eliminateFrameIndex, but not here. Possibly
-// (probably?) it should be moved into here.
 int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                              unsigned &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
   // We can't calculate offset from frame pointer if the stack is realigned,
   // so enforce usage of stack/base pointer.  The base pointer is used when we
   // have dynamic allocas in addition to dynamic realignment.
   if (TRI->hasBasePointer(MF))
-    FrameReg = TRI->getBaseRegister();
+    FrameReg = IsFixed ? TRI->getFramePtr() : TRI->getBaseRegister();
   else if (TRI->needsStackRealignment(MF))
-    FrameReg = TRI->getStackRegister();
+    FrameReg = IsFixed ? TRI->getFramePtr() : TRI->getStackRegister();
   else
     FrameReg = TRI->getFrameRegister(MF);
 
@@ -1786,6 +1783,14 @@ int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return Offset + FPDelta;
 }
 
+int X86FrameLowering::getFrameIndexReferenceSP(const MachineFunction &MF,
+                                               int FI, unsigned &FrameReg,
+                                               int Adjustment) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  FrameReg = TRI->getStackRegister();
+  return MFI.getObjectOffset(FI) - getOffsetOfLocalArea() + Adjustment;
+}
+
 int
 X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
                                                  int FI, unsigned &FrameReg,
@@ -1842,9 +1847,6 @@ X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   assert(MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta() >= 0 &&
          "we don't handle this case!");
 
-  // Fill in FrameReg output argument.
-  FrameReg = TRI->getStackRegister();
-
   // This is how the math works out:
   //
   //  %rsp grows (i.e. gets lower) left to right. Each box below is
@@ -1869,12 +1871,8 @@ X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   // (C - E) == (C - A) - (B - A) + (B - E)
   //            { Using [1], [2] and [3] above }
   //         == getObjectOffset - LocalAreaOffset + StackSize
-  //
 
-  // Get the Offset from the StackPointer
-  int Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
-
-  return Offset + StackSize;
+  return getFrameIndexReferenceSP(MF, FI, FrameReg, StackSize);
 }
 
 bool X86FrameLowering::assignCalleeSavedSpillSlots(
@@ -1926,14 +1924,15 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
       continue;
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    unsigned Size = TRI->getSpillSize(*RC);
+    unsigned Align = TRI->getSpillAlignment(*RC);
     // ensure alignment
-    SpillSlotOffset -= std::abs(SpillSlotOffset) % RC->getAlignment();
+    SpillSlotOffset -= std::abs(SpillSlotOffset) % Align;
     // spill into slot
-    SpillSlotOffset -= RC->getSize();
-    int SlotIndex =
-        MFI.CreateFixedSpillStackObject(RC->getSize(), SpillSlotOffset);
+    SpillSlotOffset -= Size;
+    int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
     CSI[i - 1].setFrameIdx(SlotIndex);
-    MFI.ensureMaxAlignment(RC->getAlignment());
+    MFI.ensureMaxAlignment(Align);
   }
 
   return true;

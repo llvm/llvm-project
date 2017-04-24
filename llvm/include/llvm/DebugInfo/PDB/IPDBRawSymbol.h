@@ -113,7 +113,7 @@ public:
   virtual Variant getValue() const = 0;
   virtual uint32_t getVirtualBaseDispIndex() const = 0;
   virtual uint32_t getVirtualBaseOffset() const = 0;
-  virtual std::unique_ptr<PDBSymbolTypeVTable>
+  virtual std::unique_ptr<PDBSymbolTypeBuiltin>
   getVirtualBaseTableType() const = 0;
   virtual uint32_t getVirtualTableShapeId() const = 0;
   virtual PDB_DataKind getDataKind() const = 0;

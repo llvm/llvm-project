@@ -5000,6 +5000,8 @@ def note_protected_by_if_available : Note<
   "jump enters controlled statement of if available">;
 def note_protected_by_vla : Note<
   "jump bypasses initialization of variable length array">;
+def note_protected_by_objc_fast_enumeration : Note<
+  "jump enters Objective-C fast enumeration loop">;
 def note_protected_by_objc_try : Note<
   "jump bypasses initialization of @try block">;
 def note_protected_by_objc_catch : Note<
@@ -8799,9 +8801,11 @@ def err_invalid_type_for_program_scope_var : Error<
 }
 
 let CategoryName = "Modules Issue" in {
+def err_module_decl_in_module_map_module : Error<
+  "'module' declaration found while building module from module map">;
 def err_module_interface_implementation_mismatch : Error<
-  "%select{'module'|'module partition'|'module implementation'}0 declaration "
-  "found while %select{not |not |}0building module interface">;
+  "missing 'export' specifier in 'module' declaration while "
+  "building module interface">;
 def err_current_module_name_mismatch : Error<
   "module name '%0' specified on command line does not match name of module">;
 def err_module_redefinition : Error<

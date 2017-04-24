@@ -1781,12 +1781,20 @@
         ;; Exponent too large
         fmov d3, #0.0625
         fmov s2, #32.0
+        fmov s2, #32
+        fmov v0.4s, #-32
 // CHECK-ERROR: error: expected compatible register or floating-point constant
 // CHECK-ERROR-NEXT:           fmov d3, #0.0625
 // CHECK-ERROR-NEXT:                    ^
 // CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
 // CHECK-ERROR-NEXT:           fmov s2, #32.0
 // CHECK-ERROR-NEXT:                    ^
+// CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
+// CHECK-ERROR-NEXT:           fmov s2, #32
+// CHECK-ERROR-NEXT:                    ^
+// CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
+// CHECK-ERROR-NEXT:           fmov v0.4s, #-32
+// CHECK-ERROR-NEXT:                       ^
 
         ;; Fraction too precise
         fmov s9, #1.03125
@@ -1798,11 +1806,17 @@
 // CHECK-ERROR-NEXT:           fmov s28, #1.96875
 // CHECK-ERROR-NEXT:                     ^
 
-        ;; No particular reason, but a striking omission
-        fmov d0, #0.0
-// CHECK-ERROR-AARCH64: error: expected compatible register or floating-point constant
-// CHECK-ERROR-AARCH64-NEXT:           fmov d0, #0.0
-// CHECK-ERROR-AARCH64-NEXT:                    ^
+        ;; Explicitly encoded value too large
+        fmov s15, #0x100
+// CHECK-ERROR: error: encoded floating point value out of range
+// CHECK-ERROR-NEXT:           fmov s15, #0x100
+// CHECK-ERROR-NEXT:                     ^
+
+        ;; Not possible to fmov ZR to a whole vector
+        fmov v0.4s, #0.0
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:           fmov v0.4s, #0.0
+// CHECK-ERROR-NEXT:                       ^
 
 //------------------------------------------------------------------------------
 // Floating-point <-> integer conversion
@@ -3259,13 +3273,18 @@
 
         dsb #-1
         dsb #16
+        dsb foo
         dmb #-1
         dmb #16
+        dmb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #16
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dsb foo
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #-1
@@ -3273,15 +3292,22 @@
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dmb foo
+// CHECK-ERROR-NEXT:             ^
 
         isb #-1
         isb #16
+        isb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: 'sy' or #imm operand expected
+// CHECK-ERROR-NEXT:        isb foo
+// CHECK-ERROR-NEXT:            ^
 
         msr daifset, x4
         msr spsel, #-1

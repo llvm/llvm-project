@@ -17,6 +17,8 @@
                       defined(__i386))
 
 #include <mach/mach.h>
+#include <mach/thread_info.h>
+#include <pthread.h>
 
 #include "sanitizer_stoptheworld.h"
 
@@ -44,9 +46,75 @@ class SuspendedThreadsListMac : public SuspendedThreadsList {
   InternalMmapVector<SuspendedThreadInfo> threads_;
 };
 
-void StopTheWorld(StopTheWorldCallback callback, void *argument) {
-  CHECK(0 && "unimplemented");
+struct RunThreadArgs {
+  StopTheWorldCallback callback;
+  void *argument;
+};
+
+void RunThread(void *arg) {
+  struct RunThreadArgs *run_args = (struct RunThreadArgs *)arg;
+  SuspendedThreadsListMac suspended_threads_list;
+
+  mach_port_t task;
+  kern_return_t err = task_for_pid(mach_task_self(), internal_getpid(), &task);
+  if (err != KERN_SUCCESS) {
+    VReport(1, "Getting task from pid failed (errno %d).\n", err);
+    return;
+  }
+
+  thread_array_t threads;
+  mach_msg_type_number_t num_threads;
+
+  err = task_threads(task, &threads, &num_threads);
+  if (err != KERN_SUCCESS) {
+    VReport(1, "Failed to get threads for task (errno %d).\n", err);
+    return;
+  }
+
+  thread_t thread_self = mach_thread_self();
+  for (unsigned int i = 0; i < num_threads; ++i) {
+    if (threads[i] == thread_self) continue;
+
+    thread_suspend(threads[i]);
+    suspended_threads_list.Append(threads[i]);
+  }
+
+  run_args->callback(suspended_threads_list, run_args->argument);
+
+  uptr num_suspended = suspended_threads_list.ThreadCount();
+  for (unsigned int i = 0; i < num_suspended; ++i) {
+    thread_resume(suspended_threads_list.GetThread(i));
+  }
 }
+
+void StopTheWorld(StopTheWorldCallback callback, void *argument) {
+  struct RunThreadArgs arg = {callback, argument};
+  pthread_t run_thread = (pthread_t)internal_start_thread(RunThread, &arg);
+  internal_join_thread(run_thread);
+}
+
+#if defined(__x86_64__)
+typedef x86_thread_state64_t regs_struct;
+
+#define SP_REG __rsp
+
+#elif defined(__aarch64__)
+typedef arm_thread_state64_t regs_struct;
+
+# if __DARWIN_UNIX03
+#  define SP_REG __sp
+# else
+#  define SP_REG sp
+# endif
+
+#elif defined(__i386)
+typedef x86_thread_state32_t regs_struct;
+
+#define SP_REG __esp
+
+#else
+#error "Unsupported architecture"
+#endif
 
 tid_t SuspendedThreadsListMac::GetThreadID(uptr index) const {
   CHECK_LT(index, threads_.size());
@@ -83,8 +151,26 @@ void SuspendedThreadsListMac::Append(thread_t thread) {
 
 PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
     uptr index, uptr *buffer, uptr *sp) const {
-  CHECK(0 && "unimplemented");
-  return REGISTERS_UNAVAILABLE_FATAL;
+  thread_t thread = GetThread(index);
+  regs_struct regs;
+  int err;
+  mach_msg_type_number_t reg_count = MACHINE_THREAD_STATE_COUNT;
+  err = thread_get_state(thread, MACHINE_THREAD_STATE, (thread_state_t)&regs,
+                         &reg_count);
+  if (err != KERN_SUCCESS) {
+    VReport(1, "Error - unable to get registers for a thread\n");
+    // KERN_INVALID_ARGUMENT indicates that either the flavor is invalid,
+    // or the thread does not exist. The other possible error case,
+    // MIG_ARRAY_TOO_LARGE, means that the state is too large, but it's
+    // still safe to proceed.
+    return err == KERN_INVALID_ARGUMENT ? REGISTERS_UNAVAILABLE_FATAL
+                                        : REGISTERS_UNAVAILABLE;
+  }
+
+  internal_memcpy(buffer, &regs, sizeof(regs));
+  *sp = regs.SP_REG;
+
+  return REGISTERS_AVAILABLE;
 }
 
 uptr SuspendedThreadsListMac::RegisterCount() const {

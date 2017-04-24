@@ -21,12 +21,22 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-static Error ErrorFromHResult(HRESULT Result, StringRef Context) {
+template <typename... Ts>
+static Error ErrorFromHResult(HRESULT Result, const char *Str, Ts &&... Args) {
+  SmallString<64> MessageStorage;
+  StringRef Context;
+  if (sizeof...(Args) > 0) {
+    MessageStorage = formatv(Str, std::forward<Ts>(Args)...).str();
+    Context = MessageStorage;
+  } else
+    Context = Str;
+
   switch (Result) {
   case E_PDB_NOT_FOUND:
     return make_error<GenericError>(generic_error_code::invalid_path, Context);
@@ -95,8 +105,9 @@ Error DIASession::createFromPdb(StringRef Path,
 
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t*>(Path16.data());
   HRESULT HR;
-  if (FAILED(HR = DiaDataSource->loadDataFromPdb(Path16Str)))
-    return ErrorFromHResult(HR, "Calling loadDataFromPdb");
+  if (FAILED(HR = DiaDataSource->loadDataFromPdb(Path16Str))) {
+    return ErrorFromHResult(HR, "Calling loadDataFromPdb {0}", Path);
+  }
 
   if (FAILED(HR = DiaDataSource->openSession(&DiaSession)))
     return ErrorFromHResult(HR, "Calling openSession");

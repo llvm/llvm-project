@@ -193,4 +193,3 @@ void *LLVMSearchForAddressOfSymbol(const char *symbolName) {
 void LLVMAddSymbol(const char *symbolName, void *symbolValue) {
   return llvm::sys::DynamicLibrary::AddSymbol(symbolName, symbolValue);
 }
-

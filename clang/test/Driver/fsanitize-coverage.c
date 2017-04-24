@@ -23,14 +23,7 @@
 // CHECK-SANITIZE-COVERAGE-FUNC_INDIR: fsanitize-coverage-indirect-calls
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-1
-// CHECK-SANITIZE-COVERAGE-1: warning: argument '-fsanitize-coverage=1' is deprecated, use '-fsanitize-coverage=func' instead
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=2 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-2
-// CHECK-SANITIZE-COVERAGE-2: warning: argument '-fsanitize-coverage=2' is deprecated, use '-fsanitize-coverage=bb' instead
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=3 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-3
-// CHECK-SANITIZE-COVERAGE-3: warning: argument '-fsanitize-coverage=3' is deprecated, use '-fsanitize-coverage=edge' instead
-//
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-5
-// CHECK-SANITIZE-COVERAGE-5: error: unsupported argument '5' to option 'fsanitize-coverage='
+// CHECK-SANITIZE-COVERAGE-1: warning: argument '-fsanitize-coverage=1' is deprecated, use '-fsanitize-coverage=trace-pc-guard' instead
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=thread   -fsanitize-coverage=func %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-UNUSED
 // RUN: %clang -target x86_64-linux-gnu                     -fsanitize-coverage=func %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
@@ -40,17 +33,15 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func -fno-sanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-SAN-DISABLED
 // CHECK-SANITIZE-COVERAGE-SAN-DISABLED-NOT: argument unused
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-bb,trace-pc,trace-cmp,8bit-counters,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-type=3
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-indirect-calls
-// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-bb
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-cmp
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-div
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-gep
-// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-8bit-counters
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-pc
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func,edge,indirect-calls,trace-bb,trace-cmp -fno-sanitize-coverage=edge,indirect-calls,trace-bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MASK
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func,edge,indirect-calls,trace-cmp -fno-sanitize-coverage=edge,indirect-calls %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MASK
 // CHECK-MASK: -fsanitize-coverage-type=1
 // CHECK-MASK: -fsanitize-coverage-trace-cmp
 // CHECK-MASK-NOT: -fsanitize-coverage-
@@ -61,8 +52,10 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INCOMPATIBLE
 // CHECK-INCOMPATIBLE: error: invalid argument '-fsanitize-coverage=func' not allowed with '-fsanitize-coverage=edge'
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-TYPE
-// CHECK-MISSING-TYPE: error: invalid argument '-fsanitize-coverage=8bit-counters' only allowed with '-fsanitize-coverage=(func|bb|edge)'
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-8BIT
+// CHECK-8BIT: warning: argument '-fsanitize-coverage=8bit-counters' is deprecated, use '-fsanitize-coverage=trace-pc-guard' instead
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE-BB
+// CHECK-TRACE-BB: warning: argument '-fsanitize-coverage=trace-bb' is deprecated, use '-fsanitize-coverage=trace-pc-guard' instead
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE_PC_EDGE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=edge,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE_PC_EDGE

@@ -7,9 +7,9 @@
 // expected-no-diagnostics
 #endif
 
-module foo;
+export module foo;
 #if TEST == 1
-// expected-error@-2 {{expected module declaration at start of module interface}}
+// FIXME: diagnose export outside of module interface unit
 #elif TEST == 2
 // CHECK-2: error: redefinition of module 'foo'
 #endif

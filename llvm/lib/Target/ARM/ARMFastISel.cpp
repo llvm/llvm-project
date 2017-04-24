@@ -1702,7 +1702,8 @@ bool ARMFastISel::SelectDiv(const Instruction *I, bool isSigned) {
   // If we have integer div support we should have selected this automagically.
   // In case we have a real miss go ahead and return false and we'll pick
   // it up later.
-  if (Subtarget->hasDivide()) return false;
+  if (Subtarget->hasDivideInThumbMode())
+    return false;
 
   // Otherwise emit a libcall.
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;

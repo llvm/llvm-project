@@ -2220,6 +2220,9 @@ public:
     Base = BaseResult.get();
     QualType BaseType = Base->getType();
 
+    if (isArrow && !BaseType->isPointerType())
+      return ExprError();
+
     // FIXME: this involves duplicating earlier analysis in a lot of
     // cases; we should avoid this when possible.
     LookupResult R(getSema(), MemberNameInfo, Sema::LookupMemberName);

@@ -559,10 +559,10 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
     }
     unsigned PhysS = (RS.Sub == 0) ? PhysR : TRI->getSubReg(PhysR, RS.Sub);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysS);
-    switch (RC->getSize()) {
-      case 4:
+    switch (TRI->getRegSizeInBits(*RC)) {
+      case 32:
         return IfTrue ? A2_tfrt : A2_tfrf;
-      case 8:
+      case 64:
         return IfTrue ? A2_tfrpt : A2_tfrpf;
     }
     llvm_unreachable("Invalid register operand");

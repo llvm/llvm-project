@@ -8,8 +8,6 @@
 // RUN: %env_asan_opts=coverage=1:coverage_bitset=1:verbosity=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3
 // RUN: %clangxx_asan -O1 -fsanitize-coverage=edge -mllvm -sanitizer-coverage-block-threshold=0 %s -o %t
 // RUN: %env_asan_opts=coverage=1:coverage_bitset=1:verbosity=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3
-// RUN: %clangxx_asan -O1 -fsanitize-coverage=edge,8bit-counters %s -o %t
-// RUN: %env_asan_opts=coverage=1:coverage_counters=1:verbosity=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK_COUNTERS
 
 // RUN: %env_asan_opts=coverage=1:coverage_bitset=0:verbosity=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3_NOBITSET
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3_NOBITSET
@@ -31,4 +29,3 @@ int main(int argc, char **argv) {
 // CHECK3:  2 PCs written
 // CHECK3_NOBITSET-NOT: bitset of
 // CHECK3_NOPCS-NOT: PCs written
-// CHECK_COUNTERS: CovDump: 3 counters written for

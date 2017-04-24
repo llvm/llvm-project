@@ -6284,9 +6284,11 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
                                 ArrayRef<MachineOperand> Cond, unsigned TrueReg,
                                 unsigned FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
   unsigned Opc = getCMovFromCond((X86::CondCode)Cond[0].getImm(),
-                                 MRI.getRegClass(DstReg)->getSize(),
+                                 TRI.getRegSizeInBits(RC) / 8,
                                  false /*HasMemoryOperand*/);
   BuildMI(MBB, I, DL, get(Opc), DstReg).addReg(FalseReg).addReg(TrueReg);
 }
@@ -6557,7 +6559,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   bool HasAVX512 = STI.hasAVX512();
   bool HasVLX = STI.hasVLX();
 
-  switch (RC->getSize()) {
+  switch (STI.getRegisterInfo()->getSpillSize(*RC)) {
   default:
     llvm_unreachable("Unknown spill size");
   case 1:
@@ -6603,28 +6605,36 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
     assert(X86::RFP80RegClass.hasSubClassEq(RC) && "Unknown 10-byte regclass");
     return load ? X86::LD_Fp80m : X86::ST_FpP80m;
   case 16: {
-    assert(X86::VR128XRegClass.hasSubClassEq(RC) && "Unknown 16-byte regclass");
-    // If stack is realigned we can use aligned stores.
-    if (isStackAligned)
-      return load ?
-        (HasVLX    ? X86::VMOVAPSZ128rm :
-         HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX :
-         HasAVX    ? X86::VMOVAPSrm :
-                     X86::MOVAPSrm):
-        (HasVLX    ? X86::VMOVAPSZ128mr :
-         HasAVX512 ? X86::VMOVAPSZ128mr_NOVLX :
-         HasAVX    ? X86::VMOVAPSmr :
-                     X86::MOVAPSmr);
-    else
-      return load ?
-        (HasVLX    ? X86::VMOVUPSZ128rm :
-         HasAVX512 ? X86::VMOVUPSZ128rm_NOVLX :
-         HasAVX    ? X86::VMOVUPSrm :
-                     X86::MOVUPSrm):
-        (HasVLX    ? X86::VMOVUPSZ128mr :
-         HasAVX512 ? X86::VMOVUPSZ128mr_NOVLX :
-         HasAVX    ? X86::VMOVUPSmr :
-                     X86::MOVUPSmr);
+    if (X86::VR128XRegClass.hasSubClassEq(RC)) {
+      // If stack is realigned we can use aligned stores.
+      if (isStackAligned)
+        return load ?
+          (HasVLX    ? X86::VMOVAPSZ128rm :
+           HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX :
+           HasAVX    ? X86::VMOVAPSrm :
+                       X86::MOVAPSrm):
+          (HasVLX    ? X86::VMOVAPSZ128mr :
+           HasAVX512 ? X86::VMOVAPSZ128mr_NOVLX :
+           HasAVX    ? X86::VMOVAPSmr :
+                       X86::MOVAPSmr);
+      else
+        return load ?
+          (HasVLX    ? X86::VMOVUPSZ128rm :
+           HasAVX512 ? X86::VMOVUPSZ128rm_NOVLX :
+           HasAVX    ? X86::VMOVUPSrm :
+                       X86::MOVUPSrm):
+          (HasVLX    ? X86::VMOVUPSZ128mr :
+           HasAVX512 ? X86::VMOVUPSZ128mr_NOVLX :
+           HasAVX    ? X86::VMOVUPSmr :
+                       X86::MOVUPSmr);
+    }
+    if (X86::BNDRRegClass.hasSubClassEq(RC)) {
+      if (STI.is64Bit())
+        return load ? X86::BNDMOVRM64rm : X86::BNDMOVMR64mr;
+      else
+        return load ? X86::BNDMOVRM32rm : X86::BNDMOVMR32mr;
+    }
+    llvm_unreachable("Unknown 16-byte regclass");
   }
   case 32:
     assert(X86::VR256XRegClass.hasSubClassEq(RC) && "Unknown 32-byte regclass");
@@ -6709,9 +6719,9 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
-  assert(MF.getFrameInfo().getObjectSize(FrameIdx) >= RC->getSize() &&
+  assert(MF.getFrameInfo().getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
          "Stack slot too small for store");
-  unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+  unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
   bool isAligned =
       (Subtarget.getFrameLowering()->getStackAlignment() >= Alignment) ||
       RI.canRealignStack(MF);
@@ -6728,7 +6738,8 @@ void X86InstrInfo::storeRegToAddr(MachineFunction &MF, unsigned SrcReg,
                                   MachineInstr::mmo_iterator MMOBegin,
                                   MachineInstr::mmo_iterator MMOEnd,
                                   SmallVectorImpl<MachineInstr*> &NewMIs) const {
-  unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
   bool isAligned = MMOBegin != MMOEnd &&
                    (*MMOBegin)->getAlignment() >= Alignment;
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
@@ -6748,7 +6759,7 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
-  unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+  unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
   bool isAligned =
       (Subtarget.getFrameLowering()->getStackAlignment() >= Alignment) ||
       RI.canRealignStack(MF);
@@ -6763,7 +6774,8 @@ void X86InstrInfo::loadRegFromAddr(MachineFunction &MF, unsigned DestReg,
                                  MachineInstr::mmo_iterator MMOBegin,
                                  MachineInstr::mmo_iterator MMOEnd,
                                  SmallVectorImpl<MachineInstr*> &NewMIs) const {
-  unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
   bool isAligned = MMOBegin != MMOEnd &&
                    (*MMOBegin)->getAlignment() >= Alignment;
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
@@ -7222,7 +7234,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         NewOpc = getSETFromCond(NewCC, HasMemoryOperand);
       else {
         unsigned DstReg = Instr.getOperand(0).getReg();
-        NewOpc = getCMovFromCond(NewCC, MRI->getRegClass(DstReg)->getSize(),
+        const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+        NewOpc = getCMovFromCond(NewCC, TRI->getRegSizeInBits(*DstRC)/8,
                                  HasMemoryOperand);
       }
 
@@ -7750,7 +7763,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       unsigned DstIdx = (Imm >> 4) & 3;
       unsigned SrcIdx = (Imm >> 6) & 3;
 
-      unsigned RCSize = getRegClass(MI.getDesc(), OpNum, &RI, MF)->getSize();
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
+      unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if (Size <= RCSize && 4 <= Align) {
         int PtrOffset = SrcIdx * 4;
         unsigned NewImm = (DstIdx << 4) | ZMask;
@@ -7772,7 +7787,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     // To fold the load, adjust the pointer to the upper and use (V)MOVLPS.
     // TODO: In most cases AVX doesn't have a 8-byte alignment requirement.
     if (OpNum == 2) {
-      unsigned RCSize = getRegClass(MI.getDesc(), OpNum, &RI, MF)->getSize();
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
+      unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if (Size <= RCSize && 8 <= Align) {
         unsigned NewOpCode =
             (MI.getOpcode() == X86::VMOVHLPSZrr) ? X86::VMOVLPSZ128rm :
@@ -7861,7 +7878,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return nullptr;
       bool NarrowToMOV32rm = false;
       if (Size) {
-        unsigned RCSize = getRegClass(MI.getDesc(), OpNum, &RI, MF)->getSize();
+        const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+        const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum,
+                                                    &RI, MF);
+        unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
         if (Size < RCSize) {
           // Check if it's safe to fold the load. If the size of the object is
           // narrower than the load width, then it's not.
@@ -8302,11 +8322,13 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
                                              const MachineFunction &MF) {
   unsigned Opc = LoadMI.getOpcode();
   unsigned UserOpc = UserMI.getOpcode();
-  unsigned RegSize =
-      MF.getRegInfo().getRegClass(LoadMI.getOperand(0).getReg())->getSize();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterClass *RC = 
+      MF.getRegInfo().getRegClass(LoadMI.getOperand(0).getReg());
+  unsigned RegSize = TRI.getRegSizeInBits(*RC);
 
   if ((Opc == X86::MOVSSrm || Opc == X86::VMOVSSrm || Opc == X86::VMOVSSZrm) &&
-      RegSize > 4) {
+      RegSize > 32) {
     // These instructions only load 32 bits, we can't fold them if the
     // destination register is wider than 32 bits (4 bytes), and its user
     // instruction isn't scalar (SS).
@@ -8357,7 +8379,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   }
 
   if ((Opc == X86::MOVSDrm || Opc == X86::VMOVSDrm || Opc == X86::VMOVSDZrm) &&
-      RegSize > 8) {
+      RegSize > 64) {
     // These instructions only load 64 bits, we can't fold them if the
     // destination register is wider than 64 bits (8 bytes), and its user
     // instruction isn't scalar (SD).
@@ -8702,6 +8724,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   bool FoldedStore = I->second.second & TB_FOLDED_STORE;
   const MCInstrDesc &MCID = get(Opc);
   MachineFunction &MF = DAG.getMachineFunction();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetRegisterClass *RC = getRegClass(MCID, Index, &RI, MF);
   unsigned NumDefs = MCID.NumDefs;
   std::vector<SDValue> AddrOps;
@@ -8724,7 +8747,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   // Emit the load instruction.
   SDNode *Load = nullptr;
   if (FoldedLoad) {
-    EVT VT = *RC->vt_begin();
+    EVT VT = *TRI.legalclasstypes_begin(*RC);
     std::pair<MachineInstr::mmo_iterator,
               MachineInstr::mmo_iterator> MMOs =
       MF.extractLoadMemRefs(cast<MachineSDNode>(N)->memoperands_begin(),
@@ -8736,7 +8759,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
       return false;
     // FIXME: If a VR128 can have size 32, we should be checking if a 32-byte
     // memory access is slow above.
-    unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+    unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
     bool isAligned = (*MMOs.first) &&
                      (*MMOs.first)->getAlignment() >= Alignment;
     Load = DAG.getMachineNode(getLoadRegOpcode(0, RC, isAligned, Subtarget), dl,
@@ -8752,7 +8775,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   const TargetRegisterClass *DstRC = nullptr;
   if (MCID.getNumDefs() > 0) {
     DstRC = getRegClass(MCID, 0, &RI, MF);
-    VTs.push_back(*DstRC->vt_begin());
+    VTs.push_back(*TRI.legalclasstypes_begin(*DstRC));
   }
   for (unsigned i = 0, e = N->getNumValues(); i != e; ++i) {
     EVT VT = N->getValueType(i);
@@ -8781,7 +8804,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
       return false;
     // FIXME: If a VR128 can have size 32, we should be checking if a 32-byte
     // memory access is slow above.
-    unsigned Alignment = std::max<uint32_t>(RC->getSize(), 16);
+    unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
     bool isAligned = (*MMOs.first) &&
                      (*MMOs.first)->getAlignment() >= Alignment;
     SDNode *Store =
@@ -9514,7 +9537,7 @@ void X86InstrInfo::setExecutionDomain(MachineInstr &MI, unsigned Domain) const {
 }
 
 /// Return the noop instruction to use for a noop.
-void X86InstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+void X86InstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(X86::NOOP);
 }
 

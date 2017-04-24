@@ -11,7 +11,12 @@
 
 #include "LinePrinter.h"
 #include "PrettyClassDefinitionDumper.h"
+#include "PrettyEnumDumper.h"
+#include "PrettyFunctionDumper.h"
+#include "PrettyTypedefDumper.h"
 #include "PrettyVariableDumper.h"
+#include "PrettyVariableDumper.h"
+#include "llvm-pdbdump.h"
 
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
@@ -23,11 +28,20 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 PrettyClassLayoutGraphicalDumper::PrettyClassLayoutGraphicalDumper(
-    LinePrinter &P, uint32_t InitialOffset)
-    : PDBSymDumper(true), Printer(P), ClassOffsetZero(InitialOffset),
-      CurrentAbsoluteOffset(InitialOffset) {}
+    LinePrinter &P, uint32_t RecurseLevel, uint32_t InitialOffset)
+    : PDBSymDumper(true), Printer(P), RecursionLevel(RecurseLevel),
+      ClassOffsetZero(InitialOffset), CurrentAbsoluteOffset(InitialOffset) {}
 
 bool PrettyClassLayoutGraphicalDumper::start(const UDTLayoutBase &Layout) {
+
+  if (RecursionLevel == 1 &&
+      opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::All) {
+    for (auto &Other : Layout.other_items())
+      Other->dump(*this);
+    for (auto &Func : Layout.funcs())
+      Func->dump(*this);
+  }
+
   const BitVector &UseMap = Layout.usedBytes();
   int NextPaddingByte = UseMap.find_first_unset();
 
@@ -53,16 +67,31 @@ bool PrettyClassLayoutGraphicalDumper::start(const UDTLayoutBase &Layout) {
       }
     }
 
-    CurrentItem = Item.get();
-    Item->getSymbol().dump(*this);
+    CurrentItem = Item;
+    if (Item->isVBPtr()) {
+      VTableLayoutItem &Layout = static_cast<VTableLayoutItem &>(*CurrentItem);
+
+      VariableDumper VarDumper(Printer);
+      VarDumper.startVbptr(CurrentAbsoluteOffset, Layout.getSize());
+    } else {
+      if (auto Sym = Item->getSymbol())
+        Sym->dump(*this);
+    }
+
+    if (Item->getLayoutSize() > 0) {
+      uint32_t Prev = RelativeOffset + Item->getLayoutSize() - 1;
+      NextPaddingByte = UseMap.find_next_unset(Prev);
+    }
   }
 
-  if (NextPaddingByte >= 0 && Layout.getClassSize() > 1) {
-    uint32_t Amount = Layout.getClassSize() - NextPaddingByte;
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Padding).get() << "<padding> (" << Amount
-                                                     << " bytes)";
-    DumpedAnything = true;
+  auto TailPadding = Layout.tailPadding();
+  if (TailPadding > 0) {
+    if (TailPadding != 1 || Layout.getSize() != 1) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Padding).get()
+          << "<padding> (" << TailPadding << " bytes)";
+      DumpedAnything = true;
+    }
   }
 
   return DumpedAnything;
@@ -85,22 +114,39 @@ void PrettyClassLayoutGraphicalDumper::dump(
   Printer.NewLine();
   BaseClassLayout &Layout = static_cast<BaseClassLayout &>(*CurrentItem);
 
-  std::string Label = Layout.isVirtualBase() ? "vbase" : "base";
+  std::string Label = "base";
+  if (Layout.isVirtualBase()) {
+    Label.insert(Label.begin(), 'v');
+    if (Layout.getBase().isIndirectVirtualBaseClass())
+      Label.insert(Label.begin(), 'i');
+  }
   Printer << Label << " ";
 
+  uint32_t Size = Layout.isEmptyBase() ? 1 : Layout.getLayoutSize();
+
   WithColor(Printer, PDB_ColorItem::Offset).get()
-      << "+" << format_hex(CurrentAbsoluteOffset, 4)
-      << " [sizeof=" << Layout.getSize() << "] ";
+      << "+" << format_hex(CurrentAbsoluteOffset, 4) << " [sizeof=" << Size
+      << "] ";
 
   WithColor(Printer, PDB_ColorItem::Identifier).get() << Layout.getName();
 
-  Printer.Indent();
-  uint32_t ChildOffsetZero = ClassOffsetZero + Layout.getOffsetInParent();
-  PrettyClassLayoutGraphicalDumper BaseDumper(Printer, ChildOffsetZero);
-  BaseDumper.start(Layout);
-  Printer.Unindent();
+  if (shouldRecurse()) {
+    Printer.Indent();
+    uint32_t ChildOffsetZero = ClassOffsetZero + Layout.getOffsetInParent();
+    PrettyClassLayoutGraphicalDumper BaseDumper(Printer, RecursionLevel + 1,
+                                                ChildOffsetZero);
+    DumpedAnything |= BaseDumper.start(Layout);
+    Printer.Unindent();
+  }
 
   DumpedAnything = true;
+}
+
+bool PrettyClassLayoutGraphicalDumper::shouldRecurse() const {
+  uint32_t Limit = opts::pretty::ClassRecursionDepth;
+  if (Limit == 0)
+    return true;
+  return RecursionLevel < Limit;
 }
 
 void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolData &Symbol) {
@@ -112,9 +158,11 @@ void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolData &Symbol) {
   VariableDumper VarDumper(Printer);
   VarDumper.start(Symbol, ClassOffsetZero);
 
-  if (Layout.hasUDTLayout()) {
+  if (Layout.hasUDTLayout() && shouldRecurse()) {
+    uint32_t ChildOffsetZero = ClassOffsetZero + Layout.getOffsetInParent();
     Printer.Indent();
-    PrettyClassLayoutGraphicalDumper TypeDumper(Printer, ClassOffsetZero);
+    PrettyClassLayoutGraphicalDumper TypeDumper(Printer, RecursionLevel + 1,
+                                                ChildOffsetZero);
     TypeDumper.start(Layout.getUDTLayout());
     Printer.Unindent();
   }
@@ -125,27 +173,43 @@ void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolData &Symbol) {
 void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolTypeVTable &Symbol) {
   assert(CurrentItem != nullptr);
 
-  VTableLayoutItem &Layout = static_cast<VTableLayoutItem &>(*CurrentItem);
-
   VariableDumper VarDumper(Printer);
   VarDumper.start(Symbol, ClassOffsetZero);
 
-  Printer.Indent();
-  uint32_t Index = 0;
-  for (auto &Func : Layout.funcs()) {
-    Printer.NewLine();
-    std::string Name = Func->getName();
-    auto ParentClass =
-        unique_dyn_cast<PDBSymbolTypeUDT>(Func->getClassParent());
-    assert(ParentClass);
-    WithColor(Printer, PDB_ColorItem::Address).get() << " [" << Index << "] ";
-    WithColor(Printer, PDB_ColorItem::Identifier).get()
-        << "&" << ParentClass->getName();
-    Printer << "::";
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << Name;
-    ++Index;
-  }
-  Printer.Unindent();
+  DumpedAnything = true;
+}
+
+void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolTypeEnum &Symbol) {
+  DumpedAnything = true;
+  Printer.NewLine();
+  EnumDumper Dumper(Printer);
+  Dumper.start(Symbol);
+}
+
+void PrettyClassLayoutGraphicalDumper::dump(
+    const PDBSymbolTypeTypedef &Symbol) {
+  DumpedAnything = true;
+  Printer.NewLine();
+  TypedefDumper Dumper(Printer);
+  Dumper.start(Symbol);
+}
+
+void PrettyClassLayoutGraphicalDumper::dump(
+    const PDBSymbolTypeBuiltin &Symbol) {}
+
+void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolTypeUDT &Symbol) {}
+
+void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolFunc &Symbol) {
+  if (Printer.IsSymbolExcluded(Symbol.getName()))
+    return;
+  if (Symbol.isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
+    return;
+  if (Symbol.getLength() == 0 && !Symbol.isPureVirtual() &&
+      !Symbol.isIntroVirtualFunction())
+    return;
 
   DumpedAnything = true;
+  Printer.NewLine();
+  FunctionDumper Dumper(Printer);
+  Dumper.start(Symbol, FunctionDumper::PointerType::None);
 }

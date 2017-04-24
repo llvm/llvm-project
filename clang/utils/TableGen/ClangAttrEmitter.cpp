@@ -1611,7 +1611,36 @@ const char *AttributeSubjectMatchRule::EnumName = "attr::SubjectMatchRule";
 
 struct PragmaClangAttributeSupport {
   std::vector<AttributeSubjectMatchRule> Rules;
-  llvm::DenseMap<const Record *, AttributeSubjectMatchRule> SubjectsToRules;
+
+  class RuleOrAggregateRuleSet {
+    std::vector<AttributeSubjectMatchRule> Rules;
+    bool IsRule;
+    RuleOrAggregateRuleSet(ArrayRef<AttributeSubjectMatchRule> Rules,
+                           bool IsRule)
+        : Rules(Rules), IsRule(IsRule) {}
+
+  public:
+    bool isRule() const { return IsRule; }
+
+    const AttributeSubjectMatchRule &getRule() const {
+      assert(IsRule && "not a rule!");
+      return Rules[0];
+    }
+
+    ArrayRef<AttributeSubjectMatchRule> getAggregateRuleSet() const {
+      return Rules;
+    }
+
+    static RuleOrAggregateRuleSet
+    getRule(const AttributeSubjectMatchRule &Rule) {
+      return RuleOrAggregateRuleSet(Rule, /*IsRule=*/true);
+    }
+    static RuleOrAggregateRuleSet
+    getAggregateRuleSet(ArrayRef<AttributeSubjectMatchRule> Rules) {
+      return RuleOrAggregateRuleSet(Rules, /*IsRule=*/false);
+    }
+  };
+  llvm::DenseMap<const Record *, RuleOrAggregateRuleSet> SubjectsToRules;
 
   PragmaClangAttributeSupport(RecordKeeper &Records);
 
@@ -1626,6 +1655,15 @@ struct PragmaClangAttributeSupport {
 
 } // end anonymous namespace
 
+static bool doesDeclDeriveFrom(const Record *D, const Record *Base) {
+  const Record *CurrentBase = D->getValueAsDef("Base");
+  if (!CurrentBase)
+    return false;
+  if (CurrentBase == Base)
+    return true;
+  return doesDeclDeriveFrom(CurrentBase, Base);
+}
+
 PragmaClangAttributeSupport::PragmaClangAttributeSupport(
     RecordKeeper &Records) {
   std::vector<Record *> MetaSubjects =
@@ -1638,7 +1676,11 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
         SubjectContainer->getValueAsListOfDefs("Subjects");
     for (const auto *Subject : ApplicableSubjects) {
       bool Inserted =
-          SubjectsToRules.try_emplace(Subject, MetaSubject, Constraint).second;
+          SubjectsToRules
+              .try_emplace(Subject, RuleOrAggregateRuleSet::getRule(
+                                        AttributeSubjectMatchRule(MetaSubject,
+                                                                  Constraint)))
+              .second;
       if (!Inserted) {
         PrintFatalError("Attribute subject match rules should not represent"
                         "same attribute subjects.");
@@ -1651,6 +1693,37 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
         MetaSubject->getValueAsListOfDefs("Constraints");
     for (const auto *Constraint : Constraints)
       MapFromSubjectsToRules(Constraint, MetaSubject, Constraint);
+  }
+
+  std::vector<Record *> Aggregates =
+      Records.getAllDerivedDefinitions("AttrSubjectMatcherAggregateRule");
+  std::vector<Record *> DeclNodes = Records.getAllDerivedDefinitions("DDecl");
+  for (const auto *Aggregate : Aggregates) {
+    Record *SubjectDecl = Aggregate->getValueAsDef("Subject");
+
+    // Gather sub-classes of the aggregate subject that act as attribute
+    // subject rules.
+    std::vector<AttributeSubjectMatchRule> Rules;
+    for (const auto *D : DeclNodes) {
+      if (doesDeclDeriveFrom(D, SubjectDecl)) {
+        auto It = SubjectsToRules.find(D);
+        if (It == SubjectsToRules.end())
+          continue;
+        if (!It->second.isRule() || It->second.getRule().isSubRule())
+          continue; // Assume that the rule will be included as well.
+        Rules.push_back(It->second.getRule());
+      }
+    }
+
+    bool Inserted =
+        SubjectsToRules
+            .try_emplace(SubjectDecl,
+                         RuleOrAggregateRuleSet::getAggregateRuleSet(Rules))
+            .second;
+    if (!Inserted) {
+      PrintFatalError("Attribute subject match rules should not represent"
+                      "same attribute subjects.");
+    }
   }
 }
 
@@ -1738,24 +1811,25 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
     auto It = SubjectsToRules.find(Subject);
     assert(It != SubjectsToRules.end() &&
            "This attribute is unsupported by #pragma clang attribute");
-    AttributeSubjectMatchRule Rule = It->getSecond();
-    // The rule might be language specific, so only subtract it from the given
-    // rules if the specific language options are specified.
-    std::vector<Record *> LangOpts = Rule.getLangOpts();
-    SS << "  MatchRules.push_back(std::make_pair(" << Rule.getEnumValue()
-       << ", /*IsSupported=*/";
-    if (!LangOpts.empty()) {
-      for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
-        std::string Part = (*I)->getValueAsString("Name");
-        if ((*I)->getValueAsBit("Negated"))
-          SS << "!";
-        SS << "LangOpts." + Part;
-        if (I + 1 != E)
-          SS << " || ";
-      }
-    } else
-      SS << "true";
-    SS << "));\n";
+    for (const auto &Rule : It->getSecond().getAggregateRuleSet()) {
+      // The rule might be language specific, so only subtract it from the given
+      // rules if the specific language options are specified.
+      std::vector<Record *> LangOpts = Rule.getLangOpts();
+      SS << "  MatchRules.push_back(std::make_pair(" << Rule.getEnumValue()
+         << ", /*IsSupported=*/";
+      if (!LangOpts.empty()) {
+        for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I) {
+          std::string Part = (*I)->getValueAsString("Name");
+          if ((*I)->getValueAsBit("Negated"))
+            SS << "!";
+          SS << "LangOpts." + Part;
+          if (I + 1 != E)
+            SS << " || ";
+        }
+      } else
+        SS << "true";
+      SS << "));\n";
+    }
   }
   SS << "}\n\n";
   OS << SS.str();
@@ -2937,7 +3011,8 @@ static std::string CalculateDiagnostic(const Record &S) {
     Field = 1U << 12,
     CXXMethod = 1U << 13,
     ObjCProtocol = 1U << 14,
-    Enum = 1U << 15
+    Enum = 1U << 15,
+    Named = 1U << 16,
   };
   uint32_t SubMask = 0;
 
@@ -2972,6 +3047,7 @@ static std::string CalculateDiagnostic(const Record &S) {
                    .Case("Field", Field)
                    .Case("CXXMethod", CXXMethod)
                    .Case("Enum", Enum)
+                   .Case("Named", Named)
                    .Default(0);
     if (!V) {
       // Something wasn't in our mapping, so be helpful and let the developer
@@ -3030,6 +3106,9 @@ static std::string CalculateDiagnostic(const Record &S) {
     case ObjCProtocol | ObjCInterface:
       return "ExpectedObjectiveCInterfaceOrProtocol";
     case Field | Var: return "ExpectedFieldOrGlobalVar";
+
+    case Named:
+      return "ExpectedNamedDecl";
   }
 
   PrintFatalError(S.getLoc(),
@@ -3754,9 +3833,19 @@ void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
     for (const auto &Subject : llvm::enumerate(Subjects)) {
       if (Subject.index())
         OS << ", ";
-      OS << Support.SubjectsToRules.find(Subject.value())
-                ->getSecond()
-                .getEnumValueName();
+      PragmaClangAttributeSupport::RuleOrAggregateRuleSet &RuleSet =
+          Support.SubjectsToRules.find(Subject.value())->getSecond();
+      if (RuleSet.isRule()) {
+        OS << RuleSet.getRule().getEnumValueName();
+        continue;
+      }
+      OS << "(";
+      for (const auto &Rule : llvm::enumerate(RuleSet.getAggregateRuleSet())) {
+        if (Rule.index())
+          OS << ", ";
+        OS << Rule.value().getEnumValueName();
+      }
+      OS << ")";
     }
     OS << ")\n";
   }

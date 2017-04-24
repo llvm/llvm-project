@@ -32,7 +32,8 @@
 // new architecture inside sanitizer library.
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC) && \
     (SANITIZER_WORDSIZE == 64) &&                               \
-    (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__))
+    (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) || \
+     defined(__powerpc64__))
 #define CAN_SANITIZE_LEAKS 1
 #elif defined(__i386__) && \
     (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC)
@@ -118,6 +119,15 @@ typedef InternalMmapVector<uptr> Frontier;
 void InitializePlatformSpecificModules();
 void ProcessGlobalRegions(Frontier *frontier);
 void ProcessPlatformSpecificAllocations(Frontier *frontier);
+
+struct RootRegion {
+  uptr begin;
+  uptr size;
+};
+
+InternalMmapVector<RootRegion> const *GetRootRegions();
+void ScanRootRegion(Frontier *frontier, RootRegion const &region,
+                    uptr region_begin, uptr region_end, uptr prot);
 // Run stoptheworld while holding any platform-specific locks.
 void DoStopTheWorld(StopTheWorldCallback callback, void* argument);
 
@@ -212,6 +222,10 @@ uptr PointsIntoChunk(void *p);
 uptr GetUserBegin(uptr chunk);
 // Helper for __lsan_ignore_object().
 IgnoreObjectResult IgnoreObjectLocked(const void *p);
+
+// Return the linker module, if valid for the platform.
+LoadedModule *GetLinker();
+
 // Wrapper for chunk metadata operations.
 class LsanMetadata {
  public:

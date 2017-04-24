@@ -432,6 +432,7 @@ namespace {
 enum PointerStripKind {
   PSK_ZeroIndices,
   PSK_ZeroIndicesAndAliases,
+  PSK_ZeroIndicesAndAliasesAndBarriers,
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
@@ -450,6 +451,7 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndicesAndAliases:
+      case PSK_ZeroIndicesAndAliasesAndBarriers:
       case PSK_ZeroIndices:
         if (!GEP->hasAllZeroIndices())
           return V;
@@ -472,12 +474,20 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
         return V;
       V = GA->getAliasee();
     } else {
-      if (auto CS = ImmutableCallSite(V))
+      if (auto CS = ImmutableCallSite(V)) {
         if (const Value *RV = CS.getReturnedArgOperand()) {
           V = RV;
           continue;
         }
-
+        // The result of invariant.group.barrier must alias it's argument,
+        // but it can't be marked with returned attribute, that's why it needs
+        // special case.
+        if (StripKind == PSK_ZeroIndicesAndAliasesAndBarriers &&
+            CS.getIntrinsicID() == Intrinsic::invariant_group_barrier) {
+          V = CS.getArgOperand(0);
+          continue;
+        }
+      }
       return V;
     }
     assert(V->getType()->isPointerTy() && "Unexpected operand type!");
@@ -497,6 +507,11 @@ const Value *Value::stripPointerCastsNoFollowAliases() const {
 
 const Value *Value::stripInBoundsConstantOffsets() const {
   return stripPointerCastsAndOffsets<PSK_InBoundsConstantIndices>(this);
+}
+
+const Value *Value::stripPointerCastsAndBarriers() const {
+  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliasesAndBarriers>(
+      this);
 }
 
 const Value *

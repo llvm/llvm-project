@@ -1,5 +1,5 @@
 // Test that out-of-scope local variables are ignored by LSan.
-// RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_registers=0:use_stacks=1"
+// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=1"
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=$LSAN_BASE":exitcode=0" %run %t 2>&1 | FileCheck --check-prefix=CHECK-sanity %s

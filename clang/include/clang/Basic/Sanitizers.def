@@ -47,6 +47,9 @@ SANITIZER("kernel-address", KernelAddress)
 // MemorySanitizer
 SANITIZER("memory", Memory)
 
+// libFuzzer
+SANITIZER("fuzzer", Fuzzer)
+
 // ThreadSanitizer
 SANITIZER("thread", Thread)
 

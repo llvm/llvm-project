@@ -260,5 +260,13 @@ TEST(DeLICM, isConflicting) {
                                   {"{}", nullptr, "{ Dom[0] }"}));
   EXPECT_FALSE(checkIsConflicting({"{}", nullptr, "{ Dom[1] }"},
                                   {"{}", nullptr, "{ Dom[0] }"}));
+
+  // Check written vs. written with known values.
+  EXPECT_FALSE(checkIsConflictingKnown({"{}", nullptr, "{ Dom[0] -> Val[] }"},
+                                       {"{}", nullptr, "{ Dom[0] -> Val[] }"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{}", nullptr, "{ Dom[0] -> ValA[] }"},
+                                      {"{}", nullptr, "{ Dom[0] -> ValB[] }"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{}", nullptr, "{ Dom[0] -> Val[] }"},
+                                      {"{}", nullptr, "{ Dom[0] -> [] }"}));
 }
 } // anonymous namespace

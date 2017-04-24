@@ -2797,7 +2797,7 @@ def t2SMLSLDX : T2DualHalfMulAddLong<0b101, 0b1101, "smlsldx">;
 def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "sdiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (sdiv rGPR:$Rn, rGPR:$Rm))]>,
-                 Requires<[HasDivide, IsThumb, HasV8MBaseline]>,
+                 Requires<[HasDivideInThumb, IsThumb, HasV8MBaseline]>,
              Sched<[WriteDIV]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b011100;
@@ -2809,7 +2809,7 @@ def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
 def t2UDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "udiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (udiv rGPR:$Rn, rGPR:$Rm))]>,
-                 Requires<[HasDivide, IsThumb, HasV8MBaseline]>,
+                 Requires<[HasDivideInThumb, IsThumb, HasV8MBaseline]>,
              Sched<[WriteDIV]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b011101;

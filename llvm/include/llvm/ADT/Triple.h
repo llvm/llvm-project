@@ -140,7 +140,8 @@ public:
     Myriad,
     AMD,
     Mesa,
-    LastVendorType = Mesa
+    SUSE,
+    LastVendorType = SUSE
   };
   enum OSType {
     UnknownOS,

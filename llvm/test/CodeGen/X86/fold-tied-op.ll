@@ -7,7 +7,6 @@ target triple = "i386--netbsd"
 
 ; CHECK-LABEL: fn1
 ; CHECK:       addl  {{.*#+}} 4-byte Folded Reload
-; CHECK:       addl  {{.*#+}} 4-byte Folded Reload
 ; CHECK:       imull {{.*#+}} 4-byte Folded Reload
 ; CHECK:       orl   {{.*#+}} 4-byte Folded Reload
 ; CHECK:       retl

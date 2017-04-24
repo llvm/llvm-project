@@ -239,7 +239,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
     unsigned Reg = CSI[i - 1].getReg();
     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
 
-    assert(TRI->getMinimalPhysRegClass(Reg)->getSize() == 1 &&
+    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
 
     // Add the callee-saved register as live-in only if it is not already a
@@ -277,7 +277,7 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
   for (const CalleeSavedInfo &CCSI : CSI) {
     unsigned Reg = CCSI.getReg();
 
-    assert(TRI->getMinimalPhysRegClass(Reg)->getSize() == 1 &&
+    assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
 
     BuildMI(MBB, MI, DL, TII.get(AVR::POPRd), Reg);

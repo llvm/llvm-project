@@ -899,7 +899,7 @@ inline
 constexpr in_place_t in_place{};
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS in_place_type_t {
+struct _LIBCPP_TEMPLATE_VIS in_place_type_t {
     explicit in_place_type_t() = default;
 };
 template <class _Tp>

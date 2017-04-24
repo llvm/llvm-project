@@ -1151,7 +1151,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end())
       return DAG.getFrameIndex(SI->second,
-                               TLI.getPointerTy(DAG.getDataLayout()));
+                               TLI.getFrameIndexTy(DAG.getDataLayout()));
   }
 
   // If this is an instruction which fast-isel has deferred, select it now.
@@ -3969,9 +3969,9 @@ void SelectionDAGBuilder::visitFence(const FenceInst &I) {
   SDValue Ops[3];
   Ops[0] = getRoot();
   Ops[1] = DAG.getConstant((unsigned)I.getOrdering(), dl,
-                           TLI.getPointerTy(DAG.getDataLayout()));
+                           TLI.getFenceOperandTy(DAG.getDataLayout()));
   Ops[2] = DAG.getConstant(I.getSynchScope(), dl,
-                           TLI.getPointerTy(DAG.getDataLayout()));
+                           TLI.getFenceOperandTy(DAG.getDataLayout()));
   DAG.setRoot(DAG.getNode(ISD::ATOMIC_FENCE, dl, MVT::Other, Ops));
 }
 
@@ -5617,7 +5617,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       SDValue Ops[2];
       Ops[0] = getRoot();
       Ops[1] =
-          DAG.getFrameIndex(FI, TLI.getPointerTy(DAG.getDataLayout()), true);
+          DAG.getFrameIndex(FI, TLI.getFrameIndexTy(DAG.getDataLayout()), true);
       unsigned Opcode = (IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END);
 
       Res = DAG.getNode(Opcode, sdl, MVT::Other, Ops);
@@ -6630,7 +6630,7 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
   unsigned Align = DL.getPrefTypeAlignment(Ty);
   MachineFunction &MF = DAG.getMachineFunction();
   int SSFI = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
-  SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getPointerTy(DL));
+  SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
   Chain = DAG.getStore(Chain, Location, OpInfo.CallOperand, StackSlot,
                        MachinePointerInfo::getFixedStack(MF, SSFI));
   OpInfo.CallOperand = StackSlot;
@@ -6653,12 +6653,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<unsigned, 4> Regs;
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
   std::pair<unsigned, const TargetRegisterClass *> PhysReg =
-      TLI.getRegForInlineAsmConstraint(MF.getSubtarget().getRegisterInfo(),
-                                       OpInfo.ConstraintCode,
+      TLI.getRegForInlineAsmConstraint(&TRI, OpInfo.ConstraintCode,
                                        OpInfo.ConstraintVT);
 
   unsigned NumRegs = 1;
@@ -6666,12 +6666,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
     // If this is a FP input in an integer register (or visa versa) insert a bit
     // cast of the input value.  More generally, handle any case where the input
     // value disagrees with the register class we plan to stick this in.
-    if (OpInfo.Type == InlineAsm::isInput &&
-        PhysReg.second && !PhysReg.second->hasType(OpInfo.ConstraintVT)) {
+    if (OpInfo.Type == InlineAsm::isInput && PhysReg.second &&
+        !TRI.isTypeLegalForClass(*PhysReg.second, OpInfo.ConstraintVT)) {
       // Try to convert to the first EVT that the reg class contains.  If the
       // types are identical size, use a bitcast to convert (e.g. two differing
       // vector types).
-      MVT RegVT = *PhysReg.second->vt_begin();
+      MVT RegVT = *TRI.legalclasstypes_begin(*PhysReg.second);
       if (RegVT.getSizeInBits() == OpInfo.CallOperand.getValueSizeInBits()) {
         OpInfo.CallOperand = DAG.getNode(ISD::BITCAST, DL,
                                          RegVT, OpInfo.CallOperand);
@@ -6699,12 +6699,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   if (unsigned AssignedReg = PhysReg.first) {
     const TargetRegisterClass *RC = PhysReg.second;
     if (OpInfo.ConstraintVT == MVT::Other)
-      ValueVT = *RC->vt_begin();
+      ValueVT = *TRI.legalclasstypes_begin(*RC);
 
     // Get the actual register value type.  This is important, because the user
     // may have asked for (e.g.) the AX register in i32 type.  We need to
     // remember that AX is actually i16 to get the right extension.
-    RegVT = *RC->vt_begin();
+    RegVT = *TRI.legalclasstypes_begin(*RC);
 
     // This is a explicit reference to a physical register.
     Regs.push_back(AssignedReg);
@@ -6730,7 +6730,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   // Otherwise, if this was a reference to an LLVM register class, create vregs
   // for this reference.
   if (const TargetRegisterClass *RC = PhysReg.second) {
-    RegVT = *RC->vt_begin();
+    RegVT = *TRI.legalclasstypes_begin(*RC);
     if (OpInfo.ConstraintVT == MVT::Other)
       ValueVT = RegVT;
 
@@ -7393,7 +7393,7 @@ static void addStackMapLiveVars(ImmutableCallSite CS, unsigned StartIdx,
     } else if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(OpVal)) {
       const TargetLowering &TLI = Builder.DAG.getTargetLoweringInfo();
       Ops.push_back(Builder.DAG.getTargetFrameIndex(
-          FI->getIndex(), TLI.getPointerTy(Builder.DAG.getDataLayout())));
+          FI->getIndex(), TLI.getFrameIndexTy(Builder.DAG.getDataLayout())));
     } else
       Ops.push_back(OpVal);
   }
@@ -7661,7 +7661,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     DemoteStackIdx = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
     Type *StackSlotPtrType = PointerType::getUnqual(CLI.RetTy);
 
-    DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getPointerTy(DL));
+    DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
     ArgListEntry Entry;
     Entry.Node = DemoteStackSlot;
     Entry.Ty = StackSlotPtrType;

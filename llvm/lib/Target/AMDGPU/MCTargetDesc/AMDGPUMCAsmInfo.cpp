@@ -15,6 +15,7 @@ using namespace llvm;
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
   CodePointerSize = (TT.getArch() == Triple::amdgcn) ? 8 : 4;
+  StackGrowsUp = true;
   HasSingleParameterDotFile = false;
   //===------------------------------------------------------------------===//
   MinInstAlignment = 4;

@@ -16,7 +16,6 @@
 
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/MC/MachineLocation.h"
 
 namespace llvm {
 
@@ -73,6 +72,8 @@ public:
   }
   /// Determine whether there are any operations left in this expression.
   operator bool() const { return Start != End; }
+  DIExpression::expr_op_iterator begin() const { return Start; }
+  DIExpression::expr_op_iterator end() const { return End; }
 
   /// Retrieve the fragment information, if any.
   Optional<DIExpression::FragmentInfo> getFragmentInfo() const {
@@ -112,8 +113,6 @@ protected:
     SubRegisterSizeInBits = SizeInBits;
     SubRegisterOffsetInBits = OffsetInBits;
   }
-
-  void setMemoryLocationKind();
 
   /// Add masking operations to stencil out a subregister.
   void maskSubRegister();
@@ -192,17 +191,24 @@ public:
   /// Emit an unsigned constant.
   void addUnsignedConstant(const APInt &Value);
 
+  /// Lock this down to become a memory location description.
+  void setMemoryLocationKind() {
+    assert(LocationKind == Unknown);
+    LocationKind = Memory;
+  }
+
   /// Emit a machine register location. As an optimization this may also consume
   /// the prefix of a DwarfExpression if a more efficient representation for
   /// combining the register location and the first operation exists.
   ///
-  /// \param FragmentOffsetInBits     If this is one fragment out of a fragmented
+  /// \param FragmentOffsetInBits     If this is one fragment out of a
+  /// fragmented
   ///                                 location, this is the offset of the
   ///                                 fragment inside the entire variable.
   /// \return                         false if no DWARF register exists
   ///                                 for MachineReg.
-  bool addMachineLocExpression(const TargetRegisterInfo &TRI,
-                               DIExpressionCursor &Expr, MachineLocation Loc,
+  bool addMachineRegExpression(const TargetRegisterInfo &TRI,
+                               DIExpressionCursor &Expr, unsigned MachineReg,
                                unsigned FragmentOffsetInBits = 0);
   /// Emit all remaining operations in the DIExpressionCursor.
   ///

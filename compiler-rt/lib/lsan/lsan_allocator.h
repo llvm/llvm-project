@@ -59,7 +59,7 @@ typedef CompactSizeClassMap SizeClassMap;
 typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE,
     sizeof(ChunkMetadata), SizeClassMap, kRegionSizeLog, ByteMap>
     PrimaryAllocator;
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(__powerpc64__)
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = 0x600000000000ULL;
   static const uptr kSpaceSize =  0x40000000000ULL; // 4T.

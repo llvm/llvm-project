@@ -53,7 +53,6 @@ void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     return;
   }
 
-  SmallVector<uint64_t, 4> BitOffsets;
   SmallVector<unsigned, 8> SplitRegs;
 
   EVT PartVT = TLI.getRegisterType(Context, VT);
@@ -64,8 +63,10 @@ void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
         ArgInfo{MRI.createGenericVirtualRegister(getLLTForType(*PartTy, DL)),
                 PartTy, OrigArg.Flags};
     SplitArgs.push_back(Info);
-    PerformArgSplit(Info.Reg, PartVT.getSizeInBits() * i);
+    SplitRegs.push_back(Info.Reg);
   }
+
+  PerformArgSplit(SplitRegs);
 }
 
 namespace {
@@ -112,10 +113,9 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](unsigned Reg, uint64_t Offset) {
-                        MIRBuilder.buildExtract(Reg, VReg, Offset);
-                      });
+    splitToValueTypes(
+        OrigArg, SplitArgs, DL, MRI,
+        [&](ArrayRef<unsigned> Regs) { MIRBuilder.buildUnmerge(Regs, VReg); });
 
     FuncReturnHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
     if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
@@ -183,22 +183,10 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : F.args()) {
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
     setArgFlags(OrigArg, Idx + 1, DL, F);
-    LLT Ty = MRI.getType(VRegs[Idx]);
-    unsigned Dst = VRegs[Idx];
-    bool Split = false;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](unsigned Reg, uint64_t Offset) {
-                        if (!Split) {
-                          Split = true;
-                          Dst = MRI.createGenericVirtualRegister(Ty);
-                          MIRBuilder.buildUndef(Dst);
-                        }
-                        unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
-                        MIRBuilder.buildInsert(Tmp, Dst, Reg, Offset);
-                        Dst = Tmp;
+                      [&](ArrayRef<unsigned> Regs) {
+                        MIRBuilder.buildMerge(VRegs[Idx], Regs);
                       });
-    if (Dst != VRegs[Idx])
-      MIRBuilder.buildCopy(VRegs[Idx], Dst);
     Idx++;
   }
 

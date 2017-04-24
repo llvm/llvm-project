@@ -1,6 +1,9 @@
 @LIT_SITE_CFG_IN_HEADER@
 
+config.name_suffix = "@CFI_TEST_CONFIG_SUFFIX@"
 config.cfi_lit_test_mode = "@CFI_LIT_TEST_MODE@"
+config.use_lld = @CFI_TEST_USE_LLD@
+config.use_thinlto = @CFI_TEST_USE_THINLTO@
 
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

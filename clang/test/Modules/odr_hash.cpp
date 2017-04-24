@@ -526,138 +526,51 @@ S3 s3;
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
+#define CREATE_ALL_DECL_STRUCT(NAME, ACCESS) \
+  typedef int INT;                           \
+  struct NAME {                              \
+  public:                                    \
+  private:                                   \
+  protected:                                 \
+    static_assert(1 == 1, "Message");        \
+    static_assert(2 == 2);                   \
+                                             \
+    int x;                                   \
+    double y;                                \
+                                             \
+    INT z;                                   \
+                                             \
+    unsigned a : 1;                          \
+    unsigned b : 2 * 2 + 5 / 2;              \
+                                             \
+    mutable int c = sizeof(x + y);           \
+                                             \
+    void method() {}                         \
+    static void static_method() {}           \
+    virtual void virtual_method() {}         \
+    virtual void pure_virtual_method() = 0;  \
+    inline void inline_method() {}           \
+    void volatile_method() volatile {}       \
+    void const_method() const {}             \
+                                             \
+    typedef int typedef_int;                 \
+    using using_int = int;                   \
+                                             \
+    ACCESS:                                  \
+  };
+
 #if defined(FIRST)
-typedef int INT;
-struct S {
-  public:
-  private:
-  protected:
-
-  static_assert(1 == 1, "Message");
-  static_assert(2 == 2);
-
-  int x;
-  double y;
-
-  INT z;
-
-  unsigned a : 1;
-  unsigned b : 2*2 + 5/2;
-
-  mutable int c = sizeof(x + y);
-
-  void method() {}
-  static void static_method() {}
-  virtual void virtual_method() {}
-  virtual void pure_virtual_method() = 0;
-  inline void inline_method() {}
-  void volatile_method() volatile {}
-  void const_method() const {}
-
-  typedef int typedef_int;
-  using using_int = int;
-};
+CREATE_ALL_DECL_STRUCT(S, public)
 #elif defined(SECOND)
-typedef int INT;
-struct S {
-  public:
-  private:
-  protected:
-
-  static_assert(1 == 1, "Message");
-  static_assert(2 == 2);
-
-  int x;
-  double y;
-
-  INT z;
-
-  unsigned a : 1;
-  unsigned b : 2 * 2 + 5 / 2;
-
-  mutable int c = sizeof(x + y);
-
-  void method() {}
-  static void static_method() {}
-  virtual void virtual_method() {}
-  virtual void pure_virtual_method() = 0;
-  inline void inline_method() {}
-  void volatile_method() volatile {}
-  void const_method() const {}
-
-  typedef int typedef_int;
-  using using_int = int;
-};
+CREATE_ALL_DECL_STRUCT(S, public)
 #else
 S *s;
 #endif
 
 #if defined(FIRST)
-typedef int INT;
-struct T {
-  public:
-  private:
-  protected:
-
-  static_assert(1 == 1, "Message");
-  static_assert(2 == 2);
-
-  int x;
-  double y;
-
-  INT z;
-
-  unsigned a : 1;
-  unsigned b : 2 * 2 + 5 / 2;
-
-  mutable int c = sizeof(x + y);
-
-  void method() {}
-  static void static_method() {}
-  virtual void virtual_method() {}
-  virtual void pure_virtual_method() = 0;
-  inline void inline_method() {}
-  void volatile_method() volatile {}
-  void const_method() const {}
-
-  typedef int typedef_int;
-  using using_int = int;
-
-  private:
-};
+CREATE_ALL_DECL_STRUCT(T, private)
 #elif defined(SECOND)
-typedef int INT;
-struct T {
-  public:
-  private:
-  protected:
-
-  static_assert(1 == 1, "Message");
-  static_assert(2 == 2);
-
-  int x;
-  double y;
-
-  INT z;
-
-  unsigned a : 1;
-  unsigned b : 2 * 2 + 5 / 2;
-
-  mutable int c = sizeof(x + y);
-
-  void method() {}
-  static void static_method() {}
-  virtual void virtual_method() {}
-  virtual void pure_virtual_method() = 0;
-  inline void inline_method() {}
-  void volatile_method() volatile {}
-  void const_method() const {}
-
-  typedef int typedef_int;
-  using using_int = int;
-
-  public:
-};
+CREATE_ALL_DECL_STRUCT(T, public)
 #else
 T *t;
 // expected-error@second.h:* {{'AllDecls::T' has different definitions in different modules; first difference is definition in module 'SecondModule' found public access specifier}}
@@ -943,6 +856,36 @@ T t;
 // expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
 #endif
 }  // namespace StructWithForwardDeclarationNoDefinition
+
+namespace LateParsedDefaultArgument {
+#if defined(FIRST)
+template <typename T>
+struct S {
+  struct R {
+    void foo(T x = 0) {}
+  };
+};
+#elif defined(SECOND)
+#else
+void run() {
+  S<int>::R().foo();
+}
+#endif
+}
+
+namespace LateParsedDefaultArgument {
+#if defined(FIRST)
+template <typename alpha> struct Bravo {
+  void charlie(bool delta = false) {}
+};
+typedef Bravo<char> echo;
+echo foxtrot;
+
+Bravo<char> golf;
+#elif defined(SECOND)
+#else
+#endif
+}
 
 // Keep macros contained to one file.
 #ifdef FIRST

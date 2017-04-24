@@ -140,7 +140,7 @@ static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
   case ICmpInst::ICMP_UGE:
     // True if LHS u>= RHS and RHS == high-bit-mask (2^7, 2^15, 2^31, etc)
     TrueIfSigned = true;
-    return RHS.isSignBit();
+    return RHS.isSignMask();
   default:
     return false;
   }
@@ -1532,14 +1532,14 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
   }
 
   if (Xor->hasOneUse()) {
-    // (icmp u/s (xor X SignBit), C) -> (icmp s/u X, (xor C SignBit))
-    if (!Cmp.isEquality() && XorC->isSignBit()) {
+    // (icmp u/s (xor X SignMask), C) -> (icmp s/u X, (xor C SignMask))
+    if (!Cmp.isEquality() && XorC->isSignMask()) {
       Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
                             : Cmp.getSignedPredicate();
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), *C ^ *XorC));
     }
 
-    // (icmp u/s (xor X ~SignBit), C) -> (icmp s/u X, (xor C ~SignBit))
+    // (icmp u/s (xor X ~SignMask), C) -> (icmp s/u X, (xor C ~SignMask))
     if (!Cmp.isEquality() && XorC->isMaxSignedValue()) {
       Pred = Cmp.isSigned() ? Cmp.getUnsignedPredicate()
                             : Cmp.getSignedPredicate();
@@ -2402,9 +2402,9 @@ Instruction *InstCombiner::foldICmpAddConstant(ICmpInst &Cmp,
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
   if (Cmp.isSigned()) {
-    if (Lower.isSignBit())
+    if (Lower.isSignMask())
       return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantInt::get(Ty, Upper));
-    if (Upper.isSignBit())
+    if (Upper.isSignMask())
       return new ICmpInst(ICmpInst::ICMP_SGE, X, ConstantInt::get(Ty, Lower));
   } else {
     if (Lower.isMinValue())
@@ -2604,7 +2604,7 @@ Instruction *InstCombiner::foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
         break;
 
       // Replace (and X, (1 << size(X)-1) != 0) with x s< 0
-      if (BOC->isSignBit()) {
+      if (BOC->isSignMask()) {
         Constant *Zero = Constant::getNullValue(BOp0->getType());
         auto NewPred = isICMP_NE ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGE;
         return new ICmpInst(NewPred, BOp0, Zero);
@@ -3032,9 +3032,9 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
       if (I.isEquality()) // a+x icmp eq/ne b+x --> a icmp b
         return new ICmpInst(I.getPredicate(), BO0->getOperand(0),
                             BO1->getOperand(0));
-      // icmp u/s (a ^ signbit), (b ^ signbit) --> icmp s/u a, b
+      // icmp u/s (a ^ signmask), (b ^ signmask) --> icmp s/u a, b
       if (ConstantInt *CI = dyn_cast<ConstantInt>(BO0->getOperand(1))) {
-        if (CI->getValue().isSignBit()) {
+        if (CI->getValue().isSignMask()) {
           ICmpInst::Predicate Pred =
               I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
           return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
@@ -3797,7 +3797,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
 static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth,
                                     bool isSignCheck) {
   if (isSignCheck)
-    return APInt::getSignBit(BitWidth);
+    return APInt::getSignMask(BitWidth);
 
   ConstantInt *CI = dyn_cast<ConstantInt>(I.getOperand(1));
   if (!CI) return APInt::getAllOnesValue(BitWidth);

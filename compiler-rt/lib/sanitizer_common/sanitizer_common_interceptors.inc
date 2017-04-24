@@ -139,12 +139,9 @@ bool PlatformHasDifferentMemcpyAndMemmove();
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (0)
 #endif
 
-#define COMMON_INTERCEPTOR_READ_STRING_OF_LEN(ctx, s, len, n)       \
-    COMMON_INTERCEPTOR_READ_RANGE((ctx), (s),                       \
-      common_flags()->strict_string_checks ? (len) + 1 : (n) )
-
 #define COMMON_INTERCEPTOR_READ_STRING(ctx, s, n)                   \
-    COMMON_INTERCEPTOR_READ_STRING_OF_LEN((ctx), (s), REAL(strlen)(s), (n))
+    COMMON_INTERCEPTOR_READ_RANGE((ctx), (s),                       \
+      common_flags()->strict_string_checks ? (REAL(strlen)(s)) + 1 : (n) )
 
 #ifndef COMMON_INTERCEPTOR_ON_DLOPEN
 #define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag) \
@@ -307,7 +304,7 @@ INTERCEPTOR(SIZE_T, strnlen, const char *s, SIZE_T maxlen) {
 INTERCEPTOR(char*, textdomain, const char *domainname) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, textdomain, domainname);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, domainname, 0);
+  if (domainname) COMMON_INTERCEPTOR_READ_STRING(ctx, domainname, 0);
   char *domain = REAL(textdomain)(domainname);
   if (domain) {
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(domain, REAL(strlen)(domain) + 1);
@@ -450,8 +447,7 @@ static inline void StrstrCheck(void *ctx, char *r, const char *s1,
                                const char *s2) {
     uptr len1 = REAL(strlen)(s1);
     uptr len2 = REAL(strlen)(s2);
-    COMMON_INTERCEPTOR_READ_STRING_OF_LEN(ctx, s1, len1,
-                                          r ? r - s1 + len2 : len1 + 1);
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s1, r ? r - s1 + len2 : len1 + 1);
     COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
 }
 #endif
@@ -577,10 +573,11 @@ INTERCEPTOR(char*, strchr, const char *s, int c) {
     return internal_strchr(s, c);
   COMMON_INTERCEPTOR_ENTER(ctx, strchr, s, c);
   char *result = REAL(strchr)(s, c);
-  uptr len = internal_strlen(s);
-  uptr n = result ? result - s + 1 : len + 1;
-  if (common_flags()->intercept_strchr)
-    COMMON_INTERCEPTOR_READ_STRING_OF_LEN(ctx, s, len, n);
+  if (common_flags()->intercept_strchr) {
+    // Keep strlen as macro argument, as macro may ignore it.
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s,
+      (result ? result - s : REAL(strlen)(s)) + 1);
+  }
   return result;
 }
 #define INIT_STRCHR COMMON_INTERCEPT_FUNCTION(strchr)
@@ -609,9 +606,8 @@ INTERCEPTOR(char*, strrchr, const char *s, int c) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return internal_strrchr(s, c);
   COMMON_INTERCEPTOR_ENTER(ctx, strrchr, s, c);
-  uptr len = internal_strlen(s);
   if (common_flags()->intercept_strchr)
-    COMMON_INTERCEPTOR_READ_STRING_OF_LEN(ctx, s, len, len + 1);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
   return REAL(strrchr)(s, c);
 }
 #define INIT_STRRCHR COMMON_INTERCEPT_FUNCTION(strrchr)
@@ -3334,7 +3330,7 @@ INTERCEPTOR(char *, strerror, int errnum) {
 //  * GNU version returns message pointer, which points to either buf or some
 //    static storage.
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE) || \
-    SANITIZER_MAC
+    SANITIZER_MAC || SANITIZER_ANDROID
 // POSIX version. Spec is not clear on whether buf is NULL-terminated.
 // At least on OSX, buf contents are valid even when the call fails.
 INTERCEPTOR(int, strerror_r, int errnum, char *buf, SIZE_T buflen) {

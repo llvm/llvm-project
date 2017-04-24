@@ -1237,7 +1237,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a udiv.
-  APInt Mask(APInt::getSignBit(I.getType()->getScalarSizeInBits()));
+  APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));
   if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
     if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
       // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set
@@ -1543,7 +1543,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.
-  APInt Mask(APInt::getSignBit(I.getType()->getScalarSizeInBits()));
+  APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));
   if (MaskedValueIsZero(Op1, Mask, 0, &I) &&
       MaskedValueIsZero(Op0, Mask, 0, &I)) {
     // X srem Y -> X urem Y, iff X and Y don't have sign bit set

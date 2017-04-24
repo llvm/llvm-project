@@ -17,6 +17,8 @@
 #ifndef LLVM_OBJECT_WASM_H
 #define LLVM_OBJECT_WASM_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
@@ -47,10 +49,10 @@ public:
 
 class WasmSection {
 public:
-  WasmSection() : Type(0), Offset(0) {}
+  WasmSection() = default;
 
-  uint32_t Type; // Section type (See below)
-  uint32_t Offset; // Offset with in the file
+  uint32_t Type = 0; // Section type (See below)
+  uint32_t Offset = 0; // Offset with in the file
   StringRef Name; // Section name (User-defined sections only)
   ArrayRef<uint8_t> Content; // Section content
   std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
@@ -74,12 +76,15 @@ public:
   const std::vector<wasm::WasmLimits>& memories() const { return Memories; }
   const std::vector<wasm::WasmGlobal>& globals() const { return Globals; }
   const std::vector<wasm::WasmExport>& exports() const { return Exports; }
+
   const std::vector<wasm::WasmElemSegment>& elements() const {
     return ElemSegments;
   }
+
   const std::vector<wasm::WasmDataSegment>& dataSegments() const {
     return DataSegments;
   }
+
   const std::vector<wasm::WasmFunction>& functions() const { return Functions; }
   const ArrayRef<uint8_t>& code() const { return CodeSection; }
   uint32_t startFunction() const { return StartFunction; }
@@ -178,7 +183,7 @@ private:
   std::vector<WasmSymbol> Symbols;
   std::vector<wasm::WasmFunction> Functions;
   ArrayRef<uint8_t> CodeSection;
-  uint32_t StartFunction;
+  uint32_t StartFunction = -1;
 };
 
 } // end namespace object

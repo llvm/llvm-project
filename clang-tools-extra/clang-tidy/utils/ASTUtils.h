@@ -18,6 +18,8 @@ namespace utils {
 // Returns the (closest) Function declaration surrounding |Statement| or NULL.
 const FunctionDecl *getSurroundingFunction(ASTContext &Context,
                                            const Stmt &Statement);
+// Determine whether Expr is a Binary or Ternary expression.
+bool IsBinaryOrTernary(const Expr *E);
 } // namespace utils
 } // namespace tidy
 } // namespace clang

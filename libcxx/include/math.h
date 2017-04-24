@@ -307,6 +307,7 @@ long double    truncl(long double x);
 extern "C++" {
 
 #include <type_traits>
+#include <limits>
 
 // signbit
 
@@ -324,21 +325,49 @@ __libcpp_signbit(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 signbit(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_signbit((typename std::__promote<_A1>::type)__lcpp_x);
 }
 
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_integral<_A1>::value && std::is_signed<_A1>::value, bool>::type
+signbit(_A1 __lcpp_x) _NOEXCEPT
+{ return __lcpp_x < 0; }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_integral<_A1>::value && !std::is_signed<_A1>::value, bool>::type
+signbit(_A1) _NOEXCEPT
+{ return false; }
+
 #elif defined(_LIBCPP_MSVCRT)
 
 template <typename _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 signbit(_A1 __lcpp_x) _NOEXCEPT
 {
   return ::signbit(static_cast<typename std::__promote<_A1>::type>(__lcpp_x));
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_integral<_A1>::value && std::is_signed<_A1>::value, bool>::type
+signbit(_A1 __lcpp_x) _NOEXCEPT
+{ return __lcpp_x < 0; }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_integral<_A1>::value && !std::is_signed<_A1>::value, bool>::type
+signbit(_A1) _NOEXCEPT
+{ return false; }
 
 #endif  // signbit
 
@@ -358,21 +387,33 @@ __libcpp_fpclassify(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, int>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, int>::type
 fpclassify(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_fpclassify((typename std::__promote<_A1>::type)__lcpp_x);
 }
 
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_integral<_A1>::value, int>::type
+fpclassify(_A1 __lcpp_x) _NOEXCEPT
+{ return __lcpp_x == 0 ? FP_ZERO : FP_NORMAL; }
+
 #elif defined(_LIBCPP_MSVCRT)
 
 template <typename _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, int>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 fpclassify(_A1 __lcpp_x) _NOEXCEPT
 {
   return ::fpclassify(static_cast<typename std::__promote<_A1>::type>(__lcpp_x));
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_integral<_A1>::value, int>::type
+fpclassify(_A1 __lcpp_x) _NOEXCEPT
+{ return __lcpp_x == 0 ? FP_ZERO : FP_NORMAL; }
 
 #endif  // fpclassify
 
@@ -392,11 +433,21 @@ __libcpp_isfinite(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<
+    std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity,
+    bool>::type
 isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_isfinite((typename std::__promote<_A1>::type)__lcpp_x);
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_arithmetic<_A1>::value && !std::numeric_limits<_A1>::has_infinity,
+    bool>::type
+isfinite(_A1) _NOEXCEPT
+{ return true; }
 
 #endif  // isfinite
 
@@ -416,11 +467,21 @@ __libcpp_isinf(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<
+    std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity,
+    bool>::type
 isinf(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_isinf((typename std::__promote<_A1>::type)__lcpp_x);
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<
+    std::is_arithmetic<_A1>::value && !std::numeric_limits<_A1>::has_infinity,
+    bool>::type
+isinf(_A1) _NOEXCEPT
+{ return false; }
 
 #endif  // isinf
 
@@ -440,11 +501,17 @@ __libcpp_isnan(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnan(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_isnan((typename std::__promote<_A1>::type)__lcpp_x);
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_integral<_A1>::value, bool>::type
+isnan(_A1) _NOEXCEPT
+{ return false; }
 
 #endif  // isnan
 
@@ -464,11 +531,17 @@ __libcpp_isnormal(_A1 __lcpp_x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_INLINE_VISIBILITY
-typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnormal(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_isnormal((typename std::__promote<_A1>::type)__lcpp_x);
 }
+
+template <class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_integral<_A1>::value, bool>::type
+isnormal(_A1 __lcpp_x) _NOEXCEPT
+{ return __lcpp_x != 0; }
 
 #endif  // isnormal
 

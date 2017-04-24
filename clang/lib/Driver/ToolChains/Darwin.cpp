@@ -930,6 +930,18 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+void MachO::AddFuzzerLinkArgs(const ArgList &Args, ArgStringList &CmdArgs) const {
+
+  // Go up one directory from Clang to find the libfuzzer archive file.
+  StringRef ParentDir = llvm::sys::path::parent_path(getDriver().InstalledDir);
+  SmallString<128> P(ParentDir);
+  llvm::sys::path::append(P, "lib", "libLLVMFuzzer.a");
+  CmdArgs.push_back(Args.MakeArgString(P));
+
+  // Libfuzzer is written in C++ and requires libcxx.
+  AddCXXStdlibLibArgs(Args, CmdArgs);
+}
+
 StringRef Darwin::getPlatformFamily() const {
   switch (TargetPlatform) {
     case DarwinPlatformKind::MacOS:
@@ -1035,10 +1047,14 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   const SanitizerArgs &Sanitize = getSanitizerArgs();
   if (Sanitize.needsAsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
+  if (Sanitize.needsLsanRt())
+    AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
   if (Sanitize.needsUbsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
+  if (Sanitize.needsFuzzer())
+    AddFuzzerLinkArgs(Args, CmdArgs);
   if (Sanitize.needsStatsRt()) {
     StringRef OS = isTargetMacOS() ? "osx" : "iossim";
     AddLinkRuntimeLib(Args, CmdArgs,
@@ -1892,6 +1908,8 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::Leak;
+  Res |= SanitizerKind::Fuzzer;
   if (isTargetMacOS()) {
     if (!isMacosxVersionLT(10, 9))
       Res |= SanitizerKind::Vptr;

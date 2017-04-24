@@ -778,6 +778,9 @@ namespace llvm {
     }
   };
 
+  // Create wrappers for C Binding types (see CBindingWrapping.h).
+  DEFINE_ISA_CONVERSION_FUNCTIONS(DIBuilder, LLVMDIBuilderRef)
+
 } // end namespace llvm
 
 #endif // LLVM_IR_DIBUILDER_H

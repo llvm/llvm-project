@@ -17,6 +17,21 @@
 using namespace clang;
 using namespace index;
 
+static bool isGeneratedDecl(const Decl *D) {
+  if (auto *attr = D->getAttr<ExternalSourceSymbolAttr>()) {
+    return attr->getGeneratedDeclaration();
+  }
+  return false;
+}
+
+bool IndexingContext::shouldIndex(const Decl *D) {
+  return !isGeneratedDecl(D);
+}
+
+const LangOptions &IndexingContext::getLangOpts() const {
+  return Ctx->getLangOpts();
+}
+
 bool IndexingContext::shouldIndexFunctionLocalSymbols() const {
   return IndexOpts.IndexFunctionLocals;
 }
@@ -233,6 +248,7 @@ static bool shouldReportOccurrenceForSystemDeclOnlyMode(
       case SymbolRole::RelationReceivedBy:
       case SymbolRole::RelationCalledBy:
       case SymbolRole::RelationContainedBy:
+      case SymbolRole::RelationSpecializationOf:
         return true;
       }
       llvm_unreachable("Unsupported SymbolRole value!");
