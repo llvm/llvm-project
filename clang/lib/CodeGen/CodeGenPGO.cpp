@@ -669,6 +669,9 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   if (SkipCoverageMapping)
     return true;
 
+  if (!D->getBody())
+    return true;
+
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getLocStart();
