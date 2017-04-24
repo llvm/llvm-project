@@ -88,7 +88,7 @@ private:
 // new name.
 //
 // FIXME: Merge with the above RenamingASTConsumer.
-class USRSymbolRenamer: public ASTConsumer {
+class USRSymbolRenamer : public ASTConsumer {
 public:
   USRSymbolRenamer(const std::vector<std::string> &NewNames,
                    const std::vector<std::vector<std::string>> &USRList,
@@ -110,7 +110,7 @@ public:
             llvm::errs() << "Renaming failed in " << Replace.getFilePath()
                          << "! " << llvm::toString(std::move(Err)) << "\n";
           }
-      }
+        }
       }
     }
   }
@@ -127,8 +127,7 @@ std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
 }
 
 std::unique_ptr<ASTConsumer> QualifiedRenamingAction::newASTConsumer() {
-  return llvm::make_unique<USRSymbolRenamer>(
-      NewNames, USRList, FileToReplaces);
+  return llvm::make_unique<USRSymbolRenamer>(NewNames, USRList, FileToReplaces);
 }
 
 } // namespace rename
