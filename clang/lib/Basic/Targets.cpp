@@ -545,6 +545,8 @@ protected:
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
   OpenBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -552,11 +554,11 @@ public:
     this->TLSSupported = false;
 
       switch (Triple.getArch()) {
-        default:
         case llvm::Triple::x86:
         case llvm::Triple::x86_64:
-        case llvm::Triple::arm:
-        case llvm::Triple::sparc:
+          this->HasFloat128 = true;
+          // FALLTHROUGH
+        default:
           this->MCountName = "__mcount";
           break;
         case llvm::Triple::mips64:
@@ -5170,6 +5172,8 @@ public:
       default:
         if (Triple.getOS() == llvm::Triple::NetBSD)
           setABI("apcs-gnu");
+        else if (Triple.getOS() == llvm::Triple::OpenBSD)
+          setABI("aapcs-linux");
         else
           setABI("aapcs");
         break;
@@ -5951,7 +5955,8 @@ class AArch64TargetInfo : public TargetInfo {
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple), ABI("aapcs") {
-    if (getTriple().getOS() == llvm::Triple::NetBSD) {
+    if (getTriple().getOS() == llvm::Triple::NetBSD ||
+        getTriple().getOS() == llvm::Triple::OpenBSD) {
       WCharType = SignedInt;
 
       // NetBSD apparently prefers consistency across ARM targets to consistency
@@ -8600,6 +8605,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+    case llvm::Triple::OpenBSD:
+      return new OpenBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     default:
       return new AArch64leTargetInfo(Triple, Opts);
     }
