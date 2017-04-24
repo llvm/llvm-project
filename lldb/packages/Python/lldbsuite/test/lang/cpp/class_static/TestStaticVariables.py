@@ -61,7 +61,7 @@ class StaticVariableTestCase(TestBase):
         bugnumber="Compiler emits incomplete debug info")
     @expectedFailureAll(
         compiler=["clang"],
-        compiler_version=["<", "3.8"],
+        compiler_version=["<", "3.9"],
         bugnumber='llvm.org/pr20550')
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):

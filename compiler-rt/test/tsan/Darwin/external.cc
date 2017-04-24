@@ -68,11 +68,11 @@ int main(int argc, char *argv[]) {
   // TEST2-NOT: WARNING: ThreadSanitizer
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
-  // TEST3: {{Mutating|read-only}} access of object MyLibrary::MyObject at
+  // TEST3: {{Mutating|read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
-  // TEST3: Previous {{mutating|read-only}} access of object MyLibrary::MyObject at
+  // TEST3: Previous {{mutating|read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
-  // TEST3: Location is MyLibrary::MyObject object of size 16 at
+  // TEST3: Location is MyLibrary::MyObject of size 16 at
   // TEST3: {{ObjectCreate}}
 
   fprintf(stderr, "RW test done\n");
@@ -91,11 +91,11 @@ int main(int argc, char *argv[]) {
   // TEST2-NOT: WARNING: ThreadSanitizer
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
-  // TEST3: Mutating access of object MyLibrary::MyObject at
+  // TEST3: Mutating access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectWriteAnother}}
-  // TEST3: Previous mutating access of object MyLibrary::MyObject at
+  // TEST3: Previous mutating access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectWriteAnother}}
-  // TEST3: Location is MyLibrary::MyObject object of size 16 at
+  // TEST3: Location is MyLibrary::MyObject of size 16 at
   // TEST3: {{ObjectCreate}}
 
   fprintf(stderr, "WW test done\n");
