@@ -14,20 +14,20 @@ GEN_DECL("some_module")
 
 EXT_DECL("some_module")
 @interface I2
-// CHECK: [[@LINE-1]]:12 | class/ObjC | I2 | c:@M@some_module@objc(cs)I2 | {{.*}} | Decl | rel: 0
+// CHECK: [[@LINE-1]]:12 | class/Swift | I2 | c:@M@some_module@objc(cs)I2 | {{.*}} | Decl | rel: 0
 -(void)method;
-// CHECK: [[@LINE-1]]:8 | instance-method/ObjC | method | c:@M@some_module@objc(cs)I2(im)method | -[I2 method] | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE-1]]:8 | instance-method/Swift | method | c:@M@some_module@objc(cs)I2(im)method | -[I2 method] | Decl,Dyn,RelChild | rel: 1
 @end
 
 void test1(I1 *o) {
-// CHECK: [[@LINE-1]]:12 | class/ObjC | I1 | c:@M@some_module@objc(cs)I1 |
+// CHECK: [[@LINE-1]]:12 | class/Swift | I1 | c:@M@some_module@objc(cs)I1 |
   [o method];
-  // CHECK: [[@LINE-1]]:6 | instance-method/ObjC | method | c:@M@some_module@objc(cs)I1(im)method |
+  // CHECK: [[@LINE-1]]:6 | instance-method/Swift | method | c:@M@some_module@objc(cs)I1(im)method |
 }
 
 EXT_DECL("some_module")
 @protocol ExtProt
-// CHECK: [[@LINE-1]]:11 | protocol/ObjC | ExtProt | c:@M@some_module@objc(pl)ExtProt |
+// CHECK: [[@LINE-1]]:11 | protocol/Swift | ExtProt | c:@M@some_module@objc(pl)ExtProt |
 @end
 
 @interface I1(cat)
@@ -38,9 +38,9 @@ EXT_DECL("some_module")
 
 EXT_DECL("cat_module")
 @interface I1(cat2)
-// CHECK: [[@LINE-1]]:15 | extension/ObjC | cat2 | c:@CM@cat_module@some_module@objc(cy)I1@cat2 |
+// CHECK: [[@LINE-1]]:15 | extension/Swift | cat2 | c:@CM@cat_module@some_module@objc(cy)I1@cat2 |
 -(void)cat_method2;
-// CHECK: [[@LINE-1]]:8 | instance-method/ObjC | cat_method2 | c:@CM@cat_module@some_module@objc(cs)I1(im)cat_method2
+// CHECK: [[@LINE-1]]:8 | instance-method/Swift | cat_method2 | c:@CM@cat_module@some_module@objc(cs)I1(im)cat_method2
 @end
 
 #define NS_ENUM(_name, _type) enum _name:_type _name; enum _name : _type
@@ -75,17 +75,17 @@ typedef NS_ENUM(SomeEnum, int) {
 #pragma clang attribute pop
 
 void test2(I3 *i3, id<ExtProt2> prot2, SomeEnum some) {
-  // CHECK: [[@LINE-1]]:12 | class/ObjC | I3 | c:@M@modname@objc(cs)I3 |
-  // CHECK: [[@LINE-2]]:23 | protocol/ObjC | ExtProt2 | c:@M@modname@objc(pl)ExtProt2 |
-  // CHECK: [[@LINE-3]]:40 | enum/C | SomeEnum | c:@M@modname@E@SomeEnum |
+  // CHECK: [[@LINE-1]]:12 | class/Swift | I3 | c:@M@modname@objc(cs)I3 |
+  // CHECK: [[@LINE-2]]:23 | protocol/Swift | ExtProt2 | c:@M@modname@objc(pl)ExtProt2 |
+  // CHECK: [[@LINE-3]]:40 | enum/Swift | SomeEnum | c:@M@modname@E@SomeEnum |
   [i3 meth];
-  // CHECK: [[@LINE-1]]:7 | instance-method/ObjC | meth | c:@M@modname@objc(cs)I3(im)meth |
+  // CHECK: [[@LINE-1]]:7 | instance-method/Swift | meth | c:@M@modname@objc(cs)I3(im)meth |
   [i3 meth2];
-  // CHECK: [[@LINE-1]]:7 | instance-method/ObjC | meth2 | c:@CM@modname@objc(cs)I3(im)meth2 |
+  // CHECK: [[@LINE-1]]:7 | instance-method/Swift | meth2 | c:@CM@modname@objc(cs)I3(im)meth2 |
   [prot2 meth];
-  // CHECK: [[@LINE-1]]:10 | instance-method/ObjC | meth | c:@M@modname@objc(pl)ExtProt2(im)meth |
+  // CHECK: [[@LINE-1]]:10 | instance-method/Swift | meth | c:@M@modname@objc(pl)ExtProt2(im)meth |
   some = SomeEnumFirst;
-  // CHECK: [[@LINE-1]]:10 | enumerator/C | SomeEnumFirst | c:@M@modname@E@SomeEnum@SomeEnumFirst |
+  // CHECK: [[@LINE-1]]:10 | enumerator/Swift | SomeEnumFirst | c:@M@modname@E@SomeEnum@SomeEnumFirst |
 }
 
 #pragma clang attribute PUSH_GEN_DECL("other_mod_for_cat")
@@ -96,5 +96,5 @@ void test2(I3 *i3, id<ExtProt2> prot2, SomeEnum some) {
 
 void test3(I3 *i3) {
   [i3 meth_other_mod];
-  // CHECK: [[@LINE-1]]:7 | instance-method/ObjC | meth_other_mod | c:@CM@other_mod_for_cat@modname@objc(cs)I3(im)meth_other_mod |
+  // CHECK: [[@LINE-1]]:7 | instance-method/Swift | meth_other_mod | c:@CM@other_mod_for_cat@modname@objc(cs)I3(im)meth_other_mod |
 }
