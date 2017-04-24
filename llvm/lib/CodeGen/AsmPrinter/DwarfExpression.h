@@ -72,6 +72,8 @@ public:
   }
   /// Determine whether there are any operations left in this expression.
   operator bool() const { return Start != End; }
+  DIExpression::expr_op_iterator begin() const { return Start; }
+  DIExpression::expr_op_iterator end() const { return End; }
 
   /// Retrieve the fragment information, if any.
   Optional<DIExpression::FragmentInfo> getFragmentInfo() const {
