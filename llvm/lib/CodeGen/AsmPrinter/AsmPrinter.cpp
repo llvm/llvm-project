@@ -777,6 +777,8 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     uint64_t ExtraOffset = Expr->getElement(i++);
     if (Op == dwarf::DW_OP_plus)
       Offset += ExtraOffset;
+    else if (Op == dwarf::DW_OP_stack_value)
+      OS << " [stack value]";
     else {
       assert(Op == dwarf::DW_OP_minus);
       Offset -= ExtraOffset;
