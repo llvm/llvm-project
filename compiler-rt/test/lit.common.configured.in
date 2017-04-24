@@ -28,6 +28,8 @@ set_default("emulator", "@COMPILER_RT_EMULATOR@")
 set_default("sanitizer_can_use_cxxabi", @SANITIZER_CAN_USE_CXXABI_PYBOOL@)
 set_default("has_lld", @COMPILER_RT_HAS_LLD_PYBOOL@)
 set_default("can_symbolize", @CAN_SYMBOLIZE@)
+set_default("use_lld", False)
+set_default("use_thinlto", False)
 config.available_features.add('target-is-%s' % config.target_arch)
 
 # LLVM tools dir can be passed in lit parameters, so try to

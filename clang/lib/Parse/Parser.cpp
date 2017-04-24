@@ -534,23 +534,6 @@ void Parser::LateTemplateParserCleanupCallback(void *P) {
 }
 
 bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
-  // C++ Modules TS: module-declaration must be the first declaration in the
-  // file. (There can be no preceding preprocessor directives, but we expect
-  // the lexer to check that.)
-  if (Tok.is(tok::kw_module)) {
-    Result = ParseModuleDecl();
-    return false;
-  } else if (getLangOpts().getCompilingModule() ==
-             LangOptions::CMK_ModuleInterface) {
-    // FIXME: We avoid providing this diagnostic when generating an object file
-    // from an existing PCM file. This is not a good way to detect this
-    // condition; we should provide a mechanism to indicate whether we've
-    // already parsed a declaration in this translation unit and avoid calling
-    // ParseFirstTopLevelDecl in that case.
-    if (Actions.TUKind == TU_Module)
-      Diag(Tok, diag::err_expected_module_interface_decl);
-  }
-
   // C11 6.9p1 says translation units must have at least one top-level
   // declaration. C++ doesn't have this restriction. We also don't want to
   // complain if we have a precompiled header, although technically if the PCH
@@ -581,6 +564,14 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 
   case tok::kw_import:
     Result = ParseModuleImport(SourceLocation());
+    return false;
+
+  case tok::kw_export:
+    if (NextToken().isNot(tok::kw_module))
+      break;
+    LLVM_FALLTHROUGH;
+  case tok::kw_module:
+    Result = ParseModuleDecl();
     return false;
 
   case tok::annot_module_include:
@@ -2049,30 +2040,28 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 /// Parse a C++ Modules TS module declaration, which appears at the beginning
 /// of a module interface, module partition, or module implementation file.
 ///
-///   module-declaration:   [Modules TS + P0273R0]
-///     'module' module-kind[opt] module-name attribute-specifier-seq[opt] ';'
-///   module-kind:
-///     'implementation'
-///     'partition'
+///   module-declaration:   [Modules TS + P0273R0 + P0629R0]
+///     'export'[opt] 'module' 'partition'[opt]
+///            module-name attribute-specifier-seq[opt] ';'
 ///
-/// Note that the module-kind values are context-sensitive keywords.
+/// Note that 'partition' is a context-sensitive keyword.
 Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
-  assert(Tok.is(tok::kw_module) && getLangOpts().ModulesTS &&
-         "should not be parsing a module declaration");
+  SourceLocation StartLoc = Tok.getLocation();
+
+  Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
+                                 ? Sema::ModuleDeclKind::Module
+                                 : Sema::ModuleDeclKind::Implementation;
+
+  assert(Tok.is(tok::kw_module) && "not a module declaration");
   SourceLocation ModuleLoc = ConsumeToken();
 
-  // Check for a module-kind.
-  Sema::ModuleDeclKind MDK = Sema::ModuleDeclKind::Module;
-  if (Tok.is(tok::identifier) && NextToken().is(tok::identifier)) {
-    if (Tok.getIdentifierInfo()->isStr("implementation"))
-      MDK = Sema::ModuleDeclKind::Implementation;
-    else if (Tok.getIdentifierInfo()->isStr("partition"))
-      MDK = Sema::ModuleDeclKind::Partition;
-    else {
-      Diag(Tok, diag::err_unexpected_module_kind) << Tok.getIdentifierInfo();
-      SkipUntil(tok::semi);
-      return nullptr;
-    }
+  if (Tok.is(tok::identifier) && NextToken().is(tok::identifier) &&
+      Tok.getIdentifierInfo()->isStr("partition")) {
+    // If 'partition' is present, this must be a module interface unit.
+    if (MDK != Sema::ModuleDeclKind::Module)
+      Diag(Tok.getLocation(), diag::err_module_implementation_partition)
+        << FixItHint::CreateInsertion(ModuleLoc, "export ");
+    MDK = Sema::ModuleDeclKind::Partition;
     ConsumeToken();
   }
 
@@ -2080,14 +2069,14 @@ Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/false))
     return nullptr;
 
+  // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  // We don't support any module attributes yet.
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr);
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return Actions.ActOnModuleDecl(ModuleLoc, MDK, Path);
+  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path);
 }
 
 /// Parse a module import declaration. This is essentially the same for

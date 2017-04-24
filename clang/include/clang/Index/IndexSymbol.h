@@ -59,6 +59,7 @@ enum class SymbolLanguage {
   C,
   ObjC,
   CXX,
+  Swift,
 };
 
 /// Language specific sub-kinds.
@@ -106,8 +107,9 @@ enum class SymbolRole : uint32_t {
   RelationAccessorOf  = 1 << 15,
   RelationContainedBy = 1 << 16,
   RelationIBTypeOf    = 1 << 17,
+  RelationSpecializationOf = 1 << 18,
 };
-static const unsigned SymbolRoleBitNum = 18;
+static const unsigned SymbolRoleBitNum = 19;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.

@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include "sanitizer_common/print_address.h"
 
+#include <sanitizer/tsan_interface.h>
+
 #ifdef __APPLE__
 #include <mach/mach_time.h>
 #endif

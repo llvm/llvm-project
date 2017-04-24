@@ -1,4 +1,4 @@
-; RUN: llc -split-dwarf=Enable -mtriple=powerpc64-unknown-linux-gnu -O0 -filetype=asm < %s | FileCheck %s
+; RUN: llc -split-dwarf-file=foo.dwo -mtriple=powerpc64-unknown-linux-gnu -O0 -filetype=asm < %s | FileCheck %s
 
 ; FIXME: add relocation and DWARF expression support to llvm-dwarfdump & use
 ; that here instead of raw assembly printing

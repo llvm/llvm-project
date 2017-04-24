@@ -59,6 +59,20 @@ void SubtargetFeatureInfo::emitSubtargetFeatureFlagEnumeration(
   OS << "};\n\n";
 }
 
+void SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(
+    std::map<Record *, SubtargetFeatureInfo, LessRecordByID> &SubtargetFeatures,
+    raw_ostream &OS) {
+  OS << "// Bits for subtarget features that participate in "
+     << "instruction matching.\n";
+  OS << "enum SubtargetFeatureBits : "
+     << getMinimalTypeForRange(SubtargetFeatures.size()) << " {\n";
+  for (const auto &SF : SubtargetFeatures) {
+    const SubtargetFeatureInfo &SFI = SF.second;
+    OS << "  " << SFI.getEnumBitName() << " = " << SFI.Index << ",\n";
+  }
+  OS << "};\n\n";
+}
+
 void SubtargetFeatureInfo::emitNameTable(
     std::map<Record *, SubtargetFeatureInfo, LessRecordByID> &SubtargetFeatures,
     raw_ostream &OS) {
@@ -87,6 +101,24 @@ void SubtargetFeatureInfo::emitNameTable(
 }
 
 void SubtargetFeatureInfo::emitComputeAvailableFeatures(
+    StringRef TargetName, StringRef ClassName, StringRef FuncName,
+    std::map<Record *, SubtargetFeatureInfo, LessRecordByID> &SubtargetFeatures,
+    raw_ostream &OS) {
+  OS << "PredicateBitset " << TargetName << ClassName << "::\n"
+     << FuncName << "(const MachineFunction *MF, const " << TargetName
+     << "Subtarget *Subtarget) const {\n";
+  OS << "  PredicateBitset Features;\n";
+  for (const auto &SF : SubtargetFeatures) {
+    const SubtargetFeatureInfo &SFI = SF.second;
+
+    OS << "  if (" << SFI.TheDef->getValueAsString("CondString") << ")\n";
+    OS << "    Features[" << SFI.getEnumBitName() << "] = 1;\n";
+  }
+  OS << "  return Features;\n";
+  OS << "}\n\n";
+}
+
+void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     std::map<Record *, SubtargetFeatureInfo, LessRecordByID> &SubtargetFeatures,
     raw_ostream &OS) {

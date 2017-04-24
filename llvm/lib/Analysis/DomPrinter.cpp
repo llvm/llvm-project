@@ -80,6 +80,22 @@ struct DOTGraphTraits<PostDominatorTree*>
 };
 }
 
+void DominatorTree::viewGraph(const Twine &Name, const Twine &Title) {
+#ifndef NDEBUG
+  ViewGraph(this, Name, false, Title);
+#else
+  errs() << "DomTree dump not available, build with DEBUG\n";
+#endif  // NDEBUG
+}
+
+void DominatorTree::viewGraph() {
+#ifndef NDEBUG
+  this->viewGraph("domtree", "Dominator Tree for function");
+#else
+  errs() << "DomTree dump not available, build with DEBUG\n";
+#endif  // NDEBUG
+}
+
 namespace {
 struct DominatorTreeWrapperPassAnalysisGraphTraits {
   static DominatorTree *getGraph(DominatorTreeWrapperPass *DTWP) {

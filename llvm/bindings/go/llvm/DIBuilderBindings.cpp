@@ -19,8 +19,6 @@
 
 using namespace llvm;
 
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DIBuilder, LLVMDIBuilderRef)
-
 LLVMDIBuilderRef LLVMNewDIBuilder(LLVMModuleRef mref) {
   Module *m = unwrap(mref);
   return wrap(new DIBuilder(*m));

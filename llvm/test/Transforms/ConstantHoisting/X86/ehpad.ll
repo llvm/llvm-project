@@ -1,4 +1,5 @@
 ; RUN: opt -S -consthoist < %s | FileCheck %s
+; RUN: opt -S -consthoist -consthoist-with-block-frequency=true < %s | FileCheck --check-prefix=BFIHOIST %s
 
 ; FIXME: The catchpad doesn't even use the constant, so a better fix would be to
 ; insert the bitcast in the catchpad block.
@@ -10,6 +11,16 @@ target triple = "x86_64-pc-windows-msvc"
 ; CHECK: %tobool = icmp eq i32 %argc, 0
 ; CHECK-NEXT: bitcast i64 9209618997431186100 to i64
 ; CHECK-NEXT: br i1 %tobool
+
+; BFIHOIST-LABEL: define i32 @main
+; BFIHOIST: then:
+; BFIHOIST: %[[CONST1:.*]] = bitcast i64 9209618997431186100 to i64
+; BFIHOIST: %add = add i64 %call4, %[[CONST1]]
+; BFIHOIST: br label %endif
+; BFIHOIST: else:
+; BFIHOIST: %[[CONST2:.*]] = bitcast i64 9209618997431186100 to i64
+; BFIHOIST: %add6 = add i64 %call5, %[[CONST2]]
+; BFIHOIST: br label %endif
 
 ; Function Attrs: norecurse
 define i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {

@@ -1430,7 +1430,8 @@ define void @store_v1i1(<1 x i1> %c , <1 x i1>* %ptr) {
 define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ; KNL-LABEL: store_v2i1:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1447,7 +1448,8 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ;
 ; AVX512BW-LABEL: store_v2i1:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -1457,7 +1459,8 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ;
 ; AVX512DQ-LABEL: store_v2i1:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512DQ-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512DQ-NEXT:    kmovb %k0, (%rdi)
@@ -1471,7 +1474,7 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ; KNL-LABEL: store_v4i1:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; KNL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1489,7 +1492,7 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ;
 ; AVX512BW-LABEL: store_v4i1:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX512BW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1500,7 +1503,7 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ;
 ; AVX512DQ-LABEL: store_v4i1:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX512DQ-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vptestmd %zmm0, %zmm0, %k0

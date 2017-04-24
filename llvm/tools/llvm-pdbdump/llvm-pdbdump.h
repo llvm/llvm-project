@@ -18,8 +18,8 @@ namespace opts {
 
 namespace pretty {
 
-enum class ClassDefinitionFormat { None, Layout, Graphical, Standard };
-enum class ClassSortMode { None, Name, Size, Padding };
+enum class ClassDefinitionFormat { None, Layout, All };
+enum class ClassSortMode { None, Name, Size, Padding, PaddingPct };
 
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
@@ -41,6 +41,7 @@ extern llvm::cl::opt<ClassSortMode> ClassOrder;
 extern llvm::cl::opt<uint32_t> SizeThreshold;
 extern llvm::cl::opt<uint32_t> PaddingThreshold;
 extern llvm::cl::opt<ClassDefinitionFormat> ClassFormat;
+extern llvm::cl::opt<uint32_t> ClassRecursionDepth;
 }
 
 namespace raw {

@@ -835,8 +835,11 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
     bool ShouldFormat = TheLine.Affected || FixIndentation;
     // We cannot format this line; if the reason is that the line had a
     // parsing error, remember that.
-    if (ShouldFormat && TheLine.Type == LT_Invalid && IncompleteFormat)
-      *IncompleteFormat = true;
+    if (ShouldFormat && TheLine.Type == LT_Invalid && Status) {
+      Status->FormatComplete = false;
+      Status->Line =
+          SourceMgr.getSpellingLineNumber(TheLine.First->Tok.getLocation());
+    }
 
     if (ShouldFormat && TheLine.Type != LT_Invalid) {
       if (!DryRun)

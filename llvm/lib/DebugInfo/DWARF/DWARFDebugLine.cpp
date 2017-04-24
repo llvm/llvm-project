@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Dwarf.h"
@@ -302,16 +303,9 @@ bool DWARFDebugLine::LineTable::parse(DataExtractor debug_line_data,
         // relocatable address. All of the other statement program opcodes
         // that affect the address register add a delta to it. This instruction
         // stores a relocatable value into it instead.
-        {
-          // If this address is in our relocation map, apply the relocation.
-          RelocAddrMap::const_iterator AI = RMap->find(*offset_ptr);
-          if (AI != RMap->end()) {
-            const std::pair<uint8_t, int64_t> &R = AI->second;
-            State.Row.Address =
-                debug_line_data.getAddress(offset_ptr) + R.second;
-          } else
-            State.Row.Address = debug_line_data.getAddress(offset_ptr);
-        }
+        State.Row.Address =
+            getRelocatedValue(debug_line_data, debug_line_data.getAddressSize(),
+                              offset_ptr, RMap);
         break;
 
       case DW_LNE_define_file:

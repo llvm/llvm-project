@@ -1043,46 +1043,7 @@ AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
 
 AttributeList AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
                                               AttributeList Attrs) const {
-  if (!pImpl)
-    return AttributeList();
-  if (!Attrs.pImpl) return *this;
-
-  // FIXME it is not obvious how this should work for alignment.
-  // For now, say we can't pass in alignment, which no current use does.
-  assert(!Attrs.hasAttribute(Index, Attribute::Alignment) &&
-         "Attempt to change alignment!");
-
-  // Add the attribute slots before the one we're trying to add.
-  SmallVector<AttributeList, 4> AttrSet;
-  uint64_t NumAttrs = pImpl->getNumSlots();
-  AttributeList AL;
-  uint64_t LastIndex = 0;
-  for (unsigned I = 0, E = NumAttrs; I != E; ++I) {
-    if (getSlotIndex(I) >= Index) {
-      if (getSlotIndex(I) == Index) AL = getSlotAttributes(LastIndex++);
-      break;
-    }
-    LastIndex = I + 1;
-    AttrSet.push_back(getSlotAttributes(I));
-  }
-
-  // Now remove the attribute from the correct slot. There may already be an
-  // AttributeList there.
-  AttrBuilder B(AL, Index);
-
-  for (unsigned I = 0, E = Attrs.pImpl->getNumSlots(); I != E; ++I)
-    if (Attrs.getSlotIndex(I) == Index) {
-      B.removeAttributes(Attrs.pImpl->getSlotAttributes(I), Index);
-      break;
-    }
-
-  AttrSet.push_back(AttributeList::get(C, Index, B));
-
-  // Add the remaining attribute slots.
-  for (unsigned I = LastIndex, E = NumAttrs; I < E; ++I)
-    AttrSet.push_back(getSlotAttributes(I));
-
-  return get(C, AttrSet);
+  return removeAttributes(C, Index, AttrBuilder(Attrs.getAttributes(Index)));
 }
 
 AttributeList AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
@@ -1095,31 +1056,30 @@ AttributeList AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
   assert(!Attrs.hasAlignmentAttr() && "Attempt to change alignment!");
 
   // Add the attribute slots before the one we're trying to add.
-  SmallVector<AttributeList, 4> AttrSet;
+  SmallVector<IndexAttrPair, 4> AttrSets;
   uint64_t NumAttrs = pImpl->getNumSlots();
-  AttributeList AL;
+  AttrBuilder B;
   uint64_t LastIndex = 0;
   for (unsigned I = 0, E = NumAttrs; I != E; ++I) {
     if (getSlotIndex(I) >= Index) {
-      if (getSlotIndex(I) == Index) AL = getSlotAttributes(LastIndex++);
+      if (getSlotIndex(I) == Index)
+        B = AttrBuilder(pImpl->getSlotNode(LastIndex++));
       break;
     }
     LastIndex = I + 1;
-    AttrSet.push_back(getSlotAttributes(I));
+    AttrSets.push_back({getSlotIndex(I), pImpl->getSlotNode(I)});
   }
 
-  // Now remove the attribute from the correct slot. There may already be an
-  // AttributeList there.
-  AttrBuilder B(AL, Index);
+  // Remove the attributes from the existing set and add them.
   B.remove(Attrs);
-
-  AttrSet.push_back(AttributeList::get(C, Index, B));
+  if (B.hasAttributes())
+    AttrSets.push_back({Index, AttributeSet::get(C, B)});
 
   // Add the remaining attribute slots.
   for (unsigned I = LastIndex, E = NumAttrs; I < E; ++I)
-    AttrSet.push_back(getSlotAttributes(I));
+    AttrSets.push_back({getSlotIndex(I), pImpl->getSlotNode(I)});
 
-  return get(C, AttrSet);
+  return get(C, AttrSets);
 }
 
 AttributeList AttributeList::removeAttributes(LLVMContext &C,
@@ -1403,18 +1363,7 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
 }
 
 AttrBuilder &AttrBuilder::removeAttributes(AttributeList A, uint64_t Index) {
-  unsigned Slot = ~0U;
-  for (unsigned I = 0, E = A.getNumSlots(); I != E; ++I)
-    if (A.getSlotIndex(I) == Index) {
-      Slot = I;
-      break;
-    }
-
-  assert(Slot != ~0U && "Couldn't find index in AttributeList!");
-
-  for (AttributeList::iterator I = A.begin(Slot), E = A.end(Slot); I != E;
-       ++I) {
-    Attribute Attr = *I;
+  for (Attribute Attr : A.getAttributes(Index)) {
     if (Attr.isEnumAttribute() || Attr.isIntAttribute()) {
       removeAttribute(Attr.getKindAsEnum());
     } else {

@@ -22,4 +22,18 @@ define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
   ret void
 }
 
+; This test used to crash in ScheduleDAG.
+;
+; GCN-LABEL: {{^}}test_readcyclecounter_smem:
+; SI-DAG: s_memtime
+; VI-DAG: s_memrealtime
+; GCN-DAG: s_load_dword
+define amdgpu_cs i32 @test_readcyclecounter_smem(i64 addrspace(2)* inreg %in) #0 {
+  %cycle0 = call i64 @llvm.readcyclecounter()
+  %in.v = load i64, i64 addrspace(2)* %in
+  %r.64 = add i64 %cycle0, %in.v
+  %r.32 = trunc i64 %r.64 to i32
+  ret i32 %r.32
+}
+
 attributes #0 = { nounwind }

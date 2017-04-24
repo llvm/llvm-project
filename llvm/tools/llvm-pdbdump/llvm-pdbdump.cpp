@@ -124,28 +124,32 @@ cl::opt<bool> Typedefs("typedefs", cl::desc("Display typedef types"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<ClassSortMode> ClassOrder(
     "class-order", cl::desc("Class sort order"), cl::init(ClassSortMode::None),
-    cl::values(clEnumValN(ClassSortMode::None, "none",
-                          "Undefined / no particular sort order"),
-               clEnumValN(ClassSortMode::Name, "name", "Sort classes by name"),
-               clEnumValN(ClassSortMode::Size, "size", "Sort classes by size"),
-               clEnumValN(ClassSortMode::Padding, "padding",
-                          "Sort classes by amount of padding")),
+    cl::values(
+        clEnumValN(ClassSortMode::None, "none",
+                   "Undefined / no particular sort order"),
+        clEnumValN(ClassSortMode::Name, "name", "Sort classes by name"),
+        clEnumValN(ClassSortMode::Size, "size", "Sort classes by size"),
+        clEnumValN(ClassSortMode::Padding, "padding",
+                   "Sort classes by amount of padding"),
+        clEnumValN(ClassSortMode::PaddingPct, "padding-pct",
+                   "Sort classes by percentage of space consumed by padding")),
     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<ClassDefinitionFormat> ClassFormat(
     "class-definitions", cl::desc("Class definition format"),
-    cl::init(ClassDefinitionFormat::Standard),
+    cl::init(ClassDefinitionFormat::All),
     cl::values(
-        clEnumValN(ClassDefinitionFormat::Standard, "all-members",
+        clEnumValN(ClassDefinitionFormat::All, "all",
                    "Display all class members including data, constants, "
                    "typedefs, functions, etc"),
-        clEnumValN(ClassDefinitionFormat::Layout, "layout-members",
+        clEnumValN(ClassDefinitionFormat::Layout, "layout",
                    "Only display members that contribute to class size."),
-        clEnumValN(ClassDefinitionFormat::Graphical, "graphical",
-                   "Display graphical representation of each class's layout."),
         clEnumValN(ClassDefinitionFormat::None, "none",
                    "Don't display class definitions")),
     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+cl::opt<uint32_t> ClassRecursionDepth(
+    "class-recurse-depth", cl::desc("Class recursion depth (0=no limit)"),
+    cl::init(0), cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Lines("lines", cl::desc("Line tables"), cl::cat(TypeCategory),
                     cl::sub(PrettySubcommand));

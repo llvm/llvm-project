@@ -728,6 +728,7 @@ to crash on invalid inputs.
 Examples: regular expression matchers, text or binary format parsers, compression,
 network, crypto.
 
+
 Trophies
 ========
 * GLIBC: https://sourceware.org/glibc/wiki/FuzzingLibc

@@ -1,16 +1,16 @@
-; RUN: llc -split-dwarf=Disable -dwarf-version=4 -generate-type-units \
+; RUN: llc -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-4
 
-; RUN: llc -split-dwarf=Enable -dwarf-version=4 -generate-type-units \
+; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-4
 
-; RUN: llc -split-dwarf=Disable -dwarf-version=5 -generate-type-units \
+; RUN: llc -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-5
 
-; RUN: llc -split-dwarf=Enable -dwarf-version=5 -generate-type-units \
+; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-5
 

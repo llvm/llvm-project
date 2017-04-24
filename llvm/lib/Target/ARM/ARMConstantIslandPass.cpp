@@ -1741,10 +1741,9 @@ bool ARMConstantIslands::undoLRSpillRestore() {
           .add(MI->getOperand(1));
       MI->eraseFromParent();
       MadeChange = true;
-    }
-    if (MI->getOpcode() == ARM::tPUSH &&
-        MI->getOperand(2).getReg() == ARM::LR &&
-        MI->getNumExplicitOperands() == 3) {
+    } else if (MI->getOpcode() == ARM::tPUSH &&
+               MI->getOperand(2).getReg() == ARM::LR &&
+               MI->getNumExplicitOperands() == 3) {
       // Just remove the push.
       MI->eraseFromParent();
       MadeChange = true;
@@ -2158,6 +2157,15 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
 
       // If we're in PIC mode, there should be another ADD following.
       auto *TRI = STI->getRegisterInfo();
+
+      // %base cannot be redefined after the load as it will appear before
+      // TBB/TBH like:
+      //      %base =
+      //      %base =
+      //      tBB %base, %idx
+      if (registerDefinedBetween(BaseReg, Load->getNextNode(), MBB->end(), TRI))
+        continue;
+
       if (isPositionIndependentOrROPI) {
         MachineInstr *Add = Load->getNextNode();
         if (Add->getOpcode() != ARM::tADDrr ||

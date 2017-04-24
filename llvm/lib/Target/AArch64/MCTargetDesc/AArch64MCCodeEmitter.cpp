@@ -565,6 +565,9 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     MCFixupKind Fixup = MCFixupKind(AArch64::fixup_aarch64_tlsdesc_call);
     Fixups.push_back(MCFixup::create(0, MI.getOperand(0).getExpr(), Fixup));
     return;
+  } else if (MI.getOpcode() == AArch64::CompilerBarrier) {
+    // This just prevents the compiler from reordering accesses, no actual code.
+    return;
   }
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);

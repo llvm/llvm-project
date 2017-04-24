@@ -877,6 +877,47 @@ private:
                                      bool ControlsExit,
                                      bool AllowPredicates = false);
 
+  // Helper functions for computeExitLimitFromCond to avoid exponential time
+  // complexity.
+
+  class ExitLimitCache {
+    // It may look like we need key on the whole (L, TBB, FBB, ControlsExit,
+    // AllowPredicates) tuple, but recursive calls to
+    // computeExitLimitFromCondCached from computeExitLimitFromCondImpl only
+    // vary the in \c ExitCond and \c ControlsExit parameters.  We remember the
+    // initial values of the other values to assert our assumption.
+    SmallDenseMap<PointerIntPair<Value *, 1>, ExitLimit> TripCountMap;
+
+    const Loop *L;
+    BasicBlock *TBB;
+    BasicBlock *FBB;
+    bool AllowPredicates;
+
+  public:
+    ExitLimitCache(const Loop *L, BasicBlock *TBB, BasicBlock *FBB,
+                   bool AllowPredicates)
+        : L(L), TBB(TBB), FBB(FBB), AllowPredicates(AllowPredicates) {}
+
+    Optional<ExitLimit> find(const Loop *L, Value *ExitCond, BasicBlock *TBB,
+                             BasicBlock *FBB, bool ControlsExit,
+                             bool AllowPredicates);
+
+    void insert(const Loop *L, Value *ExitCond, BasicBlock *TBB,
+                BasicBlock *FBB, bool ControlsExit, bool AllowPredicates,
+                const ExitLimit &EL);
+  };
+
+  typedef ExitLimitCache ExitLimitCacheTy;
+  ExitLimit computeExitLimitFromCondCached(ExitLimitCacheTy &Cache,
+                                           const Loop *L, Value *ExitCond,
+                                           BasicBlock *TBB, BasicBlock *FBB,
+                                           bool ControlsExit,
+                                           bool AllowPredicates);
+  ExitLimit computeExitLimitFromCondImpl(ExitLimitCacheTy &Cache, const Loop *L,
+                                         Value *ExitCond, BasicBlock *TBB,
+                                         BasicBlock *FBB, bool ControlsExit,
+                                         bool AllowPredicates);
+
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
   /// ExitCond, TBB, and FBB. If AllowPredicates is set, this call will try

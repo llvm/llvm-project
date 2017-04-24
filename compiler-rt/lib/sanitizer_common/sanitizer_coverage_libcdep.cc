@@ -57,12 +57,6 @@ static const u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
 static atomic_uint32_t dump_once_guard;  // Ensure that CovDump runs only once.
 
 static atomic_uintptr_t coverage_counter;
-static atomic_uintptr_t caller_callee_counter;
-
-static void ResetGlobalCounters() {
-  return atomic_store(&coverage_counter, 0, memory_order_relaxed);
-  return atomic_store(&caller_callee_counter, 0, memory_order_relaxed);
-}
 
 // pc_array is the array containing the covered PCs.
 // To make the pc_array thread- and async-signal-safe it has to be large enough.
@@ -90,25 +84,14 @@ class CoverageData {
   void AfterFork(int child_pid);
   void Extend(uptr npcs);
   void Add(uptr pc, u32 *guard);
-  void IndirCall(uptr caller, uptr callee, uptr callee_cache[],
-                 uptr cache_size);
-  void DumpCallerCalleePairs();
-  void DumpTrace();
   void DumpAsBitSet();
-  void DumpCounters();
   void DumpOffsets();
   void DumpAll();
-
-  ALWAYS_INLINE
-  void TraceBasicBlock(u32 *id);
 
   void InitializeGuardArray(s32 *guards);
   void InitializeGuards(s32 *guards, uptr n, const char *module_name,
                         uptr caller_pc);
-  void InitializeCounters(u8 *counters, uptr n);
   void ReinitializeGuards();
-  uptr GetNumberOf8bitCounters();
-  uptr Update8bitCounterBitsetAndClearCounters(u8 *bitset);
 
   uptr *data();
   uptr size() const;
@@ -150,37 +133,6 @@ class CoverageData {
   InternalMmapVectorNoCtor<NamedPcRange> comp_unit_name_vec;
   InternalMmapVectorNoCtor<NamedPcRange> module_name_vec;
 
-  struct CounterAndSize {
-    u8 *counters;
-    uptr n;
-  };
-
-  InternalMmapVectorNoCtor<CounterAndSize> counters_vec;
-  uptr num_8bit_counters;
-
-  // Caller-Callee (cc) array, size and current index.
-  static const uptr kCcArrayMaxSize = FIRST_32_SECOND_64(1 << 18, 1 << 24);
-  uptr **cc_array;
-  atomic_uintptr_t cc_array_index;
-  atomic_uintptr_t cc_array_size;
-
-  // Tracing event array, size and current pointer.
-  // We record all events (basic block entries) in a global buffer of u32
-  // values. Each such value is the index in pc_array.
-  // So far the tracing is highly experimental:
-  //   - not thread-safe;
-  //   - does not support long traces;
-  //   - not tuned for performance.
-  // Windows doesn't do overcommit (committed virtual memory costs swap), so
-  // programs can't reliably map such large amounts of virtual memory.
-  // TODO(etienneb): Find a way to support coverage of larger executable
-static const uptr kTrEventArrayMaxSize =
-    (SANITIZER_WORDSIZE == 32 || SANITIZER_WINDOWS) ? 1 << 22 : 1 << 30;
-  u32 *tr_event_array;
-  uptr tr_event_array_size;
-  u32 *tr_event_pointer;
-  static const uptr kTrPcArrayMaxSize    = FIRST_32_SECOND_64(1 << 22, 1 << 27);
-
   StaticSpinMutex mu;
 };
 
@@ -217,23 +169,6 @@ void CoverageData::Enable() {
   } else {
     atomic_store(&pc_array_size, kPcArrayMaxSize, memory_order_relaxed);
   }
-
-  cc_array = reinterpret_cast<uptr **>(MmapNoReserveOrDie(
-      sizeof(uptr *) * kCcArrayMaxSize, "CovInit::cc_array"));
-  atomic_store(&cc_array_size, kCcArrayMaxSize, memory_order_relaxed);
-  atomic_store(&cc_array_index, 0, memory_order_relaxed);
-
-  // Allocate tr_event_array with a guard page at the end.
-  tr_event_array = reinterpret_cast<u32 *>(MmapNoReserveOrDie(
-      sizeof(tr_event_array[0]) * kTrEventArrayMaxSize + GetMmapGranularity(),
-      "CovInit::tr_event_array"));
-  MprotectNoAccess(
-      reinterpret_cast<uptr>(&tr_event_array[kTrEventArrayMaxSize]),
-      GetMmapGranularity());
-  tr_event_array_size = kTrEventArrayMaxSize;
-  tr_event_pointer = tr_event_array;
-
-  num_8bit_counters = 0;
 }
 
 void CoverageData::InitializeGuardArray(s32 *guards) {
@@ -250,17 +185,6 @@ void CoverageData::Disable() {
   if (pc_array) {
     UnmapOrDie(pc_array, sizeof(uptr) * kPcArrayMaxSize);
     pc_array = nullptr;
-  }
-  if (cc_array) {
-    UnmapOrDie(cc_array, sizeof(uptr *) * kCcArrayMaxSize);
-    cc_array = nullptr;
-  }
-  if (tr_event_array) {
-    UnmapOrDie(tr_event_array,
-               sizeof(tr_event_array[0]) * kTrEventArrayMaxSize +
-                   GetMmapGranularity());
-    tr_event_array = nullptr;
-    tr_event_pointer = nullptr;
   }
   if (pc_fd != kInvalidFd) {
     CloseFile(pc_fd);
@@ -341,15 +265,6 @@ void CoverageData::Extend(uptr npcs) {
   atomic_store(&pc_array_size, size, memory_order_release);
 }
 
-void CoverageData::InitializeCounters(u8 *counters, uptr n) {
-  if (!counters) return;
-  CHECK_EQ(reinterpret_cast<uptr>(counters) % 16, 0);
-  n = RoundUpTo(n, 16); // The compiler must ensure that counters is 16-aligned.
-  SpinMutexLock l(&mu);
-  counters_vec.push_back({counters, n});
-  num_8bit_counters += n;
-}
-
 void CoverageData::UpdateModuleNameVec(uptr caller_pc, uptr range_beg,
                                        uptr range_end) {
   auto sym = Symbolizer::GetOrInit();
@@ -422,98 +337,6 @@ void CoverageData::Add(uptr pc, u32 *guard) {
   CHECK_LT(idx, atomic_load(&pc_array_size, memory_order_acquire));
   uptr counter = atomic_fetch_add(&coverage_counter, 1, memory_order_relaxed);
   pc_array[idx] = BundlePcAndCounter(pc, counter);
-}
-
-// Registers a pair caller=>callee.
-// When a given caller is seen for the first time, the callee_cache is added
-// to the global array cc_array, callee_cache[0] is set to caller and
-// callee_cache[1] is set to cache_size.
-// Then we are trying to add callee to callee_cache [2,cache_size) if it is
-// not there yet.
-// If the cache is full we drop the callee (may want to fix this later).
-void CoverageData::IndirCall(uptr caller, uptr callee, uptr callee_cache[],
-                             uptr cache_size) {
-  if (!cc_array) return;
-  atomic_uintptr_t *atomic_callee_cache =
-      reinterpret_cast<atomic_uintptr_t *>(callee_cache);
-  uptr zero = 0;
-  if (atomic_compare_exchange_strong(&atomic_callee_cache[0], &zero, caller,
-                                     memory_order_seq_cst)) {
-    uptr idx = atomic_fetch_add(&cc_array_index, 1, memory_order_relaxed);
-    CHECK_LT(idx * sizeof(uptr),
-             atomic_load(&cc_array_size, memory_order_acquire));
-    callee_cache[1] = cache_size;
-    cc_array[idx] = callee_cache;
-  }
-  CHECK_EQ(atomic_load(&atomic_callee_cache[0], memory_order_relaxed), caller);
-  for (uptr i = 2; i < cache_size; i++) {
-    uptr was = 0;
-    if (atomic_compare_exchange_strong(&atomic_callee_cache[i], &was, callee,
-                                       memory_order_seq_cst)) {
-      atomic_fetch_add(&caller_callee_counter, 1, memory_order_relaxed);
-      return;
-    }
-    if (was == callee)  // Already have this callee.
-      return;
-  }
-}
-
-uptr CoverageData::GetNumberOf8bitCounters() {
-  return num_8bit_counters;
-}
-
-// Map every 8bit counter to a 8-bit bitset and clear the counter.
-uptr CoverageData::Update8bitCounterBitsetAndClearCounters(u8 *bitset) {
-  uptr num_new_bits = 0;
-  uptr cur = 0;
-  // For better speed we map 8 counters to 8 bytes of bitset at once.
-  static const uptr kBatchSize = 8;
-  CHECK_EQ(reinterpret_cast<uptr>(bitset) % kBatchSize, 0);
-  for (uptr i = 0, len = counters_vec.size(); i < len; i++) {
-    u8 *c = counters_vec[i].counters;
-    uptr n = counters_vec[i].n;
-    CHECK_EQ(n % 16, 0);
-    CHECK_EQ(cur % kBatchSize, 0);
-    CHECK_EQ(reinterpret_cast<uptr>(c) % kBatchSize, 0);
-    if (!bitset) {
-      internal_bzero_aligned16(c, n);
-      cur += n;
-      continue;
-    }
-    for (uptr j = 0; j < n; j += kBatchSize, cur += kBatchSize) {
-      CHECK_LT(cur, num_8bit_counters);
-      u64 *pc64 = reinterpret_cast<u64*>(c + j);
-      u64 *pb64 = reinterpret_cast<u64*>(bitset + cur);
-      u64 c64 = *pc64;
-      u64 old_bits_64 = *pb64;
-      u64 new_bits_64 = old_bits_64;
-      if (c64) {
-        *pc64 = 0;
-        for (uptr k = 0; k < kBatchSize; k++) {
-          u64 x = (c64 >> (8 * k)) & 0xff;
-          if (x) {
-            u64 bit = 0;
-            /**/ if (x >= 128) bit = 128;
-            else if (x >= 32) bit = 64;
-            else if (x >= 16) bit = 32;
-            else if (x >= 8) bit = 16;
-            else if (x >= 4) bit = 8;
-            else if (x >= 3) bit = 4;
-            else if (x >= 2) bit = 2;
-            else if (x >= 1) bit = 1;
-            u64 mask = bit << (8 * k);
-            if (!(new_bits_64 & mask)) {
-              num_new_bits++;
-              new_bits_64 |= mask;
-            }
-          }
-        }
-        *pb64 = new_bits_64;
-      }
-    }
-  }
-  CHECK_EQ(cur, num_8bit_counters);
-  return num_new_bits;
 }
 
 uptr *CoverageData::data() {
@@ -594,132 +417,6 @@ static fd_t CovOpenFile(InternalScopedString *path, bool packed,
     Report("SanitizerCoverage: failed to open %s for writing (reason: %d)\n",
            path->data(), err);
   return fd;
-}
-
-// Dump trace PCs and trace events into two separate files.
-void CoverageData::DumpTrace() {
-  uptr max_idx = tr_event_pointer - tr_event_array;
-  if (!max_idx) return;
-  auto sym = Symbolizer::GetOrInit();
-  if (!sym)
-    return;
-  InternalScopedString out(32 << 20);
-  for (uptr i = 0, n = size(); i < n; i++) {
-    const char *module_name = "<unknown>";
-    uptr module_address = 0;
-    sym->GetModuleNameAndOffsetForPC(UnbundlePc(pc_array[i]), &module_name,
-                                     &module_address);
-    out.append("%s 0x%zx\n", module_name, module_address);
-  }
-  InternalScopedString path(kMaxPathLength);
-  fd_t fd = CovOpenFile(&path, false, "trace-points");
-  if (fd == kInvalidFd) return;
-  WriteToFile(fd, out.data(), out.length());
-  CloseFile(fd);
-
-  fd = CovOpenFile(&path, false, "trace-compunits");
-  if (fd == kInvalidFd) return;
-  out.clear();
-  for (uptr i = 0; i < comp_unit_name_vec.size(); i++)
-    out.append("%s\n", comp_unit_name_vec[i].copied_module_name);
-  WriteToFile(fd, out.data(), out.length());
-  CloseFile(fd);
-
-  fd = CovOpenFile(&path, false, "trace-events");
-  if (fd == kInvalidFd) return;
-  uptr bytes_to_write = max_idx * sizeof(tr_event_array[0]);
-  u8 *event_bytes = reinterpret_cast<u8*>(tr_event_array);
-  // The trace file could be huge, and may not be written with a single syscall.
-  while (bytes_to_write) {
-    uptr actually_written;
-    if (WriteToFile(fd, event_bytes, bytes_to_write, &actually_written) &&
-        actually_written <= bytes_to_write) {
-      bytes_to_write -= actually_written;
-      event_bytes += actually_written;
-    } else {
-      break;
-    }
-  }
-  CloseFile(fd);
-  VReport(1, " CovDump: Trace: %zd PCs written\n", size());
-  VReport(1, " CovDump: Trace: %zd Events written\n", max_idx);
-}
-
-// This function dumps the caller=>callee pairs into a file as a sequence of
-// lines like "module_name offset".
-void CoverageData::DumpCallerCalleePairs() {
-  uptr max_idx = atomic_load(&cc_array_index, memory_order_relaxed);
-  if (!max_idx) return;
-  auto sym = Symbolizer::GetOrInit();
-  if (!sym)
-    return;
-  InternalScopedString out(32 << 20);
-  uptr total = 0;
-  for (uptr i = 0; i < max_idx; i++) {
-    uptr *cc_cache = cc_array[i];
-    CHECK(cc_cache);
-    uptr caller = cc_cache[0];
-    uptr n_callees = cc_cache[1];
-    const char *caller_module_name = "<unknown>";
-    uptr caller_module_address = 0;
-    sym->GetModuleNameAndOffsetForPC(caller, &caller_module_name,
-                                     &caller_module_address);
-    for (uptr j = 2; j < n_callees; j++) {
-      uptr callee = cc_cache[j];
-      if (!callee) break;
-      total++;
-      const char *callee_module_name = "<unknown>";
-      uptr callee_module_address = 0;
-      sym->GetModuleNameAndOffsetForPC(callee, &callee_module_name,
-                                       &callee_module_address);
-      out.append("%s 0x%zx\n%s 0x%zx\n", caller_module_name,
-                 caller_module_address, callee_module_name,
-                 callee_module_address);
-    }
-  }
-  InternalScopedString path(kMaxPathLength);
-  fd_t fd = CovOpenFile(&path, false, "caller-callee");
-  if (fd == kInvalidFd) return;
-  WriteToFile(fd, out.data(), out.length());
-  CloseFile(fd);
-  VReport(1, " CovDump: %zd caller-callee pairs written\n", total);
-}
-
-// Record the current PC into the event buffer.
-// Every event is a u32 value (index in tr_pc_array_index) so we compute
-// it once and then cache in the provided 'cache' storage.
-//
-// This function will eventually be inlined by the compiler.
-void CoverageData::TraceBasicBlock(u32 *id) {
-  // Will trap here if
-  //  1. coverage is not enabled at run-time.
-  //  2. The array tr_event_array is full.
-  *tr_event_pointer = *id - 1;
-  tr_event_pointer++;
-}
-
-void CoverageData::DumpCounters() {
-  if (!common_flags()->coverage_counters) return;
-  uptr n = coverage_data.GetNumberOf8bitCounters();
-  if (!n) return;
-  InternalScopedBuffer<u8> bitset(n);
-  coverage_data.Update8bitCounterBitsetAndClearCounters(bitset.data());
-  InternalScopedString path(kMaxPathLength);
-
-  for (uptr m = 0; m < module_name_vec.size(); m++) {
-    auto r = module_name_vec[m];
-    CHECK(r.copied_module_name);
-    CHECK_LE(r.beg, r.end);
-    CHECK_LE(r.end, size());
-    const char *base_name = StripModuleName(r.copied_module_name);
-    fd_t fd =
-        CovOpenFile(&path, /* packed */ false, base_name, "counters-sancov");
-    if (fd == kInvalidFd) return;
-    WriteToFile(fd, bitset.data() + r.beg, r.end - r.beg);
-    CloseFile(fd);
-    VReport(1, " CovDump: %zd counters written for '%s'\n", r.end - r.beg,
-            base_name);
-  }
 }
 
 void CoverageData::DumpAsBitSet() {
@@ -869,10 +566,7 @@ void CoverageData::DumpAll() {
   if (atomic_fetch_add(&dump_once_guard, 1, memory_order_relaxed))
     return;
   DumpAsBitSet();
-  DumpCounters();
-  DumpTrace();
   DumpOffsets();
-  DumpCallerCalleePairs();
 }
 
 void CovPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
@@ -946,11 +640,6 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_with_check(u32 *guard) {
   coverage_data.Add(StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),
                     guard);
 }
-SANITIZER_INTERFACE_ATTRIBUTE void
-__sanitizer_cov_indir_call16(uptr callee, uptr callee_cache16[]) {
-  coverage_data.IndirCall(StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),
-                          callee, callee_cache16, 16);
-}
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_init() {
   coverage_enabled = true;
   coverage_dir = common_flags()->coverage_dir;
@@ -964,7 +653,6 @@ SANITIZER_INTERFACE_ATTRIBUTE void
 __sanitizer_cov_module_init(s32 *guards, uptr npcs, u8 *counters,
                             const char *comp_unit_name) {
   coverage_data.InitializeGuards(guards, npcs, comp_unit_name, GET_CALLER_PC());
-  coverage_data.InitializeCounters(counters, npcs);
   if (!common_flags()->coverage_direct) return;
   if (SANITIZER_ANDROID && coverage_enabled) {
     // dlopen/dlclose interceptors do not work on Android, so we rely on
@@ -980,45 +668,6 @@ sptr __sanitizer_maybe_open_cov_file(const char *name) {
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_get_total_unique_coverage() {
   return atomic_load(&coverage_counter, memory_order_relaxed);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_get_total_unique_caller_callee_pairs() {
-  return atomic_load(&caller_callee_counter, memory_order_relaxed);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_cov_trace_func_enter(u32 *id) {
-  __sanitizer_cov_with_check(id);
-  coverage_data.TraceBasicBlock(id);
-}
-SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_cov_trace_basic_block(u32 *id) {
-  __sanitizer_cov_with_check(id);
-  coverage_data.TraceBasicBlock(id);
-}
-SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_reset_coverage() {
-  ResetGlobalCounters();
-  coverage_data.ReinitializeGuards();
-  internal_bzero_aligned16(
-      coverage_data.data(),
-      RoundUpTo(coverage_data.size() * sizeof(coverage_data.data()[0]), 16));
-}
-SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_get_coverage_guards(uptr **data) {
-  *data = coverage_data.data();
-  return coverage_data.size();
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_get_number_of_counters() {
-  return coverage_data.GetNumberOf8bitCounters();
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_update_counter_bitset_and_clear_counters(u8 *bitset) {
-  return coverage_data.Update8bitCounterBitsetAndClearCounters(bitset);
 }
 
 // Default empty implementations (weak). Users should redefine them.

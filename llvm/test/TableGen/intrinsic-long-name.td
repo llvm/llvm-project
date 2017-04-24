@@ -22,7 +22,7 @@ class Intrinsic<string name, list<LLVMType> param_types = []> {
   list<IntrinsicProperty> IntrProperties = [];
 }
 
-def iAny : ValueType<0, 125>;
+def iAny : ValueType<0, 253>;
 def llvm_anyint_ty : LLVMType<iAny>;
 
 // Make sure we generate the long name without crashing

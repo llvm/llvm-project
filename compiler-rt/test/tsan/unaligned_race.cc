@@ -6,31 +6,22 @@
 
 volatile uint64_t objs[8*2*(2 + 4 + 8)][2];
 
-extern "C" {
-uint16_t __sanitizer_unaligned_load16(volatile void *addr);
-uint32_t __sanitizer_unaligned_load32(volatile void *addr);
-uint64_t __sanitizer_unaligned_load64(volatile void *addr);
-void __sanitizer_unaligned_store16(volatile void *addr, uint16_t v);
-void __sanitizer_unaligned_store32(volatile void *addr, uint32_t v);
-void __sanitizer_unaligned_store64(volatile void *addr, uint64_t v);
-}
-
 // All this mess is to generate unique stack for each race,
 // otherwise tsan will suppress similar stacks.
 
-static NOINLINE void access(volatile char *p, int sz, int rw) {
+static NOINLINE void access(volatile void *p, int sz, int rw) {
   if (rw) {
     switch (sz) {
-    case 0: __sanitizer_unaligned_store16(p, 0); break;
-    case 1: __sanitizer_unaligned_store32(p, 0); break;
-    case 2: __sanitizer_unaligned_store64(p, 0); break;
+    case 0: __sanitizer_unaligned_store16((void *)p, 0); break;
+    case 1: __sanitizer_unaligned_store32((void *)p, 0); break;
+    case 2: __sanitizer_unaligned_store64((void *)p, 0); break;
     default: exit(1);
     }
   } else {
     switch (sz) {
-    case 0: __sanitizer_unaligned_load16(p); break;
-    case 1: __sanitizer_unaligned_load32(p); break;
-    case 2: __sanitizer_unaligned_load64(p); break;
+    case 0: __sanitizer_unaligned_load16((void *)p); break;
+    case 1: __sanitizer_unaligned_load32((void *)p); break;
+    case 2: __sanitizer_unaligned_load64((void *)p); break;
     default: exit(1);
     }
   }

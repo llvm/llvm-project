@@ -68,6 +68,15 @@ ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
+static const char kStdSuppressions[] =
+#if SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+  // The actual string allocation happens here (for more details refer to the
+  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT definition).
+  "leak:*_dl_map_object_deps*\n"
+#endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+  // TLS leak in some glibc versions, described in
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
+  "leak:*tls_get_addr_tail*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -76,6 +85,7 @@ void InitializeSuppressions() {
   suppression_ctx->ParseFromFile(flags()->suppressions);
   if (&__lsan_default_suppressions)
     suppression_ctx->Parse(__lsan_default_suppressions());
+  suppression_ctx->Parse(kStdSuppressions);
 }
 
 static SuppressionContext *GetSuppressionContext() {
@@ -83,12 +93,9 @@ static SuppressionContext *GetSuppressionContext() {
   return suppression_ctx;
 }
 
-struct RootRegion {
-  const void *begin;
-  uptr size;
-};
+static InternalMmapVector<RootRegion> *root_regions;
 
-InternalMmapVector<RootRegion> *root_regions;
+InternalMmapVector<RootRegion> const *GetRootRegions() { return root_regions; }
 
 void InitializeRootRegions() {
   CHECK(!root_regions);
@@ -291,23 +298,29 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   }
 }
 
-static void ProcessRootRegion(Frontier *frontier, uptr root_begin,
-                              uptr root_end) {
-  MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
+                    uptr region_begin, uptr region_end, uptr prot) {
+  uptr intersection_begin = Max(root_region.begin, region_begin);
+  uptr intersection_end = Min(region_end, root_region.begin + root_region.size);
+  if (intersection_begin >= intersection_end) return;
+  bool is_readable = prot & MemoryMappingLayout::kProtectionRead;
+  LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
+               root_region.begin, root_region.begin + root_region.size,
+               region_begin, region_end,
+               is_readable ? "readable" : "unreadable");
+  if (is_readable)
+    ScanRangeForPointers(intersection_begin, intersection_end, frontier, "ROOT",
+                         kReachable);
+}
+
+static void ProcessRootRegion(Frontier *frontier,
+                              const RootRegion &root_region) {
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   uptr begin, end, prot;
   while (proc_maps.Next(&begin, &end,
                         /*offset*/ nullptr, /*filename*/ nullptr,
                         /*filename_size*/ 0, &prot)) {
-    uptr intersection_begin = Max(root_begin, begin);
-    uptr intersection_end = Min(end, root_end);
-    if (intersection_begin >= intersection_end) continue;
-    bool is_readable = prot & MemoryMappingLayout::kProtectionRead;
-    LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
-                 root_begin, root_end, begin, end,
-                 is_readable ? "readable" : "unreadable");
-    if (is_readable)
-      ScanRangeForPointers(intersection_begin, intersection_end, frontier,
-                           "ROOT", kReachable);
+    ScanRootRegion(frontier, root_region, begin, end, prot);
   }
 }
 
@@ -316,9 +329,7 @@ static void ProcessRootRegions(Frontier *frontier) {
   if (!flags()->use_root_regions) return;
   CHECK(root_regions);
   for (uptr i = 0; i < root_regions->size(); i++) {
-    RootRegion region = (*root_regions)[i];
-    uptr begin_addr = reinterpret_cast<uptr>(region.begin);
-    ProcessRootRegion(frontier, begin_addr, begin_addr + region.size);
+    ProcessRootRegion(frontier, (*root_regions)[i]);
   }
 }
 
@@ -356,6 +367,72 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
   }
 }
 
+static uptr GetCallerPC(u32 stack_id, StackDepotReverseMap *map) {
+  CHECK(stack_id);
+  StackTrace stack = map->Get(stack_id);
+  // The top frame is our malloc/calloc/etc. The next frame is the caller.
+  if (stack.size >= 2)
+    return stack.trace[1];
+  return 0;
+}
+
+struct InvalidPCParam {
+  Frontier *frontier;
+  StackDepotReverseMap *stack_depot_reverse_map;
+  bool skip_linker_allocations;
+};
+
+// ForEachChunk callback. If the caller pc is invalid or is within the linker,
+// mark as reachable. Called by ProcessPlatformSpecificAllocations.
+static void MarkInvalidPCCb(uptr chunk, void *arg) {
+  CHECK(arg);
+  InvalidPCParam *param = reinterpret_cast<InvalidPCParam *>(arg);
+  chunk = GetUserBegin(chunk);
+  LsanMetadata m(chunk);
+  if (m.allocated() && m.tag() != kReachable && m.tag() != kIgnored) {
+    u32 stack_id = m.stack_trace_id();
+    uptr caller_pc = 0;
+    if (stack_id > 0)
+      caller_pc = GetCallerPC(stack_id, param->stack_depot_reverse_map);
+    // If caller_pc is unknown, this chunk may be allocated in a coroutine. Mark
+    // it as reachable, as we can't properly report its allocation stack anyway.
+    if (caller_pc == 0 || (param->skip_linker_allocations &&
+                           GetLinker()->containsAddress(caller_pc))) {
+      m.set_tag(kReachable);
+      param->frontier->push_back(chunk);
+    }
+  }
+}
+
+// On Linux, handles dynamically allocated TLS blocks by treating all chunks
+// allocated from ld-linux.so as reachable.
+// Dynamic TLS blocks contain the TLS variables of dynamically loaded modules.
+// They are allocated with a __libc_memalign() call in allocate_and_init()
+// (elf/dl-tls.c). Glibc won't tell us the address ranges occupied by those
+// blocks, but we can make sure they come from our own allocator by intercepting
+// __libc_memalign(). On top of that, there is no easy way to reach them. Their
+// addresses are stored in a dynamically allocated array (the DTV) which is
+// referenced from the static TLS. Unfortunately, we can't just rely on the DTV
+// being reachable from the static TLS, and the dynamic TLS being reachable from
+// the DTV. This is because the initial DTV is allocated before our interception
+// mechanism kicks in, and thus we don't recognize it as allocated memory. We
+// can't special-case it either, since we don't know its size.
+// Our solution is to include in the root set all allocations made from
+// ld-linux.so (which is where allocate_and_init() is implemented). This is
+// guaranteed to include all dynamic TLS blocks (and possibly other allocations
+// which we don't care about).
+// On all other platforms, this simply checks to ensure that the caller pc is
+// valid before reporting chunks as leaked.
+void ProcessPC(Frontier *frontier) {
+  StackDepotReverseMap stack_depot_reverse_map;
+  InvalidPCParam arg;
+  arg.frontier = frontier;
+  arg.stack_depot_reverse_map = &stack_depot_reverse_map;
+  arg.skip_linker_allocations =
+      flags()->use_tls && flags()->use_ld_allocations && GetLinker() != nullptr;
+  ForEachChunk(MarkInvalidPCCb, &arg);
+}
+
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
   // Holds the flood fill frontier.
@@ -367,11 +444,13 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
   ProcessRootRegions(&frontier);
   FloodFillTag(&frontier, kReachable);
 
+  CHECK_EQ(0, frontier.size());
+  ProcessPC(&frontier);
+
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
   // otherwise.
   LOG_POINTERS("Processing platform-specific allocations.\n");
-  CHECK_EQ(0, frontier.size());
   ProcessPlatformSpecificAllocations(&frontier);
   FloodFillTag(&frontier, kReachable);
 
@@ -707,7 +786,7 @@ void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
   BlockingMutexLock l(&global_mutex);
   CHECK(root_regions);
-  RootRegion region = {begin, size};
+  RootRegion region = {reinterpret_cast<uptr>(begin), size};
   root_regions->push_back(region);
   VReport(1, "Registered root region at %p of size %llu\n", begin, size);
 #endif // CAN_SANITIZE_LEAKS
@@ -721,7 +800,7 @@ void __lsan_unregister_root_region(const void *begin, uptr size) {
   bool removed = false;
   for (uptr i = 0; i < root_regions->size(); i++) {
     RootRegion region = (*root_regions)[i];
-    if (region.begin == begin && region.size == size) {
+    if (region.begin == reinterpret_cast<uptr>(begin) && region.size == size) {
       removed = true;
       uptr last_index = root_regions->size() - 1;
       (*root_regions)[i] = (*root_regions)[last_index];

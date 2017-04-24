@@ -286,7 +286,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
     auto *RBI = new X86RegisterBankInfo(*I->getRegisterInfo());
     GISel->RegBankInfo.reset(RBI);
-    GISel->InstSelector.reset(createX86InstructionSelector(*I, *RBI));
+    GISel->InstSelector.reset(createX86InstructionSelector(*this, *I, *RBI));
 #endif
     I->setGISelAccessor(*GISel);
   }

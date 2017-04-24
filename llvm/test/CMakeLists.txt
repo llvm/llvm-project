@@ -45,6 +45,7 @@ set(LLVM_TEST_DEPENDS
           llvm-config
           llvm-cov
           llvm-cxxdump
+          llvm-cvtres
           llvm-diff
           llvm-dis
           llvm-dsymutil

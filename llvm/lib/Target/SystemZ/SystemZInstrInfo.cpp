@@ -104,8 +104,9 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineOperand &LowOffsetOp = MI->getOperand(2);
   LowOffsetOp.setImm(LowOffsetOp.getImm() + 8);
 
-  // Clear the kill flags for the base and index registers in the first
-  // instruction.
+  // Clear the kill flags on the registers in the first instruction.
+  if (EarlierMI->getOperand(0).isReg() && EarlierMI->getOperand(0).isUse())
+    EarlierMI->getOperand(0).setIsKill(false);
   EarlierMI->getOperand(1).setIsKill(false);
   EarlierMI->getOperand(3).setIsKill(false);
 

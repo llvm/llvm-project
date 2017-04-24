@@ -167,15 +167,12 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
 
     // Drop any attributes that were on the vararg arguments.
     AttributeList PAL = CS.getAttributes();
-    if (!PAL.isEmpty() && PAL.getSlotIndex(PAL.getNumSlots() - 1) > NumArgs) {
-      SmallVector<AttributeList, 8> AttributesVec;
-      for (unsigned i = 0; PAL.getSlotIndex(i) <= NumArgs; ++i)
-        AttributesVec.push_back(PAL.getSlotAttributes(i));
-      if (PAL.hasAttributes(AttributeList::FunctionIndex))
-        AttributesVec.push_back(AttributeList::get(Fn.getContext(),
-                                                   AttributeList::FunctionIndex,
-                                                   PAL.getFnAttributes()));
-      PAL = AttributeList::get(Fn.getContext(), AttributesVec);
+    if (!PAL.isEmpty()) {
+      SmallVector<AttributeSet, 8> ArgAttrs;
+      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo)
+        ArgAttrs.push_back(PAL.getParamAttributes(ArgNo));
+      PAL = AttributeList::get(Fn.getContext(), PAL.getFnAttributes(),
+                               PAL.getRetAttributes(), ArgAttrs);
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;

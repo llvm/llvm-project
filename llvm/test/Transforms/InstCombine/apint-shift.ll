@@ -287,13 +287,10 @@ define i47 @test12(i47 %X) {
   ret i47 %sh2
 }
 
-; FIXME: Same as above with vectors.
-
 define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
 ; CHECK-LABEL: @test12_splat_vec(
-; CHECK-NEXT:    [[SH1:%.*]] = ashr <2 x i47> %X, <i47 8, i47 8>
-; CHECK-NEXT:    [[SH2:%.*]] = shl nsw <2 x i47> [[SH1]], <i47 8, i47 8>
-; CHECK-NEXT:    ret <2 x i47> [[SH2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i47> %X, <i47 -256, i47 -256>
+; CHECK-NEXT:    ret <2 x i47> [[TMP1]]
 ;
   %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>

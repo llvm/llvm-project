@@ -26,6 +26,7 @@ subdirectories =
  llvm-bcanalyzer
  llvm-cat
  llvm-cov
+ llvm-cvtres
  llvm-diff
  llvm-dis
  llvm-dwarfdump

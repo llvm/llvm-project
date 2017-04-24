@@ -1,7 +1,7 @@
 # This file sets up a CMakeCache for the second stage of a Fuchsia toolchain
 # build.
 
-set(LLVM_TARGETS_TO_BUILD X86;AArch64 CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64 CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
@@ -36,6 +36,7 @@ set(BUILTINS_aarch64-fuchsia-none_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_TOOLS
+  llc
   llvm-ar
   llvm-cov
   llvm-cxxfilt
@@ -49,6 +50,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-readobj
   llvm-size
   llvm-symbolizer
+  opt
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS

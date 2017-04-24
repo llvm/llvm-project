@@ -1011,12 +1011,7 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
 bool BT::reached(const MachineBasicBlock *B) const {
   int BN = B->getNumber();
   assert(BN >= 0);
-  for (EdgeSetType::iterator I = EdgeExec.begin(), E = EdgeExec.end();
-       I != E; ++I) {
-    if (I->second == BN)
-      return true;
-  }
-  return false;
+  return ReachedBB.count(BN);
 }
 
 // Visit an individual instruction. This could be a newly added instruction,
@@ -1036,6 +1031,8 @@ void BT::reset() {
   EdgeExec.clear();
   InstrExec.clear();
   Map.clear();
+  ReachedBB.clear();
+  ReachedBB.reserve(MF.size());
 }
 
 void BT::run() {
@@ -1068,6 +1065,7 @@ void BT::run() {
     if (EdgeExec.count(Edge))
       continue;
     EdgeExec.insert(Edge);
+    ReachedBB.insert(Edge.second);
 
     const MachineBasicBlock &B = *MF.getBlockNumbered(Edge.second);
     MachineBasicBlock::const_iterator It = B.begin(), End = B.end();

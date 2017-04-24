@@ -276,14 +276,17 @@ static bool format(StringRef FileName) {
   }
   // Get new affected ranges after sorting `#includes`.
   Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
-  bool IncompleteFormat = false;
+  FormattingAttemptStatus Status;
   Replacements FormatChanges = reformat(*FormatStyle, *ChangedCode, Ranges,
-                                        AssumedFileName, &IncompleteFormat);
+                                        AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (OutputXML) {
     outs() << "<?xml version='1.0'?>\n<replacements "
               "xml:space='preserve' incomplete_format='"
-           << (IncompleteFormat ? "true" : "false") << "'>\n";
+           << (Status.FormatComplete ? "false" : "true") << "'";
+    if (!Status.FormatComplete)
+      outs() << " line=" << Status.Line;
+    outs() << ">\n";
     if (Cursor.getNumOccurrences() != 0)
       outs() << "<cursor>"
              << FormatChanges.getShiftedCodePosition(CursorPosition)
@@ -307,11 +310,15 @@ static bool format(StringRef FileName) {
       if (Rewrite.overwriteChangedFiles())
         return true;
     } else {
-      if (Cursor.getNumOccurrences() != 0)
+      if (Cursor.getNumOccurrences() != 0) {
         outs() << "{ \"Cursor\": "
                << FormatChanges.getShiftedCodePosition(CursorPosition)
                << ", \"IncompleteFormat\": "
-               << (IncompleteFormat ? "true" : "false") << " }\n";
+               << (Status.FormatComplete ? "false" : "true");
+        if (!Status.FormatComplete)
+          outs() << ", \"Line\": " << Status.Line;
+        outs() << " }\n";
+      }
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }

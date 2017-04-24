@@ -32,8 +32,8 @@ using namespace llvm;
 ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI), RI() {}
 
-/// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-void ARMInstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+/// Return the noop instruction to use for a noop.
+void ARMInstrInfo::getNoop(MCInst &NopInst) const {
   if (hasNOP()) {
     NopInst.setOpcode(ARM::HINT);
     NopInst.addOperand(MCOperand::createImm(0));

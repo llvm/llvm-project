@@ -12290,6 +12290,7 @@ The third argument is a metadata argument specifying the rounding mode to be
 assumed. This argument must be one of the following strings:
 
 ::
+
       "round.dynamic"
       "round.tonearest"
       "round.downward"
@@ -12321,6 +12322,7 @@ required exception behavior.  This argument must be one of the following
 strings:
 
 ::
+
       "fpexcept.ignore"
       "fpexcept.maytrap"
       "fpexcept.strict"

@@ -138,13 +138,18 @@ bool Argument::onlyReadsMemory() const {
          Attrs.hasParamAttribute(getArgNo(), Attribute::ReadNone);
 }
 
-void Argument::addAttr(AttributeList AS) {
-  assert(AS.getNumSlots() <= 1 &&
-         "Trying to add more than one attribute set to an argument!");
-  AttrBuilder B(AS, AS.getSlotIndex(0));
-  getParent()->addAttributes(
-      getArgNo() + 1,
-      AttributeList::get(Parent->getContext(), getArgNo() + 1, B));
+void Argument::addAttrs(AttrBuilder &B) {
+  AttributeList AL = getParent()->getAttributes();
+  AL = AL.addAttributes(Parent->getContext(), getArgNo() + 1, B);
+  getParent()->setAttributes(AL);
+}
+
+void Argument::addAttr(Attribute::AttrKind Kind) {
+  getParent()->addAttribute(getArgNo() + 1, Kind);
+}
+
+void Argument::addAttr(Attribute Attr) {
+  getParent()->addAttribute(getArgNo() + 1, Attr);
 }
 
 void Argument::removeAttr(AttributeList AS) {
@@ -154,6 +159,10 @@ void Argument::removeAttr(AttributeList AS) {
   getParent()->removeAttributes(
       getArgNo() + 1,
       AttributeList::get(Parent->getContext(), getArgNo() + 1, B));
+}
+
+void Argument::removeAttr(Attribute::AttrKind Kind) {
+  getParent()->removeAttribute(getArgNo() + 1, Kind);
 }
 
 bool Argument::hasAttribute(Attribute::AttrKind Kind) const {

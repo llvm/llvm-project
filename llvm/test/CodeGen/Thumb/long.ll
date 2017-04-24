@@ -206,3 +206,34 @@ entry:
 ; CHECK: adds r0, r0, r2
 ; CHECK: sbcs r1, r3
 }
+
+declare void @f13(i64 %x)
+
+define void @f14(i1 %x, i64 %y) #0 {
+; CHECK-LABEL: f14:
+entry:
+  %a = add i64 %y, 47
+  call void @f13(i64 %a)
+; CHECK: bl
+  br i1 %x, label %if.end, label %if.then
+
+if.then:
+  call void @f13(i64 %y)
+; CHECK: bl
+  br label %if.end
+
+if.end:
+  %b = add i64 %y, 45
+  call void @f13(i64 %b)
+; CHECK: adds
+; CHECK: adcs
+; CHECK: bl
+  %c = add i64 %y, 47
+  call void @f13(i64 %c)
+; CHECK: adds
+; CHECK-NEXT: adcs
+; CHECK: bl
+  ret void
+}
+
+attributes #0 = { optsize }

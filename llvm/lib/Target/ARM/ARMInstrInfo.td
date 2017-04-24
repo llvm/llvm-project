@@ -259,8 +259,8 @@ def HasFP16          : Predicate<"Subtarget->hasFP16()">,
                                  AssemblerPredicate<"FeatureFP16","half-float conversions">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16","full half-float">;
-def HasDivide        : Predicate<"Subtarget->hasDivide()">,
-                                 AssemblerPredicate<"FeatureHWDiv", "divide in THUMB">;
+def HasDivideInThumb : Predicate<"Subtarget->hasDivideInThumbMode()">,
+                                 AssemblerPredicate<"FeatureHWDivThumb", "divide in THUMB">;
 def HasDivideInARM   : Predicate<"Subtarget->hasDivideInARMMode()">,
                                  AssemblerPredicate<"FeatureHWDivARM", "divide in ARM">;
 def HasDSP           : Predicate<"Subtarget->hasDSP()">,
@@ -5974,4 +5974,11 @@ def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$status),
 def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$status),
                              (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
+}
+
+def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
+                                 [(atomic_fence imm:$ordering, 0)]> {
+  let hasSideEffects = 1;
+  let Size = 0;
+  let AsmString = "@ COMPILER BARRIER";
 }

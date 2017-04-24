@@ -27,10 +27,11 @@ static double convertToDoubleFromString(const char *Str) {
   return F.convertToDouble();
 }
 
-static std::string convertToString(double d, unsigned Prec, unsigned Pad) {
+static std::string convertToString(double d, unsigned Prec, unsigned Pad,
+                                   bool Tr = true) {
   llvm::SmallVector<char, 100> Buffer;
   llvm::APFloat F(d);
-  F.toString(Buffer, Prec, Pad);
+  F.toString(Buffer, Prec, Pad, Tr);
   return std::string(Buffer.data(), Buffer.size());
 }
 
@@ -949,6 +950,22 @@ TEST(APFloatTest, toString) {
   ASSERT_EQ("873.18340000000001", convertToString(873.1834, 0, 1));
   ASSERT_EQ("8.7318340000000001E+2", convertToString(873.1834, 0, 0));
   ASSERT_EQ("1.7976931348623157E+308", convertToString(1.7976931348623157E+308, 0, 0));
+  ASSERT_EQ("10", convertToString(10.0, 6, 3, false));
+  ASSERT_EQ("1.000000e+01", convertToString(10.0, 6, 0, false));
+  ASSERT_EQ("10100", convertToString(1.01E+4, 5, 2, false));
+  ASSERT_EQ("1.0100e+04", convertToString(1.01E+4, 4, 2, false));
+  ASSERT_EQ("1.01000e+04", convertToString(1.01E+4, 5, 1, false));
+  ASSERT_EQ("0.0101", convertToString(1.01E-2, 5, 2, false));
+  ASSERT_EQ("0.0101", convertToString(1.01E-2, 4, 2, false));
+  ASSERT_EQ("1.01000e-02", convertToString(1.01E-2, 5, 1, false));
+  ASSERT_EQ("0.78539816339744828",
+            convertToString(0.78539816339744830961, 0, 3, false));
+  ASSERT_EQ("4.94065645841246540e-324",
+            convertToString(4.9406564584124654e-324, 0, 3, false));
+  ASSERT_EQ("873.18340000000001", convertToString(873.1834, 0, 1, false));
+  ASSERT_EQ("8.73183400000000010e+02", convertToString(873.1834, 0, 0, false));
+  ASSERT_EQ("1.79769313486231570e+308",
+            convertToString(1.7976931348623157E+308, 0, 0, false));
 }
 
 TEST(APFloatTest, toInteger) {

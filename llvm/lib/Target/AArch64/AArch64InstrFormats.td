@@ -693,11 +693,11 @@ def addsub_shifted_imm32_neg : addsub_shifted_imm_neg<i32>;
 def addsub_shifted_imm64_neg : addsub_shifted_imm_neg<i64>;
 
 def gi_addsub_shifted_imm32 :
-    GIComplexOperandMatcher<s32, (ops i32imm, i32imm), "selectArithImmed">,
+    GIComplexOperandMatcher<s32, "selectArithImmed">,
     GIComplexPatternEquiv<addsub_shifted_imm32>;
 
 def gi_addsub_shifted_imm64 :
-    GIComplexOperandMatcher<s64, (ops i32imm, i32imm), "selectArithImmed">,
+    GIComplexOperandMatcher<s64, "selectArithImmed">,
     GIComplexPatternEquiv<addsub_shifted_imm64>;
 
 class neg_addsub_shifted_imm<ValueType Ty>

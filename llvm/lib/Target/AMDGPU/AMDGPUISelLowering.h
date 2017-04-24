@@ -244,6 +244,7 @@ enum NodeType : unsigned {
 
   // Function call.
   CALL,
+  TRAP,
 
   // Masked control flow nodes.
   IF,

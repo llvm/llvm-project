@@ -38,6 +38,7 @@ enum Kind {
   Comma,
   Equal,
   KwBase,
+  KwConstant,
   KwData,
   KwExports,
   KwHeapsize,
@@ -92,6 +93,7 @@ public:
       StringRef Word = Buf.substr(0, End);
       Kind K = llvm::StringSwitch<Kind>(Word)
                    .Case("BASE", KwBase)
+                   .Case("CONSTANT", KwConstant)
                    .Case("DATA", KwData)
                    .Case("EXPORTS", KwExports)
                    .Case("HEAPSIZE", KwHeapsize)
@@ -225,6 +227,11 @@ private:
       }
       if (Tok.K == KwData) {
         E.Data = true;
+        continue;
+      }
+      if (Tok.K == KwConstant) {
+        warn("CONSTANT keyword is obsolete; use DATA");
+        E.Constant = true;
         continue;
       }
       if (Tok.K == KwPrivate) {

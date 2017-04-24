@@ -288,7 +288,7 @@ TEST(APIntTest, i1) {
   EXPECT_EQ(zero, one.shl(1));
   EXPECT_EQ(one, one.shl(0));
   EXPECT_EQ(zero, one.lshr(1));
-  EXPECT_EQ(zero, one.ashr(1));
+  EXPECT_EQ(one, one.ashr(1));
 
   // Rotates.
   EXPECT_EQ(one, one.rotl(0));
@@ -2021,7 +2021,43 @@ TEST(APIntTest, LogicalRightShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt neg_one(128, static_cast<uint64_t>(-1), true);
-  EXPECT_EQ(0, neg_one.lshr(257));
+  EXPECT_EQ(0, neg_one.lshr(128));
+}
+
+TEST(APIntTest, ArithmeticRightShift) {
+  APInt i72(APInt::getHighBitsSet(72, 1));
+  i72.ashrInPlace(46);
+  EXPECT_EQ(47U, i72.countLeadingOnes());
+  EXPECT_EQ(25U, i72.countTrailingZeros());
+  EXPECT_EQ(47U, i72.countPopulation());
+
+  i72 = APInt::getHighBitsSet(72, 1);
+  i72.ashrInPlace(64);
+  EXPECT_EQ(65U, i72.countLeadingOnes());
+  EXPECT_EQ(7U, i72.countTrailingZeros());
+  EXPECT_EQ(65U, i72.countPopulation());
+
+  APInt i128(APInt::getHighBitsSet(128, 1));
+  i128.ashrInPlace(64);
+  EXPECT_EQ(65U, i128.countLeadingOnes());
+  EXPECT_EQ(63U, i128.countTrailingZeros());
+  EXPECT_EQ(65U, i128.countPopulation());
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt signmin32(APInt::getSignedMinValue(32));
+  EXPECT_TRUE(signmin32.ashr(32).isAllOnesValue());
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt umax32(APInt::getSignedMaxValue(32));
+  EXPECT_EQ(0, umax32.ashr(32));
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt signmin128(APInt::getSignedMinValue(128));
+  EXPECT_TRUE(signmin128.ashr(128).isAllOnesValue());
+
+  // Ensure we handle large shifts of multi-word.
+  const APInt umax128(APInt::getSignedMaxValue(128));
+  EXPECT_EQ(0, umax128.ashr(128));
 }
 
 TEST(APIntTest, LeftShift) {
@@ -2054,7 +2090,56 @@ TEST(APIntTest, LeftShift) {
 
   // Ensure we handle large shifts of multi-word.
   const APInt neg_one(128, static_cast<uint64_t>(-1), true);
-  EXPECT_EQ(0, neg_one.shl(257));
+  EXPECT_EQ(0, neg_one.shl(128));
+}
+
+TEST(APIntTest, isSubsetOf) {
+  APInt i32_1(32, 1);
+  APInt i32_2(32, 2);
+  APInt i32_3(32, 3);
+  EXPECT_FALSE(i32_3.isSubsetOf(i32_1));
+  EXPECT_TRUE(i32_1.isSubsetOf(i32_3));
+  EXPECT_FALSE(i32_2.isSubsetOf(i32_1));
+  EXPECT_FALSE(i32_1.isSubsetOf(i32_2));
+  EXPECT_TRUE(i32_3.isSubsetOf(i32_3));
+
+  APInt i128_1(128, 1);
+  APInt i128_2(128, 2);
+  APInt i128_3(128, 3);
+  EXPECT_FALSE(i128_3.isSubsetOf(i128_1));
+  EXPECT_TRUE(i128_1.isSubsetOf(i128_3));
+  EXPECT_FALSE(i128_2.isSubsetOf(i128_1));
+  EXPECT_FALSE(i128_1.isSubsetOf(i128_2));
+  EXPECT_TRUE(i128_3.isSubsetOf(i128_3));
+
+  i128_1 <<= 64;
+  i128_2 <<= 64;
+  i128_3 <<= 64;
+  EXPECT_FALSE(i128_3.isSubsetOf(i128_1));
+  EXPECT_TRUE(i128_1.isSubsetOf(i128_3));
+  EXPECT_FALSE(i128_2.isSubsetOf(i128_1));
+  EXPECT_FALSE(i128_1.isSubsetOf(i128_2));
+  EXPECT_TRUE(i128_3.isSubsetOf(i128_3));
+}
+
+TEST(APIntTest, sext) {
+  EXPECT_EQ(0, APInt(1, 0).sext(64));
+  EXPECT_EQ(~uint64_t(0), APInt(1, 1).sext(64));
+
+  APInt i32_max(APInt::getSignedMaxValue(32).sext(63));
+  EXPECT_EQ(32U, i32_max.countLeadingZeros());
+  EXPECT_EQ(0U, i32_max.countTrailingZeros());
+  EXPECT_EQ(31U, i32_max.countPopulation());
+
+  APInt i32_min(APInt::getSignedMinValue(32).sext(63));
+  EXPECT_EQ(32U, i32_min.countLeadingOnes());
+  EXPECT_EQ(31U, i32_min.countTrailingZeros());
+  EXPECT_EQ(32U, i32_min.countPopulation());
+
+  APInt i32_neg1(APInt(32, ~uint64_t(0)).sext(63));
+  EXPECT_EQ(63U, i32_neg1.countLeadingOnes());
+  EXPECT_EQ(0U, i32_neg1.countTrailingZeros());
+  EXPECT_EQ(63U, i32_neg1.countPopulation());
 }
 
 } // end anonymous namespace

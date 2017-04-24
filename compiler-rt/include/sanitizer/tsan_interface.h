@@ -114,6 +114,21 @@ void __tsan_mutex_post_signal(void *addr, unsigned flags);
 void __tsan_mutex_pre_divert(void *addr, unsigned flags);
 void __tsan_mutex_post_divert(void *addr, unsigned flags);
 
+// External race detection API.
+// Can be used by non-instrumented libraries to detect when their objects are
+// being used in an unsafe manner.
+//   - __tsan_external_read/__tsan_external_write annotates the logical reads
+//       and writes of the object at the specified address. 'caller_pc' should
+//       be the PC of the library user, which the library can obtain with e.g.
+//       `__builtin_return_address(0)`.
+//   - __tsan_external_register_tag registers a 'tag' with the specified name,
+//       which is later used in read/write annotations to denote the object type
+//   - __tsan_external_assign_tag can optionally mark a heap object with a tag
+void *__tsan_external_register_tag(const char *object_type);
+void __tsan_external_assign_tag(void *addr, void *tag);
+void __tsan_external_read(void *addr, void *caller_pc, void *tag);
+void __tsan_external_write(void *addr, void *caller_pc, void *tag);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

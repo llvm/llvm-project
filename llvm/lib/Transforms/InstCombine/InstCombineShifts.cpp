@@ -760,7 +760,7 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
   }
 
   // See if we can turn a signed shr into an unsigned shr.
-  if (MaskedValueIsZero(Op0, APInt::getSignBit(BitWidth), 0, &I))
+  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))
     return BinaryOperator::CreateLShr(Op0, Op1);
 
   return nullptr;

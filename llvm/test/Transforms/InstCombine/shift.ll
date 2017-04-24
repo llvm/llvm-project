@@ -1049,12 +1049,11 @@ define i8 @test53_no_nuw(i8 %x) {
 }
 
 ; (X << C1) >>u C2  --> X << (C1 - C2) & (-1 >> C2)
-; FIXME: Demanded bits should change the mask constant as it does for the scalar case.
 
 define <2 x i8> @test53_no_nuw_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @test53_no_nuw_splat_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> %x, <i8 2, i8 2>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 127, i8 127>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 124, i8 124>
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %A = shl <2 x i8> %x, <i8 3, i8 3>
@@ -1074,6 +1073,17 @@ define i32 @test54(i32 %x) {
   ret i32 %and
 }
 
+define <2 x i32> @test54_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test54_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> %x, <i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %shr2 = lshr <2 x i32> %x, <i32 1, i32 1>
+  %shl = shl <2 x i32> %shr2, <i32 4, i32 4>
+  %and = and <2 x i32> %shl, <i32 16, i32 16>
+  ret <2 x i32> %and
+}
 
 define i32 @test55(i32 %x) {
 ; CHECK-LABEL: @test55(
@@ -1100,7 +1110,6 @@ define i32 @test56(i32 %x) {
   ret i32 %or
 }
 
-
 define i32 @test57(i32 %x) {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 %x, 1
@@ -1114,7 +1123,6 @@ define i32 @test57(i32 %x) {
   ret i32 %or
 }
 
-
 define i32 @test58(i32 %x) {
 ; CHECK-LABEL: @test58(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 %x, 3
@@ -1127,6 +1135,17 @@ define i32 @test58(i32 %x) {
   ret i32 %or
 }
 
+define <2 x i32> @test58_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test58_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> %x, <i32 3, i32 3>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
+  %shr = ashr <2 x i32> %x, <i32 4, i32 4>
+  %shl = shl <2 x i32> %shr, <i32 1, i32 1>
+  %or = or <2 x i32> %shl, <i32 1, i32 1>
+  ret <2 x i32> %or
+}
 
 define i32 @test59(i32 %x) {
 ; CHECK-LABEL: @test59(
@@ -1257,8 +1276,7 @@ define i64 @test_64(i32 %t) {
 
 define <2 x i64> @test_64_splat_vec(<2 x i32> %t) {
 ; CHECK-LABEL: @test_64_splat_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %t, <i32 16777215, i32 16777215>
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i32> [[AND]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> %t, <i32 8, i32 8>
 ; CHECK-NEXT:    [[SHL:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[SHL]]
 ;
@@ -1266,5 +1284,25 @@ define <2 x i64> @test_64_splat_vec(<2 x i32> %t) {
   %ext = zext <2 x i32> %and to <2 x i64>
   %shl = shl <2 x i64> %ext, <i64 8, i64 8>
   ret <2 x i64> %shl
+}
+
+define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_demanded_bits_splat(
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <2 x i8> %x, <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[SHR]]
+;
+  %and = and <2 x i8> %x, <i8 128, i8 128>
+  %shr = ashr <2 x i8> %and, <i8 7, i8 7>
+  ret <2 x i8> %shr
+}
+
+define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_demanded_bits_splat(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> %x, <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[SHR]]
+;
+  %and = and <2 x i8> %x, <i8 128, i8 128>
+  %shr = lshr <2 x i8> %and, <i8 7, i8 7>
+  ret <2 x i8> %shr
 }
 

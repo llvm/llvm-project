@@ -267,15 +267,15 @@ inline cst_pred_ty<is_all_ones> m_AllOnes() {
 }
 inline api_pred_ty<is_all_ones> m_AllOnes(const APInt *&V) { return V; }
 
-struct is_sign_bit {
-  bool isValue(const APInt &C) { return C.isSignBit(); }
+struct is_sign_mask {
+  bool isValue(const APInt &C) { return C.isSignMask(); }
 };
 
 /// \brief Match an integer or vector with only the sign bit(s) set.
-inline cst_pred_ty<is_sign_bit> m_SignBit() {
-  return cst_pred_ty<is_sign_bit>();
+inline cst_pred_ty<is_sign_mask> m_SignMask() {
+  return cst_pred_ty<is_sign_mask>();
 }
-inline api_pred_ty<is_sign_bit> m_SignBit(const APInt *&V) { return V; }
+inline api_pred_ty<is_sign_mask> m_SignMask(const APInt *&V) { return V; }
 
 struct is_power2 {
   bool isValue(const APInt &C) { return C.isPowerOf2(); }

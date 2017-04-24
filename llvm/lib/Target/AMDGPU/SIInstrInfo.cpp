@@ -138,6 +138,11 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
   }
 
   if (isSMRD(Opc0) && isSMRD(Opc1)) {
+    // Skip time and cache invalidation instructions.
+    if (AMDGPU::getNamedOperandIdx(Opc0, AMDGPU::OpName::sbase) == -1 ||
+        AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::sbase) == -1)
+      return false;
+
     assert(getNumOperandsNoGlue(Load0) == getNumOperandsNoGlue(Load1));
 
     // Check base reg.
@@ -2635,6 +2640,19 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
   if (isLegalRegOperand(MRI, InstrDesc.OpInfo[Src1Idx], Src1))
     return;
 
+  // Special case: V_READLANE_B32 accepts only immediate or SGPR operands for
+  // lane select. Fix up using V_READFIRSTLANE, since we assume that the lane
+  // select is uniform.
+  if (Opc == AMDGPU::V_READLANE_B32 && Src1.isReg() &&
+      RI.isVGPR(MRI, Src1.getReg())) {
+    unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    const DebugLoc &DL = MI.getDebugLoc();
+    BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+        .add(Src1);
+    Src1.ChangeToRegister(Reg, false);
+    return;
+  }
+
   // We do not use commuteInstruction here because it is too aggressive and will
   // commute if it is possible. We only want to commute here if it improves
   // legality. This can be called a fairly large number of times so don't waste
@@ -3595,7 +3613,7 @@ void SIInstrInfo::movePackToVALU(SmallVectorImpl<MachineInstr *> &Worklist,
       .addImm(16)
       .add(Src0);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
-      .addImm(0xffff);
+      .addImm(0xffff0000);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_OR_B32), ResultReg)
       .add(Src1)
       .addReg(ImmReg, RegState::Kill)

@@ -54,6 +54,7 @@ public:
   int DwarfVersion = 0;
 
   std::string ABIName;
+  std::string SplitDwarfFile;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.

@@ -3781,6 +3781,80 @@ let Predicates = [HasMSA] in {
        ISA_MIPS1_NOT_32R6_64R6;
 }
 
+def vsplati64_imm_eq_63 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
+  APInt Imm;
+  SDNode *BV = N->getOperand(0).getNode();
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  return selectVSplat(BV, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 63;
+}]>;
+
+def immi32Cst7  : ImmLeaf<i32, [{return isUInt<32>(Imm) && Imm == 7;}]>;
+def immi32Cst15 : ImmLeaf<i32, [{return isUInt<32>(Imm) && Imm == 15;}]>;
+def immi32Cst31 : ImmLeaf<i32, [{return isUInt<32>(Imm) && Imm == 31;}]>;
+
+def vsplati8imm7 :   PatFrag<(ops node:$wt),
+                             (and node:$wt, (vsplati8 immi32Cst7))>;
+def vsplati16imm15 : PatFrag<(ops node:$wt),
+                             (and node:$wt, (vsplati16 immi32Cst15))>;
+def vsplati32imm31 : PatFrag<(ops node:$wt),
+                             (and node:$wt, (vsplati32 immi32Cst31))>;
+def vsplati64imm63 : PatFrag<(ops node:$wt),
+                             (and node:$wt, vsplati64_imm_eq_63)>;
+
+class MSAShiftPat<SDNode Node, ValueType VT, MSAInst Insn, dag Vec> :
+  MSAPat<(VT (Node VT:$ws, (VT (and VT:$wt, Vec)))),
+         (VT (Insn VT:$ws, VT:$wt))>;
+
+class MSABitPat<SDNode Node, ValueType VT, MSAInst Insn, PatFrag Frag> :
+  MSAPat<(VT (Node VT:$ws, (shl vsplat_imm_eq_1, (Frag VT:$wt)))),
+         (VT (Insn VT:$ws, VT:$wt))>;
+
+multiclass MSAShiftPats<SDNode Node, string Insn> {
+  def : MSAShiftPat<Node, v16i8, !cast<MSAInst>(Insn#_B),
+                    (vsplati8 immi32Cst7)>;
+  def : MSAShiftPat<Node, v8i16, !cast<MSAInst>(Insn#_H),
+                    (vsplati16 immi32Cst15)>;
+  def : MSAShiftPat<Node, v4i32, !cast<MSAInst>(Insn#_W),
+                    (vsplati32 immi32Cst31)>;
+  def : MSAPat<(v2i64 (Node v2i64:$ws, (v2i64 (and v2i64:$wt,
+                                                   vsplati64_imm_eq_63)))),
+               (v2i64 (!cast<MSAInst>(Insn#_D) v2i64:$ws, v2i64:$wt))>;
+}
+
+multiclass MSABitPats<SDNode Node, string Insn> {
+  def : MSABitPat<Node, v16i8, !cast<MSAInst>(Insn#_B), vsplati8imm7>;
+  def : MSABitPat<Node, v8i16, !cast<MSAInst>(Insn#_H), vsplati16imm15>;
+  def : MSABitPat<Node, v4i32, !cast<MSAInst>(Insn#_W), vsplati32imm31>;
+  def : MSAPat<(Node v2i64:$ws, (shl (v2i64 vsplati64_imm_eq_1),
+                                     (vsplati64imm63 v2i64:$wt))),
+               (v2i64 (!cast<MSAInst>(Insn#_D) v2i64:$ws, v2i64:$wt))>;
+}
+
+defm : MSAShiftPats<shl, "SLL">;
+defm : MSAShiftPats<srl, "SRL">;
+defm : MSAShiftPats<sra, "SRA">;
+defm : MSABitPats<xor, "BNEG">;
+defm : MSABitPats<or, "BSET">;
+
+def : MSAPat<(and v16i8:$ws, (xor (shl vsplat_imm_eq_1,
+                                       (vsplati8imm7 v16i8:$wt)),
+                                  immAllOnesV)),
+             (v16i8 (BCLR_B v16i8:$ws, v16i8:$wt))>;
+def : MSAPat<(and v8i16:$ws, (xor (shl vsplat_imm_eq_1,
+                                       (vsplati16imm15 v8i16:$wt)),
+                             immAllOnesV)),
+             (v8i16 (BCLR_H v8i16:$ws, v8i16:$wt))>;
+def : MSAPat<(and v4i32:$ws, (xor (shl vsplat_imm_eq_1,
+                                       (vsplati32imm31 v4i32:$wt)),
+                             immAllOnesV)),
+             (v4i32 (BCLR_W v4i32:$ws, v4i32:$wt))>;
+def : MSAPat<(and v2i64:$ws, (xor (shl (v2i64 vsplati64_imm_eq_1),
+                                       (vsplati64imm63 v2i64:$wt)),
+                                  (bitconvert (v4i32 immAllOnesV)))),
+             (v2i64 (BCLR_D v2i64:$ws, v2i64:$wt))>;
+
 // Vector extraction with fixed index.
 //
 // Extracting 32-bit values on MSA32 should always use COPY_S_W rather than

@@ -5,6 +5,8 @@
   define void @test_sext_s8() { ret void }
   define void @test_zext_s16() { ret void }
 
+  define void @test_trunc_s32_16() { ret void }
+
   define void @test_add_s8() { ret void }
   define void @test_add_s16() { ret void }
   define void @test_add_s32() { ret void }
@@ -21,6 +23,9 @@
   define void @test_mul_s32() #1 { ret void }
   define void @test_mulv5_s32() { ret void }
 
+  define void @test_sdiv_s32() #2 { ret void }
+  define void @test_udiv_s32() #2 { ret void }
+
   define void @test_load_from_stack() { ret void }
   define void @test_load_f32() #0 { ret void }
   define void @test_load_f64() #0 { ret void }
@@ -28,12 +33,14 @@
   define void @test_stores() #0 { ret void }
 
   define void @test_gep() { ret void }
-  define void @test_constants() { ret void }
+  define void @test_constant_imm() { ret void }
+  define void @test_constant_cimm() { ret void }
 
   define void @test_soft_fp_double() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
   attributes #1 = { "target-features"="+v6" }
+  attributes #2 = { "target-features"="+hwdiv-arm" }
 ...
 ---
 name:            test_zext_s1
@@ -137,6 +144,34 @@ body:             |
 
     %r0 = COPY %1(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_trunc_s32_16
+# CHECK-LABEL: name: test_trunc_s32_16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s16)
+    ; CHECK: %r0 = COPY [[VREGTRUNC]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -538,6 +573,72 @@ body:             |
     ; CHECK: BX_RET 14, _, implicit %r0
 ...
 ---
+name:            test_sdiv_s32
+# CHECK-LABEL: name: test_sdiv_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_SDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = SDIV [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_udiv_s32
+# CHECK-LABEL: name: test_udiv_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_UDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = UDIV [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
 name:            test_load_from_stack
 # CHECK-LABEL: name: test_load_from_stack
 legalized:       true
@@ -714,8 +815,8 @@ body:             |
     BX_RET 14, _, implicit %r0
 ...
 ---
-name:            test_constants
-# CHECK-LABEL: name: test_constants
+name:            test_constant_imm
+# CHECK-LABEL: name: test_constant_imm
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -726,6 +827,26 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_CONSTANT 42
+    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+
+    %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constant_cimm
+# CHECK-LABEL: name: test_constant_cimm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+# CHECK: id: [[C:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    ; Adding a type on G_CONSTANT changes its operand from an Imm into a CImm.
+    ; We still want to see the same thing in the output though.
+    %0(s32) = G_CONSTANT i32 42
     ; CHECK: %[[C]] = MOVi 42, 14, _, _
 
     %r0 = COPY %0(s32)

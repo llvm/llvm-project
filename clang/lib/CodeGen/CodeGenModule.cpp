@@ -565,12 +565,8 @@ void CodeGenModule::DecorateInstructionWithTBAA(llvm::Instruction *Inst,
 
 void CodeGenModule::DecorateInstructionWithInvariantGroup(
     llvm::Instruction *I, const CXXRecordDecl *RD) {
-  llvm::Metadata *MD = CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
-  auto *MetaDataNode = dyn_cast<llvm::MDNode>(MD);
-  // Check if we have to wrap MDString in MDNode.
-  if (!MetaDataNode)
-    MetaDataNode = llvm::MDNode::get(getLLVMContext(), MD);
-  I->setMetadata(llvm::LLVMContext::MD_invariant_group, MetaDataNode);
+  I->setMetadata(llvm::LLVMContext::MD_invariant_group,
+                 llvm::MDNode::get(getLLVMContext(), {}));
 }
 
 void CodeGenModule::Error(SourceLocation loc, StringRef message) {
@@ -3792,6 +3788,10 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // Always provide some coverage mapping
     // even for the functions that aren't emitted.
     AddDeferredUnusedCoverageMapping(D);
+    break;
+
+  case Decl::CXXDeductionGuide:
+    // Function-like, but does not result in code emission.
     break;
 
   case Decl::Var:

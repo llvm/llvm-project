@@ -162,6 +162,11 @@ public:
     return ThisValue;
   }
 
+  ValueType &operator*() {
+    assert(Array && !HasError);
+    return ThisValue;
+  }
+
   IterType &operator+=(unsigned N) {
     for (unsigned I = 0; I < N; ++I) {
       // We are done with the current record, discard it so that we are

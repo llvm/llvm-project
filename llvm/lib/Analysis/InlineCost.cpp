@@ -1557,7 +1557,6 @@ InlineParams llvm::getInlineParams(int Threshold) {
   Params.ColdCallSiteThreshold = ColdCallSiteThreshold;
 
   // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
-  // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
   // -inlinehint-threshold commandline option is not explicitly given. If that
   // option is present, then its value applies even for callees with size and
   // minsize attributes.

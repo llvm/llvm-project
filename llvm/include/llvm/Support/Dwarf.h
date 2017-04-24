@@ -46,7 +46,15 @@ enum LLVMConstants : uint32_t {
   DWARF_VERSION = 4,       // Default dwarf version we output.
   DW_PUBTYPES_VERSION = 2, // Section version number for .debug_pubtypes.
   DW_PUBNAMES_VERSION = 2, // Section version number for .debug_pubnames.
-  DW_ARANGES_VERSION = 2   // Section version number for .debug_aranges.
+  DW_ARANGES_VERSION = 2,  // Section version number for .debug_aranges.
+  // Identifiers we use to distinguish vendor extensions.
+  DWARF_VENDOR_DWARF = 0,  // Defined in v2 or later of the DWARF standard.
+  DWARF_VENDOR_APPLE = 1,
+  DWARF_VENDOR_BORLAND = 2,
+  DWARF_VENDOR_GNU = 3,
+  DWARF_VENDOR_GOOGLE = 4,
+  DWARF_VENDOR_LLVM = 5,
+  DWARF_VENDOR_MIPS = 6
 };
 
 // Special ID values that distinguish a CIE from a FDE in DWARF CFI.
@@ -55,7 +63,7 @@ const uint32_t DW_CIE_ID = UINT32_MAX;
 const uint64_t DW64_CIE_ID = UINT64_MAX;
 
 enum Tag : uint16_t {
-#define HANDLE_DW_TAG(ID, NAME) DW_TAG_##NAME = ID,
+#define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR) DW_TAG_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_TAG_lo_user = 0x4080,
   DW_TAG_hi_user = 0xffff,
@@ -92,20 +100,20 @@ inline bool isType(Tag T) {
 
 /// Attributes.
 enum Attribute : uint16_t {
-#define HANDLE_DW_AT(ID, NAME) DW_AT_##NAME = ID,
+#define HANDLE_DW_AT(ID, NAME, VERSION, VENDOR) DW_AT_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_AT_lo_user = 0x2000,
   DW_AT_hi_user = 0x3fff,
 };
 
 enum Form : uint16_t {
-#define HANDLE_DW_FORM(ID, NAME) DW_FORM_##NAME = ID,
+#define HANDLE_DW_FORM(ID, NAME, VERSION, VENDOR) DW_FORM_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
  DW_FORM_lo_user = 0x1f00, ///< Not specified by DWARF.
 };
 
 enum LocationAtom {
-#define HANDLE_DW_OP(ID, NAME) DW_OP_##NAME = ID,
+#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR) DW_OP_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
@@ -113,7 +121,7 @@ enum LocationAtom {
 };
 
 enum TypeKind {
-#define HANDLE_DW_ATE(ID, NAME) DW_ATE_##NAME = ID,
+#define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_ATE_lo_user = 0x80,
   DW_ATE_hi_user = 0xff
@@ -164,7 +172,7 @@ enum DefaultedMemberAttribute {
 };
 
 enum SourceLanguage {
-#define HANDLE_DW_LANG(ID, NAME) DW_LANG_##NAME = ID,
+#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR) DW_LANG_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_LANG_lo_user = 0x8000,
   DW_LANG_hi_user = 0xffff
@@ -220,8 +228,8 @@ enum LineNumberExtendedOps {
   DW_LNE_hi_user = 0xff
 };
 
-enum LinerNumberEntryFormat {
-#define HANDLE_DW_LNCT(ID, NAME) DW_DEFAULTED_##NAME = ID,
+enum LineNumberEntryFormat {
+#define HANDLE_DW_LNCT(ID, NAME) DW_LNCT_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_LNCT_lo_user = 0x2000,
   DW_LNCT_hi_user = 0x3fff,
@@ -405,6 +413,40 @@ unsigned getCallingConvention(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
 unsigned getMacinfo(StringRef MacinfoString);
 /// @}
+
+/// \defgroup DwarfConstantsVersioning Dwarf version for constants
+///
+/// For constants defined by DWARF, returns the DWARF version when the constant
+/// was first defined. For vendor extensions, if there is a version-related
+/// policy for when to emit it, returns a version number for that policy.
+/// Otherwise returns 0.
+///
+/// @{
+unsigned TagVersion(Tag T);
+unsigned AttributeVersion(Attribute A);
+unsigned FormVersion(Form F);
+unsigned OperationVersion(LocationAtom O);
+unsigned AttributeEncodingVersion(TypeKind E);
+unsigned LanguageVersion(SourceLanguage L);
+/// @}
+
+/// \defgroup DwarfConstantsVendor Dwarf "vendor" for constants
+///
+/// These functions return an identifier describing "who" defined the constant,
+/// either the DWARF standard itself or the vendor who defined the extension.
+///
+/// @{
+unsigned TagVendor(Tag T);
+unsigned AttributeVendor(Attribute A);
+unsigned FormVendor(Form F);
+unsigned OperationVendor(LocationAtom O);
+unsigned AttributeEncodingVendor(TypeKind E);
+unsigned LanguageVendor(SourceLanguage L);
+/// @}
+
+/// Tells whether the specified form is defined in the specified version,
+/// or is an extension if extensions are allowed.
+bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
 
 /// \brief Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.

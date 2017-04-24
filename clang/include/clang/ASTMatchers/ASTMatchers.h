@@ -1406,7 +1406,7 @@ const internal::VariadicDynCastAllOfMatcher<
 ///
 /// Example: Given
 /// \code
-///   struct T {void func()};
+///   struct T {void func();};
 ///   T f();
 ///   void g(T);
 /// \endcode

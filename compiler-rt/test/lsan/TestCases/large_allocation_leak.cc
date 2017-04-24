@@ -1,5 +1,5 @@
 // Test that LargeMmapAllocator's chunks aren't reachable via some internal data structure.
-// RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_stacks=0:use_registers=0"
+// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 

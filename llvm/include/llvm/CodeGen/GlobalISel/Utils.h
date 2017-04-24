@@ -60,5 +60,8 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                         const char *PassName, StringRef Msg,
                         const MachineInstr &MI);
 
+Optional<int64_t> getConstantVRegVal(unsigned VReg,
+                                     const MachineRegisterInfo &MRI);
+
 } // End namespace llvm.
 #endif

@@ -47,12 +47,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   unsigned SrcReg = I.getOperand(1).getReg();
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   (void)SrcSize;
-  assert((DstSize == SrcSize ||
-          // Copies are a means to setup initial types, the number of
-          // bits may not exactly match.
-          (TargetRegisterInfo::isPhysicalRegister(SrcReg) &&
-           DstSize <= SrcSize)) &&
-         "Copy with different width?!");
+  // We use copies for trunc, so it's ok for the size of the destination to be
+  // smaller (the higher bits will just be undefined).
+  assert(DstSize <= SrcSize && "Copy with different width?!");
 
   assert((RegBank->getID() == ARM::GPRRegBankID ||
           RegBank->getID() == ARM::FPRRegBankID) &&
@@ -294,6 +291,28 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     }
     break;
   }
+  case G_TRUNC: {
+    // The high bits are undefined, so there's nothing special to do, just
+    // treat it as a copy.
+    auto SrcReg = I.getOperand(1).getReg();
+    auto DstReg = I.getOperand(0).getReg();
+
+    const auto &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
+    const auto &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+
+    if (SrcRegBank.getID() != DstRegBank.getID()) {
+      DEBUG(dbgs() << "G_TRUNC operands on different register banks\n");
+      return false;
+    }
+
+    if (SrcRegBank.getID() != ARM::GPRRegBankID) {
+      DEBUG(dbgs() << "G_TRUNC on non-GPR not supported yet\n");
+      return false;
+    }
+
+    I.setDesc(TII.get(COPY));
+    return selectCopy(I, TII, MRI, TRI, RBI);
+  }
   case G_ADD:
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
@@ -312,6 +331,16 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
       MIB->getOperand(0).setIsEarlyClobber(true);
     }
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
+  case G_SDIV:
+    assert(TII.getSubtarget().hasDivideInARMMode() && "Unsupported operation");
+    I.setDesc(TII.get(ARM::SDIV));
+    MIB.add(predOps(ARMCC::AL));
+    break;
+  case G_UDIV:
+    assert(TII.getSubtarget().hasDivideInARMMode() && "Unsupported operation");
+    I.setDesc(TII.get(ARM::UDIV));
+    MIB.add(predOps(ARMCC::AL));
     break;
   case G_FADD:
     if (!selectFAdd(MIB, TII, MRI))
@@ -332,6 +361,18 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
            "Expected constant to live in a GPR");
     I.setDesc(TII.get(ARM::MOVi));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+
+    auto &Val = I.getOperand(1);
+    if (Val.isCImm()) {
+      if (Val.getCImm()->getBitWidth() > 32)
+        return false;
+      Val.ChangeToImmediate(Val.getCImm()->getZExtValue());
+    }
+
+    if (!Val.isImm()) {
+      return false;
+    }
+
     break;
   }
   case G_STORE:

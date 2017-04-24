@@ -1512,6 +1512,18 @@ llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 
+/// \brief Represents the status of a formatting attempt.
+struct FormattingAttemptStatus {
+  /// \brief A value of ``false`` means that any of the affected ranges were not
+  /// formatted due to a non-recoverable syntax error.
+  bool FormatComplete = true;
+
+  /// \brief If ``FormatComplete`` is false, ``Line`` records a one-based
+  /// original line number at which a syntax error might have occurred. This is
+  /// based on a best-effort analysis and could be imprecise.
+  unsigned Line = 0;
+};
+
 /// \brief Reformats the given \p Ranges in \p Code.
 ///
 /// Each range is extended on either end to its next bigger logic unit, i.e.
@@ -1521,13 +1533,20 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// Returns the ``Replacements`` necessary to make all \p Ranges comply with
 /// \p Style.
 ///
-/// If ``IncompleteFormat`` is non-null, its value will be set to true if any
-/// of the affected ranges were not formatted due to a non-recoverable syntax
-/// error.
+/// If ``Status`` is non-null, its value will be populated with the status of
+/// this formatting attempt. See \c FormattingAttemptStatus.
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                ArrayRef<tooling::Range> Ranges,
                                StringRef FileName = "<stdin>",
-                               bool *IncompleteFormat = nullptr);
+                               FormattingAttemptStatus *Status = nullptr);
+
+/// \brief Same as above, except if ``IncompleteFormat`` is non-null, its value
+/// will be set to true if any of the affected ranges were not formatted due to
+/// a non-recoverable syntax error.
+tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
+                               ArrayRef<tooling::Range> Ranges,
+                               StringRef FileName,
+                               bool *IncompleteFormat);
 
 /// \brief Clean up any erroneous/redundant code in the given \p Ranges in \p
 /// Code.

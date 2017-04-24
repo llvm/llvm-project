@@ -236,7 +236,7 @@ template <> struct MappingTraits<DWARFYAML::InitialLength> {
   static void mapping(IO &IO, DWARFYAML::InitialLength &DWARF);
 };
 
-#define HANDLE_DW_TAG(unused, name)                                            \
+#define HANDLE_DW_TAG(unused, name, unused2, unused3)                          \
   io.enumCase(value, "DW_TAG_" #name, dwarf::DW_TAG_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::Tag> {
@@ -266,7 +266,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LineNumberExtendedOps> {
   }
 };
 
-#define HANDLE_DW_AT(unused, name)                                             \
+#define HANDLE_DW_AT(unused, name, unused2, unused3)                           \
   io.enumCase(value, "DW_AT_" #name, dwarf::DW_AT_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::Attribute> {
@@ -276,7 +276,7 @@ template <> struct ScalarEnumerationTraits<dwarf::Attribute> {
   }
 };
 
-#define HANDLE_DW_FORM(unused, name)                                           \
+#define HANDLE_DW_FORM(unused, name, unused2, unused3)                         \
   io.enumCase(value, "DW_FORM_" #name, dwarf::DW_FORM_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::Form> {

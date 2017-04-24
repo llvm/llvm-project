@@ -46,9 +46,9 @@ class TargetLibraryInfo;
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
 struct LoopSafetyInfo {
-  bool MayThrow = false;       // The current loop contains an instruction which
-                               // may throw.
-  bool HeaderMayThrow = false; // Same as previous, but specific to loop header
+  // The early exits in the loop, excluding loop exits.
+  // These are calls that might throw, infinite loop, etc.
+  SmallVector<Instruction *, 4> EarlyExits;
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
 
