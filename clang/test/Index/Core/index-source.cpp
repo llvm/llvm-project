@@ -255,3 +255,36 @@ void ContainsSpecializedMemberFunction::memberSpecialization<int>() {
 // CHECK-NEXT: RelChild
 // CHECK-NEXT: RelSpecialization | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@FT@>1#TmemberSpecialization#v#
 }
+
+template<typename T>
+class SpecializationDecl;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<typename T>
+class SpecializationDecl { };
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Def | rel: 0
+
+template<>
+class SpecializationDecl<int>;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<>
+class SpecializationDecl<int> { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | SpecializationDecl | c:@S@SpecializationDecl>#I | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | SpecializationDecl | c:@ST>1#T@SpecializationDecl
+// CHECK-NEXT: [[@LINE-3]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<typename T>
+class PartialSpecilizationClass<Cls, T>;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-2]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+
+template<>
+class PartialSpecilizationClass<Cls, Cls> : Cls { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_ | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
+// CHECK-NEXT: [[@LINE-3]]:45 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_
+// CHECK-NEXT: [[@LINE-5]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-6]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-7]]:38 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0

@@ -564,6 +564,9 @@ public:
           D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
                             SpecializationOf));
     }
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      IndexCtx.indexTypeSourceInfo(TSI, /*Parent=*/nullptr,
+                                   D->getLexicalDeclContext());
     return true;
   }
 
