@@ -53,6 +53,7 @@ enum class SymbolKind : uint8_t {
   ConversionFunction,
 
   Parameter,
+  CommentTag,
 };
 
 enum class SymbolLanguage {
