@@ -452,6 +452,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::Destructor: return "destructor";
   case SymbolKind::ConversionFunction: return "coversion-func";
   case SymbolKind::Parameter: return "param";
+  case SymbolKind::CommentTag: return "comment-tag";
   }
   llvm_unreachable("invalid symbol kind");
 }
