@@ -3432,8 +3432,26 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (auto *CSrc0 = dyn_cast<Constant>(Src0)) {
       if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
         Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
-        return replaceInstUsesWith(*II,
-                                   ConstantExpr::getSExt(CCmp, II->getType()));
+        if (CCmp->isNullValue()) {
+          return replaceInstUsesWith(
+              *II, ConstantExpr::getSExt(CCmp, II->getType()));
+        }
+
+        // The result of V_ICMP/V_FCMP assembly instructions (which this
+        // intrinsic exposes) is one bit per thread, masked with the EXEC
+        // register (which contains the bitmask of live threads). So a
+        // comparison that always returns true is the same as a read of the
+        // EXEC register.
+        Value *NewF = Intrinsic::getDeclaration(
+            II->getModule(), Intrinsic::read_register, II->getType());
+        Metadata *MDArgs[] = {MDString::get(II->getContext(), "exec")};
+        MDNode *MD = MDNode::get(II->getContext(), MDArgs);
+        Value *Args[] = {MetadataAsValue::get(II->getContext(), MD)};
+        CallInst *NewCall = Builder->CreateCall(NewF, Args);
+        NewCall->addAttribute(AttributeList::FunctionIndex,
+                              Attribute::Convergent);
+        NewCall->takeName(II);
+        return replaceInstUsesWith(*II, NewCall);
       }
 
       // Canonicalize constants to RHS.

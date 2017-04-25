@@ -347,7 +347,7 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
 
   unsigned PhysS = (RR.Sub == 0) ? PhysR : TRI.getSubReg(PhysR, RR.Sub);
   const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PhysS);
-  uint16_t BW = RC->getSize()*8;
+  uint16_t BW = TRI.getRegSizeInBits(*RC);
   return BW;
 }
 

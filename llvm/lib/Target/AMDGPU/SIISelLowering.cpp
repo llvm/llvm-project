@@ -287,8 +287,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
-  setOperationAction(ISD::TRAP, MVT::Other, Legal);
-  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
+  setOperationAction(ISD::TRAP, MVT::Other, Custom);
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Custom);
 
   setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
@@ -1644,7 +1644,7 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
                             const TargetRegisterClass *SuperRC,
                             unsigned VecReg,
                             int Offset) {
-  int NumElts = SuperRC->getSize() / 4;
+  int NumElts = TRI.getRegSizeInBits(*SuperRC) / 32;
 
   // Skip out of bounds offsets, or else we would end up using an undefined
   // register.
@@ -1793,17 +1793,18 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
-static unsigned getMOVRELDPseudo(const TargetRegisterClass *VecRC) {
-  switch (VecRC->getSize()) {
-  case 4:
+static unsigned getMOVRELDPseudo(const SIRegisterInfo &TRI,
+                                 const TargetRegisterClass *VecRC) {
+  switch (TRI.getRegSizeInBits(*VecRC)) {
+  case 32: // 4 bytes
     return AMDGPU::V_MOVRELD_B32_V1;
-  case 8:
+  case 64: // 8 bytes
     return AMDGPU::V_MOVRELD_B32_V2;
-  case 16:
+  case 128: // 16 bytes
     return AMDGPU::V_MOVRELD_B32_V4;
-  case 32:
+  case 256: // 32 bytes
     return AMDGPU::V_MOVRELD_B32_V8;
-  case 64:
+  case 512: // 64 bytes
     return AMDGPU::V_MOVRELD_B32_V16;
   default:
     llvm_unreachable("unsupported size for MOVRELD pseudos");
@@ -1863,7 +1864,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
     } else {
-      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
+      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
 
       BuildMI(MBB, I, DL, MovRelDesc)
           .addReg(Dst, RegState::Define)
@@ -1907,7 +1908,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
         .addReg(PhiReg, RegState::Implicit)
         .addReg(AMDGPU::M0, RegState::Implicit);
   } else {
-    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
+    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
 
     BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
         .addReg(Dst, RegState::Define)
@@ -1948,50 +1949,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
-  case AMDGPU::S_TRAP_PSEUDO: {
-    const DebugLoc &DL = MI.getDebugLoc();
-    const int TrapType = MI.getOperand(0).getImm();
-
-    if (Subtarget->getTrapHandlerAbi() == SISubtarget::TrapHandlerAbiHsa &&
-        Subtarget->isTrapHandlerEnabled()) {
-
-      MachineFunction *MF = BB->getParent();
-      SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
-      unsigned UserSGPR = Info->getQueuePtrUserSGPR();
-      assert(UserSGPR != AMDGPU::NoRegister);
-
-      if (!BB->isLiveIn(UserSGPR))
-        BB->addLiveIn(UserSGPR);
-
-      BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), AMDGPU::SGPR0_SGPR1)
-        .addReg(UserSGPR);
-      BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_TRAP))
-        .addImm(TrapType)
-        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Implicit);
-    } else {
-      switch (TrapType) {
-      case SISubtarget::TrapIDLLVMTrap:
-        BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ENDPGM));
-        break;
-      case SISubtarget::TrapIDLLVMDebugTrap: {
-        DiagnosticInfoUnsupported NoTrap(*MF->getFunction(),
-                                         "debugtrap handler not supported",
-                                         DL,
-                                         DS_Warning);
-        LLVMContext &C = MF->getFunction()->getContext();
-        C.diagnose(NoTrap);
-        BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_NOP))
-          .addImm(0);
-        break;
-      }
-      default:
-        llvm_unreachable("unsupported trap handler type!");
-      }
-    }
-
-    MI.eraseFromParent();
-    return BB;
-  }
   case AMDGPU::SI_INIT_M0:
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
@@ -2163,6 +2120,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
+
+  case ISD::TRAP:
+  case ISD::DEBUGTRAP:
+    return lowerTRAP(Op, DAG);
   }
   return SDValue();
 }
@@ -2429,6 +2390,57 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
   return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);;
+}
+
+SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Chain = Op.getOperand(0);
+
+  unsigned TrapID = Op.getOpcode() == ISD::DEBUGTRAP ?
+    SISubtarget::TrapIDLLVMDebugTrap : SISubtarget::TrapIDLLVMTrap;
+
+  if (Subtarget->getTrapHandlerAbi() == SISubtarget::TrapHandlerAbiHsa &&
+      Subtarget->isTrapHandlerEnabled()) {
+    SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+    assert(UserSGPR != AMDGPU::NoRegister);
+
+    SDValue QueuePtr = CreateLiveInRegister(
+      DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
+
+    SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
+
+    SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01,
+                                     QueuePtr, SDValue());
+
+    SDValue Ops[] = {
+      ToReg,
+      DAG.getTargetConstant(TrapID, SL, MVT::i16),
+      SGPR01,
+      ToReg.getValue(1)
+    };
+
+    return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+  }
+
+  switch (TrapID) {
+  case SISubtarget::TrapIDLLVMTrap:
+    return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
+  case SISubtarget::TrapIDLLVMDebugTrap: {
+    DiagnosticInfoUnsupported NoTrap(*MF.getFunction(),
+                                     "debugtrap handler not supported",
+                                     Op.getDebugLoc(),
+                                     DS_Warning);
+    LLVMContext &Ctx = MF.getFunction()->getContext();
+    Ctx.diagnose(NoTrap);
+    return Chain;
+  }
+  default:
+    llvm_unreachable("unsupported trap handler type!");
+  }
+
+  return Chain;
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,

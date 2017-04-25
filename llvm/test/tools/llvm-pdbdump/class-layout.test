@@ -1,4 +1,5 @@
-; RUN: llvm-pdbdump pretty -all %p/Inputs/ClassLayoutTest.pdb > %t
+; RUN: llvm-pdbdump pretty -all -class-recurse-depth=1 \
+; RUN:   %p/Inputs/ClassLayoutTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_TEST
 ; RUN: FileCheck -input-file=%t %s -check-prefix=MEMBERS_TEST
 ; RUN: FileCheck -input-file=%t %s -check-prefix=BASE_CLASS_A
@@ -36,9 +37,8 @@
 
 ; BASE_CLASS_D: ---TYPES---
 ; BASE_CLASS_D: class BaseClassTest::D [sizeof = 8]
-; BASE_CLASS_D-DAG: protected BaseClassTest::B
-; BASE_CLASS_D-DAG: private BaseClassTest::C
-; BASE_CLASS_D-DAG: protected virtual BaseClassTest::A
+; BASE_CLASS_D-NEXT: protected BaseClassTest::B
+; BASE_CLASS_D-NEXT: private BaseClassTest::C
 
 ; UDT_KIND_TEST: ---TYPES---
 ; UDT_KIND_TEST-DAG: union UdtKindTest::C [sizeof = 1] {}

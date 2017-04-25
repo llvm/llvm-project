@@ -14,19 +14,11 @@ entry:
 ; LINUX-NO-FP-NEXT: .size   func, .L{{.*}}-func
 ; LINUX-NO-FP-NEXT: .cfi_endproc
 
-; A cfi directive can point to the end of a function. It (and in fact the
-; entire body) could be optimized out because of the unreachable, but we
-; don't do it right now.
+; A cfi directive cannot point to the end of a function.
 ; LINUX-FP: func:
 ; LINUX-FP-NEXT: .cfi_startproc
 ; LINUX-FP-NEXT: {{^}}!
 ; LINUX-FP-NEXT: save %sp, -96, %sp
-; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
-; LINUX-FP-NEXT: .cfi_def_cfa_register %fp
-; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
-; LINUX-FP-NEXT: .cfi_window_save
-; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
-; LINUX-FP-NEXT: .cfi_register 15, 31
 ; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT: .size   func, .Lfunc_end0-func
 ; LINUX-FP-NEXT: .cfi_endproc

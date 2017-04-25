@@ -2869,7 +2869,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   DWARFDebugRangeList RangeList;
   const auto &FunctionRanges = Unit.getFunctionRanges();
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
-  DataExtractor RangeExtractor(OrigDwarf.getRangeSection(),
+  DataExtractor RangeExtractor(OrigDwarf.getRangeSection().Data,
                                OrigDwarf.isLittleEndian(), AddressSize);
   auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
@@ -2884,7 +2884,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
     uint32_t Offset = RangeAttribute.get();
     RangeAttribute.set(Streamer->getRangesSectionSize());
-    RangeList.extract(RangeExtractor, &Offset);
+    RangeList.extract(RangeExtractor, &Offset, OrigDwarf.getRangeSection().Relocs);
     const auto &Entries = RangeList.getEntries();
     if (!Entries.empty()) {
       const DWARFDebugRangeList::RangeListEntry &First = Entries.front();

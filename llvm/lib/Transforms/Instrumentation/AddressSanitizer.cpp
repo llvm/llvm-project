@@ -265,11 +265,10 @@ static cl::opt<bool>
                                 cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
-    ClUseMachOGlobalsSection("asan-globals-live-support",
-                             cl::desc("Use linker features to support dead "
-                                      "code stripping of globals "
-                                      "(Mach-O only)"),
-                             cl::Hidden, cl::init(true));
+    ClUseGlobalsGC("asan-globals-live-support",
+                   cl::desc("Use linker features to support dead "
+                            "code stripping of globals"),
+                   cl::Hidden, cl::init(true));
 
 // Debug flags.
 static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
@@ -594,13 +593,15 @@ struct AddressSanitizer : public FunctionPass {
 };
 
 class AddressSanitizerModule : public ModulePass {
- public:
+public:
   explicit AddressSanitizerModule(bool CompileKernel = false,
-                                  bool Recover = false)
+                                  bool Recover = false,
+                                  bool UseGlobalsGC = true)
       : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover) {}
+        Recover(Recover || ClRecover),
+        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC) {}
   bool runOnModule(Module &M) override;
-  static char ID;  // Pass identification, replacement for typeid
+  static char ID; // Pass identification, replacement for typeid
   StringRef getPassName() const override { return "AddressSanitizerModule"; }
 
 private:
@@ -635,6 +636,7 @@ private:
   GlobalsMetadata GlobalsMD;
   bool CompileKernel;
   bool Recover;
+  bool UseGlobalsGC;
   Type *IntptrTy;
   LLVMContext *C;
   Triple TargetTriple;
@@ -913,9 +915,10 @@ INITIALIZE_PASS(
     "ModulePass",
     false, false)
 ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
-                                                   bool Recover) {
+                                                   bool Recover,
+                                                   bool UseGlobalsGC) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizerModule(CompileKernel, Recover);
+  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -1537,9 +1540,6 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
 // binary in order to allow the linker to properly dead strip. This is only
 // supported on recent versions of ld64.
 bool AddressSanitizerModule::ShouldUseMachOGlobalsSection() const {
-  if (!ClUseMachOGlobalsSection)
-    return false;
-
   if (!TargetTriple.isOSBinFormatMachO())
     return false;
 
@@ -1911,9 +1911,9 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     Initializers[i] = Initializer;
   }
 
-  if (TargetTriple.isOSBinFormatCOFF()) {
+  if (UseGlobalsGC && TargetTriple.isOSBinFormatCOFF()) {
     InstrumentGlobalsCOFF(IRB, M, NewGlobals, Initializers);
-  } else if (ShouldUseMachOGlobalsSection()) {
+  } else if (UseGlobalsGC && ShouldUseMachOGlobalsSection()) {
     InstrumentGlobalsMachO(IRB, M, NewGlobals, Initializers);
   } else {
     InstrumentGlobalsWithMetadataArray(IRB, M, NewGlobals, Initializers);

@@ -906,15 +906,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   switch (PredL) {
   default:
     llvm_unreachable("Unknown integer condition code!");
-  case ICmpInst::ICMP_EQ:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:  // (X == 13 & X != 15) -> X == 13
-    case ICmpInst::ICMP_ULT: // (X == 13 & X <  15) -> X == 13
-    case ICmpInst::ICMP_SLT: // (X == 13 & X <  15) -> X == 13
-      return LHS;
-    }
   case ICmpInst::ICMP_NE:
     switch (PredR) {
     default:
@@ -930,43 +921,15 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
       if (LHSC == SubOne(RHSC)) // (X != 13 & X s< 14) -> X < 13
         return Builder->CreateICmpSLT(LHS0, LHSC);
       break;                 // (X != 13 & X s< 15) -> no change
-    case ICmpInst::ICMP_EQ:  // (X != 13 & X == 15) -> X == 15
-    case ICmpInst::ICMP_UGT: // (X != 13 & X u> 15) -> X u> 15
-    case ICmpInst::ICMP_SGT: // (X != 13 & X s> 15) -> X s> 15
-      return RHS;
     case ICmpInst::ICMP_NE:
       // Potential folds for this case should already be handled.
       break;
-    }
-    break;
-  case ICmpInst::ICMP_ULT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:  // (X u< 13 & X == 15) -> false
-    case ICmpInst::ICMP_UGT: // (X u< 13 & X u> 15) -> false
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    case ICmpInst::ICMP_NE:  // (X u< 13 & X != 15) -> X u< 13
-    case ICmpInst::ICMP_ULT: // (X u< 13 & X u< 15) -> X u< 13
-      return LHS;
-    }
-    break;
-  case ICmpInst::ICMP_SLT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:  // (X s< 13 & X != 15) -> X < 13
-    case ICmpInst::ICMP_SLT: // (X s< 13 & X s< 15) -> X < 13
-      return LHS;
     }
     break;
   case ICmpInst::ICMP_UGT:
     switch (PredR) {
     default:
       llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:  // (X u> 13 & X == 15) -> X == 15
-    case ICmpInst::ICMP_UGT: // (X u> 13 & X u> 15) -> X u> 15
-      return RHS;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X u> 13 & X != 14) -> X u> 14
         return Builder->CreateICmp(PredL, LHS0, RHSC);
@@ -980,9 +943,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
     switch (PredR) {
     default:
       llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:  // (X s> 13 & X == 15) -> X == 15
-    case ICmpInst::ICMP_SGT: // (X s> 13 & X s> 15) -> X s> 15
-      return RHS;
     case ICmpInst::ICMP_NE:
       if (RHSC == AddOne(LHSC)) // (X s> 13 & X != 14) -> X s> 14
         return Builder->CreateICmp(PredL, LHS0, RHSC);
@@ -1447,11 +1407,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     }
 
     // (A&((~A)|B)) -> A&B
-    if (match(Op0, m_Or(m_Not(m_Specific(Op1)), m_Value(A))) ||
-        match(Op0, m_Or(m_Value(A), m_Not(m_Specific(Op1)))))
+    if (match(Op0, m_c_Or(m_Not(m_Specific(Op1)), m_Value(A))))
       return BinaryOperator::CreateAnd(A, Op1);
-    if (match(Op1, m_Or(m_Not(m_Specific(Op0)), m_Value(A))) ||
-        match(Op1, m_Or(m_Value(A), m_Not(m_Specific(Op0)))))
+    if (match(Op1, m_c_Or(m_Not(m_Specific(Op0)), m_Value(A))))
       return BinaryOperator::CreateAnd(A, Op0);
 
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
@@ -2150,19 +2108,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (match(Op1, m_Not(m_Value(A))) &&
       match(Op0, m_c_And(m_Specific(A), m_Value(B))))
     return BinaryOperator::CreateOr(Op1, B);
-
-  // (A & ~B) | (A ^ B) -> (A ^ B)
-  // (~B & A) | (A ^ B) -> (A ^ B)
-  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op1, m_Xor(m_Specific(A), m_Specific(B))))
-    return BinaryOperator::CreateXor(A, B);
-
-  // Commute the 'or' operands.
-  // (A ^ B) | (A & ~B) -> (A ^ B)
-  // (A ^ B) | (~B & A) -> (A ^ B)
-  if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op0, m_Xor(m_Specific(A), m_Specific(B))))
-    return BinaryOperator::CreateXor(A, B);
 
   // (A & C)|(B & D)
   Value *C = nullptr, *D = nullptr;

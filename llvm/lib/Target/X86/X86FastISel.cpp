@@ -2149,7 +2149,8 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
   if (!LHSReg || !RHSReg)
     return false;
 
-  unsigned Opc = X86::getCMovFromCond(CC, RC->getSize());
+  const TargetRegisterInfo &TRI = *Subtarget->getRegisterInfo();
+  unsigned Opc = X86::getCMovFromCond(CC, TRI.getRegSizeInBits(*RC)/8);
   unsigned ResultReg = fastEmitInst_rr(Opc, RC, RHSReg, RHSIsKill,
                                        LHSReg, LHSIsKill);
   updateValueMap(I, ResultReg);

@@ -83,6 +83,8 @@ Here are the steps you can follow to do so:
    * slaves are added to ``buildbot/osuosl/master/config/slaves.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``
 
+   Please make sure your builder name and its builddir are unique through the file.
+
    It is possible to whitelist email addresses to unconditionally receive notifications
    on build failure; for this you'll need to add an ``InformativeMailNotifier`` to
    ``buildbot/osuosl/master/config/status.py``. This is particularly useful for the

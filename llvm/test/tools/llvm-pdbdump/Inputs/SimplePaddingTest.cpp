@@ -114,6 +114,7 @@ struct SimplePadAggregate {
   NonEmptyBase1 X;
   int32_t Y;
   // the presence of X will cause 3 bytes of padding to be injected.
+  SimplePadFields1 Fields;
 } N;
 
 struct SimplePadVtable1 {

@@ -253,18 +253,8 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       const SCEV *OriginalISE = ISE;
 
       auto NormalizePred = [&](const SCEVAddRecExpr *AR) {
-        // We only allow affine AddRecs to be normalized, otherwise we would not
-        // be able to correctly denormalize.
-        // e.g. {1,+,3,+,2} == {-2,+,1,+,2} + {3,+,2}
-        // Normalized form:   {-2,+,1,+,2}
-        // Denormalized form: {1,+,3,+,2}
-        //
-        // However, denormalization would use a different step expression than
-        // normalization (see getPostIncExpr), generating the wrong final
-        // expression: {-2,+,1,+,2} + {1,+,2} => {-1,+,3,+,2}
         auto *L = AR->getLoop();
-        bool Result =
-            AR->isAffine() && IVUseShouldUsePostIncValue(User, I, L, DT);
+        bool Result = IVUseShouldUsePostIncValue(User, I, L, DT);
         if (Result)
           NewUse.PostIncLoops.insert(L);
         return Result;

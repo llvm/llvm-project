@@ -273,9 +273,9 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   // size of stack area to which FP callee-saved regs are saved.
-  unsigned CPURegSize = Mips::GPR32RegClass.getSize();
-  unsigned FGR32RegSize = Mips::FGR32RegClass.getSize();
-  unsigned AFGR64RegSize = Mips::AFGR64RegClass.getSize();
+  unsigned CPURegSize = TRI->getRegSizeInBits(Mips::GPR32RegClass) / 8;
+  unsigned FGR32RegSize = TRI->getRegSizeInBits(Mips::FGR32RegClass) / 8;
+  unsigned AFGR64RegSize = TRI->getRegSizeInBits(Mips::AFGR64RegClass) / 8;
   bool HasAFGR64Reg = false;
   unsigned CSFPRegsSize = 0;
 

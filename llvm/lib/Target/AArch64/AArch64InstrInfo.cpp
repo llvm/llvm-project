@@ -2320,7 +2320,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
       PtrInfo, MachineMemOperand::MOStore, MFI.getObjectSize(FI), Align);
   unsigned Opc = 0;
   bool Offset = true;
-  switch (RC->getSize()) {
+  switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRBui;
@@ -2424,7 +2424,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
 
   unsigned Opc = 0;
   bool Offset = true;
-  switch (RC->getSize()) {
+  switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRBui;
@@ -2649,7 +2649,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     };
 
     if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {
-      assert(getRegClass(DstReg)->getSize() == getRegClass(SrcReg)->getSize() &&
+      assert(TRI.getRegSizeInBits(*getRegClass(DstReg)) ==
+             TRI.getRegSizeInBits(*getRegClass(SrcReg)) &&
              "Mismatched register size in non subreg COPY");
       if (IsSpill)
         storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
@@ -2735,7 +2736,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
       }
 
       if (FillRC) {
-        assert(getRegClass(SrcReg)->getSize() == FillRC->getSize() &&
+        assert(TRI.getRegSizeInBits(*getRegClass(SrcReg)) ==
+                   TRI.getRegSizeInBits(*FillRC) &&
                "Mismatched regclass size on folded subreg COPY");
         loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC, &TRI);
         MachineInstr &LoadMI = *--InsertPt;

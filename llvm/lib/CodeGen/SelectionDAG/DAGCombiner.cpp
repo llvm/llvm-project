@@ -3878,27 +3878,29 @@ static bool isBSwapHWordElement(SDValue N, MutableArrayRef<SDNode *> Parts) {
   if (Opc != ISD::AND && Opc != ISD::SHL && Opc != ISD::SRL)
     return false;
 
+  SDValue N0 = N.getOperand(0);
+  unsigned Opc0 = N0.getOpcode();
+
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N.getOperand(1));
   if (!N1C)
     return false;
 
-  unsigned Num;
+  unsigned MaskByteOffset;
   switch (N1C->getZExtValue()) {
   default:
     return false;
-  case 0xFF:       Num = 0; break;
-  case 0xFF00:     Num = 1; break;
-  case 0xFF0000:   Num = 2; break;
-  case 0xFF000000: Num = 3; break;
+  case 0xFF:       MaskByteOffset = 0; break;
+  case 0xFF00:     MaskByteOffset = 1; break;
+  case 0xFF0000:   MaskByteOffset = 2; break;
+  case 0xFF000000: MaskByteOffset = 3; break;
   }
 
   // Look for (x & 0xff) << 8 as well as ((x << 8) & 0xff00).
-  SDValue N0 = N.getOperand(0);
   if (Opc == ISD::AND) {
-    if (Num == 0 || Num == 2) {
+    if (MaskByteOffset == 0 || MaskByteOffset == 2) {
       // (x >> 8) & 0xff
       // (x >> 8) & 0xff0000
-      if (N0.getOpcode() != ISD::SRL)
+      if (Opc0 != ISD::SRL)
         return false;
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C || C->getZExtValue() != 8)
@@ -3906,7 +3908,7 @@ static bool isBSwapHWordElement(SDValue N, MutableArrayRef<SDNode *> Parts) {
     } else {
       // (x << 8) & 0xff00
       // (x << 8) & 0xff000000
-      if (N0.getOpcode() != ISD::SHL)
+      if (Opc0 != ISD::SHL)
         return false;
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C || C->getZExtValue() != 8)
@@ -3915,7 +3917,7 @@ static bool isBSwapHWordElement(SDValue N, MutableArrayRef<SDNode *> Parts) {
   } else if (Opc == ISD::SHL) {
     // (x & 0xff) << 8
     // (x & 0xff0000) << 8
-    if (Num != 0 && Num != 2)
+    if (MaskByteOffset != 0 && MaskByteOffset != 2)
       return false;
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
     if (!C || C->getZExtValue() != 8)
@@ -3923,17 +3925,17 @@ static bool isBSwapHWordElement(SDValue N, MutableArrayRef<SDNode *> Parts) {
   } else { // Opc == ISD::SRL
     // (x & 0xff00) >> 8
     // (x & 0xff000000) >> 8
-    if (Num != 1 && Num != 3)
+    if (MaskByteOffset != 1 && MaskByteOffset != 3)
       return false;
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
     if (!C || C->getZExtValue() != 8)
       return false;
   }
 
-  if (Parts[Num])
+  if (Parts[MaskByteOffset])
     return false;
 
-  Parts[Num] = N0.getOperand(0).getNode();
+  Parts[MaskByteOffset] = N0.getOperand(0).getNode();
   return true;
 }
 
@@ -4198,12 +4200,13 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   // reassociate or
   if (SDValue ROR = ReassociateOps(ISD::OR, SDLoc(N), N0, N1))
     return ROR;
+
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
   // iff (c1 & c2) != 0.
   if (N1C && N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse() &&
              isa<ConstantSDNode>(N0.getOperand(1))) {
     ConstantSDNode *C1 = cast<ConstantSDNode>(N0.getOperand(1));
-    if ((C1->getAPIntValue() & N1C->getAPIntValue()) != 0) {
+    if (C1->getAPIntValue().intersects(N1C->getAPIntValue())) {
       if (SDValue COR = DAG.FoldConstantArithmetic(ISD::OR, SDLoc(N1), VT,
                                                    N1C, C1))
         return DAG.getNode(
@@ -4212,6 +4215,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       return SDValue();
     }
   }
+
   // Simplify: (or (op x...), (op y...))  -> (op (or x, y))
   if (N0.getOpcode() == N1.getOpcode())
     if (SDValue Tmp = SimplifyBinOpWithSameOpcodeHands(N))
@@ -16088,6 +16092,19 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   if (Op1->isInvariant() && Op0->writeMem())
     return false;
 
+  unsigned NumBytes0 = Op0->getMemoryVT().getSizeInBits() >> 3;
+  unsigned NumBytes1 = Op1->getMemoryVT().getSizeInBits() >> 3;
+
+  // Check for BaseIndexOffset matching.
+  BaseIndexOffset BasePtr0 = BaseIndexOffset::match(Op0->getBasePtr(), DAG);
+  BaseIndexOffset BasePtr1 = BaseIndexOffset::match(Op1->getBasePtr(), DAG);
+  if (BasePtr0.equalBaseIndex(BasePtr1))
+    return !((BasePtr0.Offset + NumBytes0 <= BasePtr1.Offset) ||
+             (BasePtr1.Offset + NumBytes1 <= BasePtr0.Offset));
+
+  // FIXME: findBaseOffset and ConstantValue/GlobalValue/FrameIndex analysis
+  // modified to use BaseIndexOffset.
+
   // Gather base node and offset information.
   SDValue Base0, Base1;
   int64_t Offset0, Offset1;
@@ -16099,8 +16116,6 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
                                       Base1, Offset1, GV1, CV1);
 
   // If they have the same base address, then check to see if they overlap.
-  unsigned NumBytes0 = Op0->getMemoryVT().getSizeInBits() >> 3;
-  unsigned NumBytes1 = Op1->getMemoryVT().getSizeInBits() >> 3;
   if (Base0 == Base1 || (GV0 && (GV0 == GV1)) || (CV0 && (CV0 == CV1)))
     return !((Offset0 + NumBytes0) <= Offset1 ||
              (Offset1 + NumBytes1) <= Offset0);

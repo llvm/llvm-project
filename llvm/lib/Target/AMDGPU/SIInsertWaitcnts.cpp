@@ -428,8 +428,8 @@ RegInterval BlockWaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   const MachineInstr &MIA = *MI;
   const TargetRegisterClass *RC = TII->getOpRegClass(MIA, OpNo);
-  unsigned Size = RC->getSize();
-  Result.second = Result.first + (Size / 4);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+  Result.second = Result.first + (Size / 32);
 
   return Result;
 }

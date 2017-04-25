@@ -1960,10 +1960,10 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         // note: Thumb1 functions spill to R12, not the stack.  Reserve a slot
         // closest to SP or frame pointer.
         assert(RS && "Register scavenging not provided");
-        const TargetRegisterClass *RC = &ARM::GPRRegClass;
-        RS->addScavengingFrameIndex(MFI.CreateStackObject(RC->getSize(),
-                                                          RC->getAlignment(),
-                                                          false));
+        const TargetRegisterClass &RC = ARM::GPRRegClass;
+        unsigned Size = TRI->getSpillSize(RC);
+        unsigned Align = TRI->getSpillAlignment(RC);
+        RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
       }
     }
   }

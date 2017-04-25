@@ -1,0 +1,132 @@
+# RUN: llc -march=amdgcn -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.2:
+# GCN:      SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.3:
+# GCN:      SI_INIT_M0 3
+
+# GCN:    bb.4:
+# GCN-NOT:  SI_INIT_M0
+# GCN:      DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 4
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.5:
+# GCN-NOT: SI_INIT_M0
+# GCN:     DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 4
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.6:
+# GCN:      SI_INIT_M0 -1,
+# GCN-NEXT: DS_WRITE_B32
+# GCN:      SI_INIT_M0 %2
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 %2
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+
+---
+name:            test
+alignment:       0
+exposesReturnsTwice: false
+noVRegs:         false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_32_xm0 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 65536, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 65536, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 65536, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_CBRANCH_VCCZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    SI_INIT_M0 65536, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4, %bb.5
+    S_CBRANCH_VCCZ %bb.4, implicit undef %vcc
+    S_BRANCH %bb.5
+
+  bb.4:
+    successors: %bb.6
+    SI_INIT_M0 3, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 4, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.6
+    SI_INIT_M0 3, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 4, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_BRANCH %bb.6
+
+  bb.6:
+    successors: %bb.0.entry, %bb.6
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 %2, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 %2, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    SI_INIT_M0 -1, implicit-def %m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit %m0, implicit %exec
+    S_CBRANCH_VCCZ %bb.6, implicit undef %vcc
+    S_BRANCH %bb.0.entry
+
+...

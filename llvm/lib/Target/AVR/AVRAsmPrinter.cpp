@@ -112,7 +112,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
       const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-      unsigned BytesPerReg = TRI.getMinimalPhysRegClass(Reg)->getSize();
+      const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+      unsigned BytesPerReg = TRI.getRegSizeInBits(*RC) / 8;
       assert(BytesPerReg <= 2 && "Only 8 and 16 bit regs are supported.");
 
       unsigned RegIdx = ByteNumber / BytesPerReg;

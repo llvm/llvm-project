@@ -345,6 +345,11 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
   if (!SI->isSimple())
     return false;
 
+  // Don't convert stores of non-integral pointer types to memsets (which stores
+  // integers).
+  if (DL->isNonIntegralPointerType(SI->getValueOperand()->getType()))
+    return false;
+
   // Avoid merging nontemporal stores.
   if (SI->getMetadata(LLVMContext::MD_nontemporal))
     return false;

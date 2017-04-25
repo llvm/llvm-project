@@ -345,12 +345,12 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
                                         unsigned SubIdx, unsigned &Size,
                                         unsigned &Offset,
                                         const MachineFunction &MF) const {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!SubIdx) {
-    Size = RC->getSize();
+    Size = TRI->getSpillSize(*RC);
     Offset = 0;
     return true;
   }
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned BitSize = TRI->getSubRegIdxSize(SubIdx);
   // Convert bit size to byte size to be consistent with
   // MCRegisterClass::getSize().
@@ -364,10 +364,10 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
   Size = BitSize /= 8;
   Offset = (unsigned)BitOffset / 8;
 
-  assert(RC->getSize() >= (Offset + Size) && "bad subregister range");
+  assert(TRI->getSpillSize(*RC) >= (Offset + Size) && "bad subregister range");
 
   if (!MF.getDataLayout().isLittleEndian()) {
-    Offset = RC->getSize() - (Offset + Size);
+    Offset = TRI->getSpillSize(*RC) - (Offset + Size);
   }
   return true;
 }

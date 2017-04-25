@@ -94,6 +94,12 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
+def ATOMIC_FENCE : SPseudoInstSI<
+  (outs), (ins i32imm:$ordering, i32imm:$scope),
+  [(atomic_fence (i32 imm:$ordering), (i32 imm:$scope))],
+  "ATOMIC_FENCE $ordering, $scope"> {
+  let hasSideEffects = 1;
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 
@@ -110,12 +116,6 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
-
-def S_TRAP_PSEUDO : SPseudoInstSI <(outs), (ins i16imm:$simm16)> {
-  let hasSideEffects = 1;
-  let SALU = 1;
-  let usesCustomInserter = 1;
-}
 
 let usesCustomInserter = 1, SALU = 1 in {
 def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
@@ -400,13 +400,8 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
 
 let Predicates = [isGCN] in {
 def : Pat<
-  (trap),
-  (S_TRAP_PSEUDO TRAPID.LLVM_TRAP)
->;
-
-def : Pat<
-  (debugtrap),
-  (S_TRAP_PSEUDO TRAPID.LLVM_DEBUG_TRAP)
+  (AMDGPUtrap timm:$trapid),
+  (S_TRAP $trapid)
 >;
 
 def : Pat<

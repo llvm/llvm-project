@@ -236,6 +236,12 @@ public:
     return getPointerTy(DL, DL.getAllocaAddrSpace());
   }
 
+  /// Return the type for operands of fence.
+  /// TODO: Let fence operands be of i32 type and remove this.
+  virtual MVT getFenceOperandTy(const DataLayout &DL) const {
+    return getPointerTy(DL);
+  }
+
   /// EVT is not used in-tree, but is used by out-of-tree target.
   /// A documentation for this function would be nice...
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
@@ -2268,7 +2274,8 @@ protected:
 
   /// Return true if the value types that can be represented by the specified
   /// register class are all legal.
-  bool isLegalRC(const TargetRegisterClass *RC) const;
+  bool isLegalRC(const TargetRegisterInfo &TRI,
+                 const TargetRegisterClass &RC) const;
 
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.

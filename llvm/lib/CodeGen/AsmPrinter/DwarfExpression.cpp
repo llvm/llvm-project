@@ -117,8 +117,9 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // Otherwise, attempt to find a covering set of sub-register numbers.
   // For example, Q0 on ARM is a composition of D0+D1.
   unsigned CurPos = 0;
-  // The size of the register in bits, assuming 8 bits per byte.
-  unsigned RegSize = TRI.getMinimalPhysRegClass(MachineReg)->getSize() * 8;
+  // The size of the register in bits.
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg);
+  unsigned RegSize = TRI.getRegSizeInBits(*RC);
   // Keep track of the bits in the register we already emitted, so we
   // can avoid emitting redundant aliasing subregs.
   SmallBitVector Coverage(RegSize, false);
@@ -343,7 +344,6 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       emitUnsigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_stack_value:
-      assert(LocationKind == Unknown || LocationKind == Implicit);
       LocationKind = Implicit;
       break;
     case dwarf::DW_OP_swap:

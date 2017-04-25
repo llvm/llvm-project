@@ -32,7 +32,7 @@ using namespace llvm;
 using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
-  parseImpl(C, Section, C.getDebugAbbrev(), C.getRangeSection(),
+  parseImpl(C, Section, C.getDebugAbbrev(), &C.getRangeSection(),
             C.getStringSection(), StringRef(), C.getAddrSection(),
             C.getLineSection().Data, C.isLittleEndian(), false);
 }
@@ -40,16 +40,17 @@ void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
                                     const DWARFSection &DWOSection,
                                     DWARFUnitIndex *Index) {
-  parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), C.getRangeDWOSection(),
+  parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &C.getRangeDWOSection(),
             C.getStringDWOSection(), C.getStringOffsetDWOSection(),
             C.getAddrSection(), C.getLineDWOSection().Data, C.isLittleEndian(),
             true);
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
-                     const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                     StringRef SOS, StringRef AOS, StringRef LS, bool LE,
-                     bool IsDWO, const DWARFUnitSectionBase &UnitSection,
+                     const DWARFDebugAbbrev *DA, const DWARFSection *RS,
+                     StringRef SS, StringRef SOS, StringRef AOS, StringRef LS,
+                     bool LE, bool IsDWO,
+                     const DWARFUnitSectionBase &UnitSection,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
       LineSection(LS), StringSection(SS), StringOffsetSection([&]() {
@@ -142,9 +143,10 @@ bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
                                         DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
   assert(!DieArray.empty());
-  DataExtractor RangesData(RangeSection, isLittleEndian, AddrSize);
+  DataExtractor RangesData(RangeSection->Data, isLittleEndian, AddrSize);
   uint32_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
-  return RangeList.extract(RangesData, &ActualRangeListOffset);
+  return RangeList.extract(RangesData, &ActualRangeListOffset,
+                           RangeSection->Relocs);
 }
 
 void DWARFUnit::clear() {

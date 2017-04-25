@@ -482,6 +482,17 @@ public:
                          static_cast<const Value *>(this)->stripPointerCasts());
   }
 
+  /// \brief Strip off pointer casts, all-zero GEPs, aliases and barriers.
+  ///
+  /// Returns the original uncasted value.  If this is called on a non-pointer
+  /// value, it returns 'this'. This function should be used only in
+  /// Alias analysis.
+  const Value *stripPointerCastsAndBarriers() const;
+  Value *stripPointerCastsAndBarriers() {
+    return const_cast<Value *>(
+        static_cast<const Value *>(this)->stripPointerCastsAndBarriers());
+  }
+
   /// \brief Strip off pointer casts and all-zero GEPs.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer

@@ -30,3 +30,42 @@ define <4 x i32> @sext_inc_vec(<4 x i1> %x) {
   ret <4 x i32> %add
 }
 
+define <4 x i32> @cmpgt_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: cmpgt_sext_inc_vec:
+; CHECK:       @ BB#0:
+; CHECK-NEXT:    mov r12, sp
+; CHECK-NEXT:    vmov d19, r2, r3
+; CHECK-NEXT:    vmov.i32 q10, #0x1
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    vmov d18, r0, r1
+; CHECK-NEXT:    vcgt.s32 q8, q9, q8
+; CHECK-NEXT:    vadd.i32 q8, q8, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    mov pc, lr
+  %cmp = icmp sgt <4 x i32> %x, %y
+  %ext = sext <4 x i1> %cmp to <4 x i32>
+  %add = add <4 x i32> %ext, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @cmpne_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: cmpne_sext_inc_vec:
+; CHECK:       @ BB#0:
+; CHECK-NEXT:    mov r12, sp
+; CHECK-NEXT:    vmov d19, r2, r3
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    vmov d18, r0, r1
+; CHECK-NEXT:    vceq.i32 q8, q9, q8
+; CHECK-NEXT:    vmov.i32 q9, #0x1
+; CHECK-NEXT:    vmvn q8, q8
+; CHECK-NEXT:    vadd.i32 q8, q8, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    mov pc, lr
+  %cmp = icmp ne <4 x i32> %x, %y
+  %ext = sext <4 x i1> %cmp to <4 x i32>
+  %add = add <4 x i32> %ext, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %add
+}
+

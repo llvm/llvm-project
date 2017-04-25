@@ -794,6 +794,11 @@ unsigned FAddCombine::calcInstrNumber(const AddendVect &Opnds) {
     if (Opnd->isConstant())
       continue;
 
+    // The constant check above is really for a few special constant
+    // coefficients.
+    if (isa<UndefValue>(Opnd->getSymVal()))
+      continue;
+
     const FAddendCoef &CE = Opnd->getCoef();
     if (CE.isMinusOne() || CE.isMinusTwo())
       NegOpndNum++;

@@ -708,10 +708,24 @@ class RegionInfoBase {
   /// The top level region.
   RegionT *TopLevelRegion;
 
-private:
   /// Map every BB to the smallest region, that contains BB.
   BBtoRegionMap BBtoRegion;
 
+protected:
+  /// \brief Update refences to a RegionInfoT held by the RegionT managed here
+  ///
+  /// This is a post-move helper. Regions hold references to the owning
+  /// RegionInfo object. After a move these need to be fixed.
+  template<typename TheRegionT>
+  void updateRegionTree(RegionInfoT &RI, TheRegionT *R) {
+    if (!R)
+      return;
+    R->RI = &RI;
+    for (auto &SubR : *R)
+      updateRegionTree(RI, SubR.get());
+  }
+
+private:
   /// \brief Wipe this region tree's state without releasing any resources.
   ///
   /// This is essentially a post-move helper only. It leaves the object in an
@@ -879,10 +893,12 @@ public:
 
   ~RegionInfo() override;
 
-  RegionInfo(RegionInfo &&Arg)
-    : Base(std::move(static_cast<Base &>(Arg))) {}
+  RegionInfo(RegionInfo &&Arg) : Base(std::move(static_cast<Base &>(Arg))) {
+    updateRegionTree(*this, TopLevelRegion);
+  }
   RegionInfo &operator=(RegionInfo &&RHS) {
     Base::operator=(std::move(static_cast<Base &>(RHS)));
+    updateRegionTree(*this, TopLevelRegion);
     return *this;
   }
 

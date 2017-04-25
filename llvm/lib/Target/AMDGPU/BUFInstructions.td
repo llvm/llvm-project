@@ -11,7 +11,9 @@ def MUBUFAddr32 : ComplexPattern<i64, 9, "SelectMUBUFAddr32">;
 def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
 def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
 
-def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
+def MUBUFScratchOffen : ComplexPattern<i64, 4, "SelectMUBUFScratchOffen">;
+def MUBUFScratchOffset : ComplexPattern<i64, 3, "SelectMUBUFScratchOffset", [], [], 20>;
+
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
@@ -958,21 +960,30 @@ defm : MUBUFLoad_Pattern <BUFFER_LOAD_UBYTE_OFFSET, i16, mubuf_az_extloadi8>;
 
 } // End Predicates = [Has16BitInsts]
 
-class MUBUFScratchLoadPat <MUBUF_Pseudo Instr, ValueType vt, PatFrag ld> : Pat <
-  (vt (ld (MUBUFScratch v4i32:$srsrc, i32:$vaddr,
-                        i32:$soffset, u16imm:$offset))),
-  (Instr $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
->;
+multiclass MUBUFScratchLoadPat <MUBUF_Pseudo InstrOffen,
+                                MUBUF_Pseudo InstrOffset,
+                                ValueType vt, PatFrag ld> {
+  def : Pat <
+    (vt (ld (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
+                               i32:$soffset, u16imm:$offset))),
+    (InstrOffen $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
 
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, i32, sextloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, i32, extloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, i16, sextloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, i16, extloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SSHORT_OFFEN, i32, sextloadi16_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, i32, extloadi16_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, i32, load_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, v2i32, load_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, v4i32, load_private>;
+  def : Pat <
+    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u16imm:$offset))),
+    (InstrOffset $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
+}
+
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, BUFFER_LOAD_SBYTE_OFFSET, i32, sextloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, BUFFER_LOAD_UBYTE_OFFSET, i32, extloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, BUFFER_LOAD_SBYTE_OFFSET, i16, sextloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, BUFFER_LOAD_UBYTE_OFFSET, i16, extloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SSHORT_OFFEN, BUFFER_LOAD_SSHORT_OFFSET, i32, sextloadi16_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, BUFFER_LOAD_USHORT_OFFSET, i32, extloadi16_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, BUFFER_LOAD_DWORD_OFFSET, i32, load_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, BUFFER_LOAD_DWORDX2_OFFSET, v2i32, load_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, BUFFER_LOAD_DWORDX4_OFFSET, v4i32, load_private>;
 
 // BUFFER_LOAD_DWORD*, addr64=0
 multiclass MUBUF_Load_Dword <ValueType vt,
@@ -1054,19 +1065,29 @@ multiclass MUBUFStore_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
 defm : MUBUFStore_Pattern <BUFFER_STORE_BYTE_OFFSET, i16, truncstorei8_global>;
 defm : MUBUFStore_Pattern <BUFFER_STORE_SHORT_OFFSET, i16, global_store>;
 
-class MUBUFScratchStorePat <MUBUF_Pseudo Instr, ValueType vt, PatFrag st> : Pat <
-  (st vt:$value, (MUBUFScratch v4i32:$srsrc, i32:$vaddr, i32:$soffset,
-                               u16imm:$offset)),
-  (Instr $value, $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
->;
+multiclass MUBUFScratchStorePat <MUBUF_Pseudo InstrOffen,
+                                 MUBUF_Pseudo InstrOffset,
+                                 ValueType vt, PatFrag st> {
+  def : Pat <
+    (st vt:$value, (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
+                                      i32:$soffset, u16imm:$offset)),
+    (InstrOffen $value, $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
 
-def : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, i32, truncstorei8_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i32, truncstorei16_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, i16, truncstorei8_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i16, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, i32, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, v2i32, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, v4i32, store_private>;
+  def : Pat <
+    (st vt:$value, (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset,
+                                       u16imm:$offset)),
+    (InstrOffset $value, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
+}
+
+defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, BUFFER_STORE_BYTE_OFFSET, i32, truncstorei8_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, BUFFER_STORE_SHORT_OFFSET, i32, truncstorei16_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, BUFFER_STORE_BYTE_OFFSET, i16, truncstorei8_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, BUFFER_STORE_SHORT_OFFSET, i16, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, BUFFER_STORE_DWORD_OFFSET, i32, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, BUFFER_STORE_DWORDX2_OFFSET, v2i32, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, BUFFER_STORE_DWORDX4_OFFSET, v4i32, store_private>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

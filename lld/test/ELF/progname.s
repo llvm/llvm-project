@@ -5,10 +5,10 @@
 // RUN: ld.lld -o %t %t.o %t2.so
 // RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 
-// RUN: echo "VER_1 { global: bar; };" > %s.script
+// RUN: echo "VER_1 { global: bar; };" > %t.script
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux \
 // RUN:   %p/Inputs/progname-ver.s -o %t-ver.o
-// RUN: ld.lld -shared -o %t.so -version-script %s.script %t-ver.o
+// RUN: ld.lld -shared -o %t.so -version-script %t.script %t-ver.o
 // RUN: ld.lld -o %t %t.o %t.so
 // RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 

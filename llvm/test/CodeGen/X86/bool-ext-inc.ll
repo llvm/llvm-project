@@ -29,4 +29,29 @@ define <4 x i32> @sext_inc_vec(<4 x i1> %x) nounwind {
   ret <4 x i32> %add
 }
 
+define <4 x i32> @cmpgt_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: cmpgt_sext_inc_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> %x, %y
+  %ext = sext <4 x i1> %cmp to <4 x i32>
+  %add = add <4 x i32> %ext, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @cmpne_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: cmpne_sext_inc_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %cmp = icmp ne <4 x i32> %x, %y
+  %ext = sext <4 x i1> %cmp to <4 x i32>
+  %add = add <4 x i32> %ext, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %add
+}
 

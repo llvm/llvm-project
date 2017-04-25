@@ -37,10 +37,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 static cl::opt<bool>
-    ColdErrorCalls("error-reporting-is-cold", cl::init(true), cl::Hidden,
-                   cl::desc("Treat error-reporting calls as cold"));
-
-static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
                          cl::init(false),
                          cl::desc("Enable unsafe double to float "
@@ -1632,7 +1628,7 @@ Value *LibCallSimplifier::optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,
 }
 
 static bool isReportingError(Function *Callee, CallInst *CI, int StreamArg) {
-  if (!ColdErrorCalls || !Callee || !Callee->isDeclaration())
+  if (!Callee || !Callee->isDeclaration())
     return false;
 
   if (StreamArg < 0)

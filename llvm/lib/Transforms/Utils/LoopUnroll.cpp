@@ -318,6 +318,10 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     return false;
   }
 
+  // The current loop unroll pass can only unroll loops with a single latch
+  // that's a conditional branch exiting the loop.
+  // FIXME: The implementation can be extended to work with more complicated
+  // cases, e.g. loops with multiple latches.
   BasicBlock *Header = L->getHeader();
   BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
 
@@ -325,6 +329,16 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     // The loop-rotate pass can be helpful to avoid this in many cases.
     DEBUG(dbgs() <<
              "  Can't unroll; loop not terminated by a conditional branch.\n");
+    return false;
+  }
+
+  auto CheckSuccessors = [&](unsigned S1, unsigned S2) {
+    return BI->getSuccessor(S1) == Header && !L->contains(BI->getSuccessor(S2));
+  };
+
+  if (!CheckSuccessors(0, 1) && !CheckSuccessors(1, 0)) {
+    DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
+                    " exiting the loop can be unrolled\n");
     return false;
   }
 

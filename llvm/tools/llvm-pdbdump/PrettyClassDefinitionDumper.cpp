@@ -11,7 +11,6 @@
 
 #include "LinePrinter.h"
 #include "PrettyClassLayoutGraphicalDumper.h"
-#include "PrettyClassLayoutTextDumper.h"
 #include "llvm-pdbdump.h"
 
 #include "llvm/ADT/APFloat.h"
@@ -39,44 +38,17 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
 void ClassDefinitionDumper::start(const ClassLayout &Layout) {
   prettyPrintClassIntro(Layout);
 
-  switch (opts::pretty::ClassFormat) {
-  case opts::pretty::ClassDefinitionFormat::Graphical: {
-    PrettyClassLayoutGraphicalDumper Dumper(Printer, 0);
-    DumpedAnything = Dumper.start(Layout);
-    break;
-  }
-  case opts::pretty::ClassDefinitionFormat::Standard:
-  case opts::pretty::ClassDefinitionFormat::Layout: {
-    PrettyClassLayoutTextDumper Dumper(Printer);
-    DumpedAnything |= Dumper.start(Layout);
-    break;
-  }
-  default:
-    llvm_unreachable("Unreachable!");
-  }
+  PrettyClassLayoutGraphicalDumper Dumper(Printer, 1, 0);
+  DumpedAnything |= Dumper.start(Layout);
 
   prettyPrintClassOutro(Layout);
-}
-
-static void printBase(LinePrinter &Printer, const PDBSymbolTypeBaseClass &Base,
-                      uint32_t &CurIndex, uint32_t TotalBaseCount,
-                      bool IsVirtual) {
-  Printer << " ";
-  WithColor(Printer, PDB_ColorItem::Keyword).get() << Base.getAccess();
-  if (IsVirtual)
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << " virtual";
-  WithColor(Printer, PDB_ColorItem::Type).get() << " " << Base.getName();
-  if (++CurIndex < TotalBaseCount) {
-    Printer.NewLine();
-    Printer << ",";
-  }
 }
 
 void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   DumpedAnything = false;
   Printer.NewLine();
 
-  uint32_t Size = Layout.getClassSize();
+  uint32_t Size = Layout.getSize();
   const PDBSymbolTypeUDT &Class = Layout.getClass();
 
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
@@ -84,19 +56,22 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   WithColor(Printer, PDB_ColorItem::Comment).get() << " [sizeof = " << Size
                                                    << "]";
   uint32_t BaseCount = Layout.bases().size();
-  uint32_t VBaseCount = Layout.vbases().size();
-  uint32_t TotalBaseCount = BaseCount + VBaseCount;
-  if (TotalBaseCount > 0) {
+  if (BaseCount > 0) {
     Printer.Indent();
-    Printer.NewLine();
-    Printer << ":";
-    uint32_t BaseIndex = 0;
+    char NextSeparator = ':';
     for (auto BC : Layout.bases()) {
       const auto &Base = BC->getBase();
-      printBase(Printer, Base, BaseIndex, TotalBaseCount, false);
-    }
-    for (auto &BC : Layout.vbases()) {
-      printBase(Printer, *BC, BaseIndex, TotalBaseCount, true);
+      if (Base.isIndirectVirtualBaseClass())
+        continue;
+
+      Printer.NewLine();
+      Printer << NextSeparator << " ";
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << Base.getAccess();
+      if (BC->isVirtualBase())
+        WithColor(Printer, PDB_ColorItem::Keyword).get() << " virtual";
+
+      WithColor(Printer, PDB_ColorItem::Type).get() << " " << Base.getName();
+      NextSeparator = ',';
     }
 
     Printer.Unindent();
@@ -114,7 +89,7 @@ void ClassDefinitionDumper::prettyPrintClassOutro(const ClassLayout &Layout) {
   Printer.NewLine();
   if (Layout.deepPaddingSize() > 0) {
     APFloat Pct(100.0 * (double)Layout.deepPaddingSize() /
-                (double)Layout.getClassSize());
+                (double)Layout.getSize());
     SmallString<8> PctStr;
     Pct.toString(PctStr, 4);
     WithColor(Printer, PDB_ColorItem::Padding).get()
