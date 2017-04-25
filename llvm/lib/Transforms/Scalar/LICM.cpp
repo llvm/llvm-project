@@ -478,17 +478,27 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 ///
 void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop cant be null");
-  // Iterate over loop instructions and compute early exit points.
-  for (Loop::block_iterator BB = CurLoop->block_begin(),
+  BasicBlock *Header = CurLoop->getHeader();
+  // Setting default safety values.
+  SafetyInfo->MayThrow = false;
+  SafetyInfo->HeaderMayThrow = false;
+  // Iterate over header and compute safety info.
+  for (BasicBlock::iterator I = Header->begin(), E = Header->end();
+       (I != E) && !SafetyInfo->HeaderMayThrow; ++I)
+    SafetyInfo->HeaderMayThrow |=
+        !isGuaranteedToTransferExecutionToSuccessor(&*I);
+
+  SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
+  // Iterate over loop instructions and compute safety info.
+  // Skip header as it has been computed and stored in HeaderMayThrow.
+  // The first block in loopinfo.Blocks is guaranteed to be the header.
+  assert(Header == *CurLoop->getBlocks().begin() && "First block must be header");
+  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
-       BB != BBE; ++BB) {
-    for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end(); I != E;
-         ++I) {
-      if (isGuaranteedToTransferExecutionToSuccessor(&*I))
-        continue;
-      SafetyInfo->EarlyExits.push_back(&*I);
-    }
-  }
+       (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
+    for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end();
+         (I != E) && !SafetyInfo->MayThrow; ++I)
+      SafetyInfo->MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(&*I);
 
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
@@ -1084,7 +1094,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // Do we know this object does not escape ?
   bool IsKnownNonEscapingObject = false;
-  if (!SafetyInfo->EarlyExits.empty()) {
+  if (SafetyInfo->MayThrow) {
     // If a loop can throw, we have to insert a store along each unwind edge.
     // That said, we can't actually make the unwind edge explicit. Therefore,
     // we have to prove that the store is dead along the unwind edge.

@@ -35,7 +35,7 @@ template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitingBlocks(SmallVectorImpl<BlockT *> &ExitingBlocks) const {
   for (const auto BB : blocks())
-    for (const auto Succ : children<BlockT*>(BB))
+    for (const auto &Succ : children<BlockT*>(BB))
       if (!contains(Succ)) {
         // Not in current loop? It must be an exit block.
         ExitingBlocks.push_back(BB);
@@ -61,7 +61,7 @@ template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitBlocks(SmallVectorImpl<BlockT*> &ExitBlocks) const {
   for (const auto BB : blocks())
-    for (const auto Succ : children<BlockT*>(BB))
+    for (const auto &Succ : children<BlockT*>(BB))
       if (!contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitBlocks.push_back(Succ);
@@ -83,7 +83,7 @@ template<class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::
 getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const {
   for (const auto BB : blocks())
-    for (const auto Succ : children<BlockT*>(BB))
+    for (const auto &Succ : children<BlockT*>(BB))
       if (!contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);

@@ -272,7 +272,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   // Give up if the loop has instructions may throw.
   LoopSafetyInfo SafetyInfo;
   computeLoopSafetyInfo(&SafetyInfo, CurLoop);
-  if (!SafetyInfo.EarlyExits.empty())
+  if (SafetyInfo.MayThrow)
     return MadeChange;
 
   // Scan all the blocks in the loop that are not in subloops.
@@ -343,6 +343,11 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
                                       bool &ForMemsetPattern, bool &ForMemcpy) {
   // Don't touch volatile stores.
   if (!SI->isSimple())
+    return false;
+
+  // Don't convert stores of non-integral pointer types to memsets (which stores
+  // integers).
+  if (DL->isNonIntegralPointerType(SI->getValueOperand()->getType()))
     return false;
 
   // Avoid merging nontemporal stores.

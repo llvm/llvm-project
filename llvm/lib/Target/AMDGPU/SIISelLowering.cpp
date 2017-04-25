@@ -1644,7 +1644,7 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
                             const TargetRegisterClass *SuperRC,
                             unsigned VecReg,
                             int Offset) {
-  int NumElts = SuperRC->getSize() / 4;
+  int NumElts = TRI.getRegSizeInBits(*SuperRC) / 32;
 
   // Skip out of bounds offsets, or else we would end up using an undefined
   // register.
@@ -1793,17 +1793,18 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
-static unsigned getMOVRELDPseudo(const TargetRegisterClass *VecRC) {
-  switch (VecRC->getSize()) {
-  case 4:
+static unsigned getMOVRELDPseudo(const SIRegisterInfo &TRI,
+                                 const TargetRegisterClass *VecRC) {
+  switch (TRI.getRegSizeInBits(*VecRC)) {
+  case 32: // 4 bytes
     return AMDGPU::V_MOVRELD_B32_V1;
-  case 8:
+  case 64: // 8 bytes
     return AMDGPU::V_MOVRELD_B32_V2;
-  case 16:
+  case 128: // 16 bytes
     return AMDGPU::V_MOVRELD_B32_V4;
-  case 32:
+  case 256: // 32 bytes
     return AMDGPU::V_MOVRELD_B32_V8;
-  case 64:
+  case 512: // 64 bytes
     return AMDGPU::V_MOVRELD_B32_V16;
   default:
     llvm_unreachable("unsupported size for MOVRELD pseudos");
@@ -1863,7 +1864,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
     } else {
-      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
+      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
 
       BuildMI(MBB, I, DL, MovRelDesc)
           .addReg(Dst, RegState::Define)
@@ -1907,7 +1908,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
         .addReg(PhiReg, RegState::Implicit)
         .addReg(AMDGPU::M0, RegState::Implicit);
   } else {
-    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(VecRC));
+    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
 
     BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
         .addReg(Dst, RegState::Define)

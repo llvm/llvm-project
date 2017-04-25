@@ -11,10 +11,15 @@
 #define LLVM_OBJECT_ELFTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace object {
@@ -45,58 +50,58 @@ public:
   static const endianness TargetEndianness = E;
   static const bool Is64Bits = Is64;
 
-  typedef typename std::conditional<Is64, uint64_t, uint32_t>::type uint;
-  typedef Elf_Ehdr_Impl<ELFType<E, Is64>> Ehdr;
-  typedef Elf_Shdr_Impl<ELFType<E, Is64>> Shdr;
-  typedef Elf_Sym_Impl<ELFType<E, Is64>> Sym;
-  typedef Elf_Dyn_Impl<ELFType<E, Is64>> Dyn;
-  typedef Elf_Phdr_Impl<ELFType<E, Is64>> Phdr;
-  typedef Elf_Rel_Impl<ELFType<E, Is64>, false> Rel;
-  typedef Elf_Rel_Impl<ELFType<E, Is64>, true> Rela;
-  typedef Elf_Verdef_Impl<ELFType<E, Is64>> Verdef;
-  typedef Elf_Verdaux_Impl<ELFType<E, Is64>> Verdaux;
-  typedef Elf_Verneed_Impl<ELFType<E, Is64>> Verneed;
-  typedef Elf_Vernaux_Impl<ELFType<E, Is64>> Vernaux;
-  typedef Elf_Versym_Impl<ELFType<E, Is64>> Versym;
-  typedef Elf_Hash_Impl<ELFType<E, Is64>> Hash;
-  typedef Elf_GnuHash_Impl<ELFType<E, Is64>> GnuHash;
-  typedef Elf_Chdr_Impl<ELFType<E, Is64>> Chdr;
-  typedef ArrayRef<Dyn> DynRange;
-  typedef ArrayRef<Shdr> ShdrRange;
-  typedef ArrayRef<Sym> SymRange;
-  typedef ArrayRef<Rel> RelRange;
-  typedef ArrayRef<Rela> RelaRange;
-  typedef ArrayRef<Phdr> PhdrRange;
+  using uint = typename std::conditional<Is64, uint64_t, uint32_t>::type;
+  using Ehdr = Elf_Ehdr_Impl<ELFType<E, Is64>>;
+  using Shdr = Elf_Shdr_Impl<ELFType<E, Is64>>;
+  using Sym = Elf_Sym_Impl<ELFType<E, Is64>>;
+  using Dyn = Elf_Dyn_Impl<ELFType<E, Is64>>;
+  using Phdr = Elf_Phdr_Impl<ELFType<E, Is64>>;
+  using Rel = Elf_Rel_Impl<ELFType<E, Is64>, false>;
+  using Rela = Elf_Rel_Impl<ELFType<E, Is64>, true>;
+  using Verdef = Elf_Verdef_Impl<ELFType<E, Is64>>;
+  using Verdaux = Elf_Verdaux_Impl<ELFType<E, Is64>>;
+  using Verneed = Elf_Verneed_Impl<ELFType<E, Is64>>;
+  using Vernaux = Elf_Vernaux_Impl<ELFType<E, Is64>>;
+  using Versym = Elf_Versym_Impl<ELFType<E, Is64>>;
+  using Hash = Elf_Hash_Impl<ELFType<E, Is64>>;
+  using GnuHash = Elf_GnuHash_Impl<ELFType<E, Is64>>;
+  using Chdr = Elf_Chdr_Impl<ELFType<E, Is64>>;
+  using DynRange = ArrayRef<Dyn>;
+  using ShdrRange = ArrayRef<Shdr>;
+  using SymRange = ArrayRef<Sym>;
+  using RelRange = ArrayRef<Rel>;
+  using RelaRange = ArrayRef<Rela>;
+  using PhdrRange = ArrayRef<Phdr>;
 
-  typedef packed<uint16_t> Half;
-  typedef packed<uint32_t> Word;
-  typedef packed<int32_t> Sword;
-  typedef packed<uint64_t> Xword;
-  typedef packed<int64_t> Sxword;
-  typedef packed<uint> Addr;
-  typedef packed<uint> Off;
+  using Half = packed<uint16_t>;
+  using Word = packed<uint32_t>;
+  using Sword = packed<int32_t>;
+  using Xword = packed<uint64_t>;
+  using Sxword = packed<int64_t>;
+  using Addr = packed<uint>;
+  using Off = packed<uint>;
 };
 
-typedef ELFType<support::little, false> ELF32LE;
-typedef ELFType<support::big, false> ELF32BE;
-typedef ELFType<support::little, true> ELF64LE;
-typedef ELFType<support::big, true> ELF64BE;
+using ELF32LE = ELFType<support::little, false>;
+using ELF32BE = ELFType<support::big, false>;
+using ELF64LE = ELFType<support::little, true>;
+using ELF64BE = ELFType<support::big, true>;
 
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.
 
 // Templates to choose Elf_Addr and Elf_Off depending on is64Bits.
 template <endianness target_endianness> struct ELFDataTypeTypedefHelperCommon {
-  typedef support::detail::packed_endian_specific_integral<
-      uint16_t, target_endianness, 2> Elf_Half;
-  typedef support::detail::packed_endian_specific_integral<
-      uint32_t, target_endianness, 2> Elf_Word;
-  typedef support::detail::packed_endian_specific_integral<
-      int32_t, target_endianness, 2> Elf_Sword;
-  typedef support::detail::packed_endian_specific_integral<
-      uint64_t, target_endianness, 2> Elf_Xword;
-  typedef support::detail::packed_endian_specific_integral<
-      int64_t, target_endianness, 2> Elf_Sxword;
+  using Elf_Half = support::detail::packed_endian_specific_integral<
+      uint16_t, target_endianness, 2>;
+  using Elf_Word = support::detail::packed_endian_specific_integral<
+      uint32_t, target_endianness, 2>;
+  using Elf_Sword = support::detail::packed_endian_specific_integral<
+      int32_t, target_endianness, 2>;
+  using Elf_Xword = support::detail::packed_endian_specific_integral<
+      uint64_t, target_endianness, 2>;
+  using Elf_Sxword = support::detail::packed_endian_specific_integral<
+      int64_t, target_endianness, 2>;
 };
 
 template <class ELFT> struct ELFDataTypeTypedefHelper;
@@ -105,34 +110,34 @@ template <class ELFT> struct ELFDataTypeTypedefHelper;
 template <endianness TargetEndianness>
 struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, false>>
     : ELFDataTypeTypedefHelperCommon<TargetEndianness> {
-  typedef uint32_t value_type;
-  typedef support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2> Elf_Addr;
-  typedef support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2> Elf_Off;
+  using value_type = uint32_t;
+  using Elf_Addr = support::detail::packed_endian_specific_integral<
+      value_type, TargetEndianness, 2>;
+  using Elf_Off = support::detail::packed_endian_specific_integral<
+      value_type, TargetEndianness, 2>;
 };
 
 /// ELF 64bit types.
 template <endianness TargetEndianness>
 struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, true>>
     : ELFDataTypeTypedefHelperCommon<TargetEndianness> {
-  typedef uint64_t value_type;
-  typedef support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2> Elf_Addr;
-  typedef support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2> Elf_Off;
+  using value_type = uint64_t;
+  using Elf_Addr = support::detail::packed_endian_specific_integral<
+      value_type, TargetEndianness, 2>;
+  using Elf_Off = support::detail::packed_endian_specific_integral<
+      value_type, TargetEndianness, 2>;
 };
 
 // I really don't like doing this, but the alternative is copypasta.
 
 #define LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)                                       \
-  typedef typename ELFT::Addr Elf_Addr;                                        \
-  typedef typename ELFT::Off Elf_Off;                                          \
-  typedef typename ELFT::Half Elf_Half;                                        \
-  typedef typename ELFT::Word Elf_Word;                                        \
-  typedef typename ELFT::Sword Elf_Sword;                                      \
-  typedef typename ELFT::Xword Elf_Xword;                                      \
-  typedef typename ELFT::Sxword Elf_Sxword;
+  using Elf_Addr = typename ELFT::Addr;                                        \
+  using Elf_Off = typename ELFT::Off;                                          \
+  using Elf_Half = typename ELFT::Half;                                        \
+  using Elf_Word = typename ELFT::Word;                                        \
+  using Elf_Sword = typename ELFT::Sword;                                      \
+  using Elf_Xword = typename ELFT::Xword;                                      \
+  using Elf_Sxword = typename ELFT::Sxword;
 
 #define LLD_ELF_COMMA ,
 #define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
@@ -222,6 +227,7 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
   uint64_t getValue() const { return st_value; }
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
+
   void setBindingAndType(unsigned char b, unsigned char t) {
     st_info = (b << 4) + (t & 0x0f);
   }
@@ -238,22 +244,29 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
   }
 
   bool isAbsolute() const { return st_shndx == ELF::SHN_ABS; }
+
   bool isCommon() const {
     return getType() == ELF::STT_COMMON || st_shndx == ELF::SHN_COMMON;
   }
+
   bool isDefined() const { return !isUndefined(); }
+
   bool isProcessorSpecific() const {
     return st_shndx >= ELF::SHN_LOPROC && st_shndx <= ELF::SHN_HIPROC;
   }
+
   bool isOSSpecific() const {
     return st_shndx >= ELF::SHN_LOOS && st_shndx <= ELF::SHN_HIOS;
   }
+
   bool isReserved() const {
     // ELF::SHN_HIRESERVE is 0xffff so st_shndx <= ELF::SHN_HIRESERVE is always
     // true and some compilers warn about it.
     return st_shndx >= ELF::SHN_LORESERVE;
   }
+
   bool isUndefined() const { return st_shndx == ELF::SHN_UNDEF; }
+
   bool isExternal() const {
     return getBinding() != ELF::STB_LOCAL;
   }
@@ -277,14 +290,12 @@ struct Elf_Versym_Impl {
   Elf_Half vs_index; // Version index with flags (e.g. VERSYM_HIDDEN)
 };
 
-template <class ELFT> struct Elf_Verdaux_Impl;
-
 /// Elf_Verdef: This is the structure of entries in the SHT_GNU_verdef section
 /// (.gnu.version_d). This structure is identical for ELF32 and ELF64.
 template <class ELFT>
 struct Elf_Verdef_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-  typedef Elf_Verdaux_Impl<ELFT> Elf_Verdaux;
+  using Elf_Verdaux = Elf_Verdaux_Impl<ELFT>;
   Elf_Half vd_version; // Version of this structure (e.g. VER_DEF_CURRENT)
   Elf_Half vd_flags;   // Bitwise flags (VER_DEF_*)
   Elf_Half vd_ndx;     // Version index, used in .gnu.version entries
@@ -361,10 +372,10 @@ template <class ELFT>
 struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   using Elf_Dyn_Base<ELFT>::d_tag;
   using Elf_Dyn_Base<ELFT>::d_un;
-  typedef typename std::conditional<ELFT::Is64Bits,
-                                    int64_t, int32_t>::type intX_t;
-  typedef typename std::conditional<ELFT::Is64Bits,
-                                    uint64_t, uint32_t>::type uintX_t;
+  using intX_t = typename std::conditional<ELFT::Is64Bits,
+                                           int64_t, int32_t>::type;
+  using uintX_t = typename std::conditional<ELFT::Is64Bits,
+                                            uint64_t, uint32_t>::type;
   intX_t getTag() const { return d_tag; }
   uintX_t getVal() const { return d_un.d_val; }
   uintX_t getPtr() const { return d_un.d_ptr; }
@@ -430,6 +441,7 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
     return (t << 32) | ((t >> 8) & 0xff000000) | ((t >> 24) & 0x00ff0000) |
            ((t >> 40) & 0x0000ff00) | ((t >> 56) & 0x000000ff);
   }
+
   void setRInfo(uint64_t R, bool IsMips64EL) {
     if (IsMips64EL)
       r_info = (R >> 32) | ((R & 0xff000000) << 8) | ((R & 0x00ff0000) << 24) |
@@ -483,14 +495,14 @@ struct Elf_Ehdr_Impl {
   Elf_Half e_shnum;     // Number of entries in the section header table
   Elf_Half e_shstrndx;  // Section header table index of section name
                         // string table
+
   bool checkMagic() const {
     return (memcmp(e_ident, ELF::ElfMagic, strlen(ELF::ElfMagic))) == 0;
   }
+
   unsigned char getFileClass() const { return e_ident[ELF::EI_CLASS]; }
   unsigned char getDataEncoding() const { return e_ident[ELF::EI_DATA]; }
 };
-
-template <class ELFT> struct Elf_Phdr_Impl;
 
 template <endianness TargetEndianness>
 struct Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
@@ -582,7 +594,7 @@ struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
 template <class ELFT>
 struct Elf_Mips_RegInfo;
 
-template <llvm::support::endianness TargetEndianness>
+template <support::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -590,7 +602,7 @@ struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
   Elf_Addr ri_gp_value;    // gp register value
 };
 
-template <llvm::support::endianness TargetEndianness>
+template <support::endianness TargetEndianness>
 struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
@@ -609,7 +621,7 @@ template <class ELFT> struct Elf_Mips_Options {
   Elf_Word info;    // Kind-specific information
 
   Elf_Mips_RegInfo<ELFT> &getRegInfo() {
-    assert(kind == llvm::ELF::ODK_REGINFO);
+    assert(kind == ELF::ODK_REGINFO);
     return *reinterpret_cast<Elf_Mips_RegInfo<ELFT> *>(
         (uint8_t *)this + sizeof(Elf_Mips_Options));
   }
@@ -637,4 +649,4 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 } // end namespace object.
 } // end namespace llvm.
 
-#endif
+#endif // LLVM_OBJECT_ELFTYPES_H

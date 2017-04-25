@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(i8* %dst, i8* %src, i32* %a, i32 %n) !prof !27 {
+define void @foo(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i32* %a, i32 %n) !prof !27 {
 entry:
   br label %for.cond
 
@@ -28,19 +28,29 @@ for.body3:
   %add = add nsw i32 %i.0, 1
   %conv = sext i32 %add to i64
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false), !prof !30
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i32 1, i1 false), !prof !31
   br label %for.inc
 
-; MEMOP_OPT:  switch i64 %conv, label %[[Default_LABEL:.*]] [
+; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
 ; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
 ; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i32 1, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
-; MEMOP_OPT: [[Default_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false)
-; MEMOP_OPT-NOT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false), !prof
+; MEMOP_OPT: [[DEFAULT_LABEL]]:
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false){{[[:space:]]}}
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
+; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
+; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL2:.*]]
+; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
+; MEMOP_OPT: [[CASE_1_LABEL2]]:
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 1, i32 1, i1 false)
+; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
+; MEMOP_OPT: [[DEFAULT_LABEL2]]:
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i32 1, i1 false){{[[:space:]]}}
+; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
+; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   br label %for.inc
 ; MEMOP_OPT: [[SWITCH_BW]] = !{!"branch_weights", i32 457, i32 99}
 
@@ -92,6 +102,7 @@ for.end6:
 !28 = !{!"branch_weights", i32 20, i32 1}
 !29 = !{!"branch_weights", i32 556, i32 20}
 !30 = !{!"VP", i32 1, i64 556, i64 1, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
+!31 = !{!"VP", i32 1, i64 556, i64 1, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 
 declare void @llvm.lifetime.start(i64, i8* nocapture)
 

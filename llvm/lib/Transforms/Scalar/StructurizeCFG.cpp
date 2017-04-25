@@ -352,20 +352,10 @@ Value *StructurizeCFG::invert(Value *Condition) {
   if (Instruction *Inst = dyn_cast<Instruction>(Condition)) {
     // Third: Check all the users for an invert
     BasicBlock *Parent = Inst->getParent();
-    for (User *U : Condition->users()) {
-      if (Instruction *I = dyn_cast<Instruction>(U)) {
+    for (User *U : Condition->users())
+      if (Instruction *I = dyn_cast<Instruction>(U))
         if (I->getParent() == Parent && match(I, m_Not(m_Specific(Condition))))
           return I;
-      }
-    }
-
-    // Avoid creating a new instruction in the common case of a compare.
-    if (CmpInst *Cmp = dyn_cast<CmpInst>(Inst)) {
-      if (Cmp->hasOneUse()) {
-        Cmp->setPredicate(Cmp->getInversePredicate());
-        return Cmp;
-      }
-    }
 
     // Last option: Create a new instruction
     return BinaryOperator::CreateNot(Condition, "", Parent->getTerminator());

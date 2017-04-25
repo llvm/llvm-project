@@ -119,7 +119,7 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
 
   // Conservatively assume all callee-saved registers will be saved.
   for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
-    unsigned Size = TRI.getMinimalPhysRegClass(*R)->getSize();
+    unsigned Size = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
     Offset = alignTo(Offset + Size, Size);
   }
 

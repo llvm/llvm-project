@@ -1115,10 +1115,9 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   unsigned OpNum = Ops[0];
-  assert(Size ==
-             MF.getRegInfo()
-                 .getRegClass(MI.getOperand(OpNum).getReg())
-                 ->getSize() &&
+  assert(Size * 8 ==
+           TRI->getRegSizeInBits(*MF.getRegInfo()
+                               .getRegClass(MI.getOperand(OpNum).getReg())) &&
          "Invalid size combination");
 
   if ((Opcode == SystemZ::AHI || Opcode == SystemZ::AGHI) && OpNum == 0 &&

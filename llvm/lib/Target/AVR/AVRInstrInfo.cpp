@@ -142,9 +142,9 @@ void AVRInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlignment(FrameIndex));
 
   unsigned Opcode = 0;
-  if (RC->hasType(MVT::i8)) {
+  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::STDPtrQRr;
-  } else if (RC->hasType(MVT::i16)) {
+  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
     Opcode = AVR::STDWPtrQRr;
   } else {
     llvm_unreachable("Cannot store this register into a stack slot!");
@@ -176,9 +176,9 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlignment(FrameIndex));
 
   unsigned Opcode = 0;
-  if (RC->hasType(MVT::i8)) {
+  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::LDDRdPtrQ;
-  } else if (RC->hasType(MVT::i16)) {
+  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = AVR::LDDWRdPtrQ;
     //:FIXME: remove this once PR13375 gets fixed
     Opcode = AVR::LDDWRdYQ;

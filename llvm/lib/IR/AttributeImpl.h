@@ -255,15 +255,8 @@ public:
 
   /// \brief Retrieve the attribute set node for the given "slot" in the
   /// AttrNode list.
-  AttributeSet getSlotNode(unsigned Slot) const {
+  AttributeSet getSlotAttributes(unsigned Slot) const {
     return getSlotPair(Slot)->second;
-  }
-
-  /// \brief Retrieve the attributes for the given "slot" in the AttrNode list.
-  /// \p Slot is an index into the AttrNodes list, not the index of the return /
-  /// parameter/ function which the attributes apply to.
-  AttributeList getSlotAttributes(unsigned Slot) const {
-    return AttributeList::get(Context, *getSlotPair(Slot));
   }
 
   /// \brief Return true if the AttributeSet or the FunctionIndex has an
@@ -273,8 +266,10 @@ public:
   }
 
   typedef AttributeSet::iterator iterator;
-  iterator begin(unsigned Slot) const { return getSlotNode(Slot).begin(); }
-  iterator end(unsigned Slot) const { return getSlotNode(Slot).end(); }
+  iterator begin(unsigned Slot) const {
+    return getSlotAttributes(Slot).begin();
+  }
+  iterator end(unsigned Slot) const { return getSlotAttributes(Slot).end(); }
 
   void Profile(FoldingSetNodeID &ID) const;
   static void Profile(FoldingSetNodeID &ID,

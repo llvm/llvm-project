@@ -265,6 +265,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Add &= ~InvalidTrappingKinds;
       Add &= Supported;
 
+      // Enable coverage if the fuzzing flag is set.
+      if (Add & Fuzzer)
+        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall | CoverageTraceCmp;
+
       Kinds |= Add;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_EQ)) {
       Arg->claim();

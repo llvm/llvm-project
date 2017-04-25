@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=HSA -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
@@ -223,9 +223,8 @@ define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_0_flat_to_private_addrspacecast:
-; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], 0{{$}}
-; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
-; HSA: buffer_store_dword [[K]], [[PTR]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
+; HSA: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
+; HSA: buffer_store_dword [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(4)* null to i32 addrspace(0)*
   store volatile i32 7, i32* %cast

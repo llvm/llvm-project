@@ -59,8 +59,7 @@ for.end:                                          ; preds = %for.body.1, %if.the
 ; CHECK: br i1 %{{[0-9]}}, label %for.body.1, label %Flow2
 
 ; CHECK: for.body.1:
-; CHECK: %cmp1.5 = icmp ne i32 %tmp22, %K1
-; CHECK-NEXT: br i1 %cmp1.5, label %for.body.6, label %Flow3
+; CHECK: br i1 %{{[0-9]+}}, label %for.body.6, label %Flow3
 for.body.1:                                       ; preds = %if.then, %lor.lhs.false
   %best_val.233 = phi float [ %tmp5, %if.then ], [ %best_val.027, %lor.lhs.false ]
   %best_count.231 = phi i32 [ %sub4, %if.then ], [ %best_count.025, %lor.lhs.false ]

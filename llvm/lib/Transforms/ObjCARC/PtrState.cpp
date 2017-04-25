@@ -351,8 +351,10 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
                                                    const Value *Ptr,
                                                    ProvenanceAnalysis &PA,
                                                    ARCInstKind Class) {
-  // Check for possible releases.
-  if (!CanAlterRefCount(Inst, Ptr, PA, Class))
+  // Check for possible releases. Treat clang.arc.use as a releasing instruction
+  // to prevent sinking a retain past it.
+  if (!CanAlterRefCount(Inst, Ptr, PA, Class) &&
+      Class != ARCInstKind::IntrinsicUser)
     return false;
 
   DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << GetSeq() << "; " << *Ptr

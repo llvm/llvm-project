@@ -88,6 +88,14 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned ScratchRSrcReg;
   unsigned ScratchWaveOffsetReg;
 
+  // This is the current function's incremented size from the kernel's scratch
+  // wave offset register. For an entry function, this is exactly the same as
+  // the ScratchWaveOffsetReg.
+  unsigned FrameOffsetReg;
+
+  // Top of the stack SGPR offset derived from the ScratchWaveOffsetReg.
+  unsigned StackPtrOffsetReg;
+
   // Input registers for non-HSA ABI
   unsigned PrivateMemoryPtrUserSGPR;
 
@@ -364,9 +372,25 @@ public:
     return ScratchWaveOffsetReg;
   }
 
+  unsigned getFrameOffsetReg() const {
+    return FrameOffsetReg;
+  }
+
+  void setStackPtrOffsetReg(unsigned Reg) {
+    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
+    StackPtrOffsetReg = Reg;
+  }
+
+  unsigned getStackPtrOffsetReg() const {
+    return StackPtrOffsetReg;
+  }
+
   void setScratchWaveOffsetReg(unsigned Reg) {
     assert(Reg != AMDGPU::NoRegister && "Should never be unset");
     ScratchWaveOffsetReg = Reg;
+
+    // FIXME: Only for entry functions.
+    FrameOffsetReg = ScratchWaveOffsetReg;
   }
 
   unsigned getQueuePtrUserSGPR() const {

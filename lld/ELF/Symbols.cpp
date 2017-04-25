@@ -339,8 +339,7 @@ uint8_t Symbol::computeBinding() const {
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  const SymbolBody *Body = body();
-  if (VersionId == VER_NDX_LOCAL && Body->isInCurrentDSO())
+  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentDSO())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;

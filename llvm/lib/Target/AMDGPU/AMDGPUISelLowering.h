@@ -231,6 +231,10 @@ public:
   AMDGPUAS getAMDGPUAS() const {
     return AMDGPUASI;
   }
+
+  MVT getFenceOperandTy(const DataLayout &DL) const override {
+    return MVT::i32;
+  }
 };
 
 namespace AMDGPUISD {

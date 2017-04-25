@@ -45,10 +45,11 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
+  const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64, MVT::v16i8, MVT::v8i16,
                 MVT::v4i32, MVT::v4f32})
-    if (TRC->hasType(T))
+    if (TRI->isTypeLegalForClass(*TRC, T))
       return T;
   DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");

@@ -806,7 +806,8 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
   if (!DstSubReg)
     return true;
   // Small registers don't frequently cause a problem, so we can coalesce them.
-  if (NewRC->getSize() < 32 && DstRC->getSize() < 32 && SrcRC->getSize() < 32)
+  if (getRegSizeInBits(*NewRC) < 256 && getRegSizeInBits(*DstRC) < 256 &&
+      getRegSizeInBits(*SrcRC) < 256)
     return true;
 
   auto NewRCWeight =

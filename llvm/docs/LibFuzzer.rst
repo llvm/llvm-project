@@ -87,10 +87,16 @@ Some important things to remember about fuzz targets:
 * Usually, the narrower the target the better. E.g. if your target can parse several data formats, split it into several targets, one per format.
 
 
-Building
---------
+Fuzzer Usage
+------------
 
-Next, build the libFuzzer library as a static archive, without any sanitizer
+Very recent versions of Clang (> April 20 2017) include libFuzzer,
+and no installation is necessary.
+In order to fuzz your binary, use the `-fsanitize=fuzzer` flag during the compilation::
+
+   clang -fsanitize=fuzzer,address mytarget.c
+
+Otherwise, build the libFuzzer library as a static archive, without any sanitizer
 options. Note that the libFuzzer library contains the ``main()`` function:
 
 .. code-block:: console

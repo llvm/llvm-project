@@ -158,7 +158,7 @@ public:
   /// True if terminator in the block can branch to another block that is
   /// outside of the current loop.
   bool isLoopExiting(const BlockT *BB) const {
-    for (const auto Succ : children<const BlockT*>(BB)) {
+    for (const auto &Succ : children<const BlockT*>(BB)) {
       if (!contains(Succ))
         return true;
     }

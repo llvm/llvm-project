@@ -1203,8 +1203,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // If we didn't find an extra callee-saved register to spill, create
     // an emergency spill slot.
     if (!ExtraCSSpill || MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
-      const TargetRegisterClass *RC = &AArch64::GPR64RegClass;
-      int FI = MFI.CreateStackObject(RC->getSize(), RC->getAlignment(), false);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass &RC = AArch64::GPR64RegClass;
+      unsigned Size = TRI->getSpillSize(RC);
+      unsigned Align = TRI->getSpillAlignment(RC);
+      int FI = MFI.CreateStackObject(Size, Align, false);
       RS->addScavengingFrameIndex(FI);
       DEBUG(dbgs() << "No available CS registers, allocated fi#" << FI
                    << " as the emergency spill slot.\n");

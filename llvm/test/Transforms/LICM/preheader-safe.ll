@@ -21,6 +21,20 @@ loop2:
   call void @use_nothrow(i64 %div)
   br label %loop
 }
+; Negative test
+define void @throw_header(i64 %x, i64 %y, i1* %cond) {
+; CHECK-LABEL: throw_header
+; CHECK-LABEL: loop
+; CHECK: %div = udiv i64 %x, %y
+; CHECK: call void @use(i64 %div)
+entry:
+  br label %loop
+
+loop:                                         ; preds = %entry, %for.inc
+  %div = udiv i64 %x, %y
+  call void @use(i64 %div)
+  br label %loop
+}
 
 ; The header is known no throw, but the loop is not.  We can
 ; still lift out of the header.

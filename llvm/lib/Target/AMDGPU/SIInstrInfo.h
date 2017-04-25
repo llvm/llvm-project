@@ -626,13 +626,13 @@ public:
       return 4;
     }
 
-    return RI.getRegClass(OpInfo.RegClass)->getSize();
+    return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
   }
 
   /// \brief This form should usually be preferred since it handles operands
   /// with unknown register classes.
   unsigned getOpSize(const MachineInstr &MI, unsigned OpNo) const {
-    return getOpRegClass(MI, OpNo)->getSize();
+    return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
   }
 
   /// \returns true if it is legal for the operand at index \p OpNo

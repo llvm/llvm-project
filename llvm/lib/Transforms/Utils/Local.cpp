@@ -1268,21 +1268,37 @@ static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset) {
   }
 }
 
-/// Prepend \p DIExpr with a deref and offset operation.
+enum { WithStackValue = true };
+
+/// Prepend \p DIExpr with a deref and offset operation and optionally turn it
+/// into a stack value.
 static DIExpression *prependDIExpr(DIBuilder &Builder, DIExpression *DIExpr,
-                                   bool Deref, int64_t Offset) {
-  if (!Deref && !Offset)
+                                   bool Deref, int64_t Offset = 0,
+                                   bool StackValue = false) {
+  if (!Deref && !Offset && !StackValue)
     return DIExpr;
-  // Create a copy of the original DIDescriptor for user variable, prepending
-  // "deref" operation to a list of address elements, as new llvm.dbg.declare
-  // will take a value storing address of the memory for variable, not
-  // alloca itself.
-  SmallVector<uint64_t, 4> Ops;
+
+  SmallVector<uint64_t, 8> Ops;
+  appendOffset(Ops, Offset);
   if (Deref)
     Ops.push_back(dwarf::DW_OP_deref);
-  appendOffset(Ops, Offset);
   if (DIExpr)
-    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+    for (auto Op : DIExpr->expr_ops()) {
+      // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+      if (StackValue) {
+        if (Op.getOp() == dwarf::DW_OP_stack_value)
+          StackValue = false;
+        else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+          Ops.push_back(dwarf::DW_OP_stack_value);
+          StackValue = false;
+        }
+      }
+      Ops.push_back(Op.getOp());
+      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
+        Ops.push_back(Op.getArg(I));
+    }
+  if (StackValue)
+    Ops.push_back(dwarf::DW_OP_stack_value);
   return Builder.createExpression(Ops);
 }
 
@@ -1374,12 +1390,15 @@ void llvm::salvageDebugInfo(Instruction &I) {
       unsigned BitWidth =
           M.getDataLayout().getPointerSizeInBits(GEP->getPointerAddressSpace());
       APInt Offset(BitWidth, 0);
-      // Rewrite a constant GEP into a DIExpression.
+      // Rewrite a constant GEP into a DIExpression.  Since we are performing
+      // arithmetic to compute the variable's *value* in the DIExpression, we
+      // need to mark the expression with a DW_OP_stack_value.
       if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
         auto *DIExpr = DVI->getExpression();
         DIBuilder DIB(M, /*AllowUnresolved*/ false);
         // GEP offsets are i32 and thus always fit into an int64_t.
-        DIExpr = prependDIExpr(DIB, DIExpr, NoDeref, Offset.getSExtValue());
+        DIExpr = prependDIExpr(DIB, DIExpr, NoDeref, Offset.getSExtValue(),
+                               WithStackValue);
         DVI->setOperand(0, MDWrap(I.getOperand(0)));
         DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
         DEBUG(dbgs() << "SALVAGE: " << *DVI << '\n');
@@ -1391,7 +1410,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       // Rewrite the load into DW_OP_deref.
       auto *DIExpr = DVI->getExpression();
       DIBuilder DIB(M, /*AllowUnresolved*/ false);
-      DIExpr = prependDIExpr(DIB, DIExpr, WithDeref, 0);
+      DIExpr = prependDIExpr(DIB, DIExpr, WithDeref);
       DVI->setOperand(0, MDWrap(I.getOperand(0)));
       DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
       DEBUG(dbgs() << "SALVAGE:  " << *DVI << '\n');

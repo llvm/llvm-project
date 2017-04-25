@@ -145,6 +145,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
   // Now that selection is complete, there are no more generic vregs.  Verify
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.
@@ -165,7 +167,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     if (VRegToType.second.isValid() &&
-        VRegToType.second.getSizeInBits() > (RC->getSize() * 8)) {
+        VRegToType.second.getSizeInBits() > TRI.getRegSizeInBits(*RC)) {
       reportGISelFailure(MF, TPC, MORE, "gisel-select",
                          "VReg has explicit size different from class size",
                          *MI);

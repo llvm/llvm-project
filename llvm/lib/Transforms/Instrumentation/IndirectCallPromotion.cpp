@@ -943,14 +943,16 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
   BasicBlock *BB = MI->getParent();
   DEBUG(dbgs() << "\n\n== Basic Block Before ==\n");
   DEBUG(dbgs() << *BB << "\n");
+  auto OrigBBFreq = BFI.getBlockFreq(BB);
 
   BasicBlock *DefaultBB = SplitBlock(BB, MI);
   BasicBlock::iterator It(*MI);
   ++It;
   assert(It != DefaultBB->end());
   BasicBlock *MergeBB = SplitBlock(DefaultBB, &(*It));
-  DefaultBB->setName("MemOP.Default");
   MergeBB->setName("MemOP.Merge");
+  BFI.setBlockFreq(MergeBB, OrigBBFreq.getFrequency());
+  DefaultBB->setName("MemOP.Default");
 
   auto &Ctx = Func.getContext();
   IRBuilder<> IRB(BB);

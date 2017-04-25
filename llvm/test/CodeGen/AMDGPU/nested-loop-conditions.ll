@@ -133,9 +133,9 @@ bb23:                                             ; preds = %bb10
 
 ; IR: Flow1:
 ; IR-NEXT: %loop.phi = phi i64 [ %loop.phi9, %Flow6 ], [ %phi.broken, %bb14 ]
-; IR-NEXT: %13 = phi <4 x i32> [ %28, %Flow6 ], [ undef, %bb14 ]
-; IR-NEXT: %14 = phi i32 [ %29, %Flow6 ], [ undef, %bb14 ]
-; IR-NEXT: %15 = phi i1 [ %30, %Flow6 ], [ false, %bb14 ]
+; IR-NEXT: %13 = phi <4 x i32> [ %29, %Flow6 ], [ undef, %bb14 ]
+; IR-NEXT: %14 = phi i32 [ %30, %Flow6 ], [ undef, %bb14 ]
+; IR-NEXT: %15 = phi i1 [ %31, %Flow6 ], [ false, %bb14 ]
 ; IR-NEXT: %16 = phi i1 [ false, %Flow6 ], [ %8, %bb14 ]
 ; IR-NEXT: %17 = call i64 @llvm.amdgcn.else.break(i64 %11, i64 %loop.phi)
 ; IR-NEXT: call void @llvm.amdgcn.end.cf(i64 %11)
@@ -144,9 +144,9 @@ bb23:                                             ; preds = %bb10
 
 ; IR: Flow2:
 ; IR-NEXT: %loop.phi10 = phi i64 [ %loop.phi11, %Flow5 ], [ %12, %bb16 ]
-; IR-NEXT: %19 = phi <4 x i32> [ %28, %Flow5 ], [ undef, %bb16 ]
-; IR-NEXT: %20 = phi i32 [ %29, %Flow5 ], [ undef, %bb16 ]
-; IR-NEXT: %21 = phi i1 [ %30, %Flow5 ], [ false, %bb16 ]
+; IR-NEXT: %19 = phi <4 x i32> [ %29, %Flow5 ], [ undef, %bb16 ]
+; IR-NEXT: %20 = phi i32 [ %30, %Flow5 ], [ undef, %bb16 ]
+; IR-NEXT: %21 = phi i1 [ %31, %Flow5 ], [ false, %bb16 ]
 ; IR-NEXT: %22 = phi i1 [ false, %Flow5 ], [ false, %bb16 ]
 ; IR-NEXT: %23 = phi i1 [ false, %Flow5 ], [ %8, %bb16 ]
 ; IR-NEXT: %24 = call { i1, i64 } @llvm.amdgcn.if(i1 %23)
@@ -156,15 +156,16 @@ bb23:                                             ; preds = %bb10
 
 ; IR: bb21:
 ; IR: %tmp12 = icmp slt i32 %tmp11, 9
-; IR-NEXT: %27 = call i64 @llvm.amdgcn.if.break(i1 %tmp12, i64 %phi.broken)
+; IR-NEXT: %27 = xor i1 %tmp12, true
+; IR-NEXT: %28 = call i64 @llvm.amdgcn.if.break(i1 %27, i64 %phi.broken)
 ; IR-NEXT: br label %Flow3
 
 ; IR: Flow3:
 ; IR-NEXT: %loop.phi11 = phi i64 [ %phi.broken, %bb21 ], [ %phi.broken, %Flow2 ]
-; IR-NEXT: %loop.phi9 = phi i64 [ %27, %bb21 ], [ %loop.phi10, %Flow2 ]
-; IR-NEXT: %28 = phi <4 x i32> [ %tmp9, %bb21 ], [ %19, %Flow2 ]
-; IR-NEXT: %29 = phi i32 [ %tmp10, %bb21 ], [ %20, %Flow2 ]
-; IR-NEXT: %30 = phi i1 [ %tmp12, %bb21 ], [ %21, %Flow2 ]
+; IR-NEXT: %loop.phi9 = phi i64 [ %28, %bb21 ], [ %loop.phi10, %Flow2 ]
+; IR-NEXT: %29 = phi <4 x i32> [ %tmp9, %bb21 ], [ %19, %Flow2 ]
+; IR-NEXT: %30 = phi i32 [ %tmp10, %bb21 ], [ %20, %Flow2 ]
+; IR-NEXT: %31 = phi i1 [ %27, %bb21 ], [ %21, %Flow2 ]
 ; IR-NEXT: call void @llvm.amdgcn.end.cf(i64 %26)
 ; IR-NEXT: br i1 %22, label %bb31.loopexit, label %Flow4
 

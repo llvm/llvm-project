@@ -69,19 +69,20 @@ endif:
 ; TOSMEM-NOT: s_m0
 ; TOSMEM: s_add_u32 m0, s7, 0x100
 ; TOSMEM-NEXT: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
-; TOSMEM-NOT: m0
+; FIXME: RegScavenger::isRegUsed() always returns true if m0 is reserved, so we have to save and restore it
+; FIXME-TOSMEM-NOT: m0
 
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s7, 0x200
 ; TOSMEM: s_buffer_store_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Spill
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 
 ; TOSMEM: s_mov_b64 exec,
 ; TOSMEM: s_cbranch_execz
 ; TOSMEM: s_branch
 
 ; TOSMEM: BB{{[0-9]+_[0-9]+}}:
-; TOSMEM-NEXT: s_add_u32 m0, s7, 0x200
+; TOSMEM: s_add_u32 m0, s7, 0x200
 ; TOSMEM-NEXT: s_buffer_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Reload
 
 
@@ -130,7 +131,7 @@ endif:                                            ; preds = %else, %if
 ; TOSMEM: s_branch
 
 ; TOSMEM: BB{{[0-9]+_[0-9]+}}:
-; TOSMEM-NEXT: s_add_u32 m0, s3, 0x100
+; TOSMEM: s_add_u32 m0, s3, 0x100
 ; TOSMEM-NEXT: s_buffer_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Reload
 
 ; GCN-NOT: v_readlane_b32 m0
@@ -159,13 +160,14 @@ endif:
 ; GCN-LABEL: {{^}}restore_m0_lds:
 ; TOSMEM: s_load_dwordx2 [[REG:s\[[0-9]+:[0-9]+\]]]
 ; TOSMEM: s_cmp_eq_u32
-; TOSMEM-NOT: m0
+; FIXME: RegScavenger::isRegUsed() always returns true if m0 is reserved, so we have to save and restore it
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s3, 0x100
 ; TOSMEM: s_buffer_store_dwordx2 [[REG]], s[88:91], m0 ; 8-byte Folded Spill
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s3, 0x300
 ; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s[88:91], m0 ; 4-byte Folded Spill
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_cbranch_scc1
 
 ; TOSMEM: s_mov_b32 m0, -1
@@ -178,10 +180,10 @@ endif:
 
 ; TOSMEM: ds_write_b64
 
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s3, 0x300
 ; TOSMEM: s_buffer_load_dword s0, s[88:91], m0 ; 4-byte Folded Reload
-; TOSMEM-NOT: m0
+; FIXME-TOSMEM-NOT: m0
 ; TOSMEM: s_waitcnt lgkmcnt(0)
 ; TOSMEM-NOT: m0
 ; TOSMEM: s_mov_b32 m0, s0
