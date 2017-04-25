@@ -144,47 +144,53 @@ define i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32) #4
+; llvm.amdgcn.atomic.inc.i32.p1i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #4
 
 ; Function Attrs: nounwind argmemonly
 define i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32) #4
+; llvm.amdgcn.atomic.inc.i32.p3i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapinc(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture, i32) #4
+; llvm.amdgcn.atomic.inc.i32.p4i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32) #4
+; llvm.amdgcn.atomic.dec.i32.p1i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #4
+; llvm.amdgcn.atomic.dec.i32.p3i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val) 
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
   ret i32 %ret
 }
 
-declare i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture, i32) #4
+; llvm.amdgcn.atomic.dec.i32.p4i32 <addr> <val> <ordering> <scope> <is_volatile>
+declare i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture, i32, i32, i32, i1) #4
 
 define i64 @__clock_u64() #1 {
   %ret = tail call i64 @llvm.amdgcn.s.memrealtime()
