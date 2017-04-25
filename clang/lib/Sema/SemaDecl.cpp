@@ -3783,7 +3783,7 @@ void Sema::notePreviousDefinition(SourceLocation Old, SourceLocation New) {
   // Is it the same file and same offset? Provide more information on why
   // this leads to a redefinition error.
   bool EmittedDiag = false;
-  if (FNew == FOld && FNewDecLoc.second == FOldDecLoc.second) {
+  if (FOld && FNew == FOld && FNewDecLoc.second == FOldDecLoc.second) {
     SourceLocation OldIncLoc = SrcMgr.getIncludeLoc(FOldDecLoc.first);
     SourceLocation NewIncLoc = SrcMgr.getIncludeLoc(FNewDecLoc.first);
     EmittedDiag = noteFromModuleOrInclude(Old, OldIncLoc);
