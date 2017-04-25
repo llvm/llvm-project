@@ -20,7 +20,7 @@
 ; right now, so we check the asm output:
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - -filetype=asm | FileCheck %s -check-prefix=ASM-CHECK
 ; vla should have a register-indirect address at one point.
-; ASM-CHECK: DEBUG_VALUE: vla <- [%RCX+0]
+; ASM-CHECK: DEBUG_VALUE: vla <- [DW_OP_deref] [%RCX+0]
 ; ASM-CHECK: DW_OP_breg2
 
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s --check-prefix=PRETTY-PRINT

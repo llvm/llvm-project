@@ -15,8 +15,8 @@
 ; CHECK-LABEL: bitpiece_spill:                         # @bitpiece_spill
 ; CHECK:               callq   g
 ; CHECK:               movl    %eax, [[offs:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [fragment offset=32 size=32] <- 0
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [fragment offset=0 size=32] <- [%RSP+[[offs]]]
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_LLVM_fragment 32 32] 0
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_LLVM_fragment 0 32] [%RSP+[[offs]]]
 ; CHECK:               #APP
 ; CHECK:               #NO_APP
 ; CHECK:               movl    [[offs]](%rsp), %eax          # 4-byte Reload
