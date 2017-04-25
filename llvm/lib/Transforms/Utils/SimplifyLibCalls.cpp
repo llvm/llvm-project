@@ -842,6 +842,9 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
 
   // Is the inner call really malloc()?
   Function *InnerCallee = Malloc->getCalledFunction();
+  if (!InnerCallee)
+    return nullptr;
+
   LibFunc Func;
   if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
       Func != LibFunc_malloc)
@@ -926,6 +929,24 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (V == nullptr)
     return nullptr;
   
+  // If call isn't an intrinsic, check that it isn't within a function with the
+  // same name as the float version of this call.
+  //
+  // e.g. inline float expf(float val) { return (float) exp((double) val); }
+  //
+  // A similar such definition exists in the MinGW-w64 math.h header file which
+  // when compiled with -O2 -ffast-math causes the generation of infinite loops
+  // where expf is called.
+  if (!Callee->isIntrinsic()) {
+    const Function *F = CI->getFunction();
+    StringRef FName = F->getName();
+    StringRef CalleeName = Callee->getName();
+    if ((FName.size() == (CalleeName.size() + 1)) &&
+        (FName.back() == 'f') &&
+        FName.startswith(CalleeName))
+      return nullptr;
+  }
+
   // Propagate fast-math flags from the existing call to the new call.
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());

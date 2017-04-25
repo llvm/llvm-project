@@ -7,7 +7,7 @@
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-indirect-calls
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-trace-cmp
 
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-LINUX %s
+// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=platform %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-LINUX %s
 //
 // CHECK-LIBCXX-LINUX: -lstdc++
 

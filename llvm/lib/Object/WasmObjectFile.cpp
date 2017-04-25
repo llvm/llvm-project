@@ -144,7 +144,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr, const uint8_t *&Ptr) {
     Expr.Value.Float64 = readFloat64(Ptr);
     break;
   case wasm::WASM_OPCODE_GET_GLOBAL:
-    Expr.Value.Global = readUint32(Ptr);
+    Expr.Value.Global = readULEB128(Ptr);
     break;
   default:
     return make_error<GenericBinaryError>("Invalid opcode in init_expr",

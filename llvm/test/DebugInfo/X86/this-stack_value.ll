@@ -17,7 +17,7 @@
 ; The inlined A::this pointer has the same location as B::this, but it may not be
 ; modified by the debugger.
 ;
-; ASM: [stack value]
+; ASM: [DW_OP_stack_value]
 ; CHECK:  Location description: 70 00 9f
 ;                               rax+0, stack-value
 source_filename = "ab.cpp"

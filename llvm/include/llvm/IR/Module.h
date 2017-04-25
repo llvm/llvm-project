@@ -319,7 +319,7 @@ public:
   /// exist, add a prototype for the function and return it. This function
   /// guarantees to return a constant of pointer to the specified function type
   /// or a ConstantExpr BitCast of that type if the named function has a
-  /// different type. This version of the method takes a null terminated list of
+  /// different type. This version of the method takes a list of
   /// function arguments, which makes it easier for clients to use.
   template<typename... ArgsTy>
   Constant *getOrInsertFunction(StringRef Name,

@@ -76,6 +76,53 @@ define <4 x i32> @combine_vec_udiv_by_pow2b(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+define <4 x i32> @combine_vec_udiv_by_pow2c(<4 x i32> %x, <4 x i32> %y) {
+; SSE-LABEL: combine_vec_udiv_by_pow2c:
+; SSE:       # BB#0:
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    psrld %xmm2, %xmm3
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psrlq $32, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm4
+; SSE-NEXT:    psrld %xmm2, %xmm4
+; SSE-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm3[4,5,6,7]
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrld %xmm1, %xmm2
+; SSE-NEXT:    psrld %xmm3, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,3],xmm0[4,5],xmm4[6,7]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_vec_udiv_by_pow2c:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpsrld %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm3
+; AVX1-NEXT:    vpsrld %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; AVX1-NEXT:    vpsrld %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX1-NEXT:    vpsrld %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_udiv_by_pow2c:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %y
+  %2 = udiv <4 x i32> %x, %1
+  ret <4 x i32> %2
+}
+
 ; fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
 define <4 x i32> @combine_vec_udiv_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_udiv_by_shl_pow2a:

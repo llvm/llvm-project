@@ -18,8 +18,8 @@ Sections:
         Functions:
           - 1
       - Offset:
-          Opcode:        I32_CONST
-          Value:         5
+          Opcode:        GET_GLOBAL
+          Index:         1
         Functions:
           - 4
 ...
@@ -34,7 +34,7 @@ Sections:
 # CHECK:           Value:            3
 # CHECK:         Functions: [ 1 ]
 # CHECK:       - Offset:
-# CHECK:           Opcode:           I32_CONST
-# CHECK:           Value:            5
+# CHECK:           Opcode:           GET_GLOBAL
+# CHECK:           Index:            1
 # CHECK:         Functions: [ 4 ]
 # CHECK: ...

@@ -60,6 +60,25 @@ public:
     if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == OldReg)
       MI.getOperand(0).setReg(NewReg);
   }
+
+  /// Update all DBG_VALUE instructions that may be affected by the dependency
+  /// breaker's update of ParentMI to use NewReg.
+  void UpdateDbgValues(const DbgValueVector &DbgValues, MachineInstr *ParentMI,
+                       unsigned OldReg, unsigned NewReg) {
+    // The following code is dependent on the order in which the DbgValues are
+    // constructed in ScheduleDAGInstrs::buildSchedGraph.
+    MachineInstr *PrevDbgMI = nullptr;
+    for (const auto &DV : make_range(DbgValues.crbegin(), DbgValues.crend())) {
+      MachineInstr *PrevMI = DV.second;
+      if ((PrevMI == ParentMI) || (PrevMI == PrevDbgMI)) {
+        MachineInstr *DbgMI = DV.first;
+        UpdateDbgValue(*DbgMI, OldReg, NewReg);
+        PrevDbgMI = DbgMI;
+      } else if (PrevDbgMI) {
+        break; // If no match and already found a DBG_VALUE, we're done.
+      }
+    }
+  }
 };
 
 }

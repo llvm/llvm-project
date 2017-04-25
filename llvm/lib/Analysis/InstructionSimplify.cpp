@@ -1376,8 +1376,7 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   // If all valid bits in the shift amount are known zero, the first operand is
   // unchanged.
   unsigned NumValidShiftBits = Log2_32_Ceil(BitWidth);
-  APInt ShiftAmountMask = APInt::getLowBitsSet(BitWidth, NumValidShiftBits);
-  if ((KnownZero & ShiftAmountMask) == ShiftAmountMask)
+  if (KnownZero.countTrailingOnes() >= NumValidShiftBits)
     return Op0;
 
   return nullptr;
@@ -1886,15 +1885,21 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const Query &Q,
 
   // (A & ~B) | (A ^ B) -> (A ^ B)
   // (~B & A) | (A ^ B) -> (A ^ B)
-  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op1, m_Xor(m_Specific(A), m_Specific(B))))
+  // (A & ~B) | (B ^ A) -> (B ^ A)
+  // (~B & A) | (B ^ A) -> (B ^ A)
+  if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
+      (match(Op0, m_c_And(m_Specific(A), m_Not(m_Specific(B)))) ||
+       match(Op0, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))))
     return Op1;
 
   // Commute the 'or' operands.
   // (A ^ B) | (A & ~B) -> (A ^ B)
   // (A ^ B) | (~B & A) -> (A ^ B)
-  if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op0, m_Xor(m_Specific(A), m_Specific(B))))
+  // (B ^ A) | (A & ~B) -> (B ^ A)
+  // (B ^ A) | (~B & A) -> (B ^ A)
+  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+      (match(Op1, m_c_And(m_Specific(A), m_Not(m_Specific(B)))) ||
+       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))))
     return Op0;
 
   if (auto *ICILHS = dyn_cast<ICmpInst>(Op0)) {
@@ -3366,7 +3371,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       APInt LHSKnownOne(BitWidth, 0);
       computeKnownBits(LHS, LHSKnownZero, LHSKnownOne, Q.DL, /*Depth=*/0, Q.AC,
                        Q.CxtI, Q.DT);
-      if (((LHSKnownZero & *RHSVal) != 0) || ((LHSKnownOne & ~(*RHSVal)) != 0))
+      if (LHSKnownZero.intersects(*RHSVal) || !LHSKnownOne.isSubsetOf(*RHSVal))
         return Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(ITy)
                                          : ConstantInt::getTrue(ITy);
     }

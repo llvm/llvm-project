@@ -4380,7 +4380,7 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
   SmallVector<ConstantInt *, 8> DeadCases;
   for (auto &Case : SI->cases()) {
     APInt CaseVal = Case.getCaseValue()->getValue();
-    if ((CaseVal & KnownZero) != 0 || (CaseVal & KnownOne) != KnownOne ||
+    if (KnownZero.intersects(CaseVal) || !KnownOne.isSubsetOf(CaseVal) ||
         (CaseVal.getMinSignedBits() > MaxSignificantBitsInCond)) {
       DeadCases.push_back(Case.getCaseValue());
       DEBUG(dbgs() << "SimplifyCFG: switch case " << CaseVal << " is dead.\n");

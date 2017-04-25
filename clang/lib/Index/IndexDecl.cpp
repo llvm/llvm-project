@@ -206,6 +206,10 @@ public:
       }
     }
     gatherTemplatePseudoOverrides(D, Relations);
+    if (const auto *Base = D->getPrimaryTemplate())
+      Relations.push_back(
+          SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
+                         Base->getTemplatedDecl()));
 
     TRY_DECL(D, IndexCtx.handleDecl(D, Roles, Relations));
     handleDeclarator(D);
@@ -560,6 +564,9 @@ public:
           D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
                             SpecializationOf));
     }
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      IndexCtx.indexTypeSourceInfo(TSI, /*Parent=*/nullptr,
+                                   D->getLexicalDeclContext());
     return true;
   }
 

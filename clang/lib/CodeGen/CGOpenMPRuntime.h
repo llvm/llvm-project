@@ -672,16 +672,50 @@ public:
   ///
   virtual bool isDynamic(OpenMPScheduleClauseKind ScheduleKind) const;
 
+  /// struct with the values to be passed to the dispatch runtime function
+  struct DispatchRTInput {
+    /// Loop lower bound
+    llvm::Value *LB = nullptr;
+    /// Loop upper bound
+    llvm::Value *UB = nullptr;
+    /// Chunk size specified using 'schedule' clause (nullptr if chunk
+    /// was not specified)
+    llvm::Value *Chunk = nullptr;
+    DispatchRTInput() = default;
+    DispatchRTInput(llvm::Value *LB, llvm::Value *UB, llvm::Value *Chunk)
+        : LB(LB), UB(UB), Chunk(Chunk) {}
+  };
+
+  /// Call the appropriate runtime routine to initialize it before start
+  /// of loop.
+
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  /// Depending on the loop schedule, it is necessary to call some runtime
+  /// routine before start of the OpenMP loop to get the loop upper / lower
+  /// bounds \a LB and \a UB and stride \a ST.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  /// \param ScheduleKind Schedule kind, specified by the 'schedule' clause.
+  /// \param IVSize Size of the iteration variable in bits.
+  /// \param IVSigned Sign of the interation variable.
+  /// \param Ordered true if loop is ordered, false otherwise.
+  /// \param DispatchValues struct containing llvm values for lower bound, upper
+  /// bound, and chunk expression.
+  /// For the default (nullptr) value, the chunk 1 will be used.
+  ///
   virtual void emitForDispatchInit(CodeGenFunction &CGF, SourceLocation Loc,
                                    const OpenMPScheduleTy &ScheduleKind,
                                    unsigned IVSize, bool IVSigned, bool Ordered,
-                                   llvm::Value *UB,
-                                   llvm::Value *Chunk = nullptr);
+                                   const DispatchRTInput &DispatchValues);
 
   /// \brief Call the appropriate runtime routine to initialize it before start
   /// of loop.
   ///
-  /// Depending on the loop schedule, it is nesessary to call some runtime
+  /// This is used only in case of static schedule, when the user did not
+  /// specify a ordered clause on the loop construct.
+  /// Depending on the loop schedule, it is necessary to call some runtime
   /// routine before start of the OpenMP loop to get the loop upper / lower
   /// bounds \a LB and \a UB and stride \a ST.
   ///

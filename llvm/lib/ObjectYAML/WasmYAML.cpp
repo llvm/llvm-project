@@ -294,6 +294,9 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
   case wasm::WASM_OPCODE_F64_CONST:
     IO.mapRequired("Value", Expr.Value.Float64);
     break;
+  case wasm::WASM_OPCODE_GET_GLOBAL:
+    IO.mapRequired("Index", Expr.Value.Global);
+    break;
   }
 }
 
