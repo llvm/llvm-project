@@ -379,10 +379,8 @@ void CXXBaseObjectRegion::Profile(llvm::FoldingSetNodeID &ID) const {
 //===----------------------------------------------------------------------===//
 
 void GlobalsSpaceRegion::anchor() { }
-void HeapSpaceRegion::anchor() { }
-void UnknownSpaceRegion::anchor() { }
-void StackLocalsSpaceRegion::anchor() { }
-void StackArgumentsSpaceRegion::anchor() { }
+void NonStaticGlobalSpaceRegion::anchor() { }
+void StackSpaceRegion::anchor() { }
 void TypedRegion::anchor() { }
 void TypedValueRegion::anchor() { }
 void CodeTextRegion::anchor() { }

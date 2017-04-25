@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 
 namespace clang {
 namespace ento {
@@ -29,8 +30,9 @@ class CompoundValData : public llvm::FoldingSetNode {
   llvm::ImmutableList<SVal> L;
 
 public:
-  CompoundValData(QualType t, llvm::ImmutableList<SVal> l)
-    : T(t), L(l) {}
+  CompoundValData(QualType t, llvm::ImmutableList<SVal> l) : T(t), L(l) {
+    assert(NonLoc::isCompoundType(t));
+  }
 
   typedef llvm::ImmutableList<SVal>::iterator iterator;
   iterator begin() const { return L.begin(); }
@@ -47,7 +49,9 @@ class LazyCompoundValData : public llvm::FoldingSetNode {
   const TypedValueRegion *region;
 public:
   LazyCompoundValData(const StoreRef &st, const TypedValueRegion *r)
-    : store(st), region(r) {}
+      : store(st), region(r) {
+    assert(NonLoc::isCompoundType(r->getValueType()));
+  }
 
   const void *getStore() const { return store.getStore(); }
   const TypedValueRegion *getRegion() const { return region; }
