@@ -666,7 +666,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
 }
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
-  if (SkipCoverageMapping)
+  if (!D->getBody())
     return true;
 
   // Don't map the functions in system headers.
