@@ -220,3 +220,38 @@ class ConflictingPseudoOverridesInSpecialization<int, T> {
 // CHECK-NEXT: RelOver,RelSpecialization | foo | c:@ST>2#T#T@ConflictingPseudoOverridesInSpecialization@F@foo#t0.0#
 // CHECK-NEXT: RelOver,RelSpecialization | foo | c:@ST>2#T#T@ConflictingPseudoOverridesInSpecialization@F@foo#t0.1#
 };
+
+template<typename T, typename U, int x>
+void functionSpecialization();
+
+template<typename T, typename U, int x>
+void functionSpecialization() { }
+// CHECK: [[@LINE-1]]:6 | function/C | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v# | <no-cgname> | Def | rel: 0
+
+template<>
+void functionSpecialization<int, int, 0>();
+// CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSpecialization | c:@F@functionSpecialization<#I#I#VI0># | __Z22functionSpecializationIiiLi0EEvv | Decl,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v#
+
+template<>
+void functionSpecialization<int, int, 0>() { }
+// CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSpecialization | c:@F@functionSpecialization<#I#I#VI0># | __Z22functionSpecializationIiiLi0EEvv | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v#
+
+struct ContainsSpecializedMemberFunction {
+  template<typename T>
+  void memberSpecialization();
+};
+
+template<typename T>
+void ContainsSpecializedMemberFunction::memberSpecialization() {
+// CHECK: [[@LINE-1]]:41 | instance-method/C++ | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@FT@>1#TmemberSpecialization#v# | <no-cgname> | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild
+}
+
+template<>
+void ContainsSpecializedMemberFunction::memberSpecialization<int>() {
+// CHECK: [[@LINE-1]]:41 | instance-method(Gen,TS)/C++ | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@F@memberSpecialization<#I># | __ZN33ContainsSpecializedMemberFunction20memberSpecializationIiEEvv | Def,RelChild,RelSpecialization | rel: 2
+// CHECK-NEXT: RelChild
+// CHECK-NEXT: RelSpecialization | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@FT@>1#TmemberSpecialization#v#
+}
