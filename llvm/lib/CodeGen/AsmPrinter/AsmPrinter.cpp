@@ -746,43 +746,25 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       OS << Name << ":";
   }
   OS << V->getName();
-
-  const DIExpression *Expr = MI->getDebugExpression();
-  auto Fragment = Expr->getFragmentInfo();
-  if (Fragment)
-    OS << " [fragment offset=" << Fragment->OffsetInBits
-       << " size=" << Fragment->SizeInBits << "]";
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
-  bool Deref = false;
   bool MemLoc = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
   int64_t Offset = MemLoc ? MI->getOperand(1).getImm() : 0;
-  for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
-    uint64_t Op = Expr->getElement(i);
-    if (Op == dwarf::DW_OP_LLVM_fragment) {
-      // There can't be any operands after this in a valid expression
-      break;
-    } else if (Deref) {
-      // We currently don't support extra Offsets or derefs after the first
-      // one. Bail out early instead of emitting an incorrect comment.
-      OS << " [complex expression]";
-      AP.OutStreamer->emitRawComment(OS.str());
-      return true;
-    } else if (Op == dwarf::DW_OP_deref) {
-      Deref = true;
-      continue;
+  const DIExpression *Expr = MI->getDebugExpression();
+  if (Expr->getNumElements()) {
+    OS << '[';
+    bool NeedSep = false;
+    for (auto Op : Expr->expr_ops()) {
+      if (NeedSep)
+        OS << ", ";
+      else
+        NeedSep = true;
+      OS << dwarf::OperationEncodingString(Op.getOp());
+      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
+        OS << ' ' << Op.getArg(I);
     }
-
-    uint64_t ExtraOffset = Expr->getElement(i++);
-    if (Op == dwarf::DW_OP_plus)
-      Offset += ExtraOffset;
-    else if (Op == dwarf::DW_OP_stack_value)
-      OS << " [stack value]";
-    else {
-      assert(Op == dwarf::DW_OP_minus);
-      Offset -= ExtraOffset;
-    }
+    OS << "] ";
   }
 
   // Register or immediate value. Register 0 means undef.
@@ -813,7 +795,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       const TargetFrameLowering *TFI = AP.MF->getSubtarget().getFrameLowering();
       Offset += TFI->getFrameIndexReference(*AP.MF,
                                             MI->getOperand(0).getIndex(), Reg);
-      Deref = true;
+      MemLoc = true;
     }
     if (Reg == 0) {
       // Suppress offset, it is not meaningful here.
@@ -822,12 +804,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
     }
-    if (MemLoc || Deref)
+    if (MemLoc)
       OS << '[';
     OS << PrintReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
   }
 
-  if (MemLoc || Deref)
+  if (MemLoc)
     OS << '+' << Offset << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
