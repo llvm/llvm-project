@@ -36,8 +36,8 @@
 
 ; KERNEL:        %polly.access.mul.MemRef_b = mul nsw i64 %polly.indvar, 8
 ; KERNEL-NEXT:   %polly.access.add.MemRef_b = add nsw i64 %polly.access.mul.MemRef_b, %t0
-; KERNEL-NEXT:   %polly.access.MemRef_b = getelementptr float, float* %polly.access.cast.MemRef_b, i64 %polly.access.add.MemRef_b
-; KERNEL-NEXT:   %shared.read = load float, float* %polly.access.MemRef_b
+; KERNEL-NEXT:   %polly.access.MemRef_b = getelementptr float, float addrspace(1)* %polly.access.cast.MemRef_b, i64 %polly.access.add.MemRef_b
+; KERNEL-NEXT:   %shared.read = load float, float addrspace(1)* %polly.access.MemRef_b
 ; KERNEL-NEXT:   store float %shared.read, float addrspace(3)* %polly.access.shared_MemRef_b
 
 
