@@ -61,11 +61,15 @@ protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
 
+  unsigned getOptimizationLevel(const llvm::opt::ArgList &DriverArgs) const;
+
 public:
   HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
                    const llvm::opt::ArgList &Args);
   ~HexagonToolChain() override;
 
+  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;

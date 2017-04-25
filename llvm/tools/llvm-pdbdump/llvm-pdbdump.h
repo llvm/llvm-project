@@ -19,7 +19,15 @@ namespace opts {
 namespace pretty {
 
 enum class ClassDefinitionFormat { None, Layout, All };
-enum class ClassSortMode { None, Name, Size, Padding, PaddingPct };
+enum class ClassSortMode {
+  None,
+  Name,
+  Size,
+  Padding,
+  PaddingPct,
+  PaddingImmediate,
+  PaddingPctImmediate
+};
 
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
@@ -40,6 +48,7 @@ extern llvm::cl::list<std::string> IncludeCompilands;
 extern llvm::cl::opt<ClassSortMode> ClassOrder;
 extern llvm::cl::opt<uint32_t> SizeThreshold;
 extern llvm::cl::opt<uint32_t> PaddingThreshold;
+extern llvm::cl::opt<uint32_t> ImmediatePaddingThreshold;
 extern llvm::cl::opt<ClassDefinitionFormat> ClassFormat;
 extern llvm::cl::opt<uint32_t> ClassRecursionDepth;
 }
@@ -66,6 +75,7 @@ extern llvm::cl::opt<bool> DumpIpiRecords;
 extern llvm::cl::opt<bool> DumpIpiRecordBytes;
 extern llvm::cl::opt<bool> DumpModules;
 extern llvm::cl::opt<bool> DumpModuleFiles;
+extern llvm::cl::opt<bool> DumpModuleLines;
 extern llvm::cl::opt<bool> DumpModuleSyms;
 extern llvm::cl::opt<bool> DumpPublics;
 extern llvm::cl::opt<bool> DumpSectionContribs;
@@ -92,6 +102,7 @@ extern llvm::cl::opt<bool> DbiStream;
 extern llvm::cl::opt<bool> DbiModuleInfo;
 extern llvm::cl::opt<bool> DbiModuleSyms;
 extern llvm::cl::opt<bool> DbiModuleSourceFileInfo;
+extern llvm::cl::opt<bool> DbiModuleSourceLineInfo;
 extern llvm::cl::opt<bool> TpiStream;
 extern llvm::cl::opt<bool> IpiStream;
 extern llvm::cl::list<std::string> InputFilename;

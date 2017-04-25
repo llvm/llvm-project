@@ -5060,8 +5060,8 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
 
   // If the input is a buildvector just emit a smaller one.
   if (Vec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getNode(ISD::BUILD_VECTOR, dl, ResultVT,
-                       makeArrayRef(Vec->op_begin() + IdxVal, ElemsPerChunk));
+    return DAG.getBuildVector(
+        ResultVT, dl, makeArrayRef(Vec->op_begin() + IdxVal, ElemsPerChunk));
 
   SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, dl);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResultVT, Vec, VecIdx);
@@ -14424,8 +14424,8 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   // If the input is a buildvector just emit a smaller one.
   unsigned ElemsPerChunk = ResVT.getVectorNumElements();
   if (In.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getNode(ISD::BUILD_VECTOR, dl, ResVT,
-                       makeArrayRef(In->op_begin() + IdxVal, ElemsPerChunk));
+    return DAG.getBuildVector(
+        ResVT, dl, makeArrayRef(In->op_begin() + IdxVal, ElemsPerChunk));
 
   // Everything else is legal.
   return Op;

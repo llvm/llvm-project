@@ -132,7 +132,12 @@ cl::opt<ClassSortMode> ClassOrder(
         clEnumValN(ClassSortMode::Padding, "padding",
                    "Sort classes by amount of padding"),
         clEnumValN(ClassSortMode::PaddingPct, "padding-pct",
-                   "Sort classes by percentage of space consumed by padding")),
+                   "Sort classes by percentage of space consumed by padding"),
+        clEnumValN(ClassSortMode::PaddingImmediate, "padding-imm",
+                   "Sort classes by amount of immediate padding"),
+        clEnumValN(ClassSortMode::PaddingPctImmediate, "padding-pct-imm",
+                   "Sort classes by percentage of space consumed by immediate "
+                   "padding")),
     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<ClassDefinitionFormat> ClassFormat(
@@ -196,6 +201,12 @@ cl::opt<uint32_t> SizeThreshold(
 cl::opt<uint32_t> PaddingThreshold(
     "min-class-padding", cl::desc("Displays only those classes which have at "
                                   "least the specified amount of padding."),
+    cl::init(0), cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::opt<uint32_t> ImmediatePaddingThreshold(
+    "min-class-padding-imm",
+    cl::desc("Displays only those classes which have at least the specified "
+             "amount of immediate padding, ignoring padding internal to bases "
+             "and aggregates."),
     cl::init(0), cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> ExcludeCompilerGenerated(
@@ -375,8 +386,14 @@ cl::opt<bool> DbiModuleSyms(
 cl::opt<bool> DbiModuleSourceFileInfo(
     "dbi-module-source-info",
     cl::desc(
-        "Dump DBI Module Source File Information (implies -dbi-module-info"),
+        "Dump DBI Module Source File Information (implies -dbi-module-info)"),
     cl::sub(PdbToYamlSubcommand), cl::init(false));
+
+cl::opt<bool>
+    DbiModuleSourceLineInfo("dbi-module-lines",
+                            cl::desc("Dump DBI Module Source Line Information "
+                                     "(implies -dbi-module-source-info)"),
+                            cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::opt<bool> TpiStream("tpi-stream",
                         cl::desc("Dump the TPI Stream (Stream 3)"),

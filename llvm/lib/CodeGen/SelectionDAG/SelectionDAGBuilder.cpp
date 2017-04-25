@@ -362,11 +362,11 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getUNDEF(ValueVT);
   }
 
-  if (ValueVT.getVectorNumElements() == 1 &&
-      ValueVT.getVectorElementType() != PartEVT)
-    Val = DAG.getAnyExtOrTrunc(Val, DL, ValueVT.getScalarType());
+  EVT ValueSVT = ValueVT.getVectorElementType();
+  if (ValueVT.getVectorNumElements() == 1 && ValueSVT != PartEVT)
+    Val = DAG.getAnyExtOrTrunc(Val, DL, ValueSVT);
 
-  return DAG.getNode(ISD::BUILD_VECTOR, DL, ValueVT, Val);
+  return DAG.getBuildVector(ValueVT, DL, Val);
 }
 
 static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &dl,
@@ -537,7 +537,7 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
            e = PartVT.getVectorNumElements(); i != e; ++i)
         Ops.push_back(DAG.getUNDEF(ElementVT));
 
-      Val = DAG.getNode(ISD::BUILD_VECTOR, DL, PartVT, Ops);
+      Val = DAG.getBuildVector(PartVT, DL, Ops);
 
       // FIXME: Use CONCAT for 2x -> 4x.
 
@@ -1088,8 +1088,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getNode(ISD::BUILD_VECTOR, getCurSDLoc(),
-                                      VT, Ops);
+      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1141,7 +1140,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     }
 
     // Create a BUILD_VECTOR node.
-    return NodeMap[V] = DAG.getNode(ISD::BUILD_VECTOR, getCurSDLoc(), VT, Ops);
+    return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
   }
 
   // If this is a static alloca, generate it as the frameindex instead of
@@ -3147,7 +3146,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     Ops.push_back(Res);
   }
 
-  setValue(&I, DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Ops));
+  setValue(&I, DAG.getBuildVector(VT, DL, Ops));
 }
 
 void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
@@ -4896,11 +4895,11 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
 
     Entry.Node = Src;
     Args.push_back(Entry);
-    
+
     Entry.Ty = I.getArgOperand(2)->getType();
     Entry.Node = NumElements;
     Args.push_back(Entry);
-    
+
     Entry.Ty = Type::getInt32Ty(*DAG.getContext());
     Entry.Node = ElementSize;
     Args.push_back(Entry);
@@ -5183,7 +5182,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue ShOps[2];
     ShOps[0] = ShAmt;
     ShOps[1] = DAG.getConstant(0, sdl, MVT::i32);
-    ShAmt =  DAG.getNode(ISD::BUILD_VECTOR, sdl, ShAmtVT, ShOps);
+    ShAmt =  DAG.getBuildVector(ShAmtVT, sdl, ShOps);
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     ShAmt = DAG.getNode(ISD::BITCAST, sdl, DestVT, ShAmt);
     Res = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, sdl, DestVT,
@@ -5743,7 +5742,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(const CallInst &I,
   unsigned Opcode;
   switch (Intrinsic) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-  case Intrinsic::experimental_constrained_fadd: 
+  case Intrinsic::experimental_constrained_fadd:
     Opcode = ISD::STRICT_FADD;
     break;
   case Intrinsic::experimental_constrained_fsub:

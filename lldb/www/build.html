@@ -354,9 +354,8 @@
               the target architecture. Since you already have a checkout of clang and lldb, you
               can compile a host version of clang in a separate folder and use that.
               Alternatively you can use system clang or even cross-gcc if your distribution
-              provides such packages (e.g., <code>g++-aarch64-linux-gnu</code> on Ubuntu). On
-              Android, a working toolchain can be produced by downloading the Android NDK and
-              running the contained <code>make-standalone-toolchain.sh</code> script.
+              provides such packages (e.g., <code>g++-aarch64-linux-gnu</code>
+              on Ubuntu).
             </p>
 
             <p>
@@ -378,11 +377,6 @@
             <p>
               In this case you, will often not need anything other than the standard C and C++
               libraries.
-            </p>
-
-            <p>
-              In the case of Android, all required headers and libraries are provided by the
-              aforementioned <code>make-standalone-toolchain.sh</code> script.
             </p>
 
             <p>
@@ -472,38 +466,37 @@
             <h3>Example 2: Cross-compiling for Android on Linux</h3>
 
             <p>
-              All tools needed to build LLDB for android are available in the Android NDK. For
-              example, we can produce an x86 toolchain along with all the libraries and headers
-              by running
-            </p>
-            <code>
-              ./build/tools/make-standalone-toolchain.sh \<br/>
-              --platform=android-21 \<br/>
-              --toolchain=x86-4.9 \<br/>
-              --install-dir=$HOME/Toolchains/x86-android-toolchain
-            </code>
-            <p>
-              from inside the unzipped NDK. Toolchains for other architectures can be produced in
-              a similar manner.
+              In the case of Android, the toolchain and all required headers and
+              libraries are available in the Android NDK.
             </p>
 
             <p>
-              For Android we provide a Android.cmake script which sets a lot of the required
-              options automatically. A cmake build can therefore be prepared with the following parameters:
+              The NDK also contains a cmake toolchain file, which makes
+              configuring the build much simpler.  The compiler, include and
+              library paths will be configured by the toolchain file and all you
+              need to do is to select the architecture (ANDROID_ABI) and
+              platform level (ANDROID_PLATFORM, should be at least 21). You will
+              also need to set ANDROID_ALLOW_UNDEFINED_SYMBOLS=On, as the
+              toolchain file defaults to "no undefined symbols in shared
+              libraries", which is not compatible with some llvm libraries. The
+              first version of NDK which supports this approach is r14.
+            </p>
+            <p>
+              For example, the following arguments are sufficient to configure
+              an android arm64 build:
             </p>
             <code>
-              -DCMAKE_TOOLCHAIN_FILE=cmake/platforms/Android.cmake \<br/>
-              -DANDROID_TOOLCHAIN_DIR=$HOME/Toolchains/x86-android-toolchain \<br/>
-              -DANDROID_ABI=x86 \<br/>
-              -DLLVM_HOST_TRIPLE=i386-unknown-linux-android \<br/>
-              -DLLVM_TABLEGEN=&lt;path-to-host&gt;/bin/llvm-tblgen \<br/>
-              -DCLANG_TABLEGEN=&lt;path-to-host&gt;/bin/clang-tblgen
+              -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \<br/>
+              -DANDROID_ABI=arm64-v8a \<br/>
+              -DANDROID_PLATFORM=android-21 \<br/>
+              -DANDROID_ALLOW_UNDEFINED_SYMBOLS=On \<br/>
+              -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-android \<br/>
+              -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++' <br/>
             </code>
 
             <p>
-              Note that the full LLVM build is not functional on android yet, so simply running
-              <code>ninja</code> will not work. You will need to manually specify the target you
-              want to build: <code>lldb</code>, <code>lldb-server</code>, etc.
+              Note that currently only lldb-server is functional on android. The
+              lldb client is not supported and unlikely to work.
             </p>
           </div>
           <div class="postfooter"></div>

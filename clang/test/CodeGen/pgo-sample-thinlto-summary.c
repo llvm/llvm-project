@@ -32,10 +32,10 @@ void unroll() {
     baz(i);
 }
 
-// Checks if icp is invoked by normal compile, but not thinlto compile.
+// Check that icp is not invoked (both -O2 and ThinLTO).
 // O2-LABEL: define void @icp
 // THINLTO-LABEL: define void @icp
-// O2: if.true.direct_targ
+// O2-NOT: if.true.direct_targ
 // ThinLTO-NOT: if.true.direct_targ
 void icp(void (*p)()) {
   p();

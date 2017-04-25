@@ -546,7 +546,7 @@ enum class TrampolineType : uint16_t { TrampIncremental, BranchIsland };
 // These values correspond to the CV_SourceChksum_t enumeration.
 enum class FileChecksumKind : uint8_t { None, MD5, SHA1, SHA256 };
 
-enum LineFlags : uint32_t {
+enum LineFlags : uint16_t {
   HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
 };
 }

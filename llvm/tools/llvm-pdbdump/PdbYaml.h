@@ -65,10 +65,53 @@ struct PdbModiStream {
   std::vector<PdbSymbolRecord> Symbols;
 };
 
+struct PdbSourceLineEntry {
+  uint32_t Offset;
+  uint32_t LineStart;
+  uint32_t EndDelta;
+  bool IsStatement;
+};
+
+struct PdbSourceColumnEntry {
+  uint16_t StartColumn;
+  uint16_t EndColumn;
+};
+
+struct PdbSourceLineBlock {
+  StringRef FileName;
+  std::vector<PdbSourceLineEntry> Lines;
+  std::vector<PdbSourceColumnEntry> Columns;
+};
+
+struct HexFormattedString {
+  std::vector<uint8_t> Bytes;
+};
+
+struct PdbSourceFileChecksumEntry {
+  StringRef FileName;
+  codeview::FileChecksumKind Kind;
+  HexFormattedString ChecksumBytes;
+};
+
+struct PdbSourceLineInfo {
+  uint32_t RelocOffset;
+  uint32_t RelocSegment;
+  codeview::LineFlags Flags;
+  uint32_t CodeSize;
+
+  std::vector<PdbSourceLineBlock> LineInfo;
+};
+
+struct PdbSourceFileInfo {
+  PdbSourceLineInfo Lines;
+  std::vector<PdbSourceFileChecksumEntry> FileChecksums;
+};
+
 struct PdbDbiModuleInfo {
   StringRef Obj;
   StringRef Mod;
   std::vector<StringRef> SourceFiles;
+  Optional<PdbSourceFileInfo> FileLineInfo;
   Optional<PdbModiStream> Modi;
 };
 
@@ -163,6 +206,56 @@ template <> struct MappingContextTraits<pdb::yaml::PdbModiStream, pdb::yaml::Ser
 
 template <> struct MappingContextTraits<pdb::yaml::PdbDbiModuleInfo, pdb::yaml::SerializationContext> {
   static void mapping(IO &IO, pdb::yaml::PdbDbiModuleInfo &Obj, pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceLineEntry,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceLineEntry &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceColumnEntry,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceColumnEntry &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceLineBlock,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceLineBlock &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceFileChecksumEntry,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceFileChecksumEntry &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <> struct ScalarTraits<pdb::yaml::HexFormattedString> {
+  static void output(const pdb::yaml::HexFormattedString &Value, void *ctx,
+                     llvm::raw_ostream &Out);
+  static StringRef input(StringRef Scalar, void *ctxt,
+                         pdb::yaml::HexFormattedString &Value);
+  static bool mustQuote(StringRef) { return false; }
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceLineInfo &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSourceFileInfo &Obj,
+                      pdb::yaml::SerializationContext &Context);
 };
 
 template <>

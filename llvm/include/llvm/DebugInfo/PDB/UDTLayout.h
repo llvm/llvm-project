@@ -44,6 +44,7 @@ public:
   virtual ~LayoutItemBase() {}
 
   uint32_t deepPaddingSize() const;
+  virtual uint32_t immediatePadding() const { return 0; }
   virtual uint32_t tailPadding() const;
 
   const UDTLayoutBase *getParent() const { return Parent; }
@@ -175,8 +176,10 @@ public:
   ClassLayout(ClassLayout &&Other) = default;
 
   const PDBSymbolTypeUDT &getClass() const { return UDT; }
+  uint32_t immediatePadding() const override;
 
 private:
+  BitVector ImmediateUsedBytes;
   std::unique_ptr<PDBSymbolTypeUDT> OwnedStorage;
   const PDBSymbolTypeUDT &UDT;
 };

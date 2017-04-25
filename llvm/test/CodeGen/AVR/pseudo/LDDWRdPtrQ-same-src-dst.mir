@@ -1,0 +1,35 @@
+# RUN: llc -O0  %s -o - -march=avr | FileCheck %s
+
+# This test checks the expansion of the 16-bit 'LDDWRdPtrQ' pseudo instruction.
+#
+# This test ensures that the pseudo expander can correctly handle the case
+# where we are expanding a 16-bit LDD instruction where the source and
+# destination registers are the same.
+#
+# The instruction itself is earlyclobber and so ISel will never produce an
+# instruction like this, but the stack slot loading can and will.
+
+--- |
+  target triple = "avr--"
+  define void @test_lddwrdptrq() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_lddwrdptrq
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_lddwrdptrq
+
+    ; CHECK:      ldd [[SCRATCH:r[0-9]+]], Z+10
+    ; CHECK-NEXT: push [[SCRATCH]]
+    ; CHECK-NEXT: ldd [[SCRATCH]], Z+11
+    ; CHECK-NEXT: mov r31, [[SCRATCH]]
+    ; CHECK-NEXT: pop r30
+
+    early-clobber %r31r30 = LDDWRdPtrQ undef %r31r30, 10
+...

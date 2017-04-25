@@ -96,5 +96,13 @@ void ClassDefinitionDumper::prettyPrintClassOutro(const ClassLayout &Layout) {
         << "Total padding " << Layout.deepPaddingSize() << " bytes (" << PctStr
         << "% of class size)";
     Printer.NewLine();
+    APFloat Pct2(100.0 * (double)Layout.immediatePadding() /
+                 (double)Layout.getSize());
+    PctStr.clear();
+    Pct2.toString(PctStr, 4);
+    WithColor(Printer, PDB_ColorItem::Padding).get()
+        << "Immediate padding " << Layout.immediatePadding() << " bytes ("
+        << PctStr << "% of class size)";
+    Printer.NewLine();
   }
 }

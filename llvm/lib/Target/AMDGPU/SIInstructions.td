@@ -472,8 +472,8 @@ def : Pat <
 
 // fp_to_fp16 patterns
 def : Pat <
-  (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)))),
-  (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0, $clamp, $omod)
+  (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+  (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
 def : Pat <
@@ -502,11 +502,11 @@ def : Pat <
 
 multiclass FMADPat <ValueType vt, Instruction inst> {
   def : Pat <
-    (vt (fmad (VOP3NoMods0 vt:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-              (VOP3NoMods  vt:$src1, i32:$src1_modifiers),
-              (VOP3NoMods  vt:$src2, i32:$src2_modifiers))),
-    (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
-          $src2_modifiers, $src2, $clamp, $omod)
+    (vt (fmad (VOP3NoMods vt:$src0),
+              (VOP3NoMods vt:$src1),
+              (VOP3NoMods vt:$src2))),
+    (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+          SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
   >;
 }
 
@@ -676,10 +676,9 @@ def : BitConvert <v16f32, v16i32, VReg_512>;
 // If denormals are not enabled, it only impacts the compare of the
 // inputs. The output result is not flushed.
 class ClampPat<Instruction inst, ValueType vt> : Pat <
-  (vt (AMDGPUclamp
-        (VOP3Mods0Clamp vt:$src0, i32:$src0_modifiers, i32:$omod))),
+  (vt (AMDGPUclamp (VOP3Mods vt:$src0, i32:$src0_modifiers))),
   (inst i32:$src0_modifiers, vt:$src0,
-        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, $omod)
+        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, DSTOMOD.NONE)
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
