@@ -61,7 +61,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
         return U->getSubExpr()->IgnoreParenCasts();
     }
     else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
-      if (ME->isArrow() || isDeclRefExprToReference(ME->getBase())) {
+      if (ME->isImplicitAccess()) {
+        return ME;
+      } else if (ME->isArrow() || isDeclRefExprToReference(ME->getBase())) {
         return ME->getBase()->IgnoreParenCasts();
       } else {
         // If we have a member expr with a dot, the base must have been
@@ -73,9 +75,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       return IvarRef->getBase()->IgnoreParenCasts();
     }
     else if (const ArraySubscriptExpr *AE = dyn_cast<ArraySubscriptExpr>(E)) {
-      return AE->getBase();
+      return getDerefExpr(AE->getBase());
     }
-    else if (isDeclRefExprToReference(E)) {
+    else if (isa<DeclRefExpr>(E)) {
       return E;
     }
     break;
@@ -961,7 +963,24 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
   const Expr *Inner = nullptr;
   if (const Expr *Ex = dyn_cast<Expr>(S)) {
     Ex = Ex->IgnoreParenCasts();
-    if (ExplodedGraph::isInterestingLValueExpr(Ex) || CallEvent::isCallStmt(Ex))
+
+    // Performing operator `&' on an lvalue expression is essentially a no-op.
+    // Then, if we are taking addresses of fields or elements, these are also
+    // unlikely to matter.
+    // FIXME: There's a hack in our Store implementation that always computes
+    // field offsets around null pointers as if they are always equal to 0.
+    // The idea here is to report accesses to fields as null dereferences
+    // even though the pointer value that's being dereferenced is actually
+    // the offset of the field rather than exactly 0.
+    // See the FIXME in StoreManager's getLValueFieldOrIvar() method.
+    // This code interacts heavily with this hack; otherwise the value
+    // would not be null at all for most fields, so we'd be unable to track it.
+    if (const auto *Op = dyn_cast<UnaryOperator>(Ex))
+      if (Op->getOpcode() == UO_AddrOf && Op->getSubExpr()->isLValue())
+        if (const Expr *DerefEx = getDerefExpr(Op->getSubExpr()))
+          Ex = DerefEx;
+
+    if (Ex && (ExplodedGraph::isInterestingLValueExpr(Ex) || CallEvent::isCallStmt(Ex)))
       Inner = Ex;
   }
 

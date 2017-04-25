@@ -548,11 +548,20 @@ template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
 // shared libraries can find them.
 // Except this, we ignore undefined symbols in DSOs.
 template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
-  for (SharedFile<ELFT> *File : SharedFiles)
-    for (StringRef U : File->getUndefinedSymbols())
-      if (SymbolBody *Sym = find(U))
-        if (Sym->isDefined())
-          Sym->symbol()->ExportDynamic = true;
+  for (SharedFile<ELFT> *File : SharedFiles) {
+    for (StringRef U : File->getUndefinedSymbols()) {
+      SymbolBody *Sym = find(U);
+      if (!Sym || !Sym->isDefined())
+        continue;
+      Sym->symbol()->ExportDynamic = true;
+
+      // If -dynamic-list is given, the default version is set to
+      // VER_NDX_LOCAL, which prevents a symbol to be exported via .dynsym.
+      // Set to VER_NDX_GLOBAL so the symbol will be handled as if it were
+      // specified by -dynamic-list.
+      Sym->symbol()->VersionId = VER_NDX_GLOBAL;
+    }
+  }
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol

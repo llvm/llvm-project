@@ -38,23 +38,25 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
                       isl::union_set &Undef) {
   auto ParamSpace = give(isl_union_set_get_space(Universe.keep()));
 
-  if (OccupiedAndKnown) {
+  if (Undef && !Occupied) {
     assert(!Occupied);
+    Occupied = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
+  }
+
+  if (OccupiedAndKnown) {
     assert(!Known);
 
     Known = isl::union_map::empty(ParamSpace);
-    Occupied = OccupiedAndKnown.domain();
+
+    if (!Occupied)
+      Occupied = OccupiedAndKnown.domain();
+
     OccupiedAndKnown.foreach_map([&Known](isl::map Map) -> isl::stat {
       if (isl_map_has_tuple_name(Map.keep(), isl_dim_out) != isl_bool_true)
         return isl::stat::ok;
       Known = give(isl_union_map_add_map(Known.take(), Map.take()));
       return isl::stat::ok;
     });
-  }
-
-  if (!Occupied) {
-    assert(Undef);
-    Occupied = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
   }
 
   if (!Undef) {
@@ -65,6 +67,11 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
   if (!Known) { // By default, nothing is known.
     Known = isl::union_map::empty(ParamSpace);
   }
+
+  // Conditions that must hold when returning.
+  assert(Occupied);
+  assert(Undef);
+  assert(Known);
 }
 
 typedef struct {

@@ -122,7 +122,7 @@ void f1(void) {
 }
 
 void f_uninit(void) {
-      int x;
+      int x;               // expected-note {{'x' declared without an initial value}}
       doStuff_uninit(&x);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                            // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
