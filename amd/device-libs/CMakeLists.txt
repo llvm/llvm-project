@@ -26,6 +26,8 @@ include(AddLLVM)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
+option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)
+
 list(APPEND CMAKE_OCL_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
@@ -47,8 +49,11 @@ if(BUILD_HC_LIB)
 add_subdirectory(hc)
 endif(BUILD_HC_LIB)
 
+
+if(ROCM_DEVICELIB_INCLUDE_TESTS)
 add_subdirectory(test/opencl)
 add_subdirectory(test/opencl_conformance)
+endif(ROCM_DEVICELIB_INCLUDE_TESTS)
 
 ## CPack standard variables
 set ( CPACK_PACKAGE_NAME "rocm-device-libs" )
