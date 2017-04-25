@@ -846,6 +846,9 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
 
   // Is the inner call really malloc()?
   Function *InnerCallee = Malloc->getCalledFunction();
+  if (!InnerCallee)
+    return nullptr;
+
   LibFunc::Func Func;
   if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
       Func != LibFunc::malloc)
