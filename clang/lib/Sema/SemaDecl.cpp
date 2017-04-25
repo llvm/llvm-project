@@ -15922,6 +15922,12 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
 
   // C++ Modules TS draft:
+  //   An export-declaration shall appear in the purview of a module other than
+  //   the global module.
+  if (ModuleScopes.empty() || !ModuleScopes.back().Module ||
+      ModuleScopes.back().Module->Kind != Module::ModuleInterfaceUnit)
+    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+
   //   An export-declaration [...] shall not contain more than one
   //   export keyword.
   //

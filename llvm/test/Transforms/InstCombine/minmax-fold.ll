@@ -280,14 +280,10 @@ define i32 @test72(i32 %x) {
   ret i32 %retval
 }
 
-; FIXME - vector neglect: FoldAndOfICmps() / FoldOrOfICmps()
-
 define <2 x i32> @test72vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test72vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> %x, <i32 92, i32 92>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> %x, <i32 11, i32 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[TMP3]], <2 x i32> %x, <2 x i32> <i32 11, i32 11>
+; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> %x, <2 x i32> <i32 11, i32 11>
 ; CHECK-NEXT:    ret <2 x i32> [[RETVAL]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 92, i32 92>

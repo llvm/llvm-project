@@ -4779,6 +4779,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
   ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
   bool First = true;
   Module *CurrentModule = nullptr;
+  Module::ModuleKind ModuleKind = Module::ModuleMapModule;
   RecordData Record;
   while (true) {
     llvm::BitstreamEntry Entry = F.Stream.advanceSkippingSubblocks();
@@ -4871,6 +4872,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         CurrentModule->setASTFile(F.File);
       }
 
+      CurrentModule->Kind = ModuleKind;
       CurrentModule->Signature = F.Signature;
       CurrentModule->IsFromModuleFile = true;
       CurrentModule->IsSystem = IsSystem || CurrentModule->IsSystem;
@@ -4969,6 +4971,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
 
         SubmodulesLoaded.resize(SubmodulesLoaded.size() + F.LocalNumSubmodules);
       }
+      ModuleKind = (Module::ModuleKind)Record[2];
       break;
     }
 

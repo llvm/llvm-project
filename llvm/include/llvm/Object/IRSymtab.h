@@ -25,23 +25,31 @@
 #define LLVM_OBJECT_IRSYMTAB_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <cassert>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace irsymtab {
+
 namespace storage {
 
 // The data structures in this namespace define the low-level serialization
 // format. Clients that just want to read a symbol table should use the
 // irsymtab::Reader class.
 
-typedef support::ulittle32_t Word;
+using Word = support::ulittle32_t;
 
 /// A reference to a string in the string table.
 struct Str {
   Word Offset, Size;
+
   StringRef get(StringRef Strtab) const {
     return {Strtab.data() + Offset, Size};
   }
@@ -50,6 +58,7 @@ struct Str {
 /// A reference to a range of objects in the symbol table.
 template <typename T> struct Range {
   Word Offset, Size;
+
   ArrayRef<T> get(StringRef Symtab) const {
     return {reinterpret_cast<const T *>(Symtab.data() + Offset), Size};
   }
@@ -122,7 +131,7 @@ struct Header {
   Str COFFLinkerOpts;
 };
 
-}
+} // end namespace storage
 
 /// Fills in Symtab and Strtab with a valid symbol and string table for Mods.
 Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
@@ -152,18 +161,22 @@ struct Symbol {
   int getComdatIndex() const { return ComdatIndex; }
 
   using S = storage::Symbol;
+
   GlobalValue::VisibilityTypes getVisibility() const {
     return GlobalValue::VisibilityTypes((Flags >> S::FB_visibility) & 3);
   }
+
   bool isUndefined() const { return (Flags >> S::FB_undefined) & 1; }
   bool isWeak() const { return (Flags >> S::FB_weak) & 1; }
   bool isCommon() const { return (Flags >> S::FB_common) & 1; }
   bool isIndirect() const { return (Flags >> S::FB_indirect) & 1; }
   bool isUsed() const { return (Flags >> S::FB_used) & 1; }
   bool isTLS() const { return (Flags >> S::FB_tls) & 1; }
+
   bool canBeOmittedFromSymbolTable() const {
     return (Flags >> S::FB_may_omit) & 1;
   }
+
   bool isGlobal() const { return (Flags >> S::FB_global) & 1; }
   bool isFormatSpecific() const { return (Flags >> S::FB_format_specific) & 1; }
   bool isUnnamedAddr() const { return (Flags >> S::FB_unnamed_addr) & 1; }
@@ -173,6 +186,7 @@ struct Symbol {
     assert(isCommon());
     return CommonSize;
   }
+
   uint32_t getCommonAlignment() const {
     assert(isCommon());
     return CommonAlign;
@@ -197,9 +211,11 @@ class Reader {
   ArrayRef<storage::Uncommon> Uncommons;
 
   StringRef str(storage::Str S) const { return S.get(Strtab); }
+
   template <typename T> ArrayRef<T> range(storage::Range<T> R) const {
     return R.get(Symtab);
   }
+
   const storage::Header &header() const {
     return *reinterpret_cast<const storage::Header *>(Symtab.data());
   }
@@ -215,7 +231,7 @@ public:
     Uncommons = range(header().Uncommons);
   }
 
-  typedef iterator_range<object::content_iterator<SymbolRef>> symbol_range;
+  using symbol_range = iterator_range<object::content_iterator<SymbolRef>>;
 
   /// Returns the symbol table for the entire bitcode file.
   /// The symbols enumerated by this method are ephemeral, but they can be
@@ -298,8 +314,7 @@ inline Reader::symbol_range Reader::module_symbols(unsigned I) const {
           SymbolRef(MEnd, MEnd, nullptr, this)};
 }
 
-}
+} // end namespace irsymtab
+} // end namespace llvm
 
-}
-
-#endif
+#endif // LLVM_OBJECT_IRSYMTAB_H

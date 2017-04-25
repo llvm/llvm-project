@@ -640,6 +640,25 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "for.end.loopexit: "
       "  ret void "
       "} "
+      " "
+      "define void @f_2(i32 %a, i32 %b, i32 %c, i32 %d) "
+      "    local_unnamed_addr { "
+      "entry: "
+      "  br label %loop_0 "
+      " "
+      "loop_0: "
+      "  br i1 undef, label %loop_0, label %loop_1 "
+      " "
+      "loop_1: "
+      "  br i1 undef, label %loop_2, label %loop_1 "
+      " "
+      " "
+      "loop_2: "
+      "  br i1 undef, label %end, label %loop_2 "
+      " "
+      "end: "
+      "  ret void "
+      "} "
       ,
       Err, C);
 
@@ -663,6 +682,85 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
     auto *N1 = normalizeForPostIncUse(S1, Loops, SE);
     auto *D1 = denormalizeForPostIncUse(N1, Loops, SE);
     EXPECT_EQ(S1, D1) << *S1 << " " << *D1;
+  });
+
+  runWithSE(*M, "f_2", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *L2 = *LI.begin();
+    auto *L1 = *std::next(LI.begin());
+    auto *L0 = *std::next(LI.begin(), 2);
+
+    auto GetAddRec = [&SE](const Loop *L, std::initializer_list<const SCEV *> Ops) {
+      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+      return SE.getAddRecExpr(OpsCopy, L, SCEV::FlagAnyWrap);
+    };
+
+    auto GetAdd = [&SE](std::initializer_list<const SCEV *> Ops) {
+      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+      return SE.getAddExpr(OpsCopy, SCEV::FlagAnyWrap);
+    };
+
+    // We first populate the AddRecs vector with a few "interesting" SCEV
+    // expressions, and then we go through the list and assert that each
+    // expression in it has an invertible normalization.
+
+    std::vector<const SCEV *> Exprs;
+    {
+      const SCEV *V0 = SE.getSCEV(&*F.arg_begin());
+      const SCEV *V1 = SE.getSCEV(&*std::next(F.arg_begin(), 1));
+      const SCEV *V2 = SE.getSCEV(&*std::next(F.arg_begin(), 2));
+      const SCEV *V3 = SE.getSCEV(&*std::next(F.arg_begin(), 3));
+
+      Exprs.push_back(GetAddRec(L0, {V0}));             // 0
+      Exprs.push_back(GetAddRec(L0, {V0, V1}));         // 1
+      Exprs.push_back(GetAddRec(L0, {V0, V1, V2}));     // 2
+      Exprs.push_back(GetAddRec(L0, {V0, V1, V2, V3})); // 3
+
+      Exprs.push_back(
+          GetAddRec(L1, {Exprs[1], Exprs[2], Exprs[3], Exprs[0]})); // 4
+      Exprs.push_back(
+          GetAddRec(L1, {Exprs[1], Exprs[2], Exprs[0], Exprs[3]})); // 5
+      Exprs.push_back(
+          GetAddRec(L1, {Exprs[1], Exprs[3], Exprs[3], Exprs[1]})); // 6
+
+      Exprs.push_back(GetAdd({Exprs[6], Exprs[3], V2})); // 7
+
+      Exprs.push_back(
+          GetAddRec(L2, {Exprs[4], Exprs[3], Exprs[3], Exprs[5]})); // 8
+
+      Exprs.push_back(
+          GetAddRec(L2, {Exprs[4], Exprs[6], Exprs[7], Exprs[3], V0})); // 9
+    }
+
+    std::vector<PostIncLoopSet> LoopSets;
+    for (int i = 0; i < 8; i++) {
+      LoopSets.emplace_back();
+      if (i & 1)
+        LoopSets.back().insert(L0);
+      if (i & 2)
+        LoopSets.back().insert(L1);
+      if (i & 4)
+        LoopSets.back().insert(L2);
+    }
+
+    for (const auto &LoopSet : LoopSets)
+      for (auto *S : Exprs) {
+        {
+          auto *N = llvm::normalizeForPostIncUse(S, LoopSet, SE);
+          auto *D = llvm::denormalizeForPostIncUse(N, LoopSet, SE);
+
+          // Normalization and then denormalizing better give us back the same
+          // value.
+          EXPECT_EQ(S, D) << "S = " << *S << "  D = " << *D << " N = " << *N;
+        }
+        {
+          auto *D = llvm::denormalizeForPostIncUse(S, LoopSet, SE);
+          auto *N = llvm::normalizeForPostIncUse(D, LoopSet, SE);
+
+          // Denormalization and then normalizing better give us back the same
+          // value.
+          EXPECT_EQ(S, N) << "S = " << *S << "  N = " << *N;
+        }
+      }
   });
 }
 
@@ -755,6 +853,5 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
-
 }  // end anonymous namespace
 }  // end namespace llvm

@@ -27,6 +27,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -42,13 +43,11 @@ namespace llvm {
 namespace object {
 
 class elf_symbol_iterator;
-class ELFSymbolRef;
-class ELFRelocationRef;
 
 class ELFObjectFileBase : public ObjectFile {
-  friend class ELFSymbolRef;
-  friend class ELFSectionRef;
   friend class ELFRelocationRef;
+  friend class ELFSectionRef;
+  friend class ELFSymbolRef;
 
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
@@ -65,7 +64,8 @@ protected:
   virtual ErrorOr<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
 
 public:
-  typedef iterator_range<elf_symbol_iterator> elf_symbol_iterator_range;
+  using elf_symbol_iterator_range = iterator_range<elf_symbol_iterator>;
+
   virtual elf_symbol_iterator_range getDynamicSymbolIterators() const = 0;
 
   elf_symbol_iterator_range symbols() const;
@@ -201,14 +201,14 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  using uintX_t = typename ELFFile<ELFT>::uintX_t;
 
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
-  typedef typename ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename ELFFile<ELFT>::Elf_Dyn Elf_Dyn;
+  using Elf_Sym = typename ELFFile<ELFT>::Elf_Sym;
+  using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
+  using Elf_Ehdr = typename ELFFile<ELFT>::Elf_Ehdr;
+  using Elf_Rel = typename ELFFile<ELFT>::Elf_Rel;
+  using Elf_Rela = typename ELFFile<ELFT>::Elf_Rela;
+  using Elf_Dyn = typename ELFFile<ELFT>::Elf_Dyn;
 
 protected:
   ELFFile<ELFT> EF;
@@ -398,10 +398,10 @@ public:
   bool isRelocatableObject() const override;
 };
 
-typedef ELFObjectFile<ELFType<support::little, false>> ELF32LEObjectFile;
-typedef ELFObjectFile<ELFType<support::little, true>> ELF64LEObjectFile;
-typedef ELFObjectFile<ELFType<support::big, false>> ELF32BEObjectFile;
-typedef ELFObjectFile<ELFType<support::big, true>> ELF64BEObjectFile;
+using ELF32LEObjectFile = ELFObjectFile<ELFType<support::little, false>>;
+using ELF64LEObjectFile = ELFObjectFile<ELFType<support::little, true>>;
+using ELF32BEObjectFile = ELFObjectFile<ELFType<support::big, false>>;
+using ELF64BEObjectFile = ELFObjectFile<ELFType<support::big, true>>;
 
 template <class ELFT>
 void ELFObjectFile<ELFT>::moveSymbolNext(DataRefImpl &Sym) const {

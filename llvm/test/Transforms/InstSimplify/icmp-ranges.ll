@@ -21,9 +21,7 @@ define i1 @and_eq_eq(i8 %x) {
 define i1 @and_eq_ne(i8 %x) {
 ; CHECK-LABEL: @and_eq_ne(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 13
   %b = icmp ne i8 %x, 17
@@ -60,9 +58,7 @@ define i1 @and_eq_sgt(i8 %x) {
 define i1 @and_eq_sle(i8 %x) {
 ; CHECK-LABEL: @and_eq_sle(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 13
   %b = icmp sle i8 %x, 17
@@ -75,9 +71,7 @@ define i1 @and_eq_sle(i8 %x) {
 define i1 @and_eq_slt(i8 %x) {
 ; CHECK-LABEL: @and_eq_slt(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 13
   %b = icmp slt i8 %x, 17
@@ -114,9 +108,7 @@ define i1 @and_eq_ugt(i8 %x) {
 define i1 @and_eq_ule(i8 %x) {
 ; CHECK-LABEL: @and_eq_ule(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 13
   %b = icmp ule i8 %x, 17
@@ -129,9 +121,7 @@ define i1 @and_eq_ule(i8 %x) {
 define i1 @and_eq_ult(i8 %x) {
 ; CHECK-LABEL: @and_eq_ult(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 13
   %b = icmp ult i8 %x, 17
@@ -144,10 +134,8 @@ define i1 @and_eq_ult(i8 %x) {
 
 define i1 @and_ne_eq(i8 %x) {
 ; CHECK-LABEL: @and_ne_eq(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 13
   %b = icmp eq i8 %x, 17
@@ -174,10 +162,8 @@ define i1 @and_ne_ne(i8 %x) {
 
 define i1 @and_ne_sge(i8 %x) {
 ; CHECK-LABEL: @and_ne_sge(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 13
   %b = icmp sge i8 %x, 17
@@ -189,10 +175,8 @@ define i1 @and_ne_sge(i8 %x) {
 
 define i1 @and_ne_sgt(i8 %x) {
 ; CHECK-LABEL: @and_ne_sgt(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 13
   %b = icmp sgt i8 %x, 17
@@ -234,10 +218,8 @@ define i1 @and_ne_slt(i8 %x) {
 
 define i1 @and_ne_uge(i8 %x) {
 ; CHECK-LABEL: @and_ne_uge(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 13
   %b = icmp uge i8 %x, 17
@@ -249,10 +231,8 @@ define i1 @and_ne_uge(i8 %x) {
 
 define i1 @and_ne_ugt(i8 %x) {
 ; CHECK-LABEL: @and_ne_ugt(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 13
   %b = icmp ugt i8 %x, 17
@@ -295,10 +275,8 @@ define i1 @and_ne_ult(i8 %x) {
 
 define i1 @and_sge_eq(i8 %x) {
 ; CHECK-LABEL: @and_sge_eq(
-; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sge i8 %x, 13
   %b = icmp eq i8 %x, 17
@@ -325,10 +303,8 @@ define i1 @and_sge_ne(i8 %x) {
 
 define i1 @and_sge_sge(i8 %x) {
 ; CHECK-LABEL: @and_sge_sge(
-; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sge i8 %x, 13
   %b = icmp sge i8 %x, 17
@@ -340,10 +316,8 @@ define i1 @and_sge_sge(i8 %x) {
 
 define i1 @and_sge_sgt(i8 %x) {
 ; CHECK-LABEL: @and_sge_sgt(
-; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sge i8 %x, 13
   %b = icmp sgt i8 %x, 17
@@ -446,10 +420,8 @@ define i1 @and_sge_ult(i8 %x) {
 
 define i1 @and_sgt_eq(i8 %x) {
 ; CHECK-LABEL: @and_sgt_eq(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sgt i8 %x, 13
   %b = icmp eq i8 %x, 17
@@ -476,10 +448,8 @@ define i1 @and_sgt_ne(i8 %x) {
 
 define i1 @and_sgt_sge(i8 %x) {
 ; CHECK-LABEL: @and_sgt_sge(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sgt i8 %x, 13
   %b = icmp sge i8 %x, 17
@@ -491,10 +461,8 @@ define i1 @and_sgt_sge(i8 %x) {
 
 define i1 @and_sgt_sgt(i8 %x) {
 ; CHECK-LABEL: @and_sgt_sgt(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sgt i8 %x, 13
   %b = icmp sgt i8 %x, 17
@@ -610,9 +578,7 @@ define i1 @and_sle_eq(i8 %x) {
 define i1 @and_sle_ne(i8 %x) {
 ; CHECK-LABEL: @and_sle_ne(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sle i8 %x, 13
   %b = icmp ne i8 %x, 17
@@ -649,9 +615,7 @@ define i1 @and_sle_sgt(i8 %x) {
 define i1 @and_sle_sle(i8 %x) {
 ; CHECK-LABEL: @and_sle_sle(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sle i8 %x, 13
   %b = icmp sle i8 %x, 17
@@ -664,9 +628,7 @@ define i1 @and_sle_sle(i8 %x) {
 define i1 @and_sle_slt(i8 %x) {
 ; CHECK-LABEL: @and_sle_slt(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sle i8 %x, 13
   %b = icmp slt i8 %x, 17
@@ -752,9 +714,7 @@ define i1 @and_slt_eq(i8 %x) {
 define i1 @and_slt_ne(i8 %x) {
 ; CHECK-LABEL: @and_slt_ne(
 ; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp slt i8 %x, 13
   %b = icmp ne i8 %x, 17
@@ -791,9 +751,7 @@ define i1 @and_slt_sgt(i8 %x) {
 define i1 @and_slt_sle(i8 %x) {
 ; CHECK-LABEL: @and_slt_sle(
 ; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp slt i8 %x, 13
   %b = icmp sle i8 %x, 17
@@ -806,9 +764,7 @@ define i1 @and_slt_sle(i8 %x) {
 define i1 @and_slt_slt(i8 %x) {
 ; CHECK-LABEL: @and_slt_slt(
 ; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp slt i8 %x, 13
   %b = icmp slt i8 %x, 17
@@ -881,10 +837,8 @@ define i1 @and_slt_ult(i8 %x) {
 
 define i1 @and_uge_eq(i8 %x) {
 ; CHECK-LABEL: @and_uge_eq(
-; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp uge i8 %x, 13
   %b = icmp eq i8 %x, 17
@@ -911,10 +865,8 @@ define i1 @and_uge_ne(i8 %x) {
 
 define i1 @and_uge_sge(i8 %x) {
 ; CHECK-LABEL: @and_uge_sge(
-; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp uge i8 %x, 13
   %b = icmp sge i8 %x, 17
@@ -926,10 +878,8 @@ define i1 @and_uge_sge(i8 %x) {
 
 define i1 @and_uge_sgt(i8 %x) {
 ; CHECK-LABEL: @and_uge_sgt(
-; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp uge i8 %x, 13
   %b = icmp sgt i8 %x, 17
@@ -971,10 +921,8 @@ define i1 @and_uge_slt(i8 %x) {
 
 define i1 @and_uge_uge(i8 %x) {
 ; CHECK-LABEL: @and_uge_uge(
-; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp uge i8 %x, 13
   %b = icmp uge i8 %x, 17
@@ -986,10 +934,8 @@ define i1 @and_uge_uge(i8 %x) {
 
 define i1 @and_uge_ugt(i8 %x) {
 ; CHECK-LABEL: @and_uge_ugt(
-; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp uge i8 %x, 13
   %b = icmp ugt i8 %x, 17
@@ -1032,10 +978,8 @@ define i1 @and_uge_ult(i8 %x) {
 
 define i1 @and_ugt_eq(i8 %x) {
 ; CHECK-LABEL: @and_ugt_eq(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ugt i8 %x, 13
   %b = icmp eq i8 %x, 17
@@ -1062,10 +1006,8 @@ define i1 @and_ugt_ne(i8 %x) {
 
 define i1 @and_ugt_sge(i8 %x) {
 ; CHECK-LABEL: @and_ugt_sge(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ugt i8 %x, 13
   %b = icmp sge i8 %x, 17
@@ -1077,10 +1019,8 @@ define i1 @and_ugt_sge(i8 %x) {
 
 define i1 @and_ugt_sgt(i8 %x) {
 ; CHECK-LABEL: @and_ugt_sgt(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ugt i8 %x, 13
   %b = icmp sgt i8 %x, 17
@@ -1122,10 +1062,8 @@ define i1 @and_ugt_slt(i8 %x) {
 
 define i1 @and_ugt_uge(i8 %x) {
 ; CHECK-LABEL: @and_ugt_uge(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ugt i8 %x, 13
   %b = icmp uge i8 %x, 17
@@ -1137,10 +1075,8 @@ define i1 @and_ugt_uge(i8 %x) {
 
 define i1 @and_ugt_ugt(i8 %x) {
 ; CHECK-LABEL: @and_ugt_ugt(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 13
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ugt i8 %x, 13
   %b = icmp ugt i8 %x, 17
@@ -1196,9 +1132,7 @@ define i1 @and_ule_eq(i8 %x) {
 define i1 @and_ule_ne(i8 %x) {
 ; CHECK-LABEL: @and_ule_ne(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ule i8 %x, 13
   %b = icmp ne i8 %x, 17
@@ -1235,9 +1169,7 @@ define i1 @and_ule_sgt(i8 %x) {
 define i1 @and_ule_sle(i8 %x) {
 ; CHECK-LABEL: @and_ule_sle(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ule i8 %x, 13
   %b = icmp sle i8 %x, 17
@@ -1250,9 +1182,7 @@ define i1 @and_ule_sle(i8 %x) {
 define i1 @and_ule_slt(i8 %x) {
 ; CHECK-LABEL: @and_ule_slt(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ule i8 %x, 13
   %b = icmp slt i8 %x, 17
@@ -1289,9 +1219,7 @@ define i1 @and_ule_ugt(i8 %x) {
 define i1 @and_ule_ule(i8 %x) {
 ; CHECK-LABEL: @and_ule_ule(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ule i8 %x, 13
   %b = icmp ule i8 %x, 17
@@ -1304,9 +1232,7 @@ define i1 @and_ule_ule(i8 %x) {
 define i1 @and_ule_ult(i8 %x) {
 ; CHECK-LABEL: @and_ule_ult(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ule i8 %x, 13
   %b = icmp ult i8 %x, 17
@@ -1332,9 +1258,7 @@ define i1 @and_ult_eq(i8 %x) {
 define i1 @and_ult_ne(i8 %x) {
 ; CHECK-LABEL: @and_ult_ne(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ult i8 %x, 13
   %b = icmp ne i8 %x, 17
@@ -1371,9 +1295,7 @@ define i1 @and_ult_sgt(i8 %x) {
 define i1 @and_ult_sle(i8 %x) {
 ; CHECK-LABEL: @and_ult_sle(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ult i8 %x, 13
   %b = icmp sle i8 %x, 17
@@ -1386,9 +1308,7 @@ define i1 @and_ult_sle(i8 %x) {
 define i1 @and_ult_slt(i8 %x) {
 ; CHECK-LABEL: @and_ult_slt(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ult i8 %x, 13
   %b = icmp slt i8 %x, 17
@@ -1425,9 +1345,7 @@ define i1 @and_ult_ugt(i8 %x) {
 define i1 @and_ult_ule(i8 %x) {
 ; CHECK-LABEL: @and_ult_ule(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ult i8 %x, 13
   %b = icmp ule i8 %x, 17
@@ -1440,9 +1358,7 @@ define i1 @and_ult_ule(i8 %x) {
 define i1 @and_ult_ult(i8 %x) {
 ; CHECK-LABEL: @and_ult_ult(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 13
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ult i8 %x, 13
   %b = icmp ult i8 %x, 17
@@ -1468,9 +1384,7 @@ define i1 @and_eq_eq_swap(i8 %x) {
 define i1 @and_eq_ne_swap(i8 %x) {
 ; CHECK-LABEL: @and_eq_ne_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 23
   %b = icmp ne i8 %x, 17
@@ -1483,9 +1397,7 @@ define i1 @and_eq_ne_swap(i8 %x) {
 define i1 @and_eq_sge_swap(i8 %x) {
 ; CHECK-LABEL: @and_eq_sge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 23
   %b = icmp sge i8 %x, 17
@@ -1498,9 +1410,7 @@ define i1 @and_eq_sge_swap(i8 %x) {
 define i1 @and_eq_sgt_swap(i8 %x) {
 ; CHECK-LABEL: @and_eq_sgt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 23
   %b = icmp sgt i8 %x, 17
@@ -1537,9 +1447,7 @@ define i1 @and_eq_slt_swap(i8 %x) {
 define i1 @and_eq_uge_swap(i8 %x) {
 ; CHECK-LABEL: @and_eq_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 23
   %b = icmp uge i8 %x, 17
@@ -1552,9 +1460,7 @@ define i1 @and_eq_uge_swap(i8 %x) {
 define i1 @and_eq_ugt_swap(i8 %x) {
 ; CHECK-LABEL: @and_eq_ugt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp eq i8 %x, 23
   %b = icmp ugt i8 %x, 17
@@ -1591,10 +1497,8 @@ define i1 @and_eq_ult_swap(i8 %x) {
 
 define i1 @and_ne_eq_swap(i8 %x) {
 ; CHECK-LABEL: @and_ne_eq_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 23
   %b = icmp eq i8 %x, 17
@@ -1651,10 +1555,8 @@ define i1 @and_ne_sgt_swap(i8 %x) {
 
 define i1 @and_ne_sle_swap(i8 %x) {
 ; CHECK-LABEL: @and_ne_sle_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 23
   %b = icmp sle i8 %x, 17
@@ -1666,10 +1568,8 @@ define i1 @and_ne_sle_swap(i8 %x) {
 
 define i1 @and_ne_slt_swap(i8 %x) {
 ; CHECK-LABEL: @and_ne_slt_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 23
   %b = icmp slt i8 %x, 17
@@ -1711,10 +1611,8 @@ define i1 @and_ne_ugt_swap(i8 %x) {
 
 define i1 @and_ne_ule_swap(i8 %x) {
 ; CHECK-LABEL: @and_ne_ule_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 23
   %b = icmp ule i8 %x, 17
@@ -1726,10 +1624,8 @@ define i1 @and_ne_ule_swap(i8 %x) {
 
 define i1 @and_ne_ult_swap(i8 %x) {
 ; CHECK-LABEL: @and_ne_ult_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ne i8 %x, 23
   %b = icmp ult i8 %x, 17
@@ -1755,9 +1651,7 @@ define i1 @and_sge_eq_swap(i8 %x) {
 define i1 @and_sge_ne_swap(i8 %x) {
 ; CHECK-LABEL: @and_sge_ne_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sge i8 %x, 23
   %b = icmp ne i8 %x, 17
@@ -1770,9 +1664,7 @@ define i1 @and_sge_ne_swap(i8 %x) {
 define i1 @and_sge_sge_swap(i8 %x) {
 ; CHECK-LABEL: @and_sge_sge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sge i8 %x, 23
   %b = icmp sge i8 %x, 17
@@ -1785,9 +1677,7 @@ define i1 @and_sge_sge_swap(i8 %x) {
 define i1 @and_sge_sgt_swap(i8 %x) {
 ; CHECK-LABEL: @and_sge_sgt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sge i8 %x, 23
   %b = icmp sgt i8 %x, 17
@@ -1824,9 +1714,7 @@ define i1 @and_sge_slt_swap(i8 %x) {
 define i1 @and_sge_uge_swap(i8 %x) {
 ; CHECK-LABEL: @and_sge_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sge i8 %x, 23
   %b = icmp uge i8 %x, 17
@@ -1839,9 +1727,7 @@ define i1 @and_sge_uge_swap(i8 %x) {
 define i1 @and_sge_ugt_swap(i8 %x) {
 ; CHECK-LABEL: @and_sge_ugt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sge i8 %x, 23
   %b = icmp ugt i8 %x, 17
@@ -1891,9 +1777,7 @@ define i1 @and_sgt_eq_swap(i8 %x) {
 define i1 @and_sgt_ne_swap(i8 %x) {
 ; CHECK-LABEL: @and_sgt_ne_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sgt i8 %x, 23
   %b = icmp ne i8 %x, 17
@@ -1906,9 +1790,7 @@ define i1 @and_sgt_ne_swap(i8 %x) {
 define i1 @and_sgt_sge_swap(i8 %x) {
 ; CHECK-LABEL: @and_sgt_sge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sgt i8 %x, 23
   %b = icmp sge i8 %x, 17
@@ -1921,9 +1803,7 @@ define i1 @and_sgt_sge_swap(i8 %x) {
 define i1 @and_sgt_sgt_swap(i8 %x) {
 ; CHECK-LABEL: @and_sgt_sgt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sgt i8 %x, 23
   %b = icmp sgt i8 %x, 17
@@ -1960,9 +1840,7 @@ define i1 @and_sgt_slt_swap(i8 %x) {
 define i1 @and_sgt_uge_swap(i8 %x) {
 ; CHECK-LABEL: @and_sgt_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sgt i8 %x, 23
   %b = icmp uge i8 %x, 17
@@ -1975,9 +1853,7 @@ define i1 @and_sgt_uge_swap(i8 %x) {
 define i1 @and_sgt_ugt_swap(i8 %x) {
 ; CHECK-LABEL: @and_sgt_ugt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp sgt i8 %x, 23
   %b = icmp ugt i8 %x, 17
@@ -2014,10 +1890,8 @@ define i1 @and_sgt_ult_swap(i8 %x) {
 
 define i1 @and_sle_eq_swap(i8 %x) {
 ; CHECK-LABEL: @and_sle_eq_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sle i8 %x, 23
   %b = icmp eq i8 %x, 17
@@ -2074,10 +1948,8 @@ define i1 @and_sle_sgt_swap(i8 %x) {
 
 define i1 @and_sle_sle_swap(i8 %x) {
 ; CHECK-LABEL: @and_sle_sle_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sle i8 %x, 23
   %b = icmp sle i8 %x, 17
@@ -2089,10 +1961,8 @@ define i1 @and_sle_sle_swap(i8 %x) {
 
 define i1 @and_sle_slt_swap(i8 %x) {
 ; CHECK-LABEL: @and_sle_slt_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sle i8 %x, 23
   %b = icmp slt i8 %x, 17
@@ -2134,10 +2004,8 @@ define i1 @and_sle_ugt_swap(i8 %x) {
 
 define i1 @and_sle_ule_swap(i8 %x) {
 ; CHECK-LABEL: @and_sle_ule_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sle i8 %x, 23
   %b = icmp ule i8 %x, 17
@@ -2149,10 +2017,8 @@ define i1 @and_sle_ule_swap(i8 %x) {
 
 define i1 @and_sle_ult_swap(i8 %x) {
 ; CHECK-LABEL: @and_sle_ult_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp sle i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp sle i8 %x, 23
   %b = icmp ult i8 %x, 17
@@ -2165,10 +2031,8 @@ define i1 @and_sle_ult_swap(i8 %x) {
 
 define i1 @and_slt_eq_swap(i8 %x) {
 ; CHECK-LABEL: @and_slt_eq_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp slt i8 %x, 23
   %b = icmp eq i8 %x, 17
@@ -2225,10 +2089,8 @@ define i1 @and_slt_sgt_swap(i8 %x) {
 
 define i1 @and_slt_sle_swap(i8 %x) {
 ; CHECK-LABEL: @and_slt_sle_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp sle i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp slt i8 %x, 23
   %b = icmp sle i8 %x, 17
@@ -2240,10 +2102,8 @@ define i1 @and_slt_sle_swap(i8 %x) {
 
 define i1 @and_slt_slt_swap(i8 %x) {
 ; CHECK-LABEL: @and_slt_slt_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp slt i8 %x, 23
   %b = icmp slt i8 %x, 17
@@ -2285,10 +2145,8 @@ define i1 @and_slt_ugt_swap(i8 %x) {
 
 define i1 @and_slt_ule_swap(i8 %x) {
 ; CHECK-LABEL: @and_slt_ule_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp slt i8 %x, 23
   %b = icmp ule i8 %x, 17
@@ -2300,10 +2158,8 @@ define i1 @and_slt_ule_swap(i8 %x) {
 
 define i1 @and_slt_ult_swap(i8 %x) {
 ; CHECK-LABEL: @and_slt_ult_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp slt i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp slt i8 %x, 23
   %b = icmp ult i8 %x, 17
@@ -2329,9 +2185,7 @@ define i1 @and_uge_eq_swap(i8 %x) {
 define i1 @and_uge_ne_swap(i8 %x) {
 ; CHECK-LABEL: @and_uge_ne_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp uge i8 %x, 23
   %b = icmp ne i8 %x, 17
@@ -2404,9 +2258,7 @@ define i1 @and_uge_slt_swap(i8 %x) {
 define i1 @and_uge_uge_swap(i8 %x) {
 ; CHECK-LABEL: @and_uge_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp uge i8 %x, 23
   %b = icmp uge i8 %x, 17
@@ -2419,9 +2271,7 @@ define i1 @and_uge_uge_swap(i8 %x) {
 define i1 @and_uge_ugt_swap(i8 %x) {
 ; CHECK-LABEL: @and_uge_ugt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp uge i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp uge i8 %x, 23
   %b = icmp ugt i8 %x, 17
@@ -2471,9 +2321,7 @@ define i1 @and_ugt_eq_swap(i8 %x) {
 define i1 @and_ugt_ne_swap(i8 %x) {
 ; CHECK-LABEL: @and_ugt_ne_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ugt i8 %x, 23
   %b = icmp ne i8 %x, 17
@@ -2546,9 +2394,7 @@ define i1 @and_ugt_slt_swap(i8 %x) {
 define i1 @and_ugt_uge_swap(i8 %x) {
 ; CHECK-LABEL: @and_ugt_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ugt i8 %x, 23
   %b = icmp uge i8 %x, 17
@@ -2561,9 +2407,7 @@ define i1 @and_ugt_uge_swap(i8 %x) {
 define i1 @and_ugt_ugt_swap(i8 %x) {
 ; CHECK-LABEL: @and_ugt_ugt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 %x, 23
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = icmp ugt i8 %x, 23
   %b = icmp ugt i8 %x, 17
@@ -2600,10 +2444,8 @@ define i1 @and_ugt_ult_swap(i8 %x) {
 
 define i1 @and_ule_eq_swap(i8 %x) {
 ; CHECK-LABEL: @and_ule_eq_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ule i8 %x, 23
   %b = icmp eq i8 %x, 17
@@ -2720,10 +2562,8 @@ define i1 @and_ule_ugt_swap(i8 %x) {
 
 define i1 @and_ule_ule_swap(i8 %x) {
 ; CHECK-LABEL: @and_ule_ule_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ule i8 %x, 23
   %b = icmp ule i8 %x, 17
@@ -2735,10 +2575,8 @@ define i1 @and_ule_ule_swap(i8 %x) {
 
 define i1 @and_ule_ult_swap(i8 %x) {
 ; CHECK-LABEL: @and_ule_ult_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ule i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ule i8 %x, 23
   %b = icmp ult i8 %x, 17
@@ -2751,10 +2589,8 @@ define i1 @and_ule_ult_swap(i8 %x) {
 
 define i1 @and_ult_eq_swap(i8 %x) {
 ; CHECK-LABEL: @and_ult_eq_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ult i8 %x, 23
   %b = icmp eq i8 %x, 17
@@ -2871,10 +2707,8 @@ define i1 @and_ult_ugt_swap(i8 %x) {
 
 define i1 @and_ult_ule_swap(i8 %x) {
 ; CHECK-LABEL: @and_ult_ule_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ult i8 %x, 23
   %b = icmp ule i8 %x, 17
@@ -2886,10 +2720,8 @@ define i1 @and_ult_ule_swap(i8 %x) {
 
 define i1 @and_ult_ult_swap(i8 %x) {
 ; CHECK-LABEL: @and_ult_ult_swap(
-; CHECK-NEXT:    [[A:%.*]] = icmp ult i8 %x, 23
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 %x, 17
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = icmp ult i8 %x, 23
   %b = icmp ult i8 %x, 17

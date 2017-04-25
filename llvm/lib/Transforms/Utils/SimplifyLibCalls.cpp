@@ -37,10 +37,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 static cl::opt<bool>
-    ColdErrorCalls("error-reporting-is-cold", cl::init(true), cl::Hidden,
-                   cl::desc("Treat error-reporting calls as cold"));
-
-static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
                          cl::init(false),
                          cl::desc("Enable unsafe double to float "
@@ -930,6 +926,24 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (V == nullptr)
     return nullptr;
   
+  // If call isn't an intrinsic, check that it isn't within a function with the
+  // same name as the float version of this call.
+  //
+  // e.g. inline float expf(float val) { return (float) exp((double) val); }
+  //
+  // A similar such definition exists in the MinGW-w64 math.h header file which
+  // when compiled with -O2 -ffast-math causes the generation of infinite loops
+  // where expf is called.
+  if (!Callee->isIntrinsic()) {
+    const Function *F = CI->getFunction();
+    StringRef FName = F->getName();
+    StringRef CalleeName = Callee->getName();
+    if ((FName.size() == (CalleeName.size() + 1)) &&
+        (FName.back() == 'f') &&
+        FName.startswith(CalleeName))
+      return nullptr;
+  }
+
   // Propagate fast-math flags from the existing call to the new call.
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());
@@ -1632,7 +1646,7 @@ Value *LibCallSimplifier::optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,
 }
 
 static bool isReportingError(Function *Callee, CallInst *CI, int StreamArg) {
-  if (!ColdErrorCalls || !Callee || !Callee->isDeclaration())
+  if (!Callee || !Callee->isDeclaration())
     return false;
 
   if (StreamArg < 0)

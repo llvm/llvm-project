@@ -2868,7 +2868,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
   // A left-shift of a constant one will have exactly one bit set because
   // shifting the bit off the end is undefined.
   if (Val.getOpcode() == ISD::SHL) {
-    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue() == 1)
       return true;
   }
@@ -2876,7 +2876,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
   // Similarly, a logical right-shift of a constant sign-bit will have exactly
   // one bit set.
   if (Val.getOpcode() == ISD::SRL) {
-    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue().isSignMask())
       return true;
   }

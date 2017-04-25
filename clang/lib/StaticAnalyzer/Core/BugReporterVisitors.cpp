@@ -61,7 +61,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
         return U->getSubExpr()->IgnoreParenCasts();
     }
     else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
-      if (ME->isArrow() || isDeclRefExprToReference(ME->getBase())) {
+      if (ME->isImplicitAccess()) {
+        return ME;
+      } else if (ME->isArrow() || isDeclRefExprToReference(ME->getBase())) {
         return ME->getBase()->IgnoreParenCasts();
       } else {
         // If we have a member expr with a dot, the base must have been
@@ -73,9 +75,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       return IvarRef->getBase()->IgnoreParenCasts();
     }
     else if (const ArraySubscriptExpr *AE = dyn_cast<ArraySubscriptExpr>(E)) {
-      return AE->getBase();
+      return getDerefExpr(AE->getBase());
     }
-    else if (isDeclRefExprToReference(E)) {
+    else if (isa<DeclRefExpr>(E)) {
       return E;
     }
     break;
@@ -974,14 +976,11 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     // This code interacts heavily with this hack; otherwise the value
     // would not be null at all for most fields, so we'd be unable to track it.
     if (const auto *Op = dyn_cast<UnaryOperator>(Ex))
-      if (Op->getOpcode() == UO_AddrOf && Op->getSubExpr()->isLValue()) {
-        Ex = Op->getSubExpr()->IgnoreParenCasts();
-        while (const auto *ME = dyn_cast<MemberExpr>(Ex)) {
-          Ex = ME->getBase()->IgnoreParenCasts();
-        }
-      }
+      if (Op->getOpcode() == UO_AddrOf && Op->getSubExpr()->isLValue())
+        if (const Expr *DerefEx = getDerefExpr(Op->getSubExpr()))
+          Ex = DerefEx;
 
-    if (ExplodedGraph::isInterestingLValueExpr(Ex) || CallEvent::isCallStmt(Ex))
+    if (Ex && (ExplodedGraph::isInterestingLValueExpr(Ex) || CallEvent::isCallStmt(Ex)))
       Inner = Ex;
   }
 

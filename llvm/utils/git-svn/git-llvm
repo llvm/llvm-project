@@ -51,6 +51,7 @@ GIT_TO_SVN_DIR.update({'clang': 'cfe/trunk'})
 
 VERBOSE = False
 QUIET = False
+dev_null_fd = None
 
 
 def eprint(*args, **kwargs):
@@ -82,19 +83,33 @@ def first_dirname(d):
         d = head
 
 
-def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True):
+def get_dev_null():
+    """Lazily create a /dev/null fd for use in shell()"""
+    global dev_null_fd
+    if dev_null_fd is None:
+        dev_null_fd = open(os.devnull, 'w')
+    return dev_null_fd
+
+
+def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
+          ignore_errors=False):
     log_verbose('Running: %s' % ' '.join(cmd))
 
+    err_pipe = subprocess.PIPE
+    if ignore_errors:
+        # Silence errors if requested.
+        err_pipe = get_dev_null()
+
     start = time.time()
-    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=err_pipe,
+                         stdin=subprocess.PIPE)
     stdout, stderr = p.communicate(input=stdin)
     elapsed = time.time() - start
 
     log_verbose('Command took %0.1fs' % elapsed)
 
-    if p.returncode == 0:
-        if stderr:
+    if p.returncode == 0 or ignore_errors:
+        if stderr and not ignore_errors:
             eprint('`%s` printed to stderr:' % ' '.join(cmd))
             eprint(stderr.rstrip())
         if strip:
@@ -115,7 +130,8 @@ def git(*cmd, **kwargs):
 
 def svn(cwd, *cmd, **kwargs):
     # TODO: Better way to do default arg when we have *cmd?
-    return shell(['svn'] + list(cmd), cwd=cwd, stdin=kwargs.get('stdin', None))
+    return shell(['svn'] + list(cmd), cwd=cwd, stdin=kwargs.get('stdin', None),
+                 ignore_errors=kwargs.get('ignore_errors', None))
 
 
 def get_default_rev_range():
@@ -173,6 +189,43 @@ def svn_init(svn_root):
         die("Can't initialize svn staging dir (%s)" % svn_root)
 
 
+def fix_eol_style_native(rev, sr, svn_sr_path):
+    """Fix line endings before applying patches with Unix endings
+
+    SVN on Windows will check out files with CRLF for files with the
+    svn:eol-style property set to "native". This breaks `git apply`, which
+    typically works with Unix-line ending patches. Work around the problem here
+    by doing a dos2unix up front for files with svn:eol-style set to "native".
+    SVN will not commit a mass line ending re-doing because it detects the line
+    ending format for files with this property.
+    """
+    files = git('diff-tree', '--no-commit-id', '--name-only', '-r', rev, '--',
+                sr).split('\n')
+    files = [f.split('/', 1)[1] for f in files]
+    # Use ignore_errors because 'svn propget' prints errors if the file doesn't
+    # have the named property. There doesn't seem to be a way to suppress that.
+    eol_props = svn(svn_sr_path, 'propget', 'svn:eol-style', *files,
+                    ignore_errors=True).split('\n')
+    crlf_files = []
+    for eol_prop in eol_props:
+        # Remove spare CR.
+        eol_prop = eol_prop.strip('\r')
+        if not eol_prop:
+            continue
+        prop_parts = eol_prop.rsplit(' - ', 1)
+        if len(prop_parts) != 2:
+            eprint("unable to parse svn propget line:")
+            eprint(eol_prop)
+            continue
+        (f, eol_style) = prop_parts
+        if eol_style == 'native':
+            crlf_files.append(f)
+    # Reformat all files with native SVN line endings to Unix format. SVN knows
+    # files with native line endings are text files. It will commit just the
+    # diff, and not a mass line ending change.
+    shell(['dos2unix', '-q'] + crlf_files, cwd=svn_sr_path)
+
+
 def svn_push_one_rev(svn_repo, rev, dry_run):
     files = git('diff-tree', '--no-commit-id', '--name-only', '-r',
                 rev).split('\n')
@@ -186,8 +239,10 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
             (rev, status))
 
     for sr in subrepos:
-        diff = git('show', '--binary', rev, '--', sr, strip=False)
         svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])
+        if os.name == 'nt':
+            fix_eol_style_native(rev, sr, svn_sr_path)
+        diff = git('show', '--binary', rev, '--', sr, strip=False)
         # git is the only thing that can handle its own patches...
         log_verbose('Apply patch: %s' % diff)
         try:

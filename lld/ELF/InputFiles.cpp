@@ -608,8 +608,9 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
 }
 
 template <class ELFT>
-SharedFile<ELFT>::SharedFile(MemoryBufferRef M)
-    : ELFFileBase<ELFT>(Base::SharedKind, M), AsNeeded(Config->AsNeeded) {}
+SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
+    : ELFFileBase<ELFT>(Base::SharedKind, M), SoName(DefaultSoName),
+      AsNeeded(Config->AsNeeded) {}
 
 template <class ELFT>
 const typename ELFT::Shdr *
@@ -617,12 +618,6 @@ SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   return check(
       this->getObj().getSection(&Sym, this->Symbols, this->SymtabSHNDX),
       toString(this));
-}
-
-template <class ELFT> StringRef SharedFile<ELFT>::getSoName() const {
-  if (SoName.empty())
-    return this->DefaultSoName;
-  return SoName;
 }
 
 // Partially parse the shared object file so that we can call
@@ -867,8 +862,23 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
 }
 
+// Small bit of template meta programming to handle the SharedFile constructor
+// being the only one with a DefaultSoName parameter.
+template <template <class> class T, class E>
+typename std::enable_if<std::is_same<T<E>, SharedFile<E>>::value,
+                        InputFile *>::type
+createELFAux(MemoryBufferRef MB, StringRef DefaultSoName) {
+  return make<T<E>>(MB, DefaultSoName);
+}
+template <template <class> class T, class E>
+typename std::enable_if<!std::is_same<T<E>, SharedFile<E>>::value,
+                        InputFile *>::type
+createELFAux(MemoryBufferRef MB, StringRef DefaultSoName) {
+  return make<T<E>>(MB);
+}
+
 template <template <class> class T>
-static InputFile *createELFFile(MemoryBufferRef MB) {
+static InputFile *createELFFile(MemoryBufferRef MB, StringRef DefaultSoName) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
@@ -882,13 +892,13 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
 
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = make<T<ELF32LE>>(MB);
+    Obj = createELFAux<T, ELF32LE>(MB, DefaultSoName);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = make<T<ELF32BE>>(MB);
+    Obj = createELFAux<T, ELF32BE>(MB, DefaultSoName);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = make<T<ELF64LE>>(MB);
+    Obj = createELFAux<T, ELF64LE>(MB, DefaultSoName);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = make<T<ELF64BE>>(MB);
+    Obj = createELFAux<T, ELF64BE>(MB, DefaultSoName);
   else
     fatal(MB.getBufferIdentifier() + ": invalid file class");
 
@@ -933,13 +943,13 @@ InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
   InputFile *F = isBitcode(MB)
                      ? make<BitcodeFile>(MB, ArchiveName, OffsetInArchive)
-                     : createELFFile<ObjectFile>(MB);
+                     : createELFFile<ObjectFile>(MB, "");
   F->ArchiveName = ArchiveName;
   return F;
 }
 
-InputFile *elf::createSharedFile(MemoryBufferRef MB) {
-  return createELFFile<SharedFile>(MB);
+InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
+  return createELFFile<SharedFile>(MB, DefaultSoName);
 }
 
 MemoryBufferRef LazyObjectFile::getBuffer() {

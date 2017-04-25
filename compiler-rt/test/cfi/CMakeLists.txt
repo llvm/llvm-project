@@ -32,7 +32,7 @@ endmacro()
 if (APPLE)
   # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32741
   add_cfi_test_suites(False False)
-elseif(WINDOWS)
+elseif(WIN32)
   # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32770
   add_cfi_test_suites(True False)
 else()

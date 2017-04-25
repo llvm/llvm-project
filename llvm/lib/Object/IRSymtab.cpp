@@ -1,4 +1,4 @@
-//===- IRSymtab.cpp - implementation of IR symbol tables --------*- C++ -*-===//
+//===- IRSymtab.cpp - implementation of IR symbol tables ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/IRSymtab.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/ObjectUtils.h"
+#include "llvm/IR/Comdat.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/IRSymtab.h"
 #include "llvm/Object/ModuleSymbolTable.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/StringSaver.h"
+#include <cassert>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace irsymtab;
@@ -25,6 +45,7 @@ namespace {
 struct Builder {
   SmallVector<char, 0> &Symtab;
   SmallVector<char, 0> &Strtab;
+
   Builder(SmallVector<char, 0> &Symtab, SmallVector<char, 0> &Strtab)
       : Symtab(Symtab), Strtab(Strtab) {}
 
@@ -49,6 +70,7 @@ struct Builder {
     S.Offset = StrtabBuilder.add(Value);
     S.Size = Value.size();
   }
+
   template <typename T>
   void writeRange(storage::Range<T> &R, const std::vector<T> &Objs) {
     R.Offset = Symtab.size();
@@ -228,7 +250,7 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
   return Error::success();
 }
 
-} // anonymous namespace
+} // end anonymous namespace
 
 Error irsymtab::build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
                       SmallVector<char, 0> &Strtab) {

@@ -79,14 +79,6 @@ inline StringRef getInstrProfValueRangeProfFuncName() {
   return INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR;
 }
 
-/// Return the name of the section containing function coverage mapping
-/// data.
-std::string getInstrProfCoverageSectionName(const Module *M = nullptr);
-/// Similar to the above, but used by host tool (e.g, coverage) which has
-/// object format information. The section name returned is not prefixed
-/// with segment name.
-std::string getInstrProfCoverageSectionNameInObject(bool isCoff);
-
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 

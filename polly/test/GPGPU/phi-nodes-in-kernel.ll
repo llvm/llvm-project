@@ -49,10 +49,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KERNEL-IR: entry:
 ; KERNEL-IR-NEXT:   %out_l.055.s2a = alloca i32
 ; KERNEL-IR-NEXT:   %out_l.055.phiops = alloca i32
-; KERNEL-IR-NEXT:   %1 = bitcast i8* %MemRef_out_l_055__phi to i32*
+; KERNEL-IR-NEXT:   %1 = addrspacecast i8 addrspace(1)* %MemRef_out_l_055__phi to i32*
 ; KERNEL-IR-NEXT:   %2 = load i32, i32* %1
 ; KERNEL-IR-NEXT:   store i32 %2, i32* %out_l.055.phiops
-; KERNEL-IR-NEXT:   %3 = bitcast i8* %MemRef_out_l_055 to i32*
+; KERNEL-IR-NEXT:   %3 = addrspacecast i8 addrspace(1)* %MemRef_out_l_055 to i32*
 ; KERNEL-IR-NEXT:   %4 = load i32, i32* %3
 ; KERNEL-IR-NEXT:   store i32 %4, i32* %out_l.055.s2a
 

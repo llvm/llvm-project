@@ -66,6 +66,8 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
+  clang::DeclContext *GetDeclContextForBlock(const DWARFDIE &die);
+
   clang::BlockDecl *ResolveBlockDIE(const DWARFDIE &die);
 
   clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);

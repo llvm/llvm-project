@@ -4516,14 +4516,15 @@ void InnerLoopVectorizer::predicateInstructions() {
   for (auto KV : PredicatedInstructions) {
     BasicBlock::iterator I(KV.first);
     BasicBlock *Head = I->getParent();
-    auto *BB = SplitBlock(Head, &*std::next(I), DT, LI);
     auto *T = SplitBlockAndInsertIfThen(KV.second, &*I, /*Unreachable=*/false,
                                         /*BranchWeights=*/nullptr, DT, LI);
     I->moveBefore(T);
     sinkScalarOperands(&*I);
 
-    I->getParent()->setName(Twine("pred.") + I->getOpcodeName() + ".if");
-    BB->setName(Twine("pred.") + I->getOpcodeName() + ".continue");
+    BasicBlock *PredicatedBlock = I->getParent();
+    Twine BBNamePrefix = Twine("pred.") + I->getOpcodeName();
+    PredicatedBlock->setName(BBNamePrefix + ".if");
+    PredicatedBlock->getSingleSuccessor()->setName(BBNamePrefix + ".continue");
 
     // If the instruction is non-void create a Phi node at reconvergence point.
     if (!I->getType()->isVoidTy()) {
