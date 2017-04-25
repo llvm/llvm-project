@@ -206,6 +206,10 @@ public:
       }
     }
     gatherTemplatePseudoOverrides(D, Relations);
+    if (const auto *Base = D->getPrimaryTemplate())
+      Relations.push_back(
+          SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
+                         Base->getTemplatedDecl()));
 
     TRY_DECL(D, IndexCtx.handleDecl(D, Roles, Relations));
     handleDeclarator(D);
