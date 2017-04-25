@@ -48,7 +48,7 @@ public:
   llvm::opt::InputArgList parse(llvm::ArrayRef<const char *> Args);
 
   // Concatenate LINK environment varirable and given arguments and parse them.
-  llvm::opt::InputArgList parseLINK(llvm::ArrayRef<const char *> Args);
+  llvm::opt::InputArgList parseLINK(std::vector<const char *> Args);
 
   // Tokenizes a given string and then parses as command line options.
   llvm::opt::InputArgList parse(StringRef S) { return parse(tokenize(S)); }

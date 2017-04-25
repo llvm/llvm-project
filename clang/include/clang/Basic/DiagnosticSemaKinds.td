@@ -8804,7 +8804,7 @@ let CategoryName = "Modules Issue" in {
 def err_module_decl_in_module_map_module : Error<
   "'module' declaration found while building module from module map">;
 def err_module_interface_implementation_mismatch : Error<
-  "missing 'export' specifier in 'module' declaration while "
+  "missing 'export' specifier in module declaration while "
   "building module interface">;
 def err_current_module_name_mismatch : Error<
   "module name '%0' specified on command line does not match name of module">;
@@ -8848,8 +8848,13 @@ def err_module_self_import : Error<
   "import of module '%0' appears within same top-level module '%1'">;
 def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
+
+// C++ Modules TS
 def err_export_within_export : Error<
   "export declaration appears within another export declaration">;
+def err_export_not_in_module_interface : Error<
+  "export declaration can only be used within a module interface unit after "
+  "the module declaration">;
 
 def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   "ambiguous use of internal linkage declaration %0 defined in multiple modules">,

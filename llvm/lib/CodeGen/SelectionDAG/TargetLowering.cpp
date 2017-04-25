@@ -2541,7 +2541,7 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
   for (const TargetRegisterClass *RC : RI->regclasses()) {
     // If none of the value types for this register class are valid, we
     // can't use it.  For example, 64-bit reg classes on 32-bit targets.
-    if (!isLegalRC(RC))
+    if (!isLegalRC(*RI, *RC))
       continue;
 
     for (TargetRegisterClass::iterator I = RC->begin(), E = RC->end();
@@ -2553,9 +2553,9 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
         // If this register class has the requested value type, return it,
         // otherwise keep searching and return the first class found
         // if no other is found which explicitly has the requested type.
-        if (RC->hasType(VT))
+        if (RI->isTypeLegalForClass(*RC, VT))
           return S;
-        else if (!R.second)
+        if (!R.second)
           R = S;
       }
     }

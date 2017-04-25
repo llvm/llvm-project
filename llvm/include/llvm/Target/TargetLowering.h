@@ -2274,7 +2274,8 @@ protected:
 
   /// Return true if the value types that can be represented by the specified
   /// register class are all legal.
-  bool isLegalRC(const TargetRegisterClass *RC) const;
+  bool isLegalRC(const TargetRegisterInfo &TRI,
+                 const TargetRegisterClass &RC) const;
 
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.

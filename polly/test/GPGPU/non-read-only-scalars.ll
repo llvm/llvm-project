@@ -87,10 +87,10 @@
 ; CODE-NEXT: Stmt_bb20(c0);
 
 ; KERNEL-IR:       store float %p_tmp23, float* %sum.0.phiops
-; KERNEL-IR-NEXT:  [[REGA:%.+]] = bitcast i8* %MemRef_sum_0__phi to float*
+; KERNEL-IR-NEXT:  [[REGA:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0__phi to float*
 ; KERNEL-IR-NEXT:  [[REGB:%.+]] = load float, float* %sum.0.phiops
 ; KERNEL-IR-NEXT:  store float [[REGB]], float* [[REGA]]
-; KERNEL-IR-NEXT:  [[REGC:%.+]] = bitcast i8* %MemRef_sum_0 to float*
+; KERNEL-IR-NEXT:  [[REGC:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0 to float*
 ; KERNEL-IR-NEXT:  [[REGD:%.+]] = load float, float* %sum.0.s2a
 ; KERNEL-IR-NEXT:  store float [[REGD]], float* [[REGC]]
 ; KERNEL-IR-NEXT:  ret void

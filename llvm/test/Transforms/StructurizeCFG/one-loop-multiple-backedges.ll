@@ -11,8 +11,8 @@ bb:
 bb3:                                              ; preds = %bb7, %bb
   %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb7 ]
   %tmp4 = fcmp ult float %arg1, 3.500000e+00
-; CHECK: %tmp4 = fcmp oge float %arg1, 3.500000e+00
-; CHECK: br i1 %tmp4, label %bb5, label %Flow
+; CHECK: %0 = xor i1 %tmp4, true
+; CHECK: br i1 %0, label %bb5, label %Flow
   br i1 %tmp4, label %bb7, label %bb5
 
 ; CHECK: bb5:
@@ -22,8 +22,7 @@ bb5:                                              ; preds = %bb3
   br i1 %tmp6, label %bb10, label %bb7
 
 ; CHECK: Flow:
-; CHECK: %1 = phi i1 [ %tmp6, %bb5 ], [ %tmp4, %bb3 ]
-; CHECK-NEXT: br i1 %1, label %bb7, label %Flow1
+; CHECK: br i1 %3, label %bb7, label %Flow1
 
 ; CHECK: bb7
 bb7:                                              ; preds = %bb5, %bb3
@@ -33,10 +32,9 @@ bb7:                                              ; preds = %bb5, %bb3
   br i1 %tmp9, label %bb3, label %bb10
 
 ; CHECK: Flow1:
-; CHECK: %4 = phi i1 [ %tmp9, %bb7 ], [ true, %Flow ]
-; CHECK-NEXT: br i1 %4, label %bb10, label %bb3
+; CHECK: br i1 %7, label %bb10, label %bb3
 
-; CHECK: bb10:
+; CHECK: bb10
 bb10:                                             ; preds = %bb7, %bb5
   %tmp11 = phi i32 [ 15, %bb5 ], [ 255, %bb7 ]
   store i32 %tmp11, i32 addrspace(1)* %arg, align 4

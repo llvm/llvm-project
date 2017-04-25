@@ -220,6 +220,7 @@ void CodeExtractor::severSplitPHINodes(BasicBlock *&Header) {
       // from OldPred of PN.
       PHINode *NewPN = PHINode::Create(PN->getType(), 1 + NumPredsFromRegion,
                                        PN->getName() + ".ce", &NewBB->front());
+      PN->replaceAllUsesWith(NewPN);
       NewPN->addIncoming(PN, OldPred);
 
       // Loop over all of the incoming value in PN, moving them to NewPN if they

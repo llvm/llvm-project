@@ -1184,12 +1184,11 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
 
 /// isLegalRC - Return true if the value types that can be represented by the
 /// specified register class are all legal.
-bool TargetLoweringBase::isLegalRC(const TargetRegisterClass *RC) const {
-  for (TargetRegisterClass::vt_iterator I = RC->vt_begin(), E = RC->vt_end();
-       I != E; ++I) {
+bool TargetLoweringBase::isLegalRC(const TargetRegisterInfo &TRI,
+                                   const TargetRegisterClass &RC) const {
+  for (auto I = TRI.legalclasstypes_begin(RC); *I != MVT::Other; ++I)
     if (isTypeLegal(*I))
       return true;
-  }
   return false;
 }
 
@@ -1301,7 +1300,7 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
     // We want the largest possible spill size.
     if (TRI->getSpillSize(*SuperRC) <= TRI->getSpillSize(*BestRC))
       continue;
-    if (!isLegalRC(SuperRC))
+    if (!isLegalRC(*TRI, *SuperRC))
       continue;
     BestRC = SuperRC;
   }

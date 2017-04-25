@@ -2694,9 +2694,10 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   unsigned ConflictAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
   // Write the submodule metadata block.
-  RecordData::value_type Record[] = {getNumberOfModules(WritingModule),
-                                     FirstSubmoduleID -
-                                         NUM_PREDEF_SUBMODULE_IDS};
+  RecordData::value_type Record[] = {
+      getNumberOfModules(WritingModule),
+      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS,
+      (unsigned)WritingModule->Kind};
   Stream.EmitRecord(SUBMODULE_METADATA, Record);
   
   // Write all of the submodules.

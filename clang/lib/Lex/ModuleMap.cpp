@@ -581,6 +581,7 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
   auto *Result =
       new Module(Name, Loc, nullptr, /*IsFramework*/ false,
                  /*IsExplicit*/ false, NumCreatedModules++);
+  Result->Kind = Module::ModuleInterfaceUnit;
   Modules[Name] = SourceModule = Result;
 
   // Mark the main source file as being within the newly-created module so that

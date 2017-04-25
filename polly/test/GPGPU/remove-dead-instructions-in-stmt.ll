@@ -10,7 +10,7 @@
 ; condition. This code referred to CPU registers and consequently resulted
 ; in invalid bitcode.
 
-; KERNEL-IR: store i32 0, i32* %polly.access.MemRef_sum_c, align 4
+; KERNEL-IR: store i32 0, i32 addrspace(1)* %polly.access.MemRef_sum_c, align 4
 ; KERNEL-IR-NEXT: br label %polly.merge
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

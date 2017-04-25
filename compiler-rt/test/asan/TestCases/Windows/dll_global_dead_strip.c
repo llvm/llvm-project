@@ -1,8 +1,8 @@
 // RUN: %clang_cl_asan -O0 %p/dll_host.cc -Fe%t
 //
-// RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll
+// RUN: %clang_cl_asan /Gw -LD -O0 %s -Fe%t.dll
 // RUN: %env_asan_opts=report_globals=2 %run %t %t.dll 2>&1 | FileCheck %s --check-prefix=NOSTRIP
-// RUN: %clang_cl_asan -LD -O2 %s -Fe%t.dll -link -opt:ref
+// RUN: %clang_cl_asan /Gw -LD -O2 %s -Fe%t.dll -link -opt:ref
 // RUN: %env_asan_opts=report_globals=2 %run %t %t.dll 2>&1 | FileCheck %s --check-prefix=STRIP
 
 #include <stdio.h>

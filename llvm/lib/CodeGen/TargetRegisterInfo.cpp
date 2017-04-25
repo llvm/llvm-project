@@ -156,8 +156,8 @@ TargetRegisterInfo::getMinimalPhysRegClass(unsigned reg, MVT VT) const {
   // this physreg.
   const TargetRegisterClass* BestRC = nullptr;
   for (const TargetRegisterClass* RC : regclasses()) {
-    if ((VT == MVT::Other || RC->hasType(VT)) && RC->contains(reg) &&
-        (!BestRC || BestRC->hasSubClass(RC)))
+    if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
+        RC->contains(reg) && (!BestRC || BestRC->hasSubClass(RC)))
       BestRC = RC;
   }
 
@@ -207,7 +207,7 @@ const TargetRegisterClass *firstCommonClass(const uint32_t *A,
     if (unsigned Common = *A++ & *B++) {
       const TargetRegisterClass *RC =
           TRI->getRegClass(I + countTrailingZeros(Common));
-      if (SVT == MVT::SimpleValueType::Any || RC->hasType(VT))
+      if (SVT == MVT::SimpleValueType::Any || TRI->isTypeLegalForClass(*RC, VT))
         return RC;
     }
   return nullptr;

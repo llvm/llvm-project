@@ -51,40 +51,47 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
   transform(AR->operands(), std::back_inserter(Operands),
             [&](const SCEV *Op) { return visit(Op); });
 
-  // Conservatively use AnyWrap until/unless we need FlagNW.
-  const SCEV *Result =
-      SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
-  switch (Kind) {
-  case Normalize:
-    // We want to normalize step expression, because otherwise we might not be
-    // able to denormalize to the original expression.
+  if (!Pred(AR))
+    return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
+
+  // Normalization and denormalization are fancy names for decrementing and
+  // incrementing a SCEV expression with respect to a set of loops.  Since
+  // Pred(AR) has returned true, we know we need to normalize or denormalize AR
+  // with respect to its loop.
+
+  if (Kind == Denormalize) {
+    // Denormalization / "partial increment" is essentially the same as \c
+    // SCEVAddRecExpr::getPostIncExpr.  Here we use an explicit loop to make the
+    // symmetry with Normalization clear.
+    for (int i = 0, e = Operands.size() - 1; i < e; i++)
+      Operands[i] = SE.getAddExpr(Operands[i], Operands[i + 1]);
+  } else {
+    assert(Kind == Normalize && "Only two possibilities!");
+
+    // Normalization / "partial decrement" is a bit more subtle.  Since
+    // incrementing a SCEV expression (in general) changes the step of the SCEV
+    // expression as well, we cannot use the step of the current expression.
+    // Instead, we have to use the step of the very expression we're trying to
+    // compute!
     //
-    // Here is an example what will happen if we don't normalize step:
-    //  ORIGINAL ISE:
-    //    {(100 /u {1,+,1}<%bb16>),+,(100 /u {1,+,1}<%bb16>)}<%bb25>
-    //  NORMALIZED ISE:
-    //    {((-1 * (100 /u {1,+,1}<%bb16>)) + (100 /u {0,+,1}<%bb16>)),+,
-    //     (100 /u {0,+,1}<%bb16>)}<%bb25>
-    //  DENORMALIZED BACK ISE:
-    //    {((2 * (100 /u {1,+,1}<%bb16>)) + (-1 * (100 /u {2,+,1}<%bb16>))),+,
-    //     (100 /u {1,+,1}<%bb16>)}<%bb25>
-    //  Note that the initial value changes after normalization +
-    //  denormalization, which isn't correct.
-    if (Pred(AR)) {
-      const SCEV *TransformedStep = visit(AR->getStepRecurrence(SE));
-      Result = SE.getMinusSCEV(Result, TransformedStep);
-    }
-    break;
-  case Denormalize:
-    // Here we want to normalize step expressions for the same reasons, as
-    // stated above.
-    if (Pred(AR)) {
-      const SCEV *TransformedStep = visit(AR->getStepRecurrence(SE));
-      Result = SE.getAddExpr(Result, TransformedStep);
-    }
-    break;
+    // We solve the issue by recursively building up the result, starting from
+    // the "least significant" operand in the add recurrence:
+    //
+    // Base case:
+    //   Single operand add recurrence.  It's its own normalization.
+    //
+    // N-operand case:
+    //   {S_{N-1},+,S_{N-2},+,...,+,S_0} = S
+    //
+    //   Since the step recurrence of S is {S_{N-2},+,...,+,S_0}, we know its
+    //   normalization by induction.  We subtract the normalized step
+    //   recurrence from S_{N-1} to get the normalization of S.
+
+    for (int i = Operands.size() - 2; i >= 0; i--)
+      Operands[i] = SE.getMinusSCEV(Operands[i], Operands[i + 1]);
   }
-  return Result;
+
+  return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
 }
 
 const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,

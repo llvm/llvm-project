@@ -509,7 +509,7 @@ public:
   unsigned getSlotIndex(unsigned Slot) const;
 
   /// \brief Return the attributes at the given slot.
-  AttributeList getSlotAttributes(unsigned Slot) const;
+  AttributeSet getSlotAttributes(unsigned Slot) const;
 
   void dump() const;
 };

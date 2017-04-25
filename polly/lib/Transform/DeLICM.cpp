@@ -374,6 +374,25 @@ isl::map computeScalarReachingDefinition( // { Domain[] -> Zone[] }
   return singleton(UMap, ResultSpace);
 }
 
+/// Create a domain-to-unknown value mapping.
+///
+/// Value instances that do not represent a specific value are represented by an
+/// unnamed tuple of 0 dimensions. Its meaning depends on the context. It can
+/// either mean a specific but unknown value which cannot be represented by
+/// other means. It conflicts with itself because those two unknown ValInsts may
+/// have different concrete values at runtime.
+///
+/// The other meaning is an arbitrary or wildcard value that can be chosen
+/// freely, like LLVM's undef. If matched with an unknown ValInst, there is no
+/// conflict.
+///
+/// @param Domain { Domain[] }
+///
+/// @return { Domain[] -> ValInst[] }
+isl::union_map makeUnknownForDomain(isl::union_set Domain) {
+  return give(isl_union_map_from_domain(Domain.take()));
+}
+
 /// If InputVal is not defined in the stmt itself, return the MemoryAccess that
 /// reads the scalar. Return nullptr otherwise (if the value is defined in the
 /// scop, or is synthesizable).
@@ -646,15 +665,58 @@ public:
     }
 #endif
 
-    // Are the new lifetimes required for Proposed unused in Existing?
-    if (isl_union_set_is_subset(Proposed.Occupied.keep(),
-                                Existing.Unused.keep()) != isl_bool_true) {
+    // Do the Existing and Proposed lifetimes conflict?
+    //
+    // Lifetimes are described as the cross-product of array elements and zone
+    // intervals in which they are alive (the space { [Element[] -> Zone[]] }).
+    // In the following we call this "element/lifetime interval".
+    //
+    // In order to not conflict, one of the following conditions must apply for
+    // each element/lifetime interval:
+    //
+    // 1. If occupied in one of the knowledges, it is unused in the other.
+    //
+    //   - or -
+    //
+    // 2. Both contain the same value.
+    //
+    // Instead of partitioning the element/lifetime intervals into a part that
+    // both Knowledges occupy (which requires an expensive subtraction) and for
+    // these to check whether they are known to be the same value, we check only
+    // the second condition and ensure that it also applies when then first
+    // condition is true. This is done by adding a wildcard value to
+    // Proposed.Known and Existing.Unused such that they match as a common known
+    // value. We use the "unknown ValInst" for this purpose. Every
+    // Existing.Unused may match with an unknown Proposed.Occupied because these
+    // never are in conflict with each other.
+    auto ProposedOccupiedAnyVal = makeUnknownForDomain(Proposed.Occupied);
+    auto ProposedValues = Proposed.Known.unite(ProposedOccupiedAnyVal);
+
+    auto ExistingUnusedAnyVal = makeUnknownForDomain(Existing.Unused);
+    auto ExistingValues = Existing.Known.unite(ExistingUnusedAnyVal);
+
+    auto MatchingVals = ExistingValues.intersect(ProposedValues);
+    auto Matches = MatchingVals.domain();
+
+    // Any Proposed.Occupied must either have a match between the known values
+    // of Existing and Occupied, or be in Existing.Unused. In the latter case,
+    // the previously added "AnyVal" will match each other.
+    if (!Proposed.Occupied.is_subset(Matches)) {
       if (OS) {
-        auto ConflictingLifetimes = give(isl_union_set_subtract(
-            Proposed.Occupied.copy(), Existing.Unused.copy()));
-        OS->indent(Indent) << "Proposed lifetimes are not unused in existing\n";
-        OS->indent(Indent) << "Conflicting lifetimes: " << ConflictingLifetimes
-                           << "\n";
+        auto Conflicting = Proposed.Occupied.subtract(Matches);
+        auto ExistingConflictingKnown =
+            Existing.Known.intersect_domain(Conflicting);
+        auto ProposedConflictingKnown =
+            Proposed.Known.intersect_domain(Conflicting);
+
+        OS->indent(Indent) << "Proposed lifetime conflicting with Existing's\n";
+        OS->indent(Indent) << "Conflicting occupied: " << Conflicting << "\n";
+        if (!ExistingConflictingKnown.is_empty())
+          OS->indent(Indent)
+              << "Existing Known:       " << ExistingConflictingKnown << "\n";
+        if (!ProposedConflictingKnown.is_empty())
+          OS->indent(Indent)
+              << "Proposed Known:       " << ProposedConflictingKnown << "\n";
       }
       return true;
     }

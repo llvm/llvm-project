@@ -8747,7 +8747,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   // Emit the load instruction.
   SDNode *Load = nullptr;
   if (FoldedLoad) {
-    EVT VT = *RC->vt_begin();
+    EVT VT = *TRI.legalclasstypes_begin(*RC);
     std::pair<MachineInstr::mmo_iterator,
               MachineInstr::mmo_iterator> MMOs =
       MF.extractLoadMemRefs(cast<MachineSDNode>(N)->memoperands_begin(),
@@ -8775,7 +8775,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   const TargetRegisterClass *DstRC = nullptr;
   if (MCID.getNumDefs() > 0) {
     DstRC = getRegClass(MCID, 0, &RI, MF);
-    VTs.push_back(*DstRC->vt_begin());
+    VTs.push_back(*TRI.legalclasstypes_begin(*DstRC));
   }
   for (unsigned i = 0, e = N->getNumValues(); i != e; ++i) {
     EVT VT = N->getValueType(i);

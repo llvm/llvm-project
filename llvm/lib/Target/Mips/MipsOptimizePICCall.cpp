@@ -116,9 +116,10 @@ static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {
 
 /// Return type of register Reg.
 static MVT::SimpleValueType getRegTy(unsigned Reg, MachineFunction &MF) {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(Reg);
-  assert(RC->vt_end() - RC->vt_begin() == 1);
-  return *RC->vt_begin();
+  assert(TRI.legalclasstypes_end(*RC) - TRI.legalclasstypes_begin(*RC) == 1);
+  return *TRI.legalclasstypes_begin(*RC);
 }
 
 /// Do the following transformation:
