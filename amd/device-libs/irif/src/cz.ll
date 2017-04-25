@@ -23,9 +23,19 @@ define i32 @__llvm_ctlz_i32(i32) #0 {
     ret i32 %2
 }
 
+define i64 @__llvm_ctlz_i64(i64) #0 {
+    %2 = call i64 @llvm.ctlz.i64(i64 %0, i1 1)
+    ret i64 %2
+}
+
 define i32 @__llvm_cttz_i32(i32) #0 {
     %2 = call i32 @llvm.cttz.i32(i32 %0, i1 1)
     ret i32 %2
+}
+
+define i64 @__llvm_cttz_i64(i64) #0 {
+    %2 = call i64 @llvm.cttz.i64(i64 %0, i1 1)
+    ret i64 %2
 }
 
 attributes #0 = { alwaysinline argmemonly norecurse nounwind readnone }

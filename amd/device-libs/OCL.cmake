@@ -70,7 +70,7 @@ endmacro(clang_opencl_bc_lib)
 macro(prepare_builtins name)
   add_custom_command(
     OUTPUT ${name}${BC_EXT}
-    COMMAND $<TARGET_FILE:prepare-builtins> ${name}.lib.bc -o ${name}${BC_EXT}
+    COMMAND ${PREPARE_BUILTINS} ${name}.lib.bc -o ${name}${BC_EXT}
     DEPENDS prepare-builtins ${name}_lib_bc
   )
   add_custom_target(${name}_bc ALL
