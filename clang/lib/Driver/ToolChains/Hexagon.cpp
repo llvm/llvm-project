@@ -402,6 +402,40 @@ Tool *HexagonToolChain::buildLinker() const {
   return new tools::hexagon::Linker(*this);
 }
 
+unsigned HexagonToolChain::getOptimizationLevel(
+    const llvm::opt::ArgList &DriverArgs) const {
+  // Copied in large part from lib/Frontend/CompilerInvocation.cpp.
+  Arg *A = DriverArgs.getLastArg(options::OPT_O_Group);
+  if (!A)
+    return 0;
+
+  if (A->getOption().matches(options::OPT_O0))
+    return 0;
+  if (A->getOption().matches(options::OPT_Ofast) ||
+      A->getOption().matches(options::OPT_O4))
+    return 3;
+  assert(A->getNumValues() != 0);
+  StringRef S(A->getValue());
+  if (S == "s" || S == "z" || S.empty())
+    return 2;
+  if (S == "g")
+    return 1;
+
+  unsigned OptLevel;
+  if (S.getAsInteger(10, OptLevel))
+    return 0;
+  return OptLevel;
+}
+
+void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_ffp_contract))
+    return;
+  unsigned OptLevel = getOptimizationLevel(DriverArgs);
+  if (OptLevel >= 3)
+    CC1Args.push_back("-ffp-contract=fast");
+}
+
 void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||

@@ -4203,16 +4203,16 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
 
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
   // iff (c1 & c2) != 0.
-  if (N1C && N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse() &&
-             isa<ConstantSDNode>(N0.getOperand(1))) {
-    ConstantSDNode *C1 = cast<ConstantSDNode>(N0.getOperand(1));
-    if (C1->getAPIntValue().intersects(N1C->getAPIntValue())) {
-      if (SDValue COR = DAG.FoldConstantArithmetic(ISD::OR, SDLoc(N1), VT,
-                                                   N1C, C1))
-        return DAG.getNode(
-            ISD::AND, SDLoc(N), VT,
-            DAG.getNode(ISD::OR, SDLoc(N0), VT, N0.getOperand(0), N1), COR);
-      return SDValue();
+  if (N1C && N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse()) {
+    if (ConstantSDNode *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+      if (C1->getAPIntValue().intersects(N1C->getAPIntValue())) {
+        if (SDValue COR =
+                DAG.FoldConstantArithmetic(ISD::OR, SDLoc(N1), VT, N1C, C1))
+          return DAG.getNode(
+              ISD::AND, SDLoc(N), VT,
+              DAG.getNode(ISD::OR, SDLoc(N0), VT, N0.getOperand(0), N1), COR);
+        return SDValue();
+      }
     }
   }
 
@@ -5615,23 +5615,24 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   // fold (srl (trunc (srl x, c1)), c2) -> 0 or (trunc (srl x, (add c1, c2)))
   if (N1C && N0.getOpcode() == ISD::TRUNCATE &&
-      N0.getOperand(0).getOpcode() == ISD::SRL &&
-      isa<ConstantSDNode>(N0.getOperand(0)->getOperand(1))) {
-    uint64_t c1 = N0.getOperand(0).getConstantOperandVal(1);
-    uint64_t c2 = N1C->getZExtValue();
-    EVT InnerShiftVT = N0.getOperand(0).getValueType();
-    EVT ShiftCountVT = N0.getOperand(0)->getOperand(1).getValueType();
-    uint64_t InnerShiftSize = InnerShiftVT.getScalarSizeInBits();
-    // This is only valid if the OpSizeInBits + c1 = size of inner shift.
-    if (c1 + OpSizeInBits == InnerShiftSize) {
-      SDLoc DL(N0);
-      if (c1 + c2 >= InnerShiftSize)
-        return DAG.getConstant(0, DL, VT);
-      return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                         DAG.getNode(ISD::SRL, DL, InnerShiftVT,
-                                     N0.getOperand(0)->getOperand(0),
-                                     DAG.getConstant(c1 + c2, DL,
-                                                     ShiftCountVT)));
+      N0.getOperand(0).getOpcode() == ISD::SRL) {
+    if (auto N001C = isConstOrConstSplat(N0.getOperand(0).getOperand(1))) {
+      uint64_t c1 = N001C->getZExtValue();
+      uint64_t c2 = N1C->getZExtValue();
+      EVT InnerShiftVT = N0.getOperand(0).getValueType();
+      EVT ShiftCountVT = N0.getOperand(0).getOperand(1).getValueType();
+      uint64_t InnerShiftSize = InnerShiftVT.getScalarSizeInBits();
+      // This is only valid if the OpSizeInBits + c1 = size of inner shift.
+      if (c1 + OpSizeInBits == InnerShiftSize) {
+        SDLoc DL(N0);
+        if (c1 + c2 >= InnerShiftSize)
+          return DAG.getConstant(0, DL, VT);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                           DAG.getNode(ISD::SRL, DL, InnerShiftVT,
+                                       N0.getOperand(0).getOperand(0),
+                                       DAG.getConstant(c1 + c2, DL,
+                                                       ShiftCountVT)));
+      }
     }
   }
 

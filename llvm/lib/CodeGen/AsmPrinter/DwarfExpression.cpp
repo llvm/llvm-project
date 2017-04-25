@@ -199,8 +199,10 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               unsigned MachineReg,
                                               unsigned FragmentOffsetInBits) {
   auto Fragment = ExprCursor.getFragmentInfo();
-  if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U))
+  if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U)) {
+    LocationKind = Unknown;
     return false;
+  }
 
   bool HasComplexExpression = false;
   auto Op = ExprCursor.peek();
@@ -213,6 +215,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // operation to multiple DW_OP_pieces.
   if (HasComplexExpression && DwarfRegs.size() > 1) {
     DwarfRegs.clear();
+    LocationKind = Unknown;
     return false;
   }
 
@@ -234,6 +237,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                       return Op.getOp() == dwarf::DW_OP_stack_value;
                     })) {
       DwarfRegs.clear();
+      LocationKind = Unknown;
       return false;
     }
 

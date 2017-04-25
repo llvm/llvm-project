@@ -1105,7 +1105,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     encodeULEB128(wasm::WASM_SEC_CODE, getStream());
 
-    encodeULEB128(CodeRelocations.size(), getStream());
+    encodeULEB128(CodeRelocations.size() + TypeIndexFixups.size(), getStream());
 
     WriteRelocations(CodeRelocations, getStream(), SymbolIndices);
     WriteTypeRelocations(TypeIndexFixups, TypeIndexFixupTypes, getStream());

@@ -964,10 +964,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
               // sure to update that as well.
               const SUnit *SU = MISUnitMap[Q.second.Operand->getParent()];
               if (!SU) continue;
-              for (DbgValueVector::iterator DVI = DbgValues.begin(),
-                     DVE = DbgValues.end(); DVI != DVE; ++DVI)
-                if (DVI->second == Q.second.Operand->getParent())
-                  UpdateDbgValue(*DVI->first, AntiDepReg, NewReg);
+              UpdateDbgValues(DbgValues, Q.second.Operand->getParent(),
+                              AntiDepReg, NewReg);
             }
 
             // We just went back in time and modified history; the

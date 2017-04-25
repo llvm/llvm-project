@@ -51,6 +51,17 @@ static bool ComparePaddingPct(const LayoutPtr &S1, const LayoutPtr &S2) {
   return Pct1 < Pct2;
 }
 
+static bool ComparePaddingImmediate(const LayoutPtr &S1, const LayoutPtr &S2) {
+  return S1->immediatePadding() < S2->immediatePadding();
+}
+
+static bool ComparePaddingPctImmediate(const LayoutPtr &S1,
+                                       const LayoutPtr &S2) {
+  double Pct1 = (double)S1->immediatePadding() / (double)S1->getSize();
+  double Pct2 = (double)S2->immediatePadding() / (double)S2->getSize();
+  return Pct1 < Pct2;
+}
+
 static CompareFunc getComparisonFunc(opts::pretty::ClassSortMode Mode) {
   switch (Mode) {
   case opts::pretty::ClassSortMode::Name:
@@ -61,6 +72,10 @@ static CompareFunc getComparisonFunc(opts::pretty::ClassSortMode Mode) {
     return ComparePadding;
   case opts::pretty::ClassSortMode::PaddingPct:
     return ComparePaddingPct;
+  case opts::pretty::ClassSortMode::PaddingImmediate:
+    return ComparePaddingImmediate;
+  case opts::pretty::ClassSortMode::PaddingPctImmediate:
+    return ComparePaddingPctImmediate;
   default:
     return nullptr;
   }
@@ -101,6 +116,10 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
 
     auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
     if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold) {
+      ++Discarded;
+      continue;
+    }
+    if (Layout->immediatePadding() < opts::pretty::ImmediatePaddingThreshold) {
       ++Discarded;
       continue;
     }

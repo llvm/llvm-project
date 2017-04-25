@@ -617,10 +617,7 @@ final:
 define i32 @test42(i32 %a, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[FORCE:%.*]] = mul i32 [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FORCE]], [[A:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[FORCE]], [[NOTA]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[FORCE]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %force = mul i32 %c, %d ; forces the complexity sorting
@@ -634,10 +631,7 @@ define i32 @test42(i32 %a, i32 %c, i32 %d) {
 define i32 @test43(i32 %a, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test43(
 ; CHECK-NEXT:    [[FORCE:%.*]] = mul i32 [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FORCE]], [[A:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[FORCE]], [[NOTA]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[FORCE]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %force = mul i32 %c, %d ; forces the complexity sorting

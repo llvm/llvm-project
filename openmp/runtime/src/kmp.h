@@ -87,7 +87,13 @@ class kmp_stats_list;
 #endif
 
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
-# include "hwloc.h"
+#include "hwloc.h"
+#ifndef HWLOC_OBJ_NUMANODE
+#define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
+#endif
+#ifndef HWLOC_OBJ_PACKAGE
+#define HWLOC_OBJ_PACKAGE HWLOC_OBJ_SOCKET
+#endif
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64

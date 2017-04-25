@@ -88,6 +88,9 @@ private:
                                 unsigned ArithOpcode,
                                 Block &MBB,
                                 BlockIt MBBI);
+
+  /// Scavenges a free GPR8 register for use.
+  unsigned scavengeGPR8(MachineInstr &MI);
 };
 
 char AVRExpandPseudo::ID = 0;
@@ -577,23 +580,42 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned OpLo, OpHi, DstLoReg, DstHiReg;
   unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned TmpReg = 0; // 0 for no temporary register
   unsigned SrcReg = MI.getOperand(1).getReg();
-  bool DstIsDead = MI.getOperand(0).isDead();
   bool SrcIsKill = MI.getOperand(1).isKill();
   OpLo = AVR::LDRdPtr;
   OpHi = AVR::LDDRdPtrQ;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  assert(DstReg != SrcReg && "SrcReg and DstReg cannot be the same");
+  // Use a temporary register if src and dst registers are the same.
+  if (DstReg == SrcReg)
+    TmpReg = scavengeGPR8(MI);
 
+  unsigned CurDstLoReg = (DstReg == SrcReg) ? TmpReg : DstLoReg;
+  unsigned CurDstHiReg = (DstReg == SrcReg) ? TmpReg : DstHiReg;
+
+  // Load low byte.
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
-    .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(CurDstLoReg, RegState::Define)
     .addReg(SrcReg);
 
+  // Push low byte onto stack if necessary.
+  if (TmpReg)
+    buildMI(MBB, MBBI, AVR::PUSHRr).addReg(TmpReg);
+
+  // Load high byte.
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
-    .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(CurDstHiReg, RegState::Define)
     .addReg(SrcReg, getKillRegState(SrcIsKill))
     .addImm(1);
+
+  if (TmpReg) {
+    // Move the high byte into the final destination.
+    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
+
+    // Move the low byte from the scratch space into the final destination.
+    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+  }
 
   MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
   MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
@@ -669,9 +691,9 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned OpLo, OpHi, DstLoReg, DstHiReg;
   unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned TmpReg = 0; // 0 for no temporary register
   unsigned SrcReg = MI.getOperand(1).getReg();
   unsigned Imm = MI.getOperand(2).getImm();
-  bool DstIsDead = MI.getOperand(0).isDead();
   bool SrcIsKill = MI.getOperand(1).isKill();
   OpLo = AVR::LDDRdPtrQ;
   OpHi = AVR::LDDRdPtrQ;
@@ -679,60 +701,35 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
 
   assert(Imm <= 63 && "Offset is out of range");
 
-  MachineInstr *MIBLO, *MIBHI;
+  // Use a temporary register if src and dst registers are the same.
+  if (DstReg == SrcReg)
+    TmpReg = scavengeGPR8(MI);
 
-  // HACK: We shouldn't have instances of this instruction
-  // where src==dest because the instruction itself is
-  // marked earlyclobber. We do however get this instruction when
-  // loading from stack slots where the earlyclobber isn't useful.
-  //
-  // In this case, just use a temporary register.
-  if (DstReg == SrcReg) {
-    RegScavenger RS;
+  unsigned CurDstLoReg = (DstReg == SrcReg) ? TmpReg : DstLoReg;
+  unsigned CurDstHiReg = (DstReg == SrcReg) ? TmpReg : DstHiReg;
 
-    RS.enterBasicBlock(MBB);
-    RS.forward(MBBI);
+  // Load low byte.
+  auto MIBLO = buildMI(MBB, MBBI, OpLo)
+    .addReg(CurDstLoReg, RegState::Define)
+    .addReg(SrcReg)
+    .addImm(Imm);
 
-    BitVector Candidates =
-        TRI->getAllocatableSet
-        (*MBB.getParent(), &AVR::GPR8RegClass);
+  // Push low byte onto stack if necessary.
+  if (TmpReg)
+    buildMI(MBB, MBBI, AVR::PUSHRr).addReg(TmpReg);
 
-    // Exclude all the registers being used by the instruction.
-    for (MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
-          !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
-        Candidates.reset(MO.getReg());
-    }
+  // Load high byte.
+  auto MIBHI = buildMI(MBB, MBBI, OpHi)
+    .addReg(CurDstHiReg, RegState::Define)
+    .addReg(SrcReg, getKillRegState(SrcIsKill))
+    .addImm(Imm + 1);
 
-    BitVector Available = RS.getRegsAvailable(&AVR::GPR8RegClass);
-    Available &= Candidates;
-
-    signed TmpReg = Available.find_first();
-    assert(TmpReg != -1 && "ran out of registers");
-
-    MIBLO = buildMI(MBB, MBBI, OpLo)
-      .addReg(TmpReg, RegState::Define)
-      .addReg(SrcReg)
-      .addImm(Imm);
-
-    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstLoReg).addReg(TmpReg);
-
-    MIBHI = buildMI(MBB, MBBI, OpHi)
-      .addReg(TmpReg, RegState::Define)
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addImm(Imm + 1);
-
+  if (TmpReg) {
+    // Move the high byte into the final destination.
     buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
-  } else {
-    MIBLO = buildMI(MBB, MBBI, OpLo)
-      .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
-      .addReg(SrcReg)
-      .addImm(Imm);
 
-    MIBHI = buildMI(MBB, MBBI, OpHi)
-      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addImm(Imm + 1);
+    // Move the low byte from the scratch space into the final destination.
+    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
   }
 
   MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
@@ -817,6 +814,32 @@ bool AVRExpandPseudo::expandAtomicArithmeticOp(unsigned Width,
       // Create the store
       buildMI(MBB, MBBI, StoreOpcode).add(Op2).add(Op1);
   });
+}
+
+unsigned AVRExpandPseudo::scavengeGPR8(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  RegScavenger RS;
+
+  RS.enterBasicBlock(MBB);
+  RS.forward(MI);
+
+  BitVector Candidates =
+      TRI->getAllocatableSet
+      (*MBB.getParent(), &AVR::GPR8RegClass);
+
+  // Exclude all the registers being used by the instruction.
+  for (MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
+        !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+      Candidates.reset(MO.getReg());
+  }
+
+  BitVector Available = RS.getRegsAvailable(&AVR::GPR8RegClass);
+  Available &= Candidates;
+
+  signed Reg = Available.find_first();
+  assert(Reg != -1 && "ran out of registers");
+  return Reg;
 }
 
 template<>

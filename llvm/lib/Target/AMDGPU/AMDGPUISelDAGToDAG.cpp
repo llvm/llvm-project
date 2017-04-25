@@ -153,7 +153,7 @@ private:
 
   bool SelectVOP3Mods_NNaN(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-  bool SelectVOP3NoMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
@@ -1667,38 +1667,28 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods_NNaN(SDValue In, SDValue &Src,
   return isNoNanSrc(Src);
 }
 
-bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src,
-                                         SDValue &SrcMods) const {
-  bool Res = SelectVOP3Mods(In, Src, SrcMods);
-  return Res && cast<ConstantSDNode>(SrcMods)->isNullValue();
+bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
+  if (In.getOpcode() == ISD::FABS || In.getOpcode() == ISD::FNEG)
+    return false;
+
+  Src = In;
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3Mods0(SDValue In, SDValue &Src,
                                          SDValue &SrcMods, SDValue &Clamp,
                                          SDValue &Omod) const {
   SDLoc DL(In);
-  // FIXME: Handle Clamp and Omod
-  Clamp = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  Omod = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+  Omod = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
   return SelectVOP3Mods(In, Src, SrcMods);
-}
-
-bool AMDGPUDAGToDAGISel::SelectVOP3NoMods0(SDValue In, SDValue &Src,
-                                           SDValue &SrcMods, SDValue &Clamp,
-                                           SDValue &Omod) const {
-  bool Res = SelectVOP3Mods0(In, Src, SrcMods, Clamp, Omod);
-
-  return Res && cast<ConstantSDNode>(SrcMods)->isNullValue() &&
-                cast<ConstantSDNode>(Clamp)->isNullValue() &&
-                cast<ConstantSDNode>(Omod)->isNullValue();
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp(SDValue In, SDValue &Src,
                                               SDValue &SrcMods,
                                               SDValue &Omod) const {
-  // FIXME: Handle Omod
-  Omod = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
+  Omod = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i1);
 
   return SelectVOP3Mods(In, Src, SrcMods);
 }
@@ -1716,9 +1706,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OMods(SDValue In, SDValue &Src,
   Src = In;
 
   SDLoc DL(In);
-  // FIXME: Handle Clamp and Omod
-  Clamp = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  Omod = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+  Omod = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
   return true;
 }

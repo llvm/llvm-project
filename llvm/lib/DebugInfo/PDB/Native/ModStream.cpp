@@ -82,4 +82,8 @@ ModStream::lines(bool *HadError) const {
   return make_range(LineInfo.begin(HadError), LineInfo.end());
 }
 
+bool ModStream::hasLineInfo() const {
+  return C13LinesSubstream.getLength() > 0 || LinesSubstream.getLength() > 0;
+}
+
 Error ModStream::commit() { return Error::success(); }

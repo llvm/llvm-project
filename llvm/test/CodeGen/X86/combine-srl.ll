@@ -223,18 +223,17 @@ define <4 x i32> @combine_vec_lshr_lshr_zero1(<4 x i32> %x) {
 define <4 x i32> @combine_vec_lshr_trunc_lshr0(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_lshr_trunc_lshr0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    psrlq $32, %xmm1
-; SSE-NEXT:    psrlq $32, %xmm0
+; SSE-NEXT:    psrlq $48, %xmm1
+; SSE-NEXT:    psrlq $48, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_trunc_lshr0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX-NEXT:    vpsrlq $48, %ymm0, %ymm0
 ; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
 ; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %1 = lshr <4 x i64> %x, <i64 32, i64 32, i64 32, i64 32>

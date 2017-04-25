@@ -12,6 +12,9 @@
 #include "PdbYaml.h"
 #include "llvm-pdbdump.h"
 
+#include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
+#include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -33,8 +36,13 @@ Error YAMLOutputStyle::dump() {
     opts::pdb2yaml::StreamMetadata = true;
   if (opts::pdb2yaml::DbiModuleSyms)
     opts::pdb2yaml::DbiModuleInfo = true;
+
+  if (opts::pdb2yaml::DbiModuleSourceLineInfo)
+    opts::pdb2yaml::DbiModuleSourceFileInfo = true;
+
   if (opts::pdb2yaml::DbiModuleSourceFileInfo)
     opts::pdb2yaml::DbiModuleInfo = true;
+
   if (opts::pdb2yaml::DbiModuleInfo)
     opts::pdb2yaml::DbiStream = true;
 
@@ -64,6 +72,112 @@ Error YAMLOutputStyle::dump() {
 
   flush();
   return Error::success();
+}
+
+namespace {
+class C13SubstreamVisitor : public codeview::IModuleSubstreamVisitor {
+public:
+  C13SubstreamVisitor(llvm::pdb::yaml::PdbSourceFileInfo &Info, PDBFile &F)
+      : Info(Info), F(F) {}
+
+  Error visitUnknown(codeview::ModuleSubstreamKind Kind,
+                     BinaryStreamRef Stream) override {
+    return Error::success();
+  }
+
+  Error
+  visitFileChecksums(BinaryStreamRef Data,
+                     const codeview::FileChecksumArray &Checksums) override {
+    for (const auto &C : Checksums) {
+      llvm::pdb::yaml::PdbSourceFileChecksumEntry Entry;
+      if (auto Result = getGlobalString(C.FileNameOffset))
+        Entry.FileName = *Result;
+      else
+        return Result.takeError();
+
+      Entry.Kind = C.Kind;
+      Entry.ChecksumBytes.Bytes = C.Checksum;
+      Info.FileChecksums.push_back(Entry);
+    }
+    return Error::success();
+  }
+
+  Error visitLines(BinaryStreamRef Data,
+                   const codeview::LineSubstreamHeader *Header,
+                   const codeview::LineInfoArray &Lines) override {
+
+    Info.Lines.CodeSize = Header->CodeSize;
+    Info.Lines.Flags =
+        static_cast<codeview::LineFlags>(uint16_t(Header->Flags));
+    Info.Lines.RelocOffset = Header->RelocOffset;
+    Info.Lines.RelocSegment = Header->RelocSegment;
+
+    for (const auto &L : Lines) {
+      llvm::pdb::yaml::PdbSourceLineBlock Block;
+
+      if (auto Result = getDbiFileName(L.NameIndex))
+        Block.FileName = *Result;
+      else
+        return Result.takeError();
+
+      for (const auto &N : L.LineNumbers) {
+        llvm::pdb::yaml::PdbSourceLineEntry Line;
+        Line.Offset = N.Offset;
+        codeview::LineInfo LI(N.Flags);
+        Line.LineStart = LI.getStartLine();
+        Line.EndDelta = LI.getEndLine();
+        Line.IsStatement = LI.isStatement();
+        Block.Lines.push_back(Line);
+      }
+
+      if (Info.Lines.Flags & codeview::LineFlags::HaveColumns) {
+        for (const auto &C : L.Columns) {
+          llvm::pdb::yaml::PdbSourceColumnEntry Column;
+          Column.StartColumn = C.StartColumn;
+          Column.EndColumn = C.EndColumn;
+          Block.Columns.push_back(Column);
+        }
+      }
+
+      Info.Lines.LineInfo.push_back(Block);
+    }
+    return Error::success();
+  }
+
+private:
+  Expected<StringRef> getGlobalString(uint32_t Offset) {
+    auto ST = F.getStringTable();
+    if (!ST)
+      return ST.takeError();
+
+    return ST->getStringForID(Offset);
+  }
+  Expected<StringRef> getDbiFileName(uint32_t Offset) {
+    auto DS = F.getPDBDbiStream();
+    if (!DS)
+      return DS.takeError();
+    return DS->getFileNameForIndex(Offset);
+  }
+
+  llvm::pdb::yaml::PdbSourceFileInfo &Info;
+  PDBFile &F;
+};
+}
+
+Expected<Optional<llvm::pdb::yaml::PdbSourceFileInfo>>
+YAMLOutputStyle::getFileLineInfo(const pdb::ModStream &ModS) {
+  if (!ModS.hasLineInfo())
+    return None;
+
+  yaml::PdbSourceFileInfo Info;
+  bool Error = false;
+  C13SubstreamVisitor Visitor(Info, File);
+  for (auto &Substream : ModS.lines(&Error)) {
+    if (auto E = codeview::visitModuleSubstream(Substream, Visitor))
+      return std::move(E);
+  }
+
+  return Info;
 }
 
 Error YAMLOutputStyle::dumpFileHeaders() {
@@ -175,16 +289,24 @@ Error YAMLOutputStyle::dumpDbiStream() {
       if (opts::pdb2yaml::DbiModuleSourceFileInfo)
         DMI.SourceFiles = MI.SourceFiles;
 
+      auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
+          File.getMsfLayout(), File.getMsfBuffer(),
+          MI.Info.getModuleStreamIndex());
+
+      pdb::ModStream ModS(MI.Info, std::move(ModStreamData));
+      if (auto EC = ModS.reload())
+        return EC;
+
+      if (opts::pdb2yaml::DbiModuleSourceLineInfo) {
+        auto ExpectedInfo = getFileLineInfo(ModS);
+        if (!ExpectedInfo)
+          return ExpectedInfo.takeError();
+        DMI.FileLineInfo = *ExpectedInfo;
+      }
+
       if (opts::pdb2yaml::DbiModuleSyms &&
           MI.Info.getModuleStreamIndex() != kInvalidStreamIndex) {
         DMI.Modi.emplace();
-        auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
-            File.getMsfLayout(), File.getMsfBuffer(),
-            MI.Info.getModuleStreamIndex());
-
-        pdb::ModStream ModS(MI.Info, std::move(ModStreamData));
-        if (auto EC = ModS.reload())
-          return EC;
 
         DMI.Modi->Signature = ModS.signature();
         bool HadError = false;
