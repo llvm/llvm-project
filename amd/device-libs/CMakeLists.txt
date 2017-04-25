@@ -35,20 +35,24 @@ list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
 set (CLANG_OCL_FLAGS "-Werror -x cl -Xclang -cl-std=CL2.0 -fblocks -target amdgcn--amdhsa -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics -Xclang -finclude-default-header ${CLANG_OPTIONS_APPEND}")
 set (CLANG_OCL_LINK_FLAGS "-target amdgcn--amdhsa -mcpu=fiji")
 
+if (PREPARE_BUILTINS)
+add_custom_target(prepare-builtins COMMAND true)
+else()
+add_subdirectory(utils/prepare-builtins)
+set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
+endif()
+
 include(OCL.cmake)
 
-add_subdirectory(utils/prepare-builtins)
 add_subdirectory(irif)
 add_subdirectory(oclc)
 add_subdirectory(ocml)
 add_subdirectory(ockl)
 add_subdirectory(opencl)
-add_subdirectory(openmp)
 
 if(BUILD_HC_LIB)
 add_subdirectory(hc)
 endif(BUILD_HC_LIB)
-
 
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
 add_subdirectory(test/opencl)
