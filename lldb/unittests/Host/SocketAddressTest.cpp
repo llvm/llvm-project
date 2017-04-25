@@ -11,9 +11,26 @@
 
 #include "lldb/Host/SocketAddress.h"
 
+namespace {
+class SocketAddressTest : public testing::Test {
+public:
+  static void SetUpTestCase() {
+#ifdef _MSC_VER
+    WSADATA data;
+    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &data));
+#endif
+  }
+  static void TearDownTestCase() {
+#ifdef _MSC_VER
+    ASSERT_EQ(0, WSACleanup());
+#endif
+  }
+};
+} // namespace
+
 using namespace lldb_private;
 
-TEST(SocketAddressTest, Set) {
+TEST_F(SocketAddressTest, Set) {
   SocketAddress sa;
   ASSERT_TRUE(sa.SetToLocalhost(AF_INET, 1138));
   ASSERT_STREQ("127.0.0.1", sa.GetIPAddress().c_str());
@@ -30,7 +47,7 @@ TEST(SocketAddressTest, Set) {
   ASSERT_EQ(1139, sa.GetPort());
 }
 
-TEST(SocketAddressTest, GetAddressInfo) {
+TEST_F(SocketAddressTest, GetAddressInfo) {
   auto addr = SocketAddress::GetAddressInfo("127.0.0.1", nullptr, AF_UNSPEC,
                                             SOCK_STREAM, IPPROTO_TCP);
   ASSERT_EQ(1u, addr.size());
@@ -43,7 +60,7 @@ TEST(SocketAddressTest, GetAddressInfo) {
 // we need to test our inet_ntop implementation for Windows XP
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 
-TEST(SocketAddressTest, inet_ntop) {
+TEST_F(SocketAddressTest, inet_ntop) {
   const uint8_t address4[4] = {255, 0, 1, 100};
   const uint8_t address6[16] = {0, 1, 2,  3,  4,  5,  6,   7,
                                 8, 9, 10, 11, 12, 13, 255, 0};

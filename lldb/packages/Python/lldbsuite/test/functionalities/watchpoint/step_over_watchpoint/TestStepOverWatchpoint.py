@@ -89,7 +89,7 @@ class TestStepOverWatchpoint(TestBase):
 
         # resolve_location=True, read=False, write=True
         write_watchpoint = write_value.Watch(True, False, True, error)
-        self.assertTrue(read_watchpoint, "Failed to set write watchpoint.")
+        self.assertTrue(write_watchpoint, "Failed to set write watchpoint.")
         self.assertTrue(error.Success(),
                         "Error while setting watchpoint: %s" %
                         error.GetCString())
