@@ -290,4 +290,12 @@ void (^_Nullable blockPointerVariableThatLeadsNowhere)();
  */
 @property int (^blockPointerProperty)(int i);
 
+/**
+ * blockReturnsNothing
+ *
+ * \returns Nothing, but can allow this as this pattern is used to document the
+ * value that the property getter returns.
+ */
+@property void (^blockReturnsNothing)();
+
 @end
