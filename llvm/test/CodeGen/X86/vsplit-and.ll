@@ -23,13 +23,13 @@ define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind read
 define void @t2(<3 x i64>* %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %r9, %xmm1
-; CHECK-NEXT:    movd %r8, %xmm0
+; CHECK-NEXT:    movq %r9, %xmm1
+; CHECK-NEXT:    movq %r8, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    movd %rdx, %xmm2
-; CHECK-NEXT:    movd %rsi, %xmm1
+; CHECK-NEXT:    movq %rdx, %xmm2
+; CHECK-NEXT:    movq %rsi, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; CHECK-NEXT:    movd %rcx, %xmm2
+; CHECK-NEXT:    movq %rcx, %xmm2
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2

@@ -10,7 +10,7 @@ define i64 @test_v2f64_sext(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
 ; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    movd %xmm0, %rax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f64_sext:
@@ -46,7 +46,7 @@ define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
 ; SSE-NEXT:    orpd %xmm3, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
 ; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    movd %xmm0, %rax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4f64_sext:
@@ -267,7 +267,7 @@ define i64 @test_v2i64_sext(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, %rax
+; SSE-NEXT:    movq %xmm1, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i64_sext:
@@ -303,7 +303,7 @@ define i64 @test_v4i64_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, %rax
+; SSE-NEXT:    movq %xmm1, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v4i64_sext:

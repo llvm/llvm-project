@@ -100,7 +100,7 @@ entry:
 define void @float_call_signbit(double %n) {
 ; CHECK-LABEL: float_call_signbit:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    movd %xmm0, %rdi
+; CHECK-NEXT:    movq %xmm0, %rdi
 ; CHECK-NEXT:    shrq $63, %rdi
 ; CHECK-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<kill>
 ; CHECK-NEXT:    jmp _float_call_signbit_callee ## TAILCALL

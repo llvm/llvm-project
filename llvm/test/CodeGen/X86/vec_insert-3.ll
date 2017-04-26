@@ -15,7 +15,7 @@ define <2 x i64> @t1(i64 %s, <2 x i64> %tmp) nounwind {
 ;
 ; X64-LABEL: t1:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %rdi, %xmm1
+; X64-NEXT:    movq %rdi, %xmm1
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %tmp1 = insertelement <2 x i64> %tmp, i64 %s, i32 1

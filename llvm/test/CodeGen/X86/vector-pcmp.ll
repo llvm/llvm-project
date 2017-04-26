@@ -87,23 +87,23 @@ define <1 x i128> @test_strange_type(<1 x i128> %x) {
 ; SSE2-LABEL: test_strange_type:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    sarq $63, %rsi
-; SSE2-NEXT:    movd %rsi, %xmm0
+; SSE2-NEXT:    movq %rsi, %xmm0
 ; SSE2-NEXT:    notq %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %rax
+; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    movq %rsi, %rdx
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: test_strange_type:
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    sarq $63, %rsi
-; SSE42-NEXT:    movd %rsi, %xmm0
+; SSE42-NEXT:    movq %rsi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE42-NEXT:    pxor %xmm0, %xmm1
-; SSE42-NEXT:    movd %xmm1, %rax
+; SSE42-NEXT:    movq %xmm1, %rax
 ; SSE42-NEXT:    pextrq $1, %xmm1, %rdx
 ; SSE42-NEXT:    retq
 ;

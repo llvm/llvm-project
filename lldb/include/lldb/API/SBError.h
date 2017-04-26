@@ -61,6 +61,7 @@ protected:
   friend class SBProcess;
   friend class SBStructuredData;
   friend class SBThread;
+  friend class SBTrace;
   friend class SBTarget;
   friend class SBValue;
   friend class SBWatchpoint;

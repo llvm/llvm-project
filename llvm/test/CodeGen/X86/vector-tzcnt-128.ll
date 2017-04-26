@@ -1249,7 +1249,7 @@ define <2 x i64> @foldv2i64() nounwind {
 ; SSE-LABEL: foldv2i64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movl $8, %eax
-; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: foldv2i64:
@@ -1271,7 +1271,7 @@ define <2 x i64> @foldv2i64u() nounwind {
 ; SSE-LABEL: foldv2i64u:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movl $8, %eax
-; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: foldv2i64u:

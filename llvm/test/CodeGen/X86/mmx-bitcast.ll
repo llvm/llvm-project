@@ -80,7 +80,7 @@ define i64 @t5(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-NEXT:    movd %esi, %xmm0
 ; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    movd %xmm1, %rax
+; CHECK-NEXT:    movq %xmm1, %rax
 ; CHECK-NEXT:    retq
   %v0 = insertelement <2 x i32> undef, i32 %a, i32 0
   %v1 = insertelement <2 x i32> %v0, i32 %b, i32 1

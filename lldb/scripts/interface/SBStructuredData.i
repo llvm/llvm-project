@@ -38,5 +38,8 @@ namespace lldb {
 
         lldb::SBError
         GetDescription(lldb::SBStream &stream) const;
+
+        lldb::SBError
+        SetFromJSON(lldb::SBStream &stream);
     };
 }

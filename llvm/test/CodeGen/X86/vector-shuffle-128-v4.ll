@@ -2104,25 +2104,25 @@ define <4 x float> @insert_mem_and_zero_v4f32(float* %ptr) {
 define <4 x i32> @insert_reg_lo_v4i32(i64 %a, <4 x i32> %b) {
 ; SSE2-LABEL: insert_reg_lo_v4i32:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movd %rdi, %xmm1
+; SSE2-NEXT:    movq %rdi, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_reg_lo_v4i32:
 ; SSE3:       # BB#0:
-; SSE3-NEXT:    movd %rdi, %xmm1
+; SSE3-NEXT:    movq %rdi, %xmm1
 ; SSE3-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_reg_lo_v4i32:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    movd %rdi, %xmm1
+; SSSE3-NEXT:    movq %rdi, %xmm1
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_reg_lo_v4i32:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    movd %rdi, %xmm1
+; SSE41-NEXT:    movq %rdi, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
@@ -2191,7 +2191,7 @@ define <4 x i32> @insert_mem_lo_v4i32(<2 x i32>* %ptr, <4 x i32> %b) {
 define <4 x i32> @insert_reg_hi_v4i32(i64 %a, <4 x i32> %b) {
 ; SSE-LABEL: insert_reg_hi_v4i32:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movd %rdi, %xmm1
+; SSE-NEXT:    movq %rdi, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
