@@ -880,6 +880,21 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
   return V;
 }
 
+// Parses --defsym=alias option.
+static std::vector<std::pair<StringRef, StringRef>>
+getDefsym(opt::InputArgList &Args) {
+  std::vector<std::pair<StringRef, StringRef>> Ret;
+  for (auto *Arg : Args.filtered(OPT_defsym)) {
+    StringRef From;
+    StringRef To;
+    std::tie(From, To) = StringRef(Arg->getValue()).split('=');
+    if (!isValidCIdentifier(To))
+      error("--defsym: symbol name expected, but got " + To);
+    Ret.push_back({From, To});
+  }
+  return Ret;
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -944,6 +959,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
+
+  // Handle --defsym=sym=alias option.
+  for (std::pair<StringRef, StringRef> &Def : getDefsym(Args))
+    Symtab.alias(Def.first, Def.second);
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.

@@ -39,7 +39,7 @@ define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, i64 %amt) nounwind {
 ;
 ; X64-LABEL: shift1b:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    movd %rsi, %xmm1
+; X64-NEXT:    movq %rsi, %xmm1
 ; X64-NEXT:    psrlq %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq

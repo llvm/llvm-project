@@ -33,7 +33,7 @@ define <2 x i32> @t3() nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movd %rax, %xmm0
+; CHECK-NEXT:    movq %rax, %xmm0
 ; CHECK-NEXT:    retq
   ret <2 x i32> <i32 1, i32 0>
 }

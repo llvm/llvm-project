@@ -58,17 +58,17 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: ne_i256:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm4, %r8
+; SSE2-NEXT:    movq %xmm4, %r8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movd %xmm4, %r9
-; SSE2-NEXT:    movd %xmm0, %r10
-; SSE2-NEXT:    movd %xmm1, %rsi
+; SSE2-NEXT:    movq %xmm4, %r9
+; SSE2-NEXT:    movq %xmm0, %r10
+; SSE2-NEXT:    movq %xmm1, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rdi
+; SSE2-NEXT:    movq %xmm0, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rax
-; SSE2-NEXT:    movd %xmm2, %rcx
-; SSE2-NEXT:    movd %xmm3, %rdx
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    movq %xmm2, %rcx
+; SSE2-NEXT:    movq %xmm3, %rdx
 ; SSE2-NEXT:    xorq %rsi, %rdx
 ; SSE2-NEXT:    xorq %r10, %rcx
 ; SSE2-NEXT:    orq %rdx, %rcx
@@ -100,17 +100,17 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: eq_i256:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm4, %r8
+; SSE2-NEXT:    movq %xmm4, %r8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movd %xmm4, %r9
-; SSE2-NEXT:    movd %xmm0, %r10
-; SSE2-NEXT:    movd %xmm1, %rsi
+; SSE2-NEXT:    movq %xmm4, %r9
+; SSE2-NEXT:    movq %xmm0, %r10
+; SSE2-NEXT:    movq %xmm1, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rdi
+; SSE2-NEXT:    movq %xmm0, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rax
-; SSE2-NEXT:    movd %xmm2, %rcx
-; SSE2-NEXT:    movd %xmm3, %rdx
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    movq %xmm2, %rcx
+; SSE2-NEXT:    movq %xmm3, %rdx
 ; SSE2-NEXT:    xorq %rsi, %rdx
 ; SSE2-NEXT:    xorq %r10, %rcx
 ; SSE2-NEXT:    orq %rdx, %rcx

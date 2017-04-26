@@ -281,6 +281,19 @@ define i32 @cttz(i32 %a) {
   ret i32 %count
 }
 
+define i1 @cttz_knownbits(i32 %arg) {
+; CHECK-LABEL: @cttz_knownbits(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #0
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CNT]], 4
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = or i32 %arg, 4
+  %cnt = call i32 @llvm.cttz.i32(i32 %or, i1 true) nounwind readnone
+  %res = icmp eq i32 %cnt, 4
+  ret i1 %res
+}
+
 define i8 @ctlz(i8 %a) {
 ; CHECK-LABEL: @ctlz(
 ; CHECK-NEXT:    ret i8 2
@@ -289,6 +302,19 @@ define i8 @ctlz(i8 %a) {
   %and = and i8 %or, 63
   %count = tail call i8 @llvm.ctlz.i8(i8 %and, i1 true) nounwind readnone
   ret i8 %count
+}
+
+define i1 @ctlz_knownbits(i8 %arg) {
+; CHECK-LABEL: @ctlz_knownbits(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[ARG:%.*]], 32
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctlz.i8(i8 [[OR]], i1 true) #0
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 4
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = or i8 %arg, 32
+  %cnt = call i8 @llvm.ctlz.i8(i8 %or, i1 true) nounwind readnone
+  %res = icmp eq i8 %cnt, 4
+  ret i1 %res
 }
 
 define void @cmp.simplify(i32 %a, i32 %b, i1* %c) {

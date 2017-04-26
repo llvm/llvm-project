@@ -1364,6 +1364,9 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
   return 1;
 }
 
+// FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must
+// work with truncating build vectors and vectors with elements of less than
+// 8 bits.
 bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   if (!N)
     return false;

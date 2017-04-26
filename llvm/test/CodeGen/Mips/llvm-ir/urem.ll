@@ -190,7 +190,7 @@ entry:
   ; 64R6:         dmodu   $2, $4, $5
   ; 64R6:         teq     $5, $zero, 7
 
-  ; MM32:         lw      $25, %call16(__umoddi3)($2)
+  ; MM32:         lw      $25, %call16(__umoddi3)($gp)
 
   ; MM64:         dmodu   $2, $4, $5
   ; MM64:         teq     $5, $zero, 7
@@ -208,9 +208,9 @@ entry:
   ; GP64-NOT-R6:  ld      $25, %call16(__umodti3)($gp)
   ; 64R6:         ld      $25, %call16(__umodti3)($gp)
 
-  ; MM32:         lw      $25, %call16(__umodti3)($16)
+  ; MM32:         lw      $25, %call16(__umodti3)($gp)
 
-  ; MM64:         ld      $25, %call16(__umodti3)($2)
+  ; MM64:         ld      $25, %call16(__umodti3)($gp)
 
     %r = urem i128 %a, %b
     ret i128 %r

@@ -11,22 +11,22 @@
 define <2 x i64> @test_div7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-LABEL: test_div7_2i64:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movd %xmm0, %rax
+; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    movabsq $5270498306774157605, %rcx # imm = 0x4924924924924925
 ; SSE2-NEXT:    imulq %rcx
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $63, %rax
 ; SSE2-NEXT:    sarq %rdx
 ; SSE2-NEXT:    addq %rax, %rdx
-; SSE2-NEXT:    movd %rdx, %xmm1
+; SSE2-NEXT:    movq %rdx, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rax
+; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    imulq %rcx
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $63, %rax
 ; SSE2-NEXT:    sarq %rdx
 ; SSE2-NEXT:    addq %rax, %rdx
-; SSE2-NEXT:    movd %rdx, %xmm0
+; SSE2-NEXT:    movq %rdx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -40,14 +40,14 @@ define <2 x i64> @test_div7_2i64(<2 x i64> %a) nounwind {
 ; SSE41-NEXT:    shrq $63, %rax
 ; SSE41-NEXT:    sarq %rdx
 ; SSE41-NEXT:    addq %rax, %rdx
-; SSE41-NEXT:    movd %rdx, %xmm1
-; SSE41-NEXT:    movd %xmm0, %rax
+; SSE41-NEXT:    movq %rdx, %xmm1
+; SSE41-NEXT:    movq %xmm0, %rax
 ; SSE41-NEXT:    imulq %rcx
 ; SSE41-NEXT:    movq %rdx, %rax
 ; SSE41-NEXT:    shrq $63, %rax
 ; SSE41-NEXT:    sarq %rdx
 ; SSE41-NEXT:    addq %rax, %rdx
-; SSE41-NEXT:    movd %rdx, %xmm0
+; SSE41-NEXT:    movq %rdx, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    retq
 ;
@@ -275,7 +275,7 @@ define <16 x i8> @test_div7_16i8(<16 x i8> %a) nounwind {
 define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-LABEL: test_rem7_2i64:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movd %xmm0, %rcx
+; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movabsq $5270498306774157605, %rsi # imm = 0x4924924924924925
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    imulq %rsi
@@ -286,9 +286,9 @@ define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-NEXT:    leaq (,%rdx,8), %rax
 ; SSE2-NEXT:    subq %rdx, %rax
 ; SSE2-NEXT:    subq %rax, %rcx
-; SSE2-NEXT:    movd %rcx, %xmm1
+; SSE2-NEXT:    movq %rcx, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %rcx
+; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    imulq %rsi
 ; SSE2-NEXT:    movq %rdx, %rax
@@ -298,7 +298,7 @@ define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-NEXT:    leaq (,%rdx,8), %rax
 ; SSE2-NEXT:    subq %rdx, %rax
 ; SSE2-NEXT:    subq %rax, %rcx
-; SSE2-NEXT:    movd %rcx, %xmm0
+; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -316,8 +316,8 @@ define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE41-NEXT:    leaq (,%rdx,8), %rax
 ; SSE41-NEXT:    subq %rdx, %rax
 ; SSE41-NEXT:    subq %rax, %rcx
-; SSE41-NEXT:    movd %rcx, %xmm1
-; SSE41-NEXT:    movd %xmm0, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    movq %xmm0, %rcx
 ; SSE41-NEXT:    movq %rcx, %rax
 ; SSE41-NEXT:    imulq %rsi
 ; SSE41-NEXT:    movq %rdx, %rax
@@ -327,7 +327,7 @@ define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE41-NEXT:    leaq (,%rdx,8), %rax
 ; SSE41-NEXT:    subq %rdx, %rax
 ; SSE41-NEXT:    subq %rax, %rcx
-; SSE41-NEXT:    movd %rcx, %xmm0
+; SSE41-NEXT:    movq %rcx, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    retq
 ;

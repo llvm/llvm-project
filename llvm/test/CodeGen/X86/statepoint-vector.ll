@@ -22,7 +22,7 @@ define <2 x i8 addrspace(1)*> @test2(<2 x i8 addrspace(1)*> %obj, i64 %offset) g
 entry:
 ; CHECK-LABEL: @test2
 ; CHECK: subq	$40, %rsp
-; CHECK: movd	%rdi, %xmm1
+; CHECK: movq	%rdi, %xmm1
 ; CHECK: pshufd	$68, %xmm1, %xmm1       # xmm1 = xmm1[0,1,0,1]
 ; CHECK: paddq	%xmm0, %xmm1
 ; CHECK: movdqa	%xmm0, 16(%rsp)

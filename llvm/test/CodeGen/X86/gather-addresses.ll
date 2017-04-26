@@ -11,7 +11,7 @@
 ; LIN: movdqa	(%rsi), %xmm0
 ; LIN: pand 	(%rdx), %xmm0
 ; LIN: pextrq	$1, %xmm0, %r[[REG4:.+]]
-; LIN: movd 	%xmm0, %r[[REG2:.+]]
+; LIN: movq 	%xmm0, %r[[REG2:.+]]
 ; LIN: movslq	%e[[REG2]], %r[[REG1:.+]]
 ; LIN: sarq    $32, %r[[REG2]]
 ; LIN: movslq	%e[[REG4]], %r[[REG3:.+]]
@@ -24,7 +24,7 @@
 ; WIN: movdqa	(%rdx), %xmm0
 ; WIN: pand 	(%r8), %xmm0
 ; WIN: pextrq	$1, %xmm0, %r[[REG4:.+]]
-; WIN: movd 	%xmm0, %r[[REG2:.+]]
+; WIN: movq 	%xmm0, %r[[REG2:.+]]
 ; WIN: movslq	%e[[REG2]], %r[[REG1:.+]]
 ; WIN: sarq    $32, %r[[REG2]]
 ; WIN: movslq	%e[[REG4]], %r[[REG3:.+]]

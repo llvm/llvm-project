@@ -7640,6 +7640,8 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   if (MinSplatBits > VecWidth)
     return false;
 
+  // FIXME: The widths are based on this node's type, but build vectors can
+  // truncate their operands. 
   SplatValue = APInt(VecWidth, 0);
   SplatUndef = APInt(VecWidth, 0);
 
@@ -7669,6 +7671,8 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   // The build_vector is all constants or undefs. Find the smallest element
   // size that splats the vector.
   HasAnyUndefs = (SplatUndef != 0);
+
+  // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
     unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);

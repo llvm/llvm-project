@@ -624,6 +624,10 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // And finally clean up LCSSA form before generating code.
   OptimizePM.addPass(InstSimplifierPass());
 
+  // LoopSink (and other loop passes since the last simplifyCFG) might have
+  // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
+  OptimizePM.addPass(SimplifyCFGPass());
+
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM)));
 
