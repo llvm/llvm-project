@@ -471,8 +471,8 @@ class MetadataLoader::MetadataLoaderImpl {
     for (auto CU_SP : CUSubprograms)
       if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
         for (auto &Op : SPs->operands())
-          if (auto *SP = dyn_cast_or_null<MDNode>(Op))
-            SP->replaceOperandWith(7, CU_SP.first);
+          if (auto *SP = dyn_cast_or_null<DISubprogram>(Op))
+            SP->replaceUnit(CU_SP.first);
     CUSubprograms.clear();
   }
 
