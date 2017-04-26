@@ -4,7 +4,7 @@
 
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test1 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK1
-// RUN: %env_asan_opts=intercept_strtok=false%run %t test1 2>&1
+// RUN: %env_asan_opts=intercept_strtok=false %run %t test1 2>&1
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test2 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK2
 // RUN: %env_asan_opts=intercept_strtok=false %run %t test2 2>&1
