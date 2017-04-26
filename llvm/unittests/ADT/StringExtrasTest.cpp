@@ -50,3 +50,19 @@ TEST(StringExtrasTest, JoinItems) {
 
   EXPECT_EQ("foo/bar/baz/x", join_items('/', Foo, Bar, Baz, X));
 }
+
+TEST(StringExtrasTest, ToAndFromHex) {
+  std::vector<uint8_t> OddBytes = {0x5, 0xBD, 0x0D, 0x3E, 0xCD};
+  std::string OddStr = "05BD0D3ECD";
+  StringRef OddData(reinterpret_cast<const char *>(OddBytes.data()),
+                    OddBytes.size());
+  EXPECT_EQ(OddStr, toHex(OddData));
+  EXPECT_EQ(OddData, fromHex(StringRef(OddStr).drop_front()));
+
+  std::vector<uint8_t> EvenBytes = {0xA5, 0xBD, 0x0D, 0x3E, 0xCD};
+  std::string EvenStr = "A5BD0D3ECD";
+  StringRef EvenData(reinterpret_cast<const char *>(EvenBytes.data()),
+                     EvenBytes.size());
+  EXPECT_EQ(EvenStr, toHex(EvenData));
+  EXPECT_EQ(EvenData, fromHex(EvenStr));
+}

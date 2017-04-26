@@ -223,7 +223,7 @@ void MappingTraits<WasmYAML::Relocation>::mapping(
   IO.mapRequired("Type", Relocation.Type);
   IO.mapRequired("Index", Relocation.Index);
   IO.mapRequired("Offset", Relocation.Offset);
-  IO.mapRequired("Addend", Relocation.Addend);
+  IO.mapOptional("Addend", Relocation.Addend, 0);
 }
 
 void MappingTraits<WasmYAML::LocalDecl>::mapping(
@@ -293,6 +293,9 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
     break;
   case wasm::WASM_OPCODE_F64_CONST:
     IO.mapRequired("Value", Expr.Value.Float64);
+    break;
+  case wasm::WASM_OPCODE_GET_GLOBAL:
+    IO.mapRequired("Index", Expr.Value.Global);
     break;
   }
 }

@@ -986,7 +986,7 @@ define <2 x i64> @shuffle_v2i64_bitcast_z123(<2 x i64> %x) {
 define <2 x i64> @insert_reg_and_zero_v2i64(i64 %a) {
 ; SSE-LABEL: insert_reg_and_zero_v2i64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movd %rdi, %xmm0
+; SSE-NEXT:    movq %rdi, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_reg_and_zero_v2i64:
@@ -1048,25 +1048,25 @@ define <2 x double> @insert_mem_and_zero_v2f64(double* %ptr) {
 define <2 x i64> @insert_reg_lo_v2i64(i64 %a, <2 x i64> %b) {
 ; SSE2-LABEL: insert_reg_lo_v2i64:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movd %rdi, %xmm1
+; SSE2-NEXT:    movq %rdi, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_reg_lo_v2i64:
 ; SSE3:       # BB#0:
-; SSE3-NEXT:    movd %rdi, %xmm1
+; SSE3-NEXT:    movq %rdi, %xmm1
 ; SSE3-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_reg_lo_v2i64:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    movd %rdi, %xmm1
+; SSSE3-NEXT:    movq %rdi, %xmm1
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_reg_lo_v2i64:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    movd %rdi, %xmm1
+; SSE41-NEXT:    movq %rdi, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
@@ -1140,7 +1140,7 @@ define <2 x i64> @insert_mem_lo_v2i64(i64* %ptr, <2 x i64> %b) {
 define <2 x i64> @insert_reg_hi_v2i64(i64 %a, <2 x i64> %b) {
 ; SSE-LABEL: insert_reg_hi_v2i64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movd %rdi, %xmm1
+; SSE-NEXT:    movq %rdi, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;

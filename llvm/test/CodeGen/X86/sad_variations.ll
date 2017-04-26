@@ -206,7 +206,7 @@ define i64 @sad8_64bit_icmp_sext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %rax
+; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_64bit_icmp_sext_slt:
@@ -255,7 +255,7 @@ define i64 @sad8_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %rax
+; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_64bit_icmp_zext_slt:
@@ -304,7 +304,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* noca
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %rax
+; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad8_early_64bit_icmp_zext_slt:

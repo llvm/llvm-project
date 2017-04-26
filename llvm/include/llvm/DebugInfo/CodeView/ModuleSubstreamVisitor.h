@@ -81,7 +81,7 @@ public:
     BinaryStreamReader Reader(Stream);
     if (auto EC = Reader.readObject(BlockHeader))
       return EC;
-    bool HasColumn = Header->Flags & LineFlags::HaveColumns;
+    bool HasColumn = Header->Flags & uint32_t(LineFlags::HaveColumns);
     uint32_t LineInfoSize =
         BlockHeader->NumLines *
         (sizeof(LineNumberEntry) + (HasColumn ? sizeof(ColumnNumberEntry) : 0));

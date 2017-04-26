@@ -648,10 +648,8 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
           // as well.
           const SUnit *SU = MISUnitMap[Q->second->getParent()];
           if (!SU) continue;
-          for (DbgValueVector::iterator DVI = DbgValues.begin(),
-                 DVE = DbgValues.end(); DVI != DVE; ++DVI)
-            if (DVI->second == Q->second->getParent())
-              UpdateDbgValue(*DVI->first, AntiDepReg, NewReg);
+          UpdateDbgValues(DbgValues, Q->second->getParent(),
+                          AntiDepReg, NewReg);
         }
 
         // We just went back in time and modified history; the

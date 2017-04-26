@@ -17,7 +17,7 @@ define i64 @test1(<2 x i64> %a) {
 ;
 ; X64-LABEL: test1:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    movd %xmm0, %rax
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    retq
 entry:
  %c = shl <2 x i64> %a, <i64 0, i64 2>

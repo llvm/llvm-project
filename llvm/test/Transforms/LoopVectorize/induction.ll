@@ -309,59 +309,59 @@ for.end:
 ;
 ; CHECK-LABEL: @scalarize_induction_variable_05(
 ; CHECK: vector.body:
-; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; CHECK:   %[[I0:.+]] = add i32 %index, 0
 ; CHECK:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
 ; CHECK: pred.udiv.if:
 ; CHECK:   udiv i32 {{.*}}, %[[I0]]
-; CHECK: pred.udiv.if1:
+; CHECK: pred.udiv.if{{[0-9]+}}:
 ; CHECK:   %[[I1:.+]] = add i32 %index, 1
 ; CHECK:   udiv i32 {{.*}}, %[[I1]]
 ;
 ; UNROLL-NO_IC-LABEL: @scalarize_induction_variable_05(
 ; UNROLL-NO-IC: vector.body:
-; UNROLL-NO-IC:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL-NO-IC:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; UNROLL-NO-IC:   %[[I0:.+]] = add i32 %index, 0
 ; UNROLL-NO-IC:   %[[I2:.+]] = add i32 %index, 2
 ; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
 ; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I2]]
 ; UNROLL-NO-IC: pred.udiv.if:
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I0]]
-; UNROLL-NO-IC: pred.udiv.if6:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   %[[I1:.+]] = add i32 %index, 1
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I1]]
-; UNROLL-NO-IC: pred.udiv.if8:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I2]]
-; UNROLL-NO-IC: pred.udiv.if10:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   %[[I3:.+]] = add i32 %index, 3
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I3]]
 ;
 ; IND-LABEL: @scalarize_induction_variable_05(
 ; IND: vector.body:
-; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; IND:   %[[E0:.+]] = sext i32 %index to i64
 ; IND:   getelementptr inbounds i32, i32* %a, i64 %[[E0]]
 ; IND: pred.udiv.if:
 ; IND:   udiv i32 {{.*}}, %index
-; IND: pred.udiv.if1:
+; IND: pred.udiv.if{{[0-9]+}}:
 ; IND:   %[[I1:.+]] = or i32 %index, 1
 ; IND:   udiv i32 {{.*}}, %[[I1]]
 ;
 ; UNROLL-LABEL: @scalarize_induction_variable_05(
 ; UNROLL: vector.body:
-; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; UNROLL:   %[[I2:.+]] = or i32 %index, 2
 ; UNROLL:   %[[E0:.+]] = sext i32 %index to i64
 ; UNROLL:   %[[G0:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[E0]]
 ; UNROLL:   getelementptr i32, i32* %[[G0]], i64 2
 ; UNROLL: pred.udiv.if:
 ; UNROLL:   udiv i32 {{.*}}, %index
-; UNROLL: pred.udiv.if6:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   %[[I1:.+]] = or i32 %index, 1
 ; UNROLL:   udiv i32 {{.*}}, %[[I1]]
-; UNROLL: pred.udiv.if8:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   udiv i32 {{.*}}, %[[I2]]
-; UNROLL: pred.udiv.if10:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   %[[I3:.+]] = or i32 %index, 3
 ; UNROLL:   udiv i32 {{.*}}, %[[I3]]
 

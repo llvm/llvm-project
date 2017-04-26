@@ -36,7 +36,7 @@ define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noa
 ; X64:       # BB#0: # %begin
 ; X64-NEXT:    movdqu (%rdx), %xmm0
 ; X64-NEXT:    pslld $4, %xmm0
-; X64-NEXT:    movd %xmm0, %rax
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    movslq %eax, %r8
 ; X64-NEXT:    sarq $32, %rax
 ; X64-NEXT:    pextrq $1, %xmm0, %rdx

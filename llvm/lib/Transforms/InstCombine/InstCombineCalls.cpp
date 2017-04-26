@@ -1393,7 +1393,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
   // zero, this value is constant.
   // FIXME: This should be in InstSimplify because we're replacing an
   // instruction with a constant.
-  if ((Mask & KnownZero) == Mask) {
+  if (Mask.isSubsetOf(KnownZero)) {
     auto *C = ConstantInt::get(IT, APInt(BitWidth, NumMaskBits));
     return IC.replaceInstUsesWith(II, C);
   }

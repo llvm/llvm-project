@@ -144,7 +144,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr, const uint8_t *&Ptr) {
     Expr.Value.Float64 = readFloat64(Ptr);
     break;
   case wasm::WASM_OPCODE_GET_GLOBAL:
-    Expr.Value.Global = readUint32(Ptr);
+    Expr.Value.Global = readULEB128(Ptr);
     break;
   default:
     return make_error<GenericBinaryError>("Invalid opcode in init_expr",
@@ -316,11 +316,12 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
       break;
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
-      Reloc.Addend = readVaruint32(Ptr);
+      Reloc.Addend = readVarint32(Ptr);
       break;
     default:
       return make_error<GenericBinaryError>("Bad relocation type",

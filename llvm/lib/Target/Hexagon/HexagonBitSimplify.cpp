@@ -2174,8 +2174,10 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
       const RegisterSet &AVs) {
   if (!GenBitSplit)
     return false;
-  if (CountBitSplit >= MaxBitSplit)
-    return false;
+  if (MaxBitSplit.getNumOccurrences()) {
+    if (CountBitSplit >= MaxBitSplit)
+      return false;
+  }
 
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
@@ -2254,7 +2256,8 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
       continue;
 
     // Generate bitsplit where S is defined.
-    CountBitSplit++;
+    if (MaxBitSplit.getNumOccurrences())
+      CountBitSplit++;
     MachineInstr *DefS = MRI.getVRegDef(S);
     assert(DefS != nullptr);
     DebugLoc DL = DefS->getDebugLoc();
@@ -2380,9 +2383,11 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
       const RegisterSet &AVs) {
   if (!GenExtract)
     return false;
-  if (CountExtract >= MaxExtract)
-    return false;
-  CountExtract++;
+  if (MaxExtract.getNumOccurrences()) {
+    if (CountExtract >= MaxExtract)
+      return false;
+    CountExtract++;
+  }
 
   unsigned W = RC.width();
   unsigned RW = W;

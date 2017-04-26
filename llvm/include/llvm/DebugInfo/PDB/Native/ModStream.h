@@ -40,6 +40,8 @@ public:
   iterator_range<codeview::ModuleSubstreamArray::Iterator>
   lines(bool *HadError) const;
 
+  bool hasLineInfo() const;
+
   Error commit();
 
 private:

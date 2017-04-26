@@ -251,11 +251,11 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X64-SSE-NEXT:    pandn %xmm3, %xmm0
 ; X64-SSE-NEXT:    pand {{.*}}(%rip), %xmm1
 ; X64-SSE-NEXT:    por %xmm0, %xmm1
-; X64-SSE-NEXT:    movd %xmm1, %rax
+; X64-SSE-NEXT:    movq %xmm1, %rax
 ; X64-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSE-NEXT:    cvtsi2sdq %rax, %xmm0
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; X64-SSE-NEXT:    movd %xmm1, %rax
+; X64-SSE-NEXT:    movq %xmm1, %rax
 ; X64-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X64-SSE-NEXT:    cvtsi2sdq %rax, %xmm1
 ; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]

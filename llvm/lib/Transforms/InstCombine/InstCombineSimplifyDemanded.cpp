@@ -138,10 +138,9 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // If there are multiple uses of this value and we aren't at the root, then
   // we can't do any simplifications of the operands, because DemandedMask
   // only reflects the bits demanded by *one* of the users.
-  if (Depth != 0 && !I->hasOneUse()) {
+  if (Depth != 0 && !I->hasOneUse())
     return SimplifyMultipleUseDemandedBits(I, DemandedMask, KnownZero, KnownOne,
                                            Depth, CxtI);
-  }
 
   APInt LHSKnownZero(BitWidth, 0), LHSKnownOne(BitWidth, 0);
   APInt RHSKnownZero(BitWidth, 0), RHSKnownOne(BitWidth, 0);
@@ -454,11 +453,11 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       // If we are known to be adding/subtracting zeros to every bit below
       // the highest demanded bit, we just return the other side.
-      if ((DemandedFromOps & RHSKnownZero) == DemandedFromOps)
+      if (DemandedFromOps.isSubsetOf(RHSKnownZero))
         return I->getOperand(0);
       // We can't do this with the LHS for subtraction.
       if (I->getOpcode() == Instruction::Add &&
-          (DemandedFromOps & LHSKnownZero) == DemandedFromOps)
+          DemandedFromOps.isSubsetOf(LHSKnownZero))
         return I->getOperand(1);
     }
 

@@ -65,7 +65,7 @@ define double @test_load_double(double * %p1) {
 ; SSE-LABEL: test_load_double:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movq (%rdi), %rax
-; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; ALL_AVX-LABEL: test_load_double:
@@ -160,7 +160,7 @@ define double * @test_store_double(double %val, double * %p1) {
 ;
 ; SSE_FAST-LABEL: test_store_double:
 ; SSE_FAST:       # BB#0:
-; SSE_FAST-NEXT:    movd %xmm0, %rax
+; SSE_FAST-NEXT:    movq %xmm0, %rax
 ; SSE_FAST-NEXT:    movq %rax, (%rdi)
 ; SSE_FAST-NEXT:    movq %rdi, %rax
 ; SSE_FAST-NEXT:    retq

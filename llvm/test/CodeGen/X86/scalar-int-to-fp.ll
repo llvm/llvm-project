@@ -536,7 +536,7 @@ define double @u64_to_d(i64 %a) nounwind {
 ;
 ; SSE2_64-LABEL: u64_to_d:
 ; SSE2_64:       # BB#0:
-; SSE2_64-NEXT:    movd %rdi, %xmm1
+; SSE2_64-NEXT:    movq %rdi, %xmm1
 ; SSE2_64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; SSE2_64-NEXT:    subpd {{.*}}(%rip), %xmm1
 ; SSE2_64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
