@@ -1311,7 +1311,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
-    if (Record.size() < 18 || Record.size() > 20)
+    if (Record.size() < 18 || Record.size() > 21)
       return error("Invalid record");
 
     IsDistinct =
@@ -1327,29 +1327,31 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Offset = Record.size() >= 19 ? 1 : 0;
     bool HasFn = Offset && !HasUnit;
     bool HasThisAdj = Record.size() >= 20;
+    bool HasThrownTypes = Record.size() >= 21;
     DISubprogram *SP = GET_OR_DISTINCT(
-        DISubprogram, (Context,
-                       getDITypeRefOrNull(Record[1]),          // scope
-                       getMDString(Record[2]),                 // name
-                       getMDString(Record[3]),                 // linkageName
-                       getMDOrNull(Record[4]),                 // file
-                       Record[5],                              // line
-                       getMDOrNull(Record[6]),                 // type
-                       Record[7],                              // isLocal
-                       Record[8],                              // isDefinition
-                       Record[9],                              // scopeLine
-                       getDITypeRefOrNull(Record[10]),         // containingType
-                       Record[11],                             // virtuality
-                       Record[12],                             // virtualIndex
-                       HasThisAdj ? Record[19] : 0,            // thisAdjustment
-                       static_cast<DINode::DIFlags>(Record[13] // flags
-                                                    ),
-                       Record[14],                       // isOptimized
-                       HasUnit ? CUorFn : nullptr,       // unit
-                       getMDOrNull(Record[15 + Offset]), // templateParams
-                       getMDOrNull(Record[16 + Offset]), // declaration
-                       getMDOrNull(Record[17 + Offset])  // variables
-                       ));
+        DISubprogram,
+        (Context,
+         getDITypeRefOrNull(Record[1]),                     // scope
+         getMDString(Record[2]),                            // name
+         getMDString(Record[3]),                            // linkageName
+         getMDOrNull(Record[4]),                            // file
+         Record[5],                                         // line
+         getMDOrNull(Record[6]),                            // type
+         Record[7],                                         // isLocal
+         Record[8],                                         // isDefinition
+         Record[9],                                         // scopeLine
+         getDITypeRefOrNull(Record[10]),                    // containingType
+         Record[11],                                        // virtuality
+         Record[12],                                        // virtualIndex
+         HasThisAdj ? Record[19] : 0,                       // thisAdjustment
+         static_cast<DINode::DIFlags>(Record[13]),          // flags
+         Record[14],                                        // isOptimized
+         HasUnit ? CUorFn : nullptr,                        // unit
+         getMDOrNull(Record[15 + Offset]),                  // templateParams
+         getMDOrNull(Record[16 + Offset]),                  // declaration
+         getMDOrNull(Record[17 + Offset]),                  // variables
+         HasThrownTypes ? getMDOrNull(Record[20]) : nullptr // thrownTypes
+         ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
 
