@@ -104,7 +104,9 @@ public:
     Iterator(const typename MapTy::iterator &i) : I(i) {}
 
     ValueT &operator*() { return I->getFirst(); }
+    const ValueT &operator*() const { return I->getFirst(); }
     ValueT *operator->() { return &I->getFirst(); }
+    const ValueT *operator->() const { return &I->getFirst(); }
 
     Iterator& operator++() { ++I; return *this; }
     Iterator operator++(int) { auto T = *this; ++I; return T; }
@@ -126,7 +128,9 @@ public:
     ConstIterator(const typename MapTy::const_iterator &i) : I(i) {}
 
     const ValueT &operator*() { return I->getFirst(); }
+    const ValueT &operator*() const { return I->getFirst(); }
     const ValueT *operator->() { return &I->getFirst(); }
+    const ValueT *operator->() const { return &I->getFirst(); }
 
     ConstIterator& operator++() { ++I; return *this; }
     ConstIterator operator++(int) { auto T = *this; ++I; return T; }
