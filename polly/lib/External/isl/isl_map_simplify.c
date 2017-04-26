@@ -4216,6 +4216,9 @@ error:
  *
  * After all constraints have been modified, we drop the lower and upper
  * bound and then drop div1.
+ * Since the new div is only placed in the same location that used
+ * to store div2, but otherwise has a different meaning, any possible
+ * explicit representation of the original div2 is removed.
  */
 static struct isl_basic_map *coalesce_divs(struct isl_basic_map *bmap,
 	unsigned div1, unsigned div2, unsigned l, unsigned u)
@@ -4260,6 +4263,7 @@ static struct isl_basic_map *coalesce_divs(struct isl_basic_map *bmap,
 		isl_basic_map_drop_inequality(bmap, u);
 		isl_basic_map_drop_inequality(bmap, l);
 	}
+	bmap = isl_basic_map_mark_div_unknown(bmap, div2);
 	bmap = isl_basic_map_drop_div(bmap, div1);
 	return bmap;
 }

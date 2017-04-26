@@ -283,6 +283,26 @@ TEST(DeLICM, isConflicting) {
   EXPECT_FALSE(checkIsConflicting({"{ Dom[i] : i != 1 }", nullptr, "{}"},
                                   {"{}", nullptr, "{ Dom[0] }"}));
 
+  // Check occupied vs. written with known values.
+  EXPECT_FALSE(checkIsConflictingKnown({"{ Dom[i] -> Val[] }", nullptr, "{}"},
+                                       {"{}", nullptr, "{ Dom[0] -> Val[] }"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{ Dom[i] -> ValA[] }", nullptr, "{}"},
+                                      {"{}", nullptr, "{ Dom[0] -> ValB[] }"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{ Dom[i] -> Val[] }", nullptr, "{}"},
+                                      {"{}", nullptr, "{ Dom[0] -> [] }"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{ Dom[i] -> [] }", nullptr, "{}"},
+                                      {"{}", nullptr, "{ Dom[0] -> Val[] }"}));
+
+  // The same value can be known under multiple names, for instance a PHINode
+  // has the same value as one of the incoming values. One matching pair
+  // suffices.
+  EXPECT_FALSE(checkIsConflictingKnown(
+      {"{ Dom[i] -> Val[]; Dom[i] -> Phi[] }", nullptr, "{}"},
+      {"{}", nullptr, "{ Dom[0] -> Val[] }"}));
+  EXPECT_FALSE(checkIsConflictingKnown(
+      {"{ Dom[i] -> Val[] }", nullptr, "{}"},
+      {"{}", nullptr, "{ Dom[0] -> Val[]; Dom[0] -> Phi[] }"}));
+
   // Check written vs. written.
   EXPECT_TRUE(checkIsConflicting({"{}", nullptr, "{ Dom[0] }"},
                                  {"{}", nullptr, "{ Dom[0] }"}));
