@@ -12,6 +12,7 @@ void load_non_null_pointers() {
 
   char c = "foo"[0];
 
+  // CHECK-NOT: and i64 {{.*}}, !nosanitize
   // CHECK-NOT: icmp ne {{.*}}, null, !nosanitize
   // CHECK: ret void
 }
@@ -42,10 +43,6 @@ struct A {
       foo = 0;
     };
     f();
-
-    // LAMBDA: %[[LAMBDAINT:[0-9]+]] = ptrtoint %class.anon* %[[FUNCVAR:.*]] to i64, !nosanitize
-    // LAMBDA: and i64 %[[LAMBDAINT]], 7, !nosanitize
-    // LAMBDA: call void @__ubsan_handle_type_mismatch
 
     // LAMBDA-NOT: call void @__ubsan_handle_type_mismatch
     // LAMBDA: ret void
