@@ -172,7 +172,7 @@ entry:
   ; 64R6:         ddiv    $2, $4, $5
   ; 64R6:         teq     $5, $zero, 7
 
-  ; MM32:         lw      $25, %call16(__divdi3)($2)
+  ; MM32:         lw      $25, %call16(__divdi3)($gp)
 
   ; MM64:         ddiv    $2, $4, $5
   ; MM64:         teq     $5, $zero, 7
@@ -184,15 +184,7 @@ entry:
 define signext i128 @sdiv_i128(i128 signext %a, i128 signext %b) {
 entry:
   ; ALL-LABEL: sdiv_i128:
-
-  ; GP32:         lw      $25, %call16(__divti3)($gp)
-
-  ; GP64-NOT-R6:  ld      $25, %call16(__divti3)($gp)
-  ; 64R6:         ld      $25, %call16(__divti3)($gp)
-
-  ; MM32:         lw      $25, %call16(__divti3)($16)
-
-  ; MM64:         ld      $25, %call16(__divti3)($2)
+  ; ALL:         l{{w|d}}      $25, %call16(__divti3)($gp)
 
   %r = sdiv i128 %a, %b
   ret i128 %r

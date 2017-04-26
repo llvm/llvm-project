@@ -14,9 +14,10 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Support/KnownBits.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -676,11 +677,10 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
         // This only works for EQ and NE
         ICI->isEquality()) {
       // If Op1C some other power of two, convert:
-      uint32_t BitWidth = Op1C->getType()->getBitWidth();
-      APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-      computeKnownBits(ICI->getOperand(0), KnownZero, KnownOne, 0, &CI);
+      KnownBits Known(Op1C->getType()->getBitWidth());
+      computeKnownBits(ICI->getOperand(0), Known, 0, &CI);
 
-      APInt KnownZeroMask(~KnownZero);
+      APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
         if (!DoTransform) return ICI;
 
@@ -726,13 +726,13 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
       Value *LHS = ICI->getOperand(0);
       Value *RHS = ICI->getOperand(1);
 
-      APInt KnownZeroLHS(BitWidth, 0), KnownOneLHS(BitWidth, 0);
-      APInt KnownZeroRHS(BitWidth, 0), KnownOneRHS(BitWidth, 0);
-      computeKnownBits(LHS, KnownZeroLHS, KnownOneLHS, 0, &CI);
-      computeKnownBits(RHS, KnownZeroRHS, KnownOneRHS, 0, &CI);
+      KnownBits KnownLHS(BitWidth);
+      KnownBits KnownRHS(BitWidth);
+      computeKnownBits(LHS, KnownLHS, 0, &CI);
+      computeKnownBits(RHS, KnownRHS, 0, &CI);
 
-      if (KnownZeroLHS == KnownZeroRHS && KnownOneLHS == KnownOneRHS) {
-        APInt KnownBits = KnownZeroLHS | KnownOneLHS;
+      if (KnownLHS.Zero == KnownRHS.Zero && KnownLHS.One == KnownRHS.One) {
+        APInt KnownBits = KnownLHS.Zero | KnownLHS.One;
         APInt UnknownBit = ~KnownBits;
         if (UnknownBit.countPopulation() == 1) {
           if (!DoTransform) return ICI;
@@ -740,7 +740,7 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
           Value *Result = Builder->CreateXor(LHS, RHS);
 
           // Mask off any bits that are set and won't be shifted away.
-          if (KnownOneLHS.uge(UnknownBit))
+          if (KnownLHS.One.uge(UnknownBit))
             Result = Builder->CreateAnd(Result,
                                         ConstantInt::get(ITy, UnknownBit));
 
@@ -1049,10 +1049,10 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
     if (ICI->hasOneUse() &&
         ICI->isEquality() && (Op1C->isZero() || Op1C->getValue().isPowerOf2())){
       unsigned BitWidth = Op1C->getType()->getBitWidth();
-      APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-      computeKnownBits(Op0, KnownZero, KnownOne, 0, &CI);
+      KnownBits Known(BitWidth);
+      computeKnownBits(Op0, Known, 0, &CI);
 
-      APInt KnownZeroMask(~KnownZero);
+      APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) {
         Value *In = ICI->getOperand(0);
 

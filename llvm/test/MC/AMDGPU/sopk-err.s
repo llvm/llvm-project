@@ -25,3 +25,18 @@ s_setreg_imm32_b32  hwreg(3,0,33), 0xff
 
 s_getreg_b32  s2, hwreg(3,32,32)
 // GCN: error: invalid bit offset: only 5-bit values are legal
+
+s_cmpk_le_u32 s2, -1
+// GCN: error: invalid operand for instruction
+
+s_cmpk_le_u32 s2, 0x1ffff
+// GCN: error: invalid operand for instruction
+
+s_cmpk_le_u32 s2, 0x10000
+// GCN: error: invalid operand for instruction
+
+s_mulk_i32 s2, 0xFFFFFFFFFFFF0000
+// GCN: error: invalid operand for instruction
+
+s_mulk_i32 s2, 0x10000
+// GCN: error: invalid operand for instruction

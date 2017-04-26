@@ -134,7 +134,7 @@ struct ParseStatementInfo {
 
   SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
-  ParseStatementInfo() = default;
+  ParseStatementInfo() = delete;
   ParseStatementInfo(SmallVectorImpl<AsmRewrite> *rewrites)
     : AsmRewrites(rewrites) {}
 };
@@ -737,6 +737,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   HadError = false;
   AsmCond StartingCondState = TheCondState;
+  SmallVector<AsmRewrite, 4> AsmStrRewrites;
 
   // If we are generating dwarf for assembly source files save the initial text
   // section and generate a .file directive.
@@ -756,7 +757,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
-    ParseStatementInfo Info;
+    ParseStatementInfo Info(&AsmStrRewrites);
     if (!parseStatement(Info, nullptr))
       continue;
 
@@ -1650,7 +1651,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     }
 
     // Emit the label.
-    if (!ParsingInlineAsm)
+    if (!getTargetParser().isParsingInlineAsm())
       Out.EmitLabel(Sym, IDLoc);
 
     // If we are generating dwarf for assembly source files then gather the
@@ -2057,9 +2058,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // If parsing succeeded, match the instruction.
   if (!ParseHadError) {
     uint64_t ErrorInfo;
-    if (getTargetParser().MatchAndEmitInstruction(IDLoc, Info.Opcode,
-                                                  Info.ParsedOperands, Out,
-                                                  ErrorInfo, ParsingInlineAsm))
+    if (getTargetParser().MatchAndEmitInstruction(
+            IDLoc, Info.Opcode, Info.ParsedOperands, Out, ErrorInfo,
+            getTargetParser().isParsingInlineAsm()))
       return true;
   }
   return false;

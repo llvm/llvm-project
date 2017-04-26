@@ -176,7 +176,7 @@ entry:
 ; ALL-LABEL: caller8_1:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
-; PIC32MM: jalr $25
+; PIC32MM: jalr{{.*}} $25
 ; STATIC32: jal
 ; PIC64: jalr $25
 ; STATIC64: jal
@@ -288,7 +288,7 @@ entry:
 ; ALL-LABEL: caller13:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
-; PIC32MM: jalr $25
+; PIC32MM: jalr{{.*}} $25
 ; STATIC32: jal
 ; STATIC64: jal
 ; PIC64R6: jalr $25

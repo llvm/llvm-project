@@ -164,7 +164,7 @@ entry:
   ; 64R6:         dmod    $2, $4, $5
   ; 64R6:         teq     $5, $zero, 7
 
-  ; MM32:         lw      $25, %call16(__moddi3)($2)
+  ; MM32:         lw      $25, %call16(__moddi3)($gp)
 
   ; MM64:         dmod    $2, $4, $5
   ; MM64:         teq     $5, $zero, 7
@@ -177,14 +177,7 @@ define signext i128 @srem_i128(i128 signext %a, i128 signext %b) {
 entry:
 ; ALL-LABEL: srem_i128:
 
-  ; GP32:         lw      $25, %call16(__modti3)($gp)
-
-  ; GP64-NOT-R6:  ld      $25, %call16(__modti3)($gp)
-  ; 64R6:         ld      $25, %call16(__modti3)($gp)
-
-  ; MM32:         lw      $25, %call16(__modti3)($16)
-
-  ; MM64:         ld      $25, %call16(__modti3)($2)
+  ; ALL:         l{{w|d}}      $25, %call16(__modti3)($gp)
 
   %r = srem i128 %a, %b
   ret i128 %r

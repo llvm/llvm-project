@@ -415,7 +415,8 @@ void LTO::addSymbolToGlobalRes(const InputFile::Symbol &Sym,
   // Flag as visible outside of ThinLTO if visible from a regular object or
   // if this is a reference in the regular LTO partition.
   GlobalRes.VisibleOutsideThinLTO |=
-      (Res.VisibleToRegularObj || (Partition == GlobalResolution::RegularLTO));
+      (Res.VisibleToRegularObj || Sym.isUsed() ||
+       Partition == GlobalResolution::RegularLTO);
 }
 
 static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,

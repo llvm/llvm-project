@@ -35,6 +35,7 @@ class Function;
 class Instruction;
 class DominatorTree;
 class AssumptionCache;
+struct KnownBits;
 
 class DemandedBits {
 public:
@@ -58,8 +59,7 @@ private:
   void determineLiveOperandBits(const Instruction *UserI,
     const Instruction *I, unsigned OperandNo,
     const APInt &AOut, APInt &AB,
-    APInt &KnownZero, APInt &KnownOne,
-    APInt &KnownZero2, APInt &KnownOne2);
+    KnownBits &Known, KnownBits &Known2);
 
   bool Analyzed;
 

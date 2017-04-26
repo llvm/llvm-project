@@ -144,8 +144,8 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
 }
 
 Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
-  if (Value *V = SimplifyExtractElementInst(
-          EI.getVectorOperand(), EI.getIndexOperand(), DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifyExtractElementInst(EI.getVectorOperand(),
+                                            EI.getIndexOperand(), SQ))
     return replaceInstUsesWith(EI, V);
 
   // If vector val is constant with all elements the same, replace EI with
@@ -1140,8 +1140,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   SmallVector<int, 16> Mask = SVI.getShuffleMask();
   Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
 
-  if (auto *V = SimplifyShuffleVectorInst(LHS, RHS, SVI.getMask(),
-                                          SVI.getType(), DL, &TLI, &DT, &AC))
+  if (auto *V =
+          SimplifyShuffleVectorInst(LHS, RHS, SVI.getMask(), SVI.getType(), SQ))
     return replaceInstUsesWith(SVI, V);
 
   bool MadeChange = false;

@@ -80,7 +80,7 @@ public:
       return;
     }
     if (Ty.isVector()) {
-      OS << "LLT::vector(" << Ty.getNumElements() << ", " << Ty.getSizeInBits()
+      OS << "LLT::vector(" << Ty.getNumElements() << ", " << Ty.getScalarSizeInBits()
          << ")";
       return;
     }
