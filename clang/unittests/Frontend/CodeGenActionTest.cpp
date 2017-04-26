@@ -46,7 +46,7 @@ TEST(CodeGenTest, TestNullCodeGen) {
       "test.cc",
       MemoryBuffer::getMemBuffer("").release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", IK_CXX));
+      FrontendInputFile("test.cc", InputKind::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;

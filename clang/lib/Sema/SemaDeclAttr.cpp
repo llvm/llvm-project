@@ -7220,6 +7220,8 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
     Body = FD->getBody();
   } else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     Body = MD->getBody();
+  else if (auto *BD = dyn_cast<BlockDecl>(D))
+    Body = BD->getBody();
 
   assert(Body && "Need a body here!");
 

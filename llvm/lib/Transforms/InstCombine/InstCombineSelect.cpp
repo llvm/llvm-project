@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/KnownBits.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -1120,8 +1121,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
-  if (Value *V =
-          SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifySelectInst(CondVal, TrueVal, FalseVal, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Instruction *I = canonicalizeSelectToShuffle(SI))
@@ -1476,11 +1476,11 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   // The motivation for this call into value tracking is to take advantage of
   // the assumption cache, so make sure that is populated.
   if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
-    APInt KnownOne(1, 0), KnownZero(1, 0);
-    computeKnownBits(CondVal, KnownZero, KnownOne, 0, &SI);
-    if (KnownOne == 1)
+    KnownBits Known(1);
+    computeKnownBits(CondVal, Known, 0, &SI);
+    if (Known.One == 1)
       return replaceInstUsesWith(SI, TrueVal);
-    if (KnownZero == 1)
+    if (Known.Zero == 1)
       return replaceInstUsesWith(SI, FalseVal);
   }
 

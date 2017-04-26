@@ -36,6 +36,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Mutex.h"
@@ -7539,10 +7540,10 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
   int64_t GVOffset = 0;
   if (TLI->isGAPlusOffset(Ptr.getNode(), GV, GVOffset)) {
     unsigned PtrWidth = getDataLayout().getPointerTypeSizeInBits(GV->getType());
-    APInt KnownZero(PtrWidth, 0), KnownOne(PtrWidth, 0);
-    llvm::computeKnownBits(const_cast<GlobalValue *>(GV), KnownZero, KnownOne,
+    KnownBits Known(PtrWidth);
+    llvm::computeKnownBits(const_cast<GlobalValue *>(GV), Known,
                            getDataLayout());
-    unsigned AlignBits = KnownZero.countTrailingOnes();
+    unsigned AlignBits = Known.Zero.countTrailingOnes();
     unsigned Align = AlignBits ? 1 << std::min(31U, AlignBits) : 0;
     if (Align)
       return MinAlign(Align, GVOffset);
@@ -7640,6 +7641,8 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   if (MinSplatBits > VecWidth)
     return false;
 
+  // FIXME: The widths are based on this node's type, but build vectors can
+  // truncate their operands. 
   SplatValue = APInt(VecWidth, 0);
   SplatUndef = APInt(VecWidth, 0);
 
@@ -7669,6 +7672,8 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   // The build_vector is all constants or undefs. Find the smallest element
   // size that splats the vector.
   HasAnyUndefs = (SplatUndef != 0);
+
+  // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
     unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);

@@ -777,28 +777,26 @@ void PrintPreprocessedAction::ExecuteAction() {
 }
 
 void PrintPreambleAction::ExecuteAction() {
-  switch (getCurrentFileKind()) {
-  case IK_C:
-  case IK_CXX:
-  case IK_ObjC:
-  case IK_ObjCXX:
-  case IK_OpenCL:
-  case IK_CUDA:
+  switch (getCurrentFileKind().getLanguage()) {
+  case InputKind::C:
+  case InputKind::CXX:
+  case InputKind::ObjC:
+  case InputKind::ObjCXX:
+  case InputKind::OpenCL:
+  case InputKind::CUDA:
     break;
       
-  case IK_None:
-  case IK_Asm:
-  case IK_PreprocessedC:
-  case IK_PreprocessedCuda:
-  case IK_PreprocessedCXX:
-  case IK_PreprocessedObjC:
-  case IK_PreprocessedObjCXX:
-  case IK_AST:
-  case IK_LLVM_IR:
-  case IK_RenderScript:
+  case InputKind::Unknown:
+  case InputKind::Asm:
+  case InputKind::LLVM_IR:
+  case InputKind::RenderScript:
     // We can't do anything with these.
     return;
   }
+
+  // We don't expect to find any #include directives in a preprocessed input.
+  if (getCurrentFileKind().isPreprocessed())
+    return;
 
   CompilerInstance &CI = getCompilerInstance();
   auto Buffer = CI.getFileManager().getBufferForFile(getCurrentFile());

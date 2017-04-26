@@ -1015,14 +1015,14 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
 /// \brief Determine the appropriate source input kind based on language
 /// options.
-static InputKind getSourceInputKindFromOptions(const LangOptions &LangOpts) {
+static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
   if (LangOpts.OpenCL)
-    return IK_OpenCL;
+    return InputKind::OpenCL;
   if (LangOpts.CUDA)
-    return IK_CUDA;
+    return InputKind::CUDA;
   if (LangOpts.ObjC1)
-    return LangOpts.CPlusPlus? IK_ObjCXX : IK_ObjC;
-  return LangOpts.CPlusPlus? IK_CXX : IK_C;
+    return LangOpts.CPlusPlus ? InputKind::ObjCXX : InputKind::ObjC;
+  return LangOpts.CPlusPlus ? InputKind::CXX : InputKind::C;
 }
 
 /// \brief Compile a module file for the given module, using the options 
@@ -1082,7 +1082,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
   FrontendOpts.Inputs.clear();
-  InputKind IK = getSourceInputKindFromOptions(*Invocation->getLangOpts());
+  InputKind IK(getLanguageFromOptions(*Invocation->getLangOpts()),
+               InputKind::ModuleMap);
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;

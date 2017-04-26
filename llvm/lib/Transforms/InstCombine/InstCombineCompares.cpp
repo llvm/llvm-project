@@ -26,6 +26,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -175,19 +176,18 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 /// Given a signed integer type and a set of known zero and one bits, compute
 /// the maximum and minimum values that could have the specified known zero and
 /// known one bits, returning them in Min/Max.
-static void computeSignedMinMaxValuesFromKnownBits(const APInt &KnownZero,
-                                                   const APInt &KnownOne,
+/// TODO: Move to method on KnownBits struct?
+static void computeSignedMinMaxValuesFromKnownBits(const KnownBits &Known,
                                                    APInt &Min, APInt &Max) {
-  assert(KnownZero.getBitWidth() == KnownOne.getBitWidth() &&
-         KnownZero.getBitWidth() == Min.getBitWidth() &&
-         KnownZero.getBitWidth() == Max.getBitWidth() &&
+  assert(Known.getBitWidth() == Min.getBitWidth() &&
+         Known.getBitWidth() == Max.getBitWidth() &&
          "KnownZero, KnownOne and Min, Max must have equal bitwidth.");
-  APInt UnknownBits = ~(KnownZero|KnownOne);
+  APInt UnknownBits = ~(Known.Zero|Known.One);
 
   // The minimum value is when all unknown bits are zeros, EXCEPT for the sign
   // bit if it is unknown.
-  Min = KnownOne;
-  Max = KnownOne|UnknownBits;
+  Min = Known.One;
+  Max = Known.One|UnknownBits;
 
   if (UnknownBits.isNegative()) { // Sign bit is unknown
     Min.setBit(Min.getBitWidth()-1);
@@ -198,19 +198,18 @@ static void computeSignedMinMaxValuesFromKnownBits(const APInt &KnownZero,
 /// Given an unsigned integer type and a set of known zero and one bits, compute
 /// the maximum and minimum values that could have the specified known zero and
 /// known one bits, returning them in Min/Max.
-static void computeUnsignedMinMaxValuesFromKnownBits(const APInt &KnownZero,
-                                                     const APInt &KnownOne,
+/// TODO: Move to method on KnownBits struct?
+static void computeUnsignedMinMaxValuesFromKnownBits(const KnownBits &Known,
                                                      APInt &Min, APInt &Max) {
-  assert(KnownZero.getBitWidth() == KnownOne.getBitWidth() &&
-         KnownZero.getBitWidth() == Min.getBitWidth() &&
-         KnownZero.getBitWidth() == Max.getBitWidth() &&
+  assert(Known.getBitWidth() == Min.getBitWidth() &&
+         Known.getBitWidth() == Max.getBitWidth() &&
          "Ty, KnownZero, KnownOne and Min, Max must have equal bitwidth.");
-  APInt UnknownBits = ~(KnownZero|KnownOne);
+  APInt UnknownBits = ~(Known.Zero|Known.One);
 
   // The minimum value is when the unknown bits are all zeros.
-  Min = KnownOne;
+  Min = Known.One;
   // The maximum value is when the unknown bits are all ones.
-  Max = KnownOne|UnknownBits;
+  Max = Known.One|UnknownBits;
 }
 
 /// This is called when we see this pattern:
@@ -1479,14 +1478,14 @@ Instruction *InstCombiner::foldICmpTruncConstant(ICmpInst &Cmp,
     // of the high bits truncated out of x are known.
     unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
              SrcBits = X->getType()->getScalarSizeInBits();
-    APInt KnownZero(SrcBits, 0), KnownOne(SrcBits, 0);
-    computeKnownBits(X, KnownZero, KnownOne, 0, &Cmp);
+    KnownBits Known(SrcBits);
+    computeKnownBits(X, Known, 0, &Cmp);
 
     // If all the high bits are known, we can do this xform.
-    if ((KnownZero | KnownOne).countLeadingOnes() >= SrcBits - DstBits) {
+    if ((Known.Zero | Known.One).countLeadingOnes() >= SrcBits - DstBits) {
       // Pull in the high bits from known-ones set.
       APInt NewRHS = C->zext(SrcBits);
-      NewRHS |= KnownOne & APInt::getHighBitsSet(SrcBits, SrcBits - DstBits);
+      NewRHS |= Known.One & APInt::getHighBitsSet(SrcBits, SrcBits - DstBits);
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), NewRHS));
     }
   }
@@ -4001,16 +4000,16 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
     IsSignBit = isSignBitCheck(Pred, *CmpC, UnusedBit);
   }
 
-  APInt Op0KnownZero(BitWidth, 0), Op0KnownOne(BitWidth, 0);
-  APInt Op1KnownZero(BitWidth, 0), Op1KnownOne(BitWidth, 0);
+  KnownBits Op0Known(BitWidth);
+  KnownBits Op1Known(BitWidth);
 
   if (SimplifyDemandedBits(&I, 0,
                            getDemandedBitsLHSMask(I, BitWidth, IsSignBit),
-                           Op0KnownZero, Op0KnownOne, 0))
+                           Op0Known, 0))
     return &I;
 
   if (SimplifyDemandedBits(&I, 1, APInt::getAllOnesValue(BitWidth),
-                           Op1KnownZero, Op1KnownOne, 0))
+                           Op1Known, 0))
     return &I;
 
   // Given the known and unknown bits, compute a range that the LHS could be
@@ -4019,15 +4018,11 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   APInt Op0Min(BitWidth, 0), Op0Max(BitWidth, 0);
   APInt Op1Min(BitWidth, 0), Op1Max(BitWidth, 0);
   if (I.isSigned()) {
-    computeSignedMinMaxValuesFromKnownBits(Op0KnownZero, Op0KnownOne, Op0Min,
-                                           Op0Max);
-    computeSignedMinMaxValuesFromKnownBits(Op1KnownZero, Op1KnownOne, Op1Min,
-                                           Op1Max);
+    computeSignedMinMaxValuesFromKnownBits(Op0Known, Op0Min, Op0Max);
+    computeSignedMinMaxValuesFromKnownBits(Op1Known, Op1Min, Op1Max);
   } else {
-    computeUnsignedMinMaxValuesFromKnownBits(Op0KnownZero, Op0KnownOne, Op0Min,
-                                             Op0Max);
-    computeUnsignedMinMaxValuesFromKnownBits(Op1KnownZero, Op1KnownOne, Op1Min,
-                                             Op1Max);
+    computeUnsignedMinMaxValuesFromKnownBits(Op0Known, Op0Min, Op0Max);
+    computeUnsignedMinMaxValuesFromKnownBits(Op1Known, Op1Min, Op1Max);
   }
 
   // If Min and Max are known to be the same, then SimplifyDemandedBits
@@ -4054,8 +4049,8 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
     // If all bits are known zero except for one, then we know at most one bit
     // is set. If the comparison is against zero, then this is a check to see if
     // *that* bit is set.
-    APInt Op0KnownZeroInverted = ~Op0KnownZero;
-    if (~Op1KnownZero == 0) {
+    APInt Op0KnownZeroInverted = ~Op0Known.Zero;
+    if (~Op1Known.Zero == 0) {
       // If the LHS is an AND with the same constant, look through it.
       Value *LHS = nullptr;
       const APInt *LHSC;
@@ -4193,8 +4188,8 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   // Turn a signed comparison into an unsigned one if both operands are known to
   // have the same sign.
   if (I.isSigned() &&
-      ((Op0KnownZero.isNegative() && Op1KnownZero.isNegative()) ||
-       (Op0KnownOne.isNegative() && Op1KnownOne.isNegative())))
+      ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
+       (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
     return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
 
   return nullptr;
@@ -4274,8 +4269,8 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     Changed = true;
   }
 
-  if (Value *V =
-          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &AC, &I))
+  if (Value *V = SimplifyICmpInst(I.getPredicate(), Op0, Op1,
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   // comparing -val or val with non-zero is the same as just comparing val
@@ -4783,8 +4778,9 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
-  if (Value *V = SimplifyFCmpInst(I.getPredicate(), Op0, Op1,
-                                  I.getFastMathFlags(), DL, &TLI, &DT, &AC, &I))
+  if (Value *V =
+          SimplifyFCmpInst(I.getPredicate(), Op0, Op1, I.getFastMathFlags(),
+                           SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   // Simplify 'fcmp pred X, X'

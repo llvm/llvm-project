@@ -326,41 +326,38 @@ void SEHTableChunk::writeTo(uint8_t *Buf) const {
 // usually loaded to that address. However, if there's already another
 // DLL that overlaps, the loader has to relocate it. To do that, DLLs
 // contain .reloc sections which contain offsets that need to be fixed
-// up at runtime. If the loader find that a DLL cannot be loaded to its
+// up at runtime. If the loader finds that a DLL cannot be loaded to its
 // desired base address, it loads it to somewhere else, and add <actual
 // base address> - <desired base address> to each offset that is
-// specified by .reloc section.
+// specified by the .reloc section. In ELF terms, .reloc sections
+// contain relative relocations in REL format (as opposed to RELA.)
 //
-// In ELF terms, .reloc sections contain arrays of relocation offsets.
-// All these offsets in the section are implicitly R_*_RELATIVE, and
-// addends are read from section contents (so it is REL as opposed to
-// RELA).
+// This already significantly reduces the size of relocations compared
+// to ELF .rel.dyn, but Windows does more to reduce it (probably because
+// it was invented for PCs in the late '80s or early '90s.)  Offsets in
+// .reloc are grouped by page where the page size is 12 bits, and
+// offsets sharing the same page address are stored consecutively to
+// represent them with less space. This is very similar to the page
+// table which is grouped by (multiple stages of) pages.
 //
-// This already reduce the size of relocations to 1/3 compared to ELF
-// .dynrel, but Windows does more to reduce it (probably because it was
-// invented for PCs in the late '80s or early '90s.) Offsets in .reloc
-// are grouped by page where page size is 16 bits, and offsets sharing
-// the same page address are stored consecutively to represent them with
-// less space. This is a very similar to the page table which is grouped
-// by (multiple stages of) pages.
-//
-// For example, let's say we have 0x00030, 0x00500, 0x01000, 0x01100,
-// 0x20004, and 0x20008 in a .reloc section. In the section, they are
-// represented like this:
+// For example, let's say we have 0x00030, 0x00500, 0x00700, 0x00A00,
+// 0x20004, and 0x20008 in a .reloc section for x64. The uppermost 4
+// bits have a type IMAGE_REL_BASED_DIR64 or 0xA. In the section, they
+// are represented like this:
 //
 //   0x00000  -- page address (4 bytes)
 //   16       -- size of this block (4 bytes)
-//     0x0030 -- entries (2 bytes each)
-//     0x0500
-//     0x1000
-//     0x1100
+//     0xA030 -- entries (2 bytes each)
+//     0xA500
+//     0xA700
+//     0xAA00
 //   0x20000  -- page address (4 bytes)
 //   12       -- size of this block (4 bytes)
-//     0x0004 -- entries (2 bytes each)
-//     0x0008
+//     0xA004 -- entries (2 bytes each)
+//     0xA008
 //
-// Usually we have a lot of relocatinos for each page, so the number of
-// bytes for one .reloc entry is close to 2 bytes.
+// Usually we have a lot of relocations for each page, so the number of
+// bytes for one .reloc entry is close to 2 bytes on average.
 BaserelChunk::BaserelChunk(uint32_t Page, Baserel *Begin, Baserel *End) {
   // Block header consists of 4 byte page RVA and 4 byte block size.
   // Each entry is 2 byte. Last entry may be padding.

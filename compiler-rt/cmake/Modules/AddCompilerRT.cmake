@@ -210,6 +210,14 @@ function(add_compiler_rt_runtime name type)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
+      if(APPLE)
+        # Ad-hoc sign the dylibs
+        add_custom_command(TARGET ${libname}
+          POST_BUILD  
+          COMMAND codesign --sign - $<TARGET_FILE:${libname}>
+          WORKING_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+        )
+      endif()
     endif()
     install(TARGETS ${libname}
       ARCHIVE DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}

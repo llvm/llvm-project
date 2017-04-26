@@ -25,7 +25,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -353,19 +352,6 @@ finalizeOptimizationRemarks(std::unique_ptr<tool_output_file> DiagOutputFile) {
   DiagOutputFile->os().flush();
 }
 
-static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
-  // Collect the list of undefined symbols used in asm and update
-  // llvm.compiler.used to prevent optimization to drop these from the output.
-  StringSet<> AsmUndefinedRefs;
-  ModuleSymbolTable::CollectAsmSymbols(
-      Mod,
-      [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
-        if (Flags & object::BasicSymbolRef::SF_Undefined)
-          AsmUndefinedRefs.insert(Name);
-      });
-  updateCompilerUsed(Mod, TM, AsmUndefinedRefs);
-}
-
 Error lto::backend(Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel,
                    std::unique_ptr<Module> Mod,
@@ -376,8 +362,6 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(C, Mod->getTargetTriple(), *TOrErr);
-
-  handleAsmUndefinedRefs(*Mod, *TM);
 
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupOptimizationRemarks(
@@ -415,8 +399,6 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(Conf, Mod.getTargetTriple(), *TOrErr);
-
-  handleAsmUndefinedRefs(Mod, *TM);
 
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);

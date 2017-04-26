@@ -45,6 +45,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -1038,9 +1039,9 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
          "getOrEnforceKnownAlignment expects a pointer!");
   unsigned BitWidth = DL.getPointerTypeSizeInBits(V->getType());
 
-  APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-  computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC, CxtI, DT);
-  unsigned TrailZ = KnownZero.countTrailingOnes();
+  KnownBits Known(BitWidth);
+  computeKnownBits(V, Known, DL, 0, AC, CxtI, DT);
+  unsigned TrailZ = Known.Zero.countTrailingOnes();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.

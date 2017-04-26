@@ -89,6 +89,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -4575,10 +4576,10 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
     // For a SCEVUnknown, ask ValueTracking.
     unsigned BitWidth = getTypeSizeInBits(U->getType());
-    APInt Zeros(BitWidth, 0), Ones(BitWidth, 0);
-    computeKnownBits(U->getValue(), Zeros, Ones, getDataLayout(), 0, &AC,
+    KnownBits Known(BitWidth);
+    computeKnownBits(U->getValue(), Known, getDataLayout(), 0, &AC,
                      nullptr, &DT);
-    return Zeros.countTrailingOnes();
+    return Known.Zero.countTrailingOnes();
   }
 
   // SCEVUDivExpr
@@ -4757,11 +4758,12 @@ ScalarEvolution::getRange(const SCEV *S,
     const DataLayout &DL = getDataLayout();
     if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED) {
       // For a SCEVUnknown, ask ValueTracking.
-      APInt Zeros(BitWidth, 0), Ones(BitWidth, 0);
-      computeKnownBits(U->getValue(), Zeros, Ones, DL, 0, &AC, nullptr, &DT);
-      if (Ones != ~Zeros + 1)
+      KnownBits Known(BitWidth);
+      computeKnownBits(U->getValue(), Known, DL, 0, &AC, nullptr, &DT);
+      if (Known.One != ~Known.Zero + 1)
         ConservativeResult =
-            ConservativeResult.intersectWith(ConstantRange(Ones, ~Zeros + 1));
+            ConservativeResult.intersectWith(ConstantRange(Known.One,
+                                                           ~Known.Zero + 1));
     } else {
       assert(SignHint == ScalarEvolution::HINT_RANGE_SIGNED &&
              "generalize as needed!");
@@ -5292,13 +5294,13 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         unsigned LZ = A.countLeadingZeros();
         unsigned TZ = A.countTrailingZeros();
         unsigned BitWidth = A.getBitWidth();
-        APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-        computeKnownBits(BO->LHS, KnownZero, KnownOne, getDataLayout(),
+        KnownBits Known(BitWidth);
+        computeKnownBits(BO->LHS, Known, getDataLayout(),
                          0, &AC, nullptr, &DT);
 
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
-        if ((LZ != 0 || TZ != 0) && !((~A & ~KnownZero) & EffectiveMask)) {
+        if ((LZ != 0 || TZ != 0) && !((~A & ~Known.Zero) & EffectiveMask)) {
           const SCEV *MulCount = getConstant(APInt::getOneBitSet(BitWidth, TZ));
           const SCEV *LHS = getSCEV(BO->LHS);
           const SCEV *ShiftedLHS = nullptr;

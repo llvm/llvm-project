@@ -30,6 +30,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -455,11 +456,9 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
      
       Value *Offset = GEP->getOperand(2);
       unsigned BitWidth = Offset->getType()->getIntegerBitWidth();
-      APInt KnownZero(BitWidth, 0);
-      APInt KnownOne(BitWidth, 0);
-      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, nullptr, CI, 
-                       nullptr);
-      KnownZero.flipAllBits();
+      KnownBits Known(BitWidth);
+      computeKnownBits(Offset, Known, DL, 0, nullptr, CI, nullptr);
+      Known.Zero.flipAllBits();
       size_t ArrSize = 
              cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
 
@@ -473,7 +472,7 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
       // optimize if we can prove that the program has undefined behavior when 
       // Offset is outside that range. That is the case when GEP->getOperand(0) 
       // is a pointer to an object whose memory extent is NullTermIdx+1.
-      if ((KnownZero.isNonNegative() && KnownZero.ule(NullTermIdx)) || 
+      if ((Known.Zero.isNonNegative() && Known.Zero.ule(NullTermIdx)) || 
           (GEP->isInBounds() && isa<GlobalVariable>(GEP->getOperand(0)) &&
            NullTermIdx == ArrSize - 1))
         return B.CreateSub(ConstantInt::get(CI->getType(), NullTermIdx), 

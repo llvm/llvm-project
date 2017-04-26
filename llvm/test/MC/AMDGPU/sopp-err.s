@@ -73,3 +73,21 @@ s_sendmsg sendmsg(MSG_SYSMSG, 0)
 
 s_sendmsg sendmsg(MSG_SYSMSG, 5)
 // GCN: error: invalid/unsupported code of SYSMSG_OP
+
+s_waitcnt lgkmcnt(16)
+// GCN: error: failed parsing operand
+
+s_waitcnt expcnt(8)
+// GCN: error: failed parsing operand
+
+s_waitcnt vmcnt(16)
+// GCN: error: failed parsing operand
+
+s_waitcnt vmcnt(0xFFFFFFFFFFFF0000)
+// GCN: error: failed parsing operand
+
+s_waitcnt vmcnt(0), expcnt(0), lgkmcnt(0),
+// GCN: error: failed parsing operand
+
+s_waitcnt vmcnt(0) & expcnt(0) & lgkmcnt(0)&
+// GCN: error: failed parsing operand

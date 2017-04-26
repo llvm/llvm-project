@@ -110,8 +110,8 @@ public:
   /// Hook called whenever a macro \#undef is seen.
   ///
   /// MD is released immediately following this callback.
-  void MacroUndefined(const Token &MacroNameTok,
-                      const MacroDefinition &MD) override;
+  void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
+                      const MacroDirective *Undef) override;
 };
 
 } // end namespace clang

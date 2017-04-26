@@ -37,6 +37,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -72,8 +73,7 @@ static bool isAlwaysLive(Instruction *I) {
 
 void DemandedBits::determineLiveOperandBits(
     const Instruction *UserI, const Instruction *I, unsigned OperandNo,
-    const APInt &AOut, APInt &AB, APInt &KnownZero, APInt &KnownOne,
-    APInt &KnownZero2, APInt &KnownOne2) {
+    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2) {
   unsigned BitWidth = AB.getBitWidth();
 
   // We're called once per operand, but for some instructions, we need to
@@ -85,15 +85,13 @@ void DemandedBits::determineLiveOperandBits(
   auto ComputeKnownBits =
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
         const DataLayout &DL = I->getModule()->getDataLayout();
-        KnownZero = APInt(BitWidth, 0);
-        KnownOne = APInt(BitWidth, 0);
-        computeKnownBits(const_cast<Value *>(V1), KnownZero, KnownOne, DL, 0,
+        Known = KnownBits(BitWidth);
+        computeKnownBits(const_cast<Value *>(V1), Known, DL, 0,
                          &AC, UserI, &DT);
 
         if (V2) {
-          KnownZero2 = APInt(BitWidth, 0);
-          KnownOne2 = APInt(BitWidth, 0);
-          computeKnownBits(const_cast<Value *>(V2), KnownZero2, KnownOne2, DL,
+          Known2 = KnownBits(BitWidth);
+          computeKnownBits(const_cast<Value *>(V2), Known2, DL,
                            0, &AC, UserI, &DT);
         }
       };
@@ -120,7 +118,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
-                 std::min(BitWidth, KnownOne.countLeadingZeros()+1));
+                 std::min(BitWidth, Known.One.countLeadingZeros()+1));
         }
         break;
       case Intrinsic::cttz:
@@ -130,7 +128,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
-                 std::min(BitWidth, KnownOne.countTrailingZeros()+1));
+                 std::min(BitWidth, Known.One.countTrailingZeros()+1));
         }
         break;
       }
@@ -200,11 +198,11 @@ void DemandedBits::determineLiveOperandBits(
     // dead).
     if (OperandNo == 0) {
       ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
-      AB &= ~KnownZero2;
+      AB &= ~Known2.Zero;
     } else {
       if (!isa<Instruction>(UserI->getOperand(0)))
         ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
-      AB &= ~(KnownZero & ~KnownZero2);
+      AB &= ~(Known.Zero & ~Known2.Zero);
     }
     break;
   case Instruction::Or:
@@ -216,11 +214,11 @@ void DemandedBits::determineLiveOperandBits(
     // dead).
     if (OperandNo == 0) {
       ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
-      AB &= ~KnownOne2;
+      AB &= ~Known2.One;
     } else {
       if (!isa<Instruction>(UserI->getOperand(0)))
         ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
-      AB &= ~(KnownOne & ~KnownOne2);
+      AB &= ~(Known.One & ~Known2.One);
     }
     break;
   case Instruction::Xor:
@@ -318,7 +316,7 @@ void DemandedBits::performAnalysis() {
     if (!UserI->getType()->isIntegerTy())
       Visited.insert(UserI);
 
-    APInt KnownZero, KnownOne, KnownZero2, KnownOne2;
+    KnownBits Known, Known2;
     // Compute the set of alive bits for each operand. These are anded into the
     // existing set, if any, and if that changes the set of alive bits, the
     // operand is added to the work-list.
@@ -335,8 +333,7 @@ void DemandedBits::performAnalysis() {
             // Bits of each operand that are used to compute alive bits of the
             // output are alive, all others are dead.
             determineLiveOperandBits(UserI, I, OI.getOperandNo(), AOut, AB,
-                                     KnownZero, KnownOne,
-                                     KnownZero2, KnownOne2);
+                                     Known, Known2);
           }
 
           // If we've added to the set of alive bits (or the operand has not
