@@ -234,6 +234,33 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  //------------------------------------------------------------------
+  /// Start Tracing with the given SBTraceOptions.
+  ///
+  /// @param[in] options
+  ///     Class containing trace options like trace buffer size, meta
+  ///     data buffer size, TraceType and any custom parameters
+  ///     {formatted as a JSON Dictionary}. In case of errors in
+  ///     formatting, an error would be reported.
+  ///     It must be noted that tracing options such as buffer sizes
+  ///     or other custom parameters passed maybe invalid for some
+  ///     trace technologies. In such cases the trace implementations
+  ///     could choose to either throw an error or could round off to
+  ///     the nearest valid options to start tracing if the passed
+  ///     value is not supported. To obtain the actual used trace
+  ///     options please use the GetTraceConfig API. For the custom
+  ///     parameters, only the parameters recognized by the target
+  ///     would be used and others would be ignored.
+  ///
+  /// @param[out] error
+  ///     An error explaining what went wrong.
+  ///
+  /// @return
+  ///     A SBTrace instance, which should be used
+  ///     to get the trace data or other trace related operations.
+  //------------------------------------------------------------------
+  lldb::SBTrace StartTrace(SBTraceOptions &options, lldb::SBError &error);
+
   uint32_t GetNumSupportedHardwareWatchpoints(lldb::SBError &error) const;
 
   //------------------------------------------------------------------

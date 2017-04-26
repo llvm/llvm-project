@@ -12,7 +12,7 @@
 // RUN: ld.lld -o %t %t.o %t.so
 // RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 
-// RUN: echo "{_start;};" > %t.dynlist
+// RUN: echo "{ _start; };" > %t.dynlist
 // RUN: ld.lld -dynamic-list %t.dynlist -o %t %t.o %t.so
 // RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 

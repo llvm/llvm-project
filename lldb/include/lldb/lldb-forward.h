@@ -218,6 +218,7 @@ class StreamFile;
 class StreamString;
 class StringList;
 struct StringSummaryFormat;
+class StructuredDataImpl;
 class StructuredDataPlugin;
 class SystemRuntime;
 class TypeSummaryImpl;
@@ -257,6 +258,7 @@ class ThreadPlanStepRange;
 class ThreadPlanStepThrough;
 class ThreadPlanTracer;
 class ThreadSpec;
+class TraceOptions;
 class Type;
 class TypeAndOrName;
 class TypeCategoryMap;
@@ -434,6 +436,7 @@ typedef std::weak_ptr<lldb_private::Stream> StreamWP;
 typedef std::shared_ptr<lldb_private::StreamFile> StreamFileSP;
 typedef std::shared_ptr<lldb_private::StringSummaryFormat>
     StringTypeSummaryImplSP;
+typedef std::unique_ptr<lldb_private::StructuredDataImpl> StructuredDataImplUP;
 typedef std::shared_ptr<lldb_private::StructuredDataPlugin>
     StructuredDataPluginSP;
 typedef std::weak_ptr<lldb_private::StructuredDataPlugin>
@@ -455,6 +458,7 @@ typedef std::weak_ptr<lldb_private::Thread> ThreadWP;
 typedef std::shared_ptr<lldb_private::ThreadCollection> ThreadCollectionSP;
 typedef std::shared_ptr<lldb_private::ThreadPlan> ThreadPlanSP;
 typedef std::shared_ptr<lldb_private::ThreadPlanTracer> ThreadPlanTracerSP;
+typedef std::shared_ptr<lldb_private::TraceOptions> TraceOptionsSP;
 typedef std::shared_ptr<lldb_private::Type> TypeSP;
 typedef std::weak_ptr<lldb_private::Type> TypeWP;
 typedef std::shared_ptr<lldb_private::TypeCategoryImpl> TypeCategoryImplSP;
