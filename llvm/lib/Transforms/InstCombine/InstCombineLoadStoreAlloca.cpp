@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -223,6 +224,103 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   return nullptr;
 }
 
+// If I and V are pointers in different address space, it is not allowed to
+// use replaceAllUsesWith since I and V have different types. A
+// non-target-specific transformation should not use addrspacecast on V since
+// the two address space may be disjoint depending on target.
+//
+// This class chases down uses of the old pointer until reaching the load
+// instructions, then replaces the old pointer in the load instructions with
+// the new pointer. If during the chasing it sees bitcast or GEP, it will
+// create new bitcast or GEP with the new pointer and use them in the load
+// instruction.
+class PointerReplacer {
+public:
+  PointerReplacer(InstCombiner &IC) : IC(IC) {}
+  void replacePointer(Instruction &I, Value *V);
+
+private:
+  void findLoadAndReplace(Instruction &I);
+  void replace(Instruction *I);
+  Value *getReplacement(Value *I);
+
+  SmallVector<Instruction *, 4> Path;
+  MapVector<Value *, Value *> WorkMap;
+  InstCombiner &IC;
+};
+
+void PointerReplacer::findLoadAndReplace(Instruction &I) {
+  for (auto U : I.users()) {
+    auto *Inst = dyn_cast<Instruction>(&*U);
+    if (!Inst)
+      return;
+    DEBUG(dbgs() << "Found pointer user: " << *U << '\n');
+    if (isa<LoadInst>(Inst)) {
+      for (auto P : Path)
+        replace(P);
+      replace(Inst);
+    } else if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst)) {
+      Path.push_back(Inst);
+      findLoadAndReplace(*Inst);
+      Path.pop_back();
+    } else {
+      return;
+    }
+  }
+}
+
+Value *PointerReplacer::getReplacement(Value *V) {
+  auto Loc = WorkMap.find(V);
+  if (Loc != WorkMap.end())
+    return Loc->second;
+  return nullptr;
+}
+
+void PointerReplacer::replace(Instruction *I) {
+  if (getReplacement(I))
+    return;
+
+  if (auto *LT = dyn_cast<LoadInst>(I)) {
+    auto *V = getReplacement(LT->getPointerOperand());
+    assert(V && "Operand not replaced");
+    auto *NewI = new LoadInst(V);
+    NewI->takeName(LT);
+    IC.InsertNewInstWith(NewI, *LT);
+    IC.replaceInstUsesWith(*LT, NewI);
+    WorkMap[LT] = NewI;
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *V = getReplacement(GEP->getPointerOperand());
+    assert(V && "Operand not replaced");
+    SmallVector<Value *, 8> Indices;
+    Indices.append(GEP->idx_begin(), GEP->idx_end());
+    auto *NewI = GetElementPtrInst::Create(
+        V->getType()->getPointerElementType(), V, Indices);
+    IC.InsertNewInstWith(NewI, *GEP);
+    NewI->takeName(GEP);
+    WorkMap[GEP] = NewI;
+  } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
+    auto *V = getReplacement(BC->getOperand(0));
+    assert(V && "Operand not replaced");
+    auto *NewT = PointerType::get(BC->getType()->getPointerElementType(),
+                                  V->getType()->getPointerAddressSpace());
+    auto *NewI = new BitCastInst(V, NewT);
+    IC.InsertNewInstWith(NewI, *BC);
+    NewI->takeName(BC);
+    WorkMap[GEP] = NewI;
+  } else {
+    llvm_unreachable("should never reach here");
+  }
+}
+
+void PointerReplacer::replacePointer(Instruction &I, Value *V) {
+  auto *PT = cast<PointerType>(I.getType());
+  auto *NT = cast<PointerType>(V->getType());
+  assert(PT != NT && PT->getElementType() == NT->getElementType() &&
+         "Invalid usage");
+  WorkMap[&I] = V;
+  findLoadAndReplace(I);
+}
+
 Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
   if (auto *I = simplifyAllocaArraySize(*this, AI))
     return I;
@@ -293,12 +391,22 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
         for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
           eraseInstFromFunction(*ToDelete[i]);
         Constant *TheSrc = cast<Constant>(Copy->getSource());
-        Constant *Cast
-          = ConstantExpr::getPointerBitCastOrAddrSpaceCast(TheSrc, AI.getType());
-        Instruction *NewI = replaceInstUsesWith(AI, Cast);
-        eraseInstFromFunction(*Copy);
-        ++NumGlobalCopies;
-        return NewI;
+        auto *SrcTy = TheSrc->getType();
+        auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
+                                        SrcTy->getPointerAddressSpace());
+        Constant *Cast =
+            ConstantExpr::getPointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
+        if (AI.getType()->getPointerAddressSpace() ==
+            SrcTy->getPointerAddressSpace()) {
+          Instruction *NewI = replaceInstUsesWith(AI, Cast);
+          eraseInstFromFunction(*Copy);
+          ++NumGlobalCopies;
+          return NewI;
+        } else {
+          PointerReplacer PtrReplacer(*this);
+          PtrReplacer.replacePointer(AI, Cast);
+          ++NumGlobalCopies;
+        }
       }
     }
   }

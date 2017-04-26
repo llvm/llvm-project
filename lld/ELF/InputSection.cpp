@@ -84,14 +84,32 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
     this->Flags &= ~(SHF_MERGE | SHF_STRINGS);
 }
 
+// GNU assembler 2.24 and LLVM 4.0.0's MC (the newest release as of
+// March 2017) fail to infer section types for sections starting with
+// ".init_array." or ".fini_array.". They set SHT_PROGBITS instead of
+// SHF_INIT_ARRAY. As a result, the following assembler directive
+// creates ".init_array.100" with SHT_PROGBITS, for example.
+//
+//   .section .init_array.100, "aw"
+//
+// This function forces SHT_{INIT,FINI}_ARRAY so that we can handle
+// incorrect inputs as if they were correct from the beginning.
+static uint64_t getType(uint64_t Type, StringRef Name) {
+  if (Type == SHT_PROGBITS && Name.startswith(".init_array."))
+    return SHT_INIT_ARRAY;
+  if (Type == SHT_PROGBITS && Name.startswith(".fini_array."))
+    return SHT_FINI_ARRAY;
+  return Type;
+}
+
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK, Hdr->sh_type,
-                       Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
-                       Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
-                       SectionKind) {
+    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK,
+                       getType(Hdr->sh_type, Name), Hdr->sh_entsize,
+                       Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
+                       getSectionContents(File, Hdr), Name, SectionKind) {
   this->Offset = Hdr->sh_offset;
 }
 
