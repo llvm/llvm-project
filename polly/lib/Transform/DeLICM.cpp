@@ -721,7 +721,17 @@ public:
       return true;
     }
 
-    // Do the writes in Existing only overwrite unused values in Proposed?
+    // Do the writes in Existing conflict with occupied values in Proposed?
+    //
+    // In order to not conflict, it must either write to unused lifetime or
+    // write the same value. To check, we remove the writes that write into
+    // Proposed.Unused (they never conflict) and then see whether the written
+    // value is already in Proposed.Known. If there are multiple known values
+    // and a written value is known under different names, it is enough when one
+    // of the written values (assuming that they are the same value under
+    // different names, e.g. a PHINode and one of the incoming values) matches
+    // one of the known names.
+    //
     // We convert here the set of lifetimes to actual timepoints. A lifetime is
     // in conflict with a set of write timepoints, if either a live timepoint is
     // clearly within the lifetime or if a write happens at the beginning of the
@@ -732,41 +742,69 @@ public:
     // Knowledge to check this property also for accesses to MemoryKind::Array.
     auto ProposedFixedDefs =
         convertZoneToTimepoints(Proposed.Occupied, true, false);
-    auto ExistingWrittenDomain =
-        isl::manage(isl_union_map_domain(Existing.Written.copy()));
-    if (isl_union_set_is_disjoint(ExistingWrittenDomain.keep(),
-                                  ProposedFixedDefs.keep()) != isl_bool_true) {
+    auto ProposedFixedKnown =
+        convertZoneToTimepoints(Proposed.Known, isl::dim::in, true, false);
+
+    auto ExistingConflictingWrites =
+        Existing.Written.intersect_domain(ProposedFixedDefs);
+    auto ExistingConflictingWritesDomain = ExistingConflictingWrites.domain();
+
+    auto CommonWrittenVal =
+        ProposedFixedKnown.intersect(ExistingConflictingWrites);
+    auto CommonWrittenValDomain = CommonWrittenVal.domain();
+
+    if (!ExistingConflictingWritesDomain.is_subset(CommonWrittenValDomain)) {
       if (OS) {
-        auto ConflictingWrites = give(isl_union_set_intersect(
-            ExistingWrittenDomain.copy(), ProposedFixedDefs.copy()));
-        OS->indent(Indent) << "Proposed writes into range used by existing\n";
-        OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
-                           << "\n";
+        auto ExistingConflictingWritten =
+            ExistingConflictingWrites.subtract_domain(CommonWrittenValDomain);
+        auto ProposedConflictingKnown = ProposedFixedKnown.subtract_domain(
+            ExistingConflictingWritten.domain());
+
+        OS->indent(Indent)
+            << "Proposed a lifetime where there is an Existing write into it\n";
+        OS->indent(Indent) << "Existing conflicting writes: "
+                           << ExistingConflictingWritten << "\n";
+        if (!ProposedConflictingKnown.is_empty())
+          OS->indent(Indent)
+              << "Proposed conflicting known:  " << ProposedConflictingKnown
+              << "\n";
       }
       return true;
     }
 
-    // Do the new writes in Proposed only overwrite unused values in Existing?
+    // Do the writes in Proposed conflict with occupied values in Existing?
     auto ExistingAvailableDefs =
         convertZoneToTimepoints(Existing.Unused, true, false);
-    auto ProposedWrittenDomain =
-        isl::manage(isl_union_map_domain(Proposed.Written.copy()));
-    if (isl_union_set_is_subset(ProposedWrittenDomain.keep(),
-                                ExistingAvailableDefs.keep()) !=
-        isl_bool_true) {
+    auto ExistingKnownDefs =
+        convertZoneToTimepoints(Existing.Known, isl::dim::in, true, false);
+
+    auto ProposedWrittenDomain = Proposed.Written.domain();
+    auto KnownIdentical = ExistingKnownDefs.intersect(Proposed.Written);
+    auto IdenticalOrUnused =
+        ExistingAvailableDefs.unite(KnownIdentical.domain());
+    if (!ProposedWrittenDomain.is_subset(IdenticalOrUnused)) {
       if (OS) {
-        auto ConflictingWrites = give(isl_union_set_subtract(
-            ProposedWrittenDomain.copy(), ExistingAvailableDefs.copy()));
-        OS->indent(Indent)
-            << "Proposed a lifetime where there is an Existing write into it\n";
-        OS->indent(Indent) << "Conflicting writes: " << ConflictingWrites
-                           << "\n";
+        auto Conflicting = ProposedWrittenDomain.subtract(IdenticalOrUnused);
+        auto ExistingConflictingKnown =
+            ExistingKnownDefs.intersect_domain(Conflicting);
+        auto ProposedConflictingWritten =
+            Proposed.Written.intersect_domain(Conflicting);
+
+        OS->indent(Indent) << "Proposed writes into range used by Existing\n";
+        OS->indent(Indent) << "Proposed conflicting writes: "
+                           << ProposedConflictingWritten << "\n";
+        if (!ExistingConflictingKnown.is_empty())
+          OS->indent(Indent)
+              << "Existing conflicting known: " << ExistingConflictingKnown
+              << "\n";
       }
       return true;
     }
 
     // Does Proposed write at the same time as Existing already does (order of
     // writes is undefined)? Writing the same value is permitted.
+    auto ExistingWrittenDomain =
+        isl::manage(isl_union_map_domain(Existing.Written.copy()));
     auto BothWritten =
         Existing.Written.domain().intersect(Proposed.Written.domain());
     auto ExistingKnownWritten = filterKnownValInst(Existing.Written);
