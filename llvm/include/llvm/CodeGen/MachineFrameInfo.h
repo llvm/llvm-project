@@ -21,15 +21,9 @@
 
 namespace llvm {
 class raw_ostream;
-class DataLayout;
-class TargetRegisterClass;
-class Type;
 class MachineFunction;
 class MachineBasicBlock;
-class TargetFrameLowering;
-class TargetMachine;
 class BitVector;
-class Value;
 class AllocaInst;
 
 /// The CalleeSavedInfo class tracks the information need to locate where a
