@@ -706,10 +706,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (!Config->Shared && !Config->AuxiliaryList.empty())
     error("-f may not be used without -shared");
 
-  for (auto *Arg : Args.filtered(OPT_dynamic_list))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      readDynamicList(*Buffer);
-
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       Config->SymbolOrderingFile = getLines(*Buffer);
@@ -724,21 +720,31 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
             {S, /*IsExternCpp*/ false, /*HasWildcard*/ false});
   }
 
-  for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
-    Config->VersionScriptGlobals.push_back(
-        {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
+  bool HasExportDynamic =
+      getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false);
 
-  // Dynamic lists are a simplified linker script that doesn't need the
-  // "global:" and implicitly ends with a "local:*". Set the variables needed to
-  // simulate that.
-  if (Args.hasArg(OPT_dynamic_list) || Args.hasArg(OPT_export_dynamic_symbol)) {
-    Config->ExportDynamic = true;
-    if (!Config->Shared)
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+  // Parses -dynamic-list and -export-dynamic-symbol. They make some
+  // symbols private. Note that -export-dynamic takes precedence over them
+  // as it says all symbols should be exported.
+  if (!HasExportDynamic) {
+    for (auto *Arg : Args.filtered(OPT_dynamic_list))
+      if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+        readDynamicList(*Buffer);
+
+    for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
+      Config->VersionScriptGlobals.push_back(
+          {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
+
+    // Dynamic lists are a simplified linker script that doesn't need the
+    // "global:" and implicitly ends with a "local:*". Set the variables
+    // needed to simulate that.
+    if (Args.hasArg(OPT_dynamic_list) ||
+        Args.hasArg(OPT_export_dynamic_symbol)) {
+      Config->ExportDynamic = true;
+      if (!Config->Shared)
+        Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+    }
   }
-
-  if (getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false))
-    Config->DefaultSymbolVersion = VER_NDX_GLOBAL;
 
   if (auto *Arg = Args.getLastArg(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

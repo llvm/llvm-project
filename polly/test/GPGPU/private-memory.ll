@@ -28,17 +28,17 @@
 
 ; KERNEL:   %polly.access.cast.private_array = bitcast [1 x float]* %private_array to float*
 ; KERNEL-NEXT:   %polly.access.private_array = getelementptr float, float* %polly.access.cast.private_array, i64 0
-; KERNEL-NEXT:   %polly.access.cast.MemRef_A = bitcast i8* %MemRef_A to float*
-; KERNEL-NEXT:   %polly.access.MemRef_A = getelementptr float, float* %polly.access.cast.MemRef_A, i64 %t0
-; KERNEL-NEXT:   %shared.read = load float, float* %polly.access.MemRef_A
+; KERNEL-NEXT:   %polly.access.cast.MemRef_A = bitcast i8 addrspace(1)* %MemRef_A to float addrspace(1)*
+; KERNEL-NEXT:   %polly.access.MemRef_A = getelementptr float, float addrspace(1)* %polly.access.cast.MemRef_A, i64 %t0
+; KERNEL-NEXT:   %shared.read = load float, float addrspace(1)* %polly.access.MemRef_A
 ; KERNEL-NEXT:   store float %shared.read, float* %polly.access.private_array
 
 ; KERNEL:   %polly.access.cast.private_array5 = bitcast [1 x float]* %private_array to float*
 ; KERNEL-NEXT:   %polly.access.private_array6 = getelementptr float, float* %polly.access.cast.private_array5, i64 0
-; KERNEL-NEXT:   %polly.access.cast.MemRef_A7 = bitcast i8* %MemRef_A to float*
-; KERNEL-NEXT:   %polly.access.MemRef_A8 = getelementptr float, float* %polly.access.cast.MemRef_A7, i64 %t0
+; KERNEL-NEXT:   %polly.access.cast.MemRef_A7 = bitcast i8 addrspace(1)* %MemRef_A to float addrspace(1)*
+; KERNEL-NEXT:   %polly.access.MemRef_A8 = getelementptr float, float addrspace(1)* %polly.access.cast.MemRef_A7, i64 %t0
 ; KERNEL-NEXT:   %shared.write = load float, float* %polly.access.private_array6
-; KERNEL-NEXT:   store float %shared.write, float* %polly.access.MemRef_A8
+; KERNEL-NEXT:   store float %shared.write, float addrspace(1)* %polly.access.MemRef_A8
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

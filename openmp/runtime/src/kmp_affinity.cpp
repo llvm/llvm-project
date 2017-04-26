@@ -343,7 +343,7 @@ __kmp_affinity_remove_radix_one_levels(AddrUnsPair *address2os, int nActiveThrea
 }
 
 // Returns the number of objects of type 'type' below 'obj' within the topology tree structure.
-// e.g., if obj is a HWLOC_OBJ_SOCKET object, and type is HWLOC_OBJ_PU, then
+// e.g., if obj is a HWLOC_OBJ_PACKAGE object, and type is HWLOC_OBJ_PU, then
 //  this will return the number of PU's under the SOCKET object.
 static int
 __kmp_hwloc_get_nobjs_under_obj(hwloc_obj_t obj, hwloc_obj_type_t type) {
@@ -385,7 +385,7 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
         //
         KMP_ASSERT(__kmp_affinity_type == affinity_none);
 
-        nCoresPerPkg = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, 0), HWLOC_OBJ_CORE);
+        nCoresPerPkg = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_PACKAGE, 0), HWLOC_OBJ_CORE);
         __kmp_nThreadsPerCore = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_CORE, 0), HWLOC_OBJ_PU);
         __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
         nPackages = (__kmp_xproc + nCoresPerPkg - 1) / nCoresPerPkg;
@@ -424,9 +424,9 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     int socket_identifier = 0;
     // re-calculate globals to count only accessible resources
     __kmp_ncores = nPackages = nCoresPerPkg = __kmp_nThreadsPerCore = 0;
-    for(socket = hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, 0);
+    for(socket = hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_PACKAGE, 0);
         socket != NULL;
-        socket = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, socket),
+        socket = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_PACKAGE, socket),
         socket_identifier++)
     {
         int core_identifier = 0;

@@ -220,3 +220,71 @@ class ConflictingPseudoOverridesInSpecialization<int, T> {
 // CHECK-NEXT: RelOver,RelSpecialization | foo | c:@ST>2#T#T@ConflictingPseudoOverridesInSpecialization@F@foo#t0.0#
 // CHECK-NEXT: RelOver,RelSpecialization | foo | c:@ST>2#T#T@ConflictingPseudoOverridesInSpecialization@F@foo#t0.1#
 };
+
+template<typename T, typename U, int x>
+void functionSpecialization();
+
+template<typename T, typename U, int x>
+void functionSpecialization() { }
+// CHECK: [[@LINE-1]]:6 | function/C | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v# | <no-cgname> | Def | rel: 0
+
+template<>
+void functionSpecialization<int, int, 0>();
+// CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSpecialization | c:@F@functionSpecialization<#I#I#VI0># | __Z22functionSpecializationIiiLi0EEvv | Decl,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v#
+
+template<>
+void functionSpecialization<int, int, 0>() { }
+// CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSpecialization | c:@F@functionSpecialization<#I#I#VI0># | __Z22functionSpecializationIiiLi0EEvv | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | functionSpecialization | c:@FT@>3#T#T#NIfunctionSpecialization#v#
+
+struct ContainsSpecializedMemberFunction {
+  template<typename T>
+  void memberSpecialization();
+};
+
+template<typename T>
+void ContainsSpecializedMemberFunction::memberSpecialization() {
+// CHECK: [[@LINE-1]]:41 | instance-method/C++ | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@FT@>1#TmemberSpecialization#v# | <no-cgname> | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild
+}
+
+template<>
+void ContainsSpecializedMemberFunction::memberSpecialization<int>() {
+// CHECK: [[@LINE-1]]:41 | instance-method(Gen,TS)/C++ | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@F@memberSpecialization<#I># | __ZN33ContainsSpecializedMemberFunction20memberSpecializationIiEEvv | Def,RelChild,RelSpecialization | rel: 2
+// CHECK-NEXT: RelChild
+// CHECK-NEXT: RelSpecialization | memberSpecialization | c:@S@ContainsSpecializedMemberFunction@FT@>1#TmemberSpecialization#v#
+}
+
+template<typename T>
+class SpecializationDecl;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<typename T>
+class SpecializationDecl { };
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Def | rel: 0
+
+template<>
+class SpecializationDecl<int>;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<>
+class SpecializationDecl<int> { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | SpecializationDecl | c:@S@SpecializationDecl>#I | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | SpecializationDecl | c:@ST>1#T@SpecializationDecl
+// CHECK-NEXT: [[@LINE-3]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+
+template<typename T>
+class PartialSpecilizationClass<Cls, T>;
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-2]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+
+template<>
+class PartialSpecilizationClass<Cls, Cls> : Cls { };
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_ | <no-cgname> | Def,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
+// CHECK-NEXT: [[@LINE-3]]:45 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_
+// CHECK-NEXT: [[@LINE-5]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-6]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-7]]:38 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0

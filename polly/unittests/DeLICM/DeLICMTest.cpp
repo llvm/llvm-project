@@ -241,6 +241,29 @@ TEST(DeLICM, isConflicting) {
   EXPECT_FALSE(checkIsConflicting({"{ Dom[i] : i != 0 }", nullptr, "{}"},
                                   {"{ Dom[0] }", nullptr, "{}"}));
 
+  // Check occupied vs. occupied with known values.
+  EXPECT_FALSE(checkIsConflictingKnown({"{ Dom[i] -> Val[] }", nullptr, "{}"},
+                                       {"{ Dom[i] -> Val[] }", nullptr, "{}"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{ Dom[i] -> ValA[] }", nullptr, "{}"},
+                                      {"{ Dom[i] -> ValB[] }", nullptr, "{}"}));
+  EXPECT_TRUE(checkIsConflictingKnown({"{ Dom[i] -> Val[] }", nullptr, "{}"},
+                                      {"{ Dom[i] -> [] }", nullptr, "{}"}));
+  EXPECT_FALSE(checkIsConflictingKnown({"{ Dom[0] -> Val[] }", nullptr, "{}"},
+                                       {nullptr, "{ Dom[0] }", "{}"}));
+
+  // An implementation using subtract would have exponential runtime on patterns
+  // such as this one.
+  EXPECT_TRUE(checkIsConflictingKnown(
+      {"{ Dom[i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,i15]"
+       "-> Val[] }",
+       nullptr, "{}"},
+      {"[p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,q0,"
+       "q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15] -> {"
+       "Dom[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] -> Val[];"
+       "Dom[p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15] -> Val[];"
+       "Dom[q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15] -> Val[] }",
+       "{}", "{}"}));
+
   // Check occupied vs. written.
   EXPECT_TRUE(
       checkIsConflicting({nullptr, "{}", "{}"}, {"{}", nullptr, "{ Dom[0] }"}));

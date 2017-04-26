@@ -51,8 +51,9 @@ struct FuncOrGblEntryTy {
 };
 
 enum ExecutionModeType {
-  SPMD,
-  GENERIC,
+  SPMD, // constructors, destructors,
+        // combined constructs (`teams distribute parallel for [simd]`)
+  GENERIC, // everything else
   NONE
 };
 
@@ -99,7 +100,7 @@ public:
   static const int HardTeamLimit = 1<<16; // 64k
   static const int HardThreadLimit = 1024;
   static const int DefaultNumTeams = 128;
-  static const int DefaultNumThreads = 1024;
+  static const int DefaultNumThreads = 128;
 
   // Record entry point associated with device
   void addOffloadEntry(int32_t device_id, __tgt_offload_entry entry) {
@@ -581,16 +582,15 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   if (thread_limit > 0) {
     cudaThreadsPerBlock = thread_limit;
     DP("Setting CUDA threads per block to requested %d\n", thread_limit);
+    // Add master warp if necessary
+    if (KernelInfo->ExecutionMode == GENERIC) {
+      cudaThreadsPerBlock += DeviceInfo.WarpSize[device_id];
+      DP("Adding master warp: +%d threads\n", DeviceInfo.WarpSize[device_id]);
+    }
   } else {
     cudaThreadsPerBlock = DeviceInfo.NumThreads[device_id];
     DP("Setting CUDA threads per block to default %d\n",
         DeviceInfo.NumThreads[device_id]);
-  }
-
-  // Add master warp if necessary
-  if (KernelInfo->ExecutionMode == GENERIC) {
-    cudaThreadsPerBlock += DeviceInfo.WarpSize[device_id];
-    DP("Adding master warp: +%d threads\n", DeviceInfo.WarpSize[device_id]);
   }
 
   if (cudaThreadsPerBlock > DeviceInfo.ThreadsPerBlock[device_id]) {
@@ -612,8 +612,27 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   int cudaBlocksPerGrid;
   if (team_num <= 0) {
     if (loop_tripcount > 0 && DeviceInfo.EnvNumTeams < 0) {
-      // round up to the nearest integer
-      cudaBlocksPerGrid = ((loop_tripcount - 1) / cudaThreadsPerBlock) + 1;
+      if (KernelInfo->ExecutionMode == SPMD) {
+        // We have a combined construct, i.e. `target teams distribute parallel
+        // for [simd]`. We launch so many teams so that each thread will
+        // execute one iteration of the loop.
+        // round up to the nearest integer
+        cudaBlocksPerGrid = ((loop_tripcount - 1) / cudaThreadsPerBlock) + 1;
+      } else {
+        // If we reach this point, then we have a non-combined construct, i.e.
+        // `teams distribute` with a nested `parallel for` and each team is
+        // assigned one iteration of the `distribute` loop. E.g.:
+        //
+        // #pragma omp target teams distribute
+        // for(...loop_tripcount...) {
+        //   #pragma omp parallel for
+        //   for(...) {}
+        // }
+        //
+        // Threads within a team will execute the iterations of the `parallel`
+        // loop.
+        cudaBlocksPerGrid = loop_tripcount;
+      }
       DP("Using %d teams due to loop trip count %" PRIu64 " and number of "
           "threads per block %d\n", cudaBlocksPerGrid, loop_tripcount,
           cudaThreadsPerBlock);
