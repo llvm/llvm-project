@@ -432,6 +432,8 @@ def fmodules_local_submodule_visibility :
 def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
   HelpText<"Select the container format for clang modules and PCH. "
            "Supported options are 'raw' and 'obj'.">;
+def fmodules_hash_error_diagnostics : Flag<["-"], "fmodules-hash-error-diagnostics">,
+  HelpText<"Make all diagnostics that produce errors to be part of the module hash">;
 def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
