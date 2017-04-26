@@ -116,6 +116,9 @@ bool ParagraphComment::isWhitespaceNoCache() const {
 static TypeLoc lookThroughTypedefOrTypeAliasLocs(TypeLoc &SrcTL) {
   TypeLoc TL = SrcTL.IgnoreParens();
 
+  // Look through attribute types.
+  if (AttributedTypeLoc AttributeTL = TL.getAs<AttributedTypeLoc>())
+    return AttributeTL.getModifiedLoc();
   // Look through qualified types.
   if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>())
     return QualifiedTL.getUnqualifiedLoc();
