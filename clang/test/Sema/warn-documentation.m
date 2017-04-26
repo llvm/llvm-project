@@ -254,7 +254,7 @@ struct HasFields {
  * \param p not here.
  * \returns integer.
  */
-void (^blockPointerVariableThatLeadsNowhere)();
+void (^_Nullable blockPointerVariableThatLeadsNowhere)();
 
 @interface CheckFunctionBlockPointerVars {
   /**
