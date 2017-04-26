@@ -17,7 +17,7 @@
 # HELP: USAGE:
 
 # RUN: ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
-# VERSION: LLD
+# VERSION: LLD {{.*}} (compatible with GNU linkers)
 
 # RUN: not ld.lld -v 2>&1 | FileCheck -check-prefix=VERSION %s
 
