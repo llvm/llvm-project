@@ -1297,17 +1297,13 @@ xsetbv // CHECK: xsetbv # encoding: [0x0f,0x01,0xd1]
 // CHECK: encoding: [0x48,0x0f,0x00,0xc8]
 	str %rax
 
-// CHECK: movd %rdi, %xmm0
+// CHECK: movq %rdi, %xmm0
 // CHECK: encoding: [0x66,0x48,0x0f,0x6e,0xc7]
 	movq %rdi,%xmm0
 
-// CHECK: movd %rdi, %xmm0
-// CHECK: encoding: [0x66,0x48,0x0f,0x6e,0xc7]
-	movd %rdi,%xmm0
-
-// CHECK: movd  %xmm0, %rax
+// CHECK: movq  %xmm0, %rax
 // CHECK: encoding: [0x66,0x48,0x0f,0x7e,0xc0]
-        movd  %xmm0, %rax
+    movq  %xmm0, %rax
 
 // CHECK: movntil %eax, (%rdi)
 // CHECK: encoding: [0x0f,0xc3,0x07]
@@ -1470,13 +1466,13 @@ fdiv %st(1)
 fdivr %st(1)
 
 // CHECK: movd %xmm0, %eax
-// CHECK: movd %xmm0, %rax
-// CHECK: movd %xmm0, %rax
+// CHECK: movq %xmm0, %rax
+// CHECK: movq %xmm0, %rax
 // CHECK: vmovd %xmm0, %eax
 // CHECK: vmovq %xmm0, %rax
 // CHECK: vmovq %xmm0, %rax
 movd %xmm0, %eax
-movd %xmm0, %rax
+movq %xmm0, %rax
 movq %xmm0, %rax
 vmovd %xmm0, %eax
 vmovd %xmm0, %rax

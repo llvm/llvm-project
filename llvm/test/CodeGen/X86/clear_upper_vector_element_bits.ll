@@ -928,7 +928,7 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE-NEXT:    pushq %r14
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    movd %xmm0, %rcx
+; SSE-NEXT:    movq %xmm0, %rcx
 ; SSE-NEXT:    movq %rcx, %r8
 ; SSE-NEXT:    movq %rcx, %r9
 ; SSE-NEXT:    movq %rcx, %r10
@@ -938,7 +938,7 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE-NEXT:    movq %rcx, %rdi
 ; SSE-NEXT:    andb $15, %cl
 ; SSE-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movd %xmm1, %rcx
+; SSE-NEXT:    movq %xmm1, %rcx
 ; SSE-NEXT:    shrq $56, %rdi
 ; SSE-NEXT:    andb $15, %dil
 ; SSE-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
@@ -1106,7 +1106,7 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE-NEXT:    pushq %r14
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE-NEXT:    movd %xmm0, %rcx
+; SSE-NEXT:    movq %xmm0, %rcx
 ; SSE-NEXT:    movq %rcx, %r8
 ; SSE-NEXT:    movq %rcx, %r9
 ; SSE-NEXT:    movq %rcx, %r10
@@ -1116,7 +1116,7 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE-NEXT:    movq %rcx, %rdi
 ; SSE-NEXT:    andb $15, %cl
 ; SSE-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movd %xmm2, %rcx
+; SSE-NEXT:    movq %xmm2, %rcx
 ; SSE-NEXT:    shrq $56, %rdi
 ; SSE-NEXT:    andb $15, %dil
 ; SSE-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)

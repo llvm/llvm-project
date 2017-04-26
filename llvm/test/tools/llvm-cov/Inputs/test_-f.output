@@ -1,3 +1,9 @@
+Function '_ZN1AC1Ev'
+Lines executed:100.00% of 1
+
+Function '_ZN1AC2Ev'
+Lines executed:100.00% of 1
+
 Function '_ZN1A1BEv'
 Lines executed:100.00% of 1
 
@@ -22,17 +28,11 @@ Lines executed:100.00% of 4
 Function 'main'
 Lines executed:91.67% of 24
 
-Function '_ZN1AC1Ev'
+File './test.h'
 Lines executed:100.00% of 1
-
-Function '_ZN1AC2Ev'
-Lines executed:100.00% of 1
+./test.h:creating 'test.h.gcov'
 
 File 'test.cpp'
 Lines executed:84.21% of 38
 test.cpp:creating 'test.cpp.gcov'
-
-File './test.h'
-Lines executed:100.00% of 1
-./test.h:creating 'test.h.gcov'
 

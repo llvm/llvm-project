@@ -144,6 +144,9 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                        " we don't have an asm parser for this target\n");
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
+  if (Dialect == InlineAsm::AD_Intel)
+    // We need this flag to be able to parse numbers like "0bH"
+    Parser->setParsingInlineAsm(true);
   if (MF) {
     const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
     TAP->SetFrameRegister(TRI->getFrameRegister(*MF));

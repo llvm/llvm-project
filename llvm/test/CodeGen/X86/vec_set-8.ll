@@ -4,7 +4,7 @@
 define <2 x i64> @test(i64 %i) nounwind  {
 ; CHECK-LABEL: test:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %rdi, %xmm0
+; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    retq
   %tmp10 = insertelement <2 x i64> undef, i64 %i, i32 0
   %tmp11 = insertelement <2 x i64> %tmp10, i64 0, i32 1

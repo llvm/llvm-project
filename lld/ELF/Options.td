@@ -25,6 +25,8 @@ def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
 def compress_debug_sections : J<"compress-debug-sections=">,
   HelpText<"Compress DWARF debug sections">;
 
+def defsym: J<"defsym=">, HelpText<"Define a symbol alias">;
+
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 

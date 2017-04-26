@@ -86,6 +86,7 @@ public:
 
   void trace(StringRef Name);
   void wrap(StringRef Name);
+  void alias(StringRef Alias, StringRef Name);
 
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);

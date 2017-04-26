@@ -16,7 +16,7 @@ define void @convert(<2 x i32>* %dst.addr, i64 %src) nounwind {
 ;
 ; X64-LABEL: convert:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    movd %rsi, %xmm0
+; X64-NEXT:    movq %rsi, %xmm0
 ; X64-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X64-NEXT:    pxor {{.*}}(%rip), %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

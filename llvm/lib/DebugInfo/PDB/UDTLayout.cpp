@@ -60,7 +60,6 @@ uint32_t LayoutItemBase::tailPadding() const {
   return UsedBytes.size() - (Last + 1);
 }
 
-
 DataMemberLayoutItem::DataMemberLayoutItem(
     const UDTLayoutBase &Parent, std::unique_ptr<PDBSymbolData> Member)
     : LayoutItemBase(&Parent, Member.get(), Member->getName(),
@@ -126,11 +125,23 @@ uint32_t UDTLayoutBase::tailPadding() const {
 
 ClassLayout::ClassLayout(const PDBSymbolTypeUDT &UDT)
     : UDTLayoutBase(nullptr, UDT, UDT.getName(), 0, UDT.getLength(), false),
-      UDT(UDT) {}
+      UDT(UDT) {
+  ImmediateUsedBytes.resize(SizeOf, false);
+  for (auto &LI : LayoutItems) {
+    uint32_t Begin = LI->getOffsetInParent();
+    uint32_t End = Begin + LI->getLayoutSize();
+    End = std::min(SizeOf, End);
+    ImmediateUsedBytes.set(Begin, End);
+  }
+}
 
 ClassLayout::ClassLayout(std::unique_ptr<PDBSymbolTypeUDT> UDT)
     : ClassLayout(*UDT) {
   OwnedStorage = std::move(UDT);
+}
+
+uint32_t ClassLayout::immediatePadding() const {
+  return SizeOf - ImmediateUsedBytes.count();
 }
 
 BaseClassLayout::BaseClassLayout(const UDTLayoutBase &Parent,

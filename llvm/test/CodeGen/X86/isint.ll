@@ -1,8 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-pc-unknown -mattr=+sse2 | FileCheck %s
-; RUN: llc < %s -mtriple=i686-pc-unknown -mattr=+sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-unknown -mattr=+sse2 | FileCheck -check-prefix=CHECK -check-prefix=CHECK64 %s
 
 ; PR19059
-; RUN: llc < %s -mtriple=i686-pc-unknown -mattr=+sse2 | FileCheck -check-prefix=CHECK32 %s
+; RUN: llc < %s -mtriple=i686-pc-unknown -mattr=+sse2 | FileCheck -check-prefix=CHECK -check-prefix=CHECK32 %s
 
 define i32 @isint_return(double %d) nounwind {
 ; CHECK-LABEL: isint_return:
@@ -15,7 +14,8 @@ define i32 @isint_return(double %d) nounwind {
   %c = fcmp oeq double %d, %e
 ; CHECK32-NOT: movd {{.*}}, %r{{.*}}
 ; CHECK32-NOT: andq
-; CHECK-NEXT: movd
+; CHECK32-NEXT: movd
+; CHECK64-NEXT: movq
 ; CHECK-NEXT: andl
   %z = zext i1 %c to i32
   ret i32 %z

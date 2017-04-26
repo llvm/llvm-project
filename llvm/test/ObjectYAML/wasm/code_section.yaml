@@ -21,11 +21,9 @@ Sections:
       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
         Index:           0
         Offset:          0x00000006
-        Addend:          0x00000000
       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
         Index:           1
         Offset:          0x00000025
-        Addend:          0x00000000
     Functions:
       - Locals:
          - Type:            I32
@@ -56,11 +54,9 @@ Sections:
 # CHECK:      - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
 # CHECK:        Index:           0
 # CHECK:        Offset:          0x00000006
-# CHECK:        Addend:          0x00000000
 # CHECK:      - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 # CHECK:        Index:           1
 # CHECK:        Offset:          0x00000025
-# CHECK:        Addend:          0x00000000
 # CHECK:    Functions:
 # CHECK:      - Locals:
 # CHECK:         - Type:            I32

@@ -606,7 +606,7 @@ public:
   template <typename T>
   void bitSetCase(T &Val, const char* Str, const T ConstVal) {
     if ( bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal) ) {
-      Val = Val | ConstVal;
+      Val = static_cast<T>(Val | ConstVal);
     }
   }
 
@@ -614,7 +614,7 @@ public:
   template <typename T>
   void bitSetCase(T &Val, const char* Str, const uint32_t ConstVal) {
     if ( bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal) ) {
-      Val = Val | ConstVal;
+      Val = static_cast<T>(Val | ConstVal);
     }
   }
 

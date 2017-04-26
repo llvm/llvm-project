@@ -223,9 +223,9 @@ inline GraphRenderer::TimeStat operator*(const GraphRenderer::TimeStat &A,
 /// Hadamard Division of TimeStats
 inline GraphRenderer::TimeStat operator/(const GraphRenderer::TimeStat &A,
                                          const GraphRenderer::TimeStat &B) {
-  return {A.Count * B.Count, A.Min * B.Min,     A.Median * B.Median,
-          A.Pct90 * B.Pct90, A.Pct99 * B.Pct99, A.Max * B.Max,
-          A.Sum * B.Sum};
+  return {A.Count / B.Count, A.Min / B.Min,     A.Median / B.Median,
+          A.Pct90 / B.Pct90, A.Pct99 / B.Pct99, A.Max / B.Max,
+          A.Sum / B.Sum};
 }
 } // namespace xray
 } // namespace llvm

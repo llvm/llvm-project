@@ -1808,32 +1808,32 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_movd_64:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    movd %rdi, %xmm1
+; GENERIC-NEXT:    movq %rdi, %xmm1
 ; GENERIC-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; GENERIC-NEXT:    paddq %xmm0, %xmm1
 ; GENERIC-NEXT:    paddq %xmm0, %xmm2
-; GENERIC-NEXT:    movd %xmm2, %rax
+; GENERIC-NEXT:    movq %xmm2, %rax
 ; GENERIC-NEXT:    movq %xmm1, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test_movd_64:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; ATOM-NEXT:    movd %rdi, %xmm2
+; ATOM-NEXT:    movq %rdi, %xmm2
 ; ATOM-NEXT:    paddq %xmm0, %xmm2
 ; ATOM-NEXT:    paddq %xmm0, %xmm1
 ; ATOM-NEXT:    movq %xmm2, (%rsi)
-; ATOM-NEXT:    movd %xmm1, %rax
+; ATOM-NEXT:    movq %xmm1, %rax
 ; ATOM-NEXT:    retq
 ;
 ; SLM-LABEL: test_movd_64:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero sched: [3:1.00]
-; SLM-NEXT:    movd %rdi, %xmm1 # sched: [1:0.50]
+; SLM-NEXT:    movq %rdi, %xmm1 # sched: [1:0.50]
 ; SLM-NEXT:    paddq %xmm0, %xmm1 # sched: [1:0.50]
 ; SLM-NEXT:    movq %xmm1, (%rsi) # sched: [1:1.00]
 ; SLM-NEXT:    paddq %xmm0, %xmm2 # sched: [1:0.50]
-; SLM-NEXT:    movd %xmm2, %rax # sched: [1:0.50]
+; SLM-NEXT:    movq %xmm2, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movd_64:

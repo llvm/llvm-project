@@ -44,6 +44,8 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
+#include "lldb/API/SBTrace.h"
+#include "lldb/API/SBTraceOptions.h"
 #include "lldb/API/SBUnixSignals.h"
 
 using namespace lldb;
@@ -347,6 +349,26 @@ size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
         dst, static_cast<uint64_t>(dst_len), static_cast<uint64_t>(bytes_read));
 
   return bytes_read;
+}
+
+lldb::SBTrace SBProcess::StartTrace(SBTraceOptions &options,
+                                    lldb::SBError &error) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  ProcessSP process_sp(GetSP());
+  error.Clear();
+  SBTrace trace_instance;
+  trace_instance.SetSP(process_sp);
+  lldb::user_id_t uid = LLDB_INVALID_UID;
+
+  if (!process_sp) {
+    error.SetErrorString("invalid process");
+  } else {
+
+    uid = process_sp->StartTrace(options.m_traceoptions_sp, error.ref());
+    trace_instance.SetTraceUID(uid);
+    LLDB_LOG(log, "SBProcess::returned uid - %" PRIx64, uid);
+  }
+  return trace_instance;
 }
 
 void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {

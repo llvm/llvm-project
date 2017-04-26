@@ -16,7 +16,7 @@ define void @func(<4 x float> %vx) {
 ; CHECK-NEXT:    pextrq $1, %xmm0, %rdx
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    movd %xmm0, %rax
+; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    movq %rax, %r9
 ; CHECK-NEXT:    shrq $32, %r9
 ; CHECK-NEXT:    andl $2032, %eax # imm = 0x7F0

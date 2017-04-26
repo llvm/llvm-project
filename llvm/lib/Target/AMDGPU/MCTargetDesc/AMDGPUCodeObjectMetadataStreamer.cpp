@@ -286,20 +286,20 @@ ValueKind MetadataStreamer::getValueKind(Type *Ty, StringRef TypeQual,
     return ValueKind::Pipe;
 
   return StringSwitch<ValueKind>(BaseTypeName)
+             .Case("image1d_t", ValueKind::Image)
+             .Case("image1d_array_t", ValueKind::Image)
+             .Case("image1d_buffer_t", ValueKind::Image)
+             .Case("image2d_t", ValueKind::Image)
+             .Case("image2d_array_t", ValueKind::Image)
+             .Case("image2d_array_depth_t", ValueKind::Image)
+             .Case("image2d_array_msaa_t", ValueKind::Image)
+             .Case("image2d_array_msaa_depth_t", ValueKind::Image)
+             .Case("image2d_depth_t", ValueKind::Image)
+             .Case("image2d_msaa_t", ValueKind::Image)
+             .Case("image2d_msaa_depth_t", ValueKind::Image)
+             .Case("image3d_t", ValueKind::Image)
              .Case("sampler_t", ValueKind::Sampler)
              .Case("queue_t", ValueKind::Queue)
-             .Cases("image1d_t",
-                    "image1d_array_t",
-                    "image1d_buffer_t",
-                    "image2d_t" ,
-                    "image2d_array_t",
-                    "image2d_array_depth_t",
-                    "image2d_array_msaa_t"
-                    "image2d_array_msaa_depth_t"
-                    "image2d_depth_t",
-                    "image2d_msaa_t",
-                    "image2d_msaa_depth_t",
-                    "image3d_t", ValueKind::Image)
              .Default(isa<PointerType>(Ty) ?
                           (Ty->getPointerAddressSpace() ==
                            AMDGPUASI.LOCAL_ADDRESS ?

@@ -2291,8 +2291,8 @@ define <2 x i64> @test_mm_set_epi64x(i64 %a0, i64 %a1) nounwind {
 ;
 ; X64-LABEL: test_mm_set_epi64x:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %rdi, %xmm1
-; X64-NEXT:    movd %rsi, %xmm0
+; X64-NEXT:    movq %rdi, %xmm1
+; X64-NEXT:    movq %rsi, %xmm0
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %res0  = insertelement <2 x i64> undef, i64 %a1, i32 0
@@ -2433,7 +2433,7 @@ define <2 x i64> @test_mm_set1_epi64x(i64 %a0) nounwind {
 ;
 ; X64-LABEL: test_mm_set1_epi64x:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %rdi, %xmm0
+; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
   %res0  = insertelement <2 x i64> undef, i64 %a0, i32 0
@@ -2685,8 +2685,8 @@ define <2 x i64> @test_mm_setr_epi64x(i64 %a0, i64 %a1) nounwind {
 ;
 ; X64-LABEL: test_mm_setr_epi64x:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %rsi, %xmm1
-; X64-NEXT:    movd %rdi, %xmm0
+; X64-NEXT:    movq %rsi, %xmm1
+; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %res0  = insertelement <2 x i64> undef, i64 %a0, i32 0
@@ -3249,7 +3249,7 @@ define void @test_mm_storel_epi64(<2 x i64> *%a0, <2 x i64> %a1) {
 ;
 ; X64-LABEL: test_mm_storel_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %xmm0, %rax
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq
   %ext = extractelement <2 x i64> %a1, i32 0

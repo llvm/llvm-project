@@ -10,7 +10,7 @@
 define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: t1:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    xorps .LCPI0_0, %xmm0
+; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: t1:
@@ -92,7 +92,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X64-SSE2:       # BB#0:
 ; X64-SSE2-NEXT:    movabsq $-9223372034707292160, %rax # imm = 0x8000000080000000
 ; X64-SSE2-NEXT:    xorq %rdi, %rax
-; X64-SSE2-NEXT:    movd %rax, %xmm0
+; X64-SSE2-NEXT:    movq %rax, %xmm0
 ; X64-SSE2-NEXT:    retq
   %bitcast = bitcast i64 %i to <2 x float>
   %fneg = fsub <2 x float> <float -0.0, float -0.0>, %bitcast

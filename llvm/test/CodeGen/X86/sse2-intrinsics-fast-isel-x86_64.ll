@@ -16,7 +16,7 @@ declare i64 @llvm.x86.sse2.cvtsd2si64(<2 x double>) nounwind readnone
 define i64 @test_mm_cvtsi128_si64(<2 x i64> %a0) nounwind {
 ; X64-LABEL: test_mm_cvtsi128_si64:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %xmm0, %rax
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    retq
   %res = extractelement <2 x i64> %a0, i32 0
   ret i64 %res
@@ -35,7 +35,7 @@ declare <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double>, i64) nounwind readn
 define <2 x i64> @test_mm_cvtsi64_si128(i64 %a0) nounwind {
 ; X64-LABEL: test_mm_cvtsi64_si128:
 ; X64:       # BB#0:
-; X64-NEXT:    movd %rdi, %xmm0
+; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    retq
   %res0 = insertelement <2 x i64> undef, i64 %a0, i32 0
   %res1 = insertelement <2 x i64> %res0, i64 0, i32 1

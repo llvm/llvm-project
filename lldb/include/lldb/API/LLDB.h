@@ -63,6 +63,8 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBThreadPlan.h"
+#include "lldb/API/SBTrace.h"
+#include "lldb/API/SBTraceOptions.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/API/SBTypeEnumMember.h"

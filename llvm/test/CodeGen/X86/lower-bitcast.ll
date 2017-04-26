@@ -44,16 +44,16 @@ define double @test2(double %A, double %B) {
 define i64 @test3(i64 %A) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %rdi, %xmm0
+; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movd %xmm0, %rax
+; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test3:
 ; CHECK-WIDE:       # BB#0:
-; CHECK-WIDE-NEXT:    movd %rdi, %xmm0
+; CHECK-WIDE-NEXT:    movq %rdi, %xmm0
 ; CHECK-WIDE-NEXT:    addps {{.*}}(%rip), %xmm0
-; CHECK-WIDE-NEXT:    movd %xmm0, %rax
+; CHECK-WIDE-NEXT:    movq %xmm0, %rax
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast i64 %A to <2 x float>
   %add = fadd <2 x float> %1, <float 3.0, float 5.0>
@@ -67,18 +67,18 @@ define i64 @test3(i64 %A) {
 define i64 @test4(i64 %A) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %rdi, %xmm0
+; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    movd %xmm0, %rax
+; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test4:
 ; CHECK-WIDE:       # BB#0:
-; CHECK-WIDE-NEXT:    movd %rdi, %xmm0
+; CHECK-WIDE-NEXT:    movq %rdi, %xmm0
 ; CHECK-WIDE-NEXT:    paddd {{.*}}(%rip), %xmm0
-; CHECK-WIDE-NEXT:    movd %xmm0, %rax
+; CHECK-WIDE-NEXT:    movq %xmm0, %rax
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast i64 %A to <2 x i32>
   %add = add <2 x i32> %1, <i32 3, i32 5>

@@ -13,6 +13,7 @@
 #include "YamlSymbolDumper.h"
 #include "YamlTypeDumper.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
@@ -35,6 +36,10 @@ LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceFileChecksumEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceColumnEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineBlock)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSymbolRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
@@ -145,7 +150,38 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_FeatureSig> {
     io.enumCase(Features, "VC140", PdbRaw_FeatureSig::VC140);
   }
 };
+
+template <> struct ScalarEnumerationTraits<llvm::codeview::FileChecksumKind> {
+  static void enumeration(IO &io, llvm::codeview::FileChecksumKind &Kind) {
+    io.enumCase(Kind, "None", llvm::codeview::FileChecksumKind::None);
+    io.enumCase(Kind, "MD5", llvm::codeview::FileChecksumKind::MD5);
+    io.enumCase(Kind, "SHA1", llvm::codeview::FileChecksumKind::SHA1);
+    io.enumCase(Kind, "SHA256", llvm::codeview::FileChecksumKind::SHA256);
+  }
+};
+
+template <> struct ScalarBitSetTraits<llvm::codeview::LineFlags> {
+  static void bitset(IO &io, llvm::codeview::LineFlags &Flags) {
+    io.bitSetCase(Flags, "HasColumnInfo",
+                  llvm::codeview::LineFlags::HaveColumns);
+    io.enumFallback<Hex16>(Flags);
+  }
+};
 }
+}
+
+void ScalarTraits<HexFormattedString>::output(const HexFormattedString &Value,
+                                              void *ctx, raw_ostream &Out) {
+  StringRef Bytes(reinterpret_cast<const char *>(Value.Bytes.data()),
+                  Value.Bytes.size());
+  Out << toHex(Bytes);
+}
+
+StringRef ScalarTraits<HexFormattedString>::input(StringRef Scalar, void *ctxt,
+                                                  HexFormattedString &Value) {
+  std::string H = fromHex(Scalar);
+  Value.Bytes.assign(H.begin(), H.end());
+  return StringRef();
 }
 
 void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
@@ -255,8 +291,64 @@ void MappingContextTraits<PdbDbiModuleInfo, pdb::yaml::SerializationContext>::ma
   IO.mapRequired("Module", Obj.Mod);
   IO.mapOptional("ObjFile", Obj.Obj, Obj.Mod);
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
+  IO.mapOptionalWithContext("LineInfo", Obj.FileLineInfo, Context);
   IO.mapOptionalWithContext("Modi", Obj.Modi, Context);
 }
+
+void MappingContextTraits<pdb::yaml::PdbSourceLineEntry,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceLineEntry &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapRequired("Offset", Obj.Offset);
+  IO.mapRequired("LineStart", Obj.LineStart);
+  IO.mapRequired("IsStatement", Obj.IsStatement);
+  IO.mapRequired("EndDelta", Obj.EndDelta);
+}
+
+void MappingContextTraits<pdb::yaml::PdbSourceColumnEntry,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceColumnEntry &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapRequired("StartColumn", Obj.StartColumn);
+  IO.mapRequired("EndColumn", Obj.EndColumn);
+};
+
+void MappingContextTraits<pdb::yaml::PdbSourceLineBlock,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceLineBlock &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapRequired("FileName", Obj.FileName);
+  IO.mapRequired("Lines", Obj.Lines, Context);
+  IO.mapRequired("Columns", Obj.Columns, Context);
+};
+
+void MappingContextTraits<pdb::yaml::PdbSourceFileChecksumEntry,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceFileChecksumEntry &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapRequired("FileName", Obj.FileName);
+  IO.mapRequired("Kind", Obj.Kind);
+  IO.mapRequired("Checksum", Obj.ChecksumBytes);
+};
+
+void MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceLineInfo &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapRequired("CodeSize", Obj.CodeSize);
+  IO.mapRequired("Flags", Obj.Flags);
+  IO.mapRequired("RelocOffset", Obj.RelocOffset);
+  IO.mapRequired("RelocSegment", Obj.RelocSegment);
+  IO.mapRequired("LineInfo", Obj.LineInfo, Context);
+};
+
+void MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
+                          pdb::yaml::SerializationContext>::
+    mapping(IO &IO, PdbSourceFileInfo &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  IO.mapOptionalWithContext("Lines", Obj.Lines, Context);
+  IO.mapOptionalWithContext("Checksums", Obj.FileChecksums, Context);
+};
 
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj,
