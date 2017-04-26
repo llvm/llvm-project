@@ -56,7 +56,7 @@ with host compiler and pass explicit target option to CMake:
     cd utils
     mkdir build
     cd build
-    cmake -DLLVM_BUILD=$LLVM_BUILD ..
+    cmake -DLLVM_DIR=$LLVM_BUILD ..
     make
     # Build bitcode libraries
     cd ../..
