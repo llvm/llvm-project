@@ -65,7 +65,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   auto Invocation = std::make_shared<CompilerInvocation>(CI.getInvocation());
 
   FrontendOptions &FrontendOpts = Invocation->getFrontendOpts();
-  InputKind IK = IK_CXX; // FIXME
+  InputKind IK = InputKind::CXX; // FIXME
   FrontendOpts.Inputs.clear();
   FrontendOpts.Inputs.emplace_back(fileName, IK);
   FrontendOpts.DisableFree = true;

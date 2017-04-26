@@ -238,7 +238,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // AST files follow a very different path, since they share objects via the
   // AST unit.
-  if (Input.getKind() == IK_AST) {
+  if (Input.getKind().getFormat() == InputKind::Precompiled) {
+    // FIXME: We should not be asserting on bad command-line arguments.
     assert(!usesPreprocessorOnly() &&
            "Attempt to pass AST file to preprocessor only action!");
     assert(hasASTFileSupport() &&
@@ -297,7 +298,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.createSourceManager(CI.getFileManager());
 
   // IR files bypass the rest of initialization.
-  if (Input.getKind() == IK_LLVM_IR) {
+  if (Input.getKind().getLanguage() == InputKind::LLVM_IR) {
     assert(hasIRSupport() &&
            "This action does not have IR file support!");
 

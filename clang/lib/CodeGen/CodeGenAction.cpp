@@ -944,7 +944,7 @@ std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
 void CodeGenAction::ExecuteAction() {
   // If this is an IR file, we have to treat it specially.
-  if (getCurrentFileKind() == IK_LLVM_IR) {
+  if (getCurrentFileKind().getLanguage() == InputKind::LLVM_IR) {
     BackendAction BA = static_cast<BackendAction>(Act);
     CompilerInstance &CI = getCompilerInstance();
     std::unique_ptr<raw_pwrite_stream> OS =
