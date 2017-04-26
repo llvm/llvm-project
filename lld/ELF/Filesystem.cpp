@@ -13,7 +13,6 @@
 
 #include "Filesystem.h"
 #include "Config.h"
-#include "Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <thread>
@@ -58,22 +57,20 @@ void elf::unlinkAsync(StringRef Path) {
   std::thread([=] { ::remove(TempPath.str().str().c_str()); }).detach();
 }
 
-// Returns true if a given file seems to be writable.
+// Simulate file creation to see if Path is writable.
 //
 // Determining whether a file is writable or not is amazingly hard,
 // and after all the only reliable way of doing that is to actually
 // create a file. But we don't want to do that in this function
 // because LLD shouldn't update any file if it will end in a failure.
-// We also don't want to reimplement heuristics. So we'll let
-// FileOutputBuffer do the work.
+// We also don't want to reimplement heuristics to determine if a
+// file is writable. So we'll let FileOutputBuffer do the work.
 //
 // FileOutputBuffer doesn't touch a desitnation file until commit()
 // is called. We use that class without calling commit() to predict
 // if the given file is writable.
-bool elf::isFileWritable(StringRef Path, StringRef Desc) {
-  if (auto EC = FileOutputBuffer::create(Path, 1).getError()) {
-    error("cannot open " + Desc + " " + Path + ": " + EC.message());
-    return false;
-  }
-  return true;
+std::error_code elf::tryCreateFile(StringRef Path) {
+  if (Path.empty())
+    return std::error_code();
+  return FileOutputBuffer::create(Path, 1).getError();
 }

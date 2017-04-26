@@ -615,7 +615,7 @@ bool Sema::isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S) {
 
     CXXRecordDecl *RD = cast<CXXRecordDecl>(CurContext);
     for (const auto &Base : RD->bases())
-      if (Context.hasSameUnqualifiedType(QualType(Ty, 1), Base.getType()))
+      if (Ty && Context.hasSameUnqualifiedType(QualType(Ty, 1), Base.getType()))
         return true;
     return S->isFunctionPrototypeScope();
   }

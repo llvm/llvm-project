@@ -223,8 +223,6 @@ public:
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
-  bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -245,7 +243,6 @@ public:
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  bool isTlsLocalDynamicRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
@@ -2066,14 +2063,6 @@ int64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   }
 }
 
-bool ARMTargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
-  return Type == R_ARM_TLS_LDO32 || Type == R_ARM_TLS_LDM32;
-}
-
-bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
-  return Type == R_ARM_TLS_IE32;
-}
-
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotPltHeaderEntriesNum = 2;
   DefaultMaxPageSize = 65536;
@@ -2163,11 +2152,6 @@ template <class ELFT> bool MipsTargetInfo<ELFT>::isPicRel(uint32_t Type) const {
 template <class ELFT>
 uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   return RelativeRel;
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::isTlsLocalDynamicRel(uint32_t Type) const {
-  return Type == R_MIPS_TLS_LDM;
 }
 
 template <class ELFT>
