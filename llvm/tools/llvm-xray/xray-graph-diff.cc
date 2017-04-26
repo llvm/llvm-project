@@ -416,7 +416,7 @@ void GraphDiffRenderer::exportGraphAsDOT(raw_ostream &OS, StatType EdgeLabel,
   }
 
   OS << "}\n";
-};
+}
 
 template <typename T> static T &ifSpecified(T &A, cl::alias &AA, T &B) {
   if (A.getPosition() == 0 && AA.getPosition() == 0)

@@ -116,7 +116,9 @@ inline perms &operator&=(perms &l, perms r) {
   return l;
 }
 inline perms operator~(perms x) {
-  return static_cast<perms>(~static_cast<unsigned short>(x));
+  // Avoid UB by explicitly truncating the (unsigned) ~ result.
+  return static_cast<perms>(
+      static_cast<unsigned short>(~static_cast<unsigned short>(x)));
 }
 
 class UniqueID {

@@ -36,13 +36,7 @@ void foo() {
 
   // CHECK-COMMON:      %[[I8PTR:.*]] = bitcast i32* %[[PTR:.*]] to i8*
   // CHECK-COMMON-NEXT: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* %[[I8PTR]], i1 false, i1 false)
-  // CHECK-COMMON-NEXT: %[[CHECK0:.*]] = icmp uge i64 %[[SIZE]], 4
-
-  // CHECK-COMMON:      %[[PTRTOINT:.*]] = ptrtoint {{.*}}* %[[PTR]] to i64
-  // CHECK-COMMON-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRTOINT]], 3
-  // CHECK-COMMON-NEXT: %[[CHECK1:.*]] = icmp eq i64 %[[MISALIGN]], 0
-
-  // CHECK-COMMON:       %[[OK:.*]] = and i1 %[[CHECK0]], %[[CHECK1]]
+  // CHECK-COMMON-NEXT: %[[OK:.*]] = icmp uge i64 %[[SIZE]], 4
 
   // CHECK-UBSAN: br i1 %[[OK]], {{.*}} !prof ![[WEIGHT_MD:.*]], !nosanitize
   // CHECK-TRAP:  br i1 %[[OK]], {{.*}}

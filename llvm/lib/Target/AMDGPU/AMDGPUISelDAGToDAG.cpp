@@ -159,8 +159,6 @@ private:
   bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                          SDValue &Clamp, SDValue &Omod) const;
 
-  bool SelectVOP3Mods0Clamp(SDValue In, SDValue &Src, SDValue &SrcMods,
-                            SDValue &Omod) const;
   bool SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src, SDValue &SrcMods,
                                  SDValue &Clamp,
                                  SDValue &Omod) const;
@@ -1681,14 +1679,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0(SDValue In, SDValue &Src,
   SDLoc DL(In);
   Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Omod = CurDAG->getTargetConstant(0, DL, MVT::i1);
-
-  return SelectVOP3Mods(In, Src, SrcMods);
-}
-
-bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp(SDValue In, SDValue &Src,
-                                              SDValue &SrcMods,
-                                              SDValue &Omod) const {
-  Omod = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i1);
 
   return SelectVOP3Mods(In, Src, SrcMods);
 }

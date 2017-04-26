@@ -196,9 +196,8 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
 static bool asanUseGlobalsGC(const Triple &T, const CodeGenOptions &CGOpts) {
   switch (T.getObjectFormat()) {
   case Triple::MachO:
-    return true;
   case Triple::COFF:
-    return CGOpts.DataSections;
+    return true;
   case Triple::ELF:
     return CGOpts.DataSections && !CGOpts.DisableIntegratedAS;
   default:

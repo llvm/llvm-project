@@ -983,7 +983,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
     .addReg(SrcLoReg, getKillRegState(SrcIsKill));
 
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
-    .addReg(DstReg, getKillRegState(DstIsKill))
+    .addReg(DstReg)
     .addImm(1)
     .addReg(SrcHiReg, getKillRegState(SrcIsKill));
 
