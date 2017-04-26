@@ -584,6 +584,10 @@ void Sema::checkReturnsCommand(const BlockCommandComment *Command) {
 
   assert(ThisDeclInfo && "should not call this check on a bare comment");
 
+  // We allow the return command for all @properties because it can be used
+  // to document the value that the property getter returns.
+  if (isObjCPropertyDecl())
+    return;
   if (isFunctionDecl() || isFunctionOrBlockPointerVarLikeDecl()) {
     if (ThisDeclInfo->ReturnType->isVoidType()) {
       unsigned DiagKind;
@@ -610,8 +614,6 @@ void Sema::checkReturnsCommand(const BlockCommandComment *Command) {
     }
     return;
   }
-  else if (isObjCPropertyDecl())
-    return;
 
   Diag(Command->getLocation(),
        diag::warn_doc_returns_not_attached_to_a_function_decl)

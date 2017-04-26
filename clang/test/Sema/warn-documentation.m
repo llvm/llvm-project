@@ -254,7 +254,7 @@ struct HasFields {
  * \param p not here.
  * \returns integer.
  */
-void (^blockPointerVariableThatLeadsNowhere)();
+void (^_Nullable blockPointerVariableThatLeadsNowhere)();
 
 @interface CheckFunctionBlockPointerVars {
   /**
@@ -289,5 +289,13 @@ void (^blockPointerVariableThatLeadsNowhere)();
  * \returns integer.
  */
 @property int (^blockPointerProperty)(int i);
+
+/**
+ * blockReturnsNothing
+ *
+ * \returns Nothing, but can allow this as this pattern is used to document the
+ * value that the property getter returns.
+ */
+@property void (^blockReturnsNothing)();
 
 @end
