@@ -13,8 +13,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 
-class StructuredDataImpl;
-
 namespace lldb {
 
 class SBStructuredData {
@@ -31,14 +29,18 @@ public:
 
   bool IsValid() const;
 
+  lldb::SBError SetFromJSON(lldb::SBStream &stream);
+
   void Clear();
 
   lldb::SBError GetAsJSON(lldb::SBStream &stream) const;
 
   lldb::SBError GetDescription(lldb::SBStream &stream) const;
 
-private:
-  std::unique_ptr<StructuredDataImpl> m_impl_up;
+protected:
+  friend class SBTraceOptions;
+
+  StructuredDataImplUP m_impl_up;
 };
 }
 

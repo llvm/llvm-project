@@ -1273,12 +1273,17 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 ///
 /// @param is64Bit Are we looking for a 64 bit architecture?
 static std::string computeNVPTXDataLayout(bool is64Bit) {
-  std::string Ret = "e";
+  std::string Ret = "";
 
-  if (!is64Bit)
-    Ret += "-p:32:32";
-
-  Ret += "-i64:64-v16:16-v32:32-n16:32:64";
+  if (!is64Bit) {
+    Ret += "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:"
+           "64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:"
+           "64-v128:128:128-n16:32:64";
+  } else {
+    Ret += "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:"
+           "64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:"
+           "64-v128:128:128-n16:32:64";
+  }
 
   return Ret;
 }
@@ -1298,7 +1303,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
       const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
       Args.push_back(SAI->getElementType());
     } else {
-      Args.push_back(Builder.getInt8PtrTy());
+      static const int UseGlobalMemory = 1;
+      Args.push_back(Builder.getInt8PtrTy(UseGlobalMemory));
     }
   }
 

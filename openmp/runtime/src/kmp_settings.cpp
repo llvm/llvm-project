@@ -4353,7 +4353,7 @@ __kmp_stg_parse_hw_subset( char const * name, char const * value, void * data ) 
   // Split by delimiter
   pos = input;
   components[level++] = pos;
-  while (pos = strchr(pos, ',')) {
+  while ((pos = strchr(pos, ','))) {
     *pos = '\0'; // modify input and avoid more copying
     components[level++] = ++pos; // expect something after ","
     if (level > MAX_T_LEVEL)
