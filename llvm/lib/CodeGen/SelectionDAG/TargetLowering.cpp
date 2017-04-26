@@ -1371,27 +1371,31 @@ bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   if (!N)
     return false;
 
-  const ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N);
-  if (!CN) {
-    const BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N);
-    if (!BV)
-      return false;
-
-    // Only interested in constant splats, we don't care about undef
-    // elements in identifying boolean constants and getConstantSplatNode
-    // returns NULL if all ops are undef;
-    CN = BV->getConstantSplatNode();
+  APInt CVal;
+  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+    CVal = CN->getAPIntValue();
+  } else if (auto *BV = dyn_cast<BuildVectorSDNode>(N)) {
+    auto *CN = BV->getConstantSplatNode();
     if (!CN)
       return false;
+
+    // If this is a truncating build vector, truncate the splat value.
+    // Otherwise, we may fail to match the expected values below.
+    unsigned BVEltWidth = BV->getValueType(0).getScalarSizeInBits();
+    CVal = CN->getAPIntValue();
+    if (BVEltWidth < CVal.getBitWidth())
+      CVal = CVal.trunc(BVEltWidth);
+  } else {
+    return false;
   }
 
   switch (getBooleanContents(N->getValueType(0))) {
   case UndefinedBooleanContent:
-    return CN->getAPIntValue()[0];
+    return CVal[0];
   case ZeroOrOneBooleanContent:
-    return CN->isOne();
+    return CVal == 1;
   case ZeroOrNegativeOneBooleanContent:
-    return CN->isAllOnesValue();
+    return CVal.isAllOnesValue();
   }
 
   llvm_unreachable("Invalid boolean contents");

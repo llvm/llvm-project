@@ -355,9 +355,14 @@ public:
       }
     }
 
+    clang::IdentifierInfo **identifier_infos = selector_components.data();
+    if (!identifier_infos) {
+      return NULL;
+    }
+
     clang::Selector sel = ast_ctx.Selectors.getSelector(
         is_zero_argument ? 0 : selector_components.size(),
-        selector_components.data());
+        identifier_infos);
 
     clang::QualType ret_type =
         ClangUtil::GetQualType(type_realizer_sp->RealizeType(

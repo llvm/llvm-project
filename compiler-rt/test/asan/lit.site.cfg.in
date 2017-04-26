@@ -7,6 +7,8 @@ config.target_cflags = "@ASAN_TEST_TARGET_CFLAGS@"
 config.clang = "@ASAN_TEST_TARGET_CC@"
 config.bits = "@ASAN_TEST_BITS@"
 config.android = "@ANDROID@"
+config.ios = @ASAN_TEST_IOS_PYBOOL@
+config.iossim = @ASAN_TEST_IOSSIM_PYBOOL@
 config.asan_dynamic = @ASAN_TEST_DYNAMIC@
 config.target_arch = "@ASAN_TEST_TARGET_ARCH@"
 

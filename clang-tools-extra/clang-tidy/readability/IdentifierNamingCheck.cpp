@@ -262,6 +262,11 @@ static bool matchesStyle(StringRef Name,
   else
     Matches = false;
 
+  // Ensure the name doesn't have any extra underscores beyond those specified
+  // in the prefix and suffix.
+  if (Name.startswith("_") || Name.endswith("_"))
+    Matches = false;
+
   if (Style.Case && !Matchers[static_cast<size_t>(*Style.Case)].match(Name))
     Matches = false;
 
@@ -367,10 +372,12 @@ static std::string fixupWithCase(StringRef Name,
 static std::string
 fixupWithStyle(StringRef Name,
                const IdentifierNamingCheck::NamingStyle &Style) {
-  return Style.Prefix +
-         fixupWithCase(Name, Style.Case.getValueOr(
-                                 IdentifierNamingCheck::CaseType::CT_AnyCase)) +
-         Style.Suffix;
+  const std::string Fixed = fixupWithCase(
+      Name, Style.Case.getValueOr(IdentifierNamingCheck::CaseType::CT_AnyCase));
+  StringRef Mid = StringRef(Fixed).trim("_");
+  if (Mid.empty())
+    Mid = "_";
+  return (Style.Prefix + Mid + Style.Suffix).str();
 }
 
 static StyleKind findStyleKind(

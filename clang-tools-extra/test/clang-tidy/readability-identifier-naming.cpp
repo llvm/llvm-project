@@ -175,6 +175,9 @@ private:
   int member2 = 2;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member 'member2'
 // CHECK-FIXES: {{^}}  int __member2 = 2;{{$}}
+  int _memberWithExtraUnderscores_ = 42;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member '_memberWithExtraUnderscores_'
+// CHECK-FIXES: {{^}}  int __memberWithExtraUnderscores = 42;{{$}}
 
 private:
     int private_member = 3;

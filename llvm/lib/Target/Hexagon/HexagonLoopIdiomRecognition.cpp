@@ -26,6 +26,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -1206,10 +1207,9 @@ bool PolynomialMultiplyRecognize::highBitsAreZero(Value *V,
   if (!T)
     return false;
 
-  unsigned BW = T->getBitWidth();
-  APInt K0(BW, 0), K1(BW, 0);
-  computeKnownBits(V, K0, K1, DL);
-  return K0.countLeadingOnes() >= IterCount;
+  KnownBits Known(T->getBitWidth());
+  computeKnownBits(V, Known, DL);
+  return Known.Zero.countLeadingOnes() >= IterCount;
 }
 
 

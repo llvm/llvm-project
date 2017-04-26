@@ -3966,8 +3966,11 @@ __isl_give isl_basic_map *isl_basic_map_move_dims(
 
 	if (!bmap)
 		return NULL;
-	if (n == 0)
+	if (n == 0) {
+		bmap = isl_basic_map_reset(bmap, src_type);
+		bmap = isl_basic_map_reset(bmap, dst_type);
 		return bmap;
+	}
 
 	if (isl_basic_map_check_range(bmap, src_type, src_pos, n) < 0)
 		return isl_basic_map_free(bmap);
@@ -4077,8 +4080,11 @@ __isl_give isl_map *isl_map_move_dims(__isl_take isl_map *map,
 
 	if (!map)
 		return NULL;
-	if (n == 0)
+	if (n == 0) {
+		map = isl_map_reset(map, src_type);
+		map = isl_map_reset(map, dst_type);
 		return map;
+	}
 
 	isl_assert(map->ctx, src_pos + n <= isl_map_dim(map, src_type),
 		goto error);
@@ -12053,6 +12059,7 @@ static __isl_give isl_basic_map *isl_basic_map_from_aff2(
 	isl_aff_free(aff);
 	if (rational)
 		bmap = isl_basic_map_set_rational(bmap);
+	bmap = isl_basic_map_gauss(bmap, NULL);
 	bmap = isl_basic_map_finalize(bmap);
 	return bmap;
 error:

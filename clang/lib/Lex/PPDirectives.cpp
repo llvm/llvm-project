@@ -2592,25 +2592,26 @@ void Preprocessor::HandleUndefDirective() {
   // Okay, we have a valid identifier to undef.
   auto *II = MacroNameTok.getIdentifierInfo();
   auto MD = getMacroDefinition(II);
+  UndefMacroDirective *Undef = nullptr;
+  
+  // If the macro is not defined, this is a noop undef.
+  if (const MacroInfo *MI = MD.getMacroInfo()) {
+    if (!MI->isUsed() && MI->isWarnIfUnused())
+      Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
+
+    if (MI->isWarnIfUnused())
+      WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());
+
+    Undef = AllocateUndefMacroDirective(MacroNameTok.getLocation());
+  }
 
   // If the callbacks want to know, tell them about the macro #undef.
   // Note: no matter if the macro was defined or not.
   if (Callbacks)
-    Callbacks->MacroUndefined(MacroNameTok, MD);
+    Callbacks->MacroUndefined(MacroNameTok, MD, Undef);
 
-  // If the macro is not defined, this is a noop undef, just return.
-  const MacroInfo *MI = MD.getMacroInfo();
-  if (!MI)
-    return;
-
-  if (!MI->isUsed() && MI->isWarnIfUnused())
-    Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
-
-  if (MI->isWarnIfUnused())
-    WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());
-
-  appendMacroDirective(MacroNameTok.getIdentifierInfo(),
-                       AllocateUndefMacroDirective(MacroNameTok.getLocation()));
+  if (Undef)
+    appendMacroDirective(II, Undef);
 }
 
 //===----------------------------------------------------------------------===//

@@ -405,6 +405,7 @@ class NewGVN {
   BumpPtrAllocator ExpressionAllocator;
   ArrayRecycler<Value *> ArgRecycler;
   TarjanSCC SCCFinder;
+  const SimplifyQuery SQ;
 
   // Number of function arguments, used by ranking
   unsigned int NumFuncArgs;
@@ -505,7 +506,8 @@ public:
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
       : F(F), DT(DT), AC(AC), TLI(TLI), AA(AA), MSSA(MSSA), DL(DL),
-        PredInfo(make_unique<PredicateInfo>(F, *DT, *AC)) {}
+        PredInfo(make_unique<PredicateInfo>(F, *DT, *AC)), SQ(DL, TLI, DT, AC) {
+  }
   bool runGVN();
 
 private:
@@ -782,8 +784,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg1));
   E->op_push_back(lookupOperandLeader(Arg2));
 
-  Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), DL, TLI,
-                           DT, AC);
+  Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
   if (const Expression *SimplifiedE = checkSimplificationResults(E, nullptr, V))
     return SimplifiedE;
   return E;
@@ -864,8 +865,8 @@ const Expression *NewGVN::createExpression(Instruction *I) {
            "Wrong types on cmp instruction");
     assert((E->getOperand(0)->getType() == I->getOperand(0)->getType() &&
             E->getOperand(1)->getType() == I->getOperand(1)->getType()));
-    Value *V = SimplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1),
-                               DL, TLI, DT, AC);
+    Value *V =
+        SimplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<SelectInst>(I)) {
@@ -874,13 +875,13 @@ const Expression *NewGVN::createExpression(Instruction *I) {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = SimplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), DL, TLI, DT, AC);
+                                    E->getOperand(2), SQ);
       if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
         return SimplifiedE;
     }
   } else if (I->isBinaryOp()) {
-    Value *V = SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1),
-                             DL, TLI, DT, AC);
+    Value *V =
+        SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (auto *BI = dyn_cast<BitCastInst>(I)) {
@@ -888,9 +889,8 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<GetElementPtrInst>(I)) {
-    Value *V = SimplifyGEPInst(E->getType(),
-                               ArrayRef<Value *>(E->op_begin(), E->op_end()),
-                               DL, TLI, DT, AC);
+    Value *V = SimplifyGEPInst(
+        E->getType(), ArrayRef<Value *>(E->op_begin(), E->op_end()), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (AllConstant) {

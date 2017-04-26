@@ -82,5 +82,68 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
+; AUTO_VEC-LABEL: @external_use_with_fast_math(
+; AUTO_VEC-NEXT:  entry:
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 %n, 1
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 %n, i64 1
+; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %min.iters.checked
+; AUTO_VEC:       min.iters.checked:
+; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
+; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %vector.body
+; AUTO_VEC:       middle.block:
+; AUTO_VEC:         [[TMP11:%.*]] = add nsw i64 [[N_VEC]], -1
+; AUTO_VEC-NEXT:    [[CAST_CMO:%.*]] = sitofp i64 [[TMP11]] to double
+; AUTO_VEC-NEXT:    [[TMP12:%.*]] = fmul fast double [[CAST_CMO]], 3.000000e+00
+; AUTO_VEC-NEXT:    br i1 {{.*}}, label %for.end, label %for.body
+; AUTO_VEC:       for.end:
+; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[TMP12]], %middle.block ], [ %j, %for.body ]
+; AUTO_VEC-NEXT:    ret double [[J_LCSSA]]
+;
+define double @external_use_with_fast_math(double* %a, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [%i.next, %for.body]
+  %j = phi double [ 0.0, %entry ], [ %j.next, %for.body ]
+  %tmp0 = getelementptr double, double* %a, i64 %i
+  store double %j, double* %tmp0
+  %i.next = add i64 %i, 1
+  %j.next = fadd fast double %j, 3.0
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %tmp1 = phi double [ %j, %for.body ]
+  ret double %tmp1
+}
+
+; AUTO_VEC-LABEL: @external_use_without_fast_math(
+; AUTO_VEC:       for.body:
+; AUTO_VEC:         [[J:%.*]] = phi double [ 0.000000e+00, %entry ], [ [[J_NEXT:%.*]], %for.body ]
+; AUTO_VEC:         [[J_NEXT]] = fadd double [[J]], 3.000000e+00
+; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %for.end
+; AUTO_VEC:       for.end:
+; AUTO_VEC-NEXT:    ret double [[J]]
+;
+define double @external_use_without_fast_math(double* %a, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [%i.next, %for.body]
+  %j = phi double [ 0.0, %entry ], [ %j.next, %for.body ]
+  %tmp0 = getelementptr double, double* %a, i64 %i
+  store double %j, double* %tmp0
+  %i.next = add i64 %i, 1
+  %j.next = fadd double %j, 3.0
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %tmp1 = phi double [ %j, %for.body ]
+  ret double %tmp1
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 attributes #1 = { "no-nans-fp-math"="false" }

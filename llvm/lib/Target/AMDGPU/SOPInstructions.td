@@ -530,14 +530,16 @@ class SOPKInstTable <bit is_sopk, string cmpOp = ""> {
 class SOPK_32 <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   opName,
   (outs SReg_32:$sdst),
-  (ins u16imm:$simm16),
+  (ins s16imm:$simm16),
   "$sdst, $simm16",
   pattern>;
 
-class SOPK_SCC <string opName, string base_op = ""> : SOPK_Pseudo <
+class SOPK_SCC <string opName, string base_op, bit isSignExt> : SOPK_Pseudo <
   opName,
   (outs),
-  (ins SReg_32:$sdst, u16imm:$simm16),
+  !if(isSignExt,
+      (ins SReg_32:$sdst, s16imm:$simm16),
+      (ins SReg_32:$sdst, u16imm:$simm16)),
   "$sdst, $simm16", []>,
   SOPKInstTable<1, base_op>{
   let Defs = [SCC];
@@ -546,7 +548,7 @@ class SOPK_SCC <string opName, string base_op = ""> : SOPK_Pseudo <
 class SOPK_32TIE <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   opName,
   (outs SReg_32:$sdst),
-  (ins SReg_32:$src0, u16imm:$simm16),
+  (ins SReg_32:$src0, s16imm:$simm16),
   "$sdst, $simm16",
   pattern
 >;
@@ -575,20 +577,20 @@ let isCompare = 1 in {
 //   [(set i1:$dst, (setcc i32:$src0, imm:$src1, SETEQ))]
 // >;
 
-def S_CMPK_EQ_I32 : SOPK_SCC <"s_cmpk_eq_i32", "s_cmp_eq_i32">;
-def S_CMPK_LG_I32 : SOPK_SCC <"s_cmpk_lg_i32", "s_cmp_lg_i32">;
-def S_CMPK_GT_I32 : SOPK_SCC <"s_cmpk_gt_i32", "s_cmp_gt_i32">;
-def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32">;
-def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32">;
-def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32">;
+def S_CMPK_EQ_I32 : SOPK_SCC <"s_cmpk_eq_i32", "s_cmp_eq_i32", 1>;
+def S_CMPK_LG_I32 : SOPK_SCC <"s_cmpk_lg_i32", "s_cmp_lg_i32", 1>;
+def S_CMPK_GT_I32 : SOPK_SCC <"s_cmpk_gt_i32", "s_cmp_gt_i32", 1>;
+def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32", 1>;
+def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32", 1>;
+def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32", 1>;
 
 let SOPKZext = 1 in {
-def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32">;
-def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32">;
-def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32">;
-def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32">;
-def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32">;
-def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32">;
+def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32", 0>;
+def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32", 0>;
+def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32", 0>;
+def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32", 0>;
+def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
+def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
 } // End SOPKZext = 1
 } // End isCompare = 1
 
@@ -600,7 +602,7 @@ let Defs = [SCC], isCommutable = 1, DisableEncoding = "$src0",
 
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
-  (outs), (ins SReg_64:$sdst, u16imm:$simm16),
+  (outs), (ins SReg_64:$sdst, s16imm:$simm16),
   "$sdst, $simm16"
 >;
 

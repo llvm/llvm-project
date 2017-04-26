@@ -29,6 +29,7 @@ template <typename T> class ArrayRef;
   class DominatorTree;
   class GEPOperator;
   class Instruction;
+  struct KnownBits;
   class Loop;
   class LoopInfo;
   class OptimizationRemarkEmitter;
@@ -49,7 +50,7 @@ template <typename T> class ArrayRef;
   /// where V is a vector, the known zero and known one values are the
   /// same width as the vector element, and the bit is set only if it is true
   /// for all of the elements in the vector.
-  void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
+  void computeKnownBits(const Value *V, KnownBits &Known,
                         const DataLayout &DL, unsigned Depth = 0,
                         AssumptionCache *AC = nullptr,
                         const Instruction *CxtI = nullptr,
