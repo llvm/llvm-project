@@ -5,11 +5,10 @@ define i32 @test_eq_1(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_eq_1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %A, %B
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -51,11 +50,10 @@ define i32 @test_ge_1(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_ge_1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %A, %B
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -97,11 +95,10 @@ define i32 @test_eq_2(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_eq_2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm0, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %B, %A
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -130,11 +127,10 @@ define i32 @test_le_2(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test_le_2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm0, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp slt <4 x i32> %B, %A
   %sext = sext <4 x i1> %cmp to <4 x i32>

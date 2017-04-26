@@ -70,6 +70,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -534,10 +535,9 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
     unsigned BitWidth = V->getType()->getIntegerBitWidth();
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC,
-                     dyn_cast<Instruction>(V), DT);
-    return KnownZero.isAllOnesValue();
+    KnownBits Known(BitWidth);
+    computeKnownBits(V, Known, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    return Known.Zero.isAllOnesValue();
   }
 
   // Per-component check doesn't work with zeroinitializer
@@ -556,9 +556,9 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
     if (isa<UndefValue>(Elem))
       return true;
 
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(Elem, KnownZero, KnownOne, DL);
-    if (KnownZero.isAllOnesValue())
+    KnownBits Known(BitWidth);
+    computeKnownBits(Elem, Known, DL);
+    if (Known.Zero.isAllOnesValue())
       return true;
   }
 

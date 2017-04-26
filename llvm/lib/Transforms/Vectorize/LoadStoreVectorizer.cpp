@@ -30,6 +30,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -343,10 +344,9 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   // If any bits are known to be zero other than the sign bit in OpA, we can
   // add 1 to it while guaranteeing no overflow of any sort.
   if (!Safe) {
-    APInt KnownZero(BitWidth, 0);
-    APInt KnownOne(BitWidth, 0);
-    computeKnownBits(OpA, KnownZero, KnownOne, DL, 0, nullptr, OpA, &DT);
-    if (KnownZero.countTrailingZeros() < (BitWidth - 1))
+    KnownBits Known(BitWidth);
+    computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
+    if (Known.Zero.countTrailingZeros() < (BitWidth - 1))
       Safe = true;
   }
 

@@ -1076,9 +1076,11 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_AST &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
+             InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_LLVM_IR &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
+             InputKind::LLVM_IR &&
          "IR inputs not support here!");
 
   // Configure the various subsystems.
@@ -1552,9 +1554,11 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_AST &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
+             InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_LLVM_IR &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
+             InputKind::LLVM_IR &&
          "IR inputs not support here!");
   
   // Clear out old caches and data.
@@ -1810,10 +1814,12 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_AST &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
+             InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_LLVM_IR &&
-         "IR inputs not supported here!");
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
+             InputKind::LLVM_IR &&
+         "IR inputs not support here!");
 
   // Configure the various subsystems.
   AST->TheSema.reset();
@@ -2399,11 +2405,12 @@ void ASTUnit::CodeComplete(
   
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_AST &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
+             InputKind::Source &&
          "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind() != IK_LLVM_IR &&
+  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
+             InputKind::LLVM_IR &&
          "IR inputs not support here!");
-
   
   // Use the source and file managers that we were given.
   Clang->setFileManager(&FileMgr);

@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -g %s -o %t
-// RUN: not %t 2>&1 | FileCheck %s --check-prefix=CHECK-FWRITE
-// RUN: not %t 1 2>&1 | FileCheck %s --check-prefix=CHECK-FREAD
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FWRITE
+// RUN: not %run %t 1 2>&1 | FileCheck %s --check-prefix=CHECK-FREAD
 
 #include <stdio.h>
 #include <stdlib.h>

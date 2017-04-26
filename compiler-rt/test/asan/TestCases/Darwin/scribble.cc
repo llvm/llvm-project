@@ -1,6 +1,6 @@
 // RUN: %clang_asan -O2 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-NOSCRIBBLE %s
-// RUN: env MallocScribble=1 MallocPreScribble=1 %run %t 2>&1 | FileCheck --check-prefix=CHECK-SCRIBBLE %s
+// RUN: %env MallocScribble=1 MallocPreScribble=1 %run %t 2>&1 | FileCheck --check-prefix=CHECK-SCRIBBLE %s
 // RUN: %env_asan_opts=max_free_fill_size=4096 %run %t 2>&1 | FileCheck --check-prefix=CHECK-SCRIBBLE %s
 
 #include <stdint.h>

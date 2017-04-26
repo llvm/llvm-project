@@ -198,7 +198,8 @@ void MacroPPCallbacks::MacroDefined(const Token &MacroNameTok,
 }
 
 void MacroPPCallbacks::MacroUndefined(const Token &MacroNameTok,
-                                      const MacroDefinition &MD) {
+                                      const MacroDefinition &MD,
+                                      const MacroDirective *Undef) {
   IdentifierInfo *Id = MacroNameTok.getIdentifierInfo();
   SourceLocation location = getCorrectLocation(MacroNameTok.getLocation());
   Gen->getCGDebugInfo()->CreateMacro(getCurrentScope(),

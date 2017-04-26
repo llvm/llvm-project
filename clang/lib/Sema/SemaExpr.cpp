@@ -171,9 +171,14 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
   if (AvailabilityResult Result =
           S.ShouldDiagnoseAvailabilityOfDecl(D, &Message)) {
 
-    if (Result == AR_NotYetIntroduced && S.getCurFunctionOrMethodDecl()) {
-      S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
-      return;
+    if (Result == AR_NotYetIntroduced) {
+      if (S.getCurFunctionOrMethodDecl()) {
+        S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
+        return;
+      } else if (S.getCurBlock() || S.getCurLambda()) {
+        S.getCurFunction()->HasPotentialAvailabilityViolations = true;
+        return;
+      }
     }
 
     const ObjCPropertyDecl *ObjCPDecl = nullptr;
@@ -12497,6 +12502,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     DiagnoseInvalidJumps(cast<CompoundStmt>(Body));
 
   BSI->TheDecl->setBody(cast<CompoundStmt>(Body));
+
+  if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
+    DiagnoseUnguardedAvailabilityViolations(BSI->TheDecl);
 
   // Try to apply the named return value optimization. We have to check again
   // if we can do this, though, because blocks keep return statements around

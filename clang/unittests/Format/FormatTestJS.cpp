@@ -318,6 +318,25 @@ TEST_F(FormatTestJS, MethodsInObjectLiterals) {
                "};");
 }
 
+TEST_F(FormatTestJS, GettersSettersVisibilityKeywords) {
+  // Don't break after "protected"
+  verifyFormat("class X {\n"
+               "  protected get getter():\n"
+               "      number {\n"
+               "    return 1;\n"
+               "  }\n"
+               "}",
+               getGoogleJSStyleWithColumns(12));
+  // Don't break after "get"
+  verifyFormat("class X {\n"
+               "  protected get someReallyLongGetterName():\n"
+               "      number {\n"
+               "    return 1;\n"
+               "  }\n"
+               "}",
+               getGoogleJSStyleWithColumns(40));
+}
+
 TEST_F(FormatTestJS, SpacesInContainerLiterals) {
   verifyFormat("var arr = [1, 2, 3];");
   verifyFormat("f({a: 1, b: 2, c: 3});");
@@ -1220,6 +1239,9 @@ TEST_F(FormatTestJS, MetadataAnnotations) {
                "}");
   verifyFormat("class X {}\n"
                "class Y {}");
+  verifyFormat("class X {\n"
+               "  @property() private isReply = false;\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, TypeAliases) {

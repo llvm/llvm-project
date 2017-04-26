@@ -17,9 +17,11 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -27,10 +29,9 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Dwarf.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Support/Dwarf.h"
-#include "llvm/IR/DIBuilder.h"
 
 #define DEBUG_TYPE "instcombine"
 
@@ -193,7 +194,7 @@ private:
   TargetLibraryInfo &TLI;
   DominatorTree &DT;
   const DataLayout &DL;
-
+  const SimplifyQuery SQ;
   // Optional analyses. When non-null, these can both be used to do better
   // combining and will be updated to reflect any changes.
   LoopInfo *LI;
@@ -203,11 +204,11 @@ private:
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy *Builder,
                bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
-               AssumptionCache &AC, TargetLibraryInfo &TLI,
-               DominatorTree &DT, const DataLayout &DL, LoopInfo *LI)
+               AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
+               const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
         ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), LI(LI), MadeIRChange(false) {}
+        DL(DL), SQ(DL, &TLI, &DT, &AC), LI(LI), MadeIRChange(false) {}
 
   /// \brief Run the combiner over the entire worklist until it is empty.
   ///
@@ -489,10 +490,9 @@ public:
     return nullptr; // Don't do anything with FI
   }
 
-  void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
+  void computeKnownBits(Value *V, KnownBits &Known,
                         unsigned Depth, Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
-                                  &DT);
+    return llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
   }
 
   bool MaskedValueIsZero(Value *V, const APInt &Mask, unsigned Depth = 0,
@@ -534,27 +534,31 @@ private:
   /// value, or null if it didn't simplify.
   Value *SimplifyUsingDistributiveLaws(BinaryOperator &I);
 
+  /// This tries to simplify binary operations by factorizing out common terms
+  /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
+  Value *tryFactorization(InstCombiner::BuilderTy *, BinaryOperator &,
+                          Instruction::BinaryOps, Value *, Value *, Value *,
+                          Value *);
+
   /// \brief Attempts to replace V with a simpler value based on the demanded
   /// bits.
-  Value *SimplifyDemandedUseBits(Value *V, APInt DemandedMask, APInt &KnownZero,
-                                 APInt &KnownOne, unsigned Depth,
-                                 Instruction *CxtI);
+  Value *SimplifyDemandedUseBits(Value *V, APInt DemandedMask, KnownBits &Known,
+                                 unsigned Depth, Instruction *CxtI);
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
-                            const APInt &DemandedMask, APInt &KnownZero,
-                            APInt &KnownOne, unsigned Depth = 0);
+                            const APInt &DemandedMask, KnownBits &Known,
+                            unsigned Depth = 0);
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
   /// DemandedMask, but without modifying the Instruction.
   Value *SimplifyMultipleUseDemandedBits(Instruction *I,
                                          const APInt &DemandedMask,
-                                         APInt &KnownZero, APInt &KnownOne,
+                                         KnownBits &Known,
                                          unsigned Depth, Instruction *CxtI);
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
   Value *simplifyShrShlDemandedBits(
       Instruction *Shr, const APInt &ShrOp1, Instruction *Shl,
-      const APInt &ShlOp1, const APInt &DemandedMask, APInt &KnownZero,
-      APInt &KnownOne);
+      const APInt &ShlOp1, const APInt &DemandedMask, KnownBits &Known);
 
   /// \brief Tries to simplify operands to an integer instruction based on its
   /// demanded bits.

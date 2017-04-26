@@ -971,7 +971,6 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   unsigned OpLo, OpHi, SrcLoReg, SrcHiReg;
   unsigned DstReg = MI.getOperand(0).getReg();
   unsigned SrcReg = MI.getOperand(1).getReg();
-  bool DstIsKill = MI.getOperand(0).isKill();
   bool SrcIsKill = MI.getOperand(1).isKill();
   OpLo = AVR::STPtrRr;
   OpHi = AVR::STDPtrQRr;

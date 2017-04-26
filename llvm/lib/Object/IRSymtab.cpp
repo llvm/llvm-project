@@ -163,6 +163,9 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   Sym.ComdatIndex = -1;
   auto *GV = Msym.dyn_cast<GlobalValue *>();
   if (!GV) {
+    // Undefined module asm symbols act as GC roots and are implicitly used.
+    if (Flags & object::BasicSymbolRef::SF_Undefined)
+      Sym.Flags |= 1 << storage::Symbol::FB_used;
     setStr(Sym.IRName, "");
     return Error::success();
   }

@@ -395,7 +395,8 @@ static bool ExtractLibcxxStringInfo(ValueObject &valobj,
   if (!D)
     return false;
 
-  ValueObjectSP layout_decider(D->GetChildAtIndexPath({0, 0}));
+  ValueObjectSP layout_decider(
+    D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
 
   // this child should exist
   if (!layout_decider)

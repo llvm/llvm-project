@@ -76,7 +76,7 @@ static const char kStdSuppressions[] =
 #endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
   // TLS leak in some glibc versions, described in
   // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-  "leak:*tls_get_addr_tail*\n";
+  "leak:*tls_get_addr*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);

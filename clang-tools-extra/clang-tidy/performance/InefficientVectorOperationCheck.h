@@ -23,10 +23,13 @@ namespace performance {
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
 class InefficientVectorOperationCheck : public ClangTidyCheck {
 public:
-  InefficientVectorOperationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  InefficientVectorOperationCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const std::vector<std::string> VectorLikeClasses;
 };
 
 } // namespace performance

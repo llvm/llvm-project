@@ -1161,10 +1161,14 @@ void Sema::PushFunctionScope() {
     // memory for a new scope.
     FunctionScopes.back()->Clear();
     FunctionScopes.push_back(FunctionScopes.back());
+    if (LangOpts.OpenMP)
+      pushOpenMPFunctionRegion();
     return;
   }
 
   FunctionScopes.push_back(new FunctionScopeInfo(getDiagnostics()));
+  if (LangOpts.OpenMP)
+    pushOpenMPFunctionRegion();
 }
 
 void Sema::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
@@ -1191,6 +1195,9 @@ void Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
                                 const Decl *D, const BlockExpr *blkExpr) {
   FunctionScopeInfo *Scope = FunctionScopes.pop_back_val();
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
+
+  if (LangOpts.OpenMP)
+    popOpenMPFunctionRegion(Scope);
 
   // Issue any analysis-based warnings.
   if (WP && D)

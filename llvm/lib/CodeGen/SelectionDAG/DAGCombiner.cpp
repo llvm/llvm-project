@@ -1866,14 +1866,31 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (isNullConstant(N1))
     return N0;
 
-  // fold ((c1-A)+c2) -> (c1+c2)-A
   if (isConstantOrConstantVector(N1, /* NoOpaque */ true)) {
-    if (N0.getOpcode() == ISD::SUB)
-      if (isConstantOrConstantVector(N0.getOperand(0), /* NoOpaque */ true)) {
-        return DAG.getNode(ISD::SUB, DL, VT,
-                           DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
-                           N0.getOperand(1));
+    // fold ((c1-A)+c2) -> (c1+c2)-A
+    if (N0.getOpcode() == ISD::SUB &&
+        isConstantOrConstantVector(N0.getOperand(0), /* NoOpaque */ true)) {
+      // FIXME: Adding 2 constants should be handled by FoldConstantArithmetic.
+      return DAG.getNode(ISD::SUB, DL, VT,
+                         DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
+                         N0.getOperand(1));
+    }
+
+    // add (sext i1 X), 1 -> zext (not i1 X)
+    // We don't transform this pattern:
+    //   add (zext i1 X), -1 -> sext (not i1 X)
+    // because most (?) targets generate better code for the zext form.
+    if (N0.getOpcode() == ISD::SIGN_EXTEND && N0.hasOneUse() &&
+        isOneConstantOrOneSplatConstant(N1)) {
+      SDValue X = N0.getOperand(0);
+      if ((!LegalOperations ||
+           (TLI.isOperationLegal(ISD::XOR, X.getValueType()) &&
+            TLI.isOperationLegal(ISD::ZERO_EXTEND, VT))) &&
+          X.getScalarValueSizeInBits() == 1) {
+        SDValue Not = DAG.getNOT(DL, X, X.getValueType());
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Not);
       }
+    }
   }
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))

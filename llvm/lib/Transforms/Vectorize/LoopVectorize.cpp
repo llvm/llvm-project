@@ -3586,8 +3586,12 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       IRBuilder<> B(MiddleBlock->getTerminator());
       Value *CountMinusOne = B.CreateSub(
           CountRoundDown, ConstantInt::get(CountRoundDown->getType(), 1));
-      Value *CMO = B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType(),
-                                       "cast.cmo");
+      Value *CMO =
+          !II.getStep()->getType()->isIntegerTy()
+              ? B.CreateCast(Instruction::SIToFP, CountMinusOne,
+                             II.getStep()->getType())
+              : B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType());
+      CMO->setName("cast.cmo");
       Value *Escape = II.transform(B, CMO, PSE.getSE(), DL);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;

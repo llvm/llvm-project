@@ -4,6 +4,8 @@
 // RUN: not %run %t %T/file 2>&1 | FileCheck %s -check-prefix=CHECK-BUS
 // RUN: %env_asan_opts=handle_sigbus=false not --crash %run %t %T/file 2>&1 | FileCheck %s
 
+// UNSUPPORTED: ios
+
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>

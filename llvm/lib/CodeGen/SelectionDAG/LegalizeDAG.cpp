@@ -3497,11 +3497,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // part.
       unsigned LoSize = VT.getSizeInBits();
       SDValue HiLHS =
-          DAG.getNode(ISD::SRA, dl, VT, RHS,
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
                       DAG.getConstant(LoSize - 1, dl,
                                       TLI.getPointerTy(DAG.getDataLayout())));
       SDValue HiRHS =
-          DAG.getNode(ISD::SRA, dl, VT, LHS,
+          DAG.getNode(ISD::SRA, dl, VT, RHS,
                       DAG.getConstant(LoSize - 1, dl,
                                       TLI.getPointerTy(DAG.getDataLayout())));
 

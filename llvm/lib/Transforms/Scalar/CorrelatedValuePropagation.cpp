@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
@@ -26,6 +26,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -95,7 +96,8 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processPHI(PHINode *P, LazyValueInfo *LVI) {
+static bool processPHI(PHINode *P, LazyValueInfo *LVI,
+                       const SimplifyQuery &SQ) {
   bool Changed = false;
 
   BasicBlock *BB = P->getParent();
@@ -149,9 +151,7 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI) {
     Changed = true;
   }
 
-  // FIXME: Provide TLI, DT, AT to SimplifyInstruction.
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  if (Value *V = SimplifyInstruction(P, DL)) {
+  if (Value *V = SimplifyInstruction(P, SQ.getWithInstruction(P))) {
     P->replaceAllUsesWith(V);
     P->eraseFromParent();
     Changed = true;
@@ -488,9 +488,8 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
     ConstantInt::getFalse(C->getContext());
 }
 
-static bool runImpl(Function &F, LazyValueInfo *LVI) {
+static bool runImpl(Function &F, LazyValueInfo *LVI, const SimplifyQuery &SQ) {
   bool FnChanged = false;
-
   // Visiting in a pre-order depth-first traversal causes us to simplify early
   // blocks before querying later blocks (which require us to analyze early
   // blocks).  Eagerly simplifying shallow blocks means there is strictly less
@@ -505,7 +504,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI) {
         BBChanged |= processSelect(cast<SelectInst>(II), LVI);
         break;
       case Instruction::PHI:
-        BBChanged |= processPHI(cast<PHINode>(II), LVI);
+        BBChanged |= processPHI(cast<PHINode>(II), LVI, SQ);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
@@ -566,14 +565,25 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
     return false;
 
   LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-  return runImpl(F, LVI);
+  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  auto *TLIWP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+  auto *TLI = TLIWP ? &TLIWP->getTLI() : nullptr;
+  auto *ACWP = getAnalysisIfAvailable<AssumptionCacheTracker>();
+  auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
+  const SimplifyQuery SQ(F.getParent()->getDataLayout(), TLI, DT, AC);
+  return runImpl(F, LVI, SQ);
 }
 
 PreservedAnalyses
 CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   LazyValueInfo *LVI = &AM.getResult<LazyValueAnalysis>(F);
-  bool Changed = runImpl(F, LVI);
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto *TLI = AM.getCachedResult<TargetLibraryAnalysis>(F);
+  auto *AC = AM.getCachedResult<AssumptionAnalysis>(F);
+  const SimplifyQuery SQ(F.getParent()->getDataLayout(), TLI, DT, AC);
+  bool Changed = runImpl(F, LVI, SQ);
 
   if (!Changed)
     return PreservedAnalyses::all();
