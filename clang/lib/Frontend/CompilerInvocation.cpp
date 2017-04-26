@@ -2076,6 +2076,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS;
   Opts.ModulesCodegen = Args.hasArg(OPT_fmodules_codegen);
   Opts.ModulesDebugInfo = Args.hasArg(OPT_fmodules_debuginfo);
+  Opts.ModulesHashErrorDiags = Args.hasArg(OPT_fmodules_hash_error_diagnostics);
   Opts.ModulesSearchAll = Opts.Modules &&
     !Args.hasArg(OPT_fno_modules_search_all) &&
     Args.hasArg(OPT_fmodules_search_all);
@@ -2656,7 +2657,16 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   return Success;
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+// Some extension diagnostics aren't explicitly mapped and require custom
+// logic in the dianognostic engine to be used, track -pedantic-errors
+static bool isExtHandlingFromDiagsError(DiagnosticsEngine &Diags) {
+  diag::Severity Ext = Diags.getExtensionHandlingBehavior();
+  if (Ext == diag::Severity::Warning && Diags.getWarningsAsErrors())
+    return true;
+  return Ext >= diag::Severity::Error;
+}
+
+std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   // Note: For QoI reasons, the things we use as a hash here should all be
   // dumped via the -module-info flag.
   using llvm::hash_code;
@@ -2746,6 +2756,24 @@ std::string CompilerInvocation::getModuleHash() const {
   SanHash.clear(getPPTransparentSanitizers());
   if (!SanHash.empty())
     code = hash_combine(code, SanHash.Mask);
+
+  // Check for a couple things (see checkDiagnosticMappings in ASTReader.cpp):
+  //  -Werror: consider all warnings into the hash
+  //  -Werror=something: consider only the specified into the hash
+  //  -pedantic-error
+  if (getLangOpts()->ModulesHashErrorDiags) {
+    bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
+    code = hash_combine(code, isExtHandlingFromDiagsError(Diags));
+    for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
+      diag::kind DiagID = DiagIDMappingPair.first;
+      auto CurLevel = Diags.getDiagnosticLevel(DiagID, SourceLocation());
+      if (CurLevel < DiagnosticsEngine::Error && !ConsiderAllWarningsAsErrors)
+        continue; // not significant
+      code = hash_combine(
+          code,
+          Diags.getDiagnosticIDs()->getWarningOptionForDiag(DiagID).str());
+    }
+  }
 
   return llvm::APInt(64, code).toString(36, /*Signed=*/false);
 }
