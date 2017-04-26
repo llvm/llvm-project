@@ -15,7 +15,7 @@
 namespace lld {
 namespace elf {
 void unlinkAsync(StringRef Path);
-bool isFileWritable(StringRef Path, StringRef FileDescription);
+std::error_code tryCreateFile(StringRef Path);
 }
 }
 

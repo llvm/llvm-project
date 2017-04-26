@@ -27,6 +27,7 @@
 #include "lldb/lldb-private-enumerations.h" // for AddressType
 #include "lldb/lldb-types.h"                // for addr_t, offs...
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h" // for StringRef
@@ -37,7 +38,6 @@
 #include <mutex>   // for recursive_mutex
 #include <string>  // for string
 #include <utility> // for pair
-#include <vector>
 
 #include <stddef.h> // for size_t
 #include <stdint.h> // for uint32_t
@@ -489,35 +489,19 @@ public:
   virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create);
 
   // this will always create the children if necessary
-  lldb::ValueObjectSP
-  GetChildAtIndexPath(const std::initializer_list<size_t> &idxs,
-                      size_t *index_of_error = nullptr);
-
-  lldb::ValueObjectSP GetChildAtIndexPath(const std::vector<size_t> &idxs,
+  lldb::ValueObjectSP GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
                                           size_t *index_of_error = nullptr);
 
-  lldb::ValueObjectSP GetChildAtIndexPath(
-      const std::initializer_list<std::pair<size_t, bool>> &idxs,
-      size_t *index_of_error = nullptr);
-
   lldb::ValueObjectSP
-  GetChildAtIndexPath(const std::vector<std::pair<size_t, bool>> &idxs,
+  GetChildAtIndexPath(llvm::ArrayRef<std::pair<size_t, bool>> idxs,
                       size_t *index_of_error = nullptr);
 
   // this will always create the children if necessary
-  lldb::ValueObjectSP
-  GetChildAtNamePath(const std::initializer_list<ConstString> &names,
-                     ConstString *name_of_error = nullptr);
-
-  lldb::ValueObjectSP GetChildAtNamePath(const std::vector<ConstString> &names,
+  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<ConstString> names,
                                          ConstString *name_of_error = nullptr);
 
-  lldb::ValueObjectSP GetChildAtNamePath(
-      const std::initializer_list<std::pair<ConstString, bool>> &names,
-      ConstString *name_of_error = nullptr);
-
   lldb::ValueObjectSP
-  GetChildAtNamePath(const std::vector<std::pair<ConstString, bool>> &names,
+  GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
                      ConstString *name_of_error = nullptr);
 
   virtual lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,

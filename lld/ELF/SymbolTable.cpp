@@ -168,6 +168,19 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   memcpy(Sym->Body.buffer, Wrap->Body.buffer, sizeof(Wrap->Body));
 }
 
+// Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
+template <class ELFT>
+void SymbolTable<ELFT>::alias(StringRef Alias, StringRef Name) {
+  SymbolBody *B = find(Name);
+  if (!B) {
+    error("-defsym: undefined symbol: " + Name);
+    return;
+  }
+  Symbol *Sym = B->symbol();
+  Symbol *AliasSym = addUndefined(Alias);
+  memcpy(AliasSym->Body.buffer, Sym->Body.buffer, sizeof(AliasSym->Body));
+}
+
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
     return VB;
