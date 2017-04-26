@@ -88,7 +88,7 @@ struct Relocation {
   RelocType Type;
   uint32_t Index;
   yaml::Hex32 Offset;
-  yaml::Hex32 Addend;
+  int32_t Addend;
 };
 
 struct DataSegment {

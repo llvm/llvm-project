@@ -223,7 +223,7 @@ void MappingTraits<WasmYAML::Relocation>::mapping(
   IO.mapRequired("Type", Relocation.Type);
   IO.mapRequired("Index", Relocation.Index);
   IO.mapRequired("Offset", Relocation.Offset);
-  IO.mapRequired("Addend", Relocation.Addend);
+  IO.mapOptional("Addend", Relocation.Addend, 0);
 }
 
 void MappingTraits<WasmYAML::LocalDecl>::mapping(

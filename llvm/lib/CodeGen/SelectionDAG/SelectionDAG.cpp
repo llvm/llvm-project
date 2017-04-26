@@ -7629,52 +7629,48 @@ Type *ConstantPoolSDNode::getType() const {
   return Val.ConstVal->getType();
 }
 
-bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue,
-                                        APInt &SplatUndef,
+bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
                                         unsigned &SplatBitSize,
                                         bool &HasAnyUndefs,
                                         unsigned MinSplatBits,
-                                        bool isBigEndian) const {
+                                        bool IsBigEndian) const {
   EVT VT = getValueType(0);
   assert(VT.isVector() && "Expected a vector type");
-  unsigned sz = VT.getSizeInBits();
-  if (MinSplatBits > sz)
+  unsigned VecWidth = VT.getSizeInBits();
+  if (MinSplatBits > VecWidth)
     return false;
 
-  SplatValue = APInt(sz, 0);
-  SplatUndef = APInt(sz, 0);
+  SplatValue = APInt(VecWidth, 0);
+  SplatUndef = APInt(VecWidth, 0);
 
-  // Get the bits.  Bits with undefined values (when the corresponding element
+  // Get the bits. Bits with undefined values (when the corresponding element
   // of the vector is an ISD::UNDEF value) are set in SplatUndef and cleared
-  // in SplatValue.  If any of the values are not constant, give up and return
+  // in SplatValue. If any of the values are not constant, give up and return
   // false.
-  unsigned int nOps = getNumOperands();
-  assert(nOps > 0 && "isConstantSplat has 0-size build vector");
-  unsigned EltBitSize = VT.getScalarSizeInBits();
+  unsigned int NumOps = getNumOperands();
+  assert(NumOps > 0 && "isConstantSplat has 0-size build vector");
+  unsigned EltWidth = VT.getScalarSizeInBits();
 
-  for (unsigned j = 0; j < nOps; ++j) {
-    unsigned i = isBigEndian ? nOps-1-j : j;
+  for (unsigned j = 0; j < NumOps; ++j) {
+    unsigned i = IsBigEndian ? NumOps - 1 - j : j;
     SDValue OpVal = getOperand(i);
-    unsigned BitPos = j * EltBitSize;
+    unsigned BitPos = j * EltWidth;
 
     if (OpVal.isUndef())
-      SplatUndef.setBits(BitPos, BitPos + EltBitSize);
-    else if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(OpVal))
-      SplatValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltBitSize),
-                            BitPos);
-    else if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(OpVal))
+      SplatUndef.setBits(BitPos, BitPos + EltWidth);
+    else if (auto *CN = dyn_cast<ConstantSDNode>(OpVal))
+      SplatValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
+    else if (auto *CN = dyn_cast<ConstantFPSDNode>(OpVal))
       SplatValue.insertBits(CN->getValueAPF().bitcastToAPInt(), BitPos);
     else
       return false;
   }
 
-  // The build_vector is all constants or undefs.  Find the smallest element
+  // The build_vector is all constants or undefs. Find the smallest element
   // size that splats the vector.
-
   HasAnyUndefs = (SplatUndef != 0);
-  while (sz > 8) {
-
-    unsigned HalfSize = sz / 2;
+  while (VecWidth > 8) {
+    unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);
     APInt LowValue = SplatValue.trunc(HalfSize);
     APInt HighUndef = SplatUndef.lshr(HalfSize).trunc(HalfSize);
@@ -7688,10 +7684,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue,
     SplatValue = HighValue | LowValue;
     SplatUndef = HighUndef & LowUndef;
 
-    sz = HalfSize;
+    VecWidth = HalfSize;
   }
 
-  SplatBitSize = sz;
+  SplatBitSize = VecWidth;
   return true;
 }
 

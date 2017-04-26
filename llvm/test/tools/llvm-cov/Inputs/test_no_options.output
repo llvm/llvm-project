@@ -1,8 +1,8 @@
-File 'test.cpp'
-Lines executed:84.21% of 38
-test.cpp:creating 'test.cpp.gcov'
-
 File './test.h'
 Lines executed:100.00% of 1
 ./test.h:creating 'test.h.gcov'
+
+File 'test.cpp'
+Lines executed:84.21% of 38
+test.cpp:creating 'test.cpp.gcov'
 
