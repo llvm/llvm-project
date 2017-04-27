@@ -150,9 +150,9 @@ extern int setjmp(jmp_buf);
 // CHECK: [[@LINE+9]]:13 | instance-property/ObjC | prop | [[I2_prop_USR:.*]] | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK-NEXT: RelAcc | _prop | c:objc(cs)I2@_prop
-// CHECK: [[@LINE+6]]:13 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR]] | -[I2 prop] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE+6]]:13 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR]] | -[I2 prop] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | [[I2_USR]]
-// CHECK: [[@LINE+4]]:13 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR]] | -[I2 setProp:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE+4]]:13 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR]] | -[I2 setProp:] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK: [[@LINE+2]]:20 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | [[I2_USR]]
@@ -214,8 +214,8 @@ extern int setjmp(jmp_buf);
 // CHECK: [[@LINE+5]]:13 | instance-property/ObjC | prop | c:objc(cs)I3(py)prop | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
 // CHECK-NEXT: RelAcc | _prop | c:objc(cs)I3@_prop
-// CHECK: [[@LINE+2]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,Impl,RelChild | rel: 1
-// CHECK: [[@LINE+1]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE+2]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,Dyn,Impl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,Dyn,Impl,RelChild | rel: 1
 @synthesize prop = _prop;
 @end
 
@@ -275,9 +275,9 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I4(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
 // CHECK-NEXT: RelAcc | _blahfoo | c:objc(cs)I4@_blahfoo
-// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I4(im)foo | -[I4 foo] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I4(im)foo | -[I4 foo] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
-// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I4(im)setFoo: | -[I4 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I4(im)setFoo: | -[I4 setFoo:] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
 // CHECK: [[@LINE-8]]:19 | field/ObjC | _blahfoo | c:objc(cs)I4@_blahfoo | <no-cgname> | Ref | rel: 0
 
@@ -296,9 +296,9 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I5(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
 // CHECK-NEXT: RelAcc | _blahfoo | c:objc(cs)I5@_blahfoo
-// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I5(im)foo | -[I5 foo] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I5(im)foo | -[I5 foo] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
-// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I5(im)setFoo: | -[I5 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I5(im)setFoo: | -[I5 setFoo:] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
 // CHECK: [[@LINE-8]]:19 | field/ObjC | _blahfoo | c:objc(cs)I5@_blahfoo | <no-cgname> | Def,RelChild | rel: 1
 
@@ -317,9 +317,9 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I6(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
 // CHECK-NEXT: RelAcc | foo | c:objc(cs)I6@foo
-// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I6(im)foo | -[I6 foo] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I6(im)foo | -[I6 foo] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
-// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I6(im)setFoo: | -[I6 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I6(im)setFoo: | -[I6 setFoo:] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
 // CHECK: [[@LINE-8]]:13 | field/ObjC | foo | c:objc(cs)I6@foo | <no-cgname> | Def,Impl,RelChild | rel: 1
 
@@ -337,9 +337,9 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE-1]]:17 | instance-property/ObjC | foo | c:objc(cs)I7(py)foo | <no-cgname> | Def,Impl,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
 // CHECK-NEXT: RelAcc | _foo | c:objc(cs)I7@_foo
-// CHECK: [[@LINE-4]]:17 | instance-method/acc-get/ObjC | foo | c:objc(cs)I7(im)foo | -[I7 foo] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-4]]:17 | instance-method/acc-get/ObjC | foo | c:objc(cs)I7(im)foo | -[I7 foo] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
-// CHECK: [[@LINE-6]]:17 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I7(im)setFoo: | -[I7 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE-6]]:17 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I7(im)setFoo: | -[I7 setFoo:] | Def,Dyn,Impl,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
 // CHECK: [[@LINE-8]]:17 | field/ObjC | _foo | c:objc(cs)I7@_foo | <no-cgname> | Def,Impl,RelChild | rel: 1
 
