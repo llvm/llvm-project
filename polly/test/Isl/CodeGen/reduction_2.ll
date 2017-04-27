@@ -89,13 +89,10 @@ if.end:                                           ; preds = %if.then, %for.end
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 
-; At some point this was a negative test, where we optimistically assumed RED[0]
-; in the conditional after the loop is invariant and expanded the SCoP from
-; the loop to include the conditional. However, during SCoP generation we
-; realized that RED[0] is in fact not invariant and bailed.
+; This is a negative test. We can prove that RED[0] in the conditional after
+; the loop is dereferencable and consequently expand the SCoP from the
+; loop to include the conditional. However, during SCoP generation we realize
+; that, while RED[0] is invariant, it is written to as part of the same scop
+; and can consequently not be hoisted. Hence, we invalidate the scop.
 ;
-; Today, LLVM can derive that the load is indeed invariant and Polly uses this
-; information to unconditionally invariant load hoist RED[0].
-;
-; CHECK: for (int c0 = 0; c0 <= 1018; c0 += 1)
-; CHECK-NEXT:   Stmt_for_body(c0);
+; CHECK-NOT: for (int c0 = 0; c0 <= 1018; c0 += 1)

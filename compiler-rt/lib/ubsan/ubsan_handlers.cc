@@ -390,7 +390,7 @@ static void handleFloatCastOverflow(void *DataPtr, ValueHandle From,
   ScopedReport R(Opts, Loc, ET);
 
   Diag(Loc, DL_Error,
-       "value %0 is outside the range of representable values of type %2")
+       "%0 is outside the range of representable values of type %2")
       << Value(*FromType, From) << *FromType << *ToType;
 }
 

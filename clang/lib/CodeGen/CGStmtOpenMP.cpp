@@ -1675,7 +1675,7 @@ static void emitOMPLoopBodyWithStopPoint(CodeGenFunction &CGF,
                                          CodeGenFunction::JumpDest LoopExit) {
   CGF.EmitOMPLoopBody(S, LoopExit);
   CGF.EmitStopPoint(&S);
-};
+}
 
 void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -2093,7 +2093,7 @@ emitDistributeParallelForDispatchBounds(CodeGenFunction &CGF,
   llvm::Value *UBVal = CGF.EmitLoadOfScalar(UB, /*Volatile=*/false, IteratorTy,
                                             SourceLocation());
   return {LBVal, UBVal};
-};
+}
 
 static void emitDistributeParallelForDistributeInnerBoundParams(
     CodeGenFunction &CGF, const OMPExecutableDirective &S,
@@ -2110,7 +2110,7 @@ static void emitDistributeParallelForDistributeInnerBoundParams(
   auto UBCast = CGF.Builder.CreateIntCast(
       CGF.Builder.CreateLoad(UB.getAddress()), CGF.SizeTy, /*isSigned=*/false);
   CapturedVars.push_back(UBCast);
-};
+}
 
 static void
 emitInnerParallelForWhenCombined(CodeGenFunction &CGF,

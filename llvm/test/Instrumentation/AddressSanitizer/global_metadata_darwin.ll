@@ -2,7 +2,7 @@
 ; allowing dead stripping to be performed, and that the appropriate runtime
 ; routines are invoked.
 
-; RUN: opt < %s -asan -asan-module -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support=1 -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -26,16 +26,16 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; CHECK: @llvm.compiler.used {{.*}} @__asan_binder_global {{.*}} section "llvm.metadata"
 
 ; Test that there is the flag global variable:
-; CHECK: @__asan_globals_registered = common hidden global i64 0
+; CHECK: @___asan_globals_registered = common hidden global i64 0
 
 ; Test that __asan_register_image_globals is invoked from the constructor:
 ; CHECK-LABEL: define internal void @asan.module_ctor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_register_image_globals(i64 ptrtoint (i64* @__asan_globals_registered to i64))
+; CHECK: call void @__asan_register_image_globals(i64 ptrtoint (i64* @___asan_globals_registered to i64))
 ; CHECK: ret
 
 ; Test that __asan_unregister_image_globals is invoked from the destructor:
 ; CHECK-LABEL: define internal void @asan.module_dtor
 ; CHECK-NOT: ret
-; CHECK: call void @__asan_unregister_image_globals(i64 ptrtoint (i64* @__asan_globals_registered to i64))
+; CHECK: call void @__asan_unregister_image_globals(i64 ptrtoint (i64* @___asan_globals_registered to i64))
 ; CHECK: ret

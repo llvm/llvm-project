@@ -10,9 +10,9 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -252,11 +252,12 @@ Error DbiStream::initializeModInfoArray() {
   if (ModInfoSubstream.getLength() == 0)
     return Error::success();
 
-  // Since each ModInfo in the stream is a variable length, we have to iterate
+  // Since each DbiModuleDescriptor in the stream is a variable length, we have
+  // to iterate
   // them to know how many there actually are.
   BinaryStreamReader Reader(ModInfoSubstream);
 
-  VarStreamArray<ModInfo> ModInfoArray;
+  VarStreamArray<DbiModuleDescriptor> ModInfoArray;
   if (auto EC = Reader.readArray(ModInfoArray, ModInfoSubstream.getLength()))
     return EC;
   for (auto &Info : ModInfoArray) {
@@ -371,10 +372,12 @@ Error DbiStream::initializeFileInfo() {
     NumSourceFiles += Count;
 
   // This is the array that in the reference implementation corresponds to
-  // `ModInfo::FileLayout::FileNameOffs`, which is commented there as being a
+  // `DbiModuleDescriptor::FileLayout::FileNameOffs`, which is commented there
+  // as being a
   // pointer. Due to the mentioned problems of pointers causing difficulty
   // when reading from the file on 64-bit systems, we continue to ignore that
-  // field in `ModInfo`, and instead build a vector of StringRefs and stores
+  // field in `DbiModuleDescriptor`, and instead build a vector of StringRefs
+  // and stores
   // them in `ModuleInfoEx`.  The value written to and read from the file is
   // not used anyway, it is only there as a way to store the offsets for the
   // purposes of later accessing the names at runtime.

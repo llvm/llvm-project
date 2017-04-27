@@ -214,6 +214,10 @@ namespace opts {
   COFFDebugDirectory("coff-debug-directory",
                      cl::desc("Display the PE/COFF debug directory"));
 
+  // -coff-resources
+  cl::opt<bool> COFFResources("coff-resources",
+                              cl::desc("Display the PE/COFF .rsrc section"));
+
   // -macho-data-in-code
   cl::opt<bool>
   MachODataInCode("macho-data-in-code",
@@ -445,6 +449,8 @@ static void dumpObject(const ObjectFile *Obj) {
       Dumper->printCOFFBaseReloc();
     if (opts::COFFDebugDirectory)
       Dumper->printCOFFDebugDirectory();
+    if (opts::COFFResources)
+      Dumper->printCOFFResources();
     if (opts::CodeView)
       Dumper->printCodeViewDebugInfo();
     if (opts::CodeViewMergedTypes)

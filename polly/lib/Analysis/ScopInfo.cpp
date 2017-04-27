@@ -3737,16 +3737,6 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   if (hasNonHoistableBasePtrInScop(Access, Writes))
     return nullptr;
 
-  auto &DL = getFunction().getParent()->getDataLayout();
-  if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getAlignment(),
-                                  DL))
-    return isl_set_empty(getParamSpace());
-
-  // Skip accesses in non-affine subregions as they might not be executed
-  // under the same condition as the entry of the non-affine subregion.
-  if (BB != LI->getParent())
-    return nullptr;
-
   isl_map *AccessRelation = Access->getAccessRelation();
   assert(!isl_map_is_empty(AccessRelation));
 
@@ -3757,10 +3747,25 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   }
 
   AccessRelation = isl_map_intersect_domain(AccessRelation, Stmt.getDomain());
-  isl_set *AccessRange = isl_map_range(AccessRelation);
+  isl_set *SafeToLoad;
+
+  auto &DL = getFunction().getParent()->getDataLayout();
+  if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getAlignment(),
+                                  DL)) {
+    SafeToLoad =
+        isl_set_universe(isl_space_range(isl_map_get_space(AccessRelation)));
+    isl_map_free(AccessRelation);
+  } else if (BB != LI->getParent()) {
+    // Skip accesses in non-affine subregions as they might not be executed
+    // under the same condition as the entry of the non-affine subregion.
+    isl_map_free(AccessRelation);
+    return nullptr;
+  } else {
+    SafeToLoad = isl_map_range(AccessRelation);
+  }
 
   isl_union_map *Written = isl_union_map_intersect_range(
-      isl_union_map_copy(Writes), isl_union_set_from_set(AccessRange));
+      isl_union_map_copy(Writes), isl_union_set_from_set(SafeToLoad));
   auto *WrittenCtx = isl_union_map_params(Written);
   bool IsWritten = !isl_set_is_empty(WrittenCtx);
 

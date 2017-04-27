@@ -12,97 +12,139 @@
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
+#include "llvm/Support/raw_ostream.h"
 
-#ifdef __MINGW32__
- #include <imagehlp.h>
-#else
- #include <dbghelp.h>
-#endif
-
-#ifdef _MSC_VER
- #include <ntverp.h>
-#endif
-
-namespace llvm {
+#include <psapi.h>
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only Win32 specific code
 //===          and must not be UNIX code.
 //===----------------------------------------------------------------------===//
 
-typedef BOOL (WINAPI *fpEnumerateLoadedModules)(HANDLE,PENUMLOADED_MODULES_CALLBACK64,PVOID);
-static fpEnumerateLoadedModules fEnumerateLoadedModules;
-static llvm::ManagedStatic<DenseSet<HMODULE> > OpenedHandles;
 
-static bool loadDebugHelp(void) {
-  HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
-  if (hLib) {
-    fEnumerateLoadedModules = (fpEnumerateLoadedModules)
-      ::GetProcAddress(hLib, "EnumerateLoadedModules64");
-  }
-  return fEnumerateLoadedModules != 0;
+DynamicLibrary::HandleSet::~HandleSet() {
+  for (void *Handle : Handles)
+    FreeLibrary(HMODULE(Handle));
+
+  // 'Process' should not be released on Windows.
+  assert((!Process || Process==this) && "Bad Handle");
 }
 
-static BOOL CALLBACK
-ELM_Callback(PCSTR ModuleName, DWORD64 ModuleBase,
-             ULONG ModuleSize, PVOID UserContext) {
-  OpenedHandles->insert((HMODULE)ModuleBase);
-  return TRUE;
-}
+void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
+  // Create the instance and return it to be the *Process* handle
+  // simillar to dlopen(NULL, RTLD_LAZY|RTLD_GLOBAL)
+  if (!File)
+    return &(*OpenedHandles);
 
-sys::DynamicLibrary
-sys::DynamicLibrary::getPermanentLibrary(const char *filename,
-                                         std::string *errMsg) {
-  SmartScopedLock<true> lock(*SymbolsMutex);
-
-  if (!filename) {
-    // When no file is specified, enumerate all DLLs and EXEs in the process.
-    if (!fEnumerateLoadedModules) {
-      if (!loadDebugHelp()) {
-        assert(false && "These APIs should always be available");
-        return DynamicLibrary();
-      }
-    }
-
-    fEnumerateLoadedModules(GetCurrentProcess(), ELM_Callback, 0);
-    // Dummy library that represents "search all handles".
-    // This is mostly to ensure that the return value still shows up as "valid".
-    return DynamicLibrary(&OpenedHandles);
-  }
-
-  SmallVector<wchar_t, MAX_PATH> filenameUnicode;
-  if (std::error_code ec = windows::UTF8ToUTF16(filename, filenameUnicode)) {
+  SmallVector<wchar_t, MAX_PATH> FileUnicode;
+  if (std::error_code ec = windows::UTF8ToUTF16(File, FileUnicode)) {
     SetLastError(ec.value());
-    MakeErrMsg(errMsg, std::string(filename) + ": Can't convert to UTF-16");
-    return DynamicLibrary();
+    MakeErrMsg(Err, std::string(File) + ": Can't convert to UTF-16");
+    return &DynamicLibrary::Invalid;
   }
 
-  HMODULE a_handle = LoadLibraryW(filenameUnicode.data());
-
-  if (a_handle == 0) {
-    MakeErrMsg(errMsg, std::string(filename) + ": Can't open");
-    return DynamicLibrary();
+  HMODULE Handle = LoadLibraryW(FileUnicode.data());
+  if (Handle == NULL) {
+    MakeErrMsg(Err, std::string(File) + ": Can't open");
+    return &DynamicLibrary::Invalid;
   }
 
-  // If we've already loaded this library, FreeLibrary() the handle in order to
-  // keep the internal refcount at +1.
-  if (!OpenedHandles->insert(a_handle).second)
-    FreeLibrary(a_handle);
-
-  return DynamicLibrary(a_handle);
+  return reinterpret_cast<void*>(Handle);
 }
 
-sys::DynamicLibrary
-sys::DynamicLibrary::addPermanentLibrary(void *handle, std::string *errMsg) {
-  SmartScopedLock<true> lock(*SymbolsMutex);
-  // If we've already loaded this library, tell the caller.
-  if (!OpenedHandles->insert((HMODULE)handle).second) {
-    MakeErrMsg(errMsg, "Library already loaded");
-    return DynamicLibrary();
-  }
-
-  return DynamicLibrary(handle);
+static DynamicLibrary::HandleSet *IsOpenedHandlesInstance(void *Handle) {
+  if (!OpenedHandles.isConstructed())
+    return nullptr;
+  DynamicLibrary::HandleSet &Inst = *OpenedHandles;
+  return Handle == &Inst ? &Inst : nullptr;
 }
+
+void DynamicLibrary::HandleSet::DLClose(void *Handle) {
+  if (HandleSet* HS = IsOpenedHandlesInstance(Handle))
+    HS->Process = nullptr; // Just drop the *Process* handle.
+  else
+    FreeLibrary((HMODULE)Handle);
+}
+
+static bool GetProcessModules(HANDLE H, DWORD &Bytes, HMODULE *Data = nullptr) {
+  // EnumProcessModules will fail on Windows 64 while some versions of
+  // MingW-32 don't have EnumProcessModulesEx.
+  if (
+#ifdef _WIN64
+      !EnumProcessModulesEx(H, Data, Bytes, &Bytes, LIST_MODULES_64BIT)
+#else
+      !EnumProcessModules(H, Data, Bytes, &Bytes)
+#endif
+     ) {
+    std::string Err;
+    if (MakeErrMsg(&Err, "EnumProcessModules failure"))
+      llvm::errs() << Err << "\n";
+    return false;
+  }
+  return true;
+}
+
+void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
+  HandleSet* HS = IsOpenedHandlesInstance(Handle);
+  if (!HS)
+    return (void *)uintptr_t(GetProcAddress((HMODULE)Handle, Symbol));
+
+  // Could have done a dlclose on the *Process* handle
+  if (!HS->Process)
+    return nullptr;
+
+  // Trials indicate EnumProcessModulesEx is consistantly faster than using
+  // EnumerateLoadedModules64 or CreateToolhelp32Snapshot.
+  //
+  // | Handles | DbgHelp.dll | CreateSnapshot | EnumProcessModulesEx
+  // |=========|=============|========================================
+  // | 37      | 0.0000585 * | 0.0003031      | 0.0000152
+  // | 1020    | 0.0026310 * | 0.0121598      | 0.0002683
+  // | 2084    | 0.0149418 * | 0.0369936      | 0.0005610
+  //
+  // * Not including the load time of Dbghelp.dll (~.005 sec)
+  //
+  // There's still a case to somehow cache the result of EnumProcessModulesEx
+  // across invocations, but the complication of doing that properly...
+  // Possibly using LdrRegisterDllNotification to invalidate the cache?
+
+  DWORD Bytes = 0;
+  HMODULE Self = HMODULE(GetCurrentProcess());
+  if (!GetProcessModules(Self, Bytes))
+    return nullptr;
+
+  // Get the most recent list in case any modules added/removed between calls
+  // to EnumProcessModulesEx that gets the amount of, then copies the HMODULES.
+  // MSDN is pretty clear that if the module list changes during the call to
+  // EnumProcessModulesEx the results should not be used.
+  std::vector<HMODULE> Handles;
+  do {
+    assert(Bytes && ((Bytes % sizeof(HMODULE)) == 0) &&
+           "Should have at least one module and be aligned");
+    Handles.resize(Bytes / sizeof(HMODULE));
+    if (!GetProcessModules(Self, Bytes, Handles.data()))
+      return nullptr;
+  } while (Bytes != (Handles.size() * sizeof(HMODULE)));
+
+  // Try EXE first, mirroring what dlsym(dlopen(NULL)) does.
+  if (FARPROC Ptr = GetProcAddress(HMODULE(Handles.front()), Symbol))
+    return (void *) uintptr_t(Ptr);
+
+  if (Handles.size() > 1) {
+    // This is different behaviour than what Posix dlsym(dlopen(NULL)) does.
+    // Doing that here is causing real problems for the JIT where msvc.dll
+    // and ucrt.dll can define the same symbols. The runtime linker will choose
+    // symbols from ucrt.dll first, but iterating NOT in reverse here would
+    // mean that the msvc.dll versions would be returned.
+
+    for (auto I = Handles.rbegin(), E = Handles.rend()-1; I != E; ++I) {
+      if (FARPROC Ptr = GetProcAddress(HMODULE(*I), Symbol))
+        return (void *) uintptr_t(Ptr);
+    }
+  }
+  return nullptr;
+}
+
 
 // Stack probing routines are in the support library (e.g. libgcc), but we don't
 // have dynamic linking on windows. Provide a hook.
@@ -129,38 +171,18 @@ sys::DynamicLibrary::addPermanentLibrary(void *handle, std::string *errMsg) {
 #undef INLINE_DEF_SYMBOL1
 #undef INLINE_DEF_SYMBOL2
 
-void *sys::DynamicLibrary::SearchForAddressOfSymbol(const char *symbolName) {
-  SmartScopedLock<true> Lock(*SymbolsMutex);
-
-  // First check symbols added via AddSymbol().
-  if (ExplicitSymbols.isConstructed()) {
-    StringMap<void *>::iterator i = ExplicitSymbols->find(symbolName);
-
-    if (i != ExplicitSymbols->end())
-      return i->second;
-  }
-
-  // Now search the libraries.
-  if (OpenedHandles.isConstructed()) {
-    for (DenseSet<HMODULE>::iterator I = OpenedHandles->begin(),
-         E = OpenedHandles->end(); I != E; ++I) {
-      FARPROC ptr = GetProcAddress((HMODULE)*I, symbolName);
-      if (ptr) {
-        return (void *)(intptr_t)ptr;
-      }
-    }
-  }
+static void *DoSearch(const char *SymbolName) {
 
 #define EXPLICIT_SYMBOL(SYM)                                                   \
-  if (!strcmp(symbolName, #SYM))                                               \
+  if (!strcmp(SymbolName, #SYM))                                               \
     return (void *)&SYM;
 #define EXPLICIT_SYMBOL2(SYMFROM, SYMTO)                                       \
-  if (!strcmp(symbolName, #SYMFROM))                                           \
+  if (!strcmp(SymbolName, #SYMFROM))                                           \
     return (void *)&SYMTO;
 
 #ifdef _M_IX86
 #define INLINE_DEF_SYMBOL1(TYP, SYM)                                           \
-  if (!strcmp(symbolName, #SYM))                                               \
+  if (!strcmp(SymbolName, #SYM))                                               \
     return (void *)&inline_##SYM;
 #define INLINE_DEF_SYMBOL2(TYP, SYM) INLINE_DEF_SYMBOL1(TYP, SYM)
 #endif
@@ -174,15 +196,5 @@ void *sys::DynamicLibrary::SearchForAddressOfSymbol(const char *symbolName) {
 #undef INLINE_DEF_SYMBOL1
 #undef INLINE_DEF_SYMBOL2
 
-  return 0;
-}
-
-void *sys::DynamicLibrary::getAddressOfSymbol(const char *symbolName) {
-  if (!isValid())
-    return NULL;
-  if (Data == &OpenedHandles)
-    return SearchForAddressOfSymbol(symbolName);
-  return (void *)(intptr_t)GetProcAddress((HMODULE)Data, symbolName);
-}
-
+  return nullptr;
 }

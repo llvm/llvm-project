@@ -645,8 +645,8 @@ void CommandInterpreter::LoadCommandDictionary() {
           "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
   if (connect_gdb_remote_cmd_ap.get()) {
     if (connect_gdb_remote_cmd_ap->AddRegexCommand(
-            "^([^:]+:[[:digit:]]+)$",
-            "process connect --plugin gdb-remote connect://%1") &&
+            "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
+            "process connect --plugin gdb-remote connect://%1:%2") &&
         connect_gdb_remote_cmd_ap->AddRegexCommand(
             "^([[:digit:]]+)$",
             "process connect --plugin gdb-remote connect://localhost:%1")) {

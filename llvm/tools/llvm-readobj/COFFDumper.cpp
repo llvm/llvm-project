@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
@@ -78,6 +79,7 @@ public:
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
   void printCOFFDebugDirectory() override;
+  void printCOFFResources() override;
   void printCodeViewDebugInfo() override;
   void mergeCodeViewTypes(llvm::codeview::TypeTableBuilder &CVIDs,
                           llvm::codeview::TypeTableBuilder &CVTypes) override;
@@ -496,19 +498,19 @@ WeakExternalCharacteristics[] = {
 };
 
 static const EnumEntry<uint32_t> SubSectionTypes[] = {
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, Symbols),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, Lines),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, StringTable),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, FileChecksums),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, FrameData),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, InlineeLines),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, CrossScopeImports),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, CrossScopeExports),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, ILLines),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, FuncMDTokenMap),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, TypeMDTokenMap),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, MergedAssemblyInput),
-  LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, CoffSymbolRVA),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, Symbols),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, Lines),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, StringTable),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, FileChecksums),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, FrameData),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, InlineeLines),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, CrossScopeImports),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, CrossScopeExports),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, ILLines),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, FuncMDTokenMap),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, TypeMDTokenMap),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, MergedAssemblyInput),
+    LLVM_READOBJ_ENUM_CLASS_ENT(ModuleDebugFragmentKind, CoffSymbolRVA),
 };
 
 static const EnumEntry<uint32_t> FrameDataFlags[] = {
@@ -730,11 +732,11 @@ void COFFDumper::initializeFileAndStringTables(StringRef Data) {
     error(consume(Data, SubSectionSize));
     if (SubSectionSize > Data.size())
       return error(object_error::parse_failed);
-    switch (ModuleSubstreamKind(SubType)) {
-    case ModuleSubstreamKind::FileChecksums:
+    switch (ModuleDebugFragmentKind(SubType)) {
+    case ModuleDebugFragmentKind::FileChecksums:
       CVFileChecksumTable = Data.substr(0, SubSectionSize);
       break;
-    case ModuleSubstreamKind::StringTable:
+    case ModuleDebugFragmentKind::StringTable:
       CVStringTable = Data.substr(0, SubSectionSize);
       break;
     default:
@@ -800,20 +802,20 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       printBinaryBlockWithRelocs("SubSectionContents", Section, SectionContents,
                                  Contents);
 
-    switch (ModuleSubstreamKind(SubType)) {
-    case ModuleSubstreamKind::Symbols:
+    switch (ModuleDebugFragmentKind(SubType)) {
+    case ModuleDebugFragmentKind::Symbols:
       printCodeViewSymbolsSubsection(Contents, Section, SectionContents);
       break;
 
-    case ModuleSubstreamKind::InlineeLines:
+    case ModuleDebugFragmentKind::InlineeLines:
       printCodeViewInlineeLines(Contents);
       break;
 
-    case ModuleSubstreamKind::FileChecksums:
+    case ModuleDebugFragmentKind::FileChecksums:
       printCodeViewFileChecksums(Contents);
       break;
 
-    case ModuleSubstreamKind::Lines: {
+    case ModuleDebugFragmentKind::Lines: {
       // Holds a PC to file:line table.  Some data to parse this subsection is
       // stored in the other subsections, so just check sanity and store the
       // pointers for deferred processing.
@@ -839,7 +841,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       FunctionNames.push_back(LinkageName);
       break;
     }
-    case ModuleSubstreamKind::FrameData: {
+    case ModuleDebugFragmentKind::FrameData: {
       // First four bytes is a relocation against the function.
       BinaryByteStream S(Contents, llvm::support::little);
       BinaryStreamReader SR(S);
@@ -985,29 +987,22 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
   BinaryByteStream S(Subsection, llvm::support::little);
   BinaryStreamReader SR(S);
-  while (!SR.empty()) {
+  ModuleDebugFileChecksumFragment Checksums;
+  error(Checksums.initialize(SR));
+
+  for (auto &FC : Checksums) {
     DictScope S(W, "FileChecksum");
-    const FileChecksum *FC;
-    error(SR.readObject(FC));
-    if (FC->FileNameOffset >= CVStringTable.size())
+
+    if (FC.FileNameOffset >= CVStringTable.size())
       error(object_error::parse_failed);
     StringRef Filename =
-        CVStringTable.drop_front(FC->FileNameOffset).split('\0').first;
-    W.printHex("Filename", Filename, FC->FileNameOffset);
-    W.printHex("ChecksumSize", FC->ChecksumSize);
-    W.printEnum("ChecksumKind", uint8_t(FC->ChecksumKind),
+        CVStringTable.drop_front(FC.FileNameOffset).split('\0').first;
+    W.printHex("Filename", Filename, FC.FileNameOffset);
+    W.printHex("ChecksumSize", FC.Checksum.size());
+    W.printEnum("ChecksumKind", uint8_t(FC.Kind),
                 makeArrayRef(FileChecksumKindNames));
-    if (FC->ChecksumSize >= SR.bytesRemaining())
-      error(object_error::parse_failed);
-    ArrayRef<uint8_t> ChecksumBytes;
-    error(SR.readBytes(ChecksumBytes, FC->ChecksumSize));
-    W.printBinary("ChecksumBytes", ChecksumBytes);
-    unsigned PaddedSize = alignTo(FC->ChecksumSize + sizeof(FileChecksum), 4) -
-                          sizeof(FileChecksum);
-    PaddedSize -= ChecksumBytes.size();
-    if (PaddedSize > SR.bytesRemaining())
-      error(object_error::parse_failed);
-    error(SR.skip(PaddedSize));
+
+    W.printBinary("ChecksumBytes", FC.Checksum);
   }
 }
 
@@ -1524,6 +1519,30 @@ void COFFDumper::printCOFFBaseReloc() {
     DictScope Import(W, "Entry");
     W.printString("Type", getBaseRelocTypeName(Type));
     W.printHex("Address", RVA);
+  }
+}
+
+void COFFDumper::printCOFFResources() {
+  ListScope ResourcesD(W, "Resources");
+  for (const SectionRef &S : Obj->sections()) {
+    StringRef Name;
+    error(S.getName(Name));
+    if (!Name.startswith(".rsrc"))
+      continue;
+
+    StringRef Ref;
+    error(S.getContents(Ref));
+
+    if ((Name == ".rsrc") || (Name == ".rsrc$01")) {
+      auto Table =
+          reinterpret_cast<const coff_resource_dir_table *>(Ref.data());
+      char FormattedTime[20];
+      time_t TDS = time_t(Table->TimeDateStamp);
+      strftime(FormattedTime, sizeof(FormattedTime), "%Y-%m-%d %H:%M:%S",
+               gmtime(&TDS));
+      W.printHex("Time/Date Stamp", FormattedTime, Table->TimeDateStamp);
+    }
+    W.printBinaryBlock(Name.str() + " Data", Ref);
   }
 }
 

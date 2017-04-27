@@ -10,7 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVECOMPILANDSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVECOMPILANDSYMBOL_H
 
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 
 namespace llvm {

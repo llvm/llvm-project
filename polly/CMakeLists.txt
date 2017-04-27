@@ -104,7 +104,7 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
       "${UNITTEST_DIR}/googletest"
       "${UNITTEST_DIR}/googlemock"
     )
-    target_link_libraries(gtest ${LLVM_SYSTEM_LIBS})
+    target_link_libraries(gtest -lpthread)
 
     add_library(gtest_main ${UNITTEST_DIR}/UnitTestMain/TestMain.cpp)
     target_link_libraries(gtest_main gtest)
