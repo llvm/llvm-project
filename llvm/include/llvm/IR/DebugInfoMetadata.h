@@ -1530,11 +1530,7 @@ public:
   DIScopeRef getScope() const { return DIScopeRef(getRawScope()); }
 
   StringRef getName() const { return getStringOperand(2); }
-  StringRef getDisplayName() const { return getStringOperand(3); }
-  StringRef getLinkageName() const { return getStringOperand(4); }
-
-  MDString *getRawName() const { return getOperandAs<MDString>(2); }
-  MDString *getRawLinkageName() const { return getOperandAs<MDString>(4); }
+  StringRef getLinkageName() const { return getStringOperand(3); }
 
   DISubroutineType *getType() const {
     return cast_or_null<DISubroutineType>(getRawType());
@@ -1546,7 +1542,7 @@ public:
   DICompileUnit *getUnit() const {
     return cast_or_null<DICompileUnit>(getRawUnit());
   }
-  void replaceUnit(DICompileUnit *CU) { replaceOperandWith(7, CU); }
+  void replaceUnit(DICompileUnit *CU) { replaceOperandWith(5, CU); }
   DITemplateParameterArray getTemplateParams() const {
     return cast_or_null<MDTuple>(getRawTemplateParams());
   }
@@ -1561,13 +1557,21 @@ public:
   }
 
   Metadata *getRawScope() const { return getOperand(1); }
-  Metadata *getRawType() const { return getOperand(5); }
-  Metadata *getRawContainingType() const { return getOperand(6); }
-  Metadata *getRawUnit() const { return getOperand(7); }
-  Metadata *getRawTemplateParams() const { return getOperand(8); }
-  Metadata *getRawDeclaration() const { return getOperand(9); }
-  Metadata *getRawVariables() const { return getOperand(10); }
-  Metadata *getRawThrownTypes() const { return getOperand(11); }
+  MDString *getRawName() const { return getOperandAs<MDString>(2); }
+  MDString *getRawLinkageName() const { return getOperandAs<MDString>(3); }
+  Metadata *getRawType() const { return getOperand(4); }
+  Metadata *getRawUnit() const { return getOperand(5); }
+  Metadata *getRawDeclaration() const { return getOperand(6); }
+  Metadata *getRawVariables() const { return getOperand(7); }
+  Metadata *getRawContainingType() const {
+    return getNumOperands() > 8 ? getOperandAs<Metadata>(8) : nullptr;
+  }
+  Metadata *getRawTemplateParams() const {
+    return getNumOperands() > 9 ? getOperandAs<Metadata>(9) : nullptr;
+  }
+  Metadata *getRawThrownTypes() const {
+    return getNumOperands() > 10 ? getOperandAs<Metadata>(10) : nullptr;
+  }
 
   /// Check if this subprogram describes the given function.
   ///
