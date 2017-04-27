@@ -140,7 +140,8 @@ public:
   void MacroDefined(const clang::Token &MacroNameTok,
                     const clang::MacroDirective *MD) override;
   void MacroUndefined(const clang::Token &MacroNameTok,
-                      const clang::MacroDefinition &MD) override;
+                      const clang::MacroDefinition &MD,
+                      const clang::MacroDirective *Undef) override;
   void Defined(const clang::Token &MacroNameTok,
                const clang::MacroDefinition &MD,
                clang::SourceRange Range) override;

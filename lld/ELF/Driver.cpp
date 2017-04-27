@@ -242,6 +242,9 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
 
+  if (!Config->Shared && !Config->AuxiliaryList.empty())
+    error("-f may not be used without -shared");
+
   if (Config->Relocatable) {
     if (Config->Shared)
       error("-r and -shared may not be used together");
@@ -550,6 +553,33 @@ static std::pair<bool, bool> getHashStyle(opt::InputArgList &Args) {
   return {true, true};
 }
 
+// Parse --build-id or --build-id=<style>. We handle "tree" as a
+// synonym for "sha1" because all our hash functions including
+// -build-id=sha1 are actually tree hashes for performance reasons.
+static std::pair<BuildIdKind, std::vector<uint8_t>>
+getBuildId(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_build_id))
+    return {BuildIdKind::Fast, {}};
+
+  auto *Arg = Args.getLastArg(OPT_build_id_eq);
+  if (!Arg)
+    return {BuildIdKind::None, {}};
+
+  StringRef S = Arg->getValue();
+  if (S == "md5")
+    return {BuildIdKind::Md5, {}};
+  if (S == "sha1" || S == "tree")
+    return {BuildIdKind::Sha1, {}};
+  if (S == "uuid")
+    return {BuildIdKind::Uuid, {}};
+  if (S.startswith("0x"))
+    return {BuildIdKind::Hexstring, parseHex(S.substr(2))};
+
+  if (S != "none")
+    error("unknown --build-id style: " + S);
+  return {BuildIdKind::None, {}};
+}
+
 static std::vector<StringRef> getLines(MemoryBufferRef MB) {
   SmallVector<StringRef, 0> Arr;
   MB.getBuffer().split(Arr, '\n');
@@ -679,32 +709,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->ZRelro = false;
 
   std::tie(Config->SysvHash, Config->GnuHash) = getHashStyle(Args);
-
-  // Parse --build-id or --build-id=<style>. We handle "tree" as a
-  // synonym for "sha1" because all of our hash functions including
-  // -build-id=sha1 are tree hashes for performance reasons.
-  if (Args.hasArg(OPT_build_id))
-    Config->BuildId = BuildIdKind::Fast;
-  if (auto *Arg = Args.getLastArg(OPT_build_id_eq)) {
-    StringRef S = Arg->getValue();
-    if (S == "md5") {
-      Config->BuildId = BuildIdKind::Md5;
-    } else if (S == "sha1" || S == "tree") {
-      Config->BuildId = BuildIdKind::Sha1;
-    } else if (S == "uuid") {
-      Config->BuildId = BuildIdKind::Uuid;
-    } else if (S == "none") {
-      Config->BuildId = BuildIdKind::None;
-    } else if (S.startswith("0x")) {
-      Config->BuildId = BuildIdKind::Hexstring;
-      Config->BuildIdVector = parseHex(S.substr(2));
-    } else {
-      error("unknown --build-id style: " + S);
-    }
-  }
-
-  if (!Config->Shared && !Config->AuxiliaryList.empty())
-    error("-f may not be used without -shared");
+  std::tie(Config->BuildId, Config->BuildIdVector) = getBuildId(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

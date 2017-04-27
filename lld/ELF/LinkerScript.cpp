@@ -407,7 +407,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
 
       // Add input sections to an output section.
       for (InputSectionBase *S : V)
-        Factory.addInputSec(S, Cmd->Name);
+        Factory.addInputSec(S, Cmd->Name, Cmd->Sec);
     }
   }
   CurOutSec = nullptr;
@@ -465,9 +465,21 @@ void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
-  for (InputSectionBase *S : InputSections)
-    if (S->Live && !S->OutSec)
-      Factory.addInputSec(S, getOutputSectionName(S->Name));
+  for (InputSectionBase *S : InputSections) {
+    if (!S->Live || S->OutSec)
+      continue;
+    StringRef Name = getOutputSectionName(S->Name);
+    auto I = std::find_if(
+        Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
+          if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+            return Cmd->Name == Name;
+          return false;
+        });
+    if (I == Opt.Commands.end())
+      Factory.addInputSec(S, Name);
+    else
+      Factory.addInputSec(S, Name, cast<OutputSectionCommand>(*I)->Sec);
+  }
 }
 
 static bool isTbss(OutputSection *Sec) {
@@ -576,14 +588,6 @@ void LinkerScript::process(BaseCommand &Base) {
   }
 }
 
-static OutputSection *
-findSection(StringRef Name, const std::vector<OutputSection *> &Sections) {
-  for (OutputSection *Sec : Sections)
-    if (Sec->Name == Name)
-      return Sec;
-  return nullptr;
-}
-
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned. Otherwise, a nullptr is returned.
@@ -663,7 +667,8 @@ void LinkerScript::removeEmptyCommands() {
   auto Pos = std::remove_if(
       Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
         if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-          return !Cmd->Sec;
+          return std::find(OutputSections->begin(), OutputSections->end(),
+                           Cmd->Sec) == OutputSections->end();
         return false;
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
@@ -687,8 +692,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
     if (!Cmd)
       continue;
-    if (OutputSection *Sec = findSection(Cmd->Name, *OutputSections)) {
-      Cmd->Sec = Sec;
+    if (OutputSection *Sec = Cmd->Sec) {
       Flags = Sec->Flags;
       Type = Sec->Type;
       continue;
