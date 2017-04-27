@@ -197,6 +197,17 @@ entry:
   ret i8 %sum
 }
 
+define i8 @test_stack_args_noext(i32 %p0, i16 %p1, i8 %p2, i1 %p3, i8 %p4) {
+; CHECK-LABEL: test_stack_args_noext:
+; CHECK: mov [[P4ADDR:r[0-9]+]], sp
+; CHECK: ldrb [[P4:r[0-9]+]], {{.*}}[[P4ADDR]]
+; CHECK: add r0, r2, [[P4]]
+; CHECK: bx lr
+entry:
+  %sum = add i8 %p2, %p4
+  ret i8 %sum
+}
+
 define i32 @test_ptr_arg_in_reg(i32* %p) {
 ; CHECK-LABEL: test_ptr_arg_in_reg:
 ; CHECK: ldr r0, [r0]

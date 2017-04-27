@@ -19,7 +19,7 @@
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Raw/ModStream.h"
+#include "llvm/DebugInfo/PDB/Raw/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -90,7 +90,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       consumeError(ModStreamData.takeError());
       return 0;
     }
-    pdb::ModStream ModS(Modi.Info, std::move(*ModStreamData));
+    pdb::ModuleDebugStream ModS(Modi.Info, std::move(*ModStreamData));
     if (auto E = ModS.reload()) {
       consumeError(std::move(E));
       return 0;

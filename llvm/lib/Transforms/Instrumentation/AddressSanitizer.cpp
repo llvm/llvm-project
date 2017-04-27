@@ -101,6 +101,10 @@ static const char *const kAsanRegisterImageGlobalsName =
   "__asan_register_image_globals";
 static const char *const kAsanUnregisterImageGlobalsName =
   "__asan_unregister_image_globals";
+static const char *const kAsanRegisterElfGlobalsName =
+  "__asan_register_elf_globals";
+static const char *const kAsanUnregisterElfGlobalsName =
+  "__asan_unregister_elf_globals";
 static const char *const kAsanPoisonGlobalsName = "__asan_before_dynamic_init";
 static const char *const kAsanUnpoisonGlobalsName = "__asan_after_dynamic_init";
 static const char *const kAsanInitName = "__asan_init";
@@ -120,8 +124,11 @@ static const char *const kAsanPoisonStackMemoryName =
     "__asan_poison_stack_memory";
 static const char *const kAsanUnpoisonStackMemoryName =
     "__asan_unpoison_stack_memory";
+
+// ASan version script has __asan_* wildcard. Triple underscore prevents a
+// linker (gold) warning about attempting to export a local symbol.
 static const char *const kAsanGlobalsRegisteredFlagName =
-    "__asan_globals_registered";
+    "___asan_globals_registered";
 
 static const char *const kAsanOptionDetectUseAfterReturn =
     "__asan_option_detect_stack_use_after_return";
@@ -269,6 +276,13 @@ static cl::opt<bool>
                    cl::desc("Use linker features to support dead "
                             "code stripping of globals"),
                    cl::Hidden, cl::init(true));
+
+// This is on by default even though there is a bug in gold:
+// https://sourceware.org/bugzilla/show_bug.cgi?id=19002
+static cl::opt<bool>
+    ClWithComdat("asan-with-comdat",
+                 cl::desc("Place ASan constructors in comdat sections"),
+                 cl::Hidden, cl::init(true));
 
 // Debug flags.
 static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
@@ -607,10 +621,14 @@ public:
 private:
   void initializeCallbacks(Module &M);
 
-  bool InstrumentGlobals(IRBuilder<> &IRB, Module &M);
+  bool InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool *CtorComdat);
   void InstrumentGlobalsCOFF(IRBuilder<> &IRB, Module &M,
                              ArrayRef<GlobalVariable *> ExtendedGlobals,
                              ArrayRef<Constant *> MetadataInitializers);
+  void InstrumentGlobalsELF(IRBuilder<> &IRB, Module &M,
+                            ArrayRef<GlobalVariable *> ExtendedGlobals,
+                            ArrayRef<Constant *> MetadataInitializers,
+                            const std::string &UniqueModuleId);
   void InstrumentGlobalsMachO(IRBuilder<> &IRB, Module &M,
                               ArrayRef<GlobalVariable *> ExtendedGlobals,
                               ArrayRef<Constant *> MetadataInitializers);
@@ -621,7 +639,8 @@ private:
 
   GlobalVariable *CreateMetadataGlobal(Module &M, Constant *Initializer,
                                        StringRef OriginalName);
-  void SetComdatForGlobalMetadata(GlobalVariable *G, GlobalVariable *Metadata);
+  void SetComdatForGlobalMetadata(GlobalVariable *G, GlobalVariable *Metadata,
+                                  StringRef InternalSuffix);
   IRBuilder<> CreateAsanModuleDtor(Module &M);
 
   bool ShouldInstrumentGlobal(GlobalVariable *G);
@@ -647,6 +666,11 @@ private:
   Function *AsanUnregisterGlobals;
   Function *AsanRegisterImageGlobals;
   Function *AsanUnregisterImageGlobals;
+  Function *AsanRegisterElfGlobals;
+  Function *AsanUnregisterElfGlobals;
+
+  Function *AsanCtorFunction = nullptr;
+  Function *AsanDtorFunction = nullptr;
 };
 
 // Stack poisoning does not play well with exception handling.
@@ -1431,8 +1455,13 @@ void AddressSanitizerModule::poisonOneInitializer(Function &GlobalInit,
 void AddressSanitizerModule::createInitializerPoisonCalls(
     Module &M, GlobalValue *ModuleName) {
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
+  if (!GV)
+    return;
 
-  ConstantArray *CA = cast<ConstantArray>(GV->getInitializer());
+  ConstantArray *CA = dyn_cast<ConstantArray>(GV->getInitializer());
+  if (!CA)
+    return;
+
   for (Use &OP : CA->operands()) {
     if (isa<ConstantAggregateZero>(OP)) continue;
     ConstantStruct *CS = cast<ConstantStruct>(OP);
@@ -1594,12 +1623,22 @@ void AddressSanitizerModule::initializeCallbacks(Module &M) {
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           kAsanUnregisterImageGlobalsName, IRB.getVoidTy(), IntptrTy));
   AsanUnregisterImageGlobals->setLinkage(Function::ExternalLinkage);
+
+  AsanRegisterElfGlobals = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kAsanRegisterElfGlobalsName, IRB.getVoidTy(),
+                            IntptrTy, IntptrTy, IntptrTy));
+  AsanRegisterElfGlobals->setLinkage(Function::ExternalLinkage);
+
+  AsanUnregisterElfGlobals = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kAsanUnregisterElfGlobalsName, IRB.getVoidTy(),
+                            IntptrTy, IntptrTy, IntptrTy));
+  AsanUnregisterElfGlobals->setLinkage(Function::ExternalLinkage);
 }
 
 // Put the metadata and the instrumented global in the same group. This ensures
 // that the metadata is discarded if the instrumented global is discarded.
 void AddressSanitizerModule::SetComdatForGlobalMetadata(
-    GlobalVariable *G, GlobalVariable *Metadata) {
+    GlobalVariable *G, GlobalVariable *Metadata, StringRef InternalSuffix) {
   Module &M = *G->getParent();
   Comdat *C = G->getComdat();
   if (!C) {
@@ -1609,7 +1648,15 @@ void AddressSanitizerModule::SetComdatForGlobalMetadata(
       assert(G->hasLocalLinkage());
       G->setName(Twine(kAsanGenPrefix) + "_anon_global");
     }
-    C = M.getOrInsertComdat(G->getName());
+
+    if (!InternalSuffix.empty() && G->hasLocalLinkage()) {
+      std::string Name = G->getName();
+      Name += InternalSuffix;
+      C = M.getOrInsertComdat(Name);
+    } else {
+      C = M.getOrInsertComdat(G->getName());
+    }
+
     // Make this IMAGE_COMDAT_SELECT_NODUPLICATES on COFF.
     if (TargetTriple.isOSBinFormatCOFF())
       C->setSelectionKind(Comdat::NoDuplicates);
@@ -1636,11 +1683,10 @@ AddressSanitizerModule::CreateMetadataGlobal(Module &M, Constant *Initializer,
 }
 
 IRBuilder<> AddressSanitizerModule::CreateAsanModuleDtor(Module &M) {
-  Function *AsanDtorFunction =
+  AsanDtorFunction =
       Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
                        GlobalValue::InternalLinkage, kAsanModuleDtorName, &M);
   BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
-  appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
 
   return IRBuilder<>(ReturnInst::Create(*C, AsanDtorBB));
 }
@@ -1665,8 +1711,67 @@ void AddressSanitizerModule::InstrumentGlobalsCOFF(
            "global metadata will not be padded appropriately");
     Metadata->setAlignment(SizeOfGlobalStruct);
 
-    SetComdatForGlobalMetadata(G, Metadata);
+    SetComdatForGlobalMetadata(G, Metadata, "");
   }
+}
+
+void AddressSanitizerModule::InstrumentGlobalsELF(
+    IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
+    ArrayRef<Constant *> MetadataInitializers,
+    const std::string &UniqueModuleId) {
+  assert(ExtendedGlobals.size() == MetadataInitializers.size());
+
+  SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
+  for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
+    GlobalVariable *G = ExtendedGlobals[i];
+    GlobalVariable *Metadata =
+        CreateMetadataGlobal(M, MetadataInitializers[i], G->getName());
+    MDNode *MD = MDNode::get(M.getContext(), ValueAsMetadata::get(G));
+    Metadata->setMetadata(LLVMContext::MD_associated, MD);
+    MetadataGlobals[i] = Metadata;
+
+    SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
+  }
+
+  // Update llvm.compiler.used, adding the new metadata globals. This is
+  // needed so that during LTO these variables stay alive.
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
+
+  // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
+  // to look up the loaded image that contains it. Second, we can store in it
+  // whether registration has already occurred, to prevent duplicate
+  // registration.
+  //
+  // Common linkage ensures that there is only one global per shared library.
+  GlobalVariable *RegisteredFlag = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::CommonLinkage,
+      ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
+  RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
+
+  // Create start and stop symbols.
+  GlobalVariable *StartELFMetadata = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
+      "__start_" + getGlobalMetadataSection());
+  StartELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
+  GlobalVariable *StopELFMetadata = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
+      "__stop_" + getGlobalMetadataSection());
+  StopELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
+
+  // Create a call to register the globals with the runtime.
+  IRB.CreateCall(AsanRegisterElfGlobals,
+                 {IRB.CreatePointerCast(RegisteredFlag, IntptrTy),
+                  IRB.CreatePointerCast(StartELFMetadata, IntptrTy),
+                  IRB.CreatePointerCast(StopELFMetadata, IntptrTy)});
+
+  // We also need to unregister globals at the end, e.g., when a shared library
+  // gets closed.
+  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRB_Dtor.CreateCall(AsanUnregisterElfGlobals,
+                      {IRB.CreatePointerCast(RegisteredFlag, IntptrTy),
+                       IRB.CreatePointerCast(StartELFMetadata, IntptrTy),
+                       IRB.CreatePointerCast(StopELFMetadata, IntptrTy)});
 }
 
 void AddressSanitizerModule::InstrumentGlobalsMachO(
@@ -1756,7 +1861,10 @@ void AddressSanitizerModule::InstrumentGlobalsWithMetadataArray(
 // This function replaces all global variables with new variables that have
 // trailing redzones. It also creates a function that poisons
 // redzones and inserts this function into llvm.global_ctors.
-bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
+// Sets *CtorComdat to true if the global registration code emitted into the
+// asan constructor is comdat-compatible.
+bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool *CtorComdat) {
+  *CtorComdat = false;
   GlobalsMD.init(M);
 
   SmallVector<GlobalVariable *, 16> GlobalsToChange;
@@ -1766,7 +1874,10 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   }
 
   size_t n = GlobalsToChange.size();
-  if (n == 0) return false;
+  if (n == 0) {
+    *CtorComdat = true;
+    return false;
+  }
 
   auto &DL = M.getDataLayout();
 
@@ -1911,7 +2022,14 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     Initializers[i] = Initializer;
   }
 
-  if (UseGlobalsGC && TargetTriple.isOSBinFormatCOFF()) {
+  std::string ELFUniqueModuleId =
+      (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) ? getUniqueModuleId(&M)
+                                                        : "";
+
+  if (!ELFUniqueModuleId.empty()) {
+    InstrumentGlobalsELF(IRB, M, NewGlobals, Initializers, ELFUniqueModuleId);
+    *CtorComdat = true;
+  } else if (UseGlobalsGC && TargetTriple.isOSBinFormatCOFF()) {
     InstrumentGlobalsCOFF(IRB, M, NewGlobals, Initializers);
   } else if (UseGlobalsGC && ShouldUseMachOGlobalsSection()) {
     InstrumentGlobalsMachO(IRB, M, NewGlobals, Initializers);
@@ -1938,17 +2056,36 @@ bool AddressSanitizerModule::runOnModule(Module &M) {
   if (CompileKernel)
     return false;
 
-  Function *AsanCtorFunction;
+  // Create a module constructor. A destructor is created lazily because not all
+  // platforms, and not all modules need it.
   std::tie(AsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
       M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
       /*InitArgs=*/{}, kAsanVersionCheckName);
-  appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority);
 
+  bool CtorComdat = true;
   bool Changed = false;
   // TODO(glider): temporarily disabled globals instrumentation for KASan.
   if (ClGlobals) {
     IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
-    Changed |= InstrumentGlobals(IRB, M);
+    Changed |= InstrumentGlobals(IRB, M, &CtorComdat);
+  }
+
+  // Put the constructor and destructor in comdat if both
+  // (1) global instrumentation is not TU-specific
+  // (2) target is ELF.
+  if (ClWithComdat && TargetTriple.isOSBinFormatELF() && CtorComdat) {
+    AsanCtorFunction->setComdat(M.getOrInsertComdat(kAsanModuleCtorName));
+    appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority,
+                        AsanCtorFunction);
+    if (AsanDtorFunction) {
+      AsanDtorFunction->setComdat(M.getOrInsertComdat(kAsanModuleDtorName));
+      appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority,
+                          AsanDtorFunction);
+    }
+  } else {
+    appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority);
+    if (AsanDtorFunction)
+      appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
   }
 
   return Changed;

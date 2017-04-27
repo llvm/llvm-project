@@ -13,17 +13,21 @@
 #include "llvm-pdbdump.h"
 
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
-#include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModStream.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
@@ -75,19 +79,17 @@ Error YAMLOutputStyle::dump() {
 }
 
 namespace {
-class C13SubstreamVisitor : public codeview::IModuleSubstreamVisitor {
+class C13SubstreamVisitor : public ModuleDebugFragmentVisitor {
 public:
   C13SubstreamVisitor(llvm::pdb::yaml::PdbSourceFileInfo &Info, PDBFile &F)
       : Info(Info), F(F) {}
 
-  Error visitUnknown(codeview::ModuleSubstreamKind Kind,
-                     BinaryStreamRef Stream) override {
+  Error visitUnknown(ModuleDebugUnknownFragment &Fragment) override {
     return Error::success();
   }
 
   Error
-  visitFileChecksums(BinaryStreamRef Data,
-                     const codeview::FileChecksumArray &Checksums) override {
+  visitFileChecksums(ModuleDebugFileChecksumFragment &Checksums) override {
     for (const auto &C : Checksums) {
       llvm::pdb::yaml::PdbSourceFileChecksumEntry Entry;
       if (auto Result = getGlobalString(C.FileNameOffset))
@@ -102,15 +104,13 @@ public:
     return Error::success();
   }
 
-  Error visitLines(BinaryStreamRef Data,
-                   const codeview::LineSubstreamHeader *Header,
-                   const codeview::LineInfoArray &Lines) override {
+  Error visitLines(ModuleDebugLineFragment &Lines) override {
 
-    Info.Lines.CodeSize = Header->CodeSize;
+    Info.Lines.CodeSize = Lines.header()->CodeSize;
     Info.Lines.Flags =
-        static_cast<codeview::LineFlags>(uint16_t(Header->Flags));
-    Info.Lines.RelocOffset = Header->RelocOffset;
-    Info.Lines.RelocSegment = Header->RelocSegment;
+        static_cast<codeview::LineFlags>(uint16_t(Lines.header()->Flags));
+    Info.Lines.RelocOffset = Lines.header()->RelocOffset;
+    Info.Lines.RelocSegment = Lines.header()->RelocSegment;
 
     for (const auto &L : Lines) {
       llvm::pdb::yaml::PdbSourceLineBlock Block;
@@ -165,15 +165,14 @@ private:
 }
 
 Expected<Optional<llvm::pdb::yaml::PdbSourceFileInfo>>
-YAMLOutputStyle::getFileLineInfo(const pdb::ModStream &ModS) {
+YAMLOutputStyle::getFileLineInfo(const pdb::ModuleDebugStream &ModS) {
   if (!ModS.hasLineInfo())
     return None;
 
   yaml::PdbSourceFileInfo Info;
-  bool Error = false;
   C13SubstreamVisitor Visitor(Info, File);
-  for (auto &Substream : ModS.lines(&Error)) {
-    if (auto E = codeview::visitModuleSubstream(Substream, Visitor))
+  for (auto &Frag : ModS.linesAndChecksums()) {
+    if (auto E = codeview::visitModuleDebugFragment(Frag, Visitor))
       return std::move(E);
   }
 
@@ -293,7 +292,7 @@ Error YAMLOutputStyle::dumpDbiStream() {
           File.getMsfLayout(), File.getMsfBuffer(),
           MI.Info.getModuleStreamIndex());
 
-      pdb::ModStream ModS(MI.Info, std::move(ModStreamData));
+      pdb::ModuleDebugStream ModS(MI.Info, std::move(ModStreamData));
       if (auto EC = ModS.reload())
         return EC;
 

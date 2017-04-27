@@ -341,7 +341,7 @@ format of this section follows:
     uint16 : NumLocations
     Location[NumLocations] {
       uint8  : Register | Direct | Indirect | Constant | ConstantIndex
-      uint8  : Reserved (location flags)
+      uint8  : Location Size
       uint16 : Dwarf RegNum
       int32  : Offset or SmallConstant
     }

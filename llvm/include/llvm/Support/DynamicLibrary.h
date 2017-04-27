@@ -58,7 +58,7 @@ namespace sys {
     void *getAddressOfSymbol(const char *symbolName);
 
     /// This function permanently loads the dynamic library at the given path.
-    /// The library will only be unloaded when the program terminates.
+    /// The library will only be unloaded when llvm_shutdown() is called.
     /// This returns a valid DynamicLibrary instance on success and an invalid
     /// instance on failure (see isValid()). \p *errMsg will only be modified
     /// if the library fails to load.
@@ -71,7 +71,8 @@ namespace sys {
     /// Registers an externally loaded library. The library will be unloaded
     /// when the program terminates.
     ///
-    /// It is safe to call this function multiple times for the same library.
+    /// It is safe to call this function multiple times for the same library,
+    /// though ownership is only taken if there was no error.
     ///
     /// \returns An empty \p DynamicLibrary if the library was already loaded.
     static DynamicLibrary addPermanentLibrary(void *handle,
@@ -106,6 +107,8 @@ namespace sys {
     /// libraries.
     /// @brief Add searchable symbol/value pair.
     static void AddSymbol(StringRef symbolName, void *symbolValue);
+
+    class HandleSet;
   };
 
 } // End sys namespace

@@ -1,4 +1,4 @@
-//===- ModuleSubstream.h ----------------------------------------*- C++ -*-===//
+//===- ModuleDebugLineFragment.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,26 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
+#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamRef.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
 
-// Corresponds to the `CV_DebugSSubsectionHeader_t` structure.
-struct ModuleSubsectionHeader {
-  support::ulittle32_t Kind;   // codeview::ModuleSubstreamKind enum
-  support::ulittle32_t Length; // number of bytes occupied by this record.
-};
-
 // Corresponds to the `CV_DebugSLinesHeader_t` structure.
-struct LineSubstreamHeader {
+struct LineFragmentHeader {
   support::ulittle32_t RelocOffset;  // Code offset of line contribution.
   support::ulittle16_t RelocSegment; // Code segment of line contribution.
   support::ulittle16_t Flags;        // See LineFlags enumeration.
@@ -34,7 +27,7 @@ struct LineSubstreamHeader {
 };
 
 // Corresponds to the `CV_DebugSLinesFileBlockHeader_t` structure.
-struct LineFileBlockHeader {
+struct LineBlockFragmentHeader {
   support::ulittle32_t NameIndex; // Index in DBI name buffer of filename.
   support::ulittle32_t NumLines;  // Number of lines
   support::ulittle32_t BlockSize; // Code size of block, in bytes.
@@ -56,32 +49,44 @@ struct ColumnNumberEntry {
   support::ulittle16_t EndColumn;
 };
 
-class ModuleSubstream {
+struct LineColumnEntry {
+  support::ulittle32_t NameIndex;
+  FixedStreamArray<LineNumberEntry> LineNumbers;
+  FixedStreamArray<ColumnNumberEntry> Columns;
+};
+
+class LineColumnExtractor {
 public:
-  ModuleSubstream();
-  ModuleSubstream(ModuleSubstreamKind Kind, BinaryStreamRef Data);
-  static Error initialize(BinaryStreamRef Stream, ModuleSubstream &Info);
-  uint32_t getRecordLength() const;
-  ModuleSubstreamKind getSubstreamKind() const;
-  BinaryStreamRef getRecordData() const;
+  typedef const LineFragmentHeader ContextType;
+
+  static Error extract(BinaryStreamRef Stream, uint32_t &Len,
+                       LineColumnEntry &Item, const LineFragmentHeader *Header);
+};
+
+class ModuleDebugLineFragment final : public ModuleDebugFragment {
+  friend class LineColumnExtractor;
+  typedef VarStreamArray<LineColumnEntry, LineColumnExtractor> LineInfoArray;
+  typedef LineInfoArray::Iterator Iterator;
+
+public:
+  ModuleDebugLineFragment();
+
+  static bool classof(const ModuleDebugFragment *S) {
+    return S->kind() == ModuleDebugFragmentKind::Lines;
+  }
+
+  Error initialize(BinaryStreamReader Reader);
+
+  Iterator begin() const { return LinesAndColumns.begin(); }
+  Iterator end() const { return LinesAndColumns.end(); }
+
+  const LineFragmentHeader *header() const { return Header; }
 
 private:
-  ModuleSubstreamKind Kind;
-  BinaryStreamRef Data;
+  const LineFragmentHeader *Header = nullptr;
+  LineInfoArray LinesAndColumns;
 };
+}
+}
 
-typedef VarStreamArray<ModuleSubstream> ModuleSubstreamArray;
-} // namespace codeview
-
-template <> struct VarStreamArrayExtractor<codeview::ModuleSubstream> {
-  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
-                   codeview::ModuleSubstream &Info) const {
-    if (auto EC = codeview::ModuleSubstream::initialize(Stream, Info))
-      return EC;
-    Length = Info.getRecordLength();
-    return Error::success();
-  }
-};
-} // namespace llvm
-
-#endif // LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H
+#endif

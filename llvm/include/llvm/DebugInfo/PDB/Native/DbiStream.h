@@ -10,9 +10,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
-#include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Native/StringTable.h"

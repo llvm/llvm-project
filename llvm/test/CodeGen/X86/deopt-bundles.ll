@@ -50,7 +50,6 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 55	[encoding: .byte 4, .byte 8, .short 0, .int 55]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 
-
 declare i32 @callee_0()
 declare i32 @callee_1(i32)
 declare i32 @callee_vararg(...)
@@ -159,3 +158,42 @@ define void @f_0(i64 %n) {
 }
 
 declare void @g_0(i64* %vl)
+
+define void @vector_deopt_bundle(<32 x i64 addrspace(1)*> %val) {
+; CHECK-LABEL: _vector_deopt_bundle:
+; CHECK: movaps  16(%rbp), %xmm8
+; CHECK-NEXT: movaps  32(%rbp), %xmm9
+; CHECK-NEXT: movaps  48(%rbp), %xmm10
+; CHECK-NEXT: movaps  64(%rbp), %xmm11
+; CHECK-NEXT: movaps  80(%rbp), %xmm12
+; CHECK-NEXT: movaps  96(%rbp), %xmm13
+; CHECK-NEXT: movaps  112(%rbp), %xmm14
+; CHECK-NEXT: movaps  128(%rbp), %xmm15
+; CHECK-NEXT: movaps  %xmm15, 240(%rsp)
+; CHECK-NEXT: movaps  %xmm14, 224(%rsp)
+; CHECK-NEXT: movaps  %xmm13, 208(%rsp)
+; CHECK-NEXT: movaps  %xmm12, 192(%rsp)
+; CHECK-NEXT: movaps  %xmm11, 176(%rsp)
+; CHECK-NEXT: movaps  %xmm10, 160(%rsp)
+; CHECK-NEXT: movaps  %xmm9, 144(%rsp)
+; CHECK-NEXT: movaps  %xmm8, 128(%rsp)
+; CHECK-NEXT: movaps  %xmm7, 112(%rsp)
+; CHECK-NEXT: movaps  %xmm6, 96(%rsp)
+; CHECK-NEXT: movaps  %xmm5, 80(%rsp)
+; CHECK-NEXT: movaps  %xmm4, 64(%rsp)
+; CHECK-NEXT: movaps  %xmm3, 48(%rsp)
+; CHECK-NEXT: movaps  %xmm2, 32(%rsp)
+; CHECK-NEXT: movaps  %xmm1, 16(%rsp)
+; CHECK-NEXT: movaps  %xmm0, (%rsp)
+  call void @unknown() [ "deopt"(<32 x i64 addrspace(1)*> %val) ]
+  ret void
+; STACKMAPS: Stack Maps: callsite 2882400015
+; STACKMAPS-NEXT: Stack Maps:   has 4 locations
+; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Indirect 7+0	[encoding: .byte 3, .byte 256, .short 7, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
+}
+
+declare void @unknown()

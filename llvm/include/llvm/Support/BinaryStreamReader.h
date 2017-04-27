@@ -172,11 +172,13 @@ public:
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
   template <typename T, typename U>
-  Error readArray(VarStreamArray<T, U> &Array, uint32_t Size) {
+  Error
+  readArray(VarStreamArray<T, U> &Array, uint32_t Size,
+            typename VarStreamArray<T, U>::ContextType *Context = nullptr) {
     BinaryStreamRef S;
     if (auto EC = readStreamRef(S, Size))
       return EC;
-    Array = VarStreamArray<T, U>(S, Array.getExtractor());
+    Array = VarStreamArray<T, U>(S, Context);
     return Error::success();
   }
 
