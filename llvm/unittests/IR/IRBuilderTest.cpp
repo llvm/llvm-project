@@ -356,6 +356,25 @@ TEST_F(IRBuilderTest, RAIIHelpersTest) {
   EXPECT_EQ(BB, Builder.GetInsertBlock());
 }
 
+TEST_F(IRBuilderTest, createFunction) {
+  IRBuilder<> Builder(BB);
+  DIBuilder DIB(*M);
+  auto File = DIB.createFile("error.swift", "/");
+  auto CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_Swift, File, "swiftc", true, "", 0);
+  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
+  auto NoErr = DIB.createFunction(CU, "noerr", "", File, 1, Type, false, true, 1,
+                               DINode::FlagZero, true);
+  EXPECT_TRUE(!NoErr->getThrownTypes());
+  auto Int = DIB.createBasicType("Int", 64, dwarf::DW_ATE_signed);
+  auto Error = DIB.getOrCreateArray({Int});
+  auto Err =
+      DIB.createFunction(CU, "err", "", File, 1, Type, false, true, 1,
+      DINode::FlagZero, true, nullptr, nullptr, Error.get());
+  EXPECT_TRUE(Err->getThrownTypes().get() == Error.get());
+  DIB.finalize();
+}
+
 TEST_F(IRBuilderTest, DIBuilder) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);

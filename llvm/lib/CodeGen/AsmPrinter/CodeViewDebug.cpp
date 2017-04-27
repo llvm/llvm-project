@@ -238,7 +238,7 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
 
   // The display name includes function template arguments. Drop them to match
   // MSVC.
-  StringRef DisplayName = SP->getDisplayName().split('<').first;
+  StringRef DisplayName = SP->getName().split('<').first;
 
   const DIScope *Scope = SP->getScope().resolve();
   TypeIndex TI;
@@ -658,7 +658,7 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
 
     OS.AddBlankLine();
     unsigned FileId = maybeRecordFile(SP->getFile());
-    OS.AddComment("Inlined function " + SP->getDisplayName() + " starts at " +
+    OS.AddComment("Inlined function " + SP->getName() + " starts at " +
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
     OS.AddBlankLine();
     // The filechecksum table uses 8 byte entries for now, and file ids start at
@@ -760,9 +760,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // If we have a display name, build the fully qualified name by walking the
   // chain of scopes.
-  if (!SP->getDisplayName().empty())
+  if (!SP->getName().empty())
     FuncName =
-        getFullyQualifiedName(SP->getScope().resolve(), SP->getDisplayName());
+        getFullyQualifiedName(SP->getScope().resolve(), SP->getName());
 
   // If our DISubprogram name is empty, use the mangled name.
   if (FuncName.empty())
