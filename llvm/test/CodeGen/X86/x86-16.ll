@@ -12,6 +12,13 @@ define i32 @main() #0 {
 ; CHECK: .code16
 ; CHECK-LABEL: main
 
+define i64 @foo(i32 %index) #0 {
+  %asm = tail call i64 asm "rdmsr", "=A,{cx},~{dirflag},~{fpsr},~{flags}"(i32 %index)
+  ret i64 %asm
+}
+
+; CHECK-LABEL: foo
+; CHECK: rdmsr
 
 attributes #0 = { nounwind }
 
