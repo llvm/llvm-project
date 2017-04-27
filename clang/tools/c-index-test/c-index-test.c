@@ -2437,11 +2437,14 @@ static void inspect_print_cursor(CXCursor Cursor) {
            clang_Cursor_getObjCSelectorIndex(Cursor));
   if (clang_Cursor_isDynamicCall(Cursor))
     printf(" Dynamic-call");
-  if (Cursor.kind == CXCursor_ObjCMessageExpr) {
+  if (Cursor.kind == CXCursor_ObjCMessageExpr ||
+      Cursor.kind == CXCursor_MemberRefExpr) {
     CXType T = clang_Cursor_getReceiverType(Cursor);
-    CXString S = clang_getTypeKindSpelling(T.kind);
-    printf(" Receiver-type=%s", clang_getCString(S));
-    clang_disposeString(S);
+    if (T.kind != CXType_Invalid) {
+      CXString S = clang_getTypeKindSpelling(T.kind);
+      printf(" Receiver-type=%s", clang_getCString(S));
+      clang_disposeString(S);
+    }
   }
 
   {
