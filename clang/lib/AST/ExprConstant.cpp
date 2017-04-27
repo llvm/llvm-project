@@ -4418,8 +4418,14 @@ private:
   bool HandleConditionalOperator(const ConditionalOperator *E) {
     bool BoolResult;
     if (!EvaluateAsBooleanCondition(E->getCond(), BoolResult, Info)) {
-      if (Info.checkingPotentialConstantExpression() && Info.noteFailure())
+      if (Info.checkingPotentialConstantExpression() && Info.noteFailure()) {
         CheckPotentialConstantConditional(E);
+        return false;
+      }
+      if (Info.noteFailure()) {
+        StmtVisitorTy::Visit(E->getTrueExpr());
+        StmtVisitorTy::Visit(E->getFalseExpr());
+      }
       return false;
     }
 
@@ -5240,14 +5246,19 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   if (E->getBase()->getType()->isVectorType())
     return Error(E);
 
-  if (!evaluatePointer(E->getBase(), Result))
-    return false;
+  bool Success = true;
+  if (!evaluatePointer(E->getBase(), Result)) {
+    if (!Info.noteFailure())
+      return false;
+    Success = false;
+  }
 
   APSInt Index;
   if (!EvaluateInteger(E->getIdx(), Index, Info))
     return false;
 
-  return HandleLValueArrayAdjustment(Info, E, Result, E->getType(), Index);
+  return Success &&
+         HandleLValueArrayAdjustment(Info, E, Result, E->getType(), Index);
 }
 
 bool LValueExprEvaluator::VisitUnaryDeref(const UnaryOperator *E) {

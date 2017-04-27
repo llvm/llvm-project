@@ -833,6 +833,8 @@ DSAStackTy::hasDSA(ValueDecl *D,
   auto I = std::prev(StartI);
   do {
     ++I;
+    if (I == EndI)
+      break;
     if (!DPred(I->Directive) && !isParallelOrTaskRegion(I->Directive))
       continue;
     DSAVarData DVar = getDSA(I, D);

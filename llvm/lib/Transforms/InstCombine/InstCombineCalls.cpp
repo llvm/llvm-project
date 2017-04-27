@@ -1384,17 +1384,17 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
   bool IsTZ = II.getIntrinsicID() == Intrinsic::cttz;
-  unsigned NumMaskBits = IsTZ ? Known.One.countTrailingZeros()
-                              : Known.One.countLeadingZeros();
-  APInt Mask = IsTZ ? APInt::getLowBitsSet(BitWidth, NumMaskBits)
-                    : APInt::getHighBitsSet(BitWidth, NumMaskBits);
+  unsigned PossibleZeros = IsTZ ? Known.One.countTrailingZeros()
+                                : Known.One.countLeadingZeros();
+  unsigned DefiniteZeros = IsTZ ? Known.Zero.countTrailingOnes()
+                                : Known.Zero.countLeadingOnes();
 
   // If all bits above (ctlz) or below (cttz) the first known one are known
   // zero, this value is constant.
   // FIXME: This should be in InstSimplify because we're replacing an
   // instruction with a constant.
-  if (Mask.isSubsetOf(Known.Zero)) {
-    auto *C = ConstantInt::get(IT, APInt(BitWidth, NumMaskBits));
+  if (PossibleZeros == DefiniteZeros) {
+    auto *C = ConstantInt::get(IT, DefiniteZeros);
     return IC.replaceInstUsesWith(II, C);
   }
 

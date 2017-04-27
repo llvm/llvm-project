@@ -748,7 +748,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // with explicit versions.
     if (V) {
       StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
-      Name = Saver.save(Twine(Name) + "@" + VerName);
+      Name = Saver.save(Name + "@" + VerName);
       elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
     }
   }
@@ -883,30 +883,29 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 }
 
 template <class ELFT> void BinaryFile::parse() {
-  StringRef Buf = MB.getBuffer();
-  ArrayRef<uint8_t> Data =
-      makeArrayRef<uint8_t>((const uint8_t *)Buf.data(), Buf.size());
-
-  std::string Filename = MB.getBufferIdentifier();
-  std::transform(Filename.begin(), Filename.end(), Filename.begin(),
-                 [](char C) { return isalnum(C) ? C : '_'; });
-  Filename = "_binary_" + Filename;
-  StringRef StartName = Saver.save(Twine(Filename) + "_start");
-  StringRef EndName = Saver.save(Twine(Filename) + "_end");
-  StringRef SizeName = Saver.save(Twine(Filename) + "_size");
-
+  ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
   auto *Section =
       make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
-  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,
-                                   STB_GLOBAL, Section, nullptr);
-  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, Section,
+  // For each input file foo that is embedded to a result as a binary
+  // blob, we define _binary_foo_{start,end,size} symbols, so that
+  // user programs can access blobs by name. Non-alphanumeric
+  // characters in a filename are replaced with underscore.
+  std::string S = "_binary_" + MB.getBufferIdentifier().str();
+  for (size_t I = 0; I < S.size(); ++I)
+    if (!isalnum(S[I]))
+      S[I] = '_';
+
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_start"), STV_DEFAULT,
+                                   STT_OBJECT, 0, 0, STB_GLOBAL, Section,
                                    nullptr);
-  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, nullptr,
-                                   nullptr);
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_end"), STV_DEFAULT,
+                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
+                                   Section, nullptr);
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_size"), STV_DEFAULT,
+                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
+                                   nullptr, nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
