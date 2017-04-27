@@ -577,15 +577,14 @@ namespace llvm {
     ///                      These flags are used to emit dwarf attributes.
     /// \param isOptimized   True if optimization is ON.
     /// \param TParams       Function template parameters.
-    DISubprogram *createFunction(DIScope *Scope, StringRef Name,
-                                 StringRef LinkageName, DIFile *File,
-                                 unsigned LineNo, DISubroutineType *Ty,
-                                 bool isLocalToUnit, bool isDefinition,
-                                 unsigned ScopeLine,
-                                 DINode::DIFlags Flags = DINode::FlagZero,
-                                 bool isOptimized = false,
-                                 DITemplateParameterArray TParams = nullptr,
-                                 DISubprogram *Decl = nullptr);
+    /// \param ThrownTypes   Exception types this function may throw.
+    DISubprogram *createFunction(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
+        bool isDefinition, unsigned ScopeLine,
+        DINode::DIFlags Flags = DINode::FlagZero, bool isOptimized = false,
+        DITemplateParameterArray TParams = nullptr,
+        DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -595,7 +594,7 @@ namespace llvm {
         bool isDefinition, unsigned ScopeLine,
         DINode::DIFlags Flags = DINode::FlagZero, bool isOptimized = false,
         DITemplateParameterArray TParams = nullptr,
-        DISubprogram *Decl = nullptr);
+        DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr);
 
     /// Create a new descriptor for the specified C++ method.
     /// See comments in \a DISubprogram* for descriptions of these fields.
@@ -619,13 +618,15 @@ namespace llvm {
     ///                      This flags are used to emit dwarf attributes.
     /// \param isOptimized   True if optimization is ON.
     /// \param TParams       Function template parameters.
+    /// \param ThrownTypes   Exception types this function may throw.
     DISubprogram *createMethod(
         DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
         bool isDefinition, unsigned Virtuality = 0, unsigned VTableIndex = 0,
         int ThisAdjustment = 0, DIType *VTableHolder = nullptr,
         DINode::DIFlags Flags = DINode::FlagZero, bool isOptimized = false,
-        DITemplateParameterArray TParams = nullptr);
+        DITemplateParameterArray TParams = nullptr,
+        DITypeArray ThrownTypes = nullptr);
 
     /// This creates new descriptor for a namespace with the specified
     /// parent scope.

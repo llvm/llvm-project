@@ -250,6 +250,9 @@ TEST(DeLICM, isConflicting) {
                                       {"{ Dom[i] -> [] }", nullptr, "{}"}));
   EXPECT_FALSE(checkIsConflictingKnown({"{ Dom[0] -> Val[] }", nullptr, "{}"},
                                        {nullptr, "{ Dom[0] }", "{}"}));
+  EXPECT_FALSE(checkIsConflictingKnown(
+      {"{ Dom[i] -> Val[]; Dom[i] -> Phi[] }", nullptr, "{}"},
+      {"{ Dom[i] -> Val[] }", nullptr, "{}"}));
 
   // An implementation using subtract would have exponential runtime on patterns
   // such as this one.
@@ -318,5 +321,8 @@ TEST(DeLICM, isConflicting) {
                                       {"{}", nullptr, "{ Dom[0] -> ValB[] }"}));
   EXPECT_TRUE(checkIsConflictingKnown({"{}", nullptr, "{ Dom[0] -> Val[] }"},
                                       {"{}", nullptr, "{ Dom[0] -> [] }"}));
+  EXPECT_FALSE(checkIsConflictingKnown(
+      {"{}", nullptr, "{ Dom[0] -> Val[]}"},
+      {"{}", nullptr, "{ Dom[0] -> Val[]; Dom[0] -> Phi[] }"}));
 }
 } // anonymous namespace

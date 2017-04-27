@@ -378,10 +378,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   // Set some properties which depend solely on the input kind; it would be nice
   // to move these to the language standard, and have the driver resolve the
   // input kind + language standard.
-  if (IK == IK_Asm) {
+  if (IK.getLanguage() == InputKind::Asm) {
     Opts.AsmPreprocessor = 1;
-  } else if (IK == IK_ObjC || IK == IK_ObjCXX || IK == IK_PreprocessedObjC ||
-             IK == IK_PreprocessedObjCXX) {
+  } else if (IK.isObjectiveC()) {
     Opts.ObjC1 = Opts.ObjC2 = 1;
   }
 
@@ -389,30 +388,24 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
 
   if (LangStd == LangStandard::lang_unspecified) {
     // Based on the base language, pick one.
-    switch (IK) {
-    case IK_None:
-    case IK_AST:
-    case IK_LLVM_IR:
-    case IK_RenderScript:
+    switch (IK.getLanguage()) {
+    case InputKind::Unknown:
+    case InputKind::LLVM_IR:
+    case InputKind::RenderScript:
       llvm_unreachable("Invalid input kind!");
-    case IK_OpenCL:
+    case InputKind::OpenCL:
       LangStd = LangStandard::lang_opencl;
       break;
-    case IK_CUDA:
-    case IK_PreprocessedCuda:
+    case InputKind::CUDA:
       LangStd = LangStandard::lang_cuda;
       break;
-    case IK_Asm:
-    case IK_C:
-    case IK_PreprocessedC:
-    case IK_ObjC:
-    case IK_PreprocessedObjC:
+    case InputKind::Asm:
+    case InputKind::C:
+    case InputKind::ObjC:
       LangStd = LangStandard::lang_gnu99;
       break;
-    case IK_CXX:
-    case IK_PreprocessedCXX:
-    case IK_ObjCXX:
-    case IK_PreprocessedObjCXX:
+    case InputKind::CXX:
+    case InputKind::ObjCXX:
       LangStd = LangStandard::lang_gnucxx98;
       break;
     }
@@ -784,8 +777,8 @@ IdentifierTable *ClangASTContext::getIdentifierTable() {
 LangOptions *ClangASTContext::getLanguageOptions() {
   if (m_language_options_ap.get() == nullptr) {
     m_language_options_ap.reset(new LangOptions());
-    ParseLangArgs(*m_language_options_ap, IK_ObjCXX, GetTargetTriple());
-    //        InitializeLangOptions(*m_language_options_ap, IK_ObjCXX);
+    ParseLangArgs(*m_language_options_ap, InputKind::ObjCXX, GetTargetTriple());
+    //        InitializeLangOptions(*m_language_options_ap, InputKind::ObjCXX);
   }
   return m_language_options_ap.get();
 }

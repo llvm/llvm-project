@@ -42,7 +42,7 @@ struct ConstantPoolEntry {
 // A class to keep track of assembler-generated constant pools that are use to
 // implement the ldr-pseudo.
 class ConstantPool {
-  typedef SmallVector<ConstantPoolEntry, 4> EntryVecTy;
+  using EntryVecTy = SmallVector<ConstantPoolEntry, 4>;
   EntryVecTy Entries;
   DenseMap<int64_t, const MCSymbolRefExpr *> CachedEntries;
 
@@ -80,7 +80,7 @@ class AssemblerConstantPools {
   // sections in a stable order to ensure that we have print the
   // constant pools in a deterministic order when printing an assembly
   // file.
-  typedef MapVector<MCSection *, ConstantPool> ConstantPoolMapTy;
+  using ConstantPoolMapTy = MapVector<MCSection *, ConstantPool>;
   ConstantPoolMapTy ConstantPools;
 
 public:

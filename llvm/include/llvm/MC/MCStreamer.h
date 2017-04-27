@@ -44,12 +44,11 @@ class MCInstPrinter;
 class MCSection;
 class MCStreamer;
 class MCSymbolRefExpr;
-class MCSymbolWasm;
 class MCSubtargetInfo;
 class raw_ostream;
 class Twine;
 
-typedef std::pair<MCSection *, const MCExpr *> MCSectionSubPair;
+using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
 
 /// Target specific streamer interface. This is used so that targets can
 /// implement support for target specific assembly directives.

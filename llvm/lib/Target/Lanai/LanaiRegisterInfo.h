@@ -41,8 +41,6 @@ struct LanaiRegisterInfo : public LanaiGenRegisterInfo {
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  bool canRealignStack(const MachineFunction &MF) const override;
-
   // Debug information queries.
   unsigned getRARegister() const;
   unsigned getFrameRegister(const MachineFunction &MF) const override;

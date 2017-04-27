@@ -26,6 +26,7 @@
 #include <string>
 
 namespace llvm {
+
 class MachineInstr;
 class MCInst;
 
@@ -63,8 +64,7 @@ public:
   MCSubtargetInfo() = delete;
   MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
-
-  virtual ~MCSubtargetInfo() {}
+  virtual ~MCSubtargetInfo() = default;
 
   /// getTargetTriple - Return the target triple string.
   const Triple &getTargetTriple() const { return TargetTriple; }
@@ -178,11 +178,11 @@ public:
 
   /// Returns string representation of scheduler comment
   virtual std::string getSchedInfoStr(const MachineInstr &MI) const {
-    return std::string();
+    return {};
   }
 
   virtual std::string getSchedInfoStr(MCInst const &MCI) const {
-    return std::string();
+    return {};
   }
 };
 

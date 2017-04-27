@@ -264,12 +264,6 @@ LanaiRegisterInfo::getFrameRegister(const MachineFunction & /*MF*/) const {
 
 unsigned LanaiRegisterInfo::getBaseRegister() const { return Lanai::R14; }
 
-bool LanaiRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  if (!TargetRegisterInfo::canRealignStack(MF))
-    return false;
-  return true;
-}
-
 unsigned LanaiRegisterInfo::getEHExceptionRegister() const {
   llvm_unreachable("no exception support");
   return 0;

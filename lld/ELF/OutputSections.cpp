@@ -395,14 +395,20 @@ static void reportDiscarded(InputSectionBase *IS) {
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
+  SectionKey Key = createKey(IS, OutsecName);
+  OutputSection *&Sec = Map[Key];
+  return addInputSec(IS, OutsecName, Sec);
+}
+
+void OutputSectionFactory::addInputSec(InputSectionBase *IS,
+                                       StringRef OutsecName,
+                                       OutputSection *&Sec) {
   if (!IS->Live) {
     reportDiscarded(IS);
     return;
   }
 
-  SectionKey Key = createKey(IS, OutsecName);
   uint64_t Flags = getOutFlags(IS);
-  OutputSection *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name +
@@ -418,7 +424,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     }
     Sec->Flags |= Flags;
   } else {
-    Sec = make<OutputSection>(Key.Name, IS->Type, Flags);
+    Sec = make<OutputSection>(OutsecName, IS->Type, Flags);
     OutputSections.push_back(Sec);
   }
 

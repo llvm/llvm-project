@@ -135,7 +135,7 @@ LDFLAGS when building your programs.
 
 LLD leaves its name and version number to a ``.comment`` section in an
 output. If you are in doubt whether you are successfully using LLD or
-not, run ``objdump -s -j .comment <output-file>`` and examine the
+not, run ``readelf --string-dump .comment <output-file>`` and examine the
 output. If the string "Linker: LLD" is included in the output, you are
 using LLD.
 

@@ -17,10 +17,15 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <map>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/event.h>
 #include <termios.h>
+#include <vector>
+
+#include "lldb/Host/SocketAddress.h"
 
 #ifdef WITH_LOCKDOWN
 #include "lockdown.h"
@@ -66,176 +71,161 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
   // Disconnect without saving errno
   Disconnect(false);
 
-  // Now figure out the hostname that will be attaching and palce it into
-  struct sockaddr_in listen_addr;
-  ::memset(&listen_addr, 0, sizeof listen_addr);
-  listen_addr.sin_len = sizeof listen_addr;
-  listen_addr.sin_family = AF_INET;
-  listen_addr.sin_port = htons(port);
-  listen_addr.sin_addr.s_addr = INADDR_ANY;
-
-  if (!ResolveIPV4HostName(listen_host, listen_addr.sin_addr.s_addr)) {
-    DNBLogThreaded("error: failed to resolve connecting host '%s'",
-                   listen_host);
-    return rnb_err;
-  }
-
   DNBError err;
-  int listen_fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (listen_fd == -1)
-    err.SetError(errno, DNBError::POSIX);
-
-  if (err.Fail() || DNBLogCheckLogBit(LOG_RNB_COMM))
-    err.LogThreaded("::socket ( domain = AF_INET, type = SOCK_STREAM, protocol "
-                    "= IPPROTO_TCP ) => socket = %i",
-                    listen_fd);
-
-  if (err.Fail())
-    return rnb_err;
-
-  // enable local address reuse
-  SetSocketOption(listen_fd, SOL_SOCKET, SO_REUSEADDR, 1);
-
-  struct sockaddr_in sa;
-  ::memset(&sa, 0, sizeof sa);
-  sa.sin_len = sizeof sa;
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
-  sa.sin_addr.s_addr = INADDR_ANY; // Let incoming connections bind to any host
-                                   // network interface (this is NOT who can
-                                   // connect to us)
-  int error = ::bind(listen_fd, (struct sockaddr *)&sa, sizeof(sa));
-  if (error == -1)
-    err.SetError(errno, DNBError::POSIX);
-
-  if (err.Fail() || DNBLogCheckLogBit(LOG_RNB_COMM))
-    err.LogThreaded(
-        "::bind ( socket = %i, (struct sockaddr *) &sa, sizeof(sa)) )",
-        listen_fd);
-
-  if (err.Fail()) {
-    ClosePort(listen_fd, false);
+  int queue_id = kqueue();
+  if (queue_id < 0) {
+    err.SetError(errno, DNBError::MachKernel);
+    err.LogThreaded("error: failed to create kqueue.");
     return rnb_err;
   }
 
-  error = ::listen(listen_fd, 5);
-  if (error == -1)
-    err.SetError(errno, DNBError::POSIX);
+  std::map<int, lldb_private::SocketAddress> sockets;
+  auto addresses = lldb_private::SocketAddress::GetAddressInfo(
+      listen_host, NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
 
-  if (err.Fail() || DNBLogCheckLogBit(LOG_RNB_COMM))
-    err.LogThreaded("::listen ( socket = %i, backlog = 1 )", listen_fd);
+  for (auto address : addresses) {
+    int sock_fd = ::socket(address.GetFamily(), SOCK_STREAM, IPPROTO_TCP);
+    if (sock_fd == -1)
+      continue;
 
-  if (err.Fail()) {
-    ClosePort(listen_fd, false);
-    return rnb_err;
-  }
+    SetSocketOption(sock_fd, SOL_SOCKET, SO_REUSEADDR, 1);
 
-  if (callback) {
-    // We were asked to listen on port zero which means we
-    // must now read the actual port that was given to us
-    // as port zero is a special code for "find an open port
-    // for me".
-    if (port == 0) {
-      socklen_t sa_len = sizeof(sa);
-      if (getsockname(listen_fd, (struct sockaddr *)&sa, &sa_len) == 0) {
-        port = ntohs(sa.sin_port);
-        callback(callback_baton, port);
-      }
-    } else {
-      callback(callback_baton, port);
+    address.SetPort(port);
+
+    int error = ::bind(sock_fd, &address.sockaddr(), address.GetLength());
+    if (error == -1) {
+      ClosePort(sock_fd, false);
+      continue;
     }
+
+    error = ::listen(sock_fd, 5);
+    if (error == -1) {
+      ClosePort(sock_fd, false);
+      continue;
+    }
+
+    // We were asked to listen on port zero which means we must now read the
+    // actual port that was given to us as port zero is a special code for "find
+    // an open port for me". This will only execute on the first socket created,
+    // subesquent sockets will reuse this port number.
+    if (port == 0) {
+      socklen_t sa_len = address.GetLength();
+      if (getsockname(sock_fd, &address.sockaddr(), &sa_len) == 0)
+        port = address.GetPort();
+    }
+
+    sockets[sock_fd] = address;
   }
 
-  struct sockaddr_in accept_addr;
-  ::memset(&accept_addr, 0, sizeof accept_addr);
-  accept_addr.sin_len = sizeof accept_addr;
+  if (sockets.size() == 0) {
+    err.SetError(errno, DNBError::POSIX);
+    err.LogThreaded("::listen or ::bind failed");
+    return rnb_err;
+  }
+
+  if (callback)
+    callback(callback_baton, port);
+
+  std::vector<struct kevent> events;
+  events.resize(sockets.size());
+  int i = 0;
+  for (auto socket : sockets) {
+    EV_SET(&events[i++], socket.first, EVFILT_READ, EV_ADD, 0, 0, 0);
+  }
 
   bool accept_connection = false;
 
   // Loop until we are happy with our connection
   while (!accept_connection) {
-    socklen_t accept_addr_len = sizeof accept_addr;
-    m_fd =
-        ::accept(listen_fd, (struct sockaddr *)&accept_addr, &accept_addr_len);
 
-    if (m_fd == -1)
-      err.SetError(errno, DNBError::POSIX);
+    struct kevent event_list[4];
+    int num_events =
+        kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
 
-    if (err.Fail() || DNBLogCheckLogBit(LOG_RNB_COMM))
-      err.LogThreaded(
-          "::accept ( socket = %i, address = %p, address_len = %u )", listen_fd,
-          &accept_addr, accept_addr_len);
+    if (num_events < 0) {
+      err.SetError(errno, DNBError::MachKernel);
+      err.LogThreaded("error: kevent() failed.");
+    }
 
-    if (err.Fail())
-      break;
+    for (int i = 0; i < num_events; ++i) {
+      auto sock_fd = event_list[i].ident;
+      auto socket_pair = sockets.find(sock_fd);
+      if (socket_pair == sockets.end())
+        continue;
 
-    if (listen_addr.sin_addr.s_addr == INADDR_ANY)
-      accept_connection = true;
-    else {
-      if (accept_addr_len == listen_addr.sin_len &&
-          accept_addr.sin_addr.s_addr == listen_addr.sin_addr.s_addr) {
+      lldb_private::SocketAddress &addr_in = socket_pair->second;
+      lldb_private::SocketAddress accept_addr;
+      socklen_t sa_len = accept_addr.GetMaxLength();
+      m_fd = ::accept(sock_fd, &accept_addr.sockaddr(), &sa_len);
+
+      if (m_fd == -1) {
+        err.SetError(errno, DNBError::POSIX);
+        err.LogThreaded("error: Socket accept failed.");
+      }
+
+      if (addr_in.IsAnyAddr())
         accept_connection = true;
-      } else {
-        ::close(m_fd);
-        m_fd = -1;
-        const uint8_t *accept_ip =
-            (const uint8_t *)&accept_addr.sin_addr.s_addr;
-        const uint8_t *listen_ip =
-            (const uint8_t *)&listen_addr.sin_addr.s_addr;
-        ::fprintf(stderr, "error: rejecting incoming connection from "
-                          "%u.%u.%u.%u (expecting %u.%u.%u.%u)\n",
-                  accept_ip[0], accept_ip[1], accept_ip[2], accept_ip[3],
-                  listen_ip[0], listen_ip[1], listen_ip[2], listen_ip[3]);
-        DNBLogThreaded("error: rejecting connection from %u.%u.%u.%u "
-                       "(expecting %u.%u.%u.%u)",
-                       accept_ip[0], accept_ip[1], accept_ip[2], accept_ip[3],
-                       listen_ip[0], listen_ip[1], listen_ip[2], listen_ip[3]);
+      else {
+        if (accept_addr == addr_in)
+          accept_connection = true;
+        else {
+          ::close(m_fd);
+          m_fd = -1;
+          ::fprintf(
+              stderr,
+              "error: rejecting incoming connection from %s (expecting %s)\n",
+              accept_addr.GetIPAddress().c_str(),
+              addr_in.GetIPAddress().c_str());
+          DNBLogThreaded("error: rejecting connection from %s (expecting %s)\n",
+                         accept_addr.GetIPAddress().c_str(),
+                         addr_in.GetIPAddress().c_str());
+        }
       }
     }
+    if (err.Fail())
+      break;
+  }
+  for (auto socket : sockets) {
+    int ListenFd = socket.first;
+    ClosePort(ListenFd, false);
   }
 
-  ClosePort(listen_fd, false);
-
-  if (err.Fail()) {
+  if (err.Fail())
     return rnb_err;
-  } else {
-    // Keep our TCP packets coming without any delays.
-    SetSocketOption(m_fd, IPPROTO_TCP, TCP_NODELAY, 1);
-  }
+
+  // Keep our TCP packets coming without any delays.
+  SetSocketOption(m_fd, IPPROTO_TCP, TCP_NODELAY, 1);
 
   return rnb_success;
 }
 
 rnb_err_t RNBSocket::Connect(const char *host, uint16_t port) {
+  auto result = rnb_err;
   Disconnect(false);
 
-  // Create the socket
-  m_fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (m_fd == -1)
-    return rnb_err;
+  auto addresses = lldb_private::SocketAddress::GetAddressInfo(
+      host, NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
 
-  // Enable local address reuse
-  SetSocketOption(m_fd, SOL_SOCKET, SO_REUSEADDR, 1);
+  for (auto address : addresses) {
+    m_fd = ::socket(address.GetFamily(), SOCK_STREAM, IPPROTO_TCP);
+    if (m_fd == -1)
+      continue;
 
-  struct sockaddr_in sa;
-  ::memset(&sa, 0, sizeof(sa));
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
+    // Enable local address reuse
+    SetSocketOption(m_fd, SOL_SOCKET, SO_REUSEADDR, 1);
 
-  if (!ResolveIPV4HostName(host, sa.sin_addr.s_addr)) {
-    DNBLogThreaded("error: failed to resolve host '%s'", host);
-    Disconnect(false);
-    return rnb_err;
+    address.SetPort(port);
+
+    if (-1 == ::connect(m_fd, &address.sockaddr(), address.GetLength())) {
+      Disconnect(false);
+      continue;
+    }
+    SetSocketOption(m_fd, IPPROTO_TCP, TCP_NODELAY, 1);
+
+    result = rnb_success;
+    break;
   }
-
-  if (-1 == ::connect(m_fd, (const struct sockaddr *)&sa, sizeof(sa))) {
-    Disconnect(false);
-    return rnb_err;
-  }
-
-  // Keep our TCP packets coming without any delays.
-  SetSocketOption(m_fd, IPPROTO_TCP, TCP_NODELAY, 1);
-  return rnb_success;
+  return result;
 }
 
 rnb_err_t RNBSocket::useFD(int fd) {

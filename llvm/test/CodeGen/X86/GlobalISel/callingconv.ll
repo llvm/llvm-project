@@ -37,6 +37,44 @@ define i64 @test_ret_i64() {
   ret i64 68719476735
 }
 
+define i8 @test_arg_i8(i8 %a) {
+; X32_GISEL-LABEL: test_arg_i8:
+; X32_GISEL:       # BB#0:
+; X32_GISEL-NEXT:    leal 4(%esp), %eax
+; X32_GISEL-NEXT:    movb (%eax), %al
+; X32_GISEL-NEXT:    retl
+;
+; X32_ISEL-LABEL: test_arg_i8:
+; X32_ISEL:       # BB#0:
+; X32_ISEL-NEXT:    movb 4(%esp), %al
+; X32_ISEL-NEXT:    retl
+;
+; X64-LABEL: test_arg_i8:
+; X64:       # BB#0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+  ret i8 %a
+}
+
+define i16 @test_arg_i16(i16 %a) {
+; X32_GISEL-LABEL: test_arg_i16:
+; X32_GISEL:       # BB#0:
+; X32_GISEL-NEXT:    leal 4(%esp), %eax
+; X32_GISEL-NEXT:    movzwl (%eax), %eax
+; X32_GISEL-NEXT:    retl
+;
+; X32_ISEL-LABEL: test_arg_i16:
+; X32_ISEL:       # BB#0:
+; X32_ISEL-NEXT:    movzwl 4(%esp), %eax
+; X32_ISEL-NEXT:    retl
+;
+; X64-LABEL: test_arg_i16:
+; X64:       # BB#0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+  ret i16 %a
+}
+
 define i32 @test_arg_i32(i32 %a) {
 ; X32_GISEL-LABEL: test_arg_i32:
 ; X32_GISEL:       # BB#0:

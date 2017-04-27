@@ -967,7 +967,7 @@ static void addRange(SmallVectorImpl<ConstantInt *> &EndPoints,
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   // Given two ranges, we want to compute the union of the ranges. This
-  // is slightly complitade by having to combine the intervals and merge
+  // is slightly complicated by having to combine the intervals and merge
   // the ones that overlap.
 
   if (!A || !B)
@@ -976,7 +976,7 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   if (A == B)
     return A;
 
-  // First, walk both lists in older of the lower boundary of each interval.
+  // First, walk both lists in order of the lower boundary of each interval.
   // At each step, try to merge the new interval to the last one we adedd.
   SmallVector<ConstantInt *, 4> EndPoints;
   int AI = 0;

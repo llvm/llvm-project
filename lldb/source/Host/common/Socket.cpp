@@ -18,6 +18,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 #ifndef LLDB_DISABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
 
@@ -67,9 +69,11 @@ bool IsInterrupted() {
 }
 }
 
-Socket::Socket(NativeSocket socket, SocketProtocol protocol, bool should_close)
+Socket::Socket(SocketProtocol protocol, bool should_close,
+               bool child_processes_inherit)
     : IOObject(eFDTypeSocket, should_close), m_protocol(protocol),
-      m_socket(socket) {}
+      m_socket(kInvalidSocketValue),
+      m_child_processes_inherit(child_processes_inherit) {}
 
 Socket::~Socket() { Close(); }
 
@@ -81,14 +85,17 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   std::unique_ptr<Socket> socket_up;
   switch (protocol) {
   case ProtocolTcp:
-    socket_up.reset(new TCPSocket(child_processes_inherit, error));
+    socket_up =
+        llvm::make_unique<TCPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUdp:
-    socket_up.reset(new UDPSocket(child_processes_inherit, error));
+    socket_up =
+        llvm::make_unique<UDPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUnixDomain:
 #ifndef LLDB_DISABLE_POSIX
-    socket_up.reset(new DomainSocket(child_processes_inherit, error));
+    socket_up =
+        llvm::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
     error.SetErrorString(
         "Unix domain sockets are not supported on this platform.");
@@ -96,7 +103,8 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     break;
   case ProtocolUnixAbstract:
 #ifdef __linux__
-    socket_up.reset(new AbstractSocket(child_processes_inherit, error));
+    socket_up =
+        llvm::make_unique<AbstractSocket>(child_processes_inherit);
 #else
     error.SetErrorString(
         "Abstract domain sockets are not supported on this platform.");
@@ -145,7 +153,7 @@ Error Socket::TcpListen(llvm::StringRef host_and_port,
     return error;
 
   std::unique_ptr<TCPSocket> listen_socket(
-      new TCPSocket(child_processes_inherit, error));
+      new TCPSocket(true, child_processes_inherit));
   if (error.Fail())
     return error;
 
@@ -208,7 +216,7 @@ Error Socket::UnixDomainAccept(llvm::StringRef name,
   if (error.Fail())
     return error;
 
-  error = listen_socket->Accept(name, child_processes_inherit, socket);
+  error = listen_socket->Accept(socket);
   return error;
 }
 
@@ -240,18 +248,22 @@ Error Socket::UnixAbstractAccept(llvm::StringRef name,
   if (error.Fail())
     return error;
 
-  error = listen_socket->Accept(name, child_processes_inherit, socket);
+  error = listen_socket->Accept(socket);
   return error;
 }
 
 bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
                                std::string &host_str, std::string &port_str,
                                int32_t &port, Error *error_ptr) {
-  static RegularExpression g_regex(llvm::StringRef("([^:]+):([0-9]+)"));
+  static RegularExpression g_regex(
+      llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
   RegularExpression::Match regex_match(2);
   if (g_regex.Execute(host_and_port, &regex_match)) {
     if (regex_match.GetMatchAtIndex(host_and_port.data(), 1, host_str) &&
         regex_match.GetMatchAtIndex(host_and_port.data(), 2, port_str)) {
+      // IPv6 addresses are wrapped in [] when specified with ports
+      if (host_str.front() == '[' && host_str.back() == ']')
+        host_str = host_str.substr(1, host_str.size() - 2);
       bool ok = false;
       port = StringConvert::ToUInt32(port_str.c_str(), UINT32_MAX, 10, &ok);
       if (ok && port <= UINT16_MAX) {
@@ -404,12 +416,12 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
                                   const int protocol,
                                   bool child_processes_inherit, Error &error) {
   error.Clear();
-  auto socketType = type;
+  auto socket_type = type;
 #ifdef SOCK_CLOEXEC
   if (!child_processes_inherit)
-    socketType |= SOCK_CLOEXEC;
+    socket_type |= SOCK_CLOEXEC;
 #endif
-  auto sock = ::socket(domain, socketType, protocol);
+  auto sock = ::socket(domain, socket_type, protocol);
   if (sock == kInvalidSocketValue)
     SetLastError(error);
 

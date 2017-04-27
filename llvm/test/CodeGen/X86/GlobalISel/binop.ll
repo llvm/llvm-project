@@ -24,6 +24,28 @@ define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
   ret i32 %ret
 }
 
+define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
+; ALL-LABEL: test_add_i16:
+; ALL:       # BB#0:
+; ALL-NEXT:    # kill: %DI<def> %DI<kill> %RDI<def>
+; ALL-NEXT:    # kill: %SI<def> %SI<kill> %RSI<def>
+; ALL-NEXT:    leal (%rsi,%rdi), %eax
+; ALL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; ALL-NEXT:    retq
+  %ret = add i16 %arg1, %arg2
+  ret i16 %ret
+}
+
+define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
+; ALL-LABEL: test_add_i8:
+; ALL:       # BB#0:
+; ALL-NEXT:    addb %dil, %sil
+; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    retq
+  %ret = add i8 %arg1, %arg2
+  ret i8 %ret
+}
+
 define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 ; ALL-LABEL: test_sub_i64:
 ; ALL:       # BB#0:

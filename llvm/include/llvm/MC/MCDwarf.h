@@ -168,10 +168,10 @@ public:
     MCLineDivisions[Sec].push_back(LineEntry);
   }
 
-  typedef std::vector<MCDwarfLineEntry> MCDwarfLineEntryCollection;
-  typedef MCDwarfLineEntryCollection::iterator iterator;
-  typedef MCDwarfLineEntryCollection::const_iterator const_iterator;
-  typedef MapVector<MCSection *, MCDwarfLineEntryCollection> MCLineDivisionMap;
+  using MCDwarfLineEntryCollection = std::vector<MCDwarfLineEntry>;
+  using iterator = MCDwarfLineEntryCollection::iterator;
+  using const_iterator = MCDwarfLineEntryCollection::const_iterator;
+  using MCLineDivisionMap = MapVector<MCSection *, MCDwarfLineEntryCollection>;
 
 private:
   // A collection of MCDwarfLineEntry for each section.

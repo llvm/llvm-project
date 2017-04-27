@@ -820,7 +820,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
 
   const DILocalVariable *V = MI->getDebugVariable();
   if (auto *SP = dyn_cast<DISubprogram>(V->getScope())) {
-    StringRef Name = SP->getDisplayName();
+    StringRef Name = SP->getName();
     if (!Name.empty())
       OS << Name << ":";
   }
