@@ -1602,6 +1602,7 @@ private:
                  *Ident_AbnormalTermination;
 
   const char *getCurLexerEndPos();
+  void diagnoseMissingHeaderInUmbrellaDir(const Module &Mod);
 
 public:
   void PoisonSEHIdentifiers(bool Poison = true); // Borland
