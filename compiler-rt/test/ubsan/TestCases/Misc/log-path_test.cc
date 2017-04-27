@@ -32,5 +32,5 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK-ERROR: runtime error: value -4 is outside the range of representable values of type 'unsigned int'
+// CHECK-ERROR: runtime error: -4 is outside the range of representable values of type 'unsigned int'
 
