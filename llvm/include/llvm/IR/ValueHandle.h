@@ -45,8 +45,8 @@ protected:
       : ValueHandleBase(RHS.PrevPair.getInt(), RHS) {}
 
   ValueHandleBase(HandleBaseKind Kind, const ValueHandleBase &RHS)
-      : PrevPair(nullptr, Kind), Next(nullptr), V(RHS.V) {
-    if (isValid(V))
+      : PrevPair(nullptr, Kind), Next(nullptr), Val(RHS.getValPtr()) {
+    if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
   }
 
@@ -54,43 +54,51 @@ private:
   PointerIntPair<ValueHandleBase**, 2, HandleBaseKind> PrevPair;
   ValueHandleBase *Next;
 
-  Value* V;
+  Value *Val;
+
+  void setValPtr(Value *V) { Val = V; }
 
 public:
   explicit ValueHandleBase(HandleBaseKind Kind)
-    : PrevPair(nullptr, Kind), Next(nullptr), V(nullptr) {}
+      : PrevPair(nullptr, Kind), Next(nullptr), Val(nullptr) {}
   ValueHandleBase(HandleBaseKind Kind, Value *V)
-    : PrevPair(nullptr, Kind), Next(nullptr), V(V) {
-    if (isValid(V))
+      : PrevPair(nullptr, Kind), Next(nullptr), Val(V) {
+    if (isValid(getValPtr()))
       AddToUseList();
   }
 
   ~ValueHandleBase() {
-    if (isValid(V))
+    if (isValid(getValPtr()))
       RemoveFromUseList();
   }
 
   Value *operator=(Value *RHS) {
-    if (V == RHS) return RHS;
-    if (isValid(V)) RemoveFromUseList();
-    V = RHS;
-    if (isValid(V)) AddToUseList();
+    if (getValPtr() == RHS)
+      return RHS;
+    if (isValid(getValPtr()))
+      RemoveFromUseList();
+    setValPtr(RHS);
+    if (isValid(getValPtr()))
+      AddToUseList();
     return RHS;
   }
 
   Value *operator=(const ValueHandleBase &RHS) {
-    if (V == RHS.V) return RHS.V;
-    if (isValid(V)) RemoveFromUseList();
-    V = RHS.V;
-    if (isValid(V)) AddToExistingUseList(RHS.getPrevPtr());
-    return V;
+    if (getValPtr() == RHS.getValPtr())
+      return RHS.getValPtr();
+    if (isValid(getValPtr()))
+      RemoveFromUseList();
+    setValPtr(RHS.getValPtr());
+    if (isValid(getValPtr()))
+      AddToExistingUseList(RHS.getPrevPtr());
+    return getValPtr();
   }
 
-  Value *operator->() const { return V; }
-  Value &operator*() const { return *V; }
+  Value *operator->() const { return getValPtr(); }
+  Value &operator*() const { return *getValPtr(); }
 
 protected:
-  Value *getValPtr() const { return V; }
+  Value *getValPtr() const { return Val; }
 
   static bool isValid(Value *V) {
     return V &&
@@ -105,7 +113,7 @@ protected:
   ///
   /// This should only be used if a derived class has manually removed the
   /// handle from the use list.
-  void clearValPtr() { V = nullptr; }
+  void clearValPtr() { setValPtr(nullptr); }
 
 public:
   // Callbacks made from Value.

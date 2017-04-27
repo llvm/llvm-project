@@ -319,8 +319,16 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         # -exec-step can keep us in the g_MyFunction for gcc
         self.runCmd("-exec-finish --frame 0")
         self.expect("\^running")
-        self.expect(
-            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"")
+        it = self.expect(["\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"",
+                         "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"29\""])
+
+        if it == 1:
+            # Call to s_MyFunction may not follow immediately after g_MyFunction.
+            # There might be some instructions in between to restore caller-saved registers.
+            # We need to get past these instructions with a next to reach call to s_MyFunction.
+            self.runCmd("-exec-next --thread 1")
+            self.expect("\^running")
+            self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"")
 
         # Test that -exec-step steps into s_MyFunction
         # (and that --frame is optional)

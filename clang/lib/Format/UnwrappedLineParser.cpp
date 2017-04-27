@@ -1040,13 +1040,15 @@ void UnwrappedLineParser::parseStructuralElement() {
         return;
       }
 
-      // Parse function literal unless 'function' is the first token in a line
-      // in which case this should be treated as a free-standing function.
+      // Function declarations (as opposed to function expressions) are parsed
+      // on their own unwrapped line by continuing this loop. Function
+      // expressions (functions that are not on their own line) must not create
+      // a new unwrapped line, so they are special cased below.
+      size_t TokenCount = Line->Tokens.size();
       if (Style.Language == FormatStyle::LK_JavaScript &&
-          (FormatTok->is(Keywords.kw_function) ||
-           FormatTok->startsSequence(Keywords.kw_async,
-                                     Keywords.kw_function)) &&
-          Line->Tokens.size() > 0) {
+          FormatTok->is(Keywords.kw_function) &&
+          (TokenCount > 1 || (TokenCount == 1 && !Line->Tokens.front().Tok->is(
+                                                     Keywords.kw_async)))) {
         tryToParseJSFunction();
         break;
       }

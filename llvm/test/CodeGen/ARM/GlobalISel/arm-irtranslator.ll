@@ -148,8 +148,9 @@ define i16 @test_stack_args_signext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK: liveins: %r0, %r1, %r2, %r3
 ; CHECK: [[VREGP1:%[0-9]+]]{{.*}} = COPY %r1
 ; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5:%[0-9]+]]{{.*}} = G_LOAD [[FIP5]](p0)
-; CHECK: [[SUM:%[0-9]+]]{{.*}} = G_ADD [[VREGP1]], [[VREGP5]]
+; CHECK: [[VREGP5EXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGP5:%[0-9]+]](s16) = G_TRUNC [[VREGP5EXT]]
+; CHECK: [[SUM:%[0-9]+]](s16) = G_ADD [[VREGP1]], [[VREGP5]]
 ; CHECK: %r0 = COPY [[SUM]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
@@ -166,13 +167,49 @@ define i8 @test_stack_args_zeroext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK: liveins: %r0, %r1, %r2, %r3
 ; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
 ; CHECK: [[FIP4:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P4]]
-; CHECK: [[VREGP4:%[0-9]+]]{{.*}} = G_LOAD [[FIP4]](p0)
-; CHECK: [[SUM:%[0-9]+]]{{.*}} = G_ADD [[VREGP2]], [[VREGP4]]
+; CHECK: [[VREGP4EXT:%[0-9]+]](s32) = G_LOAD [[FIP4]](p0)
+; CHECK: [[VREGP4:%[0-9]+]](s8) = G_TRUNC [[VREGP4EXT]]
+; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
 ; CHECK: %r0 = COPY [[SUM]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i8 %p2, %p4
   ret i8 %sum
+}
+
+define i8 @test_stack_args_noext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
+                                 i8 %p4, i16 %p5) {
+; CHECK-LABEL: name: test_stack_args_noext
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
+; CHECK: [[FIP4:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P4]]
+; CHECK: [[VREGP4:%[0-9]+]](s8) = G_LOAD [[FIP4]](p0)
+; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
+; CHECK: %r0 = COPY [[SUM]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %sum = add i8 %p2, %p4
+  ret i8 %sum
+}
+
+define zeroext i16 @test_stack_args_extend_the_extended(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
+                                                        i8 signext %p4, i16 signext %p5) {
+; CHECK-LABEL: name: test_stack_args_extend_the_extended
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5SEXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGP5:%[0-9]+]](s16) = G_TRUNC [[VREGP5SEXT]]
+; CHECK: [[VREGP5ZEXT:%[0-9]+]](s32) = G_ZEXT [[VREGP5]]
+; CHECK: %r0 = COPY [[VREGP5ZEXT]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  ret i16 %p5
 }
 
 define i16 @test_ptr_arg(i16* %p) {

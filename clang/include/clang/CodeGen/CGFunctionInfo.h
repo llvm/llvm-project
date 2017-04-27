@@ -461,7 +461,7 @@ class CGFunctionInfo final
   unsigned EffectiveCallingConvention : 8;
 
   /// The clang::CallingConv that this was originally created with.
-  unsigned ASTCallingConvention : 8;
+  unsigned ASTCallingConvention : 7;
 
   /// Whether this is an instance method.
   unsigned InstanceMethod : 1;
@@ -474,6 +474,9 @@ class CGFunctionInfo final
 
   /// Whether this function is returns-retained.
   unsigned ReturnsRetained : 1;
+
+  /// Whether this function saved caller registers.
+  unsigned NoCallerSavedRegs : 1;
 
   /// How many arguments to pass inreg.
   unsigned HasRegParm : 1;
@@ -560,6 +563,9 @@ public:
   /// is not always reliable for call sites.
   bool isReturnsRetained() const { return ReturnsRetained; }
 
+  /// Whether this function no longer saves caller registers.
+  bool isNoCallerSavedRegs() const { return NoCallerSavedRegs; }
+
   /// getASTCallingConvention() - Return the AST-specified calling
   /// convention.
   CallingConv getASTCallingConvention() const {
@@ -583,10 +589,9 @@ public:
   unsigned getRegParm() const { return RegParm; }
 
   FunctionType::ExtInfo getExtInfo() const {
-    return FunctionType::ExtInfo(isNoReturn(),
-                                 getHasRegParm(), getRegParm(),
-                                 getASTCallingConvention(),
-                                 isReturnsRetained());
+    return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
+                                 getASTCallingConvention(), isReturnsRetained(),
+                                 isNoCallerSavedRegs());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -623,6 +628,7 @@ public:
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(NoReturn);
     ID.AddBoolean(ReturnsRetained);
+    ID.AddBoolean(NoCallerSavedRegs);
     ID.AddBoolean(HasRegParm);
     ID.AddInteger(RegParm);
     ID.AddInteger(Required.getOpaqueData());
@@ -648,6 +654,7 @@ public:
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(info.getNoReturn());
     ID.AddBoolean(info.getProducesResult());
+    ID.AddBoolean(info.getNoCallerSavedRegs());
     ID.AddBoolean(info.getHasRegParm());
     ID.AddInteger(info.getRegParm());
     ID.AddInteger(required.getOpaqueData());

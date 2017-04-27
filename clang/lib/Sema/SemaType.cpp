@@ -119,8 +119,9 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST \
-    case AttributeList::AT_NoReturn: \
-    case AttributeList::AT_Regparm: \
+  case AttributeList::AT_NoReturn: \
+  case AttributeList::AT_Regparm: \
+  case AttributeList::AT_AnyX86NoCallerSavedRegisters: \
     CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
@@ -6367,6 +6368,20 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
 
     FunctionType::ExtInfo EI
       = unwrapped.get()->getExtInfo().withProducesResult(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == AttributeList::AT_AnyX86NoCallerSavedRegisters) {
+    if (S.CheckNoCallerSavedRegsAttr(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    FunctionType::ExtInfo EI =
+        unwrapped.get()->getExtInfo().withNoCallerSavedRegs(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }

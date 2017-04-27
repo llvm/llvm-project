@@ -2657,6 +2657,40 @@ hardware design, touch the red zone.
   }];
 }
 
+def AnyX86NoCallerSavedRegistersDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use this attribute to indicate that the specified function has no
+caller-saved registers. That is, all registers are callee-saved except for
+registers used for passing parameters to the function or returning parameters
+from the function.
+The compiler saves and restores any modified registers that were not used for 
+passing or returning arguments to the function.
+
+The user can call functions specified with the 'no_caller_saved_registers'
+attribute from an interrupt handler without saving and restoring all
+call-clobbered registers.
+
+Note that 'no_caller_saved_registers' attribute is not a calling convention.
+In fact, it only overrides the decision of which registers should be saved by
+the caller, but not how the parameters are passed from the caller to the callee.
+
+For example:
+
+  .. code-block:: c
+
+    __attribute__ ((no_caller_saved_registers, fastcall))
+    void f (int arg1, int arg2) {
+      ...
+    }
+
+  In this case parameters 'arg1' and 'arg2' will be passed in registers.
+  In this case, on 32-bit x86 targets, the function 'f' will use ECX and EDX as
+  register parameters. However, it will not assume any scratch registers and
+  should save and restore any modified registers except for ECX and EDX.
+  }];
+}
+
 def SwiftCallDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
