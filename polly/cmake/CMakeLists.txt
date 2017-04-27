@@ -52,7 +52,11 @@ endif()
 
 # Generate PollyConfig.cmake for the build tree.
 set(POLLY_CONFIG_CMAKE_DIR "${CMAKE_BINARY_DIR}/${POLLY_INSTALL_PACKAGE_DIR}")
-set(POLLY_CONFIG_INCLUDE_DIRS ${ISL_INCLUDE_DIRS})
+set(POLLY_CONFIG_INCLUDE_DIRS
+  ${POLLY_SOURCE_DIR}/include
+  ${ISL_INCLUDE_DIRS}
+  ${POLLY_BINARY_DIR}/include
+  )
 set(POLLY_CONFIG_LIBRARY_DIRS "${POLLY_BINARY_DIR}/lib")
 
 # set locations for imported targets
@@ -85,9 +89,15 @@ set(POLLY_CONFIG_LLVM_CMAKE_DIR "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}"
 set(POLLY_CONFIG_CMAKE_DIR "${POLLY_INSTALL_PREFIX}/${POLLY_INSTALL_PACKAGE_DIR}")
 set(POLLY_CONFIG_LIBRARY_DIRS "${POLLY_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
 if (POLLY_BUNDLED_ISL)
-  set(POLLY_CONFIG_INCLUDE_DIRS "${POLLY_INSTALL_PREFIX}/include/polly")
+  set(POLLY_CONFIG_INCLUDE_DIRS
+    "${POLLY_INSTALL_PREFIX}/include"
+    "${POLLY_INSTALL_PREFIX}/include/polly"
+    )
 else()
-  set(POLLY_CONFIG_INCLUDE_DIRS ${ISL_INCLUDE_DIRS})
+  set(POLLY_CONFIG_INCLUDE_DIRS
+    "${POLLY_INSTALL_PREFIX}/include"
+    ${ISL_INCLUDE_DIRS}
+    )
 endif()
 
 # set locations for imported targets. The path is constructed to be relative to

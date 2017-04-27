@@ -6,6 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// Note: This file is used on Darwin by debugserver, so it needs to remain as
+//       self contained as possible, and devoid of references to LLVM unless 
+//       there is compelling reason.
+//
+//===----------------------------------------------------------------------===//
 
 #if defined(_MSC_VER)
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
