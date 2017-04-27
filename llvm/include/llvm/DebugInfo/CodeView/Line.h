@@ -141,13 +141,6 @@ struct InlineeSourceLine {
   //   ulittle32_t Files[];
 };
 
-struct FileChecksum {
-  ulittle32_t FileNameOffset; // Byte offset of filename in global string table.
-  uint8_t ChecksumSize;       // Number of bytes of checksum.
-  uint8_t ChecksumKind;       // FileChecksumKind
-  // Checksum bytes follow.
-};
-
 } // namespace codeview
 } // namespace llvm
 

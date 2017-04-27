@@ -1,4 +1,4 @@
-//===- ModInfoBuilder.h - PDB module information ----------------*- C++ -*-===//
+//===- DbiModuleDescriptorBuilder.h - PDB module information ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_MODINFOBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_MODINFOBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
+#define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -27,14 +27,16 @@ struct MSFLayout;
 }
 namespace pdb {
 
-class ModInfoBuilder {
+class DbiModuleDescriptorBuilder {
   friend class DbiStreamBuilder;
 
 public:
-  ModInfoBuilder(StringRef ModuleName, uint32_t ModIndex, msf::MSFBuilder &Msf);
+  DbiModuleDescriptorBuilder(StringRef ModuleName, uint32_t ModIndex,
+                             msf::MSFBuilder &Msf);
 
-  ModInfoBuilder(const ModInfoBuilder &) = delete;
-  ModInfoBuilder &operator=(const ModInfoBuilder &) = delete;
+  DbiModuleDescriptorBuilder(const DbiModuleDescriptorBuilder &) = delete;
+  DbiModuleDescriptorBuilder &
+  operator=(const DbiModuleDescriptorBuilder &) = delete;
 
   void setObjFileName(StringRef Name);
   void addSymbol(codeview::CVSymbol Symbol);
@@ -71,4 +73,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_MODINFOBUILDER_H
+#endif // LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H

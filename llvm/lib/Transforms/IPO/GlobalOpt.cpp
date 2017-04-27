@@ -1792,7 +1792,9 @@ static void makeAllConstantUsesInstructions(Constant *C) {
       NewU->insertBefore(UI);
       UI->replaceUsesOfWith(U, NewU);
     }
-    U->dropAllReferences();
+    // We've replaced all the uses, so destroy the constant. (destroyConstant
+    // will update value handles and metadata.)
+    U->destroyConstant();
   }
 }
 

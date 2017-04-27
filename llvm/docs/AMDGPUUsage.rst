@@ -83,7 +83,7 @@ handler as follows:
    Usage           Code Sequence Description
    =============== ============= ===============================================
    llvm.trap           s_endpgm      Causes wavefront to be terminated.
-   llvm.debugtrap Nothing.         Compiler warning generated that there is no trap handler installed.
+   llvm.debugtrap      Nothing       Compiler warning generated that there is no trap handler installed.
    =============== ============= ===============================================
 
 Assembler

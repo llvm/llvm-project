@@ -1,4 +1,4 @@
-//===- ModInfoBuilder.cpp - PDB Module Info Stream Creation -----*- C++ -*-===//
+//===- DbiModuleDescriptorBuilder.cpp - PDB Mod Info Creation ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Native/ModInfoBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryItemStream.h"
@@ -45,33 +45,38 @@ static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize) {
   return Size;
 }
 
-ModInfoBuilder::ModInfoBuilder(StringRef ModuleName, uint32_t ModIndex,
-                               msf::MSFBuilder &Msf)
+DbiModuleDescriptorBuilder::DbiModuleDescriptorBuilder(StringRef ModuleName,
+                                                       uint32_t ModIndex,
+                                                       msf::MSFBuilder &Msf)
     : MSF(Msf), ModuleName(ModuleName) {
   Layout.Mod = ModIndex;
 }
 
-uint16_t ModInfoBuilder::getStreamIndex() const { return Layout.ModDiStream; }
+uint16_t DbiModuleDescriptorBuilder::getStreamIndex() const {
+  return Layout.ModDiStream;
+}
 
-void ModInfoBuilder::setObjFileName(StringRef Name) { ObjFileName = Name; }
+void DbiModuleDescriptorBuilder::setObjFileName(StringRef Name) {
+  ObjFileName = Name;
+}
 
-void ModInfoBuilder::addSymbol(CVSymbol Symbol) {
+void DbiModuleDescriptorBuilder::addSymbol(CVSymbol Symbol) {
   Symbols.push_back(Symbol);
   SymbolByteSize += Symbol.data().size();
 }
 
-void ModInfoBuilder::addSourceFile(StringRef Path) {
+void DbiModuleDescriptorBuilder::addSourceFile(StringRef Path) {
   SourceFiles.push_back(Path);
 }
 
-uint32_t ModInfoBuilder::calculateSerializedLength() const {
+uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
   uint32_t L = sizeof(Layout);
   uint32_t M = ModuleName.size() + 1;
   uint32_t O = ObjFileName.size() + 1;
   return alignTo(L + M + O, sizeof(uint32_t));
 }
 
-void ModInfoBuilder::finalize() {
+void DbiModuleDescriptorBuilder::finalize() {
   Layout.C13Bytes = 0;
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
@@ -87,7 +92,7 @@ void ModInfoBuilder::finalize() {
   Layout.SymBytes = SymbolByteSize + sizeof(uint32_t);
 }
 
-Error ModInfoBuilder::finalizeMsfLayout() {
+Error DbiModuleDescriptorBuilder::finalizeMsfLayout() {
   this->Layout.ModDiStream = kInvalidStreamIndex;
   auto ExpectedSN = MSF.addStream(calculateDiSymbolStreamSize(SymbolByteSize));
   if (!ExpectedSN)
@@ -96,9 +101,9 @@ Error ModInfoBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-Error ModInfoBuilder::commit(BinaryStreamWriter &ModiWriter,
-                             const msf::MSFLayout &MsfLayout,
-                             WritableBinaryStreamRef MsfBuffer) {
+Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
+                                         const msf::MSFLayout &MsfLayout,
+                                         WritableBinaryStreamRef MsfBuffer) {
   // We write the Modi record to the `ModiWriter`, but we additionally write its
   // symbol stream to a brand new stream.
   if (auto EC = ModiWriter.writeObject(Layout))

@@ -1,4 +1,4 @@
-//===- ModInfo.h - PDB module information -----------------------*- C++ -*-===//
+//===- DbiModuleDescriptor.h - PDB module information -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
-#define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H
+#define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -22,15 +22,15 @@ namespace llvm {
 
 namespace pdb {
 
-class ModInfo {
+class DbiModuleDescriptor {
   friend class DbiStreamBuilder;
 
 public:
-  ModInfo();
-  ModInfo(const ModInfo &Info);
-  ~ModInfo();
+  DbiModuleDescriptor();
+  DbiModuleDescriptor(const DbiModuleDescriptor &Info);
+  ~DbiModuleDescriptor();
 
-  static Error initialize(BinaryStreamRef Stream, ModInfo &Info);
+  static Error initialize(BinaryStreamRef Stream, DbiModuleDescriptor &Info);
 
   bool hasECInfo() const;
   uint16_t getTypeServerIndex() const;
@@ -54,19 +54,20 @@ private:
 };
 
 struct ModuleInfoEx {
-  ModuleInfoEx(const ModInfo &Info) : Info(Info) {}
+  ModuleInfoEx(const DbiModuleDescriptor &Info) : Info(Info) {}
   ModuleInfoEx(const ModuleInfoEx &Ex) = default;
 
-  ModInfo Info;
+  DbiModuleDescriptor Info;
   std::vector<StringRef> SourceFiles;
 };
 
 } // end namespace pdb
 
-template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
-  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
-                   pdb::ModInfo &Info) const {
-    if (auto EC = pdb::ModInfo::initialize(Stream, Info))
+template <> struct VarStreamArrayExtractor<pdb::DbiModuleDescriptor> {
+  typedef void ContextType;
+  static Error extract(BinaryStreamRef Stream, uint32_t &Length,
+                       pdb::DbiModuleDescriptor &Info, void *Ctx) {
+    if (auto EC = pdb::DbiModuleDescriptor::initialize(Stream, Info))
       return EC;
     Length = Info.getRecordLength();
     return Error::success();
@@ -75,4 +76,4 @@ template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
+#endif // LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H

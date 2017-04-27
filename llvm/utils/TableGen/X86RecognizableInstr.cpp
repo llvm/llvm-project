@@ -668,7 +668,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     break;
   case X86Local::MRMSrcReg4VOp3:
     assert(numPhysicalOperands == 3 &&
-           "Unexpected number of operands for MRMSrcRegFrm");
+           "Unexpected number of operands for MRMSrcReg4VOp3Frm");
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(rmRegister)
     HANDLE_OPERAND(vvvvRegister)
@@ -708,7 +708,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     break;
   case X86Local::MRMSrcMem4VOp3:
     assert(numPhysicalOperands == 3 &&
-           "Unexpected number of operands for MRMSrcMemFrm");
+           "Unexpected number of operands for MRMSrcMem4VOp3Frm");
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(memory)
     HANDLE_OPERAND(vvvvRegister)

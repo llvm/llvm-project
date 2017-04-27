@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMMODULES_H
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 namespace llvm {
 namespace pdb {

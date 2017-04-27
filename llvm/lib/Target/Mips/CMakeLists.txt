@@ -47,6 +47,7 @@ add_llvm_target(MipsCodeGen
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
+  MicroMipsSizeReduction.cpp
   )
 
 add_subdirectory(InstPrinter)

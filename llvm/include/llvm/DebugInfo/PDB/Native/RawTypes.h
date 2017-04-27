@@ -200,7 +200,7 @@ struct FileInfoSubstreamHeader {
 };
 
 struct ModInfoFlags {
-  ///  uint16_t fWritten : 1;   // True if ModInfo is dirty
+  ///  uint16_t fWritten : 1;   // True if DbiModuleDescriptor is dirty
   ///  uint16_t fECEnabled : 1; // Is EC symbolic info present?  (What is EC?)
   ///  uint16_t unused : 6;     // Reserved
   ///  uint16_t iTSM : 8;       // Type Server Index for this module
