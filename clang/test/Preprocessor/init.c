@@ -9690,3 +9690,12 @@
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
 // MSVC-X64-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
 // MSVC-X86-NOT:#define __GCC_ATOMIC{{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding                \
+// RUN:   -triple=aarch64-apple-ios9 < /dev/null        \
+// RUN: | FileCheck -check-prefix=DARWIN %s
+// RUN: %clang_cc1 -E -dM -ffreestanding                \
+// RUN:   -triple=aarch64-apple-macosx10.12 < /dev/null \
+// RUN: | FileCheck -check-prefix=DARWIN %s
+
+// DARWIN:#define __STDC_NO_THREADS__ 1

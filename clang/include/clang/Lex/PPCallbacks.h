@@ -247,7 +247,7 @@ public:
   }
 
   /// \brief Hook called whenever a macro \#undef is seen.
-  /// \param Token The active Token
+  /// \param MacroNameTok The active Token
   /// \param MD A MacroDefinition for the named macro.
   /// \param Undef New MacroDirective if the macro was defined, null otherwise.
   ///
