@@ -214,6 +214,10 @@ void GenericDINode::recalculateHash() {
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
   return storeImpl(new (array_lengthof(OPS)) CLASS(Context, Storage, OPS),     \
                    Storage, Context.pImpl->CLASS##s)
+#define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
+  return storeImpl(new (NUM_OPS)                                               \
+                       CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
+                   Storage, Context.pImpl->CLASS##s)
 
 DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
                                 StorageType Storage, bool ShouldCreate) {
@@ -441,21 +445,30 @@ DISubprogram *DISubprogram::getImpl(
     Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
     int ThisAdjustment, DIFlags Flags, bool IsOptimized, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *Variables,
-    StorageType Storage, bool ShouldCreate) {
+    Metadata *ThrownTypes, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(
-      DISubprogram,
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       ScopeLine, ContainingType, Virtuality, VirtualIndex, ThisAdjustment,
-       Flags, IsOptimized, Unit, TemplateParams, Declaration, Variables));
-  Metadata *Ops[] = {File,           Scope,       Name,           Name,
-                     LinkageName,    Type,        ContainingType, Unit,
-                     TemplateParams, Declaration, Variables};
-  DEFINE_GETIMPL_STORE(DISubprogram, (Line, ScopeLine, Virtuality, VirtualIndex,
-                                      ThisAdjustment, Flags, IsLocalToUnit,
-                                      IsDefinition, IsOptimized),
-                       Ops);
+      DISubprogram, (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, ScopeLine, ContainingType, Virtuality,
+                     VirtualIndex, ThisAdjustment, Flags, IsOptimized, Unit,
+                     TemplateParams, Declaration, Variables, ThrownTypes));
+  SmallVector<Metadata *, 11> Ops = {
+      File,        Scope,     Name,           LinkageName,    Type,       Unit,
+      Declaration, Variables, ContainingType, TemplateParams, ThrownTypes};
+  if (!ThrownTypes) {
+    Ops.pop_back();
+    if (!TemplateParams) {
+      Ops.pop_back();
+      if (!ContainingType)
+        Ops.pop_back();
+    }
+  }
+  DEFINE_GETIMPL_STORE_N(DISubprogram,
+                         (Line, ScopeLine, Virtuality, VirtualIndex,
+                          ThisAdjustment, Flags, IsLocalToUnit, IsDefinition,
+                          IsOptimized),
+                         Ops, Ops.size());
 }
 
 bool DISubprogram::describes(const Function *F) const {

@@ -137,15 +137,13 @@ std::string lld::toString(const InputFile *F) {
   return F->ToStringCache;
 }
 
-template <class ELFT> static ELFKind getELFKind() {
-  if (ELFT::TargetEndianness == support::little)
-    return ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
-  return ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
-}
-
 template <class ELFT>
 ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
-  EKind = getELFKind<ELFT>();
+  if (ELFT::TargetEndianness == support::little)
+    EKind = ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
+  else
+    EKind = ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
+
   EMachine = getObj().getHeader()->e_machine;
   OSABI = getObj().getHeader()->e_ident[llvm::ELF::EI_OSABI];
 }
@@ -174,8 +172,10 @@ void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
 }
 
 template <class ELFT>
-elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
-    : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
+elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M, StringRef ArchiveName)
+    : ELFFileBase<ELFT>(Base::ObjectKind, M) {
+  this->ArchiveName = ArchiveName;
+}
 
 template <class ELFT>
 ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getLocalSymbols() {
@@ -665,7 +665,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
       uint64_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
         fatal(toString(this) + ": invalid DT_SONAME entry");
-      SoName = StringRef(this->StringTable.data() + Val);
+      SoName = this->StringTable.data() + Val;
       return;
     }
   }
@@ -748,7 +748,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // with explicit versions.
     if (V) {
       StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
-      Name = Saver.save(Twine(Name) + "@" + VerName);
+      Name = Saver.save(Name + "@" + VerName);
       elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
     }
   }
@@ -862,76 +862,50 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
 }
 
-// Small bit of template meta programming to handle the SharedFile constructor
-// being the only one with a DefaultSoName parameter.
-template <template <class> class T, class E>
-typename std::enable_if<std::is_same<T<E>, SharedFile<E>>::value,
-                        InputFile *>::type
-createELFAux(MemoryBufferRef MB, StringRef DefaultSoName) {
-  return make<T<E>>(MB, DefaultSoName);
-}
-template <template <class> class T, class E>
-typename std::enable_if<!std::is_same<T<E>, SharedFile<E>>::value,
-                        InputFile *>::type
-createELFAux(MemoryBufferRef MB, StringRef DefaultSoName) {
-  return make<T<E>>(MB);
-}
-
-template <template <class> class T>
-static InputFile *createELFFile(MemoryBufferRef MB, StringRef DefaultSoName) {
+static ELFKind getELFKind(MemoryBufferRef MB) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
+
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal(MB.getBufferIdentifier() + ": invalid data encoding");
+  if (Size != ELFCLASS32 && Size != ELFCLASS64)
+    fatal(MB.getBufferIdentifier() + ": invalid file class");
 
   size_t BufSize = MB.getBuffer().size();
   if ((Size == ELFCLASS32 && BufSize < sizeof(Elf32_Ehdr)) ||
       (Size == ELFCLASS64 && BufSize < sizeof(Elf64_Ehdr)))
     fatal(MB.getBufferIdentifier() + ": file is too short");
 
-  InputFile *Obj;
-  if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj = createELFAux<T, ELF32LE>(MB, DefaultSoName);
-  else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj = createELFAux<T, ELF32BE>(MB, DefaultSoName);
-  else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj = createELFAux<T, ELF64LE>(MB, DefaultSoName);
-  else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj = createELFAux<T, ELF64BE>(MB, DefaultSoName);
-  else
-    fatal(MB.getBufferIdentifier() + ": invalid file class");
-
-  if (!Config->FirstElf)
-    Config->FirstElf = Obj;
-  return Obj;
+  if (Size == ELFCLASS32)
+    return (Endian == ELFDATA2LSB) ? ELF32LEKind : ELF32BEKind;
+  return (Endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
 }
 
 template <class ELFT> void BinaryFile::parse() {
-  StringRef Buf = MB.getBuffer();
-  ArrayRef<uint8_t> Data =
-      makeArrayRef<uint8_t>((const uint8_t *)Buf.data(), Buf.size());
-
-  std::string Filename = MB.getBufferIdentifier();
-  std::transform(Filename.begin(), Filename.end(), Filename.begin(),
-                 [](char C) { return isalnum(C) ? C : '_'; });
-  Filename = "_binary_" + Filename;
-  StringRef StartName = Saver.save(Twine(Filename) + "_start");
-  StringRef EndName = Saver.save(Twine(Filename) + "_end");
-  StringRef SizeName = Saver.save(Twine(Filename) + "_size");
-
+  ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
   auto *Section =
       make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
-  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,
-                                   STB_GLOBAL, Section, nullptr);
-  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, Section,
+  // For each input file foo that is embedded to a result as a binary
+  // blob, we define _binary_foo_{start,end,size} symbols, so that
+  // user programs can access blobs by name. Non-alphanumeric
+  // characters in a filename are replaced with underscore.
+  std::string S = "_binary_" + MB.getBufferIdentifier().str();
+  for (size_t I = 0; I < S.size(); ++I)
+    if (!isalnum(S[I]))
+      S[I] = '_';
+
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_start"), STV_DEFAULT,
+                                   STT_OBJECT, 0, 0, STB_GLOBAL, Section,
                                    nullptr);
-  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, nullptr,
-                                   nullptr);
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_end"), STV_DEFAULT,
+                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
+                                   Section, nullptr);
+  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_size"), STV_DEFAULT,
+                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
+                                   nullptr, nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -941,15 +915,36 @@ static bool isBitcode(MemoryBufferRef MB) {
 
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
-  InputFile *F = isBitcode(MB)
-                     ? make<BitcodeFile>(MB, ArchiveName, OffsetInArchive)
-                     : createELFFile<ObjectFile>(MB, "");
-  F->ArchiveName = ArchiveName;
-  return F;
+  if (isBitcode(MB))
+    return make<BitcodeFile>(MB, ArchiveName, OffsetInArchive);
+
+  switch (getELFKind(MB)) {
+  case ELF32LEKind:
+    return make<ObjectFile<ELF32LE>>(MB, ArchiveName);
+  case ELF32BEKind:
+    return make<ObjectFile<ELF32BE>>(MB, ArchiveName);
+  case ELF64LEKind:
+    return make<ObjectFile<ELF64LE>>(MB, ArchiveName);
+  case ELF64BEKind:
+    return make<ObjectFile<ELF64BE>>(MB, ArchiveName);
+  default:
+    llvm_unreachable("getELFKind");
+  }
 }
 
 InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
-  return createELFFile<SharedFile>(MB, DefaultSoName);
+  switch (getELFKind(MB)) {
+  case ELF32LEKind:
+    return make<SharedFile<ELF32LE>>(MB, DefaultSoName);
+  case ELF32BEKind:
+    return make<SharedFile<ELF32BE>>(MB, DefaultSoName);
+  case ELF64LEKind:
+    return make<SharedFile<ELF64LE>>(MB, DefaultSoName);
+  case ELF64BEKind:
+    return make<SharedFile<ELF64BE>>(MB, DefaultSoName);
+  default:
+    llvm_unreachable("getELFKind");
+  }
 }
 
 MemoryBufferRef LazyObjectFile::getBuffer() {
@@ -1004,17 +999,18 @@ std::vector<StringRef> LazyObjectFile::getSymbols() {
   if (isBitcode(this->MB))
     return getBitcodeSymbols();
 
-  unsigned char Size;
-  unsigned char Endian;
-  std::tie(Size, Endian) = getElfArchType(this->MB.getBuffer());
-  if (Size == ELFCLASS32) {
-    if (Endian == ELFDATA2LSB)
-      return getElfSymbols<ELF32LE>();
+  switch (getELFKind(this->MB)) {
+  case ELF32LEKind:
+    return getElfSymbols<ELF32LE>();
+  case ELF32BEKind:
     return getElfSymbols<ELF32BE>();
-  }
-  if (Endian == ELFDATA2LSB)
+  case ELF64LEKind:
     return getElfSymbols<ELF64LE>();
-  return getElfSymbols<ELF64BE>();
+  case ELF64BEKind:
+    return getElfSymbols<ELF64BE>();
+  default:
+    llvm_unreachable("getELFKind");
+  }
 }
 
 template void ArchiveFile::parse<ELF32LE>();

@@ -1,4 +1,4 @@
-//===-- MainLoopPosix.cpp ---------------------------------------*- C++ -*-===//
+//===-- MainLoop.cpp --------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,47 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/posix/MainLoopPosix.h"
+#include "llvm/Config/config.h"
+
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Error.h"
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <csignal>
-#include <sys/select.h>
 #include <vector>
+#include <time.h>
+
+#if HAVE_SYS_EVENT_H
+#include <sys/event.h>
+#elif defined(LLVM_ON_WIN32)
+#include <winsock2.h>
+#else
+#include <poll.h>
+#endif
+
+#ifdef LLVM_ON_WIN32
+#define POLL WSAPoll
+#else
+#define POLL poll
+#endif
+
+#if SIGNAL_POLLING_UNSUPPORTED
+#ifdef LLVM_ON_WIN32
+typedef int sigset_t;
+typedef int siginfo_t;
+#endif
+
+int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
+          const sigset_t *) {
+  int timeout =
+      (timeout_ts == nullptr)
+          ? -1
+          : (timeout_ts->tv_sec * 1000 + timeout_ts->tv_nsec / 1000000);
+  return POLL(fds, nfds, timeout);
+}
+
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,14 +59,20 @@ static void SignalHandler(int signo, siginfo_t *info, void *) {
   g_signal_flags[signo] = 1;
 }
 
-MainLoopPosix::~MainLoopPosix() {
+MainLoop::~MainLoop() {
   assert(m_read_fds.size() == 0);
   assert(m_signals.size() == 0);
 }
 
-MainLoopPosix::ReadHandleUP
-MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
+MainLoop::ReadHandleUP
+MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
                                   const Callback &callback, Error &error) {
+#ifdef LLVM_ON_WIN32
+  if (object_sp->GetFdType() != IOObject:: eFDTypeSocket) {
+    error.SetErrorString("MainLoop: non-socket types unsupported on Windows");
+    return nullptr;
+  }
+#endif
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorString("IO object is not valid.");
     return nullptr;
@@ -53,9 +92,13 @@ MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
 // We shall block the signal, then install the signal handler. The signal will
 // be unblocked in
 // the Run() function to check for signal delivery.
-MainLoopPosix::SignalHandleUP
-MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
+MainLoop::SignalHandleUP
+MainLoop::RegisterSignal(int signo, const Callback &callback,
                               Error &error) {
+#ifdef SIGNAL_POLLING_UNSUPPORTED
+  error.SetErrorString("Signal polling is not supported on this platform.");
+  return nullptr;
+#else
   if (m_signals.find(signo) != m_signals.end()) {
     error.SetErrorStringWithFormat("Signal %d already monitored.", signo);
     return nullptr;
@@ -88,15 +131,19 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   g_signal_flags[signo] = 0;
 
   return SignalHandleUP(new SignalHandle(*this, signo));
+#endif
 }
 
-void MainLoopPosix::UnregisterReadObject(IOObject::WaitableHandle handle) {
+void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
   bool erased = m_read_fds.erase(handle);
   UNUSED_IF_ASSERT_DISABLED(erased);
   assert(erased);
 }
 
-void MainLoopPosix::UnregisterSignal(int signo) {
+void MainLoop::UnregisterSignal(int signo) {
+#if SIGNAL_POLLING_UNSUPPORTED
+  Error("Signal polling is not supported on this platform.");
+#else
   // We undo the actions of RegisterSignal on a best-effort basis.
   auto it = m_signals.find(signo);
   assert(it != m_signals.end());
@@ -110,14 +157,26 @@ void MainLoopPosix::UnregisterSignal(int signo) {
                   nullptr);
 
   m_signals.erase(it);
+#endif
 }
 
-Error MainLoopPosix::Run() {
+Error MainLoop::Run() {
   std::vector<int> signals;
-  sigset_t sigmask;
-  std::vector<int> read_fds;
-  fd_set read_fd_set;
   m_terminate_request = false;
+  signals.reserve(m_signals.size());
+  
+#if HAVE_SYS_EVENT_H
+  int queue_id = kqueue();
+  if (queue_id < 0)
+    Error("kqueue failed with error %d\n", queue_id);
+
+  std::vector<struct kevent> events;
+  events.reserve(m_read_fds.size() + m_signals.size());
+#else
+  sigset_t sigmask;
+  std::vector<struct pollfd> read_fds;
+  read_fds.reserve(m_read_fds.size());
+#endif
 
   // run until termination or until we run out of things to listen to
   while (!m_terminate_request && (!m_read_fds.empty() || !m_signals.empty())) {
@@ -125,28 +184,51 @@ Error MainLoopPosix::Run() {
     // listen to, we
     // will store the *real* list of events separately.
     signals.clear();
-    read_fds.clear();
-    FD_ZERO(&read_fd_set);
-    int nfds = 0;
 
+#if HAVE_SYS_EVENT_H
+    events.resize(m_read_fds.size() + m_signals.size());
+    int i = 0;
+    for (auto &fd: m_read_fds) {
+      EV_SET(&events[i++], fd.first, EVFILT_READ, EV_ADD, 0, 0, 0);
+    }
+
+    for (const auto &sig : m_signals) {
+      signals.push_back(sig.first);
+      EV_SET(&events[i++], sig.first, EVFILT_SIGNAL, EV_ADD, 0, 0, 0);
+    }
+
+    struct kevent event_list[4];
+    int num_events =
+        kevent(queue_id, events.data(), events.size(), event_list, 4, NULL);
+
+    if (num_events < 0)
+      return Error("kevent() failed with error %d\n", num_events);
+
+#else
+    read_fds.clear();
+
+#if !SIGNAL_POLLING_UNSUPPORTED
     if (int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask))
       return Error("pthread_sigmask failed with error %d\n", ret);
-
-    for (const auto &fd : m_read_fds) {
-      read_fds.push_back(fd.first);
-      FD_SET(fd.first, &read_fd_set);
-      nfds = std::max(nfds, fd.first + 1);
-    }
 
     for (const auto &sig : m_signals) {
       signals.push_back(sig.first);
       sigdelset(&sigmask, sig.first);
     }
+#endif
 
-    if (pselect(nfds, &read_fd_set, nullptr, nullptr, nullptr, &sigmask) ==
-            -1 &&
+    for (const auto &fd : m_read_fds) {
+      struct pollfd pfd;
+      pfd.fd = fd.first;
+      pfd.events = POLLIN;
+      pfd.revents = 0;
+      read_fds.push_back(pfd);
+    }
+
+    if (ppoll(read_fds.data(), read_fds.size(), nullptr, &sigmask) == -1 &&
         errno != EINTR)
       return Error(errno, eErrorTypePOSIX);
+#endif
 
     for (int sig : signals) {
       if (g_signal_flags[sig] == 0)
@@ -163,15 +245,19 @@ Error MainLoopPosix::Run() {
         return Error();
     }
 
-    for (int fd : read_fds) {
-      if (!FD_ISSET(fd, &read_fd_set))
-        continue; // Not ready
+#if HAVE_SYS_EVENT_H
+    for (int i = 0; i < num_events; ++i) {
+      auto it = m_read_fds.find(event_list[i].ident);
+#else
+    for (auto fd : read_fds) {
+      if ((fd.revents & POLLIN) == 0)
+        continue;
 
-      auto it = m_read_fds.find(fd);
+      auto it = m_read_fds.find(fd.fd);
+#endif
       if (it == m_read_fds.end())
         continue; // File descriptor must have gotten unregistered in the
                   // meantime
-
       it->second(*this); // Do the work
 
       if (m_terminate_request)

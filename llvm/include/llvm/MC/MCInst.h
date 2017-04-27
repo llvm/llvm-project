@@ -176,8 +176,9 @@ public:
 
   void addOperand(const MCOperand &Op) { Operands.push_back(Op); }
 
-  typedef SmallVectorImpl<MCOperand>::iterator iterator;
-  typedef SmallVectorImpl<MCOperand>::const_iterator const_iterator;
+  using iterator = SmallVectorImpl<MCOperand>::iterator;
+  using const_iterator = SmallVectorImpl<MCOperand>::const_iterator;
+
   void clear() { Operands.clear(); }
   void erase(iterator I) { Operands.erase(I); }
   size_t size() const { return Operands.size(); }

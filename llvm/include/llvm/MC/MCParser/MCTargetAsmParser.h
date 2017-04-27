@@ -27,7 +27,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 template <typename T> class SmallVectorImpl;
 
-typedef SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>> OperandVector;
+using OperandVector = SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>>;
 
 enum AsmRewriteKind {
   AOK_Delete = 0,     // Rewrite should be ignored.

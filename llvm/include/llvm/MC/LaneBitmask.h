@@ -1,4 +1,4 @@
-//===-- llvm/MC/LaneBitmask.h -----------------------------------*- C++ -*-===//
+//===- llvm/MC/LaneBitmask.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -30,14 +30,16 @@
 #ifndef LLVM_MC_LANEBITMASK_H
 #define LLVM_MC_LANEBITMASK_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
   struct LaneBitmask {
     // When changing the underlying type, change the format string as well.
-    typedef unsigned Type;
+    using Type = unsigned;
     enum : unsigned { BitWidth = 8*sizeof(Type) };
     constexpr static const char *const FormatStr = "%08X";
 
@@ -84,6 +86,7 @@ namespace llvm {
       OS << format(LaneBitmask::FormatStr, LaneMask.getAsInteger());
     });
   }
-}
+
+} // end namespace llvm
 
 #endif // LLVM_MC_LANEBITMASK_H

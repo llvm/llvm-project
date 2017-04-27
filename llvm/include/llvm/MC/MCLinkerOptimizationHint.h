@@ -111,7 +111,7 @@ class MCLOHDirective {
                  const MCAsmLayout &Layout) const;
 
 public:
-  typedef SmallVectorImpl<MCSymbol *> LOHArgs;
+  using LOHArgs = SmallVectorImpl<MCSymbol *>;
 
   MCLOHDirective(MCLOHType Kind, const LOHArgs &Args)
       : Kind(Kind), Args(Args.begin(), Args.end()) {
@@ -140,7 +140,7 @@ class MCLOHContainer {
   SmallVector<MCLOHDirective, 32> Directives;
 
 public:
-  typedef SmallVectorImpl<MCLOHDirective> LOHDirectives;
+  using LOHDirectives = SmallVectorImpl<MCLOHDirective>;
 
   MCLOHContainer() = default;
 
@@ -179,8 +179,8 @@ public:
 };
 
 // Add types for specialized template using MCSymbol.
-typedef MCLOHDirective::LOHArgs MCLOHArgs;
-typedef MCLOHContainer::LOHDirectives MCLOHDirectives;
+using MCLOHArgs = MCLOHDirective::LOHArgs;
+using MCLOHDirectives = MCLOHContainer::LOHDirectives;
 
 } // end namespace llvm
 

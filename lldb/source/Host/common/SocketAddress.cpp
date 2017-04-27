@@ -227,7 +227,8 @@ bool SocketAddress::getaddrinfo(const char *host, const char *service,
                                 int ai_flags) {
   Clear();
 
-  auto addresses = GetAddressInfo(host, service, ai_family, ai_socktype, ai_protocol, ai_flags);
+  auto addresses = GetAddressInfo(host, service, ai_family, ai_socktype,
+                                  ai_protocol, ai_flags);
   if (!addresses.empty())
     *this = addresses[0];
   return IsValid();

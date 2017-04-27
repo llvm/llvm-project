@@ -74,10 +74,10 @@ namespace {
 class LibCallsShrinkWrap : public InstVisitor<LibCallsShrinkWrap> {
 public:
   LibCallsShrinkWrap(const TargetLibraryInfo &TLI, DominatorTree *DT)
-      : TLI(TLI), DT(DT), Changed(false){};
-  bool isChanged() const { return Changed; }
+      : TLI(TLI), DT(DT){};
   void visitCallInst(CallInst &CI) { checkCandidate(CI); }
-  void perform() {
+  bool perform() {
+    bool Changed = false;
     for (auto &CI : WorkList) {
       DEBUG(dbgs() << "CDCE calls: " << CI->getCalledFunction()->getName()
                    << "\n");
@@ -86,6 +86,7 @@ public:
         DEBUG(dbgs() << "Transformed\n");
       }
     }
+    return Changed;
   }
 
 private:
@@ -128,7 +129,6 @@ private:
   const TargetLibraryInfo &TLI;
   DominatorTree *DT;
   SmallVector<CallInst *, 16> WorkList;
-  bool Changed;
 };
 } // end anonymous namespace
 
@@ -526,14 +526,14 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
     return false;
   LibCallsShrinkWrap CCDCE(TLI, DT);
   CCDCE.visit(F);
-  CCDCE.perform();
+  bool Changed = CCDCE.perform();
 
 // Verify the dominator after we've updated it locally.
 #ifndef NDEBUG
   if (DT)
     DT->verifyDomTree();
 #endif
-  return CCDCE.isChanged();
+  return Changed;
 }
 
 bool LibCallsShrinkWrapLegacyPass::runOnFunction(Function &F) {
@@ -555,8 +555,7 @@ PreservedAnalyses LibCallsShrinkWrapPass::run(Function &F,
                                               FunctionAnalysisManager &FAM) {
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
-  bool Changed = runImpl(F, TLI, DT);
-  if (!Changed)
+  if (!runImpl(F, TLI, DT))
     return PreservedAnalyses::all();
   auto PA = PreservedAnalyses();
   PA.preserve<GlobalsAA>();

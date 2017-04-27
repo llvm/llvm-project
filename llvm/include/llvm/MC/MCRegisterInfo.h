@@ -27,13 +27,13 @@ namespace llvm {
 
 /// An unsigned integer type large enough to represent all physical registers,
 /// but not necessarily virtual registers.
-typedef uint16_t MCPhysReg;
+using MCPhysReg = uint16_t;
 
 /// MCRegisterClass - Base class of TargetRegisterClass.
 class MCRegisterClass {
 public:
-  typedef const MCPhysReg* iterator;
-  typedef const MCPhysReg* const_iterator;
+  using iterator = const MCPhysReg*;
+  using const_iterator = const MCPhysReg*;
 
   const iterator RegsBegin;
   const uint8_t *const RegSet;
@@ -134,7 +134,7 @@ struct MCRegisterDesc {
 ///
 class MCRegisterInfo {
 public:
-  typedef const MCRegisterClass *regclass_iterator;
+  using regclass_iterator = const MCRegisterClass *;
 
   /// DwarfLLVMRegPair - Emitted by tablegen so Dwarf<->LLVM reg mappings can be
   /// performed with a binary search.

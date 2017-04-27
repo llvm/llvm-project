@@ -97,7 +97,7 @@ static ArrayRef<uint8_t> getVersion() {
 
 // Creates a .comment section containing LLD version info.
 // With this feature, you can identify LLD-generated binaries easily
-// by "objdump -s -j .comment <file>".
+// by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
 template <class ELFT> MergeInputSection *elf::createCommentSection() {
   typename ELFT::Shdr Hdr = {};
