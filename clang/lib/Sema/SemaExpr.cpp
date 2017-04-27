@@ -5275,8 +5275,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Fn->getType() == Context.OverloadTy) {
     OverloadExpr::FindResult find = OverloadExpr::find(Fn);
 
-    // We aren't supposed to apply this logic for if there'Scope an '&'
-    // involved.
+    // We aren't supposed to apply this logic if there's an '&' involved.
     if (!find.HasFormOfMemberPointer) {
       OverloadExpr *ovl = find.Expression;
       if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(ovl))

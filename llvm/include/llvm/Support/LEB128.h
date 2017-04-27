@@ -45,8 +45,7 @@ inline void encodeSLEB128(int64_t Value, raw_ostream &OS,
 
 /// Utility function to encode a SLEB128 value to a buffer. Returns
 /// the length in bytes of the encoded value.
-inline unsigned encodeSLEB128(int64_t Value, uint8_t *p,
-                              unsigned Padding = 0) {
+inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned Padding = 0) {
   uint8_t *orig_p = p;
   bool More;
   do {
@@ -111,7 +110,6 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
   return (unsigned)(p - orig_p);
 }
 
-
 /// Utility function to decode a ULEB128 value.
 inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
                               const uint8_t *end = nullptr,
@@ -119,19 +117,19 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
   const uint8_t *orig_p = p;
   uint64_t Value = 0;
   unsigned Shift = 0;
-  if(error)
+  if (error)
     *error = nullptr;
   do {
-    if(end && p == end){
-      if(error)
+    if (end && p == end) {
+      if (error)
         *error = "malformed uleb128, extends past end";
       if (n)
         *n = (unsigned)(p - orig_p);
       return 0;
     }
     uint64_t Slice = *p & 0x7f;
-    if(Shift >= 64 || Slice << Shift >> Shift != Slice){
-      if(error)
+    if (Shift >= 64 || Slice << Shift >> Shift != Slice) {
+      if (error)
         *error = "uleb128 too big for uint64";
       if (n)
         *n = (unsigned)(p - orig_p);
@@ -154,15 +152,15 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   unsigned Shift = 0;
   uint8_t Byte;
   do {
-    if(end && p == end){
-      if(error)
+    if (end && p == end) {
+      if (error)
         *error = "malformed sleb128, extends past end";
       if (n)
         *n = (unsigned)(p - orig_p);
       return 0;
     }
     Byte = *p++;
-    Value |= ((Byte & 0x7f) << Shift);
+    Value |= (int64_t(Byte & 0x7f) << Shift);
     Shift += 7;
   } while (Byte >= 128);
   // Sign extend negative numbers.
@@ -173,13 +171,12 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   return Value;
 }
 
-
 /// Utility function to get the size of the ULEB128-encoded value.
 extern unsigned getULEB128Size(uint64_t Value);
 
 /// Utility function to get the size of the SLEB128-encoded value.
 extern unsigned getSLEB128Size(int64_t Value);
 
-}  // namespace llvm
+} // namespace llvm
 
-#endif  // LLVM_SYSTEM_LEB128_H
+#endif // LLVM_SYSTEM_LEB128_H

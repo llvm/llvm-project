@@ -6,8 +6,8 @@ define void @_Z3foov() !dbg !9 {
   ret void
 }
 
-; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
+; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14}
 
 !0 = !{null}
 !1 = distinct !DICompositeType(tag: DW_TAG_structure_type)
@@ -61,6 +61,14 @@ define void @_Z3foov() !dbg !9 {
                             unit: !8,
                             templateParams: !5, declaration: !9, variables: !6)
 
-!13 = !{i32 1, !"Debug Info Version", i32 3}
-!llvm.module.flags = !{!13}
+!13 = !{!4}
+; CHECK: !13 = !{!4}
+; CHECK: !14 = distinct !DISubprogram(name: "foo", scope: !1, file: !2, line: 1, type: !3, isLocal: true, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !8, thrownTypes: !13)
+!14 = distinct !DISubprogram(name: "foo", scope: !1,
+                            file: !2, line: 1, type: !3, isLocal: true,
+                            isDefinition: true, scopeLine: 2, isOptimized: false,
+                            unit: !8, thrownTypes: !13)
+
+!15 = !{i32 1, !"Debug Info Version", i32 3}
+!llvm.module.flags = !{!15}
 !llvm.dbg.cu = !{!8}

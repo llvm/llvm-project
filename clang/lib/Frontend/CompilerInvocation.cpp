@@ -1575,7 +1575,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case InputKind::LLVM_IR:
       llvm_unreachable("Invalid input kind!");
     case InputKind::OpenCL:
-      LangStd = LangStandard::lang_opencl;
+      LangStd = LangStandard::lang_opencl10;
       break;
     case InputKind::CUDA:
       LangStd = LangStandard::lang_cuda;
@@ -1615,13 +1615,13 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.CPlusPlus1z = Std.isCPlusPlus1z();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.GNUMode = Std.isGNUMode();
-  Opts.GNUInline = Std.isC89();
+  Opts.GNUInline = !Opts.C99 && !Opts.CPlusPlus;
   Opts.HexFloats = Std.hasHexFloats();
   Opts.ImplicitInt = Std.hasImplicitInt();
 
   // Set OpenCL Version.
-  Opts.OpenCL = Std.isOpenCL() || IK.getLanguage() == InputKind::OpenCL;
-  if (LangStd == LangStandard::lang_opencl)
+  Opts.OpenCL = Std.isOpenCL();
+  if (LangStd == LangStandard::lang_opencl10)
     Opts.OpenCLVersion = 100;
   else if (LangStd == LangStandard::lang_opencl11)
     Opts.OpenCLVersion = 110;
@@ -1644,8 +1644,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     }
   }
 
-  Opts.CUDA = IK.getLanguage() == InputKind::CUDA ||
-              LangStd == LangStandard::lang_cuda;
+  Opts.CUDA = IK.getLanguage() == InputKind::CUDA;
   if (Opts.CUDA)
     // Set default FP_CONTRACT to FAST.
     Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
@@ -1701,23 +1700,20 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
 
   case InputKind::C:
   case InputKind::ObjC:
-    // FIXME: Should this really allow OpenCL standards?
-    return S.isC89() || S.isC99();
+  case InputKind::RenderScript:
+    return S.getLanguage() == InputKind::C;
 
   case InputKind::OpenCL:
-    return S.isOpenCL();
-
-  case InputKind::RenderScript:
-    // FIXME: Should this really allow -std=c++98 etc?
-    return true;
+    return S.getLanguage() == InputKind::OpenCL;
 
   case InputKind::CXX:
   case InputKind::ObjCXX:
-    // FIXME: Should this really allow -std=cuda?
-    return S.isCPlusPlus();
+    return S.getLanguage() == InputKind::CXX;
 
   case InputKind::CUDA:
-    return S.isCPlusPlus();
+    // FIXME: What -std= values should be permitted for CUDA compilations?
+    return S.getLanguage() == InputKind::CUDA ||
+           S.getLanguage() == InputKind::CXX;
 
   case InputKind::Asm:
     // Accept (and ignore) all -std= values.
@@ -1733,21 +1729,29 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
 static const StringRef GetInputKindName(InputKind IK) {
   switch (IK.getLanguage()) {
   case InputKind::C:
+    return "C";
   case InputKind::ObjC:
-    // FIXME: Don't lump these together.
-    return "C/ObjC";
+    return "Objective-C";
   case InputKind::CXX:
+    return "C++";
   case InputKind::ObjCXX:
-    // FIXME: Don't lump these together.
-    return "C++/ObjC++";
+    return "Objective-C++";
   case InputKind::OpenCL:
     return "OpenCL";
   case InputKind::CUDA:
     return "CUDA";
-    // FIXME: Include names for other options, and make this switch exhaustive.
-  default:
-    llvm_unreachable("Cannot decide on name for InputKind!");
+  case InputKind::RenderScript:
+    return "RenderScript";
+
+  case InputKind::Asm:
+    return "Asm";
+  case InputKind::LLVM_IR:
+    return "LLVM IR";
+
+  case InputKind::Unknown:
+    break;
   }
+  llvm_unreachable("unknown input language");
 }
 
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
@@ -1758,7 +1762,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
   if (const Arg *A = Args.getLastArg(OPT_std_EQ)) {
     LangStd = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-#define LANGSTANDARD(id, name, desc, features) \
+#define LANGSTANDARD(id, name, lang, desc, features) \
       .Case(name, LangStandard::lang_##id)
 #define LANGSTANDARD_ALIAS(id, alias) \
       .Case(alias, LangStandard::lang_##id)
@@ -1774,8 +1778,20 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         const LangStandard &Std = LangStandard::getLangStandardForKind(
           static_cast<LangStandard::Kind>(KindValue));
         if (IsInputCompatibleWithStandard(IK, Std)) {
-          Diags.Report(diag::note_drv_use_standard)
-            << Std.getName() << Std.getDescription();
+          auto Diag = Diags.Report(diag::note_drv_use_standard);
+          Diag << Std.getName() << Std.getDescription();
+          unsigned NumAliases = 0;
+#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD_ALIAS(id, alias) \
+          if (KindValue == LangStandard::lang_##id) ++NumAliases;
+#define LANGSTANDARD_ALIAS_DEPR(id, alias)
+#include "clang/Frontend/LangStandards.def"
+          Diag << NumAliases;
+#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD_ALIAS(id, alias) \
+          if (KindValue == LangStandard::lang_##id) Diag << alias;
+#define LANGSTANDARD_ALIAS_DEPR(id, alias)
+#include "clang/Frontend/LangStandards.def"
         }
       }
     } else {
@@ -1794,7 +1810,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
     LangStandard::Kind OpenCLLangStd
       = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-        .Cases("cl", "CL", LangStandard::lang_opencl)
+        .Cases("cl", "CL", LangStandard::lang_opencl10)
         .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
         .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
         .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)

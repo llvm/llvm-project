@@ -141,6 +141,8 @@ public:
   ~OutputSectionFactory();
 
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
+  void addInputSec(InputSectionBase *IS, StringRef OutsecName,
+                   OutputSection *&Sec);
 
 private:
   llvm::SmallDenseMap<SectionKey, OutputSection *> Map;

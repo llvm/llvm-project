@@ -86,7 +86,8 @@
 
 #           Idx Name          Size
 # SEC-MULTI:      1 .text         0000000e {{[0-9a-f]*}} TEXT DATA
-# SEC-MULTI-NEXT:   .data         00000023 {{[0-9a-f]*}} DATA
+# SEC-MULTI-NEXT:   .data         00000020 {{[0-9a-f]*}} DATA
+# SEC-MULTI-NEXT:   .data         00000003 {{[0-9a-f]*}} DATA
 # SEC-MULTI-NEXT:   .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-MULTI-NEXT:   .comment      00000008 {{[0-9a-f]*}}
 # SEC-MULTI-NEXT:   .symtab       00000030 {{[0-9a-f]*}}

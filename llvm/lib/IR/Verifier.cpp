@@ -1050,6 +1050,14 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     // Subprogram declarations (part of the type hierarchy).
     AssertDI(!Unit, "subprogram declarations must not have a compile unit", &N);
   }
+
+  if (auto *RawThrownTypes = N.getRawThrownTypes()) {
+    auto *ThrownTypes = dyn_cast<MDTuple>(RawThrownTypes);
+    AssertDI(ThrownTypes, "invalid thrown types list", &N, RawThrownTypes);
+    for (Metadata *Op : ThrownTypes->operands())
+      AssertDI(Op && isa<DIType>(Op), "invalid thrown type", &N, ThrownTypes,
+               Op);
+  }
 }
 
 void Verifier::visitDILexicalBlockBase(const DILexicalBlockBase &N) {

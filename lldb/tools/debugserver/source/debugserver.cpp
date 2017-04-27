@@ -1345,10 +1345,18 @@ int main(int argc, char *argv[]) {
       show_usage_and_exit(1);
     }
     // accept 'localhost:' prefix on port number
-
-    int items_scanned = ::sscanf(argv[0], "%[^:]:%i", str, &port);
-    if (items_scanned == 2) {
-      host = str;
+    std::string host_specifier = argv[0];
+    auto colon_location = host_specifier.rfind(':');
+    if (colon_location != std::string::npos) {
+      host = host_specifier.substr(0, colon_location);
+      std::string port_str =
+          host_specifier.substr(colon_location + 1, std::string::npos);
+      char *end_ptr;
+      port = strtoul(port_str.c_str(), &end_ptr, 0);
+      if (end_ptr < port_str.c_str() + port_str.size())
+        show_usage_and_exit(2);
+      if (host.front() == '[' && host.back() == ']')
+        host = host.substr(1, host.size() - 2);
       DNBLogDebug("host = '%s'  port = %i", host.c_str(), port);
     } else {
       // No hostname means "localhost"

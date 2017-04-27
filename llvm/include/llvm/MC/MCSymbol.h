@@ -145,10 +145,10 @@ protected:
   /// MCSymbol contains a uint64_t so is probably aligned to 8.  On a 32-bit
   /// system, the name is a pointer so isn't going to satisfy the 8 byte
   /// alignment of uint64_t.  Account for that here.
-  typedef union {
+  using NameEntryStorageTy = union {
     const StringMapEntry<bool> *NameEntry;
     uint64_t AlignmentPadding;
-  } NameEntryStorageTy;
+  };
 
   MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),

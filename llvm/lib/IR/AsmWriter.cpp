@@ -1719,6 +1719,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("variables", N->getRawVariables());
+  Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
   Out << ")";
 }
 

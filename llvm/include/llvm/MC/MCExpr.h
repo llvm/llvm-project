@@ -28,7 +28,8 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
-typedef DenseMap<const MCSection *, uint64_t> SectionAddrMap;
+
+using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 
 /// \brief Base class for the full range of assembler expressions which are
 /// needed for parsing.

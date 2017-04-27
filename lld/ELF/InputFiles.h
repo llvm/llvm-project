@@ -156,7 +156,7 @@ public:
   ArrayRef<SymbolBody *> getSymbols();
   ArrayRef<SymbolBody *> getLocalSymbols();
 
-  explicit ObjectFile(MemoryBufferRef M);
+  ObjectFile(MemoryBufferRef M, StringRef ArchiveName);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
   InputSectionBase *getSection(const Elf_Sym &Sym) const;

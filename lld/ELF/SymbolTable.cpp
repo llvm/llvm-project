@@ -52,6 +52,9 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
 
 // Add symbols in File to the symbol table.
 template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
+  if (!Config->FirstElf && isa<ELFFileBase<ELFT>>(File))
+    Config->FirstElf = File;
+
   if (!isCompatible<ELFT>(File))
     return;
 
