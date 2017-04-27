@@ -1564,8 +1564,7 @@ CXType clang_Cursor_getReceiverType(CXCursor C) {
     ME = dyn_cast_or_null<MemberExpr>(CE->getCallee());
 
   if (ME) {
-    if (const CXXMethodDecl *
-          MD = dyn_cast_or_null<CXXMethodDecl>(ME->getMemberDecl())) {
+    if (dyn_cast_or_null<CXXMethodDecl>(ME->getMemberDecl())) {
       auto receiverTy = ME->getBase()->IgnoreImpCasts()->getType();
       return cxtype::MakeCXType(receiverTy, TU);
     }
