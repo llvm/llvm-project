@@ -1,4 +1,7 @@
 include(CheckCXXSymbolExists)
+include(CheckSymbolExists)
+include(CheckIncludeFile)
+include(CheckIncludeFiles)
 
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -426,10 +429,14 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
 endif()
 
 find_package(Backtrace)
+set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+check_symbol_exists(ppoll poll.h HAVE_PPOLL)
+set(CMAKE_REQUIRED_DEFINITIONS)
+check_symbol_exists(sigaction signal.h HAVE_SIGACTION)
 
 include(CheckIncludeFile)
 check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file(sys/event.h HAVE_SYS_EVENT_H)
+check_include_files("sys/types.h;sys/event.h" HAVE_SYS_EVENT_H)
 
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names

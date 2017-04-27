@@ -46,17 +46,19 @@ namespace llvm {
   class MCSectionELF;
   class MCSectionMachO;
   class MCSectionWasm;
+  class MCStreamer;
   class MCSymbol;
   class MCSymbolELF;
   class MCSymbolWasm;
   class SMLoc;
+  class SourceMgr;
 
   /// Context object for machine code objects.  This class owns all of the
   /// sections that it creates.
   ///
   class MCContext {
   public:
-    typedef StringMap<MCSymbol *, BumpPtrAllocator &> SymbolTable;
+    using SymbolTable = StringMap<MCSymbol *, BumpPtrAllocator &>;
 
   private:
     /// The SourceMgr for this object, if any.
@@ -223,10 +225,12 @@ namespace llvm {
       std::string SectionName;
       StringRef GroupName;
       unsigned UniqueID;
+
       WasmSectionKey(StringRef SectionName, StringRef GroupName,
                      unsigned UniqueID)
           : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {
       }
+
       bool operator<(const WasmSectionKey &Other) const {
         if (SectionName != Other.SectionName)
           return SectionName < Other.SectionName;

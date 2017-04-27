@@ -233,7 +233,9 @@ def note_drv_t_option_is_global : Note<
   "The last /TC or /TP option takes precedence over earlier instances">;
 def note_drv_address_sanitizer_debug_runtime : Note<
   "AddressSanitizer doesn't support linking with debug runtime libraries yet">;
-def note_drv_use_standard : Note<"use '%0' for '%1' standard">;
+def note_drv_use_standard : Note<"use '%0'"
+  "%select{| or '%3'|, '%3', or '%4'|, '%3', '%4', or '%5'}2 "
+  "for '%1' standard">;
 
 def err_analyzer_config_no_value : Error<
   "analyzer-config option '%0' has a key but no value">;

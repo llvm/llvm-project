@@ -127,8 +127,25 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
       m_backend.GetChildMemberWithName(ConstString("__end_cap_"), true));
   if (!data_type_finder_sp)
     return false;
-  data_type_finder_sp = data_type_finder_sp->GetChildMemberWithName(
+
+  switch (data_type_finder_sp->GetCompilerType().GetNumDirectBaseClasses()) {
+  case 1:
+    // Assume a pre llvm r300140 __compressed_pair implementation:
+    data_type_finder_sp = data_type_finder_sp->GetChildMemberWithName(
       ConstString("__first_"), true);
+    break;
+  case 2: {
+    // Assume a post llvm r300140 __compressed_pair implementation:
+    ValueObjectSP first_elem_parent_sp =
+      data_type_finder_sp->GetChildAtIndex(0, true);
+    data_type_finder_sp = first_elem_parent_sp->GetChildMemberWithName(
+      ConstString("__value_"), true);
+    break;
+  }
+  default:
+    return false;
+  }
+
   if (!data_type_finder_sp)
     return false;
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();

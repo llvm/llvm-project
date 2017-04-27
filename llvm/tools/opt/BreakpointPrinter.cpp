@@ -51,7 +51,7 @@ struct BreakpointPrinter : public ModulePass {
         if (!SP)
           continue;
         getContextName(SP->getScope().resolve(), Name);
-        Name = Name + SP->getDisplayName().str();
+        Name = Name + SP->getName().str();
         if (!Name.empty() && Processed.insert(Name).second) {
           Out << Name << "\n";
         }

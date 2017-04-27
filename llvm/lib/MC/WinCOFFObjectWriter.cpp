@@ -38,6 +38,7 @@
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm> 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -54,7 +55,7 @@ using llvm::support::endian::write32le;
 
 namespace {
 
-typedef SmallString<COFF::NameSize> name;
+using name = SmallString<COFF::NameSize>;
 
 enum AuxiliaryType {
   ATFunctionDefinition,
@@ -75,7 +76,7 @@ class COFFSymbol {
 public:
   COFF::symbol Data = {};
 
-  typedef SmallVector<AuxSymbol, 1> AuxiliarySymbols;
+  using AuxiliarySymbols = SmallVector<AuxSymbol, 1>;
 
   name Name;
   int Index;
@@ -107,7 +108,7 @@ struct COFFRelocation {
   static size_t size() { return COFF::RelocationSize; }
 };
 
-typedef std::vector<COFFRelocation> relocations;
+using relocations = std::vector<COFFRelocation>;
 
 class COFFSection {
 public:
@@ -124,11 +125,11 @@ public:
 
 class WinCOFFObjectWriter : public MCObjectWriter {
 public:
-  typedef std::vector<std::unique_ptr<COFFSymbol>> symbols;
-  typedef std::vector<std::unique_ptr<COFFSection>> sections;
+  using symbols = std::vector<std::unique_ptr<COFFSymbol>>;
+  using sections = std::vector<std::unique_ptr<COFFSection>>;
 
-  typedef DenseMap<MCSymbol const *, COFFSymbol *> symbol_map;
-  typedef DenseMap<MCSection const *, COFFSection *> section_map;
+  using symbol_map = DenseMap<MCSymbol const *, COFFSymbol *>;
+  using section_map = DenseMap<MCSection const *, COFFSection *>;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
 

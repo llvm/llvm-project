@@ -662,6 +662,14 @@ void DwarfUnit::addTemplateParams(DIE &Buffer, DINodeArray TParams) {
   }
 }
 
+/// Add thrown types.
+void DwarfUnit::addThrownTypes(DIE &Die, DINodeArray ThrownTypes) {
+  for (const auto *Ty : ThrownTypes) {
+    DIE &TT = createAndAddDIE(dwarf::DW_TAG_thrown_type, Die);
+    addType(TT, cast<DIType>(Ty));
+  }
+}
+
 DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   if (!Context || isa<DIFile>(Context))
     return &getUnitDie();
@@ -1248,6 +1256,8 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
     // be handled while processing variables.
     constructSubprogramArguments(SPDie, Args);
   }
+
+  addThrownTypes(SPDie, SP->getThrownTypes());
 
   if (SP->isArtificial())
     addFlag(SPDie, dwarf::DW_AT_artificial);

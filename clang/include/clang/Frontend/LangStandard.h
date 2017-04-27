@@ -11,6 +11,7 @@
 #define LLVM_CLANG_FRONTEND_LANGSTANDARD_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -19,18 +20,17 @@ namespace frontend {
 
 enum LangFeatures {
   LineComment = (1 << 0),
-  C89 = (1 << 1),
-  C99 = (1 << 2),
-  C11 = (1 << 3),
-  CPlusPlus = (1 << 4),
-  CPlusPlus11 = (1 << 5),
-  CPlusPlus14 = (1 << 6),
-  CPlusPlus1z = (1 << 7),
-  Digraphs = (1 << 8),
-  GNUMode = (1 << 9),
-  HexFloat = (1 << 10),
-  ImplicitInt = (1 << 11),
-  OpenCL = (1 << 12)
+  C99 = (1 << 1),
+  C11 = (1 << 2),
+  CPlusPlus = (1 << 3),
+  CPlusPlus11 = (1 << 4),
+  CPlusPlus14 = (1 << 5),
+  CPlusPlus1z = (1 << 6),
+  Digraphs = (1 << 7),
+  GNUMode = (1 << 8),
+  HexFloat = (1 << 9),
+  ImplicitInt = (1 << 10),
+  OpenCL = (1 << 11)
 };
 
 }
@@ -39,7 +39,7 @@ enum LangFeatures {
 /// standard.
 struct LangStandard {
   enum Kind {
-#define LANGSTANDARD(id, name, desc, features) \
+#define LANGSTANDARD(id, name, lang, desc, features) \
     lang_##id,
 #include "clang/Frontend/LangStandards.def"
     lang_unspecified
@@ -48,6 +48,7 @@ struct LangStandard {
   const char *ShortName;
   const char *Description;
   unsigned Flags;
+  InputKind::Language Language;
 
 public:
   /// getName - Get the name of this standard.
@@ -56,11 +57,11 @@ public:
   /// getDescription - Get the description of this standard.
   const char *getDescription() const { return Description; }
 
+  /// Get the language that this standard describes.
+  InputKind::Language getLanguage() const { return Language; }
+
   /// Language supports '//' comments.
   bool hasLineComments() const { return Flags & frontend::LineComment; }
-
-  /// isC89 - Language is a superset of C89.
-  bool isC89() const { return Flags & frontend::C89; }
 
   /// isC99 - Language is a superset of C99.
   bool isC99() const { return Flags & frontend::C99; }
