@@ -1425,14 +1425,14 @@ class DISubprogram : public DILocalScope {
           unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
           bool IsOptimized, DICompileUnit *Unit,
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
-          DILocalVariableArray Variables, StorageType Storage,
-          bool ShouldCreate = true) {
+          DILocalVariableArray Variables, DITypeArray ThrownTypes,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
                    Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
                    Unit, TemplateParams.get(), Declaration, Variables.get(),
-                   Storage, ShouldCreate);
+                   ThrownTypes.get(), Storage, ShouldCreate);
   }
   static DISubprogram *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
@@ -1441,15 +1441,16 @@ class DISubprogram : public DILocalScope {
           Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
           int ThisAdjustment, DIFlags Flags, bool IsOptimized, Metadata *Unit,
           Metadata *TemplateParams, Metadata *Declaration, Metadata *Variables,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *ThrownTypes, StorageType Storage, bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
-    return getTemporary(
-        getContext(), getScope(), getName(), getLinkageName(), getFile(),
-        getLine(), getType(), isLocalToUnit(), isDefinition(), getScopeLine(),
-        getContainingType(), getVirtuality(), getVirtualIndex(),
-        getThisAdjustment(), getFlags(), isOptimized(), getUnit(),
-        getTemplateParams(), getDeclaration(), getVariables());
+    return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
+                        getFile(), getLine(), getType(), isLocalToUnit(),
+                        isDefinition(), getScopeLine(), getContainingType(),
+                        getVirtuality(), getVirtualIndex(), getThisAdjustment(),
+                        getFlags(), isOptimized(), getUnit(),
+                        getTemplateParams(), getDeclaration(), getVariables(),
+                        getThrownTypes());
   }
 
 public:
@@ -1462,11 +1463,12 @@ public:
                      bool IsOptimized, DICompileUnit *Unit,
                      DITemplateParameterArray TemplateParams = nullptr,
                      DISubprogram *Declaration = nullptr,
-                     DILocalVariableArray Variables = nullptr),
+                     DILocalVariableArray Variables = nullptr,
+                     DITypeArray ThrownTypes = nullptr),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
                      IsDefinition, ScopeLine, ContainingType, Virtuality,
                      VirtualIndex, ThisAdjustment, Flags, IsOptimized, Unit,
-                     TemplateParams, Declaration, Variables))
+                     TemplateParams, Declaration, Variables, ThrownTypes))
   DEFINE_MDNODE_GET(
       DISubprogram,
       (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
@@ -1474,10 +1476,12 @@ public:
        unsigned ScopeLine, Metadata *ContainingType, unsigned Virtuality,
        unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
        bool IsOptimized, Metadata *Unit, Metadata *TemplateParams = nullptr,
-       Metadata *Declaration = nullptr, Metadata *Variables = nullptr),
+       Metadata *Declaration = nullptr, Metadata *Variables = nullptr,
+       Metadata *ThrownTypes = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
        ScopeLine, ContainingType, Virtuality, VirtualIndex, ThisAdjustment,
-       Flags, IsOptimized, Unit, TemplateParams, Declaration, Variables))
+       Flags, IsOptimized, Unit, TemplateParams, Declaration, Variables,
+       ThrownTypes))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -1542,9 +1546,7 @@ public:
   DICompileUnit *getUnit() const {
     return cast_or_null<DICompileUnit>(getRawUnit());
   }
-  void replaceUnit(DICompileUnit *CU) {
-    replaceOperandWith(7, CU);
-  }
+  void replaceUnit(DICompileUnit *CU) { replaceOperandWith(7, CU); }
   DITemplateParameterArray getTemplateParams() const {
     return cast_or_null<MDTuple>(getRawTemplateParams());
   }
@@ -1554,6 +1556,9 @@ public:
   DILocalVariableArray getVariables() const {
     return cast_or_null<MDTuple>(getRawVariables());
   }
+  DITypeArray getThrownTypes() const {
+    return cast_or_null<MDTuple>(getRawThrownTypes());
+  }
 
   Metadata *getRawScope() const { return getOperand(1); }
   Metadata *getRawType() const { return getOperand(5); }
@@ -1562,6 +1567,7 @@ public:
   Metadata *getRawTemplateParams() const { return getOperand(8); }
   Metadata *getRawDeclaration() const { return getOperand(9); }
   Metadata *getRawVariables() const { return getOperand(10); }
+  Metadata *getRawThrownTypes() const { return getOperand(11); }
 
   /// Check if this subprogram describes the given function.
   ///
