@@ -481,17 +481,17 @@ public:
       return true;
 
     assert(D->getPropertyImplementation() == ObjCPropertyImplDecl::Synthesize);
+    SymbolRoleSet AccessorMethodRoles =
+      SymbolRoleSet(SymbolRole::Dynamic) | SymbolRoleSet(SymbolRole::Implicit);
     if (ObjCMethodDecl *MD = PD->getGetterMethodDecl()) {
       if (MD->isPropertyAccessor() &&
           !hasUserDefined(MD, Container))
-        IndexCtx.handleDecl(MD, Loc, SymbolRoleSet(SymbolRole::Implicit), {},
-                            Container);
+        IndexCtx.handleDecl(MD, Loc, AccessorMethodRoles, {}, Container);
     }
     if (ObjCMethodDecl *MD = PD->getSetterMethodDecl()) {
       if (MD->isPropertyAccessor() &&
           !hasUserDefined(MD, Container))
-        IndexCtx.handleDecl(MD, Loc, SymbolRoleSet(SymbolRole::Implicit), {},
-                            Container);
+        IndexCtx.handleDecl(MD, Loc, AccessorMethodRoles, {}, Container);
     }
     if (ObjCIvarDecl *IvarD = D->getPropertyIvarDecl()) {
       if (IvarD->getSynthesize()) {

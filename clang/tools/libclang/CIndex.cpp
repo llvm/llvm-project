@@ -3371,7 +3371,10 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     Args->push_back("-Xclang");
     Args->push_back("-detailed-preprocessing-record");
   }
-  
+
+  // Suppress any editor placeholder diagnostics.
+  Args->push_back("-fallow-editor-placeholders");
+
   unsigned NumErrors = Diags->getClient()->getNumErrors();
   std::unique_ptr<ASTUnit> ErrUnit;
   // Unless the user specified that they want the preamble on the first parse

@@ -369,9 +369,13 @@ void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
     if (MainFile.empty())
       MainFile = "<stdin>";
     Diags.Report(diag::warn_profile_data_unprofiled) << MainFile;
-  } else
-    Diags.Report(diag::warn_profile_data_out_of_date) << Visited << Missing
-                                                      << Mismatched;
+  } else {
+    if (Mismatched > 0)
+      Diags.Report(diag::warn_profile_data_out_of_date) << Visited << Mismatched;
+
+    if (Missing > 0)
+      Diags.Report(diag::warn_profile_data_missing) << Visited << Missing;
+  }
 }
 
 void CodeGenModule::Release() {

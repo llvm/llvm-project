@@ -255,6 +255,7 @@ void ASTTypeWriter::VisitFunctionType(const FunctionType *T) {
   // FIXME: need to stabilize encoding of calling convention...
   Record.push_back(C.getCC());
   Record.push_back(C.getProducesResult());
+  Record.push_back(C.getNoCallerSavedRegs());
 
   if (C.getHasRegParm() || C.getRegParm() || C.getProducesResult())
     AbbrevToUse = 0;
@@ -839,6 +840,7 @@ void ASTWriter::WriteTypeAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // RegParm
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // CC
   Abv->Add(BitCodeAbbrevOp(0));                         // ProducesResult
+  Abv->Add(BitCodeAbbrevOp(0));                         // NoCallerSavedRegs
   // FunctionProtoType
   Abv->Add(BitCodeAbbrevOp(0));                         // IsVariadic
   Abv->Add(BitCodeAbbrevOp(0));                         // HasTrailingReturn

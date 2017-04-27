@@ -33,7 +33,7 @@ MacroInfo::MacroInfo(SourceLocation DefLoc)
     UsedForHeaderGuard(false) {
 }
 
-unsigned MacroInfo::getDefinitionLengthSlow(SourceManager &SM) const {
+unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
   assert(!IsDefinitionLengthCached);
   IsDefinitionLengthCached = true;
 

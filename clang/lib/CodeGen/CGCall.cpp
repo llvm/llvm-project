@@ -788,6 +788,7 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC,
   FI->ChainCall = chainCall;
   FI->NoReturn = info.getNoReturn();
   FI->ReturnsRetained = info.getProducesResult();
+  FI->NoCallerSavedRegs = info.getNoCallerSavedRegs();
   FI->Required = required;
   FI->HasRegParm = info.getHasRegParm();
   FI->RegParm = info.getRegParm();
@@ -1816,6 +1817,8 @@ void CodeGenModule::ConstructAttributeList(
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
+    if (TargetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
+      FuncAttrs.addAttribute("no_caller_saved_registers");
 
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
     if (auto *AllocSize = TargetDecl->getAttr<AllocSizeAttr>()) {

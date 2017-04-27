@@ -750,6 +750,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   if (Info.getRegParm())
     OS << " __attribute__((regparm ("
        << Info.getRegParm() << ")))";
+  if (Info.getNoCallerSavedRegs())
+    OS << "__attribute__((no_caller_saved_registers))";
 
   if (unsigned quals = T->getTypeQuals()) {
     OS << ' ';
