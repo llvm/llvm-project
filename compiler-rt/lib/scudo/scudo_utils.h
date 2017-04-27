@@ -40,7 +40,7 @@ bool testCPUFeature(CPUFeature feature);
 // The state (128 bits) will be stored in thread local storage.
 struct Xorshift128Plus {
  public:
-  Xorshift128Plus();
+  void initFromURandom();
   u64 getNext() {
     u64 x = State[0];
     const u64 y = State[1];

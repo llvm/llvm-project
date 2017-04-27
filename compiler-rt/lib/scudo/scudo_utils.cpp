@@ -153,9 +153,9 @@ static void fillRandom(u8 *Data, ssize_t Size) {
   }
 }
 
-// Default constructor for Xorshift128Plus seeds the state with /dev/urandom.
+// Seeds the xorshift state with /dev/urandom.
 // TODO(kostyak): investigate using getrandom() if available.
-Xorshift128Plus::Xorshift128Plus() {
+void Xorshift128Plus::initFromURandom() {
   fillRandom(reinterpret_cast<u8 *>(State), sizeof(State));
 }
 
