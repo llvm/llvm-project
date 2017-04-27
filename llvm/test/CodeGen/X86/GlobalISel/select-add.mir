@@ -14,6 +14,16 @@
     ret i32 %ret
   }
 
+  define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
+    %ret = add i16 %arg1, %arg2
+    ret i16 %ret
+  }
+
+  define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
+    %ret = add i8 %arg1, %arg2
+    ret i8 %ret
+  }
+
   define float @test_add_float(float %arg1, float %arg2) {
     %ret = fadd float %arg1, %arg2
     ret float %ret
@@ -37,6 +47,7 @@
 
 ---
 name:            test_add_i64
+# ALL-LABEL: name:            test_add_i64
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -63,6 +74,7 @@ body:             |
 
 ---
 name:            test_add_i32
+# ALL-LABEL: name:            test_add_i32
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -87,7 +99,66 @@ body:             |
 
 ...
 ---
+name:            test_add_i16
+# ALL-LABEL: name:            test_add_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+# ALL:      registers:
+# ALL-NEXT:  - { id: 0, class: gr16 }
+# ALL-NEXT:  - { id: 1, class: gr16 }
+# ALL-NEXT:  - { id: 2, class: gr16 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL: %0 = COPY %di
+# ALL: %1 = COPY %si
+# ALL: %2 = ADD16rr %0, %1, implicit-def %eflags
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s16) = G_ADD %0, %1
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_add_i8
+# ALL-LABEL: name:            test_add_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+# ALL:      registers:
+# ALL-NEXT:  - { id: 0, class: gr8 }
+# ALL-NEXT:  - { id: 1, class: gr8 }
+# ALL-NEXT:  - { id: 2, class: gr8 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL: %0 = COPY %dil
+# ALL: %1 = COPY %sil
+# ALL: %2 = ADD8rr %0, %1, implicit-def %eflags
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s8) = G_ADD %0, %1
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
+---
 name:            test_add_float
+# ALL-LABEL: name:            test_add_float
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -122,6 +193,7 @@ body:             |
 ...
 ---
 name:            test_add_double
+# ALL-LABEL: name:            test_add_double
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -156,6 +228,7 @@ body:             |
 ...
 ---
 name:            test_add_v4i32
+# ALL-LABEL: name:            test_add_v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -191,6 +264,7 @@ body:             |
 ...
 ---
 name:            test_add_v4f32
+# ALL-LABEL: name:            test_add_v4f32
 alignment:       4
 legalized:       true
 regBankSelected: true

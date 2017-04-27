@@ -153,10 +153,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  (void)DstSize;
   unsigned SrcReg = I.getOperand(1).getReg();
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-  (void)SrcSize;
+
   assert((!TargetRegisterInfo::isPhysicalRegister(SrcReg) || I.isCopy()) &&
          "No phys reg on generic operators");
   assert((DstSize == SrcSize ||
@@ -172,6 +171,18 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   case X86::GPRRegBankID:
     assert((DstSize <= 64) && "GPRs cannot get more than 64-bit width values.");
     RC = getRegClassForTypeOnBank(MRI.getType(DstReg), RegBank);
+
+    // Change the physical register
+    if (SrcSize > DstSize && TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+      if (RC == &X86::GR32RegClass)
+        I.getOperand(1).setSubReg(X86::sub_32bit);
+      else if (RC == &X86::GR16RegClass)
+        I.getOperand(1).setSubReg(X86::sub_16bit);
+      else if (RC == &X86::GR8RegClass)
+        I.getOperand(1).setSubReg(X86::sub_8bit);
+
+      I.getOperand(1).substPhysReg(SrcReg, TRI);
+    }
     break;
   case X86::VECRRegBankID:
     RC = getRegClassForTypeOnBank(MRI.getType(DstReg), RegBank);

@@ -45,7 +45,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
-    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, unsigned Align, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -69,10 +69,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   if ((Align & 3) != 0 || !ConstantSize ||
       ConstantSize->getZExtValue() > Subtarget.getMaxInlineSizeThreshold()) {
     // Check to see if there is a specialized entry-point for memory zeroing.
-    ConstantSDNode *V = dyn_cast<ConstantSDNode>(Src);
+    ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
 
-    if (const char *bzeroEntry = V &&
-        V->isNullValue() ? Subtarget.getBZeroEntry() : nullptr) {
+    if (const char *bzeroEntry = ValC &&
+        ValC->isNullValue() ? Subtarget.getBZeroEntry() : nullptr) {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
       Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
@@ -104,7 +104,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   SDValue InFlag;
   EVT AVT;
   SDValue Count;
-  ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Src);
+  ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
   unsigned BytesLeft = 0;
   if (ValC) {
     unsigned ValReg;
@@ -147,7 +147,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   } else {
     AVT = MVT::i8;
     Count  = DAG.getIntPtrConstant(SizeVal, dl);
-    Chain  = DAG.getCopyToReg(Chain, dl, X86::AL, Src, InFlag);
+    Chain  = DAG.getCopyToReg(Chain, dl, X86::AL, Val, InFlag);
     InFlag = Chain.getValue(1);
   }
 
@@ -171,7 +171,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     Chain = DAG.getMemset(Chain, dl,
                           DAG.getNode(ISD::ADD, dl, AddrVT, Dst,
                                       DAG.getConstant(Offset, dl, AddrVT)),
-                          Src,
+                          Val,
                           DAG.getConstant(BytesLeft, dl, SizeVT),
                           Align, isVolatile, false,
                           DstPtrInfo.getWithOffset(Offset));

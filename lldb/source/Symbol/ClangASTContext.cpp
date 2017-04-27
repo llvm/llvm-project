@@ -394,7 +394,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case InputKind::RenderScript:
       llvm_unreachable("Invalid input kind!");
     case InputKind::OpenCL:
-      LangStd = LangStandard::lang_opencl;
+      LangStd = LangStandard::lang_opencl10;
       break;
     case InputKind::CUDA:
       LangStd = LangStandard::lang_cuda;
@@ -425,7 +425,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.WChar = true;
 
   // OpenCL has some additional defaults.
-  if (LangStd == LangStandard::lang_opencl) {
+  if (LangStd == LangStandard::lang_opencl10) {
     Opts.OpenCL = 1;
     Opts.AltiVec = 1;
     Opts.CXXOperatorNames = 1;
