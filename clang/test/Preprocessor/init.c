@@ -9555,3 +9555,12 @@
 // AVR:#define __WCHAR_MAX__ 32767
 // AVR:#define __WCHAR_TYPE__ int
 // AVR:#define __WINT_TYPE__ int
+
+// RUN: %clang_cc1 -E -dM -ffreestanding                \
+// RUN:   -triple=aarch64-apple-ios9 < /dev/null        \
+// RUN: | FileCheck -check-prefix=DARWIN %s
+// RUN: %clang_cc1 -E -dM -ffreestanding                \
+// RUN:   -triple=aarch64-apple-macosx10.12 < /dev/null \
+// RUN: | FileCheck -check-prefix=DARWIN %s
+
+// DARWIN:#define __STDC_NO_THREADS__ 1
