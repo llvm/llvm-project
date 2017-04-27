@@ -127,7 +127,9 @@ public:
 
     ConstIterator(const typename MapTy::const_iterator &i) : I(i) {}
 
+    const ValueT &operator*() { return I->getFirst(); }
     const ValueT &operator*() const { return I->getFirst(); }
+    const ValueT *operator->() { return &I->getFirst(); }
     const ValueT *operator->() const { return &I->getFirst(); }
 
     ConstIterator& operator++() { ++I; return *this; }
