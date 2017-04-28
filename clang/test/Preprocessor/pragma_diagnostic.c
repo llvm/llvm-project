@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef -Wno-unknown-warning-option -DAVOID_UNKNOWN_WARNING %s
 // rdar://2362963
 
 #if FOO    // ok.
@@ -28,8 +29,10 @@
 #pragma GCC diagnostic error "-Wundef" 42  // expected-warning {{unexpected token in pragma diagnostic}}
 #pragma GCC diagnostic error "invalid-name"  // expected-warning {{pragma diagnostic expected option name (e.g. "-Wundef")}}
 
-#pragma GCC diagnostic error "-Winvalid-name"  // expected-warning {{unknown warning group '-Winvalid-name', ignored}}
-
+#pragma GCC diagnostic error "-Winvalid-name"
+#ifndef AVOID_UNKNOWN_WARNING
+// expected-warning@-2 {{unknown warning group '-Winvalid-name', ignored}}
+#endif
 
 // Testing pragma clang diagnostic with -Weverything
 void ppo(){} // First test that we do not diagnose on this.
