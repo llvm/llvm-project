@@ -57,7 +57,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 
 !0 = !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "global_var", linkageName: "_ZN4test10global_varE", scope: !2, file: !3, line: 2, type: !4, isLocal: false, isDefinition: true)
-!2 = !DINamespace(name: "test", scope: null, file: !3, line: 1)
+!2 = !DINamespace(name: "test", scope: null)
 !3 = !DIFile(filename: "dwarf-linkage-names.cpp", directory: "/home/probinson/projects/scratch")
 !4 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.8.0 (trunk 244662)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !6, globals: !7)
