@@ -16,121 +16,67 @@ from lldbbuild import *
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
-# The use of "var x = "..."; return x" here is important because build
-# automation looks for it with regexps.  Don't change it.
+# The use of "x = "..."; return x" here is important because tooling looks for
+# it with regexps.  Only change how this works if you know what you are doing.
+
 
 def LLVM_REF():
-    llvm_ref = SWIFT_REF()
+    llvm_ref = "stable"
     return llvm_ref
 
+
 def CLANG_REF():
-    clang_ref = SWIFT_REF()
+    clang_ref = "stable"
     return clang_ref
 
+
 def SWIFT_REF():
-    swift_ref = "swiftlang-" + SWIFT_VERSION()
+    swift_ref = "master"
     return swift_ref
 
 # For use with Xcode-style builds
 
-def SWIFT_VERSION():
-    swift_version = "900.9.27"
-    return swift_version
-
-def CLANG_VERSION():
-    clang_version = "900.2.19.5"
-    return clang_version
 
 def XCODE_REPOSITORIES():
     return [
         {'name': "llvm",
          'vcs': VCS.git,
          'root': llvm_source_path(),
-         'url': "ssh://git@stash.sd.apple.com/devtools/llvm.git",
+         'url': "ssh://git@github.com/apple/swift-llvm.git",
          'ref': LLVM_REF()},
 
         {'name': "clang",
          'vcs': VCS.git,
          'root': clang_source_path(),
-         'url': "ssh://git@stash.sd.apple.com/devtools/clang.git",
+         'url': "ssh://git@github.com/apple/swift-clang.git",
          'ref': CLANG_REF()},
 
         {'name': "swift",
          'vcs': VCS.git,
          'root': swift_source_path(),
-         'url': "ssh://git@stash.sd.apple.com/devtools/swift.git",
+         'url': "ssh://git@github.com/apple/swift.git",
          'ref': SWIFT_REF()},
 
         {'name': "cmark",
          'vcs': VCS.git,
          'root': cmark_source_path(),
-         'url': "ssh://git@stash.sd.apple.com/devtools/swift-cmark.git",
+         'url': "ssh://git@github.com/apple/swift-cmark.git",
          'ref': "master"},
 
         {'name': "ninja",
          'vcs': VCS.git,
          'root': ninja_source_path(),
-         'url': "ssh://git@stash.sd.apple.com/devtools/ninja.git",
+         'url': "https://github.com/ninja-build/ninja.git",
          'ref': "master"}
     ]
 
 
-def with_devices_preset_suffix():
-    """Return a suffix for the LLDB-specific Swift build preset."""
-    if os.environ.get("LLDB_SWIFT_STDLIB_INCLUDES_DEVICES", None) is not None:
-        return "_with_devices"
-    else:
-        return ""
-
-
 def BUILD_SCRIPT_FLAGS():
-    if is_ondevice_build():
-        platform_name = get_platform_name()
-        deployment_target = "cross_compile_tools_deployment_targets="
-        if platform_name == "iPhoneOS" or platform_name == "WatchOS" or platform_name == "AppleTVOS" or platform_name == "BridgeOS":
-            deployment_target += platform_name.lower() + "-"
-            deployment_target += (" " +
-                                  platform_name.lower() +
-                                  "-").join(build_architectures())
-
-        # for multi-arch on-device builds, deployment_target should look something like
-        # cross_compile_tools_deployment_targets=iphoneos-arm64 iphoneos-armv7
-        return {
-            "Debug": [
-                "--preset=LLDB_EngineerDesk_ondevice_" +
-                platform_name,
-                deployment_target],
-            "Release": [
-                "--preset=LLDB_EngineerDesk_ondevice_" +
-                platform_name,
-                deployment_target],
-            "BuildAndIntegration": [
-                "--preset=LLDB_BNI_ondevice_" +
-                platform_name,
-                deployment_target,
-                "swift_compiler_version=" +
-                SWIFT_VERSION(),
-                "clang_compiler_version=" +
-                CLANG_VERSION()]}
-    else:
-        LLDB_BNI_config = 'LLDB_BNI'
-        if is_host_build(): LLDB_BNI_config = '%s-%s' % (LLDB_BNI_config,rc_platform_name())
-        return {
-            "Debug": [
-                "--preset=LLDB_Swift_ReleaseAssert" +
-                with_devices_preset_suffix()],
-            "DebugClang": [
-                "--preset=LLDB_Swift_DebugAssert" +
-                with_devices_preset_suffix()],
-            "Release": [
-                "--preset=LLDB_Swift_ReleaseAssert" +
-                with_devices_preset_suffix()],
-            "BuildAndIntegration": [
-                "--preset=%s" % LLDB_BNI_config,
-                "swift_compiler_version=" +
-                SWIFT_VERSION(),
-                "clang_compiler_version=" +
-                CLANG_VERSION()]}
+    return {
+        "Debug": ["--preset=LLDB_Swift_ReleaseAssert"],
+        "DebugClang": ["--preset=LLDB_Swift_DebugAssert"],
+        "Release": ["--preset=LLDB_Swift_ReleaseAssert"],
+    }
 
 
 def BUILD_SCRIPT_ENVIRONMENT():
@@ -140,12 +86,6 @@ def BUILD_SCRIPT_ENVIRONMENT():
     }
 
 #### COLLECTING ALL ARCHIVES ####
-
-
-def excluded_libs():
-    return set([
-        "libclangServiceCore.a"
-    ])
 
 
 def collect_archives_in_path(path):
@@ -160,7 +100,7 @@ def collect_archives_in_path(path):
             path,
             file) for file in files if file.endswith(".a") and re.match(
             regexp,
-            file) and file not in excluded_libs()]
+            file)]
 
 
 def archive_list():
@@ -237,15 +177,12 @@ def should_build_llvm():
     if build_type() == BuildType.CustomSwift:
         return False
     if build_type() == BuildType.Xcode:
-        # TODO use md5 sums, but not for B&I
-        return True
-    if build_type() == BuildType.BuildAndIntegration:
+        # TODO use md5 sums
         return True
 
 
 def do_symlink(source_path, link_path):
     print "Symlinking " + source_path + " to " + link_path
-    sys.stdout.flush()
     if os.path.islink(link_path):
         os.remove(link_path)
     if not os.path.exists(link_path):
@@ -387,8 +324,8 @@ def build_ninja_if_needed():
     return ninja_binary_path
 
 def build_script_flags():
-    return BUILD_SCRIPT_FLAGS()[lldb_configuration()] + ["swift_install_destdir=" +
-                                                         expected_package_build_path_for("swift", build_architectures()[0])]
+    return BUILD_SCRIPT_FLAGS()[lldb_configuration(
+    )] + ["swift_install_destdir=" + expected_package_build_path_for("swift")]
 
 
 def join_dicts(dict1, dict2):
@@ -406,12 +343,6 @@ def build_script_environment():
 
 
 def build_llvm():
-    print (
-        "calling %s %s" %
-        (build_script_path(),
-         " ".join(
-            build_script_flags())))
-    sys.stdout.flush()
     subprocess.check_call(["python",
                            build_script_path()] + build_script_flags(),
                           cwd=lldb_source_path(),
@@ -426,8 +357,8 @@ def build_llvm_if_needed():
 
 #### MAIN LOGIC ####
 
-if __name__ == "__main__":
-	all_check_out_if_needed()
-	build_llvm_if_needed()
-	write_archives_txt()
-	sys.exit(0)
+all_check_out_if_needed()
+build_llvm_if_needed()
+write_archives_txt()
+
+sys.exit(0)
