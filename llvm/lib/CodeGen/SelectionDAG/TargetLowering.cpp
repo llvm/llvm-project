@@ -27,6 +27,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -437,10 +438,9 @@ TargetLowering::SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
                                      DAGCombinerInfo &DCI,
                                      TargetLoweringOpt &TLO) const {
   SDValue Op = User->getOperand(OpIdx);
-  APInt KnownZero, KnownOne;
+  KnownBits Known;
 
-  if (!SimplifyDemandedBits(Op, Demanded, KnownZero, KnownOne,
-                            TLO, 0, true))
+  if (!SimplifyDemandedBits(Op, Demanded, Known, TLO, 0, true))
     return false;
 
 
@@ -488,10 +488,9 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
   SelectionDAG &DAG = DCI.DAG;
   TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                         !DCI.isBeforeLegalizeOps());
-  APInt KnownZero, KnownOne;
+  KnownBits Known;
 
-  bool Simplified = SimplifyDemandedBits(Op, DemandedMask, KnownZero, KnownOne,
-                                         TLO);
+  bool Simplified = SimplifyDemandedBits(Op, DemandedMask, Known, TLO);
   if (Simplified)
     DCI.CommitTargetLoweringOpt(TLO);
   return Simplified;
@@ -501,13 +500,12 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
 /// result of Op are ever used downstream. If we can use this information to
 /// simplify Op, create a new simplified DAG node and return true, returning the
 /// original and new nodes in Old and New. Otherwise, analyze the expression and
-/// return a mask of KnownOne and KnownZero bits for the expression (used to
-/// simplify the caller).  The KnownZero/One bits may only be accurate for those
-/// bits in the DemandedMask.
+/// return a mask of Known bits for the expression (used to simplify the
+/// caller).  The Known bits may only be accurate for those bits in the
+/// DemandedMask.
 bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                           const APInt &DemandedMask,
-                                          APInt &KnownZero,
-                                          APInt &KnownOne,
+                                          KnownBits &Known,
                                           TargetLoweringOpt &TLO,
                                           unsigned Depth,
                                           bool AssumeSingleUse) const {
@@ -519,14 +517,14 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   auto &DL = TLO.DAG.getDataLayout();
 
   // Don't know anything.
-  KnownZero = KnownOne = APInt(BitWidth, 0);
+  Known = KnownBits(BitWidth);
 
   // Other users may use these bits.
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
     if (Depth != 0) {
-      // If not at the root, Just compute the KnownZero/KnownOne bits to
+      // If not at the root, Just compute the Known bits to
       // simplify things downstream.
-      TLO.DAG.computeKnownBits(Op, KnownZero, KnownOne, Depth);
+      TLO.DAG.computeKnownBits(Op, Known, Depth);
       return false;
     }
     // If this is the root being simplified, allow it to have multiple uses,
@@ -541,38 +539,37 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     return false;
   }
 
-  APInt KnownZero2, KnownOne2, KnownZeroOut, KnownOneOut;
+  KnownBits Known2, KnownOut;
   switch (Op.getOpcode()) {
   case ISD::Constant:
     // We know all of the bits for a constant!
-    KnownOne = cast<ConstantSDNode>(Op)->getAPIntValue();
-    KnownZero = ~KnownOne;
+    Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
+    Known.Zero = ~Known.One;
     return false;   // Don't fall through, will infinitely loop.
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every constant vector element.
-    KnownZero.setAllBits(); KnownOne.setAllBits();
+    Known.Zero.setAllBits(); Known.One.setAllBits();
     for (SDValue SrcOp : Op->ops()) {
       if (!isa<ConstantSDNode>(SrcOp)) {
         // We can only handle all constant values - bail out with no known bits.
-        KnownZero = KnownOne = APInt(BitWidth, 0);
+        Known = KnownBits(BitWidth);
         return false;
       }
-      KnownOne2 = cast<ConstantSDNode>(SrcOp)->getAPIntValue();
-      KnownZero2 = ~KnownOne2;
+      Known2.One = cast<ConstantSDNode>(SrcOp)->getAPIntValue();
+      Known2.Zero = ~Known2.One;
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
-      if (KnownOne2.getBitWidth() != BitWidth) {
-        assert(KnownOne2.getBitWidth() > BitWidth &&
-               KnownZero2.getBitWidth() > BitWidth &&
+      if (Known2.One.getBitWidth() != BitWidth) {
+        assert(Known2.getBitWidth() > BitWidth &&
                "Expected BUILD_VECTOR implicit truncation");
-        KnownOne2 = KnownOne2.trunc(BitWidth);
-        KnownZero2 = KnownZero2.trunc(BitWidth);
+        Known2.One = Known2.One.trunc(BitWidth);
+        Known2.Zero = Known2.Zero.trunc(BitWidth);
       }
 
       // Known bits are the values that are shared by every element.
       // TODO: support per-element known bits.
-      KnownOne &= KnownOne2;
-      KnownZero &= KnownZero2;
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
     }
     return false;   // Don't fall through, will infinitely loop.
   case ISD::AND:
@@ -582,16 +579,16 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // the RHS.
     if (ConstantSDNode *RHSC = isConstOrConstSplat(Op.getOperand(1))) {
       SDValue Op0 = Op.getOperand(0);
-      APInt LHSZero, LHSOne;
+      KnownBits LHSKnown;
       // Do not increment Depth here; that can cause an infinite loop.
-      TLO.DAG.computeKnownBits(Op0, LHSZero, LHSOne, Depth);
+      TLO.DAG.computeKnownBits(Op0, LHSKnown, Depth);
       // If the LHS already has zeros where RHSC does, this and is dead.
-      if ((LHSZero & NewMask) == (~RHSC->getAPIntValue() & NewMask))
+      if ((LHSKnown.Zero & NewMask) == (~RHSC->getAPIntValue() & NewMask))
         return TLO.CombineTo(Op, Op0);
 
       // If any of the set bits in the RHS are known zero on the LHS, shrink
       // the constant.
-      if (ShrinkDemandedConstant(Op, ~LHSZero & NewMask, TLO))
+      if (ShrinkDemandedConstant(Op, ~LHSKnown.Zero & NewMask, TLO))
         return true;
 
       // Bitwise-not (xor X, -1) is a special case: we don't usually shrink its
@@ -600,58 +597,56 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       // the xor. For example, for a 32-bit X:
       // and (xor (srl X, 31), -1), 1 --> xor (srl X, 31), 1
       if (isBitwiseNot(Op0) && Op0.hasOneUse() &&
-          LHSOne == ~RHSC->getAPIntValue()) {
+          LHSKnown.One == ~RHSC->getAPIntValue()) {
         SDValue Xor = TLO.DAG.getNode(ISD::XOR, dl, Op.getValueType(),
                                       Op0.getOperand(0), Op.getOperand(1));
         return TLO.CombineTo(Op, Xor);
       }
     }
 
-    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op.getOperand(0), ~KnownZero & NewMask,
-                             KnownZero2, KnownOne2, TLO, Depth+1))
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    if (SimplifyDemandedBits(Op.getOperand(0), ~Known.Zero & NewMask,
+                             Known2, TLO, Depth+1))
       return true;
-    assert((KnownZero2 & KnownOne2) == 0 && "Bits known to be one AND zero?");
+    assert((Known2.Zero & Known2.One) == 0 && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
-    if (NewMask.isSubsetOf(KnownZero2 | KnownOne))
+    if (NewMask.isSubsetOf(Known2.Zero | Known.One))
       return TLO.CombineTo(Op, Op.getOperand(0));
-    if (NewMask.isSubsetOf(KnownZero | KnownOne2))
+    if (NewMask.isSubsetOf(Known.Zero | Known2.One))
       return TLO.CombineTo(Op, Op.getOperand(1));
     // If all of the demanded bits in the inputs are known zeros, return zero.
-    if (NewMask.isSubsetOf(KnownZero | KnownZero2))
+    if (NewMask.isSubsetOf(Known.Zero | Known2.Zero))
       return TLO.CombineTo(Op, TLO.DAG.getConstant(0, dl, Op.getValueType()));
     // If the RHS is a constant, see if we can simplify it.
-    if (ShrinkDemandedConstant(Op, ~KnownZero2 & NewMask, TLO))
+    if (ShrinkDemandedConstant(Op, ~Known2.Zero & NewMask, TLO))
       return true;
     // If the operation can be done in a smaller type, do so.
     if (ShrinkDemandedOp(Op, BitWidth, NewMask, TLO))
       return true;
 
     // Output known-1 bits are only known if set in both the LHS & RHS.
-    KnownOne &= KnownOne2;
+    Known.One &= Known2.One;
     // Output known-0 are known to be clear if zero in either the LHS | RHS.
-    KnownZero |= KnownZero2;
+    Known.Zero |= Known2.Zero;
     break;
   case ISD::OR:
-    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op.getOperand(0), ~KnownOne & NewMask,
-                             KnownZero2, KnownOne2, TLO, Depth+1))
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    if (SimplifyDemandedBits(Op.getOperand(0), ~Known.One & NewMask,
+                             Known2, TLO, Depth+1))
       return true;
-    assert((KnownZero2 & KnownOne2) == 0 && "Bits known to be one AND zero?");
+    assert((Known2.Zero & Known2.One) == 0 && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
-    if (NewMask.isSubsetOf(KnownOne2 | KnownZero))
+    if (NewMask.isSubsetOf(Known2.One | Known.Zero))
       return TLO.CombineTo(Op, Op.getOperand(0));
-    if (NewMask.isSubsetOf(KnownOne | KnownZero2))
+    if (NewMask.isSubsetOf(Known.One | Known2.Zero))
       return TLO.CombineTo(Op, Op.getOperand(1));
     // If the RHS is a constant, see if we can simplify it.
     if (ShrinkDemandedConstant(Op, NewMask, TLO))
@@ -661,25 +656,23 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       return true;
 
     // Output known-0 bits are only known if clear in both the LHS & RHS.
-    KnownZero &= KnownZero2;
+    Known.Zero &= Known2.Zero;
     // Output known-1 are known to be set if set in either the LHS | RHS.
-    KnownOne |= KnownOne2;
+    Known.One |= Known2.One;
     break;
   case ISD::XOR:
-    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op.getOperand(0), NewMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1))
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    if (SimplifyDemandedBits(Op.getOperand(0), NewMask, Known2, TLO, Depth+1))
       return true;
-    assert((KnownZero2 & KnownOne2) == 0 && "Bits known to be one AND zero?");
+    assert((Known2.Zero & Known2.One) == 0 && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'xor'.
-    if (NewMask.isSubsetOf(KnownZero))
+    if (NewMask.isSubsetOf(Known.Zero))
       return TLO.CombineTo(Op, Op.getOperand(0));
-    if (NewMask.isSubsetOf(KnownZero2))
+    if (NewMask.isSubsetOf(Known2.Zero))
       return TLO.CombineTo(Op, Op.getOperand(1));
     // If the operation can be done in a smaller type, do so.
     if (ShrinkDemandedOp(Op, BitWidth, NewMask, TLO))
@@ -688,25 +681,25 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // If all of the unknown bits are known to be zero on one side or the other
     // (but not both) turn this into an *inclusive* or.
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
-    if ((NewMask & ~KnownZero & ~KnownZero2) == 0)
+    if ((NewMask & ~Known.Zero & ~Known2.Zero) == 0)
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, Op.getValueType(),
                                                Op.getOperand(0),
                                                Op.getOperand(1)));
 
     // Output known-0 bits are known if clear or set in both the LHS & RHS.
-    KnownZeroOut = (KnownZero & KnownZero2) | (KnownOne & KnownOne2);
+    KnownOut.Zero = (Known.Zero & Known2.Zero) | (Known.One & Known2.One);
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
-    KnownOneOut = (KnownZero & KnownOne2) | (KnownOne & KnownZero2);
+    KnownOut.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
 
     // If all of the demanded bits on one side are known, and all of the set
     // bits on that side are also known to be set on the other side, turn this
     // into an AND, as we know the bits will be cleared.
     //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
     // NB: it is okay if more bits are known than are requested
-    if (NewMask.isSubsetOf(KnownZero|KnownOne)) { // all known on one side
-      if (KnownOne == KnownOne2) { // set bits are the same on both sides
+    if (NewMask.isSubsetOf(Known.Zero|Known.One)) { // all known on one side
+      if (Known.One == Known2.One) { // set bits are the same on both sides
         EVT VT = Op.getValueType();
-        SDValue ANDC = TLO.DAG.getConstant(~KnownOne & NewMask, dl, VT);
+        SDValue ANDC = TLO.DAG.getConstant(~Known.One & NewMask, dl, VT);
         return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT,
                                                  Op.getOperand(0), ANDC));
       }
@@ -732,44 +725,39 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
     }
 
-    KnownZero = std::move(KnownZeroOut);
-    KnownOne  = std::move(KnownOneOut);
+    Known = std::move(KnownOut);
     break;
   case ISD::SELECT:
-    if (SimplifyDemandedBits(Op.getOperand(2), NewMask, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(2), NewMask, Known, TLO, Depth+1))
       return true;
-    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(1), NewMask, Known2, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    assert((KnownZero2 & KnownOne2) == 0 && "Bits known to be one AND zero?");
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    assert((Known2.Zero & Known2.One) == 0 && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(Op, NewMask, TLO))
       return true;
 
     // Only known if known in both the LHS and RHS.
-    KnownOne &= KnownOne2;
-    KnownZero &= KnownZero2;
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
     break;
   case ISD::SELECT_CC:
-    if (SimplifyDemandedBits(Op.getOperand(3), NewMask, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(3), NewMask, Known, TLO, Depth+1))
       return true;
-    if (SimplifyDemandedBits(Op.getOperand(2), NewMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(2), NewMask, Known2, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    assert((KnownZero2 & KnownOne2) == 0 && "Bits known to be one AND zero?");
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    assert((Known2.Zero & Known2.One) == 0 && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(Op, NewMask, TLO))
       return true;
 
     // Only known if known in both the LHS and RHS.
-    KnownOne &= KnownOne2;
-    KnownZero &= KnownZero2;
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
     break;
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
@@ -795,7 +783,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     if (getBooleanContents(Op0.getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero.setBitsFrom(1);
+      Known.Zero.setBitsFrom(1);
     break;
   }
   case ISD::SHL:
@@ -829,8 +817,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         }
       }
 
-      if (SimplifyDemandedBits(InOp, NewMask.lshr(ShAmt),
-                               KnownZero, KnownOne, TLO, Depth+1))
+      if (SimplifyDemandedBits(InOp, NewMask.lshr(ShAmt), Known, TLO, Depth+1))
         return true;
 
       // Convert (shl (anyext x, c)) to (anyext (shl x, c)) if the high bits
@@ -879,10 +866,10 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         }
       }
 
-      KnownZero <<= SA->getZExtValue();
-      KnownOne  <<= SA->getZExtValue();
+      Known.Zero <<= SA->getZExtValue();
+      Known.One  <<= SA->getZExtValue();
       // low bits known zero.
-      KnownZero.setLowBits(SA->getZExtValue());
+      Known.Zero.setLowBits(SA->getZExtValue());
     }
     break;
   case ISD::SRL:
@@ -925,14 +912,13 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
 
       // Compute the new bits that are at the top now.
-      if (SimplifyDemandedBits(InOp, InDemandedMask,
-                               KnownZero, KnownOne, TLO, Depth+1))
+      if (SimplifyDemandedBits(InOp, InDemandedMask, Known, TLO, Depth+1))
         return true;
-      assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-      KnownZero.lshrInPlace(ShAmt);
-      KnownOne.lshrInPlace(ShAmt);
+      assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+      Known.Zero.lshrInPlace(ShAmt);
+      Known.One.lshrInPlace(ShAmt);
 
-      KnownZero.setHighBits(ShAmt);  // High bits known zero.
+      Known.Zero.setHighBits(ShAmt);  // High bits known zero.
     }
     break;
   case ISD::SRA:
@@ -965,16 +951,16 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       if (NewMask.countLeadingZeros() < ShAmt)
         InDemandedMask.setSignBit();
 
-      if (SimplifyDemandedBits(Op.getOperand(0), InDemandedMask,
-                               KnownZero, KnownOne, TLO, Depth+1))
+      if (SimplifyDemandedBits(Op.getOperand(0), InDemandedMask, Known, TLO,
+                               Depth+1))
         return true;
-      assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-      KnownZero.lshrInPlace(ShAmt);
-      KnownOne.lshrInPlace(ShAmt);
+      assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+      Known.Zero.lshrInPlace(ShAmt);
+      Known.One.lshrInPlace(ShAmt);
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
-      if (KnownZero[BitWidth - ShAmt - 1] ||
+      if (Known.Zero[BitWidth - ShAmt - 1] ||
           NewMask.countLeadingZeros() >= ShAmt) {
         SDNodeFlags Flags;
         Flags.setExact(cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact());
@@ -993,9 +979,9 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                                  Op.getOperand(0), NewSA));
       }
 
-      if (KnownOne[BitWidth - ShAmt - 1])
+      if (Known.One[BitWidth - ShAmt - 1])
         // New bits are known one.
-        KnownOne.setHighBits(ShAmt);
+        Known.One.setHighBits(ShAmt);
     }
     break;
   case ISD::SIGN_EXTEND_INREG: {
@@ -1048,24 +1034,24 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     InputDemandedBits |= InSignBit;
 
     if (SimplifyDemandedBits(Op.getOperand(0), InputDemandedBits,
-                             KnownZero, KnownOne, TLO, Depth+1))
+                             Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
 
     // If the input sign bit is known zero, convert this into a zero extension.
-    if (KnownZero.intersects(InSignBit))
+    if (Known.Zero.intersects(InSignBit))
       return TLO.CombineTo(Op, TLO.DAG.getZeroExtendInReg(
                                    Op.getOperand(0), dl, ExVT.getScalarType()));
 
-    if (KnownOne.intersects(InSignBit)) {    // Input sign bit known set
-      KnownOne |= NewBits;
-      KnownZero &= ~NewBits;
+    if (Known.One.intersects(InSignBit)) {    // Input sign bit known set
+      Known.One |= NewBits;
+      Known.Zero &= ~NewBits;
     } else {                       // Input sign bit unknown
-      KnownZero &= ~NewBits;
-      KnownOne &= ~NewBits;
+      Known.Zero &= ~NewBits;
+      Known.One &= ~NewBits;
     }
     break;
   }
@@ -1076,22 +1062,19 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     APInt MaskLo = NewMask.getLoBits(HalfBitWidth).trunc(HalfBitWidth);
     APInt MaskHi = NewMask.getHiBits(HalfBitWidth).trunc(HalfBitWidth);
 
-    APInt KnownZeroLo, KnownOneLo;
-    APInt KnownZeroHi, KnownOneHi;
+    KnownBits KnownLo, KnownHi;
 
-    if (SimplifyDemandedBits(Op.getOperand(0), MaskLo, KnownZeroLo,
-                             KnownOneLo, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op.getOperand(0), MaskLo, KnownLo, TLO, Depth + 1))
       return true;
 
-    if (SimplifyDemandedBits(Op.getOperand(1), MaskHi, KnownZeroHi,
-                             KnownOneHi, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op.getOperand(1), MaskHi, KnownHi, TLO, Depth + 1))
       return true;
 
-    KnownZero = KnownZeroLo.zext(BitWidth) |
-                KnownZeroHi.zext(BitWidth).shl(HalfBitWidth);
+    Known.Zero = KnownLo.Zero.zext(BitWidth) |
+                KnownHi.Zero.zext(BitWidth).shl(HalfBitWidth);
 
-    KnownOne = KnownOneLo.zext(BitWidth) |
-               KnownOneHi.zext(BitWidth).shl(HalfBitWidth);
+    Known.One = KnownLo.One.zext(BitWidth) |
+               KnownHi.One.zext(BitWidth).shl(HalfBitWidth);
     break;
   }
   case ISD::ZERO_EXTEND: {
@@ -1106,13 +1089,12 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                                Op.getValueType(),
                                                Op.getOperand(0)));
 
-    if (SimplifyDemandedBits(Op.getOperand(0), InMask,
-                             KnownZero, KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(0), InMask, Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
-    KnownZero |= NewBits;
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
+    Known.Zero |= NewBits;
     break;
   }
   case ISD::SIGN_EXTEND: {
@@ -1134,37 +1116,36 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     InDemandedBits |= InSignBit;
     InDemandedBits = InDemandedBits.trunc(InBits);
 
-    if (SimplifyDemandedBits(Op.getOperand(0), InDemandedBits, KnownZero,
-                             KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(0), InDemandedBits, Known, TLO,
+                             Depth+1))
       return true;
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    if (KnownZero.intersects(InSignBit))
+    if (Known.Zero.intersects(InSignBit))
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl,
                                                Op.getValueType(),
                                                Op.getOperand(0)));
 
     // If the sign bit is known one, the top bits match.
-    if (KnownOne.intersects(InSignBit)) {
-      KnownOne |= NewBits;
-      assert((KnownZero & NewBits) == 0);
+    if (Known.One.intersects(InSignBit)) {
+      Known.One |= NewBits;
+      assert((Known.Zero & NewBits) == 0);
     } else {   // Otherwise, top bits aren't known.
-      assert((KnownOne & NewBits) == 0);
-      assert((KnownZero & NewBits) == 0);
+      assert((Known.One & NewBits) == 0);
+      assert((Known.Zero & NewBits) == 0);
     }
     break;
   }
   case ISD::ANY_EXTEND: {
     unsigned OperandBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
     APInt InMask = NewMask.trunc(OperandBitWidth);
-    if (SimplifyDemandedBits(Op.getOperand(0), InMask,
-                             KnownZero, KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(0), InMask, Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
     break;
   }
   case ISD::TRUNCATE: {
@@ -1172,11 +1153,10 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // zero/one bits live out.
     unsigned OperandBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
     APInt TruncMask = NewMask.zext(OperandBitWidth);
-    if (SimplifyDemandedBits(Op.getOperand(0), TruncMask,
-                             KnownZero, KnownOne, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(0), TruncMask, Known, TLO, Depth+1))
       return true;
-    KnownZero = KnownZero.trunc(BitWidth);
-    KnownOne = KnownOne.trunc(BitWidth);
+    Known.Zero = Known.Zero.trunc(BitWidth);
+    Known.One = Known.One.trunc(BitWidth);
 
     // If the input is only used by this truncate, see if we can shrink it based
     // on the known demanded bits.
@@ -1224,7 +1204,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
     }
 
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
     break;
   }
   case ISD::AssertZext: {
@@ -1234,11 +1214,11 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     APInt InMask = APInt::getLowBitsSet(BitWidth,
                                         VT.getSizeInBits());
     if (SimplifyDemandedBits(Op.getOperand(0), ~InMask | NewMask,
-                             KnownZero, KnownOne, TLO, Depth+1))
+                             Known, TLO, Depth+1))
       return true;
-    assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
+    assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 
-    KnownZero |= ~InMask;
+    Known.Zero |= ~InMask;
     break;
   }
   case ISD::BITCAST:
@@ -1276,10 +1256,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // of the highest bit demanded of them.
     APInt LoMask = APInt::getLowBitsSet(BitWidth,
                                         BitWidth - NewMask.countLeadingZeros());
-    if (SimplifyDemandedBits(Op.getOperand(0), LoMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1) ||
-        SimplifyDemandedBits(Op.getOperand(1), LoMask, KnownZero2,
-                             KnownOne2, TLO, Depth+1) ||
+    if (SimplifyDemandedBits(Op.getOperand(0), LoMask, Known2, TLO, Depth+1) ||
+        SimplifyDemandedBits(Op.getOperand(1), LoMask, Known2, TLO, Depth+1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, NewMask, TLO)) {
       const SDNodeFlags *Flags = Op.getNode()->getFlags();
@@ -1300,13 +1278,13 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   }
   default:
     // Just use computeKnownBits to compute output bits.
-    TLO.DAG.computeKnownBits(Op, KnownZero, KnownOne, Depth);
+    TLO.DAG.computeKnownBits(Op, Known, Depth);
     break;
   }
 
   // If we know the value of all of the demanded bits, return this as a
   // constant.
-  if (NewMask.isSubsetOf(KnownZero|KnownOne)) {
+  if (NewMask.isSubsetOf(Known.Zero|Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     const SDNode *N = Op.getNode();
     for (SDNodeIterator I = SDNodeIterator::begin(N),
@@ -1317,17 +1295,16 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
           return false;
     }
     return TLO.CombineTo(Op,
-                         TLO.DAG.getConstant(KnownOne, dl, Op.getValueType()));
+                         TLO.DAG.getConstant(Known.One, dl, Op.getValueType()));
   }
 
   return false;
 }
 
 /// Determine which of the bits specified in Mask are known to be either zero or
-/// one and return them in the KnownZero/KnownOne bitsets.
+/// one and return them in the Known.
 void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
-                                                   APInt &KnownZero,
-                                                   APInt &KnownOne,
+                                                   KnownBits &Known,
                                                    const APInt &DemandedElts,
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth) const {
@@ -1337,7 +1314,7 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
-  KnownZero.clearAllBits(); KnownOne.clearAllBits();
+  Known.Zero.clearAllBits(); Known.One.clearAllBits();
 }
 
 /// This method can be implemented by targets that want to expose additional

@@ -128,10 +128,10 @@ define i32 @test_stack_args(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 4
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 4
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
-; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5:%[0-9]+]]{{.*}} = G_LOAD [[FIP5]]
-; CHECK: [[SUM:%[0-9]+]]{{.*}} = G_ADD [[VREGP2]], [[VREGP5]]
+; CHECK: [[VREGP2:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5:%[0-9]+]](s32) = G_LOAD [[FIP5]]{{.*}}load 4
+; CHECK: [[SUM:%[0-9]+]](s32) = G_ADD [[VREGP2]], [[VREGP5]]
 ; CHECK: %r0 = COPY [[SUM]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
@@ -146,9 +146,9 @@ define i16 @test_stack_args_signext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP1:%[0-9]+]]{{.*}} = COPY %r1
-; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5EXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGP1:%[0-9]+]](s16) = COPY %r1
+; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5EXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
 ; CHECK: [[VREGP5:%[0-9]+]](s16) = G_TRUNC [[VREGP5EXT]]
 ; CHECK: [[SUM:%[0-9]+]](s16) = G_ADD [[VREGP1]], [[VREGP5]]
 ; CHECK: %r0 = COPY [[SUM]]
@@ -165,9 +165,9 @@ define i8 @test_stack_args_zeroext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
-; CHECK: [[FIP4:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P4]]
-; CHECK: [[VREGP4EXT:%[0-9]+]](s32) = G_LOAD [[FIP4]](p0)
+; CHECK: [[VREGP2:%[0-9]+]](s8) = COPY %r2
+; CHECK: [[FIP4:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
+; CHECK: [[VREGP4EXT:%[0-9]+]](s32) = G_LOAD [[FIP4]](p0){{.*}}load 4
 ; CHECK: [[VREGP4:%[0-9]+]](s8) = G_TRUNC [[VREGP4EXT]]
 ; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
 ; CHECK: %r0 = COPY [[SUM]]
@@ -184,9 +184,9 @@ define i8 @test_stack_args_noext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
-; CHECK: [[FIP4:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P4]]
-; CHECK: [[VREGP4:%[0-9]+]](s8) = G_LOAD [[FIP4]](p0)
+; CHECK: [[VREGP2:%[0-9]+]](s8) = COPY %r2
+; CHECK: [[FIP4:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
+; CHECK: [[VREGP4:%[0-9]+]](s8) = G_LOAD [[FIP4]](p0){{.*}}load 1
 ; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
 ; CHECK: %r0 = COPY [[SUM]]
 ; CHECK: BX_RET 14, _, implicit %r0
@@ -202,8 +202,8 @@ define zeroext i16 @test_stack_args_extend_the_extended(i32 %p0, i16 %p1, i8 %p2
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5SEXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5SEXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
 ; CHECK: [[VREGP5:%[0-9]+]](s16) = G_TRUNC [[VREGP5SEXT]]
 ; CHECK: [[VREGP5ZEXT:%[0-9]+]](s32) = G_ZEXT [[VREGP5]]
 ; CHECK: %r0 = COPY [[VREGP5ZEXT]]
@@ -216,7 +216,7 @@ define i16 @test_ptr_arg(i16* %p) {
 ; CHECK-LABEL: name: test_ptr_arg
 ; CHECK: liveins: %r0
 ; CHECK: [[VREGP:%[0-9]+]](p0) = COPY %r0
-; CHECK: [[VREGV:%[0-9]+]](s16) = G_LOAD [[VREGP]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s16) = G_LOAD [[VREGP]](p0){{.*}}load 2
 entry:
   %v = load i16, i16* %p
   ret i16 %v
@@ -227,7 +227,7 @@ define i32* @test_ptr_ret(i32** %p) {
 ; CHECK-LABEL: name: test_ptr_ret
 ; CHECK: liveins: %r0
 ; CHECK: [[VREGP:%[0-9]+]](p0) = COPY %r0
-; CHECK: [[VREGV:%[0-9]+]](p0) = G_LOAD [[VREGP]](p0)
+; CHECK: [[VREGV:%[0-9]+]](p0) = G_LOAD [[VREGP]](p0){{.*}}load 4
 ; CHECK: %r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
@@ -240,9 +240,9 @@ define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32* %p) {
 ; CHECK: fixedStack:
 ; CHECK: id: [[P:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[FIP:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P]]
-; CHECK: [[VREGP:%[0-9]+]](p0) = G_LOAD [[FIP]](p0)
-; CHECK: [[VREGV:%[0-9]+]](s32) = G_LOAD [[VREGP]](p0)
+; CHECK: [[FIP:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P]]
+; CHECK: [[VREGP:%[0-9]+]](p0) = G_LOAD [[FIP]](p0){{.*}}load 4
+; CHECK: [[VREGV:%[0-9]+]](s32) = G_LOAD [[VREGP]](p0){{.*}}load 4
 ; CHECK: %r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
@@ -259,7 +259,7 @@ define arm_aapcscc float @test_float_aapcscc(float %p0, float %p1, float %p2,
 ; CHECK: liveins: %r0, %r1, %r2, %r3
 ; CHECK: [[VREGP1:%[0-9]+]](s32) = COPY %r1
 ; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGP5:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
 ; CHECK: [[VREGV:%[0-9]+]](s32) = G_FADD [[VREGP1]], [[VREGP5]]
 ; CHECK: %r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %r0
@@ -288,7 +288,7 @@ define arm_aapcs_vfpcc float @test_float_vfpcc(float %p0, float %p1, float %p2,
 ; CHECK: liveins: %s0, %s1, %s2, %s3, %s4, %s5, %s6, %s7, %s8, %s9, %s10, %s11, %s12, %s13, %s14, %s15
 ; CHECK: [[VREGP1:%[0-9]+]](s32) = COPY %s1
 ; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
-; CHECK: [[VREGQ1:%[0-9]+]](s32) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGQ1:%[0-9]+]](s32) = G_LOAD [[FIQ1]](p0){{.*}}load 4
 ; CHECK: [[VREGV:%[0-9]+]](s32) = G_FADD [[VREGP1]], [[VREGQ1]]
 ; CHECK: %s0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %s0
@@ -309,7 +309,7 @@ define arm_aapcs_vfpcc double @test_double_vfpcc(double %p0, double %p1, double 
 ; CHECK: liveins: %d0, %d1, %d2, %d3, %d4, %d5, %d6, %d7
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = COPY %d1
 ; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
-; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGQ1]]
 ; CHECK: %d0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %d0
@@ -332,7 +332,7 @@ define arm_aapcscc double @test_double_aapcscc(double %p0, double %p1, double %p
 ; LITTLE: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1LO]](s32), 0, [[VREGP1HI]](s32), 32
 ; BIG: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1HI]](s32), 0, [[VREGP1LO]](s32), 32
 ; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
-; CHECK: [[VREGP5:%[0-9]+]](s64) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGP5:%[0-9]+]](s64) = G_LOAD [[FIP5]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGP5]]
 ; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
 ; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
@@ -359,7 +359,7 @@ define arm_aapcs_vfpcc double @test_double_gap_vfpcc(double %p0, float %filler,
 ; CHECK: liveins: %d0, %d2, %d3, %d4, %d5, %d6, %d7, %s2
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = COPY %d2
 ; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
-; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGQ1]]
 ; CHECK: %d0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14, _, implicit %d0
@@ -379,7 +379,7 @@ define arm_aapcscc double @test_double_gap_aapcscc(float %filler, double %p0,
 ; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
 ; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
-; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
+; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
 ; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
 ; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
@@ -404,7 +404,7 @@ define arm_aapcscc double @test_double_gap2_aapcscc(double %p0, float %filler,
 ; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
 ; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
-; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
+; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
 ; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
 ; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32

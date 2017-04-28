@@ -314,7 +314,7 @@ error:
  * basis with the equalities first.  Otherwise, we start off with
  * the identity matrix.
  */
-struct isl_mat *isl_basic_set_reduced_basis(struct isl_basic_set *bset)
+__isl_give isl_mat *isl_basic_set_reduced_basis(__isl_keep isl_basic_set *bset)
 {
 	struct isl_mat *basis;
 	struct isl_tab *tab;

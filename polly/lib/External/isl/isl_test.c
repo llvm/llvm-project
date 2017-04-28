@@ -3714,6 +3714,55 @@ static int test_special_conditional_schedule_constraints(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that the test for violated conditional validity constraints
+ * is not confused by domain compression.
+ * In particular, earlier versions of isl would apply
+ * a schedule on the compressed domains to the original domains,
+ * resulting in a failure to detect that the default schedule
+ * violates the conditional validity constraints.
+ */
+static int test_special_conditional_schedule_constraints_2(isl_ctx *ctx)
+{
+	const char *str;
+	isl_bool empty;
+	isl_union_set *domain;
+	isl_union_map *validity, *condition;
+	isl_schedule_constraints *sc;
+	isl_schedule *schedule;
+	isl_union_map *umap;
+	isl_map *map, *ge;
+
+	str = "{ A[0, i] : 0 <= i <= 10; B[1, i] : 0 <= i <= 10 }";
+	domain = isl_union_set_read_from_str(ctx, str);
+	sc = isl_schedule_constraints_on_domain(domain);
+	str = "{ B[1, i] -> A[0, i + 1] }";
+	condition = isl_union_map_read_from_str(ctx, str);
+	str = "{ A[0, i] -> B[1, i - 1] }";
+	validity = isl_union_map_read_from_str(ctx, str);
+	sc = isl_schedule_constraints_set_conditional_validity(sc, condition,
+						isl_union_map_copy(validity));
+	schedule = isl_schedule_constraints_compute_schedule(sc);
+	umap = isl_schedule_get_map(schedule);
+	isl_schedule_free(schedule);
+	validity = isl_union_map_apply_domain(validity,
+						isl_union_map_copy(umap));
+	validity = isl_union_map_apply_range(validity, umap);
+	map = isl_map_from_union_map(validity);
+	ge = isl_map_lex_ge(isl_space_domain(isl_map_get_space(map)));
+	map = isl_map_intersect(map, ge);
+	empty = isl_map_is_empty(map);
+	isl_map_free(map);
+
+	if (empty < 0)
+		return -1;
+	if (!empty)
+		isl_die(ctx, isl_error_unknown,
+			"conditional validity constraints not satisfied",
+			return -1);
+
+	return 0;
+}
+
 /* Input for testing of schedule construction based on
  * conditional constraints.
  *
@@ -3817,6 +3866,8 @@ static int test_conditional_schedule_constraints(isl_ctx *ctx)
 	int n_member;
 
 	if (test_special_conditional_schedule_constraints(ctx) < 0)
+		return -1;
+	if (test_special_conditional_schedule_constraints_2(ctx) < 0)
 		return -1;
 
 	for (i = 0; i < ARRAY_SIZE(live_range_tests); ++i) {

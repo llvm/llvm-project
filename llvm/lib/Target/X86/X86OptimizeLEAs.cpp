@@ -27,6 +27,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -221,6 +223,8 @@ public:
 
   StringRef getPassName() const override { return "X86 LEA Optimize"; }
 
+  bool doInitialization(Module &M) override;
+
   /// \brief Loop over all of the basic blocks, replacing address
   /// calculations in load and store instructions, if it's already
   /// been calculated by LEA. Also, remove redundant LEAs.
@@ -262,6 +266,12 @@ private:
   /// \brief Removes redundant address calculations.
   bool removeRedundantAddrCalc(MemOpMap &LEAs);
 
+  /// Replace debug value MI with a new debug value instruction using register
+  /// VReg with an appropriate offset and DIExpression to incorporate the
+  /// address displacement AddrDispShift. Return new debug value instruction.
+  MachineInstr *replaceDebugValue(MachineInstr &MI, unsigned VReg,
+                                  int64_t AddrDispShift);
+
   /// \brief Removes LEAs which calculate similar addresses.
   bool removeRedundantLEAs(MemOpMap &LEAs);
 
@@ -270,6 +280,7 @@ private:
   MachineRegisterInfo *MRI;
   const X86InstrInfo *TII;
   const X86RegisterInfo *TRI;
+  Module *TheModule;
 
   static char ID;
 };
@@ -532,6 +543,26 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
   return Changed;
 }
 
+MachineInstr *OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
+                                                 unsigned VReg,
+                                                 int64_t AddrDispShift) {
+  DIExpression *Expr = const_cast<DIExpression *>(MI.getDebugExpression());
+
+  if (AddrDispShift != 0) {
+    DIBuilder DIB(*TheModule);
+    Expr = DIExpression::prependDIExpr(DIB, Expr, false, AddrDispShift, true);
+  }
+
+  // Replace DBG_VALUE instruction with modified version.
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsIndirect = MI.isIndirectDebugValue();
+  int64_t Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
+  const MDNode *Var = MI.getDebugVariable();
+  return BuildMI(*MBB, MBB->erase(&MI), DL, TII->get(TargetOpcode::DBG_VALUE),
+                 IsIndirect, VReg, Offset, Var, Expr);
+}
+
 // Try to find similar LEAs in the list and replace one with another.
 bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
   bool Changed = false;
@@ -563,12 +594,20 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
         // Loop over all uses of the Last LEA and update their operands. Note
         // that the correctness of this has already been checked in the
         // isReplaceable function.
+        unsigned FirstVReg = First.getOperand(0).getReg();
         unsigned LastVReg = Last.getOperand(0).getReg();
-        for (auto UI = MRI->use_nodbg_begin(LastVReg),
-                  UE = MRI->use_nodbg_end();
+        for (auto UI = MRI->use_begin(LastVReg), UE = MRI->use_end();
              UI != UE;) {
           MachineOperand &MO = *UI++;
           MachineInstr &MI = *MO.getParent();
+
+          if (MI.isDebugValue()) {
+            // Replace DBG_VALUE instruction with modified version using the
+            // register from the replacing LEA and the address displacement
+            // between the LEA instructions.
+            replaceDebugValue(MI, FirstVReg, AddrDispShift);
+            continue;
+          }
 
           // Get the number of the first memory operand.
           const MCInstrDesc &Desc = MI.getDesc();
@@ -577,7 +616,7 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
               X86II::getOperandBias(Desc);
 
           // Update address base.
-          MO.setReg(First.getOperand(0).getReg());
+          MO.setReg(FirstVReg);
 
           // Update address disp.
           MachineOperand &Op = MI.getOperand(MemOpNo + X86::AddrDisp);
@@ -587,11 +626,8 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
             Op.setOffset(Op.getOffset() + AddrDispShift);
         }
 
-        // Mark debug values referring to Last LEA as undefined.
-        MRI->markUsesInDebugValueAsUndef(LastVReg);
-
         // Since we can possibly extend register lifetime, clear kill flags.
-        MRI->clearKillFlags(First.getOperand(0).getReg());
+        MRI->clearKillFlags(FirstVReg);
 
         ++NumRedundantLEAs;
         DEBUG(dbgs() << "OptimizeLEAs: Remove redundant LEA: "; Last.dump(););
@@ -612,6 +648,11 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
   }
 
   return Changed;
+}
+
+bool OptimizeLEAPass::doInitialization(Module &M) {
+  TheModule = &M;
+  return false;
 }
 
 bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {

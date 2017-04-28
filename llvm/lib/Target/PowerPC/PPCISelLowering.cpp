@@ -79,6 +79,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -1847,17 +1848,14 @@ bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
     // If this is an or of disjoint bitfields, we can codegen this as an add
     // (for better address arithmetic) if the LHS and RHS of the OR are provably
     // disjoint.
-    APInt LHSKnownZero, LHSKnownOne;
-    APInt RHSKnownZero, RHSKnownOne;
-    DAG.computeKnownBits(N.getOperand(0),
-                         LHSKnownZero, LHSKnownOne);
+    KnownBits LHSKnown, RHSKnown;
+    DAG.computeKnownBits(N.getOperand(0), LHSKnown);
 
-    if (LHSKnownZero.getBoolValue()) {
-      DAG.computeKnownBits(N.getOperand(1),
-                           RHSKnownZero, RHSKnownOne);
+    if (LHSKnown.Zero.getBoolValue()) {
+      DAG.computeKnownBits(N.getOperand(1), RHSKnown);
       // If all of the bits are known zero on the LHS or RHS, the add won't
       // carry.
-      if (~(LHSKnownZero | RHSKnownZero) == 0) {
+      if (~(LHSKnown.Zero | RHSKnown.Zero) == 0) {
         Base = N.getOperand(0);
         Index = N.getOperand(1);
         return true;
@@ -1953,10 +1951,10 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
       // If this is an or of disjoint bitfields, we can codegen this as an add
       // (for better address arithmetic) if the LHS and RHS of the OR are
       // provably disjoint.
-      APInt LHSKnownZero, LHSKnownOne;
-      DAG.computeKnownBits(N.getOperand(0), LHSKnownZero, LHSKnownOne);
+      KnownBits LHSKnown;
+      DAG.computeKnownBits(N.getOperand(0), LHSKnown);
 
-      if ((LHSKnownZero.getZExtValue()|~(uint64_t)imm) == ~0ULL) {
+      if ((LHSKnown.Zero.getZExtValue()|~(uint64_t)imm) == ~0ULL) {
         // If all of the bits are known zero on the LHS or RHS, the add won't
         // carry.
         if (FrameIndexSDNode *FI =
@@ -10318,17 +10316,16 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
     } else {
       // This is neither a signed nor an unsigned comparison, just make sure
       // that the high bits are equal.
-      APInt Op1Zero, Op1One;
-      APInt Op2Zero, Op2One;
-      DAG.computeKnownBits(N->getOperand(0), Op1Zero, Op1One);
-      DAG.computeKnownBits(N->getOperand(1), Op2Zero, Op2One);
+      KnownBits Op1Known, Op2Known;
+      DAG.computeKnownBits(N->getOperand(0), Op1Known);
+      DAG.computeKnownBits(N->getOperand(1), Op2Known);
 
       // We don't really care about what is known about the first bit (if
       // anything), so clear it in all masks prior to comparing them.
-      Op1Zero.clearBit(0); Op1One.clearBit(0);
-      Op2Zero.clearBit(0); Op2One.clearBit(0);
+      Op1Known.Zero.clearBit(0); Op1Known.One.clearBit(0);
+      Op2Known.Zero.clearBit(0); Op2Known.One.clearBit(0);
 
-      if (Op1Zero != Op2Zero || Op1One != Op2One)
+      if (Op1Known.Zero != Op2Known.Zero || Op1Known.One != Op2Known.One)
         return SDValue();
     }
   }
@@ -12015,18 +12012,17 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 //===----------------------------------------------------------------------===//
 
 void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
-                                                      APInt &KnownZero,
-                                                      APInt &KnownOne,
+                                                      KnownBits &Known,
                                                       const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
-  KnownZero = KnownOne = APInt(KnownZero.getBitWidth(), 0);
+  Known.Zero.clearAllBits(); Known.One.clearAllBits();
   switch (Op.getOpcode()) {
   default: break;
   case PPCISD::LBRX: {
     // lhbrx is known to have the top bits cleared out.
     if (cast<VTSDNode>(Op.getOperand(2))->getVT() == MVT::i16)
-      KnownZero = 0xFFFF0000;
+      Known.Zero = 0xFFFF0000;
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -12048,7 +12044,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::ppc_altivec_vcmpgtuh_p:
     case Intrinsic::ppc_altivec_vcmpgtuw_p:
     case Intrinsic::ppc_altivec_vcmpgtud_p:
-      KnownZero = ~1U;  // All bits but the low one are known to be zero.
+      Known.Zero = ~1U;  // All bits but the low one are known to be zero.
       break;
     }
   }

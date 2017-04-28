@@ -872,6 +872,10 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
   if (ActualCount < MemOPCountThreshold)
     return false;
+  // Skip if the total value profiled count is 0, in which case we can't
+  // scale up the counts properly (and there is no profitable transformation).
+  if (TotalCount == 0)
+    return false;
 
   TotalCount = ActualCount;
   if (MemOPScaleCount)
