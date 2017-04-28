@@ -503,7 +503,7 @@ def warn_pragma_diagnostic_invalid_token :
    InGroup<UnknownPragmas>;
 def warn_pragma_diagnostic_unknown_warning :
    ExtWarn<"unknown warning group '%0', ignored">,
-   InGroup<UnknownPragmas>;
+   InGroup<UnknownWarningOption>;
 // - #pragma __debug
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
