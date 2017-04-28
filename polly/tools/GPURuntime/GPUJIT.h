@@ -88,6 +88,7 @@ void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
                                 long MemSize);
 void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
                                 long MemSize);
+void polly_synchronizeDevice();
 void polly_launchKernel(PollyGPUFunction *Kernel, unsigned int GridDimX,
                         unsigned int GridDimY, unsigned int BlockSizeX,
                         unsigned int BlockSizeY, unsigned int BlockSizeZ,

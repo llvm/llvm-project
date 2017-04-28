@@ -762,8 +762,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_from_constraint(
-	struct isl_constraint *constraint)
+__isl_give isl_basic_set *isl_basic_set_from_constraint(
+	__isl_take isl_constraint *constraint)
 {
 	if (!constraint)
 		return NULL;

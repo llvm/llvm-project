@@ -93,6 +93,7 @@ private:
 #endif
     bool was_blocked : 1;
   };
+  class RunImpl;
 
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;

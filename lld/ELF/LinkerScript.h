@@ -228,7 +228,6 @@ protected:
   MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd);
 
   void switchTo(OutputSection *Sec);
-  void flush();
   void output(InputSection *Sec);
   void process(BaseCommand &Base);
 
@@ -241,9 +240,6 @@ protected:
   std::function<uint64_t()> LMAOffset;
   OutputSection *CurOutSec = nullptr;
   MemoryRegion *CurMemRegion = nullptr;
-
-  llvm::DenseSet<OutputSection *> AlreadyOutputOS;
-  llvm::DenseSet<InputSectionBase *> AlreadyOutputIS;
 
 public:
   bool hasPhdrsCommands() { return !Opt.PhdrsCommands.empty(); }
@@ -271,6 +267,7 @@ public:
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
   void processNonSectionCommands();
+  void synchronize();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
   int getSectionIndex(StringRef Name);
 

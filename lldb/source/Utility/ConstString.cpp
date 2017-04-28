@@ -38,14 +38,13 @@ public:
 
   static StringPoolEntryType &
   GetStringMapEntryFromKeyData(const char *keyData) {
-    char *ptr = const_cast<char *>(keyData) - sizeof(StringPoolEntryType);
-    return *reinterpret_cast<StringPoolEntryType *>(ptr);
+    return StringPoolEntryType::GetStringMapEntryFromKeyData(keyData);
   }
 
-  size_t GetConstCStringLength(const char *ccstr) const {
+  static size_t GetConstCStringLength(const char *ccstr) {
     if (ccstr != nullptr) {
-      const uint8_t h = hash(llvm::StringRef(ccstr));
-      llvm::sys::SmartScopedReader<false> rlock(m_string_pools[h].m_mutex);
+      // Since the entry is read only, and we derive the entry entirely from the
+      // pointer, we don't need the lock.
       const StringPoolEntryType &entry = GetStringMapEntryFromKeyData(ccstr);
       return entry.getKey().size();
     }
@@ -218,10 +217,8 @@ bool ConstString::operator<(const ConstString &rhs) const {
   if (m_string == rhs.m_string)
     return false;
 
-  llvm::StringRef lhs_string_ref(m_string,
-                                 StringPool().GetConstCStringLength(m_string));
-  llvm::StringRef rhs_string_ref(
-      rhs.m_string, StringPool().GetConstCStringLength(rhs.m_string));
+  llvm::StringRef lhs_string_ref(GetStringRef());
+  llvm::StringRef rhs_string_ref(rhs.GetStringRef());
 
   // If both have valid C strings, then return the comparison
   if (lhs_string_ref.data() && rhs_string_ref.data())
@@ -240,7 +237,7 @@ Stream &lldb_private::operator<<(Stream &s, const ConstString &str) {
 }
 
 size_t ConstString::GetLength() const {
-  return StringPool().GetConstCStringLength(m_string);
+  return Pool::GetConstCStringLength(m_string);
 }
 
 bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
@@ -255,10 +252,8 @@ bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
     return false;
 
   // perform case insensitive equality test
-  llvm::StringRef lhs_string_ref(
-      lhs.m_string, StringPool().GetConstCStringLength(lhs.m_string));
-  llvm::StringRef rhs_string_ref(
-      rhs.m_string, StringPool().GetConstCStringLength(rhs.m_string));
+  llvm::StringRef lhs_string_ref(lhs.GetStringRef());
+  llvm::StringRef rhs_string_ref(rhs.GetStringRef());
   return lhs_string_ref.equals_lower(rhs_string_ref);
 }
 
@@ -270,10 +265,8 @@ int ConstString::Compare(const ConstString &lhs, const ConstString &rhs,
   if (lhs_cstr == rhs_cstr)
     return 0;
   if (lhs_cstr && rhs_cstr) {
-    llvm::StringRef lhs_string_ref(
-        lhs_cstr, StringPool().GetConstCStringLength(lhs_cstr));
-    llvm::StringRef rhs_string_ref(
-        rhs_cstr, StringPool().GetConstCStringLength(rhs_cstr));
+    llvm::StringRef lhs_string_ref(lhs.GetStringRef());
+    llvm::StringRef rhs_string_ref(rhs.GetStringRef());
 
     if (case_sensitive) {
       return lhs_string_ref.compare(rhs_string_ref);
