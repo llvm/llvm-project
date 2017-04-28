@@ -287,6 +287,14 @@ const char *Preprocessor::getCurLexerEndPos() {
   return EndPos;
 }
 
+static void collectAllSubModulesWithUmbrellaHeader(
+    const Module &Mod, SmallVectorImpl<const Module *> &SubMods) {
+  if (Mod.getUmbrellaHeader())
+    SubMods.push_back(&Mod);
+  for (auto *M : Mod.submodules())
+    collectAllSubModulesWithUmbrellaHeader(*M, SubMods);
+}
+
 void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
   assert(Mod.getUmbrellaHeader() && "Module must use umbrella header");
   SourceLocation StartLoc =
@@ -508,10 +516,15 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   }
 
   // If we are building a module that has an umbrella header, make sure that
-  // each of the headers within the directory covered by the umbrella header
-  // was actually included by the umbrella header.
-  if (Module *Mod = getCurrentModule())
-    diagnoseMissingHeaderInUmbrellaDir(*Mod);
+  // each of the headers within the directory, including all submodules, is
+  // covered by the umbrella header was actually included by the umbrella
+  // header.
+  if (Module *Mod = getCurrentModule()) {
+    llvm::SmallVector<const Module *, 4> AllMods;
+    collectAllSubModulesWithUmbrellaHeader(*Mod, AllMods);
+    for (auto *M : AllMods)
+      diagnoseMissingHeaderInUmbrellaDir(*M);
+  }
 
   return true;
 }
