@@ -53,6 +53,18 @@ static cl::opt<unsigned> MaximumJumpTableSize
   ("max-jump-table-size", cl::init(0), cl::Hidden,
    cl::desc("Set maximum size of jump tables; zero for no limit."));
 
+/// Minimum jump table density for normal functions.
+static cl::opt<unsigned>
+    JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
+                     cl::desc("Minimum density for building a jump table in "
+                              "a normal function"));
+
+/// Minimum jump table density for -Os or -Oz functions.
+static cl::opt<unsigned> OptsizeJumpTableDensity(
+    "optsize-jump-table-density", cl::init(40), cl::Hidden,
+    cl::desc("Minimum density for building a jump table in "
+             "an optsize function"));
+
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
 // is best represented as control flow. Therefore, the default value N should be
@@ -1899,6 +1911,10 @@ unsigned TargetLoweringBase::getMinimumJumpTableEntries() const {
 
 void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
   MinimumJumpTableEntries = Val;
+}
+
+unsigned TargetLoweringBase::getMinimumJumpTableDensity(bool OptForSize) const {
+  return OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
 }
 
 unsigned TargetLoweringBase::getMaximumJumpTableSize() const {

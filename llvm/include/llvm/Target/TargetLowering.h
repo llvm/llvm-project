@@ -775,6 +775,74 @@ public:
     return (!isTypeLegal(VT) && getOperationAction(Op, VT) == Custom);
   }
 
+  /// Return true if lowering to a jump table is allowed.
+  bool areJTsAllowed(const Function *Fn) const {
+    if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
+      return false;
+
+    return isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
+           isOperationLegalOrCustom(ISD::BRIND, MVT::Other);
+  }
+
+  /// Check whether the range [Low,High] fits in a machine word.
+  bool rangeFitsInWord(const APInt &Low, const APInt &High,
+                       const DataLayout &DL) const {
+    // FIXME: Using the pointer type doesn't seem ideal.
+    uint64_t BW = DL.getPointerSizeInBits();
+    uint64_t Range = (High - Low).getLimitedValue(UINT64_MAX - 1) + 1;
+    return Range <= BW;
+  }
+
+  /// Return true if lowering to a jump table is suitable for a set of case
+  /// clusters which may contain \p NumCases cases, \p Range range of values.
+  /// FIXME: This function check the maximum table size and density, but the
+  /// minimum size is not checked. It would be nice if the the minimum size is
+  /// also combined within this function. Currently, the minimum size check is
+  /// performed in findJumpTable() in SelectionDAGBuiler and
+  /// getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
+  bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
+                              uint64_t Range) const {
+    const bool OptForSize = SI->getParent()->getParent()->optForSize();
+    const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
+    const unsigned MaxJumpTableSize =
+        OptForSize || getMaximumJumpTableSize() == 0
+            ? UINT_MAX
+            : getMaximumJumpTableSize();
+    // Check whether a range of clusters is dense enough for a jump table.
+    if (Range <= MaxJumpTableSize &&
+        (NumCases * 100 >= Range * MinDensity)) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Return true if lowering to a bit test is suitable for a set of case
+  /// clusters which contains \p NumDests unique destinations, \p Low and
+  /// \p High as its lowest and highest case values, and expects \p NumCmps
+  /// case value comparisons. Check if the number of destinations, comparison
+  /// metric, and range are all suitable.
+  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
+                             const APInt &Low, const APInt &High,
+                             const DataLayout &DL) const {
+    // FIXME: I don't think NumCmps is the correct metric: a single case and a
+    // range of cases both require only one branch to lower. Just looking at the
+    // number of clusters and destinations should be enough to decide whether to
+    // build bit tests.
+
+    // To lower a range with bit tests, the range must fit the bitwidth of a
+    // machine word.
+    if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    // Decide whether it's profitable to lower this range with bit tests. Each
+    // destination requires a bit test and branch, and there is an overall range
+    // check branch. For a small number of clusters, separate comparisons might
+    // be cheaper, and for many destinations, splitting the range might be
+    // better.
+    return (NumDests == 1 && NumCmps >= 3) || (NumDests == 2 && NumCmps >= 5) ||
+           (NumDests == 3 && NumCmps >= 6);
+  }
+
   /// Return true if the specified operation is illegal on this target or
   /// unlikely to be made legal with custom lowering. This is used to help guide
   /// high-level lowering decisions.
@@ -1148,6 +1216,9 @@ public:
 
   /// Return lower limit for number of blocks in a jump table.
   unsigned getMinimumJumpTableEntries() const;
+
+  /// Return lower limit of the density in a jump table.
+  unsigned getMinimumJumpTableDensity(bool OptForSize) const;
 
   /// Return upper limit for number of entries in a jump table.
   /// Zero if no limit.

@@ -25,7 +25,7 @@ extern "C" {
 
 unsigned isl_basic_set_n_dim(__isl_keep isl_basic_set *bset);
 unsigned isl_basic_set_n_param(__isl_keep isl_basic_set *bset);
-unsigned isl_basic_set_total_dim(const struct isl_basic_set *bset);
+unsigned isl_basic_set_total_dim(__isl_keep const isl_basic_set *bset);
 unsigned isl_basic_set_dim(__isl_keep isl_basic_set *bset,
 				enum isl_dim_type type);
 
@@ -258,7 +258,7 @@ __isl_give isl_basic_set *isl_set_plain_unshifted_simple_hull(
 	__isl_take isl_set *set);
 __isl_give isl_basic_set *isl_set_unshifted_simple_hull_from_set_list(
 	__isl_take isl_set *set, __isl_take isl_set_list *list);
-struct isl_basic_set *isl_set_bounded_simple_hull(struct isl_set *set);
+__isl_give isl_basic_set *isl_set_bounded_simple_hull(__isl_take isl_set *set);
 
 struct isl_set *isl_set_union_disjoint(
 			struct isl_set *set1, struct isl_set *set2);

@@ -4333,14 +4333,12 @@ static int has_any_coincidence(struct isl_sched_graph *graph)
  */
 static __isl_give isl_map *final_row(struct isl_sched_node *node)
 {
-	isl_local_space *ls;
-	isl_aff *aff;
+	isl_multi_aff *ma;
 	int row;
 
 	row = isl_mat_rows(node->sched) - 1;
-	ls = isl_local_space_from_space(isl_space_copy(node->space));
-	aff = extract_schedule_row(ls, node, row);
-	return isl_map_from_aff(aff);
+	ma = node_extract_partial_schedule_multi_aff(node, row, 1);
+	return isl_map_from_multi_aff(ma);
 }
 
 /* Is the conditional validity dependence in the edge with index "edge_index"

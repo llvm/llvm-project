@@ -3746,7 +3746,7 @@ static __isl_give isl_map *update_basic_maps(__isl_take isl_map *map,
  * For each basic map, we also compute the hash of the apparent affine hull
  * for use in coalesce.
  */
-struct isl_map *isl_map_coalesce(struct isl_map *map)
+__isl_give isl_map *isl_map_coalesce(__isl_take isl_map *map)
 {
 	int i;
 	unsigned n;

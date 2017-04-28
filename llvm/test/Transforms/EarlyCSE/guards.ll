@@ -3,6 +3,8 @@
 
 declare void @llvm.experimental.guard(i1,...)
 
+declare void @llvm.assume(i1)
+
 define i32 @test0(i32* %ptr, i1 %cond) {
 ; We can do store to load forwarding over a guard, since it does not
 ; clobber memory
@@ -178,5 +180,349 @@ define void @test6(i1 %c, i32* %ptr) {
   store i32 500, i32* %ptr
   call void(i1,...) @llvm.experimental.guard(i1 %c) [ "deopt"() ]
   store i32 600, i32* %ptr
+  ret void
+}
+
+define void @test07(i32 %a, i32 %b) {
+; Check that we are able to remove the guards on the same condition even if the
+; condition is not being recalculated.
+
+; CHECK-LABEL: @test07(
+; CHECK-NEXT:  %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:  ret void
+
+  %cmp = icmp eq i32 %a, %b
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  ret void
+}
+
+define void @test08(i32 %a, i32 %b, i32* %ptr) {
+; Check that we deal correctly with stores when removing guards in the same
+; block in case when the condition is not recalculated.
+
+; CHECK-LABEL: @test08(
+; CHECK-NEXT:  %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:  store i32 100, i32* %ptr
+; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:  store i32 400, i32* %ptr
+; CHECK-NEXT:  ret void
+
+  %cmp = icmp eq i32 %a, %b
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 200, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  ret void
+}
+
+define void @test09(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+; Similar to test08, but with more control flow.
+; TODO: Can we get rid of the store in the end of entry given that it is
+; post-dominated by other stores?
+
+; CHECK-LABEL: @test09(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    store i32 100, i32* %ptr
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:    store i32 400, i32* %ptr
+; CHECK-NEXT:    br i1 %c, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    store i32 500, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    store i32 600, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 200, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 500, i32* %ptr
+  br label %merge
+
+if.false:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 600, i32* %ptr
+  br label %merge
+
+merge:
+  ret void
+}
+
+define void @test10(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+; Make sure that non-dominating guards do not cause other guards removal.
+
+; CHECK-LABEL: @test10(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    br i1 %c, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:    store i32 100, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    store i32 200, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    store i32 300, i32* %ptr
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:    store i32 400, i32* %ptr
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  br label %merge
+
+if.false:
+  store i32 200, i32* %ptr
+  br label %merge
+
+merge:
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  ret void
+}
+
+define void @test11(i32 %a, i32 %b, i32* %ptr) {
+; Make sure that branching condition is applied to guards.
+
+; CHECK-LABEL: @test11(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    br i1 %cmp, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  br label %merge
+
+if.false:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  br label %merge
+
+merge:
+  ret void
+}
+
+define void @test12(i32 %a, i32 %b) {
+; Check that the assume marks its condition as being true (and thus allows to
+; eliminate the dominated guards).
+
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:  %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:  call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:  ret void
+
+  %cmp = icmp eq i32 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  ret void
+}
+
+define void @test13(i32 %a, i32 %b, i32* %ptr) {
+; Check that we deal correctly with stores when removing guards due to assume.
+
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:  call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:  store i32 400, i32* %ptr
+; CHECK-NEXT:  ret void
+
+  %cmp = icmp eq i32 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 200, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  ret void
+}
+
+define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+; Similar to test13, but with more control flow.
+; TODO: Can we get rid of the store in the end of entry given that it is
+; post-dominated by other stores?
+
+; CHECK-LABEL: @test14(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    store i32 400, i32* %ptr
+; CHECK-NEXT:    br i1 %c, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    store i32 500, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    store i32 600, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 200, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 500, i32* %ptr
+  br label %merge
+
+if.false:
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 600, i32* %ptr
+  br label %merge
+
+merge:
+  ret void
+}
+
+define void @test15(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+; Make sure that non-dominating assumes do not cause guards removal.
+
+; CHECK-LABEL: @test15(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    br i1 %c, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    store i32 100, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    store i32 200, i32* %ptr
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    store i32 300, i32* %ptr
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+; CHECK-NEXT:    store i32 400, i32* %ptr
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  call void @llvm.assume(i1 %cmp)
+  store i32 100, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  br label %merge
+
+if.false:
+  store i32 200, i32* %ptr
+  br label %merge
+
+merge:
+  store i32 300, i32* %ptr
+  call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  store i32 400, i32* %ptr
+  ret void
+}
+
+define void @test16(i32 %a, i32 %b) {
+; Check that we don't bother to do anything with assumes even if we know the
+; condition being true.
+
+; CHECK-LABEL: @test16(
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    ret void
+
+  %cmp = icmp eq i32 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @test17(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+; Check that we don't bother to do anything with assumes even if we know the
+; condition being true or false (includes come control flow).
+
+; CHECK-LABEL: @test17(
+; CHECK:       entry:
+; CHECK-NEXT:    %cmp = icmp eq i32 %a, %b
+; CHECK-NEXT:    br i1 %c, label %if.true, label %if.false
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    br label %merge
+; CHECK:       if.false:
+; CHECK-NEXT:    call void @llvm.assume(i1 %cmp)
+; CHECK-NEXT:    br label %merge
+; CHECK:       merge:
+; CHECK-NEXT:    ret void
+
+entry:
+  %cmp = icmp eq i32 %a, %b
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  call void @llvm.assume(i1 %cmp)
+  br label %merge
+
+if.false:
+  call void @llvm.assume(i1 %cmp)
+  br label %merge
+
+merge:
+  ret void
+}
+
+define void @test18(i1 %c) {
+; Check that we don't bother to do anything with assumes even if we know the
+; condition being true and not being an instruction.
+
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:    call void @llvm.assume(i1 %c)
+; CHECK-NEXT:    call void @llvm.assume(i1 %c)
+; CHECK-NEXT:    ret void
+
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
   ret void
 }

@@ -2318,6 +2318,22 @@ define <2 x double> @test_mm_set_pd(double %a0, double %a1) nounwind {
   ret <2 x double> %res1
 }
 
+define <2 x double> @test_mm_set_pd1(double %a0) nounwind {
+; X32-LABEL: test_mm_set_pd1:
+; X32:       # BB#0:
+; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_set_pd1:
+; X64:       # BB#0:
+; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    retq
+  %res0  = insertelement <2 x double> undef, double %a0, i32 0
+  %res1  = insertelement <2 x double> %res0, double %a0, i32 1
+  ret <2 x double> %res1
+}
+
 define <2 x double> @test_mm_set_sd(double %a0) nounwind {
 ; X32-LABEL: test_mm_set_sd:
 ; X32:       # BB#0:

@@ -635,10 +635,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // Skip assume intrinsics, they don't really have side effects (although
     // they're marked as such to ensure preservation of control dependencies),
-    // and this pass will not disturb any of the assumption's control
-    // dependencies.
+    // and this pass will not bother with its removal. However, we should mark
+    // its condition as true for all dominated blocks.
     if (match(Inst, m_Intrinsic<Intrinsic::assume>())) {
-      DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
+      auto *CondI =
+          dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0));
+      if (CondI && SimpleValue::canHandle(CondI)) {
+        DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst << '\n');
+        AvailableValues.insert(CondI, ConstantInt::getTrue(BB->getContext()));
+      } else
+        DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
       continue;
     }
 
@@ -658,10 +664,25 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (match(Inst, m_Intrinsic<Intrinsic::experimental_guard>())) {
       if (auto *CondI =
               dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0))) {
-        // The condition we're on guarding here is true for all dominated
-        // locations.
-        if (SimpleValue::canHandle(CondI))
+        if (SimpleValue::canHandle(CondI)) {
+          // Do we already know the actual value of this condition?
+          if (auto *KnownCond = AvailableValues.lookup(CondI)) {
+            // Is the condition known to be true?
+            if (isa<ConstantInt>(KnownCond) &&
+                cast<ConstantInt>(KnownCond)->isOneValue()) {
+              DEBUG(dbgs() << "EarlyCSE removing guard: " << *Inst << '\n');
+              removeMSSA(Inst);
+              Inst->eraseFromParent();
+              Changed = true;
+              continue;
+            } else
+              // Use the known value if it wasn't true.
+              cast<CallInst>(Inst)->setArgOperand(0, KnownCond);
+          }
+          // The condition we're on guarding here is true for all dominated
+          // locations.
           AvailableValues.insert(CondI, ConstantInt::getTrue(BB->getContext()));
+        }
       }
 
       // Guard intrinsics read all memory, but don't write any memory.

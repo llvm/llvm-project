@@ -171,6 +171,62 @@ public:
     return BaseT::getIntrinsicCost(IID, RetTy, ParamTys);
   }
 
+  unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                            unsigned &JumpTableSize) {
+    /// Try to find the estimated number of clusters. Note that the number of
+    /// clusters identified in this function could be different from the actural
+    /// numbers found in lowering. This function ignore switches that are
+    /// lowered with a mix of jump table / bit test / BTree. This function was
+    /// initially intended to be used when estimating the cost of switch in
+    /// inline cost heuristic, but it's a generic cost model to be used in other
+    /// places (e.g., in loop unrolling).
+    unsigned N = SI.getNumCases();
+    const TargetLoweringBase *TLI = getTLI();
+    const DataLayout &DL = this->getDataLayout();
+
+    JumpTableSize = 0;
+    bool IsJTAllowed = TLI->areJTsAllowed(SI.getParent()->getParent());
+
+    // Early exit if both a jump table and bit test are not allowed.
+    if (N < 1 || (!IsJTAllowed && DL.getPointerSizeInBits() < N))
+      return N;
+
+    APInt MaxCaseVal = SI.case_begin()->getCaseValue()->getValue();
+    APInt MinCaseVal = MaxCaseVal;
+    for (auto CI : SI.cases()) {
+      const APInt &CaseVal = CI.getCaseValue()->getValue();
+      if (CaseVal.sgt(MaxCaseVal))
+        MaxCaseVal = CaseVal;
+      if (CaseVal.slt(MinCaseVal))
+        MinCaseVal = CaseVal;
+    }
+
+    // Check if suitable for a bit test
+    if (N <= DL.getPointerSizeInBits()) {
+      SmallPtrSet<const BasicBlock *, 4> Dests;
+      for (auto I : SI.cases())
+        Dests.insert(I.getCaseSuccessor());
+
+      if (TLI->isSuitableForBitTests(Dests.size(), N, MinCaseVal, MaxCaseVal,
+                                     DL))
+        return 1;
+    }
+
+    // Check if suitable for a jump table.
+    if (IsJTAllowed) {
+      if (N < 2 || N < TLI->getMinimumJumpTableEntries())
+        return N;
+      uint64_t Range =
+          (MaxCaseVal - MinCaseVal).getLimitedValue(UINT64_MAX - 1) + 1;
+      // Check whether a range of clusters is dense enough for a jump table
+      if (TLI->isSuitableForJumpTable(&SI, N, Range)) {
+        JumpTableSize = Range;
+        return 1;
+      }
+    }
+    return N;
+  }
+
   unsigned getJumpBufAlignment() { return getTLI()->getJumpBufAlignment(); }
 
   unsigned getJumpBufSize() { return getTLI()->getJumpBufSize(); }

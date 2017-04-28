@@ -951,6 +951,13 @@ __m128d test_mm_set_pd(double A, double B) {
   return _mm_set_pd(A, B);
 }
 
+__m128d test_mm_set_pd1(double A) {
+  // CHECK-LABEL: test_mm_set_pd1
+  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
+  return _mm_set_pd1(A);
+}
+
 __m128d test_mm_set_sd(double A) {
   // CHECK-LABEL: test_mm_set_sd
   // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0

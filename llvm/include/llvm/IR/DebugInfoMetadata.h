@@ -56,6 +56,8 @@
 
 namespace llvm {
 
+class DIBuilder;
+
 template <typename T> class Optional;
 
 /// Holds a subclass of DINode.
@@ -2275,6 +2277,15 @@ public:
 
   /// Return whether this is a piece of an aggregate variable.
   bool isFragment() const { return getFragmentInfo().hasValue(); }
+
+  /// Append \p Ops with operations to apply the \p Offset.
+  static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
+
+  /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
+  /// into a stack value.
+  static DIExpression *prependDIExpr(DIBuilder &Builder, DIExpression *DIExpr,
+                                     bool Deref, int64_t Offset = 0,
+                                     bool StackValue = false);
 };
 
 /// Global variables.
