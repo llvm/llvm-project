@@ -71,6 +71,10 @@ void take_block(void (^block)()) { block(); }
 // ARC:   %[[CAPTURE1:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %[[BLOCK]], i32 0, i32 5
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE1]]
 
+// ARC-LABEL: define internal void @"_ZZ10-[Foo foo]ENK3$_4clEv"(
+// ARC-NOT: @objc_storeStrong(
+// ARC: ret void
+
 // ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke"
 // ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %{{.*}}, i32 0, i32 5
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE2]]
@@ -124,6 +128,15 @@ namespace BlockInLambda {
   };
 }
 
+@interface NSObject @end
+@interface Foo : NSObject @end
+@implementation Foo
+- (void)foo {
+  [&] {
+    ^{ (void)self; }();
+  }();
+}
+@end
 
 // ARC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 // MRC: attributes [[NUW]] = { noinline nounwind{{.*}} }
