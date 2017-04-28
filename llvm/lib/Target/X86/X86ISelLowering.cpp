@@ -26712,15 +26712,15 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
-        KnownZero = APInt::getAllOnesValue(BitWidth);
+        KnownZero.setAllBits();
         break;
       }
 
       DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
       unsigned ShAmt = ShiftImm->getZExtValue();
       if (Opc == X86ISD::VSHLI) {
-        KnownZero = KnownZero << ShAmt;
-        KnownOne = KnownOne << ShAmt;
+        KnownZero <<= ShAmt;
+        KnownOne <<= ShAmt;
         // Low bits are known zero.
         KnownZero.setLowBits(ShAmt);
       } else {
@@ -31056,8 +31056,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue N00 = N0.getOperand(0);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    const APInt &ShAmt = N1C->getAPIntValue();
-    Mask = Mask.shl(ShAmt);
+    Mask <<= N1C->getAPIntValue();
     bool MaskOK = false;
     // We can handle cases concerning bit-widening nodes containing setcc_c if
     // we carefully interrogate the mask to make sure we are semantics
@@ -31267,9 +31266,9 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     unsigned ShiftImm = ShiftVal.getZExtValue();
     for (APInt &Elt : EltBits) {
       if (X86ISD::VSHLI == Opcode)
-        Elt = Elt.shl(ShiftImm);
+        Elt <<= ShiftImm;
       else if (X86ISD::VSRAI == Opcode)
-        Elt = Elt.ashr(ShiftImm);
+        Elt.ashrInPlace(ShiftImm);
       else
         Elt.lshrInPlace(ShiftImm);
     }

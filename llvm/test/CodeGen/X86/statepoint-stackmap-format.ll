@@ -79,7 +79,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK-LABEL: .section .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 2
+; CHECK-NEXT:   .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -114,58 +114,80 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK: .short	11
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant (2)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	2
 ; Indirect Spill Slot [RSP+0]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+8]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	8
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 
 ; No Padding or LiveOuts
@@ -186,53 +208,73 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK: .short	11
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant (2)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	2
 ; Indirect Spill Slot [RSP+0]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+8]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	8
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+16]
 ; CHECK: .byte	3
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 
 ; No Padding or LiveOuts
@@ -257,22 +299,28 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; StkMapRecord[0]:
 ; SmallConstant(0):
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 
 ; StkMapRecord[1]:
 ; SmallConstant(0):
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 
 ; StkMapRecord[2]:
 ; SmallConstant(0):
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
 ; CHECK: .short	0
+; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 
 ; No padding or LiveOuts

@@ -524,3 +524,23 @@ define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %not
 }
 
+; https://bugs.llvm.org/show_bug.cgi?id=32830
+; Make sure we're matching operands correctly and not folding things wrongly.
+
+define i64 @PR32830(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @PR32830(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i64 %a, -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i64 %b, -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[NOTB]], %a
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[NOTA]], %c
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[OR1]], [[OR2]]
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %nota = xor i64 %a, -1
+  %notb = xor i64 %b, -1
+  %or1 = or i64 %notb, %a
+  %or2 = or i64 %nota, %c
+  %and = and i64 %or1, %or2
+  ret i64 %and
+}
+

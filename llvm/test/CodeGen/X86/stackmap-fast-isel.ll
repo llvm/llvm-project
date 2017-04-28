@@ -4,7 +4,7 @@
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 2
+; CHECK-NEXT:   .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -42,62 +42,86 @@
 ; CHECK-NEXT:   .short  12
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65536
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2000000000
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2147483647
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 0
 ; CHECK-NEXT:   .byte   5
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 1
 ; CHECK-NEXT:   .byte   5
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   1
 ; LargeConstant at index 2
 ; CHECK-NEXT:   .byte   5
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 
@@ -115,7 +139,9 @@ entry:
 ; CHECK-NEXT:   .short 1
 ; Loc 0: SmallConstant
 ; CHECK-NEXT:   .byte   4
-; CHECK-NEXT:   .byte   8
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   33
 
@@ -133,8 +159,10 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short	1
 ; Loc 0: Direct RBP - ofs
 ; CHECK-NEXT:   .byte	2
-; CHECK-NEXT:   .byte	8
+; CHECK-NEXT:   .byte	0
+; CHECK-NEXT:   .short	8
 ; CHECK-NEXT:   .short	6
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long
 
 define void @directFrameIdx() {

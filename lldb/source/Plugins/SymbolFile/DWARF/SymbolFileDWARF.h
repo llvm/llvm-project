@@ -226,6 +226,8 @@ public:
       const lldb_private::ConstString &name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
 
+  void PreloadSymbols() override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------

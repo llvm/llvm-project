@@ -319,6 +319,27 @@ Error LLVMOutputStyle::dumpBlockRanges() {
   return Error::success();
 }
 
+static Error parseStreamSpec(StringRef Str, uint32_t &SI, uint32_t &Offset,
+                             uint32_t &Size) {
+  if (Str.consumeInteger(0, SI))
+    return make_error<RawError>(raw_error_code::invalid_format,
+                                "Invalid Stream Specification");
+  if (Str.consume_front(":")) {
+    if (Str.consumeInteger(0, Offset))
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Invalid Stream Specification");
+  }
+  if (Str.consume_front("@")) {
+    if (Str.consumeInteger(0, Size))
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Invalid Stream Specification");
+  }
+  if (!Str.empty())
+    return make_error<RawError>(raw_error_code::invalid_format,
+                                "Invalid Stream Specification");
+  return Error::success();
+}
+
 Error LLVMOutputStyle::dumpStreamBytes() {
   if (opts::raw::DumpStreamData.empty())
     return Error::success();
@@ -327,7 +348,15 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     discoverStreamPurposes(File, StreamPurposes);
 
   DictScope D(P, "Stream Data");
-  for (uint32_t SI : opts::raw::DumpStreamData) {
+  for (auto &Str : opts::raw::DumpStreamData) {
+    uint32_t SI = 0;
+    uint32_t Begin = 0;
+    uint32_t Size = 0;
+    uint32_t End = 0;
+
+    if (auto EC = parseStreamSpec(Str, SI, Begin, Size))
+      return EC;
+
     if (SI >= File.getNumStreams())
       return make_error<RawError>(raw_error_code::no_stream);
 
@@ -336,6 +365,14 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     if (!S)
       continue;
     DictScope DD(P, "Stream");
+    if (Size == 0)
+      End = S->getLength();
+    else {
+      End = Begin + Size;
+      if (End >= S->getLength())
+        return make_error<RawError>(raw_error_code::index_out_of_bounds,
+                                    "Stream is not long enough!");
+    }
 
     P.printNumber("Index", SI);
     P.printString("Type", StreamPurposes[SI]);
@@ -347,7 +384,9 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     ArrayRef<uint8_t> StreamData;
     if (auto EC = R.readBytes(StreamData, S->getLength()))
       return EC;
-    P.printBinaryBlock("Data", StreamData);
+    Size = End - Begin;
+    StreamData = StreamData.slice(Begin, Size);
+    P.printBinaryBlock("Data", StreamData, Begin);
   }
   return Error::success();
 }

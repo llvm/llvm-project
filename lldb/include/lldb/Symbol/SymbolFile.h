@@ -180,6 +180,8 @@ public:
                           uint32_t type_mask,
                           lldb_private::TypeList &type_list) = 0;
 
+  virtual void PreloadSymbols();
+
   virtual lldb_private::TypeSystem *
   GetTypeSystemForLanguage(lldb::LanguageType language);
 

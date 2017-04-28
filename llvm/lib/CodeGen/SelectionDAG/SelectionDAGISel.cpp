@@ -1934,7 +1934,7 @@ bool SelectionDAGISel::CheckOrMask(SDValue LHS, ConstantSDNode *RHS,
   CurDAG->computeKnownBits(LHS, KnownZero, KnownOne);
 
   // If all the missing bits in the or are already known to be set, match!
-  if ((NeededMask & KnownOne) == NeededMask)
+  if (NeededMask.isSubsetOf(KnownOne))
     return true;
 
   // TODO: check to see if missing bits are just not demanded.

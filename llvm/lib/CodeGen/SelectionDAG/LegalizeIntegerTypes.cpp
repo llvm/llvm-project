@@ -1563,7 +1563,7 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // If we know that all of the high bits of the shift amount are zero, then we
   // can do this as a couple of simple shifts.
-  if ((KnownZero & HighBitMask) == HighBitMask) {
+  if (HighBitMask.isSubsetOf(KnownZero)) {
     // Calculate 31-x. 31 is used instead of 32 to avoid creating an undefined
     // shift if x is zero.  We can use XOR here because x is known to be smaller
     // than 32.

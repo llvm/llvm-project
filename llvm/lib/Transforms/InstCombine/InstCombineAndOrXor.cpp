@@ -1213,7 +1213,7 @@ static Instruction *foldAndToXor(BinaryOperator &I,
   // (~B | A) & (~A | B) --> ~(A ^ B)
   // (~B | A) & (B | ~A) --> ~(A ^ B)
   if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Value(B))))
+      match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B))))
     return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
   return nullptr;

@@ -319,7 +319,7 @@ format of this section follows:
 .. code-block:: none
 
   Header {
-    uint8  : Stack Map Version (current version is 2)
+    uint8  : Stack Map Version (current version is 3)
     uint8  : Reserved (expected to be 0)
     uint16 : Reserved (expected to be 0)
   }
@@ -341,10 +341,13 @@ format of this section follows:
     uint16 : NumLocations
     Location[NumLocations] {
       uint8  : Register | Direct | Indirect | Constant | ConstantIndex
-      uint8  : Reserved (location flags)
+      uint8  : Reserved (expected to be 0)
+      uint16 : Location Size
       uint16 : Dwarf RegNum
+      uint16 : Reserved (expected to be 0)
       int32  : Offset or SmallConstant
     }
+    uint32 : Padding (only if required to align to 8 byte)
     uint16 : Padding
     uint16 : NumLiveOuts
     LiveOuts[NumLiveOuts]

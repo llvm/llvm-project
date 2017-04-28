@@ -752,16 +752,11 @@ Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
 }
 
 const FileEntry *Preprocessor::LookupFile(
-    SourceLocation FilenameLoc,
-    StringRef Filename,
-    bool isAngled,
-    const DirectoryLookup *FromDir,
-    const FileEntry *FromFile,
-    const DirectoryLookup *&CurDir,
-    SmallVectorImpl<char> *SearchPath,
+    SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
+    const DirectoryLookup *FromDir, const FileEntry *FromFile,
+    const DirectoryLookup *&CurDir, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath,
-    ModuleMap::KnownHeader *SuggestedModule,
-    bool SkipCache) {
+    ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped, bool SkipCache) {
   Module *RequestingModule = getModuleForLocation(FilenameLoc);
   bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
@@ -819,7 +814,7 @@ const FileEntry *Preprocessor::LookupFile(
     while (const FileEntry *FE = HeaderInfo.LookupFile(
                Filename, FilenameLoc, isAngled, TmpFromDir, TmpCurDir,
                Includers, SearchPath, RelativePath, RequestingModule,
-               SuggestedModule, SkipCache)) {
+               SuggestedModule, /*IsMapped=*/nullptr, SkipCache)) {
       // Keep looking as if this file did a #include_next.
       TmpFromDir = TmpCurDir;
       ++TmpFromDir;
@@ -835,7 +830,7 @@ const FileEntry *Preprocessor::LookupFile(
   // Do a standard file entry lookup.
   const FileEntry *FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, CurDir, Includers, SearchPath,
-      RelativePath, RequestingModule, SuggestedModule, SkipCache,
+      RelativePath, RequestingModule, SuggestedModule, IsMapped, SkipCache,
       BuildSystemModule);
   if (FE) {
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
@@ -1783,6 +1778,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   }
 
   // Search include directories.
+  bool IsMapped = false;
   const DirectoryLookup *CurDir;
   SmallString<1024> SearchPath;
   SmallString<1024> RelativePath;
@@ -1801,7 +1797,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
       isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
-      &SuggestedModule);
+      &SuggestedModule, &IsMapped);
 
   if (!File) {
     if (Callbacks) {
@@ -1818,7 +1814,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
               FilenameLoc,
               LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
               LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
-              &SuggestedModule, /*SkipCache*/ true);
+              &SuggestedModule, &IsMapped, /*SkipCache*/ true);
         }
       }
     }
@@ -1833,8 +1829,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
             LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, false,
             LookupFrom, LookupFromFile, CurDir,
             Callbacks ? &SearchPath : nullptr,
-            Callbacks ? &RelativePath : nullptr,
-            &SuggestedModule);
+            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);
         if (File) {
           SourceRange Range(FilenameTok.getLocation(), CharEnd);
           Diag(FilenameTok, diag::err_pp_file_not_found_not_fatal) <<
@@ -1964,7 +1959,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // Issue a diagnostic if the name of the file on disk has a different case
   // than the one we're about to open.
   const bool CheckIncludePathPortability =
-    File && !File->tryGetRealPathName().empty();
+      !IsMapped && File && !File->tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
     StringRef Name = LangOpts.MSVCCompat ? NormalizedPath.str() : Filename;
