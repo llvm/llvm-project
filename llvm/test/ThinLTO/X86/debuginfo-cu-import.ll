@@ -43,7 +43,7 @@ entry:
 !1 = !DIFile(filename: "a2.cc", directory: "")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "enum1", scope: !4, file: !1, line: 50, size: 32, elements: !5, identifier: "_ZTSN9__gnu_cxx12_Lock_policyE")
-!4 = !DINamespace(name: "A", scope: null, file: !1, line: 1)
+!4 = !DINamespace(name: "A", scope: null)
 !5 = !{}
 !6 = !{!7}
 !7 = !DICompositeType(tag: DW_TAG_structure_type, name: "Base", file: !1, line: 1, size: 32, align: 32, elements: !5, identifier: "_ZTS4Base")

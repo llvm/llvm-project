@@ -110,9 +110,9 @@ attributes #1 = { nounwind readnone }
 
 !0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "g", linkageName: "\01?g@bar@foo@@3UGlobalRecord@12@A", scope: !2, file: !3, line: 12, type: !5, isLocal: false, isDefinition: true)
-!2 = !DINamespace(name: "bar", scope: !4, file: !3, line: 2)
+!2 = !DINamespace(name: "bar", scope: !4)
 !3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
-!4 = !DINamespace(name: "foo", scope: null, file: !3, line: 1)
+!4 = !DINamespace(name: "foo", scope: null)
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "GlobalRecord", scope: !2, file: !3, line: 9, size: 32, align: 32, elements: !6, identifier: ".?AUGlobalRecord@bar@foo@@")
 !6 = !{!7, !9}
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !5, file: !3, line: 10, baseType: !8, size: 32, align: 32)
