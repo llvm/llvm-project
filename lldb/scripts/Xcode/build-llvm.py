@@ -5,6 +5,7 @@ import fnmatch
 import os
 import platform
 import re
+import repo
 import subprocess
 import sys
 
@@ -16,59 +17,39 @@ from lldbbuild import *
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
-# The use of "x = "..."; return x" here is important because tooling looks for
-# it with regexps.  Only change how this works if you know what you are doing.
-
-
-def LLVM_REF():
-    llvm_ref = "stable"
-    return llvm_ref
-
-
-def CLANG_REF():
-    clang_ref = "stable"
-    return clang_ref
-
-
-def SWIFT_REF():
-    swift_ref = "master"
-    return swift_ref
 
 # For use with Xcode-style builds
 
+def process_vcs(vcs):
+    return {
+        "svn": VCS.svn,
+        "git": VCS.git
+    }[vcs]
+
+def process_root(name):
+    return {
+        "llvm": llvm_source_path(),
+        "clang": clang_source_path(),
+        "swift": swift_source_path(),
+        "cmark": cmark_source_path(),
+        "ninja": ninja_source_path()
+    }[name]
+
+def process_repo(r):
+    return {
+        'name': r["name"],
+        'vcs': process_vcs(r["vcs"]),
+        'root': process_root(r["name"]),
+        'url': r["url"],
+        'ref': r["ref"]
+    }
 
 def XCODE_REPOSITORIES():
-    return [
-        {'name': "llvm",
-         'vcs': VCS.git,
-         'root': llvm_source_path(),
-         'url': "ssh://git@github.com/apple/swift-llvm.git",
-         'ref': LLVM_REF()},
-
-        {'name': "clang",
-         'vcs': VCS.git,
-         'root': clang_source_path(),
-         'url': "ssh://git@github.com/apple/swift-clang.git",
-         'ref': CLANG_REF()},
-
-        {'name': "swift",
-         'vcs': VCS.git,
-         'root': swift_source_path(),
-         'url': "ssh://git@github.com/apple/swift.git",
-         'ref': SWIFT_REF()},
-
-        {'name': "cmark",
-         'vcs': VCS.git,
-         'root': cmark_source_path(),
-         'url': "ssh://git@github.com/apple/swift-cmark.git",
-         'ref': "master"},
-
-        {'name': "ninja",
-         'vcs': VCS.git,
-         'root': ninja_source_path(),
-         'url': "https://github.com/ninja-build/ninja.git",
-         'ref': "master"}
-    ]
+    identifier = repo.identifier()
+    if identifier == None:
+        identifier = "<invalid>" # repo.find will just use the fallback file
+    set = repo.find(identifier)
+    return [process_repo(r) for r in set]
 
 
 def BUILD_SCRIPT_FLAGS():
