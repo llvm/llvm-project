@@ -2160,11 +2160,13 @@ public:
   /// Append \p Ops with operations to apply the \p Offset.
   static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
 
+  /// Constants for DIExpression::prepend.
+  enum { NoDeref = false, WithDeref = true, WithStackValue = true };
+
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value.
-  static DIExpression *prependDIExpr(DIBuilder &Builder, DIExpression *DIExpr,
-                                     bool Deref, int64_t Offset = 0,
-                                     bool StackValue = false);
+  static DIExpression *prepend(DIExpression *DIExpr, bool Deref,
+                               int64_t Offset = 0, bool StackValue = false);
 };
 
 /// Global variables.
