@@ -1184,7 +1184,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   finishPendingPhis();
 
-  TLI->finalizeLowering(*MF);
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  TLI.finalizeLowering(*MF);
 
   // Merge the argument lowering and constants block with its single
   // successor, the LLVM-IR entry block.  We want the basic block to
