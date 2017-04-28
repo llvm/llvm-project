@@ -5,7 +5,6 @@ import fnmatch
 import os
 import platform
 import re
-import repo
 import subprocess
 import sys
 
@@ -17,118 +16,66 @@ from lldbbuild import *
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
+# The use of "x = "..."; return x" here is important because tooling looks for
+# it with regexps.  Only change how this works if you know what you are doing.
+
+
+def LLVM_REF():
+    llvm_ref = "stable"
+    return llvm_ref
+
+
+def CLANG_REF():
+    clang_ref = "stable"
+    return clang_ref
+
+
+def SWIFT_REF():
+    swift_ref = "master"
+    return swift_ref
+
 # For use with Xcode-style builds
 
-def process_vcs(vcs):
-    return {
-        "svn": VCS.svn,
-        "git": VCS.git
-    }[vcs]
-
-def process_root(name):
-    return {
-        "llvm": llvm_source_path(),
-        "clang": clang_source_path(),
-        "swift": swift_source_path(),
-        "cmark": cmark_source_path(),
-        "ninja": ninja_source_path()
-    }[name]
-
-def process_repo(r):
-    return {
-        'name': r["name"],
-        'vcs': process_vcs(r["vcs"]),
-        'root': process_root(r["name"]),
-        'url': r["url"],
-        'ref': r["ref"]
-    }
 
 def XCODE_REPOSITORIES():
-    identifier = repo.identifier()
-    if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
-    set = repo.find(identifier)
-    return [process_repo(r) for r in set]
+    return [
+        {'name': "llvm",
+         'vcs': VCS.git,
+         'root': llvm_source_path(),
+         'url': "ssh://git@github.com/apple/swift-llvm.git",
+         'ref': LLVM_REF()},
 
+        {'name': "clang",
+         'vcs': VCS.git,
+         'root': clang_source_path(),
+         'url': "ssh://git@github.com/apple/swift-clang.git",
+         'ref': CLANG_REF()},
 
-def get_c_compiler():
-    return subprocess.check_output([
-        'xcrun',
-        '--sdk', 'macosx',
-        '-find', 'clang'
-    ]).rstrip()
+        {'name': "swift",
+         'vcs': VCS.git,
+         'root': swift_source_path(),
+         'url': "ssh://git@github.com/apple/swift.git",
+         'ref': SWIFT_REF()},
 
+        {'name': "cmark",
+         'vcs': VCS.git,
+         'root': cmark_source_path(),
+         'url': "ssh://git@github.com/apple/swift-cmark.git",
+         'ref': "master"},
 
-def get_cxx_compiler():
-    return subprocess.check_output([
-        'xcrun',
-        '--sdk', 'macosx',
-        '-find', 'clang++'
-    ]).rstrip()
-
-#                 CFLAGS="-isysroot $(xcrun --sdk macosx --show-sdk-path) -mmacosx-version-min=${DARWIN_DEPLOYMENT_VERSION_OSX}" \
-#                        LDFLAGS="-mmacosx-version-min=${DARWIN_DEPLOYMENT_VERSION_OSX}" \
-
-
-def get_deployment_target():
-    return os.environ.get('MACOSX_DEPLOYMENT_TARGET', None)
-
-
-def get_c_flags():
-    cflags = ''
-    # sdk_path = subprocess.check_output([
-    #     'xcrun',
-    #     '--sdk', 'macosx',
-    #     '--show-sdk-path']).rstrip()
-    # cflags += '-isysroot {}'.format(sdk_path)
-
-    deployment_target = get_deployment_target()
-    if deployment_target:
-        # cflags += ' -mmacosx-version-min={}'.format(deployment_target)
-        pass
-
-    return cflags
-
-
-def get_cxx_flags():
-    return get_c_flags()
-
-
-def get_common_linker_flags():
-    linker_flags = ""
-    deployment_target = get_deployment_target()
-    if deployment_target:
-        # if len(linker_flags) > 0:
-        #     linker_flags += ' '
-        # linker_flags += '-mmacosx-version-min={}'.format(deployment_target)
-        pass
-
-    return linker_flags
-
-
-def get_exe_linker_flags():
-    return get_common_linker_flags()
-
-def with_devices_preset_suffix():
-    """Return a suffix for the LLDB-specific Swift build preset."""
-    if os.environ.get("LLDB_SWIFT_STDLIB_INCLUDES_DEVICES", None) is not None:
-        return "_with_devices"
-    else:
-        return ""
-
-def XCODE_REPOSITORIES():
-    identifier = repo.identifier()
-    if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
-    set = repo.find(identifier)
-    return [process_repo(r) for r in set]
+        {'name': "ninja",
+         'vcs': VCS.git,
+         'root': ninja_source_path(),
+         'url': "https://github.com/ninja-build/ninja.git",
+         'ref': "master"}
+    ]
 
 
 def BUILD_SCRIPT_FLAGS():
     return {
-        "Debug": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
-        "DebugClang": ["--preset=LLDB_Swift_DebugAssert" + with_devices_preset_suffix()],
-        "Release": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
+        "Debug": ["--preset=LLDB_Swift_ReleaseAssert"],
+        "DebugClang": ["--preset=LLDB_Swift_DebugAssert"],
+        "Release": ["--preset=LLDB_Swift_ReleaseAssert"],
     }
 
 
