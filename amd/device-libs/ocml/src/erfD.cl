@@ -10,7 +10,6 @@
 PUREATTR double
 MATH_MANGLE(erf)(double x)
 {
-    USE_TABLE(double, c, M64_ERF);
     double ax = BUILTIN_ABS_F64(x);
     double ret;
 
