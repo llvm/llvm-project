@@ -1350,30 +1350,51 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   InputKind DashX(InputKind::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
     StringRef XValue = A->getValue();
+
+    // Parse suffixes: '<lang>(-header|[-module-map][-cpp-output])'.
+    // FIXME: Supporting '<lang>-header-cpp-output' would be useful.
+    bool Preprocessed = XValue.consume_back("-cpp-output");
+    bool ModuleMap = XValue.consume_back("-module-map");
+    IsHeaderFile =
+        !Preprocessed && !ModuleMap && XValue.consume_back("-header");
+
+    // Principal languages.
     DashX = llvm::StringSwitch<InputKind>(XValue)
-      .Cases("c", "c-header", "cpp-output", InputKind::C)
-      .Cases("cl", "cl-header", InputKind::OpenCL)
-      .Cases("cuda", "cuda-cpp-output", InputKind::CUDA)
-      .Cases("c++", "c++-header", "c++-cpp-output", InputKind::CXX)
-      .Cases("objective-c", "objective-c-header",
-             "objective-c-cpp-output", "objc-cpp-output",
-             InputKind::ObjC)
-      .Cases("objective-c++", "objective-c++-header",
-             "objective-c++-cpp-output", "objc++-cpp-output",
-             InputKind::ObjCXX)
-      .Case("renderscript", InputKind::RenderScript)
-      .Case("assembler-with-cpp", InputKind::Asm)
-      .Cases("ast", "pcm",
-             InputKind(InputKind::Unknown, InputKind::Precompiled))
-      .Case("ir", InputKind::LLVM_IR)
-      .Default(InputKind::Unknown);
+                .Case("c", InputKind::C)
+                .Case("cl", InputKind::OpenCL)
+                .Case("cuda", InputKind::CUDA)
+                .Case("c++", InputKind::CXX)
+                .Case("objective-c", InputKind::ObjC)
+                .Case("objective-c++", InputKind::ObjCXX)
+                .Case("renderscript", InputKind::RenderScript)
+                .Default(InputKind::Unknown);
+
+    // "objc[++]-cpp-output" is an acceptable synonym for
+    // "objective-c[++]-cpp-output".
+    if (DashX.isUnknown() && Preprocessed && !IsHeaderFile && !ModuleMap)
+      DashX = llvm::StringSwitch<InputKind>(XValue)
+                  .Case("objc", InputKind::ObjC)
+                  .Case("objc++", InputKind::ObjCXX)
+                  .Default(InputKind::Unknown);
+
+    // Some special cases cannot be combined with suffixes.
+    if (DashX.isUnknown() && !Preprocessed && !ModuleMap && !IsHeaderFile)
+      DashX = llvm::StringSwitch<InputKind>(XValue)
+                  .Case("cpp-output", InputKind(InputKind::C).getPreprocessed())
+                  .Case("assembler-with-cpp", InputKind::Asm)
+                  .Cases("ast", "pcm",
+                         InputKind(InputKind::Unknown, InputKind::Precompiled))
+                  .Case("ir", InputKind::LLVM_IR)
+                  .Default(InputKind::Unknown);
+
     if (DashX.isUnknown())
       Diags.Report(diag::err_drv_invalid_value)
         << A->getAsString(Args) << A->getValue();
 
-    if (XValue.endswith("cpp-output"))
+    if (Preprocessed)
       DashX = DashX.getPreprocessed();
-    IsHeaderFile = XValue.endswith("-header");
+    if (ModuleMap)
+      DashX = DashX.withFormat(InputKind::ModuleMap);
   }
 
   // '-' is the default input if none is given.
@@ -1393,6 +1414,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       if (i == 0)
         DashX = IK;
     }
+
+    // The -emit-module action implicitly takes a module map.
+    if (Opts.ProgramAction == frontend::GenerateModule &&
+        IK.getFormat() == InputKind::Source)
+      IK = IK.withFormat(InputKind::ModuleMap);
+
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK);
   }
 

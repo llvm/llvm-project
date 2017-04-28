@@ -1917,6 +1917,12 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
   return sc_list.GetSize() - prev_size;
 }
 
+void SymbolFileDWARF::PreloadSymbols() {
+  std::lock_guard<std::recursive_mutex> guard(
+      GetObjectFile()->GetModule()->GetMutex());
+  Index();
+}
+
 void SymbolFileDWARF::Index() {
   if (m_indexed)
     return;

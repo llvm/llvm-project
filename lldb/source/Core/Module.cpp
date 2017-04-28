@@ -1432,6 +1432,22 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
   return sc_list.GetSize() - initial_size;
 }
 
+void Module::PreloadSymbols() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  SymbolVendor * sym_vendor = GetSymbolVendor();
+  if (!sym_vendor) {
+    return;
+  }
+  // Prime the symbol file first, since it adds symbols to the symbol table.
+  if (SymbolFile *symbol_file = sym_vendor->GetSymbolFile()) {
+    symbol_file->PreloadSymbols();
+  }
+  // Now we can prime the symbol table.
+  if (Symtab * symtab = sym_vendor->GetSymtab()) {
+    symtab->PreloadSymbols();
+  }
+}
+
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   if (!file.Exists())
     return;

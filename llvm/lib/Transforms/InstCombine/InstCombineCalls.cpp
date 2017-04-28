@@ -379,7 +379,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     for (unsigned i = 0; i != NumSubElts; ++i) {
       unsigned SubEltIdx = (NumSubElts - 1) - i;
       auto SubElt = cast<ConstantInt>(CDV->getElementAsConstant(SubEltIdx));
-      Count = Count.shl(BitWidth);
+      Count <<= BitWidth;
       Count |= SubElt->getValue().zextOrTrunc(64);
     }
   }

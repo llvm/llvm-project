@@ -199,8 +199,7 @@ public:
   /// either zero or one and return them in the \p KnownZero and \p KnownOne
   /// bitsets.
   void computeKnownBitsForTargetNode(const SDValue Op,
-                                     APInt &KnownZero,
-                                     APInt &KnownOne,
+                                     KnownBits &Known,
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;

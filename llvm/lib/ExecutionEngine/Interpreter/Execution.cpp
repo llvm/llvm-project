@@ -1565,7 +1565,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
           Tmp = Tmp.zext(SrcBitSize);
           Tmp = TempSrc.AggregateVal[SrcElt++].IntVal;
           Tmp = Tmp.zext(DstBitSize);
-          Tmp = Tmp.shl(ShiftAmt);
+          Tmp <<= ShiftAmt;
           ShiftAmt += isLittleEndian ? SrcBitSize : -SrcBitSize;
           Elt.IntVal |= Tmp;
         }

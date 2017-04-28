@@ -48,7 +48,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK-LABEL: .section .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 2
+; CHECK-NEXT:   .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -77,23 +77,31 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .short	4
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
 ; Direct Spill Slot [RSP+0]
 ; CHECK: .byte	2
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 ; No Padding or LiveOuts
 ; CHECK: .short	0
@@ -106,23 +114,31 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .short	4
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
 ; SmallConstant (0)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
 ; SmallConstant (1)
 ; CHECK: .byte	4
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
+; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1
 ; Direct Spill Slot [RSP+0]
 ; CHECK: .byte	2
-; CHECK: .byte	8
+; CHECK: .byte	0
+; CHECK: .short 8
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 
 ; No Padding or LiveOuts

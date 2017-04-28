@@ -224,6 +224,231 @@ static bool ReadOriginalFileName(CompilerInstance &CI, std::string &InputFile)
   return true;
 }
 
+static SmallVectorImpl<char> &
+operator+=(SmallVectorImpl<char> &Includes, StringRef RHS) {
+  Includes.append(RHS.begin(), RHS.end());
+  return Includes;
+}
+
+static void addHeaderInclude(StringRef HeaderName,
+                             SmallVectorImpl<char> &Includes,
+                             const LangOptions &LangOpts,
+                             bool IsExternC) {
+  if (IsExternC && LangOpts.CPlusPlus)
+    Includes += "extern \"C\" {\n";
+  if (LangOpts.ObjC1)
+    Includes += "#import \"";
+  else
+    Includes += "#include \"";
+
+  Includes += HeaderName;
+
+  Includes += "\"\n";
+  if (IsExternC && LangOpts.CPlusPlus)
+    Includes += "}\n";
+}
+
+/// \brief Collect the set of header includes needed to construct the given 
+/// module and update the TopHeaders file set of the module.
+///
+/// \param Module The module we're collecting includes from.
+///
+/// \param Includes Will be augmented with the set of \#includes or \#imports
+/// needed to load all of the named headers.
+static std::error_code
+collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
+                            ModuleMap &ModMap, clang::Module *Module,
+                            SmallVectorImpl<char> &Includes) {
+  // Don't collect any headers for unavailable modules.
+  if (!Module->isAvailable())
+    return std::error_code();
+
+  // Add includes for each of these headers.
+  for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
+    for (Module::Header &H : Module->Headers[HK]) {
+      Module->addTopHeader(H.Entry);
+      // Use the path as specified in the module map file. We'll look for this
+      // file relative to the module build directory (the directory containing
+      // the module map file) so this will find the same file that we found
+      // while parsing the module map.
+      addHeaderInclude(H.NameAsWritten, Includes, LangOpts, Module->IsExternC);
+    }
+  }
+  // Note that Module->PrivateHeaders will not be a TopHeader.
+
+  if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader()) {
+    Module->addTopHeader(UmbrellaHeader.Entry);
+    if (Module->Parent)
+      // Include the umbrella header for submodules.
+      addHeaderInclude(UmbrellaHeader.NameAsWritten, Includes, LangOpts,
+                       Module->IsExternC);
+  } else if (Module::DirectoryName UmbrellaDir = Module->getUmbrellaDir()) {
+    // Add all of the headers we find in this subdirectory.
+    std::error_code EC;
+    SmallString<128> DirNative;
+    llvm::sys::path::native(UmbrellaDir.Entry->getName(), DirNative);
+
+    vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+    for (vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
+         Dir != End && !EC; Dir.increment(EC)) {
+      // Check whether this entry has an extension typically associated with 
+      // headers.
+      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->getName()))
+          .Cases(".h", ".H", ".hh", ".hpp", true)
+          .Default(false))
+        continue;
+
+      const FileEntry *Header = FileMgr.getFile(Dir->getName());
+      // FIXME: This shouldn't happen unless there is a file system race. Is
+      // that worth diagnosing?
+      if (!Header)
+        continue;
+
+      // If this header is marked 'unavailable' in this module, don't include 
+      // it.
+      if (ModMap.isHeaderUnavailableInModule(Header, Module))
+        continue;
+
+      // Compute the relative path from the directory to this file.
+      SmallVector<StringRef, 16> Components;
+      auto PathIt = llvm::sys::path::rbegin(Dir->getName());
+      for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
+        Components.push_back(*PathIt);
+      SmallString<128> RelativeHeader(UmbrellaDir.NameAsWritten);
+      for (auto It = Components.rbegin(), End = Components.rend(); It != End;
+           ++It)
+        llvm::sys::path::append(RelativeHeader, *It);
+
+      // Include this header as part of the umbrella directory.
+      Module->addTopHeader(Header);
+      addHeaderInclude(RelativeHeader, Includes, LangOpts, Module->IsExternC);
+    }
+
+    if (EC)
+      return EC;
+  }
+
+  // Recurse into submodules.
+  for (clang::Module::submodule_iterator Sub = Module->submodule_begin(),
+                                      SubEnd = Module->submodule_end();
+       Sub != SubEnd; ++Sub)
+    if (std::error_code Err = collectModuleHeaderIncludes(
+            LangOpts, FileMgr, ModMap, *Sub, Includes))
+      return Err;
+
+  return std::error_code();
+}
+
+/// Parse a module map and compute the corresponding real input buffer that
+/// should be used to build the module described by that module map and the
+/// current module name.
+static std::unique_ptr<llvm::MemoryBuffer>
+getInputBufferForModuleMap(CompilerInstance &CI, StringRef Filename,
+                           bool IsSystem) {
+  // Find the module map file.
+  const FileEntry *ModuleMap =
+      CI.getFileManager().getFile(Filename, /*openFile*/true);
+  if (!ModuleMap)  {
+    CI.getDiagnostics().Report(diag::err_module_map_not_found)
+      << Filename;
+    return nullptr;
+  }
+
+  // Find the module map file from which it was generated, if different.
+  const FileEntry *OriginalModuleMap = ModuleMap;
+  StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
+  if (!OriginalModuleMapName.empty()) {
+    OriginalModuleMap = CI.getFileManager().getFile(OriginalModuleMapName,
+                                                    /*openFile*/ true);
+    if (!OriginalModuleMap) {
+      CI.getDiagnostics().Report(diag::err_module_map_not_found)
+        << OriginalModuleMapName;
+      return nullptr;
+    }
+  }
+  
+  // Parse the module map file.
+  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
+  if (HS.loadModuleMapFile(ModuleMap, IsSystem))
+    return nullptr;
+  
+  if (CI.getLangOpts().CurrentModule.empty()) {
+    CI.getDiagnostics().Report(diag::err_missing_module_name);
+    
+    // FIXME: Eventually, we could consider asking whether there was just
+    // a single module described in the module map, and use that as a 
+    // default. Then it would be fairly trivial to just "compile" a module
+    // map with a single module (the common case).
+    return nullptr;
+  }
+
+  // If we're being run from the command-line, the module build stack will not
+  // have been filled in yet, so complete it now in order to allow us to detect
+  // module cycles.
+  SourceManager &SourceMgr = CI.getSourceManager();
+  if (SourceMgr.getModuleBuildStack().empty())
+    SourceMgr.pushModuleBuildStack(CI.getLangOpts().CurrentModule,
+                                   FullSourceLoc(SourceLocation(), SourceMgr));
+
+  // Dig out the module definition.
+  Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule,
+                              /*AllowSearch=*/false);
+  if (!M) {
+    CI.getDiagnostics().Report(diag::err_missing_module)
+      << CI.getLangOpts().CurrentModule << Filename;
+    
+    return nullptr;
+  }
+
+  // Check whether we can build this module at all.
+  clang::Module::Requirement Requirement;
+  clang::Module::UnresolvedHeaderDirective MissingHeader;
+  if (!M->isAvailable(CI.getLangOpts(), CI.getTarget(), Requirement,
+                      MissingHeader)) {
+    if (MissingHeader.FileNameLoc.isValid()) {
+      CI.getDiagnostics().Report(MissingHeader.FileNameLoc,
+                                 diag::err_module_header_missing)
+        << MissingHeader.IsUmbrella << MissingHeader.FileName;
+    } else {
+      CI.getDiagnostics().Report(diag::err_module_unavailable)
+        << M->getFullModuleName() << Requirement.second << Requirement.first;
+    }
+
+    return nullptr;
+  }
+
+  if (OriginalModuleMap != ModuleMap) {
+    M->IsInferred = true;
+    HS.getModuleMap().setInferredModuleAllowedBy(M, OriginalModuleMap);
+  }
+
+  FileManager &FileMgr = CI.getFileManager();
+
+  // Collect the set of #includes we need to build the module.
+  SmallString<256> HeaderContents;
+  std::error_code Err = std::error_code();
+  if (Module::Header UmbrellaHeader = M->getUmbrellaHeader())
+    addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
+                     CI.getLangOpts(), M->IsExternC);
+  Err = collectModuleHeaderIncludes(
+      CI.getLangOpts(), FileMgr,
+      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), M,
+      HeaderContents);
+
+  if (Err) {
+    CI.getDiagnostics().Report(diag::err_module_cannot_create_includes)
+      << M->getFullModuleName() << Err.message();
+    return nullptr;
+  }
+
+  // Inform the preprocessor that includes from within the input buffer should
+  // be resolved relative to the build directory of the module map file.
+  CI.getPreprocessor().setMainFileDir(M->Directory);
+
+  return llvm::MemoryBuffer::getMemBufferCopy(
+      HeaderContents, Module::getModuleInputBufferName());
+}
+
 bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                      const FrontendInputFile &Input) {
   assert(!Instance && "Already processing a source file!");
@@ -232,6 +457,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   setCompilerInstance(&CI);
 
   StringRef InputFile = Input.getFile();
+  FrontendInputFile FileToProcess = Input;
   bool HasBegunSourceFile = false;
   if (!BeginInvocation(CI))
     goto failure;
@@ -297,6 +523,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (!CI.hasSourceManager())
     CI.createSourceManager(CI.getFileManager());
 
+  // Set up embedding for any specified files. Do this before we load any
+  // source files, including the primary module map for the compilation.
+  for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
+    if (const auto *FE = CI.getFileManager().getFile(F, /*openFile*/true))
+      CI.getSourceManager().setFileIsTransient(FE);
+    else
+      CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
+  }
+  if (CI.getFrontendOpts().ModulesEmbedAllFiles)
+    CI.getSourceManager().setAllFilesAreTransient(true);
+
   // IR files bypass the rest of initialization.
   if (Input.getKind().getLanguage() == InputKind::LLVM_IR) {
     assert(hasIRSupport() &&
@@ -360,13 +597,34 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                            &CI.getPreprocessor());
   HasBegunSourceFile = true;
 
+  // For module map files, we first parse the module map and synthesize a
+  // "<module-includes>" buffer before more conventional processing.
+  if (Input.getKind().getFormat() == InputKind::ModuleMap) {
+    CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
+
+    auto Buffer = getInputBufferForModuleMap(CI, InputFile, Input.isSystem());
+    if (!Buffer)
+      goto failure;
+
+    Module *CurrentModule =
+        CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
+            CI.getLangOpts().CurrentModule,
+            /*AllowSearch=*/false);
+    assert(CurrentModule && "no module info for current module");
+
+    // The input that we end up processing is the generated buffer, not the
+    // module map file itself.
+    FileToProcess = FrontendInputFile(
+        Buffer.release(), Input.getKind().withFormat(InputKind::Source),
+        CurrentModule->IsSystem);
+  }
+
   // Initialize the action.
   if (!BeginSourceFileAction(CI, InputFile))
     goto failure;
 
-  // Initialize the main file entry. It is important that this occurs after
-  // BeginSourceFileAction, which may change CurrentInput during module builds.
-  if (!CI.InitializeSourceManager(CurrentInput))
+  // Initialize the main file entry.
+  if (!CI.InitializeSourceManager(FileToProcess))
     goto failure;
 
   // Create the AST context and consumer unless this is a preprocessor only
@@ -498,6 +756,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (HasBegunSourceFile)
     CI.getDiagnosticClient().EndSourceFile();
   CI.clearOutputFiles(/*EraseFiles=*/true);
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_None);
   setCurrentInput(FrontendInputFile());
   setCompilerInstance(nullptr);
   return false;
@@ -580,6 +839,7 @@ void FrontendAction::EndSourceFile() {
 
   setCompilerInstance(nullptr);
   setCurrentInput(FrontendInputFile());
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_None);
 }
 
 bool FrontendAction::shouldEraseOutputFiles() {

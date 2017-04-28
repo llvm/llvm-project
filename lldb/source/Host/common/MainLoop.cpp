@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Error.h"

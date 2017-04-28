@@ -89,27 +89,37 @@ entry:
 
 ; CHECK: Ltmp0-_test1
 ; CHECK:      .byte	1
-; CHECK-NEXT: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT: .short 4
 ; CHECK-NEXT: .short	5
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 
 ; CHECK: Ltmp1-_test2
 ; CHECK:      .byte	1
-; CHECK-NEXT: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT: .short 4
 ; CHECK-NEXT: .short	6
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 ; CHECK:      .byte	1
-; CHECK-NEXT: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT: .short 4
 ; CHECK-NEXT: .short	3
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 ; CHECK: Ltmp2-_test2
 ; CHECK:      .byte	1
-; CHECK-NEXT: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT: .short 4
 ; CHECK-NEXT: .short	3
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 ; CHECK:      .byte	1
-; CHECK-NEXT: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT: .short 4
 ; CHECK-NEXT: .short	6
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

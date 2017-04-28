@@ -81,17 +81,30 @@ void WasmDumper::printRelocation(const SectionRef &Section,
   Reloc.getTypeName(RelocTypeName);
   const wasm::WasmRelocation &WasmReloc = Obj->getWasmRelocation(Reloc);
 
+  bool HasAddend = false;
+  switch (RelocType) {
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+    HasAddend = true;
+    break;
+  default:
+    break;
+  }
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printNumber("Type", RelocTypeName, RelocType);
     W.printHex("Offset", Reloc.getOffset());
     W.printHex("Index", WasmReloc.Index);
-    W.printHex("Addend", WasmReloc.Addend);
+    if (HasAddend)
+      W.printNumber("Addend", WasmReloc.Addend);
   } else {
     raw_ostream& OS = W.startLine();
     OS << W.hex(Reloc.getOffset())
-       << " " << RelocTypeName << "[" << WasmReloc.Index << "]"
-       << " " << W.hex(WasmReloc.Addend) << "\n";
+       << " " << RelocTypeName << "[" << WasmReloc.Index << "]";
+    if (HasAddend)
+      OS << " " << WasmReloc.Addend;
+    OS << "\n";
   }
 }
 

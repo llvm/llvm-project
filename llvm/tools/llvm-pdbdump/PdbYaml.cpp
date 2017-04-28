@@ -311,7 +311,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceColumnEntry,
             pdb::yaml::SerializationContext &Context) {
   IO.mapRequired("StartColumn", Obj.StartColumn);
   IO.mapRequired("EndColumn", Obj.EndColumn);
-};
+}
 
 void MappingContextTraits<pdb::yaml::PdbSourceLineBlock,
                           pdb::yaml::SerializationContext>::
@@ -320,7 +320,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceLineBlock,
   IO.mapRequired("FileName", Obj.FileName);
   IO.mapRequired("Lines", Obj.Lines, Context);
   IO.mapRequired("Columns", Obj.Columns, Context);
-};
+}
 
 void MappingContextTraits<pdb::yaml::PdbSourceFileChecksumEntry,
                           pdb::yaml::SerializationContext>::
@@ -329,7 +329,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceFileChecksumEntry,
   IO.mapRequired("FileName", Obj.FileName);
   IO.mapRequired("Kind", Obj.Kind);
   IO.mapRequired("Checksum", Obj.ChecksumBytes);
-};
+}
 
 void MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
                           pdb::yaml::SerializationContext>::
@@ -340,7 +340,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
   IO.mapRequired("RelocOffset", Obj.RelocOffset);
   IO.mapRequired("RelocSegment", Obj.RelocSegment);
   IO.mapRequired("LineInfo", Obj.LineInfo, Context);
-};
+}
 
 void MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
                           pdb::yaml::SerializationContext>::
@@ -348,7 +348,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
             pdb::yaml::SerializationContext &Context) {
   IO.mapOptionalWithContext("Lines", Obj.Lines, Context);
   IO.mapOptionalWithContext("Checksums", Obj.FileChecksums, Context);
-};
+}
 
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj,

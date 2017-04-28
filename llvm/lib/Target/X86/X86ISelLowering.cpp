@@ -52,6 +52,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
@@ -16799,9 +16800,9 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       unsigned BitWidth = Op0.getValueSizeInBits();
       unsigned AndBitWidth = And.getValueSizeInBits();
       if (BitWidth > AndBitWidth) {
-        APInt Zeros, Ones;
-        DAG.computeKnownBits(Op0, Zeros, Ones);
-        if (Zeros.countLeadingOnes() < BitWidth - AndBitWidth)
+        KnownBits Known;
+        DAG.computeKnownBits(Op0, Known);
+        if (Known.Zero.countLeadingOnes() < BitWidth - AndBitWidth)
           return SDValue();
       }
       LHS = Op1;
@@ -26667,12 +26668,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
-                                                      APInt &KnownZero,
-                                                      APInt &KnownOne,
+                                                      KnownBits &Known,
                                                       const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
-  unsigned BitWidth = KnownZero.getBitWidth();
+  unsigned BitWidth = Known.getBitWidth();
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert((Opc >= ISD::BUILTIN_OP_END ||
@@ -26682,7 +26682,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
 
-  KnownZero = KnownOne = APInt(BitWidth, 0);   // Don't know anything.
+  Known = KnownBits(BitWidth);   // Don't know anything.
   switch (Opc) {
   default: break;
   case X86ISD::ADD:
@@ -26701,33 +26701,33 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     LLVM_FALLTHROUGH;
   case X86ISD::SETCC:
-    KnownZero.setBits(1, BitWidth);
+    Known.Zero.setBits(1, BitWidth);
     break;
   case X86ISD::MOVMSK: {
     unsigned NumLoBits = Op.getOperand(0).getValueType().getVectorNumElements();
-    KnownZero.setBits(NumLoBits, BitWidth);
+    Known.Zero.setBits(NumLoBits, BitWidth);
     break;
   }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
-        KnownZero = APInt::getAllOnesValue(BitWidth);
+        Known.Zero.setAllBits();
         break;
       }
 
-      DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
       unsigned ShAmt = ShiftImm->getZExtValue();
       if (Opc == X86ISD::VSHLI) {
-        KnownZero = KnownZero << ShAmt;
-        KnownOne = KnownOne << ShAmt;
+        Known.Zero <<= ShAmt;
+        Known.One <<= ShAmt;
         // Low bits are known zero.
-        KnownZero.setLowBits(ShAmt);
+        Known.Zero.setLowBits(ShAmt);
       } else {
-        KnownZero.lshrInPlace(ShAmt);
-        KnownOne.lshrInPlace(ShAmt);
+        Known.Zero.lshrInPlace(ShAmt);
+        Known.One.lshrInPlace(ShAmt);
         // High bits are known zero.
-        KnownZero.setHighBits(ShAmt);
+        Known.Zero.setHighBits(ShAmt);
       }
     }
     break;
@@ -26741,12 +26741,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     unsigned InBitWidth = SrcVT.getScalarSizeInBits();
     assert(InNumElts >= NumElts && "Illegal VZEXT input");
 
-    KnownZero = KnownOne = APInt(InBitWidth, 0);
+    Known = KnownBits(InBitWidth);
     APInt DemandedSrcElts = APInt::getLowBitsSet(InNumElts, NumElts);
-    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedSrcElts, Depth + 1);
-    KnownOne = KnownOne.zext(BitWidth);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownZero.setBits(InBitWidth, BitWidth);
+    DAG.computeKnownBits(N0, Known, DemandedSrcElts, Depth + 1);
+    Known.One = Known.One.zext(BitWidth);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.Zero.setBits(InBitWidth, BitWidth);
     break;
   }
   }
@@ -30206,12 +30206,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
 
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
-    APInt KnownZero, KnownOne;
+    KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
                                           DCI.isBeforeLegalizeOps());
     if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
-        TLI.SimplifyDemandedBits(Cond, DemandedMask, KnownZero, KnownOne,
-                                 TLO)) {
+        TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will
       // affect all users of Cond. Make sure it is fine and update all the nodes
       // so that we do not use the generic VSELECT anymore. Otherwise, we may
@@ -31056,8 +31055,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue N00 = N0.getOperand(0);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    const APInt &ShAmt = N1C->getAPIntValue();
-    Mask = Mask.shl(ShAmt);
+    Mask <<= N1C->getAPIntValue();
     bool MaskOK = false;
     // We can handle cases concerning bit-widening nodes containing setcc_c if
     // we carefully interrogate the mask to make sure we are semantics
@@ -31267,9 +31265,9 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     unsigned ShiftImm = ShiftVal.getZExtValue();
     for (APInt &Elt : EltBits) {
       if (X86ISD::VSHLI == Opcode)
-        Elt = Elt.shl(ShiftImm);
+        Elt <<= ShiftImm;
       else if (X86ISD::VSRAI == Opcode)
-        Elt = Elt.ashr(ShiftImm);
+        Elt.ashrInPlace(ShiftImm);
       else
         Elt.lshrInPlace(ShiftImm);
     }
@@ -33775,12 +33773,12 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   if (Op1.hasOneUse()) {
     unsigned BitWidth = Op1.getValueSizeInBits();
     APInt DemandedMask = APInt::getLowBitsSet(BitWidth, Log2_32(BitWidth));
-    APInt KnownZero, KnownOne;
+    KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (TLI.ShrinkDemandedConstant(Op1, DemandedMask, TLO) ||
-        TLI.SimplifyDemandedBits(Op1, DemandedMask, KnownZero, KnownOne, TLO))
+        TLI.SimplifyDemandedBits(Op1, DemandedMask, Known, TLO))
       DCI.CommitTargetLoweringOpt(TLO);
   }
   return SDValue();
