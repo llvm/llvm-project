@@ -1064,21 +1064,30 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
     FindClose(hFind);
 #else
   std::string dir_string(dir_path);
-  lldb_utility::CleanUp<DIR *, int> dir_path_dir(opendir(dir_string.c_str()),
-                                                 NULL, closedir);
-  if (dir_path_dir.is_valid()) {
+  DIR *dir_path_dir = opendir(dir_string.c_str());
+  if (dir_path_dir != nullptr)
+  {
     char dir_path_last_char = dir_path.back();
 
-    long path_max = fpathconf(dirfd(dir_path_dir.get()), _PC_NAME_MAX);
+    long path_max = fpathconf(dirfd(dir_path_dir), _PC_NAME_MAX);
 #if defined(__APPLE_) && defined(__DARWIN_MAXPATHLEN)
       if (path_max < __DARWIN_MAXPATHLEN)
         path_max = __DARWIN_MAXPATHLEN;
 #endif
       struct dirent *buf, *dp;
-      buf = (struct dirent *)malloc(offsetof(struct dirent, d_name) + path_max +
-                                    1);
 
-      while (buf && readdir_r(dir_path_dir.get(), buf, &dp) == 0 && dp) {
+      // In case struct dirent does not include a fixed with buffer large enough
+      // for any filename we might see in this directory, add the max file path
+      // on to the dirent struct size so readdir_r doesn't write past the end of 
+      // the buffer.
+      size_t dirent_size = sizeof (struct dirent);
+      size_t dirent_plus_filepath = offsetof(struct dirent, d_name) + path_max + 1;
+      if (dirent_plus_filepath > dirent_size)
+        dirent_size = dirent_plus_filepath;
+
+      buf = (struct dirent *)malloc(dirent_size);
+
+      while (buf && readdir_r(dir_path_dir, buf, &dp) == 0 && dp) {
         // Only search directories
         if (dp->d_type == DT_DIR || dp->d_type == DT_UNKNOWN) {
           size_t len = strlen(dp->d_name);
@@ -1163,6 +1172,8 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
               // stop all directory enumerations at all levels.
               if (buf)
                 free(buf);
+              if (dir_path_dir)
+                closedir (dir_path_dir);
               return eEnumerateDirectoryResultQuit;
             }
             break;
@@ -1173,12 +1184,16 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
             // keep enumerating.
             if (buf)
               free(buf);
+            if (dir_path_dir)
+              closedir (dir_path_dir);
             return eEnumerateDirectoryResultNext;
 
           case eEnumerateDirectoryResultQuit: // Stop directory enumerations at
                                               // any level
             if (buf)
               free(buf);
+            if (dir_path_dir)
+              closedir (dir_path_dir);
             return eEnumerateDirectoryResultQuit;
           }
       }
@@ -1186,6 +1201,8 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
         free(buf);
       }
     }
+  if (dir_path_dir)
+      closedir (dir_path_dir);
 #endif
   // By default when exiting a directory, we tell the parent enumeration
   // to continue enumerating.
