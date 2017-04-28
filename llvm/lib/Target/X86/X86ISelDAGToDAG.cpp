@@ -31,6 +31,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1070,9 +1071,9 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   }
   APInt MaskedHighBits =
     APInt::getHighBitsSet(X.getSimpleValueType().getSizeInBits(), MaskLZ);
-  APInt KnownZero, KnownOne;
-  DAG.computeKnownBits(X, KnownZero, KnownOne);
-  if (MaskedHighBits != KnownZero) return true;
+  KnownBits Known;
+  DAG.computeKnownBits(X, Known);
+  if (MaskedHighBits != Known.Zero) return true;
 
   // We've identified a pattern that can be transformed into a single shift
   // and an addressing mode. Make it so.

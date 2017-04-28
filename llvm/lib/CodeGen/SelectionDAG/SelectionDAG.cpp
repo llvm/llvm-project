@@ -1967,9 +1967,9 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
 /// for bits that V cannot have.
 bool SelectionDAG::MaskedValueIsZero(SDValue Op, const APInt &Mask,
                                      unsigned Depth) const {
-  APInt KnownZero, KnownOne;
-  computeKnownBits(Op, KnownZero, KnownOne, Depth);
-  return (KnownZero & Mask) == Mask;
+  KnownBits Known;
+  computeKnownBits(Op, Known, Depth);
+  return Mask.isSubsetOf(Known.Zero);
 }
 
 /// If a SHL/SRA/SRL node has a constant or splat constant shift amount that
@@ -1985,31 +1985,30 @@ static const APInt *getValidShiftAmountConstant(SDValue V) {
 }
 
 /// Determine which bits of Op are known to be either zero or one and return
-/// them in the KnownZero/KnownOne bitsets. For vectors, the known bits are
-/// those that are shared by every vector element.
-void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
-                                    APInt &KnownOne, unsigned Depth) const {
+/// them in Known. For vectors, the known bits are those that are shared by
+/// every vector element.
+void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
+                                    unsigned Depth) const {
   EVT VT = Op.getValueType();
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnesValue(VT.getVectorNumElements())
                            : APInt(1, 1);
-  computeKnownBits(Op, KnownZero, KnownOne, DemandedElts, Depth);
+  computeKnownBits(Op, Known, DemandedElts, Depth);
 }
 
 /// Determine which bits of Op are known to be either zero or one and return
-/// them in the KnownZero/KnownOne bitsets. The DemandedElts argument allows
-/// us to only collect the known bits that are shared by the requested vector
-/// elements.
-void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
-                                    APInt &KnownOne, const APInt &DemandedElts,
+/// them in Known. The DemandedElts argument allows us to only collect the known
+/// bits that are shared by the requested vector elements.
+void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
+                                    const APInt &DemandedElts,
                                     unsigned Depth) const {
   unsigned BitWidth = Op.getScalarValueSizeInBits();
 
-  KnownZero = KnownOne = APInt(BitWidth, 0);   // Don't know anything.
+  Known = KnownBits(BitWidth);   // Don't know anything.
   if (Depth == 6)
     return;  // Limit search depth.
 
-  APInt KnownZero2, KnownOne2;
+  KnownBits Known2;
   unsigned NumElts = DemandedElts.getBitWidth();
 
   if (!DemandedElts)
@@ -2019,35 +2018,35 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   switch (Opcode) {
   case ISD::Constant:
     // We know all of the bits for a constant!
-    KnownOne = cast<ConstantSDNode>(Op)->getAPIntValue();
-    KnownZero = ~KnownOne;
+    Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
+    Known.Zero = ~Known.One;
     break;
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every demanded vector element.
     assert(NumElts == Op.getValueType().getVectorNumElements() &&
            "Unexpected vector size");
-    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    Known.Zero.setAllBits(); Known.One.setAllBits();
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
-      computeKnownBits(SrcOp, KnownZero2, KnownOne2, Depth + 1);
+      computeKnownBits(SrcOp, Known2, Depth + 1);
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
       if (SrcOp.getValueSizeInBits() != BitWidth) {
         assert(SrcOp.getValueSizeInBits() > BitWidth &&
                "Expected BUILD_VECTOR implicit truncation");
-        KnownOne2 = KnownOne2.trunc(BitWidth);
-        KnownZero2 = KnownZero2.trunc(BitWidth);
+        Known2.One = Known2.One.trunc(BitWidth);
+        Known2.Zero = Known2.Zero.trunc(BitWidth);
       }
 
       // Known bits are the values that are shared by every demanded element.
-      KnownOne &= KnownOne2;
-      KnownZero &= KnownZero2;
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
 
       // If we don't know any bits, early out.
-      if (!KnownOne && !KnownZero)
+      if (!Known.One && !Known.Zero)
         break;
     }
     break;
@@ -2055,7 +2054,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     // Collect the known bits that are shared by every vector element referenced
     // by the shuffle.
     APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
-    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    Known.Zero.setAllBits(); Known.One.setAllBits();
     const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
     assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
     for (unsigned i = 0; i != NumElts; ++i) {
@@ -2066,8 +2065,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (M < 0) {
         // For UNDEF elements, we don't know anything about the common state of
         // the shuffle result.
-        KnownOne.clearAllBits();
-        KnownZero.clearAllBits();
+        Known.One.clearAllBits();
+        Known.Zero.clearAllBits();
         DemandedLHS.clearAllBits();
         DemandedRHS.clearAllBits();
         break;
@@ -2081,24 +2080,24 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     // Known bits are the values that are shared by every demanded element.
     if (!!DemandedLHS) {
       SDValue LHS = Op.getOperand(0);
-      computeKnownBits(LHS, KnownZero2, KnownOne2, DemandedLHS, Depth + 1);
-      KnownOne &= KnownOne2;
-      KnownZero &= KnownZero2;
+      computeKnownBits(LHS, Known2, DemandedLHS, Depth + 1);
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
     }
     // If we don't know any bits, early out.
-    if (!KnownOne && !KnownZero)
+    if (!Known.One && !Known.Zero)
       break;
     if (!!DemandedRHS) {
       SDValue RHS = Op.getOperand(1);
-      computeKnownBits(RHS, KnownZero2, KnownOne2, DemandedRHS, Depth + 1);
-      KnownOne &= KnownOne2;
-      KnownZero &= KnownZero2;
+      computeKnownBits(RHS, Known2, DemandedRHS, Depth + 1);
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
     }
     break;
   }
   case ISD::CONCAT_VECTORS: {
     // Split DemandedElts and test each of the demanded subvectors.
-    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    Known.Zero.setAllBits(); Known.One.setAllBits();
     EVT SubVectorVT = Op.getOperand(0).getValueType();
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
@@ -2107,12 +2106,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       DemandedSub = DemandedSub.trunc(NumSubVectorElts);
       if (!!DemandedSub) {
         SDValue Sub = Op.getOperand(i);
-        computeKnownBits(Sub, KnownZero2, KnownOne2, DemandedSub, Depth + 1);
-        KnownOne &= KnownOne2;
-        KnownZero &= KnownZero2;
+        computeKnownBits(Sub, Known2, DemandedSub, Depth + 1);
+        Known.One &= Known2.One;
+        Known.Zero &= Known2.Zero;
       }
       // If we don't know any bits, early out.
-      if (!KnownOne && !KnownZero)
+      if (!Known.One && !Known.Zero)
         break;
     }
     break;
@@ -2127,9 +2126,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       // Offset the demanded elts by the subvector index.
       uint64_t Idx = SubIdx->getZExtValue();
       APInt DemandedSrc = DemandedElts.zext(NumSrcElts).shl(Idx);
-      computeKnownBits(Src, KnownZero, KnownOne, DemandedSrc, Depth + 1);
+      computeKnownBits(Src, Known, DemandedSrc, Depth + 1);
     } else {
-      computeKnownBits(Src, KnownZero, KnownOne, Depth + 1);
+      computeKnownBits(Src, Known, Depth + 1);
     }
     break;
   }
@@ -2143,7 +2142,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     // Fast handling of 'identity' bitcasts.
     if (BitWidth == SubBitWidth) {
-      computeKnownBits(N0, KnownZero, KnownOne, DemandedElts, Depth + 1);
+      computeKnownBits(N0, Known, DemandedElts, Depth + 1);
       break;
     }
 
@@ -2167,10 +2166,10 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
           SubDemandedElts.setBit(i * SubScale);
 
       for (unsigned i = 0; i != SubScale; ++i) {
-        computeKnownBits(N0, KnownZero2, KnownOne2, SubDemandedElts.shl(i),
+        computeKnownBits(N0, Known2, SubDemandedElts.shl(i),
                          Depth + 1);
-        KnownOne |= KnownOne2.zext(BitWidth).shl(SubBitWidth * i);
-        KnownZero |= KnownZero2.zext(BitWidth).shl(SubBitWidth * i);
+        Known.One |= Known2.One.zext(BitWidth).shl(SubBitWidth * i);
+        Known.Zero |= Known2.Zero.zext(BitWidth).shl(SubBitWidth * i);
       }
     }
 
@@ -2187,16 +2186,16 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
         if (DemandedElts[i])
           SubDemandedElts.setBit(i / SubScale);
 
-      computeKnownBits(N0, KnownZero2, KnownOne2, SubDemandedElts, Depth + 1);
+      computeKnownBits(N0, Known2, SubDemandedElts, Depth + 1);
 
-      KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+      Known.Zero.setAllBits(); Known.One.setAllBits();
       for (unsigned i = 0; i != NumElts; ++i)
         if (DemandedElts[i]) {
           unsigned Offset = (i % SubScale) * BitWidth;
-          KnownOne &= KnownOne2.lshr(Offset).trunc(BitWidth);
-          KnownZero &= KnownZero2.lshr(Offset).trunc(BitWidth);
+          Known.One &= Known2.One.lshr(Offset).trunc(BitWidth);
+          Known.Zero &= Known2.Zero.lshr(Offset).trunc(BitWidth);
           // If we don't know any bits, early out.
-          if (!KnownOne && !KnownZero)
+          if (!Known.One && !Known.Zero)
             break;
         }
     }
@@ -2204,101 +2203,91 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   }
   case ISD::AND:
     // If either the LHS or the RHS are Zero, the result is zero.
-    computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // Output known-1 bits are only known if set in both the LHS & RHS.
-    KnownOne &= KnownOne2;
+    Known.One &= Known2.One;
     // Output known-0 are known to be clear if zero in either the LHS | RHS.
-    KnownZero |= KnownZero2;
+    Known.Zero |= Known2.Zero;
     break;
   case ISD::OR:
-    computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // Output known-0 bits are only known if clear in both the LHS & RHS.
-    KnownZero &= KnownZero2;
+    Known.Zero &= Known2.Zero;
     // Output known-1 are known to be set if set in either the LHS | RHS.
-    KnownOne |= KnownOne2;
+    Known.One |= Known2.One;
     break;
   case ISD::XOR: {
-    computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // Output known-0 bits are known if clear or set in both the LHS & RHS.
-    APInt KnownZeroOut = (KnownZero & KnownZero2) | (KnownOne & KnownOne2);
+    APInt KnownZeroOut = (Known.Zero & Known2.Zero) | (Known.One & Known2.One);
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
-    KnownOne = (KnownZero & KnownOne2) | (KnownOne & KnownZero2);
-    KnownZero = KnownZeroOut;
+    Known.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
+    Known.Zero = KnownZeroOut;
     break;
   }
   case ISD::MUL: {
-    computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // If low bits are zero in either operand, output low known-0 bits.
     // Also compute a conservative estimate for high known-0 bits.
     // More trickiness is possible, but this is sufficient for the
     // interesting case of alignment computation.
-    KnownOne.clearAllBits();
-    unsigned TrailZ = KnownZero.countTrailingOnes() +
-                      KnownZero2.countTrailingOnes();
-    unsigned LeadZ =  std::max(KnownZero.countLeadingOnes() +
-                               KnownZero2.countLeadingOnes(),
+    Known.One.clearAllBits();
+    unsigned TrailZ = Known.Zero.countTrailingOnes() +
+                      Known2.Zero.countTrailingOnes();
+    unsigned LeadZ =  std::max(Known.Zero.countLeadingOnes() +
+                               Known2.Zero.countLeadingOnes(),
                                BitWidth) - BitWidth;
 
-    KnownZero.clearAllBits();
-    KnownZero.setLowBits(std::min(TrailZ, BitWidth));
-    KnownZero.setHighBits(std::min(LeadZ, BitWidth));
+    Known.Zero.clearAllBits();
+    Known.Zero.setLowBits(std::min(TrailZ, BitWidth));
+    Known.Zero.setHighBits(std::min(LeadZ, BitWidth));
     break;
   }
   case ISD::UDIV: {
     // For the purposes of computing leading zeros we can conservatively
     // treat a udiv as a logical right shift by the power of 2 known to
     // be less than the denominator.
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    unsigned LeadZ = KnownZero2.countLeadingOnes();
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    unsigned LeadZ = Known2.Zero.countLeadingOnes();
 
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    unsigned RHSUnknownLeadingOnes = KnownOne2.countLeadingZeros();
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
+    unsigned RHSUnknownLeadingOnes = Known2.One.countLeadingZeros();
     if (RHSUnknownLeadingOnes != BitWidth)
       LeadZ = std::min(BitWidth,
                        LeadZ + BitWidth - RHSUnknownLeadingOnes - 1);
 
-    KnownZero.setHighBits(LeadZ);
+    Known.Zero.setHighBits(LeadZ);
     break;
   }
   case ISD::SELECT:
-    computeKnownBits(Op.getOperand(2), KnownZero, KnownOne, Depth+1);
+    computeKnownBits(Op.getOperand(2), Known, Depth+1);
     // If we don't know any bits, early out.
-    if (!KnownOne && !KnownZero)
+    if (!Known.One && !Known.Zero)
       break;
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, Depth+1);
+    computeKnownBits(Op.getOperand(1), Known2, Depth+1);
 
     // Only known if known in both the LHS and RHS.
-    KnownOne &= KnownOne2;
-    KnownZero &= KnownZero2;
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
     break;
   case ISD::SELECT_CC:
-    computeKnownBits(Op.getOperand(3), KnownZero, KnownOne, Depth+1);
+    computeKnownBits(Op.getOperand(3), Known, Depth+1);
     // If we don't know any bits, early out.
-    if (!KnownOne && !KnownZero)
+    if (!Known.One && !Known.Zero)
       break;
-    computeKnownBits(Op.getOperand(2), KnownZero2, KnownOne2, Depth+1);
+    computeKnownBits(Op.getOperand(2), Known2, Depth+1);
 
     // Only known if known in both the LHS and RHS.
-    KnownOne &= KnownOne2;
-    KnownZero &= KnownZero2;
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
     break;
   case ISD::SMULO:
   case ISD::UMULO:
@@ -2311,49 +2300,46 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero.setBitsFrom(1);
+      Known.Zero.setBitsFrom(1);
     break;
   case ISD::SETCC:
     // If we know the result of a setcc has the top bits zero, use this info.
     if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero.setBitsFrom(1);
+      Known.Zero.setBitsFrom(1);
     break;
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                       Depth + 1);
-      KnownZero = KnownZero << *ShAmt;
-      KnownOne = KnownOne << *ShAmt;
+      computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      Known.Zero <<= *ShAmt;
+      Known.One <<= *ShAmt;
       // Low bits are known zero.
-      KnownZero.setLowBits(ShAmt->getZExtValue());
+      Known.Zero.setLowBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                       Depth + 1);
-      KnownZero.lshrInPlace(*ShAmt);
-      KnownOne.lshrInPlace(*ShAmt);
+      computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      Known.Zero.lshrInPlace(*ShAmt);
+      Known.One.lshrInPlace(*ShAmt);
       // High bits are known zero.
-      KnownZero.setHighBits(ShAmt->getZExtValue());
+      Known.Zero.setHighBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRA:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                       Depth + 1);
-      KnownZero.lshrInPlace(*ShAmt);
-      KnownOne.lshrInPlace(*ShAmt);
+      computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      Known.Zero.lshrInPlace(*ShAmt);
+      Known.One.lshrInPlace(*ShAmt);
       // If we know the value of the sign bit, then we know it is copied across
       // the high bits by the shift amount.
       APInt SignMask = APInt::getSignMask(BitWidth);
       SignMask.lshrInPlace(*ShAmt);  // Adjust to where it is now in the mask.
-      if (KnownZero.intersects(SignMask)) {
-        KnownZero.setHighBits(ShAmt->getZExtValue());// New bits are known zero.
-      } else if (KnownOne.intersects(SignMask)) {
-        KnownOne.setHighBits(ShAmt->getZExtValue()); // New bits are known one.
+      if (Known.Zero.intersects(SignMask)) {
+        Known.Zero.setHighBits(ShAmt->getZExtValue());// New bits are known zero.
+      } else if (Known.One.intersects(SignMask)) {
+        Known.One.setHighBits(ShAmt->getZExtValue()); // New bits are known one.
       }
     }
     break;
@@ -2374,22 +2360,21 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (NewBits.getBoolValue())
       InputDemandedBits |= InSignMask;
 
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    KnownOne &= InputDemandedBits;
-    KnownZero &= InputDemandedBits;
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    Known.One &= InputDemandedBits;
+    Known.Zero &= InputDemandedBits;
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
-    if (KnownZero.intersects(InSignMask)) {        // Input sign bit known clear
-      KnownZero |= NewBits;
-      KnownOne  &= ~NewBits;
-    } else if (KnownOne.intersects(InSignMask)) {  // Input sign bit known set
-      KnownOne  |= NewBits;
-      KnownZero &= ~NewBits;
+    if (Known.Zero.intersects(InSignMask)) {        // Input sign bit known clear
+      Known.Zero |= NewBits;
+      Known.One  &= ~NewBits;
+    } else if (Known.One.intersects(InSignMask)) {  // Input sign bit known set
+      Known.One  |= NewBits;
+      Known.Zero &= ~NewBits;
     } else {                              // Input sign bit unknown
-      KnownZero &= ~NewBits;
-      KnownOne  &= ~NewBits;
+      Known.Zero &= ~NewBits;
+      Known.One  &= ~NewBits;
     }
     break;
   }
@@ -2398,7 +2383,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTPOP: {
-    KnownZero.setBitsFrom(Log2_32(BitWidth)+1);
+    Known.Zero.setBitsFrom(Log2_32(BitWidth)+1);
     break;
   }
   case ISD::LOAD: {
@@ -2407,36 +2392,35 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
       EVT VT = LD->getMemoryVT();
       unsigned MemBits = VT.getScalarSizeInBits();
-      KnownZero.setBitsFrom(MemBits);
+      Known.Zero.setBitsFrom(MemBits);
     } else if (const MDNode *Ranges = LD->getRanges()) {
       if (LD->getExtensionType() == ISD::NON_EXTLOAD)
-        computeKnownBitsFromRangeMetadata(*Ranges, KnownZero, KnownOne);
+        computeKnownBitsFromRangeMetadata(*Ranges, Known);
     }
     break;
   }
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    KnownZero = KnownZero.trunc(InBits);
-    KnownOne = KnownOne.trunc(InBits);
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne,
+    Known.Zero = Known.Zero.trunc(InBits);
+    Known.One = Known.One.trunc(InBits);
+    computeKnownBits(Op.getOperand(0), Known,
                      DemandedElts.zext(InVT.getVectorNumElements()),
                      Depth + 1);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
-    KnownZero.setBitsFrom(InBits);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
+    Known.Zero.setBitsFrom(InBits);
     break;
   }
   case ISD::ZERO_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    KnownZero = KnownZero.trunc(InBits);
-    KnownOne = KnownOne.trunc(InBits);
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
-    KnownZero.setBitsFrom(InBits);
+    Known.Zero = Known.Zero.trunc(InBits);
+    Known.One = Known.One.trunc(InBits);
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
+    Known.Zero.setBitsFrom(InBits);
     break;
   }
   // TODO ISD::SIGN_EXTEND_VECTOR_INREG
@@ -2444,49 +2428,47 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
 
-    KnownZero = KnownZero.trunc(InBits);
-    KnownOne = KnownOne.trunc(InBits);
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
+    Known.Zero = Known.Zero.trunc(InBits);
+    Known.One = Known.One.trunc(InBits);
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
 
     // If the sign bit is known to be zero or one, then sext will extend
     // it to the top bits, else it will just zext.
-    KnownZero = KnownZero.sext(BitWidth);
-    KnownOne = KnownOne.sext(BitWidth);
+    Known.Zero = Known.Zero.sext(BitWidth);
+    Known.One = Known.One.sext(BitWidth);
     break;
   }
   case ISD::ANY_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    KnownZero = KnownZero.trunc(InBits);
-    KnownOne = KnownOne.trunc(InBits);
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownOne = KnownOne.zext(BitWidth);
+    Known.Zero = Known.Zero.trunc(InBits);
+    Known.One = Known.One.trunc(InBits);
+    computeKnownBits(Op.getOperand(0), Known, Depth+1);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.One = Known.One.zext(BitWidth);
     break;
   }
   case ISD::TRUNCATE: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    KnownZero = KnownZero.zext(InBits);
-    KnownOne = KnownOne.zext(InBits);
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    KnownZero = KnownZero.trunc(BitWidth);
-    KnownOne = KnownOne.trunc(BitWidth);
+    Known.Zero = Known.Zero.zext(InBits);
+    Known.One = Known.One.zext(InBits);
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    Known.Zero = Known.Zero.trunc(BitWidth);
+    Known.One = Known.One.trunc(BitWidth);
     break;
   }
   case ISD::AssertZext: {
     EVT VT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     APInt InMask = APInt::getLowBitsSet(BitWidth, VT.getSizeInBits());
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-    KnownZero |= (~InMask);
-    KnownOne  &= (~KnownZero);
+    computeKnownBits(Op.getOperand(0), Known, Depth+1);
+    Known.Zero |= (~InMask);
+    Known.One  &= (~Known.Zero);
     break;
   }
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
-    KnownZero.setBitsFrom(1);
+    Known.Zero.setBitsFrom(1);
     break;
   case ISD::USUBO:
   case ISD::SSUBO:
@@ -2495,7 +2477,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBitsFrom(1);
+        Known.Zero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2509,16 +2491,16 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
         unsigned NLZ = (CLHS->getAPIntValue()+1).countLeadingZeros();
         // NLZ can't be BitWidth with no sign bit
         APInt MaskV = APInt::getHighBitsSet(BitWidth, NLZ+1);
-        computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
+        computeKnownBits(Op.getOperand(1), Known2, DemandedElts,
                          Depth + 1);
 
         // If all of the MaskV bits are known to be zero, then we know the
         // output top bits are zero, because we now know that the output is
         // from [0-C].
-        if ((KnownZero2 & MaskV) == MaskV) {
+        if ((Known2.Zero & MaskV) == MaskV) {
           unsigned NLZ2 = CLHS->getAPIntValue().countLeadingZeros();
           // Top bits known zero.
-          KnownZero.setHighBits(NLZ2);
+          Known.Zero.setHighBits(NLZ2);
         }
       }
     }
@@ -2526,17 +2508,15 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     // If low bits are know to be zero in both operands, then we know they are
     // going to be 0 in the result. Both addition and complement operations
     // preserve the low zero bits.
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    unsigned KnownZeroLow = KnownZero2.countTrailingOnes();
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    unsigned KnownZeroLow = Known2.Zero.countTrailingOnes();
     if (KnownZeroLow == 0)
       break;
 
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
     KnownZeroLow = std::min(KnownZeroLow,
-                            KnownZero2.countTrailingOnes());
-    KnownZero.setBits(0, KnownZeroLow);
+                            Known2.Zero.countTrailingOnes());
+    Known.Zero.setBits(0, KnownZeroLow);
     break;
   }
   case ISD::UADDO:
@@ -2546,7 +2526,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBitsFrom(1);
+        Known.Zero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2560,17 +2540,16 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     // known to be clear. For example, if one input has the top 10 bits clear
     // and the other has the top 8 bits clear, we know the top 7 bits of the
     // output must be clear.
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    unsigned KnownZeroHigh = KnownZero2.countLeadingOnes();
-    unsigned KnownZeroLow = KnownZero2.countTrailingOnes();
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    unsigned KnownZeroHigh = Known2.Zero.countLeadingOnes();
+    unsigned KnownZeroLow = Known2.Zero.countTrailingOnes();
 
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts,
                      Depth + 1);
     KnownZeroHigh = std::min(KnownZeroHigh,
-                             KnownZero2.countLeadingOnes());
+                             Known2.Zero.countLeadingOnes());
     KnownZeroLow = std::min(KnownZeroLow,
-                            KnownZero2.countTrailingOnes());
+                            Known2.Zero.countTrailingOnes());
 
     if (Opcode == ISD::ADDE) {
       // With ADDE, a carry bit may be added in, so we can only use this
@@ -2578,13 +2557,13 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       // We then return to the caller that the low bit is unknown but that
       // other bits are known zero.
       if (KnownZeroLow >= 2)
-        KnownZero.setBits(1, KnownZeroLow);
+        Known.Zero.setBits(1, KnownZeroLow);
       break;
     }
 
-    KnownZero.setLowBits(KnownZeroLow);
+    Known.Zero.setLowBits(KnownZeroLow);
     if (KnownZeroHigh > 1)
-      KnownZero.setHighBits(KnownZeroHigh - 1);
+      Known.Zero.setHighBits(KnownZeroHigh - 1);
     break;
   }
   case ISD::SREM:
@@ -2592,23 +2571,22 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       const APInt &RA = Rem->getAPIntValue().abs();
       if (RA.isPowerOf2()) {
         APInt LowBits = RA - 1;
-        computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                         Depth + 1);
+        computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
         // The low bits of the first operand are unchanged by the srem.
-        KnownZero = KnownZero2 & LowBits;
-        KnownOne = KnownOne2 & LowBits;
+        Known.Zero = Known2.Zero & LowBits;
+        Known.One = Known2.One & LowBits;
 
         // If the first operand is non-negative or has all low bits zero, then
         // the upper bits are all zero.
-        if (KnownZero2[BitWidth-1] || ((KnownZero2 & LowBits) == LowBits))
-          KnownZero |= ~LowBits;
+        if (Known2.Zero[BitWidth-1] || ((Known2.Zero & LowBits) == LowBits))
+          Known.Zero |= ~LowBits;
 
         // If the first operand is negative and not all low bits are zero, then
         // the upper bits are all one.
-        if (KnownOne2[BitWidth-1] && ((KnownOne2 & LowBits) != 0))
-          KnownOne |= ~LowBits;
-        assert((KnownZero & KnownOne) == 0&&"Bits known to be one AND zero?");
+        if (Known2.One[BitWidth-1] && ((Known2.One & LowBits) != 0))
+          Known.One |= ~LowBits;
+        assert((Known.Zero & Known.One) == 0&&"Bits known to be one AND zero?");
       }
     }
     break;
@@ -2617,42 +2595,39 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       const APInt &RA = Rem->getAPIntValue();
       if (RA.isPowerOf2()) {
         APInt LowBits = (RA - 1);
-        computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                         Depth + 1);
+        computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
         // The upper bits are all zero, the lower ones are unchanged.
-        KnownZero = KnownZero2 | ~LowBits;
-        KnownOne = KnownOne2 & LowBits;
+        Known.Zero = Known2.Zero | ~LowBits;
+        Known.One = Known2.One & LowBits;
         break;
       }
     }
 
     // Since the result is less than or equal to either operand, any leading
     // zero bits in either operand must also exist in the result.
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
 
-    uint32_t Leaders = std::max(KnownZero.countLeadingOnes(),
-                                KnownZero2.countLeadingOnes());
-    KnownOne.clearAllBits();
-    KnownZero.clearAllBits();
-    KnownZero.setHighBits(Leaders);
+    uint32_t Leaders = std::max(Known.Zero.countLeadingOnes(),
+                                Known2.Zero.countLeadingOnes());
+    Known.One.clearAllBits();
+    Known.Zero.clearAllBits();
+    Known.Zero.setHighBits(Leaders);
     break;
   }
   case ISD::EXTRACT_ELEMENT: {
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
+    computeKnownBits(Op.getOperand(0), Known, Depth+1);
     const unsigned Index = Op.getConstantOperandVal(1);
     const unsigned BitWidth = Op.getValueSizeInBits();
 
     // Remove low part of known bits mask
-    KnownZero = KnownZero.getHiBits(KnownZero.getBitWidth() - Index * BitWidth);
-    KnownOne = KnownOne.getHiBits(KnownOne.getBitWidth() - Index * BitWidth);
+    Known.Zero = Known.Zero.getHiBits(Known.Zero.getBitWidth() - Index * BitWidth);
+    Known.One = Known.One.getHiBits(Known.One.getBitWidth() - Index * BitWidth);
 
     // Remove high part of known bit mask
-    KnownZero = KnownZero.trunc(BitWidth);
-    KnownOne = KnownOne.trunc(BitWidth);
+    Known.Zero = Known.Zero.trunc(BitWidth);
+    Known.One = Known.One.trunc(BitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -2665,22 +2640,22 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
     // anything about the extended bits.
     if (BitWidth > EltBitWidth) {
-      KnownZero = KnownZero.trunc(EltBitWidth);
-      KnownOne = KnownOne.trunc(EltBitWidth);
+      Known.Zero = Known.Zero.trunc(EltBitWidth);
+      Known.One = Known.One.trunc(EltBitWidth);
     }
     ConstantSDNode *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)) {
       // If we know the element index, just demand that vector element.
       unsigned Idx = ConstEltNo->getZExtValue();
       APInt DemandedElt = APInt::getOneBitSet(NumSrcElts, Idx);
-      computeKnownBits(InVec, KnownZero, KnownOne, DemandedElt, Depth + 1);
+      computeKnownBits(InVec, Known, DemandedElt, Depth + 1);
     } else {
       // Unknown element index, so ignore DemandedElts and demand them all.
-      computeKnownBits(InVec, KnownZero, KnownOne, Depth + 1);
+      computeKnownBits(InVec, Known, Depth + 1);
     }
     if (BitWidth > EltBitWidth) {
-      KnownZero = KnownZero.zext(BitWidth);
-      KnownOne = KnownOne.zext(BitWidth);
+      Known.Zero = Known.Zero.zext(BitWidth);
+      Known.One = Known.One.zext(BitWidth);
     }
     break;
   }
@@ -2693,117 +2668,110 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
       // If we know the element index, split the demand between the
       // source vector and the inserted element.
-      KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+      Known.Zero = Known.One = APInt::getAllOnesValue(BitWidth);
       unsigned EltIdx = CEltNo->getZExtValue();
 
       // If we demand the inserted element then add its common known bits.
       if (DemandedElts[EltIdx]) {
-        computeKnownBits(InVal, KnownZero2, KnownOne2, Depth + 1);
-        KnownOne &= KnownOne2.zextOrTrunc(KnownOne.getBitWidth());
-        KnownZero &= KnownZero2.zextOrTrunc(KnownZero.getBitWidth());;
+        computeKnownBits(InVal, Known2, Depth + 1);
+        Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
+        Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());;
       }
 
       // If we demand the source vector then add its common known bits, ensuring
       // that we don't demand the inserted element.
       APInt VectorElts = DemandedElts & ~(APInt::getOneBitSet(NumElts, EltIdx));
       if (!!VectorElts) {
-        computeKnownBits(InVec, KnownZero2, KnownOne2, VectorElts, Depth + 1);
-        KnownOne &= KnownOne2;
-        KnownZero &= KnownZero2;
+        computeKnownBits(InVec, Known2, VectorElts, Depth + 1);
+        Known.One &= Known2.One;
+        Known.Zero &= Known2.Zero;
       }
     } else {
       // Unknown element index, so ignore DemandedElts and demand them all.
-      computeKnownBits(InVec, KnownZero, KnownOne, Depth + 1);
-      computeKnownBits(InVal, KnownZero2, KnownOne2, Depth + 1);
-      KnownOne &= KnownOne2.zextOrTrunc(KnownOne.getBitWidth());
-      KnownZero &= KnownZero2.zextOrTrunc(KnownZero.getBitWidth());;
+      computeKnownBits(InVec, Known, Depth + 1);
+      computeKnownBits(InVal, Known2, Depth + 1);
+      Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
+      Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());;
     }
     break;
   }
   case ISD::BITREVERSE: {
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    KnownZero = KnownZero2.reverseBits();
-    KnownOne = KnownOne2.reverseBits();
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    Known.Zero = Known2.Zero.reverseBits();
+    Known.One = Known2.One.reverseBits();
     break;
   }
   case ISD::BSWAP: {
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    KnownZero = KnownZero2.byteSwap();
-    KnownOne = KnownOne2.byteSwap();
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    Known.Zero = Known2.Zero.byteSwap();
+    Known.One = Known2.One.byteSwap();
     break;
   }
   case ISD::ABS: {
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // If the source's MSB is zero then we know the rest of the bits already.
-    if (KnownZero2[BitWidth - 1]) {
-      KnownZero = KnownZero2;
-      KnownOne = KnownOne2;
+    if (Known2.Zero[BitWidth - 1]) {
+      Known.Zero = Known2.Zero;
+      Known.One = Known2.One;
       break;
     }
 
     // We only know that the absolute values's MSB will be zero iff there is
     // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
-    KnownOne2.clearBit(BitWidth - 1);
-    if (KnownOne2.getBoolValue()) {
-      KnownZero = APInt::getSignMask(BitWidth);
+    Known2.One.clearBit(BitWidth - 1);
+    if (Known2.One.getBoolValue()) {
+      Known.Zero = APInt::getSignMask(BitWidth);
       break;
     }
     break;
   }
   case ISD::UMIN: {
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
-                     Depth + 1);
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
 
     // UMIN - we know that the result will have the maximum of the
     // known zero leading bits of the inputs.
-    unsigned LeadZero = KnownZero.countLeadingOnes();
-    LeadZero = std::max(LeadZero, KnownZero2.countLeadingOnes());
+    unsigned LeadZero = Known.Zero.countLeadingOnes();
+    LeadZero = std::max(LeadZero, Known2.Zero.countLeadingOnes());
 
-    KnownZero &= KnownZero2;
-    KnownOne &= KnownOne2;
-    KnownZero.setHighBits(LeadZero);
+    Known.Zero &= Known2.Zero;
+    Known.One &= Known2.One;
+    Known.Zero.setHighBits(LeadZero);
     break;
   }
   case ISD::UMAX: {
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts,
                      Depth + 1);
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
 
     // UMAX - we know that the result will have the maximum of the
     // known one leading bits of the inputs.
-    unsigned LeadOne = KnownOne.countLeadingOnes();
-    LeadOne = std::max(LeadOne, KnownOne2.countLeadingOnes());
+    unsigned LeadOne = Known.One.countLeadingOnes();
+    LeadOne = std::max(LeadOne, Known2.One.countLeadingOnes());
 
-    KnownZero &= KnownZero2;
-    KnownOne &= KnownOne2;
-    KnownOne.setHighBits(LeadOne);
+    Known.Zero &= Known2.Zero;
+    Known.One &= Known2.One;
+    Known.One.setHighBits(LeadOne);
     break;
   }
   case ISD::SMIN:
   case ISD::SMAX: {
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+    computeKnownBits(Op.getOperand(0), Known, DemandedElts,
                      Depth + 1);
     // If we don't know any bits, early out.
-    if (!KnownOne && !KnownZero)
+    if (!Known.One && !Known.Zero)
       break;
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
-                     Depth + 1);
-    KnownZero &= KnownZero2;
-    KnownOne &= KnownOne2;
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
+    Known.Zero &= Known2.Zero;
+    Known.One &= Known2.One;
     break;
   }
   case ISD::FrameIndex:
   case ISD::TargetFrameIndex:
     if (unsigned Align = InferPtrAlignment(Op)) {
       // The low bits are known zero if the pointer is aligned.
-      KnownZero.setLowBits(Log2_32(Align));
+      Known.Zero.setLowBits(Log2_32(Align));
       break;
     }
     break;
@@ -2816,12 +2784,11 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
     // Allow the target to implement this method for its nodes.
-    TLI->computeKnownBitsForTargetNode(Op, KnownZero, KnownOne, DemandedElts,
-                                       *this, Depth);
+    TLI->computeKnownBitsForTargetNode(Op, Known, DemandedElts, *this, Depth);
     break;
   }
 
-  assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
+  assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 }
 
 SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
@@ -2830,28 +2797,28 @@ SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
   if (isNullConstant(N1))
     return OFK_Never;
 
-  APInt N1Zero, N1One;
-  computeKnownBits(N1, N1Zero, N1One);
-  if (N1Zero.getBoolValue()) {
-    APInt N0Zero, N0One;
-    computeKnownBits(N0, N0Zero, N0One);
+  KnownBits N1Known;
+  computeKnownBits(N1, N1Known);
+  if (N1Known.Zero.getBoolValue()) {
+    KnownBits N0Known;
+    computeKnownBits(N0, N0Known);
 
     bool overflow;
-    (void)(~N0Zero).uadd_ov(~N1Zero, overflow);
+    (void)(~N0Known.Zero).uadd_ov(~N1Known.Zero, overflow);
     if (!overflow)
       return OFK_Never;
   }
 
   // mulhi + 1 never overflow
   if (N0.getOpcode() == ISD::UMUL_LOHI && N0.getResNo() == 1 &&
-      (~N1Zero & 0x01) == ~N1Zero)
+      (~N1Known.Zero & 0x01) == ~N1Known.Zero)
     return OFK_Never;
 
   if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1) {
-    APInt N0Zero, N0One;
-    computeKnownBits(N0, N0Zero, N0One);
+    KnownBits N0Known;
+    computeKnownBits(N0, N0Known);
 
-    if ((~N0Zero & 0x01) == ~N0Zero)
+    if ((~N0Known.Zero & 0x01) == ~N0Known.Zero)
       return OFK_Never;
   }
 
@@ -2895,10 +2862,10 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
   // to handle some common cases.
 
   // Fall back to computeKnownBits to catch other known cases.
-  APInt KnownZero, KnownOne;
-  computeKnownBits(Val, KnownZero, KnownOne);
-  return (KnownZero.countPopulation() == BitWidth - 1) &&
-         (KnownOne.countPopulation() == 1);
+  KnownBits Known;
+  computeKnownBits(Val, Known);
+  return (Known.Zero.countPopulation() == BitWidth - 1) &&
+         (Known.One.countPopulation() == 1);
 }
 
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
@@ -3068,17 +3035,17 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     // Special case decrementing a value (ADD X, -1):
     if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
       if (CRHS->isAllOnesValue()) {
-        APInt KnownZero, KnownOne;
-        computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
+        KnownBits Known;
+        computeKnownBits(Op.getOperand(0), Known, Depth+1);
 
         // If the input is known to be 0 or 1, the output is 0/-1, which is all
         // sign bits set.
-        if ((KnownZero | APInt(VTBits, 1)).isAllOnesValue())
+        if ((Known.Zero | 1).isAllOnesValue())
           return VTBits;
 
         // If we are subtracting one from a positive number, there is no carry
         // out of the result.
-        if (KnownZero.isNegative())
+        if (Known.Zero.isNegative())
           return Tmp;
       }
 
@@ -3093,16 +3060,16 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     // Handle NEG.
     if (ConstantSDNode *CLHS = isConstOrConstSplat(Op.getOperand(0)))
       if (CLHS->isNullValue()) {
-        APInt KnownZero, KnownOne;
-        computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, Depth+1);
+        KnownBits Known;
+        computeKnownBits(Op.getOperand(1), Known, Depth+1);
         // If the input is known to be 0 or 1, the output is 0/-1, which is all
         // sign bits set.
-        if ((KnownZero | APInt(VTBits, 1)).isAllOnesValue())
+        if ((Known.Zero | 1).isAllOnesValue())
           return VTBits;
 
         // If the input is known to be positive (the sign bit is known clear),
         // the output of the NEG has the same number of sign bits as the input.
-        if (KnownZero.isNegative())
+        if (Known.Zero.isNegative())
           return Tmp2;
 
         // Otherwise, we treat this like a SUB.
@@ -3199,14 +3166,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
-  APInt KnownZero, KnownOne;
-  computeKnownBits(Op, KnownZero, KnownOne, DemandedElts, Depth);
+  KnownBits Known;
+  computeKnownBits(Op, Known, DemandedElts, Depth);
 
   APInt Mask;
-  if (KnownZero.isNegative()) {        // sign bit is 0
-    Mask = KnownZero;
-  } else if (KnownOne.isNegative()) {  // sign bit is 1;
-    Mask = KnownOne;
+  if (Known.Zero.isNegative()) {        // sign bit is 0
+    Mask = Known.Zero;
+  } else if (Known.One.isNegative()) {  // sign bit is 1;
+    Mask = Known.One;
   } else {
     // Nothing known.
     return FirstAnswer;
@@ -3284,11 +3251,10 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
 bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   assert(A.getValueType() == B.getValueType() &&
          "Values must have the same type");
-  APInt AZero, AOne;
-  APInt BZero, BOne;
-  computeKnownBits(A, AZero, AOne);
-  computeKnownBits(B, BZero, BOne);
-  return (AZero | BZero).isAllOnesValue();
+  KnownBits AKnown, BKnown;
+  computeKnownBits(A, AKnown);
+  computeKnownBits(B, BKnown);
+  return (AKnown.Zero | BKnown.Zero).isAllOnesValue();
 }
 
 static SDValue FoldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
@@ -4161,7 +4127,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     auto SignExtendInReg = [&](APInt Val, llvm::EVT ConstantVT) {
       unsigned FromBits = EVT.getScalarSizeInBits();
       Val <<= Val.getBitWidth() - FromBits;
-      Val = Val.ashr(Val.getBitWidth() - FromBits);
+      Val.ashrInPlace(Val.getBitWidth() - FromBits);
       return getConstant(Val, DL, ConstantVT);
     };
 

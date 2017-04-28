@@ -400,10 +400,10 @@ FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
   if (!LOI->IsValid)
     return nullptr;
 
-  if (BitWidth > LOI->KnownZero.getBitWidth()) {
+  if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->KnownZero = LOI->KnownZero.zextOrTrunc(BitWidth);
-    LOI->KnownOne = LOI->KnownOne.zextOrTrunc(BitWidth);
+    LOI->Known.Zero = LOI->Known.Zero.zextOrTrunc(BitWidth);
+    LOI->Known.One = LOI->Known.One.zextOrTrunc(BitWidth);
   }
 
   return LOI;
@@ -436,17 +436,15 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Value *V = PN->getIncomingValue(0);
   if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
     DestLOI.NumSignBits = 1;
-    APInt Zero(BitWidth, 0);
-    DestLOI.KnownZero = Zero;
-    DestLOI.KnownOne = Zero;
+    DestLOI.Known = KnownBits(BitWidth);
     return;
   }
 
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     APInt Val = CI->getValue().zextOrTrunc(BitWidth);
     DestLOI.NumSignBits = Val.getNumSignBits();
-    DestLOI.KnownZero = ~Val;
-    DestLOI.KnownOne = Val;
+    DestLOI.Known.Zero = ~Val;
+    DestLOI.Known.One = Val;
   } else {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
@@ -463,25 +461,23 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     DestLOI = *SrcLOI;
   }
 
-  assert(DestLOI.KnownZero.getBitWidth() == BitWidth &&
-         DestLOI.KnownOne.getBitWidth() == BitWidth &&
+  assert(DestLOI.Known.Zero.getBitWidth() == BitWidth &&
+         DestLOI.Known.One.getBitWidth() == BitWidth &&
          "Masks should have the same bit width as the type.");
 
   for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
     if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
       DestLOI.NumSignBits = 1;
-      APInt Zero(BitWidth, 0);
-      DestLOI.KnownZero = Zero;
-      DestLOI.KnownOne = Zero;
+      DestLOI.Known = KnownBits(BitWidth);
       return;
     }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
       APInt Val = CI->getValue().zextOrTrunc(BitWidth);
       DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
-      DestLOI.KnownZero &= ~Val;
-      DestLOI.KnownOne &= Val;
+      DestLOI.Known.Zero &= ~Val;
+      DestLOI.Known.One &= Val;
       continue;
     }
 
@@ -498,8 +494,8 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
       return;
     }
     DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
-    DestLOI.KnownZero &= SrcLOI->KnownZero;
-    DestLOI.KnownOne &= SrcLOI->KnownOne;
+    DestLOI.Known.Zero &= SrcLOI->Known.Zero;
+    DestLOI.Known.One &= SrcLOI->Known.One;
   }
 }
 

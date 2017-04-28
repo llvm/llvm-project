@@ -7061,7 +7061,7 @@ __isl_give isl_map *isl_multi_pw_aff_eq_map(__isl_take isl_multi_pw_aff *mpa1,
  * pairwise equal.
  */
 static __isl_give isl_map *isl_multi_pw_aff_lex_map_on_space(
-	__isl_take isl_multi_pw_aff *mpa1, __isl_take isl_multi_pw_aff *mpa2,
+	__isl_keep isl_multi_pw_aff *mpa1, __isl_keep isl_multi_pw_aff *mpa2,
 	__isl_give isl_map *(*base)(__isl_take isl_pw_aff *pa1,
 		__isl_take isl_pw_aff *pa2),
 	__isl_take isl_space *space)
@@ -7106,7 +7106,7 @@ static __isl_give isl_map *isl_multi_pw_aff_lex_map_on_space(
  * pairwise equal.
  */
 __isl_give isl_map *isl_multi_pw_aff_lex_lt_map_on_space(
-	__isl_take isl_multi_pw_aff *mpa1, __isl_take isl_multi_pw_aff *mpa2,
+	__isl_keep isl_multi_pw_aff *mpa1, __isl_keep isl_multi_pw_aff *mpa2,
 	__isl_take isl_space *space)
 {
 	return isl_multi_pw_aff_lex_map_on_space(mpa1, mpa2,
@@ -7134,7 +7134,7 @@ __isl_give isl_map *isl_multi_pw_aff_lex_lt_map(
  * pairwise equal.
  */
 __isl_give isl_map *isl_multi_pw_aff_lex_gt_map_on_space(
-	__isl_take isl_multi_pw_aff *mpa1, __isl_take isl_multi_pw_aff *mpa2,
+	__isl_keep isl_multi_pw_aff *mpa1, __isl_keep isl_multi_pw_aff *mpa2,
 	__isl_take isl_space *space)
 {
 	return isl_multi_pw_aff_lex_map_on_space(mpa1, mpa2,

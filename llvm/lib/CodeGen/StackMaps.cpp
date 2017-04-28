@@ -41,8 +41,8 @@ using namespace llvm;
 #define DEBUG_TYPE "stackmaps"
 
 static cl::opt<int> StackMapVersion(
-    "stackmap-version", cl::init(2),
-    cl::desc("Specify the stackmap encoding version (default = 2)"));
+    "stackmap-version", cl::init(3),
+    cl::desc("Specify the stackmap encoding version (default = 3)"));
 
 const char *StackMaps::WSMP = "Stack Maps: ";
 
@@ -85,7 +85,7 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
 }
 
 StackMaps::StackMaps(AsmPrinter &AP) : AP(AP) {
-  if (StackMapVersion != 2)
+  if (StackMapVersion != 3)
     llvm_unreachable("Unsupported stackmap version!");
 }
 
@@ -221,8 +221,9 @@ void StackMaps::print(raw_ostream &OS) {
         OS << "Constant Index " << Loc.Offset;
         break;
       }
-      OS << "\t[encoding: .byte " << Loc.Type << ", .byte " << Loc.Size
-         << ", .short " << Loc.Reg << ", .int " << Loc.Offset << "]\n";
+      OS << "\t[encoding: .byte " << Loc.Type << ", .byte 0"
+         << ", .short " << Loc.Size << ", .short " << Loc.Reg << ", .short 0"
+         << ", .int " << Loc.Offset << "]\n";
       Idx++;
     }
 
@@ -521,10 +522,15 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
 
     for (const auto &Loc : CSLocs) {
       OS.EmitIntValue(Loc.Type, 1);
-      OS.EmitIntValue(Loc.Size, 1);
+      OS.EmitIntValue(0, 1);  // Reserved
+      OS.EmitIntValue(Loc.Size, 2);
       OS.EmitIntValue(Loc.Reg, 2);
+      OS.EmitIntValue(0, 2);  // Reserved
       OS.EmitIntValue(Loc.Offset, 4);
     }
+
+    // Emit alignment to 8 byte.
+    OS.EmitValueToAlignment(8);
 
     // Num live-out registers and padding to align to 4 byte.
     OS.EmitIntValue(0, 2);

@@ -60,7 +60,7 @@ struct BlockRange {
 };
 
 extern llvm::Optional<BlockRange> DumpBlockRange;
-extern llvm::cl::list<uint32_t> DumpStreamData;
+extern llvm::cl::list<std::string> DumpStreamData;
 
 extern llvm::cl::opt<bool> CompactRecords;
 extern llvm::cl::opt<bool> DumpGlobals;

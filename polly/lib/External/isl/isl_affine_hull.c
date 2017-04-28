@@ -29,8 +29,8 @@
 #include <set_to_map.c>
 #include <set_from_map.c>
 
-struct isl_basic_map *isl_basic_map_implicit_equalities(
-						struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_implicit_equalities(
+	__isl_take isl_basic_map *bmap)
 {
 	struct isl_tab *tab;
 
@@ -297,7 +297,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_recession_cone(struct isl_basic_set *bset)
+__isl_give isl_basic_set *isl_basic_set_recession_cone(
+	__isl_take isl_basic_set *bset)
 {
 	int i;
 
@@ -871,8 +872,8 @@ error:
 /* Detect and make explicit all equalities satisfied by the (integer)
  * points in bmap.
  */
-struct isl_basic_map *isl_basic_map_detect_equalities(
-						struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_detect_equalities(
+	__isl_take isl_basic_map *bmap)
 {
 	int i, j;
 	struct isl_basic_set *hull = NULL;
@@ -960,7 +961,8 @@ __isl_give isl_basic_set *isl_basic_set_plain_affine_hull(
  * equalities), we compute the additional equalities satisfied by
  * the integer points (if any) and add the original equalities back in.
  */
-struct isl_basic_map *isl_basic_map_affine_hull(struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_affine_hull(
+	__isl_take isl_basic_map *bmap)
 {
 	bmap = isl_basic_map_detect_equalities(bmap);
 	bmap = isl_basic_map_plain_affine_hull(bmap);

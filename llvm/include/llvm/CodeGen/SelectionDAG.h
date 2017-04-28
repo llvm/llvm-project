@@ -33,6 +33,7 @@
 
 namespace llvm {
 
+struct KnownBits;
 class MachineConstantPoolValue;
 class MachineFunction;
 class MDNode;
@@ -1283,21 +1284,19 @@ public:
     const;
 
   /// Determine which bits of Op are known to be either zero or one and return
-  /// them in the KnownZero/KnownOne bitsets. For vectors, the known bits are
-  /// those that are shared by every vector element.
+  /// them in Known. For vectors, the known bits are those that are shared by
+  /// every vector element.
   /// Targets can implement the computeKnownBitsForTargetNode method in the
   /// TargetLowering class to allow target nodes to be understood.
-  void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
-                        unsigned Depth = 0) const;
+  void computeKnownBits(SDValue Op, KnownBits &Known, unsigned Depth = 0) const;
 
   /// Determine which bits of Op are known to be either zero or one and return
-  /// them in the KnownZero/KnownOne bitsets. The DemandedElts argument allows
-  /// us to only collect the known bits that are shared by the requested vector
-  /// elements.
+  /// them in Known. The DemandedElts argument allows us to only collect the
+  /// known bits that are shared by the requested vector elements.
   /// Targets can implement the computeKnownBitsForTargetNode method in the
   /// TargetLowering class to allow target nodes to be understood.
-  void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
-                        const APInt &DemandedElts, unsigned Depth = 0) const;
+  void computeKnownBits(SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+                        unsigned Depth = 0) const;
 
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.

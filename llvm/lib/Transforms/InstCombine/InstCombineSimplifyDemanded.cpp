@@ -1537,7 +1537,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
         for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
           APInt LaneElts = OpUndefElts.lshr(InnerVWidthPerLane * Lane);
           LaneElts = LaneElts.getLoBits(InnerVWidthPerLane);
-          LaneElts = LaneElts.shl(InnerVWidthPerLane * (2 * Lane + OpNum));
+          LaneElts <<= InnerVWidthPerLane * (2 * Lane + OpNum);
           UndefElts |= LaneElts;
         }
       }

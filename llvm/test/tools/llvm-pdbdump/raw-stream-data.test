@@ -1,0 +1,47 @@
+; RUN: llvm-pdbdump raw -stream-data=8 %p/Inputs/LoadAddressTest.pdb \
+; RUN:   | FileCheck %s -check-prefix=FULL_STREAM
+; RUN: llvm-pdbdump raw -stream-data=8:4 %p/Inputs/LoadAddressTest.pdb \
+; RUN:   | FileCheck %s -check-prefix=OFFSET_STREAM
+; RUN: llvm-pdbdump raw -stream-data=8:4@24 %p/Inputs/LoadAddressTest.pdb \
+; RUN:   | FileCheck %s -check-prefix=OFFSET_AND_LENGTH
+
+FULL_STREAM:      Stream Data {
+FULL_STREAM-NEXT:   Stream {
+FULL_STREAM-NEXT:     Index: 8
+FULL_STREAM-NEXT:     Type: Public Symbol Records
+FULL_STREAM-NEXT:     Size: 40
+FULL_STREAM-NEXT:     Blocks:
+FULL_STREAM-NEXT:     Data (
+FULL_STREAM-NEXT:       0000: 12000E11 02000000 10000000 01005F6D  |.............._m|
+FULL_STREAM-NEXT:       0010: 61696E00 12002511 00000000 88000000  |ain...%.........|
+FULL_STREAM-NEXT:       0020: 01006D61 696E0000                    |..main..|
+FULL_STREAM-NEXT:     )
+FULL_STREAM-NEXT:   }
+FULL_STREAM-NEXT: }
+
+OFFSET_STREAM:      Stream Data {
+OFFSET_STREAM-NEXT:   Stream {
+OFFSET_STREAM-NEXT:    Index: 8
+OFFSET_STREAM-NEXT:    Type: Public Symbol Records
+OFFSET_STREAM-NEXT:    Size: 40
+OFFSET_STREAM-NEXT:    Blocks: 
+OFFSET_STREAM-NEXT:    Data (
+OFFSET_STREAM-NEXT:      0004: 02000000 10000000 01005F6D 61696E00  |.........._main.|
+OFFSET_STREAM-NEXT:      0014: 12002511 00000000 88000000 01006D61  |..%...........ma|
+OFFSET_STREAM-NEXT:      0024: 696E0000                             |in..|
+OFFSET_STREAM-NEXT:    )
+OFFSET_STREAM-NEXT:  }
+OFFSET_STREAM-NEXT:}
+
+OFFSET_AND_LENGTH:      Stream Data {
+OFFSET_AND_LENGTH-NEXT:   Stream {
+OFFSET_AND_LENGTH-NEXT:    Index: 8
+OFFSET_AND_LENGTH-NEXT:    Type: Public Symbol Records
+OFFSET_AND_LENGTH-NEXT:    Size: 40
+OFFSET_AND_LENGTH-NEXT:    Blocks: 
+OFFSET_AND_LENGTH-NEXT:    Data (
+OFFSET_AND_LENGTH-NEXT:      0004: 02000000 10000000 01005F6D 61696E00  |.........._main.|
+OFFSET_AND_LENGTH-NEXT:      0014: 12002511 00000000                    |..%.....|
+OFFSET_AND_LENGTH-NEXT:    )
+OFFSET_AND_LENGTH-NEXT:  }
+OFFSET_AND_LENGTH-NEXT:}

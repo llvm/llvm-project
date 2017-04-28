@@ -91,6 +91,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -11758,9 +11759,9 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
 
   // Lastly, can we determine that the bits defined by OrCI
   // are zero in Y?
-  APInt KnownZero, KnownOne;
-  DAG.computeKnownBits(Y, KnownZero, KnownOne);
-  if ((OrCI & KnownZero) != OrCI)
+  KnownBits Known;
+  DAG.computeKnownBits(Y, Known);
+  if ((OrCI & Known.Zero) != OrCI)
     return SDValue();
 
   // OK, we can do the combine.
@@ -11898,16 +11899,16 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   }
 
   if (Res.getNode()) {
-    APInt KnownZero, KnownOne;
-    DAG.computeKnownBits(SDValue(N,0), KnownZero, KnownOne);
+    KnownBits Known;
+    DAG.computeKnownBits(SDValue(N,0), Known);
     // Capture demanded bits information that would be otherwise lost.
-    if (KnownZero == 0xfffffffe)
+    if (Known.Zero == 0xfffffffe)
       Res = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Res,
                         DAG.getValueType(MVT::i1));
-    else if (KnownZero == 0xffffff00)
+    else if (Known.Zero == 0xffffff00)
       Res = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Res,
                         DAG.getValueType(MVT::i8));
-    else if (KnownZero == 0xffff0000)
+    else if (Known.Zero == 0xffff0000)
       Res = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Res,
                         DAG.getValueType(MVT::i16));
   }
@@ -12596,13 +12597,12 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 }
 
 void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
-                                                      APInt &KnownZero,
-                                                      APInt &KnownOne,
+                                                      KnownBits &Known,
                                                       const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
-  unsigned BitWidth = KnownOne.getBitWidth();
-  KnownZero = KnownOne = APInt(BitWidth, 0);
+  unsigned BitWidth = Known.getBitWidth();
+  Known.Zero.clearAllBits(); Known.One.clearAllBits();
   switch (Op.getOpcode()) {
   default: break;
   case ARMISD::ADDC:
@@ -12612,17 +12612,17 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // These nodes' second result is a boolean
     if (Op.getResNo() == 0)
       break;
-    KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
+    Known.Zero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
     break;
   case ARMISD::CMOV: {
     // Bits are known zero/one if known on the LHS and RHS.
-    DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-    if (KnownZero == 0 && KnownOne == 0) return;
+    DAG.computeKnownBits(Op.getOperand(0), Known, Depth+1);
+    if (Known.Zero == 0 && Known.One == 0) return;
 
-    APInt KnownZeroRHS, KnownOneRHS;
-    DAG.computeKnownBits(Op.getOperand(1), KnownZeroRHS, KnownOneRHS, Depth+1);
-    KnownZero &= KnownZeroRHS;
-    KnownOne  &= KnownOneRHS;
+    KnownBits KnownRHS;
+    DAG.computeKnownBits(Op.getOperand(1), KnownRHS, Depth+1);
+    Known.Zero &= KnownRHS.Zero;
+    Known.One  &= KnownRHS.One;
     return;
   }
   case ISD::INTRINSIC_W_CHAIN: {
@@ -12634,7 +12634,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::arm_ldrex: {
       EVT VT = cast<MemIntrinsicSDNode>(Op)->getMemoryVT();
       unsigned MemBits = VT.getScalarSizeInBits();
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - MemBits);
+      Known.Zero |= APInt::getHighBitsSet(BitWidth, BitWidth - MemBits);
       return;
     }
     }
@@ -12642,14 +12642,14 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case ARMISD::BFI: {
     // Conservatively, we can recurse down the first operand
     // and just mask out all affected bits.
-    DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+    DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
 
     // The operand to BFI is already a mask suitable for removing the bits it
     // sets.
     ConstantSDNode *CI = cast<ConstantSDNode>(Op.getOperand(2));
     const APInt &Mask = CI->getAPIntValue();
-    KnownZero &= Mask;
-    KnownOne &= Mask;
+    Known.Zero &= Mask;
+    Known.One &= Mask;
     return;
   }
   }

@@ -145,6 +145,6 @@ private:
   static thread_local bool IsMyThread;
 };
 
-}; // namespace fuzzer
+} // namespace fuzzer
 
 #endif // LLVM_FUZZER_INTERNAL_H

@@ -108,51 +108,67 @@ entry:
 
 ; CHECK: .Ltmp0-test
 ; Check for the two spill slots
-; Stack Maps: 		Loc 3: Indirect 7+0	[encoding: .byte 3, .byte 16, .short 7, .int 0]
-; Stack Maps: 		Loc 4: Indirect 7+0	[encoding: .byte 3, .byte 16, .short 7, .int 0]
+; Stack Maps: 		Loc 3: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
+; Stack Maps: 		Loc 4: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 
 ; CHECK: .Ltmp1-test2
 ; Check for the two spill slots
-; Stack Maps: 		Loc 3: Indirect 7+16	[encoding: .byte 3, .byte 16, .short 7, .int 16]
-; Stack Maps: 		Loc 4: Indirect 7+0	[encoding: .byte 3, .byte 16, .short 7, .int 0]
+; Stack Maps: 		Loc 3: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
+; Stack Maps: 		Loc 4: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	16
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 
 ; CHECK: .Ltmp2-test3
 ; Check for the four spill slots
-; Stack Maps: 		Loc 3: Indirect 7+16	[encoding: .byte 3, .byte 16, .short 7, .int 16]
-; Stack Maps: 		Loc 4: Indirect 7+16	[encoding: .byte 3, .byte 16, .short 7, .int 16]
-; Stack Maps: 		Loc 5: Indirect 7+16	[encoding: .byte 3, .byte 16, .short 7, .int 16]
-; Stack Maps: 		Loc 6: Indirect 7+0		[encoding: .byte 3, .byte 16, .short 7, .int 0]
+; Stack Maps: 		Loc 3: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
+; Stack Maps: 		Loc 4: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
+; Stack Maps: 		Loc 5: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
+; Stack Maps: 		Loc 6: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	16
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	 0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	16
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	 0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	16
 ; CHECK: .byte	3
-; CHECK: .byte	16
+; CHECK: .byte	 0
+; CHECK: .short 16
 ; CHECK: .short	7
+; CHECK: .short	0
 ; CHECK: .long	0
 
 declare void @do_safepoint()

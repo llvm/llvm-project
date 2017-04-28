@@ -23,8 +23,8 @@ using namespace llvm::sys;
 extern "C" PIPSQUEAK_EXPORT const char *TestA() { return "ProcessCall"; }
 
 std::string LibPath() {
-  std::string Path =
-      fs::getMainExecutable("DynamicLibraryTests", (void *)&TestA);
+  void *Ptr = (void*)(intptr_t)TestA;
+  std::string Path = fs::getMainExecutable("DynamicLibraryTests", Ptr);
   llvm::SmallString<256> Buf(path::parent_path(Path));
   path::append(Buf, "PipSqueak.so");
   return Buf.str();

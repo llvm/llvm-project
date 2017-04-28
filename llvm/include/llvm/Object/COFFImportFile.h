@@ -53,7 +53,7 @@ public:
 
   basic_symbol_iterator symbol_end() const override {
     DataRefImpl Symb;
-    Symb.p = isCode() ? 2 : 1;
+    Symb.p = isData() ? 1 : 2;
     return BasicSymbolRef(Symb, this);
   }
 
@@ -63,8 +63,8 @@ public:
   }
 
 private:
-  bool isCode() const {
-    return getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
+  bool isData() const {
+    return getCOFFImportHeader()->getType() == COFF::IMPORT_DATA;
   }
 };
 

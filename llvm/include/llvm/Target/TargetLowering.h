@@ -69,6 +69,7 @@ class CCValAssign;
 class FastISel;
 class FunctionLoweringInfo;
 class IntrinsicInst;
+struct KnownBits;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
@@ -2442,7 +2443,7 @@ public:
   ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
-                            APInt &KnownZero, APInt &KnownOne,
+                            KnownBits &Known,
                             TargetLoweringOpt &TLO,
                             unsigned Depth = 0,
                             bool AssumeSingleUse = false) const;
@@ -2456,8 +2457,7 @@ public:
   /// argument allows us to only collect the known bits that are shared by the
   /// requested vector elements.
   virtual void computeKnownBitsForTargetNode(const SDValue Op,
-                                             APInt &KnownZero,
-                                             APInt &KnownOne,
+                                             KnownBits &Known,
                                              const APInt &DemandedElts,
                                              const SelectionDAG &DAG,
                                              unsigned Depth = 0) const;
