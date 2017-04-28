@@ -95,6 +95,14 @@ class TC1 {
   void meth(TC1);
 };
 
+typedef __attribute__((__ext_vector_type__(3))) float float3;
+
+typedef float __m128 __attribute__((__vector_size__(16)));
+
+float3 vectorOverload(float3 f);
+
+__m128 vectorOverload(__m128 f);
+
 // RUN: c-index-test -test-load-source-usrs all -fno-delayed-template-parsing %s | FileCheck %s
 // CHECK: usrs.cpp c:@N@foo Extent=[1:1 - 4:2]
 // CHECK: usrs.cpp c:@N@foo@x Extent=[2:3 - 2:8]
@@ -172,3 +180,6 @@ class TC1 {
 // CHECK: usrs.cpp c:usrs.cpp@S@usrs.cpp@1510@FI@x Extent=[91:10 - 91:15]
 
 // CHECK: usrs.cpp c:@ST>1#T@TC1@F@meth#>@ST>1#T@TC11t0.0# Extent=[95:3 - 95:17]
+
+// CHECK: usrs.cpp c:@F@vectorOverload#]3f# Extent=[102:1 - 102:32]
+// CHECK: usrs.cpp c:@F@vectorOverload#[4f# Extent=[104:1 - 104:32]

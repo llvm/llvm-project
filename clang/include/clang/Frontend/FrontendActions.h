@@ -99,8 +99,6 @@ class GenerateModuleAction : public ASTFrontendAction {
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
 protected:
-  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
-
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
@@ -112,20 +110,11 @@ protected:
 };
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
-  clang::Module *Module = nullptr;
-  const FileEntry *ModuleMapForUniquing = nullptr;
-  bool IsSystem = false;
-
 private:
   bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
-
-public:
-  GenerateModuleFromModuleMapAction() {}
-  GenerateModuleFromModuleMapAction(const FileEntry *ModuleMap, bool IsSystem)
-      : ModuleMapForUniquing(ModuleMap), IsSystem(IsSystem) {}
 };
 
 class GenerateModuleInterfaceAction : public GenerateModuleAction {

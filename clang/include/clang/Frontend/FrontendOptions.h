@@ -23,6 +23,7 @@ class MemoryBuffer;
 }
 
 namespace clang {
+class FileEntry;
 
 namespace frontend {
   enum ActionKind {
@@ -100,9 +101,8 @@ public:
     Precompiled
   };
 
-  constexpr InputKind(Language L = Unknown, bool PP = false)
-      : Lang(L), Fmt(Source), Preprocessed(PP) {}
-  constexpr InputKind(Language L, Format F, bool PP = false)
+  constexpr InputKind(Language L = Unknown, Format F = Source,
+                      bool PP = false)
       : Lang(L), Fmt(F), Preprocessed(PP) {}
 
   Language getLanguage() const { return static_cast<Language>(Lang); }
@@ -117,6 +117,9 @@ public:
 
   InputKind getPreprocessed() const {
     return InputKind(getLanguage(), getFormat(), true);
+  }
+  InputKind withFormat(Format F) const {
+    return InputKind(getLanguage(), F, isPreprocessed());
   }
 };
 
@@ -255,6 +258,10 @@ public:
 
   /// The input files and their types.
   std::vector<FrontendInputFile> Inputs;
+
+  /// When the input is a module map, the original module map file from which
+  /// that map was inferred, if any (for umbrella modules).
+  std::string OriginalModuleMap;
 
   /// The output file, if any.
   std::string OutputFile;

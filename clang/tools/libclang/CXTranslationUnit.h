@@ -35,6 +35,10 @@ struct CXTranslationUnitImpl {
   clang::index::CommentToXMLConverter *CommentToXML;
 };
 
+struct CXTargetInfoImpl {
+  CXTranslationUnit TranslationUnit;
+};
+
 namespace clang {
 namespace cxtu {
 
