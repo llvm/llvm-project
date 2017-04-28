@@ -318,6 +318,19 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   elementTypes.push_back(CGM.getBlockDescriptorType());
 }
 
+static QualType getCaptureFieldType(const CodeGenFunction &CGF,
+                                    const BlockDecl::Capture &CI) {
+  const VarDecl *VD = CI.getVariable();
+
+  // If the variable is captured by an enclosing block or lambda expression,
+  // use the type of the capture field.
+  if (CGF.BlockInfo && CI.isNested())
+    return CGF.BlockInfo->getCapture(VD).fieldType();
+  if (auto *FD = CGF.LambdaCaptureFields.lookup(VD))
+    return FD->getType();
+  return VD->getType();
+}
+
 /// Compute the layout of the given block.  Attempts to lay the block
 /// out with minimal space requirements.
 static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
@@ -432,15 +445,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       }
     }
 
-    QualType VT = variable->getType();
-
-    // If the variable is captured by an enclosing block or lambda expression,
-    // use the type of the capture field.
-    if (CGF->BlockInfo && CI.isNested())
-      VT = CGF->BlockInfo->getCapture(variable).fieldType();
-    else if (auto *FD = CGF->LambdaCaptureFields.lookup(variable))
-      VT = FD->getType();
-
+    QualType VT = getCaptureFieldType(*CGF, CI);
     CharUnits size = C.getTypeSizeInChars(VT);
     CharUnits align = C.getDeclAlign(variable);
     
@@ -606,15 +611,21 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
     if (capture.isConstant()) continue;
 
     // Ignore objects that aren't destructed.
-    QualType::DestructionKind dtorKind =
-      variable->getType().isDestructedType();
+    QualType VT = getCaptureFieldType(CGF, CI);
+    QualType::DestructionKind dtorKind = VT.isDestructedType();
     if (dtorKind == QualType::DK_none) continue;
 
     CodeGenFunction::Destroyer *destroyer;
 
     // Block captures count as local values and have imprecise semantics.
     // They also can't be arrays, so need to worry about that.
-    if (dtorKind == QualType::DK_objc_strong_lifetime) {
+    //
+    // For const-qualified captures, emit clang.arc.use to ensure the captured
+    // object doesn't get released while we are still depending on its validity
+    // within the block.
+    if (VT.isConstQualified() && VT.getObjCLifetime() == Qualifiers::OCL_Strong)
+      destroyer = CodeGenFunction::emitARCIntrinsicUse;
+    else if (dtorKind == QualType::DK_objc_strong_lifetime) {
       destroyer = CodeGenFunction::destroyARCStrongImprecise;
     } else {
       destroyer = CGF.getDestroyer(dtorKind);
@@ -634,7 +645,7 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
     if (useArrayEHCleanup) 
       cleanupKind = InactiveNormalAndEHCleanup;
 
-    CGF.pushDestroy(cleanupKind, addr, variable->getType(),
+    CGF.pushDestroy(cleanupKind, addr, VT,
                     destroyer, useArrayEHCleanup);
 
     // Remember where that cleanup was.
@@ -855,6 +866,12 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // If it's a reference variable, copy the reference into the block field.
     } else if (type->isReferenceType()) {
       Builder.CreateStore(src.getPointer(), blockField);
+
+    // If type is const-qualified, copy the value into the block field.
+    } else if (type.isConstQualified() &&
+               type.getObjCLifetime() == Qualifiers::OCL_Strong) {
+      llvm::Value *value = Builder.CreateLoad(src, "captured");
+      Builder.CreateStore(value, blockField);
 
     // If this is an ARC __strong block-pointer variable, don't do a
     // block copy.
