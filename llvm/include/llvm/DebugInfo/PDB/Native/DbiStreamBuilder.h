@@ -31,7 +31,7 @@ struct coff_section;
 namespace pdb {
 class DbiStream;
 struct DbiStreamHeader;
-class ModInfoBuilder;
+class DbiModuleDescriptorBuilder;
 class PDBFile;
 
 class DbiStreamBuilder {
@@ -57,7 +57,7 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
-  Expected<ModInfoBuilder &> addModuleInfo(StringRef ModuleName);
+  Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
   Error addModuleSourceFile(StringRef Module, StringRef File);
 
   Error finalizeMsfLayout();
@@ -103,8 +103,8 @@ private:
 
   const DbiStreamHeader *Header;
 
-  StringMap<std::unique_ptr<ModInfoBuilder>> ModiMap;
-  std::vector<ModInfoBuilder *> ModiList;
+  StringMap<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiMap;
+  std::vector<DbiModuleDescriptorBuilder *> ModiList;
 
   StringMap<uint32_t> SourceFileNames;
 

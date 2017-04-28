@@ -777,6 +777,11 @@ public:
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
 
+  /// Returns the type of FrameIndex and TargetFrameIndex nodes.
+  MVT getFrameIndexTy() {
+    return DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout());
+  }
+
 private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);

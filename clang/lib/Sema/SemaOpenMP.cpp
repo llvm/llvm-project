@@ -824,21 +824,18 @@ DSAStackTy::hasDSA(ValueDecl *D,
   if (isStackEmpty())
     return {};
   D = getCanonicalDecl(D);
-  auto StartI = std::next(Stack.back().first.rbegin());
+  auto I = (FromParent && Stack.back().first.size() > 1)
+               ? std::next(Stack.back().first.rbegin())
+               : Stack.back().first.rbegin();
   auto EndI = Stack.back().first.rend();
-  if (FromParent && StartI != EndI)
-    StartI = std::next(StartI);
-  if (StartI == EndI)
-    return {};
-  auto I = std::prev(StartI);
-  do {
-    ++I;
+  while (std::distance(I, EndI) > 1) {
+    std::advance(I, 1);
     if (!DPred(I->Directive) && !isParallelOrTaskRegion(I->Directive))
       continue;
     DSAVarData DVar = getDSA(I, D);
     if (CPred(DVar.CKind))
       return DVar;
-  } while (I != EndI);
+  }
   return {};
 }
 

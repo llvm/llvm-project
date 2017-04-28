@@ -485,6 +485,20 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  let x = 1;\n"
                "  return fetch(x);\n"
                "}");
+  verifyFormat("async function f() {\n"
+               "  return 1;\n"
+               "}\n"
+               "\n"
+               "function a() {\n"
+               "  return 1;\n"
+               "}\n",
+               "  async   function f() {\n"
+               "   return 1;\n"
+               "}\n"
+               "\n"
+               "   function a() {\n"
+               "  return   1;\n"
+               "}  \n");
   verifyFormat("async function* f() {\n"
                "  yield fetch(x);\n"
                "}");
@@ -492,6 +506,9 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  return fetch(x);\n"
                "}");
   verifyFormat("let x = async () => f();");
+  verifyFormat("let x = async function() {\n"
+               "  f();\n"
+               "};");
   verifyFormat("let x = async();");
   verifyFormat("class X {\n"
                "  async asyncMethod() {\n"

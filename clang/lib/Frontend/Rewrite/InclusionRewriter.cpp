@@ -392,7 +392,7 @@ bool InclusionRewriter::HandleHasInclude(
   // FIXME: Why don't we call PP.LookupFile here?
   const FileEntry *File = PP.getHeaderSearchInfo().LookupFile(
       Filename, SourceLocation(), isAngled, nullptr, CurDir, Includers, nullptr,
-      nullptr, nullptr, nullptr, false);
+      nullptr, nullptr, nullptr, nullptr);
 
   FileExists = File != nullptr;
   return true;

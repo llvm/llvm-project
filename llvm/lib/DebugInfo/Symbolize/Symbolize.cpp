@@ -461,8 +461,9 @@ extern "C" char *__cxa_demangle(const char *mangled_name, char *output_buffer,
                                 size_t *length, int *status);
 #endif
 
-std::string LLVMSymbolizer::DemangleName(const std::string &Name,
-                                         const SymbolizableModule *ModInfo) {
+std::string
+LLVMSymbolizer::DemangleName(const std::string &Name,
+                             const SymbolizableModule *DbiModuleDescriptor) {
 #if !defined(_MSC_VER)
   // We can spoil names of symbols with C linkage, so use an heuristic
   // approach to check if the name should be demangled.
@@ -490,7 +491,7 @@ std::string LLVMSymbolizer::DemangleName(const std::string &Name,
     return (result == 0) ? Name : std::string(DemangledName);
   }
 #endif
-  if (ModInfo && ModInfo->isWin32Module())
+  if (DbiModuleDescriptor && DbiModuleDescriptor->isWin32Module())
     return std::string(demanglePE32ExternCFunc(Name));
   return Name;
 }

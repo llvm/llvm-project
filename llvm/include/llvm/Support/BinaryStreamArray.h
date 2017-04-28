@@ -42,10 +42,12 @@ namespace llvm {
 /// having to specify a second template argument to VarStreamArray (documented
 /// below).
 template <typename T> struct VarStreamArrayExtractor {
+  typedef void Context;
+
   // Method intentionally deleted.  You must provide an explicit specialization
   // with the following method implemented.
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   T &Item) const = delete;
+  static Error extract(BinaryStreamRef Stream, uint32_t &Len, T &Item,
+                       Context *Ctx) = delete;
 };
 
 /// VarStreamArray represents an array of variable length records backed by a
@@ -64,74 +66,64 @@ template <typename T> struct VarStreamArrayExtractor {
 /// If you do not specify an Extractor type, you are expected to specialize
 /// VarStreamArrayExtractor<T> for your ValueType.
 ///
-/// By default an Extractor is default constructed in the class, but in some
-/// cases you might find it useful for an Extractor to maintain state across
-/// extractions.  In this case you can provide your own Extractor through a
-/// secondary constructor.  The following examples show various ways of
-/// creating a VarStreamArray.
+/// The default extractor type is stateless, but by specializing
+/// VarStreamArrayExtractor or defining your own custom extractor type and
+/// adding the appropriate ContextType typedef to the class, you can pass a
+/// context field during construction of the VarStreamArray that will be
+/// passed to each call to extract.
 ///
-///       // Will use VarStreamArrayExtractor<MyType> as the extractor.
-///       VarStreamArray<MyType> MyTypeArray;
-///
-///       // Will use a default-constructed MyExtractor as the extractor.
-///       VarStreamArray<MyType, MyExtractor> MyTypeArray2;
-///
-///       // Will use the specific instance of MyExtractor provided.
-///       // MyExtractor need not be default-constructible in this case.
-///       MyExtractor E(SomeContext);
-///       VarStreamArray<MyType, MyExtractor> MyTypeArray3(E);
-///
-template <typename ValueType, typename Extractor> class VarStreamArrayIterator;
+template <typename ValueType, typename ExtractorType>
+class VarStreamArrayIterator;
 
 template <typename ValueType,
-          typename Extractor = VarStreamArrayExtractor<ValueType>>
-
+          typename ExtractorType = VarStreamArrayExtractor<ValueType>>
 class VarStreamArray {
-  friend class VarStreamArrayIterator<ValueType, Extractor>;
-
 public:
-  typedef VarStreamArrayIterator<ValueType, Extractor> Iterator;
+  typedef typename ExtractorType::ContextType ContextType;
+  typedef VarStreamArrayIterator<ValueType, ExtractorType> Iterator;
+  friend Iterator;
 
   VarStreamArray() = default;
-  explicit VarStreamArray(const Extractor &E) : E(E) {}
 
-  explicit VarStreamArray(BinaryStreamRef Stream) : Stream(Stream) {}
-  VarStreamArray(BinaryStreamRef Stream, const Extractor &E)
-      : Stream(Stream), E(E) {}
+  explicit VarStreamArray(BinaryStreamRef Stream,
+                          ContextType *Context = nullptr)
+      : Stream(Stream), Context(Context) {}
 
-  VarStreamArray(const VarStreamArray<ValueType, Extractor> &Other)
-      : Stream(Other.Stream), E(Other.E) {}
+  VarStreamArray(const VarStreamArray<ValueType, ExtractorType> &Other)
+      : Stream(Other.Stream), Context(Other.Context) {}
 
   Iterator begin(bool *HadError = nullptr) const {
-    return Iterator(*this, E, HadError);
+    return Iterator(*this, Context, HadError);
   }
 
-  Iterator end() const { return Iterator(E); }
-
-  const Extractor &getExtractor() const { return E; }
+  Iterator end() const { return Iterator(); }
 
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
+  void setUnderlyingStream(BinaryStreamRef Stream) { this->Stream = Stream; }
 
 private:
   BinaryStreamRef Stream;
-  Extractor E;
+  ContextType *Context = nullptr;
 };
 
-template <typename ValueType, typename Extractor>
+template <typename ValueType, typename ExtractorType>
 class VarStreamArrayIterator
-    : public iterator_facade_base<VarStreamArrayIterator<ValueType, Extractor>,
-                                  std::forward_iterator_tag, ValueType> {
-  typedef VarStreamArrayIterator<ValueType, Extractor> IterType;
-  typedef VarStreamArray<ValueType, Extractor> ArrayType;
+    : public iterator_facade_base<
+          VarStreamArrayIterator<ValueType, ExtractorType>,
+          std::forward_iterator_tag, ValueType> {
+  typedef typename ExtractorType::ContextType ContextType;
+  typedef VarStreamArrayIterator<ValueType, ExtractorType> IterType;
+  typedef VarStreamArray<ValueType, ExtractorType> ArrayType;
 
 public:
-  VarStreamArrayIterator(const ArrayType &Array, const Extractor &E,
+  VarStreamArrayIterator(const ArrayType &Array, ContextType *Context,
                          bool *HadError = nullptr)
-      : IterRef(Array.Stream), Array(&Array), HadError(HadError), Extract(E) {
+      : IterRef(Array.Stream), Context(Context), Array(&Array),
+        HadError(HadError) {
     if (IterRef.getLength() == 0)
       moveToEnd();
     else {
-      auto EC = Extract(IterRef, ThisLen, ThisValue);
+      auto EC = ExtractorType::extract(IterRef, ThisLen, ThisValue, Context);
       if (EC) {
         consumeError(std::move(EC));
         markError();
@@ -139,7 +131,6 @@ public:
     }
   }
   VarStreamArrayIterator() = default;
-  explicit VarStreamArrayIterator(const Extractor &E) : Extract(E) {}
   ~VarStreamArrayIterator() = default;
 
   bool operator==(const IterType &R) const {
@@ -178,7 +169,7 @@ public:
         moveToEnd();
       } else {
         // There is some data after the current record.
-        auto EC = Extract(IterRef, ThisLen, ThisValue);
+        auto EC = ExtractorType::extract(IterRef, ThisLen, ThisValue, Context);
         if (EC) {
           consumeError(std::move(EC));
           markError();
@@ -205,11 +196,11 @@ private:
 
   ValueType ThisValue;
   BinaryStreamRef IterRef;
+  ContextType *Context{nullptr};
   const ArrayType *Array{nullptr};
   uint32_t ThisLen{0};
   bool HasError{false};
   bool *HadError{nullptr};
-  Extractor Extract;
 };
 
 template <typename T> class FixedStreamArrayIterator;

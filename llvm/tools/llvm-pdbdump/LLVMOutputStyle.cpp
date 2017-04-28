@@ -16,20 +16,23 @@
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
-#include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/EnumTables.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
-#include "llvm/DebugInfo/PDB/Native/ModStream.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -606,7 +609,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             File.getMsfLayout(), File.getMsfBuffer(),
             Modi.Info.getModuleStreamIndex());
 
-        ModStream ModS(Modi.Info, std::move(ModStreamData));
+        ModuleDebugStream ModS(Modi.Info, std::move(ModStreamData));
         if (auto EC = ModS.reload())
           return EC;
 
@@ -633,17 +636,15 @@ Error LLVMOutputStyle::dumpDbiStream() {
         }
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
-          bool HadError = false;
           // Define a locally scoped visitor to print the different
           // substream types types.
-          class RecordVisitor : public codeview::IModuleSubstreamVisitor {
+          class RecordVisitor : public codeview::ModuleDebugFragmentVisitor {
           public:
             RecordVisitor(ScopedPrinter &P, PDBFile &F) : P(P), F(F) {}
-            Error visitUnknown(ModuleSubstreamKind Kind,
-                               BinaryStreamRef Stream) override {
+            Error visitUnknown(ModuleDebugUnknownFragment &Fragment) override {
               DictScope DD(P, "Unknown");
               ArrayRef<uint8_t> Data;
-              BinaryStreamReader R(Stream);
+              BinaryStreamReader R(Fragment.getData());
               if (auto EC = R.readBytes(Data, R.bytesRemaining())) {
                 return make_error<RawError>(
                     raw_error_code::corrupt_file,
@@ -652,9 +653,8 @@ Error LLVMOutputStyle::dumpDbiStream() {
               P.printBinaryBlock("Data", Data);
               return Error::success();
             }
-            Error
-            visitFileChecksums(BinaryStreamRef Data,
-                               const FileChecksumArray &Checksums) override {
+            Error visitFileChecksums(
+                ModuleDebugFileChecksumFragment &Checksums) override {
               DictScope DD(P, "FileChecksums");
               for (const auto &C : Checksums) {
                 DictScope DDD(P, "Checksum");
@@ -669,9 +669,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
               return Error::success();
             }
 
-            Error visitLines(BinaryStreamRef Data,
-                             const LineSubstreamHeader *Header,
-                             const LineInfoArray &Lines) override {
+            Error visitLines(ModuleDebugLineFragment &Lines) override {
               DictScope DD(P, "Lines");
               for (const auto &L : Lines) {
                 if (auto Result = getFileNameForOffset2(L.NameIndex))
@@ -720,8 +718,8 @@ Error LLVMOutputStyle::dumpDbiStream() {
           };
 
           RecordVisitor V(P, File);
-          for (const auto &L : ModS.lines(&HadError)) {
-            if (auto EC = codeview::visitModuleSubstream(L, V))
+          for (const auto &L : ModS.linesAndChecksums()) {
+            if (auto EC = codeview::visitModuleDebugFragment(L, V))
               return EC;
           }
         }

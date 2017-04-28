@@ -18,6 +18,10 @@ macro(find_first_existing_vc_file out_var path)
   if(git_result EQUAL 0)
     string(STRIP "${git_dir}" git_dir)
     set(${out_var} "${git_dir}/logs/HEAD")
+    # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+    if (NOT EXISTS "${git_dir}/logs/HEAD")
+      file(WRITE "${git_dir}/logs/HEAD" "")
+    endif()
   else()
     find_first_existing_file(${out_var}
       "${path}/.svn/wc.db"   # SVN 1.7

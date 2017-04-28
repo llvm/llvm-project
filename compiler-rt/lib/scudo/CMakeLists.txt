@@ -14,6 +14,7 @@ set(SCUDO_SOURCES
   scudo_interceptors.cpp
   scudo_new_delete.cpp
   scudo_termination.cpp
+  scudo_tls_linux.cpp
   scudo_utils.cpp)
 
 # Enable the SSE 4.2 instruction set for scudo_crc32.cpp, if available.

@@ -623,6 +623,15 @@ struct coff_base_reloc_block_entry {
   int getOffset() const { return Data & ((1 << 12) - 1); }
 };
 
+struct coff_resource_dir_table {
+  support::ulittle32_t Characteristics;
+  support::ulittle32_t TimeDateStamp;
+  support::ulittle16_t MajorVersion;
+  support::ulittle16_t MinorVersion;
+  support::ulittle16_t NumberOfNameEntries;
+  support::ulittle16_t NumberOfIDEntries;
+};
+
 class COFFObjectFile : public ObjectFile {
 private:
   friend class ImportDirectoryEntryRef;

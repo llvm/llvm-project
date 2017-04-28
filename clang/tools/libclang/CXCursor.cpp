@@ -1523,6 +1523,10 @@ int clang_Cursor_isDynamicCall(CXCursor C) {
     return true;
   }
 
+  if (auto *PropRefE = dyn_cast<ObjCPropertyRefExpr>(E)) {
+    return !PropRefE->isSuperReceiver();
+  }
+
   const MemberExpr *ME = nullptr;
   if (isa<MemberExpr>(E))
     ME = cast<MemberExpr>(E);
@@ -1532,7 +1536,9 @@ int clang_Cursor_isDynamicCall(CXCursor C) {
   if (ME) {
     if (const CXXMethodDecl *
           MD = dyn_cast_or_null<CXXMethodDecl>(ME->getMemberDecl()))
-      return MD->isVirtual() && !ME->hasQualifier();
+      return MD->isVirtual() &&
+             ME->performsVirtualDispatch(
+                 cxcursor::getCursorContext(C).getLangOpts());
   }
 
   return 0;
@@ -1546,6 +1552,24 @@ CXType clang_Cursor_getReceiverType(CXCursor C) {
 
   if (const ObjCMessageExpr *MsgE = dyn_cast_or_null<ObjCMessageExpr>(E))
     return cxtype::MakeCXType(MsgE->getReceiverType(), TU);
+
+  if (auto *PropRefE = dyn_cast<ObjCPropertyRefExpr>(E)) {
+    return cxtype::MakeCXType(
+        PropRefE->getReceiverType(cxcursor::getCursorContext(C)), TU);
+  }
+
+  const MemberExpr *ME = nullptr;
+  if (isa<MemberExpr>(E))
+    ME = cast<MemberExpr>(E);
+  else if (const CallExpr *CE = dyn_cast<CallExpr>(E))
+    ME = dyn_cast_or_null<MemberExpr>(CE->getCallee());
+
+  if (ME) {
+    if (dyn_cast_or_null<CXXMethodDecl>(ME->getMemberDecl())) {
+      auto receiverTy = ME->getBase()->IgnoreImpCasts()->getType();
+      return cxtype::MakeCXType(receiverTy, TU);
+    }
+  }
 
   return cxtype::MakeCXType(QualType(), TU);
 }

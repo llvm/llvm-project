@@ -12,8 +12,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
-#include "llvm/DebugInfo/PDB/Native/ModInfoBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -74,10 +74,11 @@ uint32_t DbiStreamBuilder::calculateSerializedLength() const {
          calculateSectionMapStreamSize() + calculateDbgStreamsSize();
 }
 
-Expected<ModInfoBuilder &>
+Expected<DbiModuleDescriptorBuilder &>
 DbiStreamBuilder::addModuleInfo(StringRef ModuleName) {
   uint32_t Index = ModiList.size();
-  auto MIB = llvm::make_unique<ModInfoBuilder>(ModuleName, Index, Msf);
+  auto MIB =
+      llvm::make_unique<DbiModuleDescriptorBuilder>(ModuleName, Index, Msf);
   auto M = MIB.get();
   auto Result = ModiMap.insert(std::make_pair(ModuleName, std::move(MIB)));
 

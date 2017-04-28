@@ -676,7 +676,6 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondT
                                        const Instruction *I) {
   if (ValTy->isVectorTy()) {
     assert (ST->hasVector() && "getCmpSelInstrCost() called with vector type.");
-    assert (CondTy == nullptr || CondTy->isVectorTy());
     unsigned VF = ValTy->getVectorNumElements();
 
     // Called with a compare instruction.

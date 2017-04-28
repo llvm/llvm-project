@@ -51,3 +51,18 @@ running:
 
     cd docs/
     make -f Makefile.sphinx linkcheck
+
+Doxygen page Output
+==============
+
+Install doxygen <http://www.stack.nl/~dimitri/doxygen/download.html> and dot2tex <https://dot2tex.readthedocs.io/en/latest>.
+
+    cd <build-dir>
+    cmake -DLLVM_ENABLE_DOXYGEN=On <llvm-top-src-dir>
+    make doxygen-llvm # for LLVM docs
+    make doxygen-clang # for clang docs
+
+It will generate html in
+    
+    <build-dir>/docs/doxygen/html # for LLVM docs
+    <build-dir>/tools/clang/docs/doxygen/html # for clang docs

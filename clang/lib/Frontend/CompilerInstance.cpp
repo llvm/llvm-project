@@ -858,7 +858,8 @@ bool CompilerInstance::InitializeSourceManager(
                             /*SearchPath=*/nullptr,
                             /*RelativePath=*/nullptr,
                             /*RequestingModule=*/nullptr,
-                            /*SuggestedModule=*/nullptr, /*SkipCache=*/true);
+                            /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
+                            /*SkipCache=*/true);
       // Also add the header to /showIncludes output.
       if (File)
         DepOpts.ShowIncludesPretendHeader = File->getName();

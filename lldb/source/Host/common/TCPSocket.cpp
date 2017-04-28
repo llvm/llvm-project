@@ -178,6 +178,8 @@ Error TCPSocket::Listen(llvm::StringRef name, int backlog) {
   if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
     return error;
 
+  if (host_str == "*")
+    host_str = "0.0.0.0";
   auto addresses = lldb_private::SocketAddress::GetAddressInfo(
       host_str.c_str(), NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (auto address : addresses) {
