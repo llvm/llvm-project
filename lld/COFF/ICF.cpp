@@ -71,10 +71,18 @@ uint32_t ICF::getHash(SectionChunk *C) {
 }
 
 // Returns true if section S is subject of ICF.
+//
+// Microsoft's documentation
+// (https://msdn.microsoft.com/en-us/library/bxwfs976.aspx; visited April
+// 2017) says that /opt:icf folds both functions and read-only data.
+// Despite that, the MSVC linker folds only functions. We found
+// a few instances of programs that are not safe for data merging.
+// Therefore, we merge only functions just like the MSVC tool.
 bool ICF::isEligible(SectionChunk *C) {
   bool Global = C->Sym && C->Sym->isExternal();
+  bool Executable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
   bool Writable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
-  return C->isCOMDAT() && C->isLive() && Global && !Writable;
+  return C->isCOMDAT() && C->isLive() && Global && Executable && !Writable;
 }
 
 // Split a range into smaller ranges by recoloring sections

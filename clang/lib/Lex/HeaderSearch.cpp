@@ -624,7 +624,10 @@ const FileEntry *HeaderSearch::LookupFile(
     ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-    bool SkipCache, bool BuildSystemModule) {
+    bool *IsMapped, bool SkipCache, bool BuildSystemModule) {
+  if (IsMapped)
+    *IsMapped = false;
+
   if (SuggestedModule)
     *SuggestedModule = ModuleMap::KnownHeader();
     
@@ -754,8 +757,11 @@ const FileEntry *HeaderSearch::LookupFile(
   if (!SkipCache && CacheLookup.StartIdx == i+1) {
     // Skip querying potentially lots of directories for this lookup.
     i = CacheLookup.HitIdx;
-    if (CacheLookup.MappedName)
+    if (CacheLookup.MappedName) {
       Filename = CacheLookup.MappedName;
+      if (IsMapped)
+        *IsMapped = true;
+    }
   } else {
     // Otherwise, this is the first query, or the previous query didn't match
     // our search start.  We will fill in our found location below, so prime the
@@ -776,6 +782,8 @@ const FileEntry *HeaderSearch::LookupFile(
     if (HasBeenMapped) {
       CacheLookup.MappedName =
           copyString(Filename, LookupFileCache.getAllocator());
+      if (IsMapped)
+        *IsMapped = true;
     }
     if (!FE) continue;
 
@@ -839,7 +847,7 @@ const FileEntry *HeaderSearch::LookupFile(
       const FileEntry *FE =
           LookupFile(ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir,
                      CurDir, Includers.front(), SearchPath, RelativePath,
-                     RequestingModule, SuggestedModule);
+                     RequestingModule, SuggestedModule, IsMapped);
 
       if (checkMSVCHeaderSearch(Diags, MSFE, FE, IncludeLoc)) {
         if (SuggestedModule)

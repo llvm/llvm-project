@@ -867,6 +867,8 @@
 		9A0FDEA71E8EF5110086B2F5 /* RegisterContextLinux_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */; };
 		9A19A6AF1163BBB200E0D453 /* SBValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A19A6A51163BB7E00E0D453 /* SBValue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9A19A6B01163BBB300E0D453 /* SBValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A19A6AD1163BB9800E0D453 /* SBValue.cpp */; };
+		9A1E595C1EB2B141002206A5 /* SBTrace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1E59521EB2B0B9002206A5 /* SBTrace.cpp */; };
+		9A1E595D1EB2B141002206A5 /* SBTraceOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1E59531EB2B0B9002206A5 /* SBTraceOptions.cpp */; };
 		9A22A161135E30370024DDC3 /* EmulateInstructionARM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A22A15D135E30370024DDC3 /* EmulateInstructionARM.cpp */; };
 		9A22A163135E30370024DDC3 /* EmulationStateARM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A22A15F135E30370024DDC3 /* EmulationStateARM.cpp */; };
 		9A357583116CFDEE00E8ED2F /* SBValueList.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A357582116CFDEE00E8ED2F /* SBValueList.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -2809,6 +2811,10 @@
 		9A0FDE9B1E8EF5010086B2F5 /* RegisterInfos_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_mips.h; path = Utility/RegisterInfos_mips.h; sourceTree = "<group>"; };
 		9A19A6A51163BB7E00E0D453 /* SBValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBValue.h; path = include/lldb/API/SBValue.h; sourceTree = "<group>"; };
 		9A19A6AD1163BB9800E0D453 /* SBValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBValue.cpp; path = source/API/SBValue.cpp; sourceTree = "<group>"; };
+		9A1E59521EB2B0B9002206A5 /* SBTrace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBTrace.cpp; path = source/API/SBTrace.cpp; sourceTree = "<group>"; };
+		9A1E59531EB2B0B9002206A5 /* SBTraceOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBTraceOptions.cpp; path = source/API/SBTraceOptions.cpp; sourceTree = "<group>"; };
+		9A1E59581EB2B10D002206A5 /* SBTrace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBTrace.h; path = include/lldb/API/SBTrace.h; sourceTree = "<group>"; };
+		9A1E59591EB2B10D002206A5 /* SBTraceOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBTraceOptions.h; path = include/lldb/API/SBTraceOptions.h; sourceTree = "<group>"; };
 		9A22A15D135E30370024DDC3 /* EmulateInstructionARM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EmulateInstructionARM.cpp; sourceTree = "<group>"; };
 		9A22A15E135E30370024DDC3 /* EmulateInstructionARM.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EmulateInstructionARM.h; sourceTree = "<group>"; };
 		9A22A15F135E30370024DDC3 /* EmulationStateARM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EmulationStateARM.cpp; sourceTree = "<group>"; };
@@ -4004,6 +4010,10 @@
 				8CCB017F19BA4DD00009FD44 /* SBThreadCollection.cpp */,
 				4C56543419D2297A002E9C44 /* SBThreadPlan.h */,
 				4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */,
+				9A1E59581EB2B10D002206A5 /* SBTrace.h */,
+				9A1E59521EB2B0B9002206A5 /* SBTrace.cpp */,
+				9A1E59591EB2B10D002206A5 /* SBTraceOptions.h */,
+				9A1E59531EB2B0B9002206A5 /* SBTraceOptions.cpp */,
 				2617447911685869005ADD65 /* SBType.h */,
 				261744771168585B005ADD65 /* SBType.cpp */,
 				9475C18514E5E9C5001BFC6D /* SBTypeCategory.h */,
@@ -7022,6 +7032,7 @@
 				23DCEA461D1C4D0F00A602B4 /* SBMemoryRegionInfo.cpp in Sources */,
 				26680330116005E7008E1FE4 /* SBDebugger.cpp in Sources */,
 				26680331116005E9008E1FE4 /* SBCommunication.cpp in Sources */,
+				9A1E595D1EB2B141002206A5 /* SBTraceOptions.cpp in Sources */,
 				26680332116005EA008E1FE4 /* SBCommandReturnObject.cpp in Sources */,
 				26680333116005EC008E1FE4 /* SBCommandInterpreter.cpp in Sources */,
 				26680335116005EE008E1FE4 /* SBBroadcaster.cpp in Sources */,
@@ -7042,6 +7053,7 @@
 				261744781168585B005ADD65 /* SBType.cpp in Sources */,
 				9A35758E116CFE0F00E8ED2F /* SBValueList.cpp in Sources */,
 				9A357673116E7B6400E8ED2F /* SBStringList.cpp in Sources */,
+				9A1E595C1EB2B141002206A5 /* SBTrace.cpp in Sources */,
 				9A3576AA116E9AC700E8ED2F /* SBHostOS.cpp in Sources */,
 				9AC703AF117675410086C050 /* SBInstruction.cpp in Sources */,
 				9AC703B1117675490086C050 /* SBInstructionList.cpp in Sources */,
