@@ -679,3 +679,30 @@ int g() {
       sizeof(c0is0)]; // expected-error {{use of undeclared identifier}}
 };
 }
+
+namespace avoidRedundantRedefinitionErrors {
+class Class {
+  void function(int pid); // expected-note {{'function' declared here}}
+};
+
+void Class::function2(int pid) { // expected-error {{out-of-line definition of 'function2' does not match any declaration in 'avoidRedundantRedefinitionErrors::Class'; did you mean 'function'?}}
+}
+
+// Expected no redefinition error here.
+void Class::function(int pid) { // expected-note {{previous definition is here}}
+}
+
+void Class::function(int pid) { // expected-error {{redefinition of 'function'}}
+}
+
+namespace ns {
+void create_test(); // expected-note {{'create_test' declared here}}
+}
+
+void ns::create_test2() { // expected-error {{out-of-line definition of 'create_test2' does not match any declaration in namespace 'avoidRedundantRedefinitionErrors::ns'; did you mean 'create_test'?}}
+}
+
+// Expected no redefinition error here.
+void ns::create_test() {
+}
+}
