@@ -313,10 +313,12 @@ void PointerReplacer::replace(Instruction *I) {
 }
 
 void PointerReplacer::replacePointer(Instruction &I, Value *V) {
+#ifndef NDEBUG
   auto *PT = cast<PointerType>(I.getType());
   auto *NT = cast<PointerType>(V->getType());
   assert(PT != NT && PT->getElementType() == NT->getElementType() &&
          "Invalid usage");
+#endif
   WorkMap[&I] = V;
   findLoadAndReplace(I);
 }
