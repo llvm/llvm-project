@@ -65,7 +65,7 @@ public:
 
   bool commit(const Commit &commit);
   
-  void applyRewrites(EditsReceiver &receiver);
+  void applyRewrites(EditsReceiver &receiver, bool adjustRemovals = true);
   void clearRewrites();
 
   StringRef copyString(StringRef str) { return str.copy(StrAlloc); }
