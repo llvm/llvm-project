@@ -76,7 +76,7 @@ void foo() {
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier:  "_ZTSN8DebugCXX4EnumE")
 
-// CHECK: ![[NS]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
+// CHECK: ![[NS]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]])
 // CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
 
 // This type is anchored in the module by an explicit template instantiation.
