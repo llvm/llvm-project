@@ -21,6 +21,10 @@
 
 using namespace lldb_private;
 
+void SymbolFile::PreloadSymbols() {
+  // No-op for most implementations.
+}
+
 SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   std::unique_ptr<SymbolFile> best_symfile_ap;
   if (obj_file != nullptr) {

@@ -82,6 +82,10 @@ public:
 
   bool SetPreferDynamicValue(lldb::DynamicValueType d);
 
+  bool GetPreloadSymbols() const;
+
+  void SetPreloadSymbols(bool b);
+
   bool GetDisableASLR() const;
 
   void SetDisableASLR(bool b);

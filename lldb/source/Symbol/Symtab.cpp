@@ -427,6 +427,11 @@ void Symtab::InitNameIndexes() {
   }
 }
 
+void Symtab::PreloadSymbols() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  InitNameIndexes();
+}
+
 void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
                                     bool add_demangled, bool add_mangled,
                                     NameToIndexMap &name_to_index_map) const {

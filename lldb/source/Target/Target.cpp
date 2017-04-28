@@ -1870,6 +1870,11 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
           }
         }
 
+        // Preload symbols outside of any lock, so hopefully we can do this for
+        // each library in parallel.
+        if (GetPreloadSymbols())
+          module_sp->PreloadSymbols();
+
         if (old_module_sp &&
             m_images.GetIndexForModule(old_module_sp.get()) !=
                 LLDB_INVALID_INDEX32) {
@@ -3277,6 +3282,8 @@ static PropertyDefinition g_properties[] = {
     {"detach-on-error", OptionValue::eTypeBoolean, false, true, nullptr,
      nullptr, "debugserver will detach (rather than killing) a process if it "
               "loses connection with lldb."},
+    {"preload-symbols", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
+     "Enable loading of symbol tables before they are needed."},
     {"disable-aslr", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
      "Disable Address Space Layout Randomization (ASLR)"},
     {"disable-stdio", OptionValue::eTypeBoolean, false, false, nullptr, nullptr,
@@ -3379,6 +3386,7 @@ enum {
   ePropertyOutputPath,
   ePropertyErrorPath,
   ePropertyDetachOnError,
+  ePropertyPreloadSymbols,
   ePropertyDisableASLR,
   ePropertyDisableSTDIO,
   ePropertyInlineStrategy,
@@ -3639,6 +3647,17 @@ lldb::DynamicValueType TargetProperties::GetPreferDynamicValue() const {
 bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
   const uint32_t idx = ePropertyPreferDynamic;
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(nullptr, idx, d);
+}
+
+bool TargetProperties::GetPreloadSymbols() const {
+  const uint32_t idx = ePropertyPreloadSymbols;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetPreloadSymbols(bool b) {
+  const uint32_t idx = ePropertyPreloadSymbols;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 bool TargetProperties::GetDisableASLR() const {
