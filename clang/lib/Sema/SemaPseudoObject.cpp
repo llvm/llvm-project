@@ -842,12 +842,10 @@ ExprResult ObjCPropertyOpBuilder::buildRValueOperation(Expr *op) {
           result = S.ImpCastExprToType(result.get(), propType, CK_BitCast);
       }
     }
-    if (S.getLangOpts().ObjCAutoRefCount) {
-      Qualifiers::ObjCLifetime LT = propType.getObjCLifetime();
-      if (LT == Qualifiers::OCL_Weak)
-        if (!S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, RefExpr->getLocation()))
-              S.getCurFunction()->markSafeWeakUse(RefExpr);
-    }
+    if (propType.getObjCLifetime() == Qualifiers::OCL_Weak &&
+        !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
+                           RefExpr->getLocation()))
+      S.getCurFunction()->markSafeWeakUse(RefExpr);
   }
 
   return result;
@@ -963,11 +961,11 @@ ObjCPropertyOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 }
 
 ExprResult ObjCPropertyOpBuilder::complete(Expr *SyntacticForm) {
-  if (S.getLangOpts().ObjCAutoRefCount && isWeakProperty() &&
+  if (isWeakProperty() &&
       !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                          SyntacticForm->getLocStart()))
-      S.recordUseOfEvaluatedWeak(SyntacticRefExpr,
-                                 SyntacticRefExpr->isMessagingGetter());
+    S.recordUseOfEvaluatedWeak(SyntacticRefExpr,
+                               SyntacticRefExpr->isMessagingGetter());
 
   return PseudoOpBuilder::complete(SyntacticForm);
 }
@@ -1128,8 +1126,8 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
   if (!Getter)
     return;
   QualType T = Getter->parameters()[0]->getType();
-  S.CheckObjCARCConversion(Key->getSourceRange(), 
-                         T, Key, Sema::CCK_ImplicitConversion);
+  S.CheckObjCConversion(Key->getSourceRange(), T, Key,
+                        Sema::CCK_ImplicitConversion);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
