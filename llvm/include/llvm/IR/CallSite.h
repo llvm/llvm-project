@@ -386,20 +386,25 @@ public:
     CALLSITE_DELEGATE_GETTER(dataOperandHasImpliedAttr(i, Kind));
   }
 
+  /// Extract the alignment of the return value.
+  unsigned getRetAlignment() const {
+    CALLSITE_DELEGATE_GETTER(getRetAlignment());
+  }
+
   /// Extract the alignment for a call or parameter (0=unknown).
-  uint16_t getParamAlignment(uint16_t i) const {
-    CALLSITE_DELEGATE_GETTER(getParamAlignment(i));
+  unsigned getParamAlignment(unsigned ArgNo) const {
+    CALLSITE_DELEGATE_GETTER(getParamAlignment(ArgNo));
   }
 
   /// Extract the number of dereferenceable bytes for a call or parameter
   /// (0=unknown).
-  uint64_t getDereferenceableBytes(uint16_t i) const {
+  uint64_t getDereferenceableBytes(unsigned i) const {
     CALLSITE_DELEGATE_GETTER(getDereferenceableBytes(i));
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a call or
   /// parameter (0=unknown).
-  uint64_t getDereferenceableOrNullBytes(uint16_t i) const {
+  uint64_t getDereferenceableOrNullBytes(unsigned i) const {
     CALLSITE_DELEGATE_GETTER(getDereferenceableOrNullBytes(i));
   }
 
@@ -599,7 +604,7 @@ public:
   bool isReturnNonNull() const {
     if (hasRetAttr(Attribute::NonNull))
       return true;
-    else if (getDereferenceableBytes(0) > 0 &&
+    else if (getDereferenceableBytes(AttributeList::ReturnIndex) > 0 &&
              getType()->getPointerAddressSpace() == 0)
       return true;
 

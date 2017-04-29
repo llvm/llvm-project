@@ -56,6 +56,8 @@ public:
   Iterator begin() const { return Checksums.begin(); }
   Iterator end() const { return Checksums.end(); }
 
+  const FileChecksumArray &getArray() const { return Checksums; }
+
 private:
   FileChecksumArray Checksums;
 };

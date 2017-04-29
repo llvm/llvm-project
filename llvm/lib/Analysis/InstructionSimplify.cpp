@@ -21,8 +21,10 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -3685,9 +3687,9 @@ static Value *SimplifySelectInst(Value *CondVal, Value *TrueVal,
     return TrueVal;
 
   if (isa<UndefValue>(CondVal)) {  // select undef, X, Y -> X or Y
-    if (isa<Constant>(TrueVal))
-      return TrueVal;
-    return FalseVal;
+    if (isa<Constant>(FalseVal))
+      return FalseVal;
+    return TrueVal;
   }
   if (isa<UndefValue>(TrueVal))   // select C, undef, X -> X
     return FalseVal;
@@ -4440,15 +4442,10 @@ Value *llvm::SimplifyCall(Value *V, ArrayRef<Value *> Args,
 
 /// See if we can compute a simplified version of this instruction.
 /// If not, this returns null.
-Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 const DominatorTree *DT, AssumptionCache *AC,
-                                 OptimizationRemarkEmitter *ORE) {
-  return SimplifyInstruction(I, {DL, TLI, DT, AC, I}, ORE);
-}
 
-Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
+Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
                                  OptimizationRemarkEmitter *ORE) {
+  const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
   Value *Result;
 
   switch (I->getOpcode()) {
@@ -4645,7 +4642,7 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
     I = Worklist[Idx];
 
     // See if this instruction simplifies.
-    SimpleV = SimplifyInstruction(I, DL, TLI, DT, AC);
+    SimpleV = SimplifyInstruction(I, {DL, TLI, DT, AC});
     if (!SimpleV)
       continue;
 
@@ -4683,4 +4680,32 @@ bool llvm::replaceAndRecursivelySimplify(Instruction *I, Value *SimpleV,
   assert(I != SimpleV && "replaceAndRecursivelySimplify(X,X) is not valid!");
   assert(SimpleV && "Must provide a simplified value.");
   return replaceAndRecursivelySimplifyImpl(I, SimpleV, TLI, DT, AC);
+}
+
+namespace llvm {
+const SimplifyQuery getBestSimplifyQuery(Pass &P, Function &F) {
+  auto *DTWP = P.getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  auto *TLIWP = P.getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+  auto *TLI = TLIWP ? &TLIWP->getTLI() : nullptr;
+  auto *ACWP = P.getAnalysisIfAvailable<AssumptionCacheTracker>();
+  auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
+  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+}
+
+const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &AR,
+                                         const DataLayout &DL) {
+  return {DL, &AR.TLI, &AR.DT, &AR.AC};
+}
+
+template <class T, class... TArgs>
+const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
+                                         Function &F) {
+  auto *DT = AM.template getCachedResult<DominatorTreeAnalysis>(F);
+  auto *TLI = AM.template getCachedResult<TargetLibraryAnalysis>(F);
+  auto *AC = AM.template getCachedResult<AssumptionAnalysis>(F);
+  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+}
+template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
+                                                  Function &);
 }

@@ -83,20 +83,6 @@ LimitFPPrecision("limit-float-precision",
                           "for some float libcalls"),
                  cl::location(LimitFloatPrecision),
                  cl::init(0));
-
-/// Minimum jump table density for normal functions.
-static cl::opt<unsigned>
-JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
-                 cl::desc("Minimum density for building a jump table in "
-                          "a normal function"));
-
-/// Minimum jump table density for -Os or -Oz functions.
-static cl::opt<unsigned>
-OptsizeJumpTableDensity("optsize-jump-table-density", cl::init(40), cl::Hidden,
-                        cl::desc("Minimum density for building a jump table in "
-                                 "an optsize function"));
-
-
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
 // load clustering may not complete in reasonable time. It is difficult to
@@ -8187,15 +8173,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   findArgumentCopyElisionCandidates(DL, FuncInfo, ArgCopyElisionCandidates);
 
   // Set up the incoming argument description vector.
-  unsigned Idx = 0;
   for (const Argument &Arg : F.args()) {
-    ++Idx;
+    unsigned ArgNo = Arg.getArgNo();
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
     bool isArgValueUsed = !Arg.use_empty();
     unsigned PartBase = 0;
     Type *FinalType = Arg.getType();
-    if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
+    if (Arg.hasAttribute(Attribute::ByVal))
       FinalType = cast<PointerType>(FinalType)->getElementType();
     bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
         FinalType, F.getCallingConv(), F.isVarArg());
@@ -8206,11 +8191,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       ISD::ArgFlagsTy Flags;
       unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
 
-      if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))
+      if (Arg.hasAttribute(Attribute::ZExt))
         Flags.setZExt();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
+      if (Arg.hasAttribute(Attribute::SExt))
         Flags.setSExt();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::InReg)) {
+      if (Arg.hasAttribute(Attribute::InReg)) {
         // If we are using vectorcall calling convention, a structure that is
         // passed InReg - is surely an HVA
         if (F.getCallingConv() == CallingConv::X86_VectorCall &&
@@ -8223,15 +8208,15 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // Set InReg Flag
         Flags.setInReg();
       }
-      if (F.getAttributes().hasAttribute(Idx, Attribute::StructRet))
+      if (Arg.hasAttribute(Attribute::StructRet))
         Flags.setSRet();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftSelf))
+      if (Arg.hasAttribute(Attribute::SwiftSelf))
         Flags.setSwiftSelf();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftError))
+      if (Arg.hasAttribute(Attribute::SwiftError))
         Flags.setSwiftError();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
+      if (Arg.hasAttribute(Attribute::ByVal))
         Flags.setByVal();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::InAlloca)) {
+      if (Arg.hasAttribute(Attribute::InAlloca)) {
         Flags.setInAlloca();
         // Set the byval flag for CCAssignFn callbacks that don't know about
         // inalloca.  This way we can know how many bytes we should've allocated
@@ -8242,7 +8227,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
       if (F.getCallingConv() == CallingConv::X86_INTR) {
         // IA Interrupt passes frame (1st parameter) by value in the stack.
-        if (Idx == 1)
+        if (ArgNo == 0)
           Flags.setByVal();
       }
       if (Flags.isByVal() || Flags.isInAlloca()) {
@@ -8252,13 +8237,13 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // For ByVal, alignment should be passed from FE.  BE will guess if
         // this info is not there but there are cases it cannot get right.
         unsigned FrameAlign;
-        if (F.getParamAlignment(Idx))
-          FrameAlign = F.getParamAlignment(Idx);
+        if (Arg.getParamAlignment())
+          FrameAlign = Arg.getParamAlignment();
         else
           FrameAlign = TLI->getByValTypeAlignment(ElementTy, DL);
         Flags.setByValAlign(FrameAlign);
       }
-      if (F.getAttributes().hasAttribute(Idx, Attribute::Nest))
+      if (Arg.hasAttribute(Attribute::Nest))
         Flags.setNest();
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
@@ -8270,7 +8255,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       unsigned NumRegs = TLI->getNumRegisters(*CurDAG->getContext(), VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
         ISD::InputArg MyFlags(Flags, RegisterVT, VT, isArgValueUsed,
-                              Idx-1, PartBase+i*RegisterVT.getStoreSize());
+                              ArgNo, PartBase+i*RegisterVT.getStoreSize());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
@@ -8311,7 +8296,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   // Set up the argument values.
   unsigned i = 0;
-  Idx = 0;
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
@@ -8333,14 +8317,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     DAG.setRoot(NewRoot);
 
     // i indexes lowered arguments.  Bump it past the hidden sret argument.
-    // Idx indexes LLVM arguments.  Don't touch it.
     ++i;
   }
 
   SmallVector<SDValue, 4> Chains;
   DenseMap<int, int> ArgCopyElisionFrameIndexMap;
   for (const Argument &Arg : F.args()) {
-    ++Idx;
     SmallVector<SDValue, 4> ArgValues;
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
@@ -8362,7 +8344,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // debugging information.
     bool isSwiftErrorArg =
         TLI->supportSwiftError() &&
-        F.getAttributes().hasAttribute(Idx, Attribute::SwiftError);
+        Arg.hasAttribute(Attribute::SwiftError);
     if (!ArgHasUses && !isSwiftErrorArg) {
       SDB->setUnusedArgValue(&Arg, InVals[i]);
 
@@ -8382,9 +8364,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // function.
       if (ArgHasUses || isSwiftErrorArg) {
         Optional<ISD::NodeType> AssertOp;
-        if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
+        if (Arg.hasAttribute(Attribute::SExt))
           AssertOp = ISD::AssertSext;
-        else if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))
+        else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
         ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
@@ -8589,13 +8571,10 @@ void SelectionDAGBuilder::updateDAGForMaybeTailCall(SDValue MaybeTC) {
     HasTailCall = true;
 }
 
-bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
-                                  const SmallVectorImpl<unsigned> &TotalCases,
-                                  unsigned First, unsigned Last,
-                                  unsigned Density) const {
+uint64_t
+SelectionDAGBuilder::getJumpTableRange(const CaseClusterVector &Clusters,
+                                       unsigned First, unsigned Last) const {
   assert(Last >= First);
-  assert(TotalCases[Last] >= TotalCases[First]);
-
   const APInt &LowCase = Clusters[First].Low->getValue();
   const APInt &HighCase = Clusters[Last].High->getValue();
   assert(LowCase.getBitWidth() == HighCase.getBitWidth());
@@ -8604,26 +8583,17 @@ bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
   // comparison to lower. We should discriminate against such consecutive ranges
   // in jump tables.
 
-  uint64_t Diff = (HighCase - LowCase).getLimitedValue((UINT64_MAX - 1) / 100);
-  uint64_t Range = Diff + 1;
-
-  uint64_t NumCases =
-      TotalCases[Last] - (First == 0 ? 0 : TotalCases[First - 1]);
-
-  assert(NumCases < UINT64_MAX / 100);
-  assert(Range >= NumCases);
-
-  return NumCases * 100 >= Range * Density;
+  return (HighCase - LowCase).getLimitedValue((UINT64_MAX - 1) / 100) + 1;
 }
 
-static inline bool areJTsAllowed(const TargetLowering &TLI,
-                                 const SwitchInst *SI) {
-  const Function *Fn = SI->getParent()->getParent();
-  if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
-    return false;
-
-  return TLI.isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
-         TLI.isOperationLegalOrCustom(ISD::BRIND, MVT::Other);
+uint64_t SelectionDAGBuilder::getJumpTableNumCases(
+    const SmallVectorImpl<unsigned> &TotalCases, unsigned First,
+    unsigned Last) const {
+  assert(Last >= First);
+  assert(TotalCases[Last] >= TotalCases[First]);
+  uint64_t NumCases =
+      TotalCases[Last] - (First == 0 ? 0 : TotalCases[First - 1]);
+  return NumCases;
 }
 
 bool SelectionDAGBuilder::buildJumpTable(const CaseClusterVector &Clusters,
@@ -8662,10 +8632,11 @@ bool SelectionDAGBuilder::buildJumpTable(const CaseClusterVector &Clusters,
     JTProbs[Clusters[I].MBB] += Clusters[I].Prob;
   }
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned NumDests = JTProbs.size();
-  if (isSuitableForBitTests(NumDests, NumCmps,
-                            Clusters[First].Low->getValue(),
-                            Clusters[Last].High->getValue())) {
+  if (TLI.isSuitableForBitTests(
+          NumDests, NumCmps, Clusters[First].Low->getValue(),
+          Clusters[Last].High->getValue(), DAG.getDataLayout())) {
     // Clusters[First..Last] should be lowered as bit tests instead.
     return false;
   }
@@ -8686,7 +8657,6 @@ bool SelectionDAGBuilder::buildJumpTable(const CaseClusterVector &Clusters,
   }
   JumpTableMBB->normalizeSuccProbs();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned JTI = CurMF->getOrCreateJumpTableInfo(TLI.getJumpTableEncoding())
                      ->createJumpTableIndex(Table);
 
@@ -8715,17 +8685,12 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
 #endif
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!areJTsAllowed(TLI, SI))
+  if (!TLI.areJTsAllowed(SI->getParent()->getParent()))
     return;
-
-  const bool OptForSize = DefaultMBB->getParent()->getFunction()->optForSize();
 
   const int64_t N = Clusters.size();
   const unsigned MinJumpTableEntries = TLI.getMinimumJumpTableEntries();
   const unsigned SmallNumberOfEntries = MinJumpTableEntries / 2;
-  const unsigned MaxJumpTableSize =
-                   OptForSize || TLI.getMaximumJumpTableSize() == 0
-                   ? UINT_MAX : TLI.getMaximumJumpTableSize();
 
   if (N < 2 || N < MinJumpTableEntries)
     return;
@@ -8740,15 +8705,12 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  const unsigned MinDensity =
-    OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
-
   // Cheap case: the whole range may be suitable for jump table.
-  unsigned JumpTableSize = (Clusters[N - 1].High->getValue() -
-                            Clusters[0].Low->getValue())
-                           .getLimitedValue(UINT_MAX - 1) + 1;
-  if (JumpTableSize <= MaxJumpTableSize &&
-      isDense(Clusters, TotalCases, 0, N - 1, MinDensity)) {
+  uint64_t Range = getJumpTableRange(Clusters,0, N - 1);
+  uint64_t NumCases = getJumpTableNumCases(TotalCases, 0, N - 1);
+  assert(NumCases < UINT64_MAX / 100);
+  assert(Range >= NumCases);
+  if (TLI.isSuitableForJumpTable(SI, NumCases, Range)) {
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
       Clusters[0] = JTCluster;
@@ -8801,11 +8763,11 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
       // Try building a partition from Clusters[i..j].
-      JumpTableSize = (Clusters[j].High->getValue() -
-                       Clusters[i].Low->getValue())
-                      .getLimitedValue(UINT_MAX - 1) + 1;
-      if (JumpTableSize <= MaxJumpTableSize &&
-          isDense(Clusters, TotalCases, i, j, MinDensity)) {
+      uint64_t Range = getJumpTableRange(Clusters, i, j);
+      uint64_t NumCases = getJumpTableNumCases(TotalCases, i, j);
+      assert(NumCases < UINT64_MAX / 100);
+      assert(Range >= NumCases);
+      if (TLI.isSuitableForJumpTable(SI, NumCases, Range)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
         unsigned Score = j == N - 1 ? 0 : PartitionsScore[j + 1];
         int64_t NumEntries = j - i + 1;
@@ -8849,36 +8811,6 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
   Clusters.resize(DstIndex);
 }
 
-bool SelectionDAGBuilder::rangeFitsInWord(const APInt &Low, const APInt &High) {
-  // FIXME: Using the pointer type doesn't seem ideal.
-  uint64_t BW = DAG.getDataLayout().getPointerSizeInBits();
-  uint64_t Range = (High - Low).getLimitedValue(UINT64_MAX - 1) + 1;
-  return Range <= BW;
-}
-
-bool SelectionDAGBuilder::isSuitableForBitTests(unsigned NumDests,
-                                                unsigned NumCmps,
-                                                const APInt &Low,
-                                                const APInt &High) {
-  // FIXME: I don't think NumCmps is the correct metric: a single case and a
-  // range of cases both require only one branch to lower. Just looking at the
-  // number of clusters and destinations should be enough to decide whether to
-  // build bit tests.
-
-  // To lower a range with bit tests, the range must fit the bitwidth of a
-  // machine word.
-  if (!rangeFitsInWord(Low, High))
-    return false;
-
-  // Decide whether it's profitable to lower this range with bit tests. Each
-  // destination requires a bit test and branch, and there is an overall range
-  // check branch. For a small number of clusters, separate comparisons might be
-  // cheaper, and for many destinations, splitting the range might be better.
-  return (NumDests == 1 && NumCmps >= 3) ||
-         (NumDests == 2 && NumCmps >= 5) ||
-         (NumDests == 3 && NumCmps >= 6);
-}
-
 bool SelectionDAGBuilder::buildBitTests(CaseClusterVector &Clusters,
                                         unsigned First, unsigned Last,
                                         const SwitchInst *SI,
@@ -8900,16 +8832,17 @@ bool SelectionDAGBuilder::buildBitTests(CaseClusterVector &Clusters,
   APInt High = Clusters[Last].High->getValue();
   assert(Low.slt(High));
 
-  if (!isSuitableForBitTests(NumDests, NumCmps, Low, High))
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  if (!TLI.isSuitableForBitTests(NumDests, NumCmps, Low, High, DL))
     return false;
 
   APInt LowBound;
   APInt CmpRange;
 
-  const int BitWidth = DAG.getTargetLoweringInfo()
-                           .getPointerTy(DAG.getDataLayout())
-                           .getSizeInBits();
-  assert(rangeFitsInWord(Low, High) && "Case range must fit in bit mask!");
+  const int BitWidth = TLI.getPointerTy(DL).getSizeInBits();
+  assert(TLI.rangeFitsInWord(Low, High, DL) &&
+         "Case range must fit in bit mask!");
 
   // Check if the clusters cover a contiguous range such that no value in the
   // range will jump to the default statement.
@@ -8999,7 +8932,9 @@ void SelectionDAGBuilder::findBitTestClusters(CaseClusterVector &Clusters,
 
   // If target does not have legal shift left, do not emit bit tests at all.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT PTy = TLI.getPointerTy(DAG.getDataLayout());
+  const DataLayout &DL = DAG.getDataLayout();
+
+  EVT PTy = TLI.getPointerTy(DL);
   if (!TLI.isOperationLegal(ISD::SHL, PTy))
     return;
 
@@ -9030,8 +8965,8 @@ void SelectionDAGBuilder::findBitTestClusters(CaseClusterVector &Clusters,
       // Try building a partition from Clusters[i..j].
 
       // Check the range.
-      if (!rangeFitsInWord(Clusters[i].Low->getValue(),
-                           Clusters[j].High->getValue()))
+      if (!TLI.rangeFitsInWord(Clusters[i].Low->getValue(),
+                               Clusters[j].High->getValue(), DL))
         continue;
 
       // Check nbr of destinations and cluster types.

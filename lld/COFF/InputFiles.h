@@ -167,6 +167,7 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
 
   DefinedImportData *ImpSym = nullptr;
+  DefinedImportData *ConstSym = nullptr;
   DefinedImportThunk *ThunkSym = nullptr;
   std::string DLLName;
 

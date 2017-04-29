@@ -225,10 +225,10 @@ struct PromoteMem2Reg {
   std::vector<AllocaInst *> Allocas;
   DominatorTree &DT;
   DIBuilder DIB;
-
   /// A cache of @llvm.assume intrinsics used by SimplifyInstruction.
   AssumptionCache *AC;
 
+  const SimplifyQuery SQ;
   /// Reverse mapping of Allocas.
   DenseMap<AllocaInst *, unsigned> AllocaLookup;
 
@@ -270,7 +270,8 @@ public:
                  AssumptionCache *AC)
       : Allocas(Allocas.begin(), Allocas.end()), DT(DT),
         DIB(*DT.getRoot()->getParent()->getParent(), /*AllowUnresolved*/ false),
-        AC(AC) {}
+        AC(AC), SQ(DT.getRoot()->getParent()->getParent()->getDataLayout(),
+                   nullptr, &DT, AC) {}
 
   void run();
 
@@ -673,8 +674,6 @@ void PromoteMem2Reg::run() {
     A->eraseFromParent();
   }
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
-
   // Remove alloca's dbg.declare instrinsics from the function.
   for (unsigned i = 0, e = AllocaDbgDeclares.size(); i != e; ++i)
     if (DbgDeclareInst *DDI = AllocaDbgDeclares[i])
@@ -699,7 +698,7 @@ void PromoteMem2Reg::run() {
       PHINode *PN = I->second;
 
       // If this PHI node merges one value and/or undefs, get the value.
-      if (Value *V = SimplifyInstruction(PN, DL, nullptr, &DT, AC)) {
+      if (Value *V = SimplifyInstruction(PN, SQ)) {
         PN->replaceAllUsesWith(V);
         PN->eraseFromParent();
         NewPhiNodes.erase(I++);

@@ -114,6 +114,12 @@ public:
     return TTI::TCC_Free;
   }
 
+  unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                            unsigned &JTSize) {
+    JTSize = 0;
+    return SI.getNumCases();
+  }
+
   unsigned getCallCost(FunctionType *FTy, int NumArgs) {
     assert(FTy && "FunctionType must be provided to this routine.");
 

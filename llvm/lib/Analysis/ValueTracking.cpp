@@ -1162,12 +1162,12 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
 
         // If the first operand is non-negative or has all low bits zero, then
         // the upper bits are all zero.
-        if (Known2.Zero.isSignBitSet() || ((Known2.Zero & LowBits) == LowBits))
+        if (Known2.Zero.isSignBitSet() || LowBits.isSubsetOf(Known2.Zero))
           Known.Zero |= ~LowBits;
 
         // If the first operand is negative and not all low bits are zero, then
         // the upper bits are all one.
-        if (Known2.One.isSignBitSet() && ((Known2.One & LowBits) != 0))
+        if (Known2.One.isSignBitSet() && LowBits.intersects(Known2.One))
           Known.One |= ~LowBits;
 
         assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
@@ -3197,7 +3197,7 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
       // See if InstructionSimplify knows any relevant tricks.
       if (Instruction *I = dyn_cast<Instruction>(V))
         // TODO: Acquire a DominatorTree and AssumptionCache and use them.
-        if (Value *Simplified = SimplifyInstruction(I, DL, nullptr)) {
+        if (Value *Simplified = SimplifyInstruction(I, {DL, I})) {
           V = Simplified;
           continue;
         }
@@ -3318,12 +3318,18 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
                                               LI->getAlignment(), DL, CtxI, DT);
   }
   case Instruction::Call: {
+    auto *CI = cast<const CallInst>(Inst);
+    const Function *Callee = CI->getCalledFunction();
+    if (Callee && Callee->isSpeculatable())
+      return true;
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
       switch (II->getIntrinsicID()) {
       // These synthetic intrinsics have no side-effects and just mark
       // information about their operands.
       // FIXME: There are other no-op synthetic instructions that potentially
       // should be considered at least *safe* to speculate...
+      // FIXME: The speculatable attribute should be added to all these
+      // intrinsics and this case statement should be removed.
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
         return true;

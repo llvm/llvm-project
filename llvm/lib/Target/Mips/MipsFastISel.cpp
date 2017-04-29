@@ -1326,11 +1326,10 @@ bool MipsFastISel::fastLowerArguments() {
   // Only handle simple cases. i.e. All arguments are directly mapped to
   // registers of the appropriate type.
   SmallVector<AllocatedReg, 4> Allocation;
-  unsigned Idx = 1;
   for (const auto &FormalArg : F->args()) {
-    if (F->getAttributes().hasAttribute(Idx, Attribute::InReg) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::StructRet) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::ByVal)) {
+    if (FormalArg.hasAttribute(Attribute::InReg) ||
+        FormalArg.hasAttribute(Attribute::StructRet) ||
+        FormalArg.hasAttribute(Attribute::ByVal)) {
       DEBUG(dbgs() << ".. gave up (inreg, structret, byval)\n");
       return false;
     }
@@ -1342,7 +1341,8 @@ bool MipsFastISel::fastLowerArguments() {
     }
 
     EVT ArgVT = TLI.getValueType(DL, ArgTy);
-    DEBUG(dbgs() << ".. " << (Idx - 1) << ": " << ArgVT.getEVTString() << "\n");
+    DEBUG(dbgs() << ".. " << FormalArg.getArgNo() << ": "
+                 << ArgVT.getEVTString() << "\n");
     if (!ArgVT.isSimple()) {
       DEBUG(dbgs() << ".. .. gave up (not a simple type)\n");
       return false;
@@ -1352,8 +1352,8 @@ bool MipsFastISel::fastLowerArguments() {
     case MVT::i1:
     case MVT::i8:
     case MVT::i16:
-      if (!F->getAttributes().hasAttribute(Idx, Attribute::SExt) &&
-          !F->getAttributes().hasAttribute(Idx, Attribute::ZExt)) {
+      if (!FormalArg.hasAttribute(Attribute::SExt) &&
+          !FormalArg.hasAttribute(Attribute::ZExt)) {
         // It must be any extend, this shouldn't happen for clang-generated IR
         // so just fall back on SelectionDAG.
         DEBUG(dbgs() << ".. .. gave up (i8/i16 arg is not extended)\n");
@@ -1374,7 +1374,7 @@ bool MipsFastISel::fastLowerArguments() {
       break;
 
     case MVT::i32:
-      if (F->getAttributes().hasAttribute(Idx, Attribute::ZExt)) {
+      if (FormalArg.hasAttribute(Attribute::ZExt)) {
         // The O32 ABI does not permit a zero-extended i32.
         DEBUG(dbgs() << ".. .. gave up (i32 arg is zero extended)\n");
         return false;
@@ -1437,23 +1437,20 @@ bool MipsFastISel::fastLowerArguments() {
       DEBUG(dbgs() << ".. .. gave up (unknown type)\n");
       return false;
     }
-
-    ++Idx;
   }
 
-  Idx = 0;
   for (const auto &FormalArg : F->args()) {
-    unsigned SrcReg = Allocation[Idx].Reg;
-    unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, Allocation[Idx].RC);
+    unsigned ArgNo = FormalArg.getArgNo();
+    unsigned SrcReg = Allocation[ArgNo].Reg;
+    unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, Allocation[ArgNo].RC);
     // FIXME: Unfortunately it's necessary to emit a copy from the livein copy.
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
-    unsigned ResultReg = createResultReg(Allocation[Idx].RC);
+    unsigned ResultReg = createResultReg(Allocation[ArgNo].RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg)
         .addReg(DstReg, getKillRegState(true));
     updateValueMap(&FormalArg, ResultReg);
-    ++Idx;
   }
 
   // Calculate the size of the incoming arguments area.

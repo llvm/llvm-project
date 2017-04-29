@@ -1119,6 +1119,7 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::SwiftSelf:       return 1ULL << 51;
   case Attribute::SwiftError:      return 1ULL << 52;
   case Attribute::WriteOnly:       return 1ULL << 53;
+  case Attribute::Speculatable:    return 1ULL << 54;
   case Attribute::Dereferenceable:
     llvm_unreachable("dereferenceable attribute not supported in raw format");
     break;
@@ -1315,6 +1316,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ReturnsTwice;
   case bitc::ATTR_KIND_S_EXT:
     return Attribute::SExt;
+  case bitc::ATTR_KIND_SPECULATABLE:
+    return Attribute::Speculatable;
   case bitc::ATTR_KIND_STACK_ALIGNMENT:
     return Attribute::StackAlignment;
   case bitc::ATTR_KIND_STACK_PROTECT:
@@ -4966,7 +4969,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   GlobalValue::GUID LastSeenGUID = 0;
-  bool Combined = false;
 
   // We can expect to see any number of type ID information records before
   // each function summary records; these variables store the information
@@ -4985,16 +4987,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      // For a per-module index, remove any entries that still have empty
-      // summaries. The VST parsing creates entries eagerly for all symbols,
-      // but not all have associated summaries (e.g. it doesn't know how to
-      // distinguish between VST_CODE_ENTRY for function declarations vs global
-      // variables with initializers that end up with a summary). Remove those
-      // entries now so that we don't need to rely on the combined index merger
-      // to clean them up (especially since that may not run for the first
-      // module's index if we merge into that).
-      if (!Combined)
-        TheIndex.removeEmptySummaryEntries();
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -5143,7 +5135,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       LastSeenGUID = GUID;
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
-      Combined = true;
       break;
     }
     // FS_COMBINED_ALIAS: [valueid, modid, flags, valueid]
@@ -5169,7 +5160,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       LastSeenGUID = GUID;
       TheIndex.addGlobalValueSummary(GUID, std::move(AS));
-      Combined = true;
       break;
     }
     // FS_COMBINED_GLOBALVAR_INIT_REFS: [valueid, modid, flags, n x valueid]
@@ -5186,7 +5176,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       LastSeenGUID = GUID;
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
-      Combined = true;
       break;
     }
     // FS_COMBINED_ORIGINAL_NAME: [original_name]

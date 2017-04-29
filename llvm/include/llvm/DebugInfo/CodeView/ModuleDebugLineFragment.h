@@ -82,6 +82,8 @@ public:
 
   const LineFragmentHeader *header() const { return Header; }
 
+  bool hasColumnInfo() const;
+
 private:
   const LineFragmentHeader *Header = nullptr;
   LineInfoArray LinesAndColumns;

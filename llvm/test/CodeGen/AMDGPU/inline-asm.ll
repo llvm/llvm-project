@@ -232,3 +232,17 @@ entry:
   call void asm sideeffect "; use $0 $1 ", "{VGPR0}, {VGPR1}"(i1 %val0, i1 %val1)
   ret void
 }
+
+; CHECK-LABEL: {{^}}muliple_def_phys_vgpr:
+; CHECK: ; def v0
+; CHECK: v_mov_b32_e32 v1, v0
+; CHECK: ; def v0
+; CHECK: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
+define amdgpu_kernel void @muliple_def_phys_vgpr() {
+entry:
+  %def0 = call i32 asm sideeffect "; def $0 ", "={VGPR0}"()
+  %def1 = call i32 asm sideeffect "; def $0 ", "={VGPR0}"()
+  %add = shl i32 %def0, %def1
+  store i32 %add, i32 addrspace(1)* undef
+  ret void
+}

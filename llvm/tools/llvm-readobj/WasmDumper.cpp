@@ -150,8 +150,20 @@ void WasmDumper::printSections() {
     W.printEnum("Type", WasmSec.Type, makeArrayRef(WasmSectionTypes));
     W.printNumber("Size", (uint64_t)WasmSec.Content.size());
     W.printNumber("Offset", WasmSec.Offset);
-    if (WasmSec.Type == wasm::WASM_SEC_CUSTOM) {
+    switch (WasmSec.Type) {
+    case wasm::WASM_SEC_CUSTOM:
       W.printString("Name", WasmSec.Name);
+      break;
+    case wasm::WASM_SEC_MEMORY:
+      ListScope Group(W, "Memories");
+      for (const wasm::WasmLimits &Memory : Obj->memories()) {
+        DictScope Group(W, "Memory");
+        W.printNumber("InitialPages", Memory.Initial);
+        if (Memory.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX) {
+          W.printNumber("MaxPages", WasmSec.Offset);
+        }
+      }
+      break;
     }
 
     if (opts::SectionRelocations) {

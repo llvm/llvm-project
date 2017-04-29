@@ -286,9 +286,6 @@ DbgDeclareInst *FindAllocaDbgDeclare(Value *V);
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
 
-/// Constants for \p replaceDbgDeclare and friends.
-enum { NoDeref = false, WithDeref = true };
-
 /// Replaces llvm.dbg.declare instruction when the address it describes
 /// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
 /// prepended to the expression. If Offset is non-zero, a constant displacement

@@ -3025,20 +3025,18 @@ bool ARMFastISel::fastLowerArguments() {
 
   // Only handle simple cases. i.e. Up to 4 i8/i16/i32 scalar arguments
   // which are passed in r0 - r3.
-  unsigned Idx = 1;
-  for (Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
-       I != E; ++I, ++Idx) {
-    if (Idx > 4)
+  for (const Argument &Arg : F->args()) {
+    if (Arg.getArgNo() >= 4)
       return false;
 
-    if (F->getAttributes().hasAttribute(Idx, Attribute::InReg) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::StructRet) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::SwiftSelf) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::SwiftError) ||
-        F->getAttributes().hasAttribute(Idx, Attribute::ByVal))
+    if (Arg.hasAttribute(Attribute::InReg) ||
+        Arg.hasAttribute(Attribute::StructRet) ||
+        Arg.hasAttribute(Attribute::SwiftSelf) ||
+        Arg.hasAttribute(Attribute::SwiftError) ||
+        Arg.hasAttribute(Attribute::ByVal))
       return false;
 
-    Type *ArgTy = I->getType();
+    Type *ArgTy = Arg.getType();
     if (ArgTy->isStructTy() || ArgTy->isArrayTy() || ArgTy->isVectorTy())
       return false;
 
@@ -3059,10 +3057,10 @@ bool ARMFastISel::fastLowerArguments() {
   };
 
   const TargetRegisterClass *RC = &ARM::rGPRRegClass;
-  Idx = 0;
   for (Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
-       I != E; ++I, ++Idx) {
-    unsigned SrcReg = GPRArgRegs[Idx];
+       I != E; ++I) {
+    unsigned ArgNo = I->getArgNo();
+    unsigned SrcReg = GPRArgRegs[ArgNo];
     unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, RC);
     // FIXME: Unfortunately it's necessary to emit a copy from the livein copy.
     // Without this, EmitLiveInCopies may eliminate the livein if its only

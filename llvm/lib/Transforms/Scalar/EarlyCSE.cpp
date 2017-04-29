@@ -253,6 +253,7 @@ public:
   const TargetTransformInfo &TTI;
   DominatorTree &DT;
   AssumptionCache &AC;
+  const SimplifyQuery SQ;
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
   typedef RecyclingAllocator<
@@ -315,9 +316,10 @@ public:
   unsigned CurrentGeneration;
 
   /// \brief Set up the EarlyCSE runner for a particular function.
-  EarlyCSE(const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
-           DominatorTree &DT, AssumptionCache &AC, MemorySSA *MSSA)
-      : TLI(TLI), TTI(TTI), DT(DT), AC(AC), MSSA(MSSA),
+  EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
+           const TargetTransformInfo &TTI, DominatorTree &DT,
+           AssumptionCache &AC, MemorySSA *MSSA)
+      : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
         MSSAUpdater(make_unique<MemorySSAUpdater>(MSSA)), CurrentGeneration(0) {
   }
 
@@ -616,8 +618,6 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   /// stores which can occur in bitfield code among other things.
   Instruction *LastStore = nullptr;
 
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-
   // See if any instructions in the block can be eliminated.  If so, do it.  If
   // not, add them to AvailableValues.
   for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
@@ -694,7 +694,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
-    if (Value *V = SimplifyInstruction(Inst, DL, &TLI, &DT, &AC)) {
+    if (Value *V = SimplifyInstruction(Inst, SQ)) {
       DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V << '\n');
       bool Killed = false;
       if (!Inst->use_empty()) {
@@ -985,7 +985,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1029,7 +1029,7 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
     return CSE.run();
   }

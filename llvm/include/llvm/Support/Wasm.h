@@ -24,6 +24,8 @@ namespace wasm {
 const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 // Wasm binary format version
 const uint32_t WasmVersion = 0x1;
+// Wasm uses a 64k page size
+const uint32_t WasmPageSize = 65536;
 
 struct WasmObjectHeader {
   StringRef Magic;
@@ -106,7 +108,7 @@ struct WasmRelocation {
   uint32_t Type;         // The type of the relocation.
   int32_t Index;         // Index into function to global index space.
   uint64_t Offset;       // Offset from the start of the section.
-  uint64_t Addend;       // A value to add to the symbol.
+  int64_t Addend;        // A value to add to the symbol.
 };
 
 enum : unsigned {

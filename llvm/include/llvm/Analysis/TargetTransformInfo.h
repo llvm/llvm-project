@@ -197,6 +197,12 @@ public:
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                        ArrayRef<const Value *> Arguments) const;
 
+  /// \return The estimated number of case clusters when lowering \p 'SI'.
+  /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
+  /// table.
+  unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                            unsigned &JTSize) const;
+
   /// \brief Estimate the cost of a given IR user when lowered.
   ///
   /// This can estimate the cost of either a ConstantExpr or Instruction when
@@ -764,6 +770,8 @@ public:
                                ArrayRef<Type *> ParamTys) = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                                ArrayRef<const Value *> Arguments) = 0;
+  virtual unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                                    unsigned &JTSize) = 0;
   virtual int getUserCost(const User *U) = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
@@ -1066,6 +1074,10 @@ public:
   }
   unsigned getMaxInterleaveFactor(unsigned VF) override {
     return Impl.getMaxInterleaveFactor(VF);
+  }
+  unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                            unsigned &JTSize) override {
+    return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize);
   }
   unsigned
   getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,

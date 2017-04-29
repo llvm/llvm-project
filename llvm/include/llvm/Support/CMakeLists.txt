@@ -14,7 +14,8 @@ macro(find_first_existing_vc_file out_var path)
   execute_process(COMMAND ${git_executable} rev-parse --git-dir
     WORKING_DIRECTORY ${path}/cmake
     RESULT_VARIABLE git_result
-    OUTPUT_VARIABLE git_dir)
+    OUTPUT_VARIABLE git_dir
+    ERROR_QUIET)
   if(git_result EQUAL 0)
     string(STRIP "${git_dir}" git_dir)
     set(${out_var} "${git_dir}/logs/HEAD")

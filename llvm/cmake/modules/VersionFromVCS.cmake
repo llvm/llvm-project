@@ -45,7 +45,8 @@ function(add_version_info_from_vcs VERS)
             WORKING_DIRECTORY ${SOURCE_DIR}
             TIMEOUT 5
             RESULT_VARIABLE git_result
-            OUTPUT_VARIABLE git_output)
+            OUTPUT_VARIABLE git_output
+            ERROR_QUIET)
           if( git_result EQUAL 0 )
             string(REGEX MATCH "URL: ([^ \n]*)" svn_url ${git_output})
             if(svn_url)

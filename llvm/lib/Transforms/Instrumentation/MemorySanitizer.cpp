@@ -2643,7 +2643,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                "ByVal argument is not a pointer!");
         Size = DL.getTypeAllocSize(A->getType()->getPointerElementType());
         if (ArgOffset + Size > kParamTLSSize) break;
-        unsigned ParamAlignment = CS.getParamAlignment(i + 1);
+        unsigned ParamAlignment = CS.getParamAlignment(i);
         unsigned Alignment = std::min(ParamAlignment, kShadowTLSAlignment);
         Store = IRB.CreateMemCpy(ArgShadowBase,
                                  getShadowPtr(A, Type::getInt8Ty(*MS.C), IRB),
@@ -3502,7 +3502,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
         assert(A->getType()->isPointerTy());
         Type *RealTy = A->getType()->getPointerElementType();
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        uint64_t ArgAlign = CS.getParamAlignment(ArgNo + 1);
+        uint64_t ArgAlign = CS.getParamAlignment(ArgNo);
         if (ArgAlign < 8)
           ArgAlign = 8;
         VAArgOffset = alignTo(VAArgOffset, ArgAlign);

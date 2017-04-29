@@ -688,6 +688,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_RETURNS_TWICE;
   case Attribute::SExt:
     return bitc::ATTR_KIND_S_EXT;
+  case Attribute::Speculatable:
+    return bitc::ATTR_KIND_SPECULATABLE;
   case Attribute::StackAlignment:
     return bitc::ATTR_KIND_STACK_ALIGNMENT;
   case Attribute::StackProtect:
@@ -1644,9 +1646,7 @@ void ModuleBitcodeWriter::writeDINamespace(const DINamespace *N,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct() | N->getExportSymbols() << 1);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
-  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
-  Record.push_back(N->getLine());
 
   Stream.EmitRecord(bitc::METADATA_NAMESPACE, Record, Abbrev);
   Record.clear();
