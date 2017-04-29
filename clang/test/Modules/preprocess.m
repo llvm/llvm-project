@@ -16,11 +16,11 @@ void test() {
 
 
 // CHECK: int left_and_right(int *);{{$}}
-// CHECK-NEXT: @import diamond_left; /* clang -E: implicit import for "{{.*}}diamond_left.h" */{{$}}
+// CHECK-NEXT: #pragma clang module import diamond_left /* clang -E: implicit import for #import "diamond_left.h" */{{$}}
 
-// CHECK: @import diamond_right; /* clang -E: implicit import for "{{.*}}diamond_right.h" */{{$}}
-// CHECK: @import diamond_right; /* clang -E: implicit import for "{{.*}}diamond_right.h" */{{$}}
-// CHECK: @import file; /* clang -E: implicit import for "{{.*}}file.h" */{{$}}
+// CHECK: #pragma clang module import diamond_right /* clang -E: implicit import for #import "diamond_right.h" */{{$}}
+// CHECK: #pragma clang module import diamond_right /* clang -E: implicit import for #import "diamond_right.h" */{{$}}
+// CHECK: #pragma clang module import file /* clang -E: implicit import for #include "file.h" */{{$}}
 // CHECK-NEXT: void test() {{{$}}
 // CHECK-NEXT:    top_left_before();{{$}}
 // CHECK-NEXT:    left_and_right();{{$}}

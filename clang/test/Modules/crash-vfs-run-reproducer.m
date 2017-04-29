@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, shell
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
@@ -21,7 +21,7 @@
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
-// CHECKSRC: @import cstd.stdio;
+// CHECKSRC: #pragma clang module import cstd.stdio
 
 // CHECKSH: # Crash reproducer
 // CHECKSH-NEXT: # Driver args: "-fsyntax-only"

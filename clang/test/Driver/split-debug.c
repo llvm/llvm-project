@@ -40,6 +40,13 @@
 // CHECK-GMLT-WITH-SPLIT: "-debug-info-kind=line-tables-only"
 // CHECK-GMLT-WITH-SPLIT: "-split-dwarf-file"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -g -fno-split-dwarf-inlining -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-NOINLINE-WITHOUT-SPLIT < %t %s
+//
+// CHECK-NOINLINE-WITHOUT-SPLIT-NOT: "-enable-split-dwarf"
+// CHECK-NOINLINE-WITHOUT-SPLIT: "-fno-split-dwarf-inlining"
+// CHECK-NOINLINE-WITHOUT-SPLIT: "-debug-info-kind=limited"
+
 // RUN: %clang -target x86_64-unknown-linux-gnu -gmlt -gsplit-dwarf -fno-split-dwarf-inlining -S -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-SPLIT-WITH-GMLT < %t %s
 //

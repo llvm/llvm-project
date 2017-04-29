@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, shell
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m

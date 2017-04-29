@@ -3,13 +3,13 @@
 
 // CHECK: int bar();
 int bar();
-// CHECK: @import Module; /* clang -E: implicit import for "{{.*Headers[/\\]Module.h}}" */
+// CHECK: #pragma clang module import Module /* clang -E: implicit import for #include <Module/Module.h> */{{$}}
 #include <Module/Module.h>
 // CHECK: int foo();
 int foo();
-// CHECK: @import Module; /* clang -E: implicit import for "{{.*Headers[/\\]Module.h}}" */
+// CHECK: #pragma clang module import Module /* clang -E: implicit import for #include <Module/Module.h> */{{$}}
 #include <Module/Module.h>
 
 #include "pp-modules.h" // CHECK: # 1 "{{.*}}pp-modules.h" 1
-// CHECK: @import Module; /* clang -E: implicit import for "{{.*}}Module.h" */{{$}}
+// CHECK: #pragma clang module import Module /* clang -E: implicit import for #include <Module/Module.h> */{{$}}
 // CHECK: # 14 "{{.*}}pp-modules.c" 2

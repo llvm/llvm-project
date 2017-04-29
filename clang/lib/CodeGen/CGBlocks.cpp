@@ -619,7 +619,13 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
 
     // Block captures count as local values and have imprecise semantics.
     // They also can't be arrays, so need to worry about that.
-    if (dtorKind == QualType::DK_objc_strong_lifetime) {
+    //
+    // For const-qualified captures, emit clang.arc.use to ensure the captured
+    // object doesn't get released while we are still depending on its validity
+    // within the block.
+    if (VT.isConstQualified() && VT.getObjCLifetime() == Qualifiers::OCL_Strong)
+      destroyer = CodeGenFunction::emitARCIntrinsicUse;
+    else if (dtorKind == QualType::DK_objc_strong_lifetime) {
       destroyer = CodeGenFunction::destroyARCStrongImprecise;
     } else {
       destroyer = CGF.getDestroyer(dtorKind);
@@ -865,6 +871,12 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // If it's a reference variable, copy the reference into the block field.
     } else if (type->isReferenceType()) {
       Builder.CreateStore(src.getPointer(), blockField);
+
+    // If type is const-qualified, copy the value into the block field.
+    } else if (type.isConstQualified() &&
+               type.getObjCLifetime() == Qualifiers::OCL_Strong) {
+      llvm::Value *value = Builder.CreateLoad(src, "captured");
+      Builder.CreateStore(value, blockField);
 
     // If this is an ARC __strong block-pointer variable, don't do a
     // block copy.

@@ -887,6 +887,52 @@ Bravo<char> golf;
 #endif
 }
 
+namespace DifferentParameterNameInTemplate {
+#if defined(FIRST) || defined(SECOND)
+template <typename T>
+struct S {
+  typedef T Type;
+
+  static void Run(const Type *name_one);
+};
+
+template <typename T>
+void S<T>::Run(const T *name_two) {}
+
+template <typename T>
+struct Foo {
+  ~Foo() { Handler::Run(nullptr); }
+  Foo() {}
+
+  class Handler : public S<T> {};
+
+  void Get(typename Handler::Type *x = nullptr) {}
+  void Add() { Handler::Run(nullptr); }
+};
+#endif
+
+#if defined(FIRST)
+struct Beta;
+
+struct Alpha {
+  Alpha();
+  void Go() { betas.Get(); }
+  Foo<Beta> betas;
+};
+
+#elif defined(SECOND)
+struct Beta {};
+
+struct BetaHelper {
+  void add_Beta() { betas.Add(); }
+  Foo<Beta> betas;
+};
+
+#else
+Alpha::Alpha() {}
+#endif
+}
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST
