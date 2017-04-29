@@ -8387,3 +8387,44 @@ __m512 test_mm512_mask_abs_ps(__m512 __W, __mmask16 __U, __m512 __A){
   return _mm512_mask_abs_ps( __W, __U, __A);
 }
 
+__m512d test_mm512_zextpd128_pd512(__m128d A) {
+  // CHECK-LABEL: test_mm512_zextpd128_pd512
+  // CHECK: store <2 x double> zeroinitializer
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  return _mm512_zextpd128_pd512(A);
+}
+
+__m512d test_mm512_zextpd256_pd512(__m256d A) {
+  // CHECK-LABEL: test_mm512_zextpd256_pd512
+  // CHECK: store <4 x double> zeroinitializer
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  return _mm512_zextpd256_pd512(A);
+}
+
+__m512 test_mm512_zextps128_ps512(__m128 A) {
+  // CHECK-LABEL: test_mm512_zextps128_ps512
+  // CHECK: store <4 x float> zeroinitializer
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  return _mm512_zextps128_ps512(A);
+}
+
+__m512 test_mm512_zextps256_ps512(__m256 A) {
+  // CHECK-LABEL: test_mm512_zextps256_ps512
+  // CHECK: store <8 x float> zeroinitializer
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  return _mm512_zextps256_ps512(A);
+}
+
+__m512i test_mm512_zextsi128_si512(__m128i A) {
+  // CHECK-LABEL: test_mm512_zextsi128_si512
+  // CHECK: store <2 x i64> zeroinitializer
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  return _mm512_zextsi128_si512(A);
+}
+
+__m512i test_mm512_zextsi256_si512(__m256i A) {
+  // CHECK-LABEL: test_mm512_zextsi256_si512
+  // CHECK: store <4 x i64> zeroinitializer
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  return _mm512_zextsi256_si512(A);
+}
