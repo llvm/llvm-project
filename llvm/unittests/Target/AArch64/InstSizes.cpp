@@ -30,7 +30,8 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
   AArch64Subtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
-                      TM->getTargetFeatureString(), *TM, /* isLittle */ false);
+                      TM->getTargetFeatureString(), *TM, /* isLittle */ false,
+                      /* ForCodeSize */ false);
   return llvm::make_unique<AArch64InstrInfo>(ST);
 }
 

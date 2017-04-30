@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdarg>
+#include <cstdio>
 #include <tuple>
 
 #ifdef HAVE_CRASHREPORTERCLIENT_H

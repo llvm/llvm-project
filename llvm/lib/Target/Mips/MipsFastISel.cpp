@@ -1263,7 +1263,8 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     MipsCCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
 
     CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips, CLI.RetTy,
-                             CLI.Symbol->getName().data());
+                             CLI.Symbol ? CLI.Symbol->getName().data()
+                                        : nullptr);
 
     // Only handle a single return value.
     if (RVLocs.size() != 1)

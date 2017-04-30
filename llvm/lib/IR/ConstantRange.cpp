@@ -243,11 +243,8 @@ bool ConstantRange::isSignWrappedSet() const {
 }
 
 APInt ConstantRange::getSetSize() const {
-  if (isFullSet()) {
-    APInt Size(getBitWidth()+1, 0);
-    Size.setBit(getBitWidth());
-    return Size;
-  }
+  if (isFullSet())
+    return APInt::getOneBitSet(getBitWidth()+1, getBitWidth());
 
   // This is also correct for wrapped sets.
   return (Upper - Lower).zext(getBitWidth()+1);
@@ -569,9 +566,8 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (isFullSet())
     return ConstantRange(DstTySize, /*isFullSet=*/true);
 
-  APInt MaxValue = APInt::getMaxValue(DstTySize).zext(getBitWidth());
-  APInt MaxBitValue(getBitWidth(), 0);
-  MaxBitValue.setBit(DstTySize);
+  APInt MaxValue = APInt::getLowBitsSet(getBitWidth(), DstTySize);
+  APInt MaxBitValue = APInt::getOneBitSet(getBitWidth(), DstTySize);
 
   APInt LowerDiv(Lower), UpperDiv(Upper);
   ConstantRange Union(DstTySize, /*isFullSet=*/false);
@@ -585,7 +581,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
       return ConstantRange(DstTySize, /*isFullSet=*/true);
 
     Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
-    UpperDiv = APInt::getMaxValue(getBitWidth());
+    UpperDiv.setAllBits();
 
     // Union covers the MaxValue case, so return if the remaining range is just
     // MaxValue.
@@ -597,7 +593,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (LowerDiv.uge(MaxValue)) {
     APInt Div(getBitWidth(), 0);
     APInt::udivrem(LowerDiv, MaxBitValue, Div, LowerDiv);
-    UpperDiv = UpperDiv - MaxBitValue * Div;
+    UpperDiv -= MaxBitValue * Div;
   }
 
   if (UpperDiv.ule(MaxValue))
@@ -605,10 +601,10 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
                          UpperDiv.trunc(DstTySize)).unionWith(Union);
 
   // The truncated value wraps around. Check if we can do better than fullset.
-  APInt UpperModulo = UpperDiv - MaxBitValue;
-  if (UpperModulo.ult(LowerDiv))
+  UpperDiv -= MaxBitValue;
+  if (UpperDiv.ult(LowerDiv))
     return ConstantRange(LowerDiv.trunc(DstTySize),
-                         UpperModulo.trunc(DstTySize)).unionWith(Union);
+                         UpperDiv.trunc(DstTySize)).unionWith(Union);
 
   return ConstantRange(DstTySize, /*isFullSet=*/true);
 }
@@ -841,7 +837,7 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
     if (RHS.getUpper() == 1)
       RHS_umin = RHS.getLower();
     else
-      RHS_umin = APInt(getBitWidth(), 1);
+      RHS_umin = 1;
   }
 
   APInt Upper = getUnsignedMax().udiv(RHS_umin) + 1;

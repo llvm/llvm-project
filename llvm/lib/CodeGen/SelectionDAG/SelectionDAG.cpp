@@ -2516,7 +2516,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
     KnownZeroLow = std::min(KnownZeroLow,
                             Known2.Zero.countTrailingOnes());
-    Known.Zero.setBits(0, KnownZeroLow);
+    Known.Zero.setLowBits(KnownZeroLow);
     break;
   }
   case ISD::UADDO:
@@ -2711,7 +2711,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // If the source's MSB is zero then we know the rest of the bits already.
-    if (Known2.Zero[BitWidth - 1]) {
+    if (Known2.isNonNegative()) {
       Known.Zero = Known2.Zero;
       Known.One = Known2.One;
       break;
@@ -3045,7 +3045,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If we are subtracting one from a positive number, there is no carry
         // out of the result.
-        if (Known.Zero.isNegative())
+        if (Known.isNonNegative())
           return Tmp;
       }
 
@@ -3069,7 +3069,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If the input is known to be positive (the sign bit is known clear),
         // the output of the NEG has the same number of sign bits as the input.
-        if (Known.Zero.isNegative())
+        if (Known.isNonNegative())
           return Tmp2;
 
         // Otherwise, we treat this like a SUB.
@@ -3208,9 +3208,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   computeKnownBits(Op, Known, DemandedElts, Depth);
 
   APInt Mask;
-  if (Known.Zero.isNegative()) {        // sign bit is 0
+  if (Known.isNonNegative()) {        // sign bit is 0
     Mask = Known.Zero;
-  } else if (Known.One.isNegative()) {  // sign bit is 1;
+  } else if (Known.isNegative()) {  // sign bit is 1;
     Mask = Known.One;
   } else {
     // Nothing known.

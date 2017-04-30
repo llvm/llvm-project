@@ -48,7 +48,6 @@ public:
   X86InstructionSelector(const X86TargetMachine &TM, const X86Subtarget &STI,
                          const X86RegisterBankInfo &RBI);
 
-  void beginFunction(const MachineFunction &MF) override;
   bool select(MachineInstr &I) const override;
 
 private:
@@ -80,12 +79,10 @@ private:
   const X86InstrInfo &TII;
   const X86RegisterInfo &TRI;
   const X86RegisterBankInfo &RBI;
-  bool OptForSize;
-  bool OptForMinSize;
 
-  PredicateBitset AvailableFeatures;
-  PredicateBitset computeAvailableFeatures(const MachineFunction *MF,
-                                           const X86Subtarget *Subtarget) const;
+#define GET_GLOBALISEL_PREDICATES_DECL
+#include "X86GenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_DECL
 
 #define GET_GLOBALISEL_TEMPORARIES_DECL
 #include "X86GenGlobalISel.inc"
@@ -102,8 +99,10 @@ X86InstructionSelector::X86InstructionSelector(const X86TargetMachine &TM,
                                                const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
     : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI), OptForSize(false),
-      OptForMinSize(false), AvailableFeatures()
+      TRI(*STI.getRegisterInfo()), RBI(RBI),
+#define GET_GLOBALISEL_PREDICATES_INIT
+#include "X86GenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_INIT
 #define GET_GLOBALISEL_TEMPORARIES_INIT
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -204,12 +203,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   }
   I.setDesc(TII.get(X86::COPY));
   return true;
-}
-
-void X86InstructionSelector::beginFunction(const MachineFunction &MF) {
-  OptForSize = MF.getFunction()->optForSize();
-  OptForMinSize = MF.getFunction()->optForMinSize();
-  AvailableFeatures = computeAvailableFeatures(&MF, &STI);
 }
 
 bool X86InstructionSelector::select(MachineInstr &I) const {

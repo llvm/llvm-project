@@ -26682,7 +26682,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
 
-  Known = KnownBits(BitWidth);   // Don't know anything.
+  Known.Zero.clearAllBits(); Known.One.clearAllBits();
   switch (Opc) {
   default: break;
   case X86ISD::ADD:
@@ -26701,11 +26701,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     LLVM_FALLTHROUGH;
   case X86ISD::SETCC:
-    Known.Zero.setBits(1, BitWidth);
+    Known.Zero.setBitsFrom(1);
     break;
   case X86ISD::MOVMSK: {
     unsigned NumLoBits = Op.getOperand(0).getValueType().getVectorNumElements();
-    Known.Zero.setBits(NumLoBits, BitWidth);
+    Known.Zero.setBitsFrom(NumLoBits);
     break;
   }
   case X86ISD::VSHLI:
@@ -26746,7 +26746,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     DAG.computeKnownBits(N0, Known, DemandedSrcElts, Depth + 1);
     Known.One = Known.One.zext(BitWidth);
     Known.Zero = Known.Zero.zext(BitWidth);
-    Known.Zero.setBits(InBitWidth, BitWidth);
+    Known.Zero.setBitsFrom(InBitWidth);
     break;
   }
   }

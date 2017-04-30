@@ -1723,21 +1723,21 @@ TEST(APIntTest, getLowBitsSet) {
 }
 
 TEST(APIntTest, getBitsSet) {
-  APInt i64hi1lo1 = APInt::getBitsSet(64, 63, 1);
-  EXPECT_EQ(1u, i64hi1lo1.countLeadingOnes());
-  EXPECT_EQ(0u, i64hi1lo1.countLeadingZeros());
-  EXPECT_EQ(64u, i64hi1lo1.getActiveBits());
-  EXPECT_EQ(0u, i64hi1lo1.countTrailingZeros());
-  EXPECT_EQ(1u, i64hi1lo1.countTrailingOnes());
-  EXPECT_EQ(2u, i64hi1lo1.countPopulation());
+  APInt i64hi1lo1 = APInt::getBitsSet(64, 1, 63);
+  EXPECT_EQ(0u, i64hi1lo1.countLeadingOnes());
+  EXPECT_EQ(1u, i64hi1lo1.countLeadingZeros());
+  EXPECT_EQ(63u, i64hi1lo1.getActiveBits());
+  EXPECT_EQ(1u, i64hi1lo1.countTrailingZeros());
+  EXPECT_EQ(0u, i64hi1lo1.countTrailingOnes());
+  EXPECT_EQ(62u, i64hi1lo1.countPopulation());
 
-  APInt i127hi1lo1 = APInt::getBitsSet(127, 126, 1);
-  EXPECT_EQ(1u, i127hi1lo1.countLeadingOnes());
-  EXPECT_EQ(0u, i127hi1lo1.countLeadingZeros());
-  EXPECT_EQ(127u, i127hi1lo1.getActiveBits());
-  EXPECT_EQ(0u, i127hi1lo1.countTrailingZeros());
-  EXPECT_EQ(1u, i127hi1lo1.countTrailingOnes());
-  EXPECT_EQ(2u, i127hi1lo1.countPopulation());
+  APInt i127hi1lo1 = APInt::getBitsSet(127, 1, 126);
+  EXPECT_EQ(0u, i127hi1lo1.countLeadingOnes());
+  EXPECT_EQ(1u, i127hi1lo1.countLeadingZeros());
+  EXPECT_EQ(126u, i127hi1lo1.getActiveBits());
+  EXPECT_EQ(1u, i127hi1lo1.countTrailingZeros());
+  EXPECT_EQ(0u, i127hi1lo1.countTrailingOnes());
+  EXPECT_EQ(125u, i127hi1lo1.countPopulation());
 }
 
 TEST(APIntTest, getHighBitsSet) {
