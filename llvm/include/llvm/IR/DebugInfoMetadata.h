@@ -56,6 +56,8 @@
 
 namespace llvm {
 
+class DIBuilder;
+
 template <typename T> class Optional;
 
 /// Holds a subclass of DINode.
@@ -1730,45 +1732,40 @@ class DINamespace : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Line;
   unsigned ExportSymbols : 1;
 
-  DINamespace(LLVMContext &Context, StorageType Storage, unsigned Line,
-              bool ExportSymbols, ArrayRef<Metadata *> Ops)
+  DINamespace(LLVMContext &Context, StorageType Storage, bool ExportSymbols,
+              ArrayRef<Metadata *> Ops)
       : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace,
                 Ops),
-        Line(Line), ExportSymbols(ExportSymbols) {}
+        ExportSymbols(ExportSymbols) {}
   ~DINamespace() = default;
 
   static DINamespace *getImpl(LLVMContext &Context, DIScope *Scope,
-                              DIFile *File, StringRef Name, unsigned Line,
-                              bool ExportSymbols, StorageType Storage,
-                              bool ShouldCreate = true) {
-    return getImpl(Context, Scope, File, getCanonicalMDString(Context, Name),
-                   Line, ExportSymbols, Storage, ShouldCreate);
+                              StringRef Name, bool ExportSymbols,
+                              StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
+                   ExportSymbols, Storage, ShouldCreate);
   }
   static DINamespace *getImpl(LLVMContext &Context, Metadata *Scope,
-                              Metadata *File, MDString *Name, unsigned Line,
-                              bool ExportSymbols, StorageType Storage,
-                              bool ShouldCreate = true);
+                              MDString *Name, bool ExportSymbols,
+                              StorageType Storage, bool ShouldCreate = true);
 
   TempDINamespace cloneImpl() const {
-    return getTemporary(getContext(), getScope(), getFile(), getName(),
-                        getLine(), getExportSymbols());
+    return getTemporary(getContext(), getScope(), getName(),
+                        getExportSymbols());
   }
 
 public:
-  DEFINE_MDNODE_GET(DINamespace, (DIScope * Scope, DIFile *File, StringRef Name,
-                                  unsigned Line, bool ExportSymbols),
-                    (Scope, File, Name, Line, ExportSymbols))
   DEFINE_MDNODE_GET(DINamespace,
-                    (Metadata * Scope, Metadata *File, MDString *Name,
-                     unsigned Line, bool ExportSymbols),
-                    (Scope, File, Name, Line, ExportSymbols))
+                    (DIScope *Scope, StringRef Name, bool ExportSymbols),
+                    (Scope, Name, ExportSymbols))
+  DEFINE_MDNODE_GET(DINamespace,
+                    (Metadata *Scope, MDString *Name, bool ExportSymbols),
+                    (Scope, Name, ExportSymbols))
 
   TempDINamespace clone() const { return cloneImpl(); }
 
-  unsigned getLine() const { return Line; }
   bool getExportSymbols() const { return ExportSymbols; }
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
   StringRef getName() const { return getStringOperand(2); }
@@ -2154,6 +2151,17 @@ public:
 
   /// Return whether this is a piece of an aggregate variable.
   bool isFragment() const { return getFragmentInfo().hasValue(); }
+
+  /// Append \p Ops with operations to apply the \p Offset.
+  static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
+
+  /// Constants for DIExpression::prepend.
+  enum { NoDeref = false, WithDeref = true, WithStackValue = true };
+
+  /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
+  /// into a stack value.
+  static DIExpression *prepend(const DIExpression *DIExpr, bool Deref,
+                               int64_t Offset = 0, bool StackValue = false);
 };
 
 /// Global variables.

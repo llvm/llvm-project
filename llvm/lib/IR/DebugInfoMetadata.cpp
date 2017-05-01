@@ -15,6 +15,7 @@
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 
 using namespace llvm;
@@ -506,13 +507,13 @@ DILexicalBlockFile *DILexicalBlockFile::getImpl(LLVMContext &Context,
 }
 
 DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
-                                  Metadata *File, MDString *Name, unsigned Line,
-                                  bool ExportSymbols, StorageType Storage,
-                                  bool ShouldCreate) {
+                                  MDString *Name, bool ExportSymbols,
+                                  StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DINamespace, (Scope, File, Name, Line, ExportSymbols));
-  Metadata *Ops[] = {File, Scope, Name};
-  DEFINE_GETIMPL_STORE(DINamespace, (Line, ExportSymbols), Ops);
+  DEFINE_GETIMPL_LOOKUP(DINamespace, (Scope, Name, ExportSymbols));
+  // The nullptr is for DIScope's File operand. This should be refactored.
+  Metadata *Ops[] = {nullptr, Scope, Name};
+  DEFINE_GETIMPL_STORE(DINamespace, (ExportSymbols), Ops);
 }
 
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,
@@ -658,6 +659,43 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
       return Info;
     }
   return None;
+}
+
+void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
+                                int64_t Offset) {
+  if (Offset > 0) {
+    Ops.push_back(dwarf::DW_OP_plus);
+    Ops.push_back(Offset);
+  } else if (Offset < 0) {
+    Ops.push_back(dwarf::DW_OP_minus);
+    Ops.push_back(-Offset);
+  }
+}
+
+DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
+                                    int64_t Offset, bool StackValue) {
+  SmallVector<uint64_t, 8> Ops;
+  appendOffset(Ops, Offset);
+  if (Deref)
+    Ops.push_back(dwarf::DW_OP_deref);
+  if (Expr)
+    for (auto Op : Expr->expr_ops()) {
+      // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+      if (StackValue) {
+        if (Op.getOp() == dwarf::DW_OP_stack_value)
+          StackValue = false;
+        else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+          Ops.push_back(dwarf::DW_OP_stack_value);
+          StackValue = false;
+        }
+      }
+      Ops.push_back(Op.getOp());
+      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
+        Ops.push_back(Op.getArg(I));
+    }
+  if (StackValue)
+    Ops.push_back(dwarf::DW_OP_stack_value);
+  return DIExpression::get(Expr->getContext(), Ops);
 }
 
 bool DIExpression::isConstant() const {
