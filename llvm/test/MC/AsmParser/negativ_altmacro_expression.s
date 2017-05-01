@@ -1,4 +1,4 @@
-# RUN: not llvm-mc  %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple i386-linux-gnu %s 2>&1 | FileCheck %s
 
 # This test is a negative test for the altmacro expression.
 # In this test we check the '.noaltmacro' directive.

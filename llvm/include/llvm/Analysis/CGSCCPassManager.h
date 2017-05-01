@@ -646,7 +646,7 @@ public:
     LazyCallGraph::SCC *C = &InitialC;
 
     // Collect value handles for all of the indirect call sites.
-    SmallVector<WeakVH, 8> CallHandles;
+    SmallVector<WeakTrackingVH, 8> CallHandles;
 
     // Struct to track the counts of direct and indirect calls in each function
     // of the SCC.
@@ -658,7 +658,7 @@ public:
     // Put value handles on all of the indirect calls and return the number of
     // direct calls for each function in the SCC.
     auto ScanSCC = [](LazyCallGraph::SCC &C,
-                      SmallVectorImpl<WeakVH> &CallHandles) {
+                      SmallVectorImpl<WeakTrackingVH> &CallHandles) {
       assert(CallHandles.empty() && "Must start with a clear set of handles.");
 
       SmallVector<CallCount, 4> CallCounts;
@@ -671,7 +671,7 @@ public:
               ++Count.Direct;
             } else {
               ++Count.Indirect;
-              CallHandles.push_back(WeakVH(&I));
+              CallHandles.push_back(WeakTrackingVH(&I));
             }
           }
       }
@@ -699,7 +699,7 @@ public:
              "Cannot have changed the size of the SCC!");
 
       // Check whether any of the handles were devirtualized.
-      auto IsDevirtualizedHandle = [&](WeakVH &CallH) {
+      auto IsDevirtualizedHandle = [&](WeakTrackingVH &CallH) {
         if (!CallH)
           return false;
         auto CS = CallSite(CallH);

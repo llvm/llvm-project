@@ -1231,11 +1231,12 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   LoopProcessWorklist.push_back(NewLoop);
   redoLoop = true;
 
-  // Keep a WeakVH holding onto LIC.  If the first call to RewriteLoopBody
+  // Keep a WeakTrackingVH holding onto LIC.  If the first call to
+  // RewriteLoopBody
   // deletes the instruction (for example by simplifying a PHI that feeds into
   // the condition that we're unswitching on), we don't rewrite the second
   // iteration.
-  WeakVH LICHandle(LIC);
+  WeakTrackingVH LICHandle(LIC);
 
   // Now we rewrite the original code to know that the condition is true and the
   // new code to know that the condition is false.

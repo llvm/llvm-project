@@ -3253,7 +3253,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     if (TLI.isOperationLegalOrCustom(ISD::FADD, VT) &&
         TLI.isOperationLegalOrCustom(ISD::FNEG, VT)) {
-      const SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(Node)->Flags;
+      const SDNodeFlags Flags = Node->getFlags();
       Tmp1 = DAG.getNode(ISD::FNEG, dl, VT, Node->getOperand(1));
       Tmp1 = DAG.getNode(ISD::FADD, dl, VT, Node->getOperand(0), Tmp1, Flags);
       Results.push_back(Tmp1);

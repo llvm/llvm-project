@@ -163,7 +163,10 @@ namespace HexagonII {
     PrefersSlot3Mask = 0x1,
 
     CofMax1Pos = 60,
-    CofMax1Mask = 0x1
+    CofMax1Mask = 0x1,
+
+    CVINewPos = 61,
+    CVINewMask = 0x1
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //

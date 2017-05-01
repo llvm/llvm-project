@@ -361,6 +361,15 @@ InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   return Target;
 }
 
+// Create a regular InputSection class that has the same contents
+// as a given section.
+InputSectionBase *toRegularSection(MergeInputSection *Sec) {
+  auto *Ret = make<InputSection>(Sec->Flags, Sec->Type, Sec->Alignment,
+                                 Sec->Data, Sec->Name);
+  Ret->File = Sec->File;
+  return Ret;
+}
+
 template <class ELFT>
 InputSectionBase *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
@@ -398,12 +407,15 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-    if (isa<MergeInputSection>(Target)) {
-      this->Sections[Sec.sh_info] =
-          make<InputSection>(Target->Flags, Target->Type, Target->Alignment,
-                             Target->Data, Target->Name);
-      this->Sections[Sec.sh_info]->File = Target->File;
-      Target = this->Sections[Sec.sh_info];
+
+    // Mergeable sections with relocations are tricky because relocations
+    // need to be taken into account when comparing section contents for
+    // merging. The MergeInputSection class currently doesn't care about
+    // relocations, and it's unlikely to support it in future because such
+    // sections are rare. We simply handle such sections as non-mergeable.
+    if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
+      Target = toRegularSection(MS);
+      this->Sections[Sec.sh_info] = Target;
     }
 
     size_t NumRelocations;

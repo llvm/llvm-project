@@ -406,8 +406,15 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       }
 
       // Add input sections to an output section.
-      for (InputSectionBase *S : V)
+      unsigned Pos = 0;
+      for (InputSectionBase *S : V) {
+        // The actual offset will be computed during
+        // assignAddresses. For now, use the index as a very crude
+        // approximation so that it is at least easy for other code to
+        // know the section order.
+        cast<InputSection>(S)->OutSecOff = Pos++;
         Factory.addInputSec(S, Cmd->Name, Cmd->Sec);
+      }
     }
   }
   CurOutSec = nullptr;

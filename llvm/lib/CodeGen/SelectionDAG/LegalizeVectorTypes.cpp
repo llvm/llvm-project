@@ -730,7 +730,7 @@ void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo,
   GetSplitVector(N->getOperand(1), RHSLo, RHSHi);
   SDLoc dl(N);
 
-  const SDNodeFlags *Flags = N->getFlags();
+  const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   Lo = DAG.getNode(Opcode, dl, LHSLo.getValueType(), LHSLo, RHSLo, Flags);
   Hi = DAG.getNode(Opcode, dl, LHSHi.getValueType(), LHSHi, RHSHi, Flags);
@@ -2219,7 +2219,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BinaryCanTrap(SDNode *N) {
   EVT WidenEltVT = WidenVT.getVectorElementType();
   EVT VT = WidenVT;
   unsigned NumElts =  VT.getVectorNumElements();
-  const SDNodeFlags *Flags = N->getFlags();
+  const SDNodeFlags Flags = N->getFlags();
   while (!TLI.isTypeLegal(VT) && NumElts != 1) {
     NumElts = NumElts / 2;
     VT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, NumElts);
@@ -2367,7 +2367,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
 
   unsigned Opcode = N->getOpcode();
   unsigned InVTNumElts = InVT.getVectorNumElements();
-  const SDNodeFlags *Flags = N->getFlags();
+  const SDNodeFlags Flags = N->getFlags();
   if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
     InOp = GetWidenedVector(N->getOperand(0));
     InVT = InOp.getValueType();

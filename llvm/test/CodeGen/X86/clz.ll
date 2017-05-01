@@ -786,7 +786,6 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X32-NEXT:    orb $2, %al
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    bsfl %eax, %eax
-; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
@@ -795,7 +794,6 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X64-NEXT:    orb $2, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsfl %eax, %eax
-; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
@@ -805,7 +803,6 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X32-CLZ-NEXT:    orb $2, %al
 ; X32-CLZ-NEXT:    movzbl %al, %eax
 ; X32-CLZ-NEXT:    tzcntl %eax, %eax
-; X32-CLZ-NEXT:    andb $1, %al
 ; X32-CLZ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-CLZ-NEXT:    retl
 ;
@@ -814,7 +811,6 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X64-CLZ-NEXT:    orb $2, %dil
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
 ; X64-CLZ-NEXT:    tzcntl %eax, %eax
-; X64-CLZ-NEXT:    andb $1, %al
 ; X64-CLZ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-CLZ-NEXT:    retq
   %x2 = or i8 %x, 2
@@ -830,8 +826,7 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X32-NEXT:    orb $64, %al
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    bsrl %eax, %eax
-; X32-NEXT:    notl %eax
-; X32-NEXT:    andb $1, %al
+; X32-NEXT:    xorl $7, %eax
 ; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-NEXT:    retl
 ;
@@ -840,8 +835,7 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X64-NEXT:    orb $64, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    bsrl %eax, %eax
-; X64-NEXT:    notl %eax
-; X64-NEXT:    andb $1, %al
+; X64-NEXT:    xorl $7, %eax
 ; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;
@@ -852,7 +846,6 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X32-CLZ-NEXT:    movzbl %al, %eax
 ; X32-CLZ-NEXT:    lzcntl %eax, %eax
 ; X32-CLZ-NEXT:    addl $-24, %eax
-; X32-CLZ-NEXT:    andb $1, %al
 ; X32-CLZ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X32-CLZ-NEXT:    retl
 ;
@@ -862,7 +855,6 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
 ; X64-CLZ-NEXT:    lzcntl %eax, %eax
 ; X64-CLZ-NEXT:    addl $-24, %eax
-; X64-CLZ-NEXT:    andb $1, %al
 ; X64-CLZ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-CLZ-NEXT:    retq
 

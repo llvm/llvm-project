@@ -459,94 +459,16 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
   DEBUG(MCB.dump_pretty(dbgs()));
   DEBUG(dbgs() << "--\n");
 
+  MCB.setLoc(IDLoc);
   // Check the bundle for errors.
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  HexagonMCChecker Check(MCII, getSTI(), MCB, MCB, *RI);
+  HexagonMCChecker Check(getContext(), MCII, getSTI(), MCB, *RI);
 
   bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(MCII, getSTI(),
                                                         getContext(), MCB,
                                                         &Check);
 
-  while (Check.getNextErrInfo()) {
-    unsigned Reg = Check.getErrRegister();
-    Twine R(RI->getName(Reg));
-
-    uint64_t Err = Check.getError();
-    if (Err != HexagonMCErrInfo::CHECK_SUCCESS) {
-      if (HexagonMCErrInfo::CHECK_ERROR_BRANCHES & Err)
-        return Error(
-            IDLoc,
-            "unconditional branch cannot precede another branch in packet");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_NEWP & Err ||
-          HexagonMCErrInfo::CHECK_ERROR_NEWV & Err)
-        return Error(IDLoc, "register `" + R +
-                                "' used with `.new' "
-                                "but not validly modified in the same packet");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_REGISTERS & Err)
-        return Error(IDLoc, "register `" + R + "' modified more than once");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_READONLY & Err)
-        return Error(IDLoc, "cannot write to read-only register `" + R + "'");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_LOOP & Err)
-        return Error(IDLoc, "loop-setup and some branch instructions "
-                            "cannot be in the same packet");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_ENDLOOP & Err) {
-        Twine N(HexagonMCInstrInfo::isInnerLoop(MCB) ? '0' : '1');
-        return Error(IDLoc,
-                     "packet marked with `:endloop" + N + "' " +
-                         "cannot contain instructions that modify register " +
-                         "`" + R + "'");
-      }
-
-      if (HexagonMCErrInfo::CHECK_ERROR_SOLO & Err)
-        return Error(
-            IDLoc,
-            "instruction cannot appear in packet with other instructions");
-
-      if (HexagonMCErrInfo::CHECK_ERROR_NOSLOTS & Err)
-        return Error(IDLoc, "too many slots used in packet");
-
-      if (Err & HexagonMCErrInfo::CHECK_ERROR_SHUFFLE) {
-        uint64_t Erm = Check.getShuffleError();
-
-        if (HexagonShuffler::SHUFFLE_ERROR_INVALID == Erm)
-          return Error(IDLoc, "invalid instruction packet");
-        else if (HexagonShuffler::SHUFFLE_ERROR_STORES == Erm)
-          return Error(IDLoc, "invalid instruction packet: too many stores");
-        else if (HexagonShuffler::SHUFFLE_ERROR_LOADS == Erm)
-          return Error(IDLoc, "invalid instruction packet: too many loads");
-        else if (HexagonShuffler::SHUFFLE_ERROR_BRANCHES == Erm)
-          return Error(IDLoc, "too many branches in packet");
-        else if (HexagonShuffler::SHUFFLE_ERROR_NOSLOTS == Erm)
-          return Error(IDLoc, "invalid instruction packet: out of slots");
-        else if (HexagonShuffler::SHUFFLE_ERROR_SLOTS == Erm)
-          return Error(IDLoc, "invalid instruction packet: slot error");
-        else if (HexagonShuffler::SHUFFLE_ERROR_ERRATA2 == Erm)
-          return Error(IDLoc, "v60 packet violation");
-        else if (HexagonShuffler::SHUFFLE_ERROR_STORE_LOAD_CONFLICT == Erm)
-          return Error(IDLoc, "slot 0 instruction does not allow slot 1 store");
-        else
-          return Error(IDLoc, "unknown error in instruction packet");
-      }
-    }
-
-    unsigned Warn = Check.getWarning();
-    if (Warn != HexagonMCErrInfo::CHECK_SUCCESS) {
-      if (HexagonMCErrInfo::CHECK_WARN_CURRENT & Warn)
-        Warning(IDLoc, "register `" + R + "' used with `.cur' "
-                                          "but not used in the same packet");
-      else if (HexagonMCErrInfo::CHECK_WARN_TEMPORARY & Warn)
-        Warning(IDLoc, "register `" + R + "' used with `.tmp' "
-                                          "but not used in the same packet");
-    }
-  }
-
   if (CheckOk) {
-    MCB.setLoc(IDLoc);
     if (HexagonMCInstrInfo::bundleSize(MCB) == 0) {
       assert(!HexagonMCInstrInfo::isInnerLoop(MCB));
       assert(!HexagonMCInstrInfo::isOuterLoop(MCB));

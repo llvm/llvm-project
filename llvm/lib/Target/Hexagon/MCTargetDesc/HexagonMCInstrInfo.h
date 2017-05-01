@@ -180,6 +180,7 @@ bool isCompound(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return whether the instruction needs to be constant extended.
 bool isConstExtended(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isCVINew(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Is this double register suitable for use in a duplex subinst
 bool isDblRegForSubInst(unsigned Reg);

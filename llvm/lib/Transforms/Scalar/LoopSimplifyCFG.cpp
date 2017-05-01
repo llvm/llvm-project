@@ -40,7 +40,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI) {
   bool Changed = false;
   // Copy blocks into a temporary array to avoid iterator invalidation issues
   // as we remove them.
-  SmallVector<WeakVH, 16> Blocks(L.blocks());
+  SmallVector<WeakTrackingVH, 16> Blocks(L.blocks());
 
   for (auto &Block : Blocks) {
     // Attempt to merge blocks in the trivial case. Don't modify blocks which

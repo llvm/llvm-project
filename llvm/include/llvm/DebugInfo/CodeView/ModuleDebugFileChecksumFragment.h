@@ -1,4 +1,4 @@
-//===- ModuleDebugLineFragment.h --------------------------------*- C++ -*-===//
+//===- ModuleDebugFileChecksumFragment.h ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -39,15 +39,15 @@ public:
 
 namespace llvm {
 namespace codeview {
-class ModuleDebugFileChecksumFragment final : public ModuleDebugFragment {
-  typedef VarStreamArray<FileChecksumEntry> FileChecksumArray;
+class ModuleDebugFileChecksumFragmentRef final : public ModuleDebugFragmentRef {
+  typedef VarStreamArray<codeview::FileChecksumEntry> FileChecksumArray;
   typedef FileChecksumArray::Iterator Iterator;
 
 public:
-  ModuleDebugFileChecksumFragment()
-      : ModuleDebugFragment(ModuleDebugFragmentKind::FileChecksums) {}
+  ModuleDebugFileChecksumFragmentRef()
+      : ModuleDebugFragmentRef(ModuleDebugFragmentKind::FileChecksums) {}
 
-  static bool classof(const ModuleDebugFragment *S) {
+  static bool classof(const ModuleDebugFragmentRef *S) {
     return S->kind() == ModuleDebugFragmentKind::FileChecksums;
   }
 

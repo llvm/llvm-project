@@ -58,6 +58,7 @@ class HexagonAsmBackend : public MCAsmBackend {
     RF.getContents() = Code;
     RF.getFixups() = Fixups;
   }
+
 public:
   HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
       StringRef CPU) :
@@ -711,22 +712,24 @@ public:
               break;
             }
             case MCFragment::FT_Relaxable: {
+              MCContext &Context = Asm.getContext();
               auto &RF = cast<MCRelaxableFragment>(*K);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
               while (Size > 0 && HexagonMCInstrInfo::bundleSize(Inst) < 4) {
-                MCInst *Nop = new (Asm.getContext()) MCInst;
+                MCInst *Nop = new (Context) MCInst;
                 Nop->setOpcode(Hexagon::A2_nop);
                 Inst.addOperand(MCOperand::createInst(Nop));
                 Size -= 4;
                 if (!HexagonMCChecker(
-                           *MCII, RF.getSubtargetInfo(), Inst, Inst,
-                           *Asm.getContext().getRegisterInfo()).check()) {
+                         Context, *MCII, RF.getSubtargetInfo(), Inst,
+                         *Context.getRegisterInfo(), false)
+                         .check()) {
                   Inst.erase(Inst.end() - 1);
                   Size = 0;
                 }
               }
-              bool Error = HexagonMCShuffle(true, *MCII, RF.getSubtargetInfo(),
-                                            Inst);
+              bool Error = HexagonMCShuffle(Context, true, *MCII,
+                                            RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);

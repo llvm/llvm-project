@@ -189,7 +189,7 @@ namespace llvm {
     /// replace congruent phis with their most canonical representative. Return
     /// the number of phis eliminated.
     unsigned replaceCongruentIVs(Loop *L, const DominatorTree *DT,
-                                 SmallVectorImpl<WeakVH> &DeadInsts,
+                                 SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                                  const TargetTransformInfo *TTI = nullptr);
 
     /// Insert code to directly compute the specified SCEV expression into the

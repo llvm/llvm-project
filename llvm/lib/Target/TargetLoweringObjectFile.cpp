@@ -44,7 +44,7 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
                                           const TargetMachine &TM) {
   Ctx = &ctx;
   // `Initialize` can be called more than once.
-  if (Mang != nullptr) delete Mang;
+  delete Mang;
   Mang = new Mangler();
   InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(),
                        TM.getCodeModel(), *Ctx);

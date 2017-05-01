@@ -41,7 +41,8 @@ Error llvm::VarStreamArrayExtractor<FileChecksumEntry>::extract(
   return Error::success();
 }
 
-Error ModuleDebugFileChecksumFragment::initialize(BinaryStreamReader Reader) {
+Error ModuleDebugFileChecksumFragmentRef::initialize(
+    BinaryStreamReader Reader) {
   if (auto EC = Reader.readArray(Checksums, Reader.bytesRemaining()))
     return EC;
 

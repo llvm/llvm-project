@@ -1,4 +1,4 @@
-# RUN: llvm-mc  %s| FileCheck %s
+# RUN: llvm-mc -triple i386-linux-gnu %s | FileCheck %s
 
 # Checking that the '%' was evaluated as a string first
 # In a fail scenario: The asmprint will print: addl $%(1+4), %eax

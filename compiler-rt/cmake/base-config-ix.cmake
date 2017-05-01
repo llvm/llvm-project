@@ -4,6 +4,7 @@
 # runtime libraries.
 
 include(CheckIncludeFile)
+include(TestBigEndian)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Top level target used to build all compiler-rt libraries.
@@ -178,6 +179,10 @@ macro(test_targets)
       test_target_arch(aarch32 "" "-march=armv8-a")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch64")
       test_target_arch(aarch64 "" "-march=armv8-a")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64")
+      test_target_arch(powerpc64 "" "--target=powerpc64-unknown-unknown")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le")
+      test_target_arch(powerpc64le "" "--target=powerpc64le-unknown-unknown")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "wasm32")
       test_target_arch(wasm32 "" "--target=wasm32-unknown-unknown")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "wasm64")

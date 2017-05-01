@@ -245,7 +245,7 @@ namespace {
 void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
                                        BasicBlock::const_iterator StartingInst,
                                        std::vector<const BasicBlock*> &ToClone){
-  WeakVH &BBEntry = VMap[BB];
+  WeakTrackingVH &BBEntry = VMap[BB];
 
   // Have we already cloned this block?
   if (BBEntry) return;
@@ -547,7 +547,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // Make a second pass over the PHINodes now that all of them have been
   // remapped into the new function, simplifying the PHINode and performing any
   // recursive simplifications exposed. This will transparently update the
-  // WeakVH in the VMap. Notably, we rely on that so that if we coalesce
+  // WeakTrackingVH in the VMap. Notably, we rely on that so that if we coalesce
   // two PHINodes, the iteration over the old PHIs remains valid, and the
   // mapping will just map us to the new node (which may not even be a PHI
   // node).

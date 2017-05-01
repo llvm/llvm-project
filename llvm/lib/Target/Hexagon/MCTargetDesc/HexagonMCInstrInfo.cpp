@@ -66,7 +66,7 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   // instructions when possible.
   if (!HexagonDisableCompound)
     HexagonMCInstrInfo::tryCompound(MCII, STI, Context, MCB);
-  HexagonMCShuffle(false, MCII, STI, MCB);
+  HexagonMCShuffle(Context, false, MCII, STI, MCB);
   // Examine the packet and convert pairs of instructions to duplex
   // instructions when possible.
   MCInst InstBundlePreDuplex = MCInst(MCB);
@@ -74,7 +74,7 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
     SmallVector<DuplexCandidate, 8> possibleDuplexes;
     possibleDuplexes =
         HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB);
-    HexagonMCShuffle(MCII, STI, Context, MCB, possibleDuplexes);
+    HexagonMCShuffle(Context, MCII, STI, MCB, possibleDuplexes);
   }
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
@@ -87,7 +87,7 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   CheckOk = Check ? Check->check(true) : true;
   if (!CheckOk)
     return false;
-  HexagonMCShuffle(true, MCII, STI, MCB);
+  HexagonMCShuffle(Context, true, MCII, STI, MCB);
   return true;
 }
 
@@ -503,6 +503,11 @@ bool HexagonMCInstrInfo::isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI) {
 bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
   return (getType(MCII, MCI) == HexagonII::TypeCJ);
+}
+
+bool HexagonMCInstrInfo::isCVINew(MCInstrInfo const &MCII, MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return ((F >> HexagonII::CVINewPos) & HexagonII::CVINewMask);
 }
 
 bool HexagonMCInstrInfo::isDblRegForSubInst(unsigned Reg) {

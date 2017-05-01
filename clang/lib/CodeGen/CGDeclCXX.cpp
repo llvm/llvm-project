@@ -571,9 +571,10 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
   FinishFunction();
 }
 
-void CodeGenFunction::GenerateCXXGlobalDtorsFunc(llvm::Function *Fn,
-                  const std::vector<std::pair<llvm::WeakVH, llvm::Constant*> >
-                                                &DtorsAndObjects) {
+void CodeGenFunction::GenerateCXXGlobalDtorsFunc(
+    llvm::Function *Fn,
+    const std::vector<std::pair<llvm::WeakTrackingVH, llvm::Constant *>>
+        &DtorsAndObjects) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,

@@ -165,6 +165,8 @@ void CoverageData::Enable() {
       MmapNoReserveOrDie(sizeof(uptr) * kPcArrayMaxSize, "CovInit"));
   atomic_store(&pc_array_index, 0, memory_order_relaxed);
   if (common_flags()->coverage_direct) {
+    Report("coverage_direct=1 is deprecated, don't use it.\n");
+    Die();
     atomic_store(&pc_array_size, 0, memory_order_relaxed);
   } else {
     atomic_store(&pc_array_size, kPcArrayMaxSize, memory_order_relaxed);

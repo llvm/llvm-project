@@ -377,9 +377,10 @@ public:
     return countPopulationSlowCase() == BitWidth;
   }
 
-  /// \brief Determine if all bits are set
+  /// \brief Determine if all bits are clear
   ///
-  /// This checks to see if the value has all bits of the APInt are set or not.
+  /// This checks to see if the value has all bits of the APInt are clear or
+  /// not.
   bool isNullValue() const { return !*this; }
 
   /// \brief Determine if this is the largest unsigned value.

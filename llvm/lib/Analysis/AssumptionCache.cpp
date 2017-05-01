@@ -29,15 +29,16 @@ static cl::opt<bool>
                           cl::desc("Enable verification of assumption cache"),
                           cl::init(false));
 
-SmallVector<WeakVH, 1> &AssumptionCache::getOrInsertAffectedValues(Value *V) {
+SmallVector<WeakTrackingVH, 1> &
+AssumptionCache::getOrInsertAffectedValues(Value *V) {
   // Try using find_as first to avoid creating extra value handles just for the
   // purpose of doing the lookup.
   auto AVI = AffectedValues.find_as(V);
   if (AVI != AffectedValues.end())
     return AVI->second;
 
-  auto AVIP = AffectedValues.insert({
-      AffectedValueCallbackVH(V, this), SmallVector<WeakVH, 1>()});
+  auto AVIP = AffectedValues.insert(
+      {AffectedValueCallbackVH(V, this), SmallVector<WeakTrackingVH, 1>()});
   return AVIP.first->second;
 }
 
