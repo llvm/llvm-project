@@ -198,6 +198,7 @@ enum Kind {
   kw_returned,
   kw_returns_twice,
   kw_signext,
+  kw_speculatable,
   kw_ssp,
   kw_sspreq,
   kw_sspstrong,

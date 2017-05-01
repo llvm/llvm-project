@@ -518,6 +518,11 @@ WASM-NEXT:  Section {
 WASM-NEXT:    Type: MEMORY (0x5)
 WASM-NEXT:    Size: 3
 WASM-NEXT:    Offset: 66
+WASM-NEXT:    Memories [
+WASM-NEXT:      Memory {
+WASM-NEXT:        InitialPages: 0
+WASM-NEXT:      }
+WASM-NEXT:    ]
 WASM-NEXT:  }
 WASM-NEXT:  Section {
 WASM-NEXT:    Type: EXPORT (0x7)

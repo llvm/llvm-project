@@ -83,6 +83,12 @@ int TargetTransformInfo::getIntrinsicCost(
   return Cost;
 }
 
+unsigned
+TargetTransformInfo::getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
+                                                      unsigned &JTSize) const {
+  return TTIImpl->getEstimatedNumberOfCaseClusters(SI, JTSize);
+}
+
 int TargetTransformInfo::getUserCost(const User *U) const {
   int Cost = TTIImpl->getUserCost(U);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

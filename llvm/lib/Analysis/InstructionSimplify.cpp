@@ -21,8 +21,10 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -3685,9 +3687,9 @@ static Value *SimplifySelectInst(Value *CondVal, Value *TrueVal,
     return TrueVal;
 
   if (isa<UndefValue>(CondVal)) {  // select undef, X, Y -> X or Y
-    if (isa<Constant>(TrueVal))
-      return TrueVal;
-    return FalseVal;
+    if (isa<Constant>(FalseVal))
+      return FalseVal;
+    return TrueVal;
   }
   if (isa<UndefValue>(TrueVal))   // select C, undef, X -> X
     return FalseVal;
@@ -4047,9 +4049,33 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
 static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
                                         Type *RetTy, const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
+  if (isa<UndefValue>(Mask))
+    return UndefValue::get(RetTy);
+
   Type *InVecTy = Op0->getType();
   unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
   unsigned InVecNumElts = InVecTy->getVectorNumElements();
+
+  SmallVector<int, 32> Indices;
+  ShuffleVectorInst::getShuffleMask(Mask, Indices);
+  assert(MaskNumElts == Indices.size() &&
+         "Size of Indices not same as number of mask elements?");
+
+  // Canonicalization: If mask does not select elements from an input vector,
+  // replace that input vector with undef.
+  bool MaskSelects0 = false, MaskSelects1 = false;
+  for (unsigned i = 0; i != MaskNumElts; ++i) {
+    if (Indices[i] == -1)
+      continue;
+    if ((unsigned)Indices[i] < InVecNumElts)
+      MaskSelects0 = true;
+    else
+      MaskSelects1 = true;
+  }
+  if (!MaskSelects0)
+    Op0 = UndefValue::get(InVecTy);
+  if (!MaskSelects1)
+    Op1 = UndefValue::get(InVecTy);
 
   auto *Op0Const = dyn_cast<Constant>(Op0);
   auto *Op1Const = dyn_cast<Constant>(Op1);
@@ -4058,42 +4084,33 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   if (Op0Const && Op1Const)
     return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
 
-  // If only one of the operands is constant, constant fold the shuffle if the
-  // mask does not select elements from the variable operand.
-  bool MaskSelects0 = false, MaskSelects1 = false;
-  for (unsigned i = 0; i != MaskNumElts; ++i) {
-    int Idx = ShuffleVectorInst::getMaskValue(Mask, i);
-    if (Idx == -1)
-      continue;
-    if ((unsigned)Idx < InVecNumElts)
-      MaskSelects0 = true;
-    else
-      MaskSelects1 = true;
+  // Canonicalization: if only one input vector is constant, it shall be the
+  // second one.
+  if (Op0Const && !Op1Const) {
+    std::swap(Op0, Op1);
+    for (auto &Idx : Indices) {
+      if (Idx == -1)
+        continue;
+      Idx = Idx < (int)MaskNumElts ? Idx + MaskNumElts : Idx - MaskNumElts;
+    }
+    Mask = ConstantDataVector::get(
+        Mask->getContext(),
+        makeArrayRef(reinterpret_cast<uint32_t *>(Indices.data()),
+                     MaskNumElts));
   }
-  if (!MaskSelects0 && Op1Const)
-    return ConstantFoldShuffleVectorInstruction(UndefValue::get(InVecTy),
-                                                Op1Const, Mask);
-  if (!MaskSelects1 && Op0Const)
-    return ConstantFoldShuffleVectorInstruction(Op0Const,
-                                                UndefValue::get(InVecTy), Mask);
 
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
-    if (!MaskSelects1 && RetTy == InVecTy &&
+    if (isa<UndefValue>(Op1) && RetTy == InVecTy &&
         OpShuf->getMask()->getSplatValue())
       return Op0;
-  if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op1))
-    if (!MaskSelects0 && RetTy == InVecTy &&
-        OpShuf->getMask()->getSplatValue())
-      return Op1;
 
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.
   // TODO: Should we allow this?
-  for (unsigned i = 0; i != MaskNumElts; ++i)
-    if (ShuffleVectorInst::getMaskValue(Mask, i) == -1)
-      return nullptr;
+  if (find(Indices, -1) != Indices.end())
+    return nullptr;
 
   // Check if every element of this shuffle can be mapped back to the
   // corresponding element of a single root vector. If so, we don't need this
@@ -4440,15 +4457,10 @@ Value *llvm::SimplifyCall(Value *V, ArrayRef<Value *> Args,
 
 /// See if we can compute a simplified version of this instruction.
 /// If not, this returns null.
-Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 const DominatorTree *DT, AssumptionCache *AC,
-                                 OptimizationRemarkEmitter *ORE) {
-  return SimplifyInstruction(I, {DL, TLI, DT, AC, I}, ORE);
-}
 
-Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
+Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
                                  OptimizationRemarkEmitter *ORE) {
+  const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
   Value *Result;
 
   switch (I->getOpcode()) {
@@ -4645,7 +4657,7 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
     I = Worklist[Idx];
 
     // See if this instruction simplifies.
-    SimpleV = SimplifyInstruction(I, DL, TLI, DT, AC);
+    SimpleV = SimplifyInstruction(I, {DL, TLI, DT, AC});
     if (!SimpleV)
       continue;
 
@@ -4683,4 +4695,32 @@ bool llvm::replaceAndRecursivelySimplify(Instruction *I, Value *SimpleV,
   assert(I != SimpleV && "replaceAndRecursivelySimplify(X,X) is not valid!");
   assert(SimpleV && "Must provide a simplified value.");
   return replaceAndRecursivelySimplifyImpl(I, SimpleV, TLI, DT, AC);
+}
+
+namespace llvm {
+const SimplifyQuery getBestSimplifyQuery(Pass &P, Function &F) {
+  auto *DTWP = P.getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  auto *TLIWP = P.getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+  auto *TLI = TLIWP ? &TLIWP->getTLI() : nullptr;
+  auto *ACWP = P.getAnalysisIfAvailable<AssumptionCacheTracker>();
+  auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
+  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+}
+
+const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &AR,
+                                         const DataLayout &DL) {
+  return {DL, &AR.TLI, &AR.DT, &AR.AC};
+}
+
+template <class T, class... TArgs>
+const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
+                                         Function &F) {
+  auto *DT = AM.template getCachedResult<DominatorTreeAnalysis>(F);
+  auto *TLI = AM.template getCachedResult<TargetLibraryAnalysis>(F);
+  auto *AC = AM.template getCachedResult<AssumptionAnalysis>(F);
+  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+}
+template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
+                                                  Function &);
 }

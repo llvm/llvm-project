@@ -211,7 +211,9 @@ private:
 
   /// Checks the rules of order relation introduced among functions set.
   /// Returns true, if sanity check has been passed, and false if failed.
+#ifndef NDEBUG
   bool doSanityCheck(std::vector<WeakVH> &Worklist);
+#endif
 
   /// Insert a ComparableFunction into the FnTree, or merge it away if it's
   /// equal to one that's already present.
@@ -283,6 +285,7 @@ ModulePass *llvm::createMergeFunctionsPass() {
   return new MergeFunctions();
 }
 
+#ifndef NDEBUG
 bool MergeFunctions::doSanityCheck(std::vector<WeakVH> &Worklist) {
   if (const unsigned Max = NumFunctionsForSanityCheck) {
     unsigned TripleNumber = 0;
@@ -351,6 +354,7 @@ bool MergeFunctions::doSanityCheck(std::vector<WeakVH> &Worklist) {
   }
   return true;
 }
+#endif
 
 bool MergeFunctions::runOnModule(Module &M) {
   if (skipModule(M))

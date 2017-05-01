@@ -216,6 +216,9 @@ namespace ISD {
     /// These nodes take two operands of the same value type, and produce two
     /// results.  The first result is the normal add or sub result, the second
     /// result is the carry flag result.
+    /// FIXME: These nodes are deprecated in favor of ADDCARRY and SUBCARRY.
+    /// They are kept around for now to provide a smooth transition path
+    /// toward the use of ADDCARRY/SUBCARRY and will eventually be removed.
     ADDC, SUBC,
 
     /// Carry-using nodes for multiple precision addition and subtraction. These
@@ -226,6 +229,16 @@ namespace ISD {
     /// to them to be chained together for add and sub of arbitrarily large
     /// values.
     ADDE, SUBE,
+
+    /// Carry-using nodes for multiple precision addition and subtraction.
+    /// These nodes take three operands: The first two are the normal lhs and
+    /// rhs to the add or sub, and the third is a boolean indicating if there
+    /// is an incoming carry. These nodes produce two results: the normal
+    /// result of the add or sub, and the output carry so they can be chained
+    /// together. The use of this opcode is preferable to adde/sube if the
+    /// target supports it, as the carry is a regular value rather than a
+    /// glue, which allows further optimisation.
+    ADDCARRY, SUBCARRY,
 
     /// RESULT, BOOL = [SU]ADDO(LHS, RHS) - Overflow-aware nodes for addition.
     /// These nodes take two operands: the normal LHS and RHS to the add. They

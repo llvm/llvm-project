@@ -278,8 +278,7 @@ static bool phiHasBreakDef(const MachineInstr &PHI,
 
     Visited.insert(Reg);
 
-    MachineInstr *DefInstr = MRI.getUniqueVRegDef(Reg);
-    assert(DefInstr);
+    MachineInstr *DefInstr = MRI.getVRegDef(Reg);
     switch (DefInstr->getOpcode()) {
     default:
       break;
@@ -346,7 +345,7 @@ bool searchPredecessors(const MachineBasicBlock *MBB,
     return false;
 
   DenseSet<const MachineBasicBlock*> Visited;
-  SmallVector<MachineBasicBlock*, 4> Worklist(MBB->pred_begin(), 
+  SmallVector<MachineBasicBlock*, 4> Worklist(MBB->pred_begin(),
                                               MBB->pred_end());
 
   while (!Worklist.empty()) {
@@ -546,7 +545,13 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, MRI);
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
-          MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+          unsigned SrcReg = MI.getOperand(1).getReg();
+          if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+            TII->moveToVALU(MI);
+            break;
+          }
+
+          MachineInstr *DefMI = MRI.getVRegDef(SrcReg);
           unsigned SMovOp;
           int64_t Imm;
           // If we are just copying an immediate, we can replace the copy with

@@ -10,7 +10,9 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 

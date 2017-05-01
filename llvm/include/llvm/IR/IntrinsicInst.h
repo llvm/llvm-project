@@ -201,8 +201,8 @@ namespace llvm {
     Value *getNumElements() const { return getArgOperand(2); }
     void setNumElements(Value *V) { setArgOperand(2, V); }
 
-    uint64_t getSrcAlignment() const { return getParamAlignment(1); }
-    uint64_t getDstAlignment() const { return getParamAlignment(2); }
+    uint64_t getSrcAlignment() const { return getParamAlignment(0); }
+    uint64_t getDstAlignment() const { return getParamAlignment(1); }
 
     uint64_t getElementSizeInBytes() const {
       Value *Arg = getArgOperand(3);

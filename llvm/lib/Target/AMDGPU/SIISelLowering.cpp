@@ -1957,6 +1957,63 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
 
+  case AMDGPU::SI_INIT_EXEC:
+    // This should be before all vector instructions.
+    BuildMI(*BB, &*BB->begin(), MI.getDebugLoc(), TII->get(AMDGPU::S_MOV_B64),
+            AMDGPU::EXEC)
+        .addImm(MI.getOperand(0).getImm());
+    MI.eraseFromParent();
+    return BB;
+
+  case AMDGPU::SI_INIT_EXEC_FROM_INPUT: {
+    // Extract the thread count from an SGPR input and set EXEC accordingly.
+    // Since BFM can't shift by 64, handle that case with CMP + CMOV.
+    //
+    // S_BFE_U32 count, input, {shift, 7}
+    // S_BFM_B64 exec, count, 0
+    // S_CMP_EQ_U32 count, 64
+    // S_CMOV_B64 exec, -1
+    MachineInstr *FirstMI = &*BB->begin();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    unsigned InputReg = MI.getOperand(0).getReg();
+    unsigned CountReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    bool Found = false;
+
+    // Move the COPY of the input reg to the beginning, so that we can use it.
+    for (auto I = BB->begin(); I != &MI; I++) {
+      if (I->getOpcode() != TargetOpcode::COPY ||
+          I->getOperand(0).getReg() != InputReg)
+        continue;
+
+      if (I == FirstMI) {
+        FirstMI = &*++BB->begin();
+      } else {
+        I->removeFromParent();
+        BB->insert(FirstMI, &*I);
+      }
+      Found = true;
+      break;
+    }
+    assert(Found);
+
+    // This should be before all vector instructions.
+    BuildMI(*BB, FirstMI, DebugLoc(), TII->get(AMDGPU::S_BFE_U32), CountReg)
+        .addReg(InputReg)
+        .addImm((MI.getOperand(1).getImm() & 0x7f) | 0x70000);
+    BuildMI(*BB, FirstMI, DebugLoc(), TII->get(AMDGPU::S_BFM_B64),
+            AMDGPU::EXEC)
+        .addReg(CountReg)
+        .addImm(0);
+    BuildMI(*BB, FirstMI, DebugLoc(), TII->get(AMDGPU::S_CMP_EQ_U32))
+        .addReg(CountReg, RegState::Kill)
+        .addImm(64);
+    BuildMI(*BB, FirstMI, DebugLoc(), TII->get(AMDGPU::S_CMOV_B64),
+            AMDGPU::EXEC)
+        .addImm(-1);
+    MI.eraseFromParent();
+    return BB;
+  }
+
   case AMDGPU::GET_GROUPSTATICSIZE: {
     DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
@@ -3223,6 +3280,14 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Glue = Chain.getValue(1);
     return DAG.getNode(NodeOp, DL, MVT::Other, Chain,
                        Op.getOperand(2), Glue);
+  }
+  case Intrinsic::amdgcn_init_exec: {
+    return DAG.getNode(AMDGPUISD::INIT_EXEC, DL, MVT::Other, Chain,
+                       Op.getOperand(2));
+  }
+  case Intrinsic::amdgcn_init_exec_from_input: {
+    return DAG.getNode(AMDGPUISD::INIT_EXEC_FROM_INPUT, DL, MVT::Other, Chain,
+                       Op.getOperand(2), Op.getOperand(3));
   }
   case AMDGPUIntrinsic::SI_tbuffer_store: {
     SDValue Ops[] = {

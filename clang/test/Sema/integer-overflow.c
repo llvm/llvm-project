@@ -149,10 +149,16 @@ uint64_t check_integer_overflows(int i) {
 
 // expected-warning@+2 {{overflow in expression; result is 536870912 with type 'int'}}
   uint64_t *b;
-  uint64_t b2 = b[4608 * 1024 * 1024] + 1;
+  (void)b[4608 * 1024 * 1024];
 
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
-  (void)((i ? (4608 * 1024 * 1024) : (4608 * 1024 * 1024)) + 1);
+  (void)(i ? (4608 * 1024 * 1024) : (4608 * 1024 * 1024));
+
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+  (void)(-(4608 * 1024 * 1024));
+
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+  (void)b[4608 * 1024 * 1024];
 
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));

@@ -54,8 +54,7 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ,
 
         // Don't waste time simplifying unused instructions.
         if (!I->use_empty()) {
-          if (Value *V =
-                  SimplifyInstruction(I, SQ.getWithInstruction(I), ORE)) {
+          if (Value *V = SimplifyInstruction(I, SQ, ORE)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())
               Next->insert(cast<Instruction>(U));

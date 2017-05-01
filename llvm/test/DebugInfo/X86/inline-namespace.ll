@@ -28,9 +28,9 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 !0 = distinct !DIGlobalVariableExpression(var: !1)
 !1 = !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
-!2 = !DINamespace(name: "inlined", scope: !4, file: !3, line: 1, exportSymbols: true)
+!2 = !DINamespace(name: "inlined", scope: !4, exportSymbols: true)
 !3 = !DIFile(filename: "namespace.cpp", directory: "/")
-!4 = !DINamespace(name: "normal", scope: null, file: !3, line: 1)
+!4 = !DINamespace(name: "normal", scope: null)
 !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !6 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 4.0.0 (trunk 285825) (llvm/trunk 285822)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !7, globals: !8)
 !7 = !{}

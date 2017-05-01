@@ -35,35 +35,41 @@
 #include "llvm/IR/User.h"
 
 namespace llvm {
-  template<typename T>
-  class ArrayRef;
-  class AssumptionCache;
-  class DominatorTree;
-  class Instruction;
-  class DataLayout;
-  class FastMathFlags;
-  class OptimizationRemarkEmitter;
-  class TargetLibraryInfo;
-  class Type;
-  class Value;
+class Function;
+template <typename T, typename... TArgs> class AnalysisManager;
+template <class T> class ArrayRef;
+class AssumptionCache;
+class DominatorTree;
+class Instruction;
+class DataLayout;
+class FastMathFlags;
+struct LoopStandardAnalysisResults;
+class OptimizationRemarkEmitter;
+class Pass;
+class TargetLibraryInfo;
+class Type;
+class Value;
 
-  struct SimplifyQuery {
-    const DataLayout &DL;
-    const TargetLibraryInfo *TLI = nullptr;
-    const DominatorTree *DT = nullptr;
-    AssumptionCache *AC = nullptr;
-    const Instruction *CxtI = nullptr;
-    SimplifyQuery(const DataLayout &DL) : DL(DL) {}
+struct SimplifyQuery {
+  const DataLayout &DL;
+  const TargetLibraryInfo *TLI = nullptr;
+  const DominatorTree *DT = nullptr;
+  AssumptionCache *AC = nullptr;
+  const Instruction *CxtI = nullptr;
 
-    SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                  const DominatorTree *DT, AssumptionCache *AC = nullptr,
-                  const Instruction *CXTI = nullptr)
-        : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI) {}
-    SimplifyQuery getWithInstruction(Instruction *I) const {
-      SimplifyQuery Copy(*this);
-      Copy.CxtI = I;
-      return Copy;
-    }
+  SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
+      : DL(DL), CxtI(CXTI) {}
+
+  SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
+                const DominatorTree *DT = nullptr,
+                AssumptionCache *AC = nullptr,
+                const Instruction *CXTI = nullptr)
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI) {}
+  SimplifyQuery getWithInstruction(Instruction *I) const {
+    SimplifyQuery Copy(*this);
+    Copy.CxtI = I;
+    return Copy;
+  }
   };
 
   // NOTE: the explicit multiple argument versions of these functions are
@@ -200,11 +206,6 @@ namespace llvm {
   /// return null.
   Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
                              OptimizationRemarkEmitter *ORE = nullptr);
-  Value *SimplifyInstruction(Instruction *I, const DataLayout &DL,
-                             const TargetLibraryInfo *TLI = nullptr,
-                             const DominatorTree *DT = nullptr,
-                             AssumptionCache *AC = nullptr,
-                             OptimizationRemarkEmitter *ORE = nullptr);
 
   /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.
   ///
@@ -228,6 +229,15 @@ namespace llvm {
                                       const TargetLibraryInfo *TLI = nullptr,
                                       const DominatorTree *DT = nullptr,
                                       AssumptionCache *AC = nullptr);
+  // These helper functions return a SimplifyQuery structure that contains as
+  // many of the optional analysis we use as are currently valid.  This is the
+  // strongly preferred way of constructing SimplifyQuery in passes.
+  const SimplifyQuery getBestSimplifyQuery(Pass &, Function &);
+  template <class T, class... TArgs>
+  const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &,
+                                           Function &);
+  const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &,
+                                           const DataLayout &);
 } // end namespace llvm
 
 #endif

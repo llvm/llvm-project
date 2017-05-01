@@ -377,7 +377,7 @@ const ReportDesc *ScopedReport::GetReport() const {
 }
 
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
-                  MutexSet *mset) {
+                  MutexSet *mset, uptr *tag) {
   // This function restores stack trace and mutex set for the thread/epoch.
   // It does so by getting stack trace and mutex set at the beginning of
   // trace part, and then replaying the trace till the given epoch.
@@ -436,6 +436,7 @@ void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
     return;
   pos++;
   stk->Init(&stack[0], pos);
+  ExtractTagFromStack(stk, tag);
 }
 
 static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2],
@@ -625,16 +626,15 @@ void ReportRace(ThreadState *thr) {
     typ = ReportTypeVptrRace;
   else if (freed)
     typ = ReportTypeUseAfterFree;
-  else if (thr->external_tag > 0)
-    typ = ReportTypeExternalRace;
 
   if (IsFiredSuppression(ctx, typ, addr))
     return;
 
   const uptr kMop = 2;
   VarSizeStackTrace traces[kMop];
+  uptr tags[kMop] = {kExternalTagNone};
   const uptr toppc = TraceTopPC(thr);
-  ObtainCurrentStack(thr, toppc, &traces[0]);
+  ObtainCurrentStack(thr, toppc, &traces[0], &tags[0]);
   if (IsFiredSuppression(ctx, typ, traces[0]))
     return;
 
@@ -644,18 +644,22 @@ void ReportRace(ThreadState *thr) {
   MutexSet *mset2 = new(&mset_buffer[0]) MutexSet();
 
   Shadow s2(thr->racy_state[1]);
-  RestoreStack(s2.tid(), s2.epoch(), &traces[1], mset2);
+  RestoreStack(s2.tid(), s2.epoch(), &traces[1], mset2, &tags[1]);
   if (IsFiredSuppression(ctx, typ, traces[1]))
     return;
 
   if (HandleRacyStacks(thr, traces, addr_min, addr_max))
     return;
 
+  // If any of the two accesses has a tag, treat this as an "external" race.
+  if (tags[0] != kExternalTagNone || tags[1] != kExternalTagNone)
+    typ = ReportTypeExternalRace;
+
   ThreadRegistryLock l0(ctx->thread_registry);
   ScopedReport rep(typ);
   for (uptr i = 0; i < kMop; i++) {
     Shadow s(thr->racy_state[i]);
-    rep.AddMemoryAccess(addr, thr->external_tag, s, traces[i],
+    rep.AddMemoryAccess(addr, tags[i], s, traces[i],
                         i == 0 ? &thr->mset : mset2);
   }
 

@@ -151,7 +151,7 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI,
     Changed = true;
   }
 
-  if (Value *V = SimplifyInstruction(P, SQ.getWithInstruction(P))) {
+  if (Value *V = SimplifyInstruction(P, SQ)) {
     P->replaceAllUsesWith(V);
     P->eraseFromParent();
     Changed = true;
@@ -565,25 +565,14 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
     return false;
 
   LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *TLIWP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  auto *TLI = TLIWP ? &TLIWP->getTLI() : nullptr;
-  auto *ACWP = getAnalysisIfAvailable<AssumptionCacheTracker>();
-  auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
-  const SimplifyQuery SQ(F.getParent()->getDataLayout(), TLI, DT, AC);
-  return runImpl(F, LVI, SQ);
+  return runImpl(F, LVI, getBestSimplifyQuery(*this, F));
 }
 
 PreservedAnalyses
 CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   LazyValueInfo *LVI = &AM.getResult<LazyValueAnalysis>(F);
-  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
-  auto *TLI = AM.getCachedResult<TargetLibraryAnalysis>(F);
-  auto *AC = AM.getCachedResult<AssumptionAnalysis>(F);
-  const SimplifyQuery SQ(F.getParent()->getDataLayout(), TLI, DT, AC);
-  bool Changed = runImpl(F, LVI, SQ);
+  bool Changed = runImpl(F, LVI, getBestSimplifyQuery(AM, F));
 
   if (!Changed)
     return PreservedAnalyses::all();

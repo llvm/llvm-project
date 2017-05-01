@@ -26,6 +26,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
@@ -39,11 +40,12 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
@@ -892,45 +894,29 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     ListScope S(W, "FunctionLineTable");
     W.printString("LinkageName", Name);
 
-    DataExtractor DE(FunctionLineTables[Name], true, 4);
-    uint32_t Offset = 6;  // Skip relocations.
-    uint16_t Flags = DE.getU16(&Offset);
-    W.printHex("Flags", Flags);
-    bool HasColumnInformation = Flags & codeview::LineFlags::HaveColumns;
-    uint32_t FunctionSize = DE.getU32(&Offset);
-    W.printHex("CodeSize", FunctionSize);
-    while (DE.isValidOffset(Offset)) {
-      // For each range of lines with the same filename, we have a segment
-      // in the line table.  The filename string is accessed using double
-      // indirection to the string table subsection using the index subsection.
-      uint32_t OffsetInIndex = DE.getU32(&Offset),
-               NumLines = DE.getU32(&Offset),
-               FullSegmentSize = DE.getU32(&Offset);
+    BinaryByteStream LineTableInfo(FunctionLineTables[Name], support::little);
+    BinaryStreamReader Reader(LineTableInfo);
 
-      uint32_t ColumnOffset = Offset + 8 * NumLines;
-      DataExtractor ColumnDE(DE.getData(), true, 4);
+    ModuleDebugLineFragment LineInfo;
+    error(LineInfo.initialize(Reader));
 
-      if (FullSegmentSize !=
-          12 + 8 * NumLines + (HasColumnInformation ? 4 * NumLines : 0)) {
-        error(object_error::parse_failed);
-        return;
-      }
+    W.printHex("Flags", LineInfo.header()->Flags);
+    W.printHex("CodeSize", LineInfo.header()->CodeSize);
+    for (const auto &Entry : LineInfo) {
 
       ListScope S(W, "FilenameSegment");
-      printFileNameForOffset("Filename", OffsetInIndex);
-      for (unsigned LineIdx = 0;
-           LineIdx != NumLines && DE.isValidOffset(Offset); ++LineIdx) {
-        // Then go the (PC, LineNumber) pairs.  The line number is stored in the
-        // least significant 31 bits of the respective word in the table.
-        uint32_t PC = DE.getU32(&Offset), LineData = DE.getU32(&Offset);
-        if (PC >= FunctionSize) {
+      printFileNameForOffset("Filename", Entry.NameIndex);
+      uint32_t ColumnIndex = 0;
+      for (const auto &Line : Entry.LineNumbers) {
+        if (Line.Offset >= LineInfo.header()->CodeSize) {
           error(object_error::parse_failed);
           return;
         }
-        char Buffer[32];
-        format("+0x%X", PC).snprint(Buffer, 32);
-        ListScope PCScope(W, Buffer);
-        LineInfo LI(LineData);
+
+        std::string PC = formatv("+{0:X}", uint32_t(Line.Offset));
+        ListScope PCScope(W, PC);
+        codeview::LineInfo LI(Line.Flags);
+
         if (LI.isAlwaysStepInto())
           W.printString("StepInto", StringRef("Always"));
         else if (LI.isNeverStepInto())
@@ -939,19 +925,10 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
           W.printNumber("LineNumberStart", LI.getStartLine());
         W.printNumber("LineNumberEndDelta", LI.getLineDelta());
         W.printBoolean("IsStatement", LI.isStatement());
-        if (HasColumnInformation &&
-            ColumnDE.isValidOffsetForDataOfSize(ColumnOffset, 4)) {
-          uint16_t ColStart = ColumnDE.getU16(&ColumnOffset);
-          W.printNumber("ColStart", ColStart);
-          uint16_t ColEnd = ColumnDE.getU16(&ColumnOffset);
-          W.printNumber("ColEnd", ColEnd);
-        }
-      }
-      // Skip over the column data.
-      if (HasColumnInformation) {
-        for (unsigned LineIdx = 0;
-             LineIdx != NumLines && DE.isValidOffset(Offset); ++LineIdx) {
-          DE.getU32(&Offset);
+        if (LineInfo.hasColumnInfo()) {
+          W.printNumber("ColStart", Entry.Columns[ColumnIndex].StartColumn);
+          W.printNumber("ColEnd", Entry.Columns[ColumnIndex].EndColumn);
+          ++ColumnIndex;
         }
       }
     }

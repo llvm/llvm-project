@@ -703,13 +703,6 @@ public:
     return &I->second;
   }
 
-  /// Remove entries in the GlobalValueMap that have empty summaries due to the
-  /// eager nature of map entry creation during VST parsing. These would
-  /// also be suppressed during combined index generation in mergeFrom(),
-  /// but if there was only one module or this was the first module we might
-  /// not invoke mergeFrom.
-  void removeEmptySummaryEntries();
-
   /// Collect for the given module the list of function it defines
   /// (GUID -> Summary).
   void collectDefinedFunctionsForModule(StringRef ModulePath,

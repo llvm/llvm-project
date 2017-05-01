@@ -632,11 +632,9 @@ namespace llvm {
     /// parent scope.
     /// \param Scope       Namespace scope
     /// \param Name        Name of this namespace
-    /// \param File        Source file
-    /// \param LineNo      Line number
     /// \param ExportSymbols True for C++ inline namespaces.
-    DINamespace *createNameSpace(DIScope *Scope, StringRef Name, DIFile *File,
-                                 unsigned LineNo, bool ExportSymbols);
+    DINamespace *createNameSpace(DIScope *Scope, StringRef Name,
+                                 bool ExportSymbols);
 
     /// This creates new descriptor for a module with the specified
     /// parent scope.

@@ -1670,7 +1670,7 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
       Records.getAllDerivedDefinitions("AttrSubjectMatcherRule");
   auto MapFromSubjectsToRules = [this](const Record *SubjectContainer,
                                        const Record *MetaSubject,
-                                       const Record *Constraint = nullptr) {
+                                       const Record *Constraint) {
     Rules.emplace_back(MetaSubject, Constraint);
     std::vector<Record *> ApplicableSubjects =
         SubjectContainer->getValueAsListOfDefs("Subjects");
@@ -1688,7 +1688,7 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
     }
   };
   for (const auto *MetaSubject : MetaSubjects) {
-    MapFromSubjectsToRules(MetaSubject, MetaSubject);
+    MapFromSubjectsToRules(MetaSubject, MetaSubject, /*Constraints=*/nullptr);
     std::vector<Record *> Constraints =
         MetaSubject->getValueAsListOfDefs("Constraints");
     for (const auto *Constraint : Constraints)

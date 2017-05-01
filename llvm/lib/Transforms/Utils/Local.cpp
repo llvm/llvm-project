@@ -1259,7 +1259,6 @@ void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
           DbgValues.push_back(DVI);
 }
 
-enum { WithStackValue = true };
 
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              Instruction *InsertBefore, DIBuilder &Builder,
@@ -1271,9 +1270,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
-
-  DIExpr = DIExpression::prependDIExpr(Builder, DIExpr, Deref, Offset);
-
+  DIExpr = DIExpression::prepend(DIExpr, Deref, Offset);
   // Insert llvm.dbg.declare immediately after the original alloca, and remove
   // old llvm.dbg.declare.
   Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
@@ -1356,9 +1353,9 @@ void llvm::salvageDebugInfo(Instruction &I) {
         auto *DIExpr = DVI->getExpression();
         DIBuilder DIB(M, /*AllowUnresolved*/ false);
         // GEP offsets are i32 and thus always fit into an int64_t.
-        DIExpr = DIExpression::prependDIExpr(DIB, DIExpr, NoDeref,
-                                             Offset.getSExtValue(),
-                                             WithStackValue);
+        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref,
+                                       Offset.getSExtValue(),
+                                       DIExpression::WithStackValue);
         DVI->setOperand(0, MDWrap(I.getOperand(0)));
         DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
         DEBUG(dbgs() << "SALVAGE: " << *DVI << '\n');
@@ -1370,7 +1367,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       // Rewrite the load into DW_OP_deref.
       auto *DIExpr = DVI->getExpression();
       DIBuilder DIB(M, /*AllowUnresolved*/ false);
-      DIExpr = DIExpression::prependDIExpr(DIB, DIExpr, WithDeref);
+      DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
       DVI->setOperand(0, MDWrap(I.getOperand(0)));
       DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
       DEBUG(dbgs() << "SALVAGE:  " << *DVI << '\n');

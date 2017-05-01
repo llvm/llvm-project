@@ -29,31 +29,31 @@ YAML:     ObjFile:         'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj'
 YAML:     SourceFiles:
 YAML:       - 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
 YAML:     LineInfo:
+YAML:       Checksums:
+YAML:         - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+YAML:           Kind:            MD5
+YAML:           Checksum:        A0A5BD0D3ECD93FC29D19DE826FBF4BC
 YAML:       Lines:
 YAML:         CodeSize:        10
 YAML:         Flags:           [  ]
 YAML:         RelocOffset:     16
-YAML:      RelocSegment:    1
-YAML:      LineInfo:
-YAML:        - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-YAML:          Lines:
-YAML:            - Offset:          0
-YAML:              LineStart:       5
-YAML:              IsStatement:     true
-YAML:              EndDelta:        5
-YAML:            - Offset:          3
-YAML:              LineStart:       6
-YAML:              IsStatement:     true
-YAML:              EndDelta:        6
-YAML:            - Offset:          8
-YAML:              LineStart:       7
-YAML:              IsStatement:     true
-YAML:              EndDelta:        7
-YAML:          Columns:
-YAML:     Checksums:
-YAML:       - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-YAML:         Kind:            MD5
-YAML:         Checksum:        A0A5BD0D3ECD93FC29D19DE826FBF4BC
+YAML:         RelocSegment:    1
+YAML:         Blocks:
+YAML:           - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+YAML:             Lines:
+YAML:               - Offset:          0
+YAML:                 LineStart:       5
+YAML:                 IsStatement:     true
+YAML:                 EndDelta:        0
+YAML:               - Offset:          3
+YAML:                 LineStart:       6
+YAML:                 IsStatement:     true
+YAML:                 EndDelta:        0
+YAML:               - Offset:          8
+YAML:                 LineStart:       7
+YAML:                 IsStatement:     true
+YAML:                 EndDelta:        0
+YAML:             Columns:
 YAML:  - Module:          '* Linker *'
 YAML:    ObjFile:         ''
 YAML: ...

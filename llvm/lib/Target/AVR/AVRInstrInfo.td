@@ -183,33 +183,33 @@ def call_target : Operand<iPTR>
 // A 16-bit address (which can lead to an R_AVR_16 relocation).
 def imm16 : Operand<i16>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_16>";
+    let EncoderMethod = "encodeImm<AVR::fixup_16, 2>";
 }
 
 /// A 6-bit immediate used in the ADIW/SBIW instructions.
 def imm_arith6 : Operand<i16>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_6_adiw>";
+    let EncoderMethod = "encodeImm<AVR::fixup_6_adiw, 0>";
 }
 
 /// An 8-bit immediate inside an instruction with the same format
 /// as the `LDI` instruction (the `FRdK` format).
 def imm_ldi8 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_ldi>";
+    let EncoderMethod = "encodeImm<AVR::fixup_ldi, 0>";
 }
 
 /// A 5-bit port number used in SBIC and friends (the `FIOBIT` format).
 def imm_port5 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_port5>";
+    let EncoderMethod = "encodeImm<AVR::fixup_port5, 0>";
 }
 
 /// A 6-bit port number used in the `IN` instruction and friends (the
 /// `FIORdA` format.
 def imm_port6 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_port6>";
+    let EncoderMethod = "encodeImm<AVR::fixup_port6, 0>";
 }
 
 // Addressing mode pattern reg+imm6

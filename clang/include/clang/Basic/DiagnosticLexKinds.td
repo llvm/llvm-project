@@ -475,6 +475,8 @@ def warn_pragma_pop_macro_no_push : Warning<
 def warn_pragma_message : Warning<"%0">,
    InGroup<PoundPragmaMessage>, DefaultWarnNoWerror;
 def err_pragma_message : Error<"%0">;
+def err_pragma_module_import_expected_module_name : Error<
+  "expected %select{identifier in|'.' or end of directive after}0 module name">;
 def warn_pragma_ignored : Warning<"unknown pragma ignored">,
    InGroup<UnknownPragmas>, DefaultIgnore;
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,

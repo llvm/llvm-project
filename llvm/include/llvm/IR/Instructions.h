@@ -1714,9 +1714,12 @@ public:
   ///     (\p i - 1) in the operand list.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const;
 
+  /// Extract the alignment of the return value.
+  unsigned getRetAlignment() const { return Attrs.getRetAlignment(); }
+
   /// Extract the alignment for a call or parameter (0=unknown).
-  unsigned getParamAlignment(unsigned i) const {
-    return Attrs.getParamAlignment(i);
+  unsigned getParamAlignment(unsigned ArgNo) const {
+    return Attrs.getParamAlignment(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a call or
@@ -3804,9 +3807,12 @@ public:
   ///     (\p i - 1) in the operand list.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const;
 
+  /// Extract the alignment of the return value.
+  unsigned getRetAlignment() const { return Attrs.getRetAlignment(); }
+
   /// Extract the alignment for a call or parameter (0=unknown).
-  unsigned getParamAlignment(unsigned i) const {
-    return Attrs.getParamAlignment(i);
+  unsigned getParamAlignment(unsigned ArgNo) const {
+    return Attrs.getParamAlignment(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a call or

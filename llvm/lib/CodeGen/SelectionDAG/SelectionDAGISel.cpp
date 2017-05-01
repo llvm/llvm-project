@@ -593,13 +593,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     MRI.replaceRegWith(From, To);
   }
 
-  if (TLI->hasCopyImplyingStackAdjustment(MF))
-    MFI.setHasCopyImplyingStackAdjustment(true);
-
-  // Freeze the set of reserved registers now that MachineFrameInfo has been
-  // set up. All the information required by getReservedRegs() should be
-  // available now.
-  MRI.freezeReservedRegs(*MF);
+  TLI->finalizeLowering(*MF);
 
   // Release function-specific state. SDB and CurDAG are already cleared
   // at this point.

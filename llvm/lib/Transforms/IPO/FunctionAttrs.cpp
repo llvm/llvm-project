@@ -855,10 +855,11 @@ static bool addNoAliasAttrs(const SCCNodeSet &SCCNodes) {
 
   bool MadeChange = false;
   for (Function *F : SCCNodes) {
-    if (F->doesNotAlias(0) || !F->getReturnType()->isPointerTy())
+    if (F->doesNotAlias(AttributeList::ReturnIndex) ||
+        !F->getReturnType()->isPointerTy())
       continue;
 
-    F->setDoesNotAlias(0);
+    F->setDoesNotAlias(AttributeList::ReturnIndex);
     ++NumNoAlias;
     MadeChange = true;
   }

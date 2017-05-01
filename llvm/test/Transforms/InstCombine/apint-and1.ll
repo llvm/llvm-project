@@ -9,14 +9,6 @@ define i39 @test0(i39 %A) {
         ret i39 %B
 }
 
-define i47 @test1(i47 %A, i47 %B) {
-        ;; (~A & ~B) == (~(A | B)) - De Morgan's Law
-        %NotA = xor i47 %A, -1
-        %NotB = xor i47 %B, -1
-        %C1 = and i47 %NotA, %NotB
-        ret i47 %C1
-}
-
 define i15 @test2(i15 %x) {
         %tmp.2 = and i15 %x, -1 ; noop
         ret i15 %tmp.2

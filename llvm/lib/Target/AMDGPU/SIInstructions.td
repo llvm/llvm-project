@@ -286,6 +286,19 @@ def SI_INIT_M0 : SPseudoInstSI <(outs), (ins SSrc_b32:$src)> {
   let isReMaterializable = 1;
 }
 
+def SI_INIT_EXEC : SPseudoInstSI <
+  (outs), (ins i64imm:$src), []> {
+  let Defs = [EXEC];
+  let usesCustomInserter = 1;
+  let isAsCheapAsAMove = 1;
+}
+
+def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
+  (outs), (ins SSrc_b32:$input, i32imm:$shift), []> {
+  let Defs = [EXEC];
+  let usesCustomInserter = 1;
+}
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -399,6 +412,16 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
 } // End SubtargetPredicate = isGCN
 
 let Predicates = [isGCN] in {
+def : Pat <
+  (AMDGPUinit_exec i64:$src),
+  (SI_INIT_EXEC (as_i64imm $src))
+>;
+
+def : Pat <
+  (AMDGPUinit_exec_from_input i32:$input, i32:$shift),
+  (SI_INIT_EXEC_FROM_INPUT (i32 $input), (as_i32imm $shift))
+>;
+
 def : Pat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)

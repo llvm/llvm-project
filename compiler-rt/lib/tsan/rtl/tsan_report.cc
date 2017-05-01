@@ -164,7 +164,7 @@ static void PrintMop(const ReportMop *mop, bool first) {
   char thrbuf[kThreadBufSize];
   Printf("%s", d.Access());
   const char *object_type = GetObjectTypeFromTag(mop->external_tag);
-  if (!object_type) {
+  if (mop->external_tag == kExternalTagNone || !object_type) {
     Printf("  %s of size %d at %p by %s",
            MopDesc(first, mop->write, mop->atomic), mop->size,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));

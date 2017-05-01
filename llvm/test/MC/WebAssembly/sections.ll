@@ -32,6 +32,11 @@ entry:
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: MEMORY (0x5)
+; CHECK:    Memories [
+; CHECK:      Memory {
+; CHECK:        InitialPages: 1
+; CHECK:      }
+; CHECK:    ]
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: GLOBAL (0x6)

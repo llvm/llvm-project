@@ -2415,6 +2415,12 @@ void CodeGenFunction::destroyARCWeak(CodeGenFunction &CGF,
   CGF.EmitARCDestroyWeak(addr);
 }
 
+void CodeGenFunction::emitARCIntrinsicUse(CodeGenFunction &CGF, Address addr,
+                                          QualType type) {
+  llvm::Value *value = CGF.Builder.CreateLoad(addr);
+  CGF.EmitARCIntrinsicUse(value);
+}
+
 namespace {
   struct CallObjCAutoreleasePoolObject final : EHScopeStack::Cleanup {
     llvm::Value *Token;

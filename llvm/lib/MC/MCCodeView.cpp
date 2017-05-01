@@ -208,7 +208,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   bool HaveColumns = any_of(Locs, [](const MCCVLineEntry &LineEntry) {
     return LineEntry.getColumn() != 0;
   });
-  OS.EmitIntValue(HaveColumns ? int(LineFlags::HaveColumns) : 0, 2);
+  OS.EmitIntValue(HaveColumns ? int(LF_HaveColumns) : 0, 2);
   OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 4);
 
   for (auto I = Locs.begin(), E = Locs.end(); I != E;) {

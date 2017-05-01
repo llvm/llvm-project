@@ -298,15 +298,11 @@ void test7(void) {
 // CHECK:      [[D0:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load [[TEST8]]*, [[TEST8]]** [[SELF]],
-// CHECK-NEXT: [[T2:%.*]] = bitcast [[TEST8]]* [[T1]] to i8*
-// CHECK-NEXT: [[T3:%.*]] = call i8* @objc_retain(i8* [[T2]])
-// CHECK-NEXT: [[T4:%.*]] = bitcast i8* [[T3]] to [[TEST8]]*
-// CHECK-NEXT: store [[TEST8]]* [[T4]], [[TEST8]]** [[T0]]
+// CHECK-NEXT: store %0* [[T1]], %0** [[T0]]
 // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to
 // CHECK: call void @test8_helper(
-// CHECK-NEXT: [[T1:%.*]] = load [[TEST8]]*, [[TEST8]]** [[D0]]
-// CHECK-NEXT: [[T2:%.*]] = bitcast [[TEST8]]* [[T1]] to i8*
-// CHECK-NEXT: call void @objc_release(i8* [[T2]])
+// CHECK-NEXT: [[T2:%.*]] = load [[TEST8]]*, [[TEST8]]** [[D0]]
+// CHECK-NEXT: call void (...) @clang.arc.use([[TEST8]]* [[T2]])
 // CHECK: ret void
 
   extern void test8_helper(void (^)(void));
@@ -739,6 +735,32 @@ void test19(void (^b)(void)) {
 // CHECK-NEXT: call void @objc_release(i8* [[T1]])
 
 // CHECK-NEXT: ret void
+}
+
+// CHECK-LABEL: define void @test20(
+// CHECK: [[XADDR:%.*]] = alloca i8*
+// CHECK-NEXT: [[BLOCK:%.*]] = alloca <[[BLOCKTY:.*]]>
+// CHECK-NEXT: [[RETAINEDX:%.*]] = call i8* @objc_retain(i8* %{{.*}})
+// CHECK-NEXT: store i8* [[RETAINEDX]], i8** [[XADDR]]
+// CHECK-NEXT: [[CAPTUREFIELD:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCK]], i32 0, i32 5
+// CHECK: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCK]], i32 0, i32 5
+// CHECK: [[CAPTURED:%.*]] = load i8*, i8** [[XADDR]]
+// CHECK: store i8* [[CAPTURED]], i8** [[BLOCKCAPTURED]]
+// CHECK: [[CAPTURE:%.*]] = load i8*, i8** [[CAPTUREFIELD]]
+// CHECK-NEXT: call void (...) @clang.arc.use(i8* [[CAPTURE]])
+// CHECK-NEXT: [[X:%.*]] = load i8*, i8** [[XADDR]]
+// CHECK-NEXT: call void @objc_release(i8* [[X]])
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: define internal void @__copy_helper_block
+// CHECK: [[BLOCKSOURCE:%.*]] = bitcast i8* %{{.*}} to <[[BLOCKTY]]>*
+// CHECK: [[CAPTUREFIELD:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCKSOURCE]], i32 0, i32 5
+// CHECK: [[BLOCKCOPYSRC:%.*]] = load i8*, i8** [[CAPTUREFIELD]]
+// CHECK: call i8* @objc_retain(i8* [[BLOCKCOPYSRC]])
+
+void test20_callee(void (^)());
+void test20(const id x) {
+  test20_callee(^{ (void)x; });
 }
 
 // CHECK: attributes [[NUW]] = { nounwind }

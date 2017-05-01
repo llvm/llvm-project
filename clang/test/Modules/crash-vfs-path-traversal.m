@@ -25,7 +25,7 @@
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
-// CHECKSRC: @import cstd.stdio;
+// CHECKSRC: #pragma clang module import cstd.stdio
 
 // CHECKSH: # Crash reproducer
 // CHECKSH-NEXT: # Driver args: "-fsyntax-only"
@@ -62,4 +62,4 @@
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECKOVERLAY
 
-// CHECKOVERLAY: @import cstd.stdio; /* clang -E: implicit import for "/{{[^ ].*}}/usr/././//////include/../include/./././../include/stdio.h" */
+// CHECKOVERLAY: #pragma clang module import cstd.stdio /* clang -E: implicit import

@@ -901,17 +901,35 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
   // capturing lamdbda's call operator.
   //
 
-  // The issue is that we cannot rely entirely on the FunctionScopeInfo stack
-  // since ScopeInfos are pushed on during parsing and treetransforming. But
-  // since a generic lambda's call operator can be instantiated anywhere (even
-  // end of the TU) we need to be able to examine its enclosing lambdas and so
-  // we use the DeclContext to get a hold of the closure-class and query it for
-  // capture information.  The reason we don't just resort to always using the
-  // DeclContext chain is that it is only mature for lambda expressions
-  // enclosing generic lambda's call operators that are being instantiated.
+  // Since the FunctionScopeInfo stack is representative of the lexical
+  // nesting of the lambda expressions during initial parsing (and is the best
+  // place for querying information about captures about lambdas that are
+  // partially processed) and perhaps during instantiation of function templates
+  // that contain lambda expressions that need to be transformed BUT not
+  // necessarily during instantiation of a nested generic lambda's function call
+  // operator (which might even be instantiated at the end of the TU) - at which
+  // time the DeclContext tree is mature enough to query capture information
+  // reliably - we use a two pronged approach to walk through all the lexically
+  // enclosing lambda expressions:
+  //
+  //  1) Climb down the FunctionScopeInfo stack as long as each item represents
+  //  a Lambda (i.e. LambdaScopeInfo) AND each LSI's 'closure-type' is lexically
+  //  enclosed by the call-operator of the LSI below it on the stack (while
+  //  tracking the enclosing DC for step 2 if needed).  Note the topmost LSI on
+  //  the stack represents the innermost lambda.
+  //
+  //  2) Iterate out through the DeclContext chain (if it represents a lambda's
+  //  call operator, and therefore must be a generic lambda's call operator,
+  //  which is the only time an inconsistency between the LSI and the
+  //  DeclContext should occur) querying closure types regarding capture
+  //  information.
 
+
+  // 1) Climb down the function scope info stack.
   for (int I = FunctionScopes.size();
-       I-- && isa<LambdaScopeInfo>(FunctionScopes[I]);
+       I-- && isa<LambdaScopeInfo>(FunctionScopes[I]) &&
+       (!CurLSI || CurLSI->Lambda->getDeclContext() ==
+                       cast<LambdaScopeInfo>(FunctionScopes[I])->CallOperator);
        CurDC = getLambdaAwareParentOfDeclContext(CurDC)) {
     CurLSI = cast<LambdaScopeInfo>(FunctionScopes[I]);
 
@@ -927,11 +945,17 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
       return ASTCtx.getPointerType(ClassType);
     }
   }
-  // We've run out of ScopeInfos but check if CurDC is a lambda (which can
-  // happen during instantiation of generic lambdas)
+
+  // 2) We've run out of ScopeInfos but check if CurDC is a lambda (which can
+  // happen during instantiation of its nested generic lambda call operator)
   if (isLambdaCallOperator(CurDC)) {
-    assert(CurLSI);
-    assert(isGenericLambdaCallOperatorSpecialization(CurLSI->CallOperator));
+    assert(CurLSI && "While computing 'this' capture-type for a generic "
+                     "lambda, we must have a corresponding LambdaScopeInfo");
+    assert(isGenericLambdaCallOperatorSpecialization(CurLSI->CallOperator) &&
+           "While computing 'this' capture-type for a generic lambda, when we "
+           "run out of enclosing LSI's, yet the enclosing DC is a "
+           "lambda-call-operator we must be (i.e. Current LSI) in a generic "
+           "lambda call oeprator");
     assert(CurDC == getLambdaAwareParentOfDeclContext(CurLSI->CallOperator));
 
     auto IsThisCaptured =

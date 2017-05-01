@@ -138,7 +138,7 @@ private:
 
   // Tries to infer the specific address space of each address expression in
   // Postorder.
-  void inferAddressSpaces(const std::vector<Value *> &Postorder,
+  void inferAddressSpaces(ArrayRef<WeakVH> Postorder,
                           ValueToAddrSpaceMapTy *InferredAddrSpace) const;
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
@@ -147,7 +147,7 @@ private:
   // address spaces if InferredAddrSpace says so. Postorder is the postorder of
   // all flat expressions in the use-def graph of function F.
   bool
-  rewriteWithNewAddressSpaces(const std::vector<Value *> &Postorder,
+  rewriteWithNewAddressSpaces(ArrayRef<WeakVH> Postorder,
                               const ValueToAddrSpaceMapTy &InferredAddrSpace,
                               Function *F) const;
 
@@ -162,7 +162,7 @@ private:
     std::vector<std::pair<Value *, bool>> &PostorderStack,
     DenseSet<Value *> &Visited) const;
 
-  std::vector<Value *> collectFlatAddressExpressions(Function &F) const;
+  std::vector<WeakVH> collectFlatAddressExpressions(Function &F) const;
 
   Value *cloneValueWithNewAddressSpace(
     Value *V, unsigned NewAddrSpace,
@@ -274,16 +274,36 @@ void InferAddressSpaces::appendsFlatAddressExpressionToPostorderStack(
     Value *V, std::vector<std::pair<Value *, bool>> &PostorderStack,
     DenseSet<Value *> &Visited) const {
   assert(V->getType()->isPointerTy());
+
+  // Generic addressing expressions may be hidden in nested constant
+  // expressions.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
+    // TODO: Look in non-address parts, like icmp operands.
+    if (isAddressExpression(*CE) && Visited.insert(CE).second)
+      PostorderStack.push_back(std::make_pair(CE, false));
+
+    return;
+  }
+
   if (isAddressExpression(*V) &&
       V->getType()->getPointerAddressSpace() == FlatAddrSpace) {
-    if (Visited.insert(V).second)
+    if (Visited.insert(V).second) {
       PostorderStack.push_back(std::make_pair(V, false));
+
+      Operator *Op = cast<Operator>(V);
+      for (unsigned I = 0, E = Op->getNumOperands(); I != E; ++I) {
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Op->getOperand(I))) {
+          if (isAddressExpression(*CE) && Visited.insert(CE).second)
+            PostorderStack.emplace_back(CE, false);
+        }
+      }
+    }
   }
 }
 
 // Returns all flat address expressions in function F. The elements are ordered
 // ordered in postorder.
-std::vector<Value *>
+std::vector<WeakVH>
 InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
   // This function implements a non-recursive postorder traversal of a partial
   // use-def graph of function F.
@@ -326,21 +346,25 @@ InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
         PushPtrOperand(Cmp->getOperand(0));
         PushPtrOperand(Cmp->getOperand(1));
       }
+    } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+      if (!ASC->getType()->isVectorTy())
+        PushPtrOperand(ASC->getPointerOperand());
     }
   }
 
-  std::vector<Value *> Postorder; // The resultant postorder.
+  std::vector<WeakVH> Postorder; // The resultant postorder.
   while (!PostorderStack.empty()) {
+    Value *TopVal = PostorderStack.back().first;
     // If the operands of the expression on the top are already explored,
     // adds that expression to the resultant postorder.
     if (PostorderStack.back().second) {
-      Postorder.push_back(PostorderStack.back().first);
+      Postorder.push_back(TopVal);
       PostorderStack.pop_back();
       continue;
     }
     // Otherwise, adds its operands to the stack and explores them.
     PostorderStack.back().second = true;
-    for (Value *PtrOperand : getPointerOperands(*PostorderStack.back().first)) {
+    for (Value *PtrOperand : getPointerOperands(*TopVal)) {
       appendsFlatAddressExpressionToPostorderStack(PtrOperand, PostorderStack,
                                                    Visited);
     }
@@ -559,7 +583,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
     return false;
 
   // Collects all flat address expressions in postorder.
-  std::vector<Value *> Postorder = collectFlatAddressExpressions(F);
+  std::vector<WeakVH> Postorder = collectFlatAddressExpressions(F);
 
   // Runs a data-flow analysis to refine the address spaces of every expression
   // in Postorder.
@@ -571,8 +595,10 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return rewriteWithNewAddressSpaces(Postorder, InferredAddrSpace, &F);
 }
 
+// Constants need to be tracked through RAUW to handle cases with nested
+// constant expressions, so wrap values in WeakVH.
 void InferAddressSpaces::inferAddressSpaces(
-    const std::vector<Value *> &Postorder,
+    ArrayRef<WeakVH> Postorder,
     ValueToAddrSpaceMapTy *InferredAddrSpace) const {
   SetVector<Value *> Worklist(Postorder.begin(), Postorder.end());
   // Initially, all expressions are in the uninitialized address space.
@@ -784,7 +810,7 @@ static Value::use_iterator skipToNextUser(Value::use_iterator I,
 }
 
 bool InferAddressSpaces::rewriteWithNewAddressSpaces(
-  const std::vector<Value *> &Postorder,
+  ArrayRef<WeakVH> Postorder,
   const ValueToAddrSpaceMapTy &InferredAddrSpace, Function *F) const {
   // For each address expression to be modified, creates a clone of it with its
   // pointer operands converted to the new address space. Since the pointer
@@ -812,14 +838,29 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
     NewV->setOperand(OperandNo, ValueWithNewAddrSpace.lookup(UndefUse->get()));
   }
 
+  SmallVector<Instruction *, 16> DeadInstructions;
+
   // Replaces the uses of the old address expressions with the new ones.
-  for (Value *V : Postorder) {
+  for (const WeakVH &WVH : Postorder) {
+    assert(WVH && "value was unexpectedly deleted");
+    Value *V = WVH;
     Value *NewV = ValueWithNewAddrSpace.lookup(V);
     if (NewV == nullptr)
       continue;
 
     DEBUG(dbgs() << "Replacing the uses of " << *V
                  << "\n  with\n  " << *NewV << '\n');
+
+    if (Constant *C = dyn_cast<Constant>(V)) {
+      Constant *Replace = ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
+                                                         C->getType());
+      if (C != Replace) {
+        DEBUG(dbgs() << "Inserting replacement const cast: "
+              << Replace << ": " << *Replace << '\n');
+        C->replaceAllUsesWith(Replace);
+        V = Replace;
+      }
+    }
 
     Value::use_iterator I, E, Next;
     for (I = V->use_begin(), E = V->use_end(); I != E; ) {
@@ -881,6 +922,15 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
           }
         }
 
+        if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
+          unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+          if (ASC->getDestAddressSpace() == NewAS) {
+            ASC->replaceAllUsesWith(NewV);
+            DeadInstructions.push_back(ASC);
+            continue;
+          }
+        }
+
         // Otherwise, replaces the use with flat(NewV).
         if (Instruction *I = dyn_cast<Instruction>(V)) {
           BasicBlock::iterator InsertPos = std::next(I->getIterator());
@@ -894,9 +944,14 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
       }
     }
 
-    if (V->use_empty())
-      RecursivelyDeleteTriviallyDeadInstructions(V);
+    if (V->use_empty()) {
+      if (Instruction *I = dyn_cast<Instruction>(V))
+        DeadInstructions.push_back(I);
+    }
   }
+
+  for (Instruction *I : DeadInstructions)
+    RecursivelyDeleteTriviallyDeadInstructions(I);
 
   return true;
 }

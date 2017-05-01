@@ -2,15 +2,15 @@
 
 ; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: debug_info contents
+; CHECK: DW_AT_name{{.*}}= [[F1:.*]])
 ; CHECK: [[NS1:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name{{.*}} = "A"
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1:".*debug-info-namespace.cpp"]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(5)
+; CHECK-NOT: DW_AT_decl_file
+; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[NS2:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
 ; CHECK-NEXT: DW_AT_name{{.*}} = "B"
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:".*foo.cpp"]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(1)
+; CHECK-NOT: DW_AT_decl_file
+; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[I:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name{{.*}}= "i"
@@ -56,15 +56,15 @@
 ; CHECK: DW_TAG_imported_module
 ; This is a bug, it should be in F2 but it inherits the file from its
 ; enclosing scope
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1]])
+; CHECK-NEXT: DW_AT_decl_file{{.*}}stdin
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(15)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS2]]})
 ; CHECK: NULL
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_imported_module
-; Same bug as above, this should be F2, not F1
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1]])
+; Same bug as above, this should be F2
+; CHECK-NEXT: DW_AT_decl_file{{.*}}debug-info-namespace.cpp
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(18)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
@@ -76,7 +76,7 @@
 ; CHECK: DW_AT_name{{.*}}= "func"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(26)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
@@ -293,8 +293,8 @@ attributes #1 = { nounwind readnone }
 !3 = !{!4, !8}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", line: 5, flags: DIFlagFwdDecl, file: !5, scope: !6, identifier: "_ZTSN1A1B3fooE")
 !5 = !DIFile(filename: "foo.cpp", directory: "/tmp")
-!6 = !DINamespace(name: "B", line: 1, file: !5, scope: !7)
-!7 = !DINamespace(name: "A", line: 5, file: !1, scope: null)
+!6 = !DINamespace(name: "B", scope: !7)
+!7 = !DINamespace(name: "A", scope: null)
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "bar", line: 6, size: 8, align: 8, file: !5, scope: !6, elements: !2, identifier: "_ZTSN1A1B3barE")
 !10 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ev", line: 3, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !11, variables: !2)
 !11 = !DISubroutineType(types: !12)

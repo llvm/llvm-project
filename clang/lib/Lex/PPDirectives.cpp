@@ -1588,18 +1588,18 @@ bool Preprocessor::ConcatenateIncludeName(SmallString<128> &FilenameBuffer,
 }
 
 /// \brief Push a token onto the token stream containing an annotation.
-static void EnterAnnotationToken(Preprocessor &PP,
-                                 SourceLocation Begin, SourceLocation End,
-                                 tok::TokenKind Kind, void *AnnotationVal) {
+void Preprocessor::EnterAnnotationToken(SourceRange Range,
+                                        tok::TokenKind Kind,
+                                        void *AnnotationVal) {
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = llvm::make_unique<Token[]>(1);
   Tok[0].startToken();
   Tok[0].setKind(Kind);
-  Tok[0].setLocation(Begin);
-  Tok[0].setAnnotationEndLoc(End);
+  Tok[0].setLocation(Range.getBegin());
+  Tok[0].setAnnotationEndLoc(Range.getEnd());
   Tok[0].setAnnotationValue(AnnotationVal);
-  PP.EnterTokenStream(std::move(Tok), 1, true);
+  EnterTokenStream(std::move(Tok), 1, true);
 }
 
 /// \brief Produce a diagnostic informing the user that a #include or similar
@@ -2021,7 +2021,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
       if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
           tok::pp___include_macros)
-        EnterAnnotationToken(*this, HashLoc, End, tok::annot_module_include, M);
+        EnterAnnotationToken(SourceRange(HashLoc, End),
+                             tok::annot_module_include, M);
     }
     return;
   }
@@ -2059,7 +2060,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     // submodule.
     // FIXME: There's no point doing this if we're handling a #__include_macros
     // directive.
-    EnterAnnotationToken(*this, HashLoc, End, tok::annot_module_begin, M);
+    EnterAnnotationToken(SourceRange(HashLoc, End), tok::annot_module_begin, M);
   }
 }
 

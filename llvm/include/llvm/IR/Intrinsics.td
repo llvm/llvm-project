@@ -98,6 +98,18 @@ def IntrNoDuplicate : IntrinsicProperty;
 // Parallels the convergent attribute on LLVM IR functions.
 def IntrConvergent : IntrinsicProperty;
 
+// This property indicates that the intrinsic is safe to speculate.
+def IntrSpeculatable : IntrinsicProperty;
+
+// This property can be used to override the 'has no other side effects'
+// language of the IntrNoMem, IntrReadMem, IntrWriteMem, and IntrArgMemOnly
+// intrinsic properties.  By default, intrinsics are assumed to have side
+// effects, so this property is only necessary if you have defined one of
+// the memory properties listed above.
+// For this property, 'side effects' has the same meaning as 'side effects'
+// defined by the hasSideEffects property of the TableGen Instruction class.
+def IntrHasSideEffects : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // Types used by intrinsics.
 //===----------------------------------------------------------------------===//

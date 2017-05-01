@@ -137,6 +137,9 @@ def SExt : EnumAttr<"signext">;
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
 def StackAlignment : EnumAttr<"alignstack">;
 
+/// Function can be speculated.
+def Speculatable : EnumAttr<"speculatable">;
+
 /// Stack protection.
 def StackProtect : EnumAttr<"ssp">;
 

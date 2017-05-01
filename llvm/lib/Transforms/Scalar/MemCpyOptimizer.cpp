@@ -1323,7 +1323,7 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
   // then it is some target specific value that we can't know.
-  unsigned ByValAlign = CS.getParamAlignment(ArgNo+1);
+  unsigned ByValAlign = CS.getParamAlignment(ArgNo);
   if (ByValAlign == 0) return false;
 
   // If it is greater than the memcpy, then we check to see if we can force the

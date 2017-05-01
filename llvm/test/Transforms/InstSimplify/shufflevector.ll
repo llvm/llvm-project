@@ -118,6 +118,14 @@ define <4 x i32> @undef_mask(<4 x i32> %x) {
   ret <4 x i32> %shuf
 }
 
+define <4 x i32> @undef_mask_1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @undef_mask_1(
+; CHECK-NEXT:    ret <4 x i32> undef
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> undef
+  ret <4 x i32> %shuf
+}
+
 define <4 x i32> @identity_mask_0(<4 x i32> %x) {
 ; CHECK-LABEL: @identity_mask_0(
 ; CHECK-NEXT:    ret <4 x i32> [[X:%.*]]

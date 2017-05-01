@@ -39,9 +39,7 @@ std::vector<InputSectionBase *> elf::InputSections;
 
 // Returns a string to construct an error message.
 std::string lld::toString(const InputSectionBase *Sec) {
-  // File can be absent if section is synthetic.
-  std::string FileName = Sec->File ? Sec->File->getName() : "<internal>";
-  return (FileName + ":(" + Sec->Name + ")").str();
+  return (toString(Sec->File) + ":(" + Sec->Name + ")").str();
 }
 
 template <class ELFT>

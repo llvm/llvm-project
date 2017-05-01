@@ -231,8 +231,8 @@ struct ModuleInfoHeader {
   /// Size of local symbol debug info in above stream
   support::ulittle32_t SymBytes;
 
-  /// Size of line number debug info in above stream
-  support::ulittle32_t LineBytes;
+  /// Size of C11 line number info in above stream
+  support::ulittle32_t C11Bytes;
 
   /// Size of C13 line number info in above stream
   support::ulittle32_t C13Bytes;

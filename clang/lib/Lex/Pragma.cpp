@@ -534,6 +534,47 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   }
 }
 
+void Preprocessor::HandlePragmaModuleImport(Token &ImportTok) {
+  SourceLocation ImportLoc = ImportTok.getLocation();
+
+  Token Tok;
+
+  llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 8> ModuleName;
+  while (true) {
+    LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok.getLocation(),
+           diag::err_pragma_module_import_expected_module_name) << 0;
+      return;
+    }
+
+    ModuleName.emplace_back(Tok.getIdentifierInfo(), Tok.getLocation());
+
+    LexUnexpandedToken(Tok);
+    assert(Tok.isNot(tok::eof));
+    if (Tok.is(tok::eod))
+      break;
+    if (Tok.isNot(tok::period)) {
+      Diag(Tok.getLocation(),
+           diag::err_pragma_module_import_expected_module_name) << 1;
+      return;
+    }
+  }
+
+  // If we have a non-empty module path, load the named module.
+  Module *Imported =
+      TheModuleLoader.loadModule(ImportLoc, ModuleName, Module::Hidden,
+                                 /*IsIncludeDirective=*/false);
+  if (!Imported)
+    return;
+
+  makeModuleVisible(Imported, ImportLoc);
+  EnterAnnotationToken(SourceRange(ImportLoc, Tok.getLocation()),
+                       tok::annot_module_include, Imported);
+  if (Callbacks)
+    Callbacks->moduleImport(ImportLoc, ModuleName, Imported);
+}
+
 /// ParsePragmaPushOrPopMacro - Handle parsing of pragma push_macro/pop_macro.
 /// Return the IdentifierInfo* associated with the macro to push or pop.
 IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
@@ -1301,6 +1342,19 @@ public:
   }
 };
 
+/// Handle the clang \#pragma module import extension. The syntax is:
+/// \code
+///   #pragma clang module import some.module.name
+/// \endcode
+struct PragmaModuleImportHandler : public PragmaHandler {
+  PragmaModuleImportHandler() : PragmaHandler("import") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &ImportTok) override {
+    PP.HandlePragmaModuleImport(ImportTok);
+  }
+};
+
 /// PragmaPushMacroHandler - "\#pragma push_macro" saves the value of the
 /// macro on the top of the stack.
 struct PragmaPushMacroHandler : public PragmaHandler {
@@ -1523,6 +1577,11 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDiagnosticHandler("clang"));
   AddPragmaHandler("clang", new PragmaARCCFCodeAuditedHandler());
   AddPragmaHandler("clang", new PragmaAssumeNonNullHandler());
+
+  // #pragma clang module ...
+  auto *ModuleHandler = new PragmaNamespace("module");
+  AddPragmaHandler("clang", ModuleHandler);
+  ModuleHandler->AddPragma(new PragmaModuleImportHandler());
 
   AddPragmaHandler("STDC", new PragmaSTDC_FENV_ACCESSHandler());
   AddPragmaHandler("STDC", new PragmaSTDC_CX_LIMITED_RANGEHandler());

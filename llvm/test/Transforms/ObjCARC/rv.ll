@@ -291,4 +291,29 @@ define {}* @test24(i8* %p) {
   ret {}* %s
 }
 
+declare i8* @first_test25();
+declare i8* @second_test25(i8*);
+declare void @somecall_test25();
+
+; ARC optimizer used to move the last release between the call to second_test25
+; and the call to objc_retainAutoreleasedReturnValue, causing %second to be
+; released prematurely when %first and %second were pointing to the same object.
+
+; CHECK-LABEL: define void @test25(
+; CHECK: %[[CALL1:.*]] = call i8* @second_test25(
+; CHECK-NEXT: tail call i8* @objc_retainAutoreleasedReturnValue(i8* %[[CALL1]])
+
+define void @test25() {
+  %first = call i8* @first_test25()
+  %v0 = call i8* @objc_retain(i8* %first)
+  call void @somecall_test25()
+  %second = call i8* @second_test25(i8* %first)
+  %call2 = call i8* @objc_retainAutoreleasedReturnValue(i8* %second)
+  call void @objc_release(i8* %second), !clang.imprecise_release !0
+  call void @objc_release(i8* %first), !clang.imprecise_release !0
+  ret void
+}
+
+!0 = !{}
+
 ; CHECK: attributes [[NUW]] = { nounwind }

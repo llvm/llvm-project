@@ -395,7 +395,6 @@ namespace {
 class NewGVN {
   Function &F;
   DominatorTree *DT;
-  AssumptionCache *AC;
   const TargetLibraryInfo *TLI;
   AliasAnalysis *AA;
   MemorySSA *MSSA;
@@ -505,7 +504,7 @@ public:
   NewGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
-      : F(F), DT(DT), AC(AC), TLI(TLI), AA(AA), MSSA(MSSA), DL(DL),
+      : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), DL(DL),
         PredInfo(make_unique<PredicateInfo>(F, *DT, *AC)), SQ(DL, TLI, DT, AC) {
   }
   bool runGVN();
@@ -885,7 +884,8 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (auto *BI = dyn_cast<BitCastInst>(I)) {
-    Value *V = SimplifyInstruction(BI, DL, TLI, DT, AC);
+    Value *V =
+        SimplifyCastInst(BI->getOpcode(), BI->getOperand(0), BI->getType(), SQ);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<GetElementPtrInst>(I)) {

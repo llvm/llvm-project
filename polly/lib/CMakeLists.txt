@@ -67,6 +67,7 @@ add_library(PollyCore OBJECT
   Transform/Simplify.cpp
   ${POLLY_HEADER_FILES}
   )
+set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
 
 # Create the library that can be linked into LLVM's tools and Polly's unittests.
 # It depends on all library it needs, such that with
@@ -169,6 +170,6 @@ endif ()
 
 if (TARGET intrinsics_gen)
   # Check if we are building as part of an LLVM build
-  add_dependencies(Polly intrinsics_gen)
+  add_dependencies(PollyCore intrinsics_gen)
 endif()
 

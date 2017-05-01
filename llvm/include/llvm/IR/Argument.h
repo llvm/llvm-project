@@ -115,8 +115,6 @@ public:
   void addAttr(Attribute Attr);
 
   /// Remove attributes from an argument.
-  void removeAttr(AttributeList AS);
-
   void removeAttr(Attribute::AttrKind Kind);
 
   /// Check if an argument has a given attribute.

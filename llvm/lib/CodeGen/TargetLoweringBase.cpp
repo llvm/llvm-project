@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -52,6 +53,18 @@ static cl::opt<unsigned> MinimumJumpTableEntries
 static cl::opt<unsigned> MaximumJumpTableSize
   ("max-jump-table-size", cl::init(0), cl::Hidden,
    cl::desc("Set maximum size of jump tables; zero for no limit."));
+
+/// Minimum jump table density for normal functions.
+static cl::opt<unsigned>
+    JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
+                     cl::desc("Minimum density for building a jump table in "
+                              "a normal function"));
+
+/// Minimum jump table density for -Os or -Oz functions.
+static cl::opt<unsigned> OptsizeJumpTableDensity(
+    "optsize-jump-table-density", cl::init(40), cl::Hidden,
+    cl::desc("Minimum density for building a jump table in "
+             "an optsize function"));
 
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
@@ -909,6 +922,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::USUBO, VT, Expand);
     setOperationAction(ISD::SMULO, VT, Expand);
     setOperationAction(ISD::UMULO, VT, Expand);
+
+    // ADDCARRY operations default to expand
+    setOperationAction(ISD::ADDCARRY, VT, Expand);
+    setOperationAction(ISD::SUBCARRY, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
@@ -1901,6 +1918,10 @@ void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
   MinimumJumpTableEntries = Val;
 }
 
+unsigned TargetLoweringBase::getMinimumJumpTableDensity(bool OptForSize) const {
+  return OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
+}
+
 unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
   return MaximumJumpTableSize;
 }
@@ -2091,4 +2112,8 @@ int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
 int TargetLoweringBase::getDivRefinementSteps(EVT VT,
                                               MachineFunction &MF) const {
   return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
+}
+
+void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
+  MF.getRegInfo().freezeReservedRegs(MF);
 }

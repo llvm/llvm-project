@@ -36,7 +36,7 @@ public:
   uint16_t getTypeServerIndex() const;
   uint16_t getModuleStreamIndex() const;
   uint32_t getSymbolDebugInfoByteSize() const;
-  uint32_t getLineInfoByteSize() const;
+  uint32_t getC11LineInfoByteSize() const;
   uint32_t getC13LineInfoByteSize() const;
   uint32_t getNumberOfFiles() const;
   uint32_t getSourceFileNameIndex() const;

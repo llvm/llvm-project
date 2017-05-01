@@ -496,34 +496,6 @@ define i32 @xor_to_xor12(float %fa, float %fb) {
   ret i32 %xor
 }
 
-; ~(~(a | b) | (a & b)) --> (a | b) & ~(a & b) -> a ^ b
-
-define i32 @demorgan_plus_and_to_xor(i32 %a, i32 %b) {
-; CHECK-LABEL: @demorgan_plus_and_to_xor(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 %b, %a
-; CHECK-NEXT:    ret i32 [[NOT]]
-;
-  %or = or i32 %b, %a
-  %notor = xor i32 %or, -1
-  %and = and i32 %b, %a
-  %or2 = or i32 %and, %notor
-  %not = xor i32 %or2, -1
-  ret i32 %not
-}
-
-define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: @demorgan_plus_and_to_xor_vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i32> %a, %b
-; CHECK-NEXT:    ret <4 x i32> [[NOT]]
-;
-  %or = or <4 x i32> %a, %b
-  %notor = xor <4 x i32> %or, < i32 -1, i32 -1, i32 -1, i32 -1 >
-  %and = and <4 x i32> %a, %b
-  %or2 = or <4 x i32> %and, %notor
-  %not = xor <4 x i32> %or2, < i32 -1, i32 -1, i32 -1, i32 -1 >
-  ret <4 x i32> %not
-}
-
 ; https://bugs.llvm.org/show_bug.cgi?id=32830
 ; Make sure we're matching operands correctly and not folding things wrongly.
 

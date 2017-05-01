@@ -93,13 +93,25 @@ public:
       : Stream(Other.Stream), Context(Other.Context) {}
 
   Iterator begin(bool *HadError = nullptr) const {
+    if (empty())
+      return end();
+
     return Iterator(*this, Context, HadError);
   }
 
   Iterator end() const { return Iterator(); }
 
+  bool empty() const { return Stream.getLength() == 0; }
+
+  /// \brief given an offset into the array's underlying stream, return an
+  /// iterator to the record at that offset.  This is considered unsafe
+  /// since the behavior is undefined if \p Offset does not refer to the
+  /// beginning of a valid record.
+  Iterator at(uint32_t Offset) const {
+    return Iterator(*this, Context, Stream.drop_front(Offset), nullptr);
+  }
+
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
-  void setUnderlyingStream(BinaryStreamRef Stream) { this->Stream = Stream; }
 
 private:
   BinaryStreamRef Stream;
@@ -117,9 +129,8 @@ class VarStreamArrayIterator
 
 public:
   VarStreamArrayIterator(const ArrayType &Array, ContextType *Context,
-                         bool *HadError = nullptr)
-      : IterRef(Array.Stream), Context(Context), Array(&Array),
-        HadError(HadError) {
+                         BinaryStreamRef Stream, bool *HadError = nullptr)
+      : IterRef(Stream), Context(Context), Array(&Array), HadError(HadError) {
     if (IterRef.getLength() == 0)
       moveToEnd();
     else {
@@ -130,6 +141,11 @@ public:
       }
     }
   }
+
+  VarStreamArrayIterator(const ArrayType &Array, ContextType *Context,
+                         bool *HadError = nullptr)
+      : VarStreamArrayIterator(Array, Context, Array.Stream, HadError) {}
+
   VarStreamArrayIterator() = default;
   ~VarStreamArrayIterator() = default;
 
