@@ -1624,9 +1624,7 @@ void ModuleBitcodeWriter::writeDINamespace(const DINamespace *N,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct() | N->getExportSymbols() << 1);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
-  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
-  Record.push_back(N->getLine());
 
   Stream.EmitRecord(bitc::METADATA_NAMESPACE, Record, Abbrev);
   Record.clear();

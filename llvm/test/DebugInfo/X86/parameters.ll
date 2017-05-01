@@ -90,7 +90,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !1 = !DIFile(filename: "pass.cpp", directory: "/tmp")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "func", linkageName: "_ZN7pr147634funcENS_3fooE", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
-!5 = !DINamespace(name: "pr14763", line: 1, file: !1, scope: null)
+!5 = !DINamespace(name: "pr14763", scope: null)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", line: 2, size: 8, align: 8, file: !1, scope: !5, elements: !9)
