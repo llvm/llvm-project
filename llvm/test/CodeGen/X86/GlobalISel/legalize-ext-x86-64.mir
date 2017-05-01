@@ -1,0 +1,172 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+
+--- |
+  define i64 @test_sext_i8(i8 %val) {
+    %r = sext i8 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_sext_i16(i16 %val) {
+    %r = sext i16 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_sext_i32(i32 %val) {
+    %r = sext i32 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_zext_i8(i8 %val) {
+    %r = zext i8 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_zext_i16(i16 %val) {
+    %r = zext i16 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_zext_i32(i32 %val) {
+    %r = zext i32 %val to i64
+    ret i64 %r
+  }
+
+...
+---
+name:            test_sext_i8
+# CHECK-LABEL: name:  test_sext_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s8) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_SEXT %0(s8)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s64) = G_SEXT %0(s8)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_sext_i16
+# CHECK-LABEL: name:  test_sext_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s16) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_SEXT %0(s16)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s64) = G_SEXT %0(s16)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_sext_i32
+# CHECK-LABEL: name:  test_sext_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s32) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_SEXT %0(s32)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s64) = G_SEXT %0(s32)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_zext_i8
+# CHECK-LABEL: name:  test_zext_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s8) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ZEXT %0(s8)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s64) = G_ZEXT %0(s8)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_zext_i16
+# CHECK-LABEL: name:  test_zext_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s16) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ZEXT %0(s16)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s64) = G_ZEXT %0(s16)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_zext_i32
+# CHECK-LABEL: name:  test_zext_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s32) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ZEXT %0(s32)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s64) = G_ZEXT %0(s32)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...

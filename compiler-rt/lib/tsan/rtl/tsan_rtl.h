@@ -763,7 +763,7 @@ void ProcUnwire(Processor *proc, ThreadState *thr);
 // Note: the parameter is called flagz, because flags is already taken
 // by the global function that returns flags.
 void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
-void MutexDestroy(ThreadState *thr, uptr pc, uptr addr);
+void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
 void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
 void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0,
     int rec = 1);

@@ -1328,13 +1328,10 @@ void CodeGenModule::EmitDeferred() {
 
   // Grab the list of decls to emit. If EmitGlobalDefinition schedules more
   // work, it will not interfere with this.
-  std::vector<DeferredGlobal> CurDeclsToEmit;
+  std::vector<GlobalDecl> CurDeclsToEmit;
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
-  for (DeferredGlobal &G : CurDeclsToEmit) {
-    GlobalDecl D = G.GD;
-    G.GV = nullptr;
-
+  for (GlobalDecl &D : CurDeclsToEmit) {
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
@@ -1711,13 +1708,13 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   }
 
   StringRef MangledName = getMangledName(GD);
-  if (llvm::GlobalValue *GV = GetGlobalValue(MangledName)) {
+  if (GetGlobalValue(MangledName) != nullptr) {
     // The value has already been used and should therefore be emitted.
-    addDeferredDeclToEmit(GV, GD);
+    addDeferredDeclToEmit(GD);
   } else if (MustBeEmitted(Global)) {
     // The value must be emitted, but cannot be emitted eagerly.
     assert(!MayBeEmittedEagerly(Global));
-    addDeferredDeclToEmit(/*GV=*/nullptr, GD);
+    addDeferredDeclToEmit(GD);
   } else {
     // Otherwise, remember that we saw a deferred decl with this name.  The
     // first use of the mangled name will cause it to move into
@@ -2044,7 +2041,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     if (D && isa<CXXDestructorDecl>(D) &&
         getCXXABI().useThunkForDtorVariant(cast<CXXDestructorDecl>(D),
                                            GD.getDtorType()))
-      addDeferredDeclToEmit(F, GD);
+      addDeferredDeclToEmit(GD);
 
     // This is the first use or definition of a mangled name.  If there is a
     // deferred decl with this name, remember that we need to emit it at the end
@@ -2054,7 +2051,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
       // Move the potentially referenced deferred decl to the
       // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
       // don't need it anymore).
-      addDeferredDeclToEmit(F, DDI->second);
+      addDeferredDeclToEmit(DDI->second);
       DeferredDecls.erase(DDI);
 
       // Otherwise, there are cases we have to worry about where we're
@@ -2074,7 +2071,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
            FD = FD->getPreviousDecl()) {
         if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
           if (FD->doesThisDeclarationHaveABody()) {
-            addDeferredDeclToEmit(F, GD.getWithDecl(FD));
+            addDeferredDeclToEmit(GD.getWithDecl(FD));
             break;
           }
         }
@@ -2302,7 +2299,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
   if (DDI != DeferredDecls.end()) {
     // Move the potentially referenced deferred decl to the DeferredDeclsToEmit
     // list, and remove it from DeferredDecls (since we don't need it anymore).
-    addDeferredDeclToEmit(GV, DDI->second);
+    addDeferredDeclToEmit(DDI->second);
     DeferredDecls.erase(DDI);
   }
 

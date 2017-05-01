@@ -64,6 +64,8 @@ def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
 def AVRlsrLoop : SDNode<"AVRISD::LSRLOOP", SDTIntShiftOp>;
+def AVRrolLoop : SDNode<"AVRISD::ROLLOOP", SDTIntShiftOp>;
+def AVRrorLoop : SDNode<"AVRISD::RORLOOP", SDTIntShiftOp>;
 def AVRasrLoop : SDNode<"AVRISD::ASRLOOP", SDTIntShiftOp>;
 
 //===----------------------------------------------------------------------===//
@@ -1932,12 +1934,39 @@ def Lsr8 : ShiftPseudo<
   [(set i8:$dst, (AVRlsrLoop i8:$src, i8:$cnt))]
 >;
 
-
 def Lsr16 : ShiftPseudo<
   (outs DREGS:$dst),
    (ins DREGS:$src, GPR8:$cnt),
    "# Lsr16 PSEUDO",
    [(set i16:$dst, (AVRlsrLoop i16:$src, i8:$cnt))]
+>;
+
+def Rol8 : ShiftPseudo<
+  (outs GPR8:$dst),
+  (ins GPR8:$src, GPR8:$cnt),
+  "# Rol8 PSEUDO",
+  [(set i8:$dst, (AVRrolLoop i8:$src, i8:$cnt))]
+>;
+
+def Rol16 : ShiftPseudo<
+  (outs DREGS:$dst),
+  (ins DREGS:$src, GPR8:$cnt),
+  "# Rol16 PSEUDO",
+  [(set i16:$dst, (AVRrolLoop i16:$src, i8:$cnt))]
+>;
+
+def Ror8 : ShiftPseudo<
+  (outs GPR8:$dst),
+  (ins GPR8:$src, GPR8:$cnt),
+  "# Ror8 PSEUDO",
+  [(set i8:$dst, (AVRrorLoop i8:$src, i8:$cnt))]
+>;
+
+def Ror16 : ShiftPseudo<
+  (outs DREGS:$dst),
+  (ins DREGS:$src, GPR8:$cnt),
+  "# Ror16 PSEUDO",
+  [(set i16:$dst, (AVRrorLoop i16:$src, i8:$cnt))]
 >;
 
 def Asr8 : ShiftPseudo<

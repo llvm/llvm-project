@@ -471,7 +471,7 @@ void __tsan_mutex_create(void *m, unsigned flagz) {
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_destroy(void *m, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_destroy);
-  MutexDestroy(thr, pc, (uptr)m);
+  MutexDestroy(thr, pc, (uptr)m, flagz);
 }
 
 INTERFACE_ATTRIBUTE

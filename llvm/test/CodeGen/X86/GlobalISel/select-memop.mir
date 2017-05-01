@@ -95,6 +95,15 @@
     ret <4 x i32>* %p1
   }
 
+  define i32* @test_load_ptr(i32** %ptr1) {
+    %p = load i32*, i32** %ptr1
+    ret i32* %p
+  }
+
+  define void @test_store_ptr(i32** %ptr1, i32* %a) {
+    store i32* %a, i32** %ptr1
+    ret void
+  }
 ...
 ---
 # ALL-LABEL: name:            test_load_i8
@@ -578,5 +587,51 @@ body:             |
     G_STORE %0(<4 x s32>), %1(p0) :: (store 16 into %ir.p1, align 1)
     %rax = COPY %1(p0)
     RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_load_ptr
+name:            test_load_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+# ALL:   - { id: 0, class: gr64 }
+# ALL:   - { id: 1, class: gr64 }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL: %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.ptr1)
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(p0) = G_LOAD %0(p0) :: (load 8 from %ir.ptr1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_ptr
+name:            test_store_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+# ALL:   - { id: 0, class: gr64 }
+# ALL:   - { id: 1, class: gr64 }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL: MOV64mr %0, 1, _, 0, _, %1 :: (store 8 into %ir.ptr1)
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(p0) = COPY %rdi
+    %1(p0) = COPY %rsi
+    G_STORE %1(p0), %0(p0) :: (store 8 into %ir.ptr1)
+    RET 0
 
 ...

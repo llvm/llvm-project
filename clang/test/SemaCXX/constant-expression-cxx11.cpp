@@ -60,6 +60,10 @@ namespace DerivedToVBaseCast {
   static_assert((U*)&d == w, "");
   static_assert((U*)&d == x, "");
 
+  // expected-error@+2 {{constexpr variable 'a' must be initialized by a constant expression}}
+  // expected-warning@+1 {{binding dereferenced null pointer to reference has undefined behavior}}
+  constexpr A &a = *((B*)0);  // expected-note {{cannot access base class of null pointer}}
+
   struct X {};
   struct Y1 : virtual X {};
   struct Y2 : X {};
