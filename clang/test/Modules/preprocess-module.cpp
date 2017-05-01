@@ -7,6 +7,6 @@
 // CHECK: # 1 "<module-includes>"
 // CHECK: # 1 "{{.*}}file.h" 1
 // CHECK: struct __FILE;
-// CHECK: #include "fwd.h" /* clang -E: implicit import for module fwd */
+// CHECK: #pragma clang module import fwd /* clang -E: implicit import for #include "fwd.h" */
 // CHECK: typedef struct __FILE FILE;
 // CHECK: # 2 "<module-includes>" 2

@@ -369,6 +369,8 @@ enum NodeType : unsigned {
   BUILD_VERTICAL_VECTOR,
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
+  INIT_EXEC,
+  INIT_EXEC_FROM_INPUT,
   SENDMSG,
   SENDMSGHALT,
   INTERP_MOV,

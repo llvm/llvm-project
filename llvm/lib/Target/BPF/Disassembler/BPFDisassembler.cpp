@@ -17,6 +17,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -88,9 +90,9 @@ static DecodeStatus decodeMemoryOpValue(MCInst &Inst, unsigned Insn,
 }
 
 #include "BPFGenDisassemblerTables.inc"
-
 static DecodeStatus readInstruction64(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      uint64_t &Size, uint64_t &Insn) {
+                                      uint64_t &Size, uint64_t &Insn,
+                                      bool IsLittleEndian) {
   uint64_t Lo, Hi;
 
   if (Bytes.size() < 8) {
@@ -99,8 +101,14 @@ static DecodeStatus readInstruction64(ArrayRef<uint8_t> Bytes, uint64_t Address,
   }
 
   Size = 8;
-  Hi = (Bytes[0] << 24) | (Bytes[1] << 16) | (Bytes[2] << 0) | (Bytes[3] << 8);
-  Lo = (Bytes[4] << 0) | (Bytes[5] << 8) | (Bytes[6] << 16) | (Bytes[7] << 24);
+  if (IsLittleEndian) {
+    Hi = (Bytes[0] << 24) | (Bytes[1] << 16) | (Bytes[2] << 0) | (Bytes[3] << 8);
+    Lo = (Bytes[4] << 0) | (Bytes[5] << 8) | (Bytes[6] << 16) | (Bytes[7] << 24);
+  } else {
+    Hi = (Bytes[0] << 24) | ((Bytes[1] & 0x0F) << 20) | ((Bytes[1] & 0xF0) << 12) |
+         (Bytes[2] << 8) | (Bytes[3] << 0);
+    Lo = (Bytes[4] << 24) | (Bytes[5] << 16) | (Bytes[6] << 8) | (Bytes[7] << 0);
+  }
   Insn = Make_64(Hi, Lo);
 
   return MCDisassembler::Success;
@@ -111,10 +119,11 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              uint64_t Address,
                                              raw_ostream &VStream,
                                              raw_ostream &CStream) const {
-  uint64_t Insn;
+  bool IsLittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  uint64_t Insn, Hi;
   DecodeStatus Result;
 
-  Result = readInstruction64(Bytes, Address, Size, Insn);
+  Result = readInstruction64(Bytes, Address, Size, Insn, IsLittleEndian);
   if (Result == MCDisassembler::Fail) return MCDisassembler::Fail;
 
   Result = decodeInstruction(DecoderTableBPF64, Instr, Insn,
@@ -128,7 +137,10 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return MCDisassembler::Fail;
     }
     Size = 16;
-    uint64_t Hi = (Bytes[12] << 0) | (Bytes[13] << 8) | (Bytes[14] << 16) | (Bytes[15] << 24);
+    if (IsLittleEndian)
+      Hi = (Bytes[12] << 0) | (Bytes[13] << 8) | (Bytes[14] << 16) | (Bytes[15] << 24);
+    else
+      Hi = (Bytes[12] << 24) | (Bytes[13] << 16) | (Bytes[14] << 8) | (Bytes[15] << 0);
     auto& Op = Instr.getOperand(1);
     Op.setImm(Make_64(Hi, Op.getImm()));
     break;

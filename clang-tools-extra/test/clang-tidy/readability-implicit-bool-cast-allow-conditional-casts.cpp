@@ -25,8 +25,11 @@ void regularImplicitCastIntegerToBoolIsNotIgnored() {
 void implicitCastIntegerToBoolInConditionalsIsAllowed() {
   if (functionReturningInt()) {}
   if (!functionReturningInt()) {}
+  if (functionReturningInt() && functionReturningPointer()) {}
+  if (!functionReturningInt() && !functionReturningPointer()) {}
   int value1 = functionReturningInt() ? 1 : 2;
-  int value2 = ! functionReturningInt() ? 1 : 2;
+  int value2 = !functionReturningInt() ? 1 : 2;
+  int value3 = (functionReturningInt() && functionReturningPointer() || !functionReturningInt()) ? 1 : 2;
 }
 
 void regularImplicitCastPointerToBoolIsNotIgnored() {

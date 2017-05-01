@@ -181,7 +181,7 @@ void DemandedBits::determineLiveOperandBits(
         // bits, then we must keep the highest input bit.
         if ((AOut & APInt::getHighBitsSet(BitWidth, ShiftAmt))
             .getBoolValue())
-          AB.setBit(BitWidth-1);
+          AB.setSignBit();
 
         // If the shift is exact, then the low bits are not dead
         // (they must be zero).
@@ -239,7 +239,7 @@ void DemandedBits::determineLiveOperandBits(
     if ((AOut & APInt::getHighBitsSet(AOut.getBitWidth(),
                                       AOut.getBitWidth() - BitWidth))
         .getBoolValue())
-      AB.setBit(BitWidth-1);
+      AB.setSignBit();
     break;
   case Instruction::Select:
     if (OperandNo != 0)

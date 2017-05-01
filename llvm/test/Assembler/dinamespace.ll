@@ -8,11 +8,11 @@
 !1 = distinct !{}
 !2 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 
-; CHECK: !3 = !DINamespace(name: "Namespace", scope: !0, file: !2, line: 7)
-!3 = !DINamespace(name: "Namespace", scope: !0, file: !2, line: 7)
+; CHECK: !3 = !DINamespace(name: "Namespace", scope: !0)
+!3 = !DINamespace(name: "Namespace", scope: !0)
 
 ; CHECK: !4 = !DINamespace(scope: !0)
-!4 = !DINamespace(name: "", scope: !0, file: null, line: 0)
+!4 = !DINamespace(name: "", scope: !0)
 !5 = !DINamespace(scope: !0)
 !6 = !DINamespace(scope: !0, exportSymbols: false)
 ; CHECK: !5 = !DINamespace(scope: !0, exportSymbols: true)

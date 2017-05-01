@@ -78,7 +78,7 @@ private:
   }
 
   Value *simplify(Instruction *I) {
-    return SimplifyInstruction(I, *TD, TLI, DT);
+    return SimplifyInstruction(I, {*TD, TLI, DT});
   }
 
   const DataLayout *TD;

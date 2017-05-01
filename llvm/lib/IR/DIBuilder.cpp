@@ -728,10 +728,15 @@ DISubprogram *DIBuilder::createMethod(
 }
 
 DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
-                                        DIFile *File, unsigned LineNo,
                                         bool ExportSymbols) {
-  return DINamespace::get(VMContext, getNonCompileUnitScope(Scope), File, Name,
-                          LineNo, ExportSymbols);
+
+  // It is okay to *not* make anonymous top-level namespaces distinct, because
+  // all nodes that have an anonymous namespace as their parent scope are
+  // guaranteed to be unique and/or are linked to their containing
+  // DICompileUnit. This decision is an explicit tradeoff of link time versus
+  // memory usage versus code simplicity and may get revisited in the future.
+  return DINamespace::get(VMContext, getNonCompileUnitScope(Scope), Name,
+                          ExportSymbols);
 }
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,

@@ -57,8 +57,8 @@ uint32_t DbiModuleDescriptor::getSymbolDebugInfoByteSize() const {
   return Layout->SymBytes;
 }
 
-uint32_t DbiModuleDescriptor::getLineInfoByteSize() const {
-  return Layout->LineBytes;
+uint32_t DbiModuleDescriptor::getC11LineInfoByteSize() const {
+  return Layout->C11Bytes;
 }
 
 uint32_t DbiModuleDescriptor::getC13LineInfoByteSize() const {

@@ -4108,126 +4108,127 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
       break;
     }
   }
-  if (BEValueV && StartValueV) {
-    // While we are analyzing this PHI node, handle its value symbolically.
-    const SCEV *SymbolicName = getUnknown(PN);
-    assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
-           "PHI node already processed?");
-    ValueExprMap.insert({SCEVCallbackVH(PN, this), SymbolicName});
+  if (!BEValueV || !StartValueV)
+    return nullptr;
 
-    // Using this symbolic name for the PHI, analyze the value coming around
-    // the back-edge.
-    const SCEV *BEValue = getSCEV(BEValueV);
+  // While we are analyzing this PHI node, handle its value symbolically.
+  const SCEV *SymbolicName = getUnknown(PN);
+  assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
+         "PHI node already processed?");
+  ValueExprMap.insert({SCEVCallbackVH(PN, this), SymbolicName});
 
-    // NOTE: If BEValue is loop invariant, we know that the PHI node just
-    // has a special value for the first iteration of the loop.
+  // Using this symbolic name for the PHI, analyze the value coming around
+  // the back-edge.
+  const SCEV *BEValue = getSCEV(BEValueV);
 
-    // If the value coming around the backedge is an add with the symbolic
-    // value we just inserted, then we found a simple induction variable!
-    if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(BEValue)) {
-      // If there is a single occurrence of the symbolic value, replace it
-      // with a recurrence.
-      unsigned FoundIndex = Add->getNumOperands();
+  // NOTE: If BEValue is loop invariant, we know that the PHI node just
+  // has a special value for the first iteration of the loop.
+
+  // If the value coming around the backedge is an add with the symbolic
+  // value we just inserted, then we found a simple induction variable!
+  if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(BEValue)) {
+    // If there is a single occurrence of the symbolic value, replace it
+    // with a recurrence.
+    unsigned FoundIndex = Add->getNumOperands();
+    for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
+      if (Add->getOperand(i) == SymbolicName)
+        if (FoundIndex == e) {
+          FoundIndex = i;
+          break;
+        }
+
+    if (FoundIndex != Add->getNumOperands()) {
+      // Create an add with everything but the specified operand.
+      SmallVector<const SCEV *, 8> Ops;
       for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
-        if (Add->getOperand(i) == SymbolicName)
-          if (FoundIndex == e) {
-            FoundIndex = i;
-            break;
+        if (i != FoundIndex)
+          Ops.push_back(Add->getOperand(i));
+      const SCEV *Accum = getAddExpr(Ops);
+
+      // This is not a valid addrec if the step amount is varying each
+      // loop iteration, but is not itself an addrec in this loop.
+      if (isLoopInvariant(Accum, L) ||
+          (isa<SCEVAddRecExpr>(Accum) &&
+           cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
+        SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+
+        if (auto BO = MatchBinaryOp(BEValueV, DT)) {
+          if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
+            if (BO->IsNUW)
+              Flags = setFlags(Flags, SCEV::FlagNUW);
+            if (BO->IsNSW)
+              Flags = setFlags(Flags, SCEV::FlagNSW);
+          }
+        } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
+          // If the increment is an inbounds GEP, then we know the address
+          // space cannot be wrapped around. We cannot make any guarantee
+          // about signed or unsigned overflow because pointers are
+          // unsigned but we may have a negative index from the base
+          // pointer. We can guarantee that no unsigned wrap occurs if the
+          // indices form a positive value.
+          if (GEP->isInBounds() && GEP->getOperand(0) == PN) {
+            Flags = setFlags(Flags, SCEV::FlagNW);
+
+            const SCEV *Ptr = getSCEV(GEP->getPointerOperand());
+            if (isKnownPositive(getMinusSCEV(getSCEV(GEP), Ptr)))
+              Flags = setFlags(Flags, SCEV::FlagNUW);
           }
 
-      if (FoundIndex != Add->getNumOperands()) {
-        // Create an add with everything but the specified operand.
-        SmallVector<const SCEV *, 8> Ops;
-        for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
-          if (i != FoundIndex)
-            Ops.push_back(Add->getOperand(i));
-        const SCEV *Accum = getAddExpr(Ops);
-
-        // This is not a valid addrec if the step amount is varying each
-        // loop iteration, but is not itself an addrec in this loop.
-        if (isLoopInvariant(Accum, L) ||
-            (isa<SCEVAddRecExpr>(Accum) &&
-             cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
-          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
-
-          if (auto BO = MatchBinaryOp(BEValueV, DT)) {
-            if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
-              if (BO->IsNUW)
-                Flags = setFlags(Flags, SCEV::FlagNUW);
-              if (BO->IsNSW)
-                Flags = setFlags(Flags, SCEV::FlagNSW);
-            }
-          } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
-            // If the increment is an inbounds GEP, then we know the address
-            // space cannot be wrapped around. We cannot make any guarantee
-            // about signed or unsigned overflow because pointers are
-            // unsigned but we may have a negative index from the base
-            // pointer. We can guarantee that no unsigned wrap occurs if the
-            // indices form a positive value.
-            if (GEP->isInBounds() && GEP->getOperand(0) == PN) {
-              Flags = setFlags(Flags, SCEV::FlagNW);
-
-              const SCEV *Ptr = getSCEV(GEP->getPointerOperand());
-              if (isKnownPositive(getMinusSCEV(getSCEV(GEP), Ptr)))
-                Flags = setFlags(Flags, SCEV::FlagNUW);
-            }
-
-            // We cannot transfer nuw and nsw flags from subtraction
-            // operations -- sub nuw X, Y is not the same as add nuw X, -Y
-            // for instance.
-          }
-
-          const SCEV *StartVal = getSCEV(StartValueV);
-          const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
-
-          // Okay, for the entire analysis of this edge we assumed the PHI
-          // to be symbolic.  We now need to go back and purge all of the
-          // entries for the scalars that use the symbolic expression.
-          forgetSymbolicName(PN, SymbolicName);
-          ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
-
-          // We can add Flags to the post-inc expression only if we
-          // know that it us *undefined behavior* for BEValueV to
-          // overflow.
-          if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
-            if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
-              (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
-
-          return PHISCEV;
+          // We cannot transfer nuw and nsw flags from subtraction
+          // operations -- sub nuw X, Y is not the same as add nuw X, -Y
+          // for instance.
         }
-      }
-    } else {
-      // Otherwise, this could be a loop like this:
-      //     i = 0;  for (j = 1; ..; ++j) { ....  i = j; }
-      // In this case, j = {1,+,1}  and BEValue is j.
-      // Because the other in-value of i (0) fits the evolution of BEValue
-      // i really is an addrec evolution.
-      //
-      // We can generalize this saying that i is the shifted value of BEValue
-      // by one iteration:
-      //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
-      const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
-      const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this);
-      if (Shifted != getCouldNotCompute() &&
-          Start != getCouldNotCompute()) {
+
         const SCEV *StartVal = getSCEV(StartValueV);
-        if (Start == StartVal) {
-          // Okay, for the entire analysis of this edge we assumed the PHI
-          // to be symbolic.  We now need to go back and purge all of the
-          // entries for the scalars that use the symbolic expression.
-          forgetSymbolicName(PN, SymbolicName);
-          ValueExprMap[SCEVCallbackVH(PN, this)] = Shifted;
-          return Shifted;
-        }
+        const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
+
+        // Okay, for the entire analysis of this edge we assumed the PHI
+        // to be symbolic.  We now need to go back and purge all of the
+        // entries for the scalars that use the symbolic expression.
+        forgetSymbolicName(PN, SymbolicName);
+        ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
+
+        // We can add Flags to the post-inc expression only if we
+        // know that it us *undefined behavior* for BEValueV to
+        // overflow.
+        if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
+          if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
+            (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
+
+        return PHISCEV;
       }
     }
-
-    // Remove the temporary PHI node SCEV that has been inserted while intending
-    // to create an AddRecExpr for this PHI node. We can not keep this temporary
-    // as it will prevent later (possibly simpler) SCEV expressions to be added
-    // to the ValueExprMap.
-    eraseValueFromMap(PN);
+  } else {
+    // Otherwise, this could be a loop like this:
+    //     i = 0;  for (j = 1; ..; ++j) { ....  i = j; }
+    // In this case, j = {1,+,1}  and BEValue is j.
+    // Because the other in-value of i (0) fits the evolution of BEValue
+    // i really is an addrec evolution.
+    //
+    // We can generalize this saying that i is the shifted value of BEValue
+    // by one iteration:
+    //   PHI(f(0), f({1,+,1})) --> f({0,+,1})
+    const SCEV *Shifted = SCEVShiftRewriter::rewrite(BEValue, L, *this);
+    const SCEV *Start = SCEVInitRewriter::rewrite(Shifted, L, *this);
+    if (Shifted != getCouldNotCompute() &&
+        Start != getCouldNotCompute()) {
+      const SCEV *StartVal = getSCEV(StartValueV);
+      if (Start == StartVal) {
+        // Okay, for the entire analysis of this edge we assumed the PHI
+        // to be symbolic.  We now need to go back and purge all of the
+        // entries for the scalars that use the symbolic expression.
+        forgetSymbolicName(PN, SymbolicName);
+        ValueExprMap[SCEVCallbackVH(PN, this)] = Shifted;
+        return Shifted;
+      }
+    }
   }
+
+  // Remove the temporary PHI node SCEV that has been inserted while intending
+  // to create an AddRecExpr for this PHI node. We can not keep this temporary
+  // as it will prevent later (possibly simpler) SCEV expressions to be added
+  // to the ValueExprMap.
+  eraseValueFromMap(PN);
 
   return nullptr;
 }
@@ -4388,7 +4389,7 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   // PHI's incoming blocks are in a different loop, in which case doing so
   // risks breaking LCSSA form. Instcombine would normally zap these, but
   // it doesn't have DominatorTree information, so it may miss cases.
-  if (Value *V = SimplifyInstruction(PN, getDataLayout(), &TLI, &DT, &AC))
+  if (Value *V = SimplifyInstruction(PN, {getDataLayout(), &TLI, &DT, &AC}))
     if (LI.replacementPreservesLCSSAForm(PN, V))
       return getSCEV(V);
 
@@ -5028,7 +5029,8 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     return false;
 
   // Only proceed if we can prove that I does not yield poison.
-  if (!isKnownNotFullPoison(I)) return false;
+  if (!programUndefinedIfFullPoison(I))
+    return false;
 
   // At this point we know that if I is executed, then it does not wrap
   // according to at least one of NSW or NUW. If I is not executed, then we do

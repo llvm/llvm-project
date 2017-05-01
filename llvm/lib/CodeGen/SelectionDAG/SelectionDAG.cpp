@@ -2516,11 +2516,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth + 1);
     KnownZeroLow = std::min(KnownZeroLow,
                             Known2.Zero.countTrailingOnes());
-    Known.Zero.setBits(0, KnownZeroLow);
+    Known.Zero.setLowBits(KnownZeroLow);
     break;
   }
   case ISD::UADDO:
   case ISD::SADDO:
+  case ISD::ADDCARRY:
     if (Op.getResNo() == 1) {
       // If we know the result of a setcc has the top bits zero, use this info.
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
@@ -2551,11 +2552,11 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     KnownZeroLow = std::min(KnownZeroLow,
                             Known2.Zero.countTrailingOnes());
 
-    if (Opcode == ISD::ADDE) {
-      // With ADDE, a carry bit may be added in, so we can only use this
-      // information if we know (at least) that the low two bits are clear.
-      // We then return to the caller that the low bit is unknown but that
-      // other bits are known zero.
+    if (Opcode == ISD::ADDE || Opcode == ISD::ADDCARRY) {
+      // With ADDE and ADDCARRY, a carry bit may be added in, so we can only
+      // use this information if we know (at least) that the low two bits are
+      // clear. We then return to the caller that the low bit is unknown but
+      // that other bits are known zero.
       if (KnownZeroLow >= 2)
         Known.Zero.setBits(1, KnownZeroLow);
       break;
@@ -2711,7 +2712,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
 
     // If the source's MSB is zero then we know the rest of the bits already.
-    if (Known2.Zero[BitWidth - 1]) {
+    if (Known2.isNonNegative()) {
       Known.Zero = Known2.Zero;
       Known.One = Known2.One;
       break;
@@ -2719,7 +2720,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
 
     // We only know that the absolute values's MSB will be zero iff there is
     // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
-    Known2.One.clearBit(BitWidth - 1);
+    Known2.One.clearSignBit();
     if (Known2.One.getBoolValue()) {
       Known.Zero = APInt::getSignMask(BitWidth);
       break;
@@ -3045,7 +3046,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If we are subtracting one from a positive number, there is no carry
         // out of the result.
-        if (Known.Zero.isNegative())
+        if (Known.isNonNegative())
           return Tmp;
       }
 
@@ -3069,7 +3070,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If the input is known to be positive (the sign bit is known clear),
         // the output of the NEG has the same number of sign bits as the input.
-        if (Known.Zero.isNegative())
+        if (Known.isNonNegative())
           return Tmp2;
 
         // Otherwise, we treat this like a SUB.
@@ -3208,9 +3209,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   computeKnownBits(Op, Known, DemandedElts, Depth);
 
   APInt Mask;
-  if (Known.Zero.isNegative()) {        // sign bit is 0
+  if (Known.isNonNegative()) {        // sign bit is 0
     Mask = Known.Zero;
-  } else if (Known.One.isNegative()) {  // sign bit is 1;
+  } else if (Known.isNegative()) {  // sign bit is 1;
     Mask = Known.One;
   } else {
     // Nothing known.

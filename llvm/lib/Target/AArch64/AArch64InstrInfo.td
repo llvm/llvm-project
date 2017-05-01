@@ -314,8 +314,8 @@ def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 // AArch64 Instruction Predicate Definitions.
 def IsDarwin  : Predicate<"Subtarget->isTargetDarwin()">;
 def IsNotDarwin: Predicate<"!Subtarget->isTargetDarwin()">;
-def ForCodeSize   : Predicate<"ForCodeSize">;
-def NotForCodeSize   : Predicate<"!ForCodeSize">;
+def ForCodeSize   : Predicate<"Subtarget->getForCodeSize()">;
+def NotForCodeSize   : Predicate<"!Subtarget->getForCodeSize()">;
 
 include "AArch64InstrFormats.td"
 

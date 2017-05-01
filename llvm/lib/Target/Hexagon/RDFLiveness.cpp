@@ -759,8 +759,13 @@ void Liveness::computeLiveIns() {
             // all related shadows as a single use cluster.
             RegisterRef S(RS.first, P.second);
             NodeList Ds = getAllReachingDefs(S, PUA, true, false, NoRegs);
-            for (NodeAddr<DefNode*> D : Ds)
-              LOX[S.Reg].insert({D.Id, S.Mask});
+            for (NodeAddr<DefNode*> D : Ds) {
+              // Calculate the mask corresponding to the visited def.
+              RegisterAggr TA(PRI);
+              TA.insert(D.Addr->getRegRef(DFG)).intersect(S);
+              LaneBitmask TM = TA.makeRegRef().Mask;
+              LOX[S.Reg].insert({D.Id, TM});
+            }
           }
         }
 

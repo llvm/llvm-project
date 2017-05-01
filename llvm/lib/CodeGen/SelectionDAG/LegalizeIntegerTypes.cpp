@@ -135,6 +135,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULO:
   case ISD::UMULO:       Res = PromoteIntRes_XMULO(N, ResNo); break;
 
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
+
   case ISD::ATOMIC_LOAD:
     Res = PromoteIntRes_Atomic0(cast<AtomicSDNode>(N)); break;
 
@@ -511,9 +514,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   // Simply change the return type of the boolean result.
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(1));
   EVT ValueVTs[] = { N->getValueType(0), NVT };
-  SDValue Ops[] = { N->getOperand(0), N->getOperand(1) };
+  SDValue Ops[3] = { N->getOperand(0), N->getOperand(1) };
+  unsigned NumOps = N->getNumOperands();
+  assert(NumOps <= 3 && "Too many operands");
+  if (NumOps == 3)
+    Ops[2] = N->getOperand(2);
+
   SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N),
-                            DAG.getVTList(ValueVTs), Ops);
+                            DAG.getVTList(ValueVTs), makeArrayRef(Ops, NumOps));
 
   // Modified the sum result - switch anything that used the old sum to use
   // the new one.
@@ -763,6 +771,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo) {
   return Res;
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
+  if (ResNo == 1)
+    return PromoteIntRes_Overflow(N);
+  llvm_unreachable("Not implemented");
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   // Promote the overflow bit trivially.
   if (ResNo == 1)
@@ -925,6 +939,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SRL:
   case ISD::ROTL:
   case ISD::ROTR: Res = PromoteIntOp_Shift(N); break;
+
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY: Res = PromoteIntOp_ADDSUBCARRY(N, OpNo); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1277,6 +1294,30 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
                                 N->getOperand(0).getValueType().getScalarType());
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 2 && "Don't know how to promote this operand!");
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Carry = N->getOperand(2);
+  SDLoc DL(N);
+
+  auto VT = getSetCCResultType(LHS.getValueType());
+  TargetLoweringBase::BooleanContent BoolType = TLI.getBooleanContents(VT);
+  switch (BoolType) {
+  case TargetLoweringBase::UndefinedBooleanContent:
+    Carry = DAG.getAnyExtOrTrunc(Carry, DL, VT);
+    break;
+  case TargetLoweringBase::ZeroOrOneBooleanContent:
+    Carry = DAG.getZExtOrTrunc(Carry, DL, VT);
+    break;
+  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+    Carry = DAG.getSExtOrTrunc(Carry, DL, VT);
+    break;
+  }
+
+  return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
+}
 
 //===----------------------------------------------------------------------===//
 //  Integer Result Expansion
@@ -1395,6 +1436,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ADDE:
   case ISD::SUBE: ExpandIntRes_ADDSUBE(N, Lo, Hi); break;
+
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY: ExpandIntRes_ADDSUBCARRY(N, Lo, Hi); break;
 
   case ISD::SHL:
   case ISD::SRA:
@@ -1739,6 +1783,23 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
   SDValue LoOps[2] = { LHSL, RHSL };
   SDValue HiOps[3] = { LHSH, RHSH };
 
+  bool HasOpCarry = TLI.isOperationLegalOrCustom(
+      N->getOpcode() == ISD::ADD ? ISD::ADDCARRY : ISD::SUBCARRY,
+      TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
+  if (HasOpCarry) {
+    SDVTList VTList = DAG.getVTList(NVT, getSetCCResultType(NVT));
+    if (N->getOpcode() == ISD::ADD) {
+      Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
+      HiOps[2] = Lo.getValue(1);
+      Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, HiOps);
+    } else {
+      Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
+      HiOps[2] = Lo.getValue(1);
+      Hi = DAG.getNode(ISD::SUBCARRY, dl, VTList, HiOps);
+    }
+    return;
+  }
+
   // Do not generate ADDC/ADDE or SUBC/SUBE if the target does not support
   // them.  TODO: Teach operation legalization how to expand unsupported
   // ADDC/ADDE/SUBC/SUBE.  The problem is that these operations generate
@@ -1768,7 +1829,8 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
                                    ISD::UADDO : ISD::USUBO,
                                  TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
   if (hasOVF) {
-    SDVTList VTList = DAG.getVTList(NVT, NVT);
+    EVT OvfVT = getSetCCResultType(NVT);
+    SDVTList VTList = DAG.getVTList(NVT, OvfVT);
     TargetLoweringBase::BooleanContent BoolType = TLI.getBooleanContents(NVT);
     int RevOpc;
     if (N->getOpcode() == ISD::ADD) {
@@ -1784,12 +1846,14 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
 
     switch (BoolType) {
     case TargetLoweringBase::UndefinedBooleanContent:
-      OVF = DAG.getNode(ISD::AND, dl, NVT, DAG.getConstant(1, dl, NVT), OVF);
+      OVF = DAG.getNode(ISD::AND, dl, OvfVT, DAG.getConstant(1, dl, OvfVT), OVF);
       LLVM_FALLTHROUGH;
     case TargetLoweringBase::ZeroOrOneBooleanContent:
+      OVF = DAG.getZExtOrTrunc(OVF, dl, NVT);
       Hi = DAG.getNode(N->getOpcode(), dl, NVT, Hi, OVF);
       break;
     case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+      OVF = DAG.getSExtOrTrunc(OVF, dl, NVT);
       Hi = DAG.getNode(RevOpc, dl, NVT, Hi, OVF);
     }
     return;
@@ -1857,6 +1921,71 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUBE(SDNode *N,
   SDVTList VTList = DAG.getVTList(LHSL.getValueType(), MVT::Glue);
   SDValue LoOps[3] = { LHSL, RHSL, N->getOperand(2) };
   SDValue HiOps[3] = { LHSH, RHSH };
+
+  Lo = DAG.getNode(N->getOpcode(), dl, VTList, LoOps);
+  HiOps[2] = Lo.getValue(1);
+  Hi = DAG.getNode(N->getOpcode(), dl, VTList, HiOps);
+
+  // Legalized the flag result - switch anything that used the old flag to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Hi.getValue(1));
+}
+
+void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
+                                             SDValue &Lo, SDValue &Hi) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc dl(N);
+
+  SDValue Ovf;
+
+  bool HasOpCarry = TLI.isOperationLegalOrCustom(
+      N->getOpcode() == ISD::ADD ? ISD::ADDCARRY : ISD::SUBCARRY,
+      TLI.getTypeToExpandTo(*DAG.getContext(), LHS.getValueType()));
+
+  if (HasOpCarry) {
+    // Expand the subcomponents.
+    SDValue LHSL, LHSH, RHSL, RHSH;
+    GetExpandedInteger(LHS, LHSL, LHSH);
+    GetExpandedInteger(RHS, RHSL, RHSH);
+    SDVTList VTList = DAG.getVTList(LHSL.getValueType(), N->getValueType(1));
+    SDValue LoOps[2] = { LHSL, RHSL };
+    SDValue HiOps[3] = { LHSH, RHSH };
+
+    unsigned Opc = N->getOpcode() == ISD::UADDO ? ISD::ADDCARRY : ISD::SUBCARRY;
+    Lo = DAG.getNode(N->getOpcode(), dl, VTList, LoOps);
+    HiOps[2] = Lo.getValue(1);
+    Hi = DAG.getNode(Opc, dl, VTList, HiOps);
+
+    Ovf = Hi.getValue(1);
+  } else {
+    // Expand the result by simply replacing it with the equivalent
+    // non-overflow-checking operation.
+    auto Opc = N->getOpcode() == ISD::UADDO ? ISD::ADD : ISD::SUB;
+    SDValue Sum = DAG.getNode(Opc, dl, LHS.getValueType(), LHS, RHS);
+    SplitInteger(Sum, Lo, Hi);
+
+    // Calculate the overflow: addition overflows iff a + b < a, and subtraction
+    // overflows iff a - b > a.
+    auto Cond = N->getOpcode() == ISD::UADDO ? ISD::SETULT : ISD::SETUGT;
+    Ovf = DAG.getSetCC(dl, N->getValueType(1), Sum, LHS, Cond);
+  }
+
+  // Legalized the flag result - switch anything that used the old flag to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Ovf);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_ADDSUBCARRY(SDNode *N,
+                                                SDValue &Lo, SDValue &Hi) {
+  // Expand the subcomponents.
+  SDValue LHSL, LHSH, RHSL, RHSH;
+  SDLoc dl(N);
+  GetExpandedInteger(N->getOperand(0), LHSL, LHSH);
+  GetExpandedInteger(N->getOperand(1), RHSL, RHSH);
+  SDVTList VTList = DAG.getVTList(LHSL.getValueType(), N->getValueType(1));
+  SDValue LoOps[3] = { LHSL, RHSL, N->getOperand(2) };
+  SDValue HiOps[3] = { LHSH, RHSH, SDValue() };
 
   Lo = DAG.getNode(N->getOpcode(), dl, VTList, LoOps);
   HiOps[2] = Lo.getValue(1);
@@ -2531,29 +2660,6 @@ void DAGTypeLegalizer::ExpandIntRes_TRUNCATE(SDNode *N,
                    DAG.getConstant(NVT.getSizeInBits(), dl,
                                    TLI.getPointerTy(DAG.getDataLayout())));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, NVT, Hi);
-}
-
-void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
-                                             SDValue &Lo, SDValue &Hi) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDLoc dl(N);
-
-  // Expand the result by simply replacing it with the equivalent
-  // non-overflow-checking operation.
-  SDValue Sum = DAG.getNode(N->getOpcode() == ISD::UADDO ?
-                            ISD::ADD : ISD::SUB, dl, LHS.getValueType(),
-                            LHS, RHS);
-  SplitInteger(Sum, Lo, Hi);
-
-  // Calculate the overflow: addition overflows iff a + b < a, and subtraction
-  // overflows iff a - b > a.
-  SDValue Ofl = DAG.getSetCC(dl, N->getValueType(1), Sum, LHS,
-                             N->getOpcode () == ISD::UADDO ?
-                             ISD::SETULT : ISD::SETUGT);
-
-  // Use the calculated overflow everywhere.
-  ReplaceValueWith(SDValue(N, 1), Ofl);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,

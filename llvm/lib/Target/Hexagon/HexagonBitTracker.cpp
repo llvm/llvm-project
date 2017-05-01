@@ -57,12 +57,10 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
   // tion). To avoid the complications with in-memory arguments, only consi-
   // der the initial sequence of formal parameters that are known to be
   // passed via registers.
-  unsigned AttrIdx = 0;
   unsigned InVirtReg, InPhysReg = 0;
   const Function &F = *MF.getFunction();
   typedef Function::const_arg_iterator arg_iterator;
   for (arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I) {
-    AttrIdx++;
     const Argument &Arg = *I;
     Type *ATy = Arg.getType();
     unsigned Width = 0;
@@ -74,8 +72,7 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
     // Module::AnyPointerSize.
     if (Width == 0 || Width > 64)
       break;
-    AttributeList Attrs = F.getAttributes();
-    if (Attrs.hasAttribute(AttrIdx, Attribute::ByVal))
+    if (Arg.hasAttribute(Attribute::ByVal))
       continue;
     InPhysReg = getNextPhysReg(InPhysReg, Width);
     if (!InPhysReg)
@@ -83,9 +80,9 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
     InVirtReg = getVirtRegFor(InPhysReg);
     if (!InVirtReg)
       continue;
-    if (Attrs.hasAttribute(AttrIdx, Attribute::SExt))
+    if (Arg.hasAttribute(Attribute::SExt))
       VRX.insert(std::make_pair(InVirtReg, ExtType(ExtType::SExt, Width)));
-    else if (Attrs.hasAttribute(AttrIdx, Attribute::ZExt))
+    else if (Arg.hasAttribute(Attribute::ZExt))
       VRX.insert(std::make_pair(InVirtReg, ExtType(ExtType::ZExt, Width)));
   }
 }

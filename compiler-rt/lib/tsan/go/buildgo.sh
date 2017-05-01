@@ -5,6 +5,7 @@ set -e
 SRCS="
 	tsan_go.cc
 	../rtl/tsan_clock.cc
+	../rtl/tsan_external.cc
 	../rtl/tsan_flags.cc
 	../rtl/tsan_interface_atomic.cc
 	../rtl/tsan_md5.cc

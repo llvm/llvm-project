@@ -327,6 +327,9 @@ void ImportFile::parse() {
 
   ImpSym = cast<DefinedImportData>(
       Symtab->addImportData(ImpName, this)->body());
+  if (Hdr->getType() == llvm::COFF::IMPORT_CONST)
+    ConstSym =
+        cast<DefinedImportData>(Symtab->addImportData(Name, this)->body());
 
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call

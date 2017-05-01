@@ -10,38 +10,6 @@ define i999 @test0(i999 %A) {
         ret i999 %B
 }
 
-define i477 @test1(i477 %A, i477 %B) {
-        ;; (~A & ~B) == (~(A | B)) - De Morgan's Law
-        %NotA = xor i477 %A, -1
-        %NotB = xor i477 %B, -1
-        %C1 = and i477 %NotA, %NotB
-        ret i477 %C1
-}
-
-define i129 @tst(i129 %A, i129 %B) {
-        ;; (~A & ~B) == (~(A | B)) - De Morgan's Law
-        %NotA = xor i129 %A, -1
-        %NotB = xor i129 %B, -1
-        %C1 = and i129 %NotA, %NotB
-        ret i129 %C1
-}
-
-define i65 @test(i65 %A, i65 %B) {
-        ;; (~A & ~B) == (~(A | B)) - De Morgan's Law
-        %NotA = xor i65 %A, -1
-        %NotB = xor i65 -1, %B
-        %C1 = and i65 %NotA, %NotB
-        ret i65 %C1
-}
-
-define i66 @tes(i66 %A, i66 %B) {
-        ;; (~A & ~B) == (~(A | B)) - De Morgan's Law
-        %NotA = xor i66 %A, -1
-        %NotB = xor i66 %B, -1
-        %C1 = and i66 %NotA, %NotB
-        ret i66 %C1
-}
-
 define i1005 @test2(i1005 %x) {
         %tmp.2 = and i1005 %x, -1 ; noop
         ret i1005 %tmp.2

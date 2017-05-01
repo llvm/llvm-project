@@ -2097,6 +2097,12 @@ public:
     return LibcallCallingConvs[Call];
   }
 
+  /// Execute target specific actions to finalize target lowering.
+  /// This is used to set extra flags in MachineFrameInformation and freezing
+  /// the set of reserved registers.
+  /// The default implementation just freezes the set of reserved registers.
+  virtual void finalizeLowering(MachineFunction &MF) const;
+
 private:
   const TargetMachine &TM;
 
@@ -2652,12 +2658,6 @@ public:
   /// Return true if the target supports that a subset of CSRs for the given
   /// machine function is handled explicitly via copies.
   virtual bool supportSplitCSR(MachineFunction *MF) const {
-    return false;
-  }
-
-  /// Return true if the MachineFunction contains a COPY which would imply
-  /// HasCopyImplyingStackAdjustment.
-  virtual bool hasCopyImplyingStackAdjustment(MachineFunction *MF) const {
     return false;
   }
 

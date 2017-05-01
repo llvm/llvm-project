@@ -485,27 +485,6 @@
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:       LineInfo [
-; EMPTY-NEXT:         Lines {
-; EMPTY-NEXT:           FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:           Line {
-; EMPTY-NEXT:             Offset: 0
-; EMPTY-NEXT:             LineNumberStart: 5
-; EMPTY-NEXT:             EndDelta: 0
-; EMPTY-NEXT:             IsStatement: Yes
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Line {
-; EMPTY-NEXT:             Offset: 3
-; EMPTY-NEXT:             LineNumberStart: 6
-; EMPTY-NEXT:             EndDelta: 0
-; EMPTY-NEXT:             IsStatement: Yes
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Line {
-; EMPTY-NEXT:             Offset: 8
-; EMPTY-NEXT:             LineNumberStart: 7
-; EMPTY-NEXT:             EndDelta: 0
-; EMPTY-NEXT:             IsStatement: Yes
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         FileChecksums {
 ; EMPTY-NEXT:           Checksum {
 ; EMPTY-NEXT:             FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
@@ -513,6 +492,35 @@
 ; EMPTY-NEXT:             Checksum (
 ; EMPTY-NEXT:               0000: A0A5BD0D 3ECD93FC 29D19DE8 26FBF4BC  |....>...)...&...|
 ; EMPTY-NEXT:             )
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Lines {
+; EMPTY-NEXT:           LineFragment {
+; EMPTY-NEXT:             RelocSegment: 1
+; EMPTY-NEXT:             RelocOffset: 16
+; EMPTY-NEXT:             CodeSize: 10
+; EMPTY-NEXT:             HasColumns: 0
+; EMPTY-NEXT:             Lines {
+; EMPTY-NEXT:               FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:               Line {
+; EMPTY-NEXT:                 Offset: 0
+; EMPTY-NEXT:                 LineNumberStart: 5
+; EMPTY-NEXT:                 EndDelta: 0
+; EMPTY-NEXT:                 IsStatement: Yes
+; EMPTY-NEXT:               }
+; EMPTY-NEXT:               Line {
+; EMPTY-NEXT:                 Offset: 3
+; EMPTY-NEXT:                 LineNumberStart: 6
+; EMPTY-NEXT:                 EndDelta: 0
+; EMPTY-NEXT:                 IsStatement: Yes
+; EMPTY-NEXT:               }
+; EMPTY-NEXT:               Line {
+; EMPTY-NEXT:                 Offset: 8
+; EMPTY-NEXT:                 LineNumberStart: 7
+; EMPTY-NEXT:                 EndDelta: 0
+; EMPTY-NEXT:                 IsStatement: Yes
+; EMPTY-NEXT:               }
+; EMPTY-NEXT:             }
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:       ]

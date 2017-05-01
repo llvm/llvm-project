@@ -61,9 +61,6 @@ class InstructionSelector {
 public:
   virtual ~InstructionSelector() {}
 
-  /// This is executed before selecting a function.
-  virtual void beginFunction(const MachineFunction &MF) {}
-
   /// Select the (possibly generic) instruction \p I to only use target-specific
   /// opcodes. It is OK to insert multiple instructions, but they cannot be
   /// generic pre-isel instructions.

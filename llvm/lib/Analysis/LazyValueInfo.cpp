@@ -920,7 +920,7 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(LVILatticeVal &BBLV,
   // value is overdefined.
   if (BB == &BB->getParent()->getEntryBlock()) {
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
-    // Bofore giving up, see if we can prove the pointer non-null local to
+    // Before giving up, see if we can prove the pointer non-null local to
     // this particular block.
     if (Val->getType()->isPointerTy() &&
         (isKnownNonNull(Val) || isObjectDereferencedInBlock(Val, BB))) {

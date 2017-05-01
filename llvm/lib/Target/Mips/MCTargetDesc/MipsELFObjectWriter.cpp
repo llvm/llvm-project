@@ -374,6 +374,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_TLS_DTPREL_HI16;
   case Mips::fixup_MICROMIPS_TLS_DTPREL_LO16:
     return ELF::R_MICROMIPS_TLS_DTPREL_LO16;
+  case Mips::fixup_MICROMIPS_GOTTPREL:
+    return ELF::R_MICROMIPS_TLS_GOTTPREL;
   case Mips::fixup_MICROMIPS_TLS_TPREL_HI16:
     return ELF::R_MICROMIPS_TLS_TPREL_HI16;
   case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:

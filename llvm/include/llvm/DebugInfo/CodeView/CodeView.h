@@ -547,7 +547,8 @@ enum class TrampolineType : uint16_t { TrampIncremental, BranchIsland };
 enum class FileChecksumKind : uint8_t { None, MD5, SHA1, SHA256 };
 
 enum LineFlags : uint16_t {
-  HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
+  LF_None = 0,
+  LF_HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
 };
 }
 }

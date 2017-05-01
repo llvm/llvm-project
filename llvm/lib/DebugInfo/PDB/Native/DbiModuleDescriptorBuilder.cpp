@@ -77,10 +77,10 @@ uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
 }
 
 void DbiModuleDescriptorBuilder::finalize() {
-  Layout.C13Bytes = 0;
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
-  Layout.LineBytes = 0;
+  Layout.C11Bytes = 0;
+  Layout.C13Bytes = 0;
   (void)Layout.Mod;         // Set in constructor
   (void)Layout.ModDiStream; // Set in finalizeMsfLayout
   Layout.NumFiles = SourceFiles.size();

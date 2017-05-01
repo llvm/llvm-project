@@ -8173,15 +8173,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   findArgumentCopyElisionCandidates(DL, FuncInfo, ArgCopyElisionCandidates);
 
   // Set up the incoming argument description vector.
-  unsigned Idx = 0;
   for (const Argument &Arg : F.args()) {
-    ++Idx;
+    unsigned ArgNo = Arg.getArgNo();
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
     bool isArgValueUsed = !Arg.use_empty();
     unsigned PartBase = 0;
     Type *FinalType = Arg.getType();
-    if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
+    if (Arg.hasAttribute(Attribute::ByVal))
       FinalType = cast<PointerType>(FinalType)->getElementType();
     bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
         FinalType, F.getCallingConv(), F.isVarArg());
@@ -8192,11 +8191,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       ISD::ArgFlagsTy Flags;
       unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
 
-      if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))
+      if (Arg.hasAttribute(Attribute::ZExt))
         Flags.setZExt();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
+      if (Arg.hasAttribute(Attribute::SExt))
         Flags.setSExt();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::InReg)) {
+      if (Arg.hasAttribute(Attribute::InReg)) {
         // If we are using vectorcall calling convention, a structure that is
         // passed InReg - is surely an HVA
         if (F.getCallingConv() == CallingConv::X86_VectorCall &&
@@ -8209,15 +8208,15 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // Set InReg Flag
         Flags.setInReg();
       }
-      if (F.getAttributes().hasAttribute(Idx, Attribute::StructRet))
+      if (Arg.hasAttribute(Attribute::StructRet))
         Flags.setSRet();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftSelf))
+      if (Arg.hasAttribute(Attribute::SwiftSelf))
         Flags.setSwiftSelf();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftError))
+      if (Arg.hasAttribute(Attribute::SwiftError))
         Flags.setSwiftError();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
+      if (Arg.hasAttribute(Attribute::ByVal))
         Flags.setByVal();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::InAlloca)) {
+      if (Arg.hasAttribute(Attribute::InAlloca)) {
         Flags.setInAlloca();
         // Set the byval flag for CCAssignFn callbacks that don't know about
         // inalloca.  This way we can know how many bytes we should've allocated
@@ -8228,7 +8227,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
       if (F.getCallingConv() == CallingConv::X86_INTR) {
         // IA Interrupt passes frame (1st parameter) by value in the stack.
-        if (Idx == 1)
+        if (ArgNo == 0)
           Flags.setByVal();
       }
       if (Flags.isByVal() || Flags.isInAlloca()) {
@@ -8238,13 +8237,13 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // For ByVal, alignment should be passed from FE.  BE will guess if
         // this info is not there but there are cases it cannot get right.
         unsigned FrameAlign;
-        if (F.getParamAlignment(Idx))
-          FrameAlign = F.getParamAlignment(Idx);
+        if (Arg.getParamAlignment())
+          FrameAlign = Arg.getParamAlignment();
         else
           FrameAlign = TLI->getByValTypeAlignment(ElementTy, DL);
         Flags.setByValAlign(FrameAlign);
       }
-      if (F.getAttributes().hasAttribute(Idx, Attribute::Nest))
+      if (Arg.hasAttribute(Attribute::Nest))
         Flags.setNest();
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
@@ -8256,7 +8255,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       unsigned NumRegs = TLI->getNumRegisters(*CurDAG->getContext(), VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
         ISD::InputArg MyFlags(Flags, RegisterVT, VT, isArgValueUsed,
-                              Idx-1, PartBase+i*RegisterVT.getStoreSize());
+                              ArgNo, PartBase+i*RegisterVT.getStoreSize());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
@@ -8297,7 +8296,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   // Set up the argument values.
   unsigned i = 0;
-  Idx = 0;
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
@@ -8319,14 +8317,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     DAG.setRoot(NewRoot);
 
     // i indexes lowered arguments.  Bump it past the hidden sret argument.
-    // Idx indexes LLVM arguments.  Don't touch it.
     ++i;
   }
 
   SmallVector<SDValue, 4> Chains;
   DenseMap<int, int> ArgCopyElisionFrameIndexMap;
   for (const Argument &Arg : F.args()) {
-    ++Idx;
     SmallVector<SDValue, 4> ArgValues;
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
@@ -8348,7 +8344,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // debugging information.
     bool isSwiftErrorArg =
         TLI->supportSwiftError() &&
-        F.getAttributes().hasAttribute(Idx, Attribute::SwiftError);
+        Arg.hasAttribute(Attribute::SwiftError);
     if (!ArgHasUses && !isSwiftErrorArg) {
       SDB->setUnusedArgValue(&Arg, InVals[i]);
 
@@ -8368,9 +8364,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // function.
       if (ArgHasUses || isSwiftErrorArg) {
         Optional<ISD::NodeType> AssertOp;
-        if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
+        if (Arg.hasAttribute(Attribute::SExt))
           AssertOp = ISD::AssertSext;
-        else if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))
+        else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
         ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,

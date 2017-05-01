@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-// For now this is a simple wrapper around two APInts.
+// Struct for tracking the known zeros and ones of a value.
 struct KnownBits {
   APInt Zero;
   APInt One;
@@ -35,6 +35,24 @@ struct KnownBits {
     assert(Zero.getBitWidth() == One.getBitWidth() &&
            "Zero and One should have the same width!");
     return Zero.getBitWidth();
+  }
+
+  /// Returns true if this value is known to be negative.
+  bool isNegative() const { return One.isSignBitSet(); }
+
+  /// Returns true if this value is known to be non-negative.
+  bool isNonNegative() const { return Zero.isSignBitSet(); }
+
+  /// Make this value negative.
+  void makeNegative() {
+    assert(!isNonNegative() && "Can't make a non-negative value negative");
+    One.setSignBit();
+  }
+
+  /// Make this value negative.
+  void makeNonNegative() {
+    assert(!isNegative() && "Can't make a negative value non-negative");
+    Zero.setSignBit();
   }
 };
 

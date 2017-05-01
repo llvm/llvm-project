@@ -2828,7 +2828,8 @@ public:
       if (IntInfo->ModRef & CodeGenIntrinsic::MR_Mod)
         mayStore = true;// Intrinsics that can write to memory are 'mayStore'.
 
-      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem)
+      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem ||
+          IntInfo->hasSideEffects)
         // ReadWriteMem intrinsics can have other strange effects.
         hasSideEffects = true;
     }

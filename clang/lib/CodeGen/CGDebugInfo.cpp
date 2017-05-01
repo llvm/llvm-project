@@ -4034,11 +4034,9 @@ CGDebugInfo::getOrCreateNameSpace(const NamespaceDecl *NSDecl) {
   if (I != NameSpaceCache.end())
     return cast<llvm::DINamespace>(I->second);
 
-  unsigned LineNo = getLineNumber(NSDecl->getLocation());
-  llvm::DIFile *FileD = getOrCreateFile(NSDecl->getLocation());
   llvm::DIScope *Context = getDeclContextDescriptor(NSDecl);
-  llvm::DINamespace *NS = DBuilder.createNameSpace(
-      Context, NSDecl->getName(), FileD, LineNo, NSDecl->isInline());
+  llvm::DINamespace *NS =
+      DBuilder.createNameSpace(Context, NSDecl->getName(), NSDecl->isInline());
   NameSpaceCache[NSDecl].reset(NS);
   return NS;
 }

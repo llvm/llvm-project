@@ -10,24 +10,18 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTVISITOR_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
-#include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/BinaryStreamRef.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
 
 namespace codeview {
+
+class ModuleDebugFileChecksumFragment;
+class ModuleDebugFragmentRecord;
+class ModuleDebugInlineeLineFragment;
+class ModuleDebugLineFragment;
+class ModuleDebugUnknownFragment;
 
 class ModuleDebugFragmentVisitor {
 public:
@@ -43,10 +37,25 @@ public:
   virtual Error visitFileChecksums(ModuleDebugFileChecksumFragment &Checksums) {
     return Error::success();
   }
+
+  virtual Error finished() { return Error::success(); }
 };
 
 Error visitModuleDebugFragment(const ModuleDebugFragmentRecord &R,
                                ModuleDebugFragmentVisitor &V);
+
+template <typename T>
+Error visitModuleDebugFragments(T &&FragmentRange,
+                                ModuleDebugFragmentVisitor &V) {
+  for (const auto &L : FragmentRange) {
+    if (auto EC = visitModuleDebugFragment(L, V))
+      return EC;
+  }
+  if (auto EC = V.finished())
+    return EC;
+  return Error::success();
+}
+
 } // end namespace codeview
 
 } // end namespace llvm

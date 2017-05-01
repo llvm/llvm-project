@@ -1199,9 +1199,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   finishPendingPhis();
 
-  // Now that the MachineFrameInfo has been configured, no further changes to
-  // the reserved registers are possible.
-  MRI->freezeReservedRegs(*MF);
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  TLI.finalizeLowering(*MF);
 
   // Merge the argument lowering and constants block with its single
   // successor, the LLVM-IR entry block.  We want the basic block to

@@ -2350,7 +2350,7 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
                                           const MachineInstr &Orig,
                                           int FrameIndex) {
   const MDNode *Var = Orig.getDebugVariable();
-  auto *Expr = cast_or_null<DIExpression>(Orig.getDebugExpression());
+  const auto *Expr = cast_or_null<DIExpression>(Orig.getDebugExpression());
   bool IsIndirect = Orig.isIndirectDebugValue();
   uint64_t Offset = IsIndirect ? Orig.getOperand(1).getImm() : 0;
   DebugLoc DL = Orig.getDebugLoc();
@@ -2359,13 +2359,8 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
   // If the DBG_VALUE already was a memory location, add an extra
   // DW_OP_deref. Otherwise just turning this from a register into a
   // memory/indirect location is sufficient.
-  if (IsIndirect) {
-    SmallVector<uint64_t, 8> Ops;
-    Ops.push_back(dwarf::DW_OP_deref);
-    if (Expr)
-      Ops.append(Expr->elements_begin(), Expr->elements_end());
-    Expr = DIExpression::get(Expr->getContext(), Ops);
-  }
+  if (IsIndirect)
+    Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
   return BuildMI(BB, I, DL, Orig.getDesc())
       .addFrameIndex(FrameIndex)
       .addImm(Offset)

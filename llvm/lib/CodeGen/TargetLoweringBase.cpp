@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -921,6 +922,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::USUBO, VT, Expand);
     setOperationAction(ISD::SMULO, VT, Expand);
     setOperationAction(ISD::UMULO, VT, Expand);
+
+    // ADDCARRY operations default to expand
+    setOperationAction(ISD::ADDCARRY, VT, Expand);
+    setOperationAction(ISD::SUBCARRY, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
@@ -2107,4 +2112,8 @@ int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
 int TargetLoweringBase::getDivRefinementSteps(EVT VT,
                                               MachineFunction &MF) const {
   return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
+}
+
+void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
+  MF.getRegInfo().freezeReservedRegs(MF);
 }

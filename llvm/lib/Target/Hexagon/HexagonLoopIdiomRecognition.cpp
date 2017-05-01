@@ -1420,7 +1420,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
 void PolynomialMultiplyRecognize::cleanupLoopBody(BasicBlock *LoopB) {
   for (auto &I : *LoopB)
-    if (Value *SV = SimplifyInstruction(&I, DL, &TLI, &DT))
+    if (Value *SV = SimplifyInstruction(&I, {DL, &TLI, &DT}))
       I.replaceAllUsesWith(SV);
 
   for (auto I = LoopB->begin(), N = I; I != LoopB->end(); I = N) {
@@ -2044,7 +2044,7 @@ CleanupAndExit:
                                SCEV::FlagNUW);
   Value *NumBytes = Expander.expandCodeFor(NumBytesS, IntPtrTy, ExpPt);
   if (Instruction *In = dyn_cast<Instruction>(NumBytes))
-    if (Value *Simp = SimplifyInstruction(In, *DL, TLI, DT))
+    if (Value *Simp = SimplifyInstruction(In, {*DL, TLI, DT}))
       NumBytes = Simp;
 
   CallInst *NewCall;
@@ -2156,7 +2156,7 @@ CleanupAndExit:
       Value *NumWords = Expander.expandCodeFor(NumWordsS, Int32Ty,
                                                MemmoveB->getTerminator());
       if (Instruction *In = dyn_cast<Instruction>(NumWords))
-        if (Value *Simp = SimplifyInstruction(In, *DL, TLI, DT))
+        if (Value *Simp = SimplifyInstruction(In, {*DL, TLI, DT}))
           NumWords = Simp;
 
       Value *Op0 = (StoreBasePtr->getType() == Int32PtrTy)

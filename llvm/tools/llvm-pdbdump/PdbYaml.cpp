@@ -40,6 +40,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceFileChecksumEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceColumnEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineBlock)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSymbolRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
@@ -162,8 +163,7 @@ template <> struct ScalarEnumerationTraits<llvm::codeview::FileChecksumKind> {
 
 template <> struct ScalarBitSetTraits<llvm::codeview::LineFlags> {
   static void bitset(IO &io, llvm::codeview::LineFlags &Flags) {
-    io.bitSetCase(Flags, "HasColumnInfo",
-                  llvm::codeview::LineFlags::HaveColumns);
+    io.bitSetCase(Flags, "HasColumnInfo", llvm::codeview::LF_HaveColumns);
     io.enumFallback<Hex16>(Flags);
   }
 };
@@ -339,15 +339,15 @@ void MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
   IO.mapRequired("Flags", Obj.Flags);
   IO.mapRequired("RelocOffset", Obj.RelocOffset);
   IO.mapRequired("RelocSegment", Obj.RelocSegment);
-  IO.mapRequired("LineInfo", Obj.LineInfo, Context);
+  IO.mapRequired("Blocks", Obj.Blocks, Context);
 }
 
 void MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
                           pdb::yaml::SerializationContext>::
     mapping(IO &IO, PdbSourceFileInfo &Obj,
             pdb::yaml::SerializationContext &Context) {
-  IO.mapOptionalWithContext("Lines", Obj.Lines, Context);
   IO.mapOptionalWithContext("Checksums", Obj.FileChecksums, Context);
+  IO.mapOptionalWithContext("Lines", Obj.LineFragments, Context);
 }
 
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::

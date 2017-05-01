@@ -366,7 +366,7 @@ public:
   /// that 0 is not a positive value.
   ///
   /// \returns true if this APInt is positive.
-  bool isStrictlyPositive() const { return isNonNegative() && !!*this; }
+  bool isStrictlyPositive() const { return isNonNegative() && !isNullValue(); }
 
   /// \brief Determine if all bits are set
   ///
@@ -376,6 +376,11 @@ public:
       return VAL == WORD_MAX >> (APINT_BITS_PER_WORD - BitWidth);
     return countPopulationSlowCase() == BitWidth;
   }
+
+  /// \brief Determine if all bits are set
+  ///
+  /// This checks to see if the value has all bits of the APInt are set or not.
+  bool isNullValue() const { return !*this; }
 
   /// \brief Determine if this is the largest unsigned value.
   ///
@@ -395,7 +400,7 @@ public:
   ///
   /// This checks to see if the value of this APInt is the minimum unsigned
   /// value for the APInt's bit width.
-  bool isMinValue() const { return !*this; }
+  bool isMinValue() const { return isNullValue(); }
 
   /// \brief Determine if this is the smallest signed value.
   ///
@@ -1355,13 +1360,9 @@ public:
   void setBits(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");
     assert(loBit <= BitWidth && "loBit out of range");
+    assert(loBit <= hiBit && "loBit greater than hiBit");
     if (loBit == hiBit)
       return;
-    if (loBit > hiBit) {
-      setLowBits(hiBit);
-      setHighBits(BitWidth - loBit);
-      return;
-    }
     if (loBit < APINT_BITS_PER_WORD && hiBit <= APINT_BITS_PER_WORD) {
       uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
       mask <<= loBit;
@@ -1401,6 +1402,11 @@ public:
   ///
   /// Set the given bit to 0 whose position is given as "bitPosition".
   void clearBit(unsigned bitPosition);
+
+  /// Set the sign bit to 0.
+  void clearSignBit() {
+    clearBit(BitWidth - 1);
+  }
 
   /// \brief Toggle every bit to its opposite value.
   void flipAllBits() {
@@ -1706,7 +1712,7 @@ public:
       return VAL - 1;
 
     // Handle the zero case.
-    if (!getBoolValue())
+    if (isNullValue())
       return UINT32_MAX;
 
     // The non-zero case is handled by computing:

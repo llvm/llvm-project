@@ -77,7 +77,7 @@ static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
         // Don't bother simplifying unused instructions.
         if (!I->use_empty()) {
-          Value *V = SimplifyInstruction(I, DL, TLI, DT, AC);
+          Value *V = SimplifyInstruction(I, {DL, TLI, DT, AC});
           if (V && LI->replacementPreservesLCSSAForm(I, V)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())

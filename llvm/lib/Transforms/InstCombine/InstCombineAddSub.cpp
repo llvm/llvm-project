@@ -861,7 +861,7 @@ static bool checkRippleForAdd(const APInt &Op0KnownZero,
   // Find the most significant known 0 other than the sign bit.
   int BitWidth = Op0KnownZero.getBitWidth();
   APInt Op0KnownZeroTemp(Op0KnownZero);
-  Op0KnownZeroTemp.clearBit(BitWidth - 1);
+  Op0KnownZeroTemp.clearSignBit();
   int Op0ZeroPosition = BitWidth - Op0KnownZeroTemp.countLeadingZeros() - 1;
 
   int Op1OnePosition = BitWidth - Op1MaybeOne.countLeadingZeros() - 1;

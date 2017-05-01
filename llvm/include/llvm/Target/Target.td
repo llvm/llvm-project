@@ -530,6 +530,12 @@ class Predicate<string cond> {
   /// PredicateName - User-level name to use for the predicate. Mainly for use
   /// in diagnostics such as missing feature errors in the asm matcher.
   string PredicateName = "";
+
+  /// Setting this to '1' indicates that the predicate must be recomputed on
+  /// every function change. Most predicates can leave this at '0'.
+  ///
+  /// Ignored by SelectionDAG, it always recomputes the predicate on every use.
+  bit RecomputePerFunction = 0;
 }
 
 /// NoHonorSignDependentRounding - This predicate is true if support for
