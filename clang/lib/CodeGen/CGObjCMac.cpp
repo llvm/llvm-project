@@ -886,7 +886,7 @@ protected:
 
   /// Cached reference to the class for constant strings. This value has type
   /// int * but is actually an Obj-C class pointer.
-  llvm::WeakVH ConstantStringClassRef;
+  llvm::WeakTrackingVH ConstantStringClassRef;
 
   /// \brief The LLVM type corresponding to NSConstantString.
   llvm::StructType *NSConstantStringType = nullptr;

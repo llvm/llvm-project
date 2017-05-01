@@ -19,7 +19,6 @@ def TypeCVI_HIST : IType<10>;
 def TypeCVI_VA : IType<16>;
 def TypeCVI_VA_DV : IType<17>;
 def TypeCVI_VINLANESAT : IType<18>;
-def TypeCVI_VM_CUR_LD : IType<19>;
 def TypeCVI_VM_LD : IType<20>;
 def TypeCVI_VM_NEW_ST : IType<21>;
 def TypeCVI_VM_ST : IType<22>;

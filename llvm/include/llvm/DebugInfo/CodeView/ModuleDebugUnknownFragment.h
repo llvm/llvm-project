@@ -16,10 +16,11 @@
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugUnknownFragment final : public ModuleDebugFragment {
+class ModuleDebugUnknownFragmentRef final : public ModuleDebugFragmentRef {
 public:
-  ModuleDebugUnknownFragment(ModuleDebugFragmentKind Kind, BinaryStreamRef Data)
-      : ModuleDebugFragment(Kind), Data(Data) {}
+  ModuleDebugUnknownFragmentRef(ModuleDebugFragmentKind Kind,
+                                BinaryStreamRef Data)
+      : ModuleDebugFragmentRef(Kind), Data(Data) {}
 
   BinaryStreamRef getData() const { return Data; }
 

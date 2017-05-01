@@ -16342,11 +16342,9 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
-    case ISD::SHL: {
-      const auto *BinNode = cast<BinaryWithFlagsSDNode>(Op.getNode());
-      if (BinNode->Flags.hasNoSignedWrap())
+    case ISD::SHL:
+      if (Op.getNode()->getFlags().hasNoSignedWrap())
         break;
-    }
     default:
       NeedOF = true;
       break;
@@ -33514,7 +33512,7 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
   // use of a constant by performing (-0 - A*B) instead.
   // FIXME: Check rounding control flags as well once it becomes available.
   if (Arg.getOpcode() == ISD::FMUL && (SVT == MVT::f32 || SVT == MVT::f64) &&
-      Arg->getFlags()->hasNoSignedZeros() && Subtarget.hasAnyFMA()) {
+      Arg->getFlags().hasNoSignedZeros() && Subtarget.hasAnyFMA()) {
     SDValue Zero = DAG.getConstantFP(0.0, DL, VT);
     SDValue NewNode = DAG.getNode(X86ISD::FNMSUB, DL, VT, Arg.getOperand(0),
                                   Arg.getOperand(1), Zero);
@@ -33875,8 +33873,8 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
     return SDValue();
 
   bool Sext = Ext->getOpcode() == ISD::SIGN_EXTEND;
-  bool NSW = Add->getFlags()->hasNoSignedWrap();
-  bool NUW = Add->getFlags()->hasNoUnsignedWrap();
+  bool NSW = Add->getFlags().hasNoSignedWrap();
+  bool NUW = Add->getFlags().hasNoUnsignedWrap();
 
   // We need an 'add nsw' feeding into the 'sext' or 'add nuw' feeding
   // into the 'zext'
@@ -33916,7 +33914,7 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   SDNodeFlags Flags;
   Flags.setNoSignedWrap(NSW);
   Flags.setNoUnsignedWrap(NUW);
-  return DAG.getNode(ISD::ADD, SDLoc(Add), VT, NewExt, NewConstant, &Flags);
+  return DAG.getNode(ISD::ADD, SDLoc(Add), VT, NewExt, NewConstant, Flags);
 }
 
 /// (i8,i32 {s/z}ext ({s/u}divrem (i8 x, i8 y)) ->
@@ -34801,8 +34799,8 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
-  const SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(N)->Flags;
-  if (Flags->hasVectorReduction()) {
+  const SDNodeFlags Flags = N->getFlags();
+  if (Flags.hasVectorReduction()) {
     if (SDValue Sad = combineLoopSADPattern(N, DAG, Subtarget))
       return Sad;
     if (SDValue MAdd = combineLoopMAddPattern(N, DAG, Subtarget))

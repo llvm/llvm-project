@@ -21,7 +21,6 @@ enum Type {
   TypeCVI_VA = 16,
   TypeCVI_VA_DV = 17,
   TypeCVI_VINLANESAT = 18,
-  TypeCVI_VM_CUR_LD = 19,
   TypeCVI_VM_LD = 20,
   TypeCVI_VM_NEW_ST = 21,
   TypeCVI_VM_ST = 22,

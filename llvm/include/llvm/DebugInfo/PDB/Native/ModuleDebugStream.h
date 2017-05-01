@@ -24,14 +24,14 @@ namespace pdb {
 class PDBFile;
 class DbiModuleDescriptor;
 
-class ModuleDebugStream {
+class ModuleDebugStreamRef {
   typedef codeview::ModuleDebugFragmentArray::Iterator
       LinesAndChecksumsIterator;
 
 public:
-  ModuleDebugStream(const DbiModuleDescriptor &Module,
-                    std::unique_ptr<msf::MappedBlockStream> Stream);
-  ~ModuleDebugStream();
+  ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
+                       std::unique_ptr<msf::MappedBlockStream> Stream);
+  ~ModuleDebugStreamRef();
 
   Error reload();
 
@@ -54,7 +54,7 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
   codeview::CVSymbolArray SymbolsSubstream;
-  BinaryStreamRef LinesSubstream;
+  BinaryStreamRef C11LinesSubstream;
   BinaryStreamRef C13LinesSubstream;
   BinaryStreamRef GlobalRefsSubstream;
 

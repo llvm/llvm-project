@@ -18,24 +18,19 @@
 #include "MCTargetDesc/HexagonShuffler.h"
 
 namespace llvm {
-
 class MCInst;
-
 // Insn bundle shuffler.
 class HexagonMCShuffler : public HexagonShuffler {
-  bool immext_present;
-  bool duplex_present;
-
 public:
-  HexagonMCShuffler(bool Fatal, MCInstrInfo const &MCII,
+  HexagonMCShuffler(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
                     MCSubtargetInfo const &STI, MCInst &MCB)
-      : HexagonShuffler(MCII, STI) {
+      : HexagonShuffler(Context, Fatal, MCII, STI) {
     init(MCB);
   };
-  HexagonMCShuffler(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
-                    MCInst &MCB, MCInst const &AddMI,
-                    bool InsertAtFront)
-      : HexagonShuffler(MCII, STI) {
+  HexagonMCShuffler(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
+                    MCSubtargetInfo const &STI, MCInst &MCB,
+                    MCInst const &AddMI, bool InsertAtFront)
+      : HexagonShuffler(Context, Fatal, MCII, STI) {
     init(MCB, AddMI, InsertAtFront);
   };
 
@@ -44,22 +39,20 @@ public:
   // Reorder and copy result to another.
   bool reshuffleTo(MCInst &MCB);
 
-  bool immextPresent() const { return immext_present; };
-  bool duplexPresent() const { return duplex_present; };
-
 private:
   void init(MCInst &MCB);
   void init(MCInst &MCB, MCInst const &AddMI, bool InsertAtFront);
 };
 
 // Invocation of the shuffler.
-bool HexagonMCShuffle(bool Fatal, MCInstrInfo const &MCII,
+bool HexagonMCShuffle(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
                       MCSubtargetInfo const &STI, MCInst &);
-bool HexagonMCShuffle(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
-                      MCInst &, MCInst const &, int);
-unsigned HexagonMCShuffle(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
-                          MCContext &Context, MCInst &,
-                          SmallVector<DuplexCandidate, 8>);
-}
+bool HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
+                      MCSubtargetInfo const &STI, MCInst &, MCInst const &,
+                      int);
+bool HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
+                      MCSubtargetInfo const &STI, MCInst &,
+                      SmallVector<DuplexCandidate, 8>);
+} // namespace llvm
 
 #endif // HEXAGONMCSHUFFLER_H

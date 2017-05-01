@@ -207,8 +207,8 @@ bool AMDGPUDAGToDAGISel::isNoNanSrc(SDValue N) const {
     return true;
 
   // TODO: Move into isKnownNeverNaN
-  if (const auto *BO = dyn_cast<BinaryWithFlagsSDNode>(N))
-    return BO->Flags.hasNoNaNs();
+  if (N->getFlags().isDefined())
+    return N->getFlags().hasNoNaNs();
 
   return CurDAG->isKnownNeverNaN(N);
 }

@@ -1154,7 +1154,7 @@ void CodeGenModule::addCompilerUsedGlobal(llvm::GlobalValue *GV) {
 }
 
 static void emitUsed(CodeGenModule &CGM, StringRef Name,
-                     std::vector<llvm::WeakVH> &List) {
+                     std::vector<llvm::WeakTrackingVH> &List) {
   // Don't create llvm.used if there is no need.
   if (List.empty())
     return;

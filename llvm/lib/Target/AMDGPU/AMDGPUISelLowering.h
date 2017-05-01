@@ -125,8 +125,9 @@ public:
     if (getTargetMachine().Options.NoSignedZerosFPMath)
       return true;
 
-    if (const auto *BO = dyn_cast<BinaryWithFlagsSDNode>(Op))
-      return BO->Flags.hasNoSignedZeros();
+    const auto Flags = Op.getNode()->getFlags();
+    if (Flags.isDefined())
+      return Flags.hasNoSignedZeros();
 
     return false;
   }

@@ -80,7 +80,7 @@ private:
 
   /// OperandValToReplace - The Value of the operand in the user instruction
   /// that this IVStrideUse is representing.
-  WeakVH OperandValToReplace;
+  WeakTrackingVH OperandValToReplace;
 
   /// PostIncLoops - The set of loops for which Expr has been adjusted to
   /// use post-inc mode. This corresponds with SCEVExpander's post-inc concept.

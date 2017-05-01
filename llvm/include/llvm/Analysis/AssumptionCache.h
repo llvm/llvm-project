@@ -43,7 +43,7 @@ class AssumptionCache {
 
   /// \brief Vector of weak value handles to calls of the @llvm.assume
   /// intrinsic.
-  SmallVector<WeakVH, 4> AssumeHandles;
+  SmallVector<WeakTrackingVH, 4> AssumeHandles;
 
   class AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
@@ -62,12 +62,12 @@ class AssumptionCache {
   /// \brief A map of values about which an assumption might be providing
   /// information to the relevant set of assumptions.
   using AffectedValuesMap =
-    DenseMap<AffectedValueCallbackVH, SmallVector<WeakVH, 1>,
-             AffectedValueCallbackVH::DMI>;
+      DenseMap<AffectedValueCallbackVH, SmallVector<WeakTrackingVH, 1>,
+               AffectedValueCallbackVH::DMI>;
   AffectedValuesMap AffectedValues;
 
   /// Get the vector of assumptions which affect a value from the cache.
-  SmallVector<WeakVH, 1> &getOrInsertAffectedValues(Value *V);
+  SmallVector<WeakTrackingVH, 1> &getOrInsertAffectedValues(Value *V);
 
   /// Copy affected values in the cache for OV to be affected values for NV.
   void copyAffectedValuesInCache(Value *OV, Value *NV);
@@ -120,20 +120,20 @@ public:
   /// FIXME: We should replace this with pointee_iterator<filter_iterator<...>>
   /// when we can write that to filter out the null values. Then caller code
   /// will become simpler.
-  MutableArrayRef<WeakVH> assumptions() {
+  MutableArrayRef<WeakTrackingVH> assumptions() {
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
   }
 
   /// \brief Access the list of assumptions which affect this value.
-  MutableArrayRef<WeakVH> assumptionsFor(const Value *V) {
+  MutableArrayRef<WeakTrackingVH> assumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();
 
     auto AVI = AffectedValues.find_as(const_cast<Value *>(V));
     if (AVI == AffectedValues.end())
-      return MutableArrayRef<WeakVH>();
+      return MutableArrayRef<WeakTrackingVH>();
 
     return AVI->second;
   }

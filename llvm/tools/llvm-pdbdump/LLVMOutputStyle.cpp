@@ -80,8 +80,6 @@ struct PageStats {
   BitVector UseAfterFreePages;
 };
 
-// Define a locally scoped visitor to print the different
-// substream types types.
 class C13RawVisitor : public C13DebugFragmentVisitor {
 public:
   C13RawVisitor(ScopedPrinter &P, PDBFile &F)
@@ -723,7 +721,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             File.getMsfLayout(), File.getMsfBuffer(),
             Modi.Info.getModuleStreamIndex());
 
-        ModuleDebugStream ModS(Modi.Info, std::move(ModStreamData));
+        ModuleDebugStreamRef ModS(Modi.Info, std::move(ModStreamData));
         if (auto EC = ModS.reload())
           return EC;
 
@@ -751,7 +749,6 @@ Error LLVMOutputStyle::dumpDbiStream() {
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
 
-          // Inlinee Line Type Indices refer to the IPI stream.
           C13RawVisitor V(P, File);
           if (auto EC = codeview::visitModuleDebugFragments(
                   ModS.linesAndChecksums(), V))

@@ -372,14 +372,14 @@ namespace {
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
     SDValue BuildLogBase2(SDValue Op, const SDLoc &DL);
-    SDValue BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags);
-    SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags *Flags);
-    SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags *Flags);
-    SDValue buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags, bool Recip);
+    SDValue BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags, bool Recip);
     SDValue buildSqrtNROneConst(SDValue Op, SDValue Est, unsigned Iterations,
-                                SDNodeFlags *Flags, bool Reciprocal);
+                                SDNodeFlags Flags, bool Reciprocal);
     SDValue buildSqrtNRTwoConst(SDValue Op, SDValue Est, unsigned Iterations,
-                                SDNodeFlags *Flags, bool Reciprocal);
+                                SDNodeFlags Flags, bool Reciprocal);
     SDValue MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
                                bool DemandHighBits = true);
     SDValue MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1);
@@ -648,7 +648,7 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
   case ISD::FSUB:
     // We can't turn -(A-B) into B-A when we honor signed zeros.
     if (!Options->NoSignedZerosFPMath &&
-        !Op.getNode()->getFlags()->hasNoSignedZeros())
+        !Op.getNode()->getFlags().hasNoSignedZeros())
       return 0;
 
     // fold (fneg (fsub A, B)) -> (fsub B, A)
@@ -686,7 +686,7 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
   assert(Depth <= 6 && "GetNegatedExpression doesn't match isNegatibleForFree");
 
-  const SDNodeFlags *Flags = Op.getNode()->getFlags();
+  const SDNodeFlags Flags = Op.getNode()->getFlags();
 
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown code");
@@ -2185,13 +2185,13 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // 0 - X --> 0 if the sub is NUW.
-    if (N->getFlags()->hasNoUnsignedWrap())
+    if (N->getFlags().hasNoUnsignedWrap())
       return N0;
 
     if (DAG.MaskedValueIsZero(N1, ~APInt::getSignMask(BitWidth))) {
       // N1 is either 0 or the minimum signed value. If the sub is NSW, then
       // N1 must be 0 because negating the minimum signed value is undefined.
-      if (N->getFlags()->hasNoSignedWrap())
+      if (N->getFlags().hasNoSignedWrap())
         return N0;
 
       // 0 - X --> X if X is 0 or the minimum signed value.
@@ -2643,9 +2643,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   // better results in that case. The target-specific lowering should learn how
   // to handle exact sdivs efficiently.
   if (N1C && !N1C->isNullValue() && !N1C->isOpaque() &&
-      !cast<BinaryWithFlagsSDNode>(N)->Flags.hasExact() &&
-      (N1C->getAPIntValue().isPowerOf2() ||
-       (-N1C->getAPIntValue()).isPowerOf2())) {
+      !N->getFlags().hasExact() && (N1C->getAPIntValue().isPowerOf2() ||
+                                    (-N1C->getAPIntValue()).isPowerOf2())) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;
@@ -5376,7 +5375,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
   // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1  > C2
   if (N1C && (N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SRA) &&
-      cast<BinaryWithFlagsSDNode>(N0)->Flags.hasExact()) {
+      N0->getFlags().hasExact()) {
     if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
       uint64_t C1 = N0C1->getZExtValue();
       uint64_t C2 = N1C->getZExtValue();
@@ -7906,7 +7905,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   SDValue NewPtr = DAG.getNode(ISD::ADD, DL,
                                PtrType, LN0->getBasePtr(),
                                DAG.getConstant(PtrOff, DL, PtrType),
-                               &Flags);
+                               Flags);
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
@@ -8809,7 +8808,7 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
 }
 
 static bool isContractable(SDNode *N) {
-  SDNodeFlags F = cast<BinaryWithFlagsSDNode>(N)->Flags;
+  SDNodeFlags F = N->getFlags();
   return F.hasAllowContract() || F.hasUnsafeAlgebra();
 }
 
@@ -9395,7 +9394,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
-  const SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(N)->Flags;
+  const SDNodeFlags Flags = N->getFlags();
 
   // fold vector ops
   if (VT.isVector())
@@ -9426,7 +9425,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
                        GetNegatedExpression(N0, DAG, LegalOperations), Flags);
 
   // FIXME: Auto-upgrade the target/function-level option.
-  if (Options.NoSignedZerosFPMath || N->getFlags()->hasNoSignedZeros()) {
+  if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros()) {
     // fold (fadd A, 0) -> A
     if (ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1))
       if (N1C->isZero())
@@ -9549,7 +9548,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
-  const SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(N)->Flags;
+  const SDNodeFlags Flags = N->getFlags();
 
   // fold vector ops
   if (VT.isVector())
@@ -9569,7 +9568,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
                        GetNegatedExpression(N1, DAG, LegalOperations), Flags);
 
   // FIXME: Auto-upgrade the target/function-level option.
-  if (Options.NoSignedZerosFPMath  || N->getFlags()->hasNoSignedZeros()) {
+  if (Options.NoSignedZerosFPMath  || N->getFlags().hasNoSignedZeros()) {
     // (fsub 0, B) -> -B
     if (N0CFP && N0CFP->isZero()) {
       if (isNegatibleForFree(N1, LegalOperations, TLI, &Options))
@@ -9620,7 +9619,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
-  const SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(N)->Flags;
+  const SDNodeFlags Flags = N->getFlags();
 
   // fold vector ops
   if (VT.isVector()) {
@@ -9764,7 +9763,7 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
         isConstantFPBuildVectorOrConstantFP(N2.getOperand(1))) {
       return DAG.getNode(ISD::FMUL, DL, VT, N0,
                          DAG.getNode(ISD::FADD, DL, VT, N1, N2.getOperand(1),
-                                     &Flags), &Flags);
+                                     Flags), Flags);
     }
 
     // (fma (fmul x, c1), c2, y) -> (fma x, c1*c2, y)
@@ -9774,7 +9773,7 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
       return DAG.getNode(ISD::FMA, DL, VT,
                          N0.getOperand(0),
                          DAG.getNode(ISD::FMUL, DL, VT, N1, N0.getOperand(1),
-                                     &Flags),
+                                     Flags),
                          N2);
     }
   }
@@ -9800,16 +9799,16 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     if (N1CFP && N0 == N2) {
       return DAG.getNode(ISD::FMUL, DL, VT, N0,
                          DAG.getNode(ISD::FADD, DL, VT, N1,
-                                     DAG.getConstantFP(1.0, DL, VT), &Flags),
-                         &Flags);
+                                     DAG.getConstantFP(1.0, DL, VT), Flags),
+                         Flags);
     }
 
     // (fma x, c, (fneg x)) -> (fmul x, (c-1))
     if (N1CFP && N2.getOpcode() == ISD::FNEG && N2.getOperand(0) == N0) {
       return DAG.getNode(ISD::FMUL, DL, VT, N0,
                          DAG.getNode(ISD::FADD, DL, VT, N1,
-                                     DAG.getConstantFP(-1.0, DL, VT), &Flags),
-                         &Flags);
+                                     DAG.getConstantFP(-1.0, DL, VT), Flags),
+                         Flags);
     }
   }
 
@@ -9825,8 +9824,8 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
 // is the critical path is increased from "one FDIV" to "one FDIV + one FMUL".
 SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
-  const SDNodeFlags *Flags = N->getFlags();
-  if (!UnsafeMath && !Flags->hasAllowReciprocal())
+  const SDNodeFlags Flags = N->getFlags();
+  if (!UnsafeMath && !Flags.hasAllowReciprocal())
     return SDValue();
 
   // Skip if current node is a reciprocal.
@@ -9849,7 +9848,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
     if (U->getOpcode() == ISD::FDIV && U->getOperand(1) == N1) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (UnsafeMath || U->getFlags()->hasAllowReciprocal())
+      if (UnsafeMath || U->getFlags().hasAllowReciprocal())
         Users.insert(U);
     }
   }
@@ -9888,7 +9887,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
-  SDNodeFlags *Flags = &cast<BinaryWithFlagsSDNode>(N)->Flags;
+  SDNodeFlags Flags = N->getFlags();
 
   // fold vector ops
   if (VT.isVector())
@@ -10002,8 +10001,7 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
 
   // fold (frem c1, c2) -> fmod(c1,c2)
   if (N0CFP && N1CFP)
-    return DAG.getNode(ISD::FREM, SDLoc(N), VT, N0, N1,
-                       &cast<BinaryWithFlagsSDNode>(N)->Flags);
+    return DAG.getNode(ISD::FREM, SDLoc(N), VT, N0, N1, N->getFlags());
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -10023,7 +10021,7 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
   // For now, create a Flags object for use with all unsafe math transforms.
   SDNodeFlags Flags;
   Flags.setUnsafeAlgebra(true);
-  return buildSqrtEstimate(N0, &Flags);
+  return buildSqrtEstimate(N0, Flags);
 }
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)
@@ -10455,10 +10453,10 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
       if (Level >= AfterLegalizeDAG &&
           (TLI.isFPImmLegal(CVal, VT) ||
            TLI.isOperationLegal(ISD::ConstantFP, VT)))
-        return DAG.getNode(ISD::FMUL, SDLoc(N), VT, N0.getOperand(0),
-                           DAG.getNode(ISD::FNEG, SDLoc(N), VT,
-                                       N0.getOperand(1)),
-                           &cast<BinaryWithFlagsSDNode>(N0)->Flags);
+        return DAG.getNode(
+            ISD::FMUL, SDLoc(N), VT, N0.getOperand(0),
+            DAG.getNode(ISD::FNEG, SDLoc(N), VT, N0.getOperand(1)),
+            N0->getFlags());
     }
   }
 
@@ -15946,7 +15944,7 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
 ///     =>
 ///   X_{i+1} = X_i (2 - A X_i) = X_i + X_i (1 - A X_i) [this second form
 ///     does not require additional intermediate precision]
-SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
+SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
@@ -16001,7 +15999,7 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags) {
 /// As a result, we precompute A/2 prior to the iteration loop.
 SDValue DAGCombiner::buildSqrtNROneConst(SDValue Arg, SDValue Est,
                                          unsigned Iterations,
-                                         SDNodeFlags *Flags, bool Reciprocal) {
+                                         SDNodeFlags Flags, bool Reciprocal) {
   EVT VT = Arg.getValueType();
   SDLoc DL(Arg);
   SDValue ThreeHalves = DAG.getConstantFP(1.5, DL, VT);
@@ -16045,7 +16043,7 @@ SDValue DAGCombiner::buildSqrtNROneConst(SDValue Arg, SDValue Est,
 ///   X_{i+1} = (-0.5 * X_i) * (A * X_i * X_i + (-3.0))
 SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
                                          unsigned Iterations,
-                                         SDNodeFlags *Flags, bool Reciprocal) {
+                                         SDNodeFlags Flags, bool Reciprocal) {
   EVT VT = Arg.getValueType();
   SDLoc DL(Arg);
   SDValue MinusThree = DAG.getConstantFP(-3.0, DL, VT);
@@ -16090,7 +16088,7 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
 /// Build code to calculate either rsqrt(Op) or sqrt(Op). In the latter case
 /// Op*rsqrt(Op) is actually computed, so additional postprocessing is needed if
 /// Op can be zero.
-SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags,
+SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
                                            bool Reciprocal) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
@@ -16143,11 +16141,11 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags *Flags,
   return SDValue();
 }
 
-SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op, SDNodeFlags *Flags) {
+SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags) {
   return buildSqrtEstimateImpl(Op, Flags, true);
 }
 
-SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags *Flags) {
+SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags Flags) {
   return buildSqrtEstimateImpl(Op, Flags, false);
 }
 

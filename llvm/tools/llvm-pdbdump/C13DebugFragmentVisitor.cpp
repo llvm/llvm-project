@@ -24,19 +24,19 @@ C13DebugFragmentVisitor::C13DebugFragmentVisitor(PDBFile &F) : F(F) {}
 C13DebugFragmentVisitor::~C13DebugFragmentVisitor() {}
 
 Error C13DebugFragmentVisitor::visitUnknown(
-    codeview::ModuleDebugUnknownFragment &Fragment) {
+    codeview::ModuleDebugUnknownFragmentRef &Fragment) {
   return Error::success();
 }
 
 Error C13DebugFragmentVisitor::visitFileChecksums(
-    codeview::ModuleDebugFileChecksumFragment &Checksums) {
+    codeview::ModuleDebugFileChecksumFragmentRef &Checksums) {
   assert(!this->Checksums.hasValue());
   this->Checksums = Checksums;
   return Error::success();
 }
 
 Error C13DebugFragmentVisitor::visitLines(
-    codeview::ModuleDebugLineFragment &Lines) {
+    codeview::ModuleDebugLineFragmentRef &Lines) {
   this->Lines.push_back(Lines);
   return Error::success();
 }

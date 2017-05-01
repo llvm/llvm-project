@@ -3521,15 +3521,15 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  const SDNodeFlags *Flags = Op->getFlags();
+  const SDNodeFlags Flags = Op->getFlags();
 
-  if (Unsafe || Flags->hasAllowReciprocal()) {
+  if (Unsafe || Flags.hasAllowReciprocal()) {
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
-    SDNodeFlags Flags;
-    Flags.setUnsafeAlgebra(true);
+    SDNodeFlags NewFlags;
+    NewFlags.setUnsafeAlgebra(true);
     SDValue Recip = DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
-    return DAG.getNode(ISD::FMUL, SL, VT, LHS, Recip, &Flags);
+    return DAG.getNode(ISD::FMUL, SL, VT, LHS, Recip, NewFlags);
   }
 
   return SDValue();
@@ -4608,10 +4608,9 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
     return ISD::FMAD;
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
-       Options.UnsafeFPMath ||
-       (cast<BinaryWithFlagsSDNode>(N0)->Flags.hasUnsafeAlgebra() &&
-        cast<BinaryWithFlagsSDNode>(N1)->Flags.hasUnsafeAlgebra())) &&
+  if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+       (N0->getFlags().hasUnsafeAlgebra() &&
+        N1->getFlags().hasUnsafeAlgebra())) &&
       isFMAFasterThanFMulAndFAdd(VT)) {
     return ISD::FMA;
   }

@@ -26,7 +26,7 @@
 // offset for an add that needs wrapping.
 def regPlusImm : PatFrag<(ops node:$addr, node:$off),
                          (add node:$addr, node:$off),
-                         [{ return N->getFlags()->hasNoUnsignedWrap(); }]>;
+                         [{ return N->getFlags().hasNoUnsignedWrap(); }]>;
 
 // Treat an 'or' node as an 'add' if the or'ed bits are known to be zero.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
@@ -47,7 +47,7 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 def regPlusGA : PatFrag<(ops node:$addr, node:$off),
                         (add node:$addr, node:$off),
                         [{
-  return N->getFlags()->hasNoUnsignedWrap();
+  return N->getFlags().hasNoUnsignedWrap();
 }]>;
 
 // We don't need a regPlusES because external symbols never have constant

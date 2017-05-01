@@ -1,6 +1,9 @@
 // RUN: %clangxx_asan -O0 %s -pthread -o %t && %run %t
 // RUN: %clangxx_asan -O2 %s -pthread -o %t && %run %t
 // REQUIRES: stable-runtime
+// UNSUPPORTED: powerpc64le
+// FIXME: This test occasionally fails on powerpc64 LE possibly starting with
+// r279664.  Re-enable the test once the problem(s) have been fixed.
 
 #include <assert.h>
 #include <pthread.h>

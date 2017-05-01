@@ -23,7 +23,7 @@ namespace llvm {
 
 class Value;
 class Instruction;
-typedef ValueMap<const Value *, WeakVH> ValueToValueMapTy;
+typedef ValueMap<const Value *, WeakTrackingVH> ValueToValueMapTy;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
