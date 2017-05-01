@@ -44,10 +44,19 @@ def process_repo(r):
         'ref': r["ref"]
     }
 
+def fallback_repo(name):
+    return {
+        'name': name,
+        'vcs': None,
+        'root': process_root(name),
+        'url': None,
+        'ref': None
+    }
+
 def XCODE_REPOSITORIES():
     identifier = repo.identifier()
     if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
+        return [fallback_repo(n) for n in ["llvm", "clang", "swift", "cmark", "ninja"]]
     set = repo.find(identifier)
     return [process_repo(r) for r in set]
 
