@@ -2165,7 +2165,7 @@ public:
 
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value.
-  static DIExpression *prepend(DIExpression *DIExpr, bool Deref,
+  static DIExpression *prepend(const DIExpression *DIExpr, bool Deref,
                                int64_t Offset = 0, bool StackValue = false);
 };
 

@@ -672,11 +672,8 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
   }
 }
 
-DIExpression *DIExpression::prepend(DIExpression *Expr, bool Deref,
+DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
                                     int64_t Offset, bool StackValue) {
-  if (!Deref && !Offset && !StackValue)
-    return Expr;
-
   SmallVector<uint64_t, 8> Ops;
   appendOffset(Ops, Offset);
   if (Deref)
