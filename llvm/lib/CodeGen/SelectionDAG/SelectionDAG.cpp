@@ -811,8 +811,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op,
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, SDLoc(N), InsertPos);
   if (Node)
-    if (const SDNodeFlags *Flags = N->getFlags())
-      Node->intersectFlagsWith(Flags);
+    Node->intersectFlagsWith(N->getFlags());
   return Node;
 }
 
@@ -832,8 +831,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N,
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, SDLoc(N), InsertPos);
   if (Node)
-    if (const SDNodeFlags *Flags = N->getFlags())
-      Node->intersectFlagsWith(Flags);
+    Node->intersectFlagsWith(N->getFlags());
   return Node;
 }
 
@@ -852,8 +850,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
   AddNodeIDCustom(ID, N);
   SDNode *Node = FindNodeOrInsertPos(ID, SDLoc(N), InsertPos);
   if (Node)
-    if (const SDNodeFlags *Flags = N->getFlags())
-      Node->intersectFlagsWith(Flags);
+    Node->intersectFlagsWith(N->getFlags());
   return Node;
 }
 
@@ -899,29 +896,6 @@ void SelectionDAG::allnodes_clear() {
 #ifndef NDEBUG
   NextPersistentId = 0;
 #endif
-}
-
-SDNode *SelectionDAG::GetBinarySDNode(unsigned Opcode, const SDLoc &DL,
-                                      SDVTList VTs, SDValue N1, SDValue N2,
-                                      const SDNodeFlags *Flags) {
-  SDValue Ops[] = {N1, N2};
-
-  if (isBinOpWithFlags(Opcode)) {
-    // If no flags were passed in, use a default flags object.
-    SDNodeFlags F;
-    if (Flags == nullptr)
-      Flags = &F;
-
-    auto *FN = newSDNode<BinaryWithFlagsSDNode>(Opcode, DL.getIROrder(),
-                                                DL.getDebugLoc(), VTs, *Flags);
-    createOperands(FN, Ops);
-
-    return FN;
-  }
-
-  auto *N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-  createOperands(N, Ops);
-  return N;
 }
 
 SDNode *SelectionDAG::FindNodeOrInsertPos(const FoldingSetNodeID &ID,
@@ -2379,9 +2353,23 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     break;
   }
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_UNDEF: {
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    // If we have a known 1, its position is our upper bound.
+    unsigned PossibleTZ = Known2.One.countTrailingZeros();
+    unsigned LowBits = Log2_32(PossibleTZ) + 1;
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_UNDEF: {
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    // If we have a known 1, its position is our upper bound.
+    unsigned PossibleLZ = Known2.One.countLeadingZeros();
+    unsigned LowBits = Log2_32(PossibleLZ) + 1;
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
   case ISD::CTPOP: {
     Known.Zero.setBitsFrom(Log2_32(BitWidth)+1);
     break;
@@ -3245,8 +3233,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op) const {
   if (getTarget().Options.NoNaNsFPMath)
     return true;
 
-  if (const BinaryWithFlagsSDNode *BF = dyn_cast<BinaryWithFlagsSDNode>(Op))
-    return BF->Flags.hasNoNaNs();
+  if (Op->getFlags().hasNoNaNs())
+    return true;
 
   // If the value is a constant, we can obviously see if it is a NaN or not.
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
@@ -3362,7 +3350,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue Operand) {
+                              SDValue Operand, const SDNodeFlags Flags) {
   // Constant fold unary operations with an integer constant operand. Even
   // opaque constant will be folded, because the folding of unary operations
   // doesn't create new constants with different values. Nevertheless, the
@@ -3688,8 +3676,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (getTarget().Options.UnsafeFPMath && OpOpcode == ISD::FSUB)
       // FIXME: FNEG has no fast-math-flags to propagate; use the FSUB's flags?
       return getNode(ISD::FSUB, DL, VT, Operand.getNode()->getOperand(1),
-                       Operand.getNode()->getOperand(0),
-                       &cast<BinaryWithFlagsSDNode>(Operand.getNode())->Flags);
+                     Operand.getNode()->getOperand(0),
+                     Operand.getNode()->getFlags());
     if (OpOpcode == ISD::FNEG)  // --X -> X
       return Operand.getNode()->getOperand(0);
     break;
@@ -3706,10 +3694,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
+    N->setFlags(Flags);
     createOperands(N, Ops);
     CSEMap.InsertNode(N, IP);
   } else {
@@ -3888,7 +3879,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
                                                    const SDLoc &DL, EVT VT,
                                                    ArrayRef<SDValue> Ops,
-                                                   const SDNodeFlags *Flags) {
+                                                   const SDNodeFlags Flags) {
   // If the opcode is a target-specific ISD node, there's nothing we can
   // do here and the operand rules may not line up with the below, so
   // bail early.
@@ -3980,8 +3971,7 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue N1, SDValue N2,
-                              const SDNodeFlags *Flags) {
+                              SDValue N1, SDValue N2, const SDNodeFlags Flags) {
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
   ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
@@ -4448,21 +4438,23 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   // Memoize this node if possible.
   SDNode *N;
   SDVTList VTs = getVTList(VT);
+  SDValue Ops[] = {N1, N2};
   if (VT != MVT::Glue) {
-    SDValue Ops[] = {N1, N2};
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      if (Flags)
-        E->intersectFlagsWith(Flags);
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
     }
 
-    N = GetBinarySDNode(Opcode, DL, VTs, N1, N2, Flags);
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
+    N->setFlags(Flags);
+    createOperands(N, Ops);
     CSEMap.InsertNode(N, IP);
   } else {
-    N = GetBinarySDNode(Opcode, DL, VTs, N1, N2, Flags);
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
+    createOperands(N, Ops);
   }
 
   InsertNode(N);
@@ -5984,7 +5976,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              ArrayRef<SDValue> Ops, const SDNodeFlags *Flags) {
+                              ArrayRef<SDValue> Ops, const SDNodeFlags Flags) {
   unsigned NumOps = Ops.size();
   switch (NumOps) {
   case 0: return getNode(Opcode, DL, VT);
@@ -6646,14 +6638,13 @@ SDValue SelectionDAG::getTargetInsertSubreg(int SRIdx, const SDLoc &DL, EVT VT,
 /// else return NULL.
 SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                       ArrayRef<SDValue> Ops,
-                                      const SDNodeFlags *Flags) {
+                                      const SDNodeFlags Flags) {
   if (VTList.VTs[VTList.NumVTs - 1] != MVT::Glue) {
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, SDLoc(), IP)) {
-      if (Flags)
-        E->intersectFlagsWith(Flags);
+      E->intersectFlagsWith(Flags);
       return E;
     }
   }
@@ -7397,15 +7388,8 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
   return hasPredecessorHelper(N, Visited, Worklist);
 }
 
-const SDNodeFlags *SDNode::getFlags() const {
-  if (auto *FlagsNode = dyn_cast<BinaryWithFlagsSDNode>(this))
-    return &FlagsNode->Flags;
-  return nullptr;
-}
-
-void SDNode::intersectFlagsWith(const SDNodeFlags *Flags) {
-  if (auto *FlagsNode = dyn_cast<BinaryWithFlagsSDNode>(this))
-    FlagsNode->Flags.intersectWith(Flags);
+void SDNode::intersectFlagsWith(const SDNodeFlags Flags) {
+  this->Flags.intersectWith(Flags);
 }
 
 SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {

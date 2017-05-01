@@ -141,6 +141,13 @@ namespace llvm {
   Expected<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndex(MemoryBufferRef Buffer);
 
+  /// Parse the module summary index out of an IR file and return the module
+  /// summary index object if found, or an empty summary if not. If Path refers
+  /// to an empty file and the -ignore-empty-index-file cl::opt flag is passed
+  /// this function will return nullptr.
+  Expected<std::unique_ptr<ModuleSummaryIndex>>
+  getModuleSummaryIndexForFile(StringRef Path);
+
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.
   ///

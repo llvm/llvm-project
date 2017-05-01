@@ -157,7 +157,7 @@ private:
 }
 
 Expected<Optional<llvm::pdb::yaml::PdbSourceFileInfo>>
-YAMLOutputStyle::getFileLineInfo(const pdb::ModuleDebugStream &ModS) {
+YAMLOutputStyle::getFileLineInfo(const pdb::ModuleDebugStreamRef &ModS) {
   if (!ModS.hasLineInfo())
     return None;
 
@@ -286,9 +286,10 @@ Error YAMLOutputStyle::dumpDbiStream() {
         continue;
 
       auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
-          File.getMsfLayout(), File.getMsfBuffer(), ModiStream);
+          File.getMsfLayout(), File.getMsfBuffer(),
+          MI.Info.getModuleStreamIndex());
 
-      pdb::ModuleDebugStream ModS(MI.Info, std::move(ModStreamData));
+      pdb::ModuleDebugStreamRef ModS(MI.Info, std::move(ModStreamData));
       if (auto EC = ModS.reload())
         return EC;
 

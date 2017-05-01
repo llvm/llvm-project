@@ -90,7 +90,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       consumeError(ModStreamData.takeError());
       return 0;
     }
-    pdb::ModuleDebugStream ModS(Modi.Info, std::move(*ModStreamData));
+    pdb::ModuleDebugStreamRef ModS(Modi.Info, std::move(*ModStreamData));
     if (auto E = ModS.reload()) {
       consumeError(std::move(E));
       return 0;

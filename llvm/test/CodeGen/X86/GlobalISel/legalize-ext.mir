@@ -1,0 +1,116 @@
+# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+--- |
+  define i32 @test_zext_i8(i8 %val) {
+    %r = zext i8 %val to i32
+    ret i32 %r
+  }
+
+  define i32 @test_zext_i16(i16 %val) {
+    %r = zext i16 %val to i32
+    ret i32 %r
+  }
+
+  define i32 @test_sext_i8(i8 %val) {
+    %r = sext i8 %val to i32
+    ret i32 %r
+  }
+
+  define i32 @test_sext_i16(i16 %val) {
+    %r = sext i16 %val to i32
+    ret i32 %r
+  }
+
+...
+---
+name:            test_zext_i8
+# ALL-LABEL: name:  test_zext_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# ALL:          %0(s8) = COPY %edi
+# ALL-NEXT:     %1(s32) = G_ZEXT %0(s8)
+# ALL-NEXT:     %eax = COPY %1(s32)
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s32) = G_ZEXT %0(s8)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_zext_i16
+# ALL-LABEL: name:  test_zext_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# ALL:          %0(s16) = COPY %edi
+# ALL-NEXT:     %1(s32) = G_ZEXT %0(s16)
+# ALL-NEXT:     %eax = COPY %1(s32)
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s32) = G_ZEXT %0(s16)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_sext_i8
+# ALL-LABEL: name:  test_sext_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# ALL:          %0(s8) = COPY %edi
+# ALL-NEXT:     %1(s32) = G_SEXT %0(s8)
+# ALL-NEXT:     %eax = COPY %1(s32)
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s32) = G_SEXT %0(s8)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_sext_i16
+# ALL-LABEL: name:  test_sext_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# ALL:          %0(s16) = COPY %edi
+# ALL-NEXT:     %1(s32) = G_SEXT %0(s16)
+# ALL-NEXT:     %eax = COPY %1(s32)
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s32) = G_SEXT %0(s16)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...

@@ -34,12 +34,7 @@ protected:
   ///
   /// This is to avoid having a vtable for the light-weight handle pointers. The
   /// fully general Callback version does have a vtable.
-  enum HandleBaseKind {
-    Assert,
-    Callback,
-    Tracking,
-    Weak
-  };
+  enum HandleBaseKind { Assert, Callback, Weak, WeakTracking };
 
   ValueHandleBase(const ValueHandleBase &RHS)
       : ValueHandleBase(RHS.PrevPair.getInt(), RHS) {}
@@ -139,19 +134,16 @@ private:
   void AddToUseList();
 };
 
-/// \brief Value handle that is nullable, but tries to track the Value.
+/// \brief A nullable Value handle that is nullable.
 ///
-/// This is a value handle that tries hard to point to a Value, even across
-/// RAUW operations, but will null itself out if the value is destroyed.  this
-/// is useful for advisory sorts of information, but should not be used as the
-/// key of a map (since the map would have to rearrange itself when the pointer
-/// changes).
+/// This is a value handle that points to a value, and nulls itself
+/// out if that value is deleted.
 class WeakVH : public ValueHandleBase {
 public:
   WeakVH() : ValueHandleBase(Weak) {}
   WeakVH(Value *P) : ValueHandleBase(Weak, P) {}
   WeakVH(const WeakVH &RHS)
-    : ValueHandleBase(Weak, RHS) {}
+      : ValueHandleBase(Weak, RHS) {}
 
   WeakVH &operator=(const WeakVH &RHS) = default;
 
@@ -176,6 +168,51 @@ template <> struct simplify_type<WeakVH> {
 template <> struct simplify_type<const WeakVH> {
   typedef Value *SimpleType;
   static SimpleType getSimplifiedValue(const WeakVH &WVH) { return WVH; }
+};
+
+/// \brief Value handle that is nullable, but tries to track the Value.
+///
+/// This is a value handle that tries hard to point to a Value, even across
+/// RAUW operations, but will null itself out if the value is destroyed.  this
+/// is useful for advisory sorts of information, but should not be used as the
+/// key of a map (since the map would have to rearrange itself when the pointer
+/// changes).
+class WeakTrackingVH : public ValueHandleBase {
+public:
+  WeakTrackingVH() : ValueHandleBase(WeakTracking) {}
+  WeakTrackingVH(Value *P) : ValueHandleBase(WeakTracking, P) {}
+  WeakTrackingVH(const WeakTrackingVH &RHS)
+      : ValueHandleBase(WeakTracking, RHS) {}
+
+  WeakTrackingVH &operator=(const WeakTrackingVH &RHS) = default;
+
+  Value *operator=(Value *RHS) {
+    return ValueHandleBase::operator=(RHS);
+  }
+  Value *operator=(const ValueHandleBase &RHS) {
+    return ValueHandleBase::operator=(RHS);
+  }
+
+  operator Value*() const {
+    return getValPtr();
+  }
+
+  bool pointsToAliveValue() const {
+    return ValueHandleBase::isValid(getValPtr());
+  }
+};
+
+// Specialize simplify_type to allow WeakTrackingVH to participate in
+// dyn_cast, isa, etc.
+template <> struct simplify_type<WeakTrackingVH> {
+  typedef Value *SimpleType;
+  static SimpleType getSimplifiedValue(WeakTrackingVH &WVH) { return WVH; }
+};
+template <> struct simplify_type<const WeakTrackingVH> {
+  typedef Value *SimpleType;
+  static SimpleType getSimplifiedValue(const WeakTrackingVH &WVH) {
+    return WVH;
+  }
 };
 
 /// \brief Value handle that asserts if the Value is deleted.
@@ -280,39 +317,37 @@ struct isPodLike<AssertingVH<T> > {
 /// to a Value (or subclass) across some operations which may move that value,
 /// but should never destroy it or replace it with some unacceptable type.
 ///
-/// It is an error to do anything with a TrackingVH whose value has been
-/// destroyed, except to destruct it.
-///
 /// It is an error to attempt to replace a value with one of a type which is
 /// incompatible with any of its outstanding TrackingVHs.
-template<typename ValueTy>
-class TrackingVH : public ValueHandleBase {
-  void CheckValidity() const {
-    Value *VP = ValueHandleBase::getValPtr();
+///
+/// It is an error to read from a TrackingVH that does not point to a valid
+/// value.  A TrackingVH is said to not point to a valid value if either it
+/// hasn't yet been assigned a value yet or because the value it was tracking
+/// has since been deleted.
+///
+/// Assigning a value to a TrackingVH is always allowed, even if said TrackingVH
+/// no longer points to a valid value.
+template <typename ValueTy> class TrackingVH {
+  WeakTrackingVH InnerHandle;
 
-    // Null is always ok.
-    if (!VP) return;
-
-    // Check that this value is valid (i.e., it hasn't been deleted). We
-    // explicitly delay this check until access to avoid requiring clients to be
-    // unnecessarily careful w.r.t. destruction.
-    assert(ValueHandleBase::isValid(VP) && "Tracked Value was deleted!");
+public:
+  ValueTy *getValPtr() const {
+    assert(InnerHandle.pointsToAliveValue() &&
+           "TrackingVH must be non-null and valid on dereference!");
 
     // Check that the value is a member of the correct subclass. We would like
     // to check this property on assignment for better debugging, but we don't
     // want to require a virtual interface on this VH. Instead we allow RAUW to
     // replace this value with a value of an invalid type, and check it here.
-    assert(isa<ValueTy>(VP) &&
+    assert(isa<ValueTy>(InnerHandle) &&
            "Tracked Value was replaced by one with an invalid type!");
+    return cast<ValueTy>(InnerHandle);
   }
 
-  ValueTy *getValPtr() const {
-    CheckValidity();
-    return (ValueTy*)ValueHandleBase::getValPtr();
-  }
   void setValPtr(ValueTy *P) {
-    CheckValidity();
-    ValueHandleBase::operator=(GetAsValue(P));
+    // Assigning to non-valid TrackingVH's are fine so we just unconditionally
+    // assign here.
+    InnerHandle = GetAsValue(P);
   }
 
   // Convert a ValueTy*, which may be const, to the type the base
@@ -321,8 +356,8 @@ class TrackingVH : public ValueHandleBase {
   static Value *GetAsValue(const Value *V) { return const_cast<Value*>(V); }
 
 public:
-  TrackingVH() : ValueHandleBase(Tracking) {}
-  TrackingVH(ValueTy *P) : ValueHandleBase(Tracking, GetAsValue(P)) {}
+  TrackingVH() {}
+  TrackingVH(ValueTy *P) { setValPtr(P); }
 
   operator ValueTy*() const {
     return getValPtr();
@@ -367,7 +402,8 @@ public:
   ///
   /// Called when this->getValPtr() is destroyed, inside ~Value(), so you
   /// may call any non-virtual Value method on getValPtr(), but no subclass
-  /// methods.  If WeakVH were implemented as a CallbackVH, it would use this
+  /// methods.  If WeakTrackingVH were implemented as a CallbackVH, it would use
+  /// this
   /// method to call setValPtr(NULL).  AssertingVH would use this method to
   /// cause an assertion failure.
   ///
@@ -378,7 +414,8 @@ public:
   /// \brief Callback for Value RAUW.
   ///
   /// Called when this->getValPtr()->replaceAllUsesWith(new_value) is called,
-  /// _before_ any of the uses have actually been replaced.  If WeakVH were
+  /// _before_ any of the uses have actually been replaced.  If WeakTrackingVH
+  /// were
   /// implemented as a CallbackVH, it would use this method to call
   /// setValPtr(new_value).  AssertingVH would do nothing in this method.
   virtual void allUsesReplacedWith(Value *) {}

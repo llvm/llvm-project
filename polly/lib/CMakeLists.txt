@@ -67,6 +67,7 @@ add_library(PollyCore OBJECT
   Transform/Simplify.cpp
   ${POLLY_HEADER_FILES}
   )
+set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
 
 # Create the library that can be linked into LLVM's tools and Polly's unittests.
 # It depends on all library it needs, such that with

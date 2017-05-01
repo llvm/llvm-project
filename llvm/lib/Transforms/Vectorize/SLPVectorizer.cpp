@@ -3899,11 +3899,13 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 }
 
 /// \brief Check that the Values in the slice in VL array are still existent in
-/// the WeakVH array.
+/// the WeakTrackingVH array.
 /// Vectorization of part of the VL array may cause later values in the VL array
-/// to become invalid. We track when this has happened in the WeakVH array.
-static bool hasValueBeenRAUWed(ArrayRef<Value *> VL, ArrayRef<WeakVH> VH,
-                               unsigned SliceBegin, unsigned SliceSize) {
+/// to become invalid. We track when this has happened in the WeakTrackingVH
+/// array.
+static bool hasValueBeenRAUWed(ArrayRef<Value *> VL,
+                               ArrayRef<WeakTrackingVH> VH, unsigned SliceBegin,
+                               unsigned SliceSize) {
   VL = VL.slice(SliceBegin, SliceSize);
   VH = VH.slice(SliceBegin, SliceSize);
   return !std::equal(VL.begin(), VL.end(), VH.begin());
@@ -3921,7 +3923,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     return false;
 
   // Keep track of values that were deleted by vectorizing in the loop below.
-  SmallVector<WeakVH, 8> TrackValues(Chain.begin(), Chain.end());
+  SmallVector<WeakTrackingVH, 8> TrackValues(Chain.begin(), Chain.end());
 
   bool Changed = false;
   // Look for profitable vectorizable trees at all offsets, starting at zero.
@@ -4107,7 +4109,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool Changed = false;
 
   // Keep track of values that were deleted by vectorizing in the loop below.
-  SmallVector<WeakVH, 8> TrackValues(VL.begin(), VL.end());
+  SmallVector<WeakTrackingVH, 8> TrackValues(VL.begin(), VL.end());
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
@@ -4734,7 +4736,7 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
 
 namespace {
 /// Tracks instructons and its children.
-class WeakVHWithLevel final : public CallbackVH {
+class WeakTrackingVHWithLevel final : public CallbackVH {
   /// Operand index of the instruction currently beeing analized.
   unsigned Level = 0;
   /// Is this the instruction that should be vectorized, or are we now
@@ -4743,8 +4745,8 @@ class WeakVHWithLevel final : public CallbackVH {
   bool IsInitial = true;
 
 public:
-  explicit WeakVHWithLevel() = default;
-  WeakVHWithLevel(Value *V) : CallbackVH(V){};
+  explicit WeakTrackingVHWithLevel() = default;
+  WeakTrackingVHWithLevel(Value *V) : CallbackVH(V){};
   /// Restart children analysis each time it is repaced by the new instruction.
   void allUsesReplacedWith(Value *New) override {
     setValPtr(New);
@@ -4771,7 +4773,7 @@ public:
            cast<Instruction>(getValPtr())->getNumOperands() > Level);
     return cast<Instruction>(getValPtr())->getOperand(Level++);
   }
-  virtual ~WeakVHWithLevel() = default;
+  virtual ~WeakTrackingVHWithLevel() = default;
 };
 } // namespace
 
@@ -4793,7 +4795,7 @@ static bool canBeVectorized(
 
   if (Root->getParent() != BB)
     return false;
-  SmallVector<WeakVHWithLevel, 8> Stack(1, Root);
+  SmallVector<WeakTrackingVHWithLevel, 8> Stack(1, Root);
   SmallSet<Value *, 8> VisitedInstrs;
   bool Res = false;
   while (!Stack.empty()) {
@@ -5069,7 +5071,8 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
 
       // Some of the candidates may have already been vectorized after we
-      // initially collected them. If so, the WeakVHs will have nullified the
+      // initially collected them. If so, the WeakTrackingVHs will have
+      // nullified the
       // values, so remove them from the set of candidates.
       Candidates.remove(nullptr);
 

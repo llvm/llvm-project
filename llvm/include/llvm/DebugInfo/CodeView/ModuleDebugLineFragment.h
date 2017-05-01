@@ -63,15 +63,15 @@ public:
                        LineColumnEntry &Item, const LineFragmentHeader *Header);
 };
 
-class ModuleDebugLineFragment final : public ModuleDebugFragment {
+class ModuleDebugLineFragmentRef final : public ModuleDebugFragmentRef {
   friend class LineColumnExtractor;
   typedef VarStreamArray<LineColumnEntry, LineColumnExtractor> LineInfoArray;
   typedef LineInfoArray::Iterator Iterator;
 
 public:
-  ModuleDebugLineFragment();
+  ModuleDebugLineFragmentRef();
 
-  static bool classof(const ModuleDebugFragment *S) {
+  static bool classof(const ModuleDebugFragmentRef *S) {
     return S->kind() == ModuleDebugFragmentKind::Lines;
   }
 

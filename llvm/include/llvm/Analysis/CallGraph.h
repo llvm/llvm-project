@@ -172,7 +172,7 @@ class CallGraphNode {
 public:
   /// \brief A pair of the calling instruction (a call or invoke)
   /// and the call graph node being called.
-  typedef std::pair<WeakVH, CallGraphNode *> CallRecord;
+  typedef std::pair<WeakTrackingVH, CallGraphNode *> CallRecord;
 
 public:
   typedef std::vector<CallRecord> CalledFunctionsVector;

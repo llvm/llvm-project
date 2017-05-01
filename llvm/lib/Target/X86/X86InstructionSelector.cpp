@@ -55,11 +55,9 @@ private:
   /// the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I) const;
 
-  // TODO: remove after selectImpl support pattern with a predicate.
+  // TODO: remove after suported by Tablegen-erated instruction selection.
   unsigned getFAddOp(LLT &Ty, const RegisterBank &RB) const;
   unsigned getFSubOp(LLT &Ty, const RegisterBank &RB) const;
-  unsigned getAddOp(LLT &Ty, const RegisterBank &RB) const;
-  unsigned getSubOp(LLT &Ty, const RegisterBank &RB) const;
   unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
                           uint64_t Alignment) const;
 
@@ -227,8 +225,12 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   assert(I.getNumOperands() == I.getNumExplicitOperands() &&
          "Generic instruction has unexpected implicit operands\n");
 
-  // TODO: This should be implemented by tblgen, pattern with predicate not
-  // supported yet.
+  if (selectImpl(I))
+     return true;
+
+  DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
+
+  // TODO: This should be implemented by tblgen.
   if (selectBinaryOp(I, MRI, MF))
     return true;
   if (selectLoadStoreOp(I, MRI, MF))
@@ -240,7 +242,7 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectTrunc(I, MRI, MF))
     return true;
 
-  return selectImpl(I);
+  return false;
 }
 
 unsigned X86InstructionSelector::getFAddOp(LLT &Ty,
@@ -313,44 +315,6 @@ unsigned X86InstructionSelector::getFSubOp(LLT &Ty,
   return TargetOpcode::G_FSUB;
 }
 
-unsigned X86InstructionSelector::getAddOp(LLT &Ty,
-                                          const RegisterBank &RB) const {
-
-  if (X86::VECRRegBankID != RB.getID())
-    return TargetOpcode::G_ADD;
-
-  if (Ty == LLT::vector(4, 32)) {
-    if (STI.hasAVX512() && STI.hasVLX()) {
-      return X86::VPADDDZ128rr;
-    } else if (STI.hasAVX()) {
-      return X86::VPADDDrr;
-    } else if (STI.hasSSE2()) {
-      return X86::PADDDrr;
-    }
-  }
-
-  return TargetOpcode::G_ADD;
-}
-
-unsigned X86InstructionSelector::getSubOp(LLT &Ty,
-                                          const RegisterBank &RB) const {
-
-  if (X86::VECRRegBankID != RB.getID())
-    return TargetOpcode::G_SUB;
-
-  if (Ty == LLT::vector(4, 32)) {
-    if (STI.hasAVX512() && STI.hasVLX()) {
-      return X86::VPSUBDZ128rr;
-    } else if (STI.hasAVX()) {
-      return X86::VPSUBDrr;
-    } else if (STI.hasSSE2()) {
-      return X86::PSUBDrr;
-    }
-  }
-
-  return TargetOpcode::G_SUB;
-}
-
 bool X86InstructionSelector::selectBinaryOp(MachineInstr &I,
                                             MachineRegisterInfo &MRI,
                                             MachineFunction &MF) const {
@@ -367,12 +331,6 @@ bool X86InstructionSelector::selectBinaryOp(MachineInstr &I,
     break;
   case TargetOpcode::G_FSUB:
     NewOpc = getFSubOp(Ty, RB);
-    break;
-  case TargetOpcode::G_ADD:
-    NewOpc = getAddOp(Ty, RB);
-    break;
-  case TargetOpcode::G_SUB:
-    NewOpc = getSubOp(Ty, RB);
     break;
   default:
     break;
@@ -400,7 +358,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
   } else if (Ty == LLT::scalar(16)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV16rm : X86::MOV16mr;
-  } else if (Ty == LLT::scalar(32)) {
+  } else if (Ty == LLT::scalar(32) || Ty == LLT::pointer(0, 32)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV32rm : X86::MOV32mr;
     if (X86::VECRRegBankID == RB.getID())
@@ -408,7 +366,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
                                  : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm)
                     : (HasAVX512 ? X86::VMOVSSZmr
                                  : HasAVX ? X86::VMOVSSmr : X86::MOVSSmr);
-  } else if (Ty == LLT::scalar(64)) {
+  } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV64rm : X86::MOV64mr;
     if (X86::VECRRegBankID == RB.getID())

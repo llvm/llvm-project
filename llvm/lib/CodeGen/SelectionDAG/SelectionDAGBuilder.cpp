@@ -1335,7 +1335,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
                                 RetPtr.getValueType(), RetPtr,
                                 DAG.getIntPtrConstant(Offsets[i],
                                                       getCurSDLoc()),
-                                &Flags);
+                                Flags);
       Chains[i] = DAG.getStore(Chain, getCurSDLoc(),
                                SDValue(RetOp.getNode(), RetOp.getResNo() + i),
                                // FIXME: better loc info would be nice.
@@ -2575,7 +2575,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   Flags.setUnsafeAlgebra(FMF.unsafeAlgebra());
 
   SDValue BinNodeValue = DAG.getNode(OpCode, getCurSDLoc(), Op1.getValueType(),
-                                     Op1, Op2, &Flags);
+                                     Op1, Op2, Flags);
   setValue(&I, BinNodeValue);
 }
 
@@ -2628,7 +2628,7 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
   Flags.setNoSignedWrap(nsw);
   Flags.setNoUnsignedWrap(nuw);
   SDValue Res = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(), Op1, Op2,
-                            &Flags);
+                            Flags);
   setValue(&I, Res);
 }
 
@@ -2640,7 +2640,7 @@ void SelectionDAGBuilder::visitSDiv(const User &I) {
   Flags.setExact(isa<PossiblyExactOperator>(&I) &&
                  cast<PossiblyExactOperator>(&I)->isExact());
   setValue(&I, DAG.getNode(ISD::SDIV, getCurSDLoc(), Op1.getValueType(), Op1,
-                           Op2, &Flags));
+                           Op2, Flags));
 }
 
 void SelectionDAGBuilder::visitICmp(const User &I) {
@@ -3252,7 +3252,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
           Flags.setNoUnsignedWrap(true);
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
-                        DAG.getConstant(Offset, dl, N.getValueType()), &Flags);
+                        DAG.getConstant(Offset, dl, N.getValueType()), Flags);
       }
     } else {
       MVT PtrTy =
@@ -3282,7 +3282,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         if (Offs.isNonNegative() && cast<GEPOperator>(I).isInBounds())
           Flags.setNoUnsignedWrap(true);
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, &Flags);
+        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
         continue;
       }
 
@@ -3360,7 +3360,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   Flags.setNoUnsignedWrap(true);
   AllocSize = DAG.getNode(ISD::ADD, dl,
                           AllocSize.getValueType(), AllocSize,
-                          DAG.getIntPtrConstant(StackAlign - 1, dl), &Flags);
+                          DAG.getIntPtrConstant(StackAlign - 1, dl), Flags);
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl,
@@ -3464,7 +3464,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     SDValue A = DAG.getNode(ISD::ADD, dl,
                             PtrVT, Ptr,
                             DAG.getConstant(Offsets[i], dl, PtrVT),
-                            &Flags);
+                            Flags);
     auto MMOFlags = MachineMemOperand::MONone;
     if (isVolatile)
       MMOFlags |= MachineMemOperand::MOVolatile;
@@ -3619,7 +3619,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       ChainI = 0;
     }
     SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, Ptr,
-                              DAG.getConstant(Offsets[i], dl, PtrVT), &Flags);
+                              DAG.getConstant(Offsets[i], dl, PtrVT), Flags);
     SDValue St = DAG.getStore(
         Root, dl, SDValue(Src.getNode(), Src.getResNo() + i), Add,
         MachinePointerInfo(PtrV, Offsets[i]), Alignment, MMOFlags, AAInfo);
@@ -7883,7 +7883,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     for (unsigned i = 0; i < NumValues; ++i) {
       SDValue Add = CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
                                     CLI.DAG.getConstant(Offsets[i], CLI.DL,
-                                                        PtrVT), &Flags);
+                                                        PtrVT), Flags);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),

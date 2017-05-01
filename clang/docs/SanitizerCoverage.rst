@@ -367,6 +367,8 @@ This can be changed with ``ASAN_OPTIONS=coverage_dir=/path``:
 Sudden death
 ============
 
+*Deprecated, don't use*
+
 Normally, coverage data is collected in memory and saved to disk when the
 program exits (with an ``atexit()`` handler), when a SIGSEGV is caught, or when
 ``__sanitizer_cov_dump()`` is called.

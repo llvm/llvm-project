@@ -58,7 +58,7 @@ void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx) {
   if (Idx >= size())
     resize(Idx + 1);
 
-  WeakVH &OldV = ValuePtrs[Idx];
+  WeakTrackingVH &OldV = ValuePtrs[Idx];
   if (!OldV) {
     OldV = V;
     return;

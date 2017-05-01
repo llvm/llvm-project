@@ -16,11 +16,11 @@
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugFragment {
+class ModuleDebugFragmentRef {
 public:
-  explicit ModuleDebugFragment(ModuleDebugFragmentKind Kind) : Kind(Kind) {}
+  explicit ModuleDebugFragmentRef(ModuleDebugFragmentKind Kind) : Kind(Kind) {}
+  virtual ~ModuleDebugFragmentRef();
 
-  virtual ~ModuleDebugFragment();
   ModuleDebugFragmentKind kind() const { return Kind; }
 
 protected:

@@ -186,6 +186,190 @@ define i71 @test5_apint(i71 %A, i71 %B) {
   ret i71 %notc
 }
 
+; ~(~A & B) --> (A | ~B)
+
+define i8 @demorgan_nand(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nand(
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i8 [[B_NOT]], %A
+; CHECK-NEXT:    ret i8 [[NOTC]]
+;
+  %notx = xor i8 %A, -1
+  %c = and i8 %notx, %B
+  %notc = xor i8 %c, -1
+  ret i8 %notc
+}
+
+; ~(~A & B) --> (A | ~B)
+
+define i7 @demorgan_nand_apint1(i7 %A, i7 %B) {
+; CHECK-LABEL: @demorgan_nand_apint1(
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i7 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i7 [[B_NOT]], %A
+; CHECK-NEXT:    ret i7 [[NOTC]]
+;
+  %nota = xor i7 %A, -1
+  %c = and i7 %nota, %B
+  %notc = xor i7 %c, -1
+  ret i7 %notc
+}
+
+; ~(~A & B) --> (A | ~B)
+
+define i117 @demorgan_nand_apint2(i117 %A, i117 %B) {
+; CHECK-LABEL: @demorgan_nand_apint2(
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i117 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i117 [[B_NOT]], %A
+; CHECK-NEXT:    ret i117 [[NOTC]]
+;
+  %nota = xor i117 %A, -1
+  %c = and i117 %nota, %B
+  %notc = xor i117 %c, -1
+  ret i117 %notc
+}
+
+; ~(~A | B) --> (A & ~B)
+
+define i8 @demorgan_nor(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor(
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    ret i8 [[NOTC]]
+;
+  %notx = xor i8 %A, -1
+  %c = or i8 %notx, %B
+  %notc = xor i8 %c, -1
+  ret i8 %notc
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use one of the intermediate results?
+
+define i8 @demorgan_nor_use2a(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2a(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nota = xor i8 %A, -1
+  %use2a = mul i8 %nota, 23
+  %c = or i8 %nota, %B
+  %notc = xor i8 %c, -1
+  %r = sdiv i8 %notc, %use2a
+  ret i8 %r
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use one of the intermediate results?
+
+define i8 @demorgan_nor_use2b(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2b(
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2B]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %use2b = mul i8 %B, 23
+  %nota = xor i8 %A, -1
+  %c = or i8 %nota, %B
+  %notc = xor i8 %c, -1
+  %r = sdiv i8 %notc, %use2b
+  ret i8 %r
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use one of the intermediate results?
+
+define i8 @demorgan_nor_use2c(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2c(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nota = xor i8 %A, -1
+  %c = or i8 %nota, %B
+  %use2c = mul i8 %c, 23
+  %notc = xor i8 %c, -1
+  %r = sdiv i8 %notc, %use2c
+  ret i8 %r
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use two of the intermediate results?
+
+define i8 @demorgan_nor_use2ab(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2ab(
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 17
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2B]]
+; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2A]]
+; CHECK-NEXT:    ret i8 [[R2]]
+;
+  %use2b = mul i8 %B, 23
+  %nota = xor i8 %A, -1
+  %use2a = mul i8 %nota, 17
+  %c = or i8 %nota, %B
+  %notc = xor i8 %c, -1
+  %r1 = sdiv i8 %notc, %use2b
+  %r2 = sdiv i8 %r1, %use2a
+  ret i8 %r2
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use two of the intermediate results?
+
+define i8 @demorgan_nor_use2ac(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2ac(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 17
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
+; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2A]]
+; CHECK-NEXT:    ret i8 [[R2]]
+;
+  %nota = xor i8 %A, -1
+  %use2a = mul i8 %nota, 17
+  %c = or i8 %nota, %B
+  %use2c = mul i8 %c, 23
+  %notc = xor i8 %c, -1
+  %r1 = sdiv i8 %notc, %use2c
+  %r2 = sdiv i8 %r1, %use2a
+  ret i8 %r2
+}
+
+; ~(~A | B) --> (A & ~B) - what if we use two of the intermediate results?
+
+define i8 @demorgan_nor_use2bc(i8 %A, i8 %B) {
+; CHECK-LABEL: @demorgan_nor_use2bc(
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
+; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2B]]
+; CHECK-NEXT:    ret i8 [[R2]]
+;
+  %use2b = mul i8 %B, 23
+  %nota = xor i8 %A, -1
+  %c = or i8 %nota, %B
+  %use2c = mul i8 %c, 23
+  %notc = xor i8 %c, -1
+  %r1 = sdiv i8 %notc, %use2c
+  %r2 = sdiv i8 %r1, %use2b
+  ret i8 %r2
+}
+
 ; FIXME: Do not apply DeMorgan's Law to constants. We prefer 'not' ops.
 
 define i32 @demorganize_constant1(i32 %a) {

@@ -138,7 +138,7 @@ private:
 
   // Tries to infer the specific address space of each address expression in
   // Postorder.
-  void inferAddressSpaces(ArrayRef<WeakVH> Postorder,
+  void inferAddressSpaces(ArrayRef<WeakTrackingVH> Postorder,
                           ValueToAddrSpaceMapTy *InferredAddrSpace) const;
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
@@ -147,7 +147,7 @@ private:
   // address spaces if InferredAddrSpace says so. Postorder is the postorder of
   // all flat expressions in the use-def graph of function F.
   bool
-  rewriteWithNewAddressSpaces(ArrayRef<WeakVH> Postorder,
+  rewriteWithNewAddressSpaces(ArrayRef<WeakTrackingVH> Postorder,
                               const ValueToAddrSpaceMapTy &InferredAddrSpace,
                               Function *F) const;
 
@@ -162,7 +162,7 @@ private:
     std::vector<std::pair<Value *, bool>> &PostorderStack,
     DenseSet<Value *> &Visited) const;
 
-  std::vector<WeakVH> collectFlatAddressExpressions(Function &F) const;
+  std::vector<WeakTrackingVH> collectFlatAddressExpressions(Function &F) const;
 
   Value *cloneValueWithNewAddressSpace(
     Value *V, unsigned NewAddrSpace,
@@ -303,7 +303,7 @@ void InferAddressSpaces::appendsFlatAddressExpressionToPostorderStack(
 
 // Returns all flat address expressions in function F. The elements are ordered
 // ordered in postorder.
-std::vector<WeakVH>
+std::vector<WeakTrackingVH>
 InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
   // This function implements a non-recursive postorder traversal of a partial
   // use-def graph of function F.
@@ -352,7 +352,7 @@ InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
     }
   }
 
-  std::vector<WeakVH> Postorder; // The resultant postorder.
+  std::vector<WeakTrackingVH> Postorder; // The resultant postorder.
   while (!PostorderStack.empty()) {
     Value *TopVal = PostorderStack.back().first;
     // If the operands of the expression on the top are already explored,
@@ -583,7 +583,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
     return false;
 
   // Collects all flat address expressions in postorder.
-  std::vector<WeakVH> Postorder = collectFlatAddressExpressions(F);
+  std::vector<WeakTrackingVH> Postorder = collectFlatAddressExpressions(F);
 
   // Runs a data-flow analysis to refine the address spaces of every expression
   // in Postorder.
@@ -596,9 +596,9 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
 }
 
 // Constants need to be tracked through RAUW to handle cases with nested
-// constant expressions, so wrap values in WeakVH.
+// constant expressions, so wrap values in WeakTrackingVH.
 void InferAddressSpaces::inferAddressSpaces(
-    ArrayRef<WeakVH> Postorder,
+    ArrayRef<WeakTrackingVH> Postorder,
     ValueToAddrSpaceMapTy *InferredAddrSpace) const {
   SetVector<Value *> Worklist(Postorder.begin(), Postorder.end());
   // Initially, all expressions are in the uninitialized address space.
@@ -810,8 +810,8 @@ static Value::use_iterator skipToNextUser(Value::use_iterator I,
 }
 
 bool InferAddressSpaces::rewriteWithNewAddressSpaces(
-  ArrayRef<WeakVH> Postorder,
-  const ValueToAddrSpaceMapTy &InferredAddrSpace, Function *F) const {
+    ArrayRef<WeakTrackingVH> Postorder,
+    const ValueToAddrSpaceMapTy &InferredAddrSpace, Function *F) const {
   // For each address expression to be modified, creates a clone of it with its
   // pointer operands converted to the new address space. Since the pointer
   // operands are converted, the clone is naturally in the new address space by
@@ -841,7 +841,7 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
   SmallVector<Instruction *, 16> DeadInstructions;
 
   // Replaces the uses of the old address expressions with the new ones.
-  for (const WeakVH &WVH : Postorder) {
+  for (const WeakTrackingVH &WVH : Postorder) {
     assert(WVH && "value was unexpectedly deleted");
     Value *V = WVH;
     Value *NewV = ValueWithNewAddrSpace.lookup(V);

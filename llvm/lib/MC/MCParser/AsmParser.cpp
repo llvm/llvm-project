@@ -412,7 +412,7 @@ private:
     DK_CFI_REMEMBER_STATE, DK_CFI_RESTORE_STATE, DK_CFI_SAME_VALUE,
     DK_CFI_RESTORE, DK_CFI_ESCAPE, DK_CFI_SIGNAL_FRAME, DK_CFI_UNDEFINED,
     DK_CFI_REGISTER, DK_CFI_WINDOW_SAVE,
-    DK_MACROS_ON, DK_MACROS_OFF,
+    DK_MACROS_ON, DK_MACROS_OFF, DK_ALTMACRO, DK_NOALTMACRO,
     DK_MACRO, DK_EXITM, DK_ENDM, DK_ENDMACRO, DK_PURGEM,
     DK_SLEB128, DK_ULEB128,
     DK_ERR, DK_ERROR, DK_WARNING,
@@ -484,7 +484,8 @@ private:
   bool parseDirectiveEndMacro(StringRef Directive);
   bool parseDirectiveMacro(SMLoc DirectiveLoc);
   bool parseDirectiveMacrosOnOff(StringRef Directive);
-
+  // alternate macro mode directives
+  bool parseDirectiveAltmacro(StringRef Directive);
   // ".bundle_align_mode"
   bool parseDirectiveBundleAlignMode();
   // ".bundle_lock"
@@ -1922,6 +1923,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveMacrosOnOff(IDVal);
     case DK_MACRO:
       return parseDirectiveMacro(IDLoc);
+    case DK_ALTMACRO:
+    case DK_NOALTMACRO:
+      return parseDirectiveAltmacro(IDVal);
     case DK_EXITM:
       return parseDirectiveExitMacro(IDVal);
     case DK_ENDM:
@@ -2270,9 +2274,18 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
         } else {
           bool VarargParameter = HasVararg && Index == (NParameters - 1);
           for (const AsmToken &Token : A[Index])
+            // For altmacro mode, you can write '%expr'.
+            // The prefix '%' evaluates the expression 'expr'
+            // and uses the result as a string (e.g. replace %(1+2) with the string "3").
+            // Here, we identify the integer token which is the result of the
+            // absolute expression evaluation and replace it with its string representation.
+            if ((Lexer.IsaAltMacroMode()) &&
+                 (*(Token.getString().begin()) == '%') && Token.is(AsmToken::Integer))
+              // Emit an integer value to the buffer.
+              OS << Token.getIntVal();
             // We expect no quotes around the string's contents when
             // parsing for varargs.
-            if (Token.getKind() != AsmToken::String || VarargParameter)
+            else if (Token.isNot(AsmToken::String) || VarargParameter)
               OS << Token.getString();
             else
               OS << Token.getStringContents();
@@ -2443,13 +2456,29 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
 
       NamedParametersFound = true;
     }
+    bool Vararg = HasVararg && Parameter == (NParameters - 1);
 
     if (NamedParametersFound && FA.Name.empty())
       return Error(IDLoc, "cannot mix positional and keyword arguments");
 
-    bool Vararg = HasVararg && Parameter == (NParameters - 1);
-    if (parseMacroArgument(FA.Value, Vararg))
-      return true;
+    if (Lexer.IsaAltMacroMode() && Lexer.is(AsmToken::Percent)) {
+        SMLoc StrLoc = Lexer.getLoc();
+        SMLoc EndLoc;
+        const MCExpr *AbsoluteExp;
+        int64_t Value;
+        /// Eat '%'
+        Lex();
+        if (parseExpression(AbsoluteExp, EndLoc))
+          return false;
+        if (!AbsoluteExp->evaluateAsAbsolute(Value))
+          return Error(StrLoc, "expected absolute expression");
+        const char *StrChar = StrLoc.getPointer();
+        const char *EndChar = EndLoc.getPointer();
+        AsmToken newToken(AsmToken::Integer, StringRef(StrChar , EndChar - StrChar), Value);
+        FA.Value.push_back(newToken);
+    }
+    else if(parseMacroArgument(FA.Value, Vararg))
+        return true;
 
     unsigned PI = Parameter;
     if (!FA.Name.empty()) {
@@ -3841,6 +3870,19 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
   return false;
 }
 
+/// parseDirectiveAltmacro
+/// ::= .altmacro
+/// ::= .noaltmacro
+bool AsmParser::parseDirectiveAltmacro(StringRef Directive) {
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in '" + Directive + "' directive");
+  if (Directive == ".altmacro")
+    getLexer().SetAltMacroMode(true);
+  else
+    getLexer().SetAltMacroMode(false);
+  return false;
+}
+
 /// parseDirectiveMacrosOnOff
 /// ::= .macros_on
 /// ::= .macros_off
@@ -4938,6 +4980,8 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".err"] = DK_ERR;
   DirectiveKindMap[".error"] = DK_ERROR;
   DirectiveKindMap[".warning"] = DK_WARNING;
+  DirectiveKindMap[".altmacro"] = DK_ALTMACRO;
+  DirectiveKindMap[".noaltmacro"] = DK_NOALTMACRO;
   DirectiveKindMap[".reloc"] = DK_RELOC;
   DirectiveKindMap[".dc"] = DK_DC;
   DirectiveKindMap[".dc.a"] = DK_DC_A;

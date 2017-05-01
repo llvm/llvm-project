@@ -93,6 +93,13 @@ static cl::opt<bool> PrintSummaryGUIDs(
     cl::desc(
         "Print the global id for each value when reading the module summary"));
 
+// FIXME: This flag should either be removed or moved to clang as a driver flag.
+static llvm::cl::opt<bool> IgnoreEmptyThinLTOIndexFile(
+    "ignore-empty-index-file", llvm::cl::ZeroOrMore,
+    llvm::cl::desc(
+        "Ignore an empty index file and perform non-ThinLTO compilation"),
+    llvm::cl::init(false));
+
 namespace {
 
 enum {
@@ -5608,4 +5615,15 @@ Expected<bool> llvm::hasGlobalValueSummary(MemoryBufferRef Buffer) {
     return BM.takeError();
 
   return BM->hasSummary();
+}
+
+Expected<std::unique_ptr<ModuleSummaryIndex>>
+llvm::getModuleSummaryIndexForFile(StringRef Path) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(Path);
+  if (!FileOrErr)
+    return errorCodeToError(FileOrErr.getError());
+  if (IgnoreEmptyThinLTOIndexFile && !(*FileOrErr)->getBufferSize())
+    return nullptr;
+  return getModuleSummaryIndex(**FileOrErr);
 }

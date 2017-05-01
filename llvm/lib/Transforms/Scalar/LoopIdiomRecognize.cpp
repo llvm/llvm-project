@@ -499,7 +499,7 @@ bool LoopIdiomRecognize::runOnLoopBlock(
     Instruction *Inst = &*I++;
     // Look for memset instructions, which may be optimized to a larger memset.
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
-      WeakVH InstPtr(&*I);
+      WeakTrackingVH InstPtr(&*I);
       if (!processLoopMemSet(MSI, BECount))
         continue;
       MadeChange = true;

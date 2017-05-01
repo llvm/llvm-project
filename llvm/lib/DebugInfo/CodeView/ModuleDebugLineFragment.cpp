@@ -47,10 +47,10 @@ Error LineColumnExtractor::extract(BinaryStreamRef Stream, uint32_t &Len,
   return Error::success();
 }
 
-ModuleDebugLineFragment::ModuleDebugLineFragment()
-    : ModuleDebugFragment(ModuleDebugFragmentKind::Lines) {}
+ModuleDebugLineFragmentRef::ModuleDebugLineFragmentRef()
+    : ModuleDebugFragmentRef(ModuleDebugFragmentKind::Lines) {}
 
-Error ModuleDebugLineFragment::initialize(BinaryStreamReader Reader) {
+Error ModuleDebugLineFragmentRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readObject(Header))
     return EC;
 
@@ -61,6 +61,6 @@ Error ModuleDebugLineFragment::initialize(BinaryStreamReader Reader) {
   return Error::success();
 }
 
-bool ModuleDebugLineFragment::hasColumnInfo() const {
-  return Header->Flags & LF_HaveColumns;
+bool ModuleDebugLineFragmentRef::hasColumnInfo() const {
+  return !!(Header->Flags & LF_HaveColumns);
 }

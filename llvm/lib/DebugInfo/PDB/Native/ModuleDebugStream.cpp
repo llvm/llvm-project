@@ -25,13 +25,14 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-ModuleDebugStream::ModuleDebugStream(const DbiModuleDescriptor &Module,
-                                     std::unique_ptr<MappedBlockStream> Stream)
+ModuleDebugStreamRef::ModuleDebugStreamRef(
+    const DbiModuleDescriptor &Module,
+    std::unique_ptr<MappedBlockStream> Stream)
     : Mod(Module), Stream(std::move(Stream)) {}
 
-ModuleDebugStream::~ModuleDebugStream() = default;
+ModuleDebugStreamRef::~ModuleDebugStreamRef() = default;
 
-Error ModuleDebugStream::reload() {
+Error ModuleDebugStreamRef::reload() {
   BinaryStreamReader Reader(*Stream);
 
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
@@ -49,7 +50,7 @@ Error ModuleDebugStream::reload() {
   if (auto EC = Reader.readArray(SymbolsSubstream, SymbolSize - 4))
     return EC;
 
-  if (auto EC = Reader.readStreamRef(LinesSubstream, C11Size))
+  if (auto EC = Reader.readStreamRef(C11LinesSubstream, C11Size))
     return EC;
   if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
@@ -72,17 +73,17 @@ Error ModuleDebugStream::reload() {
 }
 
 iterator_range<codeview::CVSymbolArray::Iterator>
-ModuleDebugStream::symbols(bool *HadError) const {
+ModuleDebugStreamRef::symbols(bool *HadError) const {
   return make_range(SymbolsSubstream.begin(HadError), SymbolsSubstream.end());
 }
 
-llvm::iterator_range<ModuleDebugStream::LinesAndChecksumsIterator>
-ModuleDebugStream::linesAndChecksums() const {
+llvm::iterator_range<ModuleDebugStreamRef::LinesAndChecksumsIterator>
+ModuleDebugStreamRef::linesAndChecksums() const {
   return make_range(LinesAndChecksums.begin(), LinesAndChecksums.end());
 }
 
-bool ModuleDebugStream::hasLineInfo() const {
+bool ModuleDebugStreamRef::hasLineInfo() const {
   return C13LinesSubstream.getLength() > 0;
 }
 
-Error ModuleDebugStream::commit() { return Error::success(); }
+Error ModuleDebugStreamRef::commit() { return Error::success(); }
