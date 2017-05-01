@@ -10,7 +10,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 ; CHECK: %tmp = load float*, float* addrspace(3)* getelementptr inbounds (%struct.bar, %struct.bar addrspace(3)* @var1, i64 0, i32 1), align 8
 ; CHECK: %tmp1 = load float, float* %tmp, align 4
 ; CHECK: store float %conv1, float* %tmp, align 4
-; CHECK: store i32 32, i32 addrspace(3)* addrspacecast (i32* bitcast (float** getelementptr (%struct.bar, %struct.bar* addrspacecast (%struct.bar addrspace(3)* @var1 to %struct.bar*), i64 0, i32 1) to i32*) to i32 addrspace(3)*), align 4
+; CHECK: store i32 32, i32 addrspace(3)* bitcast (float* addrspace(3)* getelementptr inbounds (%struct.bar, %struct.bar addrspace(3)* @var1, i64 0, i32 1) to i32 addrspace(3)*), align 4
 define void @bug31948(float %a, float* nocapture readnone %x, float* nocapture readnone %y) local_unnamed_addr #0 {
 entry:
   %tmp = load float*, float** getelementptr (%struct.bar, %struct.bar* addrspacecast (%struct.bar addrspace(3)* @var1 to %struct.bar*), i64 0, i32 1), align 8

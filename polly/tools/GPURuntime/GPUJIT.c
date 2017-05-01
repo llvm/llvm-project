@@ -130,6 +130,9 @@ static CuLinkCompleteFcnTy *CuLinkCompleteFcnPtr;
 typedef CUresult CUDAAPI CuLinkDestroyFcnTy(CUlinkState state);
 static CuLinkDestroyFcnTy *CuLinkDestroyFcnPtr;
 
+typedef CUresult CUDAAPI CuCtxSynchronizeFcnTy();
+static CuCtxSynchronizeFcnTy *CuCtxSynchronizeFcnPtr;
+
 /* Type-defines of function pointer ot CUDA runtime APIs. */
 typedef cudaError_t CUDARTAPI CudaThreadSynchronizeFcnTy(void);
 static CudaThreadSynchronizeFcnTy *CudaThreadSynchronizeFcnPtr;
@@ -232,6 +235,9 @@ static int initialDeviceAPIs() {
 
   CuLinkDestroyFcnPtr =
       (CuLinkDestroyFcnTy *)getAPIHandle(HandleCuda, "cuLinkDestroy");
+
+  CuCtxSynchronizeFcnPtr =
+      (CuCtxSynchronizeFcnTy *)getAPIHandle(HandleCuda, "cuCtxSynchronize");
 
   /* Get function pointer to CUDA Runtime APIs. */
   CudaThreadSynchronizeFcnPtr = (CudaThreadSynchronizeFcnTy *)getAPIHandle(
@@ -433,6 +439,13 @@ void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
 
   if (CuMemcpyDtoHFcnPtr(HostData, DevData->Cuda, MemSize) != CUDA_SUCCESS) {
     fprintf(stdout, "Copying results from device to host memory failed.\n");
+    exit(-1);
+  }
+}
+void polly_synchronizeDevice() {
+  dump_function();
+  if (CuCtxSynchronizeFcnPtr() != CUDA_SUCCESS) {
+    fprintf(stdout, "Synchronizing device and host memory failed.\n");
     exit(-1);
   }
 }

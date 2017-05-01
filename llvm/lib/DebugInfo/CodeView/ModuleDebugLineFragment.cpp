@@ -1,5 +1,4 @@
-//===- ModuleDebugLineFragment.cpp --------------------------------*- C++
-//-*-===//
+//===- ModuleDebugLineFragment.cpp -------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,7 +23,7 @@ Error LineColumnExtractor::extract(BinaryStreamRef Stream, uint32_t &Len,
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readObject(BlockHeader))
     return EC;
-  bool HasColumn = Header->Flags & uint32_t(LineFlags::HaveColumns);
+  bool HasColumn = Header->Flags & uint16_t(LF_HaveColumns);
   uint32_t LineInfoSize =
       BlockHeader->NumLines *
       (sizeof(LineNumberEntry) + (HasColumn ? sizeof(ColumnNumberEntry) : 0));
@@ -60,4 +59,8 @@ Error ModuleDebugLineFragment::initialize(BinaryStreamReader Reader) {
     return EC;
 
   return Error::success();
+}
+
+bool ModuleDebugLineFragment::hasColumnInfo() const {
+  return Header->Flags & LF_HaveColumns;
 }

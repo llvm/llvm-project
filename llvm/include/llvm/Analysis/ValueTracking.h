@@ -60,7 +60,7 @@ template <typename T> class ArrayRef;
   /// \p KnownZero the set of bits that are known to be zero
   /// \p KnownOne the set of bits that are known to be one
   void computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
-                                         APInt &KnownZero, APInt &KnownOne);
+                                         KnownBits &Known);
   /// Return true if LHS and RHS have no common bits set.
   bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
                            const DataLayout &DL,
@@ -417,7 +417,7 @@ template <typename T> class ArrayRef;
   ///
   /// Note that this currently only considers the basic block that is
   /// the parent of I.
-  bool isKnownNotFullPoison(const Instruction *PoisonI);
+  bool programUndefinedIfFullPoison(const Instruction *PoisonI);
 
   /// \brief Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {

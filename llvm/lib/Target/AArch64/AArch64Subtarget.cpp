@@ -113,11 +113,12 @@ void AArch64Subtarget::initializeProperties() {
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
-                                   const TargetMachine &TM, bool LittleEndian)
+                                   const TargetMachine &TM, bool LittleEndian,
+                                   bool ForCodeSize)
     : AArch64GenSubtargetInfo(TT, CPU, FS), ReserveX18(TT.isOSDarwin()),
       IsLittle(LittleEndian), TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
-      TLInfo(TM, *this), GISel() {}
+      TLInfo(TM, *this), GISel(), ForCodeSize(ForCodeSize) {}
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
   assert(GISel && "Access to GlobalISel APIs not set");

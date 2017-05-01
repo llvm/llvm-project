@@ -6,7 +6,7 @@
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:   __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 2
+; CHECK-NEXT:   .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -32,6 +32,7 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; Padding
+; CHECK-NEXT:   .p2align 3
 ; CHECK-NEXT:   .short  0
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
@@ -43,6 +44,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .short  0
 ; Padding
+; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 1
 ; PATCH-NEXT:   .short  1
@@ -63,6 +65,7 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; Padding
+; CHECK-NEXT:   .p2align  3
 ; CHECK-NEXT:   .short  0
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
@@ -74,6 +77,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .short  0
 ; Padding
+; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 5
 ; PATCH-NEXT:   .short  5
@@ -107,6 +111,7 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; Padding
+; CHECK-NEXT:   .p2align  3
 ; CHECK-NEXT:   .short  0
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
@@ -118,6 +123,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .short  0
 ; Padding
+; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 2
 ; PATCH-NEXT:   .short  2
@@ -144,6 +150,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .short  0
 ; Padding
+; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 0
 ; PATCH-NEXT:   .short  0
@@ -155,6 +162,7 @@ entry:
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .short  0
 ; Padding
+; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
 ; Num LiveOut Entries: 2
 ; PATCH-NEXT:   .short  2

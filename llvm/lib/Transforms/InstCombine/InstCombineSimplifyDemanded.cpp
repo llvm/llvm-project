@@ -589,12 +589,12 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         // If LHS is non-negative or has all low bits zero, then the upper bits
         // are all zero.
-        if (LHSKnown.Zero.isSignBitSet() || LowBits.isSubsetOf(LHSKnown.Zero))
+        if (LHSKnown.isNonNegative() || LowBits.isSubsetOf(LHSKnown.Zero))
           Known.Zero |= ~LowBits;
 
         // If LHS is negative and not all low bits are zero, then the upper bits
         // are all one.
-        if (LHSKnown.One.isSignBitSet() && LowBits.intersects(LHSKnown.One))
+        if (LHSKnown.isNegative() && LowBits.intersects(LHSKnown.One))
           Known.One |= ~LowBits;
 
         assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
@@ -607,8 +607,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (DemandedMask.isSignBitSet()) {
       computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
       // If it's known zero, our sign bit is also zero.
-      if (LHSKnown.Zero.isSignBitSet())
-        Known.Zero.setSignBit();
+      if (LHSKnown.isNonNegative())
+        Known.makeNonNegative();
     }
     break;
   case Instruction::URem: {
@@ -1537,7 +1537,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
         for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
           APInt LaneElts = OpUndefElts.lshr(InnerVWidthPerLane * Lane);
           LaneElts = LaneElts.getLoBits(InnerVWidthPerLane);
-          LaneElts = LaneElts.shl(InnerVWidthPerLane * (2 * Lane + OpNum));
+          LaneElts <<= InnerVWidthPerLane * (2 * Lane + OpNum);
           UndefElts |= LaneElts;
         }
       }

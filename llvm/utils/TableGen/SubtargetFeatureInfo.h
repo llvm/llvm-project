@@ -21,6 +21,9 @@ namespace llvm {
 class Record;
 class RecordKeeper;
 
+struct SubtargetFeatureInfo;
+using SubtargetFeatureInfoMap = std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
+
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.
 struct SubtargetFeatureInfo {
@@ -43,6 +46,10 @@ struct SubtargetFeatureInfo {
     return "Feature_" + TheDef->getName().str() + "Bit";
   }
 
+  bool mustRecomputePerFunction() const {
+    return TheDef->getValueAsBit("RecomputePerFunction");
+  }
+
   void dump() const;
   static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
   getAll(const RecordKeeper &Records);
@@ -52,21 +59,17 @@ struct SubtargetFeatureInfo {
   /// This version emits the bit value for the feature and is therefore limited
   /// to 64 feature bits.
   static void emitSubtargetFeatureFlagEnumeration(
-      std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
-          &SubtargetFeatures,
-      raw_ostream &OS);
+      SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
 
   /// Emit the subtarget feature flag definitions.
   ///
   /// This version emits the bit index for the feature and can therefore support
   /// more than 64 feature bits.
-  static void emitSubtargetFeatureBitEnumeration(
-      std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
-          &SubtargetFeatures,
-      raw_ostream &OS);
+  static void
+  emitSubtargetFeatureBitEnumeration(SubtargetFeatureInfoMap &SubtargetFeatures,
+                                     raw_ostream &OS);
 
-  static void emitNameTable(std::map<Record *, SubtargetFeatureInfo,
-                                     LessRecordByID> &SubtargetFeatures,
+  static void emitNameTable(SubtargetFeatureInfoMap &SubtargetFeatures,
                             raw_ostream &OS);
 
   /// Emit the function to compute the list of available features given a
@@ -82,11 +85,12 @@ struct SubtargetFeatureInfo {
   /// \param FuncName   The name of the function to emit.
   /// \param SubtargetFeatures A map of TableGen records to the
   ///                          SubtargetFeatureInfo equivalent.
-  static void emitComputeAvailableFeatures(
-      StringRef TargetName, StringRef ClassName, StringRef FuncName,
-      std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
-          &SubtargetFeatures,
-      raw_ostream &OS);
+  /// \param ExtraParams Additional arguments to the generated function.
+  static void
+  emitComputeAvailableFeatures(StringRef TargetName, StringRef ClassName,
+                               StringRef FuncName,
+                               SubtargetFeatureInfoMap &SubtargetFeatures,
+                               raw_ostream &OS, StringRef ExtraParams = "");
 
   /// Emit the function to compute the list of available features given a
   /// subtarget.
@@ -103,9 +107,7 @@ struct SubtargetFeatureInfo {
   ///                          SubtargetFeatureInfo equivalent.
   static void emitComputeAssemblerAvailableFeatures(
       StringRef TargetName, StringRef ClassName, StringRef FuncName,
-      std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
-          &SubtargetFeatures,
-      raw_ostream &OS);
+      SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
 };
 } // end namespace llvm
 

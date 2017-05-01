@@ -1492,7 +1492,8 @@ using the following functions.
 	isl_bool isl_space_has_tuple_name(
 		__isl_keep isl_space *space,
 		enum isl_dim_type type);
-	const char *isl_space_get_tuple_name(__isl_keep isl_space *space,
+	__isl_keep const char *isl_space_get_tuple_name(
+		__isl_keep isl_space *space,
 		enum isl_dim_type type);
 
 	#include <isl/local_space.h>

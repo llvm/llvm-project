@@ -99,12 +99,12 @@ struct PdbSourceLineInfo {
   codeview::LineFlags Flags;
   uint32_t CodeSize;
 
-  std::vector<PdbSourceLineBlock> LineInfo;
+  std::vector<PdbSourceLineBlock> Blocks;
 };
 
 struct PdbSourceFileInfo {
-  PdbSourceLineInfo Lines;
   std::vector<PdbSourceFileChecksumEntry> FileChecksums;
+  std::vector<PdbSourceLineInfo> LineFragments;
 };
 
 struct PdbDbiModuleInfo {

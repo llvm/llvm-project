@@ -2189,7 +2189,7 @@ static std::string applyEditsToTemp(const FileEntry *FE,
 
   Rewriter rewriter(SM, LangOpts);
   RewritesReceiver Rec(rewriter);
-  Editor.applyRewrites(Rec);
+  Editor.applyRewrites(Rec, /*adjustRemovals=*/false);
 
   const RewriteBuffer *Buf = rewriter.getRewriteBufferFor(FID);
   SmallString<512> NewText;

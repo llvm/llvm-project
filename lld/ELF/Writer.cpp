@@ -254,6 +254,7 @@ template <class ELFT> void Writer<ELFT>::run() {
       fixSectionAlignments();
       Script->fabricateDefaultCommands(Config->MaxPageSize);
     }
+    Script->synchronize();
     Script->assignAddresses(Phdrs);
 
     // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
@@ -1080,6 +1081,7 @@ static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
 
     SS->OutSec->Sections.erase(std::find(SS->OutSec->Sections.begin(),
                                          SS->OutSec->Sections.end(), SS));
+    SS->Live = false;
     // If there are no other sections in the output section, remove it from the
     // output.
     if (SS->OutSec->Sections.empty())

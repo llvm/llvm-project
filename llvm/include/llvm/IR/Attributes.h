@@ -457,8 +457,11 @@ public:
   /// \brief Return the attribute object that exists at the given index.
   Attribute getAttribute(unsigned Index, StringRef Kind) const;
 
+  /// \brief Return the alignment of the return value.
+  unsigned getRetAlignment() const;
+
   /// \brief Return the alignment for the specified function parameter.
-  unsigned getParamAlignment(unsigned Index) const;
+  unsigned getParamAlignment(unsigned ArgNo) const;
 
   /// \brief Get the stack alignment.
   unsigned getStackAlignment(unsigned Index) const;

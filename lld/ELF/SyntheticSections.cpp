@@ -1022,9 +1022,9 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // fixed early.
   for (StringRef S : Config->AuxiliaryList)
     add({DT_AUXILIARY, In<ELFT>::DynStrTab->addString(S)});
-  if (!Config->RPath.empty())
+  if (!Config->Rpath.empty())
     add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-         In<ELFT>::DynStrTab->addString(Config->RPath)});
+         In<ELFT>::DynStrTab->addString(Config->Rpath)});
   for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
       add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->SoName)});

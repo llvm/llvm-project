@@ -27,11 +27,11 @@ for.body:
   br i1 %cmp6, label %for.body, label %for.end.loopexit
 
 for.end.loopexit:
-  %1 = trunc i64 %indvars.iv.next29 to i32
+  %var1 = trunc i64 %indvars.iv.next29 to i32
   br label %cleanup
 
 cleanup:
-  %retval.0 = phi i32 [ 0, %entry ], [ %1, %for.end.loopexit ]
+  %retval.0 = phi i32 [ 0, %entry ], [ %var1, %for.end.loopexit ]
   ret i32 %retval.0
 }
 
@@ -57,5 +57,5 @@ cleanup:
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [p_0_loaded_from_bs] -> { Stmt_for_end_loopexit[] -> MemRef_indvars_iv_next29[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [p_0_loaded_from_bs] -> { Stmt_for_end_loopexit[] -> MemRef_1[] };
+; CHECK-NEXT:             [p_0_loaded_from_bs] -> { Stmt_for_end_loopexit[] -> MemRef_var1[] };
 ; CHECK-NEXT: }

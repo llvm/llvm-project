@@ -35,7 +35,7 @@ Error ModuleDebugStream::reload() {
   BinaryStreamReader Reader(*Stream);
 
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
-  uint32_t C11Size = Mod.getLineInfoByteSize();
+  uint32_t C11Size = Mod.getC11LineInfoByteSize();
   uint32_t C13Size = Mod.getC13LineInfoByteSize();
 
   if (C11Size > 0 && C13Size > 0)
@@ -73,9 +73,6 @@ Error ModuleDebugStream::reload() {
 
 iterator_range<codeview::CVSymbolArray::Iterator>
 ModuleDebugStream::symbols(bool *HadError) const {
-  // It's OK if the stream is empty.
-  if (SymbolsSubstream.getUnderlyingStream().getLength() == 0)
-    return make_range(SymbolsSubstream.end(), SymbolsSubstream.end());
   return make_range(SymbolsSubstream.begin(HadError), SymbolsSubstream.end());
 }
 

@@ -24,7 +24,7 @@
 #include <bset_from_bmap.c>
 #include <set_to_map.c>
 
-static struct isl_vec *empty_sample(struct isl_basic_set *bset)
+static __isl_give isl_vec *empty_sample(__isl_take isl_basic_set *bset)
 {
 	struct isl_vec *vec;
 
@@ -37,7 +37,7 @@ static struct isl_vec *empty_sample(struct isl_basic_set *bset)
  * As a special case, if bset is zero-dimensional, this
  * function creates a zero-dimensional sample point.
  */
-static struct isl_vec *zero_sample(struct isl_basic_set *bset)
+static __isl_give isl_vec *zero_sample(__isl_take isl_basic_set *bset)
 {
 	unsigned dim;
 	struct isl_vec *sample;
@@ -52,7 +52,7 @@ static struct isl_vec *zero_sample(struct isl_basic_set *bset)
 	return sample;
 }
 
-static struct isl_vec *interval_sample(struct isl_basic_set *bset)
+static __isl_give isl_vec *interval_sample(__isl_take isl_basic_set *bset)
 {
 	int i;
 	isl_int t;
@@ -119,8 +119,8 @@ error:
  * in the resulting bset, using the specified recurse function,
  * and then transform the sample back to the original space.
  */
-static struct isl_vec *sample_eq(struct isl_basic_set *bset,
-	struct isl_vec *(*recurse)(struct isl_basic_set *))
+static __isl_give isl_vec *sample_eq(__isl_take isl_basic_set *bset,
+	__isl_give isl_vec *(*recurse)(__isl_take isl_basic_set *))
 {
 	struct isl_mat *T;
 	struct isl_vec *sample;
@@ -524,7 +524,7 @@ error:
 	return NULL;
 }
 
-static struct isl_vec *sample_bounded(struct isl_basic_set *bset);
+static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset);
 
 /* Compute a sample point of the given basic set, based on the given,
  * non-trivial factorization.
@@ -601,7 +601,7 @@ error:
  * and then use isl_tab_sample to find a sample, passing it
  * the identity matrix as initial basis.
  */ 
-static struct isl_vec *sample_bounded(struct isl_basic_set *bset)
+static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset)
 {
 	unsigned dim;
 	struct isl_vec *sample;
@@ -672,8 +672,8 @@ error:
  * where [1 s] is the sample value and I is the identity matrix of the
  * appropriate dimension.
  */
-static struct isl_basic_set *plug_in(struct isl_basic_set *bset,
-	struct isl_vec *sample)
+static __isl_give isl_basic_set *plug_in(__isl_take isl_basic_set *bset,
+	__isl_take isl_vec *sample)
 {
 	int i;
 	unsigned total;
@@ -708,7 +708,7 @@ error:
 /* Given a basic set "bset", return any (possibly non-integer) point
  * in the basic set.
  */
-static struct isl_vec *rational_sample(struct isl_basic_set *bset)
+static __isl_give isl_vec *rational_sample(__isl_take isl_basic_set *bset)
 {
 	struct isl_tab *tab;
 	struct isl_vec *sample;
@@ -758,8 +758,8 @@ static struct isl_vec *rational_sample(struct isl_basic_set *bset)
  * and we only have to add the smallest negative a_i (if any)
  * instead of the sum of all negative a_i.
  */
-static struct isl_basic_set *shift_cone(struct isl_basic_set *cone,
-	struct isl_vec *vec)
+static __isl_give isl_basic_set *shift_cone(__isl_take isl_basic_set *cone,
+	__isl_take isl_vec *vec)
 {
 	int i, j, k;
 	unsigned total;
@@ -816,8 +816,8 @@ error:
  * Then we simply round up the coordinates of x and return the
  * resulting integer point.
  */
-static struct isl_vec *round_up_in_cone(struct isl_vec *vec,
-	struct isl_basic_set *cone, struct isl_mat *U)
+static __isl_give isl_vec *round_up_in_cone(__isl_take isl_vec *vec,
+	__isl_take isl_basic_set *cone, __isl_take isl_mat *U)
 {
 	unsigned total;
 
@@ -851,7 +851,8 @@ error:
 /* Concatenate two integer vectors, i.e., two vectors with denominator
  * (stored in element 0) equal to 1.
  */
-static struct isl_vec *vec_concat(struct isl_vec *vec1, struct isl_vec *vec2)
+static __isl_give isl_vec *vec_concat(__isl_take isl_vec *vec1,
+	__isl_take isl_vec *vec2)
 {
 	struct isl_vec *vec;
 
@@ -1100,7 +1101,7 @@ int isl_tab_set_initial_basis_with_cone(struct isl_tab *tab,
  * sample_with_cone.  Otherwise, we directly perform generalized basis
  * reduction.
  */
-static struct isl_vec *gbr_sample(struct isl_basic_set *bset)
+static __isl_give isl_vec *gbr_sample(__isl_take isl_basic_set *bset)
 {
 	unsigned dim;
 	struct isl_basic_set *cone;
@@ -1121,7 +1122,8 @@ error:
 	return NULL;
 }
 
-static struct isl_vec *basic_set_sample(struct isl_basic_set *bset, int bounded)
+static __isl_give isl_vec *basic_set_sample(__isl_take isl_basic_set *bset,
+	int bounded)
 {
 	struct isl_ctx *ctx;
 	unsigned dim;
@@ -1171,7 +1173,7 @@ __isl_give isl_vec *isl_basic_set_sample_vec(__isl_take isl_basic_set *bset)
 /* Compute an integer sample in "bset", where the caller guarantees
  * that "bset" is bounded.
  */
-struct isl_vec *isl_basic_set_sample_bounded(struct isl_basic_set *bset)
+__isl_give isl_vec *isl_basic_set_sample_bounded(__isl_take isl_basic_set *bset)
 {
 	return basic_set_sample(bset, 1);
 }

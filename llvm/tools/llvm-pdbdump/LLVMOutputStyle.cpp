@@ -9,6 +9,7 @@
 
 #include "LLVMOutputStyle.h"
 
+#include "C13DebugFragmentVisitor.h"
 #include "CompactTypeDumpVisitor.h"
 #include "StreamUtil.h"
 #include "llvm-pdbdump.h"
@@ -16,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
@@ -76,6 +78,79 @@ struct PageStats {
 
   // Pages which are marked free in the FPM but are used.
   BitVector UseAfterFreePages;
+};
+
+// Define a locally scoped visitor to print the different
+// substream types types.
+class C13RawVisitor : public C13DebugFragmentVisitor {
+public:
+  C13RawVisitor(ScopedPrinter &P, PDBFile &F)
+      : C13DebugFragmentVisitor(F), P(P) {}
+
+  Error handleLines() override {
+    DictScope DD(P, "Lines");
+
+    for (const auto &Fragment : Lines) {
+      DictScope DDD(P, "LineFragment");
+      P.printNumber("RelocSegment", Fragment.header()->RelocSegment);
+      P.printNumber("RelocOffset", Fragment.header()->RelocOffset);
+      P.printNumber("CodeSize", Fragment.header()->CodeSize);
+      P.printNumber("HasColumns", Fragment.hasColumnInfo());
+
+      for (const auto &L : Fragment) {
+        DictScope DDDD(P, "Lines");
+
+        if (auto EC = printFileName("FileName", L.NameIndex))
+          return EC;
+
+        for (const auto &N : L.LineNumbers) {
+          DictScope DDD(P, "Line");
+          LineInfo LI(N.Flags);
+          P.printNumber("Offset", N.Offset);
+          if (LI.isAlwaysStepInto())
+            P.printString("StepInto", StringRef("Always"));
+          else if (LI.isNeverStepInto())
+            P.printString("StepInto", StringRef("Never"));
+          else
+            P.printNumber("LineNumberStart", LI.getStartLine());
+          P.printNumber("EndDelta", LI.getLineDelta());
+          P.printBoolean("IsStatement", LI.isStatement());
+        }
+        for (const auto &C : L.Columns) {
+          DictScope DDD(P, "Column");
+          P.printNumber("Start", C.StartColumn);
+          P.printNumber("End", C.EndColumn);
+        }
+      }
+    }
+
+    return Error::success();
+  }
+
+  Error handleFileChecksums() override {
+    DictScope DD(P, "FileChecksums");
+    for (const auto &CS : *Checksums) {
+      DictScope DDD(P, "Checksum");
+      if (auto Result = getNameFromStringTable(CS.FileNameOffset))
+        P.printString("FileName", *Result);
+      else
+        return Result.takeError();
+      P.printEnum("Kind", uint8_t(CS.Kind), getFileChecksumNames());
+      P.printBinaryBlock("Checksum", CS.Checksum);
+    }
+    return Error::success();
+  }
+
+private:
+  Error printFileName(StringRef Label, uint32_t Offset) {
+    if (auto Result = getNameFromChecksumsBuffer(Offset)) {
+      P.printString(Label, *Result);
+      return Error::success();
+    } else
+      return Result.takeError();
+  }
+
+  ScopedPrinter &P;
 };
 }
 
@@ -319,6 +394,27 @@ Error LLVMOutputStyle::dumpBlockRanges() {
   return Error::success();
 }
 
+static Error parseStreamSpec(StringRef Str, uint32_t &SI, uint32_t &Offset,
+                             uint32_t &Size) {
+  if (Str.consumeInteger(0, SI))
+    return make_error<RawError>(raw_error_code::invalid_format,
+                                "Invalid Stream Specification");
+  if (Str.consume_front(":")) {
+    if (Str.consumeInteger(0, Offset))
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Invalid Stream Specification");
+  }
+  if (Str.consume_front("@")) {
+    if (Str.consumeInteger(0, Size))
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Invalid Stream Specification");
+  }
+  if (!Str.empty())
+    return make_error<RawError>(raw_error_code::invalid_format,
+                                "Invalid Stream Specification");
+  return Error::success();
+}
+
 Error LLVMOutputStyle::dumpStreamBytes() {
   if (opts::raw::DumpStreamData.empty())
     return Error::success();
@@ -327,7 +423,15 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     discoverStreamPurposes(File, StreamPurposes);
 
   DictScope D(P, "Stream Data");
-  for (uint32_t SI : opts::raw::DumpStreamData) {
+  for (auto &Str : opts::raw::DumpStreamData) {
+    uint32_t SI = 0;
+    uint32_t Begin = 0;
+    uint32_t Size = 0;
+    uint32_t End = 0;
+
+    if (auto EC = parseStreamSpec(Str, SI, Begin, Size))
+      return EC;
+
     if (SI >= File.getNumStreams())
       return make_error<RawError>(raw_error_code::no_stream);
 
@@ -336,6 +440,14 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     if (!S)
       continue;
     DictScope DD(P, "Stream");
+    if (Size == 0)
+      End = S->getLength();
+    else {
+      End = Begin + Size;
+      if (End >= S->getLength())
+        return make_error<RawError>(raw_error_code::index_out_of_bounds,
+                                    "Stream is not long enough!");
+    }
 
     P.printNumber("Index", SI);
     P.printString("Type", StreamPurposes[SI]);
@@ -347,7 +459,9 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     ArrayRef<uint8_t> StreamData;
     if (auto EC = R.readBytes(StreamData, S->getLength()))
       return EC;
-    P.printBinaryBlock("Data", StreamData);
+    Size = End - Begin;
+    StreamData = StreamData.slice(Begin, Size);
+    P.printBinaryBlock("Data", StreamData, Begin);
   }
   return Error::success();
 }
@@ -442,11 +556,11 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     Label = "Type Info Stream (IPI)";
     VerLabel = "IPI Version";
   }
-  if (!DumpRecordBytes && !DumpRecords && !DumpTpiHash &&
-      !opts::raw::DumpModuleSyms)
-    return Error::success();
 
   bool IsSilentDatabaseBuild = !DumpRecordBytes && !DumpRecords && !DumpTpiHash;
+  if (IsSilentDatabaseBuild) {
+    errs() << "Building Type Information For " << Label << "\n";
+  }
 
   auto Tpi = (StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                       : File.getPDBIpiStream();
@@ -587,7 +701,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
       P.printNumber("Num Files", Modi.Info.getNumberOfFiles());
       P.printNumber("Source File Name Idx", Modi.Info.getSourceFileNameIndex());
       P.printNumber("Pdb File Name Idx", Modi.Info.getPdbFilePathNameIndex());
-      P.printNumber("Line Info Byte Size", Modi.Info.getLineInfoByteSize());
+      P.printNumber("Line Info Byte Size", Modi.Info.getC11LineInfoByteSize());
       P.printNumber("C13 Line Info Byte Size",
                     Modi.Info.getC13LineInfoByteSize());
       P.printNumber("Symbol Byte Size", Modi.Info.getSymbolDebugInfoByteSize());
@@ -636,92 +750,12 @@ Error LLVMOutputStyle::dumpDbiStream() {
         }
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
-          // Define a locally scoped visitor to print the different
-          // substream types types.
-          class RecordVisitor : public codeview::ModuleDebugFragmentVisitor {
-          public:
-            RecordVisitor(ScopedPrinter &P, PDBFile &F) : P(P), F(F) {}
-            Error visitUnknown(ModuleDebugUnknownFragment &Fragment) override {
-              DictScope DD(P, "Unknown");
-              ArrayRef<uint8_t> Data;
-              BinaryStreamReader R(Fragment.getData());
-              if (auto EC = R.readBytes(Data, R.bytesRemaining())) {
-                return make_error<RawError>(
-                    raw_error_code::corrupt_file,
-                    "DBI stream contained corrupt line info record");
-              }
-              P.printBinaryBlock("Data", Data);
-              return Error::success();
-            }
-            Error visitFileChecksums(
-                ModuleDebugFileChecksumFragment &Checksums) override {
-              DictScope DD(P, "FileChecksums");
-              for (const auto &C : Checksums) {
-                DictScope DDD(P, "Checksum");
-                if (auto Result = getFileNameForOffset(C.FileNameOffset))
-                  P.printString("FileName", Result.get());
-                else
-                  return Result.takeError();
-                P.flush();
-                P.printEnum("Kind", uint8_t(C.Kind), getFileChecksumNames());
-                P.printBinaryBlock("Checksum", C.Checksum);
-              }
-              return Error::success();
-            }
 
-            Error visitLines(ModuleDebugLineFragment &Lines) override {
-              DictScope DD(P, "Lines");
-              for (const auto &L : Lines) {
-                if (auto Result = getFileNameForOffset2(L.NameIndex))
-                  P.printString("FileName", Result.get());
-                else
-                  return Result.takeError();
-                P.flush();
-                for (const auto &N : L.LineNumbers) {
-                  DictScope DDD(P, "Line");
-                  LineInfo LI(N.Flags);
-                  P.printNumber("Offset", N.Offset);
-                  if (LI.isAlwaysStepInto())
-                    P.printString("StepInto", StringRef("Always"));
-                  else if (LI.isNeverStepInto())
-                    P.printString("StepInto", StringRef("Never"));
-                  else
-                    P.printNumber("LineNumberStart", LI.getStartLine());
-                  P.printNumber("EndDelta", LI.getLineDelta());
-                  P.printBoolean("IsStatement", LI.isStatement());
-                }
-                for (const auto &C : L.Columns) {
-                  DictScope DDD(P, "Column");
-                  P.printNumber("Start", C.StartColumn);
-                  P.printNumber("End", C.EndColumn);
-                }
-              }
-              return Error::success();
-            }
-
-          private:
-            Expected<StringRef> getFileNameForOffset(uint32_t Offset) {
-              auto ST = F.getStringTable();
-              if (!ST)
-                return ST.takeError();
-
-              return ST->getStringForID(Offset);
-            }
-            Expected<StringRef> getFileNameForOffset2(uint32_t Offset) {
-              auto DS = F.getPDBDbiStream();
-              if (!DS)
-                return DS.takeError();
-              return DS->getFileNameForIndex(Offset);
-            }
-            ScopedPrinter &P;
-            PDBFile &F;
-          };
-
-          RecordVisitor V(P, File);
-          for (const auto &L : ModS.linesAndChecksums()) {
-            if (auto EC = codeview::visitModuleDebugFragment(L, V))
-              return EC;
-          }
+          // Inlinee Line Type Indices refer to the IPI stream.
+          C13RawVisitor V(P, File);
+          if (auto EC = codeview::visitModuleDebugFragments(
+                  ModS.linesAndChecksums(), V))
+            return EC;
         }
       }
     }

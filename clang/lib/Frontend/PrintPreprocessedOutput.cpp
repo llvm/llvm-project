@@ -324,43 +324,50 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
                                                   StringRef SearchPath,
                                                   StringRef RelativePath,
                                                   const Module *Imported) {
-  if (Imported) {
-    // When preprocessing, turn implicit imports into @imports.
-    // FIXME: This is a stop-gap until a more comprehensive "preprocessing with
-    // modules" solution is introduced.
+  // In -dI mode, dump #include directives prior to dumping their content or
+  // interpretation.
+  if (DumpIncludeDirectives) {
     startNewLineIfNeeded();
     MoveToLine(HashLoc);
-    if (PP.getLangOpts().ObjC2) {
-      OS << "@import " << Imported->getFullModuleName() << ";"
-         << " /* clang -E: implicit import for \"" << File->getName()
-         << "\" */";
-    } else {
-      const std::string TokenText = PP.getSpelling(IncludeTok);
-      assert(!TokenText.empty());
-      OS << "#" << TokenText << " "
-         << (IsAngled ? '<' : '"')
-         << FileName
-         << (IsAngled ? '>' : '"')
-         << " /* clang -E: implicit import for module "
-         << Imported->getFullModuleName() << " */";
-    }
-    // Since we want a newline after the @import, but not a #<line>, start a new
-    // line immediately.
-    EmittedTokensOnThisLine = true;
+    const std::string TokenText = PP.getSpelling(IncludeTok);
+    assert(!TokenText.empty());
+    OS << "#" << TokenText << " "
+       << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
+       << " /* clang -E -dI */";
+    setEmittedDirectiveOnThisLine();
     startNewLineIfNeeded();
-  } else {
-    // Not a module import; it's a more vanilla inclusion of some file using one
-    // of: #include, #import, #include_next, #include_macros.
-    if (DumpIncludeDirectives) {
+  }
+
+  // When preprocessing, turn implicit imports into module import pragmas.
+  if (Imported) {
+    switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
+    case tok::pp_include:
+    case tok::pp_import:
+    case tok::pp_include_next:
       startNewLineIfNeeded();
       MoveToLine(HashLoc);
-      const std::string TokenText = PP.getSpelling(IncludeTok);
-      assert(!TokenText.empty());
-      OS << "#" << TokenText << " "
+      OS << "#pragma clang module import " << Imported->getFullModuleName()
+         << " /* clang -E: implicit import for "
+         << "#" << PP.getSpelling(IncludeTok) << " "
          << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
-         << " /* clang -E -dI */";
-      setEmittedDirectiveOnThisLine();
+         << " */";
+      // Since we want a newline after the pragma, but not a #<line>, start a
+      // new line immediately.
+      EmittedTokensOnThisLine = true;
       startNewLineIfNeeded();
+      break;
+
+    case tok::pp___include_macros:
+      // #__include_macros has no effect on a user of a preprocessed source
+      // file; the only effect is on preprocessing.
+      //
+      // FIXME: That's not *quite* true: it causes the module in question to
+      // be loaded, which can affect downstream diagnostics.
+      break;
+
+    default:
+      llvm_unreachable("unknown include directive kind");
+      break;
     }
   }
 }

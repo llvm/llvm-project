@@ -1080,6 +1080,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   FrontendOpts.DisableFree = false;
   FrontendOpts.GenerateGlobalModuleIndex = false;
   FrontendOpts.BuildingImplicitModule = true;
+  FrontendOpts.OriginalModuleMap =
+      ModMap.getModuleMapFileForUniquing(Module)->getName();
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
   FrontendOpts.Inputs.clear();
@@ -1129,11 +1131,12 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   if (const FileEntry *ModuleMapFile =
           ModMap.getContainingModuleMapFile(Module)) {
     // Use the module map where this module resides.
-    FrontendOpts.Inputs.emplace_back(ModuleMapFile->getName(), IK);
+    FrontendOpts.Inputs.emplace_back(ModuleMapFile->getName(), IK,
+                                     +Module->IsSystem);
   } else {
     SmallString<128> FakeModuleMapFile(Module->Directory->getName());
     llvm::sys::path::append(FakeModuleMapFile, "__inferred_module.map");
-    FrontendOpts.Inputs.emplace_back(FakeModuleMapFile, IK);
+    FrontendOpts.Inputs.emplace_back(FakeModuleMapFile, IK, +Module->IsSystem);
 
     llvm::raw_string_ostream OS(InferredModuleMapContent);
     Module->print(OS);
@@ -1146,11 +1149,6 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     SourceMgr.overrideFileContents(ModuleMapFile, std::move(ModuleMapBuffer));
   }
 
-  // Construct a module-generating action. Passing through the module map is
-  // safe because the FileManager is shared between the compiler instances.
-  GenerateModuleFromModuleMapAction CreateModuleAction(
-      ModMap.getModuleMapFileForUniquing(Module), Module->IsSystem);
-
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build)
     << Module->Name << ModuleFileName;
@@ -1159,8 +1157,12 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // thread so that we get a stack large enough.
   const unsigned ThreadStackSize = 8 << 20;
   llvm::CrashRecoveryContext CRC;
-  CRC.RunSafelyOnThread([&]() { Instance.ExecuteAction(CreateModuleAction); },
-                        ThreadStackSize);
+  CRC.RunSafelyOnThread(
+      [&]() {
+        GenerateModuleFromModuleMapAction Action;
+        Instance.ExecuteAction(Action);
+      },
+      ThreadStackSize);
 
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build_done)

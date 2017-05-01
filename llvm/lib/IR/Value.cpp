@@ -578,9 +578,9 @@ unsigned Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto CS = ImmutableCallSite(this)) {
-    DerefBytes = CS.getDereferenceableBytes(0);
+    DerefBytes = CS.getDereferenceableBytes(AttributeList::ReturnIndex);
     if (DerefBytes == 0) {
-      DerefBytes = CS.getDereferenceableOrNullBytes(0);
+      DerefBytes = CS.getDereferenceableOrNullBytes(AttributeList::ReturnIndex);
       CanBeNull = true;
     }
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
@@ -649,7 +649,7 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
         Align = DL.getPrefTypeAlignment(AllocatedType);
     }
   } else if (auto CS = ImmutableCallSite(this))
-    Align = CS.getAttributes().getParamAlignment(AttributeList::ReturnIndex);
+    Align = CS.getAttributes().getRetAlignment();
   else if (const LoadInst *LI = dyn_cast<LoadInst>(this))
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));

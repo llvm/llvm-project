@@ -1383,16 +1383,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_NAMESPACE: {
-    if (Record.size() != 5)
+    // Newer versions of DINamespace dropped file and line.
+    MDString *Name;
+    if (Record.size() == 3)
+      Name = getMDString(Record[2]);
+    else if (Record.size() == 5)
+      Name = getMDString(Record[3]);
+    else
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool ExportSymbols = Record[0] & 2;
     MetadataList.assignValue(
         GET_OR_DISTINCT(DINamespace,
-                        (Context, getMDOrNull(Record[1]),
-                         getMDOrNull(Record[2]), getMDString(Record[3]),
-                         Record[4], ExportSymbols)),
+                        (Context, getMDOrNull(Record[1]), Name, ExportSymbols)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

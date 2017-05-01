@@ -375,10 +375,6 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   addSourceLine(Die, Ty->getLine(), Ty->getFilename(), Ty->getDirectory());
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, const DINamespace *NS) {
-  addSourceLine(Die, NS->getLine(), NS->getFilename(), NS->getDirectory());
-}
-
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType
    VarName;", but the compiler creates a __Block_byref_x_VarName struct, and
    gives the variable VarName either the struct, or a pointer to the struct, as
@@ -1085,7 +1081,6 @@ DIE *DwarfUnit::getOrCreateNameSpace(const DINamespace *NS) {
     Name = "(anonymous namespace)";
   DD->addAccelNamespace(Name, NDie);
   addGlobalName(Name, NDie, NS->getScope());
-  addSourceLine(NDie, NS);
   if (NS->getExportSymbols())
     addFlag(NDie, dwarf::DW_AT_export_symbols);
   return &NDie;

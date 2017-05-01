@@ -26,6 +26,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -4016,6 +4017,50 @@ CXCursor clang_getTranslationUnitCursor(CXTranslationUnit TU) {
 
   ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
   return MakeCXCursor(CXXUnit->getASTContext().getTranslationUnitDecl(), TU);
+}
+
+CXTargetInfo clang_getTranslationUnitTargetInfo(CXTranslationUnit CTUnit) {
+  if (isNotUsableTU(CTUnit)) {
+    LOG_BAD_TU(CTUnit);
+    return nullptr;
+  }
+
+  CXTargetInfoImpl* impl = new CXTargetInfoImpl();
+  impl->TranslationUnit = CTUnit;
+  return impl;
+}
+
+CXString clang_TargetInfo_getTriple(CXTargetInfo TargetInfo) {
+  if (!TargetInfo)
+    return cxstring::createEmpty();
+
+  CXTranslationUnit CTUnit = TargetInfo->TranslationUnit;
+  assert(!isNotUsableTU(CTUnit) &&
+         "Unexpected unusable translation unit in TargetInfo");
+
+  ASTUnit *CXXUnit = cxtu::getASTUnit(CTUnit);
+  std::string Triple =
+    CXXUnit->getASTContext().getTargetInfo().getTriple().normalize();
+  return cxstring::createDup(Triple);
+}
+
+int clang_TargetInfo_getPointerWidth(CXTargetInfo TargetInfo) {
+  if (!TargetInfo)
+    return -1;
+
+  CXTranslationUnit CTUnit = TargetInfo->TranslationUnit;
+  assert(!isNotUsableTU(CTUnit) &&
+         "Unexpected unusable translation unit in TargetInfo");
+
+  ASTUnit *CXXUnit = cxtu::getASTUnit(CTUnit);
+  return CXXUnit->getASTContext().getTargetInfo().getMaxPointerWidth();
+}
+
+void clang_TargetInfo_dispose(CXTargetInfo TargetInfo) {
+  if (!TargetInfo)
+    return;
+
+  delete TargetInfo;
 }
 
 //===----------------------------------------------------------------------===//

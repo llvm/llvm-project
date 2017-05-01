@@ -52,6 +52,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
@@ -1652,6 +1653,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::USUBO, VT, Custom);
     setOperationAction(ISD::SMULO, VT, Custom);
     setOperationAction(ISD::UMULO, VT, Custom);
+
+    // Support carry in as value rather than glue.
+    setOperationAction(ISD::ADDCARRY, VT, Custom);
+    setOperationAction(ISD::SUBCARRY, VT, Custom);
   }
 
   if (!Subtarget.is64Bit()) {
@@ -5428,8 +5433,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                 unsigned BitOffset) {
     if (!Cst)
       return false;
-    unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
     if (isa<UndefValue>(Cst)) {
+      unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
       Undefs.setBits(BitOffset, BitOffset + CstSizeInBits);
       return true;
     }
@@ -16799,9 +16804,9 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       unsigned BitWidth = Op0.getValueSizeInBits();
       unsigned AndBitWidth = And.getValueSizeInBits();
       if (BitWidth > AndBitWidth) {
-        APInt Zeros, Ones;
-        DAG.computeKnownBits(Op0, Zeros, Ones);
-        if (Zeros.countLeadingOnes() < BitWidth - AndBitWidth)
+        KnownBits Known;
+        DAG.computeKnownBits(Op0, Known);
+        if (Known.Zero.countLeadingOnes() < BitWidth - AndBitWidth)
           return SDValue();
       }
       LHS = Op1;
@@ -23351,6 +23356,35 @@ static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(1), Op.getOperand(2));
 }
 
+static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  MVT VT = N->getSimpleValueType(0);
+
+  // Let legalize expand this if it isn't a legal type yet.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  SDLoc DL(N);
+
+  // Set the carry flag.
+  SDValue Carry = Op.getOperand(2);
+  EVT CarryVT = Carry.getValueType();
+  APInt NegOne = APInt::getAllOnesValue(CarryVT.getScalarSizeInBits());
+  Carry = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
+                      Carry, DAG.getConstant(NegOne, DL, CarryVT));
+
+  unsigned Opc = Op.getOpcode() == ISD::ADDCARRY ? X86ISD::ADC : X86ISD::SBB;
+  SDValue Sum = DAG.getNode(Opc, DL, VTs, Op.getOperand(0),
+                            Op.getOperand(1), Carry.getValue(1));
+
+  SDValue SetCC = getSETCC(X86::COND_B, Sum.getValue(1), DL, DAG);
+  if (N->getValueType(1) == MVT::i1)
+    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+
+  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
+}
+
 static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
                             SelectionDAG &DAG) {
   assert(Subtarget.isTargetDarwin() && Subtarget.is64Bit());
@@ -23862,6 +23896,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDE:
   case ISD::SUBC:
   case ISD::SUBE:               return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
+  case ISD::ADDCARRY:
+  case ISD::SUBCARRY:           return LowerADDSUBCARRY(Op, DAG);
   case ISD::ADD:
   case ISD::SUB:                return LowerADD_SUB(Op, DAG);
   case ISD::SMAX:
@@ -26667,12 +26703,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
-                                                      APInt &KnownZero,
-                                                      APInt &KnownOne,
+                                                      KnownBits &Known,
                                                       const APInt &DemandedElts,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
-  unsigned BitWidth = KnownZero.getBitWidth();
+  unsigned BitWidth = Known.getBitWidth();
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert((Opc >= ISD::BUILTIN_OP_END ||
@@ -26682,7 +26717,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
 
-  KnownZero = KnownOne = APInt(BitWidth, 0);   // Don't know anything.
+  Known.Zero.clearAllBits(); Known.One.clearAllBits();
   switch (Opc) {
   default: break;
   case X86ISD::ADD:
@@ -26701,33 +26736,33 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     LLVM_FALLTHROUGH;
   case X86ISD::SETCC:
-    KnownZero.setBits(1, BitWidth);
+    Known.Zero.setBitsFrom(1);
     break;
   case X86ISD::MOVMSK: {
     unsigned NumLoBits = Op.getOperand(0).getValueType().getVectorNumElements();
-    KnownZero.setBits(NumLoBits, BitWidth);
+    Known.Zero.setBitsFrom(NumLoBits);
     break;
   }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
-        KnownZero = APInt::getAllOnesValue(BitWidth);
+        Known.Zero.setAllBits();
         break;
       }
 
-      DAG.computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
       unsigned ShAmt = ShiftImm->getZExtValue();
       if (Opc == X86ISD::VSHLI) {
-        KnownZero = KnownZero << ShAmt;
-        KnownOne = KnownOne << ShAmt;
+        Known.Zero <<= ShAmt;
+        Known.One <<= ShAmt;
         // Low bits are known zero.
-        KnownZero.setLowBits(ShAmt);
+        Known.Zero.setLowBits(ShAmt);
       } else {
-        KnownZero.lshrInPlace(ShAmt);
-        KnownOne.lshrInPlace(ShAmt);
+        Known.Zero.lshrInPlace(ShAmt);
+        Known.One.lshrInPlace(ShAmt);
         // High bits are known zero.
-        KnownZero.setHighBits(ShAmt);
+        Known.Zero.setHighBits(ShAmt);
       }
     }
     break;
@@ -26741,12 +26776,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     unsigned InBitWidth = SrcVT.getScalarSizeInBits();
     assert(InNumElts >= NumElts && "Illegal VZEXT input");
 
-    KnownZero = KnownOne = APInt(InBitWidth, 0);
+    Known = KnownBits(InBitWidth);
     APInt DemandedSrcElts = APInt::getLowBitsSet(InNumElts, NumElts);
-    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedSrcElts, Depth + 1);
-    KnownOne = KnownOne.zext(BitWidth);
-    KnownZero = KnownZero.zext(BitWidth);
-    KnownZero.setBits(InBitWidth, BitWidth);
+    DAG.computeKnownBits(N0, Known, DemandedSrcElts, Depth + 1);
+    Known.One = Known.One.zext(BitWidth);
+    Known.Zero = Known.Zero.zext(BitWidth);
+    Known.Zero.setBitsFrom(InBitWidth);
     break;
   }
   }
@@ -30206,12 +30241,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
 
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
-    APInt KnownZero, KnownOne;
+    KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
                                           DCI.isBeforeLegalizeOps());
     if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
-        TLI.SimplifyDemandedBits(Cond, DemandedMask, KnownZero, KnownOne,
-                                 TLO)) {
+        TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will
       // affect all users of Cond. Make sure it is fine and update all the nodes
       // so that we do not use the generic VSELECT anymore. Otherwise, we may
@@ -31056,8 +31090,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue N00 = N0.getOperand(0);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    const APInt &ShAmt = N1C->getAPIntValue();
-    Mask = Mask.shl(ShAmt);
+    Mask <<= N1C->getAPIntValue();
     bool MaskOK = false;
     // We can handle cases concerning bit-widening nodes containing setcc_c if
     // we carefully interrogate the mask to make sure we are semantics
@@ -31267,9 +31300,9 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     unsigned ShiftImm = ShiftVal.getZExtValue();
     for (APInt &Elt : EltBits) {
       if (X86ISD::VSHLI == Opcode)
-        Elt = Elt.shl(ShiftImm);
+        Elt <<= ShiftImm;
       else if (X86ISD::VSRAI == Opcode)
-        Elt = Elt.ashr(ShiftImm);
+        Elt.ashrInPlace(ShiftImm);
       else
         Elt.lshrInPlace(ShiftImm);
     }
@@ -33775,12 +33808,12 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   if (Op1.hasOneUse()) {
     unsigned BitWidth = Op1.getValueSizeInBits();
     APInt DemandedMask = APInt::getLowBitsSet(BitWidth, Log2_32(BitWidth));
-    APInt KnownZero, KnownOne;
+    KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (TLI.ShrinkDemandedConstant(Op1, DemandedMask, TLO) ||
-        TLI.SimplifyDemandedBits(Op1, DemandedMask, KnownZero, KnownOne, TLO))
+        TLI.SimplifyDemandedBits(Op1, DemandedMask, Known, TLO))
       DCI.CommitTargetLoweringOpt(TLO);
   }
   return SDValue();
@@ -34486,6 +34519,34 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Optimize RES, EFLAGS = X86ISD::ADD LHS, RHS
+static SDValue combineX86ADD(SDNode *N, SelectionDAG &DAG,
+                             X86TargetLowering::DAGCombinerInfo &DCI) {
+  // When legalizing carry, we create carries via add X, -1
+  // If that comes from an actual carry, via setcc, we use the
+  // carry directly.
+  if (isAllOnesConstant(N->getOperand(1)) && N->hasAnyUseOfValue(1)) {
+    SDValue Carry = N->getOperand(0);
+    while (Carry.getOpcode() == ISD::TRUNCATE ||
+           Carry.getOpcode() == ISD::ZERO_EXTEND ||
+           Carry.getOpcode() == ISD::SIGN_EXTEND ||
+           Carry.getOpcode() == ISD::ANY_EXTEND ||
+           (Carry.getOpcode() == ISD::AND &&
+            isOneConstant(Carry.getOperand(1))))
+      Carry = Carry.getOperand(0);
+
+    if (Carry.getOpcode() == ISD::SETCC ||
+        Carry.getOpcode() == X86ISD::SETCC ||
+        Carry.getOpcode() == X86ISD::SETCC_CARRY) {
+      auto *Cond = cast<ConstantSDNode>(Carry.getOperand(0));
+      if (Cond->getZExtValue() == X86::COND_B)
+        return DCI.CombineTo(N, SDValue(N, 0), Carry.getOperand(1));
+    }
+  }
+
+  return SDValue();
+}
+
 // Optimize RES, EFLAGS = X86ISD::ADC LHS, RHS, EFLAGS
 static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
                           X86TargetLowering::DAGCombinerInfo &DCI) {
@@ -35047,6 +35108,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, Subtarget);
+  case X86ISD::ADD:         return combineX86ADD(N, DAG, DCI);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
   case ISD::SHL:
@@ -35171,12 +35233,19 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 /// know that the code that lowers COPY of EFLAGS has to use the stack, and if
 /// we don't adjust the stack we clobber the first frame index.
 /// See X86InstrInfo::copyPhysReg.
-bool X86TargetLowering::hasCopyImplyingStackAdjustment(
-    MachineFunction *MF) const {
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-
+static bool hasCopyImplyingStackAdjustment(const MachineFunction &MF) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   return any_of(MRI.reg_instructions(X86::EFLAGS),
                 [](const MachineInstr &RI) { return RI.isCopy(); });
+}
+
+void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
+  if (hasCopyImplyingStackAdjustment(MF)) {
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    MFI.setHasCopyImplyingStackAdjustment(true);
+  }
+
+  TargetLoweringBase::finalizeLowering(MF);
 }
 
 /// This method query the target whether it is beneficial for dag combiner to

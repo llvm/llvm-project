@@ -53,8 +53,8 @@ public:
 };
 
 template <typename T1, typename T2>
-pair<T1, T2> make_pair(T1, T2) {
-  return pair<T1, T2>();
+pair<T1, T2> make_pair(T1&&, T2&&) {
+  return {};
 };
 
 template <typename T>
@@ -274,18 +274,51 @@ void testPointers() {
 
 void testMakePair() {
   std::vector<std::pair<int, int>> v;
-  // FIXME: add functionality to change calls of std::make_pair
   v.push_back(std::make_pair(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(1, 2);
 
-  // FIXME: This is not a bug, but call of make_pair should be removed in the
-  // future. This one matches because the return type of make_pair is different
-  // than the pair itself.
   v.push_back(std::make_pair(42LL, 13));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
-  // CHECK-FIXES: v.emplace_back(std::make_pair(42LL, 13));
+  // CHECK-FIXES: v.emplace_back(42LL, 13);
+
+  v.push_back(std::make_pair<char, char>(0, 3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(std::make_pair<char, char>(0, 3));
+  //
+  // Even though the call above could be turned into v.emplace_back(0, 3),
+  // we don't eliminate the make_pair call here, because of the explicit
+  // template parameters provided. make_pair's arguments can be convertible
+  // to its explicitly provided template parameter, but not to the pair's
+  // element type. The examples below illustrate the problem.
+  struct D {
+    D(...) {}
+    operator char() const { return 0; }
+  };
+  v.push_back(std::make_pair<D, int>(Something(), 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(std::make_pair<D, int>(Something(), 2));
+
+  struct X {
+    X(std::pair<int, int>) {}
+  };
+  std::vector<X> x;
+  x.push_back(std::make_pair(1, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: x.emplace_back(std::make_pair(1, 2));
+  // make_pair cannot be removed here, as X is not constructible with two ints.
+
+  struct Y {
+    Y(std::pair<int, int>&&) {}
+  };
+  std::vector<Y> y;
+  y.push_back(std::make_pair(2, 3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: y.emplace_back(std::make_pair(2, 3));
+  // make_pair cannot be removed here, as Y is not constructible with two ints.
 }
 
-void testOtherCointainers() {
+void testOtherContainers() {
   std::list<Something> l;
   l.push_back(Something(42, 41));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back

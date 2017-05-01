@@ -52,18 +52,6 @@ void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
   }
 }
 
-void ModuleSummaryIndex::removeEmptySummaryEntries() {
-  for (auto MI = begin(), MIE = end(); MI != MIE;) {
-    // Only expect this to be called on a per-module index, which has a single
-    // entry per value entry list.
-    assert(MI->second.size() == 1);
-    if (!MI->second[0])
-      MI = GlobalValueMap.erase(MI);
-    else
-      ++MI;
-  }
-}
-
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(

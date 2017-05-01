@@ -506,7 +506,8 @@ static const char *constraint_op(int sign, int strict, int latex)
  * "first_constraint" is set if this is the first constraint
  * in the conjunction.
  */
-static __isl_give isl_printer *print_half_constraint(struct isl_basic_map *bmap,
+static __isl_give isl_printer *print_half_constraint(
+	__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_space *space, __isl_keep isl_mat *div,
 	__isl_take isl_printer *p, isl_int *c, int last, const char *op,
 	int first_constraint, int latex)
@@ -536,7 +537,7 @@ static __isl_give isl_printer *print_half_constraint(struct isl_basic_map *bmap,
  * "first_constraint" is set if this is the first constraint
  * in the conjunction.
  */
-static __isl_give isl_printer *print_constraint(struct isl_basic_map *bmap,
+static __isl_give isl_printer *print_constraint(__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_space *space, __isl_keep isl_mat *div,
 	__isl_take isl_printer *p,
 	isl_int *c, int last, const char *op, int first_constraint, int latex)

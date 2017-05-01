@@ -261,9 +261,10 @@ cl::opt<std::string>
                       cl::cat(MsfOptions), cl::sub(RawSubcommand));
 llvm::Optional<BlockRange> DumpBlockRange;
 
-cl::list<uint32_t>
+cl::list<std::string>
     DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
-                   cl::desc("Dump binary data from specified streams."),
+                   cl::desc("Dump binary data from specified streams.  Format "
+                            "is SN[:Start][@Size]"),
                    cl::cat(MsfOptions), cl::sub(RawSubcommand));
 
 // TYPE OPTIONS

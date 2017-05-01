@@ -777,7 +777,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ) {
       Instruction *Inst = &*I++;
 
-      if (Value *V = SimplifyInstruction(Inst, DL))
+      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(Inst, V))
           Inst->replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(Inst))

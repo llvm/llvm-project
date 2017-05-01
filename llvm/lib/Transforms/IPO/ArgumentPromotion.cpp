@@ -106,9 +106,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   AttributeList PAL = F->getAttributes();
 
   // First, determine the new argument list
-  unsigned ArgIndex = 0;
+  unsigned ArgNo = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
-       ++I, ++ArgIndex) {
+       ++I, ++ArgNo) {
     if (ByValArgsToTransform.count(&*I)) {
       // Simple byval argument? Just add all the struct element types.
       Type *AgTy = cast<PointerType>(I->getType())->getElementType();
@@ -120,7 +120,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     } else if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
       Params.push_back(I->getType());
-      ArgAttrVec.push_back(PAL.getParamAttributes(ArgIndex));
+      ArgAttrVec.push_back(PAL.getParamAttributes(ArgNo));
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
@@ -214,12 +214,12 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
     CallSite::arg_iterator AI = CS.arg_begin();
-    ArgIndex = 1;
+    ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
-         ++I, ++AI, ++ArgIndex)
+         ++I, ++AI, ++ArgNo)
       if (!ArgsToPromote.count(&*I) && !ByValArgsToTransform.count(&*I)) {
         Args.push_back(*AI); // Unmodified argument
-        ArgAttrVec.push_back(CallPAL.getAttributes(ArgIndex));
+        ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
       } else if (ByValArgsToTransform.count(&*I)) {
         // Emit a GEP and load for each element of the struct.
         Type *AgTy = cast<PointerType>(I->getType())->getElementType();
@@ -280,9 +280,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       }
 
     // Push any varargs arguments on the list.
-    for (; AI != CS.arg_end(); ++AI, ++ArgIndex) {
+    for (; AI != CS.arg_end(); ++AI, ++ArgNo) {
       Args.push_back(*AI);
-      ArgAttrVec.push_back(CallPAL.getAttributes(ArgIndex));
+      ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;
@@ -839,17 +839,12 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // avoiding a register copy.
     if (PtrArg->hasStructRetAttr()) {
       unsigned ArgNo = PtrArg->getArgNo();
-      F->setAttributes(
-          F->getAttributes()
-              .removeAttribute(F->getContext(), ArgNo + 1, Attribute::StructRet)
-              .addAttribute(F->getContext(), ArgNo + 1, Attribute::NoAlias));
+      F->removeAttribute(ArgNo + 1, Attribute::StructRet);
+      F->addAttribute(ArgNo + 1, Attribute::NoAlias);
       for (Use &U : F->uses()) {
         CallSite CS(U.getUser());
-        CS.setAttributes(
-            CS.getAttributes()
-                .removeAttribute(F->getContext(), ArgNo + 1,
-                                 Attribute::StructRet)
-                .addAttribute(F->getContext(), ArgNo + 1, Attribute::NoAlias));
+        CS.removeAttribute(ArgNo + 1, Attribute::StructRet);
+        CS.addAttribute(ArgNo + 1, Attribute::NoAlias);
       }
     }
 

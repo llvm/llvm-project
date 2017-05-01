@@ -33,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
@@ -239,7 +240,9 @@ namespace {
     SDValue visitSUBC(SDNode *N);
     SDValue visitUSUBO(SDNode *N);
     SDValue visitADDE(SDNode *N);
+    SDValue visitADDCARRY(SDNode *N);
     SDValue visitSUBE(SDNode *N);
+    SDValue visitSUBCARRY(SDNode *N);
     SDValue visitMUL(SDNode *N);
     SDValue useDivRem(SDNode *N);
     SDValue visitSDIV(SDNode *N);
@@ -965,8 +968,8 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 /// things it uses can be simplified by bit propagation. If so, return true.
 bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &Demanded) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
-  APInt KnownZero, KnownOne;
-  if (!TLI.SimplifyDemandedBits(Op, Demanded, KnownZero, KnownOne, TLO))
+  KnownBits Known;
+  if (!TLI.SimplifyDemandedBits(Op, Demanded, Known, TLO))
     return false;
 
   // Revisit the node.
@@ -1412,7 +1415,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SUBC:               return visitSUBC(N);
   case ISD::USUBO:              return visitUSUBO(N);
   case ISD::ADDE:               return visitADDE(N);
+  case ISD::ADDCARRY:           return visitADDCARRY(N);
   case ISD::SUBE:               return visitSUBE(N);
+  case ISD::SUBCARRY:           return visitSUBCARRY(N);
   case ISD::MUL:                return visitMUL(N);
   case ISD::SDIV:               return visitSDIV(N);
   case ISD::UDIV:               return visitUDIV(N);
@@ -2094,6 +2099,25 @@ SDValue DAGCombiner::visitADDE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue CarryIn = N->getOperand(2);
+
+  // canonicalize constant to RHS
+  ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  if (N0C && !N1C)
+    return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(),
+                       N1, N0, CarryIn);
+
+  // fold (addcarry x, y, false) -> (uaddo x, y)
+  if (isNullConstant(CarryIn))
+    return DAG.getNode(ISD::UADDO, SDLoc(N), N->getVTList(), N0, N1);
+
+  return SDValue();
+}
+
 // Since it may not be valid to emit a fold to zero for vector initializers
 // check if we can before folding.
 static SDValue tryFoldToZero(const SDLoc &DL, const TargetLowering &TLI, EVT VT,
@@ -2322,6 +2346,18 @@ SDValue DAGCombiner::visitSUBE(SDNode *N) {
   // fold (sube x, y, false) -> (subc x, y)
   if (CarryIn.getOpcode() == ISD::CARRY_FALSE)
     return DAG.getNode(ISD::SUBC, SDLoc(N), N->getVTList(), N0, N1);
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSUBCARRY(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue CarryIn = N->getOperand(2);
+
+  // fold (subcarry x, y, false) -> (usubo x, y)
+  if (isNullConstant(CarryIn))
+    return DAG.getNode(ISD::USUBO, SDLoc(N), N->getVTList(), N0, N1);
 
   return SDValue();
 }
@@ -5364,7 +5400,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
         APInt Mask = APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - c1);
         SDValue Shift;
         if (c2 > c1) {
-          Mask = Mask.shl(c2 - c1);
+          Mask <<= c2 - c1;
           SDLoc DL(N);
           Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0),
                               DAG.getConstant(c2 - c1, DL, N1.getValueType()));
@@ -5697,20 +5733,20 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // fold (srl (ctlz x), "5") -> x  iff x has one bit set (the low bit).
   if (N1C && N0.getOpcode() == ISD::CTLZ &&
       N1C->getAPIntValue() == Log2_32(OpSizeInBits)) {
-    APInt KnownZero, KnownOne;
-    DAG.computeKnownBits(N0.getOperand(0), KnownZero, KnownOne);
+    KnownBits Known;
+    DAG.computeKnownBits(N0.getOperand(0), Known);
 
     // If any of the input bits are KnownOne, then the input couldn't be all
     // zeros, thus the result of the srl will always be zero.
-    if (KnownOne.getBoolValue()) return DAG.getConstant(0, SDLoc(N0), VT);
+    if (Known.One.getBoolValue()) return DAG.getConstant(0, SDLoc(N0), VT);
 
     // If all of the bits input the to ctlz node are known to be zero, then
     // the result of the ctlz is "32" and the result of the shift is one.
-    APInt UnknownBits = ~KnownZero;
+    APInt UnknownBits = ~Known.Zero;
     if (UnknownBits == 0) return DAG.getConstant(1, SDLoc(N0), VT);
 
     // Otherwise, check to see if there is exactly one bit input to the ctlz.
-    if ((UnknownBits & (UnknownBits - 1)) == 0) {
+    if (UnknownBits.isPowerOf2()) {
       // Okay, we know that only that the single bit specified by UnknownBits
       // could be set on input to the CTLZ node. If this bit is set, the SRL
       // will return 0, if it is clear, it returns 1. Change the CTLZ/SRL pair
@@ -7133,15 +7169,14 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
 }
 
 // isTruncateOf - If N is a truncate of some other value, return true, record
-// the value being truncated in Op and which of Op's bits are zero in KnownZero.
-// This function computes KnownZero to avoid a duplicated call to
+// the value being truncated in Op and which of Op's bits are zero/one in Known.
+// This function computes KnownBits to avoid a duplicated call to
 // computeKnownBits in the caller.
 static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
-                         APInt &KnownZero) {
-  APInt KnownOne;
+                         KnownBits &Known) {
   if (N->getOpcode() == ISD::TRUNCATE) {
     Op = N->getOperand(0);
-    DAG.computeKnownBits(Op, KnownZero, KnownOne);
+    DAG.computeKnownBits(Op, Known);
     return true;
   }
 
@@ -7160,9 +7195,9 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
   else
     return false;
 
-  DAG.computeKnownBits(Op, KnownZero, KnownOne);
+  DAG.computeKnownBits(Op, Known);
 
-  if (!(KnownZero | APInt(Op.getValueSizeInBits(), 1)).isAllOnesValue())
+  if (!(Known.Zero | 1).isAllOnesValue())
     return false;
 
   return true;
@@ -7187,8 +7222,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // This is valid when the truncated bits of x are already zero.
   // FIXME: We should extend this to work for vectors too.
   SDValue Op;
-  APInt KnownZero;
-  if (!VT.isVector() && isTruncateOf(DAG, N0, Op, KnownZero)) {
+  KnownBits Known;
+  if (!VT.isVector() && isTruncateOf(DAG, N0, Op, Known)) {
     APInt TruncatedBits =
       (Op.getValueSizeInBits() == N0.getValueSizeInBits()) ?
       APInt(Op.getValueSizeInBits(), 0) :
@@ -7196,7 +7231,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                         N0.getValueSizeInBits(),
                         std::min(Op.getValueSizeInBits(),
                                  VT.getSizeInBits()));
-    if (TruncatedBits == (KnownZero & TruncatedBits)) {
+    if (TruncatedBits.isSubsetOf(Known.Zero)) {
       if (VT.bitsGT(Op.getValueType()))
         return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Op);
       if (VT.bitsLT(Op.getValueType()))
@@ -8245,15 +8280,16 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     return SDValue(N, 0);
 
   // (trunc adde(X, Y, Carry)) -> (adde trunc(X), trunc(Y), Carry)
+  // (trunc addcarry(X, Y, Carry)) -> (addcarry trunc(X), trunc(Y), Carry)
   // When the adde's carry is not used.
-  if (N0.getOpcode() == ISD::ADDE && N0.hasOneUse() &&
-      !N0.getNode()->hasAnyUseOfValue(1) &&
-      (!LegalOperations || TLI.isOperationLegal(ISD::ADDE, VT))) {
+  if ((N0.getOpcode() == ISD::ADDE || N0.getOpcode() == ISD::ADDCARRY) &&
+      N0.hasOneUse() && !N0.getNode()->hasAnyUseOfValue(1) &&
+      (!LegalOperations || TLI.isOperationLegal(N0.getOpcode(), VT))) {
     SDLoc SL(N);
     auto X = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
     auto Y = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
-    return DAG.getNode(ISD::ADDE, SL, DAG.getVTList(VT, MVT::Glue),
-                       X, Y, N0.getOperand(2));
+    auto VTs = DAG.getVTList(VT, N0->getValueType(1));
+    return DAG.getNode(N0.getOpcode(), SL, VTs, X, Y, N0.getOperand(2));
   }
 
   return SDValue();

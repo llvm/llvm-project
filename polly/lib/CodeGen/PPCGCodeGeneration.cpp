@@ -86,6 +86,13 @@ static cl::opt<bool> PrivateMemory("polly-acc-use-private",
                                    cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
+static cl::opt<bool> ManagedMemory("polly-acc-codegen-managed-memory",
+                                   cl::desc("Generate Host kernel code assuming"
+                                            " that all memory has been"
+                                            " declared as managed memory"),
+                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
+
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
@@ -242,6 +249,14 @@ private:
   ///
   /// @returns A tuple with grid sizes for X and Y dimension
   std::tuple<Value *, Value *> getGridSizes(ppcg_kernel *Kernel);
+
+  /// Creates a array that can be sent to the kernel on the device using a
+  /// host pointer. This is required for managed memory, when we directly send
+  /// host pointers to the device.
+  /// \note
+  /// This is to be used only with managed memory
+  Value *getOrCreateManagedDeviceArray(gpu_array_info *Array,
+                                       ScopArrayInfo *ArrayInfo);
 
   /// Compute the sizes of the thread blocks for a given kernel.
   ///
@@ -449,6 +464,11 @@ private:
   void createCallCopyFromDeviceToHost(Value *DevicePtr, Value *HostPtr,
                                       Value *Size);
 
+  /// Create a call to synchronize Host & Device.
+  /// \note
+  /// This is to be used only with managed memory.
+  void createCallSynchronizeDevice();
+
   /// Create a call to get a kernel from an assembly string.
   ///
   /// @param Buffer The string describing the kernel.
@@ -485,16 +505,22 @@ void GPUNodeBuilder::initializeAfterRTH() {
   Builder.SetInsertPoint(&NewBB->front());
 
   GPUContext = createCallInitContext();
-  allocateDeviceArrays();
+
+  if (!ManagedMemory)
+    allocateDeviceArrays();
 }
 
 void GPUNodeBuilder::finalize() {
-  freeDeviceArrays();
+  if (!ManagedMemory)
+    freeDeviceArrays();
+
   createCallFreeContext(GPUContext);
   IslNodeBuilder::finalize();
 }
 
 void GPUNodeBuilder::allocateDeviceArrays() {
+  assert(!ManagedMemory && "Managed memory will directly send host pointers "
+                           "to the kernel. There is no need for device arrays");
   isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
 
   for (int i = 0; i < Prog->n_array; ++i) {
@@ -540,6 +566,7 @@ void GPUNodeBuilder::addCUDAAnnotations(Module *M, Value *BlockDimX,
 }
 
 void GPUNodeBuilder::freeDeviceArrays() {
+  assert(!ManagedMemory && "Managed memory does not use device arrays");
   for (auto &Array : DeviceAllocations)
     createCallFreeDeviceMemory(Array.second);
 }
@@ -624,6 +651,8 @@ void GPUNodeBuilder::createCallFreeKernel(Value *GPUKernel) {
 }
 
 void GPUNodeBuilder::createCallFreeDeviceMemory(Value *Array) {
+  assert(!ManagedMemory && "Managed memory does not allocate or free memory "
+                           "for device");
   const char *Name = "polly_freeDeviceMemory";
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Function *F = M->getFunction(Name);
@@ -641,6 +670,8 @@ void GPUNodeBuilder::createCallFreeDeviceMemory(Value *Array) {
 }
 
 Value *GPUNodeBuilder::createCallAllocateMemoryForDevice(Value *Size) {
+  assert(!ManagedMemory && "Managed memory does not allocate or free memory "
+                           "for device");
   const char *Name = "polly_allocateMemoryForDevice";
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Function *F = M->getFunction(Name);
@@ -660,6 +691,8 @@ Value *GPUNodeBuilder::createCallAllocateMemoryForDevice(Value *Size) {
 void GPUNodeBuilder::createCallCopyFromHostToDevice(Value *HostData,
                                                     Value *DeviceData,
                                                     Value *Size) {
+  assert(!ManagedMemory && "Managed memory does not transfer memory between "
+                           "device and host");
   const char *Name = "polly_copyFromHostToDevice";
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Function *F = M->getFunction(Name);
@@ -681,6 +714,8 @@ void GPUNodeBuilder::createCallCopyFromHostToDevice(Value *HostData,
 void GPUNodeBuilder::createCallCopyFromDeviceToHost(Value *DeviceData,
                                                     Value *HostData,
                                                     Value *Size) {
+  assert(!ManagedMemory && "Managed memory does not transfer memory between "
+                           "device and host");
   const char *Name = "polly_copyFromDeviceToHost";
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Function *F = M->getFunction(Name);
@@ -697,6 +732,23 @@ void GPUNodeBuilder::createCallCopyFromDeviceToHost(Value *DeviceData,
   }
 
   Builder.CreateCall(F, {DeviceData, HostData, Size});
+}
+
+void GPUNodeBuilder::createCallSynchronizeDevice() {
+  assert(ManagedMemory && "explicit synchronization is only necessary for "
+                          "managed memory");
+  const char *Name = "polly_synchronizeDevice";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F);
 }
 
 Value *GPUNodeBuilder::createCallInitContext() {
@@ -805,8 +857,39 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
   return ResultValue;
 }
 
+Value *GPUNodeBuilder::getOrCreateManagedDeviceArray(gpu_array_info *Array,
+                                                     ScopArrayInfo *ArrayInfo) {
+
+  assert(ManagedMemory && "Only used when you wish to get a host "
+                          "pointer for sending data to the kernel, "
+                          "with managed memory");
+  std::map<ScopArrayInfo *, Value *>::iterator it;
+  if ((it = DeviceAllocations.find(ArrayInfo)) != DeviceAllocations.end()) {
+    return it->second;
+  } else {
+    Value *HostPtr;
+
+    if (gpu_array_is_scalar(Array))
+      HostPtr = BlockGen.getOrCreateAlloca(ArrayInfo);
+    else
+      HostPtr = ArrayInfo->getBasePtr();
+
+    Value *Offset = getArrayOffset(Array);
+    if (Offset) {
+      HostPtr = Builder.CreatePointerCast(
+          HostPtr, ArrayInfo->getElementType()->getPointerTo());
+      HostPtr = Builder.CreateGEP(HostPtr, Offset);
+    }
+
+    HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
+    DeviceAllocations[ArrayInfo] = HostPtr;
+    return HostPtr;
+  }
+}
+
 void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
                                         enum DataDirection Direction) {
+  assert(!ManagedMemory && "Managed memory needs no data transfers");
   isl_ast_expr *Expr = isl_ast_node_user_get_expr(TransferStmt);
   isl_ast_expr *Arg = isl_ast_expr_get_op_arg(Expr, 0);
   isl_id *Id = isl_ast_expr_get_id(Arg);
@@ -864,13 +947,22 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   }
 
   if (isPrefix(Str, "to_device")) {
-    createDataTransfer(UserStmt, HOST_TO_DEVICE);
+    if (!ManagedMemory)
+      createDataTransfer(UserStmt, HOST_TO_DEVICE);
+    else
+      isl_ast_node_free(UserStmt);
+
     isl_ast_expr_free(Expr);
     return;
   }
 
   if (isPrefix(Str, "from_device")) {
-    createDataTransfer(UserStmt, DEVICE_TO_HOST);
+    if (!ManagedMemory) {
+      createDataTransfer(UserStmt, DEVICE_TO_HOST);
+    } else {
+      createCallSynchronizeDevice();
+      isl_ast_node_free(UserStmt);
+    }
     isl_ast_expr_free(Expr);
     return;
   }
@@ -1096,9 +1188,16 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
 
-    Value *DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
-    DevArray = createCallGetDevicePtr(DevArray);
-
+    Value *DevArray = nullptr;
+    if (ManagedMemory) {
+      DevArray = getOrCreateManagedDeviceArray(
+          &Prog->array[i], const_cast<ScopArrayInfo *>(SAI));
+    } else {
+      DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
+      DevArray = createCallGetDevicePtr(DevArray);
+    }
+    assert(DevArray != nullptr && "Array to be offloaded to device not "
+                                  "initialized");
     Value *Offset = getArrayOffset(&Prog->array[i]);
 
     if (Offset) {
@@ -1111,7 +1210,14 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
         Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
 
     if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
-      Value *ValPtr = BlockGen.getOrCreateAlloca(SAI);
+      Value *ValPtr = nullptr;
+      if (ManagedMemory)
+        ValPtr = DevArray;
+      else
+        ValPtr = BlockGen.getOrCreateAlloca(SAI);
+
+      assert(ValPtr != nullptr && "ValPtr that should point to a valid object"
+                                  " to be stored into Parameters");
       Value *ValPtrCast =
           Builder.CreatePointerCast(ValPtr, Builder.getInt8PtrTy());
       Builder.CreateStore(ValPtrCast, Slot);

@@ -3,7 +3,7 @@
 ; Please update this file when making any IR changes. Information on the
 ; release process for this file is available here:
 ;
-;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility 
+;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility
 
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN-PR24755: verify-uselistorder < %s
@@ -1246,7 +1246,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #41
+  ; CHECK: call void @f.nobuiltin() #42
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1613,6 +1613,9 @@ normal:
 declare void @f.writeonly() writeonly
 ; CHECK: declare void @f.writeonly() #40
 
+declare void @f.speculatable() speculatable
+; CHECK: declare void @f.speculatable() #41
+
 ;; Constant Expressions
 
 define i8** @constexpr() {
@@ -1661,7 +1664,8 @@ define i8** @constexpr() {
 ; CHECK: attributes #38 = { nounwind readonly }
 ; CHECK: attributes #39 = { inaccessiblemem_or_argmemonly nounwind }
 ; CHECK: attributes #40 = { writeonly }
-; CHECK: attributes #41 = { builtin }
+; CHECK: attributes #41 = { speculatable }
+; CHECK: attributes #42 = { builtin }
 
 ;; Metadata
 

@@ -229,3 +229,69 @@ int main() {
 
 } //end ns test_star_this
 
+namespace PR32831 {
+// https://bugs.llvm.org/show_bug.cgi?id=32831
+namespace ns1 {
+template <typename Func> void fun_template(Func func) {
+  (void) [&]() { 
+    func(0); 
+  };
+}
+
+class A {
+  void member_foo() {
+    (void) [this] {
+      (void) [this] {
+        fun_template(
+            [this](auto X) {
+              auto L = [this](auto Y) 
+              { member_foo(); };
+              L(5);
+            }
+        );
+        fun_template(
+            [this](auto) { member_foo(); });
+
+      };
+    };
+  }
+};
+} // end ns1
+
+namespace ns2 {
+
+struct B {
+  int data = 0;
+  template<class F>
+  void mem2(F f) {
+    (void) [&] (auto f) {
+      (void) [&] { f(this->data); };
+    }(f);
+  }
+
+};
+
+class A {
+  void member_foo() {
+    (void) [this] {
+      (void) [this] {
+        B{}.mem2(
+            [this](auto X) {
+              auto L = [this](auto Y) 
+              { member_foo(); };
+              L(5);
+            }
+        );
+        B{}.mem2(
+            [this](auto) { member_foo(); });
+
+      };
+    };
+  }
+};
+
+
+} // end ns2
+
+}
+

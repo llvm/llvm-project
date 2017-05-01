@@ -328,12 +328,16 @@ private:
   X86TargetLowering TLInfo;
   X86FrameLowering FrameLowering;
 
+  bool OptForSize;
+  bool OptForMinSize;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
   X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
-               const X86TargetMachine &TM, unsigned StackAlignOverride);
+               const X86TargetMachine &TM, unsigned StackAlignOverride,
+               bool OptForSize, bool OptForMinSize);
 
   /// This object will take onwership of \p GISelAccessor.
   void setGISelAccessor(GISelAccessor &GISel) { this->GISel.reset(&GISel); }
@@ -498,6 +502,9 @@ public:
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
   bool useSoftFloat() const { return UseSoftFloat; }
+
+  bool getOptForSize() const { return OptForSize; }
+  bool getOptForMinSize() const { return OptForMinSize; }
 
   /// Use mfence if we have SSE2 or we're on x86-64 (even if we asked for
   /// no-sse2). There isn't any reason to disable it if the target processor

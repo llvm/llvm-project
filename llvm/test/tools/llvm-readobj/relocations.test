@@ -292,19 +292,18 @@ WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
 WASM-NEXT:       Offset: 0x6
 WASM-NEXT:       Index: 0x0
-WASM-NEXT:       Addend: 0x0
 WASM-NEXT:     }
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_LEB (3)
 WASM-NEXT:       Offset: 0x15
 WASM-NEXT:       Index: 0x0
-WASM-NEXT:       Addend: 0x0
+WASM-NEXT:       Addend: 0
 WASM-NEXT:     }
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_LEB (3)
 WASM-NEXT:       Offset: 0x24
 WASM-NEXT:       Index: 0x1
-WASM-NEXT:       Addend: 0x0
+WASM-NEXT:       Addend: 0
 WASM-NEXT:     }
 WASM-NEXT:   }
 WASM-NEXT: ]

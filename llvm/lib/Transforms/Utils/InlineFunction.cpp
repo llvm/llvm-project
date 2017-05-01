@@ -1640,7 +1640,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       // modify the struct.
       if (CS.isByValArgument(ArgNo)) {
         ActualArg = HandleByValArgument(ActualArg, TheCall, CalledFunc, IFI,
-                                        CalledFunc->getParamAlignment(ArgNo+1));
+                                        CalledFunc->getParamAlignment(ArgNo));
         if (ActualArg != *AI)
           ByValInit.push_back(std::make_pair(ActualArg, (Value*) *AI));
       }
@@ -2302,7 +2302,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     AssumptionCache *AC =
         IFI.GetAssumptionCache ? &(*IFI.GetAssumptionCache)(*Caller) : nullptr;
     auto &DL = Caller->getParent()->getDataLayout();
-    if (Value *V = SimplifyInstruction(PHI, DL, nullptr, nullptr, AC)) {
+    if (Value *V = SimplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();
     }

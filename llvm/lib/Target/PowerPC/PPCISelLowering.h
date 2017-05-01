@@ -606,8 +606,7 @@ namespace llvm {
                                SelectionDAG &DAG) const override;
 
     void computeKnownBitsForTargetNode(const SDValue Op,
-                                       APInt &KnownZero,
-                                       APInt &KnownOne,
+                                       KnownBits &Known,
                                        const APInt &DemandedElts,
                                        const SelectionDAG &DAG,
                                        unsigned Depth = 0) const override;

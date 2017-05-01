@@ -39,7 +39,7 @@ entry:
 !1 = !DIFile(filename: "a2.cc", directory: "")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEv", scope: !5, file: !1, line: 7, type: !6, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!5 = !DINamespace(name: "A", scope: null, file: !1, line: 1)
+!5 = !DINamespace(name: "A", scope: null)
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = distinct !DISubprogram(name: "b", linkageName: "_ZN1A1bEv", scope: !5, file: !1, line: 8, type: !6, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)

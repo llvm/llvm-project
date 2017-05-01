@@ -106,6 +106,12 @@ Improvements to clang-tidy
   Finds possible inefficient vector operations in for loops that may cause
   unnecessary memory reallocations.
 
+- Improved `modernize-use-emplace
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html>`_ check
+
+  Removes unnecessary std::make_pair calls in push_back(std::make_pair(a, b)) calls and turns them
+  into emplace_back(a, b).
+
 Improvements to include-fixer
 -----------------------------
 

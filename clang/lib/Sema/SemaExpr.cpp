@@ -6431,14 +6431,13 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
       return S.Context
           .getQualifiedType(CompositeTy.getUnqualifiedType(), CompositeQuals)
           .withCVRQualifiers(MergedCVRQual);
-    } else
-      return CompositeTy.withCVRQualifiers(MergedCVRQual);
+    }
+    return CompositeTy.withCVRQualifiers(MergedCVRQual);
   }();
   if (IsBlockPointer)
     ResultTy = S.Context.getBlockPointerType(ResultTy);
-  else {
+  else
     ResultTy = S.Context.getPointerType(ResultTy);
-  }
 
   LHS = S.ImpCastExprToType(LHS.get(), ResultTy, LHSCastKind);
   RHS = S.ImpCastExprToType(RHS.get(), ResultTy, RHSCastKind);

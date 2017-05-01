@@ -55,12 +55,15 @@ set(CLANG_TOOLS_TEST_DEPS
   ExtraToolsUnitTests
   )
 
-if(NOT LLVM_UTILS_PROVIDED)
-  list(APPEND CLANG_TOOLS_TEST_DEPS
-    # Base line deps.
-    FileCheck count not
-    )
-endif()
+set(llvm_utils
+  FileCheck count not
+  )
+
+foreach(t ${llvm_utils})
+  if(TARGET ${t})
+    list(APPEND CLANG_TOOLS_TEST_DEPS ${t})
+  endif()
+endforeach()
 
 add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}

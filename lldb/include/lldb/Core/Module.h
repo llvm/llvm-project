@@ -614,6 +614,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  void PreloadSymbols();
+
   void SetSymbolFileFileSpec(const FileSpec &file);
 
   const llvm::sys::TimePoint<> &GetModificationTime() const {
