@@ -672,19 +672,17 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
   }
 }
 
-DIExpression *
-DIExpression::prependDIExpr(DIBuilder &Builder, DIExpression *DIExpr,
-                            bool Deref, int64_t Offset,
-                            bool StackValue) {
+DIExpression *DIExpression::prepend(DIExpression *Expr, bool Deref,
+                                    int64_t Offset, bool StackValue) {
   if (!Deref && !Offset && !StackValue)
-    return DIExpr;
+    return Expr;
 
   SmallVector<uint64_t, 8> Ops;
   appendOffset(Ops, Offset);
   if (Deref)
     Ops.push_back(dwarf::DW_OP_deref);
-  if (DIExpr)
-    for (auto Op : DIExpr->expr_ops()) {
+  if (Expr)
+    for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
       if (StackValue) {
         if (Op.getOp() == dwarf::DW_OP_stack_value)
@@ -700,7 +698,7 @@ DIExpression::prependDIExpr(DIBuilder &Builder, DIExpression *DIExpr,
     }
   if (StackValue)
     Ops.push_back(dwarf::DW_OP_stack_value);
-  return Builder.createExpression(Ops);
+  return DIExpression::get(Expr->getContext(), Ops);
 }
 
 bool DIExpression::isConstant() const {
