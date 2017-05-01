@@ -215,6 +215,7 @@ public:
   void addSourceLine(DIE &Die, const DIGlobalVariable *G);
   void addSourceLine(DIE &Die, const DISubprogram *SP);
   void addSourceLine(DIE &Die, const DIType *Ty);
+  void addSourceLine(DIE &Die, const DINamespace *NS);
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
 
   /// Add constant value entry in variable DIE.
