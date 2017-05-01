@@ -315,14 +315,9 @@ private:
 
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.
-  struct DeferredGlobal {
-    DeferredGlobal(llvm::GlobalValue *GV, GlobalDecl GD) : GV(GV), GD(GD) {}
-    llvm::TrackingVH<llvm::GlobalValue> GV;
-    GlobalDecl GD;
-  };
-  std::vector<DeferredGlobal> DeferredDeclsToEmit;
-  void addDeferredDeclToEmit(llvm::GlobalValue *GV, GlobalDecl GD) {
-    DeferredDeclsToEmit.emplace_back(GV, GD);
+  std::vector<GlobalDecl> DeferredDeclsToEmit;
+  void addDeferredDeclToEmit(GlobalDecl GD) {
+    DeferredDeclsToEmit.emplace_back(GD);
   }
 
   /// List of alias we have emitted. Used to make sure that what they point to

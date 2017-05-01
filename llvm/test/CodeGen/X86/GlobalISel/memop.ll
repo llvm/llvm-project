@@ -187,3 +187,20 @@ define double * @test_store_double(double %val, double * %p1) {
   ret double * %p1;
 }
 
+define i32* @test_load_ptr(i32** %ptr1) {
+; ALL-LABEL: test_load_ptr:
+; ALL:       # BB#0:
+; ALL-NEXT:    movq (%rdi), %rax
+; ALL-NEXT:    retq
+  %p = load i32*, i32** %ptr1
+  ret i32* %p
+}
+
+define void @test_store_ptr(i32** %ptr1, i32* %a) {
+; ALL-LABEL: test_store_ptr:
+; ALL:       # BB#0:
+; ALL-NEXT:    movq %rsi, (%rdi)
+; ALL-NEXT:    retq
+  store i32* %a, i32** %ptr1
+  ret void
+}

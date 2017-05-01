@@ -71,6 +71,15 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   setAction({TargetOpcode::G_CONSTANT, s1}, WidenScalar);
   setAction({TargetOpcode::G_CONSTANT, s64}, NarrowScalar);
+
+  // Extensions
+  setAction({G_ZEXT, s32}, Legal);
+  setAction({G_SEXT, s32}, Legal);
+
+  for (auto Ty : {s8, s16}) {
+    setAction({G_ZEXT, 1, Ty}, Legal);
+    setAction({G_SEXT, 1, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfo64bit() {
@@ -105,6 +114,17 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);
 
   setAction({TargetOpcode::G_CONSTANT, s1}, WidenScalar);
+
+  // Extensions
+  for (auto Ty : {s32, s64}) {
+    setAction({G_ZEXT, Ty}, Legal);
+    setAction({G_SEXT, Ty}, Legal);
+  }
+
+  for (auto Ty : {s8, s16, s32}) {
+    setAction({G_ZEXT, 1, Ty}, Legal);
+    setAction({G_SEXT, 1, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {

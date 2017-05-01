@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+
+--- |
+  define i64 @test_sext_i8(i8 %val) {
+    %r = sext i8 %val to i64
+    ret i64 %r
+  }
+
+  define i64 @test_sext_i16(i16 %val) {
+    %r = sext i16 %val to i64
+    ret i64 %r
+  }
+
+...
+---
+name:            test_sext_i8
+# ALL-LABEL: name:  test_sext_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8 }
+# ALL-NEXT:   - { id: 1, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:          %0 = COPY %dil
+# ALL-NEXT:     %1 = MOVSX64rr8 %0
+# ALL-NEXT:     %rax = COPY %1
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s64) = G_SEXT %0(s8)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_sext_i16
+# ALL-LABEL: name:  test_sext_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr16 }
+# ALL-NEXT:   - { id: 1, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:          %0 = COPY %di
+# ALL-NEXT:     %1 = MOVSX64rr16 %0
+# ALL-NEXT:     %rax = COPY %1
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s64) = G_SEXT %0(s16)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
