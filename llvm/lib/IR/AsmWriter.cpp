@@ -1762,6 +1762,8 @@ static void writeDINamespace(raw_ostream &Out, const DINamespace *N,
   MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
   Printer.printString("name", N->getName());
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printBool("exportSymbols", N->getExportSymbols(), false);
   Out << ")";
 }
