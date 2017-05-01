@@ -11,13 +11,11 @@
 // hierarchically the output sections, input sections, input files and
 // symbol:
 //
-// Address  Size     Align Out     In      File    Symbol
-// =================================================================
-// 00201000 00000015     4 .text
-// 00201000 0000000e     4         .text
-// 00201000 0000000e     4                 test.o
-// 0020100e 00000000     0                         local
-// 00201005 00000000     0                         f(int)
+//   Address  Size     Align Out     File    Symbol
+//   00201000 00000015     4 .text
+//   00201000 0000000e     4         test.o:(.text)
+//   0020100e 00000000     0                 local
+//   00201005 00000000     0                 f(int)
 //
 //===----------------------------------------------------------------------===//
 

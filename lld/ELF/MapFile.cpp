@@ -13,7 +13,7 @@
 //
 //   Address  Size     Align Out     In      Symbol
 //   00201000 00000015     4 .text
-//   00201000 0000000e     4         test.o:.text
+//   00201000 0000000e     4         test.o:(.text)
 //   0020100e 00000000     0                 local
 //   00201005 00000000     0                 f(int)
 //

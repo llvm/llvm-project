@@ -411,7 +411,6 @@ struct ThreadState {
   bool is_dead;
   bool is_freeing;
   bool is_vptr_access;
-  uptr external_tag;
   const uptr stk_addr;
   const uptr stk_size;
   const uptr tls_addr;
@@ -565,6 +564,16 @@ struct ScopedIgnoreInterceptors {
   }
 };
 
+enum ExternalTag : uptr {
+  kExternalTagNone = 0,
+  kExternalTagFirstUserAvailable = 1,
+  kExternalTagMax = 1024,
+  // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
+  // as 16-bit values, see tsan_defs.h.
+};
+const char *GetObjectTypeFromTag(uptr tag);
+uptr TagFromShadowStackFrame(uptr pc);
+
 class ScopedReport {
  public:
   explicit ScopedReport(ReportType typ);
@@ -598,10 +607,26 @@ class ScopedReport {
 
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
-                  MutexSet *mset);
+                  MutexSet *mset, uptr *tag = nullptr);
+
+// The stack could look like:
+//   <start> | <main> | <foo> | tag | <bar>
+// This will extract the tag and keep:
+//   <start> | <main> | <foo> | <bar>
+template<typename StackTraceTy>
+void ExtractTagFromStack(StackTraceTy *stack, uptr *tag = nullptr) {
+  if (stack->size < 2) return;
+  uptr possible_tag_pc = stack->trace[stack->size - 2];
+  uptr possible_tag = TagFromShadowStackFrame(possible_tag_pc);
+  if (possible_tag == kExternalTagNone) return;
+  stack->trace_buffer[stack->size - 2] = stack->trace_buffer[stack->size - 1];
+  stack->size -= 1;
+  if (tag) *tag = possible_tag;
+}
 
 template<typename StackTraceTy>
-void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack) {
+void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack,
+                        uptr *tag = nullptr) {
   uptr size = thr->shadow_stack_pos - thr->shadow_stack;
   uptr start = 0;
   if (size + !!toppc > kStackTraceMax) {
@@ -609,6 +634,7 @@ void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack) {
     size = kStackTraceMax - !!toppc;
   }
   stack->Init(&thr->shadow_stack[start], size, toppc);
+  ExtractTagFromStack(stack, tag);
 }
 
 
@@ -645,8 +671,6 @@ bool OutputReport(ThreadState *thr, const ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 void PrintMatchedBenignRaces();
-
-const char *GetObjectTypeFromTag(uptr tag);
 
 #if defined(TSAN_DEBUG_OUTPUT) && TSAN_DEBUG_OUTPUT >= 1
 # define DPrintf Printf
