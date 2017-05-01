@@ -205,7 +205,7 @@ exit:
   ret void
 }
 
-; Demonstrate why we need a Visited set in llvm::isKnownNotFullPoison.
+; Demonstrate why we need a Visited set in llvm::programUndefinedIfFullPoison.
 define void @test-add-not-header5(float* %input, i32 %offset) {
 ; CHECK-LABEL: @test-add-not-header5
 entry:

@@ -420,6 +420,7 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
     case ISD::ADD:
     case ISD::ADDC:
     case ISD::ADDE:
+    case ISD::ADDCARRY:
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR: {

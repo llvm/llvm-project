@@ -5029,7 +5029,8 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
     return false;
 
   // Only proceed if we can prove that I does not yield poison.
-  if (!isKnownNotFullPoison(I)) return false;
+  if (!programUndefinedIfFullPoison(I))
+    return false;
 
   // At this point we know that if I is executed, then it does not wrap
   // according to at least one of NSW or NUW. If I is not executed, then we do
