@@ -37,7 +37,7 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
     const size_t count = m_enumerations.GetSize();
     for (size_t i = 0; i < count; ++i) {
       if (m_enumerations.GetValueAtIndexUnchecked(i).value == m_current_value) {
-        strm.PutCString(m_enumerations.GetCStringAtIndex(i));
+        strm.PutCString(m_enumerations.GetCStringAtIndex(i).GetStringRef());
         return;
       }
     }
@@ -58,8 +58,7 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationAssign: {
     ConstString const_enumerator_name(value.trim());
     const EnumerationMapEntry *enumerator_entry =
-        m_enumerations.FindFirstValueForName(
-            const_enumerator_name.GetStringRef());
+        m_enumerations.FindFirstValueForName(const_enumerator_name);
     if (enumerator_entry) {
       m_current_value = enumerator_entry->value.value;
       NotifyValueChanged();
@@ -69,10 +68,10 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
       const size_t count = m_enumerations.GetSize();
       if (count) {
         error_strm.Printf(", valid values are: %s",
-                          m_enumerations.GetCStringAtIndex(0).str().c_str());
+                          m_enumerations.GetCStringAtIndex(0).GetCString());
         for (size_t i = 1; i < count; ++i) {
           error_strm.Printf(", %s",
-                            m_enumerations.GetCStringAtIndex(i).str().c_str());
+                            m_enumerations.GetCStringAtIndex(i).GetCString());
         }
       }
       error.SetErrorString(error_strm.GetString());
@@ -99,7 +98,7 @@ void OptionValueEnumeration::SetEnumerations(
       ConstString const_enumerator_name(enumerators[i].string_value);
       EnumeratorInfo enumerator_info = {enumerators[i].value,
                                         enumerators[i].usage};
-      m_enumerations.Append(const_enumerator_name.GetStringRef(),
+      m_enumerations.Append(const_enumerator_name,
                             enumerator_info);
     }
     m_enumerations.Sort();
@@ -119,14 +118,14 @@ size_t OptionValueEnumeration::AutoComplete(
   const uint32_t num_enumerators = m_enumerations.GetSize();
   if (!s.empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
-      llvm::StringRef name = m_enumerations.GetCStringAtIndex(i);
+      llvm::StringRef name = m_enumerations.GetCStringAtIndex(i).GetStringRef();
       if (name.startswith(s))
         matches.AppendString(name);
     }
   } else {
     // only suggest "true" or "false" by default
     for (size_t i = 0; i < num_enumerators; ++i)
-      matches.AppendString(m_enumerations.GetCStringAtIndex(i));
+      matches.AppendString(m_enumerations.GetCStringAtIndex(i).GetStringRef());
   }
   return matches.GetSize();
 }

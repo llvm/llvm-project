@@ -1808,10 +1808,10 @@ DataExtractor ObjectFileELF::GetSegmentDataByIndex(lldb::user_id_t id) {
                        segment_header->p_filesz);
 }
 
-std::string
+llvm::StringRef
 ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
   size_t pos = symbol_name.find('@');
-  return symbol_name.substr(0, pos).str();
+  return symbol_name.substr(0, pos);
 }
 
 //----------------------------------------------------------------------

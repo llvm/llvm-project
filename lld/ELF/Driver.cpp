@@ -124,7 +124,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 std::vector<MemoryBufferRef>
-LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
+static getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       check(Archive::create(MB),
             MB.getBufferIdentifier() + ": failed to parse archive");
