@@ -53,24 +53,30 @@ inline namespace I {
 int var_i;
 }
 }
-void B::func_fwd() {}
+namespace {
+int anonymous;
+}
+void B::func_fwd() {
+  anonymous = 0;
+}
+
 
 // This should work even if 'i' and 'func' were declarations & not definitions,
 // but it doesn't yet.
 
 // CHECK: [[I:![0-9]+]] = distinct !DIGlobalVariable(name: "i",{{.*}} scope: [[NS:![0-9]+]],
-// CHECK: [[NS]] = !DINamespace(name: "B", scope: [[CTXT:![0-9]+]], file: [[FOOCPP:![0-9]+]], line: 1)
-// CHECK: [[FOOCPP]] = !DIFile(filename: "foo.cpp"
-// CHECK: [[CTXT]] = !DINamespace(name: "A", scope: null, file: [[FILE:![0-9]+]], line: 5)
-// CHECK: [[FILE]] = !DIFile(filename: "{{.*}}debug-info-namespace.cpp",
+// CHECK: [[NS]] = !DINamespace(name: "B", scope: [[CTXT:![0-9]+]])
+// CHECK: [[CTXT]] = !DINamespace(name: "A", scope: null)
+// CHECK: [[FOOCPP:.*]] = !DIFile(filename: "foo.cpp"
 // CHECK: [[VAR_FWD:![0-9]+]] = distinct !DIGlobalVariable(name: "var_fwd",{{.*}} scope: [[NS]],
 // CHECK-SAME:                                             line: 44
 // CHECK-SAME:                                             isDefinition: true
 // CHECK: distinct !DIGlobalVariable(name: "var_i",{{.*}} scope: [[INLINE:![0-9]+]],
-// CHECK: [[INLINE]] = !DINamespace(name: "I", scope: [[CTXT]], file: [[FOOCPP]], line: 46, exportSymbols: true)
+// CHECK: [[INLINE]] = !DINamespace(name: "I", scope: [[CTXT]], exportSymbols: true)
+// CHECK: !DINamespace(scope: null)
 // CHECK: [[CU:![0-9]+]] = distinct !DICompileUnit(
 // CHECK-SAME:                            imports: [[MODULES:![0-9]*]]
-// CHECK: [[MODULES]] = !{[[M1:![0-9]+]], [[M2:![0-9]+]], [[M3:![0-9]+]], [[M4:![0-9]+]], [[M5:![0-9]+]], [[M6:![0-9]+]], [[M7:![0-9]+]], [[M8:![0-9]+]], [[M9:![0-9]+]], [[M10:![0-9]+]], [[M11:![0-9]+]], [[M12:![0-9]+]], [[M13:![0-9]+]], [[M14:![0-9]+]], [[M15:![0-9]+]], [[M16:![0-9]+]], [[M17:![0-9]+]]}
+// CHECK: [[MODULES]] = !{[[M1:![0-9]+]], [[M2:![0-9]+]], [[M3:![0-9]+]], [[M4:![0-9]+]], [[M5:![0-9]+]], [[M6:![0-9]+]], [[M7:![0-9]+]], [[M8:![0-9]+]], [[M9:![0-9]+]], [[M10:![0-9]+]], [[M11:![0-9]+]], [[M12:![0-9]+]], [[M13:![0-9]+]], [[M14:![0-9]+]], [[M15:![0-9]+]], [[M16:![0-9]+]], [[M17:![0-9]+]]
 // CHECK: [[M1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[CTXT]], entity: [[NS]], line: 15)
 
 // CHECK: [[M2]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[CU]], entity: [[CTXT]],
@@ -106,7 +112,7 @@ void B::func_fwd() {}
 // CHECK-SAME:                          scope: [[NS]], file: [[FOOCPP]], line: 9
 // CHECK: [[M15]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[VAR_FWD:![0-9]+]]
 // CHECK: [[M16]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FUNC_FWD:![0-9]+]]
-// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 50,{{.*}} isDefinition: true
+// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 53,{{.*}} isDefinition: true
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(
