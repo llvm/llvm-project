@@ -507,13 +507,13 @@ DILexicalBlockFile *DILexicalBlockFile::getImpl(LLVMContext &Context,
 }
 
 DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
-                                  Metadata *File, MDString *Name, unsigned Line,
-                                  bool ExportSymbols, StorageType Storage,
-                                  bool ShouldCreate) {
+                                  MDString *Name, bool ExportSymbols,
+                                  StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DINamespace, (Scope, File, Name, Line, ExportSymbols));
-  Metadata *Ops[] = {File, Scope, Name};
-  DEFINE_GETIMPL_STORE(DINamespace, (Line, ExportSymbols), Ops);
+  DEFINE_GETIMPL_LOOKUP(DINamespace, (Scope, Name, ExportSymbols));
+  // The nullptr is for DIScope's File operand. This should be refactored.
+  Metadata *Ops[] = {nullptr, Scope, Name};
+  DEFINE_GETIMPL_STORE(DINamespace, (ExportSymbols), Ops);
 }
 
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,

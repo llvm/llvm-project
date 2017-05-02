@@ -29,7 +29,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !8 = !{null}
 !9 = !DILocalVariable(name: "mya", line: 4, arg: 1, scope: !5, file: !6, type: !10)
 !10 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 3, size: 8, align: 8, file: !17, scope: !11, elements: !2)
-!11 = !DINamespace(name: "N1", line: 2, file: !17, scope: null)
+!11 = !DINamespace(name: "N1", scope: null)
 !12 = !DIFile(filename: "./n.h", directory: "/private/tmp")
 !13 = !DILocation(line: 4, column: 12, scope: !5)
 !14 = !DILocation(line: 4, column: 18, scope: !15)

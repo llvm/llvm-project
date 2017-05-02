@@ -699,26 +699,21 @@ template <> struct MDNodeKeyImpl<DILexicalBlockFile> {
 
 template <> struct MDNodeKeyImpl<DINamespace> {
   Metadata *Scope;
-  Metadata *File;
   MDString *Name;
-  unsigned Line;
   bool ExportSymbols;
 
-  MDNodeKeyImpl(Metadata *Scope, Metadata *File, MDString *Name, unsigned Line,
-                bool ExportSymbols)
-      : Scope(Scope), File(File), Name(Name), Line(Line),
-        ExportSymbols(ExportSymbols) {}
+  MDNodeKeyImpl(Metadata *Scope, MDString *Name, bool ExportSymbols)
+      : Scope(Scope), Name(Name), ExportSymbols(ExportSymbols) {}
   MDNodeKeyImpl(const DINamespace *N)
-      : Scope(N->getRawScope()), File(N->getRawFile()), Name(N->getRawName()),
-        Line(N->getLine()), ExportSymbols(N->getExportSymbols()) {}
+      : Scope(N->getRawScope()), Name(N->getRawName()),
+        ExportSymbols(N->getExportSymbols()) {}
 
   bool isKeyOf(const DINamespace *RHS) const {
-    return Scope == RHS->getRawScope() && File == RHS->getRawFile() &&
-           Name == RHS->getRawName() && Line == RHS->getLine() &&
+    return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            ExportSymbols == RHS->getExportSymbols();
   }
   unsigned getHashValue() const {
-    return hash_combine(Scope, File, Name, Line);
+    return hash_combine(Scope, Name);
   }
 };
 
