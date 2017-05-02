@@ -5401,7 +5401,7 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
       return false;
 
     swift::ExistentialLayout layout = swift_can_type.getExistentialLayout();
-    protocol_info.m_is_class_only = layout.requiresClass;
+    protocol_info.m_is_class_only = layout.requiresClass();
     protocol_info.m_num_protocols = layout.getProtocols().size();
     protocol_info.m_is_objc = layout.isObjC();
     protocol_info.m_is_anyobject = layout.isAnyObject();
@@ -5418,7 +5418,7 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
       // Error existential -- instance pointer only
       protocol_info.m_num_payload_words = 0;
       protocol_info.m_num_storage_words = 1;
-    } else if (layout.requiresClass) {
+    } else if (layout.requiresClass()) {
       // Class-constrained existential -- instance pointer plus witness tables
       protocol_info.m_num_payload_words = 0;
       protocol_info.m_num_storage_words = 1 + num_witness_tables;
