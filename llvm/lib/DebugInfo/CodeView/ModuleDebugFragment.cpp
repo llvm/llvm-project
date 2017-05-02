@@ -11,4 +11,6 @@
 
 using namespace llvm::codeview;
 
+ModuleDebugFragmentRef::~ModuleDebugFragmentRef() {}
+
 ModuleDebugFragment::~ModuleDebugFragment() {}

@@ -167,7 +167,7 @@ private:
   //     foo(a + b);
   //   if (p2)
   //     bar(a + b);
-  DenseMap<const SCEV *, SmallVector<WeakVH, 2>> SeenExprs;
+  DenseMap<const SCEV *, SmallVector<WeakTrackingVH, 2>> SeenExprs;
 };
 } // namespace llvm
 

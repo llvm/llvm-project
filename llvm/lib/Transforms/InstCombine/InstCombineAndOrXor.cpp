@@ -2438,16 +2438,20 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (match(&I, m_Not(m_BinOp(NotOp)))) {
     if (NotOp->getOpcode() == Instruction::And ||
         NotOp->getOpcode() == Instruction::Or) {
-      // ~(~X & Y) --> (X | ~Y) - De Morgan's Law
-      // ~(~X | Y) === (X & ~Y) - De Morgan's Law
-      if (dyn_castNotVal(NotOp->getOperand(1)))
-        NotOp->swapOperands();
-      if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0))) {
-        Value *NotY = Builder->CreateNot(
-            NotOp->getOperand(1), NotOp->getOperand(1)->getName() + ".not");
-        if (NotOp->getOpcode() == Instruction::And)
-          return BinaryOperator::CreateOr(Op0NotVal, NotY);
-        return BinaryOperator::CreateAnd(Op0NotVal, NotY);
+      // We must eliminate the and/or for this transform to not increase the
+      // instruction count.
+      if (NotOp->hasOneUse()) {
+        // ~(~X & Y) --> (X | ~Y) - De Morgan's Law
+        // ~(~X | Y) === (X & ~Y) - De Morgan's Law
+        if (dyn_castNotVal(NotOp->getOperand(1)))
+          NotOp->swapOperands();
+        if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0))) {
+          Value *NotY = Builder->CreateNot(
+              NotOp->getOperand(1), NotOp->getOperand(1)->getName() + ".not");
+          if (NotOp->getOpcode() == Instruction::And)
+            return BinaryOperator::CreateOr(Op0NotVal, NotY);
+          return BinaryOperator::CreateAnd(Op0NotVal, NotY);
+        }
       }
 
       // ~(X & Y) --> (~X | ~Y) - De Morgan's Law

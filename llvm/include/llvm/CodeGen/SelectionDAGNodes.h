@@ -341,6 +341,11 @@ template<> struct simplify_type<SDUse> {
 /// the backend.
 struct SDNodeFlags {
 private:
+  // This bit is used to determine if the flags are in a defined state.
+  // Flag bits can only be masked out during intersection if the masking flags
+  // are defined.
+  bool AnyDefined : 1;
+
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
@@ -355,22 +360,57 @@ private:
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
-      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false),
-        UnsafeAlgebra(false), NoNaNs(false), NoInfs(false),
+      : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
+        Exact(false), UnsafeAlgebra(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
         AllowContract(false) {}
 
+  /// Sets the state of the flags to the defined state.
+  void setDefined() { AnyDefined = true; }
+  /// Returns true if the flags are in a defined state.
+  bool isDefined() const { return AnyDefined; }
+
   // These are mutators for each flag.
-  void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
-  void setNoSignedWrap(bool b) { NoSignedWrap = b; }
-  void setExact(bool b) { Exact = b; }
-  void setUnsafeAlgebra(bool b) { UnsafeAlgebra = b; }
-  void setNoNaNs(bool b) { NoNaNs = b; }
-  void setNoInfs(bool b) { NoInfs = b; }
-  void setNoSignedZeros(bool b) { NoSignedZeros = b; }
-  void setAllowReciprocal(bool b) { AllowReciprocal = b; }
-  void setVectorReduction(bool b) { VectorReduction = b; }
-  void setAllowContract(bool b) { AllowContract = b; }
+  void setNoUnsignedWrap(bool b) {
+    setDefined();
+    NoUnsignedWrap = b;
+  }
+  void setNoSignedWrap(bool b) {
+    setDefined();
+    NoSignedWrap = b;
+  }
+  void setExact(bool b) {
+    setDefined();
+    Exact = b;
+  }
+  void setUnsafeAlgebra(bool b) {
+    setDefined();
+    UnsafeAlgebra = b;
+  }
+  void setNoNaNs(bool b) {
+    setDefined();
+    NoNaNs = b;
+  }
+  void setNoInfs(bool b) {
+    setDefined();
+    NoInfs = b;
+  }
+  void setNoSignedZeros(bool b) {
+    setDefined();
+    NoSignedZeros = b;
+  }
+  void setAllowReciprocal(bool b) {
+    setDefined();
+    AllowReciprocal = b;
+  }
+  void setVectorReduction(bool b) {
+    setDefined();
+    VectorReduction = b;
+  }
+  void setAllowContract(bool b) {
+    setDefined();
+    AllowContract = b;
+  }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -385,17 +425,20 @@ public:
   bool hasAllowContract() const { return AllowContract; }
 
   /// Clear any flags in this flag set that aren't also set in Flags.
-  void intersectWith(const SDNodeFlags *Flags) {
-    NoUnsignedWrap &= Flags->NoUnsignedWrap;
-    NoSignedWrap &= Flags->NoSignedWrap;
-    Exact &= Flags->Exact;
-    UnsafeAlgebra &= Flags->UnsafeAlgebra;
-    NoNaNs &= Flags->NoNaNs;
-    NoInfs &= Flags->NoInfs;
-    NoSignedZeros &= Flags->NoSignedZeros;
-    AllowReciprocal &= Flags->AllowReciprocal;
-    VectorReduction &= Flags->VectorReduction;
-    AllowContract &= Flags->AllowContract;
+  /// If the given Flags are undefined then don't do anything.
+  void intersectWith(const SDNodeFlags Flags) {
+    if (!Flags.isDefined())
+      return;
+    NoUnsignedWrap &= Flags.NoUnsignedWrap;
+    NoSignedWrap &= Flags.NoSignedWrap;
+    Exact &= Flags.Exact;
+    UnsafeAlgebra &= Flags.UnsafeAlgebra;
+    NoNaNs &= Flags.NoNaNs;
+    NoInfs &= Flags.NoInfs;
+    NoSignedZeros &= Flags.NoSignedZeros;
+    AllowReciprocal &= Flags.AllowReciprocal;
+    VectorReduction &= Flags.VectorReduction;
+    AllowContract &= Flags.AllowContract;
   }
 };
 
@@ -526,6 +569,8 @@ private:
 
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
+
+  SDNodeFlags Flags;
 
 public:
   /// Unique and persistent id per SDNode in the DAG.
@@ -799,12 +844,12 @@ public:
     return nullptr;
   }
 
-  /// This could be defined as a virtual function and implemented more simply
-  /// and directly, but it is not to avoid creating a vtable for this class.
-  const SDNodeFlags *getFlags() const;
+  const SDNodeFlags getFlags() const { return Flags; }
+  void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
 
   /// Clear any flags in this node that aren't also set in Flags.
-  void intersectFlagsWith(const SDNodeFlags *Flags);
+  /// If Flags is not in a defined state then this has no effect.
+  void intersectFlagsWith(const SDNodeFlags Flags);
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }
@@ -1031,43 +1076,6 @@ inline void SDUse::setNode(SDNode *N) {
   Val.setNode(N);
   if (N) N->addUse(*this);
 }
-
-/// Returns true if the opcode is a binary operation with flags.
-static bool isBinOpWithFlags(unsigned Opcode) {
-  switch (Opcode) {
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SRA:
-  case ISD::SRL:
-  case ISD::MUL:
-  case ISD::ADD:
-  case ISD::SUB:
-  case ISD::SHL:
-  case ISD::FADD:
-  case ISD::FDIV:
-  case ISD::FMUL:
-  case ISD::FREM:
-  case ISD::FSUB:
-    return true;
-  default:
-    return false;
-  }
-}
-
-/// This class is an extension of BinarySDNode
-/// used from those opcodes that have associated extra flags.
-class BinaryWithFlagsSDNode : public SDNode {
-public:
-  SDNodeFlags Flags;
-
-  BinaryWithFlagsSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
-                        SDVTList VTs, const SDNodeFlags &NodeFlags)
-      : SDNode(Opc, Order, dl, VTs), Flags(NodeFlags) {}
-
-  static bool classof(const SDNode *N) {
-    return isBinOpWithFlags(N->getOpcode());
-  }
-};
 
 /// This class is used to form a handle around another node that
 /// is persistent and is updated across invocations of replaceAllUsesWith on its

@@ -191,7 +191,8 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return Result;
   if (Size > HEXAGON_MAX_PACKET_SIZE)
     return MCDisassembler::Fail;
-  HexagonMCChecker Checker(*MCII, STI, MI, MI, *getContext().getRegisterInfo());
+  HexagonMCChecker Checker(getContext(), *MCII, STI, MI,
+                           *getContext().getRegisterInfo(), false);
   if (!Checker.check())
     return MCDisassembler::Fail;
   return MCDisassembler::Success;

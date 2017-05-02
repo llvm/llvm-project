@@ -886,7 +886,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 
       // If the shift is exact, then it does demand the low bits (and knows that
       // they are zero).
-      if (cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact())
+      if (Op->getFlags().hasExact())
         InDemandedMask.setLowBits(ShAmt);
 
       // If this is ((X << C1) >>u ShAmt), see if we can simplify this into a
@@ -942,7 +942,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 
       // If the shift is exact, then it does demand the low bits (and knows that
       // they are zero).
-      if (cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact())
+      if (Op->getFlags().hasExact())
         InDemandedMask.setLowBits(ShAmt);
 
       // If any of the demanded bits are produced by the sign extension, we also
@@ -962,10 +962,10 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       if (Known.Zero[BitWidth - ShAmt - 1] ||
           NewMask.countLeadingZeros() >= ShAmt) {
         SDNodeFlags Flags;
-        Flags.setExact(cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact());
+        Flags.setExact(Op->getFlags().hasExact());
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::SRL, dl, VT, Op.getOperand(0),
-                                             Op.getOperand(1), &Flags));
+                                             Op.getOperand(1), Flags));
       }
 
       int Log2 = NewMask.exactLogBase2();
@@ -1259,16 +1259,15 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         SimplifyDemandedBits(Op.getOperand(1), LoMask, Known2, TLO, Depth+1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, NewMask, TLO)) {
-      const SDNodeFlags *Flags = Op.getNode()->getFlags();
-      if (Flags->hasNoSignedWrap() || Flags->hasNoUnsignedWrap()) {
+      SDNodeFlags Flags = Op.getNode()->getFlags();
+      if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
         // Disable the nsw and nuw flags. We can no longer guarantee that we
         // won't wrap after simplification.
-        SDNodeFlags NewFlags = *Flags;
-        NewFlags.setNoSignedWrap(false);
-        NewFlags.setNoUnsignedWrap(false);
+        Flags.setNoSignedWrap(false);
+        Flags.setNoUnsignedWrap(false);
         SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, Op.getValueType(),
                                         Op.getOperand(0), Op.getOperand(1),
-                                        &NewFlags);
+                                        Flags);
         return TLO.CombineTo(Op, NewOp);
       }
       return true;
@@ -2953,7 +2952,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDValue Op1, APInt d,
                                                         DAG.getDataLayout()));
     SDNodeFlags Flags;
     Flags.setExact(true);
-    Op1 = DAG.getNode(ISD::SRA, dl, Op1.getValueType(), Op1, Amt, &Flags);
+    Op1 = DAG.getNode(ISD::SRA, dl, Op1.getValueType(), Op1, Amt, Flags);
     Created.push_back(Op1.getNode());
     d.ashrInPlace(ShAmt);
   }
@@ -2997,7 +2996,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
     return SDValue();
 
   // If the sdiv has an 'exact' bit we can use a simpler lowering.
-  if (cast<BinaryWithFlagsSDNode>(N)->Flags.hasExact())
+  if (N->getFlags().hasExact())
     return BuildExactSDIV(*this, N->getOperand(0), Divisor, dl, DAG, *Created);
 
   APInt::ms magics = Divisor.magic();

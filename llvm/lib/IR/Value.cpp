@@ -820,13 +820,10 @@ void ValueHandleBase::ValueIsDeleted(Value *V) {
     switch (Entry->getKind()) {
     case Assert:
       break;
-    case Tracking:
-      // Mark that this value has been deleted by setting it to an invalid Value
-      // pointer.
-      Entry->operator=(DenseMapInfo<Value *>::getTombstoneKey());
-      break;
     case Weak:
-      // Weak just goes to null, which will unlink it from the list.
+    case WeakTracking:
+      // WeakTracking and Weak just go to null, which unlinks them
+      // from the list.
       Entry->operator=(nullptr);
       break;
     case Callback:
@@ -874,16 +871,10 @@ void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
 
     switch (Entry->getKind()) {
     case Assert:
-      // Asserting handle does not follow RAUW implicitly.
-      break;
-    case Tracking:
-      // Tracking goes to new value like a WeakVH. Note that this may make it
-      // something incompatible with its templated type. We don't want to have a
-      // virtual (or inline) interface to handle this though, so instead we make
-      // the TrackingVH accessors guarantee that a client never sees this value.
-
-      LLVM_FALLTHROUGH;
     case Weak:
+      // Asserting and Weak handles do not follow RAUW implicitly.
+      break;
+    case WeakTracking:
       // Weak goes to the new value, which will unlink it from Old's list.
       Entry->operator=(New);
       break;
@@ -895,18 +886,17 @@ void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
   }
 
 #ifndef NDEBUG
-  // If any new tracking or weak value handles were added while processing the
+  // If any new weak value handles were added while processing the
   // list, then complain about it now.
   if (Old->HasValueHandle)
     for (Entry = pImpl->ValueHandles[Old]; Entry; Entry = Entry->Next)
       switch (Entry->getKind()) {
-      case Tracking:
-      case Weak:
+      case WeakTracking:
         dbgs() << "After RAUW from " << *Old->getType() << " %"
                << Old->getName() << " to " << *New->getType() << " %"
                << New->getName() << "\n";
-        llvm_unreachable("A tracking or weak value handle still pointed to the"
-                         " old value!\n");
+        llvm_unreachable(
+            "A weak tracking value handle still pointed to the  old value!\n");
       default:
         break;
       }

@@ -854,7 +854,9 @@ public:
   }
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
-    OS << "    MIB.addReg(" << RegisterDef->getValueAsString("Namespace")
+    OS << "    MIB.addReg(" << (RegisterDef->getValue("Namespace")
+                                    ? RegisterDef->getValueAsString("Namespace")
+                                    : "")
        << "::" << RegisterDef->getName() << ");\n";
   }
 };
@@ -987,12 +989,16 @@ public:
            << ");\n";
 
         for (auto Def : I->ImplicitDefs) {
-          auto Namespace = Def->getValueAsString("Namespace");
+          auto Namespace = Def->getValue("Namespace")
+                               ? Def->getValueAsString("Namespace")
+                               : "";
           OS << "    MIB.addDef(" << Namespace << "::" << Def->getName()
              << ", RegState::Implicit);\n";
         }
         for (auto Use : I->ImplicitUses) {
-          auto Namespace = Use->getValueAsString("Namespace");
+          auto Namespace = Use->getValue("Namespace")
+                               ? Use->getValueAsString("Namespace")
+                               : "";
           OS << "    MIB.addUse(" << Namespace << "::" << Use->getName()
              << ", RegState::Implicit);\n";
         }

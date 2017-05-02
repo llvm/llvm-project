@@ -6464,7 +6464,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETNE:
     std::swap(TV, FV);
   case ISD::SETEQ:
-    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, &Flags);
+    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
@@ -6474,25 +6474,25 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::FNEG, dl, MVT::f64, Cmp), Sel1, FV);
   case ISD::SETULT:
   case ISD::SETLT:
-    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, &Flags);
+    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, FV, TV);
   case ISD::SETOGE:
   case ISD::SETGE:
-    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, &Flags);
+    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
   case ISD::SETUGT:
   case ISD::SETGT:
-    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, RHS, LHS, &Flags);
+    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, RHS, LHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, FV, TV);
   case ISD::SETOLE:
   case ISD::SETLE:
-    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, RHS, LHS, &Flags);
+    Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, RHS, LHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
@@ -11213,6 +11213,14 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
   }
 
   MVT VecTy = N->getValueType(0).getSimpleVT();
+
+  // Do not expand to PPCISD::LXVD2X + PPCISD::XXSWAPD when the load is
+  // aligned and the type is a vector with elements up to 4 bytes
+  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
+      && VecTy.getScalarSizeInBits() <= 32 ) {
+    return SDValue();
+  }
+
   SDValue LoadOps[] = { Chain, Base };
   SDValue Load = DAG.getMemIntrinsicNode(PPCISD::LXVD2X, dl,
                                          DAG.getVTList(MVT::v2f64, MVT::Other),
@@ -11276,6 +11284,13 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
 
   SDValue Src = N->getOperand(SrcOpnd);
   MVT VecTy = Src.getValueType().getSimpleVT();
+
+  // Do not expand to PPCISD::XXSWAPD and PPCISD::STXVD2X when the load is
+  // aligned and the type is a vector with elements up to 4 bytes
+  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
+      && VecTy.getScalarSizeInBits() <= 32 ) {
+    return SDValue();
+  }
 
   // All stores are done as v2f64 and possible bit cast.
   if (VecTy != MVT::v2f64) {

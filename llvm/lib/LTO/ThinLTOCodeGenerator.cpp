@@ -33,7 +33,6 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
-#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -566,24 +565,17 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
  * "thin-link".
  */
 std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
-  std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
+  std::unique_ptr<ModuleSummaryIndex> CombinedIndex =
+      llvm::make_unique<ModuleSummaryIndex>();
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
-    Expected<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
-        object::ModuleSummaryIndexObjectFile::create(
-            ModuleBuffer.getMemBuffer());
-    if (!ObjOrErr) {
+    if (Error Err = readModuleSummaryIndex(ModuleBuffer.getMemBuffer(),
+                                           *CombinedIndex, NextModuleId++)) {
       // FIXME diagnose
       logAllUnhandledErrors(
-          ObjOrErr.takeError(), errs(),
-          "error: can't create ModuleSummaryIndexObjectFile for buffer: ");
+          std::move(Err), errs(),
+          "error: can't create module summary index for buffer: ");
       return nullptr;
-    }
-    auto Index = (*ObjOrErr)->takeIndex();
-    if (CombinedIndex) {
-      CombinedIndex->mergeFrom(std::move(Index), ++NextModuleId);
-    } else {
-      CombinedIndex = std::move(Index);
     }
   }
   return CombinedIndex;

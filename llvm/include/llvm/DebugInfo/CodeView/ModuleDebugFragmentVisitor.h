@@ -17,24 +17,25 @@ namespace llvm {
 
 namespace codeview {
 
-class ModuleDebugFileChecksumFragment;
+class ModuleDebugFileChecksumFragmentRef;
 class ModuleDebugFragmentRecord;
-class ModuleDebugInlineeLineFragment;
-class ModuleDebugLineFragment;
-class ModuleDebugUnknownFragment;
+class ModuleDebugInlineeLineFragmentRef;
+class ModuleDebugLineFragmentRef;
+class ModuleDebugUnknownFragmentRef;
 
 class ModuleDebugFragmentVisitor {
 public:
   virtual ~ModuleDebugFragmentVisitor() = default;
 
-  virtual Error visitUnknown(ModuleDebugUnknownFragment &Unknown) {
+  virtual Error visitUnknown(ModuleDebugUnknownFragmentRef &Unknown) {
     return Error::success();
   }
-  virtual Error visitLines(ModuleDebugLineFragment &Lines) {
+  virtual Error visitLines(ModuleDebugLineFragmentRef &Lines) {
     return Error::success();
   }
 
-  virtual Error visitFileChecksums(ModuleDebugFileChecksumFragment &Checksums) {
+  virtual Error
+  visitFileChecksums(ModuleDebugFileChecksumFragmentRef &Checksums) {
     return Error::success();
   }
 

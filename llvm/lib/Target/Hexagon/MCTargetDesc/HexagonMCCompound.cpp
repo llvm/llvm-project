@@ -406,7 +406,7 @@ void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo co
   if (MCI.size() < 2)
     return;
 
-  bool StartedValid = llvm::HexagonMCShuffle(false, MCII, STI, MCI);
+  bool StartedValid = llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI);
 
   // Create a vector, needed to keep the order of jump instructions.
   MCInst CheckList(MCI);
@@ -420,8 +420,9 @@ void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo co
     // Need to update the bundle.
     MCI = CheckList;
 
-    if (StartedValid && !llvm::HexagonMCShuffle(false, MCII, STI, MCI)) {
-      DEBUG(dbgs() << "Found ERROR\n");
+    if (StartedValid &&
+        !llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI)) {
+       DEBUG(dbgs() << "Found ERROR\n");
       MCI = OriginalBundle;
     }
   }

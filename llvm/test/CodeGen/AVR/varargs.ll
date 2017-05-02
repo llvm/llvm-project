@@ -7,12 +7,12 @@ declare void @llvm.va_end(i8*)
 define i16 @varargs1(i8* nocapture %x, ...) {
 ; CHECK-LABEL: varargs1:
 ; CHECK: movw r20, r28
-; CHECK: subi r20, 215
+; CHECK: subi r20, 217
 ; CHECK: sbci r21, 255
 ; CHECK: movw r24, r28
 ; CHECK: adiw r24, 3
-; CHECK: ldd r22, Y+39
-; CHECK: ldd r23, Y+40
+; CHECK: ldd r22, Y+37
+; CHECK: ldd r23, Y+38
 ; CHECK: call
   %buffer = alloca [32 x i8]
   %ap = alloca i8*

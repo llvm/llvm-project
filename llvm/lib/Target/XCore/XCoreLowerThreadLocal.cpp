@@ -128,11 +128,11 @@ createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
-    SmallVector<WeakVH,8> WUsers(CE->user_begin(), CE->user_end());
+    SmallVector<WeakTrackingVH, 8> WUsers(CE->user_begin(), CE->user_end());
     std::sort(WUsers.begin(), WUsers.end());
     WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
     while (!WUsers.empty())
-      if (WeakVH WU = WUsers.pop_back_val()) {
+      if (WeakTrackingVH WU = WUsers.pop_back_val()) {
         if (PHINode *PN = dyn_cast<PHINode>(WU)) {
           for (int I = 0, E = PN->getNumIncomingValues(); I < E; ++I)
             if (PN->getIncomingValue(I) == CE) {
@@ -159,12 +159,12 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
 }
 
 static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
-  SmallVector<WeakVH,8> WUsers;
+  SmallVector<WeakTrackingVH, 8> WUsers;
   for (User *U : GV->users())
     if (!isa<Instruction>(U))
-      WUsers.push_back(WeakVH(U));
+      WUsers.push_back(WeakTrackingVH(U));
   while (!WUsers.empty())
-    if (WeakVH WU = WUsers.pop_back_val()) {
+    if (WeakTrackingVH WU = WUsers.pop_back_val()) {
       ConstantExpr *CE = dyn_cast<ConstantExpr>(WU);
       if (!CE || !replaceConstantExprOp(CE, P))
         return false;

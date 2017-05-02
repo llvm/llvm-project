@@ -211,7 +211,8 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
           Changed = true;
           SE->forgetValue(&*I);
           I->replaceAllUsesWith(NewI);
-          // If SeenExprs constains I's WeakVH, that entry will be replaced with
+          // If SeenExprs constains I's WeakTrackingVH, that entry will be
+          // replaced with
           // nullptr.
           RecursivelyDeleteTriviallyDeadInstructions(&*I, TLI);
           I = NewI->getIterator();
@@ -219,7 +220,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         // Add the rewritten instruction to SeenExprs; the original instruction
         // is deleted.
         const SCEV *NewSCEV = SE->getSCEV(&*I);
-        SeenExprs[NewSCEV].push_back(WeakVH(&*I));
+        SeenExprs[NewSCEV].push_back(WeakTrackingVH(&*I));
         // Ideally, NewSCEV should equal OldSCEV because tryReassociate(I)
         // is equivalent to I. However, ScalarEvolution::getSCEV may
         // weaken nsw causing NewSCEV not to equal OldSCEV. For example, suppose
@@ -239,7 +240,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         //
         // This improvement is exercised in @reassociate_gep_nsw in nary-gep.ll.
         if (NewSCEV != OldSCEV)
-          SeenExprs[OldSCEV].push_back(WeakVH(&*I));
+          SeenExprs[OldSCEV].push_back(WeakTrackingVH(&*I));
       }
     }
   }
@@ -494,7 +495,8 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // future instruction either. Therefore, we pop it out of the stack. This
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
-    // Candidates stores WeakVHs, so a candidate can be nullptr if it's removed
+    // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
+    // removed
     // during rewriting.
     if (Value *Candidate = Candidates.back()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);

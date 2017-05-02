@@ -157,7 +157,7 @@ let Namespace = "Hexagon" in {
   // and isub_lo can be composed, which leads to all kinds of issues
   // with lane masks.
   def C8:         Rc<8,  "c8",         [], [USR]>, DwarfRegNum<[75]>;
-  def PC:         Rc<9,  "pc">,                    DwarfRegNum<[76]>;
+  def PC:         Rc<9,  "pc",         ["c9"]>,    DwarfRegNum<[76]>;
   def UGP:        Rc<10, "ugp",        ["c10"]>,   DwarfRegNum<[77]>;
   def GP:         Rc<11, "gp",         ["c11"]>,   DwarfRegNum<[78]>;
   def CS0:        Rc<12, "cs0",        ["c12"]>,   DwarfRegNum<[79]>;

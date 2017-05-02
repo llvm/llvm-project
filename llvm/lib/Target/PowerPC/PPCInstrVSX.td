@@ -138,7 +138,7 @@ let Uses = [RM] in {
     def LXVW4X : XX1Form<31, 780,
                          (outs vsrc:$XT), (ins memrr:$src),
                          "lxvw4x $XT, $src", IIC_LdStLFD,
-                         [(set v4i32:$XT, (int_ppc_vsx_lxvw4x xoaddr:$src))]>;
+                         []>;
   } // mayLoad
 
   // Store indexed instructions
@@ -160,7 +160,7 @@ let Uses = [RM] in {
     def STXVW4X : XX1Form<31, 908,
                          (outs), (ins vsrc:$XT, memrr:$dst),
                          "stxvw4x $XT, $dst", IIC_LdStSTFD,
-                         [(store v4i32:$XT, xoaddr:$dst)]>;
+                         []>;
     }
   } // mayStore
 
@@ -1041,8 +1041,6 @@ let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
   // Stores.
   def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
             (STXVD2X $rS, xoaddr:$dst)>;
-  def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, xoaddr:$dst),
-            (STXVW4X $rS, xoaddr:$dst)>;
   def : Pat<(int_ppc_vsx_stxvd2x_be v2f64:$rS, xoaddr:$dst),
             (STXVD2X $rS, xoaddr:$dst)>;
   def : Pat<(int_ppc_vsx_stxvw4x_be v4i32:$rS, xoaddr:$dst),
@@ -1053,8 +1051,12 @@ let Predicates = [IsBigEndian, HasVSX, HasOnlySwappingMemOps] in {
   def : Pat<(v2f64 (load xoaddr:$src)), (LXVD2X xoaddr:$src)>;
   def : Pat<(v2i64 (load xoaddr:$src)), (LXVD2X xoaddr:$src)>;
   def : Pat<(v4i32 (load xoaddr:$src)), (LXVW4X xoaddr:$src)>;
+  def : Pat<(v4i32 (int_ppc_vsx_lxvw4x xoaddr:$src)), (LXVW4X xoaddr:$src)>;
   def : Pat<(store v2f64:$rS, xoaddr:$dst), (STXVD2X $rS, xoaddr:$dst)>;
   def : Pat<(store v2i64:$rS, xoaddr:$dst), (STXVD2X $rS, xoaddr:$dst)>;
+  def : Pat<(store v4i32:$XT, xoaddr:$dst), (STXVW4X $XT, xoaddr:$dst)>;
+  def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, xoaddr:$dst),
+            (STXVW4X $rS, xoaddr:$dst)>;
 }
 
 // Permutes.
@@ -1890,8 +1892,8 @@ let Predicates = [IsLittleEndian, HasVSX] in
   def : Pat<(f64 (vector_extract v2f64:$S, i64:$Idx)),
             (f64 VectorExtractions.LE_VARIABLE_DOUBLE)>;
 
-  def : Pat<(v4i32 (int_ppc_vsx_lxvw4x_be xoaddr:$src)), (LXVW4X xoaddr:$src)>;
-  def : Pat<(v2f64 (int_ppc_vsx_lxvd2x_be xoaddr:$src)), (LXVD2X xoaddr:$src)>;
+def : Pat<(v4i32 (int_ppc_vsx_lxvw4x_be xoaddr:$src)), (LXVW4X xoaddr:$src)>;
+def : Pat<(v2f64 (int_ppc_vsx_lxvd2x_be xoaddr:$src)), (LXVD2X xoaddr:$src)>;
 
 let Predicates = [IsLittleEndian, HasDirectMove] in {
   // v16i8 scalar <-> vector conversions (LE)

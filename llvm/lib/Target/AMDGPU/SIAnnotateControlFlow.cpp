@@ -77,9 +77,10 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   void insertElse(BranchInst *Term);
 
-  Value *handleLoopCondition(Value *Cond, PHINode *Broken,
-                             llvm::Loop *L, BranchInst *Term,
-                             SmallVectorImpl<WeakVH> &LoopPhiConditions);
+  Value *
+  handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L,
+                      BranchInst *Term,
+                      SmallVectorImpl<WeakTrackingVH> &LoopPhiConditions);
 
   void handleLoop(BranchInst *Term);
 
@@ -212,9 +213,8 @@ void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 
 /// \brief Recursively handle the condition leading to a loop
 Value *SIAnnotateControlFlow::handleLoopCondition(
-  Value *Cond, PHINode *Broken,
-  llvm::Loop *L, BranchInst *Term,
-  SmallVectorImpl<WeakVH> &LoopPhiConditions) {
+    Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term,
+    SmallVectorImpl<WeakTrackingVH> &LoopPhiConditions) {
 
   // Only search through PHI nodes which are inside the loop.  If we try this
   // with PHI nodes that are outside of the loop, we end up inserting new PHI
@@ -281,7 +281,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
       NewPhi->setIncomingValue(i, PhiArg);
     }
 
-    LoopPhiConditions.push_back(WeakVH(Phi));
+    LoopPhiConditions.push_back(WeakTrackingVH(Phi));
     return Ret;
   }
 
@@ -323,7 +323,7 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
   BasicBlock *Target = Term->getSuccessor(1);
   PHINode *Broken = PHINode::Create(Int64, 0, "phi.broken", &Target->front());
 
-  SmallVector<WeakVH, 8> LoopPhiConditions;
+  SmallVector<WeakTrackingVH, 8> LoopPhiConditions;
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
   Value *Arg = handleLoopCondition(Cond, Broken, L, Term, LoopPhiConditions);
@@ -333,7 +333,7 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 
   Term->setCondition(CallInst::Create(Loop, Arg, "", Term));
 
-  for (WeakVH Val : reverse(LoopPhiConditions)) {
+  for (WeakTrackingVH Val : reverse(LoopPhiConditions)) {
     if (PHINode *Cond = cast_or_null<PHINode>(Val))
       eraseIfUnused(Cond);
   }

@@ -20,7 +20,7 @@ namespace llvm {
 class Constant;
 
 class BitcodeReaderValueList {
-  std::vector<WeakVH> ValuePtrs;
+  std::vector<WeakTrackingVH> ValuePtrs;
 
   /// As we resolve forward-referenced constants, we add information about them
   /// to this vector.  This allows us to resolve them in bulk instead of

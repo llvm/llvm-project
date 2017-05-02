@@ -51,9 +51,7 @@ static LineNoCacheTy *getCache(void *Ptr) {
 }
 
 SourceMgr::~SourceMgr() {
-  // Delete the line # cache if allocated.
-  if (LineNoCacheTy *Cache = getCache(LineNoCache))
-    delete Cache;
+  delete getCache(LineNoCache);
 }
 
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,

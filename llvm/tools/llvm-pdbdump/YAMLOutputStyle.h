@@ -19,7 +19,7 @@
 
 namespace llvm {
 namespace pdb {
-class ModuleDebugStream;
+class ModuleDebugStreamRef;
 
 class YAMLOutputStyle : public OutputStyle {
 public:
@@ -29,7 +29,7 @@ public:
 
 private:
   Expected<Optional<llvm::pdb::yaml::PdbSourceFileInfo>>
-  getFileLineInfo(const pdb::ModuleDebugStream &ModS);
+  getFileLineInfo(const pdb::ModuleDebugStreamRef &ModS);
 
   Error dumpStringTable();
   Error dumpFileHeaders();

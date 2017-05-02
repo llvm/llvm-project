@@ -28,6 +28,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
@@ -490,6 +491,67 @@ static void yamlToPdb(StringRef Path) {
       ModiBuilder.setObjFileName(MI.Obj);
       for (auto Symbol : ModiStream.Symbols)
         ModiBuilder.addSymbol(Symbol.Record);
+    }
+    if (MI.FileLineInfo.hasValue()) {
+      const auto &FLI = *MI.FileLineInfo;
+
+      // File Checksums must be emitted before line information, because line
+      // info records use offsets into the checksum buffer to reference a file's
+      // source file name.
+      auto Checksums = llvm::make_unique<ModuleDebugFileChecksumFragment>();
+      auto &ChecksumRef = *Checksums;
+      if (!FLI.FileChecksums.empty()) {
+        auto &Strings = Builder.getStringTableBuilder();
+        for (auto &FC : FLI.FileChecksums) {
+          uint32_t STOffset = Strings.getStringIndex(FC.FileName);
+          Checksums->addChecksum(STOffset, FC.Kind, FC.ChecksumBytes.Bytes);
+        }
+      }
+      ModiBuilder.setC13FileChecksums(std::move(Checksums));
+
+      for (const auto &Fragment : FLI.LineFragments) {
+        auto Lines = llvm::make_unique<ModuleDebugLineFragment>();
+        Lines->setCodeSize(Fragment.CodeSize);
+        Lines->setRelocationAddress(Fragment.RelocSegment,
+                                    Fragment.RelocOffset);
+        Lines->setFlags(Fragment.Flags);
+        for (const auto &LC : Fragment.Blocks) {
+          // FIXME: StringTable / StringTableBuilder should really be in
+          // DebugInfoCodeView.  This would allow us to construct the
+          // ModuleDebugLineFragment with a reference to the string table,
+          // and we could just pass strings around rather than having to
+          // remember how to calculate the right offset.
+          auto &Strings = Builder.getStringTableBuilder();
+          // The offset in the line info record is the offset of the checksum
+          // entry for the corresponding file.  That entry then contains an
+          // offset into the global string table of the file name.  So to
+          // compute the proper offset to write into the line info record, we
+          // must first get its offset in the global string table, then ask the
+          // checksum builder to find the offset in its serialized buffer that
+          // it mapped that filename string table offset to.
+          uint32_t StringOffset = Strings.getStringIndex(LC.FileName);
+          uint32_t ChecksumOffset = ChecksumRef.mapChecksumOffset(StringOffset);
+
+          Lines->createBlock(ChecksumOffset);
+          if (Lines->hasColumnInfo()) {
+            for (const auto &Item : zip(LC.Lines, LC.Columns)) {
+              auto &L = std::get<0>(Item);
+              auto &C = std::get<1>(Item);
+              uint32_t LE = L.LineStart + L.EndDelta;
+              Lines->addLineAndColumnInfo(
+                  L.Offset, LineInfo(L.LineStart, LE, L.IsStatement),
+                  C.StartColumn, C.EndColumn);
+            }
+          } else {
+            for (const auto &L : LC.Lines) {
+              uint32_t LE = L.LineStart + L.EndDelta;
+              Lines->addLineInfo(L.Offset,
+                                 LineInfo(L.LineStart, LE, L.IsStatement));
+            }
+          }
+        }
+        ModiBuilder.addC13LineFragment(std::move(Lines));
+      }
     }
   }
 

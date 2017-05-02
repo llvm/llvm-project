@@ -80,8 +80,6 @@ struct PageStats {
   BitVector UseAfterFreePages;
 };
 
-// Define a locally scoped visitor to print the different
-// substream types types.
 class C13RawVisitor : public C13DebugFragmentVisitor {
 public:
   C13RawVisitor(ScopedPrinter &P, PDBFile &F)
@@ -91,11 +89,11 @@ public:
     DictScope DD(P, "Lines");
 
     for (const auto &Fragment : Lines) {
-      DictScope DDD(P, "LineFragment");
+      DictScope DDD(P, "Block");
       P.printNumber("RelocSegment", Fragment.header()->RelocSegment);
       P.printNumber("RelocOffset", Fragment.header()->RelocOffset);
       P.printNumber("CodeSize", Fragment.header()->CodeSize);
-      P.printNumber("HasColumns", Fragment.hasColumnInfo());
+      P.printBoolean("HasColumns", Fragment.hasColumnInfo());
 
       for (const auto &L : Fragment) {
         DictScope DDDD(P, "Lines");
@@ -559,6 +557,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   bool IsSilentDatabaseBuild = !DumpRecordBytes && !DumpRecords && !DumpTpiHash;
   if (IsSilentDatabaseBuild) {
+    outs().flush();
     errs() << "Building Type Information For " << Label << "\n";
   }
 
@@ -723,7 +722,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             File.getMsfLayout(), File.getMsfBuffer(),
             Modi.Info.getModuleStreamIndex());
 
-        ModuleDebugStream ModS(Modi.Info, std::move(ModStreamData));
+        ModuleDebugStreamRef ModS(Modi.Info, std::move(ModStreamData));
         if (auto EC = ModS.reload())
           return EC;
 
@@ -751,7 +750,6 @@ Error LLVMOutputStyle::dumpDbiStream() {
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
 
-          // Inlinee Line Type Indices refer to the IPI stream.
           C13RawVisitor V(P, File);
           if (auto EC = codeview::visitModuleDebugFragments(
                   ModS.linesAndChecksums(), V))

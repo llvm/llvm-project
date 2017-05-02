@@ -2226,10 +2226,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       ConstantInt *RetVal =
           lowerObjectSizeCall(II, *DL, TLInfo, /*MustSucceed=*/true);
       // Substituting this can cause recursive simplifications, which can
-      // invalidate our iterator.  Use a WeakVH to hold onto it in case this
+      // invalidate our iterator.  Use a WeakTrackingVH to hold onto it in case
+      // this
       // happens.
       Value *CurValue = &*CurInstIterator;
-      WeakVH IterHandle(CurValue);
+      WeakTrackingVH IterHandle(CurValue);
 
       replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
 
@@ -4442,9 +4443,9 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // using it.
   if (Repl->use_empty()) {
     // This can cause recursive deletion, which can invalidate our iterator.
-    // Use a WeakVH to hold onto it in case this happens.
+    // Use a WeakTrackingVH to hold onto it in case this happens.
     Value *CurValue = &*CurInstIterator;
-    WeakVH IterHandle(CurValue);
+    WeakTrackingVH IterHandle(CurValue);
     BasicBlock *BB = CurInstIterator->getParent();
 
     RecursivelyDeleteTriviallyDeadInstructions(Repl, TLInfo);

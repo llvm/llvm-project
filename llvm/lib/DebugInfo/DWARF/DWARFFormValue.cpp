@@ -309,8 +309,10 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   }
   // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section offset.
   // Don't check for DWARF version here, as some producers may still do this
-  // by mistake.
-  return (Form == DW_FORM_data4 || Form == DW_FORM_data8) &&
+  // by mistake. Also accept DW_FORM_strp since this is .debug_str section
+  // offset.
+  return (Form == DW_FORM_data4 || Form == DW_FORM_data8 ||
+          Form == DW_FORM_strp) &&
          FC == FC_SectionOffset;
 }
 

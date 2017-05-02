@@ -897,7 +897,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     BinaryByteStream LineTableInfo(FunctionLineTables[Name], support::little);
     BinaryStreamReader Reader(LineTableInfo);
 
-    ModuleDebugLineFragment LineInfo;
+    ModuleDebugLineFragmentRef LineInfo;
     error(LineInfo.initialize(Reader));
 
     W.printHex("Flags", LineInfo.header()->Flags);
@@ -964,7 +964,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
   BinaryByteStream S(Subsection, llvm::support::little);
   BinaryStreamReader SR(S);
-  ModuleDebugFileChecksumFragment Checksums;
+  ModuleDebugFileChecksumFragmentRef Checksums;
   error(Checksums.initialize(SR));
 
   for (auto &FC : Checksums) {
