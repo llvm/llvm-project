@@ -20,7 +20,6 @@ define void @test_void_return() {
 ; CHECK-NEXT:   maxAlignment:    0
 ; CHECK-NEXT:   adjustsStack:    false
 ; CHECK-NEXT:   hasCalls:        false
-; CHECK-NEXT:   maxCallFrameSize: 0
 ; CHECK-NEXT:   hasOpaqueSPAdjustment: false
 ; CHECK-NEXT:   hasVAStart:      false
 ; CHECK-NEXT:   hasMustTailInVarArgFunc: false

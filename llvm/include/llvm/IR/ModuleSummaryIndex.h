@@ -644,13 +644,6 @@ public:
     return It->second.second;
   }
 
-  /// Add the given per-module index into this module index/summary,
-  /// assigning it the given module ID. Each module merged in should have
-  /// a unique ID, necessary for consistent renaming of promoted
-  /// static (local) variables.
-  void mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
-                 uint64_t NextModuleId);
-
   /// Convenience method for creating a promoted global name
   /// for the given value name of a local, and its original module's ID.
   static std::string getGlobalNameForLocal(StringRef Name, ModuleHash ModHash) {

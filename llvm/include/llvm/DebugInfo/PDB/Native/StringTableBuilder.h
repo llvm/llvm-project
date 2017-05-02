@@ -29,6 +29,7 @@ public:
   // If string S does not exist in the string table, insert it.
   // Returns the ID for S.
   uint32_t insert(StringRef S);
+  uint32_t getStringIndex(StringRef S);
 
   uint32_t finalize();
   Error commit(BinaryStreamWriter &Writer) const;

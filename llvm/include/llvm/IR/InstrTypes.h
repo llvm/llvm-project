@@ -1059,18 +1059,6 @@ public:
     return isFalseWhenEqual(getPredicate());
   }
 
-  /// @brief Determine if Pred1 implies Pred2 is true when two compares have
-  /// matching operands.
-  bool isImpliedTrueByMatchingCmp(Predicate Pred2) const {
-    return isImpliedTrueByMatchingCmp(getPredicate(), Pred2);
-  }
-
-  /// @brief Determine if Pred1 implies Pred2 is false when two compares have
-  /// matching operands.
-  bool isImpliedFalseByMatchingCmp(Predicate Pred2) const {
-    return isImpliedFalseByMatchingCmp(getPredicate(), Pred2);
-  }
-
   /// @returns true if the predicate is unsigned, false otherwise.
   /// @brief Determine if the predicate is an unsigned operation.
   static bool isUnsigned(Predicate predicate);

@@ -11,7 +11,9 @@
 #define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFILECHECKSUMFRAGMENT_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
@@ -60,6 +62,28 @@ public:
 
 private:
   FileChecksumArray Checksums;
+};
+
+class ModuleDebugFileChecksumFragment final : public ModuleDebugFragment {
+public:
+  ModuleDebugFileChecksumFragment();
+
+  static bool classof(const ModuleDebugFragment *S) {
+    return S->kind() == ModuleDebugFragmentKind::FileChecksums;
+  }
+
+  void addChecksum(uint32_t StringTableOffset, FileChecksumKind Kind,
+                   ArrayRef<uint8_t> Bytes);
+
+  uint32_t calculateSerializedLength() override;
+  Error commit(BinaryStreamWriter &Writer) override;
+  uint32_t mapChecksumOffset(uint32_t StringTableOffset) const;
+
+private:
+  DenseMap<uint32_t, uint32_t> OffsetMap;
+  uint32_t SerializedSize = 0;
+  llvm::BumpPtrAllocator Storage;
+  std::vector<FileChecksumEntry> Checksums;
 };
 }
 }

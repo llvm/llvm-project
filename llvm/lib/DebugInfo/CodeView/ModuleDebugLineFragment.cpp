@@ -64,3 +64,92 @@ Error ModuleDebugLineFragmentRef::initialize(BinaryStreamReader Reader) {
 bool ModuleDebugLineFragmentRef::hasColumnInfo() const {
   return !!(Header->Flags & LF_HaveColumns);
 }
+
+ModuleDebugLineFragment::ModuleDebugLineFragment()
+    : ModuleDebugFragment(ModuleDebugFragmentKind::Lines) {}
+
+void ModuleDebugLineFragment::createBlock(uint32_t ChecksumBufferOffset) {
+  Blocks.emplace_back(ChecksumBufferOffset);
+}
+
+void ModuleDebugLineFragment::addLineInfo(uint32_t Offset,
+                                          const LineInfo &Line) {
+  Block &B = Blocks.back();
+  LineNumberEntry LNE;
+  LNE.Flags = Line.getRawData();
+  LNE.Offset = Offset;
+  B.Lines.push_back(LNE);
+}
+
+void ModuleDebugLineFragment::addLineAndColumnInfo(uint32_t Offset,
+                                                   const LineInfo &Line,
+                                                   uint32_t ColStart,
+                                                   uint32_t ColEnd) {
+  Block &B = Blocks.back();
+  assert(B.Lines.size() == B.Columns.size());
+
+  addLineInfo(Offset, Line);
+  ColumnNumberEntry CNE;
+  CNE.StartColumn = ColStart;
+  CNE.EndColumn = ColEnd;
+  B.Columns.push_back(CNE);
+}
+
+Error ModuleDebugLineFragment::commit(BinaryStreamWriter &Writer) {
+  LineFragmentHeader Header;
+  Header.CodeSize = CodeSize;
+  Header.Flags = hasColumnInfo() ? LF_HaveColumns : 0;
+  Header.RelocOffset = RelocOffset;
+  Header.RelocSegment = RelocSegment;
+
+  if (auto EC = Writer.writeObject(Header))
+    return EC;
+
+  for (const auto &B : Blocks) {
+    LineBlockFragmentHeader BlockHeader;
+    assert(B.Lines.size() == B.Columns.size() || B.Columns.empty());
+
+    BlockHeader.NumLines = B.Lines.size();
+    BlockHeader.BlockSize = sizeof(LineBlockFragmentHeader);
+    BlockHeader.BlockSize += BlockHeader.NumLines * sizeof(LineNumberEntry);
+    if (hasColumnInfo())
+      BlockHeader.BlockSize += BlockHeader.NumLines * sizeof(ColumnNumberEntry);
+    BlockHeader.NameIndex = B.ChecksumBufferOffset;
+    if (auto EC = Writer.writeObject(BlockHeader))
+      return EC;
+
+    if (auto EC = Writer.writeArray(makeArrayRef(B.Lines)))
+      return EC;
+
+    if (hasColumnInfo()) {
+      if (auto EC = Writer.writeArray(makeArrayRef(B.Columns)))
+        return EC;
+    }
+  }
+  return Error::success();
+}
+
+uint32_t ModuleDebugLineFragment::calculateSerializedLength() {
+  uint32_t Size = sizeof(LineFragmentHeader);
+  for (const auto &B : Blocks) {
+    Size += sizeof(LineBlockFragmentHeader);
+    Size += B.Lines.size() * sizeof(LineNumberEntry);
+    if (hasColumnInfo())
+      Size += B.Columns.size() * sizeof(ColumnNumberEntry);
+  }
+  return Size;
+}
+
+void ModuleDebugLineFragment::setRelocationAddress(uint16_t Segment,
+                                                   uint16_t Offset) {
+  RelocOffset = Offset;
+  RelocSegment = Segment;
+}
+
+void ModuleDebugLineFragment::setCodeSize(uint32_t Size) { CodeSize = Size; }
+
+void ModuleDebugLineFragment::setFlags(LineFlags Flags) { this->Flags = Flags; }
+
+bool ModuleDebugLineFragment::hasColumnInfo() const {
+  return Flags & LF_HaveColumns;
+}

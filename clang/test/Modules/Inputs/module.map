@@ -261,6 +261,10 @@ module config {
   config_macros [exhaustive] WANT_FOO, WANT_BAR
 }
 
+module diag_flags {
+  header "diag_flags.h"
+}
+
 module diag_pragma {
   header "diag_pragma.h"
 }

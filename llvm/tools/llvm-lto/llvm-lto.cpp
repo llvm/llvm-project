@@ -331,12 +331,9 @@ static void createCombinedModuleSummaryIndex() {
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
-    std::unique_ptr<ModuleSummaryIndex> Index =
-        ExitOnErr(llvm::getModuleSummaryIndexForFile(Filename));
-    // Skip files without a module summary.
-    if (!Index)
-      continue;
-    CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
+    std::unique_ptr<MemoryBuffer> MB =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
+    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, ++NextModuleId));
   }
   std::error_code EC;
   assert(!OutputFilename.empty());

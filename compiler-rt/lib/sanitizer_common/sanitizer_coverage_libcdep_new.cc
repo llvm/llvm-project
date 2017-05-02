@@ -98,10 +98,6 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
   InternalFree(file_path);
   InternalFree(module_name);
   InternalFree(pcs);
-
-  if (sancov_flags()->symbolize) {
-    Printf("TODO(aizatsky): call sancov to symbolize\n");
-  }
 }
 
 // Collects trace-pc guard coverage.

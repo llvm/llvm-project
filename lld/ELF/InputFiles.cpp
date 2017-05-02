@@ -410,9 +410,11 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
     // Mergeable sections with relocations are tricky because relocations
     // need to be taken into account when comparing section contents for
-    // merging. The MergeInputSection class currently doesn't care about
-    // relocations, and it's unlikely to support it in future because such
-    // sections are rare. We simply handle such sections as non-mergeable.
+    // merging. It doesn't worth supporting such mergeable sections because
+    // they are rare and it'd complicates the internal design (we usually
+    // have to determine if two sections are mergeable early in the link
+    // process much before applying relocations). We simply handle mergeable
+    // sections with relocations as non-mergeable.
     if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
       Target = toRegularSection(MS);
       this->Sections[Sec.sh_info] = Target;

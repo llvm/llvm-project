@@ -89,11 +89,11 @@ public:
     DictScope DD(P, "Lines");
 
     for (const auto &Fragment : Lines) {
-      DictScope DDD(P, "LineFragment");
+      DictScope DDD(P, "Block");
       P.printNumber("RelocSegment", Fragment.header()->RelocSegment);
       P.printNumber("RelocOffset", Fragment.header()->RelocOffset);
       P.printNumber("CodeSize", Fragment.header()->CodeSize);
-      P.printNumber("HasColumns", Fragment.hasColumnInfo());
+      P.printBoolean("HasColumns", Fragment.hasColumnInfo());
 
       for (const auto &L : Fragment) {
         DictScope DDDD(P, "Lines");
@@ -557,6 +557,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   bool IsSilentDatabaseBuild = !DumpRecordBytes && !DumpRecords && !DumpTpiHash;
   if (IsSilentDatabaseBuild) {
+    outs().flush();
     errs() << "Building Type Information For " << Label << "\n";
   }
 

@@ -1667,4 +1667,245 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
 }
 
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {
+  // Create a single compile unit with a single function that has a DW_AT_type
+  // that is CU relative. The CU offset is not valid becuase it is larger than
+  // the compile unit itself.
+
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+      - main
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_yes
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+      - Code:            0x00000002
+        Tag:             DW_TAG_subprogram
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_type
+            Form:            DW_FORM_ref4
+    debug_info:
+      - Length:
+          TotalLength:     22
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+          - AbbrCode:        0x00000002
+            Values:
+              - Value:           0x000000000000000D
+              - Value:           0x0000000000001234
+          - AbbrCode:        0x00000000
+            Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  const char *err = "error: DW_FORM_ref4 CU offset 0x00001234 is invalid "
+                    "(must be less than CU size of 0x0000001a):";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
+  // Create a single compile unit with a single function that has an invalid
+  // DW_AT_type with an invalid .debug_info offset in its DW_FORM_ref_addr.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+      - main
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_yes
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+      - Code:            0x00000002
+        Tag:             DW_TAG_subprogram
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_type
+            Form:            DW_FORM_ref_addr
+    debug_info:
+      - Length:
+          TotalLength:     22
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+          - AbbrCode:        0x00000002
+            Values:
+              - Value:           0x000000000000000D
+              - Value:           0x0000000000001234
+          - AbbrCode:        0x00000000
+            Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  strm.flush();
+  const char *err = "error: DW_FORM_ref_addr offset beyond .debug_info bounds:";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
+  // Create a single compile unit with a DW_AT_ranges whose section offset
+  // isn't valid.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_ranges
+            Form:            DW_FORM_sec_offset
+    debug_info:
+      - Length:
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000001000
+
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  strm.flush();
+  const char *err = "error: DW_AT_ranges offset is beyond .debug_ranges "
+                    "bounds:";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {
+  // Create a single compile unit with a DW_AT_stmt_list whose section offset
+  // isn't valid.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_stmt_list
+            Form:            DW_FORM_sec_offset
+    debug_info:
+      - Length:
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000001000
+
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  strm.flush();
+  const char *err = "error: DW_AT_stmt_list offset is beyond .debug_line "
+                    "bounds: 0x00001000";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
+  // Create a single compile unit with a single function that has an invalid
+  // DW_FORM_strp for the DW_AT_name.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+    debug_info:
+      - Length:
+          TotalLength:     12
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000001234
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  strm.flush();
+  const char *err = "error: DW_FORM_strp offset beyond .debug_str bounds:";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+
 } // end anonymous namespace

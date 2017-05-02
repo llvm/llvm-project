@@ -2186,9 +2186,6 @@ static bool HandleLValueBase(EvalInfo &Info, const Expr *E, LValue &Obj,
   if (!Base->isVirtual())
     return HandleLValueDirectBase(Info, E, Obj, DerivedDecl, BaseDecl);
 
-  if (!Obj.checkNullPointer(Info, E, CSK_Base))
-    return false;
-
   SubobjectDesignator &D = Obj.Designator;
   if (D.Invalid)
     return false;
@@ -9946,11 +9943,8 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (E->getType().isNull())
     return false;
 
-  if (!CheckLiteralType(Info, E)) {
-    if (Info.noteFailure())
-      EvaluateIgnoredValue(Info, E);
+  if (!CheckLiteralType(Info, E))
     return false;
-  }
 
   if (!::Evaluate(Result, Info, E))
     return false;
