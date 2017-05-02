@@ -47,7 +47,7 @@
 !7 = !{!8}
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "f", scope: !6, file: !3, line: 6, baseType: !9, size: 8)
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo", scope: !10, file: !3, line: 2, size: 8, elements: !4, identifier: "_ZTSN2ns3fooE")
-!10 = !DINamespace(name: "ns", scope: null, file: !3, line: 1)
+!10 = !DINamespace(name: "ns", scope: null)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{!"clang version 5.0.0 (trunk 293904) (llvm/trunk 293908)"}

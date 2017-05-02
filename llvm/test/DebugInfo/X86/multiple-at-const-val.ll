@@ -34,7 +34,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 174207)", isOptimized: true, emissionKind: FullDebug, file: !1802, enums: !1, retainedTypes: !955, globals: !1786, imports:  !955)
 !1 = !{!26}
-!4 = !DINamespace(name: "std", line: 48, scope: !5)
+!4 = !DINamespace(name: "std", scope: !5)
 !5 = !DIFile(filename: "os_base.h", directory: "/privite/tmp")
 !25 = !DIEnumerator(name: "_S_os_fmtflags_end", value: 65536) ; [ DW_TAG_enumerator ]
 !26 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Ios_Iostate", line: 146, size: 32, align: 32, file: !1801, scope: !4, elements: !27)
