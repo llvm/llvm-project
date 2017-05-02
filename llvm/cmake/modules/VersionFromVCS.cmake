@@ -33,7 +33,8 @@ function(add_version_info_from_vcs VERS)
       execute_process(COMMAND ${git_executable} rev-parse --git-dir
         WORKING_DIRECTORY ${SOURCE_DIR}/cmake
         RESULT_VARIABLE git_result
-        OUTPUT_VARIABLE git_dir)
+        OUTPUT_VARIABLE git_dir
+        ERROR_QUIET)
       if(git_result EQUAL 0)
         # Try to get a ref-id
         string(STRIP "${git_dir}" git_dir)

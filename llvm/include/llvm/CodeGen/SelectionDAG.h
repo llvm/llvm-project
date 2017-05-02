@@ -688,6 +688,10 @@ public:
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
 
+  /// Convert Op, which must be of float type, to the
+  /// float type VT, by either extending or rounding (by truncation).
+  SDValue getFPExtendOrRound(SDValue Op, const SDLoc &DL, EVT VT);
+
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any-extending or truncating it.
   SDValue getAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);

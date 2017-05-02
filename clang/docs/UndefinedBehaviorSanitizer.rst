@@ -157,8 +157,6 @@ will need to:
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
 
-Stacktrace printing for UBSan issues is currently not supported on Darwin.
-
 Issue Suppression
 =================
 

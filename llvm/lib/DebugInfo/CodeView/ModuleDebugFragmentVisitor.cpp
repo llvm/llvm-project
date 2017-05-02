@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -36,6 +37,12 @@ Error llvm::codeview::visitModuleDebugFragment(
       return EC;
 
     return V.visitFileChecksums(Fragment);
+  }
+  case ModuleDebugFragmentKind::InlineeLines: {
+    ModuleDebugInlineeLineFragmentRef Fragment;
+    if (auto EC = Fragment.initialize(Reader))
+      return EC;
+    return V.visitInlineeLines(Fragment);
   }
   default: {
     ModuleDebugUnknownFragmentRef Fragment(R.kind(), R.getRecordData());

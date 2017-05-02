@@ -13,9 +13,11 @@
 using namespace llvm;
 using namespace object;
 
-#define ELF_RELOC(name, value)                                          \
-  case ELF::name:                                                       \
-    return #name;                                                       \
+#define STRINGIFY_ENUM_CASE(ns, name)                                          \
+  case ns::name:                                                               \
+    return #name;
+
+#define ELF_RELOC(name, value) STRINGIFY_ENUM_CASE(ELF, name)
 
 StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
                                                  uint32_t Type) {
@@ -141,3 +143,61 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 }
 
 #undef ELF_RELOC
+
+StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
+  switch (Machine) {
+  case ELF::EM_ARM:
+    switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_ARM_EXIDX);
+      STRINGIFY_ENUM_CASE(ELF, SHT_ARM_PREEMPTMAP);
+      STRINGIFY_ENUM_CASE(ELF, SHT_ARM_ATTRIBUTES);
+      STRINGIFY_ENUM_CASE(ELF, SHT_ARM_DEBUGOVERLAY);
+      STRINGIFY_ENUM_CASE(ELF, SHT_ARM_OVERLAYSECTION);
+    }
+    break;
+  case ELF::EM_HEXAGON:
+    switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_HEX_ORDERED); }
+    break;
+  case ELF::EM_X86_64:
+    switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_X86_64_UNWIND); }
+    break;
+  case ELF::EM_MIPS:
+  case ELF::EM_MIPS_RS3_LE:
+    switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_REGINFO);
+      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_OPTIONS);
+      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_ABIFLAGS);
+      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_DWARF);
+    }
+    break;
+  default:
+    break;
+  }
+
+  switch (Type) {
+    STRINGIFY_ENUM_CASE(ELF, SHT_NULL);
+    STRINGIFY_ENUM_CASE(ELF, SHT_PROGBITS);
+    STRINGIFY_ENUM_CASE(ELF, SHT_SYMTAB);
+    STRINGIFY_ENUM_CASE(ELF, SHT_STRTAB);
+    STRINGIFY_ENUM_CASE(ELF, SHT_RELA);
+    STRINGIFY_ENUM_CASE(ELF, SHT_HASH);
+    STRINGIFY_ENUM_CASE(ELF, SHT_DYNAMIC);
+    STRINGIFY_ENUM_CASE(ELF, SHT_NOTE);
+    STRINGIFY_ENUM_CASE(ELF, SHT_NOBITS);
+    STRINGIFY_ENUM_CASE(ELF, SHT_REL);
+    STRINGIFY_ENUM_CASE(ELF, SHT_SHLIB);
+    STRINGIFY_ENUM_CASE(ELF, SHT_DYNSYM);
+    STRINGIFY_ENUM_CASE(ELF, SHT_INIT_ARRAY);
+    STRINGIFY_ENUM_CASE(ELF, SHT_FINI_ARRAY);
+    STRINGIFY_ENUM_CASE(ELF, SHT_PREINIT_ARRAY);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GROUP);
+    STRINGIFY_ENUM_CASE(ELF, SHT_SYMTAB_SHNDX);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verneed);
+    STRINGIFY_ENUM_CASE(ELF, SHT_GNU_versym);
+  default:
+    return "Unknown";
+  }
+}

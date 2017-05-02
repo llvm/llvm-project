@@ -1,4 +1,4 @@
-//===- StringTableBuilder.h - PDB String Table Builder ----------*- C++ -*-===//
+//===- PDBStringTableBuilder.h - PDB String Table Builder -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H
+#define LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,7 +24,7 @@ class BinaryStreamWriter;
 
 namespace pdb {
 
-class StringTableBuilder {
+class PDBStringTableBuilder {
 public:
   // If string S does not exist in the string table, insert it.
   // Returns the ID for S.
@@ -42,4 +42,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H
+#endif // LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H

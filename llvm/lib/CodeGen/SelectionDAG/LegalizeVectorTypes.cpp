@@ -529,10 +529,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue Res = GetScalarizedVector(N->getOperand(0));
   if (Res.getValueType() != VT)
-    Res = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, Res);
+    Res = VT.isFloatingPoint()
+              ? DAG.getNode(ISD::FP_EXTEND, SDLoc(N), VT, Res)
+              : DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, Res);
   return Res;
 }
-
 
 /// If the input condition is a vector that needs to be scalarized, it must be
 /// <1 x i1>, so just convert to a normal ISD::SELECT

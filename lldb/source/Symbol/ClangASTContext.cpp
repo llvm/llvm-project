@@ -954,75 +954,60 @@ ClangASTContext::GetBasicTypeEnumeration(const ConstString &name) {
     static llvm::once_flag g_once_flag;
     llvm::call_once(g_once_flag, []() {
       // "void"
-      g_type_map.Append(ConstString("void").GetStringRef(), eBasicTypeVoid);
+      g_type_map.Append(ConstString("void"), eBasicTypeVoid);
 
       // "char"
-      g_type_map.Append(ConstString("char").GetStringRef(), eBasicTypeChar);
-      g_type_map.Append(ConstString("signed char").GetStringRef(),
-                        eBasicTypeSignedChar);
-      g_type_map.Append(ConstString("unsigned char").GetStringRef(),
-                        eBasicTypeUnsignedChar);
-      g_type_map.Append(ConstString("wchar_t").GetStringRef(), eBasicTypeWChar);
-      g_type_map.Append(ConstString("signed wchar_t").GetStringRef(),
-                        eBasicTypeSignedWChar);
-      g_type_map.Append(ConstString("unsigned wchar_t").GetStringRef(),
+      g_type_map.Append(ConstString("char"), eBasicTypeChar);
+      g_type_map.Append(ConstString("signed char"), eBasicTypeSignedChar);
+      g_type_map.Append(ConstString("unsigned char"), eBasicTypeUnsignedChar);
+      g_type_map.Append(ConstString("wchar_t"), eBasicTypeWChar);
+      g_type_map.Append(ConstString("signed wchar_t"), eBasicTypeSignedWChar);
+      g_type_map.Append(ConstString("unsigned wchar_t"),
                         eBasicTypeUnsignedWChar);
       // "short"
-      g_type_map.Append(ConstString("short").GetStringRef(), eBasicTypeShort);
-      g_type_map.Append(ConstString("short int").GetStringRef(),
-                        eBasicTypeShort);
-      g_type_map.Append(ConstString("unsigned short").GetStringRef(),
-                        eBasicTypeUnsignedShort);
-      g_type_map.Append(ConstString("unsigned short int").GetStringRef(),
+      g_type_map.Append(ConstString("short"), eBasicTypeShort);
+      g_type_map.Append(ConstString("short int"), eBasicTypeShort);
+      g_type_map.Append(ConstString("unsigned short"), eBasicTypeUnsignedShort);
+      g_type_map.Append(ConstString("unsigned short int"),
                         eBasicTypeUnsignedShort);
 
       // "int"
-      g_type_map.Append(ConstString("int").GetStringRef(), eBasicTypeInt);
-      g_type_map.Append(ConstString("signed int").GetStringRef(),
-                        eBasicTypeInt);
-      g_type_map.Append(ConstString("unsigned int").GetStringRef(),
-                        eBasicTypeUnsignedInt);
-      g_type_map.Append(ConstString("unsigned").GetStringRef(),
-                        eBasicTypeUnsignedInt);
+      g_type_map.Append(ConstString("int"), eBasicTypeInt);
+      g_type_map.Append(ConstString("signed int"), eBasicTypeInt);
+      g_type_map.Append(ConstString("unsigned int"), eBasicTypeUnsignedInt);
+      g_type_map.Append(ConstString("unsigned"), eBasicTypeUnsignedInt);
 
       // "long"
-      g_type_map.Append(ConstString("long").GetStringRef(), eBasicTypeLong);
-      g_type_map.Append(ConstString("long int").GetStringRef(), eBasicTypeLong);
-      g_type_map.Append(ConstString("unsigned long").GetStringRef(),
-                        eBasicTypeUnsignedLong);
-      g_type_map.Append(ConstString("unsigned long int").GetStringRef(),
+      g_type_map.Append(ConstString("long"), eBasicTypeLong);
+      g_type_map.Append(ConstString("long int"), eBasicTypeLong);
+      g_type_map.Append(ConstString("unsigned long"), eBasicTypeUnsignedLong);
+      g_type_map.Append(ConstString("unsigned long int"),
                         eBasicTypeUnsignedLong);
 
       // "long long"
-      g_type_map.Append(ConstString("long long").GetStringRef(),
-                        eBasicTypeLongLong);
-      g_type_map.Append(ConstString("long long int").GetStringRef(),
-                        eBasicTypeLongLong);
-      g_type_map.Append(ConstString("unsigned long long").GetStringRef(),
+      g_type_map.Append(ConstString("long long"), eBasicTypeLongLong);
+      g_type_map.Append(ConstString("long long int"), eBasicTypeLongLong);
+      g_type_map.Append(ConstString("unsigned long long"),
                         eBasicTypeUnsignedLongLong);
-      g_type_map.Append(ConstString("unsigned long long int").GetStringRef(),
+      g_type_map.Append(ConstString("unsigned long long int"),
                         eBasicTypeUnsignedLongLong);
 
       // "int128"
-      g_type_map.Append(ConstString("__int128_t").GetStringRef(),
-                        eBasicTypeInt128);
-      g_type_map.Append(ConstString("__uint128_t").GetStringRef(),
-                        eBasicTypeUnsignedInt128);
+      g_type_map.Append(ConstString("__int128_t"), eBasicTypeInt128);
+      g_type_map.Append(ConstString("__uint128_t"), eBasicTypeUnsignedInt128);
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool").GetStringRef(), eBasicTypeBool);
-      g_type_map.Append(ConstString("float").GetStringRef(), eBasicTypeFloat);
-      g_type_map.Append(ConstString("double").GetStringRef(), eBasicTypeDouble);
-      g_type_map.Append(ConstString("long double").GetStringRef(),
-                        eBasicTypeLongDouble);
-      g_type_map.Append(ConstString("id").GetStringRef(), eBasicTypeObjCID);
-      g_type_map.Append(ConstString("SEL").GetStringRef(), eBasicTypeObjCSel);
-      g_type_map.Append(ConstString("nullptr").GetStringRef(),
-                        eBasicTypeNullPtr);
+      g_type_map.Append(ConstString("bool"), eBasicTypeBool);
+      g_type_map.Append(ConstString("float"), eBasicTypeFloat);
+      g_type_map.Append(ConstString("double"), eBasicTypeDouble);
+      g_type_map.Append(ConstString("long double"), eBasicTypeLongDouble);
+      g_type_map.Append(ConstString("id"), eBasicTypeObjCID);
+      g_type_map.Append(ConstString("SEL"), eBasicTypeObjCSel);
+      g_type_map.Append(ConstString("nullptr"), eBasicTypeNullPtr);
       g_type_map.Sort();
     });
 
-    return g_type_map.Find(name.GetStringRef(), eBasicTypeInvalid);
+    return g_type_map.Find(name, eBasicTypeInvalid);
   }
   return eBasicTypeInvalid;
 }

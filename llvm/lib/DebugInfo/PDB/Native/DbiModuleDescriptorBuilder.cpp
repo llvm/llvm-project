@@ -161,7 +161,7 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
   return Error::success();
 }
 
-void DbiModuleDescriptorBuilder::addC13LineFragment(
+void DbiModuleDescriptorBuilder::addC13Fragment(
     std::unique_ptr<ModuleDebugLineFragment> Lines) {
   ModuleDebugLineFragment &Frag = *Lines;
 
@@ -171,6 +171,20 @@ void DbiModuleDescriptorBuilder::addC13LineFragment(
     C13Builders.push_back(nullptr);
 
   this->LineInfo.push_back(std::move(Lines));
+  C13Builders.push_back(
+      llvm::make_unique<ModuleDebugFragmentRecordBuilder>(Frag.kind(), Frag));
+}
+
+void DbiModuleDescriptorBuilder::addC13Fragment(
+    std::unique_ptr<codeview::ModuleDebugInlineeLineFragment> Inlinees) {
+  ModuleDebugInlineeLineFragment &Frag = *Inlinees;
+
+  // File Checksums have to come first, so push an empty entry on if this
+  // is the first.
+  if (C13Builders.empty())
+    C13Builders.push_back(nullptr);
+
+  this->Inlinees.push_back(std::move(Inlinees));
   C13Builders.push_back(
       llvm::make_unique<ModuleDebugFragmentRecordBuilder>(Frag.kind(), Frag));
 }

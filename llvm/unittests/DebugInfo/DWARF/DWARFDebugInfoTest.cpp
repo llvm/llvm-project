@@ -1908,4 +1908,60 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
   EXPECT_TRUE(strm.str().find(err) != std::string::npos);
 }
 
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddrBetween) {
+  // Create a single compile unit with a single function that has a DW_AT_type
+  // with a valid .debug_info offset, but the offset is between two DIEs.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+      - main
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_yes
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+      - Code:            0x00000002
+        Tag:             DW_TAG_subprogram
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_type
+            Form:            DW_FORM_ref_addr
+    debug_info:
+      - Length:
+          TotalLength:     22
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+          - AbbrCode:        0x00000002
+            Values:
+              - Value:           0x000000000000000D
+              - Value:           0x0000000000000011
+          - AbbrCode:        0x00000000
+            Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
+  std::string str;
+  raw_string_ostream strm(str);
+  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
+  strm.flush();
+  const char *err = "error: invalid DIE reference 0x00000011. Offset is in "
+      "between DIEs:";
+  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+}
+  
 } // end anonymous namespace

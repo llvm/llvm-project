@@ -15372,7 +15372,7 @@ static ExprResult diagnoseUnknownAnyExpr(Sema &S, Expr *E) {
 }
 
 /// Check for operands with placeholder types and complain if found.
-/// Returns true if there was an error and no recovery was possible.
+/// Returns ExprError() if there was an error and no recovery was possible.
 ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
   if (!getLangOpts().CPlusPlus) {
     // C cannot handle TypoExpr nodes on either side of a binop because it

@@ -1984,6 +1984,7 @@ void Verifier::visitFunction(const Function &F) {
            "Calling convention requires void return type", &F);
     LLVM_FALLTHROUGH;
   case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:

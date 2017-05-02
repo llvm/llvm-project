@@ -35,16 +35,21 @@ public:
 
   Error visitLines(codeview::ModuleDebugLineFragmentRef &Lines) final;
 
+  Error
+  visitInlineeLines(codeview::ModuleDebugInlineeLineFragmentRef &Lines) final;
+
   Error finished() final;
 
 protected:
   virtual Error handleFileChecksums() { return Error::success(); }
   virtual Error handleLines() { return Error::success(); }
+  virtual Error handleInlineeLines() { return Error::success(); }
 
   Expected<StringRef> getNameFromStringTable(uint32_t Offset);
   Expected<StringRef> getNameFromChecksumsBuffer(uint32_t Offset);
 
   Optional<codeview::ModuleDebugFileChecksumFragmentRef> Checksums;
+  std::vector<codeview::ModuleDebugInlineeLineFragmentRef> InlineeLines;
   std::vector<codeview::ModuleDebugLineFragmentRef> Lines;
 
   PDBFile &F;

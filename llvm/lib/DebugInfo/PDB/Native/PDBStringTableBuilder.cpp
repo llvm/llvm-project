@@ -1,4 +1,4 @@
-//===- StringTableBuilder.cpp - PDB String Table ----------------*- C++ -*-===//
+//===- PDBStringTableBuilder.cpp - PDB String Table -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -19,7 +19,7 @@ using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::pdb;
 
-uint32_t StringTableBuilder::insert(StringRef S) {
+uint32_t PDBStringTableBuilder::insert(StringRef S) {
   auto P = Strings.insert({S, StringSize});
 
   // If a given string didn't exist in the string table, we want to increment
@@ -29,7 +29,7 @@ uint32_t StringTableBuilder::insert(StringRef S) {
   return P.first->second;
 }
 
-uint32_t StringTableBuilder::getStringIndex(StringRef S) {
+uint32_t PDBStringTableBuilder::getStringIndex(StringRef S) {
   auto Iter = Strings.find(S);
   assert(Iter != Strings.end());
   return Iter->second;
@@ -44,9 +44,9 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
   return (NumStrings + 1) * 1.25;
 }
 
-uint32_t StringTableBuilder::finalize() {
+uint32_t PDBStringTableBuilder::finalize() {
   uint32_t Size = 0;
-  Size += sizeof(StringTableHeader);
+  Size += sizeof(PDBStringTableHeader);
   Size += StringSize;
   Size += sizeof(uint32_t); // Hash table begins with 4-byte size field.
 
@@ -58,10 +58,10 @@ uint32_t StringTableBuilder::finalize() {
   return Size;
 }
 
-Error StringTableBuilder::commit(BinaryStreamWriter &Writer) const {
+Error PDBStringTableBuilder::commit(BinaryStreamWriter &Writer) const {
   // Write a header
-  StringTableHeader H;
-  H.Signature = StringTableSignature;
+  PDBStringTableHeader H;
+  H.Signature = PDBStringTableSignature;
   H.HashVersion = 1;
   H.ByteSize = StringSize;
   if (auto EC = Writer.writeObject(H))

@@ -8,7 +8,7 @@
 
 // OBJ:      Section {
 // OBJ:        Name: .sec
-// OBJ-NEXT:   Type: (0x7FFFFFFF)
+// OBJ-NEXT:   Type: Unknown (0x7FFFFFFF)
 // OBJ:      }
 
 // ASM: unsupported type 0x7fffffff for section .sec

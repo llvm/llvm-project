@@ -1440,18 +1440,15 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) {
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
   // All constant tracks the state of whether all the *original* phi operands
-  // were constant.
-  // This is really shorthand for "this phi cannot cycle due to forward
-  // propagation", as any
-  // change in value of the phi is guaranteed not to later change the value of
-  // the phi.
+  // were constant. This is really shorthand for "this phi cannot cycle due
+  // to forward propagation", as any change in value of the phi is guaranteed
+  // not to later change the value of the phi.
   // IE it can't be v = phi(undef, v+1)
   bool AllConstant = true;
   auto *E =
       cast<PHIExpression>(createPHIExpression(I, HasBackedge, AllConstant));
   // We match the semantics of SimplifyPhiNode from InstructionSimplify here.
-
-  // See if all arguaments are the same.
+  // See if all arguments are the same.
   // We track if any were undef because they need special handling.
   bool HasUndef = false;
   auto Filtered = make_filter_range(E->operands(), [&](const Value *Arg) {

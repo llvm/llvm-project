@@ -15,8 +15,6 @@
 //                         Instruction Classes Definitions +
 //----------------------------------------------------------------------------//
 
-let validSubTargets = HasV60SubT in
-{
 class CVI_VA_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
                        InstrItinClass itin = CVI_VA>
@@ -184,10 +182,7 @@ class CVI_HIST_Resource<dag outs, dag ins, string asmstr,
                         InstrItinClass itin = CVI_HIST>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_HIST>,
      OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
-}
 
-let validSubTargets = HasV60SubT in
-{
 class CVI_VA_Resource1<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
                        InstrItinClass itin = CVI_VA>
@@ -205,6 +200,3 @@ class CVI_HIST_Resource1<dag outs, dag ins, string asmstr,
                         InstrItinClass itin = CVI_HIST>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_HIST>,
      Requires<[HasV60T, UseHVX]>;
-}
-
-

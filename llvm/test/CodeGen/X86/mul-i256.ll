@@ -219,7 +219,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    .cfi_offset %r14, -24
 ; X64-NEXT:  .Lcfi7:
 ; X64-NEXT:    .cfi_offset %r15, -16
-; X64-NEXT:    movq %rdx, %r10
+; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    movq (%rdi), %r14
 ; X64-NEXT:    movq 8(%rdi), %r8
 ; X64-NEXT:    movq 16(%rdi), %rcx
@@ -230,7 +230,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    imulq %r12, %rdi
 ; X64-NEXT:    movq %r12, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    addq %rdi, %rdx
 ; X64-NEXT:    imulq %r15, %rcx
 ; X64-NEXT:    addq %rdx, %rcx
@@ -243,12 +243,12 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    movq 24(%rsi), %rbx
 ; X64-NEXT:    imulq %r14, %rbx
 ; X64-NEXT:    addq %rdx, %rbx
-; X64-NEXT:    addq %r9, %r11
+; X64-NEXT:    addq %r10, %r11
 ; X64-NEXT:    adcq %rcx, %rbx
 ; X64-NEXT:    movq %r14, %rax
 ; X64-NEXT:    mulq %r12
 ; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    movq %r8, %rax
 ; X64-NEXT:    mulq %r12
 ; X64-NEXT:    movq %rdx, %rcx
@@ -260,8 +260,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rax, %r14
 ; X64-NEXT:    addq %rdi, %r14
-; X64-NEXT:    adcq $0, %rsi
-; X64-NEXT:    addq %rcx, %rsi
+; X64-NEXT:    adcq %rcx, %rsi
 ; X64-NEXT:    sbbq %rcx, %rcx
 ; X64-NEXT:    andl $1, %ecx
 ; X64-NEXT:    movq %r8, %rax
@@ -270,10 +269,10 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-NEXT:    adcq %rcx, %rdx
 ; X64-NEXT:    addq %r11, %rax
 ; X64-NEXT:    adcq %rbx, %rdx
-; X64-NEXT:    movq %r9, (%r10)
-; X64-NEXT:    movq %r14, 8(%r10)
-; X64-NEXT:    movq %rax, 16(%r10)
-; X64-NEXT:    movq %rdx, 24(%r10)
+; X64-NEXT:    movq %r10, (%r9)
+; X64-NEXT:    movq %r14, 8(%r9)
+; X64-NEXT:    movq %rax, 16(%r9)
+; X64-NEXT:    movq %rdx, 24(%r9)
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r12
 ; X64-NEXT:    popq %r14

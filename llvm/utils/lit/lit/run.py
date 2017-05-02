@@ -20,6 +20,14 @@ except ImportError:
 
 import lit.Test
 
+def abort_now():
+    """Abort the current process without doing any exception teardown"""
+    sys.stdout.flush()
+    if win32api:
+        win32api.TerminateProcess(win32api.GetCurrentProcess(), 3)
+    else:
+        os.kill(0, 9)
+
 ###
 # Test Execution Implementation
 
@@ -91,8 +99,7 @@ class Tester(object):
             # This is a sad hack. Unfortunately subprocess goes
             # bonkers with ctrl-c and we start forking merrily.
             print('\nCtrl-C detected, goodbye.')
-            sys.stdout.flush()
-            os.kill(0,9)
+            abort_now()
         self.consumer.update(test_index, test)
 
 class ThreadResultsConsumer(object):
@@ -353,7 +360,7 @@ class Run(object):
                 print('\nCtrl-C detected, terminating.')
                 pool.terminate()
                 pool.join()
-                os.kill(0,9)
+                abort_now()
                 return True
             win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
 
@@ -368,6 +375,10 @@ class Run(object):
             deadline = time.time() + max_time
 
         # Start a process pool. Copy over the data shared between all test runs.
+        # FIXME: Find a way to capture the worker process stderr. If the user
+        # interrupts the workers before we make it into our task callback, they
+        # will each raise a KeyboardInterrupt exception and print to stderr at
+        # the same time.
         pool = multiprocessing.Pool(jobs, worker_initializer,
                                     (self.lit_config,
                                      self.parallelism_semaphores))
@@ -379,6 +390,7 @@ class Run(object):
                                               args=(test_index, test),
                                               callback=self.consume_test_result)
                              for test_index, test in enumerate(self.tests)]
+            pool.close()
 
             # Wait for all results to come in. The callback that runs in the
             # parent process will update the display.
@@ -395,10 +407,12 @@ class Run(object):
                     a.get() # Exceptions raised here come from the worker.
                 if self.hit_max_failures:
                     break
-        finally:
+        except:
             # Stop the workers and wait for any straggling results to come in
             # if we exited without waiting on every async result.
             pool.terminate()
+            raise
+        finally:
             pool.join()
 
         # Mark any tests that weren't run as UNRESOLVED.
@@ -463,11 +477,7 @@ def worker_run_one_test(test_index, test):
         execute_test(test, child_lit_config, child_parallelism_semaphores)
         return (test_index, test)
     except KeyboardInterrupt as e:
-        # This is a sad hack. Unfortunately subprocess goes
-        # bonkers with ctrl-c and we start forking merrily.
-        print('\nCtrl-C detected, goodbye.')
-        traceback.print_exc()
-        sys.stdout.flush()
-        os.kill(0,9)
+        # If a worker process gets an interrupt, abort it immediately.
+        abort_now()
     except:
         traceback.print_exc()

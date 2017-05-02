@@ -918,17 +918,18 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
   //  tracking the enclosing DC for step 2 if needed).  Note the topmost LSI on
   //  the stack represents the innermost lambda.
   //
-  //  2) Iterate out through the DeclContext chain (if it represents a lambda's
-  //  call operator, and therefore must be a generic lambda's call operator,
-  //  which is the only time an inconsistency between the LSI and the
-  //  DeclContext should occur) querying closure types regarding capture
-  //  information.
-
+  //  2) If we run out of enclosing LSI's, check if the enclosing DeclContext
+  //  represents a lambda's call operator.  If it does, we must be instantiating
+  //  a generic lambda's call operator (represented by the Current LSI, and
+  //  should be the only scenario where an inconsistency between the LSI and the
+  //  DeclContext should occur), so climb out the DeclContexts if they
+  //  represent lambdas, while querying the corresponding closure types
+  //  regarding capture information.
 
   // 1) Climb down the function scope info stack.
   for (int I = FunctionScopes.size();
        I-- && isa<LambdaScopeInfo>(FunctionScopes[I]) &&
-       (!CurLSI || CurLSI->Lambda->getDeclContext() ==
+       (!CurLSI || !CurLSI->Lambda || CurLSI->Lambda->getDeclContext() ==
                        cast<LambdaScopeInfo>(FunctionScopes[I])->CallOperator);
        CurDC = getLambdaAwareParentOfDeclContext(CurDC)) {
     CurLSI = cast<LambdaScopeInfo>(FunctionScopes[I]);

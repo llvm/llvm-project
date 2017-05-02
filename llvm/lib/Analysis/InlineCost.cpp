@@ -1283,36 +1283,10 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // the rest of the function body.
   Threshold += (SingleBBBonus + FiftyPercentVectorBonus);
 
-  // Give out bonuses per argument, as the instructions setting them up will
-  // be gone after inlining.
-  for (unsigned I = 0, E = CS.arg_size(); I != E; ++I) {
-    if (CS.isByValArgument(I)) {
-      // We approximate the number of loads and stores needed by dividing the
-      // size of the byval type by the target's pointer size.
-      PointerType *PTy = cast<PointerType>(CS.getArgument(I)->getType());
-      unsigned TypeSize = DL.getTypeSizeInBits(PTy->getElementType());
-      unsigned PointerSize = DL.getPointerSizeInBits();
-      // Ceiling division.
-      unsigned NumStores = (TypeSize + PointerSize - 1) / PointerSize;
+  // Give out bonuses for the callsite, as the instructions setting them up
+  // will be gone after inlining.
+  Cost -= getCallsiteCost(CS, DL);
 
-      // If it generates more than 8 stores it is likely to be expanded as an
-      // inline memcpy so we take that as an upper bound. Otherwise we assume
-      // one load and one store per word copied.
-      // FIXME: The maxStoresPerMemcpy setting from the target should be used
-      // here instead of a magic number of 8, but it's not available via
-      // DataLayout.
-      NumStores = std::min(NumStores, 8U);
-
-      Cost -= 2 * NumStores * InlineConstants::InstrCost;
-    } else {
-      // For non-byval arguments subtract off one instruction per call
-      // argument.
-      Cost -= InlineConstants::InstrCost;
-    }
-  }
-  // The call instruction also disappears after inlining.
-  Cost -= InlineConstants::InstrCost + InlineConstants::CallPenalty;
-  
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically.
   bool OnlyOneCallAndLocalLinkage =
@@ -1495,6 +1469,38 @@ static bool functionsHaveCompatibleAttributes(Function *Caller,
                                               TargetTransformInfo &TTI) {
   return TTI.areInlineCompatible(Caller, Callee) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
+}
+
+int llvm::getCallsiteCost(CallSite CS, const DataLayout &DL) {
+  int Cost = 0;
+  for (unsigned I = 0, E = CS.arg_size(); I != E; ++I) {
+    if (CS.isByValArgument(I)) {
+      // We approximate the number of loads and stores needed by dividing the
+      // size of the byval type by the target's pointer size.
+      PointerType *PTy = cast<PointerType>(CS.getArgument(I)->getType());
+      unsigned TypeSize = DL.getTypeSizeInBits(PTy->getElementType());
+      unsigned PointerSize = DL.getPointerSizeInBits();
+      // Ceiling division.
+      unsigned NumStores = (TypeSize + PointerSize - 1) / PointerSize;
+
+      // If it generates more than 8 stores it is likely to be expanded as an
+      // inline memcpy so we take that as an upper bound. Otherwise we assume
+      // one load and one store per word copied.
+      // FIXME: The maxStoresPerMemcpy setting from the target should be used
+      // here instead of a magic number of 8, but it's not available via
+      // DataLayout.
+      NumStores = std::min(NumStores, 8U);
+
+      Cost += 2 * NumStores * InlineConstants::InstrCost;
+    } else {
+      // For non-byval arguments subtract off one instruction per call
+      // argument.
+      Cost += InlineConstants::InstrCost;
+    }
+  }
+  // The call instruction also disappears after inlining.
+  Cost += InlineConstants::InstrCost + InlineConstants::CallPenalty;
+  return Cost;
 }
 
 InlineCost llvm::getInlineCost(

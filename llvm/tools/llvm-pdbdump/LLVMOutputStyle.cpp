@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
@@ -82,10 +83,13 @@ struct PageStats {
 
 class C13RawVisitor : public C13DebugFragmentVisitor {
 public:
-  C13RawVisitor(ScopedPrinter &P, PDBFile &F)
-      : C13DebugFragmentVisitor(F), P(P) {}
+  C13RawVisitor(ScopedPrinter &P, PDBFile &F, TypeDatabase &IPI)
+      : C13DebugFragmentVisitor(F), P(P), IPI(IPI) {}
 
   Error handleLines() override {
+    if (Lines.empty())
+      return Error::success();
+
     DictScope DD(P, "Lines");
 
     for (const auto &Fragment : Lines) {
@@ -126,6 +130,9 @@ public:
   }
 
   Error handleFileChecksums() override {
+    if (!Checksums.hasValue())
+      return Error::success();
+
     DictScope DD(P, "FileChecksums");
     for (const auto &CS : *Checksums) {
       DictScope DDD(P, "Checksum");
@@ -139,7 +146,50 @@ public:
     return Error::success();
   }
 
+  Error handleInlineeLines() override {
+    if (InlineeLines.empty())
+      return Error::success();
+
+    DictScope D(P, "InlineeLines");
+    for (const auto &IL : InlineeLines) {
+      P.printBoolean("HasExtraFiles", IL.hasExtraFiles());
+      ListScope LS(P, "Lines");
+      for (const auto &L : IL) {
+        DictScope DDD(P, "Inlinee");
+        if (auto EC = printFileName("FileName", L.Header->FileID))
+          return EC;
+
+        if (auto EC = dumpTypeRecord("Function", IPI, L.Header->Inlinee))
+          return EC;
+        P.printNumber("SourceLine", L.Header->SourceLineNum);
+        if (IL.hasExtraFiles()) {
+          ListScope DDDD(P, "ExtraFiles");
+          for (const auto &EF : L.ExtraFiles) {
+            if (auto EC = printFileName("File", EF))
+              return EC;
+          }
+        }
+      }
+    }
+    return Error::success();
+  }
+
 private:
+  Error dumpTypeRecord(StringRef Label, TypeDatabase &DB, TypeIndex Index) {
+    CompactTypeDumpVisitor CTDV(DB, Index, &P);
+    CVTypeVisitor Visitor(CTDV);
+    DictScope D(P, Label);
+    if (DB.containsTypeIndex(Index)) {
+      CVType &Type = DB.getTypeRecord(Index);
+      if (auto EC = Visitor.visitTypeRecord(Type))
+        return EC;
+    } else {
+      P.printString(
+          llvm::formatv("Index: {0:x} (unknown function)", Index.getIndex())
+              .str());
+    }
+    return Error::success();
+  }
   Error printFileName(StringRef Label, uint32_t Offset) {
     if (auto Result = getNameFromChecksumsBuffer(Offset)) {
       P.printString(Label, *Result);
@@ -149,6 +199,7 @@ private:
   }
 
   ScopedPrinter &P;
+  TypeDatabase &IPI;
 };
 }
 
@@ -618,6 +669,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
     if (auto EC = Visitor.visitTypeRecord(Type))
       return EC;
+    T.setIndex(T.getIndex() + 1);
   }
   if (HadError)
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -750,7 +802,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
 
-          C13RawVisitor V(P, File);
+          C13RawVisitor V(P, File, ItemDB);
           if (auto EC = codeview::visitModuleDebugFragments(
                   ModS.linesAndChecksums(), V))
             return EC;

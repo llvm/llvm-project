@@ -147,15 +147,15 @@ static inline CXTranslationUnit GetTU(CXType CT) {
 static Optional<ArrayRef<TemplateArgument>>
 GetTemplateArguments(QualType Type) {
   assert(!Type.isNull());
+  if (const auto *Specialization = Type->getAs<TemplateSpecializationType>())
+    return Specialization->template_arguments();
+
   if (const auto *RecordDecl = Type->getAsCXXRecordDecl()) {
     const auto *TemplateDecl =
       dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
     if (TemplateDecl)
       return TemplateDecl->getTemplateArgs().asArray();
   }
-
-  if (const auto *Specialization = Type->getAs<TemplateSpecializationType>())
-    return Specialization->template_arguments();
 
   return None;
 }

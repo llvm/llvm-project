@@ -18,6 +18,13 @@ LINES-NEXT:            Checksum (
 LINES-NEXT:              0000: A0A5BD0D 3ECD93FC 29D19DE8 26FBF4BC  |....>...)...&...|
 LINES-NEXT:            )
 LINES-NEXT:          }
+LINES-NEXT:          Checksum {
+LINES-NEXT:            FileName: f:\dd\externalapis\windows\10\sdk\inc\winerror.h
+LINES-NEXT:            Kind: MD5 (0x1)
+LINES-NEXT:            Checksum (
+LINES-NEXT:              0000: 1154D69F 5B265019 6E1FC34F 4134E56B  |.T..[&P.n..OA4.k|
+LINES-NEXT:            )
+LINES-NEXT:          }
 LINES-NEXT:        }
 LINES-NEXT:        Lines {
 LINES-NEXT:          Block {
@@ -47,6 +54,18 @@ LINES-NEXT:                IsStatement: Yes
 LINES-NEXT:              }
 LINES-NEXT:            }
 LINES-NEXT:          }
+LINES-NEXT:        }
+LINES-NEXT:        InlineeLines {
+LINES-NEXT:          HasExtraFiles: No
+LINES-NEXT:          Lines [
+LINES-NEXT:            Inlinee {
+LINES-NEXT:              FileName: f:\dd\externalapis\windows\10\sdk\inc\winerror.h
+LINES-NEXT:              Function {
+LINES-NEXT:                Index: 0x58ef (unknown function)
+LINES-NEXT:              }
+LINES-NEXT:              SourceLine: 26950
+LINES-NEXT:            }
+LINES-NEXT:          ]
 LINES-NEXT:        }
 LINES-NEXT:      ]
 LINES-NEXT:    }

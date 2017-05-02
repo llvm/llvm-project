@@ -47,7 +47,7 @@ define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
-; CHECK-NEXT:    adcl $0, %ecx
+; CHECK-NEXT:    adcw $0, %cx
 ; CHECK-NEXT:    movw %cx, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -66,7 +66,7 @@ define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
-; CHECK-NEXT:    adcl $0, %ecx
+; CHECK-NEXT:    adcb $0, %cl
 ; CHECK-NEXT:    movb %cl, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -86,25 +86,21 @@ entry:
 define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
 ; CHECK-LABEL: pr31719:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    addq (%rsi), %rdx
+; CHECK-NEXT:    addq 8(%rsi), %rcx
 ; CHECK-NEXT:    sbbq %r10, %r10
 ; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    addq 8(%rsi), %rcx
-; CHECK-NEXT:    sbbq %r11, %r11
-; CHECK-NEXT:    andl $1, %r11d
-; CHECK-NEXT:    addq %r10, %rcx
-; CHECK-NEXT:    adcq $0, %r11
 ; CHECK-NEXT:    addq 16(%rsi), %r8
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addq %r11, %r8
-; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    addq 24(%rsi), %r9
-; CHECK-NEXT:    addq %rax, %r9
+; CHECK-NEXT:    addq (%rsi), %rdx
+; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    adcq %r8, %r10
+; CHECK-NEXT:    adcq %r9, %rax
 ; CHECK-NEXT:    movq %rdx, (%rdi)
 ; CHECK-NEXT:    movq %rcx, 8(%rdi)
-; CHECK-NEXT:    movq %r8, 16(%rdi)
-; CHECK-NEXT:    movq %r9, 24(%rdi)
+; CHECK-NEXT:    movq %r10, 16(%rdi)
+; CHECK-NEXT:    movq %rax, 24(%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -159,12 +155,10 @@ define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    addq (%rdi), %rax
-; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    movq %rax, (%rdi)
-; CHECK-NEXT:    addq 8(%rdi), %rdx
+; CHECK-NEXT:    adcq 8(%rdi), %rdx
 ; CHECK-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    subl %eax, 16(%rdi)
+; CHECK-NEXT:    adcl $0, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = zext i64 %arg.a to i128
@@ -191,4 +185,22 @@ entry:
   %19 = trunc i128 %18 to i32
   store i32 %19, i32* %15, align 4
   ret void
+}
+
+define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-LABEL: shiftadd:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    leaq (%rdx,%rcx), %rax
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    retq
+entry:
+  %0 = zext i64 %a to i128
+  %1 = zext i64 %b to i128
+  %2 = add i128 %0, %1
+  %3 = lshr i128 %2, 64
+  %4 = trunc i128 %3 to i64
+  %5 = add i64 %c, %d
+  %6 = add i64 %4, %5
+  ret i64 %6
 }

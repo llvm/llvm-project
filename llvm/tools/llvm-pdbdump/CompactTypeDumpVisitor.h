@@ -27,6 +27,8 @@ namespace pdb {
 class CompactTypeDumpVisitor : public codeview::TypeVisitorCallbacks {
 public:
   CompactTypeDumpVisitor(codeview::TypeDatabase &TypeDB, ScopedPrinter *W);
+  CompactTypeDumpVisitor(codeview::TypeDatabase &TypeDB,
+                         codeview::TypeIndex FirstTI, ScopedPrinter *W);
 
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.

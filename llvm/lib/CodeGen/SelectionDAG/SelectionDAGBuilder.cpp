@@ -350,7 +350,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 
   EVT ValueSVT = ValueVT.getVectorElementType();
   if (ValueVT.getVectorNumElements() == 1 && ValueSVT != PartEVT)
-    Val = DAG.getAnyExtOrTrunc(Val, DL, ValueSVT);
+    Val = ValueVT.isFloatingPoint() ? DAG.getFPExtendOrRound(Val, DL, ValueSVT)
+                                    : DAG.getAnyExtOrTrunc(Val, DL, ValueSVT);
 
   return DAG.getBuildVector(ValueVT, DL, Val);
 }
@@ -543,10 +544,9 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       Val = DAG.getNode(
           ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
           DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
-
-      Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
     }
 
+    assert(Val.getValueType() == PartVT && "Unexpected vector part value type");
     Parts[0] = Val;
     return;
   }

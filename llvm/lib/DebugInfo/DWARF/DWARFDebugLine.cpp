@@ -107,25 +107,22 @@ bool DWARFDebugLine::Prologue::parse(DataExtractor DebugLineData,
   }
 
   while (*OffsetPtr < EndPrologueOffset) {
-    const char *S = DebugLineData.getCStr(OffsetPtr);
-    if (S && S[0])
-      IncludeDirectories.push_back(S);
-    else
+    StringRef S = DebugLineData.getCStrRef(OffsetPtr);
+    if (S.empty())
       break;
+    IncludeDirectories.push_back(S);
   }
 
   while (*OffsetPtr < EndPrologueOffset) {
-    const char *Name = DebugLineData.getCStr(OffsetPtr);
-    if (Name && Name[0]) {
-      FileNameEntry FileEntry;
-      FileEntry.Name = Name;
-      FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
-      FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
-      FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
-      FileNames.push_back(FileEntry);
-    } else {
+    StringRef Name = DebugLineData.getCStrRef(OffsetPtr);
+    if (Name.empty())
       break;
-    }
+    FileNameEntry FileEntry;
+    FileEntry.Name = Name;
+    FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
+    FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
+    FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
+    FileNames.push_back(FileEntry);
   }
 
   if (*OffsetPtr != EndPrologueOffset) {
@@ -637,7 +634,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = Prologue.FileNames[FileIndex - 1];
-  const char *FileName = Entry.Name;
+  StringRef FileName = Entry.Name;
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
       sys::path::is_absolute(FileName)) {
     Result = FileName;
@@ -646,7 +643,7 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
 
   SmallString<16> FilePath;
   uint64_t IncludeDirIndex = Entry.DirIdx;
-  const char *IncludeDir = "";
+  StringRef IncludeDir;
   // Be defensive about the contents of Entry.
   if (IncludeDirIndex > 0 &&
       IncludeDirIndex <= Prologue.IncludeDirectories.size())

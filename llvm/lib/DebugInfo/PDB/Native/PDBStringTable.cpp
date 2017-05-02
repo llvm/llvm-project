@@ -1,4 +1,5 @@
-//===- StringTable.cpp - PDB String Table -----------------------*- C++ -*-===//
+//===- PDBStringTable.cpp - PDB String Table -----------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Native/StringTable.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
@@ -20,16 +21,16 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-StringTable::StringTable() {}
+PDBStringTable::PDBStringTable() {}
 
-Error StringTable::load(BinaryStreamReader &Stream) {
+Error PDBStringTable::load(BinaryStreamReader &Stream) {
   ByteSize = Stream.getLength();
 
-  const StringTableHeader *H;
+  const PDBStringTableHeader *H;
   if (auto EC = Stream.readObject(H))
     return EC;
 
-  if (H->Signature != StringTableSignature)
+  if (H->Signature != PDBStringTableSignature)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid hash table signature");
   if (H->HashVersion != 1 && H->HashVersion != 2)
@@ -61,16 +62,14 @@ Error StringTable::load(BinaryStreamReader &Stream) {
 
   if (Stream.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::stream_too_long,
-      "Unexpected bytes found in string table");
+                                "Unexpected bytes found in string table");
 
   return Error::success();
 }
 
-uint32_t StringTable::getByteSize() const {
-  return ByteSize;
-}
+uint32_t PDBStringTable::getByteSize() const { return ByteSize; }
 
-StringRef StringTable::getStringForID(uint32_t ID) const {
+StringRef PDBStringTable::getStringForID(uint32_t ID) const {
   if (ID == IDs[0])
     return StringRef();
 
@@ -85,7 +84,7 @@ StringRef StringTable::getStringForID(uint32_t ID) const {
   return Result;
 }
 
-uint32_t StringTable::getIDForString(StringRef Str) const {
+uint32_t PDBStringTable::getIDForString(StringRef Str) const {
   uint32_t Hash = (HashVersion == 1) ? hashStringV1(Str) : hashStringV2(Str);
   size_t Count = IDs.size();
   uint32_t Start = Hash % Count;
@@ -104,6 +103,6 @@ uint32_t StringTable::getIDForString(StringRef Str) const {
   return IDs[0];
 }
 
-FixedStreamArray<support::ulittle32_t> StringTable::name_ids() const {
+FixedStreamArray<support::ulittle32_t> PDBStringTable::name_ids() const {
   return IDs;
 }

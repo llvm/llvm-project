@@ -307,7 +307,7 @@ public:
   bool iss31_1Imm() const { return true; }
   bool iss30_2Imm() const { return true; }
   bool iss29_3Imm() const { return true; }
-  bool iss23_2Imm() const { return CheckImmRange(23, 2, true, true, false); }
+  bool iss27_2Imm() const { return CheckImmRange(27, 2, true, true, false); }
   bool iss10_0Imm() const { return CheckImmRange(10, 0, true, false, false); }
   bool iss10_6Imm() const { return CheckImmRange(10, 6, true, false, false); }
   bool iss9_0Imm() const { return CheckImmRange(9, 0, true, false, false); }
@@ -1292,13 +1292,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_iconst: {
     Inst.setOpcode(Hexagon::A2_addi);
     MCOperand Reg = Inst.getOperand(0);
-    MCOperand S16 = Inst.getOperand(1);
-    HexagonMCInstrInfo::setMustNotExtend(*S16.getExpr());
-    HexagonMCInstrInfo::setS23_2_reloc(*S16.getExpr());
+    MCOperand S27 = Inst.getOperand(1);
+    HexagonMCInstrInfo::setMustNotExtend(*S27.getExpr());
+    HexagonMCInstrInfo::setS27_2_reloc(*S27.getExpr());
     Inst.clear();
     Inst.addOperand(Reg);
     Inst.addOperand(MCOperand::createReg(Hexagon::R0));
-    Inst.addOperand(S16);
+    Inst.addOperand(S27);
     break;
   }
   case Hexagon::M4_mpyrr_addr:

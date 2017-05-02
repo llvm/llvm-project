@@ -58,6 +58,28 @@ public:
   ///     NULL will be returned.
   const char *getCStr(uint32_t *offset_ptr) const;
 
+  /// Extract a C string from \a *OffsetPtr.
+  ///
+  /// Returns a StringRef for the C String from the data at the offset
+  /// pointed to by \a OffsetPtr. A variable length NULL terminated C
+  /// string will be extracted and the \a OffsetPtr will be
+  /// updated with the offset of the byte that follows the NULL
+  /// terminator byte.
+  ///
+  /// \param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// \return
+  ///     A StringRef for the C string value in the data. If the offset
+  ///     pointed to by \a OffsetPtr is out of bounds, or if the
+  ///     offset plus the length of the C string is out of bounds,
+  ///     a default-initialized StringRef will be returned.
+  StringRef getCStrRef(uint32_t *OffsetPtr) const;
+
   /// Extract an unsigned integer of size \a byte_size from \a
   /// *offset_ptr.
   ///

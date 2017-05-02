@@ -39,7 +39,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   // Populate the relocation type based on Hexagon target flags
   // set on an operand
   MCSymbolRefExpr::VariantKind RelocationType;
-  switch (MO.getTargetFlags()) {
+  switch (MO.getTargetFlags() & ~HexagonII::HMOTF_ConstExtended) {
   default:
     RelocationType = MCSymbolRefExpr::VK_None;
     break;
