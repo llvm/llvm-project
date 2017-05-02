@@ -406,8 +406,15 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       }
 
       // Add input sections to an output section.
-      for (InputSectionBase *S : V)
+      unsigned Pos = 0;
+      for (InputSectionBase *S : V) {
+        // The actual offset will be computed during
+        // assignAddresses. For now, use the index as a very crude
+        // approximation so that it is at least easy for other code to
+        // know the section order.
+        cast<InputSection>(S)->OutSecOff = Pos++;
         Factory.addInputSec(S, Cmd->Name, Cmd->Sec);
+      }
     }
   }
   CurOutSec = nullptr;
@@ -635,8 +642,8 @@ void LinkerScript::assignOffsets(OutputSectionCommand *Cmd) {
     Dot = CurMemRegion->Offset;
   switchTo(Sec);
 
-  for (BaseCommand *Cmd : Cmd->Commands)
-    process(*Cmd);
+  for (BaseCommand *C : Cmd->Commands)
+    process(*C);
 }
 
 void LinkerScript::removeEmptyCommands() {
@@ -856,19 +863,21 @@ void LinkerScript::synchronize() {
       continue;
     ArrayRef<InputSection *> Sections = Cmd->Sec->Sections;
     std::vector<InputSectionBase **> ScriptSections;
+    DenseSet<InputSectionBase *> ScriptSectionsSet;
     for (BaseCommand *Base : Cmd->Commands) {
       auto *ISD = dyn_cast<InputSectionDescription>(Base);
       if (!ISD)
         continue;
-      for (InputSectionBase *&IS : ISD->Sections)
-        if (IS->Live)
+      for (InputSectionBase *&IS : ISD->Sections) {
+        if (IS->Live) {
           ScriptSections.push_back(&IS);
+          ScriptSectionsSet.insert(IS);
+        }
+      }
     }
     std::vector<InputSectionBase *> Missing;
     for (InputSection *IS : Sections)
-      if (std::find_if(ScriptSections.begin(), ScriptSections.end(),
-                       [=](InputSectionBase **Base) { return *Base == IS; }) ==
-          ScriptSections.end())
+      if (!ScriptSectionsSet.count(IS))
         Missing.push_back(IS);
     if (!Missing.empty()) {
       auto ISD = make<InputSectionDescription>("");

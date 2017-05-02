@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <queue>
 
 using namespace clang::ast_matchers;
 
@@ -281,20 +282,29 @@ void addFixItHintsForLiteralCastFromBool(DiagnosticBuilder &Diagnostic,
                                          Context)));
 }
 
-StatementMatcher createConditionalExpressionMatcher() {
-  return stmt(anyOf(ifStmt(), conditionalOperator(),
-                    parenExpr(hasParent(conditionalOperator()))));
-}
-
 bool isAllowedConditionalCast(const ImplicitCastExpr *CastExpression,
                               ASTContext &Context) {
-  auto AllowedConditionalMatcher = stmt(hasParent(stmt(
-      anyOf(createConditionalExpressionMatcher(),
-            unaryOperator(hasOperatorName("!"),
-                          hasParent(createConditionalExpressionMatcher()))))));
-
-  auto MatchResult = match(AllowedConditionalMatcher, *CastExpression, Context);
-  return !MatchResult.empty();
+  std::queue<const Stmt *> Q;
+  Q.push(CastExpression);
+  while (!Q.empty()) {
+    for (const auto &N : Context.getParents(*Q.front())) {
+      const Stmt *S = N.get<Stmt>();
+      if (!S)
+        return false;
+      if (isa<IfStmt>(S) || isa<ConditionalOperator>(S))
+        return true;
+      if (isa<ParenExpr>(S) || isa<ImplicitCastExpr>(S) ||
+          (isa<UnaryOperator>(S) &&
+           cast<UnaryOperator>(S)->getOpcode() == UO_LNot) ||
+          (isa<BinaryOperator>(S) && cast<BinaryOperator>(S)->isLogicalOp())) {
+        Q.push(S);
+      } else {
+        return false;
+      }
+    }
+    Q.pop();
+  }
+  return false;
 }
 
 } // anonymous namespace

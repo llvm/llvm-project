@@ -60,6 +60,7 @@ void elf::log(const Twine &Msg) {
   if (Config->Verbose) {
     std::lock_guard<std::mutex> Lock(Mu);
     outs() << Argv0 << ": " << Msg << "\n";
+    outs().flush();
   }
 }
 

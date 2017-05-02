@@ -361,6 +361,15 @@ InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   return Target;
 }
 
+// Create a regular InputSection class that has the same contents
+// as a given section.
+InputSectionBase *toRegularSection(MergeInputSection *Sec) {
+  auto *Ret = make<InputSection>(Sec->Flags, Sec->Type, Sec->Alignment,
+                                 Sec->Data, Sec->Name);
+  Ret->File = Sec->File;
+  return Ret;
+}
+
 template <class ELFT>
 InputSectionBase *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
@@ -398,9 +407,18 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-    if (isa<MergeInputSection>(Target))
-      fatal(toString(this) +
-            ": relocations pointing to SHF_MERGE are not supported");
+
+    // Mergeable sections with relocations are tricky because relocations
+    // need to be taken into account when comparing section contents for
+    // merging. It doesn't worth supporting such mergeable sections because
+    // they are rare and it'd complicates the internal design (we usually
+    // have to determine if two sections are mergeable early in the link
+    // process much before applying relocations). We simply handle mergeable
+    // sections with relocations as non-mergeable.
+    if (auto *MS = dyn_cast<MergeInputSection>(Target)) {
+      Target = toRegularSection(MS);
+      this->Sections[Sec.sh_info] = Target;
+    }
 
     size_t NumRelocations;
     if (Sec.sh_type == SHT_RELA) {
@@ -459,6 +477,15 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   }
 
   if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
+    return &InputSection::Discarded;
+
+  // If -gdb-index is given, LLD creates .gdb_index section, and that
+  // section serves the same purpose as .debug_gnu_pub{names,types} sections.
+  // If that's the case, we want to eliminate .debug_gnu_pub{names,types}
+  // because they are redundant and can waste large amount of disk space
+  // (for example, they are about 400 MiB in total for a clang debug build.)
+  if (Config->GdbIndex &&
+      (Name == ".debug_gnu_pubnames" || Name == ".debug_gnu_pubtypes"))
     return &InputSection::Discarded;
 
   // The linkonce feature is a sort of proto-comdat. Some glibc i386 object

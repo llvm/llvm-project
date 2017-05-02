@@ -53,46 +53,46 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @B = common global [1024 x i32] zeroinitializer, align 16 ; <[1024 x i32]*> [#uses=4]
 
 define void @loop_with_condition() nounwind {
-; <label>:0
+bb0:
   fence seq_cst
-  br label %1
+  br label %bb1
 
-; <label>:1                                       ; preds = %10, %0
-  %indvar = phi i64 [ %indvar.next, %10 ], [ 0, %0 ] ; <i64> [#uses=5]
+bb1:
+  %indvar = phi i64 [ %indvar.next, %bb10 ], [ 0, %bb0 ] ; <i64> [#uses=5]
   %scevgep = getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvar ; <i32*> [#uses=2]
   %scevgep1 = getelementptr [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvar ; <i32*> [#uses=1]
   %i.0 = trunc i64 %indvar to i32                 ; <i32> [#uses=2]
   %exitcond = icmp ne i64 %indvar, 1024           ; <i1> [#uses=1]
-  br i1 %exitcond, label %2, label %11
+  br i1 %exitcond, label %bb2, label %bb11
 
-; <label>:2                                       ; preds = %1
-  %3 = icmp sle i32 %i.0, 512                     ; <i1> [#uses=1]
-  br i1 %3, label %4, label %9
+bb2:
+  %var3 = icmp sle i32 %i.0, 512                     ; <i1> [#uses=1]
+  br i1 %var3, label %bb4, label %bb9
 
-; <label>:4                                       ; preds = %2
-  %5 = icmp sgt i32 %i.0, 20                      ; <i1> [#uses=1]
-  br i1 %5, label %6, label %7
+bb4:
+  %var5 = icmp sgt i32 %i.0, 20                      ; <i1> [#uses=1]
+  br i1 %var5, label %bb6, label %bb7
 
-; <label>:6                                       ; preds = %4
+bb6:
   store i32 1, i32* %scevgep
-  br label %8
+  br label %bb8
 
-; <label>:7                                       ; preds = %4
+bb7:
   store i32 2, i32* %scevgep
-  br label %8
+  br label %bb8
 
-; <label>:8                                       ; preds = %7, %6
-  br label %9
+bb8:
+  br label %bb9
 
-; <label>:9                                       ; preds = %8, %2
+bb9:
   store i32 3, i32* %scevgep1
-  br label %10
+  br label %bb10
 
-; <label>:10                                      ; preds = %9
+bb10:
   %indvar.next = add i64 %indvar, 1               ; <i64> [#uses=1]
-  br label %1
+  br label %bb1
 
-; <label>:11                                      ; preds = %1
+bb11:
   fence seq_cst
   ret void
 }
@@ -205,13 +205,12 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 
 ; CHECK: for (int c0 = 0; c0 <= 1023; c0 += 1) {
 ; CHECK:   if (c0 <= 20) {
-; CHECK:     Stmt_7(c0);
+; CHECK:     Stmt_bb7(c0);
 ; CHECK:   } else if (c0 <= 512)
-; CHECK:     Stmt_6(c0);
-; CHECK:   Stmt_9(c0);
+; CHECK:     Stmt_bb6(c0);
+; CHECK:   Stmt_bb9(c0);
 ; CHECK: }
 
 ; LOOPS: Printing analysis 'Natural Loop Information' for function 'loop_with_condition':
-; LOOPS: Loop at depth 1 containing: %1<header><exiting>,%2,%4,%7,%6,%8,%9,%10<latch>
-; LOOPS: Loop at depth 1 containing:
-; LOOPS: %polly.loop_header<header>,%polly.cond,%polly.merge,%polly.then,%polly.else,%polly.stmt.,%polly.cond3,%polly.merge4,%polly.then5,%polly.else6,%polly.stmt.7,%polly.stmt{{.*}}<latch><exiting>
+; LOOPS: Loop at depth 1 containing: %bb1<header><exiting>,%bb2,%bb4,%bb7,%bb6,%bb8,%bb9,%bb10<latch>
+; LOOPS: Loop at depth 1 containing: %polly.loop_header<header>,%polly.cond,%polly.merge,%polly.then,%polly.else,%polly.stmt.bb7,%polly.cond3,%polly.merge4,%polly.then5,%polly.else6,%polly.stmt.bb6,%polly.stmt.bb9<latch><exiting>

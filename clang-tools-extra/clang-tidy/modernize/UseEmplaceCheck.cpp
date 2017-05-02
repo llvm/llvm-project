@@ -45,7 +45,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  auto callPushBack = cxxMemberCallExpr(
+  auto CallPushBack = cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName("push_back"))),
       on(hasType(cxxRecordDecl(hasAnyName(SmallVector<StringRef, 5>(
           ContainersWithPushBack.begin(), ContainersWithPushBack.end()))))));
@@ -54,38 +54,38 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
   // passed pointer because smart pointer won't be constructed
   // (and destructed) as in push_back case.
-  auto isCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
+  auto IsCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
       SmallVector<StringRef, 5>(SmartPointers.begin(), SmartPointers.end())))));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
-  auto bitFieldAsArgument = hasAnyArgument(
+  auto BitFieldAsArgument = hasAnyArgument(
       ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField())))));
 
   // Initializer list can't be passed to universal reference.
-  auto initializerListAsArgument = hasAnyArgument(
+  auto InitializerListAsArgument = hasAnyArgument(
       ignoringImplicit(cxxConstructExpr(isListInitialization())));
 
   // We could have leak of resource.
-  auto newExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
+  auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
   // We would call another constructor.
-  auto constructingDerived =
+  auto ConstructingDerived =
       hasParent(implicitCastExpr(hasCastKind(CastKind::CK_DerivedToBase)));
 
   // emplace_back can't access private constructor.
-  auto isPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
+  auto IsPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
 
-  auto hasInitList = has(ignoringImplicit(initListExpr()));
+  auto HasInitList = has(ignoringImplicit(initListExpr()));
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.
-  auto soughtConstructExpr =
+  auto SoughtConstructExpr =
       cxxConstructExpr(
-          unless(anyOf(isCtorOfSmartPtr, hasInitList, bitFieldAsArgument,
-                       initializerListAsArgument, newExprAsArgument,
-                       constructingDerived, isPrivateCtor)))
+          unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
+                       InitializerListAsArgument, NewExprAsArgument,
+                       ConstructingDerived, IsPrivateCtor)))
           .bind("ctor");
-  auto hasConstructExpr = has(ignoringImplicit(soughtConstructExpr));
+  auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
-  auto makePair = ignoringImplicit(
+  auto MakePair = ignoringImplicit(
       callExpr(callee(expr(ignoringImplicit(
           declRefExpr(unless(hasExplicitTemplateArgs()),
                       to(functionDecl(hasName("::std::make_pair"))))
@@ -93,15 +93,15 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // make_pair can return type convertible to container's element type.
   // Allow the conversion only on containers of pairs.
-  auto makePairCtor = ignoringImplicit(cxxConstructExpr(
-      has(materializeTemporaryExpr(makePair)),
+  auto MakePairCtor = ignoringImplicit(cxxConstructExpr(
+      has(materializeTemporaryExpr(MakePair)),
       hasDeclaration(cxxConstructorDecl(ofClass(hasName("::std::pair"))))));
 
-  auto soughtParam = materializeTemporaryExpr(
-      anyOf(has(makePair), has(makePairCtor),
-            hasConstructExpr, has(cxxFunctionalCastExpr(hasConstructExpr))));
+  auto SoughtParam = materializeTemporaryExpr(
+      anyOf(has(MakePair), has(MakePairCtor),
+            HasConstructExpr, has(cxxFunctionalCastExpr(HasConstructExpr))));
 
-  Finder->addMatcher(cxxMemberCallExpr(callPushBack, has(soughtParam),
+  Finder->addMatcher(cxxMemberCallExpr(CallPushBack, has(SoughtParam),
                                        unless(isInTemplateInstantiation()))
                          .bind("call"),
                      this);

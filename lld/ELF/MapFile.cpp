@@ -13,7 +13,7 @@
 //
 //   Address  Size     Align Out     In      Symbol
 //   00201000 00000015     4 .text
-//   00201000 0000000e     4         test.o:.text
+//   00201000 0000000e     4         test.o:(.text)
 //   0020100e 00000000     0                 local
 //   00201005 00000000     0                 f(int)
 //
@@ -33,26 +33,8 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-namespace {
-template <class ELFT> class PrettyPrinter {
-public:
-  PrettyPrinter();
-  void print(raw_ostream &OS, ArrayRef<OutputSection *> OutputSections);
-
-private:
-  void writeInputSection(raw_ostream &OS, const InputSection *IS);
-
-  // Maps sections to their symbols.
-  DenseMap<const SectionBase *, SmallVector<DefinedRegular *, 4>> Symbols;
-
-  // Contains a string like this
-  //
-  //   0020100e 00000000     0                         f(int)
-  //
-  // for each symbol.
-  DenseMap<SymbolBody *, std::string> SymStr;
-};
-} // namespace
+typedef DenseMap<const SectionBase *, SmallVector<DefinedRegular *, 4>>
+    SymbolMapTy;
 
 // Print out the first three columns of a line.
 template <class ELFT>
@@ -64,69 +46,55 @@ static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
 
 static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 
-template <class ELFT> PrettyPrinter<ELFT>::PrettyPrinter() {
-  // Collect all symbols that we want to print out.
-  std::vector<DefinedRegular *> Syms;
+// Returns a list of all symbols that we want to print out.
+template <class ELFT> std::vector<DefinedRegular *> getSymbols() {
+  std::vector<DefinedRegular *> V;
   for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles())
     for (SymbolBody *B : File->getSymbols())
       if (B->File == File && !B->isSection())
         if (auto *Sym = dyn_cast<DefinedRegular>(B))
           if (Sym->Section)
-            Syms.push_back(Sym);
+            V.push_back(Sym);
+  return V;
+}
 
-  // Initialize the map from sections to their symbols.
-  for (DefinedRegular *Sym : Syms)
-    Symbols[Sym->Section].push_back(Sym);
+// Returns a map from sections to their symbols.
+template <class ELFT>
+SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> Syms) {
+  SymbolMapTy Ret;
+  for (DefinedRegular *S : Syms)
+    Ret[S->Section].push_back(S);
 
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
   // in the input files.
-  for (auto &It : Symbols) {
+  for (auto &It : Ret) {
     SmallVectorImpl<DefinedRegular *> &V = It.second;
     std::sort(V.begin(), V.end(), [](DefinedRegular *A, DefinedRegular *B) {
       return A->getVA() < B->getVA();
     });
   }
+  return Ret;
+}
 
-  // Construct a map from symbols to their stringified representations.
-  // Demangling symbols is slow, so we use the parallel-for.
+// Construct a map from symbols to their stringified representations.
+// Demangling symbols (which is what toString() does) is slow, so
+// we do that in batch using parallel-for.
+template <class ELFT>
+DenseMap<DefinedRegular *, std::string>
+getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
   std::vector<std::string> Str(Syms.size());
   parallelFor(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
     writeHeader<ELFT>(OS, Syms[I]->getVA(), Syms[I]->template getSize<ELFT>(),
                       0);
-    OS << indent(2) << toString(*Syms[I]) << '\n';
+    OS << indent(2) << toString(*Syms[I]);
   });
+
+  DenseMap<DefinedRegular *, std::string> Ret;
   for (size_t I = 0, E = Syms.size(); I < E; ++I)
-    SymStr[Syms[I]] = std::move(Str[I]);
-}
-
-template <class ELFT>
-void PrettyPrinter<ELFT>::writeInputSection(raw_ostream &OS,
-                                            const InputSection *IS) {
-  // Write a line for each symbol defined in the given section.
-  writeHeader<ELFT>(OS, IS->OutSec->Addr + IS->OutSecOff, IS->getSize(),
-                    IS->Alignment);
-  OS << indent(1) << toString(IS) << '\n';
-  for (DefinedRegular *Sym : Symbols[IS])
-    OS << SymStr[Sym];
-}
-
-template <class ELFT>
-void PrettyPrinter<ELFT>::print(raw_ostream &OS,
-                                ArrayRef<OutputSection *> OutputSections) {
-  // Print out the header line.
-  int W = ELFT::Is64Bits ? 16 : 8;
-  OS << left_justify("Address", W) << ' ' << left_justify("Size", W)
-     << " Align Out     In      Symbol\n";
-
-  // Print out a mapfile.
-  for (OutputSection *Sec : OutputSections) {
-    writeHeader<ELFT>(OS, Sec->Addr, Sec->Size, Sec->Alignment);
-    OS << Sec->Name << '\n';
-    for (InputSection *IS : Sec->Sections)
-      writeInputSection(OS, IS);
-  }
+    Ret[Syms[I]] = std::move(Str[I]);
+  return Ret;
 }
 
 template <class ELFT>
@@ -134,12 +102,38 @@ void elf::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
   if (Config->MapFile.empty())
     return;
 
+  // Open a map file for writing.
   std::error_code EC;
   raw_fd_ostream OS(Config->MapFile, EC, sys::fs::F_None);
-  if (EC)
+  if (EC) {
     error("cannot open " + Config->MapFile + ": " + EC.message());
-  else
-    PrettyPrinter<ELFT>().print(OS, OutputSections);
+    return;
+  }
+
+  // Collect symbol info that we want to print out.
+  std::vector<DefinedRegular *> Syms = getSymbols<ELFT>();
+  SymbolMapTy SectionSyms = getSectionSyms<ELFT>(Syms);
+  DenseMap<DefinedRegular *, std::string> SymStr = getSymbolStrings<ELFT>(Syms);
+
+  // Print out the header line.
+  int W = ELFT::Is64Bits ? 16 : 8;
+  OS << left_justify("Address", W) << ' ' << left_justify("Size", W)
+     << " Align Out     In      Symbol\n";
+
+  // Print out file contents.
+  for (OutputSection *OSec : OutputSections) {
+    writeHeader<ELFT>(OS, OSec->Addr, OSec->Size, OSec->Alignment);
+    OS << OSec->Name << '\n';
+
+    // Dump symbols for each input section.
+    for (InputSection *IS : OSec->Sections) {
+      writeHeader<ELFT>(OS, OSec->Addr + IS->OutSecOff, IS->getSize(),
+                        IS->Alignment);
+      OS << indent(1) << toString(IS) << '\n';
+      for (DefinedRegular *Sym : SectionSyms[IS])
+        OS << SymStr[Sym] << '\n';
+    }
+  }
 }
 
 template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSection *>);
