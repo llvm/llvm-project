@@ -13,32 +13,16 @@
 define i32 @test1(i32 %x) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $16711680, %edx # imm = 0xFF0000
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
-; CHECK-NEXT:    shll $8, %edx
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    roll $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test1:
 ; CHECK64:       # BB#0:
-; CHECK64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    andl $16711680, %eax # imm = 0xFF0000
-; CHECK64-NEXT:    movl %edi, %ecx
-; CHECK64-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
-; CHECK64-NEXT:    shll $8, %eax
-; CHECK64-NEXT:    shrl $8, %ecx
 ; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    shrl $16, %edi
-; CHECK64-NEXT:    orl %eax, %ecx
-; CHECK64-NEXT:    leal (%rcx,%rdi), %eax
+; CHECK64-NEXT:    roll $16, %edi
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
   %byte0 = and i32 %x, 255        ; 0x000000ff
   %byte1 = and i32 %x, 65280      ; 0x0000ff00
@@ -62,33 +46,16 @@ define i32 @test1(i32 %x) nounwind {
 define i32 @test2(i32 %x) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    movzwl %cx, %edx
-; CHECK-NEXT:    movzbl %al, %esi
-; CHECK-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
-; CHECK-NEXT:    andl $16711680, %eax # imm = 0xFF0000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    roll $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test2:
 ; CHECK64:       # BB#0:
-; CHECK64-NEXT:    movl %edi, %ecx
-; CHECK64-NEXT:    shll $8, %ecx
-; CHECK64-NEXT:    shrl $8, %edi
-; CHECK64-NEXT:    movzwl %cx, %edx
-; CHECK64-NEXT:    movzbl %dil, %eax
-; CHECK64-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
-; CHECK64-NEXT:    andl $16711680, %edi # imm = 0xFF0000
-; CHECK64-NEXT:    orl %edx, %eax
-; CHECK64-NEXT:    orl %ecx, %edi
-; CHECK64-NEXT:    orl %edi, %eax
+; CHECK64-NEXT:    bswapl %edi
+; CHECK64-NEXT:    roll $16, %edi
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
   %byte1 = shl  i32 %x, 8
   %byte0 = lshr i32 %x, 8

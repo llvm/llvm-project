@@ -2899,3 +2899,37 @@ entry:
   %s2 = shufflevector <8 x float> %s1, <8 x float> undef, <8 x i32> <i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
   ret <8 x float> %s2
 }
+
+define <4 x float> @PR30264(<4 x float> %x) {
+; SSE2-LABEL: PR30264:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm0[0,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],mem[2,3]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR30264:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm0[0,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],mem[2,3]
+; SSSE3-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR30264:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movaps {{.*#+}} xmm1 = <u,u,4,1>
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm0[0],zero,xmm1[2,3]
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR30264:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <u,u,4,1>
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[2,3]
+; AVX-NEXT:    retq
+  %shuf1 = shufflevector <4 x float> %x, <4 x float> <float undef, float 0.0, float undef, float undef>, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  %shuf2 = shufflevector <4 x float> %shuf1, <4 x float> <float undef, float undef, float 4.0, float 1.0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x float> %shuf2
+}

@@ -4783,14 +4783,10 @@ static bool isVEXTRACTIndex(SDNode *N, unsigned vecWidth) {
     return false;
 
   // The index should be aligned on a vecWidth-bit boundary.
-  uint64_t Index =
-    cast<ConstantSDNode>(N->getOperand(1).getNode())->getZExtValue();
-
+  uint64_t Index = N->getConstantOperandVal(1);
   MVT VT = N->getSimpleValueType(0);
   unsigned ElSize = VT.getScalarSizeInBits();
-  bool Result = (Index * ElSize) % vecWidth == 0;
-
-  return Result;
+  return (Index * ElSize) % vecWidth == 0;
 }
 
 /// Return true if the specified INSERT_SUBVECTOR
@@ -4800,15 +4796,12 @@ static bool isVINSERTIndex(SDNode *N, unsigned vecWidth) {
   assert((vecWidth == 128 || vecWidth == 256) && "Unexpected vector width");
   if (!isa<ConstantSDNode>(N->getOperand(2).getNode()))
     return false;
-  // The index should be aligned on a vecWidth-bit boundary.
-  uint64_t Index =
-    cast<ConstantSDNode>(N->getOperand(2).getNode())->getZExtValue();
 
+  // The index should be aligned on a vecWidth-bit boundary.
+  uint64_t Index = N->getConstantOperandVal(2);
   MVT VT = N->getSimpleValueType(0);
   unsigned ElSize = VT.getScalarSizeInBits();
-  bool Result = (Index * ElSize) % vecWidth == 0;
-
-  return Result;
+  return (Index * ElSize) % vecWidth == 0;
 }
 
 bool X86::isVINSERT128Index(SDNode *N) {
@@ -4832,13 +4825,9 @@ static unsigned getExtractVEXTRACTImmediate(SDNode *N, unsigned vecWidth) {
   assert(isa<ConstantSDNode>(N->getOperand(1).getNode()) &&
          "Illegal extract subvector for VEXTRACT");
 
-  uint64_t Index =
-    cast<ConstantSDNode>(N->getOperand(1).getNode())->getZExtValue();
-
+  uint64_t Index = N->getConstantOperandVal(1);
   MVT VecVT = N->getOperand(0).getSimpleValueType();
-  MVT ElVT = VecVT.getVectorElementType();
-
-  unsigned NumElemsPerChunk = vecWidth / ElVT.getSizeInBits();
+  unsigned NumElemsPerChunk = vecWidth / VecVT.getScalarSizeInBits();
   return Index / NumElemsPerChunk;
 }
 
@@ -4847,13 +4836,9 @@ static unsigned getInsertVINSERTImmediate(SDNode *N, unsigned vecWidth) {
   assert(isa<ConstantSDNode>(N->getOperand(2).getNode()) &&
          "Illegal insert subvector for VINSERT");
 
-  uint64_t Index =
-    cast<ConstantSDNode>(N->getOperand(2).getNode())->getZExtValue();
-
+  uint64_t Index = N->getConstantOperandVal(2);
   MVT VecVT = N->getSimpleValueType(0);
-  MVT ElVT = VecVT.getVectorElementType();
-
-  unsigned NumElemsPerChunk = vecWidth / ElVT.getSizeInBits();
+  unsigned NumElemsPerChunk = vecWidth / VecVT.getScalarSizeInBits();
   return Index / NumElemsPerChunk;
 }
 
@@ -4886,9 +4871,9 @@ bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
 }
 
-// Build a vector of constants
+// Build a vector of constants.
 // Use an UNDEF node if MaskElt == -1.
-// Spilt 64-bit constants in the 32-bit mode.
+// Split 64-bit constants in the 32-bit mode.
 static SDValue getConstVector(ArrayRef<int> Values, MVT VT, SelectionDAG &DAG,
                               const SDLoc &dl, bool IsMask = false) {
 

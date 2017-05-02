@@ -598,33 +598,32 @@ GoASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
     static llvm::once_flag g_once_flag;
     llvm::call_once(g_once_flag, []() {
       // "void"
-      g_type_map.Append(ConstString("void").GetStringRef(), eBasicTypeVoid);
+      g_type_map.Append(ConstString("void"), eBasicTypeVoid);
       // "int"
-      g_type_map.Append(ConstString("int").GetStringRef(), eBasicTypeInt);
-      g_type_map.Append(ConstString("uint").GetStringRef(),
-                        eBasicTypeUnsignedInt);
+      g_type_map.Append(ConstString("int"), eBasicTypeInt);
+      g_type_map.Append(ConstString("uint"), eBasicTypeUnsignedInt);
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool").GetStringRef(), eBasicTypeBool);
+      g_type_map.Append(ConstString("bool"), eBasicTypeBool);
 
       // Others. Should these map to C types?
-      g_type_map.Append(ConstString("byte").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint8").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint16").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint32").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uint64").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int8").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int16").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int32").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("int64").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("float32").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("float64").GetStringRef(), eBasicTypeOther);
-      g_type_map.Append(ConstString("uintptr").GetStringRef(), eBasicTypeOther);
+      g_type_map.Append(ConstString("byte"), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint8"), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint16"), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint32"), eBasicTypeOther);
+      g_type_map.Append(ConstString("uint64"), eBasicTypeOther);
+      g_type_map.Append(ConstString("int8"), eBasicTypeOther);
+      g_type_map.Append(ConstString("int16"), eBasicTypeOther);
+      g_type_map.Append(ConstString("int32"), eBasicTypeOther);
+      g_type_map.Append(ConstString("int64"), eBasicTypeOther);
+      g_type_map.Append(ConstString("float32"), eBasicTypeOther);
+      g_type_map.Append(ConstString("float64"), eBasicTypeOther);
+      g_type_map.Append(ConstString("uintptr"), eBasicTypeOther);
 
       g_type_map.Sort();
     });
 
-    return g_type_map.Find(name.GetStringRef(), eBasicTypeInvalid);
+    return g_type_map.Find(name, eBasicTypeInvalid);
   }
   return eBasicTypeInvalid;
 }

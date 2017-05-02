@@ -3819,7 +3819,7 @@ SDValue DAGCombiner::MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
   EVT VT = N->getValueType(0);
   if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16)
     return SDValue();
-  if (!TLI.isOperationLegal(ISD::BSWAP, VT))
+  if (!TLI.isOperationLegalOrCustom(ISD::BSWAP, VT))
     return SDValue();
 
   // Recognize (and (shl a, 8), 0xff), (and (srl a, 8), 0xff00)
@@ -3933,8 +3933,15 @@ static bool isBSwapHWordElement(SDValue N, MutableArrayRef<SDNode *> Parts) {
 
   SDValue N0 = N.getOperand(0);
   unsigned Opc0 = N0.getOpcode();
+  if (Opc0 != ISD::AND && Opc0 != ISD::SHL && Opc0 != ISD::SRL)
+    return false;
 
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N.getOperand(1));
+  ConstantSDNode *N1C = nullptr;
+  // SHL or SRL: look upstream for AND mask operand
+  if (Opc == ISD::AND)
+    N1C = dyn_cast<ConstantSDNode>(N.getOperand(1));
+  else if (Opc0 == ISD::AND)
+    N1C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
   if (!N1C)
     return false;
 
@@ -4005,7 +4012,7 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::i32)
     return SDValue();
-  if (!TLI.isOperationLegal(ISD::BSWAP, VT))
+  if (!TLI.isOperationLegalOrCustom(ISD::BSWAP, VT))
     return SDValue();
 
   // Look for either
@@ -4020,18 +4027,16 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
   if (N1.getOpcode() == ISD::OR &&
       N00.getNumOperands() == 2 && N01.getNumOperands() == 2) {
     // (or (or (and), (and)), (or (and), (and)))
-    SDValue N000 = N00.getOperand(0);
-    if (!isBSwapHWordElement(N000, Parts))
+    if (!isBSwapHWordElement(N00, Parts))
       return SDValue();
 
-    SDValue N001 = N00.getOperand(1);
-    if (!isBSwapHWordElement(N001, Parts))
+    if (!isBSwapHWordElement(N01, Parts))
       return SDValue();
-    SDValue N010 = N01.getOperand(0);
-    if (!isBSwapHWordElement(N010, Parts))
+    SDValue N10 = N1.getOperand(0);
+    if (!isBSwapHWordElement(N10, Parts))
       return SDValue();
-    SDValue N011 = N01.getOperand(1);
-    if (!isBSwapHWordElement(N011, Parts))
+    SDValue N11 = N1.getOperand(1);
+    if (!isBSwapHWordElement(N11, Parts))
       return SDValue();
   } else {
     // (or (or (or (and), (and)), (and)), (and))

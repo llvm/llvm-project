@@ -47,7 +47,7 @@ FunctionPass *createARMOptimizeBarriersPass();
 FunctionPass *createThumb2SizeReductionPass(
     std::function<bool(const Function &)> Ftor = nullptr);
 InstructionSelector *
-createARMInstructionSelector(const ARMSubtarget &STI,
+createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                              const ARMRegisterBankInfo &RBI);
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
