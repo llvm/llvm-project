@@ -30,7 +30,7 @@ public:
   struct FileNameEntry {
     FileNameEntry() = default;
 
-    const char *Name = nullptr;
+    StringRef Name = StringRef();
     uint64_t DirIdx = 0;
     uint64_t ModTime = 0;
     uint64_t Length = 0;
@@ -63,7 +63,7 @@ public:
     /// The number assigned to the first special opcode.
     uint8_t OpcodeBase;
     std::vector<uint8_t> StandardOpcodeLengths;
-    std::vector<const char *> IncludeDirectories;
+    std::vector<StringRef> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
     bool IsDWARF64;

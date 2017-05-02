@@ -285,6 +285,13 @@ class A {
       };
     };
   }
+  int data = 0;
+  auto m2() {
+    return [this] { return [] () -> decltype(data){ return 0; }; };
+  }
+  auto m3() {
+    return [] { return [] () -> decltype(data){ return 0; }; };
+  }
 };
 
 } // namespace ns2

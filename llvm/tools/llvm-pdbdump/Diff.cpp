@@ -15,8 +15,8 @@
 #include "llvm/DebugInfo/PDB/Native/Formatters.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Native/StringTable.h"
 
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatProviders.h"

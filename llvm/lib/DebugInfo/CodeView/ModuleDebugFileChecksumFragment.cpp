@@ -68,7 +68,10 @@ void ModuleDebugFileChecksumFragment::addChecksum(uint32_t StringTableOffset,
   // This maps the offset of this string in the string table to the offset
   // of this checksum entry in the checksum buffer.
   OffsetMap[StringTableOffset] = SerializedSize;
-  SerializedSize += sizeof(FileChecksumEntryHeader) + Bytes.size();
+  assert(SerializedSize % 4 == 0);
+
+  uint32_t Len = alignTo(sizeof(FileChecksumEntryHeader) + Bytes.size(), 4);
+  SerializedSize += Len;
 }
 
 uint32_t ModuleDebugFileChecksumFragment::calculateSerializedLength() {
@@ -84,6 +87,8 @@ Error ModuleDebugFileChecksumFragment::commit(BinaryStreamWriter &Writer) {
     if (auto EC = Writer.writeObject(Header))
       return EC;
     if (auto EC = Writer.writeArray(makeArrayRef(FC.Checksum)))
+      return EC;
+    if (auto EC = Writer.padToAlignment(4))
       return EC;
   }
   return Error::success();

@@ -196,6 +196,10 @@ namespace CallingConv {
     /// Register calling convention used for parameters transfer optimization
     X86_RegCall = 92,
 
+    /// Calling convention used for Mesa hull shaders. (= tessellation control
+    /// shaders)
+    AMDGPU_HS = 93,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

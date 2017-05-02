@@ -10,10 +10,11 @@
 #include "C13DebugFragmentVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
-#include "llvm/DebugInfo/PDB/Native/StringTable.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -41,6 +42,12 @@ Error C13DebugFragmentVisitor::visitLines(
   return Error::success();
 }
 
+Error C13DebugFragmentVisitor::visitInlineeLines(
+    codeview::ModuleDebugInlineeLineFragmentRef &Lines) {
+  this->InlineeLines.push_back(Lines);
+  return Error::success();
+}
+
 Error C13DebugFragmentVisitor::finished() {
   if (!Checksums.hasValue()) {
     assert(Lines.empty());
@@ -50,6 +57,9 @@ Error C13DebugFragmentVisitor::finished() {
     return EC;
 
   if (auto EC = handleLines())
+    return EC;
+
+  if (auto EC = handleInlineeLines())
     return EC;
 
   return Error::success();

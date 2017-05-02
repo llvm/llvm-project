@@ -759,7 +759,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
-    if (SemaBuiltinVAStart(TheCall))
+    if (SemaBuiltinVAStart(BuiltinID, TheCall))
       return ExprError();
     break;
   case Builtin::BI__va_start: {
@@ -770,7 +770,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
         return ExprError();
       break;
     default:
-      if (SemaBuiltinVAStart(TheCall))
+      if (SemaBuiltinVAStart(BuiltinID, TheCall))
         return ExprError();
       break;
     }
@@ -2090,7 +2090,7 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return SemaBuiltinCpuSupports(*this, TheCall);
 
   if (BuiltinID == X86::BI__builtin_ms_va_start)
-    return SemaBuiltinMSVAStart(TheCall);
+    return SemaBuiltinVAStart(BuiltinID, TheCall);
 
   // If the intrinsic has rounding or SAE make sure its valid.
   if (CheckX86BuiltinRoundingOrSAE(BuiltinID, TheCall))
@@ -3611,11 +3611,81 @@ ExprResult Sema::CheckOSLogFormatStringArg(Expr *Arg) {
   return Result;
 }
 
+/// Check that the user is calling the appropriate va_start builtin for the
+/// target and calling convention.
+static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
+  const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
+  bool IsX64 = TT.getArch() == llvm::Triple::x86_64;
+  bool IsWindows = TT.isOSWindows();
+  bool IsMSVAStart = BuiltinID == X86::BI__builtin_ms_va_start;
+  if (IsX64) {
+    clang::CallingConv CC = CC_C;
+    if (const FunctionDecl *FD = S.getCurFunctionDecl())
+      CC = FD->getType()->getAs<FunctionType>()->getCallConv();
+    if (IsMSVAStart) {
+      // Don't allow this in System V ABI functions.
+      if (CC == CC_X86_64SysV || (!IsWindows && CC != CC_X86_64Win64))
+        return S.Diag(Fn->getLocStart(),
+                      diag::err_ms_va_start_used_in_sysv_function);
+    } else {
+      // On x86-64 Unix, don't allow this in Win64 ABI functions.
+      // On x64 Windows, don't allow this in System V ABI functions.
+      // (Yes, that means there's no corresponding way to support variadic
+      // System V ABI functions on Windows.)
+      if ((IsWindows && CC == CC_X86_64SysV) ||
+          (!IsWindows && CC == CC_X86_64Win64))
+        return S.Diag(Fn->getLocStart(),
+                      diag::err_va_start_used_in_wrong_abi_function)
+               << !IsWindows;
+    }
+    return false;
+  }
+
+  if (IsMSVAStart)
+    return S.Diag(Fn->getLocStart(), diag::err_x86_builtin_64_only);
+  return false;
+}
+
+static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
+                                             ParmVarDecl **LastParam = nullptr) {
+  // Determine whether the current function, block, or obj-c method is variadic
+  // and get its parameter list.
+  bool IsVariadic = false;
+  ArrayRef<ParmVarDecl *> Params;
+  if (BlockScopeInfo *CurBlock = S.getCurBlock()) {
+    IsVariadic = CurBlock->TheDecl->isVariadic();
+    Params = CurBlock->TheDecl->parameters();
+  } else if (FunctionDecl *FD = S.getCurFunctionDecl()) {
+    IsVariadic = FD->isVariadic();
+    Params = FD->parameters();
+  } else if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
+    IsVariadic = MD->isVariadic();
+    // FIXME: This isn't correct for methods (results in bogus warning).
+    Params = MD->parameters();
+  } else {
+    llvm_unreachable("unknown va_start context");
+  }
+
+  if (!IsVariadic) {
+    S.Diag(Fn->getLocStart(), diag::err_va_start_used_in_non_variadic_function);
+    return true;
+  }
+
+  if (LastParam)
+    *LastParam = Params.empty() ? nullptr : Params.back();
+
+  return false;
+}
+
 /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
 /// for validity.  Emit an error and return true on failure; return false
 /// on success.
-bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
+bool Sema::SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   Expr *Fn = TheCall->getCallee();
+
+  if (checkVAStartABI(*this, BuiltinID, Fn))
+    return true;
+
   if (TheCall->getNumArgs() > 2) {
     Diag(TheCall->getArg(2)->getLocStart(),
          diag::err_typecheck_call_too_many_args)
@@ -3636,20 +3706,10 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
   if (checkBuiltinArgument(*this, TheCall, 0))
     return true;
 
-  // Determine whether the current function is variadic or not.
-  BlockScopeInfo *CurBlock = getCurBlock();
-  bool isVariadic;
-  if (CurBlock)
-    isVariadic = CurBlock->TheDecl->isVariadic();
-  else if (FunctionDecl *FD = getCurFunctionDecl())
-    isVariadic = FD->isVariadic();
-  else
-    isVariadic = getCurMethodDecl()->isVariadic();
-
-  if (!isVariadic) {
-    Diag(Fn->getLocStart(), diag::err_va_start_used_in_non_variadic_function);
+  // Check that the current function is variadic, and get its last parameter.
+  ParmVarDecl *LastParam;
+  if (checkVAStartIsInVariadicFunction(*this, Fn, &LastParam))
     return true;
-  }
 
   // Verify that the second argument to the builtin is the last argument of the
   // current function or method.
@@ -3664,16 +3724,7 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
 
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Arg)) {
     if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(DR->getDecl())) {
-      // FIXME: This isn't correct for methods (results in bogus warning).
-      // Get the last formal in the current function.
-      const ParmVarDecl *LastArg;
-      if (CurBlock)
-        LastArg = CurBlock->TheDecl->parameters().back();
-      else if (FunctionDecl *FD = getCurFunctionDecl())
-        LastArg = FD->parameters().back();
-      else
-        LastArg = getCurMethodDecl()->parameters().back();
-      SecondArgIsLastNamedArgument = PV == LastArg;
+      SecondArgIsLastNamedArgument = PV == LastParam;
 
       Type = PV->getType();
       ParamLoc = PV->getLocation();
@@ -3708,48 +3759,6 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
   return false;
 }
 
-/// Check the arguments to '__builtin_va_start' for validity, and that
-/// it was called from a function of the native ABI.
-/// Emit an error and return true on failure; return false on success.
-bool Sema::SemaBuiltinVAStart(CallExpr *TheCall) {
-  // On x86-64 Unix, don't allow this in Win64 ABI functions.
-  // On x64 Windows, don't allow this in System V ABI functions.
-  // (Yes, that means there's no corresponding way to support variadic
-  // System V ABI functions on Windows.)
-  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86_64) {
-    unsigned OS = Context.getTargetInfo().getTriple().getOS();
-    clang::CallingConv CC = CC_C;
-    if (const FunctionDecl *FD = getCurFunctionDecl())
-      CC = FD->getType()->getAs<FunctionType>()->getCallConv();
-    if ((OS == llvm::Triple::Win32 && CC == CC_X86_64SysV) ||
-        (OS != llvm::Triple::Win32 && CC == CC_X86_64Win64))
-      return Diag(TheCall->getCallee()->getLocStart(),
-                  diag::err_va_start_used_in_wrong_abi_function)
-             << (OS != llvm::Triple::Win32);
-  }
-  return SemaBuiltinVAStartImpl(TheCall);
-}
-
-/// Check the arguments to '__builtin_ms_va_start' for validity, and that
-/// it was called from a Win64 ABI function.
-/// Emit an error and return true on failure; return false on success.
-bool Sema::SemaBuiltinMSVAStart(CallExpr *TheCall) {
-  // This only makes sense for x86-64.
-  const llvm::Triple &TT = Context.getTargetInfo().getTriple();
-  Expr *Callee = TheCall->getCallee();
-  if (TT.getArch() != llvm::Triple::x86_64)
-    return Diag(Callee->getLocStart(), diag::err_x86_builtin_32_bit_tgt);
-  // Don't allow this in System V ABI functions.
-  clang::CallingConv CC = CC_C;
-  if (const FunctionDecl *FD = getCurFunctionDecl())
-    CC = FD->getType()->getAs<FunctionType>()->getCallConv();
-  if (CC == CC_X86_64SysV ||
-      (TT.getOS() != llvm::Triple::Win32 && CC != CC_X86_64Win64))
-    return Diag(Callee->getLocStart(),
-                diag::err_ms_va_start_used_in_sysv_function);
-  return SemaBuiltinVAStartImpl(TheCall);
-}
-
 bool Sema::SemaBuiltinVAStartARM(CallExpr *Call) {
   // void __va_start(va_list *ap, const char *named_addr, size_t slot_size,
   //                 const char *named_addr);
@@ -3761,24 +3770,12 @@ bool Sema::SemaBuiltinVAStartARM(CallExpr *Call) {
                 diag::err_typecheck_call_too_few_args_at_least)
            << 0 /*function call*/ << 3 << Call->getNumArgs();
 
-  // Determine whether the current function is variadic or not.
-  bool IsVariadic;
-  if (BlockScopeInfo *CurBlock = getCurBlock())
-    IsVariadic = CurBlock->TheDecl->isVariadic();
-  else if (FunctionDecl *FD = getCurFunctionDecl())
-    IsVariadic = FD->isVariadic();
-  else if (ObjCMethodDecl *MD = getCurMethodDecl())
-    IsVariadic = MD->isVariadic();
-  else
-    llvm_unreachable("unexpected statement type");
-
-  if (!IsVariadic) {
-    Diag(Func->getLocStart(), diag::err_va_start_used_in_non_variadic_function);
-    return true;
-  }
-
   // Type-check the first argument normally.
   if (checkBuiltinArgument(*this, Call, 0))
+    return true;
+
+  // Check that the current function is variadic.
+  if (checkVAStartIsInVariadicFunction(*this, Func))
     return true;
 
   const struct {

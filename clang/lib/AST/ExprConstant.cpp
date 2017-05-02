@@ -148,8 +148,7 @@ namespace {
   static unsigned
   findMostDerivedSubobject(ASTContext &Ctx, APValue::LValueBase Base,
                            ArrayRef<APValue::LValuePathEntry> Path,
-                           uint64_t &ArraySize, QualType &Type, bool &IsArray,
-                           bool &IsUnsizedArray) {
+                           uint64_t &ArraySize, QualType &Type, bool &IsArray) {
     // This only accepts LValueBases from APValues, and APValues don't support
     // arrays that lack size info.
     assert(!isBaseAnAllocSizeCall(Base) &&
@@ -158,34 +157,28 @@ namespace {
     Type = getType(Base);
 
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
-      if (auto AT = Ctx.getAsArrayType(Type)) {
+      if (Type->isArrayType()) {
+        const ConstantArrayType *CAT =
+            cast<ConstantArrayType>(Ctx.getAsArrayType(Type));
+        Type = CAT->getElementType();
+        ArraySize = CAT->getSize().getZExtValue();
         MostDerivedLength = I + 1;
         IsArray = true;
-        if (auto CAT = Ctx.getAsConstantArrayType(Type))
-          ArraySize = CAT->getSize().getZExtValue();
-        else {
-          ArraySize = 0;
-          IsUnsizedArray = true;
-        }
-        Type = AT->getElementType();
       } else if (Type->isAnyComplexType()) {
         const ComplexType *CT = Type->castAs<ComplexType>();
         Type = CT->getElementType();
         ArraySize = 2;
         MostDerivedLength = I + 1;
         IsArray = true;
-        IsUnsizedArray = false;
       } else if (const FieldDecl *FD = getAsField(Path[I])) {
         Type = FD->getType();
         ArraySize = 0;
         MostDerivedLength = I + 1;
         IsArray = false;
-        IsUnsizedArray = false;
       } else {
         // Path[I] describes a base class.
         ArraySize = 0;
         IsArray = false;
-        IsUnsizedArray = false;
       }
     }
     return MostDerivedLength;
@@ -207,9 +200,8 @@ namespace {
     /// Is this a pointer one past the end of an object?
     unsigned IsOnePastTheEnd : 1;
 
-    /// Indicator of whether the most-derived object is an unsized array (e.g.
-    /// of unknown bound).
-    unsigned MostDerivedIsAnUnsizedArray : 1;
+    /// Indicator of whether the first entry is an unsized array.
+    unsigned FirstEntryIsAnUnsizedArray : 1;
 
     /// Indicator of whether the most-derived object is an array element.
     unsigned MostDerivedIsArrayElement : 1;
@@ -239,28 +231,25 @@ namespace {
 
     explicit SubobjectDesignator(QualType T)
         : Invalid(false), IsOnePastTheEnd(false),
-          MostDerivedIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
+          FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
           MostDerivedPathLength(0), MostDerivedArraySize(0),
           MostDerivedType(T) {}
 
     SubobjectDesignator(ASTContext &Ctx, const APValue &V)
         : Invalid(!V.isLValue() || !V.hasLValuePath()), IsOnePastTheEnd(false),
-          MostDerivedIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
+          FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
           MostDerivedPathLength(0), MostDerivedArraySize(0) {
       assert(V.isLValue() && "Non-LValue used to make an LValue designator?");
       if (!Invalid) {
         IsOnePastTheEnd = V.isLValueOnePastTheEnd();
         ArrayRef<PathEntry> VEntries = V.getLValuePath();
         Entries.insert(Entries.end(), VEntries.begin(), VEntries.end());
-        if (auto Base = V.getLValueBase()) {
-          if (auto Decl = Base.dyn_cast<ValueDecl const*>())
-            Base = cast<ValueDecl>(Decl->getMostRecentDecl());
-          bool IsArray = false, IsUnsizedArray = false;
+        if (V.getLValueBase()) {
+          bool IsArray = false;
           MostDerivedPathLength = findMostDerivedSubobject(
-              Ctx, Base, V.getLValuePath(), MostDerivedArraySize,
-              MostDerivedType, IsArray, IsUnsizedArray);
-              MostDerivedIsArrayElement = IsArray;
-              MostDerivedIsAnUnsizedArray = IsUnsizedArray;
+              Ctx, V.getLValueBase(), V.getLValuePath(), MostDerivedArraySize,
+              MostDerivedType, IsArray);
+          MostDerivedIsArrayElement = IsArray;
         }
       }
     }
@@ -274,7 +263,7 @@ namespace {
     /// known bound.
     bool isMostDerivedAnUnsizedArray() const {
       assert(!Invalid && "Calling this makes no sense on invalid designators");
-      return MostDerivedIsAnUnsizedArray;
+      return Entries.size() == 1 && FirstEntryIsAnUnsizedArray;
     }
 
     /// Determine what the most derived array's size is. Results in an assertion
@@ -314,7 +303,6 @@ namespace {
       // This is a most-derived object.
       MostDerivedType = CAT->getElementType();
       MostDerivedIsArrayElement = true;
-      MostDerivedIsAnUnsizedArray = false;
       MostDerivedArraySize = CAT->getSize().getZExtValue();
       MostDerivedPathLength = Entries.size();
     }
@@ -327,7 +315,6 @@ namespace {
 
       MostDerivedType = ElemTy;
       MostDerivedIsArrayElement = true;
-      MostDerivedIsAnUnsizedArray = true;
       // The value in MostDerivedArraySize is undefined in this case. So, set it
       // to an arbitrary value that's likely to loudly break things if it's
       // used.
@@ -346,7 +333,6 @@ namespace {
       if (const FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
         MostDerivedType = FD->getType();
         MostDerivedIsArrayElement = false;
-        MostDerivedIsAnUnsizedArray = false;
         MostDerivedArraySize = 0;
         MostDerivedPathLength = Entries.size();
       }
@@ -361,14 +347,53 @@ namespace {
       // is unlikely to matter.
       MostDerivedType = EltTy;
       MostDerivedIsArrayElement = true;
-      MostDerivedIsAnUnsizedArray = false;
       MostDerivedArraySize = 2;
       MostDerivedPathLength = Entries.size();
     }
     void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
                                    const APSInt &N);
     /// Add N to the address of this subobject.
-    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N);
+    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N) {
+      if (Invalid || !N) return;
+      uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
+      if (isMostDerivedAnUnsizedArray()) {
+        // Can't verify -- trust that the user is doing the right thing (or if
+        // not, trust that the caller will catch the bad behavior).
+        // FIXME: Should we reject if this overflows, at least?
+        Entries.back().ArrayIndex += TruncatedN;
+        return;
+      }
+
+      // [expr.add]p4: For the purposes of these operators, a pointer to a
+      // nonarray object behaves the same as a pointer to the first element of
+      // an array of length one with the type of the object as its element type.
+      bool IsArray = MostDerivedPathLength == Entries.size() &&
+                     MostDerivedIsArrayElement;
+      uint64_t ArrayIndex =
+          IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
+      uint64_t ArraySize =
+          IsArray ? getMostDerivedArraySize() : (uint64_t)1;
+
+      if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
+        // Calculate the actual index in a wide enough type, so we can include
+        // it in the note.
+        N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
+        (llvm::APInt&)N += ArrayIndex;
+        assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
+        diagnosePointerArithmetic(Info, E, N);
+        setInvalid();
+        return;
+      }
+
+      ArrayIndex += TruncatedN;
+      assert(ArrayIndex <= ArraySize &&
+             "bounds check succeeded for out-of-bounds index");
+
+      if (IsArray)
+        Entries.back().ArrayIndex = ArrayIndex;
+      else
+        IsOnePastTheEnd = (ArrayIndex != 0);
+    }
   };
 
   /// A stack frame in the constexpr call stack.
@@ -470,7 +495,7 @@ namespace {
         // FIXME: Force the precision of the source value down so we don't
         // print digits which are usually useless (we don't really care here if
         // we truncate a digit by accident in edge cases).  Ideally,
-        // APFloat::toString would automatically print the shortest
+        // APFloat::toString would automatically print the shortest 
         // representation which rounds to the correct value, but it's a bit
         // tricky to implement.
         unsigned precision =
@@ -695,7 +720,7 @@ namespace {
   private:
     OptionalDiagnostic Diag(SourceLocation Loc, diag::kind DiagId,
                             unsigned ExtraNotes, bool IsCCEDiag) {
-
+    
       if (EvalStatus.Diag) {
         // If we have a prior diagnostic, it will be noting that the expression
         // isn't a constant expression. This diagnostic is more important,
@@ -748,7 +773,7 @@ namespace {
           unsigned ExtraNotes = 0) {
       return Diag(Loc, DiagId, ExtraNotes, false);
     }
-
+    
     OptionalDiagnostic FFDiag(const Expr *E, diag::kind DiagId
                               = diag::note_invalid_subexpr_in_const_expr,
                             unsigned ExtraNotes = 0) {
@@ -1061,53 +1086,6 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
   setInvalid();
 }
 
-void SubobjectDesignator::adjustIndex(EvalInfo &Info, const Expr *E, APSInt N) {
-  if (Invalid || !N) return;
-
-  uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
-  if (isMostDerivedAnUnsizedArray()) {
-    // If we're dealing with an array without constant bound, the expression is
-    // not a constant expression.
-    if (!Info.checkingPotentialConstantExpression())
-      Info.CCEDiag(E, diag::note_constexpr_array_unknown_bound_arithmetic);
-    // Can't verify -- trust that the user is doing the right thing (or if
-    // not, trust that the caller will catch the bad behavior).
-    // FIXME: Should we reject if this overflows, at least?
-    Entries.back().ArrayIndex += TruncatedN;
-    return;
-  }
-
-  // [expr.add]p4: For the purposes of these operators, a pointer to a
-  // nonarray object behaves the same as a pointer to the first element of
-  // an array of length one with the type of the object as its element type.
-  bool IsArray = MostDerivedPathLength == Entries.size() &&
-                 MostDerivedIsArrayElement;
-  uint64_t ArrayIndex =
-      IsArray ? Entries.back().ArrayIndex : (uint64_t)IsOnePastTheEnd;
-  uint64_t ArraySize =
-      IsArray ? getMostDerivedArraySize() : (uint64_t)1;
-
-  if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
-    // Calculate the actual index in a wide enough type, so we can include
-    // it in the note.
-    N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
-    (llvm::APInt&)N += ArrayIndex;
-    assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
-    diagnosePointerArithmetic(Info, E, N);
-    setInvalid();
-    return;
-  }
-
-  ArrayIndex += TruncatedN;
-  assert(ArrayIndex <= ArraySize &&
-         "bounds check succeeded for out-of-bounds index");
-
-  if (IsArray)
-    Entries.back().ArrayIndex = ArrayIndex;
-  else
-    IsOnePastTheEnd = (ArrayIndex != 0);
-}
-
 CallStackFrame::CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                                const FunctionDecl *Callee, const LValue *This,
                                APValue *Arguments)
@@ -1236,6 +1214,8 @@ namespace {
                     IsNullPtr);
       else {
         assert(!InvalidBase && "APValues can't handle invalid LValue bases");
+        assert(!Designator.FirstEntryIsAnUnsizedArray &&
+               "Unsized array with a valid base?");
         V = APValue(Base, Offset, Designator.Entries,
                     Designator.IsOnePastTheEnd, CallIndex, IsNullPtr);
       }
@@ -1300,9 +1280,12 @@ namespace {
       if (checkSubobject(Info, E, isa<FieldDecl>(D) ? CSK_Field : CSK_Base))
         Designator.addDeclUnchecked(D, Virtual);
     }
-    void addUnsizedArray(EvalInfo &Info, const Expr *E, QualType ElemTy) {
-      if (checkSubobject(Info, E, CSK_ArrayToPointer))
-        Designator.addUnsizedArrayUnchecked(ElemTy);
+    void addUnsizedArray(EvalInfo &Info, QualType ElemTy) {
+      assert(Designator.Entries.empty() && getType(Base)->isPointerType());
+      assert(isBaseAnAllocSizeCall(Base) &&
+             "Only alloc_size bases can have unsized arrays");
+      Designator.FirstEntryIsAnUnsizedArray = true;
+      Designator.addUnsizedArrayUnchecked(ElemTy);
     }
     void addArray(EvalInfo &Info, const Expr *E, const ConstantArrayType *CAT) {
       if (checkSubobject(Info, E, CSK_ArrayToPointer))
@@ -3033,15 +3016,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     if (!evaluateVarDeclInit(Info, E, VD, Frame, BaseVal))
       return CompleteObject();
-
-    // The complete object can be an array of unknown bound, in which case we
-    // have to find the most recent declaration and adjust the type accordingly.
-    if (Info.Ctx.getAsIncompleteArrayType(BaseType)) {
-      QualType MostRecentType =
-         cast<ValueDecl const>(D->getMostRecentDecl())->getType();
-      if (Info.Ctx.getAsConstantArrayType(MostRecentType))
-        BaseType = MostRecentType;
-    }
   } else {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
 
@@ -4124,13 +4098,13 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 
   if (Info.getLangOpts().CPlusPlus11) {
     const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
-
+    
     // If this function is not constexpr because it is an inherited
     // non-constexpr constructor, diagnose that directly.
     auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
     if (CD && CD->isInheritingConstructor()) {
       auto *Inherited = CD->getInheritedConstructor().getConstructor();
-      if (!Inherited->isConstexpr())
+      if (!Inherited->isConstexpr()) 
         DiagDecl = CD = Inherited;
     }
 
@@ -4667,7 +4641,7 @@ public:
           return false;
         This = &ThisVal;
         Args = Args.slice(1);
-      } else if (MD && MD->isLambdaStaticInvoker()) {
+      } else if (MD && MD->isLambdaStaticInvoker()) {   
         // Map the static invoker for the lambda back to the call operator.
         // Conveniently, we don't have to slice out the 'this' argument (as is
         // being done for the non-static case), since a static member function
@@ -4702,7 +4676,7 @@ public:
           FD = LambdaCallOp;
       }
 
-
+      
     } else
       return Error(E);
 
@@ -5462,7 +5436,7 @@ static bool evaluateLValueAsAllocSize(EvalInfo &Info, APValue::LValueBase Base,
   Result.setInvalid(E);
 
   QualType Pointee = E->getType()->castAs<PointerType>()->getPointeeType();
-  Result.addUnsizedArray(Info, E, Pointee);
+  Result.addUnsizedArray(Info, Pointee);
   return true;
 }
 
@@ -5541,7 +5515,7 @@ public:
       // Update 'Result' to refer to the data member/field of the closure object
       // that represents the '*this' capture.
       if (!HandleLValueMember(Info, E, Result,
-                             Info.CurrentCall->LambdaThisCaptureField))
+                             Info.CurrentCall->LambdaThisCaptureField)) 
         return false;
       // If we captured '*this' by reference, replace the field with its referent.
       if (Info.CurrentCall->LambdaThisCaptureField->getType()
@@ -5682,18 +5656,12 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
                            Info, Result, SubExpr))
         return false;
     }
-
     // The result is a pointer to the first element of the array.
     if (const ConstantArrayType *CAT
           = Info.Ctx.getAsConstantArrayType(SubExpr->getType()))
       Result.addArray(Info, E, CAT);
-    // If the array hasn't been given a bound yet, add it as an unsized one.
-    else {
-      auto AT = Info.Ctx.getAsArrayType(SubExpr->getType());
-      assert(AT && "Array to pointer decay on non-array object?");
-      Result.addUnsizedArray(Info, E, AT->getElementType());
-    }
-
+    else
+      Result.Designator.setInvalid();
     return true;
 
   case CK_FunctionToPointerDecay:
@@ -5761,7 +5729,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 
   Result.setInvalid(E);
   QualType PointeeTy = E->getType()->castAs<PointerType>()->getPointeeType();
-  Result.addUnsizedArray(Info, E, PointeeTy);
+  Result.addUnsizedArray(Info, PointeeTy);
   return true;
 }
 
@@ -6395,7 +6363,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
   if (ClosureClass->isInvalidDecl()) return false;
 
   if (Info.checkingPotentialConstantExpression()) return true;
-
+  
   const size_t NumFields =
       std::distance(ClosureClass->field_begin(), ClosureClass->field_end());
 
@@ -6414,7 +6382,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
     assert(CaptureInitIt != E->capture_init_end());
     // Get the initializer for this field
     Expr *const CurFieldInit = *CaptureInitIt++;
-
+    
     // If there is no initializer, either this is a VLA or an error has
     // occurred.
     if (!CurFieldInit)
@@ -6615,18 +6583,18 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
   // The number of initializers can be less than the number of
   // vector elements. For OpenCL, this can be due to nested vector
-  // initialization. For GCC compatibility, missing trailing elements
+  // initialization. For GCC compatibility, missing trailing elements 
   // should be initialized with zeroes.
   unsigned CountInits = 0, CountElts = 0;
   while (CountElts < NumElements) {
     // Handle nested vector initialization.
-    if (CountInits < NumInits
+    if (CountInits < NumInits 
         && E->getInit(CountInits)->getType()->isVectorType()) {
       APValue v;
       if (!EvaluateVector(E->getInit(CountInits), v, Info))
         return Error(E);
       unsigned vlen = v.getVectorLength();
-      for (unsigned j = 0; j < vlen; j++)
+      for (unsigned j = 0; j < vlen; j++) 
         Elements.push_back(v.getVectorElt(j));
       CountElts += vlen;
     } else if (EltTy->isIntegerType()) {
@@ -6902,7 +6870,7 @@ public:
   }
 
   bool Success(const llvm::APInt &I, const Expr *E, APValue &Result) {
-    assert(E->getType()->isIntegralOrEnumerationType() &&
+    assert(E->getType()->isIntegralOrEnumerationType() && 
            "Invalid evaluation result.");
     assert(I.getBitWidth() == Info.Ctx.getIntWidth(E->getType()) &&
            "Invalid evaluation result.");
@@ -6916,7 +6884,7 @@ public:
   }
 
   bool Success(uint64_t Value, const Expr *E, APValue &Result) {
-    assert(E->getType()->isIntegralOrEnumerationType() &&
+    assert(E->getType()->isIntegralOrEnumerationType() && 
            "Invalid evaluation result.");
     Result = APValue(Info.Ctx.MakeIntValue(Value, E->getType()));
     return true;
@@ -6992,7 +6960,7 @@ public:
     }
     return Success(Info.ArrayInitIndex, E);
   }
-
+    
   // Note, GNU defines __null as an integer, not a pointer.
   bool VisitGNUNullExpr(const GNUNullExpr *E) {
     return ZeroInitialization(E);
@@ -7356,8 +7324,10 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
 
   unsigned I = 0;
   QualType BaseType = getType(Base);
-  // If this is an alloc_size base, we should ignore the initial array index
-  if (isBaseAnAllocSizeCall(Base)) {
+  if (LVal.Designator.FirstEntryIsAnUnsizedArray) {
+    assert(isBaseAnAllocSizeCall(Base) &&
+           "Unsized array in non-alloc_size call?");
+    // If this is an alloc_size base, we should ignore the initial array index
     ++I;
     BaseType = BaseType->castAs<PointerType>()->getPointeeType();
   }
@@ -8144,12 +8114,12 @@ bool DataRecursiveIntBinOpEvaluator::
     Result = RHSResult.Val;
     return true;
   }
-
+  
   if (E->isLogicalOp()) {
     bool lhsResult, rhsResult;
     bool LHSIsOK = HandleConversionToBool(LHSResult.Val, lhsResult);
     bool RHSIsOK = HandleConversionToBool(RHSResult.Val, rhsResult);
-
+    
     if (LHSIsOK) {
       if (RHSIsOK) {
         if (E->getOpcode() == BO_LOr)
@@ -8165,26 +8135,26 @@ bool DataRecursiveIntBinOpEvaluator::
           return Success(rhsResult, E, Result);
       }
     }
-
+    
     return false;
   }
-
+  
   assert(E->getLHS()->getType()->isIntegralOrEnumerationType() &&
          E->getRHS()->getType()->isIntegralOrEnumerationType());
-
+  
   if (LHSResult.Failed || RHSResult.Failed)
     return false;
-
+  
   const APValue &LHSVal = LHSResult.Val;
   const APValue &RHSVal = RHSResult.Val;
-
+  
   // Handle cases like (unsigned long)&a + 4.
   if (E->isAdditiveOp() && LHSVal.isLValue() && RHSVal.isInt()) {
     Result = LHSVal;
     addOrSubLValueAsInteger(Result, RHSVal.getInt(), E->getOpcode() == BO_Sub);
     return true;
   }
-
+  
   // Handle cases like 4 + (unsigned long)&a
   if (E->getOpcode() == BO_Add &&
       RHSVal.isLValue() && LHSVal.isInt()) {
@@ -8192,7 +8162,7 @@ bool DataRecursiveIntBinOpEvaluator::
     addOrSubLValueAsInteger(Result, LHSVal.getInt(), /*IsSub*/false);
     return true;
   }
-
+  
   if (E->getOpcode() == BO_Sub && LHSVal.isLValue() && RHSVal.isLValue()) {
     // Handle (intptr_t)&&A - (intptr_t)&&B.
     if (!LHSVal.getLValueOffset().isZero() ||
@@ -8231,7 +8201,7 @@ bool DataRecursiveIntBinOpEvaluator::
 
 void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
   Job &job = Queue.back();
-
+  
   switch (job.Kind) {
     case Job::AnyExprKind: {
       if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(job.E)) {
@@ -8241,12 +8211,12 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
           return;
         }
       }
-
+      
       EvaluateExpr(job.E, Result);
       Queue.pop_back();
       return;
     }
-
+      
     case Job::BinOpKind: {
       const BinaryOperator *Bop = cast<BinaryOperator>(job.E);
       bool SuppressRHSDiags = false;
@@ -8261,7 +8231,7 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
       enqueue(Bop->getRHS());
       return;
     }
-
+      
     case Job::BinOpVisitedLHSKind: {
       const BinaryOperator *Bop = cast<BinaryOperator>(job.E);
       EvalResult RHS;
@@ -8271,7 +8241,7 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
       return;
     }
   }
-
+  
   llvm_unreachable("Invalid Job::Kind!");
 }
 
@@ -8783,7 +8753,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *BaseRT = CurrentType->getAs<RecordType>();
       if (!BaseRT)
         return Error(OOE);
-
+      
       // Add the offset to the base.
       Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
       break;
@@ -9978,7 +9948,7 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
     IsConst = false;
     return true;
   }
-
+  
   // FIXME: Evaluating values of large array and record types can cause
   // performance problems. Only do so in C++11 for now.
   if (Exp->isRValue() && (Exp->getType()->isArrayType() ||
@@ -10000,7 +9970,7 @@ bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx) const {
   bool IsConst;
   if (FastEvaluateAsRValue(this, Result, Ctx, IsConst, false))
     return IsConst;
-
+  
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
   return ::EvaluateAsRValue(Info, this, Result.Val);
 }

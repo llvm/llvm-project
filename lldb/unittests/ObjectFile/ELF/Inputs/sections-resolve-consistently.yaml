@@ -1,0 +1,50 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400158
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E55003F3EC29E3FD83E49D18C4D49CD8A730CC13117B6
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601000
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601004
+    AddressAlign:    0x0000000000000004
+    Size:            0x0000000000000004
+Symbols:
+  Global:
+    - Name:            Y
+      Type:            STT_OBJECT
+      Section:         .data
+      Value:           0x0000000000601000
+      Size:            0x0000000000000004
+    - Name:            _start
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x0000000000400180
+      Size:            0x0000000000000014
+    - Name:            X
+      Type:            STT_OBJECT
+      Section:         .bss
+      Value:           0x0000000000601004
+      Size:            0x0000000000000004
+...

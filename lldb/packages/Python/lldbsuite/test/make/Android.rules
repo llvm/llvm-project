@@ -63,6 +63,7 @@ endif
 GCC_TOOLCHAIN = $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
 
 OBJCOPY ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-objcopy
+ARCHIVER ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-ar
 
 ifeq "$(findstring clang,$(CC))" "clang"
 	ARCH_CFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)

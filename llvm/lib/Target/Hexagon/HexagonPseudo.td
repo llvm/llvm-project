@@ -14,8 +14,11 @@ let PrintMethod = "printGlobalOperand" in {
 
 let isPseudo = 1 in {
 let isCodeGenOnly = 0 in
-def A2_iconst : Pseudo<(outs IntRegs:$Rd32), (ins s23_2Imm:$Ii), "${Rd32}=iconst(#${Ii})">;
-def DUPLEX_Pseudo : InstHexagon<(outs), (ins s32_0Imm:$offset), "DUPLEX", [], "", DUPLEX, TypePSEUDO>;
+def A2_iconst : Pseudo<(outs IntRegs:$Rd32),
+    (ins s27_2Imm:$Ii), "${Rd32}=iconst(#${Ii})">;
+
+def DUPLEX_Pseudo : InstHexagon<(outs),
+    (ins s32_0Imm:$offset), "DUPLEX", [], "", DUPLEX, TypePSEUDO>;
 }
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
@@ -321,7 +324,7 @@ def LDriw_mod : LDInst<(outs ModRegs:$dst),
 
 // Vector load
 let Predicates = [HasV60T, UseHVX] in
-let mayLoad = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
+let mayLoad = 1, hasSideEffects = 0 in
   class V6_LDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                   string cstr = "", InstrItinClass itin = CVI_VM_LD,
                   IType type = TypeCVI_VM_LD>
@@ -329,7 +332,7 @@ let mayLoad = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
 
 // Vector store
 let Predicates = [HasV60T, UseHVX] in
-let mayStore = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
+let mayStore = 1, hasSideEffects = 0 in
 class V6_STInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = CVI_VM_ST,
                 IType type = TypeCVI_VM_ST>
@@ -415,7 +418,7 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 
 // Vector load/store pseudos
 
-let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
+let isPseudo = 1, isCodeGenOnly = 1 in
 class STrivv_template<RegisterClass RC>
   : V6_STInst<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src), "", []>;
 
@@ -429,7 +432,7 @@ def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
 
-let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
+let isPseudo = 1, isCodeGenOnly = 1 in
 class LDrivv_template<RegisterClass RC>
   : V6_LDInst<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off), "", []>;
 

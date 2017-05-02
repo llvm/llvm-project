@@ -128,6 +128,16 @@ const char *DataExtractor::getCStr(uint32_t *offset_ptr) const {
   return nullptr;
 }
 
+StringRef DataExtractor::getCStrRef(uint32_t *OffsetPtr) const {
+  uint32_t Start = *OffsetPtr;
+  StringRef::size_type Pos = Data.find('\0', Start);
+  if (Pos != StringRef::npos) {
+    *OffsetPtr = Pos + 1;
+    return StringRef(Data.data() + Start, Pos - Start);
+  }
+  return StringRef();
+}
+
 uint64_t DataExtractor::getULEB128(uint32_t *offset_ptr) const {
   uint64_t result = 0;
   if (Data.empty())

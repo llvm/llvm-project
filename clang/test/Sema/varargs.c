@@ -27,7 +27,7 @@ void f3(float a, ...) { // expected-note 2{{parameter of type 'float' is declare
 }
 
 
-// stdarg: PR3075
+// stdarg: PR3075 and PR2531
 void f4(const char *msg, ...) {
  __builtin_va_list ap;
  __builtin_stdarg_start((ap), (msg));

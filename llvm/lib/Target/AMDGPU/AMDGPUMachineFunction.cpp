@@ -17,6 +17,7 @@ static bool isEntryFunctionCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
   case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:

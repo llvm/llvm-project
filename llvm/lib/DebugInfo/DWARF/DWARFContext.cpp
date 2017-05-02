@@ -42,6 +42,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -284,11 +286,30 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
                      getStringSection(), isLittleEndian());
 }
 
-bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
-  bool Success = true;
-  if (DumpType == DIDT_All || DumpType == DIDT_Info) {
+DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
+  parseCompileUnits();
+  if (auto *CU = CUs.getUnitForOffset(Offset))
+    return CU->getDIEForOffset(Offset);
+  return DWARFDie();
+}
+
+namespace {
+  
+class Verifier {
+  raw_ostream &OS;
+  DWARFContext &DCtx;
+public:
+  Verifier(raw_ostream &S, DWARFContext &D) : OS(S), DCtx(D) {}
+  
+  bool HandleDebugInfo() {
+    bool Success = true;
+    // A map that tracks all references (converted absolute references) so we
+    // can verify each reference points to a valid DIE and not an offset that
+    // lies between to valid DIEs.
+    std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
+
     OS << "Verifying .debug_info...\n";
-    for (const auto &CU : compile_units()) {
+    for (const auto &CU : DCtx.compile_units()) {
       unsigned NumDies = CU->getNumDIEs();
       for (unsigned I = 0; I < NumDies; ++I) {
         auto Die = CU->getDIEAtIndex(I);
@@ -299,101 +320,141 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
           const auto Attr = AttrValue.Attr;
           const auto Form = AttrValue.Value.getForm();
           switch (Attr) {
-          case DW_AT_ranges:
-            // Make sure the offset in the DW_AT_ranges attribute is valid.
-            if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-              if (*SectionOffset >= getRangeSection().Data.size()) {
+            case DW_AT_ranges:
+              // Make sure the offset in the DW_AT_ranges attribute is valid.
+              if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
+                if (*SectionOffset >= DCtx.getRangeSection().Data.size()) {
+                  Success = false;
+                  OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
+                  "bounds:\n";
+                  Die.dump(OS, 0);
+                  OS << "\n";
+                }
+              } else {
                 Success = false;
-                OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
-                      "bounds:\n";
+                OS << "error: DIE has invalid DW_AT_ranges encoding:\n";
                 Die.dump(OS, 0);
                 OS << "\n";
               }
-            } else {
-              Success = false;
-              OS << "error: DIE has invalid DW_AT_ranges encoding:\n";
-              Die.dump(OS, 0);
-              OS << "\n";
-            }
-            break;
-          case DW_AT_stmt_list:
-            // Make sure the offset in the DW_AT_stmt_list attribute is valid.
-            if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-              if (*SectionOffset >= getLineSection().Data.size()) {
+              break;
+            case DW_AT_stmt_list:
+              // Make sure the offset in the DW_AT_stmt_list attribute is valid.
+              if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
+                if (*SectionOffset >= DCtx.getLineSection().Data.size()) {
+                  Success = false;
+                  OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
+                  "bounds: "
+                  << format("0x%08" PRIx32, *SectionOffset) << "\n";
+                  CU->getUnitDIE().dump(OS, 0);
+                  OS << "\n";
+                }
+              } else {
                 Success = false;
-                OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
-                      "bounds: "
-                   << format("0x%08" PRIx32, *SectionOffset) << "\n";
-                CU->getUnitDIE().dump(OS, 0);
+                OS << "error: DIE has invalid DW_AT_stmt_list encoding:\n";
+                Die.dump(OS, 0);
                 OS << "\n";
               }
-            } else {
-              Success = false;
-              OS << "error: DIE has invalid DW_AT_stmt_list encoding:\n";
-              Die.dump(OS, 0);
-              OS << "\n";
-            }
-            break;
-
-          default:
-            break;
+              break;
+              
+            default:
+              break;
           }
           switch (Form) {
-          case DW_FORM_ref1:
-          case DW_FORM_ref2:
-          case DW_FORM_ref4:
-          case DW_FORM_ref8:
-          case DW_FORM_ref_udata: {
-            // Verify all CU relative references are valid CU offsets.
-            Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
-            assert(RefVal);
-            if (RefVal) {
-              auto DieCU = Die.getDwarfUnit();
-              auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
-              auto CUOffset = AttrValue.Value.getRawUValue();
-              if (CUOffset >= CUSize) {
+            case DW_FORM_ref1:
+            case DW_FORM_ref2:
+            case DW_FORM_ref4:
+            case DW_FORM_ref8:
+            case DW_FORM_ref_udata: {
+              // Verify all CU relative references are valid CU offsets.
+              Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+              assert(RefVal);
+              if (RefVal) {
+                auto DieCU = Die.getDwarfUnit();
+                auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
+                auto CUOffset = AttrValue.Value.getRawUValue();
+                if (CUOffset >= CUSize) {
+                  Success = false;
+                  OS << "error: " << FormEncodingString(Form) << " CU offset "
+                  << format("0x%08" PRIx32, CUOffset)
+                  << " is invalid (must be less than CU size of "
+                  << format("0x%08" PRIx32, CUSize) << "):\n";
+                  Die.dump(OS, 0);
+                  OS << "\n";
+                } else {
+                  // Valid reference, but we will verify it points to an actual
+                  // DIE later.
+                  ReferenceToDIEOffsets[*RefVal].insert(Die.getOffset());
+                }
+              }
+              break;
+            }
+            case DW_FORM_ref_addr: {
+              // Verify all absolute DIE references have valid offsets in the
+              // .debug_info section.
+              Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+              assert(RefVal);
+              if (RefVal) {
+                if(*RefVal >= DCtx.getInfoSection().Data.size()) {
+                  Success = false;
+                  OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
+                        "bounds:\n";
+                  Die.dump(OS, 0);
+                  OS << "\n";
+                } else {
+                  // Valid reference, but we will verify it points to an actual
+                  // DIE later.
+                  ReferenceToDIEOffsets[*RefVal].insert(Die.getOffset());
+                }
+              }
+              break;
+            }
+            case DW_FORM_strp: {
+              auto SecOffset = AttrValue.Value.getAsSectionOffset();
+              assert(SecOffset); // DW_FORM_strp is a section offset.
+              if (SecOffset && *SecOffset >= DCtx.getStringSection().size()) {
                 Success = false;
-                OS << "error: " << FormEncodingString(Form) << " CU offset "
-                   << format("0x%08" PRIx32, CUOffset)
-                   << " is invalid (must be less than CU size of "
-                   << format("0x%08" PRIx32, CUSize) << "):\n";
+                OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
                 Die.dump(OS, 0);
                 OS << "\n";
               }
+              break;
             }
-            break;
-          }
-          case DW_FORM_ref_addr: {
-            // Verify all absolute DIE references have valid offsets in the
-            // .debug_info section.
-            Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
-            assert(RefVal);
-            if (RefVal && *RefVal >= getInfoSection().Data.size()) {
-              Success = false;
-              OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
-                    "bounds:\n";
-              Die.dump(OS, 0);
-              OS << "\n";
-            }
-            break;
-          }
-          case DW_FORM_strp: {
-            auto SecOffset = AttrValue.Value.getAsSectionOffset();
-            assert(SecOffset); // DW_FORM_strp is a section offset.
-            if (SecOffset && *SecOffset >= getStringSection().size()) {
-              Success = false;
-              OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
-              Die.dump(OS, 0);
-              OS << "\n";
-            }
-            break;
-          }
-          default:
-            break;
+            default:
+              break;
           }
         }
       }
     }
+
+    // Take all references and make sure they point to an actual DIE by
+    // getting the DIE by offset and emitting an error
+    OS << "Verifying .debug_info references...\n";
+    for (auto Pair: ReferenceToDIEOffsets) {
+      auto Die = DCtx.getDIEForOffset(Pair.first);
+      if (Die)
+        continue;
+      Success = false;
+      OS << "error: invalid DIE reference " << format("0x%08" PRIx64, Pair.first)
+         << ". Offset is in between DIEs:\n";
+      for (auto Offset: Pair.second) {
+        auto ReferencingDie = DCtx.getDIEForOffset(Offset);
+        ReferencingDie.dump(OS, 0);
+        OS << "\n";
+      }
+      OS << "\n";
+    }
+    return Success;
+  }
+};
+  
+} // anonymous namespace
+
+bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
+  bool Success = true;
+  Verifier verifier(OS, *this);
+  if (DumpType == DIDT_All || DumpType == DIDT_Info) {
+    if (!verifier.HandleDebugInfo())
+      Success = false;
   }
   return Success;
 }

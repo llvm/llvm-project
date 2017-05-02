@@ -39,6 +39,10 @@ public:
     return Error::success();
   }
 
+  virtual Error visitInlineeLines(ModuleDebugInlineeLineFragmentRef &Inlinees) {
+    return Error::success();
+  }
+
   virtual Error finished() { return Error::success(); }
 };
 

@@ -30,6 +30,8 @@ namespace llvm {
 /// although no methods are overridable.
 class BinaryStreamWriter {
 public:
+  // FIXME: We should be able to slice and drop_front etc on Writers / Readers.
+
   BinaryStreamWriter() = default;
   explicit BinaryStreamWriter(WritableBinaryStreamRef Stream);
   virtual ~BinaryStreamWriter() {}

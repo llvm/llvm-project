@@ -31,4 +31,6 @@
 // RUN: echo "=== NOTE === If you see a mismatch below, please update sanitizer_interface.inc files."
 // RUN: diff %t.imports-sorted %t.exports-sorted
 
+// UNSUPPORTED: ios
+
 int main() { return 0; }

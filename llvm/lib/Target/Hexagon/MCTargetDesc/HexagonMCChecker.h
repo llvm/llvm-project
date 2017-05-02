@@ -78,10 +78,6 @@ class HexagonMCChecker {
   typedef std::set<unsigned>::iterator SoftDefsIterator;
   std::set<unsigned> SoftDefs;
 
-  /// Set of current definitions committed to the register file.
-  typedef std::set<unsigned>::iterator CurDefsIterator;
-  std::set<unsigned> CurDefs;
-
   /// Set of temporary definitions not committed to the register file.
   typedef std::set<unsigned>::iterator TmpDefsIterator;
   std::set<unsigned> TmpDefs;
@@ -110,15 +106,20 @@ class HexagonMCChecker {
   void init(MCInst const &);
   void initReg(MCInst const &, unsigned, unsigned &PredReg, bool &isTrue);
 
+  bool registerUsed(unsigned Register);
+
   // Checks performed.
   bool checkBranches();
   bool checkPredicates();
   bool checkNewValues();
   bool checkRegisters();
   bool checkRegistersReadOnly();
+  bool checkEndloopBranches();
+  void checkRegisterCurDefs();
   bool checkSolo();
   bool checkShuffle();
   bool checkSlots();
+  bool checkAXOK();
 
   static void compoundRegisterMap(unsigned &);
 

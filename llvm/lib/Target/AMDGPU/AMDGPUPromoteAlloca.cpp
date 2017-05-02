@@ -677,12 +677,19 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
   }
 
   const Function &ContainingFunction = *I.getParent()->getParent();
+  CallingConv::ID CC = ContainingFunction.getCallingConv();
 
   // Don't promote the alloca to LDS for shader calling conventions as the work
   // item ID intrinsics are not supported for these calling conventions.
   // Furthermore not all LDS is available for some of the stages.
-  if (AMDGPU::isShader(ContainingFunction.getCallingConv()))
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    break;
+  default:
+    DEBUG(dbgs() << " promote alloca to LDS not supported with calling convention.\n");
     return;
+  }
 
   const AMDGPUSubtarget &ST =
     TM->getSubtarget<AMDGPUSubtarget>(ContainingFunction);

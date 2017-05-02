@@ -1,5 +1,6 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
+// UNSUPPORTED: ios
 //
 // RUN: %clangxx_asan -fsanitize-coverage=func %s -o %t
 // RUN: rm -rf %T/coverage-maybe-open-file

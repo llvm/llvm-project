@@ -199,6 +199,11 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
       return Hexagon::fixup_Hexagon_IE_GOT_32_6_X;
     case MCSymbolRefExpr::VK_Hexagon_PCREL:
       return Hexagon::fixup_Hexagon_B32_PCREL_X;
+    case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
+      return Hexagon::fixup_Hexagon_GD_PLT_B32_PCREL_X;
+    case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
+      return Hexagon::fixup_Hexagon_LD_PLT_B32_PCREL_X;
+
     case MCSymbolRefExpr::VK_None: {
       auto Insts = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
       for (auto I = Insts.begin(), N = Insts.end(); I != N; ++I) {
@@ -318,6 +323,8 @@ namespace {
     case fixup_Hexagon_PLT_B22_PCREL:
     case fixup_Hexagon_GD_PLT_B22_PCREL:
     case fixup_Hexagon_LD_PLT_B22_PCREL:
+    case fixup_Hexagon_GD_PLT_B22_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B22_PCREL_X:
     case fixup_Hexagon_6_PCREL_X:
       return true;
     default:
@@ -414,10 +421,12 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   case 22:
     switch (kind) {
     case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
-      FixupKind = Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL;
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL_X
+                            : Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL;
       break;
     case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
-      FixupKind = Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL;
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL_X
+                            : Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL;
       break;
     case MCSymbolRefExpr::VK_None:
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_B22_PCREL_X
@@ -467,8 +476,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     } else
       switch (kind) {
       case MCSymbolRefExpr::VK_None: {
-        if (HexagonMCInstrInfo::s23_2_reloc(*MO.getExpr()))
-          FixupKind = Hexagon::fixup_Hexagon_23_REG;
+        if (HexagonMCInstrInfo::s27_2_reloc(*MO.getExpr()))
+          FixupKind = Hexagon::fixup_Hexagon_27_REG;
         else
           if (MCID.mayStore() || MCID.mayLoad()) {
             for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses;
@@ -592,6 +601,12 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
         break;
       case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
         FixupKind = Hexagon::fixup_Hexagon_LD_GOT_11_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
+        FixupKind = Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
+        FixupKind = Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL_X;
         break;
       case MCSymbolRefExpr::VK_None:
         FixupKind = Hexagon::fixup_Hexagon_11_X;

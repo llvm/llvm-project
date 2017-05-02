@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -48,8 +49,9 @@ public:
   void setObjFileName(StringRef Name);
   void addSymbol(codeview::CVSymbol Symbol);
 
-  void
-  addC13LineFragment(std::unique_ptr<codeview::ModuleDebugLineFragment> Lines);
+  void addC13Fragment(std::unique_ptr<codeview::ModuleDebugLineFragment> Lines);
+  void addC13Fragment(
+      std::unique_ptr<codeview::ModuleDebugInlineeLineFragment> Inlinees);
   void setC13FileChecksums(
       std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> Checksums);
 
@@ -80,8 +82,11 @@ private:
   std::string ObjFileName;
   std::vector<std::string> SourceFiles;
   std::vector<codeview::CVSymbol> Symbols;
-  std::vector<std::unique_ptr<codeview::ModuleDebugLineFragment>> LineInfo;
+
   std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> ChecksumInfo;
+  std::vector<std::unique_ptr<codeview::ModuleDebugLineFragment>> LineInfo;
+  std::vector<std::unique_ptr<codeview::ModuleDebugInlineeLineFragment>>
+      Inlinees;
 
   std::vector<std::unique_ptr<codeview::ModuleDebugFragmentRecordBuilder>>
       C13Builders;

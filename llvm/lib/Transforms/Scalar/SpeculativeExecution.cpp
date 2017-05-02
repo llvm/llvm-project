@@ -208,47 +208,6 @@ bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
   return false;
 }
 
-static unsigned ComputeSpeculationCost(const Instruction *I,
-                                       const TargetTransformInfo &TTI) {
-  switch (Operator::getOpcode(I)) {
-    case Instruction::GetElementPtr:
-    case Instruction::Add:
-    case Instruction::Mul:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Select:
-    case Instruction::Shl:
-    case Instruction::Sub:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::Xor:
-    case Instruction::ZExt:
-    case Instruction::SExt:
-    case Instruction::Call:
-    case Instruction::BitCast:
-    case Instruction::PtrToInt:
-    case Instruction::IntToPtr:
-    case Instruction::AddrSpaceCast:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPExt:
-    case Instruction::FPTrunc:
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-      return TTI.getUserCost(I);
-
-    default:
-      return UINT_MAX; // Disallow anything not whitelisted.
-  }
-}
-
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
   SmallSet<const Instruction *, 8> NotHoisted;
@@ -264,7 +223,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
 
   unsigned TotalSpeculationCost = 0;
   for (auto& I : FromBlock) {
-    const unsigned Cost = ComputeSpeculationCost(&I, *TTI);
+    const unsigned Cost = TTI->getUserCost(&I);
     if (Cost != UINT_MAX && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
