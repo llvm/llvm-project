@@ -128,10 +128,6 @@ namespace HexagonII {
     ExtentAlignPos  = 33,
     ExtentAlignMask = 0x3,
 
-    // Valid subtargets
-    validSubTargetPos  = 35,
-    validSubTargetMask = 0x3f,
-
     // Addressing mode for load/store instructions.
     AddrModePos  = 41,
     AddrModeMask = 0x7,

@@ -205,64 +205,12 @@ static struct {
 } jumpSlots[] = {{8, 4}, {8, 2}, {8, 1}, {4, 2}, {4, 1}, {2, 1}};
 #define MAX_JUMP_SLOTS (sizeof(jumpSlots) / sizeof(jumpSlots[0]))
 
-namespace {
-bool isDuplexAGroup(unsigned Opcode) {
-  switch (Opcode) {
-  case Hexagon::SA1_addi:
-  case Hexagon::SA1_addrx:
-  case Hexagon::SA1_addsp:
-  case Hexagon::SA1_and1:
-  case Hexagon::SA1_clrf:
-  case Hexagon::SA1_clrfnew:
-  case Hexagon::SA1_clrt:
-  case Hexagon::SA1_clrtnew:
-  case Hexagon::SA1_cmpeqi:
-  case Hexagon::SA1_combine0i:
-  case Hexagon::SA1_combine1i:
-  case Hexagon::SA1_combine2i:
-  case Hexagon::SA1_combine3i:
-  case Hexagon::SA1_combinerz:
-  case Hexagon::SA1_combinezr:
-  case Hexagon::SA1_dec:
-  case Hexagon::SA1_inc:
-  case Hexagon::SA1_seti:
-  case Hexagon::SA1_setin1:
-  case Hexagon::SA1_sxtb:
-  case Hexagon::SA1_sxth:
-  case Hexagon::SA1_tfr:
-  case Hexagon::SA1_zxtb:
-  case Hexagon::SA1_zxth:
-    return true;
-    break;
-  default:
-    return false;
-  }
-}
-
-unsigned countNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
-  unsigned Result = 0;
-  unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
-  if (Type == HexagonII::TypeDUPLEX) {
-    unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
-    unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
-    Result += !isDuplexAGroup(subInst0Opcode);
-    Result += !isDuplexAGroup(subInst1Opcode);
-  } else
-    Result +=
-        Type != HexagonII::TypeALU32_2op && Type != HexagonII::TypeALU32_3op &&
-        Type != HexagonII::TypeALU32_ADDI && Type != HexagonII::TypeS_2op &&
-        Type != HexagonII::TypeS_3op && Type != HexagonII::TypeALU64 &&
-        (Type != HexagonII::TypeM || HexagonMCInstrInfo::isFloat(MCII, ID));
-  return Result;
-}
-} // namespace
-
 /// Check that the packet is legal and enforce relative insn order.
 bool HexagonShuffler::check() {
   // Descriptive slot masks.
   const unsigned slotSingleLoad = 0x1, slotSingleStore = 0x1, slotOne = 0x2,
                  slotThree = 0x8, // slotFirstJump = 0x8,
-      slotFirstLoadStore = 0x2, slotLastLoadStore = 0x1;
+                 slotFirstLoadStore = 0x2, slotLastLoadStore = 0x1;
   // Highest slots for branches and stores used to keep their original order.
   // unsigned slotJump = slotFirstJump;
   unsigned slotLoadStore = slotFirstLoadStore;
@@ -271,18 +219,12 @@ bool HexagonShuffler::check() {
   // Number of memory operations, loads, solo loads, stores, solo stores, single
   // stores.
   unsigned memory = 0, loads = 0, load0 = 0, stores = 0, store0 = 0, store1 = 0;
-  // Number of HVX loads, HVX stores.
-  unsigned CVIloads = 0, CVIstores = 0;
-  // Number of duplex insns, solo insns.
-  unsigned duplex = 0, solo = 0;
-  // Number of insns restricting other insns in the packet to A and X types,
-  // which is neither A or X types.
-  unsigned onlyAX = 0, neitherAnorX = 0;
+  // Number of duplex insns
+  unsigned duplex = 0;
   // Number of insns restricting other insns in slot #1 to A type.
   unsigned onlyAin1 = 0;
   // Number of insns restricting any insn in slot #1, except A2_nop.
   unsigned onlyNo1 = 0;
-  unsigned xtypeFloat = 0;
   unsigned pSlot3Cnt = 0;
   unsigned nvstores = 0;
   unsigned memops = 0;
@@ -295,13 +237,8 @@ bool HexagonShuffler::check() {
   for (iterator ISJ = begin(); ISJ != end(); ++ISJ) {
     MCInst const &ID = ISJ->getDesc();
 
-    if (HexagonMCInstrInfo::isSolo(MCII, ID))
-      solo++;
-    else if (HexagonMCInstrInfo::isSoloAX(MCII, ID))
-      onlyAX++;
-    else if (HexagonMCInstrInfo::isSoloAin1(MCII, ID))
-      onlyAin1++;
-    neitherAnorX += countNeitherAnorX(MCII, ID);
+    if (HexagonMCInstrInfo::isSoloAin1(MCII, ID))
+      ++onlyAin1;
     if (HexagonMCInstrInfo::prefersSlot3(MCII, ID)) {
       ++pSlot3Cnt;
       slot3ISJ = ISJ;
@@ -314,8 +251,6 @@ bool HexagonShuffler::check() {
     case HexagonII::TypeS_2op:
     case HexagonII::TypeS_3op:
     case HexagonII::TypeALU64:
-      if (HexagonMCInstrInfo::isFloat(MCII, ID))
-        ++xtypeFloat;
       break;
     case HexagonII::TypeJ:
       ++jumps;
@@ -325,7 +260,6 @@ bool HexagonShuffler::check() {
       ++onlyNo1;
     case HexagonII::TypeCVI_VM_LD:
     case HexagonII::TypeCVI_VM_TMP_LD:
-      ++CVIloads;
     case HexagonII::TypeLD:
       ++loads;
       ++memory;
@@ -341,7 +275,6 @@ bool HexagonShuffler::check() {
       ++onlyNo1;
     case HexagonII::TypeCVI_VM_ST:
     case HexagonII::TypeCVI_VM_NEW_ST:
-      ++CVIstores;
     case HexagonII::TypeST:
       ++stores;
       ++memory;
@@ -403,15 +336,22 @@ bool HexagonShuffler::check() {
         ++jumps;
         foundBranches.push_back(ISJ);
       }
+      if (HexagonMCInstrInfo::getDesc(MCII, Inst0).isReturn()) {
+        ++deallocs, ++jumps, ++jump1; // DEALLOC_RETURN is of type LD.
+        foundBranches.push_back(ISJ);
+      }
+      if (HexagonMCInstrInfo::getDesc(MCII, Inst1).isReturn()) {
+        ++deallocs, ++jumps, ++jump1; // DEALLOC_RETURN is of type LD.
+        foundBranches.push_back(ISJ);
+      }
       break;
     }
     }
   }
 
   // Check if the packet is legal.
-  if ((load0 > 1 || store0 > 1 || CVIloads > 1 || CVIstores > 1) ||
-      (duplex > 1 || (duplex && memory)) || (solo && size() > 1) ||
-      (onlyAX && neitherAnorX > 1) || (onlyAX && xtypeFloat)) {
+  if ((load0 > 1 || store0 > 1) ||
+      (duplex > 1 || (duplex && memory))) {
     reportError(llvm::Twine("invalid instruction packet"));
     return false;
   }

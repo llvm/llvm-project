@@ -761,6 +761,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
     // Be careful about underflow in comparisons agains MinCSFrameIndex.
     for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
+      if (MFI.isDeadObjectIndex(i))
+        continue;
+
       unsigned Align = MFI.getObjectAlignment(i);
       // Adjust to alignment boundary
       Offset = alignTo(Offset, Align, Skew);

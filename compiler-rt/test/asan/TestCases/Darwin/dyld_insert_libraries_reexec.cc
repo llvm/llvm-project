@@ -1,6 +1,8 @@
 // When DYLD-inserting the ASan dylib from a different location than the
 // original, make sure we don't try to reexec.
 
+// UNSUPPORTED: ios
+
 // RUN: mkdir -p %T/dyld_insert_libraries_reexec
 // RUN: cp `%clang_asan %s -fsanitize=address -### 2>&1 \
 // RUN:   | grep "libclang_rt.asan_osx_dynamic.dylib" \

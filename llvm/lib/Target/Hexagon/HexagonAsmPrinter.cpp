@@ -298,7 +298,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MCOperand Reg = Inst.getOperand(0);
     MCOperand S16 = Inst.getOperand(1);
     HexagonMCInstrInfo::setMustNotExtend(*S16.getExpr());
-    HexagonMCInstrInfo::setS23_2_reloc(*S16.getExpr());
+    HexagonMCInstrInfo::setS27_2_reloc(*S16.getExpr());
     Inst.clear();
     Inst.addOperand(Reg);
     Inst.addOperand(MCOperand::createReg(Hexagon::R0));

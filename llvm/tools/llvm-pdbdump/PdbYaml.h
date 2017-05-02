@@ -102,9 +102,22 @@ struct PdbSourceLineInfo {
   std::vector<PdbSourceLineBlock> Blocks;
 };
 
+struct PdbInlineeSite {
+  codeview::TypeIndex Inlinee;
+  StringRef FileName;
+  uint32_t SourceLineNum;
+  std::vector<StringRef> ExtraFiles;
+};
+
+struct PdbInlineeInfo {
+  bool HasExtraFiles;
+  std::vector<PdbInlineeSite> Sites;
+};
+
 struct PdbSourceFileInfo {
   std::vector<PdbSourceFileChecksumEntry> FileChecksums;
   std::vector<PdbSourceLineInfo> LineFragments;
+  std::vector<PdbInlineeInfo> Inlinees;
 };
 
 struct PdbDbiModuleInfo {
@@ -255,6 +268,20 @@ template <>
 struct MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
                             pdb::yaml::SerializationContext> {
   static void mapping(IO &IO, pdb::yaml::PdbSourceFileInfo &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbInlineeInfo,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbInlineeInfo &Obj,
+                      pdb::yaml::SerializationContext &Context);
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbInlineeSite,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbInlineeSite &Obj,
                       pdb::yaml::SerializationContext &Context);
 };
 

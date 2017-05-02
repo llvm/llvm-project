@@ -1,4 +1,5 @@
-//===- StringTable.h - PDB String Table -------------------------*- C++ -*-===//
+//===- PDBStringTable.h - PDB String Table -------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H
-#define LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLE_H
+#define LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,9 +25,9 @@ class BinaryStreamReader;
 
 namespace pdb {
 
-class StringTable {
+class PDBStringTable {
 public:
-  StringTable();
+  PDBStringTable();
 
   Error load(BinaryStreamReader &Stream);
 

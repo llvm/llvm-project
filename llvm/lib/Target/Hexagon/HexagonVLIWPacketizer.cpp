@@ -1579,14 +1579,13 @@ MachineBasicBlock::iterator
 HexagonPacketizerList::addToPacket(MachineInstr &MI) {
   MachineBasicBlock::iterator MII = MI.getIterator();
   MachineBasicBlock *MBB = MI.getParent();
-  if (MI.isImplicitDef()) {
-    unsigned R = MI.getOperand(0).getReg();
-    if (Hexagon::IntRegsRegClass.contains(R)) {
-      MCSuperRegIterator S(R, HRI, false);
-      MI.addOperand(MachineOperand::CreateReg(*S, true, true));
-    }
+
+  if (CurrentPacketMIs.size() == 0)
+    PacketStalls = false;
+  PacketStalls |= producesStall(MI);
+
+  if (MI.isImplicitDef())
     return MII;
-  }
   assert(ResourceTracker->canReserveResources(MI));
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
@@ -1677,6 +1676,11 @@ static bool isDependent(const MachineInstr &ProdMI,
 
 // V60 forward scheduling.
 bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
+  // If the packet already stalls, then ignore the stall from a subsequent
+  // instruction in the same packet.
+  if (PacketStalls)
+    return false;
+
   // Check whether the previous packet is in a different loop. If this is the
   // case, there is little point in trying to avoid a stall because that would
   // favor the rare case (loop entry) over the common case (loop iteration).
@@ -1699,6 +1703,7 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
       if (isDependent(*J, I) && !HII->isVecUsableNextPacket(*J, I))
         return true;
     }
+
     return false;
   }
 
@@ -1719,6 +1724,16 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
       if (isDependent(*J, I) && !HII->canExecuteInBundle(*J, I))
         return true;
     }
+  }
+
+  // Check if the latency is greater than one between this instruction and any
+  // instruction in the previous packet.
+  SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
+  for (auto J : OldPacketMIs) {
+    SUnit *SUJ = MIToSUnit[J];
+    for (auto &Pred : SUI->Preds)
+      if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)
+        return true;
   }
 
   return false;

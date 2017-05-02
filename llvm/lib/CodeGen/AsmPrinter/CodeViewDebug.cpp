@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"

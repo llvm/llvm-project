@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -143,6 +144,35 @@ public:
             Column.StartColumn = C.StartColumn;
             Column.EndColumn = C.EndColumn;
             Block.Columns.push_back(Column);
+          }
+        }
+      }
+    }
+    return Error::success();
+  }
+
+  Error handleInlineeLines() override {
+    for (const auto &ILF : InlineeLines) {
+      Info.Inlinees.emplace_back();
+      auto &Inlinee = Info.Inlinees.back();
+
+      Inlinee.HasExtraFiles = ILF.hasExtraFiles();
+      for (const auto &IL : ILF) {
+        Inlinee.Sites.emplace_back();
+        auto &Site = Inlinee.Sites.back();
+        if (auto Result = getNameFromChecksumsBuffer(IL.Header->FileID))
+          Site.FileName = *Result;
+        else
+          return Result.takeError();
+
+        Site.Inlinee = IL.Header->Inlinee;
+        Site.SourceLineNum = IL.Header->SourceLineNum;
+        if (ILF.hasExtraFiles()) {
+          for (const auto &EF : IL.ExtraFiles) {
+            if (auto Result = getNameFromChecksumsBuffer(EF))
+              Site.ExtraFiles.push_back(*Result);
+            else
+              return Result.takeError();
           }
         }
       }

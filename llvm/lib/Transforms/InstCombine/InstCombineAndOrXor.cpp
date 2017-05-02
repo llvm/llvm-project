@@ -2433,29 +2433,32 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I))
     return replaceInstUsesWith(I, V);
 
+  // Apply DeMorgan's Law for 'nand' / 'nor' logic with an inverted operand.
+  Value *X, *Y;
+
+  // We must eliminate the and/or (one-use) for these transforms to not increase
+  // the instruction count.
+  // ~(~X & Y) --> (X | ~Y)
+  // ~(Y & ~X) --> (X | ~Y)
+  if (match(&I, m_Not(m_OneUse(m_c_And(m_Not(m_Value(X)), m_Value(Y)))))) {
+    Value *NotY = Builder->CreateNot(Y, Y->getName() + ".not");
+    return BinaryOperator::CreateOr(X, NotY);
+  }
+  // ~(~X | Y) --> (X & ~Y)
+  // ~(Y | ~X) --> (X & ~Y)
+  if (match(&I, m_Not(m_OneUse(m_c_Or(m_Not(m_Value(X)), m_Value(Y)))))) {
+    Value *NotY = Builder->CreateNot(Y, Y->getName() + ".not");
+    return BinaryOperator::CreateAnd(X, NotY);
+  }
+
   // Is this a 'not' (~) fed by a binary operator?
   BinaryOperator *NotOp;
   if (match(&I, m_Not(m_BinOp(NotOp)))) {
     if (NotOp->getOpcode() == Instruction::And ||
         NotOp->getOpcode() == Instruction::Or) {
-      // We must eliminate the and/or for this transform to not increase the
-      // instruction count.
-      if (NotOp->hasOneUse()) {
-        // ~(~X & Y) --> (X | ~Y) - De Morgan's Law
-        // ~(~X | Y) === (X & ~Y) - De Morgan's Law
-        if (dyn_castNotVal(NotOp->getOperand(1)))
-          NotOp->swapOperands();
-        if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0))) {
-          Value *NotY = Builder->CreateNot(
-              NotOp->getOperand(1), NotOp->getOperand(1)->getName() + ".not");
-          if (NotOp->getOpcode() == Instruction::And)
-            return BinaryOperator::CreateOr(Op0NotVal, NotY);
-          return BinaryOperator::CreateAnd(Op0NotVal, NotY);
-        }
-      }
-
-      // ~(X & Y) --> (~X | ~Y) - De Morgan's Law
-      // ~(X | Y) === (~X & ~Y) - De Morgan's Law
+      // Apply DeMorgan's Law when inverts are free:
+      // ~(X & Y) --> (~X | ~Y)
+      // ~(X | Y) --> (~X & ~Y)
       if (IsFreeToInvert(NotOp->getOperand(0),
                          NotOp->getOperand(0)->hasOneUse()) &&
           IsFreeToInvert(NotOp->getOperand(1),

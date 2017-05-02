@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s -D CPP11
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
@@ -1513,3 +1513,15 @@ public:
 
 }  // end namespace FunctionAttributesInsideClass_ICE_Test
 
+
+#ifdef CPP11
+namespace CRASH_POST_R301735 {
+  class SomeClass {
+   public:
+     void foo() {
+       auto l = [this] { auto l = [] () EXCLUSIVE_LOCKS_REQUIRED(mu_) {}; };
+     }
+     Mutex mu_;
+   };
+}
+#endif

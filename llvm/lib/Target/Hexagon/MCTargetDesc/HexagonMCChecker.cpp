@@ -113,7 +113,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // The instruction table models the USR.OVF flag, which can be
         // implicitly modified more than once, but cannot be modified in the
         // same packet with an instruction that modifies is explicitly. Deal
-        // with such situ- ations individually.
+        // with such situations individually.
         SoftDefs.insert(R);
       else if (isPredicateRegister(R) &&
                HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
@@ -159,12 +159,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
                isPredicateRegister(*SRI))
         // Some insns produce predicates too late to be used in the same packet.
         LatePreds.insert(*SRI);
-      else if (i == 0 && HexagonMCInstrInfo::isCVINew(MCII, MCI) &&
-               MCID.mayLoad())
-        // Current loads should be used in the same packet.
-        // TODO: relies on the impossibility of a current and a temporary loads
-        // in the same packet.
-        CurDefs.insert(*SRI), Defs[*SRI].insert(PredSense(PredReg, isTrue));
       else if (i == 0 && llvm::HexagonMCInstrInfo::getType(MCII, MCI) ==
                              HexagonII::TypeCVI_VM_TMP_LD)
         // Temporary loads should be used in the same packet, but don't commit
@@ -202,9 +196,8 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     if (HexagonMCInstrInfo::hasNewValue2(MCII, MCI)) {
       unsigned R2 = HexagonMCInstrInfo::getNewValueOperand2(MCII, MCI).getReg();
 
-      for (MCRegAliasIterator SRI(R2, &RI,
-                                  !MCSubRegIterator(R2, &RI).isValid());
-           SRI.isValid(); ++SRI)
+      bool HasSubRegs = MCSubRegIterator(R2, &RI).isValid();
+      for (MCRegAliasIterator SRI(R2, &RI, !HasSubRegs); SRI.isValid(); ++SRI)
         if (!MCSubRegIterator(*SRI, &RI).isValid())
           NewDefs[*SRI].push_back(NewSense::Def(
               PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI),
@@ -252,6 +245,8 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkNV = checkNewValues();
   bool chkR = checkRegisters();
   bool chkRRO = checkRegistersReadOnly();
+  bool chkELB = checkEndloopBranches();
+  checkRegisterCurDefs();
   bool chkS = checkSolo();
   bool chkSh = true;
   if (FullCheck)
@@ -259,9 +254,104 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkSl = true;
   if (FullCheck)
     chkSl = checkSlots();
-  bool chk = chkB && chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl;
+  bool chkAXOK = checkAXOK();
+  bool chk = chkB && chkP && chkNV && chkR && chkRRO && chkELB && chkS &&
+             chkSh && chkSl && chkAXOK;
 
   return chk;
+}
+
+bool HexagonMCChecker::checkEndloopBranches() {
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.isBranch() || Desc.isCall()) {
+      auto Inner = HexagonMCInstrInfo::isInnerLoop(MCB);
+      if (Inner || HexagonMCInstrInfo::isOuterLoop(MCB)) {
+        reportError(I.getLoc(),
+                    llvm::Twine("packet marked with `:endloop") +
+                        (Inner ? "0" : "1") + "' " +
+                        "cannot contain instructions that modify register " +
+                        "`" + llvm::Twine(RI.getName(Hexagon::PC)) + "'");
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+namespace {
+bool isDuplexAGroup(unsigned Opcode) {
+  switch (Opcode) {
+  case Hexagon::SA1_addi:
+  case Hexagon::SA1_addrx:
+  case Hexagon::SA1_addsp:
+  case Hexagon::SA1_and1:
+  case Hexagon::SA1_clrf:
+  case Hexagon::SA1_clrfnew:
+  case Hexagon::SA1_clrt:
+  case Hexagon::SA1_clrtnew:
+  case Hexagon::SA1_cmpeqi:
+  case Hexagon::SA1_combine0i:
+  case Hexagon::SA1_combine1i:
+  case Hexagon::SA1_combine2i:
+  case Hexagon::SA1_combine3i:
+  case Hexagon::SA1_combinerz:
+  case Hexagon::SA1_combinezr:
+  case Hexagon::SA1_dec:
+  case Hexagon::SA1_inc:
+  case Hexagon::SA1_seti:
+  case Hexagon::SA1_setin1:
+  case Hexagon::SA1_sxtb:
+  case Hexagon::SA1_sxth:
+  case Hexagon::SA1_tfr:
+  case Hexagon::SA1_zxtb:
+  case Hexagon::SA1_zxth:
+    return true;
+    break;
+  default:
+    return false;
+  }
+}
+
+bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
+  unsigned Result = 0;
+  unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
+  if (Type == HexagonII::TypeDUPLEX) {
+    unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
+    unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
+    Result += !isDuplexAGroup(subInst0Opcode);
+    Result += !isDuplexAGroup(subInst1Opcode);
+  } else
+    Result +=
+        Type != HexagonII::TypeALU32_2op && Type != HexagonII::TypeALU32_3op &&
+        Type != HexagonII::TypeALU32_ADDI && Type != HexagonII::TypeS_2op &&
+        Type != HexagonII::TypeS_3op &&
+        (Type != HexagonII::TypeALU64 || HexagonMCInstrInfo::isFloat(MCII, ID));
+  return Result != 0;
+}
+} // namespace
+
+bool HexagonMCChecker::checkAXOK() {
+  MCInst const *HasSoloAXInst = nullptr;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (HexagonMCInstrInfo::isSoloAX(MCII, I)) {
+      HasSoloAXInst = &I;
+    }
+  }
+  if (!HasSoloAXInst)
+    return true;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (&I != HasSoloAXInst && isNeitherAnorX(MCII, I)) {
+      reportError(
+          HasSoloAXInst->getLoc(),
+          llvm::Twine("Instruction can only be in a packet with ALU or "
+                      "non-FPU XTYPE instructions"));
+      reportError(I.getLoc(),
+                  llvm::Twine("Not an ALU or non-FPU XTYPE instruction"));
+      return false;
+    }
+  }
+  return true;
 }
 
 bool HexagonMCChecker::checkSlots() {
@@ -309,16 +399,6 @@ bool HexagonMCChecker::checkBranches() {
       }
     }
 
-    if (Branches) // FIXME: should "Defs.count(Hexagon::PC)" be here too?
-      if (HexagonMCInstrInfo::isInnerLoop(MCB) ||
-          HexagonMCInstrInfo::isOuterLoop(MCB)) {
-        // Error out if there's any branch in a loop-end packet.
-        Twine N(HexagonMCInstrInfo::isInnerLoop(MCB) ? '0' : '1');
-        reportError("packet marked with `:endloop" + N + "' " +
-                    "cannot contain instructions that modify register " + "`" +
-                    llvm::Twine(RI.getName(Hexagon::PC)) + "'");
-        return false;
-      }
     if (Branches > 1)
       if (!hasConditional || Conditional > Unconditional) {
         // Error out if more than one unconditional branch or
@@ -396,6 +476,31 @@ bool HexagonMCChecker::checkRegistersReadOnly() {
   return true;
 }
 
+bool HexagonMCChecker::registerUsed(unsigned Register) {
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB))
+    for (unsigned j = HexagonMCInstrInfo::getDesc(MCII, I).getNumDefs(),
+                  n = I.getNumOperands();
+         j < n; ++j) {
+      MCOperand const &Operand = I.getOperand(j);
+      if (Operand.isReg() && Operand.getReg() == Register)
+        return true;
+    }
+  return false;
+}
+
+void HexagonMCChecker::checkRegisterCurDefs() {
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (HexagonMCInstrInfo::isCVINew(MCII, I) &&
+        HexagonMCInstrInfo::getDesc(MCII, I).mayLoad()) {
+      unsigned Register = I.getOperand(0).getReg();
+      if (!registerUsed(Register))
+        reportWarning("Register `" + llvm::Twine(RI.getName(Register)) +
+                      "' used with `.cur' "
+                      "but not used in the same packet");
+    }
+  }
+}
+
 // Check for legal register uses and definitions.
 bool HexagonMCChecker::checkRegisters() {
   // Check for proper register definitions.
@@ -447,25 +552,11 @@ bool HexagonMCChecker::checkRegisters() {
         if (PM.count(P) && PM.size() > 2) {
           // Error out on conditional changes based on the same predicate
           // multiple times
-          // (e.g., "{ if (p0) r0 =...; if (!p0) r0 =... }; if (!p0) r0 =...
-          // }").
+          // (e.g., "if (p0) r0 =...; if (!p0) r0 =... }; if (!p0) r0 =...").
           reportErrorRegisters(R);
           return false;
         }
       }
-    }
-  }
-
-  // Check for use of current definitions.
-  for (const auto &I : CurDefs) {
-    unsigned R = I;
-
-    if (!Uses.count(R)) {
-      // Warn on an unused current definition.
-      reportWarning("register `" + llvm::Twine(RI.getName(R)) +
-                    "' used with `.cur' "
-                    "but not used in the same packet");
-      return true;
     }
   }
 
@@ -499,12 +590,11 @@ bool HexagonMCChecker::checkRegisters() {
 // Check for legal use of solo insns.
 bool HexagonMCChecker::checkSolo() {
   if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
-    for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-      if (llvm::HexagonMCInstrInfo::isSolo(MCII, *I.getInst())) {
-        SMLoc Loc = I.getInst()->getLoc();
-        reportError(Loc, "Instruction is marked `isSolo' and "
-                         "cannot have other instructions in "
-                         "the same packet");
+    for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+      if (llvm::HexagonMCInstrInfo::isSolo(MCII, I)) {
+        reportError(I.getLoc(), "Instruction is marked `isSolo' and "
+                                "cannot have other instructions in "
+                                "the same packet");
         return false;
       }
     }

@@ -367,12 +367,12 @@ define i8 @demorgan_nor_use2bc(i8 %A, i8 %B) {
   ret i8 %r2
 }
 
-; FIXME: Do not apply DeMorgan's Law to constants. We prefer 'not' ops.
+; Do not apply DeMorgan's Law to constants. We prefer 'not' ops.
 
 define i32 @demorganize_constant1(i32 %a) {
 ; CHECK-LABEL: @demorganize_constant1(
-; CHECK-NEXT:    [[A_NOT:%.*]] = or i32 %a, -16
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[A_NOT]], 15
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %a, 15
+; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[AND]], -1
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = and i32 %a, 15
@@ -380,12 +380,12 @@ define i32 @demorganize_constant1(i32 %a) {
   ret i32 %and1
 }
 
-; FIXME: Do not apply DeMorgan's Law to constants. We prefer 'not' ops.
+; Do not apply DeMorgan's Law to constants. We prefer 'not' ops.
 
 define i32 @demorganize_constant2(i32 %a) {
 ; CHECK-LABEL: @demorganize_constant2(
-; CHECK-NEXT:    [[A_NOT:%.*]] = and i32 %a, -16
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[A_NOT]], -16
+; CHECK-NEXT:    [[AND:%.*]] = or i32 %a, 15
+; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[AND]], -1
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = or i32 %a, 15

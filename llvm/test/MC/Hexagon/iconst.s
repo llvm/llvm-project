@@ -2,5 +2,5 @@
 
 a:
 # CHECK: r0 = add(r0,#0)
-# CHECK: R_HEX_23_REG
+# CHECK: R_HEX_27_REG
 r0 = iconst(#a)

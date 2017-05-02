@@ -866,9 +866,8 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
   // Don't want to touch lots of shadow memory.
   // If a program maps 10MB stack, there is no need reset the whole range.
   size = (size + (kShadowCell - 1)) & ~(kShadowCell - 1);
-  // UnmapOrDie/MmapFixedNoReserve does not work on Windows,
-  // so we do it only for C/C++.
-  if (SANITIZER_GO || size < common_flags()->clear_shadow_mmap_threshold) {
+  // UnmapOrDie/MmapFixedNoReserve does not work on Windows.
+  if (SANITIZER_WINDOWS || size < common_flags()->clear_shadow_mmap_threshold) {
     u64 *p = (u64*)MemToShadow(addr);
     CHECK(IsShadowMem((uptr)p));
     CHECK(IsShadowMem((uptr)(p + size * kShadowCnt / kShadowCell - 1)));

@@ -14,8 +14,8 @@ def f64Imm : Operand<f64> { let ParserMatchClass = f64ImmOperand; }
 def s8_0Imm64Pred  : PatLeaf<(i64 imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 def s9_0ImmOperand : AsmOperandClass { let Name = "s9_0Imm"; }
 def s9_0Imm : Operand<i32> { let ParserMatchClass = s9_0ImmOperand; }
-def s23_2ImmOperand : AsmOperandClass { let Name = "s23_2Imm"; let RenderMethod = "addSignedImmOperands"; }
-def s23_2Imm : Operand<i32> { let ParserMatchClass = s23_2ImmOperand; }
+def s27_2ImmOperand : AsmOperandClass { let Name = "s27_2Imm"; let RenderMethod = "addSignedImmOperands"; }
+def s27_2Imm : Operand<i32> { let ParserMatchClass = s27_2ImmOperand; }
 def r32_0ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isInt<32>(v);

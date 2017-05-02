@@ -2418,7 +2418,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
                 .emplace(sect_name.GetCString(),
                          module_section_list->FindSectionByName(sect_name))
                 .first;
-      if (section_it->second && section_it->second->GetFileSize())
+      if (section_it->second)
         symbol_section_sp = section_it->second;
     }
 

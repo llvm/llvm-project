@@ -7,16 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Maintain list of valid subtargets for each instruction.
-class SubTarget<bits<6> value> {
-  bits<6> Value = value;
-}
-
-def HasAnySubT    : SubTarget<0x3f>;  // 111111
-def HasV5SubT     : SubTarget<0x3e>;  // 111110
-def HasV55SubT    : SubTarget<0x3c>;  // 111100
-def HasV60SubT    : SubTarget<0x38>;  // 111000
-
 // Addressing modes for load/store instructions
 class AddrModeType<bits<3> value> {
   bits<3> Value = value;
@@ -130,12 +120,6 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   let TSFlags{32-28} = opExtentBits; //Number of bits of range before extending.
   bits<2> opExtentAlign = 0;
   let TSFlags{34-33} = opExtentAlign; // Alignment exponent before extending.
-
-  // If an instruction is valid on a subtarget, set the corresponding
-  // bit from validSubTargets.
-  // By default, instruction is valid on all subtargets.
-  SubTarget validSubTargets = HasAnySubT;
-  let TSFlags{40-35} = validSubTargets.Value;
 
   // Addressing mode for load/store instructions.
   AddrModeType addrMode = NoAddrMode;
