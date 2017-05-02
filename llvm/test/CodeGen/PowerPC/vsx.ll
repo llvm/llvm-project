@@ -645,8 +645,8 @@ define <4 x float> @test32(<4 x float>* %a) {
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test32
-; CHECK-LE: lxvd2x [[V1:[0-9]+]], 0, 3
-; CHECK-LE: xxswapd 34, [[V1]]
+; CHECK-LE: lvx 2, 0, 3
+; CHECK-LE-NOT: xxswapd
 ; CHECK-LE: blr
 }
 
@@ -663,8 +663,8 @@ define void @test33(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test33
-; CHECK-LE: xxswapd [[V1:[0-9]+]], 34
-; CHECK-LE: stxvd2x [[V1]], 0, 3
+; CHECK-LE-NOT: xxswapd
+; CHECK-LE: stvx 2, 0, 3
 ; CHECK-LE: blr
 }
 
@@ -716,8 +716,8 @@ define <4 x i32> @test34(<4 x i32>* %a) {
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test34
-; CHECK-LE: lxvd2x [[V1:[0-9]+]], 0, 3
-; CHECK-LE: xxswapd 34, [[V1]]
+; CHECK-LE: lvx 2, 0, 3
+; CHECK-LE-NOT: xxswapd
 ; CHECK-LE: blr
 }
 
@@ -734,8 +734,8 @@ define void @test35(<4 x i32>* %a, <4 x i32> %b) {
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test35
-; CHECK-LE: xxswapd [[V1:[0-9]+]], 34
-; CHECK-LE: stxvd2x [[V1]], 0, 3
+; CHECK-LE-NOT: xxswapd
+; CHECK-LE: stvx 2, 0, 3
 ; CHECK-LE: blr
 }
 
@@ -1150,9 +1150,9 @@ define <2 x i32> @test80(i32 %v) {
 ; CHECK-LE-DAG: mtvsrd [[R1:[0-9]+]], 3
 ; CHECK-LE-DAG: xxswapd  [[V1:[0-9]+]], [[R1]]
 ; CHECK-LE-DAG: addi [[R2:[0-9]+]], {{[0-9]+}}, .LCPI
-; CHECK-LE-DAG: lxvd2x [[V2:[0-9]+]], 0, [[R2]]
+; CHECK-LE-DAG: lvx 3, 0, [[R2]]
 ; CHECK-LE-DAG: xxspltw 34, [[V1]]
-; CHECK-LE-DAG: xxswapd 35, [[V2]]
+; CHECK-LE-NOT: xxswapd 35, [[V2]]
 ; CHECK-LE: vadduwm 2, 2, 3
 ; CHECK-LE: blr
 }

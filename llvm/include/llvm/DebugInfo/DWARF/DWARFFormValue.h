@@ -59,6 +59,7 @@ public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
 
   dwarf::Form getForm() const { return Form; }
+  uint64_t getRawUValue() const { return Value.uval; }
   void setForm(dwarf::Form F) { Form = F; }
   void setUValue(uint64_t V) { Value.uval = V; }
   void setSValue(int64_t V) { Value.sval = V; }

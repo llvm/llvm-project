@@ -78,6 +78,11 @@ static cl::opt<bool>
     SummarizeTypes("summarize-types",
                    cl::desc("Abbreviate the description of type unit entries"));
 
+static cl::opt<bool> Verify("verify", cl::desc("Verify the DWARF debug info"));
+
+static cl::opt<bool> Quiet("quiet",
+                           cl::desc("Use with -verify to not emit to STDOUT."));
+
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
     return;
@@ -114,6 +119,46 @@ static void DumpInput(StringRef Filename) {
       DumpObjectFile(**MachOOrErr,
                      Filename + " (" + ObjForArch.getArchFlagName() + ")");
     }
+}
+
+static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
+  std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(Obj));
+  
+  // Verify the DWARF and exit with non-zero exit status if verification
+  // fails.
+  raw_ostream &stream = Quiet ? nulls() : outs();
+  stream << "Verifying " << Filename.str() << ":\tfile format "
+  << Obj.getFileFormatName() << "\n";
+  bool Result = DICtx->verify(stream, DumpType);
+  if (Result)
+    stream << "No errors.\n";
+  else
+    stream << "Errors detected.\n";
+  return Result;
+}
+
+static bool VerifyInput(StringRef Filename) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+  MemoryBuffer::getFileOrSTDIN(Filename);
+  error(Filename, BuffOrErr.getError());
+  std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
+  
+  Expected<std::unique_ptr<Binary>> BinOrErr =
+  object::createBinary(Buff->getMemBufferRef());
+  if (!BinOrErr)
+    error(Filename, errorToErrorCode(BinOrErr.takeError()));
+  
+  bool Result = true;
+  if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
+    Result = VerifyObjectFile(*Obj, Filename);
+  else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
+    for (auto &ObjForArch : Fat->objects()) {
+      auto MachOOrErr = ObjForArch.getAsObjectFile();
+      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
+      if (!VerifyObjectFile(**MachOOrErr, Filename + " (" + ObjForArch.getArchFlagName() + ")"))
+        Result = false;
+    }
+  return Result;
 }
 
 /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
@@ -168,7 +213,13 @@ int main(int argc, char **argv) {
     Objects.insert(Objects.end(), Objs.begin(), Objs.end());
   }
 
-  std::for_each(Objects.begin(), Objects.end(), DumpInput);
+  if (Verify) {
+    // If we encountered errors during verify, exit with a non-zero exit status.
+    if (!std::all_of(Objects.begin(), Objects.end(), VerifyInput))
+      exit(1);
+  } else {
+    std::for_each(Objects.begin(), Objects.end(), DumpInput);
+  }
 
   return EXIT_SUCCESS;
 }

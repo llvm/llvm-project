@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 
 #include "llvm/Support/BinaryStreamReader.h"
 
@@ -30,6 +31,13 @@ Error ModuleDebugFragmentRecord::initialize(BinaryStreamRef Stream,
 
   ModuleDebugFragmentKind Kind =
       static_cast<ModuleDebugFragmentKind>(uint32_t(Header->Kind));
+  switch (Kind) {
+  case ModuleDebugFragmentKind::FileChecksums:
+  case ModuleDebugFragmentKind::Lines:
+    break;
+  default:
+    llvm_unreachable("Unexpected debug fragment kind!");
+  }
   if (auto EC = Reader.readStreamRef(Info.Data, Header->Length))
     return EC;
   Info.Kind = Kind;
@@ -37,11 +45,39 @@ Error ModuleDebugFragmentRecord::initialize(BinaryStreamRef Stream,
 }
 
 uint32_t ModuleDebugFragmentRecord::getRecordLength() const {
-  return sizeof(ModuleDebugFragmentHeader) + Data.getLength();
+  uint32_t Result = sizeof(ModuleDebugFragmentHeader) + Data.getLength();
+  assert(Result % 4 == 0);
+  return Result;
 }
 
 ModuleDebugFragmentKind ModuleDebugFragmentRecord::kind() const { return Kind; }
 
 BinaryStreamRef ModuleDebugFragmentRecord::getRecordData() const {
   return Data;
+}
+
+ModuleDebugFragmentRecordBuilder::ModuleDebugFragmentRecordBuilder(
+    ModuleDebugFragmentKind Kind, ModuleDebugFragment &Frag)
+    : Kind(Kind), Frag(Frag) {}
+
+uint32_t ModuleDebugFragmentRecordBuilder::calculateSerializedLength() {
+  uint32_t Size = sizeof(ModuleDebugFragmentHeader) +
+                  alignTo(Frag.calculateSerializedLength(), 4);
+  return Size;
+}
+
+Error ModuleDebugFragmentRecordBuilder::commit(BinaryStreamWriter &Writer) {
+  ModuleDebugFragmentHeader Header;
+  Header.Kind = uint32_t(Kind);
+  Header.Length =
+      calculateSerializedLength() - sizeof(ModuleDebugFragmentHeader);
+
+  if (auto EC = Writer.writeObject(Header))
+    return EC;
+  if (auto EC = Frag.commit(Writer))
+    return EC;
+  if (auto EC = Writer.padToAlignment(4))
+    return EC;
+
+  return Error::success();
 }

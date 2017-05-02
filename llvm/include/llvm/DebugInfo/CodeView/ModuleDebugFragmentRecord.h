@@ -13,11 +13,14 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
+
+class ModuleDebugFragment;
 
 // Corresponds to the `CV_DebugSSubsectionHeader_t` structure.
 struct ModuleDebugFragmentHeader {
@@ -32,6 +35,7 @@ public:
 
   static Error initialize(BinaryStreamRef Stream,
                           ModuleDebugFragmentRecord &Info);
+
   uint32_t getRecordLength() const;
   ModuleDebugFragmentKind kind() const;
   BinaryStreamRef getRecordData() const;
@@ -39,6 +43,18 @@ public:
 private:
   ModuleDebugFragmentKind Kind;
   BinaryStreamRef Data;
+};
+
+class ModuleDebugFragmentRecordBuilder {
+public:
+  ModuleDebugFragmentRecordBuilder(ModuleDebugFragmentKind Kind,
+                                   ModuleDebugFragment &Frag);
+  uint32_t calculateSerializedLength();
+  Error commit(BinaryStreamWriter &Writer);
+
+private:
+  ModuleDebugFragmentKind Kind;
+  ModuleDebugFragment &Frag;
 };
 
 typedef VarStreamArray<ModuleDebugFragmentRecord> ModuleDebugFragmentArray;

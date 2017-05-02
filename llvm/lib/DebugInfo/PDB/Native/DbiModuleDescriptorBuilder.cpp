@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -35,11 +36,12 @@ template <> struct BinaryItemTraits<CVSymbol> {
 };
 }
 
-static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize) {
+static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
+                                            uint32_t C13Size) {
   uint32_t Size = sizeof(uint32_t); // Signature
   Size += SymbolByteSize;           // Symbol Data
-  Size += 0;                        // TODO: Layout.LineBytes
-  Size += 0;                        // TODO: Layout.C13Bytes
+  Size += 0;                        // TODO: Layout.C11Bytes
+  Size += C13Size;                  // C13 Debug Info Size
   Size += sizeof(uint32_t);         // GlobalRefs substream size (always 0)
   Size += 0;                        // GlobalRefs substream bytes
   return Size;
@@ -51,6 +53,8 @@ DbiModuleDescriptorBuilder::DbiModuleDescriptorBuilder(StringRef ModuleName,
     : MSF(Msf), ModuleName(ModuleName) {
   Layout.Mod = ModIndex;
 }
+
+DbiModuleDescriptorBuilder::~DbiModuleDescriptorBuilder() {}
 
 uint16_t DbiModuleDescriptorBuilder::getStreamIndex() const {
   return Layout.ModDiStream;
@@ -69,6 +73,15 @@ void DbiModuleDescriptorBuilder::addSourceFile(StringRef Path) {
   SourceFiles.push_back(Path);
 }
 
+uint32_t DbiModuleDescriptorBuilder::calculateC13DebugInfoSize() const {
+  uint32_t Result = 0;
+  for (const auto &Builder : C13Builders) {
+    assert(Builder && "Empty C13 Fragment Builder!");
+    Result += Builder->calculateSerializedLength();
+  }
+  return Result;
+}
+
 uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
   uint32_t L = sizeof(Layout);
   uint32_t M = ModuleName.size() + 1;
@@ -80,7 +93,7 @@ void DbiModuleDescriptorBuilder::finalize() {
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
   Layout.C11Bytes = 0;
-  Layout.C13Bytes = 0;
+  Layout.C13Bytes = calculateC13DebugInfoSize();
   (void)Layout.Mod;         // Set in constructor
   (void)Layout.ModDiStream; // Set in finalizeMsfLayout
   Layout.NumFiles = SourceFiles.size();
@@ -94,7 +107,9 @@ void DbiModuleDescriptorBuilder::finalize() {
 
 Error DbiModuleDescriptorBuilder::finalizeMsfLayout() {
   this->Layout.ModDiStream = kInvalidStreamIndex;
-  auto ExpectedSN = MSF.addStream(calculateDiSymbolStreamSize(SymbolByteSize));
+  uint32_t C13Size = calculateC13DebugInfoSize();
+  auto ExpectedSN =
+      MSF.addStream(calculateDiSymbolStreamSize(SymbolByteSize, C13Size));
   if (!ExpectedSN)
     return ExpectedSN.takeError();
   Layout.ModDiStream = *ExpectedSN;
@@ -130,7 +145,13 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
     if (auto EC = SymbolWriter.writeStreamRef(RecordsRef))
       return EC;
     // TODO: Write C11 Line data
-    // TODO: Write C13 Line data
+
+    for (const auto &Builder : C13Builders) {
+      assert(Builder && "Empty C13 Fragment Builder!");
+      if (auto EC = Builder->commit(SymbolWriter))
+        return EC;
+    }
+
     // TODO: Figure out what GlobalRefs substream actually is and populate it.
     if (auto EC = SymbolWriter.writeInteger<uint32_t>(0))
       return EC;
@@ -138,4 +159,30 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
       return make_error<RawError>(raw_error_code::stream_too_long);
   }
   return Error::success();
+}
+
+void DbiModuleDescriptorBuilder::addC13LineFragment(
+    std::unique_ptr<ModuleDebugLineFragment> Lines) {
+  ModuleDebugLineFragment &Frag = *Lines;
+
+  // File Checksums have to come first, so push an empty entry on if this
+  // is the first.
+  if (C13Builders.empty())
+    C13Builders.push_back(nullptr);
+
+  this->LineInfo.push_back(std::move(Lines));
+  C13Builders.push_back(
+      llvm::make_unique<ModuleDebugFragmentRecordBuilder>(Frag.kind(), Frag));
+}
+
+void DbiModuleDescriptorBuilder::setC13FileChecksums(
+    std::unique_ptr<ModuleDebugFileChecksumFragment> Checksums) {
+  assert(!ChecksumInfo && "Can't have more than one checksum info!");
+
+  if (C13Builders.empty())
+    C13Builders.push_back(nullptr);
+
+  ChecksumInfo = std::move(Checksums);
+  C13Builders[0] = llvm::make_unique<ModuleDebugFragmentRecordBuilder>(
+      ChecksumInfo->kind(), *ChecksumInfo);
 }

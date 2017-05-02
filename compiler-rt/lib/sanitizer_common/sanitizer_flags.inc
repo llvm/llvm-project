@@ -142,12 +142,6 @@ COMMON_FLAG(bool, coverage_pcs, true,
 COMMON_FLAG(bool, coverage_order_pcs, false,
              "If true, the PCs will be dumped in the order they've"
              " appeared during the execution.")
-COMMON_FLAG(bool, coverage_bitset, false,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will also be dumped as a bitset to a separate file.")
-COMMON_FLAG(bool, coverage_counters, false,
-            "If set (and if 'coverage' is set too), the bitmap that corresponds"
-            " to coverage counters will be dumped.")
 COMMON_FLAG(bool, coverage_direct, SANITIZER_ANDROID,
             "If set, coverage information will be dumped directly to a memory "
             "mapped file. This way data is not lost even if the process is "

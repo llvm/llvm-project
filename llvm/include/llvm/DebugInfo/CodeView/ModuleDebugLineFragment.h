@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
 #define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
 
+#include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -28,7 +29,10 @@ struct LineFragmentHeader {
 
 // Corresponds to the `CV_DebugSLinesFileBlockHeader_t` structure.
 struct LineBlockFragmentHeader {
-  support::ulittle32_t NameIndex; // Index in DBI name buffer of filename.
+  support::ulittle32_t NameIndex; // Offset of FileChecksum entry in File
+                                  // checksums buffer.  The checksum entry then
+                                  // contains another offset into the string
+                                  // table of the actual name.
   support::ulittle32_t NumLines;  // Number of lines
   support::ulittle32_t BlockSize; // Code size of block, in bytes.
   // The following two variable length arrays appear immediately after the
@@ -87,6 +91,45 @@ public:
 private:
   const LineFragmentHeader *Header = nullptr;
   LineInfoArray LinesAndColumns;
+};
+
+class ModuleDebugLineFragment final : public ModuleDebugFragment {
+  struct Block {
+    Block(uint32_t ChecksumBufferOffset)
+        : ChecksumBufferOffset(ChecksumBufferOffset) {}
+
+    uint32_t ChecksumBufferOffset;
+    std::vector<LineNumberEntry> Lines;
+    std::vector<ColumnNumberEntry> Columns;
+  };
+
+public:
+  ModuleDebugLineFragment();
+
+  static bool classof(const ModuleDebugFragment *S) {
+    return S->kind() == ModuleDebugFragmentKind::Lines;
+  }
+
+  void createBlock(uint32_t ChecksumBufferOffset);
+  void addLineInfo(uint32_t Offset, const LineInfo &Line);
+  void addLineAndColumnInfo(uint32_t Offset, const LineInfo &Line,
+                            uint32_t ColStart, uint32_t ColEnd);
+
+  uint32_t calculateSerializedLength() override;
+  Error commit(BinaryStreamWriter &Writer) override;
+
+  void setRelocationAddress(uint16_t Segment, uint16_t Offset);
+  void setCodeSize(uint32_t Size);
+  void setFlags(LineFlags Flags);
+
+  bool hasColumnInfo() const;
+
+private:
+  uint16_t RelocOffset = 0;
+  uint16_t RelocSegment = 0;
+  uint32_t CodeSize = 0;
+  LineFlags Flags = LF_None;
+  std::vector<Block> Blocks;
 };
 }
 }

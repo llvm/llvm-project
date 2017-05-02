@@ -3,7 +3,7 @@
 ; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -S | FileCheck --check-prefix=LIMIT %s
 ; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=LIMIT %s
 
-; Function Attrs: noinline nounwind uwtable
+; Function Attrs: nounwind uwtable
 define i32 @bar(i32 %arg) local_unnamed_addr #0 {
 bb:
   %tmp = icmp slt i32 %arg, 0
@@ -35,7 +35,7 @@ declare i32 @channels(...) local_unnamed_addr
 
 declare void @foo(...) local_unnamed_addr
 
-; Function Attrs: noinline nounwind uwtable
+; Function Attrs: nounwind uwtable
 define i32 @dummy_caller(i32 %arg) local_unnamed_addr #0 {
 bb:
 ; CHECK-LABEL: @dummy_caller
@@ -89,7 +89,7 @@ define i32 @dummy_caller2(i32 %arg) local_unnamed_addr #0 {
   ret i32 %tmp
 }
 
-attributes #0 = { noinline nounwind uwtable }
+attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
 
 !llvm.ident = !{!0}

@@ -110,6 +110,10 @@ const CVType &TypeDatabase::getTypeRecord(TypeIndex Index) const {
   return TypeRecords[Index.getIndex() - TypeIndex::FirstNonSimpleIndex];
 }
 
+CVType &TypeDatabase::getTypeRecord(TypeIndex Index) {
+  return TypeRecords[Index.getIndex() - TypeIndex::FirstNonSimpleIndex];
+}
+
 bool TypeDatabase::containsTypeIndex(TypeIndex Index) const {
   uint32_t I = Index.getIndex() - TypeIndex::FirstNonSimpleIndex;
   return I < CVUDTNames.size();
