@@ -78,13 +78,13 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   s->mtx.Unlock();
 }
 
-void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
+void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
   StatInc(thr, StatMutexDestroy);
   SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   if (s == 0)
     return;
-  if (s->IsFlagSet(MutexFlagLinkerInit)) {
+  if ((flagz & MutexFlagLinkerInit) || s->IsFlagSet(MutexFlagLinkerInit)) {
     // Destroy is no-op for linker-initialized mutexes.
     s->mtx.Unlock();
     return;

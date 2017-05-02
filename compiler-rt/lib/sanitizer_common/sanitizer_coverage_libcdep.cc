@@ -84,7 +84,6 @@ class CoverageData {
   void AfterFork(int child_pid);
   void Extend(uptr npcs);
   void Add(uptr pc, u32 *guard);
-  void DumpAsBitSet();
   void DumpOffsets();
   void DumpAll();
 
@@ -156,6 +155,13 @@ void CoverageData::DirectOpen() {
 
 void CoverageData::Init() {
   pc_fd = kInvalidFd;
+
+  if (!common_flags()->coverage) return;
+  Printf("**\n***\n***\n");
+  Printf("**WARNING: this implementation of SanitizerCoverage is deprecated\n");
+  Printf("**WARNING: and will be removed in future versions\n");
+  Printf("**WARNING: See https://clang.llvm.org/docs/SanitizerCoverage.html\n");
+  Printf("**\n***\n***\n");
 }
 
 void CoverageData::Enable() {
@@ -165,6 +171,8 @@ void CoverageData::Enable() {
       MmapNoReserveOrDie(sizeof(uptr) * kPcArrayMaxSize, "CovInit"));
   atomic_store(&pc_array_index, 0, memory_order_relaxed);
   if (common_flags()->coverage_direct) {
+    Report("coverage_direct=1 is deprecated, don't use it.\n");
+    Die();
     atomic_store(&pc_array_size, 0, memory_order_relaxed);
   } else {
     atomic_store(&pc_array_size, kPcArrayMaxSize, memory_order_relaxed);
@@ -419,35 +427,6 @@ static fd_t CovOpenFile(InternalScopedString *path, bool packed,
   return fd;
 }
 
-void CoverageData::DumpAsBitSet() {
-  if (!common_flags()->coverage_bitset) return;
-  if (!size()) return;
-  InternalScopedBuffer<char> out(size());
-  InternalScopedString path(kMaxPathLength);
-  for (uptr m = 0; m < module_name_vec.size(); m++) {
-    uptr n_set_bits = 0;
-    auto r = module_name_vec[m];
-    CHECK(r.copied_module_name);
-    CHECK_LE(r.beg, r.end);
-    CHECK_LE(r.end, size());
-    for (uptr i = r.beg; i < r.end; i++) {
-      uptr pc = UnbundlePc(pc_array[i]);
-      out[i] = pc ? '1' : '0';
-      if (pc)
-        n_set_bits++;
-    }
-    const char *base_name = StripModuleName(r.copied_module_name);
-    fd_t fd = CovOpenFile(&path, /* packed */false, base_name, "bitset-sancov");
-    if (fd == kInvalidFd) return;
-    WriteToFile(fd, out.data() + r.beg, r.end - r.beg);
-    CloseFile(fd);
-    VReport(1,
-            " CovDump: bitset of %zd bits written for '%s', %zd bits are set\n",
-            r.end - r.beg, base_name, n_set_bits);
-  }
-}
-
-
 void CoverageData::GetRangeOffsets(const NamedPcRange& r, Symbolizer* sym,
     InternalMmapVector<uptr>* offsets) const {
   offsets->clear();
@@ -565,7 +544,6 @@ void CoverageData::DumpAll() {
   if (!coverage_enabled || common_flags()->coverage_direct) return;
   if (atomic_fetch_add(&dump_once_guard, 1, memory_order_relaxed))
     return;
-  DumpAsBitSet();
   DumpOffsets();
 }
 

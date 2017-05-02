@@ -68,7 +68,8 @@ const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
 void __tsan_mutex_create(void *addr, unsigned flags);
 
 // Annotate destruction of a mutex.
-// Supported flags: none.
+// Supported flags:
+//   - __tsan_mutex_linker_init
 void __tsan_mutex_destroy(void *addr, unsigned flags);
 
 // Annotate start of lock operation.
