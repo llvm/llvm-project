@@ -7,22 +7,9 @@
 
 #include "mathD.h"
 
-extern double MATH_PRIVATE(sincosb)(double, int, __private double *);
-extern double MATH_PRIVATE(pzero)(double);
-extern double MATH_PRIVATE(qzero)(double);
-
-// This implementation makes use of large x approximations from
-// the Sun library which reqires the following to be included:
-/*
- * ====================================================
- * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
- *
- * Developed at SunPro, a Sun Microsystems, Inc. business.
- * Permission to use, copy, modify, and distribute this
- * software is freely granted, provided that this notice
- * is preserved.
- * ====================================================
- */
+extern double MATH_PRIVATE(cosb)(double, int, double);
+extern CONSTATTR double MATH_PRIVATE(bp0)(double);
+extern CONSTATTR double MATH_PRIVATE(ba0)(double);
 
 double
 MATH_MANGLE(j0)(double x)
@@ -94,14 +81,10 @@ MATH_MANGLE(j0)(double x)
               p[3]), p[2]), p[1]), p[0]);
               
     } else {
-        // j0(x) ~ sqrt(2 / (pi*x)) * (P0(x) cos(x-pi/4) - Q0(x) sin(x-pi/4))
-        double c;
-        double s = MATH_PRIVATE(sincosb)(x, 0, &c);
-        const double sqrt2bypi = 0x1.9884533d43651p-1;
-        if (x > 0x1.0p+129)
-            ret = MATH_DIV(sqrt2bypi * c, MATH_SQRT(x));
-        else
-            ret = MATH_DIV(sqrt2bypi * (MATH_PRIVATE(pzero)(x)*c - MATH_PRIVATE(qzero)(x)*s), MATH_SQRT(x));
+        double r = MATH_RCP(x);
+        double r2 = r*r;
+        double p = MATH_PRIVATE(bp0)(r2) * r;
+        ret = 0x1.9884533d43651p-1 * MATH_FAST_SQRT(r) * MATH_PRIVATE(ba0)(r2) * MATH_PRIVATE(cosb)(x, 0, p);
         ret = BUILTIN_CLASS_F64(x, CLASS_PINF) ? 0.0 : ret;
     }
 

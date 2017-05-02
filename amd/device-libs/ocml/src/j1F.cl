@@ -7,22 +7,9 @@
 
 #include "mathF.h"
 
-extern float MATH_PRIVATE(sincosb)(float, int, __private float *);
-extern float MATH_PRIVATE(pone)(float);
-extern float MATH_PRIVATE(qone)(float);
-
-// This implementation makes use of large x approximations from
-// the Sun library which reqires the following to be included:
-/*
- * ====================================================
- * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
- *
- * Developed at SunPro, a Sun Microsystems, Inc. business.
- * Permission to use, copy, modify, and distribute this
- * software is freely granted, provided that this notice
- * is preserved.
- * ====================================================
- */
+extern float MATH_PRIVATE(cosb)(float, int, float);
+extern CONSTATTR float MATH_PRIVATE(bp1)(float);
+extern CONSTATTR float MATH_PRIVATE(ba1)(float);
 
 float
 MATH_MANGLE(j1)(float x)
@@ -88,14 +75,10 @@ MATH_MANGLE(j1)(float x)
               p[8],  p[7]), p[6]), p[5]), p[4]),
               p[3]), p[2]), p[1]), p[0]);
     } else {
-        // j1(x) ~ sqrt(2 / (pi*x)) * (P1(x) cos(x-3*pi/4) - Q1(x) sin(x-3*pi/4))
-        float c;
-        float s = MATH_PRIVATE(sincosb)(ax, 1, &c);
-        const float sqrt2bypi = 0x1.988454p-1f;
-        if (ax > 0x1.0p+17f)
-            ret = MATH_DIV(sqrt2bypi * c, MATH_SQRT(ax));
-        else
-            ret = MATH_DIV(sqrt2bypi * (MATH_PRIVATE(pone)(ax)*c - MATH_PRIVATE(qone)(ax)*s), MATH_SQRT(ax));
+        float r = MATH_RCP(x);
+        float r2 = r*r;
+        float p = MATH_PRIVATE(bp1)(r2) * r;
+        ret = 0x1.988454p-1f * BUILTIN_RSQRT_F32(x) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(x, 1, p);
         ret = BUILTIN_CLASS_F32(ax, CLASS_PINF) ? 0.0f : ret;
     }
 
