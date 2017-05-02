@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell
+// REQUIRES: crash-recovery, shell, system-darwin
 
 // This uses a headermap with this entry:
 //   Foo.h -> Foo/Foo.h

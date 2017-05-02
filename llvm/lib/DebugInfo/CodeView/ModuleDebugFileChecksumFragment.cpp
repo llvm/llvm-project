@@ -48,3 +48,50 @@ Error ModuleDebugFileChecksumFragmentRef::initialize(
 
   return Error::success();
 }
+
+ModuleDebugFileChecksumFragment::ModuleDebugFileChecksumFragment()
+    : ModuleDebugFragment(ModuleDebugFragmentKind::FileChecksums) {}
+
+void ModuleDebugFileChecksumFragment::addChecksum(uint32_t StringTableOffset,
+                                                  FileChecksumKind Kind,
+                                                  ArrayRef<uint8_t> Bytes) {
+  FileChecksumEntry Entry;
+  if (!Bytes.empty()) {
+    uint8_t *Copy = Storage.Allocate<uint8_t>(Bytes.size());
+    ::memcpy(Copy, Bytes.data(), Bytes.size());
+    Entry.Checksum = makeArrayRef(Copy, Bytes.size());
+  }
+  Entry.FileNameOffset = StringTableOffset;
+  Entry.Kind = Kind;
+  Checksums.push_back(Entry);
+
+  // This maps the offset of this string in the string table to the offset
+  // of this checksum entry in the checksum buffer.
+  OffsetMap[StringTableOffset] = SerializedSize;
+  SerializedSize += sizeof(FileChecksumEntryHeader) + Bytes.size();
+}
+
+uint32_t ModuleDebugFileChecksumFragment::calculateSerializedLength() {
+  return SerializedSize;
+}
+
+Error ModuleDebugFileChecksumFragment::commit(BinaryStreamWriter &Writer) {
+  for (const auto &FC : Checksums) {
+    FileChecksumEntryHeader Header;
+    Header.ChecksumKind = uint8_t(FC.Kind);
+    Header.ChecksumSize = FC.Checksum.size();
+    Header.FileNameOffset = FC.FileNameOffset;
+    if (auto EC = Writer.writeObject(Header))
+      return EC;
+    if (auto EC = Writer.writeArray(makeArrayRef(FC.Checksum)))
+      return EC;
+  }
+  return Error::success();
+}
+
+uint32_t ModuleDebugFileChecksumFragment::mapChecksumOffset(
+    uint32_t StringTableOffset) const {
+  auto Iter = OffsetMap.find(StringTableOffset);
+  assert(Iter != OffsetMap.end());
+  return Iter->second;
+}

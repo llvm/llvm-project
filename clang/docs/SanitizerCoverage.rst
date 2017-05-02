@@ -8,202 +8,12 @@ SanitizerCoverage
 Introduction
 ============
 
-Sanitizer tools have a very simple code coverage tool built in. It allows to
-get function-level, basic-block-level, and edge-level coverage at a very low
-cost.
-
-How to build and run
-====================
-
-SanitizerCoverage can be used with :doc:`AddressSanitizer`,
-:doc:`LeakSanitizer`, :doc:`MemorySanitizer`,
-UndefinedBehaviorSanitizer, or without any sanitizer.  Pass one of the
-following compile-time flags:
-
-* ``-fsanitize-coverage=func`` for function-level coverage (very fast).
-* ``-fsanitize-coverage=bb`` for basic-block-level coverage (may add up to 30%
-  **extra** slowdown).
-* ``-fsanitize-coverage=edge`` for edge-level coverage (up to 40% slowdown).
-
-At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``,
-``LSAN_OPTIONS``, ``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as
-appropriate. For the standalone coverage mode, use ``UBSAN_OPTIONS``.
-
-Example:
-
-.. code-block:: console
-
-    % cat -n cov.cc
-         1  #include <stdio.h>
-         2  __attribute__((noinline))
-         3  void foo() { printf("foo\n"); }
-         4
-         5  int main(int argc, char **argv) {
-         6    if (argc == 2)
-         7      foo();
-         8    printf("main\n");
-         9  }
-    % clang++ -g cov.cc -fsanitize=address -fsanitize-coverage=func
-    % ASAN_OPTIONS=coverage=1 ./a.out; ls -l *sancov
-    main
-    -rw-r----- 1 kcc eng 4 Nov 27 12:21 a.out.22673.sancov
-    % ASAN_OPTIONS=coverage=1 ./a.out foo ; ls -l *sancov
-    foo
-    main
-    -rw-r----- 1 kcc eng 4 Nov 27 12:21 a.out.22673.sancov
-    -rw-r----- 1 kcc eng 8 Nov 27 12:21 a.out.22679.sancov
-
-Every time you run an executable instrumented with SanitizerCoverage
-one ``*.sancov`` file is created during the process shutdown.
-If the executable is dynamically linked against instrumented DSOs,
-one ``*.sancov`` file will be also created for every DSO.
-
-Postprocessing
-==============
-
-The format of ``*.sancov`` files is very simple: the first 8 bytes is the magic,
-one of ``0xC0BFFFFFFFFFFF64`` and ``0xC0BFFFFFFFFFFF32``. The last byte of the
-magic defines the size of the following offsets. The rest of the data is the
-offsets in the corresponding binary/DSO that were executed during the run.
-
-A simple script
-``$LLVM/projects/compiler-rt/lib/sanitizer_common/scripts/sancov.py`` is
-provided to dump these offsets.
-
-.. code-block:: console
-
-    % sancov.py print a.out.22679.sancov a.out.22673.sancov
-    sancov.py: read 2 PCs from a.out.22679.sancov
-    sancov.py: read 1 PCs from a.out.22673.sancov
-    sancov.py: 2 files merged; 2 PCs total
-    0x465250
-    0x4652a0
-
-You can then filter the output of ``sancov.py`` through ``addr2line --exe
-ObjectFile`` or ``llvm-symbolizer --obj ObjectFile`` to get file names and line
-numbers:
-
-.. code-block:: console
-
-    % sancov.py print a.out.22679.sancov a.out.22673.sancov 2> /dev/null | llvm-symbolizer --obj a.out
-    cov.cc:3
-    cov.cc:5
-
-Sancov Tool
-===========
-
-A new experimental ``sancov`` tool is developed to process coverage files.
-The tool is part of LLVM project and is currently supported only on Linux.
-It can handle symbolization tasks autonomously without any extra support
-from the environment. You need to pass .sancov files (named 
-``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
-Sancov matches these files using module names and binaries file names.
-
-.. code-block:: console
-
-    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
-
-    Action (required)
-      -print                    - Print coverage addresses
-      -covered-functions        - Print all covered functions.
-      -not-covered-functions    - Print all not covered functions.
-      -symbolize                - Symbolizes the report.
-
-    Options
-      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
-      -demangle                   - Print demangled function name.
-      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
-
-
-Coverage Reports (Experimental)
-================================
-
-``.sancov`` files do not contain enough information to generate a source-level 
-coverage report. The missing information is contained
-in debug info of the binary. Thus the ``.sancov`` has to be symbolized
-to produce a ``.symcov`` file first:
-
-.. code-block:: console
-
-    sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
-
-The ``.symcov`` file can be browsed overlayed over the source code by
-running ``tools/sancov/coverage-report-server.py`` script that will start
-an HTTP server.
-
-
-How good is the coverage?
-=========================
-
-It is possible to find out which PCs are not covered, by subtracting the covered
-set from the set of all instrumented PCs. The latter can be obtained by listing
-all callsites of ``__sanitizer_cov()`` in the binary. On Linux, ``sancov.py``
-can do this for you. Just supply the path to binary and a list of covered PCs:
-
-.. code-block:: console
-
-    % sancov.py print a.out.12345.sancov > covered.txt
-    sancov.py: read 2 64-bit PCs from a.out.12345.sancov
-    sancov.py: 1 file merged; 2 PCs total
-    % sancov.py missing a.out < covered.txt
-    sancov.py: found 3 instrumented PCs in a.out
-    sancov.py: read 2 PCs from stdin
-    sancov.py: 1 PCs missing from coverage
-    0x4cc61c
-
-Edge coverage
-=============
-
-Consider this code:
-
-.. code-block:: c++
-
-    void foo(int *a) {
-      if (a)
-        *a = 0;
-    }
-
-It contains 3 basic blocks, let's name them A, B, C:
-
-.. code-block:: none
-
-    A
-    |\
-    | \
-    |  B
-    | /
-    |/
-    C
-
-If blocks A, B, and C are all covered we know for certain that the edges A=>B
-and B=>C were executed, but we still don't know if the edge A=>C was executed.
-Such edges of control flow graph are called
-`critical <http://en.wikipedia.org/wiki/Control_flow_graph#Special_edges>`_. The
-edge-level coverage (``-fsanitize-coverage=edge``) simply splits all critical
-edges by introducing new dummy blocks and then instruments those blocks:
-
-.. code-block:: none
-
-    A
-    |\
-    | \
-    D  B
-    | /
-    |/
-    C
-
-Tracing PCs
-===========
-
-*Experimental* feature similar to tracing basic blocks, but with a different API.
-With ``-fsanitize-coverage=trace-pc`` the compiler will insert
-``__sanitizer_cov_trace_pc()`` on every edge.
-With an additional ``...=trace-pc,indirect-calls`` flag
-``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
-These callbacks are not implemented in the Sanitizer run-time and should be defined
-by the user. So, these flags do not require the other sanitizer to be used.
-This mechanism is used for fuzzing the Linux kernel (https://github.com/google/syzkaller)
-and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
+LLVM has a simple code coverage instrumentation built in (SanitizerCoverage).
+It inserts calls to user-defined functions on function-, basic-block-, and edge- levels.
+Default implementations of those callbacks are provided and implement
+simple coverage reporting and visualization,
+however if you need *just* coverage visualization you may want to use
+:doc:`SourceBasedCodeCoverage <SourceBasedCodeCoverage>` instead.
 
 Tracing PCs with guards
 =======================
@@ -217,7 +27,7 @@ on every edge:
 
 Every edge will have its own `guard_variable` (uint32_t).
 
-The compler will also insert a module constructor that will call
+The compler will also insert calls to a module constructor:
 
 .. code-block:: c++
 
@@ -226,7 +36,7 @@ The compler will also insert a module constructor that will call
    // more than once with the same values of start/stop.
    __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
 
-With `trace-pc-guards,indirect-calls`
+With an additional ``...=trace-pc,indirect-calls`` flag
 ``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
@@ -309,6 +119,75 @@ Example:
   guard: 0x71bcdc 4 PC 0x4ecdc7 in main trace-pc-guard-example.cc:4:17
   guard: 0x71bcd0 1 PC 0x4ecd20 in foo() trace-pc-guard-example.cc:2:14
 
+Tracing PCs
+===========
+
+With ``-fsanitize-coverage=trace-pc`` the compiler will insert
+``__sanitizer_cov_trace_pc()`` on every edge.
+With an additional ``...=trace-pc,indirect-calls`` flag
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+These callbacks are not implemented in the Sanitizer run-time and should be defined
+by the user.
+This mechanism is used for fuzzing the Linux kernel
+(https://github.com/google/syzkaller).
+
+
+Instrumentation points
+======================
+Sanitizer Coverage offers different levels of instrumentation.
+
+* ``edge`` (default): edges are instrumented (see below).
+* ``bb``: basic blocks are instrumented.
+* ``func``: only the entry block of every function will be instrumented.
+
+Use these flags together with ``trace-pc-guard`` or ``trace-pc``,
+like this: ``-fsanitize-coverage=func,trace-pc-guard``.
+
+When ``edge`` or ``bb`` is used, some of the edges/blocks may still be left
+uninstrumented if such instrumentation is considered redundant.
+**TODO**: add a user-visible option to disable the optimization.
+
+
+Edge coverage
+-------------
+
+Consider this code:
+
+.. code-block:: c++
+
+    void foo(int *a) {
+      if (a)
+        *a = 0;
+    }
+
+It contains 3 basic blocks, let's name them A, B, C:
+
+.. code-block:: none
+
+    A
+    |\
+    | \
+    |  B
+    | /
+    |/
+    C
+
+If blocks A, B, and C are all covered we know for certain that the edges A=>B
+and B=>C were executed, but we still don't know if the edge A=>C was executed.
+Such edges of control flow graph are called
+`critical <http://en.wikipedia.org/wiki/Control_flow_graph#Special_edges>`_. The
+edge-level coverage simply splits all critical
+edges by introducing new dummy blocks and then instruments those blocks:
+
+.. code-block:: none
+
+    A
+    |\
+    | \
+    D  B
+    | /
+    |/
+    C
 
 Tracing data flow
 =================
@@ -349,10 +228,100 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
 
 
 This interface is a subject to change.
-The current implementation is not thread-safe and thus can be safely used only for single-threaded targets.
+
+Default implementation
+======================
+
+The sanitizer run-time (AddressSanitizer, MemorySanitizer, etc) provide a
+default implementations of some of the coverage callbacks.
+You may use this implementation to dump the coverage on disk at the process
+exit.
+
+Example:
+
+.. code-block:: console
+
+    % cat -n cov.cc
+         1  #include <stdio.h>
+         2  __attribute__((noinline))
+         3  void foo() { printf("foo\n"); }
+         4
+         5  int main(int argc, char **argv) {
+         6    if (argc == 2)
+         7      foo();
+         8    printf("main\n");
+         9  }
+    % clang++ -g cov.cc -fsanitize=address -fsanitize-coverage=trace-pc-guard
+    % ASAN_OPTIONS=coverage=1 ./a.out; wc -c *.sancov
+    main
+    SanitizerCoverage: ./a.out.7312.sancov 2 PCs written
+    24 a.out.7312.sancov
+    % ASAN_OPTIONS=coverage=1 ./a.out foo ; wc -c *.sancov
+    foo
+    main
+    SanitizerCoverage: ./a.out.7316.sancov 3 PCs written
+    24 a.out.7312.sancov
+    32 a.out.7316.sancov
+
+Every time you run an executable instrumented with SanitizerCoverage
+one ``*.sancov`` file is created during the process shutdown.
+If the executable is dynamically linked against instrumented DSOs,
+one ``*.sancov`` file will be also created for every DSO.
+
+Sancov data format
+------------------
+
+The format of ``*.sancov`` files is very simple: the first 8 bytes is the magic,
+one of ``0xC0BFFFFFFFFFFF64`` and ``0xC0BFFFFFFFFFFF32``. The last byte of the
+magic defines the size of the following offsets. The rest of the data is the
+offsets in the corresponding binary/DSO that were executed during the run.
+
+Sancov Tool
+-----------
+
+An simple ``sancov`` tool is provided to process coverage files.
+The tool is part of LLVM project and is currently supported only on Linux.
+It can handle symbolization tasks autonomously without any extra support
+from the environment. You need to pass .sancov files (named 
+``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
+Sancov matches these files using module names and binaries file names.
+
+.. code-block:: console
+
+    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+
+    Action (required)
+      -print                    - Print coverage addresses
+      -covered-functions        - Print all covered functions.
+      -not-covered-functions    - Print all not covered functions.
+      -symbolize                - Symbolizes the report.
+
+    Options
+      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
+      -demangle                   - Print demangled function name.
+      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+
+
+Coverage Reports
+----------------
+
+**Experimental**
+
+``.sancov`` files do not contain enough information to generate a source-level
+coverage report. The missing information is contained
+in debug info of the binary. Thus the ``.sancov`` has to be symbolized
+to produce a ``.symcov`` file first:
+
+.. code-block:: console
+
+    sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
+
+The ``.symcov`` file can be browsed overlayed over the source code by
+running ``tools/sancov/coverage-report-server.py`` script that will start
+an HTTP server.
 
 Output directory
-================
+----------------
 
 By default, .sancov files are created in the current working directory.
 This can be changed with ``ASAN_OPTIONS=coverage_dir=/path``:
@@ -363,38 +332,3 @@ This can be changed with ``ASAN_OPTIONS=coverage_dir=/path``:
     % ls -l /tmp/cov/*sancov
     -rw-r----- 1 kcc eng 4 Nov 27 12:21 a.out.22673.sancov
     -rw-r----- 1 kcc eng 8 Nov 27 12:21 a.out.22679.sancov
-
-Sudden death
-============
-
-*Deprecated, don't use*
-
-Normally, coverage data is collected in memory and saved to disk when the
-program exits (with an ``atexit()`` handler), when a SIGSEGV is caught, or when
-``__sanitizer_cov_dump()`` is called.
-
-If the program ends with a signal that ASan does not handle (or can not handle
-at all, like SIGKILL), coverage data will be lost. This is a big problem on
-Android, where SIGKILL is a normal way of evicting applications from memory.
-
-With ``ASAN_OPTIONS=coverage=1:coverage_direct=1`` coverage data is written to a
-memory-mapped file as soon as it collected.
-
-.. code-block:: console
-
-    % ASAN_OPTIONS="coverage=1:coverage_direct=1" ./a.out
-    main
-    % ls
-    7036.sancov.map  7036.sancov.raw  a.out
-    % sancov.py rawunpack 7036.sancov.raw
-    sancov.py: reading map 7036.sancov.map
-    sancov.py: unpacking 7036.sancov.raw
-    writing 1 PCs to a.out.7036.sancov
-    % sancov.py print a.out.7036.sancov
-    sancov.py: read 1 PCs from a.out.7036.sancov
-    sancov.py: 1 files merged; 1 PCs total
-    0x4b2bae
-
-Note that on 64-bit platforms, this method writes 2x more data than the default,
-because it stores full PC values instead of 32-bit offsets.
-

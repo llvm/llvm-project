@@ -3765,6 +3765,13 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
       SourceMgr.getLoadedSLocEntryByID(Index);
     }
 
+    // Map the original source file ID into the ID space of the current
+    // compilation.
+    if (F.OriginalSourceFileID.isValid()) {
+      F.OriginalSourceFileID = FileID::get(
+          F.SLocEntryBaseID + F.OriginalSourceFileID.getOpaqueValue() - 1);
+    }
+
     // Preload all the pending interesting identifiers by marking them out of
     // date.
     for (auto Offset : F.PreloadIdentifierOffsets) {
@@ -3873,10 +3880,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
   ModuleFile &PrimaryModule = ModuleMgr.getPrimaryModule();
   if (PrimaryModule.OriginalSourceFileID.isValid()) {
-    PrimaryModule.OriginalSourceFileID
-      = FileID::get(PrimaryModule.SLocEntryBaseID
-                    + PrimaryModule.OriginalSourceFileID.getOpaqueValue() - 1);
-
     // If this AST file is a precompiled preamble, then set the
     // preamble file ID of the source manager to the file source file
     // from which the preamble was built.
@@ -5575,6 +5578,13 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       FirstState = ReadDiagState(
           F.isModule() ? DiagState() : *Diag.DiagStatesByLoc.CurDiagState,
           SourceLocation(), F.isModule());
+
+      // For an explicit module, set up the root buffer of the module to start
+      // with the initial diagnostic state of the module itself, to cover files
+      // that contain no explicit transitions.
+      if (F.isModule())
+        Diag.DiagStatesByLoc.Files[F.OriginalSourceFileID]
+            .StateTransitions.push_back({FirstState, 0});
     }
 
     // Read the state transitions.

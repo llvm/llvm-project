@@ -9,7 +9,6 @@
 // RUN: cd $DIR
 // RUN: %clangxx -O0 -fsanitize-coverage=trace-pc-guard %s -ldl -o %t
 // RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s
-// RUN: %env_tool_opts=coverage=1 SANCOV_OPTIONS=symbolize=0 %t 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYM
 // RUN: rm -rf $DIR
 
 #include <stdio.h>
@@ -27,8 +26,3 @@ int main() {
 
 // CHECK: main
 // CHECK: SanitizerCoverage: ./sanitizer_coverage_symbolize.{{.*}}.sancov 2 PCs written
-// CHECK: call sancov
-
-// CHECK-NOSYM: main
-// CHECK-NOSYM: SanitizerCoverage: ./sanitizer_coverage_symbolize.{{.*}}.sancov 2 PCs written
-// CHECK-NOSYM-NOT: call sancov

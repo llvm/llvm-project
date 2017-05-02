@@ -591,11 +591,9 @@ Error LTO::addThinLTO(BitcodeModule BM,
                       ArrayRef<InputFile::Symbol> Syms,
                       const SymbolResolution *&ResI,
                       const SymbolResolution *ResE) {
-  Expected<std::unique_ptr<ModuleSummaryIndex>> SummaryOrErr = BM.getSummary();
-  if (!SummaryOrErr)
-    return SummaryOrErr.takeError();
-  ThinLTO.CombinedIndex.mergeFrom(std::move(*SummaryOrErr),
-                                  ThinLTO.ModuleMap.size());
+  if (Error Err =
+          BM.readSummary(ThinLTO.CombinedIndex, ThinLTO.ModuleMap.size()))
+    return Err;
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);

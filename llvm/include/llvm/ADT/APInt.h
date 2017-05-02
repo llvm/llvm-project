@@ -693,7 +693,9 @@ public:
   ///
   /// \returns true if *this is zero, false otherwise.
   bool operator!() const {
-    return *this == 0;
+    if (isSingleWord())
+      return VAL == 0;
+    return countLeadingZerosSlowCase() == BitWidth;
   }
 
   /// @}

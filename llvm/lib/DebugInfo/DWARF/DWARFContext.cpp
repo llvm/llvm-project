@@ -284,6 +284,119 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
                      getStringSection(), isLittleEndian());
 }
 
+bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
+  bool Success = true;
+  if (DumpType == DIDT_All || DumpType == DIDT_Info) {
+    OS << "Verifying .debug_info...\n";
+    for (const auto &CU : compile_units()) {
+      unsigned NumDies = CU->getNumDIEs();
+      for (unsigned I = 0; I < NumDies; ++I) {
+        auto Die = CU->getDIEAtIndex(I);
+        const auto Tag = Die.getTag();
+        if (Tag == DW_TAG_null)
+          continue;
+        for (auto AttrValue : Die.attributes()) {
+          const auto Attr = AttrValue.Attr;
+          const auto Form = AttrValue.Value.getForm();
+          switch (Attr) {
+          case DW_AT_ranges:
+            // Make sure the offset in the DW_AT_ranges attribute is valid.
+            if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
+              if (*SectionOffset >= getRangeSection().Data.size()) {
+                Success = false;
+                OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
+                      "bounds:\n";
+                Die.dump(OS, 0);
+                OS << "\n";
+              }
+            } else {
+              Success = false;
+              OS << "error: DIE has invalid DW_AT_ranges encoding:\n";
+              Die.dump(OS, 0);
+              OS << "\n";
+            }
+            break;
+          case DW_AT_stmt_list:
+            // Make sure the offset in the DW_AT_stmt_list attribute is valid.
+            if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
+              if (*SectionOffset >= getLineSection().Data.size()) {
+                Success = false;
+                OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
+                      "bounds: "
+                   << format("0x%08" PRIx32, *SectionOffset) << "\n";
+                CU->getUnitDIE().dump(OS, 0);
+                OS << "\n";
+              }
+            } else {
+              Success = false;
+              OS << "error: DIE has invalid DW_AT_stmt_list encoding:\n";
+              Die.dump(OS, 0);
+              OS << "\n";
+            }
+            break;
+
+          default:
+            break;
+          }
+          switch (Form) {
+          case DW_FORM_ref1:
+          case DW_FORM_ref2:
+          case DW_FORM_ref4:
+          case DW_FORM_ref8:
+          case DW_FORM_ref_udata: {
+            // Verify all CU relative references are valid CU offsets.
+            Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+            assert(RefVal);
+            if (RefVal) {
+              auto DieCU = Die.getDwarfUnit();
+              auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
+              auto CUOffset = AttrValue.Value.getRawUValue();
+              if (CUOffset >= CUSize) {
+                Success = false;
+                OS << "error: " << FormEncodingString(Form) << " CU offset "
+                   << format("0x%08" PRIx32, CUOffset)
+                   << " is invalid (must be less than CU size of "
+                   << format("0x%08" PRIx32, CUSize) << "):\n";
+                Die.dump(OS, 0);
+                OS << "\n";
+              }
+            }
+            break;
+          }
+          case DW_FORM_ref_addr: {
+            // Verify all absolute DIE references have valid offsets in the
+            // .debug_info section.
+            Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+            assert(RefVal);
+            if (RefVal && *RefVal >= getInfoSection().Data.size()) {
+              Success = false;
+              OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
+                    "bounds:\n";
+              Die.dump(OS, 0);
+              OS << "\n";
+            }
+            break;
+          }
+          case DW_FORM_strp: {
+            auto SecOffset = AttrValue.Value.getAsSectionOffset();
+            assert(SecOffset); // DW_FORM_strp is a section offset.
+            if (SecOffset && *SecOffset >= getStringSection().size()) {
+              Success = false;
+              OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
+              Die.dump(OS, 0);
+              OS << "\n";
+            }
+            break;
+          }
+          default:
+            break;
+          }
+        }
+      }
+    }
+  }
+  return Success;
+}
 const DWARFUnitIndex &DWARFContext::getCUIndex() {
   if (CUIndex)
     return *CUIndex;

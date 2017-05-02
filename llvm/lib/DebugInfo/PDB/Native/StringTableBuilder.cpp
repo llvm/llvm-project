@@ -29,6 +29,12 @@ uint32_t StringTableBuilder::insert(StringRef S) {
   return P.first->second;
 }
 
+uint32_t StringTableBuilder::getStringIndex(StringRef S) {
+  auto Iter = Strings.find(S);
+  assert(Iter != Strings.end());
+  return Iter->second;
+}
+
 static uint32_t computeBucketCount(uint32_t NumStrings) {
   // The /names stream is basically an on-disk open-addressing hash table.
   // Hash collisions are resolved by linear probing. We cannot make

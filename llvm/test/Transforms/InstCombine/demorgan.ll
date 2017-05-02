@@ -286,8 +286,7 @@ define i8 @demorgan_nor_use2c(i8 %A, i8 %B) {
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
 ; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -330,8 +329,7 @@ define i8 @demorgan_nor_use2ac(i8 %A, i8 %B) {
 ; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 17
 ; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
 ; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2A]]
 ; CHECK-NEXT:    ret i8 [[R2]]
@@ -354,8 +352,7 @@ define i8 @demorgan_nor_use2bc(i8 %A, i8 %B) {
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
 ; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
 ; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2B]]
 ; CHECK-NEXT:    ret i8 [[R2]]

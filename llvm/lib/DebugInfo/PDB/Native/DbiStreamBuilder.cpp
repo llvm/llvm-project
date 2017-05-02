@@ -101,6 +101,14 @@ Error DbiStreamBuilder::addModuleSourceFile(StringRef Module, StringRef File) {
   return Error::success();
 }
 
+Expected<uint32_t> DbiStreamBuilder::getSourceFileNameIndex(StringRef File) {
+  auto NameIter = SourceFileNames.find(File);
+  if (NameIter == SourceFileNames.end())
+    return make_error<RawError>(raw_error_code::no_entry,
+                                "The specified source file was not found");
+  return NameIter->getValue();
+}
+
 uint32_t DbiStreamBuilder::calculateModiSubstreamSize() const {
   uint32_t Size = 0;
   for (const auto &M : ModiList)

@@ -565,22 +565,17 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
  * "thin-link".
  */
 std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
-  std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
+  std::unique_ptr<ModuleSummaryIndex> CombinedIndex =
+      llvm::make_unique<ModuleSummaryIndex>();
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
-    Expected<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-        getModuleSummaryIndex(ModuleBuffer.getMemBuffer());
-    if (!IndexOrErr) {
+    if (Error Err = readModuleSummaryIndex(ModuleBuffer.getMemBuffer(),
+                                           *CombinedIndex, NextModuleId++)) {
       // FIXME diagnose
       logAllUnhandledErrors(
-          IndexOrErr.takeError(), errs(),
+          std::move(Err), errs(),
           "error: can't create module summary index for buffer: ");
       return nullptr;
-    }
-    if (CombinedIndex) {
-      CombinedIndex->mergeFrom(std::move(*IndexOrErr), ++NextModuleId);
-    } else {
-      CombinedIndex = std::move(*IndexOrErr);
     }
   }
   return CombinedIndex;

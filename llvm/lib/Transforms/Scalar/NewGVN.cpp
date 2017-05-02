@@ -1628,15 +1628,15 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) {
         if (PBranch->TrueEdge) {
           // If we know the previous predicate is true and we are in the true
           // edge then we may be implied true or false.
-          if (CmpInst::isImpliedTrueByMatchingCmp(OurPredicate,
-                                                  BranchPredicate)) {
+          if (CmpInst::isImpliedTrueByMatchingCmp(BranchPredicate,
+                                                  OurPredicate)) {
             addPredicateUsers(PI, I);
             return createConstantExpression(
                 ConstantInt::getTrue(CI->getType()));
           }
 
-          if (CmpInst::isImpliedFalseByMatchingCmp(OurPredicate,
-                                                   BranchPredicate)) {
+          if (CmpInst::isImpliedFalseByMatchingCmp(BranchPredicate,
+                                                   OurPredicate)) {
             addPredicateUsers(PI, I);
             return createConstantExpression(
                 ConstantInt::getFalse(CI->getType()));

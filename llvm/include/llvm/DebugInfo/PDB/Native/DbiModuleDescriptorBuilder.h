@@ -11,6 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Error.h"
@@ -20,6 +22,10 @@
 
 namespace llvm {
 class BinaryStreamWriter;
+
+namespace codeview {
+class ModuleDebugFragmentRecordBuilder;
+}
 
 namespace msf {
 class MSFBuilder;
@@ -33,6 +39,7 @@ class DbiModuleDescriptorBuilder {
 public:
   DbiModuleDescriptorBuilder(StringRef ModuleName, uint32_t ModIndex,
                              msf::MSFBuilder &Msf);
+  ~DbiModuleDescriptorBuilder();
 
   DbiModuleDescriptorBuilder(const DbiModuleDescriptorBuilder &) = delete;
   DbiModuleDescriptorBuilder &
@@ -40,6 +47,11 @@ public:
 
   void setObjFileName(StringRef Name);
   void addSymbol(codeview::CVSymbol Symbol);
+
+  void
+  addC13LineFragment(std::unique_ptr<codeview::ModuleDebugLineFragment> Lines);
+  void setC13FileChecksums(
+      std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> Checksums);
 
   uint16_t getStreamIndex() const;
   StringRef getModuleName() const { return ModuleName; }
@@ -58,6 +70,8 @@ public:
                WritableBinaryStreamRef MsfBuffer);
 
 private:
+  uint32_t calculateC13DebugInfoSize() const;
+
   void addSourceFile(StringRef Path);
   msf::MSFBuilder &MSF;
 
@@ -66,6 +80,12 @@ private:
   std::string ObjFileName;
   std::vector<std::string> SourceFiles;
   std::vector<codeview::CVSymbol> Symbols;
+  std::vector<std::unique_ptr<codeview::ModuleDebugLineFragment>> LineInfo;
+  std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> ChecksumInfo;
+
+  std::vector<std::unique_ptr<codeview::ModuleDebugFragmentRecordBuilder>>
+      C13Builders;
+
   ModuleInfoHeader Layout;
 };
 

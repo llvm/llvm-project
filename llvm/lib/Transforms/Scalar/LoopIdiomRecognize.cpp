@@ -856,7 +856,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
 /// If the stored value is a strided load in the same loop with the same stride
 /// this may be transformable into a memcpy.  This kicks in for stuff like
-///   for (i) A[i] = B[i];
+/// for (i) A[i] = B[i];
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
                                                     const SCEV *BECount) {
   assert(SI->isSimple() && "Expected only non-volatile stores.");

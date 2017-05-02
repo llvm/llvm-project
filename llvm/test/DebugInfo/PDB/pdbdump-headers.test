@@ -495,11 +495,11 @@
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Lines {
-; EMPTY-NEXT:           LineFragment {
+; EMPTY-NEXT:           Block {
 ; EMPTY-NEXT:             RelocSegment: 1
 ; EMPTY-NEXT:             RelocOffset: 16
 ; EMPTY-NEXT:             CodeSize: 10
-; EMPTY-NEXT:             HasColumns: 0
+; EMPTY-NEXT:             HasColumns: No
 ; EMPTY-NEXT:             Lines {
 ; EMPTY-NEXT:               FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
 ; EMPTY-NEXT:               Line {

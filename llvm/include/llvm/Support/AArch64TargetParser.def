@@ -21,7 +21,7 @@ AARCH64_ARCH("invalid", AK_INVALID, nullptr, nullptr,
 AARCH64_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
              FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_LSE))
+              AArch64::AEK_SIMD))
 AARCH64_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
