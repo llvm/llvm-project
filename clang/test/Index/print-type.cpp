@@ -71,10 +71,9 @@ struct Specialization<int>;
 Specialization<Specialization<bool>& > templRefParam;
 auto autoTemplRefParam = templRefParam;
 
-template<typename T, typename U = int>
-struct DefaultedTypeExample {};
-
-typedef DefaultedTypeExample<int> DefaultedTypeAlias;
+template<typename T> struct A {};
+template<typename T> using C = T;
+using baz = C<A<void>>;
 
 // RUN: c-index-test -test-print-type %s -std=c++14 | FileCheck %s
 // CHECK: Namespace=outer:1:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
@@ -120,7 +119,7 @@ typedef DefaultedTypeExample<int> DefaultedTypeAlias;
 // CHECK: TemplateRef=Baz:9:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
-// CHECK: FieldDecl=qux:29:38 (Definition) [type=Qux<int, char *, Foo<int>, outer::inner::Bar::FooType>] [typekind=Unexposed] [templateargs/4= [type=int] [typekind=Int] [type=char *] [typekind=Pointer] [type=outer::Foo<int>] [typekind=Record] [type=int] [typekind=Int]] [canonicaltype=outer::Qux<int, char *, outer::Foo<int>, int>] [canonicaltypekind=Record] [canonicaltemplateargs/4= [type=int] [typekind=Int] [type=char *] [typekind=Pointer] [type=outer::Foo<int>] [typekind=Record] [type=int] [typekind=Int]] [isPOD=1]
+// CHECK: FieldDecl=qux:29:38 (Definition) [type=Qux<int, char *, Foo<int>, outer::inner::Bar::FooType>] [typekind=Unexposed] [templateargs/4= [type=int] [typekind=Int] [type=char *] [typekind=Pointer] [type=Foo<int>] [typekind=Unexposed] [type=outer::inner::Bar::FooType] [typekind=Typedef]] [canonicaltype=outer::Qux<int, char *, outer::Foo<int>, int>] [canonicaltypekind=Record] [canonicaltemplateargs/4= [type=int] [typekind=Int] [type=char *] [typekind=Pointer] [type=outer::Foo<int>] [typekind=Record] [type=int] [typekind=Int]] [isPOD=1]
 // CHECK: TemplateRef=Qux:12:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: FunctionTemplate=tbar:36:3 [type=T (int)] [typekind=FunctionProto] [canonicaltype=type-parameter-0-0 (int)] [canonicaltypekind=FunctionProto] [resulttype=T] [resulttypekind=Unexposed] [isPOD=0]
@@ -183,3 +182,4 @@ typedef DefaultedTypeExample<int> DefaultedTypeAlias;
 // CHECK: UnexposedExpr=templRefParam:71:40 [type=const Specialization<Specialization<bool> &>] [typekind=Unexposed] const [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=const Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]
 // CHECK: DeclRefExpr=templRefParam:71:40 [type=Specialization<Specialization<bool> &>] [typekind=Unexposed] [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]
 // CHECK: TypedefDecl=DefaultedTypeAlias:77:35 (Definition) [type=DefaultedTypeAlias] [typekind=Typedef] [templateargs/2= [type=int] [typekind=Int] [type=int] [typekind=Int]] [canonicaltype=DefaultedTypeExample<int, int>] [canonicaltypekind=Record] [canonicaltemplateargs/2= [type=int] [typekind=Int] [type=int] [typekind=Int]] [isPOD=0]
+// CHECK: TypeAliasDecl=baz:76:7 (Definition) [type=baz] [typekind=Typedef] [templateargs/1= [type=A<void>] [typekind=Unexposed]] [canonicaltype=A<void>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=void] [typekind=Void]] [isPOD=0]

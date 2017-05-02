@@ -49,7 +49,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   // arguments.  Therefore, we need to skip the flag and the next argument.
   bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
     .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
-    .Cases("-o", "-coverage-file", "-dependency-file", true)
+    .Cases("-o", "-dependency-file", true)
     .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
     .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
     .Default(false);
