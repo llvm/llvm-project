@@ -193,7 +193,8 @@
 ; RUN: llc < %s -mtriple=armv6-none-linux-gnueabi -mcpu=arm1136j-s -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv6-none-linux-gnueabi -mcpu=arm1136j-s | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv6k
-; RUN: llc < %s -mtriple=armv6k-none-netbsd-gnueabi -mcpu=arm1176j-s | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=armv6k-none-netbsd-gnueabi -mcpu=arm1176j-s 2> %t | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: FileCheck %s < %t --allow-empty --check-prefix=CPU-SUPPORTED
 ; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=arm1176j-s -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=arm1176j-s | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv6m
@@ -209,6 +210,8 @@
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-vfp2,-fp16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NOFPU
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-neon,+fp-only-sp,+d16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-SP
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NEON
+
+; CPU-SUPPORTED-NOT: is not a recognized processor for this target
 
 ; XSCALE:      .eabi_attribute 6, 5
 ; XSCALE:      .eabi_attribute 8, 1
