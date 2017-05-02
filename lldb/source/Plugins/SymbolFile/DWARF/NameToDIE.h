@@ -43,7 +43,8 @@ public:
                                       DIEArray &info_array) const;
 
   void
-  ForEach(std::function<bool(llvm::StringRef name, const DIERef &die_ref)> const
+  ForEach(std::function<bool(lldb_private::ConstString name,
+                             const DIERef &die_ref)> const
               &callback) const;
 
 protected:
