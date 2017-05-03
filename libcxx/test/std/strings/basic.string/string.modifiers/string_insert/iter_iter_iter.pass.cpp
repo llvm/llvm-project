@@ -188,10 +188,35 @@ int main()
 
 	{ // test assigning a different type
     typedef std::string S;
-	const uint8_t p[] = "ABCD";
+    const uint8_t p[] = "ABCD";
 
-	S s;
-	s.insert(s.begin(), p, p + 4);
-	assert(s == "ABCD");
+    S s;
+    s.insert(s.begin(), p, p + 4);
+    assert(s == "ABCD");
 	}
+
+  { // test with a move iterator that returns char&&
+    typedef input_iterator<const char*> It;
+    typedef std::move_iterator<It> MoveIt;
+    const char p[] = "ABCD";
+    std::string s;
+    s.insert(s.begin(), MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
+    assert(s == "ABCD");
+  }
+  { // test with a move iterator that returns char&&
+    typedef forward_iterator<const char*> It;
+    typedef std::move_iterator<It> MoveIt;
+    const char p[] = "ABCD";
+    std::string s;
+    s.insert(s.begin(), MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
+    assert(s == "ABCD");
+  }
+  { // test with a move iterator that returns char&&
+    typedef const char* It;
+    typedef std::move_iterator<It> MoveIt;
+    const char p[] = "ABCD";
+    std::string s;
+    s.insert(s.begin(), MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
+    assert(s == "ABCD");
+  }
 }
