@@ -24,7 +24,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; CHECK-NOT: {{compact encoding:.*0x0309f800}}
 ; CHECK: {{compact encoding:.*0x030df800}}
 
-define void @__asan_report_error() #0 {
+define void @__asan_report_error(i64 %step) #0 {
   %str.i = alloca i64, align 8
   %stack = alloca [256 x i64], align 8
   br label %print_shadow_bytes.exit.i
@@ -37,7 +37,7 @@ print_shadow_bytes.exit.i: ; preds = %print_shadow_bytes.exit.i, %0
   %reg17 = shl i64 %iv.i, 1
   %reg19 = inttoptr i64 %reg17 to i8*
   call void (i64*, i8*, ...) @append(i64* %str.i, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i64 0, i64 0), i8* %reg16, i8* %reg19)
-  %iv.next.i = add nsw i64 %iv.i, 0
+  %iv.next.i = add nsw i64 %iv.i, %step
   br label %print_shadow_bytes.exit.i
 }
 
