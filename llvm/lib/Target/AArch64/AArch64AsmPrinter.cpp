@@ -580,8 +580,7 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO_Sym = MI->getOperand(0);
     MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
     MCOperand Sym, SymTLSDescLo12, SymTLSDesc;
-    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
-                                   AArch64II::MO_NC);
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
     MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
     MCInstLowering.lowerOperand(MO_Sym, Sym);
     MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
