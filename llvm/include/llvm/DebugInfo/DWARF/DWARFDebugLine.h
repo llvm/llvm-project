@@ -44,6 +44,10 @@ public:
     uint64_t TotalLength;
     /// Version identifier for the statement information format.
     uint16_t Version;
+    /// In v5, size in bytes of an address (or segment offset).
+    uint8_t AddressSize;
+    /// In v5, size in bytes of a segment selector.
+    uint8_t SegSelectorSize;
     /// The number of bytes following the prologue_length field to the beginning
     /// of the first byte of the statement program itself.
     uint64_t PrologueLength;
@@ -100,7 +104,7 @@ public:
     void postAppend();
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
-
+    static void dumpTableHeader(raw_ostream &OS);
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return LHS.Address < RHS.Address;
     }

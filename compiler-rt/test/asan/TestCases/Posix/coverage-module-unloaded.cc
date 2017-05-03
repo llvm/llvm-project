@@ -10,6 +10,7 @@
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android
+// UNSUPPORTED: ios
 
 #include <assert.h>
 #include <dlfcn.h>

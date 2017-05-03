@@ -33,7 +33,7 @@ TEST_F(StringTableBuilderTest, Simple) {
   EXPECT_EQ(1U, Builder.insert("foo"));
   EXPECT_EQ(9U, Builder.insert("baz"));
 
-  std::vector<uint8_t> Buffer(Builder.finalize());
+  std::vector<uint8_t> Buffer(Builder.calculateSerializedSize());
   MutableBinaryByteStream OutStream(Buffer, little);
   BinaryStreamWriter Writer(OutStream);
   EXPECT_NO_ERROR(Builder.commit(Writer));
@@ -42,7 +42,7 @@ TEST_F(StringTableBuilderTest, Simple) {
   BinaryByteStream InStream(Buffer, little);
   BinaryStreamReader Reader(InStream);
   PDBStringTable Table;
-  EXPECT_NO_ERROR(Table.load(Reader));
+  EXPECT_NO_ERROR(Table.reload(Reader));
 
   EXPECT_EQ(3U, Table.getNameCount());
   EXPECT_EQ(1U, Table.getHashVersion());

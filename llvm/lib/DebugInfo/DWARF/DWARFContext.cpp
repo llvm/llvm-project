@@ -445,6 +445,75 @@ public:
     }
     return Success;
   }
+
+  bool HandleDebugLine() {
+    bool Success = true;
+    OS << "Verifying .debug_line...\n";
+    for (const auto &CU : DCtx.compile_units()) {
+      uint32_t LineTableOffset = 0;
+      auto StmtFormValue = CU->getUnitDIE().find(DW_AT_stmt_list);
+      if (!StmtFormValue) {
+        // No line table for this compile unit.
+        continue;
+      }
+      // Get the attribute value as a section offset. No need to produce an
+      // error here if the encoding isn't correct because we validate this in
+      // the .debug_info verifier.
+      if (auto StmtSectionOffset = toSectionOffset(StmtFormValue)) {
+        LineTableOffset = *StmtSectionOffset;
+        if (LineTableOffset >= DCtx.getLineSection().Data.size()) {
+          // Make sure we don't get a valid line table back if the offset
+          // is wrong.
+          assert(DCtx.getLineTableForUnit(CU.get()) == nullptr);
+          // Skip this line table as it isn't valid. No need to create an error
+          // here because we validate this in the .debug_info verifier.
+          continue;
+        }
+      }
+      auto LineTable = DCtx.getLineTableForUnit(CU.get());
+      if (!LineTable) {
+        Success = false;
+        OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
+           << "] was not able to be parsed for CU:\n";
+        CU->getUnitDIE().dump(OS, 0);
+        OS << '\n';
+        continue;
+      }
+      uint32_t MaxFileIndex = LineTable->Prologue.FileNames.size();
+      uint64_t PrevAddress = 0;
+      uint32_t RowIndex = 0;
+      for (const auto &Row : LineTable->Rows) {
+        if (Row.Address < PrevAddress) {
+          Success = false;
+          OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
+             << "] row[" << RowIndex
+             << "] decreases in address from previous row:\n";
+
+          DWARFDebugLine::Row::dumpTableHeader(OS);
+          if (RowIndex > 0)
+            LineTable->Rows[RowIndex - 1].dump(OS);
+          Row.dump(OS);
+          OS << '\n';
+        }
+
+        if (Row.File > MaxFileIndex) {
+          Success = false;
+          OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
+             << "][" << RowIndex << "] has invalid file index " << Row.File
+             << " (valid values are [1," << MaxFileIndex << "]):\n";
+          DWARFDebugLine::Row::dumpTableHeader(OS);
+          Row.dump(OS);
+          OS << '\n';
+        }
+        if (Row.EndSequence)
+          PrevAddress = 0;
+        else
+          PrevAddress = Row.Address;
+        ++RowIndex;
+      }
+    }
+    return Success;
+  }
 };
   
 } // anonymous namespace
@@ -454,6 +523,10 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
   Verifier verifier(OS, *this);
   if (DumpType == DIDT_All || DumpType == DIDT_Info) {
     if (!verifier.HandleDebugInfo())
+      Success = false;
+  }
+  if (DumpType == DIDT_All || DumpType == DIDT_Line) {
+    if (!verifier.HandleDebugLine())
       Success = false;
   }
   return Success;

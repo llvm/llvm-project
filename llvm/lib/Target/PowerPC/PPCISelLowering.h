@@ -1017,6 +1017,14 @@ namespace llvm {
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
+
+    bool supportsModuloShift(ISD::NodeType Inst,
+                             EVT ReturnType) const override {
+      assert((Inst == ISD::SHL || Inst == ISD::SRA || Inst == ISD::SRL) &&
+             "Expect a shift instruction");
+      assert(isOperationLegal(Inst, ReturnType));
+      return ReturnType.isVector();
+    }
   };
 
   namespace PPC {

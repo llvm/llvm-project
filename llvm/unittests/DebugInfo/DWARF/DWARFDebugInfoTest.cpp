@@ -10,6 +10,7 @@
 #include "DwarfGenerator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
@@ -18,8 +19,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
+#include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1191,10 +1192,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
 
   // Verify the number of compile units is correct.
   uint32_t NumCUs = DwarfContext.getNumCompileUnits();
@@ -1667,6 +1665,13 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
 }
 
+void VerifyError(DWARFContext &DwarfContext, StringRef Error) {
+  SmallString<1024> Str;
+  raw_svector_ostream Strm(Str);
+  EXPECT_FALSE(DwarfContext.verify(Strm, DIDT_All));
+  EXPECT_TRUE(Str.str().contains(Error));
+}
+
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {
   // Create a single compile unit with a single function that has a DW_AT_type
   // that is CU relative. The CU offset is not valid becuase it is larger than
@@ -1711,17 +1716,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  const char *err = "error: DW_FORM_ref4 CU offset 0x00001234 is invalid "
-                    "(must be less than CU size of 0x0000001a):";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext, "error: DW_FORM_ref4 CU offset 0x00001234 is "
+                            "invalid (must be less than CU size of "
+                            "0x0000001a):");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
@@ -1766,17 +1764,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  strm.flush();
-  const char *err = "error: DW_FORM_ref_addr offset beyond .debug_info bounds:";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext,
+              "error: DW_FORM_ref_addr offset beyond .debug_info bounds:");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
@@ -1810,18 +1800,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  strm.flush();
-  const char *err = "error: DW_AT_ranges offset is beyond .debug_ranges "
-                    "bounds:";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext,
+              "error: DW_AT_ranges offset is beyond .debug_ranges bounds:");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {
@@ -1855,18 +1836,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  strm.flush();
-  const char *err = "error: DW_AT_stmt_list offset is beyond .debug_line "
-                    "bounds: 0x00001000";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(
+      DwarfContext,
+      "error: DW_AT_stmt_list offset is beyond .debug_line bounds: 0x00001000");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
@@ -1895,17 +1868,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  strm.flush();
-  const char *err = "error: DW_FORM_strp offset beyond .debug_str bounds:";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext,
+              "error: DW_FORM_strp offset beyond .debug_str bounds:");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddrBetween) {
@@ -1950,18 +1915,150 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddrBetween) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-
-  auto &DebugSections = *ErrOrSections;
-
-  DWARFContextInMemory DwarfContext(DebugSections, 8);
-
-  std::string str;
-  raw_string_ostream strm(str);
-  EXPECT_FALSE(DwarfContext.verify(strm, DIDT_All));
-  strm.flush();
-  const char *err = "error: invalid DIE reference 0x00000011. Offset is in "
-      "between DIEs:";
-  EXPECT_TRUE(strm.str().find(err) != std::string::npos);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(
+      DwarfContext,
+      "error: invalid DIE reference 0x00000011. Offset is in between DIEs:");
 }
-  
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineSequence) {
+  // Create a single compile unit whose line table has a sequence in it where
+  // the address decreases.
+  StringRef yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_stmt_list
+            Form:            DW_FORM_sec_offset
+    debug_info:
+      - Length:
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000000000
+    debug_line:
+      - Length:
+          TotalLength:     68
+        Version:         2
+        PrologueLength:  34
+        MinInstLength:   1
+        DefaultIsStmt:   1
+        LineBase:        251
+        LineRange:       14
+        OpcodeBase:      13
+        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+        IncludeDirs:
+          - /tmp
+        Files:
+          - Name:            main.c
+            DirIdx:          1
+            ModTime:         0
+            Length:          0
+        Opcodes:
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          9
+            SubOpcode:       DW_LNE_set_address
+            Data:            4112
+          - Opcode:          DW_LNS_advance_line
+            SData:           9
+            Data:            4112
+          - Opcode:          DW_LNS_copy
+            Data:            4112
+          - Opcode:          DW_LNS_advance_pc
+            Data:            18446744073709551600
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          1
+            SubOpcode:       DW_LNE_end_sequence
+            Data:            18446744073709551600
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_TRUE((bool)ErrOrSections);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext, "error: .debug_line[0x00000000] row[1] decreases "
+                            "in address from previous row:");
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineFileIndex) {
+  // Create a single compile unit whose line table has a line table row with
+  // an invalid file index.
+  StringRef yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_stmt_list
+            Form:            DW_FORM_sec_offset
+    debug_info:
+      - Length:
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000000000
+    debug_line:
+      - Length:
+          TotalLength:     61
+        Version:         2
+        PrologueLength:  34
+        MinInstLength:   1
+        DefaultIsStmt:   1
+        LineBase:        251
+        LineRange:       14
+        OpcodeBase:      13
+        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+        IncludeDirs:
+          - /tmp
+        Files:
+          - Name:            main.c
+            DirIdx:          1
+            ModTime:         0
+            Length:          0
+        Opcodes:
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          9
+            SubOpcode:       DW_LNE_set_address
+            Data:            4096
+          - Opcode:          DW_LNS_advance_line
+            SData:           9
+            Data:            4096
+          - Opcode:          DW_LNS_copy
+            Data:            4096
+          - Opcode:          DW_LNS_advance_pc
+            Data:            16
+          - Opcode:          DW_LNS_set_file
+            Data:            5
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          1
+            SubOpcode:       DW_LNE_end_sequence
+            Data:            5
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_TRUE((bool)ErrOrSections);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext, "error: .debug_line[0x00000000][1] has invalid "
+                            "file index 5 (valid values are [1,1]):");
+}
+
 } // end anonymous namespace

@@ -892,10 +892,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
         CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
-    F->addAttributes(
-        llvm::AttributeList::FunctionIndex,
-        llvm::AttributeList::get(F->getContext(),
-                                 llvm::AttributeList::FunctionIndex, B));
+    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
     return;
   }
 
@@ -961,9 +958,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
-  F->addAttributes(llvm::AttributeList::FunctionIndex,
-                   llvm::AttributeList::get(
-                       F->getContext(), llvm::AttributeList::FunctionIndex, B));
+  F->addAttributes(llvm::AttributeList::FunctionIndex, B);
 
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
   if (alignment)
@@ -2029,9 +2024,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
   if (ExtraAttrs.hasAttributes(llvm::AttributeList::FunctionIndex)) {
     llvm::AttrBuilder B(ExtraAttrs, llvm::AttributeList::FunctionIndex);
-    F->addAttributes(llvm::AttributeList::FunctionIndex,
-                     llvm::AttributeList::get(
-                         VMContext, llvm::AttributeList::FunctionIndex, B));
+    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
 
   if (!DontDefer) {

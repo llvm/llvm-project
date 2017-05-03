@@ -4056,13 +4056,20 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
   unsigned InVecNumElts = InVecTy->getVectorNumElements();
 
+  auto *Op0Const = dyn_cast<Constant>(Op0);
+  auto *Op1Const = dyn_cast<Constant>(Op1);
+
+  // If all operands are constant, constant fold the shuffle.
+  if (Op0Const && Op1Const)
+    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
+
   SmallVector<int, 32> Indices;
   ShuffleVectorInst::getShuffleMask(Mask, Indices);
   assert(MaskNumElts == Indices.size() &&
          "Size of Indices not same as number of mask elements?");
 
-  // Canonicalization: If mask does not select elements from an input vector,
-  // replace that input vector with undef.
+  // If only one of the operands is constant, constant fold the shuffle if the
+  // mask does not select elements from the variable operand.
   bool MaskSelects0 = false, MaskSelects1 = false;
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     if (Indices[i] == -1)
@@ -4072,39 +4079,23 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
     else
       MaskSelects1 = true;
   }
-  if (!MaskSelects0)
-    Op0 = UndefValue::get(InVecTy);
-  if (!MaskSelects1)
-    Op1 = UndefValue::get(InVecTy);
-
-  auto *Op0Const = dyn_cast<Constant>(Op0);
-  auto *Op1Const = dyn_cast<Constant>(Op1);
-
-  // If all operands are constant, constant fold the shuffle.
-  if (Op0Const && Op1Const)
-    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
-
-  // Canonicalization: if only one input vector is constant, it shall be the
-  // second one.
-  if (Op0Const && !Op1Const) {
-    std::swap(Op0, Op1);
-    for (auto &Idx : Indices) {
-      if (Idx == -1)
-        continue;
-      Idx = Idx < (int)MaskNumElts ? Idx + MaskNumElts : Idx - MaskNumElts;
-    }
-    Mask = ConstantDataVector::get(
-        Mask->getContext(),
-        makeArrayRef(reinterpret_cast<uint32_t *>(Indices.data()),
-                     MaskNumElts));
-  }
+  if (!MaskSelects0 && Op1Const)
+    return ConstantFoldShuffleVectorInstruction(UndefValue::get(InVecTy),
+                                                Op1Const, Mask);
+  if (!MaskSelects1 && Op0Const)
+    return ConstantFoldShuffleVectorInstruction(Op0Const,
+                                                UndefValue::get(InVecTy), Mask);
 
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
-    if (isa<UndefValue>(Op1) && RetTy == InVecTy &&
+    if (!MaskSelects1 && RetTy == InVecTy &&
         OpShuf->getMask()->getSplatValue())
       return Op0;
+  if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op1))
+    if (!MaskSelects0 && RetTy == InVecTy &&
+        OpShuf->getMask()->getSplatValue())
+      return Op1;
 
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.

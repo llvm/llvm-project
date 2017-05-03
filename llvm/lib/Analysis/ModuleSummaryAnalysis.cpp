@@ -451,12 +451,6 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     auto &Summary = GlobalList.second[0];
     bool AllRefsCanBeExternallyReferenced =
         llvm::all_of(Summary->refs(), [&](const ValueInfo &VI) {
-          // If a global value definition references an unnamed global,
-          // be conservative. They're valid IR so we don't want to crash
-          // when we encounter any of them but they're infrequent enough
-          // that we don't bother optimizing them.
-          if (!VI.getValue()->hasName())
-            return false;
           return !CantBePromoted.count(VI.getValue()->getGUID());
         });
     if (!AllRefsCanBeExternallyReferenced) {
