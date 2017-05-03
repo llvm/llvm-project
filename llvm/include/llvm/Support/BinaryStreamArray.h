@@ -42,99 +42,34 @@ namespace llvm {
 /// having to specify a second template argument to VarStreamArray (documented
 /// below).
 template <typename T> struct VarStreamArrayExtractor {
-  typedef void Context;
+  struct ContextType {};
 
   // Method intentionally deleted.  You must provide an explicit specialization
-  // with the following method implemented.
+  // with one of the following two methods implemented.
+  static Error extract(BinaryStreamRef Stream, uint32_t &Len, T &Item) = delete;
+
   static Error extract(BinaryStreamRef Stream, uint32_t &Len, T &Item,
-                       Context *Ctx) = delete;
+                       const ContextType &Ctx) = delete;
 };
 
-/// VarStreamArray represents an array of variable length records backed by a
-/// stream.  This could be a contiguous sequence of bytes in memory, it could
-/// be a file on disk, or it could be a PDB stream where bytes are stored as
-/// discontiguous blocks in a file.  Usually it is desirable to treat arrays
-/// as contiguous blocks of memory, but doing so with large PDB files, for
-/// example, could mean allocating huge amounts of memory just to allow
-/// re-ordering of stream data to be contiguous before iterating over it.  By
-/// abstracting this out, we need not duplicate this memory, and we can
-/// iterate over arrays in arbitrarily formatted streams.  Elements are parsed
-/// lazily on iteration, so there is no upfront cost associated with building
-/// or copying a VarStreamArray, no matter how large it may be.
-///
-/// You create a VarStreamArray by specifying a ValueType and an Extractor type.
-/// If you do not specify an Extractor type, you are expected to specialize
-/// VarStreamArrayExtractor<T> for your ValueType.
-///
-/// The default extractor type is stateless, but by specializing
-/// VarStreamArrayExtractor or defining your own custom extractor type and
-/// adding the appropriate ContextType typedef to the class, you can pass a
-/// context field during construction of the VarStreamArray that will be
-/// passed to each call to extract.
-///
-template <typename ValueType, typename ExtractorType>
-class VarStreamArrayIterator;
-
-template <typename ValueType,
-          typename ExtractorType = VarStreamArrayExtractor<ValueType>>
-class VarStreamArray {
-public:
-  typedef typename ExtractorType::ContextType ContextType;
-  typedef VarStreamArrayIterator<ValueType, ExtractorType> Iterator;
-  friend Iterator;
-
-  VarStreamArray() = default;
-
-  explicit VarStreamArray(BinaryStreamRef Stream,
-                          ContextType *Context = nullptr)
-      : Stream(Stream), Context(Context) {}
-
-  VarStreamArray(const VarStreamArray<ValueType, ExtractorType> &Other)
-      : Stream(Other.Stream), Context(Other.Context) {}
-
-  Iterator begin(bool *HadError = nullptr) const {
-    if (empty())
-      return end();
-
-    return Iterator(*this, Context, HadError);
-  }
-
-  Iterator end() const { return Iterator(); }
-
-  bool empty() const { return Stream.getLength() == 0; }
-
-  /// \brief given an offset into the array's underlying stream, return an
-  /// iterator to the record at that offset.  This is considered unsafe
-  /// since the behavior is undefined if \p Offset does not refer to the
-  /// beginning of a valid record.
-  Iterator at(uint32_t Offset) const {
-    return Iterator(*this, Context, Stream.drop_front(Offset), nullptr);
-  }
-
-  BinaryStreamRef getUnderlyingStream() const { return Stream; }
-
-private:
-  BinaryStreamRef Stream;
-  ContextType *Context = nullptr;
-};
-
-template <typename ValueType, typename ExtractorType>
+template <typename ArrayType, typename Value, typename Extractor,
+          typename WrappedCtx>
 class VarStreamArrayIterator
     : public iterator_facade_base<
-          VarStreamArrayIterator<ValueType, ExtractorType>,
-          std::forward_iterator_tag, ValueType> {
-  typedef typename ExtractorType::ContextType ContextType;
-  typedef VarStreamArrayIterator<ValueType, ExtractorType> IterType;
-  typedef VarStreamArray<ValueType, ExtractorType> ArrayType;
+          VarStreamArrayIterator<ArrayType, Value, Extractor, WrappedCtx>,
+          std::forward_iterator_tag, Value> {
+  typedef VarStreamArrayIterator<ArrayType, Value, Extractor, WrappedCtx>
+      IterType;
 
 public:
-  VarStreamArrayIterator(const ArrayType &Array, ContextType *Context,
+  VarStreamArrayIterator() = default;
+  VarStreamArrayIterator(const ArrayType &Array, const WrappedCtx &Ctx,
                          BinaryStreamRef Stream, bool *HadError = nullptr)
-      : IterRef(Stream), Context(Context), Array(&Array), HadError(HadError) {
+      : IterRef(Stream), Ctx(&Ctx), Array(&Array), HadError(HadError) {
     if (IterRef.getLength() == 0)
       moveToEnd();
     else {
-      auto EC = ExtractorType::extract(IterRef, ThisLen, ThisValue, Context);
+      auto EC = Ctx.template invoke<Extractor>(IterRef, ThisLen, ThisValue);
       if (EC) {
         consumeError(std::move(EC));
         markError();
@@ -142,11 +77,13 @@ public:
     }
   }
 
-  VarStreamArrayIterator(const ArrayType &Array, ContextType *Context,
+  VarStreamArrayIterator(const ArrayType &Array, const WrappedCtx &Ctx,
                          bool *HadError = nullptr)
-      : VarStreamArrayIterator(Array, Context, Array.Stream, HadError) {}
+      : VarStreamArrayIterator(Array, Ctx, Array.Stream, HadError) {}
 
-  VarStreamArrayIterator() = default;
+  VarStreamArrayIterator(const WrappedCtx &Ctx) : Ctx(&Ctx) {}
+  VarStreamArrayIterator(const VarStreamArrayIterator &Other) = default;
+
   ~VarStreamArrayIterator() = default;
 
   bool operator==(const IterType &R) const {
@@ -164,12 +101,12 @@ public:
     return false;
   }
 
-  const ValueType &operator*() const {
+  const Value &operator*() const {
     assert(Array && !HasError);
     return ThisValue;
   }
 
-  ValueType &operator*() {
+  Value &operator*() {
     assert(Array && !HasError);
     return ThisValue;
   }
@@ -185,7 +122,7 @@ public:
         moveToEnd();
       } else {
         // There is some data after the current record.
-        auto EC = ExtractorType::extract(IterRef, ThisLen, ThisValue, Context);
+        auto EC = Ctx->template invoke<Extractor>(IterRef, ThisLen, ThisValue);
         if (EC) {
           consumeError(std::move(EC));
           markError();
@@ -210,14 +147,133 @@ private:
       *HadError = true;
   }
 
-  ValueType ThisValue;
+  Value ThisValue;
   BinaryStreamRef IterRef;
-  ContextType *Context{nullptr};
+  const WrappedCtx *Ctx{nullptr};
   const ArrayType *Array{nullptr};
   uint32_t ThisLen{0};
   bool HasError{false};
   bool *HadError{nullptr};
 };
+
+template <typename T, typename Context> struct ContextWrapper {
+  ContextWrapper() = default;
+
+  explicit ContextWrapper(Context &&Ctx) : Ctx(Ctx) {}
+
+  template <typename Extractor>
+  Error invoke(BinaryStreamRef Stream, uint32_t &Len, T &Item) const {
+    return Extractor::extract(Stream, Len, Item, Ctx);
+  }
+
+  Context Ctx;
+};
+
+template <typename T> struct ContextWrapper<T, void> {
+  ContextWrapper() = default;
+
+  template <typename Extractor>
+  Error invoke(BinaryStreamRef Stream, uint32_t &Len, T &Item) const {
+    return Extractor::extract(Stream, Len, Item);
+  }
+};
+
+/// VarStreamArray represents an array of variable length records backed by a
+/// stream.  This could be a contiguous sequence of bytes in memory, it could
+/// be a file on disk, or it could be a PDB stream where bytes are stored as
+/// discontiguous blocks in a file.  Usually it is desirable to treat arrays
+/// as contiguous blocks of memory, but doing so with large PDB files, for
+/// example, could mean allocating huge amounts of memory just to allow
+/// re-ordering of stream data to be contiguous before iterating over it.  By
+/// abstracting this out, we need not duplicate this memory, and we can
+/// iterate over arrays in arbitrarily formatted streams.  Elements are parsed
+/// lazily on iteration, so there is no upfront cost associated with building
+/// or copying a VarStreamArray, no matter how large it may be.
+///
+/// You create a VarStreamArray by specifying a ValueType and an Extractor type.
+/// If you do not specify an Extractor type, you are expected to specialize
+/// VarStreamArrayExtractor<T> for your ValueType.
+///
+/// The default extractor type is stateless, but by specializing
+/// VarStreamArrayExtractor or defining your own custom extractor type and
+/// adding the appropriate ContextType typedef to the class, you can pass a
+/// context field during construction of the VarStreamArray that will be
+/// passed to each call to extract.
+///
+template <typename Value, typename Extractor, typename WrappedCtx>
+class VarStreamArrayBase {
+  typedef VarStreamArrayBase<Value, Extractor, WrappedCtx> MyType;
+
+public:
+  typedef VarStreamArrayIterator<MyType, Value, Extractor, WrappedCtx> Iterator;
+  friend Iterator;
+
+  VarStreamArrayBase() = default;
+
+  VarStreamArrayBase(BinaryStreamRef Stream, const WrappedCtx &Ctx)
+      : Stream(Stream), Ctx(Ctx) {}
+
+  VarStreamArrayBase(const MyType &Other)
+      : Stream(Other.Stream), Ctx(Other.Ctx) {}
+
+  Iterator begin(bool *HadError = nullptr) const {
+    if (empty())
+      return end();
+
+    return Iterator(*this, Ctx, Stream, HadError);
+  }
+
+  Iterator end() const { return Iterator(Ctx); }
+
+  bool empty() const { return Stream.getLength() == 0; }
+
+  /// \brief given an offset into the array's underlying stream, return an
+  /// iterator to the record at that offset.  This is considered unsafe
+  /// since the behavior is undefined if \p Offset does not refer to the
+  /// beginning of a valid record.
+  Iterator at(uint32_t Offset) const {
+    return Iterator(*this, Ctx, Stream.drop_front(Offset), nullptr);
+  }
+
+  BinaryStreamRef getUnderlyingStream() const { return Stream; }
+
+private:
+  BinaryStreamRef Stream;
+  WrappedCtx Ctx;
+};
+
+template <typename Value, typename Extractor, typename Context>
+class VarStreamArrayImpl
+    : public VarStreamArrayBase<Value, Extractor,
+                                ContextWrapper<Value, Context>> {
+  typedef ContextWrapper<Value, Context> WrappedContext;
+  typedef VarStreamArrayImpl<Value, Extractor, Context> MyType;
+  typedef VarStreamArrayBase<Value, Extractor, WrappedContext> BaseType;
+
+public:
+  typedef Context ContextType;
+
+  VarStreamArrayImpl() = default;
+  VarStreamArrayImpl(BinaryStreamRef Stream, Context &&Ctx)
+      : BaseType(Stream, WrappedContext(std::forward<Context>(Ctx))) {}
+};
+
+template <typename Value, typename Extractor>
+class VarStreamArrayImpl<Value, Extractor, void>
+    : public VarStreamArrayBase<Value, Extractor, ContextWrapper<Value, void>> {
+  typedef ContextWrapper<Value, void> WrappedContext;
+  typedef VarStreamArrayImpl<Value, Extractor, void> MyType;
+  typedef VarStreamArrayBase<Value, Extractor, WrappedContext> BaseType;
+
+public:
+  VarStreamArrayImpl() = default;
+  VarStreamArrayImpl(BinaryStreamRef Stream)
+      : BaseType(Stream, WrappedContext()) {}
+};
+
+template <typename Value, typename Extractor = VarStreamArrayExtractor<Value>>
+using VarStreamArray =
+    VarStreamArrayImpl<Value, Extractor, typename Extractor::ContextType>;
 
 template <typename T> class FixedStreamArrayIterator;
 

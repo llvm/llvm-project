@@ -59,19 +59,6 @@ Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref, uint32_t Length) {
   return Error::success();
 }
 
-std::pair<BinaryStreamWriter, BinaryStreamWriter>
-BinaryStreamWriter::split(uint32_t Off) const {
-  assert(getLength() >= Off);
-
-  WritableBinaryStreamRef First = Stream.drop_front(Offset);
-
-  WritableBinaryStreamRef Second = First.drop_front(Off);
-  First = First.keep_front(Off);
-  BinaryStreamWriter W1{First};
-  BinaryStreamWriter W2{Second};
-  return std::make_pair(W1, W2);
-}
-
 Error BinaryStreamWriter::padToAlignment(uint32_t Align) {
   uint32_t NewOffset = alignTo(Offset, Align);
   if (NewOffset > getLength())

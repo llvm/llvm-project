@@ -93,16 +93,3 @@ uint8_t BinaryStreamReader::peek() const {
   llvm::consumeError(std::move(EC));
   return Buffer[0];
 }
-
-std::pair<BinaryStreamReader, BinaryStreamReader>
-BinaryStreamReader::split(uint32_t Off) const {
-  assert(getLength() >= Off);
-
-  BinaryStreamRef First = Stream.drop_front(Offset);
-
-  BinaryStreamRef Second = First.drop_front(Off);
-  First = First.keep_front(Off);
-  BinaryStreamReader W1{First};
-  BinaryStreamReader W2{Second};
-  return std::make_pair(W1, W2);
-}

@@ -945,7 +945,7 @@ void callInMacroArg() {
 // CHECK-NEXT:    </dict>
 // CHECK-NEXT:   </array>
 // CHECK-NEXT:   <key>description</key><string>Memory allocated by &apos;new[]&apos; should be deallocated by &apos;delete[]&apos;, not &apos;delete&apos; (within a call to &apos;~auto_ptr&apos;)</string>
-// CHECK-NEXT:   <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:   <key>category</key><string>Memory error</string>
 // CHECK-NEXT:   <key>type</key><string>Bad deallocator</string>
 // CHECK-NEXT:   <key>check_name</key><string>unix.MismatchedDeallocator</string>
 // CHECK-NEXT:   <!-- This hash is experimental and going to change! -->

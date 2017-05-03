@@ -6142,6 +6142,20 @@ INTERCEPTOR(int, getloadavg, double *loadavg, int nelem) {
 #define INIT_GETLOADAVG
 #endif
 
+#if SANITIZER_INTERCEPT_MCHECK_MPROBE
+INTERCEPTOR(int, mcheck, void (*abortfunc)(int mstatus)) {
+  return 0;
+}
+
+INTERCEPTOR(int, mcheck_pedantic, void (*abortfunc)(int mstatus)) {
+  return 0;
+}
+
+INTERCEPTOR(int, mprobe, void *ptr) {
+  return 0;
+}
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();

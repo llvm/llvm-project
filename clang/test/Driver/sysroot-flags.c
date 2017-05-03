@@ -26,7 +26,3 @@
 // RUN:   FileCheck %s -check-prefix=SYSROOT_SEPARATE
 // SYSROOT_SEPARATE: "-isysroot" "{{[^"]*}}/foo/bar"
 // SYSROOT_SEPARATE: "--sysroot{{" "|=}}{{[^"]*}}/foo/bar"
-
-// Check that -isysroot is handled properly
-// RUN: %clang -isysroot /foo/bar -c %s -v 2>&1 | \
-// RUN:   grep "/foo/bar"

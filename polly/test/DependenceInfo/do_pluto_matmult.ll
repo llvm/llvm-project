@@ -81,15 +81,15 @@ do.end45:                                         ; preds = %do.cond42
 ; MEMORY-NEXT:     { Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
 
 ; FUNC-VALUE:      RAW dependences:
-; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Read0_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
+; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Read0[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 ; FUNC-VALUE-NEXT: WAR dependences:
 ; FUNC-VALUE-NEXT:     { }
 ; FUNC-VALUE-NEXT: WAW dependences:
-; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Write3_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
+; FUNC-VALUE-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3[]] -> [Stmt_do_body2[i0, i1, 1 + i2] -> Stmt_do_body2_Write3[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, 1 + i2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and 0 <= i2 <= 34 }
 
 ; FUNC-MEMORY:      RAW dependences:
-; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Read0_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
+; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Read0[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
 ; FUNC-MEMORY-NEXT: WAR dependences:
-; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Read0_MemRef_C[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Write3_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
+; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Read0[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Write3[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
 ; FUNC-MEMORY-NEXT: WAW dependences:
-; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3_MemRef_C[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Write3_MemRef_C[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }
+; FUNC-MEMORY-NEXT:     { [Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2_Write3[]] -> [Stmt_do_body2[i0, i1, o2] -> Stmt_do_body2_Write3[]] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35; Stmt_do_body2[i0, i1, i2] -> Stmt_do_body2[i0, i1, o2] : 0 <= i0 <= 35 and 0 <= i1 <= 35 and i2 >= 0 and i2 < o2 <= 35 }

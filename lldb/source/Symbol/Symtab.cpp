@@ -299,17 +299,24 @@ void Symtab::InitNameIndexes() {
               const char *const_context =
                   ConstString(cxx_method.GetContext()).GetCString();
 
-              entry_ref = entry.cstring.GetStringRef();
-              if (entry_ref[0] == '~' ||
-                  !cxx_method.GetQualifiers().empty()) {
-                // The first character of the demangled basename is '~' which
-                // means we have a class destructor. We can use this information
-                // to help us know what is a class and what isn't.
-                if (class_contexts.find(const_context) == class_contexts.end())
-                  class_contexts.insert(const_context);
-                m_method_to_index.Append(entry);
+              if (!const_context || const_context[0] == 0) {
+                // No context for this function so this has to be a basename
+                m_basename_to_index.Append(entry);
+                // If there is no context (no namespaces or class scopes that
+                // come before the function name) then this also could be a
+                // fullname.
+                m_name_to_index.Append(entry);
               } else {
-                if (const_context && const_context[0]) {
+                entry_ref = entry.cstring.GetStringRef();
+                if (entry_ref[0] == '~' ||
+                    !cxx_method.GetQualifiers().empty()) {
+                  // The first character of the demangled basename is '~' which
+                  // means we have a class destructor. We can use this information
+                  // to help us know what is a class and what isn't.
+                  if (class_contexts.find(const_context) == class_contexts.end())
+                    class_contexts.insert(const_context);
+                  m_method_to_index.Append(entry);
+                } else {
                   if (class_contexts.find(const_context) !=
                       class_contexts.end()) {
                     // The current decl context is in our "class_contexts" which
@@ -326,14 +333,6 @@ void Symtab::InitNameIndexes() {
                     mangled_name_to_index.Append(entry);
                     symbol_contexts[entry.value] = const_context;
                   }
-                } else {
-                  // No context for this function so this has to be a basename
-                  m_basename_to_index.Append(entry);
-                  // If there is no context (no namespaces or class scopes that
-                  // come before the function name) then this also could be a
-                  // fullname.
-                  if (cxx_method.GetContext().empty())
-                    m_name_to_index.Append(entry);
                 }
               }
             }
