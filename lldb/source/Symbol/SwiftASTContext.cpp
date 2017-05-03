@@ -5191,6 +5191,7 @@ bool SwiftASTContext::IsReferenceType(void *type, CompilerType *pointee_type,
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
+    case swift::TypeKind::InOut:
     case swift::TypeKind::LValue:
       if (pointee_type)
         *pointee_type = GetNonReferenceType(type);
@@ -5214,7 +5215,14 @@ bool SwiftASTContext::IsInoutType(const CompilerType &compiler_type,
       if (lvalue) {
         if (original_type)
           *original_type =
-              CompilerType(ast, lvalue->getObjectType().getPointer());
+          CompilerType(ast, lvalue->getObjectType().getPointer());
+        return true;
+      }
+      swift::InOutType *inout = swift_can_type->getAs<swift::InOutType>();
+      if (inout) {
+        if (original_type)
+          *original_type =
+          CompilerType(ast, inout->getObjectType().getPointer());
         return true;
       }
     }
@@ -5679,6 +5687,7 @@ SwiftASTContext::GetTypeInfo(void *type,
         eTypeHasValue | eTypeIsScalar | eTypeIsPointer | eTypeIsArchetype;
     break;
 
+  case swift::TypeKind::InOut:
   case swift::TypeKind::LValue:
     if (pointee_or_element_clang_type)
       *pointee_or_element_clang_type = GetNonReferenceType(type);
@@ -5688,7 +5697,6 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -6029,6 +6037,10 @@ CompilerType SwiftASTContext::GetNonReferenceType(void *type) {
     if (lvalue)
       return CompilerType(GetASTContext(),
                           lvalue->getObjectType().getPointer());
+    swift::InOutType *inout = swift_can_type->getAs<swift::InOutType>();
+    if (inout)
+        return CompilerType(GetASTContext(),
+                            inout->getObjectType().getPointer());
   }
   return CompilerType();
 }
@@ -6045,6 +6057,8 @@ CompilerType SwiftASTContext::GetPointerType(void *type) {
     const swift::TypeKind type_kind = swift_type->getKind();
     if (type_kind == swift::TypeKind::BuiltinRawPointer)
       return CompilerType(GetASTContext(), swift_type);
+    else if (type_kind == swift::TypeKind::Struct)
+      return CompilerType(GetASTContext(), swift::InOutType::get(swift_type));
   }
   return CompilerType();
 }
@@ -7371,6 +7385,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
+    case swift::TypeKind::InOut:
     case swift::TypeKind::LValue: {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
 
@@ -7388,7 +7403,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::SILBox:
     case swift::TypeKind::SILFunction:
     case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
       break;
 
@@ -7504,6 +7518,7 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
+    case swift::TypeKind::InOut:
     case swift::TypeKind::LValue: {
       CompilerType pointee_type(GetNonReferenceType(type));
 
@@ -7521,7 +7536,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::SILBox:
     case swift::TypeKind::SILFunction:
     case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::InOut:
     case swift::TypeKind::Unresolved:
       break;
 
