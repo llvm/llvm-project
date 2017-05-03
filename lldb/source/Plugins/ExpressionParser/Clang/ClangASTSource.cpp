@@ -348,7 +348,7 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
           GetCompleteObjCInterface(original_iface_decl);
 
       if (complete_iface_decl && (complete_iface_decl != original_iface_decl)) {
-        m_ast_importer_sp->SetDeclOrigin(interface_decl, original_iface_decl);
+        m_ast_importer_sp->SetDeclOrigin(interface_decl, complete_iface_decl);
       }
     }
   }
@@ -472,7 +472,7 @@ void ClangASTSource::FindExternalLexicalDecls(
       original_decl = complete_iface_decl;
       original_ctx = &complete_iface_decl->getASTContext();
 
-      m_ast_importer_sp->SetDeclOrigin(context_decl, original_iface_decl);
+      m_ast_importer_sp->SetDeclOrigin(context_decl, complete_iface_decl);
     }
   }
 
