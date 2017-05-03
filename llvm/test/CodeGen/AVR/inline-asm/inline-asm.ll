@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=avr -mattr=movw -no-integrated-as | FileCheck %s
+; XFAIL: *
 
 ; CHECK-LABEL: no_operands:
 define void @no_operands() {

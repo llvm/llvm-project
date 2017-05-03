@@ -157,6 +157,15 @@ struct MBlock {
 
 COMPILER_CHECK(sizeof(MBlock) == 16);
 
+enum ExternalTag : uptr {
+  kExternalTagNone = 0,
+  kExternalTagSwiftModifyingAccess = 1,
+  kExternalTagFirstUserAvailable = 2,
+  kExternalTagMax = 1024,
+  // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
+  // as 16-bit values, see tsan_defs.h.
+};
+
 }  // namespace __tsan
 
 #endif  // TSAN_DEFS_H

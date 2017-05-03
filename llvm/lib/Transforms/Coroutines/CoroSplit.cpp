@@ -216,8 +216,8 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
                        F.getName() + Suffix, M);
-  NewF->addAttribute(1, Attribute::NonNull);
-  NewF->addAttribute(1, Attribute::NoAlias);
+  NewF->addParamAttr(0, Attribute::NonNull);
+  NewF->addParamAttr(0, Attribute::NoAlias);
 
   ValueToValueMapTy VMap;
   // Replace all args with undefs. The buildCoroutineFrame algorithm already

@@ -99,7 +99,6 @@ struct Configuration {
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
-  bool ArchiveWithoutSymbolsSeen = false;
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;

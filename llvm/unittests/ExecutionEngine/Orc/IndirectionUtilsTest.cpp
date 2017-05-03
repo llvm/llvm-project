@@ -20,17 +20,15 @@ TEST(IndirectionUtilsTest, MakeStub) {
   LLVMContext Context;
   ModuleBuilder MB(Context, "x86_64-apple-macosx10.10", "");
   Function *F = MB.createFunctionDecl<void(DummyStruct, DummyStruct)>("");
-  SmallVector<AttributeList, 4> Attrs;
-  Attrs.push_back(
-      AttributeList::get(MB.getModule()->getContext(), 1U,
-                         AttrBuilder().addAttribute(Attribute::StructRet)));
-  Attrs.push_back(
-      AttributeList::get(MB.getModule()->getContext(), 2U,
-                         AttrBuilder().addAttribute(Attribute::ByVal)));
-  Attrs.push_back(
-      AttributeList::get(MB.getModule()->getContext(), ~0U,
-                         AttrBuilder().addAttribute(Attribute::NoUnwind)));
-  F->setAttributes(AttributeList::get(MB.getModule()->getContext(), Attrs));
+  AttributeSet FnAttrs = AttributeSet::get(
+      Context, AttrBuilder().addAttribute(Attribute::NoUnwind));
+  AttributeSet RetAttrs; // None
+  AttributeSet ArgAttrs[2] = {
+      AttributeSet::get(Context,
+                        AttrBuilder().addAttribute(Attribute::StructRet)),
+      AttributeSet::get(Context, AttrBuilder().addAttribute(Attribute::ByVal)),
+  };
+  F->setAttributes(AttributeList::get(Context, FnAttrs, RetAttrs, ArgAttrs));
 
   auto ImplPtr = orc::createImplPointer(*F->getType(), *MB.getModule(), "", nullptr);
   orc::makeStub(*F, *ImplPtr);

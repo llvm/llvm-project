@@ -285,7 +285,8 @@ class AttributeList {
 public:
   enum AttrIndex : unsigned {
     ReturnIndex = 0U,
-    FunctionIndex = ~0U
+    FunctionIndex = ~0U,
+    FirstArgIndex = 1,
   };
 
 private:
@@ -335,6 +336,13 @@ public:
                            ArrayRef<StringRef> Kind);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  AttributeList addParamAttribute(LLVMContext &C, unsigned ArgNo,
+                                  Attribute::AttrKind Kind) const {
+    return addAttribute(C, ArgNo + FirstArgIndex, Kind);
+  }
 
   /// \brief Add an attribute to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
@@ -433,7 +441,7 @@ public:
   /// may be faster.
   bool hasFnAttribute(StringRef Kind) const;
 
-  /// \brief Equivalent to hasAttribute(ArgNo + 1, Kind).
+  /// \brief Equivalent to hasAttribute(ArgNo + FirstArgIndex, Kind).
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// \brief Return true if the specified attribute is set for at least one

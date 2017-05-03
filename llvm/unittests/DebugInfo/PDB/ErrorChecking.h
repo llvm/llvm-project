@@ -36,6 +36,18 @@
     }                                                                          \
   }
 
+#define EXPECT_EXPECTED_EQ(Val, Exp)                                           \
+  {                                                                            \
+    auto Result = Exp;                                                         \
+    auto E = Result.takeError();                                               \
+    EXPECT_FALSE(static_cast<bool>(E));                                        \
+    if (E) {                                                                   \
+      consumeError(std::move(E));                                              \
+      return;                                                                  \
+    }                                                                          \
+    EXPECT_EQ(Val, *Result);                                                   \
+  }
+
 #define EXPECT_UNEXPECTED(Exp)                                                 \
   {                                                                            \
     auto E = Exp.takeError();                                                  \

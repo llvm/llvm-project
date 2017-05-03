@@ -1,4 +1,4 @@
-//==- HexagonInstrFormats.td - Hexagon Instruction Formats --*- tablegen -*-==//
+//==- HexagonInstrFormatsV4.td - Hexagon Instruction Formats --*- tablegen -==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -85,64 +85,3 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
   bits<2> opExtentAlign = 0;
   let TSFlags{28-27} = opExtentAlign; // Alignment exponent before extending.
 }
-
-//----------------------------------------------------------------------------//
-//                         Instruction Classes Definitions
-//----------------------------------------------------------------------------//
-
-//
-// NV type instructions.
-//
-class NVInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-             string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeNCJ>, OpcodeHexagon;
-
-class NVInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// Definition of Post increment new value store.
-class NVInstPost_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ST_tc_st_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// Post increment ST Instruction.
-let mayStore = 1 in
-class NVInstPI_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ST_tc_st_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// New-value conditional branch.
-class NCJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : NVInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayLoad = 1, mayStore = 1 in
-class MEMInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeV4LDST>,
-    OpcodeHexagon;
-
-class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                 string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : MEMInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-class EXTENDERInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
-  : InstHexagon<outs, ins, asmstr, pattern, "", EXTENDER_tc_1_SLOT0123,
-                TypeEXTENDER>, OpcodeHexagon;
-
-class SUBInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : InstHexagon<outs, ins, asmstr, pattern, "", PREFIX, TypeDUPLEX>,
-    OpcodeHexagon;
-
-class CJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND_CJ_ARCHDEPSLOT, TypeCJ>,
-    OpcodeHexagon;
-
-class CJInst_JMPSET<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND, TypeCJ>,
-    OpcodeHexagon;
-

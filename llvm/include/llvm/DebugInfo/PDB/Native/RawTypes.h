@@ -308,9 +308,9 @@ struct InfoStreamHeader {
 
 /// The header preceeding the /names stream.
 struct PDBStringTableHeader {
-  support::ulittle32_t Signature;
-  support::ulittle32_t HashVersion;
-  support::ulittle32_t ByteSize;
+  support::ulittle32_t Signature;   // PDBStringTableSignature
+  support::ulittle32_t HashVersion; // 1 or 2
+  support::ulittle32_t ByteSize;    // Number of bytes of names buffer.
 };
 
 const uint32_t PDBStringTableSignature = 0xEFFEEFFE;

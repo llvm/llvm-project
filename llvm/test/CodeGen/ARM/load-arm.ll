@@ -15,3 +15,14 @@ define i32 @addrmode_cse_mutation(i8* %base, i32 %count) {
   %res = mul i32 %count, 34661
   ret i32 %res
 }
+
+; CHECK-LABEL: addrmode_cse_multi_use:
+; CHECK-NOT: {{ldrb|ldrb.w}} {{r[0-9]+}}, [{{r[0-9]+}}, {{r[0-9]+}}, lsl #3]
+define i32 @addrmode_cse_multi_use(i8* %base, i32 %count) {
+  %offset = mul i32 %count, 277288
+  %ptr = getelementptr i8, i8* %base, i32 %offset
+  %val = load volatile i8, i8* %ptr
+  %res = mul i32 %count, 34661
+  %res.1 = add i32 %res, %offset
+  ret i32 %res.1
+}

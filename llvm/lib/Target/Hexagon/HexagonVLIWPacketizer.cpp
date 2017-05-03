@@ -334,7 +334,7 @@ bool HexagonPacketizerList::isNewifiable(const MachineInstr &MI,
   // Vector stores can be predicated, and can be new-value stores, but
   // they cannot be predicated on a .new predicate value.
   if (NewRC == &Hexagon::PredRegsRegClass)
-    if (HII->isV60VectorInstruction(MI) && MI.mayStore())
+    if (HII->isHVXVec(MI) && MI.mayStore())
       return false;
   return HII->isCondInst(MI) || HII->isJumpR(MI) || MI.isReturn() ||
          HII->mayBeNewStore(MI);
@@ -356,7 +356,7 @@ void HexagonPacketizerList::cleanUpDotCur() {
   MachineInstr *MI = nullptr;
   for (auto BI : CurrentPacketMIs) {
     DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
-    if (BI->getOpcode() == Hexagon::V6_vL32b_cur_ai) {
+    if (HII->isDotCurInst(*BI)) {
       MI = BI;
       continue;
     }
@@ -369,7 +369,7 @@ void HexagonPacketizerList::cleanUpDotCur() {
   if (!MI)
     return;
   // We did not find a use of the CUR, so de-cur it.
-  MI->setDesc(HII->get(Hexagon::V6_vL32b_ai));
+  MI->setDesc(HII->get(HII->getNonDotCurOp(*MI)));
   DEBUG(dbgs() << "Demoted CUR "; MI->dump(););
 }
 
@@ -377,9 +377,9 @@ void HexagonPacketizerList::cleanUpDotCur() {
 bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
       const SUnit *PacketSU, unsigned DepReg, MachineBasicBlock::iterator &MII,
       const TargetRegisterClass *RC) {
-  if (!HII->isV60VectorInstruction(MI))
+  if (!HII->isHVXVec(MI))
     return false;
-  if (!HII->isV60VectorInstruction(*MII))
+  if (!HII->isHVXVec(*MII))
     return false;
 
   // Already a dot new instruction.
@@ -1365,7 +1365,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
 
     // Data dpendence ok if we have load.cur.
     if (DepType == SDep::Data && HII->isDotCurInst(J)) {
-      if (HII->isV60VectorInstruction(I))
+      if (HII->isHVXVec(I))
         continue;
     }
 
@@ -1374,6 +1374,8 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       if (canPromoteToDotNew(I, SUJ, DepReg, II, RC)) {
         if (promoteToDotNew(I, DepType, II, RC)) {
           PromotedToDotNew = true;
+          if (cannotCoexist(I, J))
+            FoundSequentialDependence = true;
           continue;
         }
       }
@@ -1418,26 +1420,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
         DepType != SDep::Output)
       continue;
 
-    // Ignore output dependences due to superregs. We can write to two
-    // different subregisters of R1:0 for instance in the same cycle.
-
-    // If neither I nor J defines DepReg, then this is a superfluous output
-    // dependence. The dependence must be of the form:
-    //   R0 = ...
-    //   R1 = ...
-    // and there is an output dependence between the two instructions with
-    // DepReg = D0.
-    // We want to ignore these dependences. Ideally, the dependence
-    // constructor should annotate such dependences. We can then avoid this
-    // relatively expensive check.
-    //
     if (DepType == SDep::Output) {
-      // DepReg is the register that's responsible for the dependence.
-      unsigned DepReg = SUJ->Succs[i].getReg();
-
-      // Check if I and J really defines DepReg.
-      if (!I.definesRegister(DepReg) && !J.definesRegister(DepReg))
-        continue;
       FoundSequentialDependence = true;
       break;
     }
@@ -1553,10 +1536,9 @@ bool HexagonPacketizerList::isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
   MachineInstr &I = *SUI->getInstr();
   MachineInstr &J = *SUJ->getInstr();
 
-  if (cannotCoexist(I, J))
-    return false;
+  bool Coexist = !cannotCoexist(I, J);
 
-  if (!Dependence)
+  if (Coexist && !Dependence)
     return true;
 
   // Check if the instruction was promoted to a dot-new. If so, demote it
@@ -1659,21 +1641,6 @@ bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
 }
 
 
-// Return true when ConsMI uses a register defined by ProdMI.
-static bool isDependent(const MachineInstr &ProdMI,
-      const MachineInstr &ConsMI) {
-  if (!ProdMI.getOperand(0).isReg())
-    return false;
-  unsigned DstReg = ProdMI.getOperand(0).getReg();
-
-  for (auto &Op : ConsMI.operands())
-    if (Op.isReg() && Op.isUse() && Op.getReg() == DstReg)
-      // The MIs depend on each other.
-      return true;
-
-  return false;
-}
-
 // V60 forward scheduling.
 bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
   // If the packet already stalls, then ignore the stall from a subsequent
@@ -1695,40 +1662,48 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
       return false;
   }
 
-  // Check for stall between two vector instructions.
-  if (HII->isV60VectorInstruction(I)) {
-    for (auto J : OldPacketMIs) {
-      if (!HII->isV60VectorInstruction(*J))
-        continue;
-      if (isDependent(*J, I) && !HII->isVecUsableNextPacket(*J, I))
-        return true;
-    }
+  SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
 
-    return false;
-  }
+  // Check if the latency is 0 between this instruction and any instruction
+  // in the current packet. If so, we disregard any potential stalls due to
+  // the instructions in the previous packet. Most of the instruction pairs
+  // that can go together in the same packet have 0 latency between them.
+  // Only exceptions are newValueJumps as they're generated much later and
+  // the latencies can't be changed at that point. Another is .cur
+  // instructions if its consumer has a 0 latency successor (such as .new).
+  // In this case, the latency between .cur and the consumer stays non-zero
+  // even though we can have  both .cur and .new in the same packet. Changing
+  // the latency to 0 is not an option as it causes software pipeliner to
+  // not pipeline in some cases.
 
-  // Check for stall between two scalar instructions. First, check that
-  // there is no definition of a use in the current packet, because it
-  // may be a candidate for .new.
-  for (auto J : CurrentPacketMIs)
-    if (!HII->isV60VectorInstruction(*J) && isDependent(*J, I))
-      return false;
+  // For Example:
+  // {
+  //   I1:  v6.cur = vmem(r0++#1)
+  //   I2:  v7 = valign(v6,v4,r2)
+  //   I3:  vmem(r5++#1) = v7.new
+  // }
+  // Here I2 and I3 has 0 cycle latency, but I1 and I2 has 2.
 
-  // Check for stall between I and instructions in the previous packet.
-  if (MF.getSubtarget<HexagonSubtarget>().useBSBScheduling()) {
-    for (auto J : OldPacketMIs) {
-      if (HII->isV60VectorInstruction(*J))
-        continue;
-      if (!HII->isLateInstrFeedsEarlyInstr(*J, I))
-        continue;
-      if (isDependent(*J, I) && !HII->canExecuteInBundle(*J, I))
-        return true;
-    }
+  for (auto J : CurrentPacketMIs) {
+    SUnit *SUJ = MIToSUnit[J];
+    for (auto &Pred : SUI->Preds)
+      if (Pred.getSUnit() == SUJ &&
+          (Pred.getLatency() == 0 || HII->isNewValueJump(I) ||
+           HII->isToBeScheduledASAP(*J, I)))
+        return false;
   }
 
   // Check if the latency is greater than one between this instruction and any
   // instruction in the previous packet.
-  SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
+  for (auto J : OldPacketMIs) {
+    SUnit *SUJ = MIToSUnit[J];
+    for (auto &Pred : SUI->Preds)
+      if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)
+        return true;
+  }
+
+  // Check if the latency is greater than one between this instruction and any
+  // instruction in the previous packet.
   for (auto J : OldPacketMIs) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
@@ -1738,7 +1713,6 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
 
   return false;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions

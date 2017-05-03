@@ -839,12 +839,12 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // avoiding a register copy.
     if (PtrArg->hasStructRetAttr()) {
       unsigned ArgNo = PtrArg->getArgNo();
-      F->removeAttribute(ArgNo + 1, Attribute::StructRet);
-      F->addAttribute(ArgNo + 1, Attribute::NoAlias);
+      F->removeParamAttr(ArgNo, Attribute::StructRet);
+      F->addParamAttr(ArgNo, Attribute::NoAlias);
       for (Use &U : F->uses()) {
         CallSite CS(U.getUser());
-        CS.removeAttribute(ArgNo + 1, Attribute::StructRet);
-        CS.addAttribute(ArgNo + 1, Attribute::NoAlias);
+        CS.removeParamAttr(ArgNo, Attribute::StructRet);
+        CS.addParamAttr(ArgNo, Attribute::NoAlias);
       }
     }
 

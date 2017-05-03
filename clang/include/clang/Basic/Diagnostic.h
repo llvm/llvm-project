@@ -216,7 +216,7 @@ private:
     unsigned WarningsAsErrors : 1;       // Treat warnings like errors.
     unsigned ErrorsAsFatal : 1;          // Treat errors like fatal errors.
     unsigned SuppressSystemWarnings : 1; // Suppress warnings in system headers.
-    diag::Severity ExtBehavior : 4;     // Map extensions to warnings or errors?
+    diag::Severity ExtBehavior;         // Map extensions to warnings or errors?
 
     DiagState()
         : IgnoreAllWarnings(false), EnableAllWarnings(false),

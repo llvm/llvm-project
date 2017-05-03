@@ -525,14 +525,17 @@ Error LLVMOutputStyle::dumpStringTable() {
 
   DictScope D(P, "String Table");
   for (uint32_t I : IS->name_ids()) {
-    StringRef S = IS->getStringForID(I);
-    if (!S.empty()) {
-      llvm::SmallString<32> Str;
-      Str.append("'");
-      Str.append(S);
-      Str.append("'");
-      P.printString(Str);
-    }
+    auto ES = IS->getStringForID(I);
+    if (!ES)
+      return ES.takeError();
+
+    if (ES->empty())
+      continue;
+    llvm::SmallString<32> Str;
+    Str.append("'");
+    Str.append(*ES);
+    Str.append("'");
+    P.printString(Str);
   }
   return Error::success();
 }
@@ -688,8 +691,11 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     const auto &ST = *ExpectedST;
     for (const auto &E : Tpi->getHashAdjusters()) {
       DictScope DHA(P);
-      StringRef Name = ST.getStringForID(E.first);
-      P.printString("Type", Name);
+      auto Name = ST.getStringForID(E.first);
+      if (!Name)
+        return Name.takeError();
+
+      P.printString("Type", *Name);
       P.printHex("TI", E.second);
     }
   }

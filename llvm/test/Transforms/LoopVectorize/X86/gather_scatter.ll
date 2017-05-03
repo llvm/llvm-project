@@ -17,9 +17,9 @@ target triple = "x86_64-pc_linux"
 ;}
 
 ;AVX512-LABEL: @foo1
-;AVX512: llvm.masked.load.v16i32
-;AVX512: llvm.masked.gather.v16f32
-;AVX512: llvm.masked.store.v16f32
+;AVX512: llvm.masked.load.v16i32.p0v16i32
+;AVX512: llvm.masked.gather.v16f32.v16p0f32
+;AVX512: llvm.masked.store.v16f32.p0v16f32
 ;AVX512: ret void
 
 ; Function Attrs: nounwind uwtable
@@ -96,8 +96,8 @@ for.end:                                          ; preds = %for.cond
 
 ;AVX512-LABEL: @foo2
 ;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> {{.*}}, i32 1
-;AVX512: llvm.masked.gather.v16f32
-;AVX512: llvm.masked.scatter.v16f32
+;AVX512: llvm.masked.gather.v16f32.v16p0f32
+;AVX512: llvm.masked.scatter.v16f32.v16p0f32
 ;AVX512: ret void
 define void @foo2(%struct.In* noalias %in, float* noalias %out, i32* noalias %trigger, i32* noalias %index) #0 {
 entry:
@@ -171,10 +171,10 @@ for.end:                                          ; preds = %for.cond
 
 ;AVX512-LABEL: @foo3
 ;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> {{.*}}, i32 1
-;AVX512: llvm.masked.gather.v16f32
+;AVX512: llvm.masked.gather.v16f32.v16p0f32
 ;AVX512: fadd <16 x float>
 ;AVX512: getelementptr inbounds %struct.Out, %struct.Out* %out, <16 x i64> {{.*}}, i32 1
-;AVX512: llvm.masked.scatter.v16f32
+;AVX512: llvm.masked.scatter.v16f32.v16p0f32
 ;AVX512: ret void
 
 %struct.Out = type { float, float }
@@ -233,4 +233,194 @@ for.inc:                                          ; preds = %if.end
 for.end:                                          ; preds = %for.cond
   ret void
 }
-declare void @llvm.masked.scatter.v16f32(<16 x float>, <16 x float*>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float>, <16 x float*>, i32, <16 x i1>)
+
+; The same as @foo2 but scatter/gather argument is a vecotr of ptrs with addresspace 1
+
+;AVX512-LABEL: @foo2_addrspace
+;AVX512: getelementptr inbounds %struct.In, %struct.In addrspace(1)* %in, <16 x i64> {{.*}}, i32 1
+;AVX512: llvm.masked.gather.v16f32.v16p1f32
+;AVX512: llvm.masked.scatter.v16f32.v16p1f32
+;AVX512: ret void
+define void @foo2_addrspace(%struct.In addrspace(1)* noalias %in, float addrspace(1)* noalias %out, i32* noalias %trigger, i32* noalias %index) #0 {
+entry:
+  %in.addr = alloca %struct.In addrspace(1)*, align 8
+  %out.addr = alloca float addrspace(1)*, align 8
+  %trigger.addr = alloca i32*, align 8
+  %index.addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  store %struct.In addrspace(1)* %in, %struct.In addrspace(1)** %in.addr, align 8
+  store float addrspace(1)* %out, float addrspace(1)** %out.addr, align 8
+  store i32* %trigger, i32** %trigger.addr, align 8
+  store i32* %index, i32** %index.addr, align 8
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 4096
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32, i32* %i, align 4
+  %idxprom = sext i32 %1 to i64
+  %2 = load i32*, i32** %trigger.addr, align 8
+  %arrayidx = getelementptr inbounds i32, i32* %2, i64 %idxprom
+  %3 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %3, 0
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  %4 = load i32, i32* %i, align 4
+  %idxprom2 = sext i32 %4 to i64
+  %5 = load %struct.In addrspace(1)*, %struct.In addrspace(1)** %in.addr, align 8
+  %arrayidx3 = getelementptr inbounds %struct.In, %struct.In addrspace(1)* %5, i64 %idxprom2
+  %b = getelementptr inbounds %struct.In, %struct.In addrspace(1)* %arrayidx3, i32 0, i32 1
+  %6 = load float, float addrspace(1)* %b, align 4
+  %add = fadd float %6, 5.000000e-01
+  %7 = load i32, i32* %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %8 = load float addrspace(1)*, float addrspace(1)** %out.addr, align 8
+  %arrayidx5 = getelementptr inbounds float, float addrspace(1)* %8, i64 %idxprom4
+  store float %add, float addrspace(1)* %arrayidx5, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.end
+  %9 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %9, 16
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}
+
+; Same as foo2_addrspace but here only the input has the non-default address space.
+
+;AVX512-LABEL: @foo2_addrspace2
+;AVX512: getelementptr inbounds %struct.In, %struct.In addrspace(1)* %in, <16 x i64> {{.*}}, i32 1
+;AVX512: llvm.masked.gather.v16f32.v16p1f32
+;AVX512: llvm.masked.scatter.v16f32.v16p0f32
+;AVX512: ret void
+define void @foo2_addrspace2(%struct.In addrspace(1)* noalias %in, float addrspace(0)* noalias %out, i32* noalias %trigger, i32* noalias %index) {
+entry:
+  %in.addr = alloca %struct.In addrspace(1)*, align 8
+  %out.addr = alloca float addrspace(0)*, align 8
+  %trigger.addr = alloca i32*, align 8
+  %index.addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  store %struct.In addrspace(1)* %in, %struct.In addrspace(1)** %in.addr, align 8
+  store float addrspace(0)* %out, float addrspace(0)** %out.addr, align 8
+  store i32* %trigger, i32** %trigger.addr, align 8
+  store i32* %index, i32** %index.addr, align 8
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 4096
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32, i32* %i, align 4
+  %idxprom = sext i32 %1 to i64
+  %2 = load i32*, i32** %trigger.addr, align 8
+  %arrayidx = getelementptr inbounds i32, i32* %2, i64 %idxprom
+  %3 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %3, 0
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  %4 = load i32, i32* %i, align 4
+  %idxprom2 = sext i32 %4 to i64
+  %5 = load %struct.In addrspace(1)*, %struct.In addrspace(1)** %in.addr, align 8
+  %arrayidx3 = getelementptr inbounds %struct.In, %struct.In addrspace(1)* %5, i64 %idxprom2
+  %b = getelementptr inbounds %struct.In, %struct.In addrspace(1)* %arrayidx3, i32 0, i32 1
+  %6 = load float, float addrspace(1)* %b, align 4
+  %add = fadd float %6, 5.000000e-01
+  %7 = load i32, i32* %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %8 = load float addrspace(0)*, float addrspace(0)** %out.addr, align 8
+  %arrayidx5 = getelementptr inbounds float, float addrspace(0)* %8, i64 %idxprom4
+  store float %add, float addrspace(0)* %arrayidx5, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.end
+  %9 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %9, 16
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}
+
+; Same as foo2_addrspace but here only the output has the non-default address space.
+
+;AVX512-LABEL: @foo2_addrspace3
+;AVX512: getelementptr inbounds %struct.In, %struct.In* %in, <16 x i64> {{.*}}, i32 1
+;AVX512: llvm.masked.gather.v16f32.v16p0f32
+;AVX512: llvm.masked.scatter.v16f32.v16p1f32
+;AVX512: ret void
+
+define void @foo2_addrspace3(%struct.In addrspace(0)* noalias %in, float addrspace(1)* noalias %out, i32* noalias %trigger, i32* noalias %index) {
+entry:
+  %in.addr = alloca %struct.In addrspace(0)*, align 8
+  %out.addr = alloca float addrspace(1)*, align 8
+  %trigger.addr = alloca i32*, align 8
+  %index.addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  store %struct.In addrspace(0)* %in, %struct.In addrspace(0)** %in.addr, align 8
+  store float addrspace(1)* %out, float addrspace(1)** %out.addr, align 8
+  store i32* %trigger, i32** %trigger.addr, align 8
+  store i32* %index, i32** %index.addr, align 8
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 4096
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32, i32* %i, align 4
+  %idxprom = sext i32 %1 to i64
+  %2 = load i32*, i32** %trigger.addr, align 8
+  %arrayidx = getelementptr inbounds i32, i32* %2, i64 %idxprom
+  %3 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %3, 0
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  %4 = load i32, i32* %i, align 4
+  %idxprom2 = sext i32 %4 to i64
+  %5 = load %struct.In addrspace(0)*, %struct.In addrspace(0)** %in.addr, align 8
+  %arrayidx3 = getelementptr inbounds %struct.In, %struct.In addrspace(0)* %5, i64 %idxprom2
+  %b = getelementptr inbounds %struct.In, %struct.In addrspace(0)* %arrayidx3, i32 0, i32 1
+  %6 = load float, float addrspace(0)* %b, align 4
+  %add = fadd float %6, 5.000000e-01
+  %7 = load i32, i32* %i, align 4
+  %idxprom4 = sext i32 %7 to i64
+  %8 = load float addrspace(1)*, float addrspace(1)** %out.addr, align 8
+  %arrayidx5 = getelementptr inbounds float, float addrspace(1)* %8, i64 %idxprom4
+  store float %add, float addrspace(1)* %arrayidx5, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.end
+  %9 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %9, 16
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}

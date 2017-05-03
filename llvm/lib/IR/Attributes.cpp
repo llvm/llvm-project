@@ -1123,7 +1123,7 @@ AttributeList::addAllocSizeAttr(LLVMContext &C, unsigned Index,
 LLVMContext &AttributeList::getContext() const { return pImpl->getContext(); }
 
 AttributeSet AttributeList::getParamAttributes(unsigned ArgNo) const {
-  return getAttributes(ArgNo + 1);
+  return getAttributes(ArgNo + FirstArgIndex);
 }
 
 AttributeSet AttributeList::getRetAttributes() const {
@@ -1189,7 +1189,7 @@ unsigned AttributeList::getRetAlignment() const {
 }
 
 unsigned AttributeList::getParamAlignment(unsigned ArgNo) const {
-  return getAttributes(ArgNo + 1).getAlignment();
+  return getAttributes(ArgNo + FirstArgIndex).getAlignment();
 }
 
 unsigned AttributeList::getStackAlignment(unsigned Index) const {

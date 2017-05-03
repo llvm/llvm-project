@@ -199,7 +199,7 @@ void Fuzzer::CrashCallback() {
   Printf("SUMMARY: libFuzzer: deadly signal\n");
   DumpCurrentUnit("crash-");
   PrintFinalStats();
-  exit(Options.ErrorExitCode);
+  _Exit(Options.ErrorExitCode);  // Stop right now.
 }
 
 void Fuzzer::InterruptCallback() {

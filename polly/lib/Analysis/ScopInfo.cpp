@@ -158,6 +158,12 @@ static cl::opt<bool> PollyPreciseFoldAccesses(
     cl::desc("Fold memory accesses to model more possible delinearizations "
              "(does not scale well)"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool> UseInstructionNames(
+    "polly-use-llvm-names",
+    cl::desc("Use LLVM-IR names when deriving statement names"), cl::Hidden,
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -240,8 +246,9 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
     : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S) {
   std::string BasePtrName =
       BaseName ? BaseName
-               : getIslCompatibleName("MemRef_", BasePtr,
-                                      Kind == MemoryKind::PHI ? "__phi" : "");
+               : getIslCompatibleName("MemRef", BasePtr, S->getNextArrayIdx(),
+                                      Kind == MemoryKind::PHI ? "__phi" : "",
+                                      UseInstructionNames);
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
@@ -1574,14 +1581,16 @@ ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(nullptr),
       R(&R), Build(nullptr), SurroundingLoop(SurroundingLoop) {
 
-  BaseName = getIslCompatibleName("Stmt_", R.getNameStr(), "");
+  BaseName = getIslCompatibleName(
+      "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
 }
 
 ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
       R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop) {
 
-  BaseName = getIslCompatibleName("Stmt_", &bb, "");
+  BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), "",
+                                  UseInstructionNames);
 }
 
 ScopStmt::ScopStmt(Scop &parent, __isl_take isl_map *SourceRel,
@@ -1891,25 +1900,27 @@ void Scop::createParameterId(const SCEV *Parameter) {
 
   std::string ParameterName = "p_" + std::to_string(getNumParams() - 1);
 
-  if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
-    Value *Val = ValueParameter->getValue();
+  if (UseInstructionNames) {
+    if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
+      Value *Val = ValueParameter->getValue();
 
-    // If this parameter references a specific Value and this value has a name
-    // we use this name as it is likely to be unique and more useful than just
-    // a number.
-    if (Val->hasName())
-      ParameterName = Val->getName();
-    else if (LoadInst *LI = dyn_cast<LoadInst>(Val)) {
-      auto *LoadOrigin = LI->getPointerOperand()->stripInBoundsOffsets();
-      if (LoadOrigin->hasName()) {
-        ParameterName += "_loaded_from_";
-        ParameterName +=
-            LI->getPointerOperand()->stripInBoundsOffsets()->getName();
+      // If this parameter references a specific Value and this value has a name
+      // we use this name as it is likely to be unique and more useful than just
+      // a number.
+      if (Val->hasName())
+        ParameterName = Val->getName();
+      else if (LoadInst *LI = dyn_cast<LoadInst>(Val)) {
+        auto *LoadOrigin = LI->getPointerOperand()->stripInBoundsOffsets();
+        if (LoadOrigin->hasName()) {
+          ParameterName += "_loaded_from_";
+          ParameterName +=
+              LI->getPointerOperand()->stripInBoundsOffsets()->getName();
+        }
       }
     }
-  }
 
-  ParameterName = getIslCompatibleName("", ParameterName, "");
+    ParameterName = getIslCompatibleName("", ParameterName, "");
+  }
 
   auto *Id = isl_id_alloc(getIslCtx(), ParameterName.c_str(),
                           const_cast<void *>((const void *)Parameter));

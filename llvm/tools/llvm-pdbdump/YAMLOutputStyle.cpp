@@ -233,9 +233,12 @@ Error YAMLOutputStyle::dumpStringTable() {
 
   const auto &ST = ExpectedST.get();
   for (auto ID : ST.name_ids()) {
-    StringRef S = ST.getStringForID(ID);
-    if (!S.empty())
-      Obj.StringTable->push_back(S);
+    auto S = ST.getStringForID(ID);
+    if (!S)
+      return S.takeError();
+    if (S->empty())
+      continue;
+    Obj.StringTable->push_back(*S);
   }
   return Error::success();
 }

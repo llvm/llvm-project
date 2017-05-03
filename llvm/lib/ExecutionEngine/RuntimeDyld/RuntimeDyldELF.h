@@ -58,6 +58,9 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
 
+  void resolveBPFRelocation(const SectionEntry &Section, uint64_t Offset,
+                            uint64_t Value, uint32_t Type, int64_t Addend);
+
   unsigned getMaxStubSize() override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
       return 20; // movz; movk; movk; movk; br

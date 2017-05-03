@@ -98,6 +98,9 @@ public:
   BinaryStreamRef(BinaryStreamRef &S, uint32_t Offset,
                   uint32_t Length) = delete;
 
+  /// Check if a Stream is valid.
+  bool valid() const { return Stream != nullptr; }
+
   /// Given an Offset into this StreamRef and a Size, return a reference to a
   /// buffer owned by the stream.
   ///

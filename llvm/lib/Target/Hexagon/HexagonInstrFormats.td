@@ -188,29 +188,9 @@ class LDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = LD_tc_ld_SLOT01>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeLD>, OpcodeHexagon;
 
-class PseudoLDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+class CONSTLDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = LD_tc_ld_SLOT01>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeLD>, OpcodeHexagon;
-
-class CONSTLDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                  string cstr = "">
-  : PseudoLDInst<outs, ins, asmstr, pattern, cstr>;
-
-// LD Instruction Class in V2/V3/V4.
-// Definition of the instruction class NOT CHANGED.
-class LDInstPost<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                 string cstr = "">
-  : LDInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayLoad = 1 in
-class LD0Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin=LD_tc_ld_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeLD>, OpcodeHexagon;
-
-let mayLoad = 1 in
-class LD1Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin=LD_tc_ld_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeLD>;
 
 // ST Instruction Class in V2/V3 can take SLOT0 only.
 // ST Instruction Class in V4    can take SLOT0 & SLOT1.
@@ -220,124 +200,9 @@ class STInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = ST_tc_st_SLOT01>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeST>, OpcodeHexagon;
 
-let mayStore = 1 in
-class STInst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-             string cstr = "", InstrItinClass itin = ST_tc_st_SLOT01>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeST>;
-
-class STInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : STInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayStore = 1 in
-class ST0Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = ST_tc_ld_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeST>, OpcodeHexagon;
-
-// Same as ST0Inst but doesn't derive from OpcodeHexagon.
-let mayStore = 1 in
-class ST1Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = ST_tc_st_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeST>;
-
-// ST Instruction Class in V2/V3 can take SLOT0 only.
-// ST Instruction Class in V4    can take SLOT0 & SLOT1.
-// Definition of the instruction class CHANGED from V2/V3 to V4.
-class STInstPost<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                 string cstr = "", InstrItinClass itin = ST_tc_st_SLOT01>
-  : STInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// ALU64 Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from ALU64 to XTYPE from V2/V3 to V4.
-class ALU64Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
-   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU64>,
-     OpcodeHexagon;
-
-// ALU64 Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from ALU64 to XTYPE from V2/V3 to V4.
-class ALU64Inst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
-   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU64>;
-
-
-class ALU64_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
-  : ALU64Inst<outs, ins, asmstr, pattern, cstr, itin>;
-
-
-// M Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from M to XTYPE from V2/V3 to V4.
-class MInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = M_tc_3x_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeM>,
-    OpcodeHexagon;
-
-// Same as above but doesn't derive from OpcodeHexagon
-class MInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = M_tc_3x_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeM>;
-
-// M Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from M to XTYPE from V2/V3 to V4.
-class MInst_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = M_tc_2_SLOT23>
-    : MInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// S Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from S to XTYPE from V2/V3 to V4.
-class SInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>,
-    OpcodeHexagon;
-
-class SInst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>;
-
-class SInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>;
-
-// S Instruction Class in V2/V3.
-// XTYPE Instruction Class in V4.
-// Definition of the instruction class NOT CHANGED.
-// Name of the Instruction Class changed from S to XTYPE from V2/V3 to V4.
-class SInst_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = S_3op_tc_1_SLOT23>
-  : SInst<outs, ins, asmstr, pattern, cstr, itin> {
-  let Type = TypeS_3op;
-}
-
-// J Instruction Class in V2/V3/V4.
-// Definition of the instruction class NOT CHANGED.
-class JInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = J_tc_2early_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
-
-class JInst_CJUMP_UCJUMP<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-            string cstr = "", InstrItinClass itin = J_tc_2early_CJUMP_UCJUMP_ARCHDEPSLOT>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
-
-// CR Instruction Class in V2/V3/V4.
-// Definition of the instruction class NOT CHANGED.
-class CRInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-             string cstr = "", InstrItinClass itin = CR_tc_2early_SLOT3>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCR>, OpcodeHexagon;
-
 let isCodeGenOnly = 1, isPseudo = 1 in
 class Endloop<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = J_tc_2early_SLOT0123>
+              string cstr = "", InstrItinClass itin = tc_ENDLOOP>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeENDLOOP>,
     OpcodeHexagon;
 
@@ -357,27 +222,6 @@ class PseudoM<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 //                         Instruction Classes Definitions -
 //===----------------------------------------------------------------------===//
 
-//
-// ALU64 patterns.
-//
-class ALU64_rr<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ALU64_tc_1_SLOT23>
-   : ALU64Inst<outs, ins, asmstr, pattern, cstr, itin>;
-
-class ALU64_ri<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ALU64_tc_1_SLOT23>
-   : ALU64Inst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// Post increment ST Instruction.
-class STInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "">
-  : STInst<outs, ins, asmstr, pattern, cstr>;
-
-// Post increment LD Instruction.
-class LDInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "">
-  : LDInst<outs, ins, asmstr, pattern, cstr>;
-
 //===----------------------------------------------------------------------===//
 // V4 Instruction Format Definitions +
 //===----------------------------------------------------------------------===//
@@ -385,7 +229,7 @@ class LDInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 include "HexagonInstrFormatsV4.td"
 
 //===----------------------------------------------------------------------===//
-// V4 Instruction Format Definitions +
+// V55 Instruction Format Definitions +
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -395,5 +239,5 @@ include "HexagonInstrFormatsV4.td"
 include "HexagonInstrFormatsV60.td"
 
 //===----------------------------------------------------------------------===//
-// V60 Instruction Format Definitions +
+// V62 Instruction Format Definitions +
 //===----------------------------------------------------------------------===//

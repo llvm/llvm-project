@@ -105,11 +105,6 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 static void undefine(Symbol *S) {
   replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
                          STV_DEFAULT, S->body()->Type, nullptr);
-  // It shouldn't normally matter what the binding is, but if a bug in the LTO
-  // implementation causes it to fail to provide a definition for a symbol,
-  // setting the binding to STB_GLOBAL will cause the linker to report an
-  // undefined symbol error, even if the definition was weak.
-  S->Binding = STB_GLOBAL;
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {

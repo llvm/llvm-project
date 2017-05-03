@@ -412,7 +412,7 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
   // Can't use musttail due to prototype mismatch, but we can use tail.
   Call->setTailCall(true);
   // Set inreg so we pass it in EAX.
-  Call->addAttribute(1, Attribute::InReg);
+  Call->addParamAttr(0, Attribute::InReg);
   Builder.CreateRet(Call);
   return Trampoline;
 }

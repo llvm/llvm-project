@@ -171,14 +171,31 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   case file_magic::unknown:
     readLinkerScript(MBRef);
     return;
-  case file_magic::archive:
+  case file_magic::archive: {
+    // Handle -whole-archive.
     if (InWholeArchive) {
       for (MemoryBufferRef MB : getArchiveMembers(MBRef))
         Files.push_back(createObjectFile(MB, Path));
       return;
     }
-    Files.push_back(make<ArchiveFile>(MBRef));
+
+    std::unique_ptr<Archive> File =
+        check(Archive::create(MBRef), Path + ": failed to parse archive");
+
+    // If an archive file has no symbol table, it is likely that a user
+    // is attempting LTO and using a default ar command that doesn't
+    // understand the LLVM bitcode file. It is a pretty common error, so
+    // we'll handle it as if it had a symbol table.
+    if (!File->hasSymbolTable()) {
+      for (MemoryBufferRef MB : getArchiveMembers(MBRef))
+        Files.push_back(make<LazyObjectFile>(MB));
+      return;
+    }
+
+    // Handle the regular case.
+    Files.push_back(make<ArchiveFile>(std::move(File)));
     return;
+  }
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
       error("attempted static link of dynamic object " + Path);

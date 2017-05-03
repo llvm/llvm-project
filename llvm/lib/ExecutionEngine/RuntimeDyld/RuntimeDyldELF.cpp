@@ -819,6 +819,34 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
   }
 }
 
+void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
+                                          uint64_t Offset, uint64_t Value,
+                                          uint32_t Type, int64_t Addend) {
+  bool isBE = Arch == Triple::bpfeb;
+
+  switch (Type) {
+  default:
+    llvm_unreachable("Relocation type not implemented yet!");
+    break;
+  case ELF::R_BPF_NONE:
+    break;
+  case ELF::R_BPF_64_64: {
+    write(isBE, Section.getAddressWithOffset(Offset), Value + Addend);
+    DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
+                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    break;
+  }
+  case ELF::R_BPF_64_32: {
+    Value += Addend;
+    assert(Value <= UINT32_MAX);
+    write(isBE, Section.getAddressWithOffset(Offset), static_cast<uint32_t>(Value));
+    DEBUG(dbgs() << "Writing " << format("%p", Value) << " at "
+                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    break;
+  }
+  }
+}
+
 // The target location for the relocation is described by RE.SectionID and
 // RE.Offset.  RE.SectionID can be used to find the SectionEntry.  Each
 // SectionEntry has three members describing its location.
@@ -878,6 +906,10 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
     break;
   case Triple::systemz:
     resolveSystemZRelocation(Section, Offset, Value, Type, Addend);
+    break;
+  case Triple::bpfel:
+  case Triple::bpfeb:
+    resolveBPFRelocation(Section, Offset, Value, Type, Addend);
     break;
   default:
     llvm_unreachable("Unsupported CPU type!");

@@ -596,17 +596,13 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   }
 }
 
+ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
+    : InputFile(ArchiveKind, File->getMemoryBufferRef()),
+      File(std::move(File)) {}
+
 template <class ELFT> void ArchiveFile::parse() {
-  File = check(Archive::create(MB),
-               MB.getBufferIdentifier() + ": failed to parse archive");
-
-  // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &Sym : File->symbols()) {
+  for (const Archive::Symbol &Sym : File->symbols())
     Symtab<ELFT>::X->addLazyArchive(this, Sym);
-  }
-
-  if (File->symbols().begin() == File->symbols().end())
-    Config->ArchiveWithoutSymbolsSeen = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

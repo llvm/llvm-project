@@ -44,6 +44,12 @@
 # CHECK: error: instruction requires: lse
 # CHECK:        casa  w5, w7, [x19]
 
+	.arch armv8+crypto
+        crc32b w0, w1, w2
+
+# CHECK: error: instruction requires: crc
+# CHECK:        crc32b w0, w1, w2
+
 	.arch armv8.1-a+nolse
         casa  w5, w7, [x20]
 

@@ -199,4 +199,4 @@ class rdar10142572 {
 };
 
 id rdar10142572::f() { return 0; } // okay: merged down
-id __attribute__((ns_returns_retained)) rdar10142572::g() { return 0; } // expected-error{{function declared with the ns_returns_retained attribute was previously declared without the ns_returns_retained attribute}}
+id __attribute__((ns_returns_retained)) rdar10142572::g() { return 0; } // expected-error{{function declared with 'ns_returns_retained' attribute was previously declared without the 'ns_returns_retained' attribute}}

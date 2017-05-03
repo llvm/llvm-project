@@ -564,19 +564,13 @@ struct ScopedIgnoreInterceptors {
   }
 };
 
-enum ExternalTag : uptr {
-  kExternalTagNone = 0,
-  kExternalTagFirstUserAvailable = 1,
-  kExternalTagMax = 1024,
-  // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
-  // as 16-bit values, see tsan_defs.h.
-};
 const char *GetObjectTypeFromTag(uptr tag);
+const char *GetReportHeaderFromTag(uptr tag);
 uptr TagFromShadowStackFrame(uptr pc);
 
 class ScopedReport {
  public:
-  explicit ScopedReport(ReportType typ);
+  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
   ~ScopedReport();
 
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, StackTrace stack,

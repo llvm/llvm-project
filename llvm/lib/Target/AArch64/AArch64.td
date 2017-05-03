@@ -358,7 +358,6 @@ def ProcThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
                                        FeatureNEON]>;
 
 def : ProcessorModel<"generic", NoSchedModel, [
-                     FeatureCRC,
                      FeatureFPARMv8,
                      FeatureNEON,
                      FeaturePerfMon,
