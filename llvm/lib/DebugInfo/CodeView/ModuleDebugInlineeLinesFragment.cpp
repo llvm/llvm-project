@@ -17,13 +17,13 @@ using namespace llvm::codeview;
 
 Error VarStreamArrayExtractor<InlineeSourceLine>::extract(
     BinaryStreamRef Stream, uint32_t &Len, InlineeSourceLine &Item,
-    ContextType *Fragment) {
+    bool HasExtraFiles) {
   BinaryStreamReader Reader(Stream);
 
   if (auto EC = Reader.readObject(Item.Header))
     return EC;
 
-  if (Fragment->hasExtraFiles()) {
+  if (HasExtraFiles) {
     uint32_t ExtraFileCount;
     if (auto EC = Reader.readInteger(ExtraFileCount))
       return EC;
@@ -42,7 +42,8 @@ Error ModuleDebugInlineeLineFragmentRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readEnum(Signature))
     return EC;
 
-  if (auto EC = Reader.readArray(Lines, Reader.bytesRemaining(), this))
+  if (auto EC =
+          Reader.readArray(Lines, Reader.bytesRemaining(), hasExtraFiles()))
     return EC;
 
   assert(Reader.bytesRemaining() == 0);

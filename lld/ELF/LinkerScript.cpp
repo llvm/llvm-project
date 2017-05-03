@@ -428,13 +428,12 @@ void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
   if (AllocateHeader)
     StartAddr += elf::getHeaderSize();
 
-  // The Sections with -T<section> are sorted in order of ascending address
-  // we must use this if it is lower than StartAddr as calls to setDot() must
-  // be monotonically increasing
-  if (!Config->SectionStartMap.empty()) {
-    uint64_t LowestSecStart = Config->SectionStartMap.begin()->second;
-    StartAddr = std::min(StartAddr, LowestSecStart);
-  }
+  // The Sections with -T<section> have been sorted in order of ascending
+  // address. We must lower StartAddr if the lowest -T<section address> as
+  // calls to setDot() must be monotonically increasing.
+  for (auto& KV : Config->SectionStartMap)
+    StartAddr = std::min(StartAddr, KV.second);
+
   Commands.push_back(
       make<SymbolAssignment>(".", [=] { return StartAddr; }, ""));
 
@@ -444,17 +443,19 @@ void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
     if (!(Sec->Flags & SHF_ALLOC))
       continue;
 
+    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
+    OSCmd->Sec = Sec;
+
+    // Prefer user supplied address over additional alignment constraint
     auto I = Config->SectionStartMap.find(Sec->Name);
     if (I != Config->SectionStartMap.end())
       Commands.push_back(
           make<SymbolAssignment>(".", [=] { return I->second; }, ""));
-
-    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
-    OSCmd->Sec = Sec;
-    if (Sec->PageAlign)
+    else if (Sec->PageAlign)
       OSCmd->AddrExpr = [=] {
         return alignTo(Script->getDot(), Config->MaxPageSize);
       };
+
     Commands.push_back(OSCmd);
     if (Sec->Sections.size()) {
       auto *ISD = make<InputSectionDescription>("");

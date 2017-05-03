@@ -51,6 +51,64 @@ struct BinOpInfo {
   BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
   FPOptions FPFeatures;
   const Expr *E;      // Entire expr, for error unsupported.  May not be binop.
+
+  /// Check if the binop can result in integer overflow.
+  bool mayHaveIntegerOverflow() const {
+    // Without constant input, we can't rule out overflow.
+    const auto *LHSCI = dyn_cast<llvm::ConstantInt>(LHS);
+    const auto *RHSCI = dyn_cast<llvm::ConstantInt>(RHS);
+    if (!LHSCI || !RHSCI)
+      return true;
+
+    // Assume overflow is possible, unless we can prove otherwise.
+    bool Overflow = true;
+    const auto &LHSAP = LHSCI->getValue();
+    const auto &RHSAP = RHSCI->getValue();
+    if (Opcode == BO_Add) {
+      if (Ty->hasSignedIntegerRepresentation())
+        (void)LHSAP.sadd_ov(RHSAP, Overflow);
+      else
+        (void)LHSAP.uadd_ov(RHSAP, Overflow);
+    } else if (Opcode == BO_Sub) {
+      if (Ty->hasSignedIntegerRepresentation())
+        (void)LHSAP.ssub_ov(RHSAP, Overflow);
+      else
+        (void)LHSAP.usub_ov(RHSAP, Overflow);
+    } else if (Opcode == BO_Mul) {
+      if (Ty->hasSignedIntegerRepresentation())
+        (void)LHSAP.smul_ov(RHSAP, Overflow);
+      else
+        (void)LHSAP.umul_ov(RHSAP, Overflow);
+    } else if (Opcode == BO_Div || Opcode == BO_Rem) {
+      if (Ty->hasSignedIntegerRepresentation() && !RHSCI->isZero())
+        (void)LHSAP.sdiv_ov(RHSAP, Overflow);
+      else
+        return false;
+    }
+    return Overflow;
+  }
+
+  /// Check if the binop computes a division or a remainder.
+  bool isDivisionLikeOperation() const {
+    return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
+           Opcode == BO_RemAssign;
+  }
+
+  /// Check if the binop can result in an integer division by zero.
+  bool mayHaveIntegerDivisionByZero() const {
+    if (isDivisionLikeOperation())
+      if (auto *CI = dyn_cast<llvm::ConstantInt>(RHS))
+        return CI->isZero();
+    return true;
+  }
+
+  /// Check if the binop can result in a float division by zero.
+  bool mayHaveFloatDivisionByZero() const {
+    if (isDivisionLikeOperation())
+      if (auto *CFP = dyn_cast<llvm::ConstantFP>(RHS))
+        return CFP->isZero();
+    return true;
+  }
 };
 
 static bool MustVisitNullValue(const Expr *E) {
@@ -85,9 +143,17 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
   assert((isa<UnaryOperator>(Op.E) || isa<BinaryOperator>(Op.E)) &&
          "Expected a unary or binary operator");
 
+  // If the binop has constant inputs and we can prove there is no overflow,
+  // we can elide the overflow check.
+  if (!Op.mayHaveIntegerOverflow())
+    return true;
+
+  // If a unary op has a widened operand, the op cannot overflow.
   if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
     return IsWidenedIntegerOp(Ctx, UO->getSubExpr());
 
+  // We usually don't need overflow checks for binops with widened operands.
+  // Multiplication with promoted unsigned operands is a special case.
   const auto *BO = cast<BinaryOperator>(Op.E);
   auto OptionalLHSTy = getUnwidenedIntegerType(Ctx, BO->getLHS());
   if (!OptionalLHSTy)
@@ -100,14 +166,14 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
   QualType LHSTy = *OptionalLHSTy;
   QualType RHSTy = *OptionalRHSTy;
 
-  // We usually don't need overflow checks for binary operations with widened
-  // operands. Multiplication with promoted unsigned operands is a special case.
+  // This is the simple case: binops without unsigned multiplication, and with
+  // widened operands. No overflow check is needed here.
   if ((Op.Opcode != BO_Mul && Op.Opcode != BO_MulAssign) ||
       !LHSTy->isUnsignedIntegerType() || !RHSTy->isUnsignedIntegerType())
     return true;
 
-  // The overflow check can be skipped if either one of the unpromoted types
-  // are less than half the size of the promoted type.
+  // For unsigned multiplication the overflow check can be elided if either one
+  // of the unpromoted types are less than half the size of the promoted type.
   unsigned PromotedSize = Ctx.getTypeSize(Op.E->getType());
   return (2 * Ctx.getTypeSize(LHSTy)) < PromotedSize ||
          (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
@@ -2377,7 +2443,8 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   const auto *BO = cast<BinaryOperator>(Ops.E);
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
-      !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS())) {
+      !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
+      Ops.mayHaveIntegerOverflow()) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
 
     llvm::Value *IntMin =
@@ -2400,11 +2467,13 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
          CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
-        Ops.Ty->isIntegerType()) {
+        Ops.Ty->isIntegerType() &&
+        (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
       EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, true);
     } else if (CGF.SanOpts.has(SanitizerKind::FloatDivideByZero) &&
-               Ops.Ty->isRealFloatingType()) {
+               Ops.Ty->isRealFloatingType() &&
+               Ops.mayHaveFloatDivisionByZero()) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
       llvm::Value *NonZero = Builder.CreateFCmpUNE(Ops.RHS, Zero);
       EmitBinOpCheck(std::make_pair(NonZero, SanitizerKind::FloatDivideByZero),
@@ -2439,7 +2508,8 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
   if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
        CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
-      Ops.Ty->isIntegerType()) {
+      Ops.Ty->isIntegerType() &&
+      (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
     EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);

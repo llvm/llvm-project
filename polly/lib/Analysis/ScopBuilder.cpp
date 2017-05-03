@@ -493,9 +493,6 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   if (!Stmt)
     return nullptr;
 
-  Value *BaseAddr = BaseAddress;
-  std::string BaseName = getIslCompatibleName("MemRef_", BaseAddr, "");
-
   bool isKnownMustAccess = false;
 
   // Accesses in single-basic block statements are always excuted.
@@ -521,9 +518,8 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   if (!isKnownMustAccess && AccType == MemoryAccess::MUST_WRITE)
     AccType = MemoryAccess::MAY_WRITE;
 
-  auto *Access =
-      new MemoryAccess(Stmt, Inst, AccType, BaseAddress, ElementType, Affine,
-                       Subscripts, Sizes, AccessValue, Kind, BaseName);
+  auto *Access = new MemoryAccess(Stmt, Inst, AccType, BaseAddress, ElementType,
+                                  Affine, Subscripts, Sizes, AccessValue, Kind);
 
   scop->addAccessFunction(Access);
   Stmt->addAccess(Access);

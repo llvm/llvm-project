@@ -358,14 +358,14 @@ TEST_F(BinaryStreamTest, VarStreamArray) {
 
   struct StringExtractor {
   public:
-    typedef uint32_t ContextType;
+    typedef uint32_t &ContextType;
     static Error extract(BinaryStreamRef Stream, uint32_t &Len, StringRef &Item,
-                         uint32_t *Index) {
-      if (*Index == 0)
+                         uint32_t &Index) {
+      if (Index == 0)
         Len = strlen("1. Test");
-      else if (*Index == 1)
+      else if (Index == 1)
         Len = strlen("2. Longer Test");
-      else if (*Index == 2)
+      else if (Index == 2)
         Len = strlen("3. Really Long Test");
       else
         Len = strlen("4. Super Extra Longest Test Of All");
@@ -374,14 +374,14 @@ TEST_F(BinaryStreamTest, VarStreamArray) {
         return EC;
       Item =
           StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size());
-      ++(*Index);
+      ++Index;
       return Error::success();
     }
   };
 
   for (auto &Stream : Streams) {
     uint32_t Context = 0;
-    VarStreamArray<StringRef, StringExtractor> Array(*Stream.Input, &Context);
+    VarStreamArray<StringRef, StringExtractor> Array(*Stream.Input, Context);
     auto Iter = Array.begin();
     ASSERT_EQ("1. Test", *Iter++);
     ASSERT_EQ("2. Longer Test", *Iter++);

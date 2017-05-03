@@ -104,7 +104,7 @@ public:
     void postAppend();
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
-
+    static void dumpTableHeader(raw_ostream &OS);
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return LHS.Address < RHS.Address;
     }

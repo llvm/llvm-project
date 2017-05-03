@@ -42,11 +42,10 @@ struct InlineeSourceLine {
 }
 
 template <> struct VarStreamArrayExtractor<codeview::InlineeSourceLine> {
-  typedef codeview::ModuleDebugInlineeLineFragmentRef ContextType;
+  typedef bool ContextType;
 
   static Error extract(BinaryStreamRef Stream, uint32_t &Len,
-                       codeview::InlineeSourceLine &Item,
-                       ContextType *Fragment);
+                       codeview::InlineeSourceLine &Item, bool HasExtraFiles);
 };
 
 namespace codeview {

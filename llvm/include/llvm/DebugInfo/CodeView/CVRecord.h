@@ -53,7 +53,7 @@ struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
   typedef void ContextType;
 
   static Error extract(BinaryStreamRef Stream, uint32_t &Len,
-                       codeview::CVRecord<Kind> &Item, void *Ctx) {
+                       codeview::CVRecord<Kind> &Item) {
     using namespace codeview;
     const RecordPrefix *Prefix = nullptr;
     BinaryStreamReader Reader(Stream);

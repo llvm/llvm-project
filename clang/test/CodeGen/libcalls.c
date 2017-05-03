@@ -124,7 +124,7 @@ void test_builtins(double d, float f, long double ld) {
 // CHECK-YES-NOT: declare float @logf(float) [[NUW_RN]]
 }
 
-// CHECK-YES: attributes [[NUW_RN]] = { nounwind readnone }
+// CHECK-YES: attributes [[NUW_RN]] = { nounwind readnone speculatable }
 
 // CHECK-NO: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
-// CHECK-NO: attributes [[NUW_RNI]] = { nounwind readnone }
+// CHECK-NO: attributes [[NUW_RNI]] = { nounwind readnone speculatable }

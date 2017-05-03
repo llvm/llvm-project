@@ -169,6 +169,11 @@ public:
     Inherited::VisitValueDecl(D);
   }
 
+  void VisitParmVarDecl(const ParmVarDecl *D) {
+    // TODO: Handle default arguments.
+    Inherited::VisitParmVarDecl(D);
+  }
+
   void VisitAccessSpecDecl(const AccessSpecDecl *D) {
     ID.AddInteger(D->getAccess());
     Inherited::VisitAccessSpecDecl(D);
@@ -201,6 +206,12 @@ public:
     Hash.AddBoolean(D->isVirtualAsWritten());
     Hash.AddBoolean(D->isPure());
     Hash.AddBoolean(D->isDeletedAsWritten());
+
+    ID.AddInteger(D->param_size());
+
+    for (auto *Param : D->parameters()) {
+      Hash.AddSubDecl(Param);
+    }
 
     Inherited::VisitFunctionDecl(D);
   }
@@ -256,6 +267,11 @@ void ODRHash::AddSubDecl(const Decl *D) {
 void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   assert(Record && Record->hasDefinition() &&
          "Expected non-null record to be a definition.");
+
+  if (isa<ClassTemplateSpecializationDecl>(Record)) {
+    return;
+  }
+
   AddDecl(Record);
 
   // Filter out sub-Decls which will not be processed in order to get an
@@ -315,6 +331,14 @@ public:
     }
   }
 
+  void AddQualType(QualType T) {
+    Hash.AddQualType(T);
+  }
+
+  void VisitQualifiers(Qualifiers Quals) {
+    ID.AddInteger(Quals.getAsOpaqueValue());
+  }
+
   void Visit(const Type *T) {
     ID.AddInteger(T->getTypeClass());
     Inherited::Visit(T);
@@ -322,9 +346,67 @@ public:
 
   void VisitType(const Type *T) {}
 
+  void VisitAdjustedType(const AdjustedType *T) {
+    AddQualType(T->getOriginalType());
+    AddQualType(T->getAdjustedType());
+    VisitType(T);
+  }
+
+  void VisitDecayedType(const DecayedType *T) {
+    AddQualType(T->getDecayedType());
+    AddQualType(T->getPointeeType());
+    VisitAdjustedType(T);
+  }
+
+  void VisitArrayType(const ArrayType *T) {
+    AddQualType(T->getElementType());
+    ID.AddInteger(T->getSizeModifier());
+    VisitQualifiers(T->getIndexTypeQualifiers());
+    VisitType(T);
+  }
+  void VisitConstantArrayType(const ConstantArrayType *T) {
+    T->getSize().Profile(ID);
+    VisitArrayType(T);
+  }
+
+  void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
+    AddStmt(T->getSizeExpr());
+    VisitArrayType(T);
+  }
+
+  void VisitIncompleteArrayType(const IncompleteArrayType *T) {
+    VisitArrayType(T);
+  }
+
+  void VisitVariableArrayType(const VariableArrayType *T) {
+    AddStmt(T->getSizeExpr());
+    VisitArrayType(T);
+  }
+
   void VisitBuiltinType(const BuiltinType *T) {
     ID.AddInteger(T->getKind());
     VisitType(T);
+  }
+
+  void VisitFunctionType(const FunctionType *T) {
+    AddQualType(T->getReturnType());
+    T->getExtInfo().Profile(ID);
+    Hash.AddBoolean(T->isConst());
+    Hash.AddBoolean(T->isVolatile());
+    Hash.AddBoolean(T->isRestrict());
+    VisitType(T);
+  }
+
+  void VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
+    VisitFunctionType(T);
+  }
+
+  void VisitFunctionProtoType(const FunctionProtoType *T) {
+    ID.AddInteger(T->getNumParams());
+    for (auto ParamType : T->getParamTypes())
+      AddQualType(ParamType);
+
+    VisitFunctionType(T);
   }
 
   void VisitTypedefType(const TypedefType *T) {

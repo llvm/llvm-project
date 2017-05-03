@@ -178,12 +178,7 @@ public:
 
 private:
   unsigned char AllExtensionsSilenced; // Used by __extension__
-  bool IgnoreAllWarnings;        // Ignore all warnings: -w
-  bool WarningsAsErrors;         // Treat warnings like errors.
-  bool EnableAllWarnings;        // Enable all warnings.
-  bool ErrorsAsFatal;            // Treat errors like fatal errors.
-  bool FatalsAsError;             // Treat fatal errors like errors.
-  bool SuppressSystemWarnings;   // Suppress warnings in system headers.
+  bool SuppressAfterFatalError;  // Suppress diagnostics after a fatal error?
   bool SuppressAllDiagnostics;   // Suppress all diagnostics.
   bool ElideType;                // Elide common types of templates.
   bool PrintTemplateTree;        // Print a tree when comparing templates.
@@ -194,7 +189,6 @@ private:
                                    // 0 -> no limit.
   unsigned ConstexprBacktraceLimit; // Cap on depth of constexpr evaluation
                                     // backtrace stack, 0 -> no limit.
-  diag::Severity ExtBehavior;       // Map extensions to warnings or errors?
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticConsumer *Client;
@@ -216,6 +210,19 @@ private:
     llvm::DenseMap<unsigned, DiagnosticMapping> DiagMap;
 
   public:
+    // "Global" configuration state that can actually vary between modules.
+    unsigned IgnoreAllWarnings : 1;      // Ignore all warnings: -w
+    unsigned EnableAllWarnings : 1;      // Enable all warnings.
+    unsigned WarningsAsErrors : 1;       // Treat warnings like errors.
+    unsigned ErrorsAsFatal : 1;          // Treat errors like fatal errors.
+    unsigned SuppressSystemWarnings : 1; // Suppress warnings in system headers.
+    diag::Severity ExtBehavior : 4;     // Map extensions to warnings or errors?
+
+    DiagState()
+        : IgnoreAllWarnings(false), EnableAllWarnings(false),
+          WarningsAsErrors(false), ErrorsAsFatal(false),
+          SuppressSystemWarnings(false), ExtBehavior(diag::Severity::Ignored) {}
+
     typedef llvm::DenseMap<unsigned, DiagnosticMapping>::iterator iterator;
     typedef llvm::DenseMap<unsigned, DiagnosticMapping>::const_iterator
     const_iterator;
@@ -493,33 +500,47 @@ public:
   /// \brief When set to true, any unmapped warnings are ignored.
   ///
   /// If this and WarningsAsErrors are both set, then this one wins.
-  void setIgnoreAllWarnings(bool Val) { IgnoreAllWarnings = Val; }
-  bool getIgnoreAllWarnings() const { return IgnoreAllWarnings; }
+  void setIgnoreAllWarnings(bool Val) {
+    GetCurDiagState()->IgnoreAllWarnings = Val;
+  }
+  bool getIgnoreAllWarnings() const {
+    return GetCurDiagState()->IgnoreAllWarnings;
+  }
 
   /// \brief When set to true, any unmapped ignored warnings are no longer
   /// ignored.
   ///
   /// If this and IgnoreAllWarnings are both set, then that one wins.
-  void setEnableAllWarnings(bool Val) { EnableAllWarnings = Val; }
-  bool getEnableAllWarnings() const { return EnableAllWarnings; }
+  void setEnableAllWarnings(bool Val) {
+    GetCurDiagState()->EnableAllWarnings = Val;
+  }
+  bool getEnableAllWarnings() const {
+    return GetCurDiagState()->EnableAllWarnings;
+  }
 
   /// \brief When set to true, any warnings reported are issued as errors.
-  void setWarningsAsErrors(bool Val) { WarningsAsErrors = Val; }
-  bool getWarningsAsErrors() const { return WarningsAsErrors; }
+  void setWarningsAsErrors(bool Val) {
+    GetCurDiagState()->WarningsAsErrors = Val;
+  }
+  bool getWarningsAsErrors() const {
+    return GetCurDiagState()->WarningsAsErrors;
+  }
 
   /// \brief When set to true, any error reported is made a fatal error.
-  void setErrorsAsFatal(bool Val) { ErrorsAsFatal = Val; }
-  bool getErrorsAsFatal() const { return ErrorsAsFatal; }
+  void setErrorsAsFatal(bool Val) { GetCurDiagState()->ErrorsAsFatal = Val; }
+  bool getErrorsAsFatal() const { return GetCurDiagState()->ErrorsAsFatal; }
 
-  /// \brief When set to true, any fatal error reported is made an error.
-  ///
-  /// This setting takes precedence over the setErrorsAsFatal setting above.
-  void setFatalsAsError(bool Val) { FatalsAsError = Val; }
-  bool getFatalsAsError() const { return FatalsAsError; }
+  /// \brief When set to true (the default), suppress further diagnostics after
+  /// a fatal error.
+  void setSuppressAfterFatalError(bool Val) { SuppressAfterFatalError = Val; }
 
   /// \brief When set to true mask warnings that come from system headers.
-  void setSuppressSystemWarnings(bool Val) { SuppressSystemWarnings = Val; }
-  bool getSuppressSystemWarnings() const { return SuppressSystemWarnings; }
+  void setSuppressSystemWarnings(bool Val) {
+    GetCurDiagState()->SuppressSystemWarnings = Val;
+  }
+  bool getSuppressSystemWarnings() const {
+    return GetCurDiagState()->SuppressSystemWarnings;
+  }
 
   /// \brief Suppress all diagnostics, to silence the front end when we 
   /// know that we don't want any more diagnostics to be passed along to the
@@ -571,11 +592,15 @@ public:
   }
 
   /// \brief Controls whether otherwise-unmapped extension diagnostics are
-  /// mapped onto ignore/warning/error. 
+  /// mapped onto ignore/warning/error.
   ///
   /// This corresponds to the GCC -pedantic and -pedantic-errors option.
-  void setExtensionHandlingBehavior(diag::Severity H) { ExtBehavior = H; }
-  diag::Severity getExtensionHandlingBehavior() const { return ExtBehavior; }
+  void setExtensionHandlingBehavior(diag::Severity H) {
+    GetCurDiagState()->ExtBehavior = H;
+  }
+  diag::Severity getExtensionHandlingBehavior() const {
+    return GetCurDiagState()->ExtBehavior;
+  }
 
   /// \brief Counter bumped when an __extension__  block is/ encountered.
   ///

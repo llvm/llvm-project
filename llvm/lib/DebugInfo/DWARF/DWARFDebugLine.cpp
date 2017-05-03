@@ -287,6 +287,12 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
   EpilogueBegin = false;
 }
 
+void DWARFDebugLine::Row::dumpTableHeader(raw_ostream &OS) {
+  OS << "Address            Line   Column File   ISA Discriminator Flags\n"
+     << "------------------ ------ ------ ------ --- ------------- "
+        "-------------\n";
+}
+
 void DWARFDebugLine::Row::dump(raw_ostream &OS) const {
   OS << format("0x%16.16" PRIx64 " %6u %6u", Address, Line, Column)
      << format(" %6u %3u %13u ", File, Isa, Discriminator)
@@ -313,9 +319,7 @@ void DWARFDebugLine::LineTable::dump(raw_ostream &OS) const {
   OS << '\n';
 
   if (!Rows.empty()) {
-    OS << "Address            Line   Column File   ISA Discriminator Flags\n"
-       << "------------------ ------ ------ ------ --- ------------- "
-          "-------------\n";
+    Row::dumpTableHeader(OS);
     for (const Row &R : Rows) {
       R.dump(OS);
     }

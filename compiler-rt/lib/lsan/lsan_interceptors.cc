@@ -185,6 +185,20 @@ INTERCEPTOR(void, cfree, void *p) ALIAS(WRAPPER_NAME(free));
 #define LSAN_MAYBE_INTERCEPT_CFREE
 #endif // SANITIZER_INTERCEPT_CFREE
 
+#if SANITIZER_INTERCEPT_MCHECK_MPROBE
+INTERCEPTOR(int, mcheck, void (*abortfunc)(int mstatus)) {
+  return 0;
+}
+
+INTERCEPTOR(int, mcheck_pedantic, void (*abortfunc)(int mstatus)) {
+  return 0;
+}
+
+INTERCEPTOR(int, mprobe, void *ptr) {
+  return 0;
+}
+#endif // SANITIZER_INTERCEPT_MCHECK_MPROBE
+
 #define OPERATOR_NEW_BODY                              \
   ENSURE_LSAN_INITED;                                  \
   GET_STACK_TRACE_MALLOC;                              \

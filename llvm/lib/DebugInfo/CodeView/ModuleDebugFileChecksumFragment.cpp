@@ -25,7 +25,7 @@ struct FileChecksumEntryHeader {
 };
 
 Error llvm::VarStreamArrayExtractor<FileChecksumEntry>::extract(
-    BinaryStreamRef Stream, uint32_t &Len, FileChecksumEntry &Item, void *Ctx) {
+    BinaryStreamRef Stream, uint32_t &Len, FileChecksumEntry &Item) {
   BinaryStreamReader Reader(Stream);
 
   const FileChecksumEntryHeader *Header;

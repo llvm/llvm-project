@@ -275,6 +275,33 @@ S11 s11;
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x' with a different initializer}}
 #endif
 
+#if defined(FIRST)
+struct S12 {
+  unsigned x[5];
+};
+#elif defined(SECOND)
+struct S12 {
+  unsigned x[7];
+};
+#else
+S12 s12;
+// expected-error@first.h:* {{'Field::S12::x' from module 'FirstModule' is not present in definition of 'Field::S12' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S13 {
+  unsigned x[7];
+};
+#elif defined(SECOND)
+struct S13 {
+  double x[7];
+};
+#else
+S13 s13;
+// expected-error@first.h:* {{'Field::S13::x' from module 'FirstModule' is not present in definition of 'Field::S13' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
 }  // namespace Field
 
 namespace Method {
@@ -403,6 +430,91 @@ S8 s8;
 // expected-note@first.h:* {{but in 'FirstModule' found method 'A' is const}}
 #endif
 
+#if defined(FIRST)
+struct S9 {
+  void A(int x) {}
+  void A(int x, int y) {}
+};
+#elif defined(SECOND)
+struct S9 {
+  void A(int x, int y) {}
+  void A(int x) {}
+};
+#else
+S9 s9;
+// expected-error@second.h:* {{'Method::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' that has 2 parameters}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' that has 1 parameter}}
+#endif
+
+#if defined(FIRST)
+struct S10 {
+  void A(int x) {}
+  void A(float x) {}
+};
+#elif defined(SECOND)
+struct S10 {
+  void A(float x) {}
+  void A(int x) {}
+};
+#else
+S10 s10;
+// expected-error@second.h:* {{'Method::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'float'}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int'}}
+#endif
+
+#if defined(FIRST)
+struct S11 {
+  void A(int x) {}
+};
+#elif defined(SECOND)
+struct S11 {
+  void A(int y) {}
+};
+#else
+S11 s11;
+// expected-error@second.h:* {{'Method::S11' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter named 'y'}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter named 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S12 {
+  void A(int x) {}
+};
+#elif defined(SECOND)
+struct S12 {
+  void A(int x = 1) {}
+};
+#else
+S12 s12;
+// TODO: This should produce an error.
+#endif
+
+#if defined(FIRST)
+struct S13 {
+  void A(int x = 1 + 0) {}
+};
+#elif defined(SECOND)
+struct S13 {
+  void A(int x = 1) {}
+};
+#else
+S13 s13;
+// TODO: This should produce an error.
+#endif
+
+#if defined(FIRST)
+struct S14 {
+  void A(int x[2]) {}
+};
+#elif defined(SECOND)
+struct S14 {
+  void A(int x[3]) {}
+};
+#else
+S14 s14;
+// expected-error@second.h:* {{'Method::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [3]'}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [2]'}}
+#endif
 }  // namespace Method
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
@@ -526,37 +638,43 @@ S3 s3;
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
-#define CREATE_ALL_DECL_STRUCT(NAME, ACCESS) \
-  typedef int INT;                           \
-  struct NAME {                              \
-  public:                                    \
-  private:                                   \
-  protected:                                 \
-    static_assert(1 == 1, "Message");        \
-    static_assert(2 == 2);                   \
-                                             \
-    int x;                                   \
-    double y;                                \
-                                             \
-    INT z;                                   \
-                                             \
-    unsigned a : 1;                          \
-    unsigned b : 2 * 2 + 5 / 2;              \
-                                             \
-    mutable int c = sizeof(x + y);           \
-                                             \
-    void method() {}                         \
-    static void static_method() {}           \
-    virtual void virtual_method() {}         \
-    virtual void pure_virtual_method() = 0;  \
-    inline void inline_method() {}           \
-    void volatile_method() volatile {}       \
-    void const_method() const {}             \
-                                             \
-    typedef int typedef_int;                 \
-    using using_int = int;                   \
-                                             \
-    ACCESS:                                  \
+#define CREATE_ALL_DECL_STRUCT(NAME, ACCESS)               \
+  typedef int INT;                                         \
+  struct NAME {                                            \
+  public:                                                  \
+  private:                                                 \
+  protected:                                               \
+    static_assert(1 == 1, "Message");                      \
+    static_assert(2 == 2);                                 \
+                                                           \
+    int x;                                                 \
+    double y;                                              \
+                                                           \
+    INT z;                                                 \
+                                                           \
+    unsigned a : 1;                                        \
+    unsigned b : 2 * 2 + 5 / 2;                            \
+                                                           \
+    mutable int c = sizeof(x + y);                         \
+                                                           \
+    void method() {}                                       \
+    static void static_method() {}                         \
+    virtual void virtual_method() {}                       \
+    virtual void pure_virtual_method() = 0;                \
+    inline void inline_method() {}                         \
+    void volatile_method() volatile {}                     \
+    void const_method() const {}                           \
+                                                           \
+    typedef int typedef_int;                               \
+    using using_int = int;                                 \
+                                                           \
+    void method_one_arg(int x) {}                          \
+    void method_one_arg_default_argument(int x = 5 + 5) {} \
+    void method_decayed_type(int x[5]) {}                  \
+                                                           \
+    int constant_arr[5];                                   \
+                                                           \
+    ACCESS:                                                \
   };
 
 #if defined(FIRST)
@@ -932,6 +1050,34 @@ struct BetaHelper {
 Alpha::Alpha() {}
 #endif
 }
+
+namespace ParameterTest {
+#if defined(FIRST)
+class X {};
+template <typename G>
+class S {
+  public:
+   typedef G Type;
+   static inline G *Foo(const G *a, int * = nullptr);
+};
+
+template<typename G>
+G* S<G>::Foo(const G* aaaa, int*) {}
+#elif defined(SECOND)
+template <typename G>
+class S {
+  public:
+   typedef G Type;
+   static inline G *Foo(const G *a, int * = nullptr);
+};
+
+template<typename G>
+G* S<G>::Foo(const G* asdf, int*) {}
+#else
+S<X> s;
+#endif
+}
+
 
 // Keep macros contained to one file.
 #ifdef FIRST
