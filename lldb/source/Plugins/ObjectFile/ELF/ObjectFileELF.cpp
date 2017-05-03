@@ -1808,10 +1808,10 @@ DataExtractor ObjectFileELF::GetSegmentDataByIndex(lldb::user_id_t id) {
                        segment_header->p_filesz);
 }
 
-std::string
+llvm::StringRef
 ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
   size_t pos = symbol_name.find('@');
-  return symbol_name.substr(0, pos).str();
+  return symbol_name.substr(0, pos);
 }
 
 //----------------------------------------------------------------------
@@ -2418,7 +2418,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
                 .emplace(sect_name.GetCString(),
                          module_section_list->FindSectionByName(sect_name))
                 .first;
-      if (section_it->second && section_it->second->GetFileSize())
+      if (section_it->second)
         symbol_section_sp = section_it->second;
     }
 

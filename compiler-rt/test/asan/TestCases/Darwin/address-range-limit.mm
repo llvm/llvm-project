@@ -3,6 +3,9 @@
 // RUN: %clangxx_asan %s -Wno-deprecated-declarations -flat_namespace -bundle -undefined suppress -o %t.bundle
 // RUN: %clangxx_asan %s -Wno-deprecated-declarations -o %t -framework Foundation && not %run %t 2>&1 | FileCheck %s
 
+// NSCreateObjectFileImageFromFile/NSLinkModule isn't available on iOS
+// UNSUPPORTED: ios
+
 #import <Foundation/Foundation.h>
 #import <mach-o/dyld.h>
 

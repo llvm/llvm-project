@@ -2,6 +2,8 @@
 // the ASan dylib from the environment variable (both when using an absolute
 // or relative path) and also that the other dylibs are left untouched.
 
+// UNSUPPORTED: ios
+
 // RUN: mkdir -p %T/dyld_insert_libraries_remove
 // RUN: cp `%clang_asan %s -fsanitize=address -### 2>&1 \
 // RUN:   | grep "libclang_rt.asan_osx_dynamic.dylib" \

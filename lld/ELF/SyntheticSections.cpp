@@ -541,6 +541,13 @@ template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
       Off += alignTo(Fde->size(), Config->Wordsize);
     }
   }
+
+  // The LSB standard does not allow a .eh_frame section with zero
+  // Call Frame Information records. Therefore add a CIE record length
+  // 0 as a terminator if this .eh_frame section is empty.
+  if (Off == 0)
+    Off = 4;
+
   this->Size = Off;
 }
 

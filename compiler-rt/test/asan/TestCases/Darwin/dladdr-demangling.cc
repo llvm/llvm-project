@@ -5,6 +5,9 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=verbosity=2 not %run sandbox-exec -p '(version 1)(allow default)(deny process-fork)' %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DLADDR
 
+// sandbox-exec isn't available on iOS
+// UNSUPPORTED: ios
+
 #include <stdlib.h>
 
 class MyClass {
