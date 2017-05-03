@@ -410,7 +410,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
     // Mergeable sections with relocations are tricky because relocations
     // need to be taken into account when comparing section contents for
-    // merging. It doesn't worth supporting such mergeable sections because
+    // merging. It's not worth supporting such mergeable sections because
     // they are rare and it'd complicates the internal design (we usually
     // have to determine if two sections are mergeable early in the link
     // process much before applying relocations). We simply handle mergeable

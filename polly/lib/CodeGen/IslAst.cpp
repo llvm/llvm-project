@@ -351,7 +351,7 @@ IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
   // Create the alias checks from the minimal/maximal accesses in each alias
   // group which consists of read only and non read only (read write) accesses.
   // This operation is by construction quadratic in the read-write pointers and
-  // linear int the read only pointers in each alias group.
+  // linear in the read only pointers in each alias group.
   for (const Scop::MinMaxVectorPairTy &MinMaxAccessPair : S->getAliasGroups()) {
     auto &MinMaxReadWrite = MinMaxAccessPair.first;
     auto &MinMaxReadOnly = MinMaxAccessPair.second;
