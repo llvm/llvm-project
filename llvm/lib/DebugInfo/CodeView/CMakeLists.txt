@@ -15,6 +15,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   ModuleDebugLineFragment.cpp
   ModuleDebugUnknownFragment.cpp
   RecordSerialization.cpp
+  StringTable.cpp
   SymbolRecordMapping.cpp
   SymbolDumper.cpp
   SymbolSerializer.cpp

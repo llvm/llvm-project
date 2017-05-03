@@ -279,7 +279,7 @@ public:
   void addAttribute(unsigned i, Attribute Attr);
 
   /// @brief adds the attributes to the list of attributes.
-  void addAttributes(unsigned i, AttributeList Attrs);
+  void addAttributes(unsigned i, const AttrBuilder &Attrs);
 
   /// @brief removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
@@ -288,7 +288,7 @@ public:
   void removeAttribute(unsigned i, StringRef Kind);
 
   /// @brief removes the attributes from the list of attributes.
-  void removeAttributes(unsigned i, AttributeList Attrs);
+  void removeAttributes(unsigned i, const AttrBuilder &Attrs);
 
   /// @brief check if an attributes is in the list of attributes.
   bool hasAttribute(unsigned i, Attribute::AttrKind Kind) const {

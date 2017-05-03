@@ -503,4 +503,4 @@ define i64 @testcttzneg(i64 %A1, i64 %A2, i64 %B1, i64 %B2) {
 ; CHECK: declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) #0
 ; CHECK: declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1) #0
 ; CHECK: declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1) #0
-; CHECK: attributes #0 = { nounwind readnone }
+; CHECK: attributes #0 = { nounwind readnone speculatable }

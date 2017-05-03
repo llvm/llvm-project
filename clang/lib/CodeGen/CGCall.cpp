@@ -1756,9 +1756,7 @@ void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
   ConstructDefaultFnAttrList(F.getName(),
                              F.hasFnAttribute(llvm::Attribute::OptimizeNone),
                              /* AttrOnCallsite = */ false, FuncAttrs);
-  llvm::AttributeList AS = llvm::AttributeList::get(
-      getLLVMContext(), llvm::AttributeList::FunctionIndex, FuncAttrs);
-  F.addAttributes(llvm::AttributeList::FunctionIndex, AS);
+  F.addAttributes(llvm::AttributeList::FunctionIndex, FuncAttrs);
 }
 
 void CodeGenModule::ConstructAttributeList(

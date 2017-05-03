@@ -2607,10 +2607,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         AttrBuilder B;
         B.addAttribute(Attribute::ReadOnly)
           .addAttribute(Attribute::ReadNone);
-        Func->removeAttributes(AttributeList::FunctionIndex,
-                               AttributeList::get(Func->getContext(),
-                                                  AttributeList::FunctionIndex,
-                                                  B));
+        Func->removeAttributes(AttributeList::FunctionIndex, B);
       }
 
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
@@ -3659,9 +3656,7 @@ bool MemorySanitizer::runOnFunction(Function &F) {
   AttrBuilder B;
   B.addAttribute(Attribute::ReadOnly)
     .addAttribute(Attribute::ReadNone);
-  F.removeAttributes(
-      AttributeList::FunctionIndex,
-      AttributeList::get(F.getContext(), AttributeList::FunctionIndex, B));
+  F.removeAttributes(AttributeList::FunctionIndex, B);
 
   return Visitor.runOnFunction();
 }

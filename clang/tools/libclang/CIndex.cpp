@@ -3313,7 +3313,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
 
   if (options & CXTranslationUnit_KeepGoing)
-    Diags->setFatalsAsError(true);
+    Diags->setSuppressAfterFatalError(false);
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,

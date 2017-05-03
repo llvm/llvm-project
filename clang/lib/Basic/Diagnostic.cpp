@@ -67,18 +67,12 @@ DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
   ArgToStringCookie = nullptr;
 
   AllExtensionsSilenced = 0;
-  IgnoreAllWarnings = false;
-  WarningsAsErrors = false;
-  EnableAllWarnings = false;
-  ErrorsAsFatal = false;
-  FatalsAsError = false;
-  SuppressSystemWarnings = false;
+  SuppressAfterFatalError = true;
   SuppressAllDiagnostics = false;
   ElideType = true;
   PrintTemplateTree = false;
   ShowColors = false;
   ShowOverloads = Ovl_All;
-  ExtBehavior = diag::Severity::Ignored;
 
   ErrorLimit = 0;
   TemplateBacktraceLimit = 0;
@@ -343,8 +337,8 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Fatal);
 
-  // Otherwise, we want to set the diagnostic mapping's "no Werror" bit, and
-  // potentially downgrade anything already mapped to be an error.
+  // Otherwise, we want to set the diagnostic mapping's "no Wfatal-errors" bit,
+  // and potentially downgrade anything already mapped to be a fatal error.
 
   // Get the diagnostics in this group.
   SmallVector<diag::kind, 8> GroupDiags;

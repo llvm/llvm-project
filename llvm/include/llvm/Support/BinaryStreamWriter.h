@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -30,8 +31,6 @@ namespace llvm {
 /// although no methods are overridable.
 class BinaryStreamWriter {
 public:
-  // FIXME: We should be able to slice and drop_front etc on Writers / Readers.
-
   BinaryStreamWriter() = default;
   explicit BinaryStreamWriter(WritableBinaryStreamRef Stream);
   virtual ~BinaryStreamWriter() {}
@@ -151,6 +150,9 @@ public:
   template <typename T> Error writeArray(FixedStreamArray<T> Array) {
     return writeStreamRef(Array.getUnderlyingStream());
   }
+
+  /// Splits the Writer into two Writers at a given offset.
+  std::pair<BinaryStreamWriter, BinaryStreamWriter> split(uint32_t Off) const;
 
   void setOffset(uint32_t Off) { Offset = Off; }
   uint32_t getOffset() const { return Offset; }

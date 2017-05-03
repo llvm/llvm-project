@@ -3049,6 +3049,6 @@ define void @test67(i8* %x) {
 !4 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 
-; CHECK: attributes #0 = { nounwind readnone }
+; CHECK: attributes #0 = { nounwind readnone speculatable }
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: ![[RELEASE]] = !{}

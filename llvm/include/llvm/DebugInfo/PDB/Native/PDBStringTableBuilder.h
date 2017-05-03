@@ -16,27 +16,39 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/StringTable.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
 class BinaryStreamWriter;
+class WritableBinaryStreamRef;
+
+namespace msf {
+struct MSFLayout;
+}
 
 namespace pdb {
+
+class PDBFileBuilder;
 
 class PDBStringTableBuilder {
 public:
   // If string S does not exist in the string table, insert it.
   // Returns the ID for S.
   uint32_t insert(StringRef S);
-  uint32_t getStringIndex(StringRef S);
 
-  uint32_t finalize();
+  uint32_t calculateSerializedSize() const;
   Error commit(BinaryStreamWriter &Writer) const;
 
 private:
-  DenseMap<StringRef, uint32_t> Strings;
-  uint32_t StringSize = 1;
+  uint32_t calculateHashTableSize() const;
+  Error writeHeader(BinaryStreamWriter &Writer) const;
+  Error writeStrings(BinaryStreamWriter &Writer) const;
+  Error writeHashTable(BinaryStreamWriter &Writer) const;
+  Error writeEpilogue(BinaryStreamWriter &Writer) const;
+
+  codeview::StringTable Strings;
 };
 
 } // end namespace pdb

@@ -5294,6 +5294,17 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     }
   }
 
+  // If the target supports masking y in (shl, y),
+  // fold (shl x, (and y, ((1 << numbits(x)) - 1))) -> (shl x, y)
+  if (TLI.isOperationLegal(ISD::SHL, VT) &&
+      TLI.supportsModuloShift(ISD::SHL, VT) && N1->getOpcode() == ISD::AND) {
+    if (ConstantSDNode *Mask = isConstOrConstSplat(N1->getOperand(1))) {
+      if (Mask->getZExtValue() == OpSizeInBits - 1) {
+        return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N1->getOperand(0));
+      }
+    }
+  }
+
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // fold (shl c1, c2) -> c1<<c2
@@ -5492,6 +5503,17 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
+  // If the target supports masking y in (sra, y),
+  // fold (sra x, (and y, ((1 << numbits(x)) - 1))) -> (sra x, y)
+  if (TLI.isOperationLegal(ISD::SRA, VT) &&
+      TLI.supportsModuloShift(ISD::SRA, VT) && N1->getOpcode() == ISD::AND) {
+    if (ConstantSDNode *Mask = isConstOrConstSplat(N1->getOperand(1))) {
+      if (Mask->getZExtValue() == OpSizeInBits - 1) {
+        return DAG.getNode(ISD::SRA, SDLoc(N), VT, N0, N1->getOperand(0));
+      }
+    }
+  }
+
   // Arithmetic shifting an all-sign-bit value is a no-op.
   if (DAG.ComputeNumSignBits(N0) == OpSizeInBits)
     return N0;
@@ -5649,6 +5671,17 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
+
+  // If the target supports masking y in (srl, y),
+  // fold (srl x, (and y, ((1 << numbits(x)) - 1))) -> (srl x, y)
+  if (TLI.isOperationLegal(ISD::SRL, VT) &&
+      TLI.supportsModuloShift(ISD::SRL, VT) && N1->getOpcode() == ISD::AND) {
+    if (ConstantSDNode *Mask = isConstOrConstSplat(N1->getOperand(1))) {
+      if (Mask->getZExtValue() == OpSizeInBits - 1) {
+        return DAG.getNode(ISD::SRL, SDLoc(N), VT, N0, N1->getOperand(0));
+      }
+    }
+  }
 
   // fold vector ops
   if (VT.isVector())

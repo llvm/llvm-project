@@ -511,7 +511,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         << "-fsanitize-coverage=edge";
   // Basic block tracing and 8-bit counters require some type of coverage
   // enabled.
-  int CoverageTypes = CoverageFunc | CoverageBB | CoverageEdge;
   if (CoverageFeatures & CoverageTraceBB)
     D.Diag(clang::diag::warn_drv_deprecated_arg)
         << "-fsanitize-coverage=trace-bb"
@@ -520,9 +519,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     D.Diag(clang::diag::warn_drv_deprecated_arg)
         << "-fsanitize-coverage=8bit-counters"
         << "-fsanitize-coverage=trace-pc-guard";
+
+  int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
+  if ((CoverageFeatures & InsertionPointTypes) &&
+      !(CoverageFeatures &(CoverageTracePC | CoverageTracePCGuard))) {
+    D.Diag(clang::diag::warn_drv_deprecated_arg)
+        << "-fsanitize-coverage=[func|bb|edge]"
+        << "-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc]";
+  }
+
   // trace-pc w/o func/bb/edge implies edge.
   if ((CoverageFeatures & (CoverageTracePC | CoverageTracePCGuard)) &&
-      !(CoverageFeatures & CoverageTypes))
+      !(CoverageFeatures & InsertionPointTypes))
     CoverageFeatures |= CoverageEdge;
 
   if (AllAddedKinds & Address) {

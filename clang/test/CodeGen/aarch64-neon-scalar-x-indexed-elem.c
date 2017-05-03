@@ -59,7 +59,7 @@ float64x1_t test_vmul_n_f64(float64x1_t a, float64_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-// CHECK:   [[VMULXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmulx.f32(float %a, float [[VGET_LANE]]) #2
+// CHECK:   [[VMULXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmulx.f32(float %a, float [[VGET_LANE]])
 // CHECK:   ret float [[VMULXS_F32_I]]
 float32_t test_vmulxs_lane_f32(float32_t a, float32x2_t b) {
   return vmulxs_lane_f32(a, b, 1);
@@ -69,7 +69,7 @@ float32_t test_vmulxs_lane_f32(float32_t a, float32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %b to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-// CHECK:   [[VMULXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmulx.f32(float %a, float [[VGETQ_LANE]]) #2
+// CHECK:   [[VMULXS_F32_I:%.*]] = call float @llvm.aarch64.neon.fmulx.f32(float %a, float [[VGETQ_LANE]])
 // CHECK:   ret float [[VMULXS_F32_I]]
 float32_t test_vmulxs_laneq_f32(float32_t a, float32x4_t b) {
   return vmulxs_laneq_f32(a, b, 3);
@@ -79,7 +79,7 @@ float32_t test_vmulxs_laneq_f32(float32_t a, float32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double %a, double [[VGET_LANE]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double %a, double [[VGET_LANE]])
 // CHECK:   ret double [[VMULXD_F64_I]]
 float64_t test_vmulxd_lane_f64(float64_t a, float64x1_t b) {
   return vmulxd_lane_f64(a, b, 0);
@@ -89,7 +89,7 @@ float64_t test_vmulxd_lane_f64(float64_t a, float64x1_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %b to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x double>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double %a, double [[VGETQ_LANE]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double %a, double [[VGETQ_LANE]])
 // CHECK:   ret double [[VMULXD_F64_I]]
 float64_t test_vmulxd_laneq_f64(float64_t a, float64x2_t b) {
   return vmulxd_laneq_f64(a, b, 1);
@@ -102,7 +102,7 @@ float64_t test_vmulxd_laneq_f64(float64_t a, float64x2_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <1 x double> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x double>
 // CHECK:   [[VGET_LANE6:%.*]] = extractelement <1 x double> [[TMP3]], i32 0
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE6]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE6]])
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP5:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP5]], double [[VMULXD_F64_I]], i32 0
@@ -119,7 +119,7 @@ float64x1_t test_vmulx_lane_f64(float64x1_t a, float64x1_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x double>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]])
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP5:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP5]], double [[VMULXD_F64_I]], i32 0
@@ -135,7 +135,7 @@ float64x1_t test_vmulx_laneq_f64_0(float64x1_t a, float64x2_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x double>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]])
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP5:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP5]], double [[VMULXD_F64_I]], i32 0
@@ -252,7 +252,7 @@ float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGET_LANE]], i64 0
-// CHECK:   [[VQDMULLH_S16_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQDMULLH_S16_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i32> [[VQDMULLH_S16_I]], i64 0
 // CHECK:   ret i32 [[TMP4]]
 int32_t test_vqdmullh_lane_s16(int16_t a, int16x4_t b) {
@@ -263,7 +263,7 @@ int32_t test_vqdmullh_lane_s16(int16_t a, int16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-// CHECK:   [[VQDMULLS_S32_I:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 [[VGET_LANE]]) #2
+// CHECK:   [[VQDMULLS_S32_I:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 [[VGET_LANE]])
 // CHECK:   ret i64 [[VQDMULLS_S32_I]]
 int64_t test_vqdmulls_lane_s32(int32_t a, int32x2_t b) {
   return vqdmulls_lane_s32(a, b, 1);
@@ -275,7 +275,7 @@ int64_t test_vqdmulls_lane_s32(int32_t a, int32x2_t b) {
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGETQ_LANE]], i64 0
-// CHECK:   [[VQDMULLH_S16_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQDMULLH_S16_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i32> [[VQDMULLH_S16_I]], i64 0
 // CHECK:   ret i32 [[TMP4]]
 int32_t test_vqdmullh_laneq_s16(int16_t a, int16x8_t b) {
@@ -286,7 +286,7 @@ int32_t test_vqdmullh_laneq_s16(int16_t a, int16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK:   [[VQDMULLS_S32_I:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 [[VGETQ_LANE]]) #2
+// CHECK:   [[VQDMULLS_S32_I:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 [[VGETQ_LANE]])
 // CHECK:   ret i64 [[VQDMULLS_S32_I]]
 int64_t test_vqdmulls_laneq_s32(int32_t a, int32x4_t b) {
   return vqdmulls_laneq_s32(a, b, 3);
@@ -298,7 +298,7 @@ int64_t test_vqdmulls_laneq_s32(int32_t a, int32x4_t b) {
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGET_LANE]], i64 0
-// CHECK:   [[VQDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i16> [[VQDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP4]]
 int16_t test_vqdmulhh_lane_s16(int16_t a, int16x4_t b) {
@@ -309,7 +309,7 @@ int16_t test_vqdmulhh_lane_s16(int16_t a, int16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-// CHECK:   [[VQDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %a, i32 [[VGET_LANE]]) #2
+// CHECK:   [[VQDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %a, i32 [[VGET_LANE]])
 // CHECK:   ret i32 [[VQDMULHS_S32_I]]
 int32_t test_vqdmulhs_lane_s32(int32_t a, int32x2_t b) {
   return vqdmulhs_lane_s32(a, b, 1);
@@ -322,7 +322,7 @@ int32_t test_vqdmulhs_lane_s32(int32_t a, int32x2_t b) {
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGETQ_LANE]], i64 0
-// CHECK:   [[VQDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i16> [[VQDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP4]]
 int16_t test_vqdmulhh_laneq_s16(int16_t a, int16x8_t b) {
@@ -334,7 +334,7 @@ int16_t test_vqdmulhh_laneq_s16(int16_t a, int16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK:   [[VQDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %a, i32 [[VGETQ_LANE]]) #2
+// CHECK:   [[VQDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %a, i32 [[VGETQ_LANE]])
 // CHECK:   ret i32 [[VQDMULHS_S32_I]]
 int32_t test_vqdmulhs_laneq_s32(int32_t a, int32x4_t b) {
   return vqdmulhs_laneq_s32(a, b, 3);
@@ -346,7 +346,7 @@ int32_t test_vqdmulhs_laneq_s32(int32_t a, int32x4_t b) {
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGET_LANE]], i64 0
-// CHECK:   [[VQRDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQRDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i16> [[VQRDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP4]]
 int16_t test_vqrdmulhh_lane_s16(int16_t a, int16x4_t b) {
@@ -357,7 +357,7 @@ int16_t test_vqrdmulhh_lane_s16(int16_t a, int16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-// CHECK:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 [[VGET_LANE]]) #2
+// CHECK:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 [[VGET_LANE]])
 // CHECK:   ret i32 [[VQRDMULHS_S32_I]]
 int32_t test_vqrdmulhs_lane_s32(int32_t a, int32x2_t b) {
   return vqrdmulhs_lane_s32(a, b, 1);
@@ -370,7 +370,7 @@ int32_t test_vqrdmulhs_lane_s32(int32_t a, int32x2_t b) {
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %a, i64 0
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[VGETQ_LANE]], i64 0
-// CHECK:   [[VQRDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]]) #2
+// CHECK:   [[VQRDMULHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[TMP4:%.*]] = extractelement <4 x i16> [[VQRDMULHH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP4]]
 int16_t test_vqrdmulhh_laneq_s16(int16_t a, int16x8_t b) {
@@ -382,7 +382,7 @@ int16_t test_vqrdmulhh_laneq_s16(int16_t a, int16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 [[VGETQ_LANE]]) #2
+// CHECK:   [[VQRDMULHS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 [[VGETQ_LANE]])
 // CHECK:   ret i32 [[VQRDMULHS_S32_I]]
 int32_t test_vqrdmulhs_laneq_s32(int32_t a, int32x4_t b) {
   return vqrdmulhs_laneq_s32(a, b, 3);
@@ -497,7 +497,7 @@ int64_t test_vqdmlsls_laneq_s32(int64_t a, int32_t b, int32x4_t c) {
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x double> [[TMP1]] to <8 x i8>
 // CHECK:   [[TMP5:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK:   [[VGET_LANE7:%.*]] = extractelement <1 x double> [[TMP5]], i32 0
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE7]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE7]])
 // CHECK:   [[TMP6:%.*]] = bitcast <1 x double> [[TMP0]] to <8 x i8>
 // CHECK:   [[TMP7:%.*]] = bitcast <8 x i8> [[TMP6]] to <1 x double>
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP7]], double [[VMULXD_F64_I]], i32 0
@@ -523,7 +523,7 @@ float64x1_t test_vmulx_lane_f64_0() {
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x double> [[SHUFFLE_I]] to <16 x i8>
 // CHECK:   [[TMP5:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
-// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]]) #2
+// CHECK:   [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]])
 // CHECK:   [[TMP6:%.*]] = bitcast <1 x double> [[TMP0]] to <8 x i8>
 // CHECK:   [[TMP7:%.*]] = bitcast <8 x i8> [[TMP6]] to <1 x double>
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP7]], double [[VMULXD_F64_I]], i32 0

@@ -1,5 +1,6 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
+// UNSUPPORTED: ios
 //
 // RUN: %clangxx_asan -O0 %s -o %t && %run %t %p 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t %p 2>&1 | FileCheck %s

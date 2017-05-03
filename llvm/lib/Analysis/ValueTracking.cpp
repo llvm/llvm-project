@@ -3320,67 +3320,10 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   case Instruction::Call: {
     auto *CI = cast<const CallInst>(Inst);
     const Function *Callee = CI->getCalledFunction();
-    if (Callee && Callee->isSpeculatable())
-      return true;
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-      switch (II->getIntrinsicID()) {
-      // These synthetic intrinsics have no side-effects and just mark
-      // information about their operands.
-      // FIXME: There are other no-op synthetic instructions that potentially
-      // should be considered at least *safe* to speculate...
-      // FIXME: The speculatable attribute should be added to all these
-      // intrinsics and this case statement should be removed.
-      case Intrinsic::dbg_declare:
-      case Intrinsic::dbg_value:
-        return true;
 
-      case Intrinsic::bitreverse:
-      case Intrinsic::bswap:
-      case Intrinsic::ctlz:
-      case Intrinsic::ctpop:
-      case Intrinsic::cttz:
-      case Intrinsic::objectsize:
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-      case Intrinsic::umul_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        return true;
-      // These intrinsics are defined to have the same behavior as libm
-      // functions except for setting errno.
-      case Intrinsic::sqrt:
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-        return true;
-      // These intrinsics are defined to have the same behavior as libm
-      // functions, and the corresponding libm functions never set errno.
-      case Intrinsic::trunc:
-      case Intrinsic::copysign:
-      case Intrinsic::fabs:
-      case Intrinsic::minnum:
-      case Intrinsic::maxnum:
-        return true;
-      // These intrinsics are defined to have the same behavior as libm
-      // functions, which never overflow when operating on the IEEE754 types
-      // that we support, and never set errno otherwise.
-      case Intrinsic::ceil:
-      case Intrinsic::floor:
-      case Intrinsic::nearbyint:
-      case Intrinsic::rint:
-      case Intrinsic::round:
-        return true;
-      // These intrinsics do not correspond to any libm function, and
-      // do not set errno.
-      case Intrinsic::powi:
-        return true;
-      // TODO: are convert_{from,to}_fp16 safe?
-      // TODO: can we list target-specific intrinsics here?
-      default: break;
-      }
-    }
-    return false; // The called function could have undefined behavior or
-                  // side-effects, even if marked readnone nounwind.
+    // The called function could have undefined behavior or side-effects, even
+    // if marked readnone nounwind.
+    return Callee && Callee->isSpeculatable();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:
