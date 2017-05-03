@@ -30,9 +30,26 @@ namespace llvm {
 
 class AMDGPUTargetStreamer;
 class MCOperand;
+class SISubtarget;
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 private:
+  // Track resource usage for callee functions.
+  struct SIFunctionResourceInfo {
+    // Track the number of explicitly used VGPRs. Special registers reserved at
+    // the end are tracked separately.
+    int32_t NumVGPR = 0;
+    int32_t NumExplicitSGPR = 0;
+    uint32_t PrivateSegmentSize = 0;
+    bool UsesVCC = false;
+    bool UsesFlatScratch = false;
+    bool HasDynamicallySizedStack = false;
+    bool HasRecursion = false;
+
+    int32_t getTotalNumSGPRs(const SISubtarget &ST) const;
+  };
+
+  // Track resource usage for kernels / entry functions.
   struct SIProgramInfo {
     // Fields set in PGM_RSRC1 pm4 packet.
     uint32_t VGPRBlocks = 0;
@@ -83,14 +100,23 @@ private:
     uint16_t DebuggerPrivateSegmentBufferSGPR =
         std::numeric_limits<uint16_t>::max();
 
+    // Whether there is recursion, dynamic allocas, indirect calls or some other
+    // reason there may be statically unknown stack usage.
+    bool DynamicCallStack = false;
+
     // Bonus information for debugging.
     bool VCCUsed = false;
 
     SIProgramInfo() = default;
   };
 
+  SIProgramInfo CurrentProgramInfo;
+  DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
+
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
-  void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF) const;
+  SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF) const;
+
+  void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
   void findNumUsedRegistersSI(const MachineFunction &MF,
@@ -101,6 +127,10 @@ private:
   /// can correctly setup the GPU state.
   void EmitProgramInfoR600(const MachineFunction &MF);
   void EmitProgramInfoSI(const MachineFunction &MF, const SIProgramInfo &KernelInfo);
+  void emitCommonFunctionComments(uint32_t NumVGPR,
+                                  uint32_t NumSGPR,
+                                  uint32_t ScratchSize,
+                                  uint64_t CodeSize);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
@@ -112,6 +142,7 @@ public:
 
   AMDGPUTargetStreamer& getTargetStreamer() const;
 
+  bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   /// \brief Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated

@@ -328,7 +328,7 @@ void Function::addAttribute(unsigned i, Attribute Attr) {
   setAttributes(PAL);
 }
 
-void Function::addAttributes(unsigned i, AttributeList Attrs) {
+void Function::addAttributes(unsigned i, const AttrBuilder &Attrs) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addAttributes(getContext(), i, Attrs);
   setAttributes(PAL);
@@ -346,7 +346,7 @@ void Function::removeAttribute(unsigned i, StringRef Kind) {
   setAttributes(PAL);
 }
 
-void Function::removeAttributes(unsigned i, AttributeList Attrs) {
+void Function::removeAttributes(unsigned i, const AttrBuilder &Attrs) {
   AttributeList PAL = getAttributes();
   PAL = PAL.removeAttributes(getContext(), i, Attrs);
   setAttributes(PAL);

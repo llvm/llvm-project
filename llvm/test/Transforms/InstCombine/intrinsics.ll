@@ -284,7 +284,7 @@ define i32 @cttz(i32 %a) {
 define i1 @cttz_knownbits(i32 %arg) {
 ; CHECK-LABEL: @cttz_knownbits(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG:%.*]], 4
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #0
+; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CNT]], 4
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -307,7 +307,7 @@ define i8 @ctlz(i8 %a) {
 define i1 @ctlz_knownbits(i8 %arg) {
 ; CHECK-LABEL: @ctlz_knownbits(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[ARG:%.*]], 32
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctlz.i8(i8 [[OR]], i1 true) #0
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctlz.i8(i8 [[OR]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 4
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;

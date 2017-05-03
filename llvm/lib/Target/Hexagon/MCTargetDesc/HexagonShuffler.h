@@ -105,8 +105,8 @@ class HexagonInstr {
 public:
   HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
                MCInstrInfo const &MCII, MCInst const *id,
-               MCInst const *Extender, unsigned s, bool x = false)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {}
+               MCInst const *Extender, unsigned s)
+      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {};
 
   MCInst const &getDesc() const { return *ID; };
 

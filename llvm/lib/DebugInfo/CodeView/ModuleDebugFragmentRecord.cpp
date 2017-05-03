@@ -34,6 +34,7 @@ Error ModuleDebugFragmentRecord::initialize(BinaryStreamRef Stream,
   switch (Kind) {
   case ModuleDebugFragmentKind::FileChecksums:
   case ModuleDebugFragmentKind::Lines:
+  case ModuleDebugFragmentKind::InlineeLines:
     break;
   default:
     llvm_unreachable("Unexpected debug fragment kind!");

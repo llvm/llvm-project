@@ -424,7 +424,6 @@ public:
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
   unsigned getUnits(const MachineInstr &MI) const;
-  unsigned getValidSubTargets(const unsigned Opcode) const;
 
   /// getInstrTimingClassLatency - Compute the instruction latency of a given
   /// instruction using Timing Class information, if available.

@@ -147,5 +147,5 @@ entry:
 ; CHECK: declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) [[ATTR0]]
 ; CHECK: declare <2 x double> @llvm.exp2.v2f64(<2 x double>) [[ATTR0]]
 
-; CHECK: attributes [[ATTR0]] = { nounwind readnone }
+; CHECK: attributes [[ATTR0]] = { nounwind readnone speculatable }
 

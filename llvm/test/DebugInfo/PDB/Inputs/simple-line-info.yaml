@@ -1,8 +1,4 @@
 ---
-StringTable:
-  - 'junk_a'
-  - 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-  - 'junk_b'
 DbiStream:
   Modules:
     - Module:          'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj'
@@ -14,6 +10,9 @@ DbiStream:
           - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
             Kind:            MD5
             Checksum:        A0A5BD0D3ECD93FC29D19DE826FBF4BC
+          - FileName:        'f:\dd\externalapis\windows\10\sdk\inc\winerror.h'
+            Kind:            MD5
+            Checksum:        1154D69F5B2650196E1FC34F4134E56B
         Lines:
           - CodeSize:        10
             Flags:           [  ]
@@ -35,4 +34,10 @@ DbiStream:
                     IsStatement:     true
                     EndDelta:        0
                 Columns:
+        InlineeLines:    
+          - HasExtraFiles:   false
+            Sites:           
+              - FileName:        'f:\dd\externalapis\windows\10\sdk\inc\winerror.h'
+                LineNum:         26950
+                Inlinee:         22767
 ...

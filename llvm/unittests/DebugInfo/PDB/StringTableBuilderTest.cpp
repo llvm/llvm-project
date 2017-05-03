@@ -9,8 +9,8 @@
 
 #include "ErrorChecking.h"
 
-#include "llvm/DebugInfo/PDB/Native/StringTable.h"
-#include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
+#include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -27,7 +27,7 @@ class StringTableBuilderTest : public ::testing::Test {};
 
 TEST_F(StringTableBuilderTest, Simple) {
   // Create /names table contents.
-  StringTableBuilder Builder;
+  PDBStringTableBuilder Builder;
   EXPECT_EQ(1U, Builder.insert("foo"));
   EXPECT_EQ(5U, Builder.insert("bar"));
   EXPECT_EQ(1U, Builder.insert("foo"));
@@ -41,7 +41,7 @@ TEST_F(StringTableBuilderTest, Simple) {
   // Reads the contents back.
   BinaryByteStream InStream(Buffer, little);
   BinaryStreamReader Reader(InStream);
-  StringTable Table;
+  PDBStringTable Table;
   EXPECT_NO_ERROR(Table.load(Reader));
 
   EXPECT_EQ(3U, Table.getNameCount());

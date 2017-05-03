@@ -45,7 +45,7 @@ TEST(Attributes, Ordering) {
                          AttributeList::get(C, 1, Attribute::SExt)};
 
   AttributeList SetA = AttributeList::get(C, ASs);
-  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1]);
+  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1].getAttributes(1));
   EXPECT_NE(SetA, SetB);
 }
 

@@ -39,7 +39,7 @@ bb2:                                              ; preds = %bb1, %bb
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nounwind readnone speculatable }
 ; CHECK: attributes #2 = { noinline nounwind ssp }
 ; CHECK: attributes [[NUW]] = { nounwind }
 

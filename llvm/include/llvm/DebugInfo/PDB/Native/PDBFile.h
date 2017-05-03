@@ -33,7 +33,7 @@ namespace pdb {
 class DbiStream;
 class GlobalsStream;
 class InfoStream;
-class StringTable;
+class PDBStringTable;
 class PDBFileBuilder;
 class PublicsStream;
 class SymbolStream;
@@ -95,7 +95,7 @@ public:
   Expected<TpiStream &> getPDBIpiStream();
   Expected<PublicsStream &> getPDBPublicsStream();
   Expected<SymbolStream &> getPDBSymbolStream();
-  Expected<StringTable &> getStringTable();
+  Expected<PDBStringTable &> getStringTable();
 
   BumpPtrAllocator &getAllocator() { return Allocator; }
 
@@ -106,7 +106,7 @@ public:
   bool hasPDBPublicsStream();
   bool hasPDBSymbolStream();
   bool hasPDBTpiStream() const;
-  bool hasStringTable();
+  bool hasPDBStringTable();
 
 private:
   Expected<std::unique_ptr<msf::MappedBlockStream>>
@@ -130,8 +130,8 @@ private:
   std::unique_ptr<PublicsStream> Publics;
   std::unique_ptr<SymbolStream> Symbols;
   std::unique_ptr<msf::MappedBlockStream> DirectoryStream;
-  std::unique_ptr<msf::MappedBlockStream> StringTableStream;
-  std::unique_ptr<StringTable> Strings;
+  std::unique_ptr<msf::MappedBlockStream> PDBStringTableStream;
+  std::unique_ptr<PDBStringTable> Strings;
 };
 }
 }

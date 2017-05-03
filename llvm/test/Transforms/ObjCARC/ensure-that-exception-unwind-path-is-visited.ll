@@ -105,7 +105,7 @@ declare void @NSLog(i8*, ...)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { ssp uwtable }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nounwind readnone speculatable }
 ; CHECK: attributes #2 = { nonlazybind }
 ; CHECK: attributes #3 = { noinline ssp uwtable }
 ; CHECK: attributes [[NUW]] = { nounwind }

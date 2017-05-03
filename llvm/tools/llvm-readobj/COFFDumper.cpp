@@ -26,6 +26,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
@@ -986,27 +987,20 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
 void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
   BinaryByteStream S(Subsection, llvm::support::little);
   BinaryStreamReader SR(S);
-  uint32_t Signature;
-  error(SR.readInteger(Signature));
-  bool HasExtraFiles = Signature == unsigned(InlineeLinesSignature::ExtraFiles);
+  ModuleDebugInlineeLineFragmentRef Lines;
+  error(Lines.initialize(SR));
 
-  while (!SR.empty()) {
-    const InlineeSourceLine *ISL;
-    error(SR.readObject(ISL));
+  for (auto &Line : Lines) {
     DictScope S(W, "InlineeSourceLine");
-    printTypeIndex("Inlinee", ISL->Inlinee);
-    printFileNameForOffset("FileID", ISL->FileID);
-    W.printNumber("SourceLineNum", ISL->SourceLineNum);
+    printTypeIndex("Inlinee", Line.Header->Inlinee);
+    printFileNameForOffset("FileID", Line.Header->FileID);
+    W.printNumber("SourceLineNum", Line.Header->SourceLineNum);
 
-    if (HasExtraFiles) {
-      uint32_t ExtraFileCount;
-      error(SR.readInteger(ExtraFileCount));
-      W.printNumber("ExtraFileCount", ExtraFileCount);
+    if (Lines.hasExtraFiles()) {
+      W.printNumber("ExtraFileCount", Line.ExtraFiles.size());
       ListScope ExtraFiles(W, "ExtraFiles");
-      for (unsigned I = 0; I < ExtraFileCount; ++I) {
-        uint32_t FileID;
-        error(SR.readInteger(FileID));
-        printFileNameForOffset("FileID", FileID);
+      for (const auto &FID : Line.ExtraFiles) {
+        printFileNameForOffset("FileID", FID);
       }
     }
   }

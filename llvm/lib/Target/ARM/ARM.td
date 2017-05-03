@@ -577,6 +577,7 @@ def : Processor<"cortex-m0plus",    ARMV6Itineraries,   [ARMv6m]>;
 def : Processor<"cortex-m1",        ARMV6Itineraries,   [ARMv6m]>;
 def : Processor<"sc000",            ARMV6Itineraries,   [ARMv6m]>;
 
+def : Processor<"arm1176j-s",       ARMV6Itineraries,   [ARMv6kz]>;
 def : Processor<"arm1176jz-s",      ARMV6Itineraries,   [ARMv6kz]>;
 def : Processor<"arm1176jzf-s",     ARMV6Itineraries,   [ARMv6kz,
                                                          FeatureVFP2,

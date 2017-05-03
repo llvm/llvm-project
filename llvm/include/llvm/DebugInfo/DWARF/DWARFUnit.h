@@ -312,9 +312,9 @@ public:
         [](const DWARFDebugInfoEntry &LHS, uint32_t Offset) {
           return LHS.getOffset() < Offset;
         });
-    if (it == DieArray.end())
-      return DWARFDie();
-    return DWARFDie(this, &*it);
+    if (it != DieArray.end() && it->getOffset() == Offset)
+      return DWARFDie(this, &*it);
+    return DWARFDie();
   }
 
   uint32_t getLineTableOffset() const {

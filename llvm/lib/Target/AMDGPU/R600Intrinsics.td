@@ -61,7 +61,7 @@ def int_r600_ddx : TextureIntrinsicFloatInput;
 def int_r600_ddy : TextureIntrinsicFloatInput;
 
 def int_r600_dot4 : Intrinsic<[llvm_float_ty],
-  [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem]
+  [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem, IntrSpeculatable]
 >;
 
 } // End TargetPrefix = "r600", isTarget = 1

@@ -340,146 +340,28 @@ public:
     // in writing out the call graph edges. Save the mapping from GUID
     // to the new global value id to use when writing those edges, which
     // are currently saved in the index in terms of GUID.
-    for (const auto &I : *this)
+    forEachSummary([&](GVInfo I) {
       GUIDToValueIdMap[I.first] = ++GlobalValueId;
+    });
   }
 
   /// The below iterator returns the GUID and associated summary.
   typedef std::pair<GlobalValue::GUID, GlobalValueSummary *> GVInfo;
 
-  /// Iterator over the value GUID and summaries to be written to bitcode,
-  /// hides the details of whether they are being pulled from the entire
-  /// index or just those in a provided ModuleToSummariesForIndex map.
-  class iterator
-      : public llvm::iterator_facade_base<iterator, std::forward_iterator_tag,
-                                          GVInfo> {
-    /// Enables access to parent class.
-    const IndexBitcodeWriter &Writer;
-
-    // Iterators used when writing only those summaries in a provided
-    // ModuleToSummariesForIndex map:
-
-    /// Points to the last element in outer ModuleToSummariesForIndex map.
-    std::map<std::string, GVSummaryMapTy>::const_iterator ModuleSummariesBack;
-    /// Iterator on outer ModuleToSummariesForIndex map.
-    std::map<std::string, GVSummaryMapTy>::const_iterator ModuleSummariesIter;
-    /// Iterator on an inner global variable summary map.
-    GVSummaryMapTy::const_iterator ModuleGVSummariesIter;
-
-    // Iterators used when writing all summaries in the index:
-
-    /// Points to the last element in the Index outer GlobalValueMap.
-    const_gvsummary_iterator IndexSummariesBack;
-    /// Iterator on outer GlobalValueMap.
-    const_gvsummary_iterator IndexSummariesIter;
-    /// Iterator on an inner GlobalValueSummaryList.
-    GlobalValueSummaryList::const_iterator IndexGVSummariesIter;
-
-  public:
-    /// Construct iterator from parent \p Writer and indicate if we are
-    /// constructing the end iterator.
-    iterator(const IndexBitcodeWriter &Writer, bool IsAtEnd) : Writer(Writer) {
-      // Set up the appropriate set of iterators given whether we are writing
-      // the full index or just a subset.
-      // Can't setup the Back or inner iterators if the corresponding map
-      // is empty. This will be handled specially in operator== as well.
-      if (Writer.ModuleToSummariesForIndex &&
-          !Writer.ModuleToSummariesForIndex->empty()) {
-        for (ModuleSummariesBack = Writer.ModuleToSummariesForIndex->begin();
-             std::next(ModuleSummariesBack) !=
-             Writer.ModuleToSummariesForIndex->end();
-             ModuleSummariesBack++)
-          ;
-        ModuleSummariesIter = !IsAtEnd
-                                  ? Writer.ModuleToSummariesForIndex->begin()
-                                  : ModuleSummariesBack;
-        ModuleGVSummariesIter = !IsAtEnd ? ModuleSummariesIter->second.begin()
-                                         : ModuleSummariesBack->second.end();
-      } else if (!Writer.ModuleToSummariesForIndex &&
-                 Writer.Index.begin() != Writer.Index.end()) {
-        for (IndexSummariesBack = Writer.Index.begin();
-             std::next(IndexSummariesBack) != Writer.Index.end();
-             IndexSummariesBack++)
-          ;
-        IndexSummariesIter =
-            !IsAtEnd ? Writer.Index.begin() : IndexSummariesBack;
-        IndexGVSummariesIter = !IsAtEnd ? IndexSummariesIter->second.begin()
-                                        : IndexSummariesBack->second.end();
-      }
+  /// Calls the callback for each value GUID and summary to be written to
+  /// bitcode. This hides the details of whether they are being pulled from the
+  /// entire index or just those in a provided ModuleToSummariesForIndex map.
+  void forEachSummary(std::function<void(GVInfo)> Callback) {
+    if (ModuleToSummariesForIndex) {
+      for (auto &M : *ModuleToSummariesForIndex)
+        for (auto &Summary : M.second)
+          Callback(Summary);
+    } else {
+      for (auto &Summaries : Index)
+        for (auto &Summary : Summaries.second)
+          Callback({Summaries.first, Summary.get()});
     }
-
-    /// Increment the appropriate set of iterators.
-    iterator &operator++() {
-      // First the inner iterator is incremented, then if it is at the end
-      // and there are more outer iterations to go, the inner is reset to
-      // the start of the next inner list.
-      if (Writer.ModuleToSummariesForIndex) {
-        ++ModuleGVSummariesIter;
-        if (ModuleGVSummariesIter == ModuleSummariesIter->second.end() &&
-            ModuleSummariesIter != ModuleSummariesBack) {
-          ++ModuleSummariesIter;
-          ModuleGVSummariesIter = ModuleSummariesIter->second.begin();
-        }
-      } else {
-        ++IndexGVSummariesIter;
-        if (IndexGVSummariesIter == IndexSummariesIter->second.end() &&
-            IndexSummariesIter != IndexSummariesBack) {
-          ++IndexSummariesIter;
-          IndexGVSummariesIter = IndexSummariesIter->second.begin();
-        }
-      }
-      return *this;
-    }
-
-    /// Access the <GUID,GlobalValueSummary*> pair corresponding to the current
-    /// outer and inner iterator positions.
-    GVInfo operator*() {
-      if (Writer.ModuleToSummariesForIndex)
-        return std::make_pair(ModuleGVSummariesIter->first,
-                              ModuleGVSummariesIter->second);
-      return std::make_pair(IndexSummariesIter->first,
-                            IndexGVSummariesIter->get());
-    }
-
-    /// Checks if the iterators are equal, with special handling for empty
-    /// indexes.
-    bool operator==(const iterator &RHS) const {
-      if (Writer.ModuleToSummariesForIndex) {
-        // First ensure that both are writing the same subset.
-        if (Writer.ModuleToSummariesForIndex !=
-            RHS.Writer.ModuleToSummariesForIndex)
-          return false;
-        // Already determined above that maps are the same, so if one is
-        // empty, they both are.
-        if (Writer.ModuleToSummariesForIndex->empty())
-          return true;
-        // Ensure the ModuleGVSummariesIter are iterating over the same
-        // container before checking them below.
-        if (ModuleSummariesIter != RHS.ModuleSummariesIter)
-          return false;
-        return ModuleGVSummariesIter == RHS.ModuleGVSummariesIter;
-      }
-      // First ensure RHS also writing the full index, and that both are
-      // writing the same full index.
-      if (RHS.Writer.ModuleToSummariesForIndex ||
-          &Writer.Index != &RHS.Writer.Index)
-        return false;
-      // Already determined above that maps are the same, so if one is
-      // empty, they both are.
-      if (Writer.Index.begin() == Writer.Index.end())
-        return true;
-      // Ensure the IndexGVSummariesIter are iterating over the same
-      // container before checking them below.
-      if (IndexSummariesIter != RHS.IndexSummariesIter)
-        return false;
-      return IndexGVSummariesIter == RHS.IndexGVSummariesIter;
-    }
-  };
-
-  /// Obtain the start iterator over the summaries to be written.
-  iterator begin() { return iterator(*this, /*IsAtEnd=*/false); }
-  /// Obtain the end iterator over the summaries to be written.
-  iterator end() { return iterator(*this, /*IsAtEnd=*/true); }
+  }
 
   /// Main entry point for writing a combined index to bitcode.
   void write();
@@ -3528,16 +3410,16 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
   // Create value IDs for undefined references.
-  for (const auto &I : *this) {
+  forEachSummary([&](GVInfo I) {
     if (auto *VS = dyn_cast<GlobalVarSummary>(I.second)) {
       for (auto &RI : VS->refs())
         assignValueId(RI.getGUID());
-      continue;
+      return;
     }
 
     auto *FS = dyn_cast<FunctionSummary>(I.second);
     if (!FS)
-      continue;
+      return;
     for (auto &RI : FS->refs())
       assignValueId(RI.getGUID());
 
@@ -3553,7 +3435,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       }
       assignValueId(GUID);
     }
-  }
+  });
 
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
@@ -3624,7 +3506,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  for (const auto &I : *this) {
+  forEachSummary([&](GVInfo I) {
     GlobalValueSummary *S = I.second;
     assert(S);
 
@@ -3636,7 +3518,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       // Will process aliases as a post-pass because the reader wants all
       // global to be loaded first.
       Aliases.push_back(AS);
-      continue;
+      return;
     }
 
     if (auto *VS = dyn_cast<GlobalVarSummary>(S)) {
@@ -3652,7 +3534,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
                         FSModRefsAbbrev);
       NameVals.clear();
       MaybeEmitOriginalName(*S);
-      continue;
+      return;
     }
 
     auto *FS = cast<FunctionSummary>(S);
@@ -3700,7 +3582,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Stream.EmitRecord(Code, NameVals, FSAbbrev);
     NameVals.clear();
     MaybeEmitOriginalName(*S);
-  }
+  });
 
   for (auto *AS : Aliases) {
     auto AliasValueId = SummaryToValueIdMap[AS];

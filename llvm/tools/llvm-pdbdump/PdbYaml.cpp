@@ -41,6 +41,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceColumnEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineBlock)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSourceLineInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbInlineeSite)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbInlineeInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSymbolRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
@@ -336,6 +338,7 @@ void MappingContextTraits<pdb::yaml::PdbSourceLineInfo,
     mapping(IO &IO, PdbSourceLineInfo &Obj,
             pdb::yaml::SerializationContext &Context) {
   IO.mapRequired("CodeSize", Obj.CodeSize);
+
   IO.mapRequired("Flags", Obj.Flags);
   IO.mapRequired("RelocOffset", Obj.RelocOffset);
   IO.mapRequired("RelocSegment", Obj.RelocSegment);
@@ -348,6 +351,21 @@ void MappingContextTraits<pdb::yaml::PdbSourceFileInfo,
             pdb::yaml::SerializationContext &Context) {
   IO.mapOptionalWithContext("Checksums", Obj.FileChecksums, Context);
   IO.mapOptionalWithContext("Lines", Obj.LineFragments, Context);
+  IO.mapOptionalWithContext("InlineeLines", Obj.Inlinees, Context);
+}
+
+void MappingContextTraits<PdbInlineeSite, SerializationContext>::mapping(
+    IO &IO, PdbInlineeSite &Obj, SerializationContext &Context) {
+  IO.mapRequired("FileName", Obj.FileName);
+  IO.mapRequired("LineNum", Obj.SourceLineNum);
+  IO.mapRequired("Inlinee", Obj.Inlinee);
+  IO.mapOptional("ExtraFiles", Obj.ExtraFiles);
+}
+
+void MappingContextTraits<PdbInlineeInfo, SerializationContext>::mapping(
+    IO &IO, PdbInlineeInfo &Obj, SerializationContext &Context) {
+  IO.mapRequired("HasExtraFiles", Obj.HasExtraFiles);
+  IO.mapRequired("Sites", Obj.Sites, Context);
 }
 
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::

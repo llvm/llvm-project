@@ -1259,7 +1259,7 @@ define i64 @icmp_constant_inputs_false() {
 }
 
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK: %result = call i64 @llvm.read_register.i64(metadata !0) #4
+; CHECK: %result = call i64 @llvm.read_register.i64(metadata !0) #5
 define i64 @icmp_constant_inputs_true() {
   %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 8, i32 34)
   ret i64 %result
@@ -1524,7 +1524,7 @@ define i64 @fcmp_constant_inputs_false() {
 }
 
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK: %result = call i64 @llvm.read_register.i64(metadata !0) #4
+; CHECK: %result = call i64 @llvm.read_register.i64(metadata !0) #5
 define i64 @fcmp_constant_inputs_true() {
   %result = call i64 @llvm.amdgcn.fcmp.f32(float 2.0, float 4.0, i32 4)
   ret i64 %result
@@ -1537,4 +1537,4 @@ define i64 @fcmp_constant_to_rhs_olt(float %x) {
   ret i64 %result
 }
 
-; CHECK: attributes #4 = { convergent }
+; CHECK: attributes #5 = { convergent }

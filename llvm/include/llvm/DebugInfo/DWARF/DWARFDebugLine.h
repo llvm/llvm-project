@@ -30,7 +30,7 @@ public:
   struct FileNameEntry {
     FileNameEntry() = default;
 
-    const char *Name = nullptr;
+    StringRef Name = StringRef();
     uint64_t DirIdx = 0;
     uint64_t ModTime = 0;
     uint64_t Length = 0;
@@ -44,6 +44,10 @@ public:
     uint64_t TotalLength;
     /// Version identifier for the statement information format.
     uint16_t Version;
+    /// In v5, size in bytes of an address (or segment offset).
+    uint8_t AddressSize;
+    /// In v5, size in bytes of a segment selector.
+    uint8_t SegSelectorSize;
     /// The number of bytes following the prologue_length field to the beginning
     /// of the first byte of the statement program itself.
     uint64_t PrologueLength;
@@ -63,7 +67,7 @@ public:
     /// The number assigned to the first special opcode.
     uint8_t OpcodeBase;
     std::vector<uint8_t> StandardOpcodeLengths;
-    std::vector<const char *> IncludeDirectories;
+    std::vector<StringRef> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
     bool IsDWARF64;
@@ -100,7 +104,7 @@ public:
     void postAppend();
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
-
+    static void dumpTableHeader(raw_ostream &OS);
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return LHS.Address < RHS.Address;
     }

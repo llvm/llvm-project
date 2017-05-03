@@ -337,6 +337,16 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   if (F->hasAddressTaken())
     return nullptr;
 
+  // Let inliner handle it
+  if (F->hasFnAttribute(Attribute::AlwaysInline))
+    return nullptr;
+
+  if (F->hasFnAttribute(Attribute::NoInline))
+    return nullptr;
+
+  if (PSI->isFunctionEntryCold(F))
+    return nullptr;
+
   std::unique_ptr<FunctionOutliningInfo> OutliningInfo =
       computeOutliningInfo(F);
 

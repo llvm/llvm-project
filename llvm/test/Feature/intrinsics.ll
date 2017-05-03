@@ -69,5 +69,5 @@ define void @trap() {
   ret void
 }
 
-; CHECK: attributes #0 = { nounwind readnone }
+; CHECK: attributes #0 = { nounwind readnone speculatable }
 ; CHECK: attributes #1 = { noreturn nounwind }
