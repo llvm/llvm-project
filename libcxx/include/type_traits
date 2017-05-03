@@ -1297,18 +1297,8 @@ template <class _Tp> using decay_t = typename decay<_Tp>::type;
 
 // is_abstract
 
-namespace __is_abstract_imp
-{
-template <class _Tp> char  __test(_Tp (*)[1]);
-template <class _Tp> __two __test(...);
-}
-
-template <class _Tp, bool = is_class<_Tp>::value>
-struct __libcpp_abstract : public integral_constant<bool, sizeof(__is_abstract_imp::__test<_Tp>(0)) != 1> {};
-
-template <class _Tp> struct __libcpp_abstract<_Tp, false> : public false_type {};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_abstract : public __libcpp_abstract<_Tp> {};
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_abstract
+    : public integral_constant<bool, __is_abstract(_Tp)> {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp> _LIBCPP_CONSTEXPR bool is_abstract_v
