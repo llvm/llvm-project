@@ -961,18 +961,17 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
                            Type *ElementType, bool Affine,
                            ArrayRef<const SCEV *> Subscripts,
                            ArrayRef<const SCEV *> Sizes, Value *AccessValue,
-                           MemoryKind Kind, StringRef BaseName)
+                           MemoryKind Kind)
     : Kind(Kind), AccType(AccType), RedType(RT_NONE), Statement(Stmt),
-      InvalidDomain(nullptr), BaseAddr(BaseAddress), BaseName(BaseName),
-      ElementType(ElementType), Sizes(Sizes.begin(), Sizes.end()),
-      AccessInstruction(AccessInst), AccessValue(AccessValue), IsAffine(Affine),
+      InvalidDomain(nullptr), BaseAddr(BaseAddress), ElementType(ElementType),
+      Sizes(Sizes.begin(), Sizes.end()), AccessInstruction(AccessInst),
+      AccessValue(AccessValue), IsAffine(Affine),
       Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(nullptr),
       NewAccessRelation(nullptr) {
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
-  const std::string Access = TypeStrings[AccType] + utostr(Stmt->size()) + "_";
+  const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
-  std::string IdName =
-      getIslCompatibleName(Stmt->getBaseName(), Access, BaseName);
+  std::string IdName = Stmt->getBaseName() + Access;
   Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 
@@ -988,12 +987,10 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
     Sizes.push_back(SAI->getDimensionSize(i));
   ElementType = SAI->getElementType();
   BaseAddr = SAI->getBasePtr();
-  BaseName = SAI->getName();
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
-  const std::string Access = TypeStrings[AccType] + utostr(Stmt->size()) + "_";
+  const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
-  std::string IdName =
-      getIslCompatibleName(Stmt->getBaseName(), Access, BaseName);
+  std::string IdName = Stmt->getBaseName() + Access;
   Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 

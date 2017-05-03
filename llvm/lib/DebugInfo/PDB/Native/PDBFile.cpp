@@ -338,7 +338,7 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
 }
 
 Expected<PDBStringTable &> PDBFile::getStringTable() {
-  if (!Strings) {
+  if (!Strings || !PDBStringTableStream) {
     auto IS = getPDBInfoStream();
     if (!IS)
       return IS.takeError();
@@ -350,13 +350,12 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
     if (!NS)
       return NS.takeError();
 
-    auto N = llvm::make_unique<PDBStringTable>();
     BinaryStreamReader Reader(**NS);
-    if (auto EC = N->reload(Reader))
+    auto N = llvm::make_unique<PDBStringTable>();
+    if (auto EC = N->load(Reader))
       return std::move(EC);
-    assert(Reader.bytesRemaining() == 0);
-    StringTableStream = std::move(*NS);
     Strings = std::move(N);
+    PDBStringTableStream = std::move(*NS);
   }
   return *Strings;
 }

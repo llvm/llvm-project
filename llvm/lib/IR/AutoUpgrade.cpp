@@ -467,6 +467,27 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
     }
+    // Renaming gather/scatter intrinsics with no address space overloading
+    // to the new overload which includes an address space
+    if (Name.startswith("masked.gather.")) {
+      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
+      if (F->getName() != Intrinsic::getName(Intrinsic::masked_gather, Tys)) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::masked_gather, Tys);
+        return true;
+      }
+    }
+    if (Name.startswith("masked.scatter.")) {
+      auto Args = F->getFunctionType()->params();
+      Type *Tys[] = {Args[0], Args[1]};
+      if (F->getName() != Intrinsic::getName(Intrinsic::masked_scatter, Tys)) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::masked_scatter, Tys);
+        return true;
+      }
+    }
     break;
   }
   case 'n': {
@@ -2072,7 +2093,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::masked_load:
-  case Intrinsic::masked_store: {
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_gather:
+  case Intrinsic::masked_scatter: {
     SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
                                  CI->arg_operands().end());
     NewCall = Builder.CreateCall(NewFn, Args);

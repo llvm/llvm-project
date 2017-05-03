@@ -50,10 +50,8 @@ public:
 
   Error commit(StringRef Filename);
 
-  Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
-  Error addNamedStream(StringRef Name, uint32_t Size);
-
 private:
+  Error addNamedStream(StringRef Name, uint32_t Size);
   Expected<msf::MSFLayout> finalizeMsfLayout();
 
   BumpPtrAllocator &Allocator;

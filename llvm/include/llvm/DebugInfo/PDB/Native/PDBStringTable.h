@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/StringTable.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -24,22 +23,19 @@
 namespace llvm {
 class BinaryStreamReader;
 
-namespace msf {
-class MappedBlockStream;
-}
-
 namespace pdb {
-
-struct PDBStringTableHeader;
 
 class PDBStringTable {
 public:
-  Error reload(BinaryStreamReader &Reader);
+  PDBStringTable();
+
+  Error load(BinaryStreamReader &Stream);
 
   uint32_t getByteSize() const;
-  uint32_t getNameCount() const;
-  uint32_t getHashVersion() const;
-  uint32_t getSignature() const;
+
+  uint32_t getNameCount() const { return NameCount; }
+  uint32_t getHashVersion() const { return HashVersion; }
+  uint32_t getSignature() const { return Signature; }
 
   StringRef getStringForID(uint32_t ID) const;
   uint32_t getIDForString(StringRef Str) const;
@@ -47,15 +43,11 @@ public:
   FixedStreamArray<support::ulittle32_t> name_ids() const;
 
 private:
-  Error readHeader(BinaryStreamReader &Reader);
-  Error readStrings(BinaryStreamReader &Reader);
-  Error readHashTable(BinaryStreamReader &Reader);
-  Error readEpilogue(BinaryStreamReader &Reader);
-
-  const PDBStringTableHeader *Header = nullptr;
-  codeview::StringTableRef Strings;
+  BinaryStreamRef NamesBuffer;
   FixedStreamArray<support::ulittle32_t> IDs;
   uint32_t ByteSize = 0;
+  uint32_t Signature = 0;
+  uint32_t HashVersion = 0;
   uint32_t NameCount = 0;
 };
 

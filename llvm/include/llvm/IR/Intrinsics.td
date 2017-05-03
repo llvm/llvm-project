@@ -155,7 +155,7 @@ class LLVMVectorSameWidth<int num, LLVMType elty>
 }
 class LLVMPointerTo<int num> : LLVMMatchType<num>;
 class LLVMPointerToElt<int num> : LLVMMatchType<num>;
-class LLVMVectorOfPointersToElt<int num> : LLVMMatchType<num>;
+class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type, but change the element count to be half as many
@@ -761,14 +761,14 @@ def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
 def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
+                                 [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
                                  [IntrReadMem]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
-                                   LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
+                                   LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                    LLVMVectorSameWidth<0, llvm_i1_ty>]>;
 
 def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],

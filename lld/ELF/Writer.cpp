@@ -252,7 +252,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     if (!Script->Opt.HasSections) {
       fixSectionAlignments();
-      Script->fabricateDefaultCommands(Config->MaxPageSize);
+      Script->fabricateDefaultCommands(AllocateHeader);
     }
     Script->synchronize();
     Script->assignAddresses(Phdrs);

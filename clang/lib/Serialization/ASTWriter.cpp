@@ -2872,8 +2872,9 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       [](const DiagnosticsEngine::DiagState *DS) -> unsigned {
     unsigned Result = (unsigned)DS->ExtBehavior;
     for (unsigned Val :
-         {DS->IgnoreAllWarnings, DS->EnableAllWarnings, DS->WarningsAsErrors,
-          DS->ErrorsAsFatal, DS->SuppressSystemWarnings})
+         {(unsigned)DS->IgnoreAllWarnings, (unsigned)DS->EnableAllWarnings,
+          (unsigned)DS->WarningsAsErrors, (unsigned)DS->ErrorsAsFatal,
+          (unsigned)DS->SuppressSystemWarnings})
       Result = (Result << 1) | Val;
     return Result;
   };

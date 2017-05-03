@@ -211,12 +211,11 @@ enum IIT_Info {
   IIT_SAME_VEC_WIDTH_ARG = 31,
   IIT_PTR_TO_ARG = 32,
   IIT_PTR_TO_ELT = 33,
-  IIT_VEC_OF_PTRS_TO_ELT = 34,
+  IIT_VEC_OF_ANYPTRS_TO_ELT = 34,
   IIT_I128 = 35,
   IIT_V512 = 36,
   IIT_V1024 = 37
 };
-
 
 static void EncodeFixedValueType(MVT::SimpleValueType VT,
                                  std::vector<unsigned char> &Sig) {
@@ -273,9 +272,16 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     }
     else if (R->isSubClassOf("LLVMPointerTo"))
       Sig.push_back(IIT_PTR_TO_ARG);
-    else if (R->isSubClassOf("LLVMVectorOfPointersToElt"))
-      Sig.push_back(IIT_VEC_OF_PTRS_TO_ELT);
-    else if (R->isSubClassOf("LLVMPointerToElt"))
+    else if (R->isSubClassOf("LLVMVectorOfAnyPointersToElt")) {
+      Sig.push_back(IIT_VEC_OF_ANYPTRS_TO_ELT);
+      unsigned ArgNo = ArgCodes.size();
+      ArgCodes.push_back(3 /*vAny*/);
+      // Encode overloaded ArgNo
+      Sig.push_back(ArgNo);
+      // Encode LLVMMatchType<Number> ArgNo
+      Sig.push_back(Number);
+      return;
+    } else if (R->isSubClassOf("LLVMPointerToElt"))
       Sig.push_back(IIT_PTR_TO_ELT);
     else
       Sig.push_back(IIT_ARG);

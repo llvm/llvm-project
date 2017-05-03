@@ -80,9 +80,9 @@ Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
 }
 
 Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
-  uint32_t StringsLen = Strings.calculateSerializedSize();
+  uint32_t PDBStringTableSize = Strings.finalize();
 
-  if (auto EC = addNamedStream("/names", StringsLen))
+  if (auto EC = addNamedStream("/names", PDBStringTableSize))
     return std::move(EC);
   if (auto EC = addNamedStream("/LinkInfo", 0))
     return std::move(EC);
@@ -107,13 +107,6 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
   }
 
   return Msf->build();
-}
-
-Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
-  uint32_t SN = 0;
-  if (!NamedStreams.get(Name, SN))
-    return llvm::make_error<pdb::RawError>(raw_error_code::no_stream);
-  return SN;
 }
 
 Error PDBFileBuilder::commit(StringRef Filename) {
@@ -153,12 +146,12 @@ Error PDBFileBuilder::commit(StringRef Filename) {
       return EC;
   }
 
-  auto ExpectedSN = getNamedStreamIndex("/names");
-  if (!ExpectedSN)
-    return ExpectedSN.takeError();
+  uint32_t PDBStringTableStreamNo = 0;
+  if (!NamedStreams.get("/names", PDBStringTableStreamNo))
+    return llvm::make_error<pdb::RawError>(raw_error_code::no_stream);
 
-  auto NS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
-                                                           *ExpectedSN);
+  auto NS = WritableMappedBlockStream::createIndexedStream(
+      Layout, Buffer, PDBStringTableStreamNo);
   BinaryStreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;

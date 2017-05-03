@@ -146,7 +146,7 @@ Error DbiStream::reload() {
 
   if (ECSubstream.getLength() > 0) {
     BinaryStreamReader ECReader(ECSubstream);
-    if (auto EC = ECNames.reload(ECReader))
+    if (auto EC = ECNames.load(ECReader))
       return EC;
   }
 

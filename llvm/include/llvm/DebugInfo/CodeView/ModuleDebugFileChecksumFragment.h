@@ -35,7 +35,7 @@ public:
   typedef void ContextType;
 
   static Error extract(BinaryStreamRef Stream, uint32_t &Len,
-                       codeview::FileChecksumEntry &Item, void *Ctx);
+                       codeview::FileChecksumEntry &Item);
 };
 }
 
@@ -55,8 +55,8 @@ public:
 
   Error initialize(BinaryStreamReader Reader);
 
-  Iterator begin() const { return Checksums.begin(); }
-  Iterator end() const { return Checksums.end(); }
+  Iterator begin() { return Checksums.begin(); }
+  Iterator end() { return Checksums.end(); }
 
   const FileChecksumArray &getArray() const { return Checksums; }
 

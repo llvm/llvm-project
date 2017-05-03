@@ -3181,6 +3181,15 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
+  const CallInst *CI =
+      CLI.CS ? dyn_cast<CallInst>(CLI.CS->getInstruction()) : nullptr;
+  const Function *CalledFn = CI ? CI->getCalledFunction() : nullptr;
+
+  // Functions with no_caller_saved_registers that need special handling.
+  if ((CI && CI->hasFnAttr("no_caller_saved_registers")) ||
+      (CalledFn && CalledFn->hasFnAttribute("no_caller_saved_registers")))
+    return false;
+
   // Handle only C, fastcc, and webkit_js calling conventions for now.
   switch (CC) {
   default: return false;

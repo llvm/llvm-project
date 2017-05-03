@@ -57,8 +57,6 @@ private:
   ModuleDebugFragment &Frag;
 };
 
-typedef VarStreamArray<ModuleDebugFragmentRecord> ModuleDebugFragmentArray;
-
 } // namespace codeview
 
 template <>
@@ -66,13 +64,17 @@ struct VarStreamArrayExtractor<codeview::ModuleDebugFragmentRecord> {
   typedef void ContextType;
 
   static Error extract(BinaryStreamRef Stream, uint32_t &Length,
-                       codeview::ModuleDebugFragmentRecord &Info, void *Ctx) {
+                       codeview::ModuleDebugFragmentRecord &Info) {
     if (auto EC = codeview::ModuleDebugFragmentRecord::initialize(Stream, Info))
       return EC;
     Length = Info.getRecordLength();
     return Error::success();
   }
 };
+
+namespace codeview {
+typedef VarStreamArray<ModuleDebugFragmentRecord> ModuleDebugFragmentArray;
+}
 } // namespace llvm
 
 #endif // LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTRECORD_H

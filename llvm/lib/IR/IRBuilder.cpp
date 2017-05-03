@@ -293,11 +293,13 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
     Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
                                      NumElts));
 
+  Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value * Ops[] = {Ptrs, getInt32(Align), Mask, UndefValue::get(DataTy)};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, { DataTy }, Name);
+  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, OverloadedTypes,
+                               Name);
 }
 
 /// \brief Create a call to a Masked Scatter intrinsic.
@@ -323,11 +325,13 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
   if (!Mask)
     Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
                                      NumElts));
+
+  Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value * Ops[] = {Data, Ptrs, getInt32(Align), Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, { DataTy });
+  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
 }
 
 template <typename T0, typename T1, typename T2, typename T3>

@@ -276,7 +276,14 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->callsEHReturn();
 
-  switch (MF->getFunction()->getCallingConv()) {
+  CallingConv::ID CC = MF->getFunction()->getCallingConv();
+
+  // If attribute NoCallerSavedRegisters exists then we set X86_INTR calling
+  // convention because it has the CSR list.
+  if (MF->getFunction()->hasFnAttribute("no_caller_saved_registers"))
+    CC = CallingConv::X86_INTR;
+
+  switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
     return CSR_NoRegs_SaveList;

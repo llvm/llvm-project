@@ -21,4 +21,4 @@ a.out: main.m libTest.dylib libTestExt.dylib
 .PHONY: clean
 
 clean:
-	rm -rf *.dylib a.out *.o *.dSYM *.d
+	rm -rf libTest.dylib libTestExt.dylib a.out Test.o TestExt.o libTest.dylib.dSYM libTest.dylib.dSYM
