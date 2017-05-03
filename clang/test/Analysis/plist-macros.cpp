@@ -218,7 +218,7 @@ void test2(int *p) {
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:    </array>
 // CHECK-NEXT:    <key>description</key><string>Memory allocated by malloc() should be deallocated by free(), not &apos;delete&apos;</string>
-// CHECK-NEXT:    <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:    <key>category</key><string>Memory error</string>
 // CHECK-NEXT:    <key>type</key><string>Bad deallocator</string>
 // CHECK-NEXT:    <key>check_name</key><string>unix.MismatchedDeallocator</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->
@@ -315,7 +315,7 @@ void test2(int *p) {
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:    </array>
 // CHECK-NEXT:    <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:    <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:    <key>category</key><string>Memory error</string>
 // CHECK-NEXT:    <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:    <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->
