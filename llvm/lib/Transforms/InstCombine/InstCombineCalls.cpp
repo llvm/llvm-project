@@ -3845,7 +3845,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
     if (V->getType()->isPointerTy() &&
         !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
         isKnownNonNullAt(V, CS.getInstruction(), &DT))
-      Indices.push_back(ArgNo + 1);
+      Indices.push_back(ArgNo + AttributeList::FirstArgIndex);
     ArgNo++;
   }
 

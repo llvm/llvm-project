@@ -663,7 +663,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       }
 
       // The lookup function is guaranteed not to capture the receiver pointer.
-      LookupFn->setDoesNotCapture(1);
+      LookupFn->addParamAttr(0, llvm::Attribute::NoCapture);
 
       llvm::Value *args[] = {
               EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),

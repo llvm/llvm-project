@@ -90,13 +90,15 @@ unsigned Argument::getParamAlignment() const {
 uint64_t Argument::getDereferenceableBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");
-  return getParent()->getDereferenceableBytes(getArgNo()+1);
+  return getParent()->getDereferenceableBytes(getArgNo() +
+                                              AttributeList::FirstArgIndex);
 }
 
 uint64_t Argument::getDereferenceableOrNullBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");
-  return getParent()->getDereferenceableOrNullBytes(getArgNo()+1);
+  return getParent()->getDereferenceableOrNullBytes(
+      getArgNo() + AttributeList::FirstArgIndex);
 }
 
 bool Argument::hasNestAttr() const {
@@ -139,20 +141,21 @@ bool Argument::onlyReadsMemory() const {
 
 void Argument::addAttrs(AttrBuilder &B) {
   AttributeList AL = getParent()->getAttributes();
-  AL = AL.addAttributes(Parent->getContext(), getArgNo() + 1, B);
+  AL = AL.addAttributes(Parent->getContext(),
+                        getArgNo() + AttributeList::FirstArgIndex, B);
   getParent()->setAttributes(AL);
 }
 
 void Argument::addAttr(Attribute::AttrKind Kind) {
-  getParent()->addAttribute(getArgNo() + 1, Kind);
+  getParent()->addAttribute(getArgNo() + AttributeList::FirstArgIndex, Kind);
 }
 
 void Argument::addAttr(Attribute Attr) {
-  getParent()->addAttribute(getArgNo() + 1, Attr);
+  getParent()->addAttribute(getArgNo() + AttributeList::FirstArgIndex, Attr);
 }
 
 void Argument::removeAttr(Attribute::AttrKind Kind) {
-  getParent()->removeAttribute(getArgNo() + 1, Kind);
+  getParent()->removeAttribute(getArgNo() + AttributeList::FirstArgIndex, Kind);
 }
 
 bool Argument::hasAttribute(Attribute::AttrKind Kind) const {

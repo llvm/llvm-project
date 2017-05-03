@@ -102,12 +102,13 @@ void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
       UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VA_DV] = UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
   (*TUL)[HexagonII::TypeCVI_VX] = UnitsAndLanes(CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VX_LATE] = UnitsAndLanes(CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VX_DV] = UnitsAndLanes(CVI_MPY0, 2);
   (*TUL)[HexagonII::TypeCVI_VP] = UnitsAndLanes(CVI_XLANE, 1);
   (*TUL)[HexagonII::TypeCVI_VP_VS] = UnitsAndLanes(CVI_XLANE, 2);
   (*TUL)[HexagonII::TypeCVI_VS] = UnitsAndLanes(CVI_SHIFT, 1);
   (*TUL)[HexagonII::TypeCVI_VINLANESAT] =
-      (CPU == "hexagonv60" || CPU == "hexagonv61" || CPU == "hexagonv61v1")
+      (CPU == "hexagonv60")
           ? UnitsAndLanes(CVI_SHIFT, 1)
           : UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VM_LD] =
@@ -291,10 +292,8 @@ bool HexagonShuffler::check() {
       break;
     case HexagonII::TypeNCJ:
       ++memory; // NV insns are memory-like.
-      if (HexagonMCInstrInfo::getDesc(MCII, ID).isBranch()) {
-        ++jumps, ++jump1;
-        foundBranches.push_back(ISJ);
-      }
+      ++jumps, ++jump1;
+      foundBranches.push_back(ISJ);
       break;
     case HexagonII::TypeV2LDST:
       if (HexagonMCInstrInfo::getDesc(MCII, ID).mayLoad()) {

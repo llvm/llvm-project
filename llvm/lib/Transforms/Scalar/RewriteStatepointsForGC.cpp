@@ -2286,7 +2286,7 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
   if (AH.getDereferenceableOrNullBytes(Index))
     R.addAttribute(Attribute::get(Ctx, Attribute::DereferenceableOrNull,
                                   AH.getDereferenceableOrNullBytes(Index)));
-  if (AH.doesNotAlias(Index))
+  if (AH.getAttributes().hasAttribute(Index, Attribute::NoAlias))
     R.addAttribute(Attribute::NoAlias);
 
   if (!R.empty())
@@ -2299,7 +2299,8 @@ RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
 
   for (Argument &A : F.args())
     if (isa<PointerType>(A.getType()))
-      RemoveNonValidAttrAtIndex(Ctx, F, A.getArgNo() + 1);
+      RemoveNonValidAttrAtIndex(Ctx, F,
+                                A.getArgNo() + AttributeList::FirstArgIndex);
 
   if (isa<PointerType>(F.getReturnType()))
     RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
@@ -2335,7 +2336,7 @@ void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
     if (CallSite CS = CallSite(&I)) {
       for (int i = 0, e = CS.arg_size(); i != e; i++)
         if (isa<PointerType>(CS.getArgument(i)->getType()))
-          RemoveNonValidAttrAtIndex(Ctx, CS, i + 1);
+          RemoveNonValidAttrAtIndex(Ctx, CS, i + AttributeList::FirstArgIndex);
       if (isa<PointerType>(CS.getType()))
         RemoveNonValidAttrAtIndex(Ctx, CS, AttributeList::ReturnIndex);
     }

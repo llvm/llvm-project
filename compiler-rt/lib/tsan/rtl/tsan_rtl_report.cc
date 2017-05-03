@@ -143,11 +143,12 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
   return stack;
 }
 
-ScopedReport::ScopedReport(ReportType typ) {
+ScopedReport::ScopedReport(ReportType typ, uptr tag) {
   ctx->thread_registry->CheckLocked();
   void *mem = internal_alloc(MBlockReport, sizeof(ReportDesc));
   rep_ = new(mem) ReportDesc;
   rep_->typ = typ;
+  rep_->tag = tag;
   ctx->report_mtx.Lock();
   CommonSanitizerReportMutex.Lock();
 }
@@ -651,12 +652,18 @@ void ReportRace(ThreadState *thr) {
   if (HandleRacyStacks(thr, traces, addr_min, addr_max))
     return;
 
-  // If any of the two accesses has a tag, treat this as an "external" race.
-  if (tags[0] != kExternalTagNone || tags[1] != kExternalTagNone)
-    typ = ReportTypeExternalRace;
+  // If any of the accesses has a tag, treat this as an "external" race.
+  uptr tag = kExternalTagNone;
+  for (uptr i = 0; i < kMop; i++) {
+    if (tags[i] != kExternalTagNone) {
+      typ = ReportTypeExternalRace;
+      tag = tags[i];
+      break;
+    }
+  }
 
   ThreadRegistryLock l0(ctx->thread_registry);
-  ScopedReport rep(typ);
+  ScopedReport rep(typ, tag);
   for (uptr i = 0; i < kMop; i++) {
     Shadow s(thr->racy_state[i]);
     rep.AddMemoryAccess(addr, tags[i], s, traces[i],

@@ -204,6 +204,10 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attr);
   }
 
+  void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    addAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
+  }
+
   /// @brief Remove function attributes from this function.
   void removeFnAttr(Attribute::AttrKind Kind) {
     removeAttribute(AttributeList::FunctionIndex, Kind);
@@ -211,8 +215,12 @@ public:
 
   /// @brief Remove function attribute from this function.
   void removeFnAttr(StringRef Kind) {
-    setAttributes(AttributeSets.removeAttribute(
+    setAttributes(getAttributes().removeAttribute(
         getContext(), AttributeList::FunctionIndex, Kind));
+  }
+
+  void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    removeAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
   }
 
   /// \brief Set the entry count for this function.
@@ -459,35 +467,12 @@ public:
   /// @brief Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   /// @param n The parameter to check. 1 is the first parameter, 0 is the return
-  bool doesNotAlias(unsigned n) const {
-    return AttributeSets.hasAttribute(n, Attribute::NoAlias);
+  bool returnDoesNotAlias() const {
+    return AttributeSets.hasAttribute(AttributeList::ReturnIndex,
+                                      Attribute::NoAlias);
   }
-  void setDoesNotAlias(unsigned n) {
-    addAttribute(n, Attribute::NoAlias);
-  }
-
-  /// @brief Determine if the parameter can be captured.
-  /// @param n The parameter to check. 1 is the first parameter, 0 is the return
-  bool doesNotCapture(unsigned n) const {
-    return AttributeSets.hasAttribute(n, Attribute::NoCapture);
-  }
-  void setDoesNotCapture(unsigned n) {
-    addAttribute(n, Attribute::NoCapture);
-  }
-
-  bool doesNotAccessMemory(unsigned n) const {
-    return AttributeSets.hasAttribute(n, Attribute::ReadNone);
-  }
-  void setDoesNotAccessMemory(unsigned n) {
-    addAttribute(n, Attribute::ReadNone);
-  }
-
-  bool onlyReadsMemory(unsigned n) const {
-    return doesNotAccessMemory(n) ||
-      AttributeSets.hasAttribute(n, Attribute::ReadOnly);
-  }
-  void setOnlyReadsMemory(unsigned n) {
-    addAttribute(n, Attribute::ReadOnly);
+  void setReturnDoesNotAlias() {
+    addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
 
   /// Optimize this function for minimum size (-Oz).

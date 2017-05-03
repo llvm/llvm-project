@@ -52,12 +52,12 @@ class Value;
 struct DenseMapAPIntKeyInfo {
   static inline APInt getEmptyKey() {
     APInt V(nullptr, 0);
-    V.VAL = 0;
+    V.U.VAL = 0;
     return V;
   }
   static inline APInt getTombstoneKey() {
     APInt V(nullptr, 0);
-    V.VAL = 1;
+    V.U.VAL = 1;
     return V;
   }
   static unsigned getHashValue(const APInt &Key) {

@@ -279,9 +279,10 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, bool IsLocal,
     return S;
   }
   if (Binding != STB_WEAK) {
-    if (S->body()->isShared() || S->body()->isLazy())
+    SymbolBody *B = S->body();
+    if (B->isShared() || B->isLazy() || B->isUndefined())
       S->Binding = Binding;
-    if (auto *SS = dyn_cast<SharedSymbol>(S->body()))
+    if (auto *SS = dyn_cast<SharedSymbol>(B))
       cast<SharedFile<ELFT>>(SS->File)->IsUsed = true;
   }
   if (auto *L = dyn_cast<Lazy>(S->body())) {

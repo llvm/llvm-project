@@ -170,6 +170,8 @@ def FeatureAES     : SubtargetFeature<"aes", "HasAES", "true",
                                       [FeatureSSE2]>;
 def FeatureTBM     : SubtargetFeature<"tbm", "HasTBM", "true",
                                       "Enable TBM instructions">;
+def FeatureLWP     : SubtargetFeature<"lwp", "HasLWP", "true",
+                                      "Enable LWP instructions">;
 def FeatureMOVBE   : SubtargetFeature<"movbe", "HasMOVBE", "true",
                                       "Support MOVBE instruction">;
 def FeatureRDRAND  : SubtargetFeature<"rdrnd", "HasRDRAND", "true",
@@ -691,6 +693,7 @@ def : Proc<"bdver1", [
   FeatureLZCNT,
   FeaturePOPCNT,
   FeatureXSAVE,
+  FeatureLWP,
   FeatureSlowSHLD,
   FeatureLAHFSAHF
 ]>;
@@ -713,6 +716,7 @@ def : Proc<"bdver2", [
   FeatureXSAVE,
   FeatureBMI,
   FeatureTBM,
+  FeatureLWP,
   FeatureFMA,
   FeatureSlowSHLD,
   FeatureLAHFSAHF
@@ -737,6 +741,7 @@ def : Proc<"bdver3", [
   FeatureXSAVE,
   FeatureBMI,
   FeatureTBM,
+  FeatureLWP,
   FeatureFMA,
   FeatureXSAVEOPT,
   FeatureSlowSHLD,
@@ -763,6 +768,7 @@ def : Proc<"bdver4", [
   FeatureBMI,
   FeatureBMI2,
   FeatureTBM,
+  FeatureLWP,
   FeatureFMA,
   FeatureXSAVEOPT,
   FeatureSlowSHLD,

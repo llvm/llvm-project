@@ -19,6 +19,9 @@
 namespace llvm {
 namespace codeview {
 
+class ModuleDebugFileChecksumFragment;
+class StringTable;
+
 // Corresponds to the `CV_DebugSLinesHeader_t` structure.
 struct LineFragmentHeader {
   support::ulittle32_t RelocOffset;  // Code offset of line contribution.
@@ -104,13 +107,14 @@ class ModuleDebugLineFragment final : public ModuleDebugFragment {
   };
 
 public:
-  ModuleDebugLineFragment();
+  ModuleDebugLineFragment(ModuleDebugFileChecksumFragment &Checksums,
+                          StringTable &Strings);
 
   static bool classof(const ModuleDebugFragment *S) {
     return S->kind() == ModuleDebugFragmentKind::Lines;
   }
 
-  void createBlock(uint32_t ChecksumBufferOffset);
+  void createBlock(StringRef FileName);
   void addLineInfo(uint32_t Offset, const LineInfo &Line);
   void addLineAndColumnInfo(uint32_t Offset, const LineInfo &Line,
                             uint32_t ColStart, uint32_t ColEnd);
@@ -125,6 +129,8 @@ public:
   bool hasColumnInfo() const;
 
 private:
+  ModuleDebugFileChecksumFragment &Checksums;
+
   uint16_t RelocOffset = 0;
   uint16_t RelocSegment = 0;
   uint32_t CodeSize = 0;

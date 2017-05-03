@@ -354,7 +354,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
     ArgInfo AInfo(VRegs[Idx], Arg.getType());
-    setArgFlags(AInfo, Idx + 1, DL, F);
+    setArgFlags(AInfo, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(AInfo, ArgInfos, DL, MF.getRegInfo());
     Idx++;
   }

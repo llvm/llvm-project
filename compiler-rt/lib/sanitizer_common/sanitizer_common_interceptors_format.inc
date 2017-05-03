@@ -325,8 +325,8 @@ static void scanf_common(void *ctx, int n_inputs, bool allowGnuMalloc,
       continue;
     int size = scanf_get_value_size(&dir);
     if (size == FSS_INVALID) {
-      Report("WARNING: unexpected format specifier in scanf interceptor: "
-        "%.*s\n", dir.end - dir.begin, dir.begin);
+      Report("%s: WARNING: unexpected format specifier in scanf interceptor: ",
+             SanitizerToolName, "%.*s\n", dir.end - dir.begin, dir.begin);
       break;
     }
     void *argp = va_arg(aq, void *);
@@ -520,8 +520,12 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
       continue;
     int size = printf_get_value_size(&dir);
     if (size == FSS_INVALID) {
-      Report("WARNING: unexpected format specifier in printf "
-             "interceptor: %.*s\n", dir.end - dir.begin, dir.begin);
+      static int ReportedOnce;
+      if (!ReportedOnce++)
+        Report(
+            "%s: WARNING: unexpected format specifier in printf "
+            "interceptor: %.*s (reported once per process)\n",
+            SanitizerToolName, dir.end - dir.begin, dir.begin);
       break;
     }
     if (dir.convSpecifier == 'n') {

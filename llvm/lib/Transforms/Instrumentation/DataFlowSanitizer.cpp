@@ -625,16 +625,16 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     F->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
     F->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
     F->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    F->addAttribute(1, Attribute::ZExt);
-    F->addAttribute(2, Attribute::ZExt);
+    F->addParamAttr(0, Attribute::ZExt);
+    F->addParamAttr(1, Attribute::ZExt);
   }
   DFSanCheckedUnionFn = Mod->getOrInsertFunction("dfsan_union", DFSanUnionFnTy);
   if (Function *F = dyn_cast<Function>(DFSanCheckedUnionFn)) {
     F->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
     F->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
     F->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    F->addAttribute(1, Attribute::ZExt);
-    F->addAttribute(2, Attribute::ZExt);
+    F->addParamAttr(0, Attribute::ZExt);
+    F->addParamAttr(1, Attribute::ZExt);
   }
   DFSanUnionLoadFn =
       Mod->getOrInsertFunction("__dfsan_union_load", DFSanUnionLoadFnTy);
@@ -648,7 +648,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanSetLabelFn =
       Mod->getOrInsertFunction("__dfsan_set_label", DFSanSetLabelFnTy);
   if (Function *F = dyn_cast<Function>(DFSanSetLabelFn)) {
-    F->addAttribute(1, Attribute::ZExt);
+    F->addParamAttr(0, Attribute::ZExt);
   }
   DFSanNonzeroLabelFn =
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
@@ -982,8 +982,8 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
   if (AvoidNewBlocks) {
     CallInst *Call = IRB.CreateCall(DFS.DFSanCheckedUnionFn, {V1, V2});
     Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    Call->addAttribute(1, Attribute::ZExt);
-    Call->addAttribute(2, Attribute::ZExt);
+    Call->addParamAttr(0, Attribute::ZExt);
+    Call->addParamAttr(1, Attribute::ZExt);
 
     CCS.Block = Pos->getParent();
     CCS.Shadow = Call;
@@ -995,8 +995,8 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
     IRBuilder<> ThenIRB(BI);
     CallInst *Call = ThenIRB.CreateCall(DFS.DFSanUnionFn, {V1, V2});
     Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    Call->addAttribute(1, Attribute::ZExt);
-    Call->addAttribute(2, Attribute::ZExt);
+    Call->addParamAttr(0, Attribute::ZExt);
+    Call->addParamAttr(1, Attribute::ZExt);
 
     BasicBlock *Tail = BI->getSuccessor(0);
     PHINode *Phi = PHINode::Create(DFS.ShadowTy, 2, "", &Tail->front());

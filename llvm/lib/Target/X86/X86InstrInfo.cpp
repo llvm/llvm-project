@@ -821,6 +821,12 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPSHLQrr,           X86::VPSHLQmr,         0 },
     { X86::VPSHLWrr,           X86::VPSHLWmr,         0 },
 
+    // LWP foldable instructions
+    { X86::LWPINS32rri,        X86::LWPINS32rmi,      0 },
+    { X86::LWPINS64rri,        X86::LWPINS64rmi,      0 },
+    { X86::LWPVAL32rri,        X86::LWPVAL32rmi,      0 },
+    { X86::LWPVAL64rri,        X86::LWPVAL64rmi,      0 },
+
     // BMI/BMI2/LZCNT/POPCNT/TBM foldable instructions
     { X86::BEXTR32rr,       X86::BEXTR32rm,           0 },
     { X86::BEXTR64rr,       X86::BEXTR64rm,           0 },

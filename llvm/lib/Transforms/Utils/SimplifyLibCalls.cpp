@@ -537,7 +537,7 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilder<> &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addAttribute(1, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::NoCapture);
   }
 
   return nullptr;
