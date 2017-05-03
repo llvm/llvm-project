@@ -401,6 +401,9 @@ private:
   void ReportUseZeroAllocated(CheckerContext &C, SourceRange Range,
                               SymbolRef Sym) const;
 
+  void ReportFunctionPointerFree(CheckerContext &C, SVal ArgVal,
+                                 SourceRange Range, const Expr *FreeExpr) const;
+
   /// Find the location of the allocation for Sym on the path leading to the
   /// exploded node N.
   LeakInfo getAllocationSite(const ExplodedNode *N, SymbolRef Sym,
@@ -1564,6 +1567,11 @@ ProgramStateRef MallocChecker::FreeMemAux(CheckerContext &C,
     }
   }
 
+  if (SymBase->getType()->isFunctionPointerType()) {
+    ReportFunctionPointerFree(C, ArgVal, ArgExpr->getSourceRange(), ParentExpr);
+    return nullptr;
+  }
+
   ReleasedAllocated = (RsBase != nullptr) && (RsBase->isAllocated() ||
                                               RsBase->isAllocatedOfSizeZero());
 
@@ -2024,10 +2032,45 @@ void MallocChecker::ReportUseZeroAllocated(CheckerContext &C,
   }
 }
 
+void MallocChecker::ReportFunctionPointerFree(CheckerContext &C, SVal ArgVal,
+                                              SourceRange Range,
+                                              const Expr *FreeExpr) const {
+  if (!ChecksEnabled[CK_MallocChecker])
+    return;
+
+  Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(C, FreeExpr);
+  if (!CheckKind.hasValue())
+    return;
+
+  if (ExplodedNode *N = C.generateErrorNode()) {
+    if (!BT_BadFree[*CheckKind])
+      BT_BadFree[*CheckKind].reset(
+          new BugType(CheckNames[*CheckKind], "Bad free", "Memory Error"));
+
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+
+    const MemRegion *MR = ArgVal.getAsRegion();
+    while (const ElementRegion *ER = dyn_cast_or_null<ElementRegion>(MR))
+      MR = ER->getSuperRegion();
+
+    Os << "Argument to ";
+    if (!printAllocDeallocName(Os, C, FreeExpr))
+      Os << "deallocator";
+
+    Os << " is a function pointer";
+
+    auto R = llvm::make_unique<BugReport>(*BT_BadFree[*CheckKind], Os.str(), N);
+    R->markInteresting(MR);
+    R->addRange(Range);
+    C.emitReport(std::move(R));
+  }
+}
+
 ProgramStateRef MallocChecker::ReallocMemAux(CheckerContext &C,
                                              const CallExpr *CE,
                                              bool FreesOnFail,
-                                             ProgramStateRef State, 
+                                             ProgramStateRef State,
                                              bool SuffixWithN) const {
   if (!State)
     return nullptr;

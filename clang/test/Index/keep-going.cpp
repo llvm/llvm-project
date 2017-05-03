@@ -25,5 +25,5 @@ class C : public A<float> { };
 // CHECK: C++ base class specifier=A<float>:4:7 [access=public isVirtual=false] [type=A<float>] [typekind=Unexposed] [templateargs/1= [type=float] [typekind=Float]] [canonicaltype=A<float>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=float] [typekind=Float]] [isPOD=0] [nbFields=1]
 // CHECK: TemplateRef=A:4:7 [type=] [typekind=Invalid] [isPOD=0]
 
-// CHECK-DIAG: keep-going.cpp:1:10: error: 'missing1.h' file not found
-// CHECK-DIAG: keep-going.cpp:8:10: error: 'missing2.h' file not found
+// CHECK-DIAG: keep-going.cpp:1:10: fatal error: 'missing1.h' file not found
+// CHECK-DIAG: keep-going.cpp:8:10: fatal error: 'missing2.h' file not found

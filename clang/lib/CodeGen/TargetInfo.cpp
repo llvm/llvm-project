@@ -1901,10 +1901,7 @@ void X86_32TargetCodeGenInfo::setTargetAttributes(const Decl *D,
       // Now add the 'alignstack' attribute with a value of 16.
       llvm::AttrBuilder B;
       B.addStackAlignmentAttr(16);
-      Fn->addAttributes(
-          llvm::AttributeList::FunctionIndex,
-          llvm::AttributeList::get(CGM.getLLVMContext(),
-                                   llvm::AttributeList::FunctionIndex, B));
+      Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
     }
     if (FD->hasAttr<AnyX86InterruptAttr>()) {
       llvm::Function *Fn = cast<llvm::Function>(GV);
@@ -5449,10 +5446,7 @@ public:
     // the backend to perform a realignment as part of the function prologue.
     llvm::AttrBuilder B;
     B.addStackAlignmentAttr(8);
-    Fn->addAttributes(
-        llvm::AttributeList::FunctionIndex,
-        llvm::AttributeList::get(CGM.getLLVMContext(),
-                                 llvm::AttributeList::FunctionIndex, B));
+    Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
 };
 
