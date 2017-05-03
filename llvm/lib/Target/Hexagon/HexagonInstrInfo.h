@@ -288,6 +288,19 @@ public:
   /// If the instruction is an increment of a constant value, return the amount.
   bool getIncrementValue(const MachineInstr &MI, int &Value) const override;
 
+  /// getOperandLatency - Compute and return the use operand latency of a given
+  /// pair of def and use.
+  /// In most cases, the static scheduling itinerary was enough to determine the
+  /// operand latency. But it may not be possible for instructions with variable
+  /// number of defs / uses.
+  ///
+  /// This is a raw interface to the itinerary that may be directly overriden by
+  /// a target. Use computeOperandLatency to get the best estimate of latency.
+  int getOperandLatency(const InstrItineraryData *ItinData,
+                        const MachineInstr &DefMI, unsigned DefIdx,
+                        const MachineInstr &UseMI,
+                        unsigned UseIdx) const override;
+
   bool isTailCall(const MachineInstr &MI) const override;
 
   /// HexagonInstrInfo specifics.
@@ -356,7 +369,7 @@ public:
   bool isTC4x(const MachineInstr &MI) const;
   bool isToBeScheduledASAP(const MachineInstr &MI1,
                            const MachineInstr &MI2) const;
-  bool isV60VectorInstruction(const MachineInstr &MI) const;
+  bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
@@ -399,6 +412,7 @@ public:
                              const MachineInstr &GB) const;
   int getCondOpcode(int Opc, bool sense) const;
   int getDotCurOp(const MachineInstr &MI) const;
+  int getNonDotCurOp(const MachineInstr &MI) const;
   int getDotNewOp(const MachineInstr &MI) const;
   int getDotNewPredJumpOp(const MachineInstr &MI,
                           const MachineBranchProbabilityInfo *MBPI) const;

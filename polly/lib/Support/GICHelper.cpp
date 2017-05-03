@@ -193,13 +193,32 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
 }
 
 std::string polly::getIslCompatibleName(const std::string &Prefix,
-                                        const Value *Val,
-                                        const std::string &Suffix) {
+                                        const std::string &Name, long Number,
+                                        const std::string &Suffix,
+                                        bool UseInstructionNames) {
+  std::string S = Prefix;
+
+  if (UseInstructionNames)
+    S += std::string("_") + Name;
+  else
+    S += std::to_string(Number);
+
+  S += Suffix;
+
+  makeIslCompatible(S);
+  return S;
+}
+
+std::string polly::getIslCompatibleName(const std::string &Prefix,
+                                        const Value *Val, long Number,
+                                        const std::string &Suffix,
+                                        bool UseInstructionNames) {
   std::string ValStr;
-  raw_string_ostream OS(ValStr);
-  Val->printAsOperand(OS, false);
-  ValStr = OS.str();
-  // Remove the leading %
-  ValStr.erase(0, 1);
+
+  if (UseInstructionNames && Val->hasName())
+    ValStr = std::string("_") + std::string(Val->getName());
+  else
+    ValStr = std::to_string(Number);
+
   return getIslCompatibleName(Prefix, ValStr, Suffix);
 }

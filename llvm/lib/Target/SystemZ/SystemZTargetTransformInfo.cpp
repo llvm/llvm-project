@@ -530,9 +530,10 @@ static Type *getCmpOpsType(const Instruction *I, unsigned VF = 1) {
   if (CmpInst *CI = dyn_cast<CmpInst>(I->getOperand(0)))
     OpTy = CI->getOperand(0)->getType();
   else if (Instruction *LogicI = dyn_cast<Instruction>(I->getOperand(0)))
-    if (CmpInst *CI0 = dyn_cast<CmpInst>(LogicI->getOperand(0)))
-      if (isa<CmpInst>(LogicI->getOperand(1)))
-        OpTy = CI0->getOperand(0)->getType();
+    if (LogicI->getNumOperands() == 2)
+      if (CmpInst *CI0 = dyn_cast<CmpInst>(LogicI->getOperand(0)))
+        if (isa<CmpInst>(LogicI->getOperand(1)))
+          OpTy = CI0->getOperand(0)->getType();
 
   if (OpTy != nullptr) {
     if (VF == 1) {

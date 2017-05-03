@@ -247,7 +247,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   unsigned i = 0;
   for (auto &Arg : F.args()) {
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
-    setArgFlags(OrigArg, i + 1, DL, F);
+    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
     bool Split = false;
     LLT Ty = MRI.getType(VRegs[i]);
     unsigned Dst = VRegs[i];

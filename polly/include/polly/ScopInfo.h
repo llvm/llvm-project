@@ -1710,6 +1710,12 @@ private:
   /// List of invariant accesses.
   InvariantEquivClassesTy InvariantEquivClasses;
 
+  /// The smallest array index not yet assigned.
+  long ArrayIdx = 0;
+
+  /// The smallest statement index not yet assigned.
+  long StmtIdx = 0;
+
   /// Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC);
@@ -2620,6 +2626,18 @@ public:
   ///                      When true, also removes statements without
   ///                      side-effects.
   void simplifySCoP(bool AfterHoisting);
+
+  /// Get the next free array index.
+  ///
+  /// This function returns a unique index which can be used to identify an
+  /// array.
+  long getNextArrayIdx() { return ArrayIdx++; }
+
+  /// Get the next free statement index.
+  ///
+  /// This function returns a unique index which can be used to identify a
+  /// statement.
+  long getNextStmtIdx() { return StmtIdx++; }
 };
 
 /// Print Scop scop to raw_ostream O.

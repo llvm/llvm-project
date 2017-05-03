@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
@@ -29,6 +29,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -447,11 +448,13 @@ public:
   }
 
   bool HandleDebugLine() {
+    std::map<uint64_t, DWARFDie> StmtListToDie;
     bool Success = true;
     OS << "Verifying .debug_line...\n";
     for (const auto &CU : DCtx.compile_units()) {
       uint32_t LineTableOffset = 0;
-      auto StmtFormValue = CU->getUnitDIE().find(DW_AT_stmt_list);
+      auto CUDie = CU->getUnitDIE();
+      auto StmtFormValue = CUDie.find(DW_AT_stmt_list);
       if (!StmtFormValue) {
         // No line table for this compile unit.
         continue;
@@ -468,6 +471,21 @@ public:
           // Skip this line table as it isn't valid. No need to create an error
           // here because we validate this in the .debug_info verifier.
           continue;
+        } else {
+          auto Iter = StmtListToDie.find(LineTableOffset);
+          if (Iter != StmtListToDie.end()) {
+            Success = false;
+            OS << "error: two compile unit DIEs, "
+               << format("0x%08" PRIx32, Iter->second.getOffset()) << " and "
+               << format("0x%08" PRIx32, CUDie.getOffset())
+               << ", have the same DW_AT_stmt_list section offset:\n";
+            Iter->second.dump(OS, 0);
+            CUDie.dump(OS, 0);
+            OS << '\n';
+            // Already verified this line table before, no need to do it again.
+            continue;
+          }
+          StmtListToDie[LineTableOffset] = CUDie;
         }
       }
       auto LineTable = DCtx.getLineTableForUnit(CU.get());
@@ -475,7 +493,7 @@ public:
         Success = false;
         OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
            << "] was not able to be parsed for CU:\n";
-        CU->getUnitDIE().dump(OS, 0);
+        CUDie.dump(OS, 0);
         OS << '\n';
         continue;
       }
@@ -520,13 +538,13 @@ public:
 
 bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
   bool Success = true;
-  Verifier verifier(OS, *this);
+  DWARFVerifier verifier(OS, *this);
   if (DumpType == DIDT_All || DumpType == DIDT_Info) {
-    if (!verifier.HandleDebugInfo())
+    if (!verifier.handleDebugInfo())
       Success = false;
   }
   if (DumpType == DIDT_All || DumpType == DIDT_Line) {
-    if (!verifier.HandleDebugLine())
+    if (!verifier.handleDebugLine())
       Success = false;
   }
   return Success;

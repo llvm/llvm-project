@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/DebugInfo/CodeView/StringTable.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -369,14 +370,14 @@ Error CVSymbolDumperImpl::visitKnownRecord(
   DictScope S(W, "DefRangeSubfield");
 
   if (ObjDelegate) {
-    StringRef StringTable = ObjDelegate->getStringTable();
-    auto ProgramStringTableOffset = DefRangeSubfield.Program;
-    if (ProgramStringTableOffset >= StringTable.size())
+    StringTableRef Strings = ObjDelegate->getStringTable();
+    auto ExpectedProgram = Strings.getString(DefRangeSubfield.Program);
+    if (!ExpectedProgram) {
+      consumeError(ExpectedProgram.takeError());
       return llvm::make_error<CodeViewError>(
           "String table offset outside of bounds of String Table!");
-    StringRef Program =
-        StringTable.drop_front(ProgramStringTableOffset).split('\0').first;
-    W.printString("Program", Program);
+    }
+    W.printString("Program", *ExpectedProgram);
   }
   W.printNumber("OffsetInParent", DefRangeSubfield.OffsetInParent);
   printLocalVariableAddrRange(DefRangeSubfield.Range,
@@ -390,14 +391,14 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   DictScope S(W, "DefRange");
 
   if (ObjDelegate) {
-    StringRef StringTable = ObjDelegate->getStringTable();
-    auto ProgramStringTableOffset = DefRange.Program;
-    if (ProgramStringTableOffset >= StringTable.size())
+    StringTableRef Strings = ObjDelegate->getStringTable();
+    auto ExpectedProgram = Strings.getString(DefRange.Program);
+    if (!ExpectedProgram) {
+      consumeError(ExpectedProgram.takeError());
       return llvm::make_error<CodeViewError>(
           "String table offset outside of bounds of String Table!");
-    StringRef Program =
-        StringTable.drop_front(ProgramStringTableOffset).split('\0').first;
-    W.printString("Program", Program);
+    }
+    W.printString("Program", *ExpectedProgram);
   }
   printLocalVariableAddrRange(DefRange.Range, DefRange.getRelocationOffset());
   printLocalVariableAddrGap(DefRange.Gaps);

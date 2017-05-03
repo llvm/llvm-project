@@ -85,6 +85,23 @@ define void @tests.masked.store(<2 x double>* %ptr, <2 x i1> %mask, <2 x double>
   ret void
 }
 
+declare <2 x double> @llvm.masked.gather.v2f64(<2 x double*> %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
+
+define <2 x double> @tests.masked.gather(<2 x double*> %ptr, <2 x i1> %mask, <2 x double> %passthru)  {
+; CHECK-LABEL: @tests.masked.gather(
+; CHECK: @llvm.masked.gather.v2f64.v2p0f64
+  %res = call <2 x double> @llvm.masked.gather.v2f64(<2 x double*> %ptr, i32 1, <2 x i1> %mask, <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
+declare void @llvm.masked.scatter.v2f64(<2 x double> %val, <2 x double*> %ptrs, i32, <2 x i1> %mask)
+
+define void @tests.masked.scatter(<2 x double*> %ptr, <2 x i1> %mask, <2 x double> %val)  {
+; CHECK-LABEL: @tests.masked.scatter(
+; CHECK: @llvm.masked.scatter.v2f64.v2p0f64
+  call void @llvm.masked.scatter.v2f64(<2 x double> %val, <2 x double*> %ptr, i32 3, <2 x i1> %mask)
+  ret void
+}
 
 declare {}* @llvm.invariant.start(i64, i8* nocapture) nounwind readonly
 declare void @llvm.invariant.end({}*, i64, i8* nocapture) nounwind

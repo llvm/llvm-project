@@ -163,7 +163,7 @@ private:
 
     AttributeList Attr = AttributeList().addAttribute(
         C, AttributeList::FunctionIndex, Attribute::NoUnwind);
-    Attr = Attr.addAttribute(C, 1, Attribute::NoCapture);
+    Attr = Attr.addParamAttribute(C, 0, Attribute::NoCapture);
 
     FunctionType *Fty = FunctionType::get(Type::getVoidTy(C), Params,
                                           /*isVarArg=*/false);

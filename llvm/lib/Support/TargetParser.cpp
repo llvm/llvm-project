@@ -423,7 +423,7 @@ unsigned llvm::AArch64::getDefaultExtensions(StringRef CPU, unsigned ArchKind) {
 
   return StringSwitch<unsigned>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
-    .Case(NAME, DEFAULT_EXT)
+    .Case(NAME, AArch64ARCHNames[(unsigned)ArchKind::ID].ArchBaseExtensions | DEFAULT_EXT)
 #include "llvm/Support/AArch64TargetParser.def"
     .Default(AArch64::AEK_INVALID);
 }

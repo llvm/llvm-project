@@ -613,16 +613,16 @@ bool GuardWideningImpl::combineRangeChecks(
     // We have a series of f+1 checks as:
     //
     //   I+k_0 u< L   ... Chk_0
-    //   I_k_1 u< L   ... Chk_1
+    //   I+k_1 u< L   ... Chk_1
     //   ...
-    //   I_k_f u< L   ... Chk_(f+1)
+    //   I+k_f u< L   ... Chk_f
     //
-    //     with forall i in [0,f): k_f-k_i u< k_f-k_0  ... Precond_0
+    //     with forall i in [0,f]: k_f-k_i u< k_f-k_0  ... Precond_0
     //          k_f-k_0 u< INT_MIN+k_f                 ... Precond_1
     //          k_f != k_0                             ... Precond_2
     //
     // Claim:
-    //   Chk_0 AND Chk_(f+1)  implies all the other checks
+    //   Chk_0 AND Chk_f  implies all the other checks
     //
     // Informal proof sketch:
     //

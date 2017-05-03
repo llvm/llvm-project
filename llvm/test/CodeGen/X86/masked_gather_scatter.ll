@@ -54,13 +54,13 @@ define <16 x float> @test1(float* %base, <16 x i32> %ind) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
-declare <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*>, i32, <16 x i1>, <16 x i32>)
-declare <16 x float> @llvm.masked.gather.v16f32(<16 x float*>, i32, <16 x i1>, <16 x float>)
-declare <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> , i32, <8 x i1> , <8 x i32> )
+declare <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*>, i32, <16 x i1>, <16 x i32>)
+declare <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*>, i32, <16 x i1>, <16 x float>)
+declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> , i32, <8 x i1> , <8 x i32> )
 
 
 ; SCALAR-LABEL: test2
@@ -111,7 +111,7 @@ define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
   %imask = bitcast i16 %mask to <16 x i1>
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> %imask, <16 x float>undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> %imask, <16 x float>undef)
   ret <16 x float> %res
 }
 
@@ -152,7 +152,7 @@ define <16 x i32> @test3(i32* %base, <16 x i32> %ind, i16 %mask) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i64> %sext_ind
   %imask = bitcast i16 %mask to <16 x i1>
-  %res = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
+  %res = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
   ret <16 x i32> %res
 }
 
@@ -205,8 +205,8 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 
   %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
   %imask = bitcast i16 %mask to <16 x i1>
-  %gt1 = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
-  %gt2 = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>%gt1)
+  %gt1 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
+  %gt2 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %gep.random, i32 4, <16 x i1> %imask, <16 x i32>%gt1)
   %res = add <16 x i32> %gt1, %gt2
   ret <16 x i32> %res
 }
@@ -270,13 +270,13 @@ define void @test5(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) {
 
   %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
   %imask = bitcast i16 %mask to <16 x i1>
-  call void @llvm.masked.scatter.v16i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
-  call void @llvm.masked.scatter.v16i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i32(<8 x i32> , <8 x i32*> , i32 , <8 x i1> )
-declare void @llvm.masked.scatter.v16i32(<16 x i32> , <16 x i32*> , i32 , <16 x i1> )
+declare void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> , <8 x i32*> , i32 , <8 x i1> )
+declare void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> , <16 x i32*> , i32 , <16 x i1> )
 
 
 ; SCALAR-LABEL: test6
@@ -326,9 +326,9 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
 ; SKX_32-NEXT:    vmovdqa %ymm2, %ymm0
 ; SKX_32-NEXT:    retl
 
-  %a = call <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %ptr, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %a = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %ptr, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
 
-  call void @llvm.masked.scatter.v8i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   ret <8 x i32>%a
 }
 
@@ -384,8 +384,8 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 
   %gep.random = getelementptr i32, <8 x i32*> %broadcast.splat, <8 x i32> %ind
   %imask = bitcast i8 %mask to <8 x i1>
-  %gt1 = call <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %gep.random, i32 4, <8 x i1> %imask, <8 x i32>undef)
-  %gt2 = call <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %gep.random, i32 4, <8 x i1> %imask, <8 x i32>%gt1)
+  %gt1 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %gep.random, i32 4, <8 x i1> %imask, <8 x i32>undef)
+  %gt2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %gep.random, i32 4, <8 x i1> %imask, <8 x i32>%gt1)
   %res = add <8 x i32> %gt1, %gt2
   ret <8 x i32> %res
 }
@@ -444,8 +444,8 @@ define <16 x i32> @test8(<16 x i32*> %ptr.random, <16 x i32> %ind, i16 %mask) {
 ; SKX_32-NEXT:    retl
 
   %imask = bitcast i16 %mask to <16 x i1>
-  %gt1 = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %ptr.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
-  %gt2 = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %ptr.random, i32 4, <16 x i1> %imask, <16 x i32>%gt1)
+  %gt1 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %ptr.random, i32 4, <16 x i1> %imask, <16 x i32>undef)
+  %gt2 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %ptr.random, i32 4, <16 x i1> %imask, <16 x i32>%gt1)
   %res = add <16 x i32> %gt1, %gt2
   ret <16 x i32> %res
 }
@@ -522,7 +522,7 @@ entry:
   %broadcast.splat = shufflevector <8 x %struct.ST*> %broadcast.splatinsert, <8 x %struct.ST*> undef, <8 x i32> zeroinitializer
 
   %arrayidx = getelementptr  %struct.ST, <8 x %struct.ST*> %broadcast.splat, <8 x i64> %ind1, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>, <8 x i32><i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, <8 x i32> %ind5, <8 x i64> <i64 13, i64 13, i64 13, i64 13, i64 13, i64 13, i64 13, i64 13>
-  %res = call <8 x i32 >  @llvm.masked.gather.v8i32(<8 x i32*>%arrayidx, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %res = call <8 x i32 >  @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*>%arrayidx, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   ret <8 x i32> %res
 }
 
@@ -591,7 +591,7 @@ entry:
   %broadcast.splat = shufflevector <8 x %struct.ST*> %broadcast.splatinsert, <8 x %struct.ST*> undef, <8 x i32> zeroinitializer
 
   %arrayidx = getelementptr  %struct.ST, <8 x %struct.ST*> %broadcast.splat, <8 x i64> %i1, i32 2, i32 1, <8 x i32> %ind5, i64 13
-  %res = call <8 x i32 >  @llvm.masked.gather.v8i32(<8 x i32*>%arrayidx, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %res = call <8 x i32 >  @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*>%arrayidx, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   ret <8 x i32> %res
 }
 
@@ -632,7 +632,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, i32 %ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -671,7 +671,7 @@ define <16 x float> @test12(float* %base, <16 x i32> %ind) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, float *%base, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -710,7 +710,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, float *%base, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -772,13 +772,13 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, i32 %ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
-declare <4 x float> @llvm.masked.gather.v4f32(<4 x float*>, i32, <4 x i1>, <4 x float>)
-declare <4 x double> @llvm.masked.gather.v4f64(<4 x double*>, i32, <4 x i1>, <4 x double>)
-declare <2 x double> @llvm.masked.gather.v2f64(<2 x double*>, i32, <2 x i1>, <2 x double>)
+declare <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*>, i32, <4 x i1>, <4 x float>)
+declare <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*>, i32, <4 x i1>, <4 x double>)
+declare <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*>, i32, <2 x i1>, <2 x double>)
 
 ; Gather smaller than existing instruction
 define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
@@ -831,7 +831,7 @@ define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
 
   %sext_ind = sext <4 x i32> %ind to <4 x i64>
   %gep.random = getelementptr float, float* %base, <4 x i64> %sext_ind
-  %res = call <4 x float> @llvm.masked.gather.v4f32(<4 x float*> %gep.random, i32 4, <4 x i1> %mask, <4 x float> undef)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.random, i32 4, <4 x i1> %mask, <4 x float> undef)
   ret <4 x float>%res
 }
 
@@ -890,7 +890,7 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 
   %sext_ind = sext <4 x i32> %ind to <4 x i64>
   %gep.random = getelementptr double, double* %base, <4 x i64> %sext_ind
-  %res = call <4 x double> @llvm.masked.gather.v4f64(<4 x double*> %gep.random, i32 4, <4 x i1> %mask, <4 x double> %src0)
+  %res = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %gep.random, i32 4, <4 x i1> %mask, <4 x double> %src0)
   ret <4 x double>%res
 }
 
@@ -942,15 +942,15 @@ define <2 x double> @test17(double* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x 
 
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr double, double* %base, <2 x i64> %sext_ind
-  %res = call <2 x double> @llvm.masked.gather.v2f64(<2 x double*> %gep.random, i32 4, <2 x i1> %mask, <2 x double> %src0)
+  %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> %gep.random, i32 4, <2 x i1> %mask, <2 x double> %src0)
   ret <2 x double>%res
 }
 
-declare void @llvm.masked.scatter.v4i32(<4 x i32> , <4 x i32*> , i32 , <4 x i1> )
-declare void @llvm.masked.scatter.v4f64(<4 x double> , <4 x double*> , i32 , <4 x i1> )
-declare void @llvm.masked.scatter.v2i64(<2 x i64> , <2 x i64*> , i32 , <2 x i1> )
-declare void @llvm.masked.scatter.v2i32(<2 x i32> , <2 x i32*> , i32 , <2 x i1> )
-declare void @llvm.masked.scatter.v2f32(<2 x float> , <2 x float*> , i32 , <2 x i1> )
+declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> , <4 x i32*> , i32 , <4 x i1> )
+declare void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> , <4 x double*> , i32 , <4 x i1> )
+declare void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> , <2 x i64*> , i32 , <2 x i1> )
+declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> , <2 x i32*> , i32 , <2 x i1> )
+declare void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> , <2 x float*> , i32 , <2 x i1> )
 
 define void @test18(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ;
@@ -995,7 +995,7 @@ define void @test18(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ; SKX_32-NEXT:    vptestmd %xmm2, %xmm2, %k1
 ; SKX_32-NEXT:    vpscatterdd %xmm0, (,%xmm1) {%k1}
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v4i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
   ret void
 }
 
@@ -1049,7 +1049,7 @@ define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
   %gep = getelementptr double, double* %ptr, <4 x i64> %ind
-  call void @llvm.masked.scatter.v4f64(<4 x double> %a1, <4 x double*> %gep, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> %a1, <4 x double*> %gep, i32 8, <4 x i1> %mask)
   ret void
 }
 
@@ -1103,7 +1103,7 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 ; SKX_32-NEXT:    kshiftrb $6, %k0, %k1
 ; SKX_32-NEXT:    vscatterdps %xmm0, (,%xmm1) {%k1}
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v2f32(<2 x float> %a1, <2 x float*> %ptr, i32 4, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> %a1, <2 x float*> %ptr, i32 4, <2 x i1> %mask)
   ret void
 }
 
@@ -1157,12 +1157,12 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 ; SKX_32-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v2i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> %mask)
   ret void
 }
 
 ; The result type requires widening
-declare <2 x float> @llvm.masked.gather.v2f32(<2 x float*>, i32, <2 x i1>, <2 x float>)
+declare <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*>, i32, <2 x i1>, <2 x float>)
 
 define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x float> %src0) {
 ;
@@ -1222,12 +1222,12 @@ define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x fl
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr float, float* %base, <2 x i64> %sext_ind
-  %res = call <2 x float> @llvm.masked.gather.v2f32(<2 x float*> %gep.random, i32 4, <2 x i1> %mask, <2 x float> %src0)
+  %res = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> %gep.random, i32 4, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float>%res
 }
 
-declare <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
-declare <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*>, i32, <2 x i1>, <2 x i64>)
+declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
+declare <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*>, i32, <2 x i1>, <2 x i64>)
 
 define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %src0) {
 ;
@@ -1276,7 +1276,7 @@ define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr i32, i32* %base, <2 x i64> %sext_ind
-  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*> %gep.random, i32 4, <2 x i1> %mask, <2 x i32> %src0)
+  %res = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> %gep.random, i32 4, <2 x i1> %mask, <2 x i32> %src0)
   ret <2 x i32>%res
 }
 
@@ -1320,7 +1320,7 @@ define <2 x i32> @test24(i32* %base, <2 x i32> %ind) {
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr i32, i32* %base, <2 x i64> %sext_ind
-  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*> %gep.random, i32 4, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
+  %res = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> %gep.random, i32 4, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
   ret <2 x i32>%res
 }
 
@@ -1371,7 +1371,7 @@ define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr i64, i64* %base, <2 x i64> %sext_ind
-  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %gep.random, i32 8, <2 x i1> %mask, <2 x i64> %src0)
+  %res = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> %gep.random, i32 8, <2 x i1> %mask, <2 x i64> %src0)
   ret <2 x i64>%res
 }
 
@@ -1418,7 +1418,7 @@ define <2 x i64> @test26(i64* %base, <2 x i32> %ind, <2 x i64> %src0) {
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr i64, i64* %base, <2 x i64> %sext_ind
-  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %gep.random, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> %src0)
+  %res = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> %gep.random, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> %src0)
   ret <2 x i64>%res
 }
 
@@ -1466,7 +1466,7 @@ define <2 x float> @test27(float* %base, <2 x i32> %ind) {
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr float, float* %base, <2 x i64> %sext_ind
-  %res = call <2 x float> @llvm.masked.gather.v2f32(<2 x float*> %gep.random, i32 4, <2 x i1> <i1 true, i1 true>, <2 x float> undef)
+  %res = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> %gep.random, i32 4, <2 x i1> <i1 true, i1 true>, <2 x float> undef)
   ret <2 x float>%res
 }
 
@@ -1515,7 +1515,7 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 ; SKX_32-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v2i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> <i1 true, i1 true>)
+  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> <i1 true, i1 true>)
   ret void
 }
 
@@ -1568,23 +1568,23 @@ define <16 x float> @test29(float* %base, <16 x i32> %ind) {
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float> undef)
   ret <16 x float>%res
 }
 
 ; Check non-power-of-2 case. It should be scalarized.
-declare <3 x i32> @llvm.masked.gather.v3i32(<3 x i32*>, i32, <3 x i1>, <3 x i32>)
+declare <3 x i32> @llvm.masked.gather.v3i32.v3p0i32(<3 x i32*>, i32, <3 x i1>, <3 x i32>)
 define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> %src0) {
 ; ALL-LABEL: test30:
 ; ALL-NOT:       gather
 
   %sext_ind = sext <3 x i32> %ind to <3 x i64>
   %gep.random = getelementptr i32, <3 x i32*> %base, <3 x i64> %sext_ind
-  %res = call <3 x i32> @llvm.masked.gather.v3i32(<3 x i32*> %gep.random, i32 4, <3 x i1> %mask, <3 x i32> %src0)
+  %res = call <3 x i32> @llvm.masked.gather.v3i32.v3p0i32(<3 x i32*> %gep.random, i32 4, <3 x i1> %mask, <3 x i32> %src0)
   ret <3 x i32>%res
 }
 
-declare <16 x float*> @llvm.masked.gather.v16p0f32(<16 x float**>, i32, <16 x i1>, <16 x float*>)
+declare <16 x float*> @llvm.masked.gather.v16p0f32.v16p0p0f32(<16 x float**>, i32, <16 x i1>, <16 x float*>)
 
 ; KNL-LABEL: test31
 ; KNL: vpgatherqq
@@ -1626,7 +1626,7 @@ define <16 x float*> @test31(<16 x float**> %ptrs) {
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
 
-  %res = call <16 x float*> @llvm.masked.gather.v16p0f32(<16 x float**> %ptrs, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float*> undef)
+  %res = call <16 x float*> @llvm.masked.gather.v16p0f32.v16p0p0f32(<16 x float**> %ptrs, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float*> undef)
   ret <16 x float*>%res
 }
 
@@ -1672,7 +1672,7 @@ define <16 x i32> @test_gather_16i32(<16 x i32*> %ptrs, <16 x i1> %mask, <16 x i
 ; SKX_32-NEXT:    vpgatherdd (,%zmm0), %zmm2 {%k1}
 ; SKX_32-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; SKX_32-NEXT:    retl
-  %res = call <16 x i32> @llvm.masked.gather.v16i32(<16 x i32*> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> %src0)
+  %res = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> %src0)
   ret <16 x i32> %res
 }
 define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %src0)  {
@@ -1749,10 +1749,10 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    retl
-  %res = call <16 x i64> @llvm.masked.gather.v16i64(<16 x i64*> %ptrs, i32 4, <16 x i1> %mask, <16 x i64> %src0)
+  %res = call <16 x i64> @llvm.masked.gather.v16i64.v16p0i64(<16 x i64*> %ptrs, i32 4, <16 x i1> %mask, <16 x i64> %src0)
   ret <16 x i64> %res
 }
-declare <16 x i64> @llvm.masked.gather.v16i64(<16 x i64*> %ptrs, i32, <16 x i1> %mask, <16 x i64> %src0)
+declare <16 x i64> @llvm.masked.gather.v16i64.v16p0i64(<16 x i64*> %ptrs, i32, <16 x i1> %mask, <16 x i64> %src0)
 define <16 x float> @test_gather_16f32(<16 x float*> %ptrs, <16 x i1> %mask, <16 x float> %src0)  {
 ; KNL_64-LABEL: test_gather_16f32:
 ; KNL_64:       # BB#0:
@@ -1795,7 +1795,7 @@ define <16 x float> @test_gather_16f32(<16 x float*> %ptrs, <16 x i1> %mask, <16
 ; SKX_32-NEXT:    vgatherdps (,%zmm0), %zmm2 {%k1}
 ; SKX_32-NEXT:    vmovaps %zmm2, %zmm0
 ; SKX_32-NEXT:    retl
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
   ret <16 x float> %res
 }
 define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x double> %src0)  {
@@ -1872,10 +1872,10 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    retl
-  %res = call <16 x double> @llvm.masked.gather.v16f64(<16 x double*> %ptrs, i32 4, <16 x i1> %mask, <16 x double> %src0)
+  %res = call <16 x double> @llvm.masked.gather.v16f64.v16p0f64(<16 x double*> %ptrs, i32 4, <16 x i1> %mask, <16 x double> %src0)
   ret <16 x double> %res
 }
-declare <16 x double> @llvm.masked.gather.v16f64(<16 x double*> %ptrs, i32, <16 x i1> %mask, <16 x double> %src0)
+declare <16 x double> @llvm.masked.gather.v16f64.v16p0f64(<16 x double*> %ptrs, i32, <16 x i1> %mask, <16 x double> %src0)
 define void @test_scatter_16i32(<16 x i32*> %ptrs, <16 x i1> %mask, <16 x i32> %src0)  {
 ; KNL_64-LABEL: test_scatter_16i32:
 ; KNL_64:       # BB#0:
@@ -1918,7 +1918,7 @@ define void @test_scatter_16i32(<16 x i32*> %ptrs, <16 x i1> %mask, <16 x i32> %
 ; SKX_32-NEXT:    vpscatterdd %zmm2, (,%zmm0) {%k1}
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v16i32(<16 x i32> %src0, <16 x i32*> %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %src0, <16 x i32*> %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
 define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %src0)  {
@@ -1993,10 +1993,10 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v16i64(<16 x i64> %src0, <16 x i64*> %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i64.v16p0i64(<16 x i64> %src0, <16 x i64*> %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.scatter.v16i64(<16 x i64> %src0, <16 x i64*> %ptrs, i32, <16 x i1> %mask)
+declare void @llvm.masked.scatter.v16i64.v16p0i64(<16 x i64> %src0, <16 x i64*> %ptrs, i32, <16 x i1> %mask)
 define void @test_scatter_16f32(<16 x float*> %ptrs, <16 x i1> %mask, <16 x float> %src0)  {
 ; KNL_64-LABEL: test_scatter_16f32:
 ; KNL_64:       # BB#0:
@@ -2039,10 +2039,10 @@ define void @test_scatter_16f32(<16 x float*> %ptrs, <16 x i1> %mask, <16 x floa
 ; SKX_32-NEXT:    vscatterdps %zmm2, (,%zmm0) {%k1}
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v16f32(<16 x float> %src0, <16 x float*> %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> %src0, <16 x float*> %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.scatter.v16f32(<16 x float> %src0, <16 x float*> %ptrs, i32, <16 x i1> %mask)
+declare void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> %src0, <16 x float*> %ptrs, i32, <16 x i1> %mask)
 define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x double> %src0)  {
 ; KNL_64-LABEL: test_scatter_16f64:
 ; KNL_64:       # BB#0:
@@ -2115,10 +2115,10 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
-  call void @llvm.masked.scatter.v16f64(<16 x double> %src0, <16 x double*> %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16f64.v16p0f64(<16 x double> %src0, <16 x double*> %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.scatter.v16f64(<16 x double> %src0, <16 x double*> %ptrs, i32, <16 x i1> %mask)
+declare void @llvm.masked.scatter.v16f64.v16p0f64(<16 x double> %src0, <16 x double*> %ptrs, i32, <16 x i1> %mask)
 
 define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64> %d) {
 ; KNL_64-LABEL: test_pr28312:
@@ -2193,11 +2193,11 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
 ; SKX_32-NEXT:    retl
-  %g1 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
-  %g2 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
-  %g3 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
+  %g1 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
+  %g2 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
+  %g3 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
   %a = add <4 x i64> %g1, %g2
   %b = add <4 x i64> %a, %g3
   ret <4 x i64> %b
 }
-declare <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*>, i32, <4 x i1>, <4 x i64>)
+declare <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*>, i32, <4 x i1>, <4 x i64>)

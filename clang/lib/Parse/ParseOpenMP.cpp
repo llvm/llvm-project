@@ -1690,6 +1690,30 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Data.MapType = OMPC_MAP_tofrom;
           Data.IsMapTypeImplicit = true;
         }
+      } else if (IsMapClauseModifierToken(PP.LookAhead(0))) {
+        if (PP.LookAhead(1).is(tok::colon)) {
+          Data.MapTypeModifier = Data.MapType;
+          if (Data.MapTypeModifier != OMPC_MAP_always) {
+            Diag(Tok, diag::err_omp_unknown_map_type_modifier);
+            Data.MapTypeModifier = OMPC_MAP_unknown;
+          } else
+            MapTypeModifierSpecified = true;
+
+          ConsumeToken();
+
+          Data.MapType =
+              IsMapClauseModifierToken(Tok)
+                  ? static_cast<OpenMPMapClauseKind>(
+                        getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)))
+                  : OMPC_MAP_unknown;
+          if (Data.MapType == OMPC_MAP_unknown ||
+              Data.MapType == OMPC_MAP_always)
+            Diag(Tok, diag::err_omp_unknown_map_type);
+          ConsumeToken();
+        } else {
+          Data.MapType = OMPC_MAP_tofrom;
+          Data.IsMapTypeImplicit = true;
+        }
       } else {
         Data.MapType = OMPC_MAP_tofrom;
         Data.IsMapTypeImplicit = true;

@@ -223,6 +223,8 @@ public:
     return Iterator(*this, Ctx, Stream, HadError);
   }
 
+  bool valid() const { return Stream.valid(); }
+
   Iterator end() const { return Iterator(Ctx); }
 
   bool empty() const { return Stream.getLength() == 0; }

@@ -394,11 +394,17 @@ Error DiffStyle::diffStringTable() {
       StringRef S1, S2;
       if (I < IdList1.size()) {
         Id1 = IdList1[I];
-        S1 = ST1.getStringForID(*Id1);
+        if (auto Result = ST1.getStringForID(*Id1))
+          S1 = *Result;
+        else
+          return Result.takeError();
       }
       if (I < IdList2.size()) {
         Id2 = IdList2[I];
-        S2 = ST2.getStringForID(*Id2);
+        if (auto Result = ST2.getStringForID(*Id2))
+          S2 = *Result;
+        else
+          return Result.takeError();
       }
       if (Id1 == Id2 && S1 == S2)
         continue;
@@ -418,10 +424,18 @@ Error DiffStyle::diffStringTable() {
     std::vector<StringRef> Strings1, Strings2;
     Strings1.reserve(IdList1.size());
     Strings2.reserve(IdList2.size());
-    for (auto ID : IdList1)
-      Strings1.push_back(ST1.getStringForID(ID));
-    for (auto ID : IdList2)
-      Strings2.push_back(ST2.getStringForID(ID));
+    for (auto ID : IdList1) {
+      auto S = ST1.getStringForID(ID);
+      if (!S)
+        return S.takeError();
+      Strings1.push_back(*S);
+    }
+    for (auto ID : IdList2) {
+      auto S = ST2.getStringForID(ID);
+      if (!S)
+        return S.takeError();
+      Strings2.push_back(*S);
+    }
 
     SmallVector<StringRef, 64> OnlyP;
     SmallVector<StringRef, 64> OnlyQ;

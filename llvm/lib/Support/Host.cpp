@@ -1363,6 +1363,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["sse4a"] = HasExtLeaf1 && ((ECX >> 6) & 1);
   Features["prfchw"] = HasExtLeaf1 && ((ECX >> 8) & 1);
   Features["xop"] = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
+  Features["lwp"] = HasExtLeaf1 && ((ECX >> 15) & 1);
   Features["fma4"] = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
   Features["tbm"] = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);

@@ -19,6 +19,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFTypeUnit.cpp
   DWARFUnitIndex.cpp
   DWARFUnit.cpp
+  DWARFVerifier.cpp
   SyntaxHighlighting.cpp
 
   ADDITIONAL_HEADER_DIRS

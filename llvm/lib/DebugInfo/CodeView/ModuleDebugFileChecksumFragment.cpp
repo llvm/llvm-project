@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/StringTable.h"
 #include "llvm/Support/BinaryStreamReader.h"
 
 using namespace llvm;
@@ -49,10 +50,12 @@ Error ModuleDebugFileChecksumFragmentRef::initialize(
   return Error::success();
 }
 
-ModuleDebugFileChecksumFragment::ModuleDebugFileChecksumFragment()
-    : ModuleDebugFragment(ModuleDebugFragmentKind::FileChecksums) {}
+ModuleDebugFileChecksumFragment::ModuleDebugFileChecksumFragment(
+    StringTable &Strings)
+    : ModuleDebugFragment(ModuleDebugFragmentKind::FileChecksums),
+      Strings(Strings) {}
 
-void ModuleDebugFileChecksumFragment::addChecksum(uint32_t StringTableOffset,
+void ModuleDebugFileChecksumFragment::addChecksum(StringRef FileName,
                                                   FileChecksumKind Kind,
                                                   ArrayRef<uint8_t> Bytes) {
   FileChecksumEntry Entry;
@@ -61,13 +64,14 @@ void ModuleDebugFileChecksumFragment::addChecksum(uint32_t StringTableOffset,
     ::memcpy(Copy, Bytes.data(), Bytes.size());
     Entry.Checksum = makeArrayRef(Copy, Bytes.size());
   }
-  Entry.FileNameOffset = StringTableOffset;
+
+  Entry.FileNameOffset = Strings.insert(FileName);
   Entry.Kind = Kind;
   Checksums.push_back(Entry);
 
   // This maps the offset of this string in the string table to the offset
   // of this checksum entry in the checksum buffer.
-  OffsetMap[StringTableOffset] = SerializedSize;
+  OffsetMap[Entry.FileNameOffset] = SerializedSize;
   assert(SerializedSize % 4 == 0);
 
   uint32_t Len = alignTo(sizeof(FileChecksumEntryHeader) + Bytes.size(), 4);
@@ -94,9 +98,10 @@ Error ModuleDebugFileChecksumFragment::commit(BinaryStreamWriter &Writer) {
   return Error::success();
 }
 
-uint32_t ModuleDebugFileChecksumFragment::mapChecksumOffset(
-    uint32_t StringTableOffset) const {
-  auto Iter = OffsetMap.find(StringTableOffset);
+uint32_t
+ModuleDebugFileChecksumFragment::mapChecksumOffset(StringRef FileName) const {
+  uint32_t Offset = Strings.getStringId(FileName);
+  auto Iter = OffsetMap.find(Offset);
   assert(Iter != OffsetMap.end());
   return Iter->second;
 }

@@ -50,6 +50,10 @@ endif()
 
 target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
 
+if (LLVM_DYLIB_SYMBOL_VERSIONING)
+  set_property(TARGET LLVM APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--default-symver")
+endif()
+
 if (APPLE)
   set_property(TARGET LLVM APPEND_STRING PROPERTY
               LINK_FLAGS

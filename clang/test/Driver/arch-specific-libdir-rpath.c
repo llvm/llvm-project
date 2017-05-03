@@ -81,5 +81,5 @@
 // RPATH-X86_64:    "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 // LIBPATH-AArch64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}
 // RPATH-AArch64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}"
-// NO-LIBPATH-NOT:  -L{{.*Inputs(/|\\\\)resource_dir}}
+// NO-LIBPATH-NOT:  "-L{{[^"]*Inputs(/|\\\\)resource_dir}}"
 // NO-RPATH-NOT:    "-rpath" {{.*(/|\\\\)Inputs(/|\\\\)resource_dir}}
