@@ -184,9 +184,7 @@ public:
             continue;
         }
         Relations.emplace_back(
-            SymbolRoleSet(SymbolRole::RelationOverrideOf) |
-                SymbolRoleSet(SymbolRole::RelationSpecializationOf),
-            ND);
+            SymbolRoleSet(SymbolRole::RelationSpecializationOf), ND);
       }
     }
   }
