@@ -12,7 +12,7 @@
 // template <class RandomAccessIterator>
 //     void
 //     random_shuffle(RandomAccessIterator first, RandomAccessIterator last);
-// 
+//
 // template <class RandomAccessIterator, class RandomNumberGenerator>
 //     void
 //     random_shuffle(RandomAccessIterator first, RandomAccessIterator last,

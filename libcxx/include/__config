@@ -314,7 +314,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-#if !(__has_feature(cxx_rtti))
+#if !(__has_feature(cxx_rtti)) && !defined(_LIBCPP_NO_RTTI)
 #define _LIBCPP_NO_RTTI
 #endif
 

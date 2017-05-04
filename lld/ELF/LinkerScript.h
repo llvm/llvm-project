@@ -228,6 +228,7 @@ protected:
   MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd);
 
   void switchTo(OutputSection *Sec);
+  uint64_t advance(uint64_t Size, unsigned Align);
   void output(InputSection *Sec);
   void process(BaseCommand &Base);
 

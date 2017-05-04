@@ -421,7 +421,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;p&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -586,7 +586,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;A&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -974,7 +974,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;buf&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -1376,7 +1376,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;buf&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -1962,7 +1962,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Use of memory after it is freed</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Use-after-free</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -2524,7 +2524,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;buf&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -2795,7 +2795,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;v&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -3144,7 +3144,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Use of memory after it is freed</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Use-after-free</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -3309,7 +3309,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;m&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -3517,7 +3517,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -3725,7 +3725,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -4030,7 +4030,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -4335,7 +4335,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -4543,7 +4543,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -4751,7 +4751,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential leak of memory pointed to by &apos;x&apos;</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -4988,7 +4988,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential memory leak</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -5225,7 +5225,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential memory leak</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->
@@ -5496,7 +5496,7 @@ void testMyMalloc() {
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:     </array>
 // CHECK-NEXT:     <key>description</key><string>Potential memory leak</string>
-// CHECK-NEXT:     <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:     <key>category</key><string>Memory error</string>
 // CHECK-NEXT:     <key>type</key><string>Memory leak</string>
 // CHECK-NEXT:     <key>check_name</key><string>unix.Malloc</string>
 // CHECK-NEXT:     <!-- This hash is experimental and going to change! -->

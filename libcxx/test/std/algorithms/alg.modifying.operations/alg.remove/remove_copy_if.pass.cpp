@@ -30,7 +30,7 @@ test()
     int ia[] = {0, 1, 2, 3, 4, 2, 3, 4, 2};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     int ib[sa];
-    OutIter r = std::remove_copy_if(InIter(ia), InIter(ia+sa), 
+    OutIter r = std::remove_copy_if(InIter(ia), InIter(ia+sa),
                                     OutIter(ib), equalToTwo);
     assert(base(r) == ib + sa-3);
     assert(ib[0] == 0);

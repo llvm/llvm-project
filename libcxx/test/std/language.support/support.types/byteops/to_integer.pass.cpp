@@ -17,13 +17,13 @@
 
 // template <class IntegerType>
 //    constexpr IntegerType to_integer(byte b) noexcept;
-// This function shall not participate in overload resolution unless 
+// This function shall not participate in overload resolution unless
 //   is_integral_v<IntegerType> is true.
 
 int main () {
 	constexpr std::byte b1{1};
 	constexpr std::byte b3{3};
-	
+
 	static_assert(noexcept(std::to_integer<int>(b1)), "" );
 	static_assert(std::is_same<int, decltype(std::to_integer<int>(b1))>::value, "" );
 	static_assert(std::is_same<long, decltype(std::to_integer<long>(b1))>::value, "" );

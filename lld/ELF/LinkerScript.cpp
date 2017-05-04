@@ -428,13 +428,12 @@ void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
   if (AllocateHeader)
     StartAddr += elf::getHeaderSize();
 
-  // The Sections with -T<section> are sorted in order of ascending address
-  // we must use this if it is lower than StartAddr as calls to setDot() must
-  // be monotonically increasing
-  if (!Config->SectionStartMap.empty()) {
-    uint64_t LowestSecStart = Config->SectionStartMap.begin()->second;
-    StartAddr = std::min(StartAddr, LowestSecStart);
-  }
+  // The Sections with -T<section> have been sorted in order of ascending
+  // address. We must lower StartAddr if the lowest -T<section address> as
+  // calls to setDot() must be monotonically increasing.
+  for (auto& KV : Config->SectionStartMap)
+    StartAddr = std::min(StartAddr, KV.second);
+
   Commands.push_back(
       make<SymbolAssignment>(".", [=] { return StartAddr; }, ""));
 
@@ -444,17 +443,19 @@ void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
     if (!(Sec->Flags & SHF_ALLOC))
       continue;
 
+    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
+    OSCmd->Sec = Sec;
+
+    // Prefer user supplied address over additional alignment constraint
     auto I = Config->SectionStartMap.find(Sec->Name);
     if (I != Config->SectionStartMap.end())
       Commands.push_back(
           make<SymbolAssignment>(".", [=] { return I->second; }, ""));
-
-    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
-    OSCmd->Sec = Sec;
-    if (Sec->PageAlign)
+    else if (Sec->PageAlign)
       OSCmd->AddrExpr = [=] {
         return alignTo(Script->getDot(), Config->MaxPageSize);
       };
+
     Commands.push_back(OSCmd);
     if (Sec->Sections.size()) {
       auto *ISD = make<InputSectionDescription>("");
@@ -494,17 +495,22 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   }
 }
 
-static bool isTbss(OutputSection *Sec) {
-  return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
+uint64_t LinkerScript::advance(uint64_t Size, unsigned Align) {
+  bool IsTbss = (CurOutSec->Flags & SHF_TLS) && CurOutSec->Type == SHT_NOBITS;
+  uint64_t Start = IsTbss ? Dot + ThreadBssOffset : Dot;
+  Start = alignTo(Start, Align);
+  uint64_t End = Start + Size;
+
+  if (IsTbss)
+    ThreadBssOffset = End - Dot;
+  else
+    Dot = End;
+  return End;
 }
 
 void LinkerScript::output(InputSection *S) {
-  bool IsTbss = isTbss(CurOutSec);
-
-  uint64_t Pos = IsTbss ? Dot + ThreadBssOffset : Dot;
-  Pos = alignTo(Pos, S->Alignment);
-  S->OutSecOff = Pos - CurOutSec->Addr;
-  Pos += S->getSize();
+  uint64_t Pos = advance(S->getSize(), S->Alignment);
+  S->OutSecOff = Pos - S->getSize() - CurOutSec->Addr;
 
   // Update output section size after adding each section. This is so that
   // SIZEOF works correctly in the case below:
@@ -523,11 +529,6 @@ void LinkerScript::output(InputSection *S) {
             " bytes");
     }
   }
-
-  if (IsTbss)
-    ThreadBssOffset = Pos - Dot;
-  else
-    Dot = Pos;
 }
 
 void LinkerScript::switchTo(OutputSection *Sec) {
@@ -535,9 +536,7 @@ void LinkerScript::switchTo(OutputSection *Sec) {
     return;
 
   CurOutSec = Sec;
-
-  Dot = alignTo(Dot, CurOutSec->Alignment);
-  CurOutSec->Addr = isTbss(CurOutSec) ? Dot + ThreadBssOffset : Dot;
+  CurOutSec->Addr = advance(0, CurOutSec->Alignment);
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
   // will set the LMA such that the difference between VMA and LMA for the

@@ -66,6 +66,8 @@ struct SA {
     {}
     #pragma omp target map(always, tofrom: c,f[:])   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
+    #pragma omp target map(always)   // expected-error {{use of undeclared identifier 'always'}}
+    {}
     return;
   }
 };

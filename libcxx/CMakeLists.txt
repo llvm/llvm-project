@@ -627,7 +627,12 @@ endif()
 # Create the lit.site.cfg file even when LIBCXX_INCLUDE_TESTS is OFF or
 # LLVM_FOUND is OFF. This allows users to run the tests manually using
 # LIT without requiring a full LLVM checkout.
-add_subdirectory(test)
+#
+# However, since some submission systems strip test/ subdirectories, check for
+# it before adding it.
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test")
+  add_subdirectory(test)
+endif()
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(lib/abi)
 endif()

@@ -17,6 +17,7 @@ namespace clang {
       extern const char * const CoreFoundationObjectiveC;
       extern const char * const LogicError;
       extern const char * const MemoryCoreFoundationObjectiveC;
+      extern const char * const MemoryError;
       extern const char * const UnixAPI;
     }
   }
