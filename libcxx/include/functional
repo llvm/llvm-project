@@ -2224,7 +2224,7 @@ typename __bind_return<_Fp, _BoundArgs, _Args>::type
 __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
                 _Args&& __args)
 {
-    return __invoke(__f, __mu(_VSTD::get<_Indx>(__bound_args), __args)...);
+    return _VSTD::__invoke(__f, _VSTD::__mu(_VSTD::get<_Indx>(__bound_args), __args)...);
 }
 
 template<class _Fp, class ..._BoundArgs>
@@ -2257,7 +2257,7 @@ public:
         typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args)
         {
-            return __apply_functor(__f_, __bound_args_, __indices(),
+            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
                                   tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
         }
 
@@ -2266,7 +2266,7 @@ public:
         typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args) const
         {
-            return __apply_functor(__f_, __bound_args_, __indices(),
+            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
                                    tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
         }
 };

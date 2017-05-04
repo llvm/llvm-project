@@ -1440,7 +1440,7 @@ bool LowerTypeTestsModule::lower() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second) {
+      for (auto &S : P.second.SummaryList) {
         auto *FS = dyn_cast<FunctionSummary>(S.get());
         if (!FS)
           continue;

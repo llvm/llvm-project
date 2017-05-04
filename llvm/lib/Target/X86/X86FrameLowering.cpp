@@ -2990,6 +2990,10 @@ unsigned X86FrameLowering::getWinEHParentFrameOffset(const MachineFunction &MF) 
 
 void X86FrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
+  // Mark the function as not having WinCFI. We will set it back to true in
+  // emitPrologue if it gets called and emits CFI.
+  MF.setHasWinCFI(false);
+
   // If this function isn't doing Win64-style C++ EH, we don't need to do
   // anything.
   const Function *Fn = MF.getFunction();

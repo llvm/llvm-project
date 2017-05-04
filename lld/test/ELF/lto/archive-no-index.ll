@@ -4,29 +4,15 @@
 ; encountered an empty archive index and undefined references (to prevent
 ; noisy false alarms).
 
-; RUN: rm -fr %T/archive-no-index
-; RUN: mkdir %T/archive-no-index
-; RUN: llvm-as %S/Inputs/archive.ll -o %T/archive-no-index/f.o
-; RUN: llvm-ar cr %T/archive-no-index/libf.a
-; RUN: llvm-ar qS %T/archive-no-index/libf.a %T/archive-no-index/f.o
-; RUN: llvm-as %s -o %t.o
-; RUN: not ld.lld -emain -m elf_x86_64 %t.o -o %t %T/archive-no-index/libf.a \
-; RUN:     2>&1 | FileCheck --check-prefix=NOTE %s
+; RUN: llvm-as -o %t1.o %s
+; RUN: llvm-as -o %t2.o %S/Inputs/archive.ll
 
-; RUN: llvm-ar crs %T/archive-no-index/libfs.a %T/archive-no-index/f.o
-; RUN: ld.lld -emain -m elf_x86_64 %t.o -o %t %T/archive-no-index/libf.a \
-; RUN:     %T/archive-no-index/libfs.a
+; RUN: rm -f %t1.a %t2.a
+; RUN: llvm-ar crS %t1.a %t2.o
+; RUN: llvm-ar crs %t2.a %t2.o
 
-; RUN: llvm-as %S/Inputs/archive-3.ll -o %T/archive-no-index/foo.o
-; RUN: llvm-ar crs %T/archive-no-index/libfoo.a %T/archive-no-index/foo.o
-; RUN: not ld.lld -emain -m elf_x86_64 %t.o -o %t %T/archive-no-index/libfoo.a \
-; RUN:     2>&1 | FileCheck --check-prefix=NO-NOTE %s
-
-; NOTE: undefined symbol: f
-; NOTE: archive listed no symbols
-
-; NO-NOTE: undefined symbol: f
-; NO-NOTE-NOT: archive listed no symbols
+; RUN: ld.lld -o %t -emain -m elf_x86_64 %t1.o %t1.a
+; RUN: ld.lld -o %t -emain -m elf_x86_64 %t1.o %t2.a
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

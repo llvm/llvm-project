@@ -1,2 +1,2 @@
 module fwd { header "fwd.h" export * }
-module file { header "file.h" export * }
+module file { header "file.h" header "file2.h" export * }

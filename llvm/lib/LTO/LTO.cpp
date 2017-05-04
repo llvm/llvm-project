@@ -274,13 +274,14 @@ void llvm::thinLTOResolveWeakForLinkerInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second)
+    for (auto &S : I.second.SummaryList)
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
   for (auto &I : Index)
-    thinLTOResolveWeakForLinkerGUID(I.second, I.first, GlobalInvolvedWithAlias,
-                                    isPrevailing, recordNewLinkage);
+    thinLTOResolveWeakForLinkerGUID(I.second.SummaryList, I.first,
+                                    GlobalInvolvedWithAlias, isPrevailing,
+                                    recordNewLinkage);
 }
 
 static void thinLTOInternalizeAndPromoteGUID(
@@ -301,7 +302,7 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &I : Index)
-    thinLTOInternalizeAndPromoteGUID(I.second, I.first, isExported);
+    thinLTOInternalizeAndPromoteGUID(I.second.SummaryList, I.first, isExported);
 }
 
 // Requires a destructor for std::vector<InputModule>.

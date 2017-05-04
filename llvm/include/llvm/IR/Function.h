@@ -466,7 +466,6 @@ public:
 
   /// @brief Determine if the parameter or return value is marked with NoAlias
   /// attribute.
-  /// @param n The parameter to check. 1 is the first parameter, 0 is the return
   bool returnDoesNotAlias() const {
     return AttributeSets.hasAttribute(AttributeList::ReturnIndex,
                                       Attribute::NoAlias);

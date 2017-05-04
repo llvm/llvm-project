@@ -2017,8 +2017,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       if (SrcOp.getValueSizeInBits() != BitWidth) {
         assert(SrcOp.getValueSizeInBits() > BitWidth &&
                "Expected BUILD_VECTOR implicit truncation");
-        Known2.One = Known2.One.trunc(BitWidth);
-        Known2.Zero = Known2.Zero.trunc(BitWidth);
+        Known2 = Known2.trunc(BitWidth);
       }
 
       // Known bits are the values that are shared by every demanded element.
@@ -2396,24 +2395,20 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    Known.Zero = Known.Zero.trunc(InBits);
-    Known.One = Known.One.trunc(InBits);
+    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known,
                      DemandedElts.zext(InVT.getVectorNumElements()),
                      Depth + 1);
-    Known.Zero = Known.Zero.zext(BitWidth);
-    Known.One = Known.One.zext(BitWidth);
+    Known = Known.zext(BitWidth);
     Known.Zero.setBitsFrom(InBits);
     break;
   }
   case ISD::ZERO_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    Known.Zero = Known.Zero.trunc(InBits);
-    Known.One = Known.One.trunc(InBits);
+    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-    Known.Zero = Known.Zero.zext(BitWidth);
-    Known.One = Known.One.zext(BitWidth);
+    Known = Known.zext(BitWidth);
     Known.Zero.setBitsFrom(InBits);
     break;
   }
@@ -2422,34 +2417,28 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
 
-    Known.Zero = Known.Zero.trunc(InBits);
-    Known.One = Known.One.trunc(InBits);
+    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
 
     // If the sign bit is known to be zero or one, then sext will extend
     // it to the top bits, else it will just zext.
-    Known.Zero = Known.Zero.sext(BitWidth);
-    Known.One = Known.One.sext(BitWidth);
+    Known = Known.sext(BitWidth);
     break;
   }
   case ISD::ANY_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    Known.Zero = Known.Zero.trunc(InBits);
-    Known.One = Known.One.trunc(InBits);
+    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, Depth+1);
-    Known.Zero = Known.Zero.zext(BitWidth);
-    Known.One = Known.One.zext(BitWidth);
+    Known = Known.zext(BitWidth);
     break;
   }
   case ISD::TRUNCATE: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
-    Known.Zero = Known.Zero.zext(InBits);
-    Known.One = Known.One.zext(InBits);
+    Known = Known.zext(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-    Known.Zero = Known.Zero.trunc(BitWidth);
-    Known.One = Known.One.trunc(BitWidth);
+    Known = Known.trunc(BitWidth);
     break;
   }
   case ISD::AssertZext: {
@@ -2621,8 +2610,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     Known.One = Known.One.getHiBits(Known.One.getBitWidth() - Index * BitWidth);
 
     // Remove high part of known bit mask
-    Known.Zero = Known.Zero.trunc(BitWidth);
-    Known.One = Known.One.trunc(BitWidth);
+    Known = Known.trunc(BitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -2634,10 +2622,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
     // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
     // anything about the extended bits.
-    if (BitWidth > EltBitWidth) {
-      Known.Zero = Known.Zero.trunc(EltBitWidth);
-      Known.One = Known.One.trunc(EltBitWidth);
-    }
+    if (BitWidth > EltBitWidth)
+      Known = Known.trunc(EltBitWidth);
     ConstantSDNode *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)) {
       // If we know the element index, just demand that vector element.
@@ -2648,10 +2634,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       // Unknown element index, so ignore DemandedElts and demand them all.
       computeKnownBits(InVec, Known, Depth + 1);
     }
-    if (BitWidth > EltBitWidth) {
-      Known.Zero = Known.Zero.zext(BitWidth);
-      Known.One = Known.One.zext(BitWidth);
-    }
+    if (BitWidth > EltBitWidth)
+      Known = Known.zext(BitWidth);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {

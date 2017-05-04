@@ -11,7 +11,7 @@
 // <optional>
 
 // constexpr optional(const optional<T>& rhs);
-//   If is_trivially_copy_constructible_v<T> is true, 
+//   If is_trivially_copy_constructible_v<T> is true,
 //    this constructor shall be a constexpr constructor.
 
 #include <optional>
@@ -26,7 +26,7 @@ struct S {
 	S(const S &rhs) : v_(rhs.v_) {}  // make it not trivially copyable
 	int v_;
 	};
-	
+
 
 int main()
 {

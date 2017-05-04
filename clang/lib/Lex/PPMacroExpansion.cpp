@@ -1453,7 +1453,7 @@ static bool EvaluateHasIncludeNext(Token &Tok,
   } else if (PP.isInPrimaryFile()) {
     Lookup = nullptr;
     PP.Diag(Tok, diag::pp_include_next_in_primary);
-  } else if (PP.getCurrentSubmodule()) {
+  } else if (PP.getCurrentLexerSubmodule()) {
     // Start looking up in the directory *after* the one in which the current
     // file would be found, if any.
     assert(PP.getCurrentLexer() && "#include_next directive in macro?");

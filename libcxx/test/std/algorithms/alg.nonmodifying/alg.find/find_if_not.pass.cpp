@@ -25,7 +25,7 @@ struct ne {
 	bool operator () (int v2) const { return v != v2; }
 	int v;
 	};
-	
+
 
 int main()
 {
