@@ -620,7 +620,7 @@ int main()
     {
         std::cmatch m;
         const char s[] = "m";
-        assert(std::regex_match(s, m, 
+        assert(std::regex_match(s, m,
                       std::regex("[a[=M=]z]", std::regex_constants::awk)));
         assert(m.size() == 1);
         assert(!m.prefix().matched);

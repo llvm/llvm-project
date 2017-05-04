@@ -2182,8 +2182,8 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
   // determine the value. If so, constant fold it.
   KnownBits Known(VTy->getPrimitiveSizeInBits());
   computeKnownBits(ResultOp, Known, 0, &RI);
-  if ((Known.Zero|Known.One).isAllOnesValue())
-    RI.setOperand(0, Constant::getIntegerValue(VTy, Known.One));
+  if (Known.isConstant())
+    RI.setOperand(0, Constant::getIntegerValue(VTy, Known.getConstant()));
 
   return nullptr;
 }
@@ -2863,8 +2863,8 @@ bool InstCombiner::run() {
       unsigned BitWidth = Ty->getScalarSizeInBits();
       KnownBits Known(BitWidth);
       computeKnownBits(I, Known, /*Depth*/0, I);
-      if ((Known.Zero | Known.One).isAllOnesValue()) {
-        Constant *C = ConstantInt::get(Ty, Known.One);
+      if (Known.isConstant()) {
+        Constant *C = ConstantInt::get(Ty, Known.getConstant());
         DEBUG(dbgs() << "IC: ConstFold (all bits known) to: " << *C <<
                         " from: " << *I << '\n');
 

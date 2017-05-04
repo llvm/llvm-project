@@ -2,22 +2,20 @@ version: '{build}'
 
 shallow_clone: true
 
-os:
-  - Visual Studio 2015
-
 build:
   verbosity: detailed
-
-branches:
-  only:
-    - master
 
 configuration:
   - Debug
 
 environment:
   matrix:
-    - COMPILER: Clang-CL 4.0
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      COMPILER: Clang-CL 4.0
+      MSVC_SETUP_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      COMPILER: Clang-CL 4.0
+      MSVC_SETUP_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
 
 install:
   ############################################################################
@@ -54,12 +52,11 @@ install:
   ############################################################################
   # Setup the cached copy of LLVM
   ############################################################################
-  - if exist llvm (git -C llvm pull --rebase=true --ff-only)
-  - if not exist llvm (git clone --depth=1 http://llvm.org/git/llvm.git)
+  - git clone --depth=1 http://llvm.org/git/llvm.git
 
 
 before_build:
-  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+  - call "$MSVC_SETUP_PATH" amd64
   - cd C:\projects\libcxx
 
 build_script:
@@ -92,6 +89,3 @@ on_failure:
 artifacts:
   - path: '_build/CMakeFiles/*.log'
     name: logs
-
-cache:
-  - C:\projects\deps\llvm

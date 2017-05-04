@@ -17,7 +17,7 @@
 
 // template <class IntegerType>
 //    constexpr byte operator <<(byte b, IntegerType shift) noexcept;
-// These functions shall not participate in overload resolution unless 
+// These functions shall not participate in overload resolution unless
 //   is_integral_v<IntegerType> is true.
 
 int main () {

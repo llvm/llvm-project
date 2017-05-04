@@ -117,7 +117,7 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurLexer.reset(TheLexer);
   CurPPLexer = TheLexer;
   CurDirLookup = CurDir;
-  CurSubmodule = nullptr;
+  CurLexerSubmodule = nullptr;
   if (CurLexerKind != CLK_LexAfterModuleImport)
     CurLexerKind = CLK_Lexer;
 
@@ -142,7 +142,7 @@ void Preprocessor::EnterSourceFileWithPTH(PTHLexer *PL,
   CurDirLookup = CurDir;
   CurPTHLexer.reset(PL);
   CurPPLexer = CurPTHLexer.get();
-  CurSubmodule = nullptr;
+  CurLexerSubmodule = nullptr;
   if (CurLexerKind != CLK_LexAfterModuleImport)
     CurLexerKind = CLK_PTHLexer;
   
@@ -337,6 +337,26 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   assert(!CurTokenLexer &&
          "Ending a file when currently in a macro!");
 
+  // If we have an unclosed module region from a pragma at the end of a
+  // module, complain and close it now.
+  // FIXME: This is not correct if we are building a module from PTH.
+  const bool LeavingSubmodule = CurLexer && CurLexerSubmodule;
+  if ((LeavingSubmodule || IncludeMacroStack.empty()) &&
+      !BuildingSubmoduleStack.empty() &&
+      BuildingSubmoduleStack.back().IsPragma) {
+    Diag(BuildingSubmoduleStack.back().ImportLoc,
+         diag::err_pp_module_begin_without_module_end);
+    Module *M = LeaveSubmodule(/*ForPragma*/true);
+
+    Result.startToken();
+    const char *EndPos = getCurLexerEndPos();
+    CurLexer->BufferPtr = EndPos;
+    CurLexer->FormTokenWithChars(Result, EndPos, tok::annot_module_end);
+    Result.setAnnotationEndLoc(Result.getLocation());
+    Result.setAnnotationValue(M);
+    return true;
+  }
+
   // See if this file had a controlling macro.
   if (CurPPLexer) {  // Not ending a macro, ignore it.
     if (const IdentifierInfo *ControllingMacro =
@@ -442,18 +462,17 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     if (Callbacks && !isEndOfMacro && CurPPLexer)
       ExitedFID = CurPPLexer->getFileID();
 
-    bool LeavingSubmodule = CurSubmodule && CurLexer;
     if (LeavingSubmodule) {
+      // We're done with this submodule.
+      Module *M = LeaveSubmodule(/*ForPragma*/false);
+
       // Notify the parser that we've left the module.
       const char *EndPos = getCurLexerEndPos();
       Result.startToken();
       CurLexer->BufferPtr = EndPos;
       CurLexer->FormTokenWithChars(Result, EndPos, tok::annot_module_end);
       Result.setAnnotationEndLoc(Result.getLocation());
-      Result.setAnnotationValue(CurSubmodule);
-
-      // We're done with this submodule.
-      LeaveSubmodule();
+      Result.setAnnotationValue(M);
     }
 
     // We're done with the #included file.
@@ -628,11 +647,13 @@ void Preprocessor::HandleMicrosoftCommentPaste(Token &Tok) {
   assert(!FoundLexer && "Lexer should return EOD before EOF in PP mode");
 }
 
-void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc) {
+void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
+                                  bool ForPragma) {
   if (!getLangOpts().ModulesLocalVisibility) {
     // Just track that we entered this submodule.
-    BuildingSubmoduleStack.push_back(BuildingSubmoduleInfo(
-        M, ImportLoc, CurSubmoduleState, PendingModuleMacroNames.size()));
+    BuildingSubmoduleStack.push_back(
+        BuildingSubmoduleInfo(M, ImportLoc, ForPragma, CurSubmoduleState,
+                              PendingModuleMacroNames.size()));
     return;
   }
 
@@ -673,8 +694,9 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc) {
   }
 
   // Track that we entered this module.
-  BuildingSubmoduleStack.push_back(BuildingSubmoduleInfo(
-      M, ImportLoc, CurSubmoduleState, PendingModuleMacroNames.size()));
+  BuildingSubmoduleStack.push_back(
+      BuildingSubmoduleInfo(M, ImportLoc, ForPragma, CurSubmoduleState,
+                            PendingModuleMacroNames.size()));
 
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
@@ -697,7 +719,13 @@ bool Preprocessor::needModuleMacros() const {
   return getLangOpts().isCompilingModule();
 }
 
-void Preprocessor::LeaveSubmodule() {
+Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
+  if (BuildingSubmoduleStack.empty() ||
+      BuildingSubmoduleStack.back().IsPragma != ForPragma) {
+    assert(ForPragma && "non-pragma module enter/leave mismatch");
+    return nullptr;
+  }
+
   auto &Info = BuildingSubmoduleStack.back();
 
   Module *LeavingMod = Info.M;
@@ -711,7 +739,7 @@ void Preprocessor::LeaveSubmodule() {
     // of pending names for the surrounding submodule.
     BuildingSubmoduleStack.pop_back();
     makeModuleVisible(LeavingMod, ImportLoc);
-    return;
+    return LeavingMod;
   }
 
   // Create ModuleMacros for any macros defined in this submodule.
@@ -800,4 +828,5 @@ void Preprocessor::LeaveSubmodule() {
 
   // A nested #include makes the included submodule visible.
   makeModuleVisible(LeavingMod, ImportLoc);
+  return LeavingMod;
 }

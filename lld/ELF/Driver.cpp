@@ -152,8 +152,7 @@ static getArchiveMembers(MemoryBufferRef MB) {
   return V;
 }
 
-// Opens and parses a file. Path has to be resolved already.
-// Newly created memory buffers are owned by this driver.
+// Opens a file and create a file object. Path has to be resolved already.
 void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   using namespace sys::fs;
 

@@ -85,10 +85,10 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
       LastTokenWasAt(false), ModuleImportExpectsIdentifier(false),
       CodeCompletionReached(false), CodeCompletionII(nullptr),
       MainFileDir(nullptr), SkipMainFilePreamble(0, true), CurPPLexer(nullptr),
-      CurDirLookup(nullptr), CurLexerKind(CLK_Lexer), CurSubmodule(nullptr),
-      Callbacks(nullptr), CurSubmoduleState(&NullSubmoduleState),
-      MacroArgCache(nullptr), Record(nullptr), MIChainHead(nullptr),
-      DeserialMIChainHead(nullptr) {
+      CurDirLookup(nullptr), CurLexerKind(CLK_Lexer),
+      CurLexerSubmodule(nullptr), Callbacks(nullptr),
+      CurSubmoduleState(&NullSubmoduleState), MacroArgCache(nullptr),
+      Record(nullptr), MIChainHead(nullptr), DeserialMIChainHead(nullptr) {
   OwnsHeaderSearch = OwnsHeaders;
   
   CounterValue = 0; // __COUNTER__ starts at 0.

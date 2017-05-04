@@ -2049,12 +2049,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         M->getTopLevelModuleName() == getLangOpts().CurrentModule)
       return;
 
-    assert(!CurSubmodule && "should not have marked this as a module yet");
-    CurSubmodule = M;
+    assert(!CurLexerSubmodule && "should not have marked this as a module yet");
+    CurLexerSubmodule = M;
 
     // Let the macro handling code know that any future macros are within
     // the new submodule.
-    EnterSubmodule(M, HashLoc);
+    EnterSubmodule(M, HashLoc, /*ForPragma*/false);
 
     // Let the parser know that any future declarations are within the new
     // submodule.
@@ -2082,7 +2082,7 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
   } else if (isInPrimaryFile()) {
     Lookup = nullptr;
     Diag(IncludeNextTok, diag::pp_include_next_in_primary);
-  } else if (CurSubmodule) {
+  } else if (CurLexerSubmodule) {
     // Start looking up in the directory *after* the one in which the current
     // file would be found, if any.
     assert(CurPPLexer && "#include_next directive in macro?");

@@ -40,8 +40,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
 // MSVC frontend only configurations
 #if !defined(__clang__)
-    #define TEST_STD_VER 17
-
     // Simulate feature-test macros.
     #define __has_feature(X) _MSVC_HAS_FEATURE_ ## X
     #define _MSVC_HAS_FEATURE_cxx_exceptions    1
@@ -74,5 +72,13 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
 // Silence warnings about raw pointers and other unchecked iterators.
 #define _SCL_SECURE_NO_WARNINGS
+
+#include <ciso646>
+
+#if _HAS_CXX17
+    #define TEST_STD_VER 17
+#else // _HAS_CXX17
+    #define TEST_STD_VER 14
+#endif // _HAS_CXX17
 
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
