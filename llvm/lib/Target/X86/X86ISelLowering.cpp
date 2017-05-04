@@ -26729,8 +26729,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownBits(InBitWidth);
     APInt DemandedSrcElts = APInt::getLowBitsSet(InNumElts, NumElts);
     DAG.computeKnownBits(N0, Known, DemandedSrcElts, Depth + 1);
-    Known.One = Known.One.zext(BitWidth);
-    Known.Zero = Known.Zero.zext(BitWidth);
+    Known = Known.zext(BitWidth);
     Known.Zero.setBitsFrom(InBitWidth);
     break;
   }

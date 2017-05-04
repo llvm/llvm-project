@@ -29,3 +29,12 @@ entry:
 ; and no unwind info in the object file.
 ; READOBJ-NOT: leaf_func
 }
+
+define void @naked_func() naked {
+  call void asm sideeffect "ret", ""()
+  unreachable
+}
+; ASM-LABEL: naked_func:
+; ASM-NOT: .seh_
+; ASM: ret
+; ASM-NOT: .seh_

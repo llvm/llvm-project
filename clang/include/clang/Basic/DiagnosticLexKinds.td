@@ -475,8 +475,6 @@ def warn_pragma_pop_macro_no_push : Warning<
 def warn_pragma_message : Warning<"%0">,
    InGroup<PoundPragmaMessage>, DefaultWarnNoWerror;
 def err_pragma_message : Error<"%0">;
-def err_pragma_module_import_expected_module_name : Error<
-  "expected %select{identifier in|'.' or end of directive after}0 module name">;
 def warn_pragma_ignored : Warning<"unknown pragma ignored">,
    InGroup<UnknownPragmas>, DefaultIgnore;
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
@@ -511,6 +509,22 @@ def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_missing_argument : Warning<
   "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+// #pragma module
+def err_pp_expected_module_name : Error<
+  "expected %select{identifier after '.' in |}0module name">;
+def err_pp_module_begin_wrong_module : Error<
+  "must specify '-fmodule-name=%0' to enter %select{|submodule of }1"
+  "this module%select{ (current module is %3)|}2">;
+def err_pp_module_begin_no_module_map : Error<
+  "no module map available for module %0">;
+def err_pp_module_begin_no_submodule : Error<
+  "submodule %0.%1 not declared in module map">;
+def err_pp_module_begin_without_module_end : Error<
+  "no matching '#pragma clang module end' for this "
+  "'#pragma clang module begin'">;
+def err_pp_module_end_without_module_begin : Error<
+  "no matching '#pragma clang module begin' for this "
+  "'#pragma clang module end'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<

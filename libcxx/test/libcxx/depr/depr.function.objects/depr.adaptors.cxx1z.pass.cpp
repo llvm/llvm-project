@@ -34,14 +34,14 @@ int main()
 	typedef std::pointer_to_binary_function<int, int, int> PBF;
 	assert((std::ptr_fun<int, int>(identity)(4) == 4));
 	assert((std::ptr_fun<int, int, int>(sum)(4, 5) == 9));
-	
+
 	Foo f;
 	assert((std::mem_fn(&Foo::identity)(f, 5) == 5));
 	assert((std::mem_fn(&Foo::sum)(f, 5, 6) == 11));
-	
+
     typedef std::mem_fun_ref_t<int, Foo> MFR;
     typedef std::const_mem_fun_ref_t<int, Foo> CMFR;
-	
+
 	assert((std::mem_fun_ref(&Foo::zero)(f) == 0));
 	assert((std::mem_fun_ref(&Foo::identity)(f, 5) == 5));
 }

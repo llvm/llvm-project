@@ -1705,10 +1705,12 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
                  SizeInBytes, FullName, Ty->getIdentifier());
   TypeIndex ClassTI = TypeTable.writeKnownType(CR);
 
-  StringIdRecord SIDR(TypeIndex(0x0), getFullFilepath(Ty->getFile()));
-  TypeIndex SIDI = TypeTable.writeKnownType(SIDR);
-  UdtSourceLineRecord USLR(ClassTI, SIDI, Ty->getLine());
-  TypeTable.writeKnownType(USLR);
+  if (const auto *File = Ty->getFile()) {
+    StringIdRecord SIDR(TypeIndex(0x0), getFullFilepath(File));
+    TypeIndex SIDI = TypeTable.writeKnownType(SIDR);
+    UdtSourceLineRecord USLR(ClassTI, SIDI, Ty->getLine());
+    TypeTable.writeKnownType(USLR);
+  }
 
   addToUDTs(Ty, ClassTI);
 

@@ -701,11 +701,10 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
       return Op1;
     }
 
-    APInt KnownZero = Known0.Zero | Known1.Zero;
-    APInt KnownOne = Known0.One & Known1.One;
-    if ((KnownZero | KnownOne).isAllOnesValue()) {
-      return ConstantInt::get(Op0->getType(), KnownOne);
-    }
+    Known0.Zero |= Known1.Zero;
+    Known0.One &= Known1.One;
+    if (Known0.isConstant())
+      return ConstantInt::get(Op0->getType(), Known0.getConstant());
   }
 
   // If the constant expr is something like &A[123] - &A[4].f, fold this into a

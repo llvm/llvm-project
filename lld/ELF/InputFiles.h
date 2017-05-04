@@ -239,7 +239,7 @@ private:
 // An ArchiveFile object represents a .a file.
 class ArchiveFile : public InputFile {
 public:
-  explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
+  explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   template <class ELFT> void parse();
 

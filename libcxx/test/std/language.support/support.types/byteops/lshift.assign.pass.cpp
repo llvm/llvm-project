@@ -17,7 +17,7 @@
 
 // template <class IntegerType>
 //   constexpr byte& operator<<=(byte& b, IntegerType shift) noexcept;
-// This function shall not participate in overload resolution unless 
+// This function shall not participate in overload resolution unless
 //   is_integral_v<IntegerType> is true.
 
 
@@ -32,7 +32,7 @@ int main () {
 	constexpr std::byte b3{3};
 
 	static_assert(noexcept(b <<= 2), "" );
-	
+
 	static_assert(std::to_integer<int>(test(b2)) ==  8, "" );
 	static_assert(std::to_integer<int>(test(b3)) == 12, "" );
 

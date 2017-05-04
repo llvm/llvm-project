@@ -132,12 +132,48 @@ CleanupInvoker<Function> scopeCleanup(Function Fn) XRAY_NEVER_INSTRUMENT {
   return CleanupInvoker<Function>{Fn};
 }
 
+inline bool patchSled(const XRaySledEntry &Sled, bool Enable,
+                      int32_t FuncId) XRAY_NEVER_INSTRUMENT {
+  // While we're here, we should patch the nop sled. To do that we mprotect
+  // the page containing the function to be writeable.
+  const uint64_t PageSize = GetPageSizeCached();
+  void *PageAlignedAddr =
+      reinterpret_cast<void *>(Sled.Address & ~(PageSize - 1));
+  std::size_t MProtectLen = (Sled.Address + cSledLength) -
+                            reinterpret_cast<uint64_t>(PageAlignedAddr);
+  MProtectHelper Protector(PageAlignedAddr, MProtectLen);
+  if (Protector.MakeWriteable() == -1) {
+    printf("Failed mprotect: %d\n", errno);
+    return XRayPatchingStatus::FAILED;
+  }
+
+  bool Success = false;
+  switch (Sled.Kind) {
+  case XRayEntryType::ENTRY:
+    Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_FunctionEntry);
+    break;
+  case XRayEntryType::EXIT:
+    Success = patchFunctionExit(Enable, FuncId, Sled);
+    break;
+  case XRayEntryType::TAIL:
+    Success = patchFunctionTailExit(Enable, FuncId, Sled);
+    break;
+  case XRayEntryType::LOG_ARGS_ENTRY:
+    Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_ArgLoggerEntry);
+    break;
+  default:
+    Report("Unsupported sled kind '%d' @%04x\n", Sled.Address, int(Sled.Kind));
+    return false;
+  }
+  return Success;
+}
+
 // controlPatching implements the common internals of the patching/unpatching
 // implementation. |Enable| defines whether we're enabling or disabling the
 // runtime XRay instrumentation.
 XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   if (!__sanitizer::atomic_load(&XRayInitialized,
-                               __sanitizer::memory_order_acquire))
+                                __sanitizer::memory_order_acquire))
     return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
 
   uint8_t NotPatching = false;
@@ -179,38 +215,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
       ++FuncId;
       CurFun = F;
     }
-
-    // While we're here, we should patch the nop sled. To do that we mprotect
-    // the page containing the function to be writeable.
-    void *PageAlignedAddr =
-        reinterpret_cast<void *>(Sled.Address & ~(PageSize - 1));
-    std::size_t MProtectLen = (Sled.Address + cSledLength) -
-                              reinterpret_cast<uint64_t>(PageAlignedAddr);
-    MProtectHelper Protector(PageAlignedAddr, MProtectLen);
-    if (Protector.MakeWriteable() == -1) {
-      printf("Failed mprotect: %d\n", errno);
-      return XRayPatchingStatus::FAILED;
-    }
-
-    bool Success = false;
-    switch (Sled.Kind) {
-    case XRayEntryType::ENTRY:
-      Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_FunctionEntry);
-      break;
-    case XRayEntryType::EXIT:
-      Success = patchFunctionExit(Enable, FuncId, Sled);
-      break;
-    case XRayEntryType::TAIL:
-      Success = patchFunctionTailExit(Enable, FuncId, Sled);
-      break;
-    case XRayEntryType::LOG_ARGS_ENTRY:
-      Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_ArgLoggerEntry);
-      break;
-    default:
-      Report("Unsupported sled kind: %d\n", int(Sled.Kind));
-      continue;
-    }
-    (void)Success;
+    patchSled(Sled, Enable, FuncId);
   }
   __sanitizer::atomic_store(&XRayPatching, false,
                             __sanitizer::memory_order_release);
@@ -224,6 +229,64 @@ XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
 
 XRayPatchingStatus __xray_unpatch() XRAY_NEVER_INSTRUMENT {
   return controlPatching(false);
+}
+
+XRayPatchingStatus patchFunction(int32_t FuncId,
+                                 bool Enable) XRAY_NEVER_INSTRUMENT {
+  if (!__sanitizer::atomic_load(&XRayInitialized,
+                                __sanitizer::memory_order_acquire))
+    return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
+
+  uint8_t NotPatching = false;
+  if (!__sanitizer::atomic_compare_exchange_strong(
+          &XRayPatching, &NotPatching, true, __sanitizer::memory_order_acq_rel))
+    return XRayPatchingStatus::ONGOING; // Already patching.
+
+  // Next, we look for the function index.
+  XRaySledMap InstrMap;
+  {
+    __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
+    InstrMap = XRayInstrMap;
+  }
+
+  // If we don't have an index, we can't patch individual functions.
+  if (InstrMap.Functions == 0)
+    return XRayPatchingStatus::NOT_INITIALIZED;
+
+  // FuncId must be a positive number, less than the number of functions
+  // instrumented.
+  if (FuncId <= 0 || static_cast<size_t>(FuncId) >= InstrMap.Functions) {
+    Report("Invalid function id provided: %d\n", FuncId);
+    return XRayPatchingStatus::FAILED;
+  }
+
+  // Now we patch ths sleds for this specific function.
+  auto SledRange = InstrMap.SledsIndex[FuncId - 1];
+  auto *f = SledRange.Begin;
+  auto *e = SledRange.End;
+
+  bool SucceedOnce = false;
+  while (f != e)
+    SucceedOnce |= patchSled(*f++, Enable, FuncId);
+
+  __sanitizer::atomic_store(&XRayPatching, false,
+                            __sanitizer::memory_order_release);
+
+  if (!SucceedOnce) {
+    Report("Failed patching any sled for function '%d'.", FuncId);
+    return XRayPatchingStatus::FAILED;
+  }
+
+  return XRayPatchingStatus::SUCCESS;
+}
+
+XRayPatchingStatus __xray_patch_function(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
+  return patchFunction(FuncId, true);
+}
+
+XRayPatchingStatus
+__xray_unpatch_function(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
+  return patchFunction(FuncId, false);
 }
 
 int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t)) {

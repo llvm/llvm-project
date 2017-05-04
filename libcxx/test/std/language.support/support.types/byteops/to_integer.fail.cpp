@@ -17,7 +17,7 @@
 
 // template <class IntegerType>
 //    constexpr IntegerType to_integer(byte b) noexcept;
-// This function shall not participate in overload resolution unless 
+// This function shall not participate in overload resolution unless
 //   is_integral_v<IntegerType> is true.
 
 int main () {

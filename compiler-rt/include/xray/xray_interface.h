@@ -67,6 +67,14 @@ extern XRayPatchingStatus __xray_patch();
 // result values.
 extern XRayPatchingStatus __xray_unpatch();
 
+// This patches a specific function id. See XRayPatchingStatus for possible
+// result values.
+extern XRayPatchingStatus __xray_patch_function(int32_t FuncId);
+
+// This unpatches a specific function id. See XRayPatchingStatus for possible
+// result values.
+extern XRayPatchingStatus __xray_unpatch_function(int32_t FuncId);
+
 // Use XRay to log the first argument of each (instrumented) function call.
 // When this function exits, all threads will have observed the effect and
 // start logging their subsequent affected function calls (if patched).
