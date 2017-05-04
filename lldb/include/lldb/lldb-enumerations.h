@@ -733,7 +733,8 @@ enum TraceType {
 };
 
 FLAGS_ENUM(TypeClass){
-    eTypeClassInvalid = (0u), eTypeClassArray = (1u << 0),
+    eTypeClassInvalid = (0u), 
+  eTypeClassArray = (1u << 0),
     eTypeClassBlockPointer = (1u << 1), eTypeClassBuiltin = (1u << 2),
     eTypeClassClass = (1u << 3), eTypeClassComplexFloat = (1u << 4),
     eTypeClassComplexInteger = (1u << 5), eTypeClassEnumeration = (1u << 6),
