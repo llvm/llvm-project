@@ -35,8 +35,8 @@ define void @fn2NoDebug(%struct.Buffer* byval align 64 %p1) {
 ; CHECK-NEXT: pop
 ; CHECK-NEXT: ret
 
-define void @fn2WithDebug(%struct.Buffer* byval align 64 %p1) !dbg !4 {
-  call void @llvm.dbg.declare(metadata %struct.Buffer* %p1, metadata !5, metadata !6), !dbg !7
+define void @fn2WithDebug(%struct.Buffer* byval align 64 %p1) !dbg !8 {
+  call void @llvm.dbg.declare(metadata %struct.Buffer* %p1, metadata !9, metadata !6), !dbg !10
   ret void
 }
 
@@ -64,3 +64,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !5 = !DILocalVariable(name: "w", scope: !4)
 !6 = !DIExpression()
 !7 = !DILocation(line: 210, column: 12, scope: !4)
+!8 = distinct !DISubprogram(name: "withDebug", unit: !0)
+!9 = !DILocalVariable(name: "w", scope: !8)
+!10 = !DILocation(line: 210, column: 12, scope: !8)
