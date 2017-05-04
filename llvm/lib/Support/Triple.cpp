@@ -459,7 +459,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("kfreebsd", Triple::KFreeBSD)
     .StartsWith("linux", Triple::Linux)
     .StartsWith("lv2", Triple::Lv2)
-    .StartsWith("macosx", Triple::MacOSX)
+    .StartsWith("macos", Triple::MacOSX)
     .StartsWith("netbsd", Triple::NetBSD)
     .StartsWith("openbsd", Triple::OpenBSD)
     .StartsWith("solaris", Triple::Solaris)
@@ -984,6 +984,8 @@ void Triple::getOSVersion(unsigned &Major, unsigned &Minor,
   StringRef OSTypeName = getOSTypeName(getOS());
   if (OSName.startswith(OSTypeName))
     OSName = OSName.substr(OSTypeName.size());
+  else if (getOS() == MacOSX)
+    OSName.consume_front("macos");
 
   parseVersionFromName(OSName, Major, Minor, Micro);
 }

@@ -744,7 +744,7 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
 
   // Give less preference to an instruction that will cause a stall with
   // an instruction in the previous packet.
-  if (QII.isV60VectorInstruction(Instr)) {
+  if (QII.isHVXVec(Instr)) {
     // Check for stalls in the previous packet.
     if (Q.getID() == TopQID) {
       for (auto J : Top.ResourceModel->OldPacket)

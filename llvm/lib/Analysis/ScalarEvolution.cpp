@@ -4083,6 +4083,56 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
   return None;
 }
 
+/// A helper function for createAddRecFromPHI to handle simple cases.
+///
+/// This function tries to find an AddRec expression for the simplest (yet most
+/// common) cases: PN = PHI(Start, OP(Self, LoopInvariant)).
+/// If it fails, createAddRecFromPHI will use a more general, but slow,
+/// technique for finding the AddRec expression.
+const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
+                                                      Value *BEValueV,
+                                                      Value *StartValueV) {
+  const Loop *L = LI.getLoopFor(PN->getParent());
+  assert(L && L->getHeader() == PN->getParent());
+  assert(BEValueV && StartValueV);
+
+  auto BO = MatchBinaryOp(BEValueV, DT);
+  if (!BO)
+    return nullptr;
+
+  if (BO->Opcode != Instruction::Add)
+    return nullptr;
+
+  const SCEV *Accum = nullptr;
+  if (BO->LHS == PN && L->isLoopInvariant(BO->RHS))
+    Accum = getSCEV(BO->RHS);
+  else if (BO->RHS == PN && L->isLoopInvariant(BO->LHS))
+    Accum = getSCEV(BO->LHS);
+
+  if (!Accum)
+    return nullptr;
+
+  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  if (BO->IsNUW)
+    Flags = setFlags(Flags, SCEV::FlagNUW);
+  if (BO->IsNSW)
+    Flags = setFlags(Flags, SCEV::FlagNSW);
+
+  const SCEV *StartVal = getSCEV(StartValueV);
+  const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
+
+  ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
+
+  // We can add Flags to the post-inc expression only if we
+  // know that it us *undefined behavior* for BEValueV to
+  // overflow.
+  if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
+    if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
+      (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
+
+  return PHISCEV;
+}
+
 const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   const Loop *L = LI.getLoopFor(PN->getParent());
   if (!L || L->getHeader() != PN->getParent())
@@ -4111,10 +4161,16 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   if (!BEValueV || !StartValueV)
     return nullptr;
 
-  // While we are analyzing this PHI node, handle its value symbolically.
-  const SCEV *SymbolicName = getUnknown(PN);
   assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
          "PHI node already processed?");
+
+  // First, try to find AddRec expression without creating a fictituos symbolic
+  // value for PN.
+  if (auto *S = createSimpleAffineAddRec(PN, BEValueV, StartValueV))
+    return S;
+
+  // Handle PHI node value symbolically.
+  const SCEV *SymbolicName = getUnknown(PN);
   ValueExprMap.insert({SCEVCallbackVH(PN, this), SymbolicName});
 
   // Using this symbolic name for the PHI, analyze the value coming around

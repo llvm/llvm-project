@@ -429,7 +429,7 @@ template <typename CFLAA> class CFLGraphBuilder {
 
       if (Inst->getType()->isPointerTy()) {
         auto *Fn = CS.getCalledFunction();
-        if (Fn == nullptr || !Fn->doesNotAlias(AttributeList::ReturnIndex))
+        if (Fn == nullptr || !Fn->returnDoesNotAlias())
           // No need to call addNode() since we've added Inst at the
           // beginning of this function and we know it is not a global.
           Graph.addAttr(InstantiatedValue{Inst, 0}, getAttrUnknown());

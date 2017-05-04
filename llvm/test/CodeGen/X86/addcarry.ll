@@ -190,9 +190,9 @@ entry:
 define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: shiftadd:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    leaq (%rdx,%rcx), %rax
 ; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    adcq %rcx, %rdx
+; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = zext i64 %a to i128

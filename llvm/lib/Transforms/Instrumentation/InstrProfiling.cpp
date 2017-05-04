@@ -241,7 +241,7 @@ static Constant *getOrInsertValueProfilingCall(Module &M,
 
   if (Function *FunRes = dyn_cast<Function>(Res)) {
     if (auto AK = TLI.getExtAttrForI32Param(false))
-      FunRes->addAttribute(3, AK);
+      FunRes->addParamAttr(2, AK);
   }
   return Res;
 }
@@ -292,7 +292,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
         Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true), Args);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
-    Call->addAttribute(3, AK);
+    Call->addParamAttr(2, AK);
   Ind->replaceAllUsesWith(Call);
   Ind->eraseFromParent();
 }

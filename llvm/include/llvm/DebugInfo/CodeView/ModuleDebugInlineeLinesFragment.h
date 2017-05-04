@@ -20,6 +20,8 @@ namespace llvm {
 namespace codeview {
 
 class ModuleDebugInlineeLineFragmentRef;
+class ModuleDebugFileChecksumFragment;
+class StringTable;
 
 enum class InlineeLinesSignature : uint32_t {
   Normal,    // CV_INLINEE_SOURCE_LINE_SIGNATURE
@@ -73,7 +75,8 @@ private:
 
 class ModuleDebugInlineeLineFragment final : public ModuleDebugFragment {
 public:
-  explicit ModuleDebugInlineeLineFragment(bool HasExtraFiles);
+  ModuleDebugInlineeLineFragment(ModuleDebugFileChecksumFragment &Checksums,
+                                 bool HasExtraFiles);
 
   static bool classof(const ModuleDebugFragment *S) {
     return S->kind() == ModuleDebugFragmentKind::InlineeLines;
@@ -82,11 +85,12 @@ public:
   Error commit(BinaryStreamWriter &Writer) override;
   uint32_t calculateSerializedLength() override;
 
-  void addInlineSite(TypeIndex FuncId, uint32_t FileOffset,
-                     uint32_t SourceLine);
-  void addExtraFile(uint32_t FileOffset);
+  void addInlineSite(TypeIndex FuncId, StringRef FileName, uint32_t SourceLine);
+  void addExtraFile(StringRef FileName);
 
 private:
+  ModuleDebugFileChecksumFragment &Checksums;
+
   bool HasExtraFiles = false;
   uint32_t ExtraFileCount = 0;
 

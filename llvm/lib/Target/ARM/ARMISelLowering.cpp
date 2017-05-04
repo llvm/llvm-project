@@ -822,6 +822,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   setOperationAction(ISD::SRL,       MVT::i64, Custom);
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
 
   setOperationAction(ISD::ADDC,      MVT::i32, Custom);
   setOperationAction(ISD::ADDE,      MVT::i32, Custom);
@@ -1344,6 +1345,10 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::SMLALTT:       return "ARMISD::SMLALTT";
   case ARMISD::SMULWB:        return "ARMISD::SMULWB";
   case ARMISD::SMULWT:        return "ARMISD::SMULWT";
+  case ARMISD::SMLALD:        return "ARMISD::SMLALD";
+  case ARMISD::SMLALDX:       return "ARMISD::SMLALDX";
+  case ARMISD::SMLSLD:        return "ARMISD::SMLSLD";
+  case ARMISD::SMLSLDX:       return "ARMISD::SMLSLDX";
   case ARMISD::BUILD_VECTOR:  return "ARMISD::BUILD_VECTOR";
   case ARMISD::BFI:           return "ARMISD::BFI";
   case ARMISD::VORRIMM:       return "ARMISD::VORRIMM";
@@ -7722,6 +7727,37 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
+static void ReplaceLongIntrinsic(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                 SelectionDAG &DAG) {
+  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned Opc = 0;
+  if (IntNo == Intrinsic::arm_smlald)
+    Opc = ARMISD::SMLALD;
+  else if (IntNo == Intrinsic::arm_smlaldx)
+    Opc = ARMISD::SMLALDX;
+  else if (IntNo == Intrinsic::arm_smlsld)
+    Opc = ARMISD::SMLSLD;
+  else if (IntNo == Intrinsic::arm_smlsldx)
+    Opc = ARMISD::SMLSLDX;
+  else
+    return;
+
+  SDLoc dl(N);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32,
+                           N->getOperand(3),
+                           DAG.getConstant(0, dl, MVT::i32));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32,
+                           N->getOperand(3),
+                           DAG.getConstant(1, dl, MVT::i32));
+
+  SDValue LongMul = DAG.getNode(Opc, dl,
+                                DAG.getVTList(MVT::i32, MVT::i32),
+                                N->getOperand(1), N->getOperand(2),
+                                Lo, Hi);
+  Results.push_back(LongMul.getValue(0));
+  Results.push_back(LongMul.getValue(1));
+}
+
 /// ReplaceNodeResults - Replace the results of node with an illegal result
 /// type with new values built out of custom code.
 void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
@@ -7763,6 +7799,8 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ATOMIC_CMP_SWAP:
     ReplaceCMP_SWAP_64Results(N, Results, DAG);
     return;
+  case ISD::INTRINSIC_WO_CHAIN:
+    return ReplaceLongIntrinsic(N, Results, DAG);
   }
   if (Res.getNode())
     Results.push_back(Res);

@@ -2061,4 +2061,85 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineFileIndex) {
                             "file index 5 (valid values are [1,1]):");
 }
 
+TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
+  // Create a two compile units where both compile units share the same
+  // DW_AT_stmt_list value and verify we report the error correctly.
+  StringRef yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+      - /tmp/foo.c
+    debug_abbrev:    
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:      
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_stmt_list
+            Form:            DW_FORM_sec_offset
+    debug_info:      
+      - Length:          
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:         
+          - AbbrCode:        0x00000001
+            Values:          
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000000000
+      - Length:          
+          TotalLength:     16
+        Version:         4
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:         
+          - AbbrCode:        0x00000001
+            Values:          
+              - Value:           0x000000000000000D
+              - Value:           0x0000000000000000
+    debug_line:      
+      - Length:          
+          TotalLength:     60
+        Version:         2
+        PrologueLength:  34
+        MinInstLength:   1
+        DefaultIsStmt:   1
+        LineBase:        251
+        LineRange:       14
+        OpcodeBase:      13
+        StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+        IncludeDirs:     
+          - /tmp
+        Files:           
+          - Name:            main.c
+            DirIdx:          1
+            ModTime:         0
+            Length:          0
+        Opcodes:         
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          9
+            SubOpcode:       DW_LNE_set_address
+            Data:            4096
+          - Opcode:          DW_LNS_advance_line
+            SData:           9
+            Data:            4096
+          - Opcode:          DW_LNS_copy
+            Data:            4096
+          - Opcode:          DW_LNS_advance_pc
+            Data:            256
+          - Opcode:          DW_LNS_extended_op
+            ExtLen:          1
+            SubOpcode:       DW_LNE_end_sequence
+            Data:            256
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_TRUE((bool)ErrOrSections);
+  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  VerifyError(DwarfContext, "error: two compile unit DIEs, 0x0000000b and "
+                            "0x0000001f, have the same DW_AT_stmt_list section "
+                            "offset:");
+}
+
 } // end anonymous namespace

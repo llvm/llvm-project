@@ -1658,11 +1658,17 @@ public:
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
 
+  /// Adds the attribute to the indicated argument
+  void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
+
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
+
+  /// Removes the attribute from the given argument
+  void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
 
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -1734,11 +1740,9 @@ public:
     return Attrs.getDereferenceableOrNullBytes(i);
   }
 
-  /// @brief Determine if the parameter or return value is marked with NoAlias
-  /// attribute.
-  /// @param n The parameter to check. 1 is the first parameter, 0 is the return
-  bool doesNotAlias(unsigned n) const {
-    return Attrs.hasAttribute(n, Attribute::NoAlias);
+  /// @brief Determine if the return value is marked with NoAlias attribute.
+  bool returnDoesNotAlias() const {
+    return Attrs.hasAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
 
   /// Return true if the call should not be treated as a call to a
@@ -3750,11 +3754,17 @@ public:
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
 
+  /// Adds the attribute to the indicated argument
+  void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
+
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
+
+  /// Removes the attribute from the given argument
+  void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
 
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -3827,11 +3837,9 @@ public:
     return Attrs.getDereferenceableOrNullBytes(i);
   }
 
-  /// @brief Determine if the parameter or return value is marked with NoAlias
-  /// attribute.
-  /// @param n The parameter to check. 1 is the first parameter, 0 is the return
-  bool doesNotAlias(unsigned n) const {
-    return Attrs.hasAttribute(n, Attribute::NoAlias);
+  /// @brief Determine if the return value is marked with NoAlias attribute.
+  bool returnDoesNotAlias() const {
+    return Attrs.hasAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
 
   /// Return true if the call should not be treated as a call to a

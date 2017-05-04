@@ -4595,8 +4595,8 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     unsigned BitWidth = I->getType()->getScalarSizeInBits();
     KnownBits Known(BitWidth);
     computeKnownBits(I, Known, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
-    if ((Known.Zero | Known.One).isAllOnesValue())
-      Result = ConstantInt::get(I->getType(), Known.One);
+    if (Known.isConstant())
+      Result = ConstantInt::get(I->getType(), Known.getConstant());
   }
 
   /// If called on unreachable code, the above logic may report that the

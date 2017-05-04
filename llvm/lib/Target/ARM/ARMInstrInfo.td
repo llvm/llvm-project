@@ -99,6 +99,11 @@ def SDT_LongMac  : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
                                         SDTCisSameAs<0, 4>,
                                         SDTCisSameAs<0, 5>]>;
 
+def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
+def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
+def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
+def ARMSmlsldx       : SDNode<"ARMISD::SMLSLDX", SDT_LongMac>;
+
 // Node definitions.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
@@ -870,7 +875,9 @@ def imm1_16_XFORM: SDNodeXForm<imm, [{
                                    MVT::i32);
 }]>;
 def Imm1_16AsmOperand: ImmAsmOperandMinusOne<1,16> { let Name = "Imm1_16"; }
-def imm1_16 : Operand<i32>, PatLeaf<(imm), [{ return Imm > 0 && Imm <= 16; }],
+def imm1_16 : Operand<i32>, ImmLeaf<i32, [{
+    return Imm > 0 && Imm <= 16;
+  }],
     imm1_16_XFORM> {
   let PrintMethod = "printImmPlusOneOperand";
   let ParserMatchClass = Imm1_16AsmOperand;
@@ -1983,7 +1990,9 @@ def : InstAlias<"sevl$p", (HINT 5, pred:$p)>, Requires<[IsARM, HasV8]>;
 def : InstAlias<"esb$p", (HINT 16, pred:$p)>, Requires<[IsARM, HasRAS]>;
 
 def SEL : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), DPFrm, NoItinerary, "sel",
-             "\t$Rd, $Rn, $Rm", []>, Requires<[IsARM, HasV6]> {
+             "\t$Rd, $Rn, $Rm",
+             [(set GPR:$Rd, (int_arm_sel GPR:$Rn, GPR:$Rm))]>,
+             Requires<[IsARM, HasV6]> {
   bits<4> Rd;
   bits<4> Rn;
   bits<4> Rm;
@@ -3472,8 +3481,12 @@ def : ARMV6Pat<(add rGPR:$Rn, (sext_inreg (srl rGPR:$Rm, imm8_or_16:$rot),
                (SXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 
 def SXTB16  : AI_ext_rrot_np<0b01101000, "sxtb16">;
+def : ARMV6Pat<(int_arm_sxtb16 GPR:$Src),
+               (SXTB16 GPR:$Src, 0)>;
 
 def SXTAB16 : AI_exta_rrot_np<0b01101000, "sxtab16">;
+def : ARMV6Pat<(int_arm_sxtab16 GPR:$LHS, GPR:$RHS),
+               (SXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
 
 // Zero extenders
 
@@ -3493,6 +3506,8 @@ def UXTB16 : AI_ext_rrot<0b01101100,
 //               (UXTB16r_rot GPR:$Src, 3)>;
 def : ARMV6Pat<(and (srl GPR:$Src, (i32 8)), 0xFF00FF),
                (UXTB16 GPR:$Src, 1)>;
+def : ARMV6Pat<(int_arm_uxtb16 GPR:$Src),
+               (UXTB16 GPR:$Src, 0)>;
 
 def UXTAB : AI_exta_rrot<0b01101110, "uxtab",
                         BinOpFrag<(add node:$LHS, (and node:$RHS, 0x00FF))>>;
@@ -3507,6 +3522,8 @@ def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot), 0xFFFF)),
 
 // This isn't safe in general, the add is two 16-bit units, not a 32-bit add.
 def UXTAB16 : AI_exta_rrot_np<0b01101100, "uxtab16">;
+def : ARMV6Pat<(int_arm_uxtab16 GPR:$LHS, GPR:$RHS),
+               (UXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
 
 
 def SBFX  : I<(outs GPRnopc:$Rd),
@@ -3633,71 +3650,85 @@ class AAI<bits<8> op27_20, bits<8> op11_4, string opc,
   let Unpredictable{11-8} = 0b1111;
 }
 
+// Wrappers around the AAI class
+class AAIRevOpr<bits<8> op27_20, bits<8> op11_4, string opc,
+                list<dag> pattern = []>
+  : AAI<op27_20, op11_4, opc,
+        pattern,
+        (ins GPRnopc:$Rm, GPRnopc:$Rn),
+        "\t$Rd, $Rm, $Rn">;
+
+class AAIIntrinsic<bits<8> op27_20, bits<8> op11_4, string opc,
+                 Intrinsic intrinsic>
+  : AAI<op27_20, op11_4, opc,
+        [(set GPRnopc:$Rd, (intrinsic GPRnopc:$Rn, GPRnopc:$Rm))]>;
+
 // Saturating add/subtract
+let hasSideEffects = 1 in {
+def QADD8   : AAIIntrinsic<0b01100010, 0b11111001, "qadd8", int_arm_qadd8>;
+def QADD16  : AAIIntrinsic<0b01100010, 0b11110001, "qadd16", int_arm_qadd16>;
+def QSUB16  : AAIIntrinsic<0b01100010, 0b11110111, "qsub16", int_arm_qsub16>;
+def QSUB8   : AAIIntrinsic<0b01100010, 0b11111111, "qsub8", int_arm_qsub8>;
 
+def QDADD   : AAIRevOpr<0b00010100, 0b00000101, "qdadd",
+              [(set GPRnopc:$Rd, (int_arm_qadd (int_arm_qadd GPRnopc:$Rm,
+                                                             GPRnopc:$Rm),
+                                  GPRnopc:$Rn))]>;
+def QDSUB   : AAIRevOpr<0b00010110, 0b00000101, "qdsub",
+              [(set GPRnopc:$Rd, (int_arm_qsub GPRnopc:$Rm,
+                                  (int_arm_qadd GPRnopc:$Rn, GPRnopc:$Rn)))]>;
+def QSUB    : AAIRevOpr<0b00010010, 0b00000101, "qsub",
+              [(set GPRnopc:$Rd, (int_arm_qsub GPRnopc:$Rm, GPRnopc:$Rn))]>;
 let DecoderMethod = "DecodeQADDInstruction" in
-def QADD    : AAI<0b00010000, 0b00000101, "qadd",
-                  [(set GPRnopc:$Rd, (int_arm_qadd GPRnopc:$Rm, GPRnopc:$Rn))],
-                  (ins GPRnopc:$Rm, GPRnopc:$Rn), "\t$Rd, $Rm, $Rn">;
+  def QADD    : AAIRevOpr<0b00010000, 0b00000101, "qadd",
+                [(set GPRnopc:$Rd, (int_arm_qadd GPRnopc:$Rm, GPRnopc:$Rn))]>;
+}
 
-def QSUB    : AAI<0b00010010, 0b00000101, "qsub",
-                  [(set GPRnopc:$Rd, (int_arm_qsub GPRnopc:$Rm, GPRnopc:$Rn))],
-                  (ins GPRnopc:$Rm, GPRnopc:$Rn), "\t$Rd, $Rm, $Rn">;
-def QDADD   : AAI<0b00010100, 0b00000101, "qdadd", [],
-                  (ins GPRnopc:$Rm, GPRnopc:$Rn),
-                  "\t$Rd, $Rm, $Rn">;
-def QDSUB   : AAI<0b00010110, 0b00000101, "qdsub", [],
-                  (ins GPRnopc:$Rm, GPRnopc:$Rn),
-                  "\t$Rd, $Rm, $Rn">;
-
-def QADD16  : AAI<0b01100010, 0b11110001, "qadd16">;
-def QADD8   : AAI<0b01100010, 0b11111001, "qadd8">;
-def QASX    : AAI<0b01100010, 0b11110011, "qasx">;
-def QSAX    : AAI<0b01100010, 0b11110101, "qsax">;
-def QSUB16  : AAI<0b01100010, 0b11110111, "qsub16">;
-def QSUB8   : AAI<0b01100010, 0b11111111, "qsub8">;
-def UQADD16 : AAI<0b01100110, 0b11110001, "uqadd16">;
-def UQADD8  : AAI<0b01100110, 0b11111001, "uqadd8">;
-def UQASX   : AAI<0b01100110, 0b11110011, "uqasx">;
-def UQSAX   : AAI<0b01100110, 0b11110101, "uqsax">;
-def UQSUB16 : AAI<0b01100110, 0b11110111, "uqsub16">;
-def UQSUB8  : AAI<0b01100110, 0b11111111, "uqsub8">;
+def UQADD16 : AAIIntrinsic<0b01100110, 0b11110001, "uqadd16", int_arm_uqadd16>;
+def UQADD8  : AAIIntrinsic<0b01100110, 0b11111001, "uqadd8", int_arm_uqadd8>;
+def UQSUB16 : AAIIntrinsic<0b01100110, 0b11110111, "uqsub16", int_arm_uqsub16>;
+def UQSUB8  : AAIIntrinsic<0b01100110, 0b11111111, "uqsub8", int_arm_uqsub8>;
+def QASX    : AAIIntrinsic<0b01100010, 0b11110011, "qasx", int_arm_qasx>;
+def QSAX    : AAIIntrinsic<0b01100010, 0b11110101, "qsax", int_arm_qsax>;
+def UQASX   : AAIIntrinsic<0b01100110, 0b11110011, "uqasx", int_arm_uqasx>;
+def UQSAX   : AAIIntrinsic<0b01100110, 0b11110101, "uqsax", int_arm_uqsax>;
 
 // Signed/Unsigned add/subtract
 
-def SASX   : AAI<0b01100001, 0b11110011, "sasx">;
-def SADD16 : AAI<0b01100001, 0b11110001, "sadd16">;
-def SADD8  : AAI<0b01100001, 0b11111001, "sadd8">;
-def SSAX   : AAI<0b01100001, 0b11110101, "ssax">;
-def SSUB16 : AAI<0b01100001, 0b11110111, "ssub16">;
-def SSUB8  : AAI<0b01100001, 0b11111111, "ssub8">;
-def UASX   : AAI<0b01100101, 0b11110011, "uasx">;
-def UADD16 : AAI<0b01100101, 0b11110001, "uadd16">;
-def UADD8  : AAI<0b01100101, 0b11111001, "uadd8">;
-def USAX   : AAI<0b01100101, 0b11110101, "usax">;
-def USUB16 : AAI<0b01100101, 0b11110111, "usub16">;
-def USUB8  : AAI<0b01100101, 0b11111111, "usub8">;
+def SASX   : AAIIntrinsic<0b01100001, 0b11110011, "sasx", int_arm_sasx>;
+def SADD16 : AAIIntrinsic<0b01100001, 0b11110001, "sadd16", int_arm_sadd16>;
+def SADD8  : AAIIntrinsic<0b01100001, 0b11111001, "sadd8", int_arm_sadd8>;
+def SSAX   : AAIIntrinsic<0b01100001, 0b11110101, "ssax", int_arm_ssax>;
+def SSUB16 : AAIIntrinsic<0b01100001, 0b11110111, "ssub16", int_arm_ssub16>;
+def SSUB8  : AAIIntrinsic<0b01100001, 0b11111111, "ssub8", int_arm_ssub8>;
+def UASX   : AAIIntrinsic<0b01100101, 0b11110011, "uasx", int_arm_uasx>;
+def UADD16 : AAIIntrinsic<0b01100101, 0b11110001, "uadd16", int_arm_uadd16>;
+def UADD8  : AAIIntrinsic<0b01100101, 0b11111001, "uadd8", int_arm_uadd8>;
+def USAX   : AAIIntrinsic<0b01100101, 0b11110101, "usax", int_arm_usax>;
+def USUB16 : AAIIntrinsic<0b01100101, 0b11110111, "usub16", int_arm_usub16>;
+def USUB8  : AAIIntrinsic<0b01100101, 0b11111111, "usub8", int_arm_usub8>;
 
 // Signed/Unsigned halving add/subtract
 
-def SHASX   : AAI<0b01100011, 0b11110011, "shasx">;
-def SHADD16 : AAI<0b01100011, 0b11110001, "shadd16">;
-def SHADD8  : AAI<0b01100011, 0b11111001, "shadd8">;
-def SHSAX   : AAI<0b01100011, 0b11110101, "shsax">;
-def SHSUB16 : AAI<0b01100011, 0b11110111, "shsub16">;
-def SHSUB8  : AAI<0b01100011, 0b11111111, "shsub8">;
-def UHASX   : AAI<0b01100111, 0b11110011, "uhasx">;
-def UHADD16 : AAI<0b01100111, 0b11110001, "uhadd16">;
-def UHADD8  : AAI<0b01100111, 0b11111001, "uhadd8">;
-def UHSAX   : AAI<0b01100111, 0b11110101, "uhsax">;
-def UHSUB16 : AAI<0b01100111, 0b11110111, "uhsub16">;
-def UHSUB8  : AAI<0b01100111, 0b11111111, "uhsub8">;
+def SHASX   : AAIIntrinsic<0b01100011, 0b11110011, "shasx", int_arm_shasx>;
+def SHADD16 : AAIIntrinsic<0b01100011, 0b11110001, "shadd16", int_arm_shadd16>;
+def SHADD8  : AAIIntrinsic<0b01100011, 0b11111001, "shadd8", int_arm_shadd8>;
+def SHSAX   : AAIIntrinsic<0b01100011, 0b11110101, "shsax", int_arm_shsax>;
+def SHSUB16 : AAIIntrinsic<0b01100011, 0b11110111, "shsub16", int_arm_shsub16>;
+def SHSUB8  : AAIIntrinsic<0b01100011, 0b11111111, "shsub8", int_arm_shsub8>;
+def UHASX   : AAIIntrinsic<0b01100111, 0b11110011, "uhasx", int_arm_uhasx>;
+def UHADD16 : AAIIntrinsic<0b01100111, 0b11110001, "uhadd16", int_arm_uhadd16>;
+def UHADD8  : AAIIntrinsic<0b01100111, 0b11111001, "uhadd8", int_arm_uhadd8>;
+def UHSAX   : AAIIntrinsic<0b01100111, 0b11110101, "uhsax", int_arm_uhsax>;
+def UHSUB16 : AAIIntrinsic<0b01100111, 0b11110111, "uhsub16", int_arm_uhsub16>;
+def UHSUB8  : AAIIntrinsic<0b01100111, 0b11111111, "uhsub8", int_arm_uhsub8>;
 
 // Unsigned Sum of Absolute Differences [and Accumulate].
 
 def USAD8  : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
                 MulFrm /* for convenience */, NoItinerary, "usad8",
-                "\t$Rd, $Rn, $Rm", []>,
+                "\t$Rd, $Rn, $Rm",
+             [(set GPR:$Rd, (int_arm_usad8 GPR:$Rn, GPR:$Rm))]>,
              Requires<[IsARM, HasV6]>, Sched<[WriteALU, ReadALU, ReadALU]> {
   bits<4> Rd;
   bits<4> Rn;
@@ -3711,7 +3742,8 @@ def USAD8  : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
 }
 def USADA8 : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
                 MulFrm /* for convenience */, NoItinerary, "usada8",
-                "\t$Rd, $Rn, $Rm, $Ra", []>,
+                "\t$Rd, $Rn, $Rm, $Ra",
+             [(set GPR:$Rd, (int_arm_usada8 GPR:$Rn, GPR:$Rm, GPR:$Ra))]>,
              Requires<[IsARM, HasV6]>, Sched<[WriteALU, ReadALU, ReadALU]>{
   bits<4> Rd;
   bits<4> Rn;
@@ -3726,7 +3758,6 @@ def USADA8 : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
 }
 
 // Signed/Unsigned saturate
-
 def SSAT : AI<(outs GPRnopc:$Rd),
               (ins imm1_32:$sat_imm, GPRnopc:$Rn, shift_imm:$sh),
               SatFrm, NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
@@ -3795,6 +3826,10 @@ def : ARMV6Pat<(int_arm_usat GPRnopc:$a, imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, 0)>;
 def : ARMPat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
              (SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
+def : ARMV6Pat<(int_arm_ssat16 GPRnopc:$a, imm1_16:$pos),
+               (SSAT16 imm1_16:$pos, GPRnopc:$a)>;
+def : ARMV6Pat<(int_arm_usat16 GPRnopc:$a, imm0_15:$pos),
+               (USAT16 imm0_15:$pos, GPRnopc:$a)>;
 
 //===----------------------------------------------------------------------===//
 //  Bitwise Instructions.
@@ -4220,8 +4255,8 @@ multiclass AI_smla<string opc> {
               IIC_iMAC16, !strconcat(opc, "wt"), "\t$Rd, $Rn, $Rm, $Ra",
               [(set GPRnopc:$Rd,
                     (add GPR:$Ra, (ARMsmulwt GPRnopc:$Rn, GPRnopc:$Rm)))]>,
-           Requires<[IsARM, HasV5TE, UseMulOps]>,
-           Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
+            Requires<[IsARM, HasV5TE, UseMulOps]>,
+            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
   }
 }
 
@@ -4255,7 +4290,8 @@ def : ARMV5TEPat<(ARMsmlaltt GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
 // Helper class for AI_smld.
 class AMulDualIbase<bit long, bit sub, bit swap, dag oops, dag iops,
                     InstrItinClass itin, string opc, string asm>
-  : AI<oops, iops, MulFrm, itin, opc, asm, []>, Requires<[IsARM, HasV6]> {
+  : AI<oops, iops, MulFrm, itin, opc, asm, []>,
+       Requires<[IsARM, HasV6]> {
   bits<4> Rn;
   bits<4> Rm;
   let Inst{27-23} = 0b01110;
@@ -4305,19 +4341,39 @@ multiclass AI_smld<bit sub, string opc> {
           Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 
   def LD: AMulDualI64<1, sub, 0, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                  (ins GPRnopc:$Rn, GPRnopc:$Rm), NoItinerary,
+                  (ins GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+                  NoItinerary,
                   !strconcat(opc, "ld"), "\t$RdLo, $RdHi, $Rn, $Rm">,
+                  RegConstraint<"$RLo = $RdLo, $RHi = $RdHi">,
           Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
 
   def LDX : AMulDualI64<1, sub, 1, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                  (ins GPRnopc:$Rn, GPRnopc:$Rm), NoItinerary,
+                  (ins GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+                  NoItinerary,
                   !strconcat(opc, "ldx"),"\t$RdLo, $RdHi, $Rn, $Rm">,
+                  RegConstraint<"$RLo = $RdLo, $RHi = $RdHi">,
              Sched<[WriteMUL64Lo, WriteMUL64Hi, ReadMUL, ReadMUL]>;
-
 }
 
 defm SMLA : AI_smld<0, "smla">;
 defm SMLS : AI_smld<1, "smls">;
+
+def : ARMV6Pat<(int_arm_smlad GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
+               (SMLAD GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra)>;
+def : ARMV6Pat<(int_arm_smladx GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
+               (SMLADX GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra)>;
+def : ARMV6Pat<(int_arm_smlsd GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
+               (SMLSD GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra)>;
+def : ARMV6Pat<(int_arm_smlsdx GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
+               (SMLSDX GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra)>;
+def : ARMV6Pat<(ARMSmlald GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+               (SMLALD GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi)>;
+def : ARMV6Pat<(ARMSmlaldx GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+               (SMLALDX GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi)>;
+def : ARMV6Pat<(ARMSmlsld GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+               (SMLSLD GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi)>;
+def : ARMV6Pat<(ARMSmlsldx GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+               (SMLSLDX GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi)>;
 
 multiclass AI_sdml<bit sub, string opc> {
 
@@ -4331,6 +4387,15 @@ multiclass AI_sdml<bit sub, string opc> {
 
 defm SMUA : AI_sdml<0, "smua">;
 defm SMUS : AI_sdml<1, "smus">;
+
+def : ARMV6Pat<(int_arm_smuad GPRnopc:$Rn, GPRnopc:$Rm),
+               (SMUAD GPRnopc:$Rn, GPRnopc:$Rm)>;
+def : ARMV6Pat<(int_arm_smuadx GPRnopc:$Rn, GPRnopc:$Rm),
+               (SMUADX GPRnopc:$Rn, GPRnopc:$Rm)>;
+def : ARMV6Pat<(int_arm_smusd GPRnopc:$Rn, GPRnopc:$Rm),
+               (SMUSD GPRnopc:$Rn, GPRnopc:$Rm)>;
+def : ARMV6Pat<(int_arm_smusdx GPRnopc:$Rn, GPRnopc:$Rm),
+               (SMUSDX GPRnopc:$Rn, GPRnopc:$Rm)>;
 
 //===----------------------------------------------------------------------===//
 //  Division Instructions (ARMv7-A with virtualization extension)
@@ -5647,6 +5712,32 @@ def : ARMV5MOPat<(add GPR:$acc,
                       (mul (sra GPR:$a, (i32 16)), sext_16_node:$b)),
                  (SMLATB GPR:$a, GPR:$b, GPR:$acc)>,
       Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
+
+def : ARMV5TEPat<(int_arm_smulbb GPR:$a, GPR:$b),
+                 (SMULBB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(int_arm_smulbt GPR:$a, GPR:$b),
+                 (SMULBT GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(int_arm_smultb GPR:$a, GPR:$b),
+                 (SMULTB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(int_arm_smultt GPR:$a, GPR:$b),
+                 (SMULTT GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(int_arm_smulwb GPR:$a, GPR:$b),
+                 (SMULWB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(int_arm_smulwt GPR:$a, GPR:$b),
+                 (SMULWT GPR:$a, GPR:$b)>;
+
+def : ARMV5TEPat<(int_arm_smlabb GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLABB GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5TEPat<(int_arm_smlabt GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLABT GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5TEPat<(int_arm_smlatb GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLATB GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5TEPat<(int_arm_smlatt GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLATT GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5TEPat<(int_arm_smlawb GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLAWB GPR:$a, GPR:$b, GPR:$acc)>;
+def : ARMV5TEPat<(int_arm_smlawt GPR:$a, GPR:$b, GPR:$acc),
+                 (SMLAWT GPR:$a, GPR:$b, GPR:$acc)>;
 
 // Pre-v7 uses MCR for synchronization barriers.
 def : ARMPat<(ARMMemBarrierMCR GPR:$zero), (MCR 15, 0, GPR:$zero, 7, 10, 5)>,

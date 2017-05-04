@@ -1,13 +1,5 @@
 // Pattern fragment that combines the value type and the register class
 // into a single parameter.
-// The pat frags in the definitions below need to have a named register,
-// otherwise i32 will be assumed regardless of the register class. The
-// name of the register does not matter.
-def I1  : PatLeaf<(i1 PredRegs:$R)>;
-def I32 : PatLeaf<(i32 IntRegs:$R)>;
-def I64 : PatLeaf<(i64 DoubleRegs:$R)>;
-def F32 : PatLeaf<(f32 IntRegs:$R)>;
-def F64 : PatLeaf<(f64 DoubleRegs:$R)>;
 
 // Pattern fragments to extract the low and high subregisters from a
 // 64-bit value.

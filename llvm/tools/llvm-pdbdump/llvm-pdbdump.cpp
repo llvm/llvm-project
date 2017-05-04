@@ -424,21 +424,6 @@ cl::list<std::string> InputFilename(cl::Positional,
 
 static ExitOnError ExitOnErr;
 
-static uint32_t
-getFileChecksumOffset(StringRef FileName,
-                      ModuleDebugFileChecksumFragment &Checksums,
-                      PDBStringTableBuilder &Strings) {
-  // The offset in the line info record is the offset of the checksum
-  // entry for the corresponding file.  That entry then contains an
-  // offset into the global string table of the file name.  So to
-  // compute the proper offset to write into the line info record, we
-  // must first get its offset in the global string table, then ask the
-  // checksum builder to find the offset in its serialized buffer that
-  // it mapped that filename string table offset to.
-  uint32_t StringOffset = Strings.insert(FileName);
-  return Checksums.mapChecksumOffset(StringOffset);
-}
-
 static void yamlToPdb(StringRef Path) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
@@ -490,6 +475,8 @@ static void yamlToPdb(StringRef Path) {
   for (auto F : Info.Features)
     InfoBuilder.addFeature(F);
 
+  auto &Strings = Builder.getStringTableBuilder().getStrings();
+
   const auto &Dbi = YamlObj.DbiStream.getValueOr(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(Dbi.Age);
@@ -516,35 +503,24 @@ static void yamlToPdb(StringRef Path) {
       // File Checksums must be emitted before line information, because line
       // info records use offsets into the checksum buffer to reference a file's
       // source file name.
-      auto Checksums = llvm::make_unique<ModuleDebugFileChecksumFragment>();
+      auto Checksums =
+          llvm::make_unique<ModuleDebugFileChecksumFragment>(Strings);
       auto &ChecksumRef = *Checksums;
       if (!FLI.FileChecksums.empty()) {
-        auto &Strings = Builder.getStringTableBuilder();
-        for (auto &FC : FLI.FileChecksums) {
-          uint32_t STOffset = Strings.insert(FC.FileName);
-          Checksums->addChecksum(STOffset, FC.Kind, FC.ChecksumBytes.Bytes);
-        }
+        for (auto &FC : FLI.FileChecksums)
+          Checksums->addChecksum(FC.FileName, FC.Kind, FC.ChecksumBytes.Bytes);
       }
       ModiBuilder.setC13FileChecksums(std::move(Checksums));
 
-      // FIXME: StringTable / StringTableBuilder should really be in
-      // DebugInfoCodeView.  This would allow us to construct the
-      // ModuleDebugLineFragment with a reference to the string table,
-      // and we could just pass strings around rather than having to
-      // remember how to calculate the right offset.
-      auto &Strings = Builder.getStringTableBuilder();
-
       for (const auto &Fragment : FLI.LineFragments) {
-        auto Lines = llvm::make_unique<ModuleDebugLineFragment>();
+        auto Lines =
+            llvm::make_unique<ModuleDebugLineFragment>(ChecksumRef, Strings);
         Lines->setCodeSize(Fragment.CodeSize);
         Lines->setRelocationAddress(Fragment.RelocSegment,
                                     Fragment.RelocOffset);
         Lines->setFlags(Fragment.Flags);
         for (const auto &LC : Fragment.Blocks) {
-          uint32_t ChecksumOffset =
-              getFileChecksumOffset(LC.FileName, ChecksumRef, Strings);
-
-          Lines->createBlock(ChecksumOffset);
+          Lines->createBlock(LC.FileName);
           if (Lines->hasColumnInfo()) {
             for (const auto &Item : zip(LC.Lines, LC.Columns)) {
               auto &L = std::get<0>(Item);
@@ -567,18 +543,15 @@ static void yamlToPdb(StringRef Path) {
 
       for (const auto &Inlinee : FLI.Inlinees) {
         auto Inlinees = llvm::make_unique<ModuleDebugInlineeLineFragment>(
-            Inlinee.HasExtraFiles);
+            ChecksumRef, Inlinee.HasExtraFiles);
         for (const auto &Site : Inlinee.Sites) {
-          uint32_t FileOff =
-              getFileChecksumOffset(Site.FileName, ChecksumRef, Strings);
-
-          Inlinees->addInlineSite(Site.Inlinee, FileOff, Site.SourceLineNum);
+          Inlinees->addInlineSite(Site.Inlinee, Site.FileName,
+                                  Site.SourceLineNum);
           if (!Inlinee.HasExtraFiles)
             continue;
 
           for (auto EF : Site.ExtraFiles) {
-            FileOff = getFileChecksumOffset(EF, ChecksumRef, Strings);
-            Inlinees->addExtraFile(FileOff);
+            Inlinees->addExtraFile(EF);
           }
         }
         ModiBuilder.addC13Fragment(std::move(Inlinees));

@@ -45,58 +45,54 @@ struct CalleeInfo {
   }
 };
 
-/// Struct to hold value either by GUID or GlobalValue*. Values in combined
-/// indexes as well as indirect calls are GUIDs, all others are GlobalValues.
+class GlobalValueSummary;
+
+typedef std::vector<std::unique_ptr<GlobalValueSummary>> GlobalValueSummaryList;
+
+struct GlobalValueSummaryInfo {
+  /// The GlobalValue corresponding to this summary. This is only used in
+  /// per-module summaries.
+  const GlobalValue *GV = nullptr;
+
+  /// List of global value summary structures for a particular value held
+  /// in the GlobalValueMap. Requires a vector in the case of multiple
+  /// COMDAT values of the same name.
+  GlobalValueSummaryList SummaryList;
+};
+
+/// Map from global value GUID to corresponding summary structures. Use a
+/// std::map rather than a DenseMap so that pointers to the map's value_type
+/// (which are used by ValueInfo) are not invalidated by insertion. Also it will
+/// likely incur less overhead, as the value type is not very small and the size
+/// of the map is unknown, resulting in inefficiencies due to repeated
+/// insertions and resizing.
+typedef std::map<GlobalValue::GUID, GlobalValueSummaryInfo>
+    GlobalValueSummaryMapTy;
+
+/// Struct that holds a reference to a particular GUID in a global value
+/// summary.
 struct ValueInfo {
-  /// The value representation used in this instance.
-  enum ValueInfoKind {
-    VI_GUID,
-    VI_Value,
-  };
+  const GlobalValueSummaryMapTy::value_type *Ref = nullptr;
+  ValueInfo() = default;
+  ValueInfo(const GlobalValueSummaryMapTy::value_type *Ref) : Ref(Ref) {}
+  operator bool() const { return Ref; }
 
-  /// Union of the two possible value types.
-  union ValueUnion {
-    GlobalValue::GUID Id;
-    const GlobalValue *GV;
-    ValueUnion(GlobalValue::GUID Id) : Id(Id) {}
-    ValueUnion(const GlobalValue *GV) : GV(GV) {}
-  };
-
-  /// The value being represented.
-  ValueUnion TheValue;
-  /// The value representation.
-  ValueInfoKind Kind;
-  /// Constructor for a GUID value
-  ValueInfo(GlobalValue::GUID Id = 0) : TheValue(Id), Kind(VI_GUID) {}
-  /// Constructor for a GlobalValue* value
-  ValueInfo(const GlobalValue *V) : TheValue(V), Kind(VI_Value) {}
-  /// Accessor for GUID value
-  GlobalValue::GUID getGUID() const {
-    assert(Kind == VI_GUID && "Not a GUID type");
-    return TheValue.Id;
+  GlobalValue::GUID getGUID() const { return Ref->first; }
+  const GlobalValue *getValue() const { return Ref->second.GV; }
+  ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
+    return Ref->second.SummaryList;
   }
-  /// Accessor for GlobalValue* value
-  const GlobalValue *getValue() const {
-    assert(Kind == VI_Value && "Not a Value type");
-    return TheValue.GV;
-  }
-  bool isGUID() const { return Kind == VI_GUID; }
 };
 
 template <> struct DenseMapInfo<ValueInfo> {
-  static inline ValueInfo getEmptyKey() { return ValueInfo((GlobalValue *)-1); }
+  static inline ValueInfo getEmptyKey() {
+    return ValueInfo((GlobalValueSummaryMapTy::value_type *)-1);
+  }
   static inline ValueInfo getTombstoneKey() {
-    return ValueInfo((GlobalValue *)-2);
+    return ValueInfo((GlobalValueSummaryMapTy::value_type *)-2);
   }
-  static bool isEqual(ValueInfo L, ValueInfo R) {
-    if (L.isGUID() != R.isGUID())
-      return false;
-    return L.isGUID() ? (L.getGUID() == R.getGUID())
-                      : (L.getValue() == R.getValue());
-  }
-  static unsigned getHashValue(ValueInfo I) {
-    return I.isGUID() ? I.getGUID() : (uintptr_t)I.getValue();
-  }
+  static bool isEqual(ValueInfo L, ValueInfo R) { return L.Ref == R.Ref; }
+  static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.Ref; }
 };
 
 /// \brief Function and variable summary information to aid decisions and
@@ -483,19 +479,6 @@ struct TypeIdSummary {
 /// 160 bits SHA1
 typedef std::array<uint32_t, 5> ModuleHash;
 
-/// List of global value summary structures for a particular value held
-/// in the GlobalValueMap. Requires a vector in the case of multiple
-/// COMDAT values of the same name.
-typedef std::vector<std::unique_ptr<GlobalValueSummary>> GlobalValueSummaryList;
-
-/// Map from global value GUID to corresponding summary structures.
-/// Use a std::map rather than a DenseMap since it will likely incur
-/// less overhead, as the value type is not very small and the size
-/// of the map is unknown, resulting in inefficiencies due to repeated
-/// insertions and resizing.
-typedef std::map<GlobalValue::GUID, GlobalValueSummaryList>
-    GlobalValueSummaryMapTy;
-
 /// Type used for iterating through the global value summary map.
 typedef GlobalValueSummaryMapTy::const_iterator const_gvsummary_iterator;
 typedef GlobalValueSummaryMapTy::iterator gvsummary_iterator;
@@ -532,6 +515,11 @@ private:
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
+  GlobalValueSummaryMapTy::value_type *
+  getOrInsertValuePtr(GlobalValue::GUID GUID) {
+    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo{}).first;
+  }
+
 public:
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
@@ -539,21 +527,22 @@ public:
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
 
-  /// Get the list of global value summary objects for a given value name.
-  const GlobalValueSummaryList &getGlobalValueSummaryList(StringRef ValueName) {
-    return GlobalValueMap[GlobalValue::getGUID(ValueName)];
+  /// Return a ValueInfo for GUID if it exists, otherwise return ValueInfo().
+  ValueInfo getValueInfo(GlobalValue::GUID GUID) const {
+    auto I = GlobalValueMap.find(GUID);
+    return ValueInfo(I == GlobalValueMap.end() ? nullptr : &*I);
   }
 
-  /// Get the list of global value summary objects for a given value name.
-  const const_gvsummary_iterator
-  findGlobalValueSummaryList(StringRef ValueName) const {
-    return GlobalValueMap.find(GlobalValue::getGUID(ValueName));
+  /// Return a ValueInfo for \p GUID.
+  ValueInfo getOrInsertValueInfo(GlobalValue::GUID GUID) {
+    return ValueInfo(getOrInsertValuePtr(GUID));
   }
 
-  /// Get the list of global value summary objects for a given value GUID.
-  const const_gvsummary_iterator
-  findGlobalValueSummaryList(GlobalValue::GUID ValueGUID) const {
-    return GlobalValueMap.find(ValueGUID);
+  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+    auto VP = getOrInsertValuePtr(GV->getGUID());
+    VP->second.GV = GV;
+    return ValueInfo(VP);
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.
@@ -565,17 +554,18 @@ public:
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,
                              std::unique_ptr<GlobalValueSummary> Summary) {
-    addOriginalName(GlobalValue::getGUID(ValueName),
-                    Summary->getOriginalName());
-    GlobalValueMap[GlobalValue::getGUID(ValueName)].push_back(
-        std::move(Summary));
+    addGlobalValueSummary(getOrInsertValueInfo(GlobalValue::getGUID(ValueName)),
+                          std::move(Summary));
   }
 
-  /// Add a global value summary for a value of the given GUID.
-  void addGlobalValueSummary(GlobalValue::GUID ValueGUID,
+  /// Add a global value summary for the given ValueInfo.
+  void addGlobalValueSummary(ValueInfo VI,
                              std::unique_ptr<GlobalValueSummary> Summary) {
-    addOriginalName(ValueGUID, Summary->getOriginalName());
-    GlobalValueMap[ValueGUID].push_back(std::move(Summary));
+    addOriginalName(VI.getGUID(), Summary->getOriginalName());
+    // Here we have a notionally const VI, but the value it points to is owned
+    // by the non-const *this.
+    const_cast<GlobalValueSummaryMapTy::value_type *>(VI.Ref)
+        ->second.SummaryList.push_back(std::move(Summary));
   }
 
   /// Add an original name for the value of the given GUID.
@@ -593,16 +583,16 @@ public:
   /// not found.
   GlobalValueSummary *findSummaryInModule(GlobalValue::GUID ValueGUID,
                                           StringRef ModuleId) const {
-    auto CalleeInfoList = findGlobalValueSummaryList(ValueGUID);
-    if (CalleeInfoList == end()) {
+    auto CalleeInfo = getValueInfo(ValueGUID);
+    if (!CalleeInfo) {
       return nullptr; // This function does not have a summary
     }
     auto Summary =
-        llvm::find_if(CalleeInfoList->second,
+        llvm::find_if(CalleeInfo.getSummaryList(),
                       [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
                         return Summary->modulePath() == ModuleId;
                       });
-    if (Summary == CalleeInfoList->second.end())
+    if (Summary == CalleeInfo.getSummaryList().end())
       return nullptr;
     return Summary->get();
   }

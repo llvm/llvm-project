@@ -8,31 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
+
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::pdb;
 
 uint32_t PDBStringTableBuilder::insert(StringRef S) {
-  auto P = Strings.insert({S, StringSize});
-
-  // If a given string didn't exist in the string table, we want to increment
-  // the string table size.
-  if (P.second)
-    StringSize += S.size() + 1; // +1 for '\0'
-  return P.first->second;
-}
-
-uint32_t PDBStringTableBuilder::getStringIndex(StringRef S) {
-  auto Iter = Strings.find(S);
-  assert(Iter != Strings.end());
-  return Iter->second;
+  return Strings.insert(S);
 }
 
 static uint32_t computeBucketCount(uint32_t NumStrings) {
@@ -44,49 +36,52 @@ static uint32_t computeBucketCount(uint32_t NumStrings) {
   return (NumStrings + 1) * 1.25;
 }
 
-uint32_t PDBStringTableBuilder::finalize() {
-  uint32_t Size = 0;
-  Size += sizeof(PDBStringTableHeader);
-  Size += StringSize;
-  Size += sizeof(uint32_t); // Hash table begins with 4-byte size field.
+uint32_t PDBStringTableBuilder::calculateHashTableSize() const {
+  uint32_t Size = sizeof(uint32_t); // Hash table begins with 4-byte size field.
+  Size += sizeof(uint32_t) * computeBucketCount(Strings.size());
 
-  uint32_t BucketCount = computeBucketCount(Strings.size());
-  Size += BucketCount * sizeof(uint32_t);
-
-  Size +=
-      sizeof(uint32_t); // The /names stream ends with the number of strings.
   return Size;
 }
 
-Error PDBStringTableBuilder::commit(BinaryStreamWriter &Writer) const {
+uint32_t PDBStringTableBuilder::calculateSerializedSize() const {
+  uint32_t Size = 0;
+  Size += sizeof(PDBStringTableHeader);
+  Size += Strings.calculateSerializedSize();
+  Size += calculateHashTableSize();
+  Size += sizeof(uint32_t); // The /names stream ends with the string count.
+  return Size;
+}
+
+Error PDBStringTableBuilder::writeHeader(BinaryStreamWriter &Writer) const {
   // Write a header
   PDBStringTableHeader H;
   H.Signature = PDBStringTableSignature;
   H.HashVersion = 1;
-  H.ByteSize = StringSize;
+  H.ByteSize = Strings.calculateSerializedSize();
   if (auto EC = Writer.writeObject(H))
     return EC;
+  assert(Writer.bytesRemaining() == 0);
+  return Error::success();
+}
 
-  // Write a string table.
-  uint32_t StringStart = Writer.getOffset();
-  for (auto Pair : Strings) {
-    StringRef S = Pair.first;
-    uint32_t Offset = Pair.second;
-    Writer.setOffset(StringStart + Offset);
-    if (auto EC = Writer.writeCString(S))
-      return EC;
-  }
-  Writer.setOffset(StringStart + StringSize);
+Error PDBStringTableBuilder::writeStrings(BinaryStreamWriter &Writer) const {
+  if (auto EC = Strings.commit(Writer))
+    return EC;
 
+  assert(Writer.bytesRemaining() == 0);
+  return Error::success();
+}
+
+Error PDBStringTableBuilder::writeHashTable(BinaryStreamWriter &Writer) const {
   // Write a hash table.
   uint32_t BucketCount = computeBucketCount(Strings.size());
   if (auto EC = Writer.writeInteger(BucketCount))
     return EC;
   std::vector<ulittle32_t> Buckets(BucketCount);
 
-  for (auto Pair : Strings) {
-    StringRef S = Pair.first;
-    uint32_t Offset = Pair.second;
+  for (auto &Pair : Strings) {
+    StringRef S = Pair.getKey();
+    uint32_t Offset = Pair.getValue();
     uint32_t Hash = hashStringV1(S);
 
     for (uint32_t I = 0; I != BucketCount; ++I) {
@@ -102,7 +97,37 @@ Error PDBStringTableBuilder::commit(BinaryStreamWriter &Writer) const {
 
   if (auto EC = Writer.writeArray(ArrayRef<ulittle32_t>(Buckets)))
     return EC;
-  if (auto EC = Writer.writeInteger(static_cast<uint32_t>(Strings.size())))
+
+  assert(Writer.bytesRemaining() == 0);
+  return Error::success();
+}
+
+Error PDBStringTableBuilder::writeEpilogue(BinaryStreamWriter &Writer) const {
+  if (auto EC = Writer.writeInteger<uint32_t>(Strings.size()))
     return EC;
+  assert(Writer.bytesRemaining() == 0);
+  return Error::success();
+}
+
+Error PDBStringTableBuilder::commit(BinaryStreamWriter &Writer) const {
+  BinaryStreamWriter SectionWriter;
+
+  std::tie(SectionWriter, Writer) = Writer.split(sizeof(PDBStringTableHeader));
+  if (auto EC = writeHeader(SectionWriter))
+    return EC;
+
+  std::tie(SectionWriter, Writer) =
+      Writer.split(Strings.calculateSerializedSize());
+  if (auto EC = writeStrings(SectionWriter))
+    return EC;
+
+  std::tie(SectionWriter, Writer) = Writer.split(calculateHashTableSize());
+  if (auto EC = writeHashTable(SectionWriter))
+    return EC;
+
+  std::tie(SectionWriter, Writer) = Writer.split(sizeof(uint32_t));
+  if (auto EC = writeEpilogue(SectionWriter))
+    return EC;
+
   return Error::success();
 }

@@ -10,7 +10,9 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
+#include "llvm/DebugInfo/CodeView/StringTable.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -65,11 +67,15 @@ bool ModuleDebugLineFragmentRef::hasColumnInfo() const {
   return !!(Header->Flags & LF_HaveColumns);
 }
 
-ModuleDebugLineFragment::ModuleDebugLineFragment()
-    : ModuleDebugFragment(ModuleDebugFragmentKind::Lines) {}
+ModuleDebugLineFragment::ModuleDebugLineFragment(
+    ModuleDebugFileChecksumFragment &Checksums, StringTable &Strings)
+    : ModuleDebugFragment(ModuleDebugFragmentKind::Lines),
+      Checksums(Checksums) {}
 
-void ModuleDebugLineFragment::createBlock(uint32_t ChecksumBufferOffset) {
-  Blocks.emplace_back(ChecksumBufferOffset);
+void ModuleDebugLineFragment::createBlock(StringRef FileName) {
+  uint32_t Offset = Checksums.mapChecksumOffset(FileName);
+
+  Blocks.emplace_back(Offset);
 }
 
 void ModuleDebugLineFragment::addLineInfo(uint32_t Offset,

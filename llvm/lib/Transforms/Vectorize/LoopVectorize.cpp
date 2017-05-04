@@ -7178,7 +7178,7 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   if (VF == 1) {
     Type *ValTy = getMemInstValueType(I);
     unsigned Alignment = getMemInstAlignment(I);
-    unsigned AS = getMemInstAlignment(I);
+    unsigned AS = getMemInstAddressSpace(I);
 
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, I);

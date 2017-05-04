@@ -95,6 +95,44 @@ define i16 @ripple_nsw2(i16 %x, i16 %y) {
   ret i16 %c
 }
 
+; CHECK-LABEL: @ripple_nsw3
+; CHECK: add nsw i16 %a, %b
+define i16 @ripple_nsw3(i16 %x, i16 %y) {
+  %a = and i16 %y, 43691
+  %b = and i16 %x, 21843
+  %c = add i16 %a, %b
+  ret i16 %c
+}
+
+; Like the previous test, but flip %a and %b
+; CHECK-LABEL: @ripple_nsw4
+; CHECK: add nsw i16 %b, %a
+define i16 @ripple_nsw4(i16 %x, i16 %y) {
+  %a = and i16 %y, 43691
+  %b = and i16 %x, 21843
+  %c = add i16 %b, %a
+  ret i16 %c
+}
+
+; CHECK-LABEL: @ripple_nsw5
+; CHECK: add nsw i16 %a, %b
+define i16 @ripple_nsw5(i16 %x, i16 %y) {
+  %a = or i16 %y, 43691
+  %b = or i16 %x, 54613
+  %c = add i16 %a, %b
+  ret i16 %c
+}
+
+; Like the previous test, but flip %a and %b
+; CHECK-LABEL: @ripple_nsw6
+; CHECK: add nsw i16 %b, %a
+define i16 @ripple_nsw6(i16 %x, i16 %y) {
+  %a = or i16 %y, 43691
+  %b = or i16 %x, 54613
+  %c = add i16 %b, %a
+  ret i16 %c
+}
+
 ; CHECK-LABEL: @ripple_no_nsw1
 ; CHECK: add i32 %a, %x
 define i32 @ripple_no_nsw1(i32 %x, i32 %y) {
@@ -114,5 +152,43 @@ define i16 @ripple_no_nsw2(i16 %x, i16 %y) {
   %b = and i16 %x, 32767
 
   %c = add i16 %a, %b
+  ret i16 %c
+}
+
+; CHECK-LABEL: @ripple_no_nsw3
+; CHECK: add i16 %a, %b
+define i16 @ripple_no_nsw3(i16 %x, i16 %y) {
+  %a = and i16 %y, 43691
+  %b = and i16 %x, 21845
+  %c = add i16 %a, %b
+  ret i16 %c
+}
+
+; Like the previous test, but flip %a and %b
+; CHECK-LABEL: @ripple_no_nsw4
+; CHECK: add i16 %b, %a
+define i16 @ripple_no_nsw4(i16 %x, i16 %y) {
+  %a = and i16 %y, 43691
+  %b = and i16 %x, 21845
+  %c = add i16 %b, %a
+  ret i16 %c
+}
+
+; CHECK-LABEL: @ripple_no_nsw5
+; CHECK: add i16 %a, %b
+define i16 @ripple_no_nsw5(i16 %x, i16 %y) {
+  %a = or i16 %y, 43689
+  %b = or i16 %x, 54613
+  %c = add i16 %a, %b
+  ret i16 %c
+}
+
+; Like the previous test, but flip %a and %b
+; CHECK-LABEL: @ripple_no_nsw6
+; CHECK: add i16 %b, %a
+define i16 @ripple_no_nsw6(i16 %x, i16 %y) {
+  %a = or i16 %y, 43689
+  %b = or i16 %x, 54613
+  %c = add i16 %b, %a
   ret i16 %c
 }

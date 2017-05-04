@@ -37,7 +37,7 @@ bool CallLowering::lowerCall(
   for (auto &Arg : CS.args()) {
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
-    setArgFlags(OrigArg, i + 1, DL, CS);
+    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
     OrigArgs.push_back(OrigArg);
     ++i;
   }

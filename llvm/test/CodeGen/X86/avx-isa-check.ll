@@ -680,3 +680,8 @@ define   <4 x double> @_inreg4xdouble(double %a) {
   %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
   ret <4 x double> %c
 }
+
+define <8 x i32> @test_mul_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) #0 {
+  %ret = mul <8 x i32> %arg1, %arg2
+  ret <8 x i32> %ret
+}

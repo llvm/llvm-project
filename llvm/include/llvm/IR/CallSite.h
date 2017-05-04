@@ -339,12 +339,20 @@ public:
     CALLSITE_DELEGATE_SETTER(addAttribute(i, Attr));
   }
 
+  void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    CALLSITE_DELEGATE_SETTER(addParamAttr(ArgNo, Kind));
+  }
+
   void removeAttribute(unsigned i, Attribute::AttrKind Kind) {
     CALLSITE_DELEGATE_SETTER(removeAttribute(i, Kind));
   }
 
   void removeAttribute(unsigned i, StringRef Kind) {
     CALLSITE_DELEGATE_SETTER(removeAttribute(i, Kind));
+  }
+
+  void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    CALLSITE_DELEGATE_SETTER(removeParamAttr(ArgNo, Kind));
   }
 
   /// Return true if this function has the given attribute.
@@ -408,11 +416,9 @@ public:
     CALLSITE_DELEGATE_GETTER(getDereferenceableOrNullBytes(i));
   }
 
-  /// Determine if the parameter or return value is marked with NoAlias
-  /// attribute.
-  /// @param n The parameter to check. 1 is the first parameter, 0 is the return
-  bool doesNotAlias(unsigned n) const {
-    CALLSITE_DELEGATE_GETTER(doesNotAlias(n));
+  /// Determine if the return value is marked with NoAlias attribute.
+  bool returnDoesNotAlias() const {
+    CALLSITE_DELEGATE_GETTER(returnDoesNotAlias());
   }
 
   /// Return true if the call should not be treated as a call to a builtin.

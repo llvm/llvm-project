@@ -242,7 +242,7 @@ public:
   };
 
   // All the sleds to be emitted.
-  std::vector<XRayFunctionEntry> Sleds;
+  SmallVector<XRayFunctionEntry, 4> Sleds;
 
   // Helper function to record a given XRay sled.
   void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);

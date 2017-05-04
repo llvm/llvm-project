@@ -242,6 +242,7 @@ namespace {
     SDValue visitUSUBO(SDNode *N);
     SDValue visitADDE(SDNode *N);
     SDValue visitADDCARRY(SDNode *N);
+    SDValue visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn, SDNode *N);
     SDValue visitSUBE(SDNode *N);
     SDValue visitSUBCARRY(SDNode *N);
     SDValue visitMUL(SDNode *N);
@@ -2141,6 +2142,24 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
   // fold (addcarry x, y, false) -> (uaddo x, y)
   if (isNullConstant(CarryIn))
     return DAG.getNode(ISD::UADDO, SDLoc(N), N->getVTList(), N0, N1);
+
+  if (SDValue Combined = visitADDCARRYLike(N0, N1, CarryIn, N))
+    return Combined;
+
+  if (SDValue Combined = visitADDCARRYLike(N1, N0, CarryIn, N))
+    return Combined;
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
+                                       SDNode *N) {
+  // Iff the flag result is dead:
+  // (addcarry (add|uaddo X, Y), 0, Carry) -> (addcarry X, Y, Carry)
+  if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::UADDO) &&
+      isNullConstant(N1) && !N->hasAnyUseOfValue(1))
+    return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(),
+                       N0.getOperand(0), N0.getOperand(1), CarryIn);
 
   return SDValue();
 }

@@ -2761,37 +2761,63 @@ void AsmPrinter::emitXRayTable() {
 
   auto PrevSection = OutStreamer->getCurrentSectionOnly();
   auto Fn = MF->getFunction();
-  MCSection *Section = nullptr;
+  MCSection *InstMap = nullptr;
+  MCSection *FnSledIndex = nullptr;
   if (MF->getSubtarget().getTargetTriple().isOSBinFormatELF()) {
     if (Fn->hasComdat()) {
-      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+      InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
                                          ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
                                          Fn->getComdat()->getName());
+      FnSledIndex = OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS,
+                                             ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+                                             Fn->getComdat()->getName());
     } else {
-      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+      InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
                                          ELF::SHF_ALLOC);
+      FnSledIndex = OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS,
+                                             ELF::SHF_ALLOC);
     }
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
-    Section = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
+    InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
                                          SectionKind::getReadOnlyWithRel());
+    FnSledIndex = OutContext.getMachOSection("__DATA", "xray_fn_idx", 0,
+                                             SectionKind::getReadOnlyWithRel());
   } else {
     llvm_unreachable("Unsupported target");
   }
 
   // Before we switch over, we force a reference to a label inside the
-  // xray_instr_map section. Since this function is always called just
-  // before the function's end, we assume that this is happening after
-  // the last return instruction.
-
+  // xray_instr_map and xray_fn_idx sections. Since this function is always
+  // called just before the function's end, we assume that this is happening
+  // after the last return instruction. We also use the synthetic label in the
+  // xray_inster_map as a delimeter for the range of sleds for this function in
+  // the index.
   auto WordSizeBytes = MAI->getCodePointerSize();
-  MCSymbol *Tmp = OutContext.createTempSymbol("xray_synthetic_", true);
+  MCSymbol *SledsStart = OutContext.createTempSymbol("xray_synthetic_", true);
+  MCSymbol *IdxRef = OutContext.createTempSymbol("xray_fn_idx_synth_", true);
   OutStreamer->EmitCodeAlignment(16);
-  OutStreamer->EmitSymbolValue(Tmp, WordSizeBytes, false);
-  OutStreamer->SwitchSection(Section);
-  OutStreamer->EmitLabel(Tmp);
+  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes, false);
+  OutStreamer->EmitSymbolValue(IdxRef, WordSizeBytes, false);
+
+  // Now we switch to the instrumentation map section. Because this is done
+  // per-function, we are able to create an index entry that will represent the
+  // range of sleds associated with a function.
+  OutStreamer->SwitchSection(InstMap);
+  OutStreamer->EmitLabel(SledsStart);
   for (const auto &Sled : Sleds)
     Sled.emit(WordSizeBytes, OutStreamer.get(), CurrentFnSym);
+  MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_synthetic_end", true);
+  OutStreamer->EmitLabel(SledsEnd);
 
+  // We then emit a single entry in the index per function. We use the symbols
+  // that bound the instrumentation map as the range for a specific function.
+  // Each entry here will be 2 * word size aligned, as we're writing down two
+  // pointers. This should work for both 32-bit and 64-bit platforms.
+  OutStreamer->SwitchSection(FnSledIndex);
+  OutStreamer->EmitCodeAlignment(2 * WordSizeBytes);
+  OutStreamer->EmitLabel(IdxRef);
+  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes);
+  OutStreamer->EmitSymbolValue(SledsEnd, WordSizeBytes);
   OutStreamer->SwitchSection(PrevSection);
   Sleds.clear();
 }

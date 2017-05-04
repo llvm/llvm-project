@@ -7,6 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The pat frags in the definitions below need to have a named register,
+// otherwise i32 will be assumed regardless of the register class. The
+// name of the register does not matter.
+def I1  : PatLeaf<(i1 PredRegs:$R)>;
+def I32 : PatLeaf<(i32 IntRegs:$R)>;
+def I64 : PatLeaf<(i64 DoubleRegs:$R)>;
+def F32 : PatLeaf<(f32 IntRegs:$R)>;
+def F64 : PatLeaf<(f64 DoubleRegs:$R)>;
+
 let PrintMethod = "printGlobalOperand" in {
   def globaladdress : Operand<i32>;
   def globaladdressExt : Operand<i32>;
@@ -23,17 +32,20 @@ def DUPLEX_Pseudo : InstHexagon<(outs),
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
     isAsmParserOnly = 1 in
-def TFRI64_V2_ext : ALU64_rr<(outs DoubleRegs:$dst),
-                             (ins s32_0Imm:$src1, s8_0Imm:$src2),
-                             "$dst=combine(#$src1,#$src2)">;
+def TFRI64_V2_ext : InstHexagon<(outs DoubleRegs:$dst),
+    (ins s32_0Imm:$src1, s8_0Imm:$src2),
+    "$dst=combine(#$src1,#$src2)", [], "",
+    A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // HI/LO Instructions
 let isReMaterializable = 1, isMoveImm = 1, hasSideEffects = 0,
     hasNewValue = 1, opNewValue = 0 in
-class REG_IMMED<string RegHalf, bit Rs, bits<3> MajOp, bit MinOp>
+class REG_IMMED<string RegHalf, bit Rs, bits<3> MajOp, bit MinOp,
+                InstHexagon rootInst>
   : InstHexagon<(outs IntRegs:$dst),
-              (ins u16_0Imm:$imm_value),
-              "$dst"#RegHalf#"=#$imm_value", [], "", ALU32_2op_tc_1_SLOT0123, TypeALU32_2op>, OpcodeHexagon {
+                (ins u16_0Imm:$imm_value),
+                "$dst"#RegHalf#"=#$imm_value", [], "",
+                rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<5> dst;
     bits<32> imm_value;
 
@@ -46,8 +58,8 @@ class REG_IMMED<string RegHalf, bit Rs, bits<3> MajOp, bit MinOp>
 }
 
 let isAsmParserOnly = 1 in {
-  def LO : REG_IMMED<".l", 0b0, 0b001, 0b1>;
-  def HI : REG_IMMED<".h", 0b0, 0b010, 0b1>;
+  def LO : REG_IMMED<".l", 0b0, 0b001, 0b1, A2_tfril>;
+  def HI : REG_IMMED<".h", 0b0, 0b010, 0b1, A2_tfrih>;
 }
 
 let isReMaterializable = 1, isMoveImm = 1, isAsmParserOnly = 1 in {
@@ -59,11 +71,13 @@ let isReMaterializable = 1, isMoveImm = 1, isAsmParserOnly = 1 in {
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in
-def PS_true : SInst<(outs PredRegs:$dst), (ins), "", []>;
+def PS_true : InstHexagon<(outs PredRegs:$dst), (ins), "",
+              [(set I1:$dst, 1)], "", C2_orn.Itinerary, TypeCR>;
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in
-def PS_false : SInst<(outs PredRegs:$dst), (ins), "", []>;
+def PS_false : InstHexagon<(outs PredRegs:$dst), (ins), "",
+               [(set I1:$dst, 0)], "", C2_andn.Itinerary, TypeCR>;
 
 let Defs = [R29, R30], Uses = [R31, R30, R29], isPseudo = 1 in
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
@@ -90,10 +104,10 @@ def ENDLOOP1 : Endloop<(outs), (ins b30_2Imm:$offset),
 
 let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
-class LOOP_iBase<string mnemonic, Operand brOp, bit mustExtend = 0>
-         : CRInst<(outs), (ins brOp:$offset, u10_0Imm:$src2),
+class LOOP_iBase<string mnemonic, InstHexagon rootInst>
+         : InstHexagon <(outs), (ins b30_2Imm:$offset, u10_0Imm:$src2),
            #mnemonic#"($offset,#$src2)",
-           [], "" , CR_tc_3x_SLOT3> {
+           [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<10> src2;
 
@@ -110,10 +124,10 @@ class LOOP_iBase<string mnemonic, Operand brOp, bit mustExtend = 0>
 
 let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
-class LOOP_rBase<string mnemonic, Operand brOp, bit mustExtend = 0>
-         : CRInst<(outs), (ins brOp:$offset, IntRegs:$src2),
+class LOOP_rBase<string mnemonic, InstHexagon rootInst>
+         : InstHexagon<(outs), (ins b30_2Imm:$offset, IntRegs:$src2),
            #mnemonic#"($offset,$src2)",
-           [], "" ,CR_tc_3x_SLOT3> {
+           [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<5> src2;
 
@@ -126,27 +140,25 @@ class LOOP_rBase<string mnemonic, Operand brOp, bit mustExtend = 0>
     let Inst{4-3} = offset{3-2};
   }
 
-multiclass LOOP_ri<string mnemonic> {
-  let isCodeGenOnly = 1, isExtended = 1, opExtendable = 0 in {
-    def iext: LOOP_iBase<mnemonic, b30_2Imm, 1>;
-    def rext: LOOP_rBase<mnemonic, b30_2Imm, 1>;
-  }
+let Defs = [SA0, LC0, USR], isCodeGenOnly = 1, isExtended = 1,
+    opExtendable = 0 in {
+  def J2_loop0iext : LOOP_iBase<"loop0", J2_loop0i>;
+  def J2_loop1iext : LOOP_iBase<"loop1", J2_loop1i>;
 }
 
-
-let Defs = [SA0, LC0, USR] in
-defm J2_loop0 : LOOP_ri<"loop0">;
-
 // Interestingly only loop0's appear to set usr.lpcfg
-let Defs = [SA1, LC1] in
-defm J2_loop1 : LOOP_ri<"loop1">;
+let Defs = [SA1, LC1], isCodeGenOnly = 1, isExtended = 1, opExtendable = 0 in {
+  def J2_loop0rext : LOOP_rBase<"loop0", J2_loop0r>;
+  def J2_loop1rext : LOOP_rBase<"loop1", J2_loop1r>;
+}
 
 let isCall = 1, hasSideEffects = 1, isPredicable = 0,
     isExtended = 0, isExtendable = 1, opExtendable = 0,
     isExtentSigned = 1, opExtentBits = 24, opExtentAlign = 2 in
 class T_Call<string ExtStr>
-  : JInst<(outs), (ins a30_2Imm:$dst),
-      "call " # ExtStr # "$dst", [], "", J_tc_2early_SLOT23> {
+  : InstHexagon<(outs), (ins a30_2Imm:$dst),
+      "call " # ExtStr # "$dst", [], "", J2_call.Itinerary, TypeJ>,
+    OpcodeHexagon {
   let BaseOpcode = "call";
   bits<24> dst;
 
@@ -164,38 +176,24 @@ let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
     Defs = [PC, R31, R6, R7, P0] in
 def PS_call_stk : T_Call<"">;
 
-let isCall = 1, hasSideEffects = 1, cofMax1 = 1 in
-class JUMPR_MISC_CALLR<bit isPred, bit isPredNot,
-               dag InputDag = (ins IntRegs:$Rs)>
-  : JInst<(outs), InputDag,
-      !if(isPred, !if(isPredNot, "if (!$Pu) callr $Rs",
-                                 "if ($Pu) callr $Rs"),
-                                 "callr $Rs"),
-      [], "", J_tc_2early_SLOT2> {
+// Call, no return.
+let isCall = 1, hasSideEffects = 1, cofMax1 = 1, isCodeGenOnly = 1 in
+def PS_callr_nr: InstHexagon<(outs), (ins IntRegs:$Rs),
+    "callr $Rs", [], "", J2_callr.Itinerary, TypeJ>, OpcodeHexagon {
     bits<5> Rs;
     bits<2> Pu;
-    let isPredicated = isPred;
-    let isPredicatedFalse = isPredNot;
+    let isPredicatedFalse = 1;
 
     let IClass = 0b0101;
-    let Inst{27-25} = 0b000;
-    let Inst{24-23} = !if (isPred, 0b10, 0b01);
-    let Inst{22} = 0;
-    let Inst{21} = isPredNot;
-    let Inst{9-8} = !if (isPred, Pu, 0b00);
+    let Inst{27-21} = 0b0000101;
     let Inst{20-16} = Rs;
-
   }
-
-let isCodeGenOnly = 1 in {
-  def PS_callr_nr : JUMPR_MISC_CALLR<0, 1>; // Call, no return.
-}
 
 let isCall = 1, hasSideEffects = 1,
     isExtended = 0, isExtendable = 1, opExtendable = 0, isCodeGenOnly = 1,
-    BaseOpcode = "PS_call_nr", isExtentSigned = 1, opExtentAlign = 2,
-    Itinerary = J_tc_2early_SLOT23 in
-class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops>
+    BaseOpcode = "PS_call_nr", isExtentSigned = 1, opExtentAlign = 2 in
+class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops,
+              InstrItinClass itin>
   : Pseudo<(outs), iops, "">, PredRel {
     bits<2> Pu;
     bits<17> dst;
@@ -205,16 +203,18 @@ class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops>
     let isPredicatedFalse = isFalse;
 }
 
-def PS_call_nr : Call_nr<24, 0, 0, (ins s32_0Imm:$Ii)>;
-//def PS_call_nrt: Call_nr<17, 1, 0, (ins PredRegs:$Pu, s32_0Imm:$dst)>;
-//def PS_call_nrf: Call_nr<17, 1, 1, (ins PredRegs:$Pu, s32_0Imm:$dst)>;
+def PS_call_nr : Call_nr<24, 0, 0, (ins s32_0Imm:$Ii), J2_call.Itinerary>;
+//def PS_call_nrt: Call_nr<17, 1, 0, (ins PredRegs:$Pu, s32_0Imm:$dst),
+//                         J2_callt.Itinerary>;
+//def PS_call_nrf: Call_nr<17, 1, 1, (ins PredRegs:$Pu, s32_0Imm:$dst),
+//                         J2_callf.Itinerary>;
 
 let isBranch = 1, isIndirectBranch = 1, isBarrier = 1, Defs = [PC],
     isPredicable = 1, hasSideEffects = 0, InputType = "reg",
     cofMax1 = 1 in
-class T_JMPr
+class T_JMPr <InstHexagon rootInst>
   :  InstHexagon<(outs), (ins IntRegs:$dst), "jumpr $dst", [],
-                 "", J_tc_2early_SLOT2, TypeJ>, OpcodeHexagon {
+                 "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<5> dst;
 
     let IClass = 0b0101;
@@ -225,12 +225,12 @@ class T_JMPr
 // A return through builtin_eh_return.
 let isReturn = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 0,
     isCodeGenOnly = 1, Defs = [PC], Uses = [R28], isPredicable = 0 in
-def EH_RETURN_JMPR : T_JMPr;
+def EH_RETURN_JMPR : T_JMPr<J2_jumpr>;
 
 // Indirect tail-call.
 let isPseudo = 1, isCall = 1, isReturn = 1, isBarrier = 1, isPredicable = 0,
     isTerminator = 1, isCodeGenOnly = 1 in
-def PS_tailcall_r : T_JMPr;
+def PS_tailcall_r : T_JMPr<J2_jumpr>;
 
 //
 // Direct tail-calls.
@@ -262,11 +262,11 @@ class JumpOpcStr<string Mnemonic, bit New, bit Taken> {
 }
 let isBranch = 1, isIndirectBranch = 1, Defs = [PC], isPredicated = 1,
     hasSideEffects = 0, InputType = "reg", cofMax1 = 1 in
-class T_JMPr_c <bit PredNot, bit isPredNew, bit isTak>
+class T_JMPr_c <bit PredNot, bit isPredNew, bit isTak, InstHexagon rootInst>
   :  InstHexagon<(outs), (ins PredRegs:$src, IntRegs:$dst),
                  CondStr<"$src", !if(PredNot,0,1), isPredNew>.S #
                  JumpOpcStr<"jumpr", isPredNew, isTak>.S # " $dst",
-                 [], "", J_tc_2early_SLOT2, TypeJ>, OpcodeHexagon {
+                 [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
 
     let isTaken = isTak;
     let isPredicatedFalse = PredNot;
@@ -283,30 +283,25 @@ class T_JMPr_c <bit PredNot, bit isPredNew, bit isTak>
     let Inst{11} = isPredNew;
     let Inst{9-8} = src;
 }
-multiclass JMPR_Pred<bit PredNot> {
-  def NAME        : T_JMPr_c<PredNot, 0, 0>; // not taken
-  // Predicate new
-  def NAME#newpt  : T_JMPr_c<PredNot, 1, 1>; // taken
-  def NAME#new    : T_JMPr_c<PredNot, 1, 0>; // not taken
+
+let isTerminator = 1, hasSideEffects = 0, isReturn = 1, isCodeGenOnly = 1,
+    isBarrier = 1, BaseOpcode = "JMPret" in {
+  def PS_jmpret : T_JMPr<J2_jumpr>, PredNewRel;
+  def PS_jmprett : T_JMPr_c<0, 0, 0, J2_jumprt>, PredNewRel;
+  def PS_jmpretf : T_JMPr_c<1, 0, 0, J2_jumprf>, PredNewRel;
+  def PS_jmprettnew : T_JMPr_c<0, 1, 0, J2_jumprtnew>, PredNewRel;
+  def PS_jmpretfnew : T_JMPr_c<1, 1, 0, J2_jumprfnew>, PredNewRel;
+  def PS_jmprettnewpt : T_JMPr_c<0, 1, 1, J2_jumprtnewpt>, PredNewRel;
+  def PS_jmpretfnewpt : T_JMPr_c<1, 1, 1, J2_jumprfnewpt>, PredNewRel;
 }
-multiclass JMPR_base<string BaseOp> {
-  let BaseOpcode = BaseOp in {
-    def NAME : T_JMPr;
-    defm t : JMPR_Pred<0>;
-    defm f : JMPR_Pred<1>;
-  }
-}
-let isTerminator = 1, hasSideEffects = 0, isReturn = 1, isCodeGenOnly = 1, isBarrier = 1 in
-defm PS_jmpret : JMPR_base<"JMPret">, PredNewRel;
 
 //defm V6_vtran2x2_map : HexagonMapping<(outs VectorRegs:$Vy32, VectorRegs:$Vx32), (ins VectorRegs:$Vx32in, IntRegs:$Rt32), "vtrans2x2(${Vy32},${Vx32},${Rt32})", (V6_vshuff VectorRegs:$Vy32, VectorRegs:$Vx32, VectorRegs:$Vx32in, IntRegs:$Rt32)>;
 
 // The reason for the custom inserter is to record all ALLOCA instructions
 // in MachineFunctionInfo.
-let Defs = [R29], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1 in
-def PS_alloca: InstHexagon<(outs IntRegs:$Rd),
-      (ins IntRegs:$Rs, u32_0Imm:$A), "",
-      [], "", ALU32_2op_tc_1_SLOT0123, TypeALU32_2op>;
+let Defs = [R29], hasSideEffects = 1 in
+def PS_alloca: Pseudo <(outs IntRegs:$Rd),
+                       (ins IntRegs:$Rs, u32_0Imm:$A), "", []>;
 
 // Load predicate.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
@@ -322,35 +317,19 @@ def LDriw_mod : LDInst<(outs ModRegs:$dst),
                         (ins IntRegs:$addr, s32_0Imm:$off),
                         ".error \"should not emit\"", []>;
 
-// Vector load
-let Predicates = [HasV60T, UseHVX] in
-let mayLoad = 1, hasSideEffects = 0 in
-  class V6_LDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                  string cstr = "", InstrItinClass itin = CVI_VM_LD,
-                  IType type = TypeCVI_VM_LD>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
-
-// Vector store
-let Predicates = [HasV60T, UseHVX] in
-let mayStore = 1, hasSideEffects = 0 in
-class V6_STInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = CVI_VM_ST,
-                IType type = TypeCVI_VM_ST>
-: InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
 let isCodeGenOnly = 1, isPseudo = 1 in
-def PS_pselect : ALU64_rr<(outs DoubleRegs:$Rd),
+def PS_pselect: InstHexagon<(outs DoubleRegs:$Rd),
       (ins PredRegs:$Pu, DoubleRegs:$Rs, DoubleRegs:$Rt),
-      ".error \"should not emit\" ", []>;
+      ".error \"should not emit\" ", [], "", A2_tfrpt.Itinerary, TypeALU32_2op>;
 
 let isBranch = 1, isBarrier = 1, Defs = [PC], hasSideEffects = 0,
     isPredicable = 1,
     isExtendable = 1, opExtendable = 0, isExtentSigned = 1,
     opExtentBits = 24, opExtentAlign = 2, InputType = "imm" in
-class T_JMP<string ExtStr>
-  : JInst_CJUMP_UCJUMP<(outs), (ins b30_2Imm:$dst),
-      "jump " # ExtStr # "$dst",
-      [], "", J_tc_2early_CJUMP_UCJUMP_ARCHDEPSLOT> {
+class T_JMP: InstHexagon<(outs), (ins b30_2Imm:$dst),
+      "jump $dst",
+      [], "", J2_jump.Itinerary, TypeJ>, OpcodeHexagon {
     bits<24> dst;
     let IClass = 0b0101;
 
@@ -362,16 +341,16 @@ class T_JMP<string ExtStr>
 // Restore registers and dealloc return function call.
 let isCall = 1, isBarrier = 1, isReturn = 1, isTerminator = 1,
     Defs = [R29, R30, R31, PC], isPredicable = 0, isAsmParserOnly = 1 in {
-  def RESTORE_DEALLOC_RET_JMP_V4 : T_JMP<"">;
+  def RESTORE_DEALLOC_RET_JMP_V4 : T_JMP;
 
   let isExtended = 1, opExtendable = 0 in
-  def RESTORE_DEALLOC_RET_JMP_V4_EXT : T_JMP<"">;
+  def RESTORE_DEALLOC_RET_JMP_V4_EXT : T_JMP;
 
   let Defs = [R14, R15, R28, R29, R30, R31, PC] in {
-    def RESTORE_DEALLOC_RET_JMP_V4_PIC : T_JMP<"">;
+    def RESTORE_DEALLOC_RET_JMP_V4_PIC : T_JMP;
 
     let isExtended = 1, opExtendable = 0 in
-    def RESTORE_DEALLOC_RET_JMP_V4_EXT_PIC : T_JMP<"">;
+    def RESTORE_DEALLOC_RET_JMP_V4_EXT_PIC : T_JMP;
   }
 }
 
@@ -416,33 +395,38 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
   def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<"">, PredRel;
 }
 
-// Vector load/store pseudos
+// Vector store pseudos
+let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+    mayStore = 1, hasSideEffects = 0 in
+class STrivv_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-let isPseudo = 1, isCodeGenOnly = 1 in
-class STrivv_template<RegisterClass RC>
-  : V6_STInst<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src), "", []>;
-
-def PS_vstorerw_ai: STrivv_template<VecDblRegs>,
+def PS_vstorerw_ai: STrivv_template<VecDblRegs, V6_vS32b_ai>,
       Requires<[HasV60T,UseHVXSgl]>;
-def PS_vstorerwu_ai: STrivv_template<VecDblRegs>,
-      Requires<[HasV60T,UseHVXSgl]>;
-def PS_vstorerw_ai_128B: STrivv_template<VecDblRegs128B>,
-      Requires<[HasV60T,UseHVXDbl]>;
-def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B>,
+def PS_vstorerw_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32b_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
-
-let isPseudo = 1, isCodeGenOnly = 1 in
-class LDrivv_template<RegisterClass RC>
-  : V6_LDInst<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off), "", []>;
-
-def PS_vloadrw_ai: LDrivv_template<VecDblRegs>,
+def PS_vstorerwu_ai: STrivv_template<VecDblRegs, V6_vS32Ub_ai>,
       Requires<[HasV60T,UseHVXSgl]>;
-def PS_vloadrwu_ai: LDrivv_template<VecDblRegs>,
-      Requires<[HasV60T,UseHVXSgl]>;
-def PS_vloadrw_ai_128B: LDrivv_template<VecDblRegs128B>,
+def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32Ub_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
-def PS_vloadrwu_ai_128B: LDrivv_template<VecDblRegs128B>,
+
+// Vector load pseudos
+let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+    mayLoad = 1, hasSideEffects = 0 in
+class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
+
+def PS_vloadrw_ai: LDrivv_template<VecDblRegs, V6_vL32b_ai>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrw_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32b_ai_128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+
+def PS_vloadrwu_ai: LDrivv_template<VecDblRegs, V6_vL32Ub_ai>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrwu_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32Ub_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
 // Store vector predicate pseudo.
@@ -469,25 +453,23 @@ let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
             Requires<[HasV60T,UseHVXDbl]>;
 }
 
-class VSELInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = CVI_VA_DV,
-              IType type = TypeCVI_VA_DV>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+class VSELInst<dag outs, dag ins, InstHexagon rootInst>
+  : InstHexagon<outs, ins, "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-  def PS_vselect: VSELInst<(outs VectorRegs:$dst),
-        (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3), "", []>,
-        Requires<[HasV60T,UseHVXSgl]>;
-  def PS_vselect_128B: VSELInst<(outs VectorRegs128B:$dst),
-        (ins PredRegs:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
-        "", []>, Requires<[HasV60T,UseHVXDbl]>;
-  def PS_wselect: VSELInst<(outs VecDblRegs:$dst),
-        (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3), "", []>,
-        Requires<[HasV60T,UseHVXSgl]>;
-  def PS_wselect_128B: VSELInst<(outs VecDblRegs128B:$dst),
-        (ins PredRegs:$src1, VecDblRegs128B:$src2, VecDblRegs128B:$src3),
-        "", []>, Requires<[HasV60T,UseHVXDbl]>;
-}
+def PS_vselect: VSELInst<(outs VectorRegs:$dst),
+      (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3),
+      V6_vcmov>, Requires<[HasV60T,UseHVXSgl]>;
+def PS_vselect_128B: VSELInst<(outs VectorRegs128B:$dst),
+      (ins PredRegs:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
+      V6_vcmov>, Requires<[HasV60T,UseHVXDbl]>;
+
+def PS_wselect: VSELInst<(outs VecDblRegs:$dst),
+      (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3),
+      V6_vccombine>, Requires<[HasV60T,UseHVXSgl]>;
+def PS_wselect_128B: VSELInst<(outs VecDblRegs128B:$dst),
+      (ins PredRegs:$src1, VecDblRegs128B:$src2, VecDblRegs128B:$src3),
+      V6_vccombine>, Requires<[HasV60T,UseHVXDbl]>;
 
 // Store predicate.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
@@ -504,8 +486,10 @@ def STriw_mod : STInst<(outs),
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
     isAsmParserOnly = 1 in
-def TFRI64_V4 : ALU64_rr<(outs DoubleRegs:$dst), (ins u64_0Imm:$src1),
-                         "$dst = #$src1">;
+def TFRI64_V4 : InstHexagon<(outs DoubleRegs:$dst),
+    (ins u64_0Imm:$src1),
+    "$dst = #$src1", [], "",
+    A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // Hexagon doesn't have a vector multiply with C semantics.
 // Instead, generate a pseudo instruction that gets expaneded into two

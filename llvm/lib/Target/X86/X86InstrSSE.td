@@ -6718,22 +6718,23 @@ let Constraints = "$src1 = $dst" in {
                                   SSE_INTMUL_ITINS_P, 1>;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
+let Predicates = [HasAVX, NoVLX] in
   defm VPMULLD  : SS48I_binop_rm<0x40, "vpmulld", mul, v4i32, VR128,
                                  loadv2i64, i128mem, 0, SSE_PMULLD_ITINS>,
                                  VEX_4V, VEX_WIG;
+let Predicates = [HasAVX] in
   defm VPCMPEQQ : SS48I_binop_rm<0x29, "vpcmpeqq", X86pcmpeq, v2i64, VR128,
                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                  VEX_4V, VEX_WIG;
-}
-let Predicates = [HasAVX2] in {
+
+let Predicates = [HasAVX2, NoVLX] in
   defm VPMULLDY  : SS48I_binop_rm<0x40, "vpmulld", mul, v8i32, VR256,
                                   loadv4i64, i256mem, 0, SSE_PMULLD_ITINS>,
                                   VEX_4V, VEX_L, VEX_WIG;
+let Predicates = [HasAVX2] in
   defm VPCMPEQQY : SS48I_binop_rm<0x29, "vpcmpeqq", X86pcmpeq, v4i64, VR256,
                                   loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_L, VEX_WIG;
-}
 
 let Constraints = "$src1 = $dst" in {
   defm PMULLD  : SS48I_binop_rm<0x40, "pmulld", mul, v4i32, VR128,

@@ -29,6 +29,7 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/StringTable.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
@@ -124,7 +125,7 @@ private:
                                   StringRef SectionContents, StringRef Block);
 
   /// Given a .debug$S section, find the string table and file checksum table.
-  void initializeFileAndStringTables(StringRef Data);
+  void initializeFileAndStringTables(BinaryStreamReader &Reader);
 
   void cacheRelocations();
 
@@ -145,8 +146,12 @@ private:
   const llvm::object::COFFObjectFile *Obj;
   bool RelocCached = false;
   RelocMapTy RelocMap;
-  StringRef CVFileChecksumTable;
-  StringRef CVStringTable;
+
+  BinaryByteStream ChecksumContents;
+  VarStreamArray<FileChecksumEntry> CVFileChecksumTable;
+
+  BinaryByteStream StringTableContents;
+  StringTableRef CVStringTable;
 
   ScopedPrinter &Writer;
   TypeDatabase TypeDB;
@@ -186,7 +191,7 @@ public:
     return CD.getFileNameForFileOffset(FileOffset);
   }
 
-  StringRef getStringTable() override { return CD.CVStringTable; }
+  StringTableRef getStringTable() override { return CD.CVStringTable; }
 
 private:
   COFFDumper &CD;
@@ -725,30 +730,35 @@ void COFFDumper::printCodeViewDebugInfo() {
   }
 }
 
-void COFFDumper::initializeFileAndStringTables(StringRef Data) {
-  while (!Data.empty() && (CVFileChecksumTable.data() == nullptr ||
-                           CVStringTable.data() == nullptr)) {
+void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
+  while (Reader.bytesRemaining() > 0 &&
+         (!CVFileChecksumTable.valid() || !CVStringTable.valid())) {
     // The section consists of a number of subsection in the following format:
     // |SubSectionType|SubSectionSize|Contents...|
     uint32_t SubType, SubSectionSize;
-    error(consume(Data, SubType));
-    error(consume(Data, SubSectionSize));
-    if (SubSectionSize > Data.size())
-      return error(object_error::parse_failed);
+    error(Reader.readInteger(SubType));
+    error(Reader.readInteger(SubSectionSize));
+
+    StringRef Contents;
+    error(Reader.readFixedString(Contents, SubSectionSize));
+
     switch (ModuleDebugFragmentKind(SubType)) {
-    case ModuleDebugFragmentKind::FileChecksums:
-      CVFileChecksumTable = Data.substr(0, SubSectionSize);
+    case ModuleDebugFragmentKind::FileChecksums: {
+      ChecksumContents = BinaryByteStream(Contents, support::little);
+      BinaryStreamReader CSR(ChecksumContents);
+      error(CSR.readArray(CVFileChecksumTable, CSR.getLength()));
       break;
-    case ModuleDebugFragmentKind::StringTable:
-      CVStringTable = Data.substr(0, SubSectionSize);
-      break;
+    }
+    case ModuleDebugFragmentKind::StringTable: {
+      StringTableContents = BinaryByteStream(Contents, support::little);
+      error(CVStringTable.initialize(StringTableContents));
+    } break;
     default:
       break;
     }
+
     uint32_t PaddedSize = alignTo(SubSectionSize, 4);
-    if (PaddedSize > Data.size())
-      error(object_error::parse_failed);
-    Data = Data.drop_front(PaddedSize);
+    error(Reader.skip(PaddedSize - SubSectionSize));
   }
 }
 
@@ -771,7 +781,9 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
 
-  initializeFileAndStringTables(Data);
+  BinaryByteStream FileAndStrings(Data, support::little);
+  BinaryStreamReader FSReader(FileAndStrings);
+  initializeFileAndStringTables(FSReader);
 
   // TODO: Convert this over to using ModuleSubstreamVisitor.
   while (!Data.empty()) {
@@ -861,11 +873,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         const FrameData *FD;
         error(SR.readObject(FD));
 
-        if (FD->FrameFunc >= CVStringTable.size())
-          error(object_error::parse_failed);
-
-        StringRef FrameFunc =
-            CVStringTable.drop_front(FD->FrameFunc).split('\0').first;
+        StringRef FrameFunc = error(CVStringTable.getString(FD->FrameFunc));
 
         DictScope S(W, "FrameData");
         W.printHex("RvaStart", FD->RvaStart);
@@ -971,10 +979,7 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
   for (auto &FC : Checksums) {
     DictScope S(W, "FileChecksum");
 
-    if (FC.FileNameOffset >= CVStringTable.size())
-      error(object_error::parse_failed);
-    StringRef Filename =
-        CVStringTable.drop_front(FC.FileNameOffset).split('\0').first;
+    StringRef Filename = error(CVStringTable.getString(FC.FileNameOffset));
     W.printHex("Filename", Filename, FC.FileNameOffset);
     W.printHex("ChecksumSize", FC.Checksum.size());
     W.printEnum("ChecksumKind", uint8_t(FC.Kind),
@@ -1008,23 +1013,16 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
 
 StringRef COFFDumper::getFileNameForFileOffset(uint32_t FileOffset) {
   // The file checksum subsection should precede all references to it.
-  if (!CVFileChecksumTable.data() || !CVStringTable.data())
+  if (!CVFileChecksumTable.valid() || !CVStringTable.valid())
     error(object_error::parse_failed);
+
+  auto Iter = CVFileChecksumTable.at(FileOffset);
+
   // Check if the file checksum table offset is valid.
-  if (FileOffset >= CVFileChecksumTable.size())
+  if (Iter == CVFileChecksumTable.end())
     error(object_error::parse_failed);
 
-  // The string table offset comes first before the file checksum.
-  StringRef Data = CVFileChecksumTable.drop_front(FileOffset);
-  uint32_t StringOffset;
-  error(consume(Data, StringOffset));
-
-  // Check if the string table offset is valid.
-  if (StringOffset >= CVStringTable.size())
-    error(object_error::parse_failed);
-
-  // Return the null-terminated string.
-  return CVStringTable.drop_front(StringOffset).split('\0').first;
+  return error(CVStringTable.getString(Iter->FileNameOffset));
 }
 
 void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {

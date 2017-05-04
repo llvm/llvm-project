@@ -57,23 +57,23 @@ define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i32 %eco
 define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* %frame, i32 %ecode) {
   call void asm sideeffect "", "~{eax},~{ebx},~{ebp}"()
   ; CHECK-LABEL: test_isr_clobbers
-  ; CHECK-SSE-NEXT: pushl %ebp
-  ; CHECK-SSE-NEXT: pushl %ebx
-  ; CHECK-SSE-NEXT; pushl %eax
-  ; CHECK-SSE-NEXT: popl %eax
-  ; CHECK-SSE-NEXT: popl %ebx
-  ; CHECK-SSE-NEXT: popl %ebp
-  ; CHECK-SSE-NEXT: addl $4, %esp
-  ; CHECK-SSE-NEXT: iretl
+  ; CHECK: pushl %ebp
+  ; CHECK: pushl %ebx
+  ; CHECK: pushl %eax
+  ; CHECK: popl %eax
+  ; CHECK: popl %ebx
+  ; CHECK: popl %ebp
+  ; CHECK: addl $4, %esp
+  ; CHECK: iretl
   ; CHECK0-LABEL: test_isr_clobbers
-  ; CHECK0-SSE-NEXT: pushl %ebp
-  ; CHECK0-SSE-NEXT: pushl %ebx
-  ; CHECK0-SSE-NEXT; pushl %eax
-  ; CHECK0-SSE-NEXT: popl %eax
-  ; CHECK0-SSE-NEXT: popl %ebx
-  ; CHECK0-SSE-NEXT: popl %ebp
-  ; CHECK0-SSE-NEXT: addl $4, %esp
-  ; CHECK0-SSE-NEXT: iretl
+  ; CHECK0: pushl %ebp
+  ; CHECK0: pushl %ebx
+  ; CHECK0: pushl %eax
+  ; CHECK0: popl %eax
+  ; CHECK0: popl %ebx
+  ; CHECK0: popl %ebp
+  ; CHECK0: addl $4, %esp
+  ; CHECK0: iretl
   ret void
 }
 
