@@ -1,0 +1,8 @@
+RUN: llvm-objdump -t %p/../Inputs/test.wasm | FileCheck %s
+
+CHECK: SYMBOL TABLE:
+CHECK: 00000000 l     F IMPORT bar
+CHECK: 00000000 g     F EXPORT baz
+CHECK: 00000001 g     F EXPORT quux
+CHECK: 00000000 l     F name   $import
+CHECK: 00000001 l     F name   $func0

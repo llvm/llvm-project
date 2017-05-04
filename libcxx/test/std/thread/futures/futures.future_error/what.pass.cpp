@@ -12,9 +12,11 @@
 // LWG 2056 changed the values of future_errc, so if we're using new headers
 // with an old library we'll get incorrect messages.
 //
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.7
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.8
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin13
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
 
 // <future>
 

@@ -1,15 +1,20 @@
-; RUN: opt < %s -inline -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
-; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
-
 ; This tests that a hot callsite gets the (higher) inlinehint-threshold even without
 ; without inline hints and gets inlined because the cost is less than
 ; inlinehint-threshold. A cold callee with identical body does not get inlined because
 ; cost exceeds the inline-threshold
 
+; RUN: opt < %s -inline -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
+
+; Run this with the default O2 pipeline to test that profile summary analysis
+; is available during inlining.
+; RUN: opt < %s -passes='default<O2>' -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
+
 define i32 @callee1(i32 %x) {
   %x1 = add i32 %x, 1
   %x2 = add i32 %x1, 1
   %x3 = add i32 %x2, 1
+  call void @extern()
   call void @extern()
   ret i32 %x3
 }
@@ -19,6 +24,7 @@ define i32 @callee2(i32 %x) {
   %x1 = add i32 %x, 1
   %x2 = add i32 %x1, 1
   %x3 = add i32 %x2, 1
+  call void @extern()
   call void @extern()
   ret i32 %x3
 }

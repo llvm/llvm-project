@@ -2494,12 +2494,11 @@ void NewGVN::verifyMemoryCongruency() const {
       continue;
     if (CC->getStoreCount() != 0) {
       assert((CC->getStoredValue() || !isa<StoreInst>(CC->getLeader())) &&
-             "Any class with a store as a "
-             "leader should have a "
-             "representative stored value\n");
+             "Any class with a store as a leader should have a "
+             "representative stored value");
       assert(CC->getMemoryLeader() &&
-             "Any congruence class with a store should "
-             "have a representative access\n");
+             "Any congruence class with a store should have a "
+             "representative access");
     }
 
     if (CC->getMemoryLeader())

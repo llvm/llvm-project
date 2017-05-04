@@ -204,8 +204,8 @@ define <64 x i8> @stack_fold_pabsb_maskz(<64 x i8> %a0, i64 %mask) {
 }
 
 define <16 x i32> @stack_fold_pabsd(<16 x i32> %a0) {
-  ;check-label: stack_fold_pabsd
-  ;check:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte folded reload
+  ;CHECK-LABEL: stack_fold_pabsd
+  ;CHECK:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.mask.pabs.d.512(<16 x i32> %a0, <16 x i32> undef, i16 -1)
   ret <16 x i32> %2
@@ -213,16 +213,16 @@ define <16 x i32> @stack_fold_pabsd(<16 x i32> %a0) {
 declare <16 x i32> @llvm.x86.avx512.mask.pabs.d.512(<16 x i32>, <16 x i32>, i16) nounwind readnone
 
 define <16 x i32> @stack_fold_pabsd_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
-  ;check-label: stack_fold_pabsd
-  ;check:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte folded reload
+  ;CHECK-LABEL: stack_fold_pabsd_mask
+  ;CHECK:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.mask.pabs.d.512(<16 x i32> %a0, <16 x i32> %passthru, i16 %mask)
   ret <16 x i32> %2
 }
 
 define <16 x i32> @stack_fold_pabsd_maskz(<16 x i32> %a0, i16 %mask) {
-  ;check-label: stack_fold_pabsd
-  ;check:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte folded reload
+  ;CHECK-LABEL: stack_fold_pabsd_maskz
+  ;CHECK:       vpabsd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.mask.pabs.d.512(<16 x i32> %a0, <16 x i32> zeroinitializer, i16 %mask)
   ret <16 x i32> %2

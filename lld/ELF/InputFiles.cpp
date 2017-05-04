@@ -977,6 +977,13 @@ MemoryBufferRef LazyObjectFile::getBuffer() {
   return MB;
 }
 
+InputFile *LazyObjectFile::fetch() {
+  MemoryBufferRef MBRef = getBuffer();
+  if (MBRef.getBuffer().empty())
+    return nullptr;
+  return createObjectFile(MBRef);
+}
+
 template <class ELFT> void LazyObjectFile::parse() {
   for (StringRef Sym : getSymbols())
     Symtab<ELFT>::X->addLazyObject(Sym, *this);

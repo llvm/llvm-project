@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 // <complex>
 
 // template<class T, class charT, class traits>

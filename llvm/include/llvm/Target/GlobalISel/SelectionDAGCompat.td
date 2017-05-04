@@ -25,25 +25,43 @@ class GINodeEquiv<Instruction i, SDNode node> {
   SDNode Node = node;
 }
 
-def : GINodeEquiv<G_ZEXT, zext>;
+// These are defined in the same order as the G_* instructions.
+def : GINodeEquiv<G_ANYEXT, anyext>;
 def : GINodeEquiv<G_SEXT, sext>;
+def : GINodeEquiv<G_ZEXT, zext>;
+def : GINodeEquiv<G_TRUNC, trunc>;
+def : GINodeEquiv<G_BITCAST, bitconvert>;
+// G_INTTOPTR - SelectionDAG has no equivalent.
+// G_PTRTOINT - SelectionDAG has no equivalent.
+// G_CONSTANT - Not needed since constants aren't operators.
+// G_FCONSTANT - Not needed since constants aren't operators.
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
-
-def : GINodeEquiv<G_OR, or>;
-def : GINodeEquiv<G_XOR, xor>;
-def : GINodeEquiv<G_AND, and>;
-
-def : GINodeEquiv<G_SHL, shl>;
-def : GINodeEquiv<G_LSHR, srl>;
-def : GINodeEquiv<G_ASHR, sra>;
-
 def : GINodeEquiv<G_SDIV, sdiv>;
 def : GINodeEquiv<G_UDIV, udiv>;
 def : GINodeEquiv<G_SREM, srem>;
 def : GINodeEquiv<G_UREM, urem>;
-
+def : GINodeEquiv<G_AND, and>;
+def : GINodeEquiv<G_OR, or>;
+def : GINodeEquiv<G_XOR, xor>;
+def : GINodeEquiv<G_SHL, shl>;
+def : GINodeEquiv<G_LSHR, srl>;
+def : GINodeEquiv<G_ASHR, sra>;
+def : GINodeEquiv<G_SELECT, select>;
+def : GINodeEquiv<G_FNEG, fneg>;
+def : GINodeEquiv<G_FPEXT, fpextend>;
+def : GINodeEquiv<G_FPTRUNC, ftrunc>;
+def : GINodeEquiv<G_FPTOSI, fp_to_sint>;
+def : GINodeEquiv<G_FPTOUI, fp_to_uint>;
+def : GINodeEquiv<G_SITOFP, sint_to_fp>;
+def : GINodeEquiv<G_UITOFP, uint_to_fp>;
+def : GINodeEquiv<G_FADD, fadd>;
+def : GINodeEquiv<G_FSUB, fsub>;
+def : GINodeEquiv<G_FMUL, fmul>;
+def : GINodeEquiv<G_FDIV, fdiv>;
+def : GINodeEquiv<G_FREM, frem>;
+def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_BR, br>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.

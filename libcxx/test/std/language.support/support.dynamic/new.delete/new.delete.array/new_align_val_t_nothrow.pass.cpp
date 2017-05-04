@@ -15,6 +15,13 @@
 // FIXME turn this into an XFAIL
 // UNSUPPORTED: no-aligned-allocation
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // test operator new (nothrow)
 
 #include <new>

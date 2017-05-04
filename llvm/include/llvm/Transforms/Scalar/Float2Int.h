@@ -31,7 +31,7 @@ public:
 
 private:
   void findRoots(Function &F, SmallPtrSet<Instruction *, 8> &Roots);
-  ConstantRange seen(Instruction *I, ConstantRange R);
+  void seen(Instruction *I, ConstantRange R);
   ConstantRange badRange();
   ConstantRange unknownRange();
   ConstantRange validateRange(ConstantRange R);

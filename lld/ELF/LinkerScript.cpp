@@ -420,13 +420,11 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   CurOutSec = nullptr;
 }
 
-void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
+void LinkerScript::fabricateDefaultCommands() {
   std::vector<BaseCommand *> Commands;
 
   // Define start address
-  uint64_t StartAddr = Config->ImageBase;
-  if (AllocateHeader)
-    StartAddr += elf::getHeaderSize();
+  uint64_t StartAddr = Config->ImageBase + elf::getHeaderSize();
 
   // The Sections with -T<section> have been sorted in order of ascending
   // address. We must lower StartAddr if the lowest -T<section address> as
@@ -890,6 +888,48 @@ void LinkerScript::synchronize() {
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
   }
+}
+
+static bool allocateHeaders(std::vector<PhdrEntry> &Phdrs,
+                            ArrayRef<OutputSection *> OutputSections,
+                            uint64_t Min) {
+  auto FirstPTLoad =
+      std::find_if(Phdrs.begin(), Phdrs.end(),
+                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
+  if (FirstPTLoad == Phdrs.end())
+    return false;
+
+  uint64_t HeaderSize = getHeaderSize();
+  if (HeaderSize <= Min || Script->hasPhdrsCommands()) {
+    Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
+    Out::ElfHeader->Addr = Min;
+    Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
+    return true;
+  }
+
+  assert(FirstPTLoad->First == Out::ElfHeader);
+  OutputSection *ActualFirst = nullptr;
+  for (OutputSection *Sec : OutputSections) {
+    if (Sec->FirstInPtLoad == Out::ElfHeader) {
+      ActualFirst = Sec;
+      break;
+    }
+  }
+  if (ActualFirst) {
+    for (OutputSection *Sec : OutputSections)
+      if (Sec->FirstInPtLoad == Out::ElfHeader)
+        Sec->FirstInPtLoad = ActualFirst;
+    FirstPTLoad->First = ActualFirst;
+  } else {
+    Phdrs.erase(FirstPTLoad);
+  }
+
+  auto PhdrI = std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry &E) {
+    return E.p_type == PT_PHDR;
+  });
+  if (PhdrI != Phdrs.end())
+    Phdrs.erase(PhdrI);
+  return false;
 }
 
 void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {

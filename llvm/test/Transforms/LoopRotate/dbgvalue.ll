@@ -38,7 +38,7 @@ return:                                           ; preds = %if.end
   ret i32 %z.tr, !dbg !17
 }
 
-define i32 @tak2(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !0 {
+define i32 @tak2(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !21 {
 ; CHECK-LABEL: define i32 @tak2(
 ; CHECK: entry
 ; CHECK: tail call void @llvm.dbg.value(metadata i32 %x.tr
@@ -51,29 +51,29 @@ tailrecurse:                                      ; preds = %if.then, %entry
   %x.tr = phi i32 [ %x, %entry ], [ %call, %if.then ]
   %y.tr = phi i32 [ %y, %entry ], [ %call9, %if.then ]
   %z.tr = phi i32 [ %z, %entry ], [ %call14, %if.then ]
-  %cmp = icmp slt i32 %y.tr, %x.tr, !dbg !12
-  br i1 %cmp, label %if.then, label %if.end, !dbg !12
+  %cmp = icmp slt i32 %y.tr, %x.tr, !dbg !22
+  br i1 %cmp, label %if.then, label %if.end, !dbg !22
 
 if.then:                                          ; preds = %tailrecurse
-  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !6, metadata !DIExpression()), !dbg !7
-  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !8, metadata !DIExpression()), !dbg !9
-  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !10, metadata !DIExpression()), !dbg !11
-  %sub = sub nsw i32 %x.tr, 1, !dbg !14
-  %call = tail call i32 @tak(i32 %sub, i32 %y.tr, i32 %z.tr), !dbg !14
-  %sub6 = sub nsw i32 %y.tr, 1, !dbg !14
-  %call9 = tail call i32 @tak(i32 %sub6, i32 %z.tr, i32 %x.tr), !dbg !14
-  %sub11 = sub nsw i32 %z.tr, 1, !dbg !14
-  %call14 = tail call i32 @tak(i32 %sub11, i32 %x.tr, i32 %y.tr), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !36, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !38, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !40, metadata !DIExpression()), !dbg !41
+  %sub = sub nsw i32 %x.tr, 1, !dbg !24
+  %call = tail call i32 @tak(i32 %sub, i32 %y.tr, i32 %z.tr), !dbg !24
+  %sub6 = sub nsw i32 %y.tr, 1, !dbg !24
+  %call9 = tail call i32 @tak(i32 %sub6, i32 %z.tr, i32 %x.tr), !dbg !24
+  %sub11 = sub nsw i32 %z.tr, 1, !dbg !24
+  %call14 = tail call i32 @tak(i32 %sub11, i32 %x.tr, i32 %y.tr), !dbg !24
   br label %tailrecurse
 
 if.end:                                           ; preds = %tailrecurse
-  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !6, metadata !DIExpression()), !dbg !7
-  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !8, metadata !DIExpression()), !dbg !9
-  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !10, metadata !DIExpression()), !dbg !11
-  br label %return, !dbg !16
+  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !36, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !38, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !40, metadata !DIExpression()), !dbg !41
+  br label %return, !dbg !26
 
 return:                                           ; preds = %if.end
-  ret i32 %z.tr, !dbg !17
+  ret i32 %z.tr, !dbg !27
 }
 
 @channelColumns = external global i64
@@ -143,3 +143,16 @@ for.end:
 !17 = !DILocation(line: 37, column: 1, scope: !13)
 !18 = !DIFile(filename: "/Volumes/Lalgate/cj/llvm/projects/llvm-test/SingleSource/Benchmarks/BenchmarkGame/recursive.c", directory: "/Volumes/Lalgate/cj/D/projects/llvm-test/SingleSource/Benchmarks/BenchmarkGame")
 !20 = !{i32 1, !"Debug Info Version", i32 3}
+!21 = distinct !DISubprogram(name: "tak", line: 32, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !2, file: !18, scope: !1, type: !3)
+!22 = !DILocation(line: 33, column: 3, scope: !23)
+!23 = distinct !DILexicalBlock(line: 32, column: 30, file: !18, scope: !21)
+!24 = !DILocation(line: 34, column: 5, scope: !25)
+!25 = distinct !DILexicalBlock(line: 33, column: 14, file: !18, scope: !23)
+!26 = !DILocation(line: 36, column: 3, scope: !23)
+!27 = !DILocation(line: 37, column: 1, scope: !23)
+!36 = !DILocalVariable(name: "x", line: 32, arg: 1, scope: !21, file: !1, type: !5)
+!37 = !DILocation(line: 32, column: 13, scope: !21)
+!38 = !DILocalVariable(name: "y", line: 32, arg: 2, scope: !21, file: !1, type: !5)
+!39 = !DILocation(line: 32, column: 20, scope: !21)
+!40 = !DILocalVariable(name: "z", line: 32, arg: 3, scope: !21, file: !1, type: !5)
+!41 = !DILocation(line: 32, column: 27, scope: !21)

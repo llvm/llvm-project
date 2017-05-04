@@ -2,6 +2,8 @@
 // XFAIL: aarch64
 // test fails for aarch64 (see pr32260)
 
+// UNSUPPORTED: mips
+
 //===-- floatuntixf.c - Test __floatuntixf --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

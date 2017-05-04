@@ -1,19 +1,19 @@
 test:63067:0
- 4: 3345 _Z3barv:1398 _Z3foov:2059
+ 1: 3345 _Z3barv:1398 _Z3foov:2059
 test_inline:3000:0
- 5: foo_inline1:3000
-  1: 3000
- 5: foo_inline2:4000
-  1: 4000
+ 1: foo_inline1:3000
+  11: 3000
+ 1: foo_inline2:4000
+  19: 4000
 test_noinline:3000:0
- 5: foo_noinline:3000
-  1: 3000
+ 1: foo_noinline:3000
+  20: 3000
 test_direct:3000:0
- 5: foo_direct:3000
-  1: 3000
+ 1: foo_direct:3000
+  21: 3000
 test_inline_strip:3000:0
- 5: foo_inline_strip:3000
+ 1: foo_inline_strip:3000
   1: 3000
-test_inline_strip_confilict:3000:0
- 5: foo_inline_strip_conflict:3000
+test_inline_strip_conflict:3000:0
+ 1: foo_inline_strip_conflict:3000
   1: 3000

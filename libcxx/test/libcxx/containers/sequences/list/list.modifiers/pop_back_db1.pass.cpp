@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Can't test the system lib because this test enables debug mode
+// UNSUPPORTED: with_system_cxx_lib
+
 // <list>
 
 // void pop_back();
