@@ -850,12 +850,18 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL, unsigned DestReg,
                                    unsigned SrcReg, bool KillSrc) const {
-  // Split 128-bit GPR moves into two 64-bit moves.  This handles ADDR128 too.
+  // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
+  // super register in case one of the subregs is undefined.
+  // This handles ADDR128 too.
   if (SystemZ::GR128BitRegClass.contains(DestReg, SrcReg)) {
     copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, SystemZ::subreg_h64),
                 RI.getSubReg(SrcReg, SystemZ::subreg_h64), KillSrc);
+    MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
+      .addReg(SrcReg, RegState::Implicit);
     copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, SystemZ::subreg_l64),
                 RI.getSubReg(SrcReg, SystemZ::subreg_l64), KillSrc);
+    MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
+      .addReg(SrcReg, (getKillRegState(KillSrc) | RegState::Implicit));
     return;
   }
 

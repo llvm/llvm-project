@@ -53,6 +53,8 @@ namespace format {
   TYPE(InlineASMColon) \
   TYPE(JavaAnnotation) \
   TYPE(JsComputedPropertyName) \
+  TYPE(JsExponentiation) \
+  TYPE(JsExponentiationEqual) \
   TYPE(JsFatArrow) \
   TYPE(JsNonNullAssertion) \
   TYPE(JsTypeColon) \

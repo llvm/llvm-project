@@ -108,6 +108,7 @@ protected:
 #endif
 
 public:
+    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
     virtual ~type_info();
 
 #if defined(_LIBCPP_HAS_NONUNIQUE_TYPEINFO)

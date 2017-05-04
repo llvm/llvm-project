@@ -10,13 +10,18 @@
 // test aligned operator delete replacement.
 
 // UNSUPPORTED: sanitizer-new-delete, c++98, c++03, c++11, c++14
-
 // Older Clang versions do not support this
-// XFAIL: clang-3, apple-clang
+// XFAIL: clang-3, apple-clang-7, apple-clang-8
 
 // None of the current GCC compilers support this.
 // XFAIL: gcc
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
 
 #include <new>
 #include <cstddef>

@@ -468,6 +468,64 @@ define <2 x i3> @and_of_different_cast_icmps_vec(<2 x i8> %i, <2 x i16> %j) {
   ret <2 x i3> %and
 }
 
+; FIXME: This should simplify.
+
+define i32 @or_of_zexted_icmps(i32 %i) {
+; CHECK-LABEL: @or_of_zexted_icmps(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i32 %i, 0
+; CHECK-NEXT:    [[CONV0:%.*]] = zext i1 [[CMP0]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i32 4, %i
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[CMP1]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp0 = icmp ne i32 %i, 0
+  %conv0 = zext i1 %cmp0 to i32
+  %cmp1 = icmp uge i32 4, %i
+  %conv1 = zext i1 %cmp1 to i32
+  %or = or i32 %conv0, %conv1
+  ret i32 %or
+}
+
+; FIXME: This should simplify 
+; Try a different cast and weird vector types.
+
+define i3 @or_of_bitcast_icmps_vec(<3 x i65> %i) {
+; CHECK-LABEL: @or_of_bitcast_icmps_vec(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge <3 x i65> %i, zeroinitializer
+; CHECK-NEXT:    [[CONV0:%.*]] = bitcast <3 x i1> [[CMP0]] to i3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <3 x i65> %i, zeroinitializer
+; CHECK-NEXT:    [[CONV1:%.*]] = bitcast <3 x i1> [[CMP1]] to i3
+; CHECK-NEXT:    [[OR:%.*]] = or i3 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    ret i3 [[OR]]
+;
+  %cmp0 = icmp sge <3 x i65> %i, zeroinitializer
+  %conv0 = bitcast <3 x i1> %cmp0 to i3
+  %cmp1 = icmp slt <3 x i65> %i, zeroinitializer
+  %conv1 = bitcast <3 x i1> %cmp1 to i3
+  %or = or i3 %conv0, %conv1
+  ret i3 %or
+}
+
+; We can't simplify if the casts are different.
+
+define i16 @or_of_different_cast_icmps(i8 %i) {
+; CHECK-LABEL: @or_of_different_cast_icmps(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i8 %i, 0
+; CHECK-NEXT:    [[CONV0:%.*]] = zext i1 [[CMP0]] to i16
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 %i, 1
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i1 [[CMP1]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %cmp0 = icmp ne i8 %i, 0
+  %conv0 = zext i1 %cmp0 to i16
+  %cmp1 = icmp ne i8 %i, 1
+  %conv1 = sext i1 %cmp1 to i16
+  %or = or i16 %conv0, %conv1
+  ret i16 %or
+}
+
 ; (A & ~B) | (A ^ B) -> A ^ B
 
 define i32 @test43(i32 %a, i32 %b) {

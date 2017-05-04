@@ -8,6 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
+// XFAIL: availability_markup=macosx10.12
+// XFAIL: availability_markup=macosx10.11
+// XFAIL: availability_markup=macosx10.10
+// XFAIL: availability_markup=macosx10.9
+// XFAIL: availability_markup=macosx10.8
+// XFAIL: availability_markup=macosx10.7
 
 // <optional>
 

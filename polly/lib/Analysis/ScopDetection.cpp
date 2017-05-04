@@ -350,6 +350,14 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     return false;
 
   for (LoadInst *Load : RequiredILS) {
+    // If we already know a load has been accepted as required invariant, we
+    // already run the validation below once and consequently don't need to
+    // run it again. Hence, we return early. For certain test cases (e.g.,
+    // COSMO this avoids us spending 50% of scop-detection time in this
+    // very function (and its children).
+    if (Context.RequiredILS.count(Load))
+      continue;
+
     if (!isHoistableLoad(Load, CurRegion, *LI, *SE, *DT))
       return false;
 

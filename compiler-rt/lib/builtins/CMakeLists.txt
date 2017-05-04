@@ -167,6 +167,26 @@ set(GENERIC_SOURCES
   umodti3.c
   emutls.c)
 
+set(GENERIC_TF_SOURCES
+  comparetf2.c
+  extenddftf2.c
+  extendsftf2.c
+  fixtfdi.c
+  fixtfsi.c
+  fixtfti.c
+  fixunstfdi.c
+  fixunstfsi.c
+  fixunstfti.c
+  floatditf.c
+  floatsitf.c
+  floattitf.c
+  floatunditf.c
+  floatunsitf.c
+  floatuntitf.c
+  multc3.c
+  trunctfdf2.c
+  trunctfsf2.c)
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (this may be needed if system headers are unavailable)"
   Off)
@@ -404,24 +424,7 @@ elseif(NOT WIN32)
 endif()
 
 set(aarch64_SOURCES
-  comparetf2.c
-  extenddftf2.c
-  extendsftf2.c
-  fixtfdi.c
-  fixtfsi.c
-  fixtfti.c
-  fixunstfdi.c
-  fixunstfsi.c
-  fixunstfti.c
-  floatditf.c
-  floatsitf.c
-  floattitf.c
-  floatunditf.c
-  floatunsitf.c
-  floatuntitf.c
-  multc3.c
-  trunctfdf2.c
-  trunctfsf2.c
+  ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
 
 set(armhf_SOURCES ${arm_SOURCES})
@@ -437,8 +440,10 @@ set(armv7em_SOURCES ${arm_SOURCES})
 
 set(mips_SOURCES ${GENERIC_SOURCES})
 set(mipsel_SOURCES ${mips_SOURCES})
-set(mips64_SOURCES ${mips_SOURCES})
-set(mips64el_SOURCES ${mips_SOURCES})
+set(mips64_SOURCES ${GENERIC_TF_SOURCES}
+                   ${mips_SOURCES})
+set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
+                     ${mips_SOURCES})
 
 set(wasm32_SOURCES ${GENERIC_SOURCES})
 set(wasm64_SOURCES ${GENERIC_SOURCES})

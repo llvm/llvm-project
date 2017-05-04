@@ -540,13 +540,10 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
     return;
 
   // See comment for addLazyArchive above.
-  if (S->isWeak()) {
+  if (S->isWeak())
     replaceBody<LazyObject>(S, Name, Obj, S->body()->Type);
-  } else {
-    MemoryBufferRef MBRef = Obj.getBuffer();
-    if (!MBRef.getBuffer().empty())
-      addFile(createObjectFile(MBRef));
-  }
+  else if (InputFile *F = Obj.fetch())
+    addFile(F);
 }
 
 // Process undefined (-u) flags by loading lazy symbols named by those flags.

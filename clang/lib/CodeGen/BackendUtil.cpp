@@ -974,6 +974,10 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   // via a WriteIndexesThinBackend.
   FunctionImporter::ImportMapTy ImportList;
   for (auto &GlobalList : *CombinedIndex) {
+    // Ignore entries for undefined references.
+    if (GlobalList.second.SummaryList.empty())
+      continue;
+
     auto GUID = GlobalList.first;
     assert(GlobalList.second.SummaryList.size() == 1 &&
            "Expected individual combined index to have one summary per GUID");

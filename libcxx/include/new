@@ -146,9 +146,8 @@ _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 
 #if defined(_LIBCPP_BUILDING_LIBRARY) || (_LIBCPP_STD_VER > 11)
 
-class _LIBCPP_EXCEPTION_ABI bad_array_length
-    : public bad_alloc
-{
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_ARRAY_LENGTH
+    bad_array_length : public bad_alloc {
 public:
     bad_array_length() _NOEXCEPT;
     virtual ~bad_array_length() _NOEXCEPT;
@@ -182,7 +181,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, const std::not
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, const std::nothrow_t&) _NOEXCEPT;
 #ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
-_LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 
 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz) _THROW_BAD_ALLOC;
@@ -190,7 +189,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, const std::n
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, const std::nothrow_t&) _NOEXCEPT;
 #ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
-_LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 
 #ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
@@ -199,7 +198,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, std::align_val
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
 #ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
-_LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete(void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #endif
 
 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
@@ -207,7 +206,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, std::align_v
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
 #ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
-_LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #endif
 #endif
 
@@ -238,6 +237,9 @@ inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate(void *__ptr) {
 
 #ifdef _LIBCPP_BAD_ARRAY_LENGTH_DEFINED
 _LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+#ifndef _LIBCPP_NO_EXCEPTIONS
+_LIBCPP_AVAILABILITY_BAD_ARRAY_LENGTH
+#endif
 void __throw_bad_array_length()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS

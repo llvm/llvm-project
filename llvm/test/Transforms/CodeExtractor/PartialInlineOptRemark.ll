@@ -32,52 +32,52 @@ bb2:                                              ; preds = %bb1, %bb
   ret i32 %tmp3, !dbg !19
 }
 
-define i32 @bar_noinline(i32 %arg) local_unnamed_addr #1 !dbg !5 {
+define i32 @bar_noinline(i32 %arg) local_unnamed_addr #1 !dbg !23 {
 bb:
-  %tmp = icmp slt i32 %arg, 0, !dbg !7
-  br i1 %tmp, label %bb1, label %bb2, !dbg !8
+  %tmp = icmp slt i32 %arg, 0, !dbg !24
+  br i1 %tmp, label %bb1, label %bb2, !dbg !24
 
 bb1:                                              ; preds = %bb
-  tail call void (...) @foo() #0, !dbg !9
-  tail call void (...) @foo() #0, !dbg !10
-  tail call void (...) @foo() #0, !dbg !11
-  br label %bb2, !dbg !18
+  tail call void (...) @foo() #0, !dbg !24
+  tail call void (...) @foo() #0, !dbg !24
+  tail call void (...) @foo() #0, !dbg !24
+  br label %bb2, !dbg !24
 
 bb2:                                              ; preds = %bb1, %bb
   %tmp3 = phi i32 [ 0, %bb1 ], [ 1, %bb ]
-  ret i32 %tmp3, !dbg !19
+  ret i32 %tmp3, !dbg !24
 }
 
-define i32 @bar_alwaysinline(i32 %arg) local_unnamed_addr #2 !dbg !5 {
+define i32 @bar_alwaysinline(i32 %arg) local_unnamed_addr #2 !dbg !25 {
 bb:
-  %tmp = icmp slt i32 %arg, 0, !dbg !7
-  br i1 %tmp, label %bb1, label %bb2, !dbg !8
+  %tmp = icmp slt i32 %arg, 0, !dbg !26
+  br i1 %tmp, label %bb1, label %bb2, !dbg !26
 
 bb1:                                              ; preds = %bb
-  tail call void (...) @foo() #0, !dbg !9
-  tail call void (...) @foo() #0, !dbg !10
-  tail call void (...) @foo() #0, !dbg !11
-  br label %bb2, !dbg !18
+  tail call void (...) @foo() #0, !dbg !26
+  tail call void (...) @foo() #0, !dbg !26
+  tail call void (...) @foo() #0, !dbg !26
+  br label %bb2, !dbg !26
 
 bb2:                                              ; preds = %bb1, %bb
   %tmp3 = phi i32 [ 0, %bb1 ], [ 1, %bb ]
-  ret i32 %tmp3, !dbg !19
+  ret i32 %tmp3, !dbg !26
 }
 
-define i32 @bar_cold(i32 %arg) local_unnamed_addr #3 !dbg !5 {
+define i32 @bar_cold(i32 %arg) local_unnamed_addr #3 !dbg !27 {
 bb:
-  %tmp = icmp slt i32 %arg, 0, !dbg !7
-  br i1 %tmp, label %bb1, label %bb2, !dbg !8
+  %tmp = icmp slt i32 %arg, 0, !dbg !28
+  br i1 %tmp, label %bb1, label %bb2, !dbg !28
 
 bb1:                                              ; preds = %bb
-  tail call void (...) @foo() #0, !dbg !9
-  tail call void (...) @foo() #0, !dbg !10
-  tail call void (...) @foo() #0, !dbg !11
-  br label %bb2, !dbg !18
+  tail call void (...) @foo() #0, !dbg !28
+  tail call void (...) @foo() #0, !dbg !28
+  tail call void (...) @foo() #0, !dbg !28
+  br label %bb2, !dbg !28
 
 bb2:                                              ; preds = %bb1, %bb
   %tmp3 = phi i32 [ 0, %bb1 ], [ 1, %bb ]
-  ret i32 %tmp3, !dbg !19
+  ret i32 %tmp3, !dbg !28
 }
 
 ; Function Attrs: nounwind
@@ -130,3 +130,9 @@ attributes #3 = { cold nounwind }
 !20 = distinct !DISubprogram(name: "dummy_caller", scope: !1, file: !1, line: 19, type: !6, isLocal: false, isDefinition: true, scopeLine: 19, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !21 = !DILocation(line: 21, column: 11, scope: !20)
 !22 = !DILocation(line: 21, column: 4, scope: !20)
+!23 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 3, type: !6, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!24 = !DILocation(line: 4, column: 6, scope: !23)
+!25 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 3, type: !6, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!26 = !DILocation(line: 4, column: 6, scope: !25)
+!27 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 3, type: !6, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!28 = !DILocation(line: 4, column: 6, scope: !27)

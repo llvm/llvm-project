@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 
+// UNSUPPORTED: mips
+
 #if __LDBL_MANT_DIG__ == 113
 
 #include "fp_test.h"

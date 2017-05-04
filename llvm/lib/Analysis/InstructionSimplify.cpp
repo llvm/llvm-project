@@ -1495,6 +1495,32 @@ static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
 
 /// Commuted variants are assumed to be handled by calling this function again
 /// with the parameters swapped.
+static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
+  ICmpInst::Predicate Pred0, Pred1;
+  Value *A ,*B;
+  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
+      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
+    return nullptr;
+
+  // We have (icmp Pred0, A, B) | (icmp Pred1, A, B).
+  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
+  // can eliminate Op0 from this 'or'.
+  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
+    return Op1;
+
+  // Check for any combination of predicates that cover the entire range of
+  // possibilities.
+  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
+      (Pred0 == ICmpInst::ICMP_NE && ICmpInst::isTrueWhenEqual(Pred1)) ||
+      (Pred0 == ICmpInst::ICMP_SLE && Pred1 == ICmpInst::ICMP_SGE) ||
+      (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGE))
+    return getTrue(Op0->getType());
+
+  return nullptr;
+}
+
+/// Commuted variants are assumed to be handled by calling this function again
+/// with the parameters swapped.
 static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true))
     return X;
@@ -1560,6 +1586,60 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
     if (Delta == 1)
       if (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGT)
         return getFalse(ITy);
+  }
+
+  return nullptr;
+}
+
+/// Commuted variants are assumed to be handled by calling this function again
+/// with the parameters swapped.
+static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
+  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false))
+    return X;
+
+  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
+    return X;
+
+  // (icmp (add V, C0), C1) | (icmp V, C0)
+  ICmpInst::Predicate Pred0, Pred1;
+  const APInt *C0, *C1;
+  Value *V;
+  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_APInt(C0)), m_APInt(C1))))
+    return nullptr;
+
+  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Value())))
+    return nullptr;
+
+  auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
+  if (AddInst->getOperand(1) != Op1->getOperand(1))
+    return nullptr;
+
+  Type *ITy = Op0->getType();
+  bool isNSW = AddInst->hasNoSignedWrap();
+  bool isNUW = AddInst->hasNoUnsignedWrap();
+
+  const APInt Delta = *C1 - *C0;
+  if (C0->isStrictlyPositive()) {
+    if (Delta == 2) {
+      if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_SLE)
+        return getTrue(ITy);
+      if (Pred0 == ICmpInst::ICMP_SGE && Pred1 == ICmpInst::ICMP_SLE && isNSW)
+        return getTrue(ITy);
+    }
+    if (Delta == 1) {
+      if (Pred0 == ICmpInst::ICMP_UGT && Pred1 == ICmpInst::ICMP_SLE)
+        return getTrue(ITy);
+      if (Pred0 == ICmpInst::ICMP_SGT && Pred1 == ICmpInst::ICMP_SLE && isNSW)
+        return getTrue(ITy);
+    }
+  }
+  if (C0->getBoolValue() && isNUW) {
+    if (Delta == 2)
+      if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_ULE)
+        return getTrue(ITy);
+    if (Delta == 1)
+      if (Pred0 == ICmpInst::ICMP_UGT && Pred1 == ICmpInst::ICMP_ULE)
+        return getTrue(ITy);
   }
 
   return nullptr;
@@ -1676,86 +1756,6 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
 Value *llvm::SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyAndInst(Op0, Op1, Q, RecursionLimit);
-}
-
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A ,*B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // We have (icmp Pred0, A, B) | (icmp Pred1, A, B).
-  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
-  // can eliminate Op0 from this 'or'.
-  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
-    return Op1;
-
-  // Check for any combination of predicates that cover the entire range of
-  // possibilities.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_NE && ICmpInst::isTrueWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLE && Pred1 == ICmpInst::ICMP_SGE) ||
-      (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGE))
-    return getTrue(Op0->getType());
-
-  return nullptr;
-}
-
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
-  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false))
-    return X;
-
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-
-  // (icmp (add V, C0), C1) | (icmp V, C0)
-  ICmpInst::Predicate Pred0, Pred1;
-  const APInt *C0, *C1;
-  Value *V;
-  if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_APInt(C0)), m_APInt(C1))))
-    return nullptr;
-
-  if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Value())))
-    return nullptr;
-
-  auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
-  if (AddInst->getOperand(1) != Op1->getOperand(1))
-    return nullptr;
-
-  Type *ITy = Op0->getType();
-  bool isNSW = AddInst->hasNoSignedWrap();
-  bool isNUW = AddInst->hasNoUnsignedWrap();
-
-  const APInt Delta = *C1 - *C0;
-  if (C0->isStrictlyPositive()) {
-    if (Delta == 2) {
-      if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_SLE)
-        return getTrue(ITy);
-      if (Pred0 == ICmpInst::ICMP_SGE && Pred1 == ICmpInst::ICMP_SLE && isNSW)
-        return getTrue(ITy);
-    }
-    if (Delta == 1) {
-      if (Pred0 == ICmpInst::ICMP_UGT && Pred1 == ICmpInst::ICMP_SLE)
-        return getTrue(ITy);
-      if (Pred0 == ICmpInst::ICMP_SGT && Pred1 == ICmpInst::ICMP_SLE && isNSW)
-        return getTrue(ITy);
-    }
-  }
-  if (C0->getBoolValue() && isNUW) {
-    if (Delta == 2)
-      if (Pred0 == ICmpInst::ICMP_UGE && Pred1 == ICmpInst::ICMP_ULE)
-        return getTrue(ITy);
-    if (Delta == 1)
-      if (Pred0 == ICmpInst::ICMP_UGT && Pred1 == ICmpInst::ICMP_ULE)
-        return getTrue(ITy);
-  }
-
-  return nullptr;
 }
 
 /// Given operands for an Or, see if we can fold the result.

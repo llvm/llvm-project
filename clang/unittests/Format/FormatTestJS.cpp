@@ -1786,5 +1786,11 @@ TEST_F(FormatTestJS, ImportComments) {
                getGoogleJSStyleWithColumns(25));
   verifyFormat("// taze: x from 'location'", getGoogleJSStyleWithColumns(10));
 }
+
+TEST_F(FormatTestJS, Exponentiation) {
+  verifyFormat("squared = x ** 2;");
+  verifyFormat("squared **= 2;");
+}
+
 } // end namespace tooling
 } // end namespace clang

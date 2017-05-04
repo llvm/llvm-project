@@ -4124,7 +4124,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
 
   // We can add Flags to the post-inc expression only if we
-  // know that it us *undefined behavior* for BEValueV to
+  // know that it is *undefined behavior* for BEValueV to
   // overflow.
   if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
     if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
@@ -4245,7 +4245,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
 
         // We can add Flags to the post-inc expression only if we
-        // know that it us *undefined behavior* for BEValueV to
+        // know that it is *undefined behavior* for BEValueV to
         // overflow.
         if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
           if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))

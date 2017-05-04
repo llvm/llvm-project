@@ -666,6 +666,10 @@ bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag) const {
     }
   }
 
+  // Make sure we set FatalErrorOccurred to ensure that the notes from the
+  // diagnostic that caused `fatal_too_many_errors` won't be emitted.
+  if (Diag.CurDiagID == diag::fatal_too_many_errors)
+    Diag.FatalErrorOccurred = true;
   // Finally, report it.
   EmitDiag(Diag, DiagLevel);
   return true;

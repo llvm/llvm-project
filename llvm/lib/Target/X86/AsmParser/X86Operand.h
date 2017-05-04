@@ -62,6 +62,10 @@ struct X86Operand : public MCParsedAsmOperand {
     unsigned Scale;
     unsigned Size;
     unsigned ModeSize;
+
+    /// If the memory operand is unsized and there are multiple instruction
+    /// matches, prefer the one with this size.
+    unsigned FrontendSize;
   };
 
   union {
@@ -135,6 +139,10 @@ struct X86Operand : public MCParsedAsmOperand {
   unsigned getMemModeSize() const {
     assert(Kind == Memory && "Invalid access!");
     return Mem.ModeSize;
+  }
+  unsigned getMemFrontendSize() const {
+    assert(Kind == Memory && "Invalid access!");
+    return Mem.FrontendSize;
   }
 
   bool isToken() const override {return Kind == Token; }
@@ -532,7 +540,7 @@ struct X86Operand : public MCParsedAsmOperand {
   CreateMem(unsigned ModeSize, unsigned SegReg, const MCExpr *Disp,
             unsigned BaseReg, unsigned IndexReg, unsigned Scale, SMLoc StartLoc,
             SMLoc EndLoc, unsigned Size = 0, StringRef SymName = StringRef(),
-            void *OpDecl = nullptr) {
+            void *OpDecl = nullptr, unsigned FrontendSize = 0) {
     // We should never just have a displacement, that should be parsed as an
     // absolute memory operand.
     assert((SegReg || BaseReg || IndexReg) && "Invalid memory operand!");
@@ -548,6 +556,7 @@ struct X86Operand : public MCParsedAsmOperand {
     Res->Mem.Scale    = Scale;
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
+    Res->Mem.FrontendSize = FrontendSize;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;

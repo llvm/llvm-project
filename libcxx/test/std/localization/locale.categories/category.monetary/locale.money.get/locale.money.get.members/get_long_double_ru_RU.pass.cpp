@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: apple-darwin
+// This test is passing in an uncontrolled manner in some Apple environment.
+// UNSUPPORTED: apple-darwin
 
 // Failure related to GLIBC's use of U00A0 as mon_thousands_sep
 // and U002E as mon_decimal_point.

@@ -65,6 +65,13 @@ FixItHint createReplacement(const D &Destination, const S &Source,
                                       getText(Source, Context));
 }
 
+// \brief Returns a FixItHint to replace \p Destination by \p Source.
+template <typename D>
+FixItHint createReplacement(const D &Destination, StringRef Source) {
+  return FixItHint::CreateReplacement(internal::getSourceRange(Destination),
+                                      Source);
+}
+
 } // end namespace fixit
 } // end namespace tooling
 } // end namespace clang
