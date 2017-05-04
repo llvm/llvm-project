@@ -43,7 +43,7 @@ build_script:
     -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
     "-DCMAKE_BUILD_TYPE=%configuration%"
     "-DLLVM_PATH=C:\projects\deps\llvm" -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
-    -DLLVM_LIT_ARGS="-sv --no-progress-bar --show-xfail --show-unsupported"
+    -DLLVM_LIT_ARGS="-sv --show-xfail --show-unsupported"
     %APPVEYOR_BUILD_FOLDER%
 
   #############################################################################

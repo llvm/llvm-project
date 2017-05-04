@@ -22,7 +22,7 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath, GVSummaryMapTy &GVSummaryMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &GlobSummary : GlobalList.second.SummaryList) {
+    for (auto &GlobSummary : GlobalList.second) {
       auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
@@ -40,7 +40,7 @@ void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList) {
+    for (auto &Summary : GlobalList.second) {
       ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
     }
   }
@@ -49,10 +49,10 @@ void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
 GlobalValueSummary *
 ModuleSummaryIndex::getGlobalValueSummary(uint64_t ValueGUID,
                                           bool PerModuleIndex) const {
-  auto VI = getValueInfo(ValueGUID);
-  assert(VI && "GlobalValue not found in index");
-  assert((!PerModuleIndex || VI.getSummaryList().size() == 1) &&
+  auto SummaryList = findGlobalValueSummaryList(ValueGUID);
+  assert(SummaryList != end() && "GlobalValue not found in index");
+  assert((!PerModuleIndex || SummaryList->second.size() == 1) &&
          "Expected a single entry per global value in per-module index");
-  auto &Summary = VI.getSummaryList()[0];
+  auto &Summary = SummaryList->second[0];
   return Summary.get();
 }

@@ -1322,7 +1322,7 @@ bool DevirtModule::run() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second.SummaryList) {
+      for (auto &S : P.second) {
         auto *FS = dyn_cast<FunctionSummary>(S.get());
         if (!FS)
           continue;

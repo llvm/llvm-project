@@ -37,8 +37,7 @@ using namespace llvm;
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
-static void findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
-                         SetVector<ValueInfo> &RefEdges,
+static void findRefEdges(const User *CurUser, SetVector<ValueInfo> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited) {
   SmallVector<const User *, 32> Worklist;
   Worklist.push_back(CurUser);
@@ -62,7 +61,7 @@ static void findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
         if (!(CS && CS.isCallee(&OI)))
-          RefEdges.insert(Index.getOrInsertValueInfo(GV));
+          RefEdges.insert(GV);
         continue;
       }
       Worklist.push_back(Operand);
@@ -199,7 +198,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       ++NumInsts;
-      findRefEdges(Index, &I, RefEdges, Visited);
+      findRefEdges(&I, RefEdges, Visited);
       auto CS = ImmutableCallSite(&I);
       if (!CS)
         continue;
@@ -240,9 +239,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // to record the call edge to the alias in that case. Eventually
         // an alias summary will be created to associate the alias and
         // aliasee.
-        CallGraphEdges[Index.getOrInsertValueInfo(
-                           cast<GlobalValue>(CalledValue))]
-            .updateHotness(Hotness);
+        CallGraphEdges[cast<GlobalValue>(CalledValue)].updateHotness(Hotness);
       } else {
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
@@ -257,16 +254,15 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, NumVals, TotalCount, NumCandidates);
         for (auto &Candidate : CandidateProfileData)
-          CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
-              .updateHotness(getHotness(Candidate.Count, PSI));
+          CallGraphEdges[Candidate.Value].updateHotness(
+              getHotness(Candidate.Count, PSI));
       }
     }
 
   // Explicit add hot edges to enforce importing for designated GUIDs for
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
-    CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        CalleeInfo::HotnessType::Hot);
+    CallGraphEdges[I].updateHotness(CalleeInfo::HotnessType::Hot);
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =
@@ -292,7 +288,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
                        DenseSet<GlobalValue::GUID> &CantBePromoted) {
   SetVector<ValueInfo> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  findRefEdges(Index, &V, RefEdges, Visited);
+  findRefEdges(&V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
                                     /* LiveRoot = */ false);
@@ -321,9 +317,12 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
 
 // Set LiveRoot flag on entries matching the given value name.
 static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
-  if (ValueInfo VI = Index.getValueInfo(GlobalValue::getGUID(Name)))
-    for (auto &Summary : VI.getSummaryList())
-      Summary->setLiveRoot();
+  auto SummaryList =
+      Index.findGlobalValueSummaryList(GlobalValue::getGUID(Name));
+  if (SummaryList == Index.end())
+    return;
+  for (auto &Summary : SummaryList->second)
+    Summary->setLiveRoot();
 }
 
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
@@ -447,16 +446,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   }
 
   for (auto &GlobalList : Index) {
-    // Ignore entries for references that are undefined in the current module.
-    if (GlobalList.second.SummaryList.empty())
-      continue;
-
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.size() == 1 &&
            "Expected module's index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second[0];
     bool AllRefsCanBeExternallyReferenced =
         llvm::all_of(Summary->refs(), [&](const ValueInfo &VI) {
-          return !CantBePromoted.count(VI.getGUID());
+          return !CantBePromoted.count(VI.getValue()->getGUID());
         });
     if (!AllRefsCanBeExternallyReferenced) {
       Summary->setNotEligibleToImport();
@@ -466,7 +461,9 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     if (auto *FuncSummary = dyn_cast<FunctionSummary>(Summary.get())) {
       bool AllCallsCanBeExternallyReferenced = llvm::all_of(
           FuncSummary->calls(), [&](const FunctionSummary::EdgeTy &Edge) {
-            return !CantBePromoted.count(Edge.first.getGUID());
+            auto GUID = Edge.first.isGUID() ? Edge.first.getGUID()
+                                            : Edge.first.getValue()->getGUID();
+            return !CantBePromoted.count(GUID);
           });
       if (!AllCallsCanBeExternallyReferenced)
         Summary->setNotEligibleToImport();

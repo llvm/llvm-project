@@ -119,9 +119,8 @@ static void computePrevailingCopies(
   };
 
   for (auto &I : Index) {
-    if (HasMultipleCopies(I.second.SummaryList))
-      PrevailingCopy[I.first] =
-          getFirstDefinitionForLinker(I.second.SummaryList);
+    if (HasMultipleCopies(I.second))
+      PrevailingCopy[I.first] = getFirstDefinitionForLinker(I.second);
   }
 }
 
