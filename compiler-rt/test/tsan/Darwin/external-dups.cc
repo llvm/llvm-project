@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
       barrier_wait(&barrier);
       ExternalWrite(opaque_object);
     });
-    // CHECK: WARNING: ThreadSanitizer: race on a library object
+    // CHECK: WARNING: ThreadSanitizer: race on HelloWorld
     t1.join();
     t2.join();
   }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       barrier_wait(&barrier);
       ExternalWrite(opaque_object);
     });
-    // CHECK: WARNING: ThreadSanitizer: race on a library object
+    // CHECK: WARNING: ThreadSanitizer: race on HelloWorld
     t1.join();
     t2.join();
   }

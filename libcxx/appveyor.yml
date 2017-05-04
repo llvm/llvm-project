@@ -10,54 +10,26 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      COMPILER: Clang-CL 4.0
-      MSVC_SETUP_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat"
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      COMPILER: Clang-CL 4.0
-      MSVC_SETUP_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+      CLANG_VERSION: ToT
+      MSVC_SETUP_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat
+      MSVC_SETUP_ARG: x86
+      APPVEYOR_SAVE_CACHE_ON_ERROR: true
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CLANG_VERSION: 4
+      MSVC_SETUP_PATH: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+      MSVC_SETUP_ARG: x86_amd64
+      APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 install:
   ############################################################################
   # All external dependencies are installed in C:\projects\deps
   ############################################################################
-  - mkdir C:\projects\deps
-  - cd C:\projects\deps
-
-  ############################################################################
-  # Install Ninja
-  ############################################################################
-  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.6.0/ninja-win.zip"
-  - appveyor DownloadFile %NINJA_URL% -FileName ninja.zip
-  - 7z x ninja.zip -oC:\projects\deps\ninja > nul
-  - set PATH=C:\projects\deps\ninja;%PATH%
-  - ninja --version
-
-  ############################################################################
-  # Install a recent CMake
-  ############################################################################
-  - set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-win64-x64.zip"
-  - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
-  - 7z x cmake.zip -oC:\projects\deps > nul
-  - move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
-  - set PATH=C:\projects\deps\cmake\bin;%PATH%
-  - cmake --version
-
-  ############################################################################
-  # Setup the path to Clang-cl
-  ############################################################################
-  - set PATH="C:\Program Files\LLVM\bin";%PATH%
-  - clang-cl -v
-
-  ############################################################################
-  # Setup the cached copy of LLVM
-  ############################################################################
-  - git clone --depth=1 http://llvm.org/git/llvm.git
-
+  - call "%APPVEYOR_BUILD_FOLDER%\\install-appveyor-reqs.cmd"
 
 before_build:
-  - call "$MSVC_SETUP_PATH" amd64
-  - cd C:\projects\libcxx
+  - call "%MSVC_SETUP_PATH%" %MSVC_SETUP_ARG%
+  - cd %APPVEYOR_BUILD_FOLDER%
 
 build_script:
   - md C:\projects\build-libcxx
@@ -71,8 +43,8 @@ build_script:
     -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
     "-DCMAKE_BUILD_TYPE=%configuration%"
     "-DLLVM_PATH=C:\projects\deps\llvm" -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
-    -DLLVM_LIT_ARGS="-sv --no-progress-bar --show-xfail --show-unsupported"
-    C:\projects\libcxx
+    -DLLVM_LIT_ARGS="-sv --show-xfail --show-unsupported"
+    %APPVEYOR_BUILD_FOLDER%
 
   #############################################################################
   # Build Step
@@ -89,3 +61,8 @@ on_failure:
 artifacts:
   - path: '_build/CMakeFiles/*.log'
     name: logs
+
+cache:
+ - C:\projects\deps\ninja
+ - C:\projects\deps\cmake
+ - C:\projects\deps\llvm

@@ -82,6 +82,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_end();
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_external_register_tag(const char *object_type);
 SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_external_register_header(void *tag, const char *header);
+SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_assign_tag(void *addr, void *tag);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_read(void *addr, void *caller_pc, void *tag);
