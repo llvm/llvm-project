@@ -25,7 +25,7 @@ struct eq {
 	bool operator () (int v2) const { return v == v2; }
 	int v;
 	};
-	
+
 int main()
 {
     int ia[] = {0, 1, 2, 3, 4, 5};

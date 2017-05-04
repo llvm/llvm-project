@@ -495,17 +495,22 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   }
 }
 
-static bool isTbss(OutputSection *Sec) {
-  return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
+uint64_t LinkerScript::advance(uint64_t Size, unsigned Align) {
+  bool IsTbss = (CurOutSec->Flags & SHF_TLS) && CurOutSec->Type == SHT_NOBITS;
+  uint64_t Start = IsTbss ? Dot + ThreadBssOffset : Dot;
+  Start = alignTo(Start, Align);
+  uint64_t End = Start + Size;
+
+  if (IsTbss)
+    ThreadBssOffset = End - Dot;
+  else
+    Dot = End;
+  return End;
 }
 
 void LinkerScript::output(InputSection *S) {
-  bool IsTbss = isTbss(CurOutSec);
-
-  uint64_t Pos = IsTbss ? Dot + ThreadBssOffset : Dot;
-  Pos = alignTo(Pos, S->Alignment);
-  S->OutSecOff = Pos - CurOutSec->Addr;
-  Pos += S->getSize();
+  uint64_t Pos = advance(S->getSize(), S->Alignment);
+  S->OutSecOff = Pos - S->getSize() - CurOutSec->Addr;
 
   // Update output section size after adding each section. This is so that
   // SIZEOF works correctly in the case below:
@@ -524,11 +529,6 @@ void LinkerScript::output(InputSection *S) {
             " bytes");
     }
   }
-
-  if (IsTbss)
-    ThreadBssOffset = Pos - Dot;
-  else
-    Dot = Pos;
 }
 
 void LinkerScript::switchTo(OutputSection *Sec) {
@@ -536,9 +536,7 @@ void LinkerScript::switchTo(OutputSection *Sec) {
     return;
 
   CurOutSec = Sec;
-
-  Dot = alignTo(Dot, CurOutSec->Alignment);
-  CurOutSec->Addr = isTbss(CurOutSec) ? Dot + ThreadBssOffset : Dot;
+  CurOutSec->Addr = advance(0, CurOutSec->Alignment);
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
   // will set the LMA such that the difference between VMA and LMA for the

@@ -9,6 +9,7 @@
 
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -47,6 +48,31 @@ SBInstruction SBInstructionList::GetInstructionAtIndex(uint32_t idx) {
         m_opaque_sp,
         m_opaque_sp->GetInstructionList().GetInstructionAtIndex(idx));
   return inst;
+}
+
+size_t SBInstructionList::GetInstructionsCount(const SBAddress &start,
+                                              const SBAddress &end, 
+                                              bool canSetBreakpoint) {
+  size_t num_instructions = GetSize();
+  size_t i = 0;
+  SBAddress addr;
+  size_t lower_index = 0;
+  size_t upper_index = 0;
+  size_t instructions_to_skip = 0;
+  for (i = 0; i < num_instructions; ++i) {
+    addr = GetInstructionAtIndex(i).GetAddress();
+    if (start == addr)
+      lower_index = i;
+    if (end == addr)
+      upper_index = i;
+  }
+  if (canSetBreakpoint)
+    for (i = lower_index; i <= upper_index; ++i) {
+      SBInstruction insn = GetInstructionAtIndex(i);
+      if (!insn.CanSetBreakpoint())
+        ++instructions_to_skip;
+    }
+  return upper_index - lower_index - instructions_to_skip;
 }
 
 void SBInstructionList::Clear() { m_opaque_sp.reset(); }

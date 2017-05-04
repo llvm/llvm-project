@@ -150,6 +150,6 @@ int main()
         std::scoped_lock sl{m1, m2, m3};
         static_assert((std::is_same<decltype(sl), std::scoped_lock<decltype(m1), decltype(m2), decltype(m3)>>::value), "" );
         }
-    } 
+    }
 #endif
 }

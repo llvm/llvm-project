@@ -13,7 +13,7 @@
 
 // XFAIL: c++98, c++03, c++11, c++14
 
-// std::byte is not an integer type, nor a character type. 
+// std::byte is not an integer type, nor a character type.
 // It is a distinct type for accessing the bits that ultimately make up object storage.
 
 static_assert( std::is_pod<std::byte>::value, "" );

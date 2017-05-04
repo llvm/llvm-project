@@ -176,6 +176,13 @@ bool SBInstruction::HasDelaySlot() {
   return false;
 }
 
+bool SBInstruction::CanSetBreakpoint () {
+  lldb::InstructionSP inst_sp(GetOpaque());
+  if (inst_sp)
+    return inst_sp->CanSetBreakpoint();
+  return false;
+}
+
 lldb::InstructionSP SBInstruction::GetOpaque() {
   if (m_opaque_sp)
     return m_opaque_sp->GetSP();

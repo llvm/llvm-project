@@ -235,10 +235,43 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-/// Return @p Prefix + @p Val->getName() + @p Suffix but Isl compatible.
+/// Combine Prefix, Val (or Number) and Suffix to an isl-compatible name.
+///
+/// In case @p UseInstructionNames is set, this function returns:
+///
+/// @p Prefix + "_" + @p Val->getName() + @p Suffix
+///
+/// otherwise
+///
+/// @p Prefix + to_string(Number) + @p Suffix
+///
+/// We ignore the value names by default, as they may change between release
+/// and debug mode and can consequently not be used when aiming for reproducible
+/// builds. However, for debugging named statements are often helpful, hence
+/// we allow their optional use.
 std::string getIslCompatibleName(const std::string &Prefix,
-                                 const llvm::Value *Val,
-                                 const std::string &Suffix);
+                                 const llvm::Value *Val, long Number,
+                                 const std::string &Suffix,
+                                 bool UseInstructionNames);
+
+/// Combine Prefix, Name (or Number) and Suffix to an isl-compatible name.
+///
+/// In case @p UseInstructionNames is set, this function returns:
+///
+/// @p Prefix + "_" + Name + @p Suffix
+///
+/// otherwise
+///
+/// @p Prefix + to_string(Number) + @p Suffix
+///
+/// We ignore @p Name by default, as they may change between release
+/// and debug mode and can consequently not be used when aiming for reproducible
+/// builds. However, for debugging named statements are often helpful, hence
+/// we allow their optional use.
+std::string getIslCompatibleName(const std::string &Prefix,
+                                 const std::string &Middle, long Number,
+                                 const std::string &Suffix,
+                                 bool UseInstructionNames);
 
 std::string getIslCompatibleName(const std::string &Prefix,
                                  const std::string &Middle,
