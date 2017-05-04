@@ -2376,7 +2376,10 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     break;
   }
   case ISD::CTPOP: {
-    Known.Zero.setBitsFrom(Log2_32(BitWidth)+1);
+    computeKnownBits(Op.getOperand(0), Known2, DemandedElts, Depth + 1);
+    // If we know some of the bits are zero, they can't be one.
+    unsigned PossibleOnes = BitWidth - Known2.Zero.countPopulation();
+    Known.Zero.setBitsFrom(Log2_32(PossibleOnes) + 1);
     break;
   }
   case ISD::LOAD: {

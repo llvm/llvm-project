@@ -14,11 +14,17 @@ define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
 }
 ; CHECK:       .p2align 4, 0x90
-; CHECK-NEXT:  .quad {{.*}}xray_synthetic_0
+; CHECK-NEXT:  .quad {{.*}}xray_synthetic_0{{.*}}
+; CHECK-NEXT:  .quad {{.*}}xray_fn_idx_synth_0{{.*}}
 ; CHECK-NEXT:  .section {{.*}}xray_instr_map
 ; CHECK-LABEL: Lxray_synthetic_0:
 ; CHECK:       .quad {{.*}}xray_sled_0
 ; CHECK:       .quad {{.*}}xray_sled_1
+; CHECK-LABEL: Lxray_synthetic_end0:
+; CHECK-NEXT:  .section {{.*}}xray_fn_idx
+; CHECK-LABEL: Lxray_fn_idx_synth_0:
+; CHECK:       .quad {{.*}}xray_synthetic_0
+; CHECK-NEXT:  .quad {{.*}}xray_synthetic_end0
 
 define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 1, 0x90
@@ -36,7 +42,13 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
   ret i32 %retval
 }
 ; CHECK:       .p2align 4, 0x90
-; CHECK-NEXT:  .quad {{.*}}xray_synthetic_1
+; CHECK-NEXT:  .quad {{.*}}xray_synthetic_1{{.*}}
+; CHECK-NEXT:  .quad {{.*}}xray_fn_idx_synth_1{{.*}}
 ; CHECK-LABEL: Lxray_synthetic_1:
 ; CHECK:       .quad {{.*}}xray_sled_2
 ; CHECK:       .quad {{.*}}xray_sled_3
+; CHECK-LABEL: Lxray_synthetic_end1:
+; CHECK:       .section {{.*}}xray_fn_idx
+; CHECK-LABEL: Lxray_fn_idx_synth_1:
+; CHECK:       .quad {{.*}}xray_synthetic_1
+; CHECK:       .quad {{.*}}xray_synthetic_end1
