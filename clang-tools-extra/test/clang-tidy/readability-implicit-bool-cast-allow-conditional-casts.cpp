@@ -40,7 +40,7 @@ void regularImplicitCastPointerToBoolIsNotIgnored() {
 
   int Struct::* memberPointer = &Struct::member;
   functionTaking<bool>(memberPointer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit cast 'int struct Struct::*' -> bool
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit cast 'int Struct::*' -> bool
   // CHECK-FIXES: functionTaking<bool>(memberPointer != nullptr);
 }
 

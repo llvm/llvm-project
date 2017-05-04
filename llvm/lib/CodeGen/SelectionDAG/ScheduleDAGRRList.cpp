@@ -520,21 +520,20 @@ FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
 /// interference on flags.
 void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
   // Bottom up: release predecessors
-  for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    ReleasePred(SU, &*I);
-    if (I->isAssignedRegDep()) {
+  for (SDep &Pred : SU->Preds) {
+    ReleasePred(SU, &Pred);
+    if (Pred.isAssignedRegDep()) {
       // This is a physical register dependency and it's impossible or
       // expensive to copy the register. Make sure nothing that can
       // clobber the register is scheduled between the predecessor and
       // this node.
-      SUnit *RegDef = LiveRegDefs[I->getReg()]; (void)RegDef;
-      assert((!RegDef || RegDef == SU || RegDef == I->getSUnit()) &&
+      SUnit *RegDef = LiveRegDefs[Pred.getReg()]; (void)RegDef;
+      assert((!RegDef || RegDef == SU || RegDef == Pred.getSUnit()) &&
              "interference on register dependence");
-      LiveRegDefs[I->getReg()] = I->getSUnit();
-      if (!LiveRegGens[I->getReg()]) {
+      LiveRegDefs[Pred.getReg()] = Pred.getSUnit();
+      if (!LiveRegGens[Pred.getReg()]) {
         ++NumLiveRegs;
-        LiveRegGens[I->getReg()] = SU;
+        LiveRegGens[Pred.getReg()] = SU;
       }
     }
   }
@@ -733,15 +732,14 @@ void ScheduleDAGRRList::ScheduleNodeBottomUp(SUnit *SU) {
   ReleasePredecessors(SU);
 
   // Release all the implicit physical register defs that are live.
-  for (SUnit::succ_iterator I = SU->Succs.begin(), E = SU->Succs.end();
-       I != E; ++I) {
-    // LiveRegDegs[I->getReg()] != SU when SU is a two-address node.
-    if (I->isAssignedRegDep() && LiveRegDefs[I->getReg()] == SU) {
+  for (SDep &Succ : SU->Succs) {
+    // LiveRegDegs[Succ.getReg()] != SU when SU is a two-address node.
+    if (Succ.isAssignedRegDep() && LiveRegDefs[Succ.getReg()] == SU) {
       assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
       --NumLiveRegs;
-      LiveRegDefs[I->getReg()] = nullptr;
-      LiveRegGens[I->getReg()] = nullptr;
-      releaseInterferences(I->getReg());
+      LiveRegDefs[Succ.getReg()] = nullptr;
+      LiveRegGens[Succ.getReg()] = nullptr;
+      releaseInterferences(Succ.getReg());
     }
   }
   // Release the special call resource dependence, if this is the beginning
@@ -802,17 +800,16 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
   DEBUG(dbgs() << "*** Unscheduling [" << SU->getHeight() << "]: ");
   DEBUG(SU->dump(this));
 
-  for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    CapturePred(&*I);
-    if (I->isAssignedRegDep() && SU == LiveRegGens[I->getReg()]){
+  for (SDep &Pred : SU->Preds) {
+    CapturePred(&Pred);
+    if (Pred.isAssignedRegDep() && SU == LiveRegGens[Pred.getReg()]){
       assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
-      assert(LiveRegDefs[I->getReg()] == I->getSUnit() &&
+      assert(LiveRegDefs[Pred.getReg()] == Pred.getSUnit() &&
              "Physical register dependency violated?");
       --NumLiveRegs;
-      LiveRegDefs[I->getReg()] = nullptr;
-      LiveRegGens[I->getReg()] = nullptr;
-      releaseInterferences(I->getReg());
+      LiveRegDefs[Pred.getReg()] = nullptr;
+      LiveRegGens[Pred.getReg()] = nullptr;
+      releaseInterferences(Pred.getReg());
     }
   }
 
@@ -895,7 +892,7 @@ void ScheduleDAGRRList::RestoreHazardCheckerBottomUp() {
 
   std::vector<SUnit*>::const_iterator I = (Sequence.end() - LookAhead);
   unsigned HazardCycle = (*I)->getHeight();
-  for (std::vector<SUnit*>::const_iterator E = Sequence.end(); I != E; ++I) {
+  for (auto E = Sequence.end(); I != E; ++I) {
     SUnit *SU = *I;
     for (; SU->getHeight() > HazardCycle; ++HazardCycle) {
       HazardRec->RecedeCycle();
@@ -1261,10 +1258,9 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
   //
   // If SU is the currently live definition of the same register that it uses,
   // then we are free to schedule it.
-  for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    if (I->isAssignedRegDep() && LiveRegDefs[I->getReg()] != SU)
-      CheckForLiveRegDef(I->getSUnit(), I->getReg(), LiveRegDefs.get(),
+  for (SDep &Pred : SU->Preds) {
+    if (Pred.isAssignedRegDep() && LiveRegDefs[Pred.getReg()] != SU)
+      CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), LiveRegDefs.get(),
                          RegAdded, LRegs, TRI);
   }
 
@@ -1743,8 +1739,7 @@ protected:
 template<class SF>
 static SUnit *popFromQueueImpl(std::vector<SUnit*> &Q, SF &Picker) {
   std::vector<SUnit *>::iterator Best = Q.begin();
-  for (std::vector<SUnit *>::iterator I = std::next(Q.begin()),
-         E = Q.end(); I != E; ++I)
+  for (auto I = std::next(Q.begin()), E = Q.end(); I != E; ++I)
     if (Picker(*Best, *I))
       Best = I;
   SUnit *V = *Best;

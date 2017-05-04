@@ -141,7 +141,7 @@ template <class Mutex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS __shared_mutex_base
+struct _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX __shared_mutex_base
 {
     mutex               __mut_;
     condition_variable  __gate1_;
@@ -173,7 +173,7 @@ struct _LIBCPP_TYPE_VIS __shared_mutex_base
 
 
 #if _LIBCPP_STD_VER > 14
-class _LIBCPP_TYPE_VIS shared_mutex
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX shared_mutex
 {
     __shared_mutex_base __base;
 public:
@@ -199,7 +199,7 @@ public:
 #endif
 
 
-class _LIBCPP_TYPE_VIS shared_timed_mutex
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX shared_timed_mutex
 {
     __shared_mutex_base __base;
 public:

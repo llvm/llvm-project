@@ -3997,16 +3997,20 @@ public:
         {return !(__x == __y);}
 };
 
+extern "C" double lgamma_r(double, int *);
+
 template<class _IntType>
-binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p)
+binomial_distribution<_IntType>::param_type::param_type(const result_type __t, const double __p)
     : __t_(__t), __p_(__p)
 {
     if (0 < __p_ && __p_ < 1)
     {
+    	int __sign;
         __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-        __pr_ = _VSTD::exp(_VSTD::lgamma(__t_ + 1.) - _VSTD::lgamma(__r0_ + 1.) -
-                          _VSTD::lgamma(__t_ - __r0_ + 1.) + __r0_ * _VSTD::log(__p_) +
-                          (__t_ - __r0_) * _VSTD::log(1 - __p_));
+        __pr_ = _VSTD::exp(lgamma_r(__t_ + 1., &__sign) - 
+                           lgamma_r(__r0_ + 1., &__sign) -
+                           lgamma_r(__t_ - __r0_ + 1., &__sign) + __r0_ * _VSTD::log(__p_) +
+                           (__t_ - __r0_) * _VSTD::log(1 - __p_));
         __odds_ratio_ = __p_ / (1 - __p_);
     }
 }

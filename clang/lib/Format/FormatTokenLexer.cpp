@@ -74,6 +74,10 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     static const tok::TokenKind JSShiftEqual[] = {tok::greater, tok::greater,
                                                   tok::greaterequal};
     static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
+    static const tok::TokenKind JSExponentiation[] = {tok::star, tok::star};
+    static const tok::TokenKind JSExponentiationEqual[] = {tok::star,
+                                                           tok::starequal};
+
     // FIXME: Investigate what token type gives the correct operator priority.
     if (tryMergeTokens(JSIdentity, TT_BinaryOperator))
       return;
@@ -83,6 +87,12 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
       return;
+    if (tryMergeTokens(JSExponentiation, TT_JsExponentiation))
+      return;
+    if (tryMergeTokens(JSExponentiationEqual, TT_JsExponentiationEqual)) {
+      Tokens.back()->Tok.setKind(tok::starequal);
+      return;
+    }
   }
 
   if (Style.Language == FormatStyle::LK_Java) {

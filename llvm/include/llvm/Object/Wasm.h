@@ -41,10 +41,14 @@ public:
     DEBUG_FUNCTION_NAME,
   };
 
-  WasmSymbol(StringRef Name, SymbolType Type) : Name(Name), Type(Type) {}
+  WasmSymbol(StringRef Name, SymbolType Type, uint32_t Section,
+             uint32_t ElementIndex)
+      : Name(Name), Type(Type), Section(Section), ElementIndex(ElementIndex) {}
 
   StringRef Name;
   SymbolType Type;
+  uint32_t Section;
+  uint32_t ElementIndex;
 };
 
 class WasmSection {

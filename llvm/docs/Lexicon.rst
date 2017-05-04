@@ -38,6 +38,13 @@ B
 **BB Vectorization**
     Basic-Block Vectorization
 
+**BDCE**
+    Bit-tracking dead code elimination. Some bit-wise instructions (shifts,
+    ands, ors, etc.) "kill" some of their input bits -- that is, they make it
+    such that those bits can be either zero or one without affecting control or
+    data flow of a program. The BDCE pass removes instructions that only
+    compute these dead bits.
+
 **BURS**
     Bottom Up Rewriting System --- A method of instruction selection for code
     generation.  An example is the `BURG

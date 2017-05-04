@@ -49,9 +49,6 @@ struct PhdrEntry {
 
 llvm::StringRef getOutputSectionName(llvm::StringRef Name);
 
-bool allocateHeaders(std::vector<PhdrEntry> &, llvm::ArrayRef<OutputSection *>,
-                     uint64_t Min);
-
 template <class ELFT> uint32_t getMipsEFlags();
 
 uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,

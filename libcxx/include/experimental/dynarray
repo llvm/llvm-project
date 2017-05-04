@@ -110,7 +110,7 @@ public:
 namespace std { namespace experimental { inline namespace __array_extensions_v1 {
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS dynarray
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_DYNARRAY dynarray
 {
 public:
     // types:

@@ -1459,8 +1459,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (FI->usesPICBase())
-    BuildMI(MBB, MBBI, dl, LoadInst)
-      .addReg(PPC::R30)
+    BuildMI(MBB, MBBI, dl, LoadInst, PPC::R30)
       .addImm(PBPOffset)
       .addReg(RBReg);
 

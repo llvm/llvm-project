@@ -3652,22 +3652,29 @@ static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
   // and get its parameter list.
   bool IsVariadic = false;
   ArrayRef<ParmVarDecl *> Params;
-  if (BlockScopeInfo *CurBlock = S.getCurBlock()) {
-    IsVariadic = CurBlock->TheDecl->isVariadic();
-    Params = CurBlock->TheDecl->parameters();
-  } else if (FunctionDecl *FD = S.getCurFunctionDecl()) {
+  DeclContext *Caller = S.CurContext;
+  if (auto *Block = dyn_cast<BlockDecl>(Caller)) {
+    IsVariadic = Block->isVariadic();
+    Params = Block->parameters();
+  } else if (auto *FD = dyn_cast<FunctionDecl>(Caller)) {
     IsVariadic = FD->isVariadic();
     Params = FD->parameters();
-  } else if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
+  } else if (auto *MD = dyn_cast<ObjCMethodDecl>(Caller)) {
     IsVariadic = MD->isVariadic();
     // FIXME: This isn't correct for methods (results in bogus warning).
     Params = MD->parameters();
+  } else if (isa<CapturedDecl>(Caller)) {
+    // We don't support va_start in a CapturedDecl.
+    S.Diag(Fn->getLocStart(), diag::err_va_start_captured_stmt);
+    return true;
   } else {
-    llvm_unreachable("unknown va_start context");
+    // This must be some other declcontext that parses exprs.
+    S.Diag(Fn->getLocStart(), diag::err_va_start_outside_function);
+    return true;
   }
 
   if (!IsVariadic) {
-    S.Diag(Fn->getLocStart(), diag::err_va_start_used_in_non_variadic_function);
+    S.Diag(Fn->getLocStart(), diag::err_va_start_fixed_function);
     return true;
   }
 

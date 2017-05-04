@@ -327,12 +327,7 @@ InputFile *LazyArchive::fetch() {
   return createObjectFile(MBInfo.first, file()->getName(), MBInfo.second);
 }
 
-InputFile *LazyObject::fetch() {
-  MemoryBufferRef MBRef = file()->getBuffer();
-  if (MBRef.getBuffer().empty())
-    return nullptr;
-  return createObjectFile(MBRef);
-}
+InputFile *LazyObject::fetch() { return file()->fetch(); }
 
 uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)
