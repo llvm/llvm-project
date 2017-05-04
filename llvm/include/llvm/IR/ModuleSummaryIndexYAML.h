@@ -201,7 +201,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     for (auto &FSum : FSums) {
       GlobalValueSummary::GVFlags GVFlags(GlobalValue::ExternalLinkage, false,
                                           false);
-      Elem.SummaryList.push_back(llvm::make_unique<FunctionSummary>(
+      Elem.push_back(llvm::make_unique<FunctionSummary>(
           GVFlags, 0, ArrayRef<ValueInfo>{},
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
@@ -213,7 +213,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
     for (auto &P : V) {
       std::vector<FunctionSummaryYaml> FSums;
-      for (auto &Sum : P.second.SummaryList) {
+      for (auto &Sum : P.second) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get()))
           FSums.push_back(FunctionSummaryYaml{
               FSum->type_tests(), FSum->type_test_assume_vcalls(),

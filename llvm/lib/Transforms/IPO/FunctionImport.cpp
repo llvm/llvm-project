@@ -117,7 +117,7 @@ namespace {
 /// - [insert you fancy metric here]
 static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
-             ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
+             const GlobalValueSummaryList &CalleeSummaryList,
              unsigned Threshold, StringRef CallerModulePath) {
   auto It = llvm::find_if(
       CalleeSummaryList,
@@ -168,6 +168,19 @@ selectCallee(const ModuleSummaryIndex &Index,
   return cast<GlobalValueSummary>(It->get());
 }
 
+/// Return the summary for the function \p GUID that fits the \p Threshold, or
+/// null if there's no match.
+static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
+                                              unsigned Threshold,
+                                              const ModuleSummaryIndex &Index,
+                                              StringRef CallerModulePath) {
+  auto CalleeSummaryList = Index.findGlobalValueSummaryList(GUID);
+  if (CalleeSummaryList == Index.end())
+    return nullptr; // This function does not have a summary
+  return selectCallee(Index, CalleeSummaryList->second, Threshold,
+                      CallerModulePath);
+}
+
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
                             GlobalValue::GUID>;
 
@@ -181,23 +194,19 @@ static void computeImportForFunction(
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   for (auto &Edge : Summary.calls()) {
-    ValueInfo VI = Edge.first;
-    DEBUG(dbgs() << " edge -> " << VI.getGUID() << " Threshold:" << Threshold
-                 << "\n");
+    auto GUID = Edge.first.getGUID();
+    DEBUG(dbgs() << " edge -> " << GUID << " Threshold:" << Threshold << "\n");
 
-    if (VI.getSummaryList().empty()) {
+    if (Index.findGlobalValueSummaryList(GUID) == Index.end()) {
       // For SamplePGO, the indirect call targets for local functions will
       // have its original name annotated in profile. We try to find the
       // corresponding PGOFuncName as the GUID.
-      auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
+      GUID = Index.getGUIDFromOriginalID(GUID);
       if (GUID == 0)
-        continue;
-      VI = Index.getValueInfo(GUID);
-      if (!VI)
         continue;
     }
 
-    if (DefinedGVSummaries.count(VI.getGUID())) {
+    if (DefinedGVSummaries.count(GUID)) {
       DEBUG(dbgs() << "ignored! Target already in destination module.\n");
       continue;
     }
@@ -213,8 +222,8 @@ static void computeImportForFunction(
     const auto NewThreshold =
         Threshold * GetBonusMultiplier(Edge.second.Hotness);
 
-    auto *CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                                       Summary.modulePath());
+    auto *CalleeSummary =
+        selectCallee(GUID, NewThreshold, Index, Summary.modulePath());
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
       continue;
@@ -246,7 +255,7 @@ static void computeImportForFunction(
     const auto AdjThreshold = GetAdjustedThreshold(Threshold, IsHotCallsite);
 
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();
-    auto &ProcessedThreshold = ImportList[ExportModulePath][VI.getGUID()];
+    auto &ProcessedThreshold = ImportList[ExportModulePath][GUID];
     /// Since the traversal of the call graph is DFS, we can revisit a function
     /// a second time with a higher threshold. In this case, it is added back to
     /// the worklist with the new threshold.
@@ -262,7 +271,7 @@ static void computeImportForFunction(
     // Make exports in the source module.
     if (ExportLists) {
       auto &ExportList = (*ExportLists)[ExportModulePath];
-      ExportList.insert(VI.getGUID());
+      ExportList.insert(GUID);
       if (!PreviouslyImported) {
         // This is the first time this function was exported from its source
         // module, so mark all functions and globals it references as exported
@@ -282,7 +291,7 @@ static void computeImportForFunction(
     }
 
     // Insert the newly imported function to the worklist.
-    Worklist.emplace_back(ResolvedCalleeSummary, AdjThreshold, VI.getGUID());
+    Worklist.emplace_back(ResolvedCalleeSummary, AdjThreshold, GUID);
   }
 }
 
@@ -422,56 +431,57 @@ DenseSet<GlobalValue::GUID> llvm::computeDeadSymbols(
   if (GUIDPreservedSymbols.empty())
     // Don't do anything when nothing is live, this is friendly with tests.
     return DenseSet<GlobalValue::GUID>();
-  DenseSet<ValueInfo> LiveSymbols;
-  SmallVector<ValueInfo, 128> Worklist;
-  Worklist.reserve(GUIDPreservedSymbols.size() * 2);
-  for (auto GUID : GUIDPreservedSymbols) {
-    ValueInfo VI = Index.getValueInfo(GUID);
-    if (!VI)
-      continue;
-    DEBUG(dbgs() << "Live root: " << VI.getGUID() << "\n");
-    LiveSymbols.insert(VI);
-    Worklist.push_back(VI);
+  DenseSet<GlobalValue::GUID> LiveSymbols = GUIDPreservedSymbols;
+  SmallVector<GlobalValue::GUID, 128> Worklist;
+  Worklist.reserve(LiveSymbols.size() * 2);
+  for (auto GUID : LiveSymbols) {
+    DEBUG(dbgs() << "Live root: " << GUID << "\n");
+    Worklist.push_back(GUID);
   }
   // Add values flagged in the index as live roots to the worklist.
   for (const auto &Entry : Index) {
     bool IsLiveRoot = llvm::any_of(
-        Entry.second.SummaryList,
+        Entry.second,
         [&](const std::unique_ptr<llvm::GlobalValueSummary> &Summary) {
           return Summary->liveRoot();
         });
     if (!IsLiveRoot)
       continue;
     DEBUG(dbgs() << "Live root (summary): " << Entry.first << "\n");
-    Worklist.push_back(ValueInfo(&Entry));
+    Worklist.push_back(Entry.first);
   }
 
   while (!Worklist.empty()) {
-    auto VI = Worklist.pop_back_val();
+    auto GUID = Worklist.pop_back_val();
+    auto It = Index.findGlobalValueSummaryList(GUID);
+    if (It == Index.end()) {
+      DEBUG(dbgs() << "Not in index: " << GUID << "\n");
+      continue;
+    }
 
     // FIXME: we should only make the prevailing copy live here
-    for (auto &Summary : VI.getSummaryList()) {
+    for (auto &Summary : It->second) {
       for (auto Ref : Summary->refs()) {
-        if (LiveSymbols.insert(Ref).second) {
-          DEBUG(dbgs() << "Marking live (ref): " << Ref.getGUID() << "\n");
-          Worklist.push_back(Ref);
+        auto RefGUID = Ref.getGUID();
+        if (LiveSymbols.insert(RefGUID).second) {
+          DEBUG(dbgs() << "Marking live (ref): " << RefGUID << "\n");
+          Worklist.push_back(RefGUID);
         }
       }
       if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
         for (auto Call : FS->calls()) {
-          if (LiveSymbols.insert(Call.first).second) {
-            DEBUG(dbgs() << "Marking live (call): " << Call.first.getGUID()
-                         << "\n");
-            Worklist.push_back(Call.first);
+          auto CallGUID = Call.first.getGUID();
+          if (LiveSymbols.insert(CallGUID).second) {
+            DEBUG(dbgs() << "Marking live (call): " << CallGUID << "\n");
+            Worklist.push_back(CallGUID);
           }
         }
       }
       if (auto *AS = dyn_cast<AliasSummary>(Summary.get())) {
         auto AliaseeGUID = AS->getAliasee().getOriginalName();
-        ValueInfo AliaseeVI = Index.getValueInfo(AliaseeGUID);
-        if (AliaseeVI && LiveSymbols.insert(AliaseeVI).second) {
+        if (LiveSymbols.insert(AliaseeGUID).second) {
           DEBUG(dbgs() << "Marking live (alias): " << AliaseeGUID << "\n");
-          Worklist.push_back(AliaseeVI);
+          Worklist.push_back(AliaseeGUID);
         }
       }
     }
@@ -480,9 +490,10 @@ DenseSet<GlobalValue::GUID> llvm::computeDeadSymbols(
   DeadSymbols.reserve(
       std::min(Index.size(), Index.size() - LiveSymbols.size()));
   for (auto &Entry : Index) {
-    if (!LiveSymbols.count(ValueInfo(&Entry))) {
-      DEBUG(dbgs() << "Marking dead: " << Entry.first << "\n");
-      DeadSymbols.insert(Entry.first);
+    auto GUID = Entry.first;
+    if (!LiveSymbols.count(GUID)) {
+      DEBUG(dbgs() << "Marking dead: " << GUID << "\n");
+      DeadSymbols.insert(GUID);
     }
   }
   DEBUG(dbgs() << LiveSymbols.size() << " symbols Live, and "
@@ -814,7 +825,7 @@ static bool doImportingForModule(Module &M) {
   // is only enabled when testing importing via the 'opt' tool, which does
   // not do the ThinLink that would normally determine what values to promote.
   for (auto &I : *Index) {
-    for (auto &S : I.second.SummaryList) {
+    for (auto &S : I.second) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
     }

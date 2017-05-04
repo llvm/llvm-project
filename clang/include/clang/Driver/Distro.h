@@ -57,6 +57,7 @@ public:
     UbuntuXenial,
     UbuntuYakkety,
     UbuntuZesty,
+    UbuntuArtful,
     UnknownDistro
   };
 
@@ -110,9 +111,9 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuZesty;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuArtful;
   }
- 
+
   /// @}
 };
 

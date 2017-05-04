@@ -156,14 +156,14 @@ public:
       return;
     for (const auto &GUIDSummaryLists : *Index)
       // Examine all summaries for this GUID.
-      for (auto &Summary : GUIDSummaryLists.second.SummaryList)
+      for (auto &Summary : GUIDSummaryLists.second)
         if (auto FS = dyn_cast<FunctionSummary>(Summary.get()))
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
           // a value id.
           for (auto &CallEdge : FS->calls())
-            if (!CallEdge.first.getValue())
+            if (CallEdge.first.isGUID())
               assignValueId(CallEdge.first.getGUID());
   }
 
@@ -304,7 +304,7 @@ private:
   }
   // Helper to get the valueId for the type of value recorded in VI.
   unsigned getValueId(ValueInfo VI) {
-    if (!VI.getValue())
+    if (VI.isGUID())
       return getValueId(VI.getGUID());
     return VE.getValueID(VI.getValue());
   }
@@ -358,7 +358,7 @@ public:
           Callback(Summary);
     } else {
       for (auto &Summaries : Index)
-        for (auto &Summary : Summaries.second.SummaryList)
+        for (auto &Summary : Summaries.second)
           Callback({Summaries.first, Summary.get()});
     }
   }
@@ -3270,14 +3270,15 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
 void ModuleBitcodeWriter::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev) {
-  auto VI = Index->getValueInfo(GlobalValue::getGUID(V.getName()));
-  if (!VI || VI.getSummaryList().empty()) {
+  auto Summaries =
+      Index->findGlobalValueSummaryList(GlobalValue::getGUID(V.getName()));
+  if (Summaries == Index->end()) {
     // Only declarations should not have a summary (a declaration might however
     // have a summary if the def was in module level asm).
     assert(V.isDeclaration());
     return;
   }
-  auto *Summary = VI.getSummaryList()[0].get();
+  auto *Summary = Summaries->second.front().get();
   NameVals.push_back(VE.getValueID(&V));
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
   NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
@@ -3366,14 +3367,15 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(GlobalValue::getGUID(F.getName()));
-    if (!VI || VI.getSummaryList().empty()) {
+    auto Summaries =
+        Index->findGlobalValueSummaryList(GlobalValue::getGUID(F.getName()));
+    if (Summaries == Index->end()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
       assert(F.isDeclaration());
       continue;
     }
-    auto *Summary = VI.getSummaryList()[0].get();
+    auto *Summary = Summaries->second.front().get();
     writePerModuleFunctionSummaryRecord(NameVals, Summary, VE.getValueID(&F),
                                         FSCallsAbbrev, FSCallsProfileAbbrev, F);
   }

@@ -42,6 +42,7 @@ private:
 public:
   typedef std::unique_ptr<SignalHandle> SignalHandleUP;
 
+  MainLoop();
   ~MainLoop() override;
 
   ReadHandleUP RegisterReadObject(const lldb::IOObjectSP &object_sp,
@@ -71,6 +72,9 @@ protected:
   void UnregisterSignal(int signo);
 
 private:
+  void ProcessReadObject(IOObject::WaitableHandle handle);
+  void ProcessSignal(int signo);
+
   class SignalHandle {
   public:
     ~SignalHandle() { m_mainloop.UnregisterSignal(m_signo); }
@@ -97,6 +101,9 @@ private:
 
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;
+#if HAVE_SYS_EVENT_H
+  int m_kqueue;
+#endif
   bool m_terminate_request : 1;
 };
 

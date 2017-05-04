@@ -1,6 +1,7 @@
 set (FILES
   FileSpecTest.cpp
   FileSystemTest.cpp
+  MainLoopTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
   SymbolsTest.cpp

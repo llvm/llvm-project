@@ -39,6 +39,11 @@ struct XRaySledEntry {
 #error "Unsupported word size."
 #endif
 };
+
+struct XRayFunctionSledIndex {
+  const XRaySledEntry* Begin;
+  const XRaySledEntry* End;
+};
 }
 
 namespace __xray {
@@ -46,6 +51,8 @@ namespace __xray {
 struct XRaySledMap {
   const XRaySledEntry *Sleds;
   size_t Entries;
+  const XRayFunctionSledIndex *SledsIndex;
+  size_t Functions;
 };
 
 bool patchFunctionEntry(bool Enable, uint32_t FuncId,

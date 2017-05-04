@@ -25,6 +25,8 @@ extern "C" {
 void __xray_init();
 extern const XRaySledEntry __start_xray_instr_map[] __attribute__((weak));
 extern const XRaySledEntry __stop_xray_instr_map[] __attribute__((weak));
+extern const XRayFunctionSledIndex __start_xray_fn_idx[] __attribute__((weak));
+extern const XRayFunctionSledIndex __stop_xray_fn_idx[] __attribute__((weak));
 }
 
 using namespace __xray;
@@ -55,6 +57,8 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
     __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
     XRayInstrMap.Sleds = __start_xray_instr_map;
     XRayInstrMap.Entries = __stop_xray_instr_map - __start_xray_instr_map;
+    XRayInstrMap.SledsIndex = __start_xray_fn_idx;
+    XRayInstrMap.Functions = __stop_xray_fn_idx - __start_xray_fn_idx;
   }
   __sanitizer::atomic_store(&XRayInitialized, true,
                             __sanitizer::memory_order_release);

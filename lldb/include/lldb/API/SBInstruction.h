@@ -53,6 +53,8 @@ public:
 
   bool HasDelaySlot();
 
+  bool CanSetBreakpoint();
+
   void Print(FILE *out);
 
   bool GetDescription(lldb::SBStream &description);

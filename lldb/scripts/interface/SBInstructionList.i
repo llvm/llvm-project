@@ -44,6 +44,9 @@ public:
     lldb::SBInstruction
     GetInstructionAtIndex (uint32_t idx);
 
+    size_t GetInstructionsCount(const SBAddress &start, const SBAddress &end,
+                                bool canSetBreakpoint);
+
     void
     Clear ();
 

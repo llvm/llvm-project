@@ -247,7 +247,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           if (!ArgIndex.second.empty()) {
             Ops.reserve(ArgIndex.second.size());
             Type *ElTy = V->getType();
-            for (unsigned long II : ArgIndex.second) {
+            for (auto II : ArgIndex.second) {
               // Use i32 to index structs, and i64 for others (pointers/arrays).
               // This satisfies GEP constraints.
               Type *IdxTy =

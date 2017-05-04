@@ -139,12 +139,18 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return X86II::MO_NO_FLAG;
 
   assert(!isTargetCOFF());
+  const Function *F = dyn_cast_or_null<Function>(GV);
 
-  if (isTargetELF())
+  if (isTargetELF()) {
+    if (is64Bit() && F && (CallingConv::X86_RegCall == F->getCallingConv()))
+      // According to psABI, PLT stub clobbers XMM8-XMM15.
+      // In Regcall calling convention those registers are used for passing
+      // parameters. Thus we need to prevent lazy binding in Regcall.
+      return X86II::MO_GOTPCREL;
     return X86II::MO_PLT;
+  }
 
   if (is64Bit()) {
-    auto *F = dyn_cast_or_null<Function>(GV);
     if (F && F->hasFnAttribute(Attribute::NonLazyBind))
       // If the function is marked as non-lazy, generate an indirect call
       // which loads from the GOT directly. This avoids runtime overhead
