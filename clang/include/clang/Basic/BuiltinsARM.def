@@ -25,11 +25,93 @@
 // In libgcc
 BUILTIN(__clear_cache, "vv*v*", "i")
 
+// 16-bit multiplications
+BUILTIN(__builtin_arm_smulbb, "iii", "nc")
+BUILTIN(__builtin_arm_smulbt, "iii", "nc")
+BUILTIN(__builtin_arm_smultb, "iii", "nc")
+BUILTIN(__builtin_arm_smultt, "iii", "nc")
+BUILTIN(__builtin_arm_smulwb, "iii", "nc")
+BUILTIN(__builtin_arm_smulwt, "iii", "nc")
+
 // Saturating arithmetic
 BUILTIN(__builtin_arm_qadd, "iii", "nc")
 BUILTIN(__builtin_arm_qsub, "iii", "nc")
 BUILTIN(__builtin_arm_ssat, "iiUi", "nc")
-BUILTIN(__builtin_arm_usat, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_usat, "UiiUi", "nc")
+
+BUILTIN(__builtin_arm_smlabb, "iiii", "nc")
+BUILTIN(__builtin_arm_smlabt, "iiii", "nc")
+BUILTIN(__builtin_arm_smlatb, "iiii", "nc")
+BUILTIN(__builtin_arm_smlatt, "iiii", "nc")
+BUILTIN(__builtin_arm_smlawb, "iiii", "nc")
+BUILTIN(__builtin_arm_smlawt, "iiii", "nc")
+
+BUILTIN(__builtin_arm_ssat16, "iii", "nc")
+BUILTIN(__builtin_arm_usat16, "iii", "nc")
+
+BUILTIN(__builtin_arm_sxtab16, "iii", "nc")
+BUILTIN(__builtin_arm_sxtb16, "ii", "nc")
+BUILTIN(__builtin_arm_uxtab16, "iii", "nc")
+BUILTIN(__builtin_arm_uxtb16, "ii", "nc")
+
+BUILTIN(__builtin_arm_sel, "iii", "nc")
+
+BUILTIN(__builtin_arm_qadd8, "iii", "nc")
+BUILTIN(__builtin_arm_qsub8, "iii", "nc")
+BUILTIN(__builtin_arm_sadd8, "iii", "nc")
+BUILTIN(__builtin_arm_shadd8, "iii", "nc")
+BUILTIN(__builtin_arm_shsub8, "iii", "nc")
+BUILTIN(__builtin_arm_ssub8, "iii", "nc")
+BUILTIN(__builtin_arm_uadd8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhadd8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhsub8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqadd8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqsub8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_usub8, "UiUiUi", "nc")
+
+// Sum of 8-bit absolute differences
+BUILTIN(__builtin_arm_usad8, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_usada8, "UiUiUiUi", "nc")
+
+// Parallel 16-bit addition and subtraction
+BUILTIN(__builtin_arm_qadd16, "iii", "nc")
+BUILTIN(__builtin_arm_qasx, "iii", "nc")
+BUILTIN(__builtin_arm_qsax, "iii", "nc")
+BUILTIN(__builtin_arm_qsub16, "iii", "nc")
+BUILTIN(__builtin_arm_sadd16, "iii", "nc")
+BUILTIN(__builtin_arm_sasx, "iii", "nc")
+BUILTIN(__builtin_arm_shadd16, "iii", "nc")
+BUILTIN(__builtin_arm_shasx, "iii", "nc")
+BUILTIN(__builtin_arm_shsax, "iii", "nc")
+BUILTIN(__builtin_arm_shsub16, "iii", "nc")
+BUILTIN(__builtin_arm_ssax, "iii", "nc")
+BUILTIN(__builtin_arm_ssub16, "iii", "nc")
+BUILTIN(__builtin_arm_uadd16, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uasx, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhadd16, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhasx, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhsax, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uhsub16, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqadd16, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqasx, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqsax, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_uqsub16, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_usax, "UiUiUi", "nc")
+BUILTIN(__builtin_arm_usub16, "UiUiUi", "nc")
+
+// Parallel 16-bit multiplication
+BUILTIN(__builtin_arm_smlad, "iiii", "nc")
+BUILTIN(__builtin_arm_smladx, "iiii", "nc")
+BUILTIN(__builtin_arm_smlald, "LLiiiLLi", "nc")
+BUILTIN(__builtin_arm_smlaldx, "LLiiiLLi", "nc")
+BUILTIN(__builtin_arm_smlsd, "iiii", "nc")
+BUILTIN(__builtin_arm_smlsdx, "iiii", "nc")
+BUILTIN(__builtin_arm_smlsld, "LLiiiLLi", "nc")
+BUILTIN(__builtin_arm_smlsldx, "LLiiiLLi", "nc")
+BUILTIN(__builtin_arm_smuad, "iii", "nc")
+BUILTIN(__builtin_arm_smuadx, "iii", "nc")
+BUILTIN(__builtin_arm_smusd, "iii", "nc")
+BUILTIN(__builtin_arm_smusdx, "iii", "nc")
 
 // Bit manipulation
 BUILTIN(__builtin_arm_rbit, "UiUi", "nc")

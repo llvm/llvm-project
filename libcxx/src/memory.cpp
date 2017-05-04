@@ -154,7 +154,7 @@ __sp_mut::lock() _NOEXCEPT
 {
     auto m = static_cast<__libcpp_mutex_t*>(__lx);
     unsigned count = 0;
-    while (__libcpp_mutex_trylock(m) != 0)
+    while (!__libcpp_mutex_trylock(m))
     {
         if (++count > 16)
         {

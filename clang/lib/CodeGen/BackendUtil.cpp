@@ -975,9 +975,9 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   FunctionImporter::ImportMapTy ImportList;
   for (auto &GlobalList : *CombinedIndex) {
     auto GUID = GlobalList.first;
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.size() == 1 &&
            "Expected individual combined index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second[0];
     // Skip the summaries for the importing module. These are included to
     // e.g. record required linkage changes.
     if (Summary->modulePath() == M->getModuleIdentifier())

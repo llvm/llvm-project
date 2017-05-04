@@ -55,6 +55,12 @@ const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
   return *this;
 }
 
+bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
+  if (lhs.IsValid() && rhs.IsValid())
+    return lhs.ref() == rhs.ref();
+  return false;
+}
+
 bool SBAddress::IsValid() const {
   return m_opaque_ap.get() != NULL && m_opaque_ap->IsValid();
 }
