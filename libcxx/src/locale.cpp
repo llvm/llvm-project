@@ -68,8 +68,8 @@ T&
 make(A0 a0)
 {
     static typename aligned_storage<sizeof(T)>::type buf;
-    ::new (&buf) T(a0);
-    return *reinterpret_cast<T*>(&buf);
+    auto *obj = ::new (&buf) T(a0);
+    return *obj;
 }
 
 template <class T, class A0, class A1>
@@ -88,8 +88,8 @@ T&
 make(A0 a0, A1 a1, A2 a2)
 {
     static typename aligned_storage<sizeof(T)>::type buf;
-    ::new (&buf) T(a0, a1, a2);
-    return *reinterpret_cast<T*>(&buf);
+    auto *obj = ::new (&buf) T(a0, a1, a2);
+    return *obj;
 }
 
 template <typename T, size_t N>
@@ -480,8 +480,8 @@ locale::__imp::make_global()
 {
     // only one thread can get in here and it only gets in once
     static aligned_storage<sizeof(locale)>::type buf;
-    ::new (&buf) locale(locale::classic());
-    return *reinterpret_cast<locale*>(&buf);
+    auto *obj = ::new (&buf) locale(locale::classic());
+    return *obj;
 }
 
 locale&

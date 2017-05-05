@@ -120,8 +120,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     return nullptr;
   }
 
-  Known.Zero.clearAllBits();
-  Known.One.clearAllBits();
+  Known.resetAll();
   if (DemandedMask == 0)     // Not demanding any bits from V.
     return UndefValue::get(VTy);
 

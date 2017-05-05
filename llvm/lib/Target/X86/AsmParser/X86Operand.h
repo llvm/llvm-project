@@ -520,7 +520,7 @@ struct X86Operand : public MCParsedAsmOperand {
   static std::unique_ptr<X86Operand>
   CreateMem(unsigned ModeSize, const MCExpr *Disp, SMLoc StartLoc, SMLoc EndLoc,
             unsigned Size = 0, StringRef SymName = StringRef(),
-            void *OpDecl = nullptr) {
+            void *OpDecl = nullptr, unsigned FrontendSize = 0) {
     auto Res = llvm::make_unique<X86Operand>(Memory, StartLoc, EndLoc);
     Res->Mem.SegReg   = 0;
     Res->Mem.Disp     = Disp;
@@ -529,6 +529,7 @@ struct X86Operand : public MCParsedAsmOperand {
     Res->Mem.Scale    = 1;
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
+    Res->Mem.FrontendSize = FrontendSize;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;

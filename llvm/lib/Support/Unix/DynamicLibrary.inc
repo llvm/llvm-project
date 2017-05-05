@@ -31,7 +31,7 @@ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
 #ifdef __CYGWIN__
   // Cygwin searches symbols only in the main
   // with the handle of dlopen(NULL, RTLD_GLOBAL).
-  if (!Filename)
+  if (!File)
     Handle = RTLD_DEFAULT;
 #endif
 

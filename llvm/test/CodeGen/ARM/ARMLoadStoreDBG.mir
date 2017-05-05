@@ -118,7 +118,6 @@ stack:
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%r7' }
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2.if.end
     liveins: %r0, %r1, %r2, %r3, %lr, %r7
 
     DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28

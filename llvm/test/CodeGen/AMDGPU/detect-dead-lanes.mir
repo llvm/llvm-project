@@ -294,7 +294,6 @@ registers:
   - { id: 5, class: sreg_128 }
 body: |
   bb.0:
-    successors: %bb.1
     S_NOP 0, implicit-def %0
     S_NOP 0, implicit-def %1
     S_NOP 0, implicit-def %2
@@ -302,7 +301,6 @@ body: |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.1, %bb.2
     %4 = PHI %3, %bb.0, %5, %bb.1
 
     ; let's swiffle some lanes around for fun...
@@ -348,7 +346,6 @@ registers:
   - { id: 6, class: sreg_128 }
 body: |
   bb.0:
-    successors: %bb.1
     S_NOP 0, implicit-def %0
     S_NOP 0, implicit-def %1
     S_NOP 0, implicit-def dead %2
@@ -357,7 +354,6 @@ body: |
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.1, %bb.2
     %5 = PHI %4, %bb.0, %6, %bb.1
 
     ; rotate lanes, but skip sub2 lane...
@@ -396,13 +392,11 @@ registers:
   - { id: 3, class: sreg_128 }
 body: |
   bb.0:
-    successors: %bb.1
     S_NOP 0, implicit-def %0
     %1 = REG_SEQUENCE %0, %subreg.sub0
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.1, %bb.2
     %2 = PHI %1, %bb.0, %3, %bb.1
 
     ; rotate subreg lanes, skipping sub1

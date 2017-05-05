@@ -2044,8 +2044,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       if (M < 0) {
         // For UNDEF elements, we don't know anything about the common state of
         // the shuffle result.
-        Known.One.clearAllBits();
-        Known.Zero.clearAllBits();
+        Known.resetAll();
         DemandedLHS.clearAllBits();
         DemandedRHS.clearAllBits();
         break;
@@ -2218,14 +2217,13 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     // Also compute a conservative estimate for high known-0 bits.
     // More trickiness is possible, but this is sufficient for the
     // interesting case of alignment computation.
-    Known.One.clearAllBits();
     unsigned TrailZ = Known.Zero.countTrailingOnes() +
                       Known2.Zero.countTrailingOnes();
     unsigned LeadZ =  std::max(Known.Zero.countLeadingOnes() +
                                Known2.Zero.countLeadingOnes(),
                                BitWidth) - BitWidth;
 
-    Known.Zero.clearAllBits();
+    Known.resetAll();
     Known.Zero.setLowBits(std::min(TrailZ, BitWidth));
     Known.Zero.setHighBits(std::min(LeadZ, BitWidth));
     break;
@@ -2598,8 +2596,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
 
     uint32_t Leaders = std::max(Known.Zero.countLeadingOnes(),
                                 Known2.Zero.countLeadingOnes());
-    Known.One.clearAllBits();
-    Known.Zero.clearAllBits();
+    Known.resetAll();
     Known.Zero.setHighBits(Leaders);
     break;
   }

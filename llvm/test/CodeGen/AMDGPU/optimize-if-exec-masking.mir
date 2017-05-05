@@ -176,7 +176,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -189,7 +188,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -236,7 +234,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -248,7 +245,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -295,7 +291,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -307,7 +302,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -356,7 +350,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -370,7 +363,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -418,7 +410,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr6 = S_MOV_B32 -1
@@ -433,7 +424,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1 , %sgpr4_sgpr5_sgpr6_sgpr7
     %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
 
@@ -480,7 +470,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -494,7 +483,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -544,7 +532,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -557,7 +544,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1, %sgpr2_sgpr3
     S_SLEEP 0, implicit %sgpr2_sgpr3
     %sgpr7 = S_MOV_B32 61440
@@ -606,7 +592,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -618,7 +603,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -665,7 +649,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -677,7 +660,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440
@@ -724,7 +706,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
-    successors: %bb.1.if, %bb.2.end
     liveins: %vgpr0
 
     %sgpr0_sgpr1 = COPY %exec
@@ -736,7 +717,6 @@ body:             |
     S_BRANCH %bb.1.if
 
   bb.1.if:
-    successors: %bb.2.end
     liveins: %sgpr0_sgpr1
 
     %sgpr7 = S_MOV_B32 61440

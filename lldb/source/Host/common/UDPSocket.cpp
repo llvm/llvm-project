@@ -28,16 +28,14 @@ const int kDomain = AF_INET;
 const int kType = SOCK_DGRAM;
 
 static const char *g_not_supported_error = "Not supported";
-} // namespace
+}
+
+UDPSocket::UDPSocket(NativeSocket socket) : Socket(ProtocolUdp, true, true) {
+  m_socket = socket;
+}
 
 UDPSocket::UDPSocket(bool should_close, bool child_processes_inherit)
     : Socket(ProtocolUdp, should_close, child_processes_inherit) {}
-
-UDPSocket::UDPSocket(NativeSocket socket, const UDPSocket &listen_socket)
-    : Socket(ProtocolUdp, listen_socket.m_should_close_fd,
-             listen_socket.m_child_processes_inherit) {
-  m_socket = socket;
-}
 
 size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
   return ::sendto(m_socket, static_cast<const char *>(buf), num_bytes, 0,
@@ -45,14 +43,26 @@ size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
 }
 
 Error UDPSocket::Connect(llvm::StringRef name) {
+  return Error("%s", g_not_supported_error);
+}
+
+Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
+  return Error("%s", g_not_supported_error);
+}
+
+Error UDPSocket::Accept(Socket *&socket) {
+  return Error("%s", g_not_supported_error);
+}
+
+Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
+                         Socket *&socket) {
+  std::unique_ptr<UDPSocket> final_socket;
+
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("UDPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Error error;
-  if (error.Fail())
-    return error;
-
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;
@@ -84,11 +94,12 @@ Error UDPSocket::Connect(llvm::StringRef name) {
   for (struct addrinfo *service_info_ptr = service_info_list;
        service_info_ptr != nullptr;
        service_info_ptr = service_info_ptr->ai_next) {
-    m_socket = Socket::CreateSocket(
+    auto send_fd = CreateSocket(
         service_info_ptr->ai_family, service_info_ptr->ai_socktype,
-        service_info_ptr->ai_protocol, m_child_processes_inherit, error);
+        service_info_ptr->ai_protocol, child_processes_inherit, error);
     if (error.Success()) {
-      m_sockaddr = service_info_ptr;
+      final_socket.reset(new UDPSocket(send_fd));
+      final_socket->m_sockaddr = service_info_ptr;
       break;
     } else
       continue;
@@ -96,17 +107,16 @@ Error UDPSocket::Connect(llvm::StringRef name) {
 
   ::freeaddrinfo(service_info_list);
 
-  if (IsValid())
+  if (!final_socket)
     return error;
 
   SocketAddress bind_addr;
 
   // Only bind to the loopback address if we are expecting a connection from
   // localhost to avoid any firewall issues.
-  const bool bind_addr_success =
-      (host_str == "127.0.0.1" || host_str == "localhost")
-          ? bind_addr.SetToLocalhost(kDomain, port)
-          : bind_addr.SetToAnyAddress(kDomain, port);
+  const bool bind_addr_success = (host_str == "127.0.0.1" || host_str == "localhost")
+                                     ? bind_addr.SetToLocalhost(kDomain, port)
+                                     : bind_addr.SetToAnyAddress(kDomain, port);
 
   if (!bind_addr_success) {
     error.SetErrorString("Failed to get hostspec to bind for");
@@ -115,37 +125,13 @@ Error UDPSocket::Connect(llvm::StringRef name) {
 
   bind_addr.SetPort(0); // Let the source port # be determined dynamically
 
-  err = ::bind(m_socket, bind_addr, bind_addr.GetLength());
+  err = ::bind(final_socket->GetNativeSocket(), bind_addr, bind_addr.GetLength());
 
+  struct sockaddr_in source_info;
+  socklen_t address_len = sizeof (struct sockaddr_in);
+  err = ::getsockname(final_socket->GetNativeSocket(), (struct sockaddr *) &source_info, &address_len);
+
+  socket = final_socket.release();
   error.Clear();
-  return error;
-}
-
-Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
-  return Error("%s", g_not_supported_error);
-}
-
-Error UDPSocket::Accept(Socket *&socket) {
-  return Error("%s", g_not_supported_error);
-}
-
-Error UDPSocket::CreateSocket() {
-  Error error;
-  if (IsValid())
-    error = Close();
-  if (error.Fail())
-    return error;
-  m_socket =
-      Socket::CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
-  return error;
-}
-
-Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
-                         Socket *&socket) {
-  std::unique_ptr<UDPSocket> final_socket(
-      new UDPSocket(true, child_processes_inherit));
-  Error error = final_socket->Connect(name);
-  if (!error.Fail())
-    socket = final_socket.release();
   return error;
 }

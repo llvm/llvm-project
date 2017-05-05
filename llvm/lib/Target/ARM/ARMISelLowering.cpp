@@ -12640,7 +12640,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
   unsigned BitWidth = Known.getBitWidth();
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
   switch (Op.getOpcode()) {
   default: break;
   case ARMISD::ADDC:
@@ -12655,7 +12655,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case ARMISD::CMOV: {
     // Bits are known zero/one if known on the LHS and RHS.
     DAG.computeKnownBits(Op.getOperand(0), Known, Depth+1);
-    if (Known.Zero == 0 && Known.One == 0) return;
+    if (Known.isUnknown())
+      return;
 
     KnownBits KnownRHS;
     DAG.computeKnownBits(Op.getOperand(1), KnownRHS, Depth+1);

@@ -384,14 +384,12 @@ liveins:
 
 body:             |
   bb.0.entry:
-    successors: %bb.3.is_null, %bb.1.not_null
     liveins: %esi, %rdi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
     JE_1 %bb.3.is_null, implicit %eflags
 
   bb.1.not_null:
-    successors: %bb.4.ret_100, %bb.2.ret_200
     liveins: %esi, %rdi
 
     %eax = MOV32ri 2200000
@@ -427,7 +425,6 @@ liveins:
 
 body:             |
   bb.0.entry:
-    successors: %bb.3.is_null, %bb.1.not_null
     liveins: %esi, %rdi, %rdx
 
     %eax = MOV32rm killed %rdx, 1, _, 0, _ :: (volatile load 4 from %ir.ptr)
@@ -435,7 +432,6 @@ body:             |
     JE_1 %bb.3.is_null, implicit %eflags
 
   bb.1.not_null:
-    successors: %bb.4.ret_100, %bb.2.ret_200
     liveins: %esi, %rdi
 
     %eax = MOV32ri 2200000
@@ -444,7 +440,6 @@ body:             |
     JE_1 %bb.4.ret_100, implicit %eflags
 
   bb.2.ret_200:
-    successors: %bb.3.is_null
 
     %eax = MOV32ri 200
 
@@ -472,14 +467,12 @@ liveins:
 
 body:             |
   bb.0.entry:
-    successors: %bb.3.is_null, %bb.1.not_null
     liveins: %esi, %rdi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
     JE_1 %bb.3.is_null, implicit %eflags
 
   bb.1.not_null:
-    successors: %bb.4.ret_100, %bb.2.ret_200
     liveins: %esi, %rdi
 
     %eax = MOV32ri 2200000
@@ -515,14 +508,12 @@ liveins:
 
 body:             |
   bb.0.entry:
-    successors: %bb.3.is_null, %bb.1.not_null
     liveins: %rsi, %rdi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
     JE_1 %bb.3.is_null, implicit %eflags
 
   bb.1.not_null:
-    successors: %bb.4.ret_100, %bb.2.ret_200
     liveins: %rsi, %rdi
 
     %rdi  = MOV64ri 5000
@@ -557,14 +548,12 @@ liveins:
 
 body:             |
   bb.0.entry:
-    successors: %bb.3.is_null, %bb.1.not_null
     liveins: %rsi, %rdi, %rdx
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
     JE_1 %bb.3.is_null, implicit %eflags
 
   bb.1.not_null:
-    successors: %bb.4.ret_100, %bb.2.ret_200
     liveins: %rsi, %rdi, %rdx
 
     %rbx  = MOV64rr %rdx
@@ -603,7 +592,6 @@ calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx',
 # CHECK: CALL64pcrel32
 body:             |
   bb.0.entry:
-    successors: %bb.2.leave, %bb.1.stay
     liveins: %rdi, %rbx
 
     frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
@@ -645,7 +633,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -680,7 +667,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -712,7 +698,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.1.is_null(0x30000000), %bb.2.not_null(0x50000000)
     liveins: %rsi, %rdi
   
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -745,7 +730,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.1.is_null(0x30000000), %bb.2.not_null(0x50000000)
     liveins: %rsi, %rdi
   
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -779,7 +763,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -810,7 +793,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -842,7 +824,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -874,7 +855,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -910,7 +890,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -941,7 +920,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -974,7 +952,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1006,7 +983,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1042,7 +1018,6 @@ calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx',
                         '%r14d', '%r15d', '%r12w', '%r13w', '%r14w', '%r15w' ]
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rbx
 
     frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
@@ -1082,7 +1057,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1116,7 +1090,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1149,7 +1122,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1182,7 +1154,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1214,7 +1185,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1246,7 +1216,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags
@@ -1279,7 +1248,6 @@ liveins:
   - { reg: '%rsi' }
 body:             |
   bb.0.entry:
-    successors: %bb.2.is_null, %bb.1.not_null
     liveins: %rdi, %rsi
 
     TEST64rr %rdi, %rdi, implicit-def %eflags

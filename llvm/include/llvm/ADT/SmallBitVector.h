@@ -278,6 +278,24 @@ public:
     return getPointer()->find_next_unset(Prev);
   }
 
+  /// find_prev - Returns the index of the first set bit that precedes the
+  /// the bit at \p PriorTo.  Returns -1 if all previous bits are unset.
+  int find_prev(unsigned PriorTo) const {
+    if (isSmall()) {
+      if (PriorTo == 0)
+        return -1;
+
+      --PriorTo;
+      uintptr_t Bits = getSmallBits();
+      Bits &= maskTrailingOnes<uintptr_t>(PriorTo + 1);
+      if (Bits == 0)
+        return -1;
+
+      return NumBaseBits - countLeadingZeros(Bits) - 1;
+    }
+    return getPointer()->find_prev(PriorTo);
+  }
+
   /// Clear all bits.
   void clear() {
     if (!isSmall())

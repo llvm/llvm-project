@@ -1881,7 +1881,7 @@ void SparcTargetLowering::computeKnownBitsForTargetNode
                                  const SelectionDAG &DAG,
                                  unsigned Depth) const {
   KnownBits Known2;
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
 
   switch (Op.getOpcode()) {
   default: break;

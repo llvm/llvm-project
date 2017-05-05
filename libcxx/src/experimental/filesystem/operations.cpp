@@ -513,8 +513,8 @@ bool checked_set(CType* out, ChronoType time) {
     return true;
 }
 
-using TimeSpec = struct ::timespec;
-using StatT = struct ::stat;
+using TimeSpec = struct timespec;
+using StatT =  struct stat;
 
 #if defined(__APPLE__)
 TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }

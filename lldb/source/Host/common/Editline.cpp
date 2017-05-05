@@ -367,7 +367,7 @@ void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
   if (to == CursorLocation::EditingCursor) {
     toColumn =
         editline_cursor_position - (editline_cursor_row * m_terminal_width) + 1;
-  } else if (to == CursorLocation::BlockEnd) {
+  } else if (to == CursorLocation::BlockEnd && !m_input_lines.empty()) {
     toColumn =
         ((m_input_lines[m_input_lines.size() - 1].length() + GetPromptWidth()) %
          80) +

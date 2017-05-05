@@ -3580,7 +3580,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, KnownBits &Known,
     const APInt &DemandedElts, const SelectionDAG &DAG, unsigned Depth) const {
 
-  Known.Zero.clearAllBits(); Known.One.clearAllBits(); // Don't know anything.
+  Known.resetAll(); // Don't know anything.
 
   KnownBits Known2;
   unsigned Opc = Op.getOpcode();

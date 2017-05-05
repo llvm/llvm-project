@@ -255,7 +255,7 @@ XRayPatchingStatus patchFunction(int32_t FuncId,
 
   // FuncId must be a positive number, less than the number of functions
   // instrumented.
-  if (FuncId <= 0 || static_cast<size_t>(FuncId) >= InstrMap.Functions) {
+  if (FuncId <= 0 || static_cast<size_t>(FuncId) > InstrMap.Functions) {
     Report("Invalid function id provided: %d\n", FuncId);
     return XRayPatchingStatus::FAILED;
   }
@@ -302,3 +302,15 @@ int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t)) {
   return 1;
 }
 int __xray_remove_handler_arg1() { return __xray_set_handler_arg1(nullptr); }
+
+uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
+  __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
+  if (FuncId <= 0 || static_cast<size_t>(FuncId) > XRayInstrMap.Functions)
+    return 0;
+  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->Address;
+}
+
+size_t __xray_max_function_id() XRAY_NEVER_INSTRUMENT {
+  __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
+  return XRayInstrMap.Functions;
+}

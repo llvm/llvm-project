@@ -123,13 +123,13 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef>
-static getArchiveMembers(MemoryBufferRef MB) {
+std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
+    MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       check(Archive::create(MB),
             MB.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> V;
+  std::vector<std::pair<MemoryBufferRef, uint64_t>> V;
   Error Err = Error::success();
   for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
     Archive::Child C =
@@ -139,7 +139,7 @@ static getArchiveMembers(MemoryBufferRef MB) {
         check(C.getMemoryBufferRef(),
               MB.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    V.push_back(MBRef);
+    V.push_back(std::make_pair(MBRef, C.getChildOffset()));
   }
   if (Err)
     fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
@@ -173,8 +173,8 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   case file_magic::archive: {
     // Handle -whole-archive.
     if (InWholeArchive) {
-      for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB, Path));
+      for (const auto &P : getArchiveMembers(MBRef))
+        Files.push_back(createObjectFile(P.first, Path, P.second));
       return;
     }
 
@@ -186,8 +186,8 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // understand the LLVM bitcode file. It is a pretty common error, so
     // we'll handle it as if it had a symbol table.
     if (!File->hasSymbolTable()) {
-      for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(make<LazyObjectFile>(MB));
+      for (const auto &P : getArchiveMembers(MBRef))
+        Files.push_back(make<LazyObjectFile>(P.first, Path, P.second));
       return;
     }
 
@@ -215,7 +215,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   default:
     if (InLib)
-      Files.push_back(make<LazyObjectFile>(MBRef));
+      Files.push_back(make<LazyObjectFile>(MBRef, "", 0));
     else
       Files.push_back(createObjectFile(MBRef));
   }

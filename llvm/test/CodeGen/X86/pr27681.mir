@@ -25,7 +25,6 @@ stack:
   - { id: 2, type: spill-slot, offset: -32, size: 4, alignment: 4 }
 body:             |
   bb.0:
-    successors: %bb.1
     liveins: %ebp, %ebx, %edi, %esi
 
     frame-setup PUSH32r killed %ebp, implicit-def %esp, implicit %esp
@@ -41,7 +40,6 @@ body:             |
     %edx = MOV32ri 6
 
   bb.1:
-    successors: %bb.3, %bb.2
     liveins: %eax, %ebp, %ebx, %ecx, %edi, %edx
 
     %ebp = SHR32rCL killed %ebp, implicit-def dead %eflags, implicit %cl
@@ -66,7 +64,6 @@ body:             |
     JE_1 %bb.3, implicit %eflags
 
   bb.2:
-    successors: %bb.3
     liveins: %cl, %eax, %ebp, %esi
 
     OR32mr %esp, 1, _, 8, _, killed %eax, implicit-def %eflags ; :: (store 4 into %stack.1)

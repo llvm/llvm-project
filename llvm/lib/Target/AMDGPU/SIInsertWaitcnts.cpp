@@ -1087,7 +1087,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
            (CntVal[LGKM_CNT] & AMDGPU::getLgkmcntBitMask(IV)))) {
         MachineLoop *ContainingLoop = MLI->getLoopFor(MI.getParent());
         if (ContainingLoop) {
-          MachineBasicBlock *TBB = ContainingLoop->getTopBlock();
+          MachineBasicBlock *TBB = ContainingLoop->getHeader();
           BlockWaitcntBrackets *ScoreBracket =
               BlockWaitcntBracketsMap[TBB].get();
           if (!ScoreBracket) {
@@ -1097,7 +1097,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
           }
           ScoreBracket->setRevisitLoop(true);
           DEBUG(dbgs() << "set-revisit: block"
-                       << ContainingLoop->getTopBlock()->getNumber() << '\n';);
+                       << ContainingLoop->getHeader()->getNumber() << '\n';);
         }
       }
 
@@ -1758,12 +1758,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     // If we are walking into the block from before the loop, then guarantee
     // at least 1 re-walk over the loop to propagate the information, even if
     // no S_WAITCNT instructions were generated.
-    if (ContainingLoop && ContainingLoop->getTopBlock() == &MBB && J < I &&
+    if (ContainingLoop && ContainingLoop->getHeader() == &MBB && J < I &&
         (BlockWaitcntProcessedSet.find(&MBB) ==
          BlockWaitcntProcessedSet.end())) {
       BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
       DEBUG(dbgs() << "set-revisit: block"
-                   << ContainingLoop->getTopBlock()->getNumber() << '\n';);
+                   << ContainingLoop->getHeader()->getNumber() << '\n';);
     }
 
     // Walk over the instructions.
@@ -1774,7 +1774,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     // See if we want to revisit the loop.
     if (ContainingLoop && loopBottom(ContainingLoop) == &MBB) {
-      MachineBasicBlock *EntryBB = ContainingLoop->getTopBlock();
+      MachineBasicBlock *EntryBB = ContainingLoop->getHeader();
       BlockWaitcntBrackets *EntrySB = BlockWaitcntBracketsMap[EntryBB].get();
       if (EntrySB && EntrySB->getRevisitLoop()) {
         EntrySB->setRevisitLoop(false);

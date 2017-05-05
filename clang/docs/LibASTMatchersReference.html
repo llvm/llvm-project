@@ -924,6 +924,19 @@ in
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxStdInitializerListExpr0')"><a name="cxxStdInitializerListExpr0Anchor">cxxStdInitializerListExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXStdInitializerListExpr.html">CXXStdInitializerListExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="cxxStdInitializerListExpr0"><pre>Matches C++ initializer list expressions.
+
+Given
+  std::vector&lt;int&gt; a({ 1, 2, 3 });
+  std::vector&lt;int&gt; b = { 4, 5 };
+  int c[] = { 6, 7 };
+  std::pair&lt;int, int&gt; d = { 8, 9 };
+cxxStdInitializerListExpr()
+  matches "{ 1, 2, 3 }" and "{ 4, 5 }"
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxTemporaryObjectExpr0')"><a name="cxxTemporaryObjectExpr0Anchor">cxxTemporaryObjectExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxTemporaryObjectExpr0"><pre>Matches functional cast expressions having N != 1 arguments
 
@@ -1160,7 +1173,7 @@ Example matches [&amp;](){return 5;}
 <tr><td colspan="4" class="doc" id="materializeTemporaryExpr0"><pre>Matches nodes where temporaries are materialized.
 
 Example: Given
-  struct T {void func()};
+  struct T {void func();};
   T f();
   void g(T);
 materializeTemporaryExpr() matches 'f()' in these statements
@@ -5233,7 +5246,7 @@ Example matches y in x(y)
 <tr><td colspan="4" class="doc" id="hasReceiverType0"><pre>Matches on the receiver of an ObjectiveC Message expression.
 
 Example
-matcher = objCMessageExpr(hasRecieverType(asString("UIWebView *")));
+matcher = objCMessageExpr(hasReceiverType(asString("UIWebView *")));
 matches the [webView ...] message invocation.
   NSString *webViewJavaScript = ...
   UIWebView *webView = ...

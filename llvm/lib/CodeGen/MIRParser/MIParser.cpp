@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MIParser.h"
+
 #include "MILexer.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -134,7 +136,8 @@ public:
 
   bool
   parseBasicBlockDefinition(DenseMap<unsigned, MachineBasicBlock *> &MBBSlots);
-  bool parseBasicBlock(MachineBasicBlock &MBB);
+  bool parseBasicBlock(MachineBasicBlock &MBB,
+                       MachineBasicBlock *&AddFalthroughFrom);
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
 
@@ -518,7 +521,8 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
   return false;
 }
 
-bool MIParser::parseBasicBlock(MachineBasicBlock &MBB) {
+bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
+                               MachineBasicBlock *&AddFalthroughFrom) {
   // Skip the definition.
   assert(Token.is(MIToken::MachineBasicBlockLabel));
   lex();
@@ -538,10 +542,12 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB) {
   //
   // is equivalent to
   //   liveins: %edi, %esi
+  bool ExplicitSuccesors = false;
   while (true) {
     if (Token.is(MIToken::kw_successors)) {
       if (parseBasicBlockSuccessors(MBB))
         return true;
+      ExplicitSuccesors = true;
     } else if (Token.is(MIToken::kw_liveins)) {
       if (parseBasicBlockLiveins(MBB))
         return true;
@@ -557,10 +563,9 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB) {
   // Parse the instructions.
   bool IsInBundle = false;
   MachineInstr *PrevMI = nullptr;
-  while (true) {
-    if (Token.is(MIToken::MachineBasicBlockLabel) || Token.is(MIToken::Eof))
-      return false;
-    else if (consumeIfPresent(MIToken::Newline))
+  while (!Token.is(MIToken::MachineBasicBlockLabel) &&
+         !Token.is(MIToken::Eof)) {
+    if (consumeIfPresent(MIToken::Newline))
       continue;
     if (consumeIfPresent(MIToken::rbrace)) {
       // The first parsing pass should verify that all closing '}' have an
@@ -592,6 +597,22 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB) {
     assert(Token.isNewlineOrEOF() && "MI is not fully parsed");
     lex();
   }
+
+  // Construct successor list by searching for basic block machine operands.
+  if (!ExplicitSuccesors) {
+    SmallVector<MachineBasicBlock*,4> Successors;
+    bool IsFallthrough;
+    guessSuccessors(MBB, Successors, IsFallthrough);
+    for (MachineBasicBlock *Succ : Successors)
+      MBB.addSuccessor(Succ);
+
+    if (IsFallthrough) {
+      AddFalthroughFrom = &MBB;
+    } else {
+      MBB.normalizeSuccProbs();
+    }
+  }
+
   return false;
 }
 
@@ -605,11 +626,18 @@ bool MIParser::parseBasicBlocks() {
   // The first parsing pass should have verified that this token is a MBB label
   // in the 'parseBasicBlockDefinitions' method.
   assert(Token.is(MIToken::MachineBasicBlockLabel));
+  MachineBasicBlock *AddFalthroughFrom = nullptr;
   do {
     MachineBasicBlock *MBB = nullptr;
     if (parseMBBReference(MBB))
       return true;
-    if (parseBasicBlock(*MBB))
+    if (AddFalthroughFrom) {
+      if (!AddFalthroughFrom->isSuccessor(MBB))
+        AddFalthroughFrom->addSuccessor(MBB);
+      AddFalthroughFrom->normalizeSuccProbs();
+      AddFalthroughFrom = nullptr;
+    }
+    if (parseBasicBlock(*MBB, AddFalthroughFrom))
       return true;
     // The method 'parseBasicBlock' should parse the whole block until the next
     // block or the end of file.

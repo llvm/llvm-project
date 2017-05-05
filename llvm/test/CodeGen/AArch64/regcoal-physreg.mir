@@ -93,7 +93,6 @@ body: |
 name: func1
 body: |
   bb.0:
-    successors: %bb.1, %bb.2
     ; Cannot coalesce physreg because we have reads on other CFG paths (we
     ; currently abort for any control flow)
     ; CHECK-NOT: %fp = SUBXri
@@ -117,7 +116,6 @@ body: |
 name: func2
 body: |
   bb.0:
-    successors: %bb.1, %bb.2
     ; We can coalesce copies from physreg to vreg across multiple blocks.
     ; CHECK-NOT: COPY
     ; CHECK: CBZX undef %x0, %bb.1

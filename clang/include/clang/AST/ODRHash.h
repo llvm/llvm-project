@@ -25,7 +25,7 @@ namespace clang {
 
 class Decl;
 class IdentifierInfo;
-class NestedNameSpecifer;
+class NestedNameSpecifier;
 class Stmt;
 class TemplateParameterList;
 
