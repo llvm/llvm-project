@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -68,9 +69,7 @@ public:
   /// not present, returns InvalidStreamIndex.
   uint32_t getDebugStreamIndex(DbgHeaderType Type) const;
 
-  ArrayRef<ModuleInfoEx> modules() const;
-
-  Expected<StringRef> getFileNameForIndex(uint32_t Index) const;
+  const DbiModuleList &modules() const;
 
   FixedStreamArray<object::coff_section> getSectionHeaders();
 
@@ -80,27 +79,22 @@ public:
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
 private:
-  Error initializeModInfoArray();
   Error initializeSectionContributionData();
   Error initializeSectionHeadersData();
   Error initializeSectionMapData();
-  Error initializeFileInfo();
   Error initializeFpoRecords();
 
   PDBFile &Pdb;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
-  std::vector<ModuleInfoEx> ModuleInfos;
   PDBStringTable ECNames;
 
-  BinaryStreamRef ModInfoSubstream;
   BinaryStreamRef SecContrSubstream;
   BinaryStreamRef SecMapSubstream;
-  BinaryStreamRef FileInfoSubstream;
   BinaryStreamRef TypeServerMapSubstream;
   BinaryStreamRef ECSubstream;
 
-  BinaryStreamRef NamesBuffer;
+  DbiModuleList Modules;
 
   FixedStreamArray<support::ulittle16_t> DbgStreams;
 
@@ -108,7 +102,6 @@ private:
   FixedStreamArray<SectionContrib> SectionContribs;
   FixedStreamArray<SectionContrib2> SectionContribs2;
   FixedStreamArray<SecMapEntry> SectionMap;
-  FixedStreamArray<support::little32_t> FileNameOffsets;
 
   std::unique_ptr<msf::MappedBlockStream> SectionHeaderStream;
   FixedStreamArray<object::coff_section> SectionHeaders;

@@ -176,8 +176,13 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       unsigned NumNewInsns = 0;
       SmallVector<MachineInstr *, 4> WorkList;
       Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
-        ++NumNewInsns;
-        WorkList.push_back(MI);
+        // Only legalize pre-isel generic instructions.
+        // Legalization process could generate Target specific pseudo
+        // instructions with generic types. Don't record them
+        if (isPreISelGenericOpcode(MI->getOpcode())) {
+          ++NumNewInsns;
+          WorkList.push_back(MI);
+        }
       });
       WorkList.push_back(&*MI);
 

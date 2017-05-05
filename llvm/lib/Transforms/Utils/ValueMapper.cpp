@@ -121,6 +121,8 @@ public:
 
   void addFlags(RemapFlags Flags);
 
+  void remapGlobalObjectMetadata(GlobalObject &GO);
+
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
@@ -802,6 +804,7 @@ void Mapper::flush() {
     switch (E.Kind) {
     case WorklistEntry::MapGlobalInit:
       E.Data.GVInit.GV->setInitializer(mapConstant(E.Data.GVInit.Init));
+      remapGlobalObjectMetadata(*E.Data.GVInit.GV);
       break;
     case WorklistEntry::MapAppendingVar: {
       unsigned PrefixSize = AppendingInits.size() - E.AppendingGVNumNewMembers;
@@ -892,6 +895,14 @@ void Mapper::remapInstruction(Instruction *I) {
   I->mutateType(TypeMapper->remapType(I->getType()));
 }
 
+void Mapper::remapGlobalObjectMetadata(GlobalObject &GO) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  GO.getAllMetadata(MDs);
+  GO.clearMetadata();
+  for (const auto &I : MDs)
+    GO.addMetadata(I.first, *cast<MDNode>(mapMetadata(I.second)));
+}
+
 void Mapper::remapFunction(Function &F) {
   // Remap the operands.
   for (Use &Op : F.operands())
@@ -899,11 +910,7 @@ void Mapper::remapFunction(Function &F) {
       Op = mapValue(Op);
 
   // Remap the metadata attachments.
-  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
-  F.getAllMetadata(MDs);
-  F.clearMetadata();
-  for (const auto &I : MDs)
-    F.addMetadata(I.first, *cast<MDNode>(mapMetadata(I.second)));
+  remapGlobalObjectMetadata(F);
 
   // Remap the argument types.
   if (TypeMapper)
