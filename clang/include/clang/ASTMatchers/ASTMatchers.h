@@ -1223,6 +1223,20 @@ AST_MATCHER_P(InitListExpr, hasSyntacticForm,
           InnerMatcher.matches(*SyntForm, Finder, Builder));
 }
 
+/// \brief Matches C++ initializer list expressions.
+///
+/// Given
+/// \code
+///   std::vector<int> a({ 1, 2, 3 });
+///   std::vector<int> b = { 4, 5 };
+///   int c[] = { 6, 7 };
+///   std::pair<int, int> d = { 8, 9 };
+/// \endcode
+/// cxxStdInitializerListExpr()
+///   matches "{ 1, 2, 3 }" and "{ 4, 5 }"
+const internal::VariadicDynCastAllOfMatcher<Stmt,
+  CXXStdInitializerListExpr> cxxStdInitializerListExpr;
+
 /// \brief Matches implicit initializers of init list expressions.
 ///
 /// Given

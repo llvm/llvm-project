@@ -478,6 +478,11 @@ public:
     return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
   }
 
+  /// Returns the leading whitespace for line that corresponds to the given
+  /// location \p Loc.
+  static StringRef getIndentationForLine(SourceLocation Loc,
+                                         const SourceManager &SM);
+
   //===--------------------------------------------------------------------===//
   // Internal implementation interfaces.
 private:

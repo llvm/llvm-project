@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=ALL -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=ALL -check-prefix=EG %s
 
 ; This test makes sure we do not double count global values when they are
@@ -10,6 +11,9 @@
 ; EG: .long 166120
 ; EG-NEXT: .long 1
 ; ALL: {{^}}test:
+
+; HSA: granulated_lds_size = 0
+; HSA: workgroup_group_segment_byte_size = 4
 
 ; GCN: ; LDSByteSize: 4 bytes/workgroup (compile time only)
 @lds = internal unnamed_addr addrspace(3) global i32 undef, align 4

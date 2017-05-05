@@ -124,8 +124,6 @@ public:
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -147,8 +145,6 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
-  bool isTlsLocalDynamicRel(uint32_t Type) const override;
-  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -193,7 +189,6 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
-  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
@@ -302,10 +297,6 @@ bool TargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,
                             const InputFile *File, const SymbolBody &S) const {
   return false;
 }
-
-bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
-
-bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
 
 void TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   writeGotPlt(Buf, S);
@@ -449,14 +440,6 @@ uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_386_TLS_LE_32)
     return R_386_TLS_TPOFF32;
   return Type;
-}
-
-bool X86TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
-  return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM;
-}
-
-bool X86TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
-  return Type == R_386_TLS_IE || Type == R_386_TLS_GOTIE;
 }
 
 void X86TargetInfo::writePltHeader(uint8_t *Buf) const {
@@ -769,17 +752,6 @@ void X86_64TargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 template <class ELFT>
 bool X86_64TargetInfo<ELFT>::isPicRel(uint32_t Type) const {
   return Type != R_X86_64_PC32 && Type != R_X86_64_32;
-}
-
-template <class ELFT>
-bool X86_64TargetInfo<ELFT>::isTlsInitialExecRel(uint32_t Type) const {
-  return Type == R_X86_64_GOTTPOFF;
-}
-
-template <class ELFT>
-bool X86_64TargetInfo<ELFT>::isTlsLocalDynamicRel(uint32_t Type) const {
-  return Type == R_X86_64_DTPOFF32 || Type == R_X86_64_DTPOFF64 ||
-         Type == R_X86_64_TLSLD;
 }
 
 template <class ELFT>
@@ -1381,11 +1353,6 @@ bool AArch64TargetInfo::usesOnlyLowPageBits(uint32_t Type) const {
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return true;
   }
-}
-
-bool AArch64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
-  return Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
 }
 
 bool AArch64TargetInfo::isPicRel(uint32_t Type) const {

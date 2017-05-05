@@ -44,7 +44,24 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       }
       auto CustomSec = make_unique<WasmYAML::CustomSection>();
       CustomSec->Name = WasmSec.Name;
-      CustomSec->Payload = yaml::BinaryRef(WasmSec.Content);
+      if (CustomSec->Name == "name") {
+        for (const object::SymbolRef& Sym: Obj.symbols()) {
+          uint32_t Flags = Sym.getFlags();
+          // Skip over symbols that come from imports or exports
+          if (Flags &
+              (object::SymbolRef::SF_Global | object::SymbolRef::SF_Undefined))
+            continue;
+          Expected<StringRef> NameOrError = Sym.getName();
+          if (!NameOrError)
+            continue;
+          WasmYAML::NameEntry NameEntry;
+          NameEntry.Name = *NameOrError;
+          NameEntry.Index = Sym.getValue();
+          CustomSec->FunctionNames.push_back(NameEntry);
+        }
+      } else {
+        CustomSec->Payload = yaml::BinaryRef(WasmSec.Content);
+      }
       S = std::move(CustomSec);
       break;
     }

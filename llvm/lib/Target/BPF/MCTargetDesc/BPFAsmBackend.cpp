@@ -70,7 +70,7 @@ void BPFAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
     unsigned Size = Fixup.getKind() == FK_Data_4 ? 4 : 8;
 
     for (unsigned i = 0; i != Size; ++i) {
-      unsigned Idx = IsLittleEndian ? i : Size - i;
+      unsigned Idx = IsLittleEndian ? i : Size - i - 1;
       Data[Fixup.getOffset() + Idx] = uint8_t(Value >> (i * 8));
     }
   } else {

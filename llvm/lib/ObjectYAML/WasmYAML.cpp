@@ -50,7 +50,11 @@ static void commonSectionMapping(IO &IO, WasmYAML::Section &Section) {
 static void sectionMapping(IO &IO, WasmYAML::CustomSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
-  IO.mapRequired("Payload", Section.Payload);
+  if (Section.Name == "name") {
+    IO.mapOptional("FunctionNames", Section.FunctionNames);
+  } else {
+    IO.mapRequired("Payload", Section.Payload);
+  }
 }
 
 static void sectionMapping(IO &IO, WasmYAML::TypeSection &Section) {
@@ -224,6 +228,12 @@ void MappingTraits<WasmYAML::Relocation>::mapping(
   IO.mapRequired("Index", Relocation.Index);
   IO.mapRequired("Offset", Relocation.Offset);
   IO.mapOptional("Addend", Relocation.Addend, 0);
+}
+
+void MappingTraits<WasmYAML::NameEntry>::mapping(
+    IO &IO, WasmYAML::NameEntry &NameEntry) {
+  IO.mapRequired("Index", NameEntry.Index);
+  IO.mapRequired("Name", NameEntry.Name);
 }
 
 void MappingTraits<WasmYAML::LocalDecl>::mapping(

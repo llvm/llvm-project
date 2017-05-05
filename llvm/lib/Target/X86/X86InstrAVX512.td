@@ -8639,6 +8639,31 @@ multiclass avx512_ctlz<bits<8> opc, string OpcodeStr, Predicate prd>{
 defm VPLZCNT    : avx512_ctlz<0x44, "vplzcnt", HasCDI>;
 defm VPCONFLICT : avx512_unary_rm_vl_dq<0xC4, 0xC4, "vpconflict", X86Conflict, HasCDI>;
 
+// VPLZCNT: Use 512bit version to implement 128/256 bit in case NoVLX.
+let Predicates = [HasCDI, NoVLX] in {
+  def : Pat<(v4i64 (ctlz VR256X:$src)),
+            (EXTRACT_SUBREG
+                (VPLZCNTQZrr
+                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)),
+             sub_ymm)>;
+  def : Pat<(v2i64 (ctlz VR128X:$src)),
+            (EXTRACT_SUBREG
+                (VPLZCNTQZrr
+                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm)),
+             sub_xmm)>;
+
+  def : Pat<(v8i32 (ctlz VR256X:$src)),
+            (EXTRACT_SUBREG
+                (VPLZCNTDZrr
+                    (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)),
+             sub_ymm)>;
+  def : Pat<(v4i32 (ctlz VR128X:$src)),
+            (EXTRACT_SUBREG
+                (VPLZCNTDZrr
+                    (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src, sub_xmm)),
+             sub_xmm)>;
+}
+
 //===---------------------------------------------------------------------===//
 // Replicate Single FP - MOVSHDUP and MOVSLDUP
 //===---------------------------------------------------------------------===//

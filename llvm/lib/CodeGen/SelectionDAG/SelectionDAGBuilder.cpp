@@ -4992,45 +4992,33 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       SDV = DAG.getConstantDbgValue(Variable, Expression, V, Offset, dl,
                                     SDNodeOrder);
       DAG.AddDbgValue(SDV, nullptr, false);
-    } else {
-      // Do not use getValue() in here; we don't want to generate code at
-      // this point if it hasn't been done yet.
-      SDValue N = NodeMap[V];
-      if (!N.getNode() && isa<Argument>(V))
-        // Check unused arguments map.
-        N = UnusedArgNodeMap[V];
-      if (N.getNode()) {
-        if (!EmitFuncArgumentDbgValue(V, Variable, Expression, dl, Offset,
-                                      false, N)) {
-          SDV = getDbgValue(N, Variable, Expression, Offset, dl, SDNodeOrder);
-          DAG.AddDbgValue(SDV, N.getNode(), false);
-        }
-      } else if (!V->use_empty() ) {
-        // Do not call getValue(V) yet, as we don't want to generate code.
-        // Remember it for later.
-        DanglingDebugInfo DDI(&DI, dl, SDNodeOrder);
-        DanglingDebugInfoMap[V] = DDI;
-      } else {
-        // We may expand this to cover more cases.  One case where we have no
-        // data available is an unreferenced parameter.
-        DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
-      }
-    }
-
-    // Build a debug info table entry.
-    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(V))
-      V = BCI->getOperand(0);
-    const AllocaInst *AI = dyn_cast<AllocaInst>(V);
-    // Don't handle byval struct arguments or VLAs, for example.
-    if (!AI) {
-      DEBUG(dbgs() << "Dropping debug location info for:\n  " << DI << "\n");
-      DEBUG(dbgs() << "  Last seen at:\n    " << *V << "\n");
       return nullptr;
     }
-    DenseMap<const AllocaInst*, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
-    if (SI == FuncInfo.StaticAllocaMap.end())
-      return nullptr; // VLAs.
+
+    // Do not use getValue() in here; we don't want to generate code at
+    // this point if it hasn't been done yet.
+    SDValue N = NodeMap[V];
+    if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
+      N = UnusedArgNodeMap[V];
+    if (N.getNode()) {
+      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, Offset, false,
+                                   N))
+        return nullptr;
+      SDV = getDbgValue(N, Variable, Expression, Offset, dl, SDNodeOrder);
+      DAG.AddDbgValue(SDV, N.getNode(), false);
+      return nullptr;
+    }
+
+    if (!V->use_empty() ) {
+      // Do not call getValue(V) yet, as we don't want to generate code.
+      // Remember it for later.
+      DanglingDebugInfo DDI(&DI, dl, SDNodeOrder);
+      DanglingDebugInfoMap[V] = DDI;
+      return nullptr;
+    }
+
+    DEBUG(dbgs() << "Dropping debug location info for:\n  " << DI << "\n");
+    DEBUG(dbgs() << "  Last seen at:\n    " << *V << "\n");
     return nullptr;
   }
 

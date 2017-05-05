@@ -21,14 +21,12 @@ public:
                        Socket *&socket);
 
 private:
-  UDPSocket(NativeSocket socket, const UDPSocket &listen_socket);
+  UDPSocket(NativeSocket socket);
 
   size_t Send(const void *buf, const size_t num_bytes) override;
   Error Connect(llvm::StringRef name) override;
   Error Listen(llvm::StringRef name, int backlog) override;
   Error Accept(Socket *&socket) override;
-
-  Error CreateSocket();
 
   SocketAddress m_sockaddr;
 };

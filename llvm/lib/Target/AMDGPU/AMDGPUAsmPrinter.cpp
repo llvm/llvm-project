@@ -713,7 +713,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       S_00B84C_TG_SIZE_EN(MFI->hasWorkGroupInfo()) |
       S_00B84C_TIDIG_COMP_CNT(TIDIGCompCnt) |
       S_00B84C_EXCP_EN_MSB(0) |
-      S_00B84C_LDS_SIZE(ProgInfo.LDSBlocks) |
+      // For AMDHSA, LDS_SIZE must be zero, as it is populated by the CP.
+      S_00B84C_LDS_SIZE(STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks) |
       S_00B84C_EXCP_EN(0);
 }
 

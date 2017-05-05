@@ -204,3 +204,70 @@ entry:
   %6 = add i64 %4, %5
   ret i64 %6
 }
+
+%S = type { [4 x i64] }
+
+define %S @readd(%S* nocapture readonly %this, %S %arg.b) {
+; CHECK-LABEL: readd:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    addq (%rsi), %rdx
+; CHECK-NEXT:    movq 8(%rsi), %r10
+; CHECK-NEXT:    adcq $0, %r10
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    addq %rcx, %r10
+; CHECK-NEXT:    adcq 16(%rsi), %rax
+; CHECK-NEXT:    sbbq %rcx, %rcx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    addq %r8, %rax
+; CHECK-NEXT:    adcq 24(%rsi), %rcx
+; CHECK-NEXT:    addq %r9, %rcx
+; CHECK-NEXT:    movq %rdx, (%rdi)
+; CHECK-NEXT:    movq %r10, 8(%rdi)
+; CHECK-NEXT:    movq %rax, 16(%rdi)
+; CHECK-NEXT:    movq %rcx, 24(%rdi)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %0 = extractvalue %S %arg.b, 0
+  %.elt6 = extractvalue [4 x i64] %0, 1
+  %.elt8 = extractvalue [4 x i64] %0, 2
+  %.elt10 = extractvalue [4 x i64] %0, 3
+  %.elt = extractvalue [4 x i64] %0, 0
+  %1 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 0
+  %2 = load i64, i64* %1, align 8
+  %3 = zext i64 %2 to i128
+  %4 = zext i64 %.elt to i128
+  %5 = add nuw nsw i128 %3, %4
+  %6 = trunc i128 %5 to i64
+  %7 = lshr i128 %5, 64
+  %8 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 1
+  %9 = load i64, i64* %8, align 8
+  %10 = zext i64 %9 to i128
+  %11 = add nuw nsw i128 %7, %10
+  %12 = zext i64 %.elt6 to i128
+  %13 = add nuw nsw i128 %11, %12
+  %14 = trunc i128 %13 to i64
+  %15 = lshr i128 %13, 64
+  %16 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 2
+  %17 = load i64, i64* %16, align 8
+  %18 = zext i64 %17 to i128
+  %19 = add nuw nsw i128 %15, %18
+  %20 = zext i64 %.elt8 to i128
+  %21 = add nuw nsw i128 %19, %20
+  %22 = lshr i128 %21, 64
+  %23 = trunc i128 %21 to i64
+  %24 = getelementptr inbounds %S, %S* %this, i64 0,i32 0, i64 3
+  %25 = load i64, i64* %24, align 8
+  %26 = zext i64 %25 to i128
+  %27 = add nuw nsw i128 %22, %26
+  %28 = zext i64 %.elt10 to i128
+  %29 = add nuw nsw i128 %27, %28
+  %30 = trunc i128 %29 to i64
+  %31 = insertvalue [4 x i64] undef, i64 %6, 0
+  %32 = insertvalue [4 x i64] %31, i64 %14, 1
+  %33 = insertvalue [4 x i64] %32, i64 %23, 2
+  %34 = insertvalue [4 x i64] %33, i64 %30, 3
+  %35 = insertvalue %S undef, [4 x i64] %34, 0
+  ret %S %35
+}

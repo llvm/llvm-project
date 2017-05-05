@@ -4347,10 +4347,8 @@ static void checkObjCMethodX86VectorTypes(Sema &SemaRef,
     AcceptedInVersion = VersionTuple(/*Major=*/10, /*Minor=*/11);
   else
     return;
-  VersionTuple MethodVersion = Method->getVersionIntroduced();
   if (SemaRef.getASTContext().getTargetInfo().getPlatformMinVersion() >=
-          AcceptedInVersion &&
-      (MethodVersion.empty() || MethodVersion >= AcceptedInVersion))
+      AcceptedInVersion)
     return;
   SemaRef.Diag(Loc, diag::err_objc_method_unsupported_param_ret_type)
       << T << (Method->getReturnType()->isVectorType() ? /*return value*/ 1

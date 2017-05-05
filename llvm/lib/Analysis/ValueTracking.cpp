@@ -342,7 +342,6 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   // Also compute a conservative estimate for high known-0 bits.
   // More trickiness is possible, but this is sufficient for the
   // interesting case of alignment computation.
-  Known.One.clearAllBits();
   unsigned TrailZ = Known.Zero.countTrailingOnes() +
                     Known2.Zero.countTrailingOnes();
   unsigned LeadZ =  std::max(Known.Zero.countLeadingOnes() +
@@ -351,7 +350,7 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
 
   TrailZ = std::min(TrailZ, BitWidth);
   LeadZ = std::min(LeadZ, BitWidth);
-  Known.Zero.clearAllBits();
+  Known.resetAll();
   Known.Zero.setLowBits(TrailZ);
   Known.Zero.setHighBits(LeadZ);
 
@@ -529,15 +528,13 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
     if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
-      Known.Zero.clearAllBits();
-      Known.One.setAllBits();
+      Known.setAllOnes();
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
         isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
-      Known.Zero.setAllBits();
-      Known.One.clearAllBits();
+      Known.setAllZero();
       return;
     }
 
@@ -719,7 +716,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       KnownBits RHSKnown(BitWidth);
       computeKnownBits(A, RHSKnown, Depth+1, Query(Q, I));
 
-      if (RHSKnown.One.isAllOnesValue() || RHSKnown.isNonNegative()) {
+      if (RHSKnown.isAllOnes() || RHSKnown.isNonNegative()) {
         // We know that the sign bit is zero.
         Known.makeNonNegative();
       }
@@ -741,7 +738,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       KnownBits RHSKnown(BitWidth);
       computeKnownBits(A, RHSKnown, Depth+1, Query(Q, I));
 
-      if (RHSKnown.Zero.isAllOnesValue() || RHSKnown.isNegative()) {
+      if (RHSKnown.isZero() || RHSKnown.isNegative()) {
         // We know that the sign bit is one.
         Known.makeNegative();
       }
@@ -776,8 +773,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   // behavior, or we might have a bug in the compiler. We can't assert/crash, so
   // clear out the known bits, try to warn the user, and hope for the best.
   if (Known.Zero.intersects(Known.One)) {
-    Known.Zero.clearAllBits();
-    Known.One.clearAllBits();
+    Known.resetAll();
 
     if (Q.ORE) {
       auto *CxtI = const_cast<Instruction *>(Q.CxtI);
@@ -813,10 +809,8 @@ static void computeKnownBitsFromShiftOperator(
     // If there is conflict between Known.Zero and Known.One, this must be an
     // overflowing left shift, so the shift result is undefined. Clear Known
     // bits so that other code could propagate this undef.
-    if ((Known.Zero & Known.One) != 0) {
-      Known.Zero.clearAllBits();
-      Known.One.clearAllBits();
-    }
+    if ((Known.Zero & Known.One) != 0)
+      Known.resetAll();
 
     return;
   }
@@ -826,8 +820,7 @@ static void computeKnownBitsFromShiftOperator(
   // If the shift amount could be greater than or equal to the bit-width of the LHS, the
   // value could be undef, so we don't know anything about it.
   if ((~Known.Zero).uge(BitWidth)) {
-    Known.Zero.clearAllBits();
-    Known.One.clearAllBits();
+    Known.resetAll();
     return;
   }
 
@@ -839,8 +832,7 @@ static void computeKnownBitsFromShiftOperator(
 
   // It would be more-clearly correct to use the two temporaries for this
   // calculation. Reusing the APInts here to prevent unnecessary allocations.
-  Known.Zero.clearAllBits();
-  Known.One.clearAllBits();
+  Known.resetAll();
 
   // If we know the shifter operand is nonzero, we can sometimes infer more
   // known bits. However this is expensive to compute, so be lazy about it and
@@ -886,10 +878,8 @@ static void computeKnownBitsFromShiftOperator(
   // return anything we'd like, but we need to make sure the sets of known bits
   // stay disjoint (it should be better for some other code to actually
   // propagate the undef than to pick a value here using known bits).
-  if (Known.Zero.intersects(Known.One)) {
-    Known.Zero.clearAllBits();
-    Known.One.clearAllBits();
-  }
+  if (Known.Zero.intersects(Known.One))
+    Known.resetAll();
 }
 
 static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
@@ -924,7 +914,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
                                        m_Value(Y))) ||
          match(I->getOperand(1), m_Add(m_Specific(I->getOperand(0)),
                                        m_Value(Y))))) {
-      Known2.Zero.clearAllBits(); Known2.One.clearAllBits();
+      Known2.resetAll();
       computeKnownBits(Y, Known2, Depth + 1, Q);
       if (Known2.One.countTrailingOnes() > 0)
         Known.Zero.setBit(0);
@@ -965,8 +955,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
     computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
     unsigned LeadZ = Known2.Zero.countLeadingOnes();
 
-    Known2.One.clearAllBits();
-    Known2.Zero.clearAllBits();
+    Known2.resetAll();
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
     unsigned RHSUnknownLeadingOnes = Known2.One.countLeadingZeros();
     if (RHSUnknownLeadingOnes != BitWidth)
@@ -1198,8 +1187,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
 
     unsigned Leaders = std::max(Known.Zero.countLeadingOnes(),
                                 Known2.Zero.countLeadingOnes());
-    Known.One.clearAllBits();
-    Known.Zero.clearAllBits();
+    Known.resetAll();
     Known.Zero.setHighBits(Leaders);
     break;
   }
@@ -1500,8 +1488,7 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   }
   // Null and aggregate-zero are all-zeros.
   if (isa<ConstantPointerNull>(V) || isa<ConstantAggregateZero>(V)) {
-    Known.One.clearAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllZero();
     return;
   }
   // Handle a constant vector by taking the intersection of the known bits of
@@ -1528,8 +1515,7 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
       Constant *Element = CV->getAggregateElement(i);
       auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
       if (!ElementCI) {
-        Known.Zero.clearAllBits();
-        Known.One.clearAllBits();
+        Known.resetAll();
         return;
       }
       Elt = ElementCI->getValue();
@@ -1540,7 +1526,7 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   }
 
   // Start out not knowing anything.
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
 
   // We can't imply anything about undefs.
   if (isa<UndefValue>(V))

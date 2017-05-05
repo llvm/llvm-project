@@ -180,7 +180,6 @@ body: |
     %x9 = ADRP target-flags(aarch64-page, aarch64-got) @g5
 
   bb.13:
-    successors: %bb.14
     ; Cannot produce a LOH for multiple users
     ; CHECK-NOT: MCLOH_AdrpAdd
     %x10 = ADRP target-flags(aarch64-page) @g0

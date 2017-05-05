@@ -730,6 +730,9 @@ def err_super_in_lambda_unsupported : Error<
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,
   InGroup<IgnoredPragmas>;
+def warn_atl_uuid_deprecated : Warning<
+  "specifying 'uuid' as an ATL attribute is deprecated; use __declspec instead">,
+  InGroup<DeprecatedDeclarations>;
 def warn_pragma_unused_expected_var_arg : Warning<
   "only variables can be arguments to '#pragma unused'">,
   InGroup<IgnoredPragmas>;
@@ -2868,7 +2871,8 @@ def warn_partial_availability : Warning<"%0 is only available conditionally">,
 def note_partial_availability_silence : Note<
   "explicitly redeclare %0 to silence this warning">;
 def note_unguarded_available_silence : Note<
-  "enclose %0 in an @available check to silence this warning">;
+  "enclose %0 in %select{an @available|a __builtin_available}1 check to silence"
+  " this warning">;
 def warn_partial_message : Warning<"%0 is partial: %1">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
 def warn_partial_fwdclass_message : Warning<
@@ -8975,6 +8979,9 @@ def warn_nullability_lost : Warning<
   "implicit conversion from nullable pointer %0 to non-nullable pointer "
   "type %1">,
   InGroup<NullableToNonNullConversion>, DefaultIgnore;
+def warn_zero_as_null_pointer_constant : Warning<
+  "zero as null pointer constant">,
+  InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
   "nullability keyword %0 cannot be applied to multi-level pointer type %1">;

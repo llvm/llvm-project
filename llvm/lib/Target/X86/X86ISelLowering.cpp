@@ -1352,33 +1352,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::XOR, MVT::v16i32, MVT::v8i64);
 
     if (Subtarget.hasCDI()) {
+      // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
       setOperationAction(ISD::CTLZ,             MVT::v8i64,  Legal);
       setOperationAction(ISD::CTLZ,             MVT::v16i32, Legal);
-
-      setOperationAction(ISD::CTLZ,             MVT::v8i16,  Custom);
-      setOperationAction(ISD::CTLZ,             MVT::v16i8,  Custom);
-      setOperationAction(ISD::CTLZ,             MVT::v16i16, Custom);
-      setOperationAction(ISD::CTLZ,             MVT::v32i8,  Custom);
+      setOperationAction(ISD::CTLZ,             MVT::v4i64,  Legal);
+      setOperationAction(ISD::CTLZ,             MVT::v8i32,  Legal);
+      setOperationAction(ISD::CTLZ,             MVT::v2i64,  Legal);
+      setOperationAction(ISD::CTLZ,             MVT::v4i32,  Legal);
 
       setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v8i64,  Custom);
       setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v16i32, Custom);
-
-      if (Subtarget.hasVLX()) {
-        setOperationAction(ISD::CTLZ,             MVT::v4i64, Legal);
-        setOperationAction(ISD::CTLZ,             MVT::v8i32, Legal);
-        setOperationAction(ISD::CTLZ,             MVT::v2i64, Legal);
-        setOperationAction(ISD::CTLZ,             MVT::v4i32, Legal);
-      } else {
-        setOperationAction(ISD::CTLZ,             MVT::v4i64, Custom);
-        setOperationAction(ISD::CTLZ,             MVT::v8i32, Custom);
-        setOperationAction(ISD::CTLZ,             MVT::v2i64, Custom);
-        setOperationAction(ISD::CTLZ,             MVT::v4i32, Custom);
-      }
-
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i64, Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v8i32, Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v2i64, Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i32, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i64,  Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v8i32,  Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v2i64,  Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i32,  Custom);
     } // Subtarget.hasCDI()
 
     if (Subtarget.hasDQI()) {
@@ -6241,7 +6228,7 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 
     Elt = Op->getOperand(EltIdx);
     // By construction, Elt is a EXTRACT_VECTOR_ELT with constant index.
-    EltMaskIdx = cast<ConstantSDNode>(Elt.getOperand(1))->getZExtValue();
+    EltMaskIdx = Elt.getConstantOperandVal(1);
     if (Elt.getOperand(0) != V1 || EltMaskIdx != EltIdx)
       break;
     Mask[EltIdx] = EltIdx;
@@ -6272,8 +6259,7 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
     SDValue SrcVector = Current->getOperand(0);
     if (!V1.getNode())
       V1 = SrcVector;
-    CanFold = SrcVector == V1 &&
-      cast<ConstantSDNode>(Current.getOperand(1))->getZExtValue() == i;
+    CanFold = (SrcVector == V1) && (Current.getConstantOperandVal(1) == i);
   }
 
   if (!CanFold)
@@ -20981,34 +20967,16 @@ static SDValue Lower512IntUnary(SDValue Op, SelectionDAG &DAG) {
 
 /// \brief Lower a vector CTLZ using native supported vector CTLZ instruction.
 //
-// 1. i32/i64 128/256-bit vector (native support require VLX) are expended
-//    to 512-bit vector.
-// 2. i8/i16 vector implemented using dword LZCNT vector instruction
-//    ( sub(trunc(lzcnt(zext32(x)))) ). In case zext32(x) is illegal,
-//    split the vector, perform operation on it's Lo a Hi part and
-//    concatenate the results.
-static SDValue LowerVectorCTLZ_AVX512(SDValue Op, SelectionDAG &DAG) {
+// i8/i16 vector implemented using dword LZCNT vector instruction
+// ( sub(trunc(lzcnt(zext32(x)))) ). In case zext32(x) is illegal,
+// split the vector, perform operation on it's Lo a Hi part and
+// concatenate the results.
+static SDValue LowerVectorCTLZ_AVX512CDI(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getOpcode() == ISD::CTLZ);
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
-
-  if (EltVT == MVT::i64 || EltVT == MVT::i32) {
-    // Extend to 512 bit vector.
-    assert((VT.is256BitVector() || VT.is128BitVector()) &&
-              "Unsupported value type for operation");
-
-    MVT NewVT = MVT::getVectorVT(EltVT, 512 / VT.getScalarSizeInBits());
-    SDValue Vec512 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NewVT,
-                                 DAG.getUNDEF(NewVT),
-                                 Op.getOperand(0),
-                                 DAG.getIntPtrConstant(0, dl));
-    SDValue CtlzNode = DAG.getNode(ISD::CTLZ, dl, NewVT, Vec512);
-
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, CtlzNode,
-                       DAG.getIntPtrConstant(0, dl));
-  }
 
   assert((EltVT == MVT::i8 || EltVT == MVT::i16) &&
           "Unsupported element type");
@@ -21105,12 +21073,16 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
                                SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
-  if (Subtarget.hasAVX512())
-    return LowerVectorCTLZ_AVX512(Op, DAG);
+  if (Subtarget.hasCDI())
+    return LowerVectorCTLZ_AVX512CDI(Op, DAG);
 
   // Decompose 256-bit ops into smaller 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return Lower256IntUnary(Op, DAG);
+
+  // Decompose 512-bit ops into smaller 256-bit ops.
+  if (VT.is512BitVector() && !Subtarget.hasBWI())
+    return Lower512IntUnary(Op, DAG);
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
@@ -26641,7 +26613,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
 
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
   switch (Opc) {
   default: break;
   case X86ISD::ADD:
@@ -26671,7 +26643,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
-        Known.Zero.setAllBits();
+        Known.setAllZero();
         break;
       }
 
@@ -31644,10 +31616,9 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
     if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Mask.getOperand(1)))
       if (auto *AmtConst = AmtBV->getConstantSplatNode())
         SraAmt = AmtConst->getZExtValue();
-  } else if (Mask.getOpcode() == X86ISD::VSRAI) {
-    SDValue SraC = Mask.getOperand(1);
-    SraAmt = cast<ConstantSDNode>(SraC)->getZExtValue();
-  }
+  } else if (Mask.getOpcode() == X86ISD::VSRAI)
+    SraAmt = Mask.getConstantOperandVal(1);
+
   if ((SraAmt + 1) != EltBits)
     return SDValue();
 
@@ -34461,8 +34432,7 @@ static SDValue combineX86ADD(SDNode *N, SelectionDAG &DAG,
     if (Carry.getOpcode() == ISD::SETCC ||
         Carry.getOpcode() == X86ISD::SETCC ||
         Carry.getOpcode() == X86ISD::SETCC_CARRY) {
-      auto *Cond = cast<ConstantSDNode>(Carry.getOperand(0));
-      if (Cond->getZExtValue() == X86::COND_B)
+      if (Carry.getConstantOperandVal(0) == X86::COND_B)
         return DCI.CombineTo(N, SDValue(N, 0), Carry.getOperand(1));
     }
   }

@@ -83,8 +83,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    successors: %bb.4(0x30000000), %bb.1.while.body.preheader(0x50000000)
-  
     %0 = MOV64rm %rip, 1, _, @b, _ :: (dereferenceable load 8 from @b)
     %12 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.t0)
     TEST8rr %12, %12, implicit-def %eflags
@@ -92,17 +90,12 @@ body:             |
     JNE_1 %bb.1.while.body.preheader, implicit killed %eflags
   
   bb.4:
-    successors: %bb.3.while.end(0x80000000)
-  
     %10 = COPY %11
     JMP_1 %bb.3.while.end
   
   bb.1.while.body.preheader:
-    successors: %bb.2.while.body(0x80000000)
 
   bb.2.while.body:
-    successors: %bb.3.while.end(0x04000000), %bb.2.while.body(0x7c000000)
-  
     %8 = MOVSX32rr8 %12
     %10 = COPY %11
     %10 = SHL32ri %10, 5, implicit-def dead %eflags
