@@ -146,12 +146,8 @@ class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
   loadFromDirectory(StringRef Directory, std::string &ErrorMessage) override {
     SmallString<1024> JSONDatabasePath(Directory);
     llvm::sys::path::append(JSONDatabasePath, "compile_commands.json");
-    std::unique_ptr<CompilationDatabase> Database(
-        JSONCompilationDatabase::loadFromFile(
-            JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect));
-    if (!Database)
-      return nullptr;
-    return Database;
+    return JSONCompilationDatabase::loadFromFile(
+        JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect);
   }
 };
 

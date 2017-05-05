@@ -1,13 +1,14 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: echo 'module foo { module a {} module b {} } module bar {}' > %t/module.map
-// RUN: %clang -cc1 -E -fmodules %s -verify -fmodule-name=foo -fmodule-map-file=%t/module.map
-// RUN: %clang -cc1 -E -fmodules %s -verify -fmodule-name=foo -fmodule-map-file=%t/module.map -fmodules-local-submodule-visibility -DLOCAL_VIS
+// RUN: echo 'module foo { module a {} module b {} } module bar {} module if {}' > %t/module.map
+// RUN: %clang -cc1 -fmodules -fmodule-name=if -x c %t/module.map -emit-module -o %t/if.pcm
+// RUN: %clang -cc1 -E -fmodules %s -fmodule-file=%t/if.pcm -verify -fmodule-name=foo -fmodule-map-file=%t/module.map
+// RUN: %clang -cc1 -E -fmodules %s -fmodule-file=%t/if.pcm -verify -fmodule-name=foo -fmodule-map-file=%t/module.map -fmodules-local-submodule-visibility -DLOCAL_VIS
 
 // Just checking the syntax here; the semantics are tested elsewhere.
 #pragma clang module import // expected-error {{expected module name}}
 #pragma clang module import ! // expected-error {{expected module name}}
-#pragma clang module import if // expected-error {{expected module name}}
+#pragma clang module import if // ok
 #pragma clang module import foo ? bar // expected-warning {{extra tokens at end of #pragma}}
 #pragma clang module import foo. // expected-error {{expected identifier after '.' in module name}}
 #pragma clang module import foo.bar.baz.quux // expected-error {{no submodule named 'bar' in module 'foo'}}

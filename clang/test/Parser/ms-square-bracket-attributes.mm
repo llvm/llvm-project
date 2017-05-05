@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify -fms-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify -fms-extensions %s -Wno-deprecated-declarations
 
 typedef struct _GUID {
   unsigned long Data1;

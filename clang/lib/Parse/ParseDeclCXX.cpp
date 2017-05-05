@@ -4153,8 +4153,6 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   if (!T.consumeClose()) {
-    // FIXME: Warn that this syntax is deprecated, with a Fix-It suggesting
-    // using __declspec(uuid()) instead.
     Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()), nullptr,
                  SourceLocation(), ArgExprs.data(), ArgExprs.size(),
                  AttributeList::AS_Microsoft);

@@ -196,6 +196,18 @@ void RewriteIncludesAction::ExecuteAction() {
       CI.createDefaultOutputFile(true, getCurrentFile());
   if (!OS) return;
 
+  // If we're preprocessing a module map, start by dumping the contents of the
+  // module itself before switching to the input buffer.
+  auto &Input = getCurrentInput();
+  if (Input.getKind().getFormat() == InputKind::ModuleMap) {
+    if (Input.isFile())
+      (*OS) << "# 1 \"" << Input.getFile() << "\"\n";
+    // FIXME: Include additional information here so that we don't need the
+    // original source files to exist on disk.
+    getCurrentModule()->print(*OS);
+    (*OS) << "#pragma clang module contents\n";
+  }
+
   RewriteIncludesInInput(CI.getPreprocessor(), OS.get(),
                          CI.getPreprocessorOutputOpts());
 }

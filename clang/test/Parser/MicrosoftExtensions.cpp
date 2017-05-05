@@ -60,7 +60,7 @@ struct struct_without_uuid { };
 struct __declspec(uuid("000000A0-0000-0000-C000-000000000049"))
 struct_with_uuid2;
 
-[uuid("000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid3;
+[uuid("000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid3; // expected-warning{{specifying 'uuid' as an ATL attribute is deprecated; use __declspec instead}}
 
 struct
 struct_with_uuid2 {} ;
