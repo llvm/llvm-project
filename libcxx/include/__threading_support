@@ -474,7 +474,10 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
                                  timeout_ms.count() > 0 ? timeout_ms.count()
                                                         : 0,
                                  0))
-    return GetLastError();
+    {
+      auto __ec = GetLastError();
+      return __ec == ERROR_TIMEOUT ? ETIMEDOUT : __ec;
+    }
   return 0;
 }
 

@@ -24,3 +24,8 @@ fun:_ZNSt3__19addressof*
 # Windows C++ stdlib headers that contain bad unrelated casts.
 src:*xmemory0
 src:*xstddef
+
+# std::_Sp_counted_ptr_inplace::_Sp_counted_ptr_inplace() (libstdc++).
+# This ctor is used by std::make_shared and needs to cast to uninitialized T*
+# in order to call std::allocator_traits<T>::construct.
+fun:_ZNSt23_Sp_counted_ptr_inplace*

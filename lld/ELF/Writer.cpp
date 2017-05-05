@@ -745,15 +745,12 @@ static bool compareSectionsNonScript(const OutputSection *A,
 // Output section ordering is determined by this function.
 template <class ELFT>
 static bool compareSections(const OutputSection *A, const OutputSection *B) {
-  // For now, put sections mentioned in a linker script first.
-  int AIndex = Script->getSectionIndex(A->Name);
-  int BIndex = Script->getSectionIndex(B->Name);
-  bool AInScript = AIndex != INT_MAX;
-  bool BInScript = BIndex != INT_MAX;
-  if (AInScript != BInScript)
-    return AInScript;
-  // If both are in the script, use that order.
-  if (AInScript)
+  // For now, put sections mentioned in a linker script
+  // first. Sections not on linker script will have a SectionIndex of
+  // INT_MAX.
+  int AIndex = A->SectionIndex;
+  int BIndex = B->SectionIndex;
+  if (AIndex != BIndex)
     return AIndex < BIndex;
 
   return compareSectionsNonScript<ELFT>(A, B);
@@ -1019,9 +1016,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto I = OutputSections.begin();
   auto E = OutputSections.end();
   auto NonScriptI =
-      std::find_if(OutputSections.begin(), E, [](OutputSection *S) {
-        return Script->getSectionIndex(S->Name) == INT_MAX;
-      });
+      std::find_if(OutputSections.begin(), E,
+                   [](OutputSection *S) { return S->SectionIndex == INT_MAX; });
   while (NonScriptI != E) {
     auto BestPos = std::max_element(
         I, NonScriptI, [&](OutputSection *&A, OutputSection *&B) {

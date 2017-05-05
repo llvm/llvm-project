@@ -14,7 +14,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 
 #include "scudo_tls.h"
 
@@ -26,8 +26,10 @@ namespace __scudo {
 static pthread_once_t GlobalInitialized = PTHREAD_ONCE_INIT;
 static pthread_key_t PThreadKey;
 
-thread_local ThreadState ScudoThreadState = ThreadNotInitialized;
-thread_local ScudoThreadContext ThreadLocalContext;
+__attribute__((tls_model("initial-exec")))
+THREADLOCAL ThreadState ScudoThreadState = ThreadNotInitialized;
+__attribute__((tls_model("initial-exec")))
+THREADLOCAL ScudoThreadContext ThreadLocalContext;
 
 static void teardownThread(void *Ptr) {
   uptr Iteration = reinterpret_cast<uptr>(Ptr);
@@ -59,4 +61,4 @@ void initThread() {
 
 }  // namespace __scudo
 
-#endif  // SANITIZER_LINUX
+#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID

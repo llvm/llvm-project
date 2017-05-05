@@ -4,6 +4,11 @@
 # RUN: llvm-readobj -t -s %t | FileCheck %s
 # RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s --check-prefix=USE
 
+## Check that we accept --defsym foo2=foo1 form.
+# RUN: ld.lld -o %t2 %t.o --defsym foo2=foo1
+# RUN: llvm-readobj -t -s %t2 | FileCheck %s
+# RUN: llvm-objdump -d -print-imm-hex %t2 | FileCheck %s --check-prefix=USE
+
 ## In compare with GNU linkers, symbol defined with --defsym does
 ## not get aliased name in symbol table:
 # CHECK:      Symbol {

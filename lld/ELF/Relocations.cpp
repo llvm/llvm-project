@@ -233,7 +233,7 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (Target->isTlsLocalDynamicRel(Type) && !Config->Shared) {
+  if (isRelExprOneOf<R_ABS, R_TLSLD, R_TLSLD_PC>(Expr) && !Config->Shared) {
     C.Relocations.push_back(
         {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
     return 1;
@@ -282,7 +282,8 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
-  if (Target->isTlsInitialExecRel(Type) && !Config->Shared && !IsPreemptible) {
+  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC>(Expr) &&
+      !Config->Shared && !IsPreemptible) {
     C.Relocations.push_back(
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;

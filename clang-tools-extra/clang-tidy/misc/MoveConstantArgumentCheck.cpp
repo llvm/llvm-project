@@ -73,6 +73,12 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
       Arg->getType().isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
+    if (const CXXRecordDecl *R = Arg->getType()->getAsCXXRecordDecl()) {
+      for (const auto *Ctor : R->ctors()) {
+        if (Ctor->isCopyConstructor() && Ctor->isDeleted())
+          return;
+      }
+    }
     bool IsVariable = isa<DeclRefExpr>(Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;

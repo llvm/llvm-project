@@ -14,6 +14,7 @@ set(SCUDO_SOURCES
   scudo_interceptors.cpp
   scudo_new_delete.cpp
   scudo_termination.cpp
+  scudo_tls_android.cpp
   scudo_tls_linux.cpp
   scudo_utils.cpp)
 

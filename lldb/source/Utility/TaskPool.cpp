@@ -73,3 +73,26 @@ void TaskPoolImpl::Worker(TaskPoolImpl *pool) {
     f();
   }
 }
+
+void TaskMapOverInt(size_t begin, size_t end,
+                    std::function<void(size_t)> const &func) {
+  std::atomic<size_t> idx{begin};
+  size_t num_workers =
+      std::min<size_t>(end, std::thread::hardware_concurrency());
+
+  auto wrapper = [&idx, end, &func]() {
+    while (true) {
+      size_t i = idx.fetch_add(1);
+      if (i >= end)
+        break;
+      func(i);
+    }
+  };
+
+  std::vector<std::future<void>> futures;
+  futures.reserve(num_workers);
+  for (size_t i = 0; i < num_workers; i++)
+    futures.push_back(TaskPool::AddTask(wrapper));
+  for (size_t i = 0; i < num_workers; i++)
+    futures[i].wait();
+}
