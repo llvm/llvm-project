@@ -568,17 +568,17 @@ done
 
 ) 2>&1 | tee $LogDir/testing.$Release-$RC.log
 
+if [ "$use_gzip" = "yes" ]; then
+  echo "# Packaging the release as $Package.tar.gz"
+else
+  echo "# Packaging the release as $Package.tar.xz"
+fi
 package_release
 
 set +e
 
 # Woo hoo!
 echo "### Testing Finished ###"
-if [ "$use_gzip" = "yes" ]; then
-  echo "### Package: $Package.tar.gz"
-else
-  echo "### Package: $Package.tar.xz"
-fi
 echo "### Logs: $LogDir"
 
 echo "### Errors:"

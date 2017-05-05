@@ -45,7 +45,7 @@ class MachineIRBuilder {
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
 
-  /// Fields describing the insertion point.
+  /// \name Fields describing the insertion point.
   /// @{
   MachineBasicBlock *MBB;
   MachineBasicBlock::iterator II;
@@ -84,7 +84,7 @@ public:
   void setInsertPt(MachineBasicBlock &MBB, MachineBasicBlock::iterator II);
   /// @}
 
-  /// Setters for the insertion point.
+  /// \name Setters for the insertion point.
   /// @{
   /// Set the MachineFunction where to build instructions.
   void setMF(MachineFunction &);
@@ -98,7 +98,7 @@ public:
   void setInstr(MachineInstr &MI);
   /// @}
 
-  /// Control where instructions we create are recorded (typically for
+  /// \name Control where instructions we create are recorded (typically for
   /// visiting again later during legalization).
   /// @{
   void recordInsertions(std::function<void(MachineInstr *)> InsertedInstr);

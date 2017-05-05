@@ -191,8 +191,8 @@ define amdgpu_kernel void @fadd_b_a_a_f32(float addrspace(1)* %out,
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 
-; GCN-DENORM-SLOWFMA: v_mul_f32_e32 [[TMP:v[0-9]+]], -2.0, [[R1]]
-; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
+; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
+; GCN-DENORM-SLOWFMA: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -251,8 +251,8 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out,
 
 ; GCN-DENORM-FASTFMA: v_fma_f32 [[RESULT:v[0-9]+]], -[[R1]], 2.0, [[R2]]
 
-; GCN-DENORM-SLOWFMA: v_mul_f32_e32 [[TMP:v[0-9]+]], -2.0, [[R1]]
-; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
+; GCN-DENORM-SLOWFMA: v_add_f32_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
+; GCN-DENORM-SLOWFMA: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; VI-DENORM: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]

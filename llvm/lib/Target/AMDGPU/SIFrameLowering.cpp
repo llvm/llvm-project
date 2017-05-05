@@ -353,7 +353,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (OffsetRegUsed &&
       PreloadedScratchWaveOffsetReg != ScratchWaveOffsetReg) {
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchWaveOffsetReg)
-      .addReg(PreloadedScratchWaveOffsetReg, RegState::Kill);
+      .addReg(PreloadedScratchWaveOffsetReg,
+              MRI.isPhysRegUsed(ScratchWaveOffsetReg) ? 0 : RegState::Kill);
   }
 
   if (CopyBuffer && !CopyBufferFirst) {

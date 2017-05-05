@@ -53,14 +53,6 @@ private:
   const ModuleInfoHeader *Layout = nullptr;
 };
 
-struct ModuleInfoEx {
-  ModuleInfoEx(const DbiModuleDescriptor &Info) : Info(Info) {}
-  ModuleInfoEx(const ModuleInfoEx &Ex) = default;
-
-  DbiModuleDescriptor Info;
-  std::vector<StringRef> SourceFiles;
-};
-
 } // end namespace pdb
 
 template <> struct VarStreamArrayExtractor<pdb::DbiModuleDescriptor> {

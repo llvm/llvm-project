@@ -211,7 +211,7 @@ struct ModInfoFlags {
 };
 
 /// The header preceeding each entry in the Module Info substream of the DBI
-/// stream.
+/// stream.  Corresponds to the type MODI in the reference implementation.
 struct ModuleInfoHeader {
   /// Currently opened module. This field is a pointer in the reference
   /// implementation, but that won't work on 64-bit systems, and anyway it
@@ -243,9 +243,12 @@ struct ModuleInfoHeader {
   /// Padding so the next field is 4-byte aligned.
   char Padding1[2];
 
-  /// Array of [0..NumFiles) DBI name buffer offsets.  This field is a pointer
-  /// in the reference implementation, but as with `Mod`, we ignore it for now
-  /// since it is unused.
+  /// Array of [0..NumFiles) DBI name buffer offsets.  In the reference
+  /// implementation this field is a pointer.  But since you can't portably
+  /// serialize a pointer, on 64-bit platforms they copy all the values except
+  /// this one into the 32-bit version of the struct and use that for
+  /// serialization.  Regardless, this field is unused, it is only there to
+  /// store a pointer that can be accessed at runtime.
   support::ulittle32_t FileNameOffs;
 
   /// Name Index for src file name

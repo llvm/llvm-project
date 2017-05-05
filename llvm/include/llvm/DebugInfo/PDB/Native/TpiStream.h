@@ -40,12 +40,12 @@ public:
 
   uint32_t TypeIndexBegin() const;
   uint32_t TypeIndexEnd() const;
-  uint32_t NumTypeRecords() const;
+  uint32_t getNumTypeRecords() const;
   uint16_t getTypeHashStreamIndex() const;
   uint16_t getTypeHashStreamAuxIndex() const;
 
   uint32_t getHashKeySize() const;
-  uint32_t NumHashBuckets() const;
+  uint32_t getNumHashBuckets() const;
   FixedStreamArray<support::ulittle32_t> getHashValues() const;
   FixedStreamArray<TypeIndexOffset> getTypeIndexOffsets() const;
   HashTable &getHashAdjusters();
@@ -55,8 +55,6 @@ public:
   Error commit();
 
 private:
-  Error verifyHashValues();
-
   const PDBFile &Pdb;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 

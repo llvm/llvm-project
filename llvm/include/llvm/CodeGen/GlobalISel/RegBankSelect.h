@@ -309,7 +309,7 @@ public:
       Impossible
     };
 
-    /// Convenient types for a list of insertion points.
+    /// \name Convenient types for a list of insertion points.
     /// @{
     typedef SmallVector<std::unique_ptr<InsertPoint>, 2> InsertionPoints;
     typedef InsertionPoints::iterator insertpt_iterator;
@@ -341,7 +341,7 @@ public:
                        const TargetRegisterInfo &TRI, Pass &P,
                        RepairingKind Kind = RepairingKind::Insert);
 
-    /// Getters.
+    /// \name Getters.
     /// @{
     RepairingKind getKind() const { return Kind; }
     unsigned getOpIdx() const { return OpIdx; }
@@ -349,7 +349,7 @@ public:
     bool hasSplit() { return HasSplit; }
     /// @}
 
-    /// Overloaded methods to add an insertion point.
+    /// \name Overloaded methods to add an insertion point.
     /// @{
     /// Add a MBBInsertionPoint to the list of InsertPoints.
     void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
@@ -362,7 +362,7 @@ public:
     void addInsertPoint(InsertPoint &Point);
     /// @}
 
-    /// Accessors related to the insertion points.
+    /// \name Accessors related to the insertion points.
     /// @{
     insertpt_iterator begin() { return InsertPoints.begin(); }
     insertpt_iterator end() { return InsertPoints.end(); }

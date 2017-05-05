@@ -18,7 +18,7 @@ namespace pdb {
 
 class NativeCompilandSymbol : public NativeRawSymbol {
 public:
-  NativeCompilandSymbol(NativeSession &Session, const ModuleInfoEx &MI);
+  NativeCompilandSymbol(NativeSession &Session, DbiModuleDescriptor MI);
   PDB_SymType getSymTag() const override;
   bool isEditAndContinueEnabled() const override;
   uint32_t getLexicalParentId() const override;
@@ -26,7 +26,7 @@ public:
   std::string getName() const override;
 
 private:
-  ModuleInfoEx Module;
+  DbiModuleDescriptor Module;
 };
 
 } // namespace pdb

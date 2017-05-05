@@ -692,6 +692,10 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (const DWARFLineTable *lt = Line->getLineTable(stmtOffset))
     return lt;
 
+  // Make sure the offset is good before we try to parse.
+  if (stmtOffset >= U->getLineSection().size())
+    return nullptr;  
+
   // We have to parse it first.
   DataExtractor lineData(U->getLineSection(), isLittleEndian(),
                          U->getAddressByteSize());

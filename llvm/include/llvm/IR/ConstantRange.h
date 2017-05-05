@@ -41,7 +41,7 @@ namespace llvm {
 class MDNode;
 
 /// This class represents a range of values.
-class ConstantRange {
+class LLVM_NODISCARD ConstantRange {
   APInt Lower, Upper;
 
 public:

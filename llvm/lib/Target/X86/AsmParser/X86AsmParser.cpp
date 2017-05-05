@@ -776,11 +776,6 @@ private:
 
   bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
 
-  /// MS-compatibility:
-  /// Obtain an appropriate size qualifier, when facing its absence,
-  /// upon AVX512 vector/broadcast memory operand
-  unsigned AdjustAVX512Mem(unsigned Size, X86Operand* UnsizedMemOpNext);
-
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
     return getSTI().getFeatureBits()[X86::Mode64Bit];
@@ -1206,27 +1201,16 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
                                  Identifier, Info.OpDecl);
   }
 
+
   // We either have a direct symbol reference, or an offset from a symbol.  The
   // parser always puts the symbol on the LHS, so look there for size
   // calculation purposes.
+  unsigned FrontendSize = 0;
   const MCBinaryExpr *BinOp = dyn_cast<MCBinaryExpr>(Disp);
   bool IsSymRef =
       isa<MCSymbolRefExpr>(BinOp ? BinOp->getLHS() : Disp);
-  if (IsSymRef) {
-    if (!Size) {
-      Size = Info.Type * 8; // Size is in terms of bits in this context.
-      if (Size)
-        InstInfo->AsmRewrites->emplace_back(AOK_SizeDirective, Start,
-                                            /*Len=*/0, Size);
-    if (AllowBetterSizeMatch)
-      // Handle cases where size qualifier is absent, upon an indirect symbol
-      // reference - e.g. "vaddps zmm1, zmm2, [var]"
-      // set Size to zero to allow matching mechansim to try and find a better
-      // size qualifier than our initial guess, based on available variants of
-      // the given instruction
-      Size = 0;
-    }
-  }
+  if (IsSymRef && !Size && Info.Type)
+    FrontendSize = Info.Type * 8; // Size is in terms of bits in this context.
 
   // When parsing inline assembly we set the base register to a non-zero value
   // if we don't know the actual value at this time.  This is necessary to
@@ -1234,7 +1218,7 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
   BaseReg = BaseReg ? BaseReg : 1;
   return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
                                IndexReg, Scale, Start, End, Size, Identifier,
-                               Info.OpDecl);
+                               Info.OpDecl, FrontendSize);
 }
 
 static void
@@ -2884,23 +2868,6 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   return true;
 }
 
-unsigned X86AsmParser::AdjustAVX512Mem(unsigned Size,
-    X86Operand* UnsizedMemOpNext) {
-  // Check for the existence of an AVX512 platform
-  if (!getSTI().getFeatureBits()[X86::FeatureAVX512])
-    return 0;
-  // Allow adjusting upon a (x|y|z)mm
-  if (Size == 512 || Size == 256 || Size == 128)
-    return Size;
-  // This is an allegadly broadcasting mem op adjustment,
-  // allow some more inquiring to validate it
-  if (Size == 64 || Size == 32)
-    return UnsizedMemOpNext && UnsizedMemOpNext->isToken() &&
-      UnsizedMemOpNext->getToken().substr(0, 4).equals("{1to") ? Size : 0;
-  // Do not allow any other type of adjustments
-  return 0;
-}
-
 bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                 OperandVector &Operands,
                                                 MCStreamer &Out,
@@ -2920,19 +2887,14 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
-  // If unsized memory operand was found - obtain following operand.
-  // For use in AdjustAVX512Mem
-  X86Operand *UnsizedMemOpNext = nullptr;
   for (const auto &Op : Operands) {
     X86Operand *X86Op = static_cast<X86Operand *>(Op.get());
-    if (UnsizedMemOp) {
-      UnsizedMemOpNext = X86Op;
+    if (X86Op->isMemUnsized()) {
+      UnsizedMemOp = X86Op;
       // Have we found an unqualified memory operand,
       // break. IA allows only one memory operand.
       break;
     }
-    if (X86Op->isMemUnsized())
-      UnsizedMemOp = X86Op;
   }
 
   // Allow some instructions to have implicitly pointer-sized operands.  This is
@@ -2978,7 +2940,6 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // If an unsized memory operand is present, try to match with each memory
   // operand size.  In Intel assembly, the size is not part of the instruction
   // mnemonic.
-  unsigned MatchedSize = 0;
   if (UnsizedMemOp && UnsizedMemOp->isMemUnsized()) {
     static const unsigned MopSizes[] = {8, 16, 32, 64, 80, 128, 256, 512};
     for (unsigned Size : MopSizes) {
@@ -2993,17 +2954,10 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
       // If this returned as a missing feature failure, remember that.
       if (Match.back() == Match_MissingFeature)
         ErrorInfoMissingFeature = ErrorInfoIgnore;
-      if (M == Match_Success)
-        // MS-compatability:
-        // Adjust AVX512 vector/broadcast memory operand,
-        // when facing the absence of a size qualifier.
-        // Match GCC behavior on respective cases.
-        MatchedSize = AdjustAVX512Mem(Size, UnsizedMemOpNext);
     }
 
     // Restore the size of the unsized memory operand if we modified it.
-    if (UnsizedMemOp)
-      UnsizedMemOp->Mem.Size = 0;
+    UnsizedMemOp->Mem.Size = 0;
   }
 
   // If we haven't matched anything yet, this is not a basic integer or FPU
@@ -3027,20 +2981,30 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
                  Op.getLocRange(), MatchingInlineAsm);
   }
 
+  unsigned NumSuccessfulMatches =
+      std::count(std::begin(Match), std::end(Match), Match_Success);
+
+  // If matching was ambiguous and we had size information from the frontend,
+  // try again with that. This handles cases like "movxz eax, m8/m16".
+  if (UnsizedMemOp && NumSuccessfulMatches > 1 &&
+      UnsizedMemOp->getMemFrontendSize()) {
+    UnsizedMemOp->Mem.Size = UnsizedMemOp->getMemFrontendSize();
+    unsigned M = MatchInstruction(
+        Operands, Inst, ErrorInfo, MatchingInlineAsm, isParsingIntelSyntax());
+    if (M == Match_Success)
+      NumSuccessfulMatches = 1;
+
+    // Add a rewrite that encodes the size information we used from the
+    // frontend.
+    InstInfo->AsmRewrites->emplace_back(
+        AOK_SizeDirective, UnsizedMemOp->getStartLoc(),
+        /*Len=*/0, UnsizedMemOp->getMemFrontendSize());
+  }
+
   // If exactly one matched, then we treat that as a successful match (and the
   // instruction will already have been filled in correctly, since the failing
   // matches won't have modified it).
-  unsigned NumSuccessfulMatches =
-      std::count(std::begin(Match), std::end(Match), Match_Success);
   if (NumSuccessfulMatches == 1) {
-    if (MatchedSize && isParsingInlineAsm() && isParsingIntelSyntax())
-      // MS compatibility -
-      // Fix the rewrite according to the matched memory size
-      // MS inline assembly only
-      for (AsmRewrite &AR : *InstInfo->AsmRewrites)
-        if ((AR.Loc.getPointer() == UnsizedMemOp->StartLoc.getPointer()) &&
-            (AR.Kind == AOK_SizeDirective))
-          AR.Val = MatchedSize;
     // Some instructions need post-processing to, for example, tweak which
     // encoding is selected. Loop on it while changes happen so the individual
     // transformations can chain off each other.
@@ -3057,7 +3021,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
            "multiple matches only possible with unsized memory operands");
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
-                 UnsizedMemOp->getLocRange(), MatchingInlineAsm);
+                 UnsizedMemOp->getLocRange());
   }
 
   // If one instruction matched with a missing feature, report this as a
