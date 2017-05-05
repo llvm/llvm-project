@@ -26,7 +26,7 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
   case PDB_SymType::Compiland: {
     auto Dbi = File.getPDBDbiStream();
     if (Dbi) {
-      const auto Modules = Dbi->modules();
+      const DbiModuleList &Modules = Dbi->modules();
       return std::unique_ptr<IPDBEnumSymbols>(
           new NativeEnumModules(Session, Modules));
     }

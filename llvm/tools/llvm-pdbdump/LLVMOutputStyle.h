@@ -12,6 +12,7 @@
 
 #include "OutputStyle.h"
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -28,6 +29,8 @@ public:
   Error dump() override;
 
 private:
+  Error buildTypeDatabase(uint32_t SN);
+
   Error dumpFileHeaders();
   Error dumpStreamSummary();
   Error dumpFreePageMap();
@@ -51,8 +54,8 @@ private:
 
   PDBFile &File;
   ScopedPrinter P;
-  codeview::TypeDatabase TypeDB;
-  codeview::TypeDatabase ItemDB;
+  Optional<codeview::TypeDatabase> TypeDB;
+  Optional<codeview::TypeDatabase> ItemDB;
   SmallVector<std::string, 32> StreamPurposes;
 };
 }

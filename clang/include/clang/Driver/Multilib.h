@@ -70,7 +70,14 @@ public:
   /// All elements begin with either '+' or '-'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
+
   /// Add a flag to the flags list
+  /// \p Flag must be a flag accepted by the driver with its leading '-' removed,
+  ///     and replaced with either:
+  ///       '-' which contraindicates using this multilib with that flag
+  ///     or:
+  ///       '+' which promotes using this multilib in the presence of that flag
+  ///     otherwise '-print-multi-lib' will not emit them correctly.
   Multilib &flag(StringRef F) {
     assert(F.front() == '+' || F.front() == '-');
     Flags.push_back(F);

@@ -13,7 +13,7 @@ namespace llvm {
 namespace pdb {
 
 NativeCompilandSymbol::NativeCompilandSymbol(NativeSession &Session,
-                                             const ModuleInfoEx &MI)
+                                             DbiModuleDescriptor MI)
     : NativeRawSymbol(Session), Module(MI) {}
 
 PDB_SymType NativeCompilandSymbol::getSymTag() const {
@@ -21,7 +21,7 @@ PDB_SymType NativeCompilandSymbol::getSymTag() const {
 }
 
 bool NativeCompilandSymbol::isEditAndContinueEnabled() const {
-  return Module.Info.hasECInfo();
+  return Module.hasECInfo();
 }
 
 uint32_t NativeCompilandSymbol::getLexicalParentId() const { return 0; }
@@ -32,11 +32,11 @@ uint32_t NativeCompilandSymbol::getLexicalParentId() const { return 0; }
 // this potential confusion.
 
 std::string NativeCompilandSymbol::getLibraryName() const {
-  return Module.Info.getObjFileName();
+  return Module.getObjFileName();
 }
 
 std::string NativeCompilandSymbol::getName() const {
-  return Module.Info.getModuleName();
+  return Module.getModuleName();
 }
 
 } // namespace pdb

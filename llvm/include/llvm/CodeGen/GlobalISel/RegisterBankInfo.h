@@ -310,7 +310,7 @@ public:
     OperandsMapper(MachineInstr &MI, const InstructionMapping &InstrMapping,
                    MachineRegisterInfo &MRI);
 
-    /// Getters.
+    /// \name Getters.
     /// @{
     /// The MachineInstr being remapped.
     MachineInstr &getMI() const { return MI; }
@@ -378,15 +378,18 @@ protected:
 
   /// Keep dynamically allocated PartialMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const PartialMapping>> MapOfPartialMappings;
+  mutable DenseMap<unsigned, std::unique_ptr<const PartialMapping>>
+      MapOfPartialMappings;
 
   /// Keep dynamically allocated ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const ValueMapping> > MapOfValueMappings;
+  mutable DenseMap<unsigned, std::unique_ptr<const ValueMapping>>
+      MapOfValueMappings;
 
   /// Keep dynamically allocated array of ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<ValueMapping[]>> MapOfOperandsMappings;
+  mutable DenseMap<unsigned, std::unique_ptr<ValueMapping[]>>
+      MapOfOperandsMappings;
 
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
@@ -432,7 +435,7 @@ protected:
   const PartialMapping &getPartialMapping(unsigned StartIdx, unsigned Length,
                                           const RegisterBank &RegBank) const;
 
-  /// Methods to get a uniquely generated ValueMapping.
+  /// \name Methods to get a uniquely generated ValueMapping.
   /// @{
 
   /// The most common ValueMapping consists of a single PartialMapping.
@@ -445,7 +448,7 @@ protected:
                                       unsigned NumBreakDowns) const;
   /// @}
 
-  /// Methods to get a uniquely generated array of ValueMapping.
+  /// \name Methods to get a uniquely generated array of ValueMapping.
   /// @{
 
   /// Get the uniquely generated array of ValueMapping for the

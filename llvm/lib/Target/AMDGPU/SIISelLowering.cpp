@@ -1045,6 +1045,7 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
 static void allocateSystemSGPRs(CCState &CCInfo,
                                 MachineFunction &MF,
                                 SIMachineFunctionInfo &Info,
+                                CallingConv::ID CallConv,
                                 bool IsShader) {
   if (Info.hasWorkGroupIDX()) {
     unsigned Reg = Info.addWorkGroupIDX();
@@ -1075,8 +1076,15 @@ static void allocateSystemSGPRs(CCState &CCInfo,
     unsigned PrivateSegmentWaveByteOffsetReg;
 
     if (IsShader) {
-      PrivateSegmentWaveByteOffsetReg = findFirstFreeSGPR(CCInfo);
-      Info.setPrivateSegmentWaveByteOffset(PrivateSegmentWaveByteOffsetReg);
+      PrivateSegmentWaveByteOffsetReg =
+        Info.getPrivateSegmentWaveByteOffsetSystemSGPR();
+
+      // This is true if the scratch wave byte offset doesn't have a fixed
+      // location.
+      if (PrivateSegmentWaveByteOffsetReg == AMDGPU::NoRegister) {
+        PrivateSegmentWaveByteOffsetReg = findFirstFreeSGPR(CCInfo);
+        Info.setPrivateSegmentWaveByteOffset(PrivateSegmentWaveByteOffsetReg);
+      }
     } else
       PrivateSegmentWaveByteOffsetReg = Info.addPrivateSegmentWaveByteOffset();
 
@@ -1313,7 +1321,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   // Start adding system SGPRs.
   if (IsEntryFunc)
-    allocateSystemSGPRs(CCInfo, MF, *Info, IsShader);
+    allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsShader);
 
   reservePrivateMemoryRegs(getTargetMachine(), MF, *TRI, *Info);
 

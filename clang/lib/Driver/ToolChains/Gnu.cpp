@@ -893,6 +893,8 @@ static bool isSoftFloatABI(const ArgList &Args) {
           A->getValue() == StringRef("soft"));
 }
 
+/// \p Flag must be a flag accepted by the driver with its leading '-' removed,
+//     otherwise '-print-multi-lib' will not emit them correctly.
 static void addMultilibFlag(bool Enabled, const char *const Flag,
                             std::vector<std::string> &Flags) {
   if (Enabled)
@@ -1437,17 +1439,17 @@ static void findAndroidArmMultilibs(const Driver &D,
   // Find multilibs with subdirectories like armv7-a, thumb, armv7-a/thumb.
   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
   Multilib ArmV7Multilib = makeMultilib("/armv7-a")
-                               .flag("+armv7")
-                               .flag("-thumb");
+                               .flag("+march=armv7-a")
+                               .flag("-mthumb");
   Multilib ThumbMultilib = makeMultilib("/thumb")
-                               .flag("-armv7")
-                               .flag("+thumb");
+                               .flag("-march=armv7-a")
+                               .flag("+mthumb");
   Multilib ArmV7ThumbMultilib = makeMultilib("/armv7-a/thumb")
-                               .flag("+armv7")
-                               .flag("+thumb");
+                               .flag("+march=armv7-a")
+                               .flag("+mthumb");
   Multilib DefaultMultilib = makeMultilib("")
-                               .flag("-armv7")
-                               .flag("-thumb");
+                               .flag("-march=armv7-a")
+                               .flag("-mthumb");
   MultilibSet AndroidArmMultilibs =
       MultilibSet()
           .Either(ThumbMultilib, ArmV7Multilib,
@@ -1465,8 +1467,8 @@ static void findAndroidArmMultilibs(const Driver &D,
   bool IsArmV7Mode = (IsArmArch || IsThumbArch) &&
       (llvm::ARM::parseArchVersion(Arch) == 7 ||
        (IsArmArch && Arch == "" && IsV7SubArch));
-  addMultilibFlag(IsArmV7Mode, "armv7", Flags);
-  addMultilibFlag(IsThumbMode, "thumb", Flags);
+  addMultilibFlag(IsArmV7Mode, "march=armv7-a", Flags);
+  addMultilibFlag(IsThumbMode, "mthumb", Flags);
 
   if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilib))
     Result.Multilibs = AndroidArmMultilibs;
