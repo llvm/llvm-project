@@ -1172,6 +1172,10 @@ def err_objc_kindof_nonobject : Error<
 def err_objc_kindof_wrong_position : Error<
   "'__kindof' type specifier must precede the declarator">;
 
+def err_objc_method_unsupported_param_ret_type : Error<
+  "%0 %select{parameter|return}1 type is unsupported; "
+  "support for vector types for this target is introduced in %2">;
+
 // C++ declarations
 def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;
@@ -2769,7 +2773,8 @@ def warn_partial_availability : Warning<"%0 is only available conditionally">,
 def note_partial_availability_silence : Note<
   "explicitly redeclare %0 to silence this warning">;
 def note_unguarded_available_silence : Note<
-  "enclose %0 in an @available check to silence this warning">;
+  "enclose %0 in %select{an @available|a __builtin_available}1 check to silence"
+  " this warning">;
 def warn_partial_message : Warning<"%0 is partial: %1">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
 def warn_partial_fwdclass_message : Warning<
