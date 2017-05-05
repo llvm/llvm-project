@@ -98,6 +98,22 @@
 # CHECK: and r0, r1, #16777472 @ encoding: [0x01,0xf0,0x01,0x20]
 # CHECK-DISABLED: error: instruction requires: NegativeImmediates
 # CHECK-DISABLED: BIC
+	ORR r0, r1, #0xFFFFFF00
+# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: ORR
+# CHECK: orn r0, r1, #255
+	ORR r0, r1, #0xFEFFFEFF
+# CHECK: orn r0, r1, #16777472 @ encoding: [0x61,0xf0,0x01,0x20]
+# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: ORR
+	ORN r0, r1, #0xFFFFFF00
+# CHECK: orr r0, r1, #255
+# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: ORN
+	ORN r0, r1, #0xFEFFFEFF
+# CHECK: orr r0, r1, #16777472 @ encoding: [0x41,0xf0,0x01,0x20]
+# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: ORN
 	CMP r0, #0xFFFFFF01
 # CHECK: cmn.w r0, #255
 # CHECK-DISABLED: error: instruction requires: NegativeImmediates

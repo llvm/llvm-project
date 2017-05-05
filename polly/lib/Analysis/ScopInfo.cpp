@@ -788,7 +788,7 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   if (Range.isFullSet())
     return;
 
-  if (Range.isWrappedSet())
+  if (Range.isWrappedSet() | Range.isSignWrappedSet())
     return;
 
   bool isWrapping = Range.isSignWrappedSet();

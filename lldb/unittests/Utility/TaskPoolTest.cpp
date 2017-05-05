@@ -30,25 +30,14 @@ TEST(TaskPoolTest, RunTasks) {
   ASSERT_EQ(17, r[3]);
 }
 
-TEST(TaskPoolTest, TaskRunner) {
-  auto fn = [](int x) { return std::make_pair(x, x * x); };
+TEST(TaskPoolTest, TaskMap) {
+  int data[4];
+  auto fn = [&data](int x) { data[x] = x * x; };
 
-  TaskRunner<std::pair<int, int>> tr;
-  tr.AddTask(fn, 1);
-  tr.AddTask(fn, 2);
-  tr.AddTask(fn, 3);
-  tr.AddTask(fn, 4);
+  TaskMapOverInt(0, 4, fn);
 
-  int count = 0;
-  while (true) {
-    auto f = tr.WaitForNextCompletedTask();
-    if (!f.valid())
-      break;
-
-    ++count;
-    std::pair<int, int> v = f.get();
-    ASSERT_EQ(v.first * v.first, v.second);
-  }
-
-  ASSERT_EQ(4, count);
+  ASSERT_EQ(data[0], 0);
+  ASSERT_EQ(data[1], 1);
+  ASSERT_EQ(data[2], 4);
+  ASSERT_EQ(data[3], 9);
 }

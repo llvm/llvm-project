@@ -2362,32 +2362,30 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
     if (success)
       return_valobj_sp = ValueObjectConstResult::Create(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
-  } else if (type_flags & eTypeIsVector) {
+  } else if (type_flags & eTypeIsVector && byte_size <= 16) {
     if (byte_size > 0) {
       const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
 
       if (v0_info) {
-        if (byte_size <= v0_info->byte_size) {
-          std::unique_ptr<DataBufferHeap> heap_data_ap(
-              new DataBufferHeap(byte_size, 0));
-          const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
-          RegisterValue reg_value;
-          if (reg_ctx->ReadRegister(v0_info, reg_value)) {
-            Error error;
-            if (reg_value.GetAsMemoryData(v0_info, heap_data_ap->GetBytes(),
-                                          heap_data_ap->GetByteSize(),
-                                          byte_order, error)) {
-              DataExtractor data(DataBufferSP(heap_data_ap.release()),
-                                 byte_order,
-                                 exe_ctx.GetProcessRef().GetAddressByteSize());
-              return_valobj_sp = ValueObjectConstResult::Create(
-                  &thread, return_compiler_type, ConstString(""), data);
-            }
+        std::unique_ptr<DataBufferHeap> heap_data_ap(
+            new DataBufferHeap(byte_size, 0));
+        const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
+        RegisterValue reg_value;
+        if (reg_ctx->ReadRegister(v0_info, reg_value)) {
+          Error error;
+          if (reg_value.GetAsMemoryData(v0_info, heap_data_ap->GetBytes(),
+                                        heap_data_ap->GetByteSize(), byte_order,
+                                        error)) {
+            DataExtractor data(DataBufferSP(heap_data_ap.release()), byte_order,
+                               exe_ctx.GetProcessRef().GetAddressByteSize());
+            return_valobj_sp = ValueObjectConstResult::Create(
+                &thread, return_compiler_type, ConstString(""), data);
           }
         }
       }
     }
-  } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass) {
+  } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass ||
+             (type_flags & eTypeIsVector && byte_size > 16)) {
     DataExtractor data;
 
     uint32_t NGRN = 0; // Search ABI docs for NGRN
