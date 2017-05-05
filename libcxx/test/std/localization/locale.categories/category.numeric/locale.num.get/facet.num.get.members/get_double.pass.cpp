@@ -7,8 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.7
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.8
+// PR11871
+// XFAIL: with_system_cxx_lib=macosx10.7
+// PR15445
+// XFAIL: with_system_cxx_lib=macosx10.8
 
 // <locale>
 

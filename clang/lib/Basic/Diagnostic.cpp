@@ -146,10 +146,9 @@ void DiagnosticsEngine::SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1,
 }
 
 void DiagnosticsEngine::ReportDelayed() {
-  Report(DelayedDiagID) << DelayedDiagArg1 << DelayedDiagArg2;
+  unsigned ID = DelayedDiagID;
   DelayedDiagID = 0;
-  DelayedDiagArg1.clear();
-  DelayedDiagArg2.clear();
+  Report(ID) << DelayedDiagArg1 << DelayedDiagArg2;
 }
 
 void DiagnosticsEngine::DiagStateMap::appendFirst(
@@ -420,11 +419,10 @@ bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
   }
 
   // Clear out the current diagnostic object.
-  unsigned DiagID = CurDiagID;
   Clear();
 
   // If there was a delayed diagnostic, emit it now.
-  if (!Force && DelayedDiagID && DelayedDiagID != DiagID)
+  if (!Force && DelayedDiagID)
     ReportDelayed();
 
   return Emitted;

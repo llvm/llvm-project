@@ -22,6 +22,7 @@
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
+#include "polly/Support/VirtualInstruction.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -93,46 +94,119 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
 
 Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
                                    LoopToScevMapT &LTS, Loop *L) const {
-  // Constants that do not reference any named value can always remain
-  // unchanged. Handle them early to avoid expensive map lookups. We do not take
-  // the fast-path for external constants which are referenced through globals
-  // as these may need to be rewritten when distributing code accross different
-  // LLVM modules.
-  if (isa<Constant>(Old) && !isa<GlobalValue>(Old))
-    return Old;
 
-  // Inline asm is like a constant to us.
-  if (isa<InlineAsm>(Old))
-    return Old;
+  auto lookupGlobally = [this](Value *Old) -> Value * {
+    Value *New = GlobalMap.lookup(Old);
+    if (!New)
+      return nullptr;
 
-  if (Value *New = GlobalMap.lookup(Old)) {
+    // Required by:
+    // * Isl/CodeGen/OpenMP/invariant_base_pointer_preloaded.ll
+    // * Isl/CodeGen/OpenMP/invariant_base_pointer_preloaded_different_bb.ll
+    // * Isl/CodeGen/OpenMP/invariant_base_pointer_preloaded_pass_only_needed.ll
+    // * Isl/CodeGen/OpenMP/invariant_base_pointers_preloaded.ll
+    // * Isl/CodeGen/OpenMP/loop-body-references-outer-values-3.ll
+    // * Isl/CodeGen/OpenMP/single_loop_with_loop_invariant_baseptr.ll
+    // GlobalMap should be a mapping from (value in original SCoP) to (copied
+    // value in generated SCoP), without intermediate mappings, which might
+    // easily require transitiveness as well.
     if (Value *NewRemapped = GlobalMap.lookup(New))
       New = NewRemapped;
+
+    // No test case for this code.
     if (Old->getType()->getScalarSizeInBits() <
         New->getType()->getScalarSizeInBits())
       New = Builder.CreateTruncOrBitCast(New, Old->getType());
 
     return New;
+  };
+
+  Value *New = nullptr;
+  auto VUse = VirtualUse::create(&Stmt, L, Old, true);
+  switch (VUse.getKind()) {
+  case VirtualUse::Block:
+    // BasicBlock are constants, but the BlockGenerator copies them.
+    New = BBMap.lookup(Old);
+    break;
+
+  case VirtualUse::Constant:
+    // Used by:
+    // * Isl/CodeGen/OpenMP/reference-argument-from-non-affine-region.ll
+    // Constants should not be redefined. In this case, the GlobalMap just
+    // contains a mapping to the same constant, which is unnecessary, but
+    // harmless.
+    if ((New = lookupGlobally(Old)))
+      break;
+
+    assert(!BBMap.count(Old));
+    New = Old;
+    break;
+
+  case VirtualUse::ReadOnly:
+    assert(!GlobalMap.count(Old));
+
+    // Required for:
+    // * Isl/CodeGen/MemAccess/create_arrays.ll
+    // * Isl/CodeGen/read-only-scalars.ll
+    // * ScheduleOptimizer/pattern-matching-based-opts_10.ll
+    // For some reason these reload a read-only value. The reloaded value ends
+    // up in BBMap, buts its value should be identical.
+    //
+    // Required for:
+    // * Isl/CodeGen/OpenMP/single_loop_with_param.ll
+    // The parallel subfunctions need to reference the read-only value from the
+    // parent function, this is done by reloading them locally.
+    if ((New = BBMap.lookup(Old)))
+      break;
+
+    New = Old;
+    break;
+
+  case VirtualUse::Synthesizable:
+    // Used by:
+    // * Isl/CodeGen/OpenMP/loop-body-references-outer-values-3.ll
+    // * Isl/CodeGen/OpenMP/recomputed-srem.ll
+    // * Isl/CodeGen/OpenMP/reference-other-bb.ll
+    // * Isl/CodeGen/OpenMP/two-parallel-loops-reference-outer-indvar.ll
+    // For some reason synthesizable values end up in GlobalMap. Their values
+    // are the same as trySynthesizeNewValue would return. The legacy
+    // implementation prioritized GlobalMap, so this is what we do here as well.
+    // Ideally, synthesizable values should not end up in GlobalMap.
+    if ((New = lookupGlobally(Old)))
+      break;
+
+    // Required for:
+    // * Isl/CodeGen/RuntimeDebugBuilder/combine_different_values.ll
+    // * Isl/CodeGen/getNumberOfIterations.ll
+    // * Isl/CodeGen/non_affine_float_compare.ll
+    // * ScheduleOptimizer/pattern-matching-based-opts_10.ll
+    // Ideally, synthesizable values are synthesized by trySynthesizeNewValue,
+    // not precomputed (SCEVExpander has its own caching mechanism).
+    // These tests fail without this, but I think trySynthesizeNewValue would
+    // just re-synthesize the same instructions.
+    if ((New = BBMap.lookup(Old)))
+      break;
+
+    New = trySynthesizeNewValue(Stmt, Old, BBMap, LTS, L);
+    break;
+
+  case VirtualUse::Hoisted:
+    // TODO: Hoisted invariant loads should be found in GlobalMap only, but not
+    // redefined locally (which will be ignored anyway). That is, the following
+    // assertion should apply: assert(!BBMap.count(Old))
+
+    New = lookupGlobally(Old);
+    break;
+
+  case VirtualUse::Intra:
+  case VirtualUse::Inter:
+    assert(!GlobalMap.count(Old) &&
+           "Intra and inter-stmt values are never global");
+    New = BBMap.lookup(Old);
+    break;
   }
-
-  if (Value *New = BBMap.lookup(Old))
-    return New;
-
-  if (Value *New = trySynthesizeNewValue(Stmt, Old, BBMap, LTS, L))
-    return New;
-
-  // A scop-constant value defined by a global or a function parameter.
-  if (isa<GlobalValue>(Old) || isa<Argument>(Old))
-    return Old;
-
-  // A scop-constant value defined by an instruction executed outside the scop.
-  if (const Instruction *Inst = dyn_cast<Instruction>(Old))
-    if (!Stmt.getParent()->contains(Inst->getParent()))
-      return Old;
-
-  // The scalar dependence is neither available nor SCEVCodegenable.
-  llvm_unreachable("Unexpected scalar dependence in region!");
-  return nullptr;
+  assert(New && "Unexpected scalar dependence in region!");
+  return New;
 }
 
 void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,

@@ -8,6 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: libcpp-no-exceptions
+// XFAIL: libcpp-no-exceptions
+
+// XFAIL: availability=macosx10.7
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.11
+
 // test uncaught_exceptions
 
 #include <exception>

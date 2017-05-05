@@ -145,7 +145,7 @@ namespace std { namespace experimental { inline namespace fundamentals_v1 {
 #include <stdexcept>
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
-class _LIBCPP_EXCEPTION_ABI bad_optional_access
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access
     : public std::logic_error
 {
 public:
@@ -523,6 +523,9 @@ public:
     constexpr explicit operator bool() const noexcept {return this->__engaged_;}
 
 	_LIBCPP_NORETURN _LIBCPP_INLINE_VISIBILITY 
+#ifndef _LIBCPP_NO_EXCEPTIONS
+_LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+#endif
 	constexpr void __throw_bad_optional_access() const
 	{
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -532,7 +535,7 @@ public:
 #endif
 	}
 	
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
     constexpr value_type const& value() const
     {
         if (!this->__engaged_)
@@ -540,7 +543,7 @@ public:
         return this->__val_;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
     value_type& value()
     {
         if (!this->__engaged_)

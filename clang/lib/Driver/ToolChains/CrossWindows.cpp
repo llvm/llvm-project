@@ -204,7 +204,7 @@ CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,
                                              const llvm::Triple &T,
                                              const llvm::opt::ArgList &Args)
     : Generic_GCC(D, T, Args) {
-  if (GetCXXStdlibType(Args) == ToolChain::CST_Libstdcxx) {
+  if (D.CCCIsCXX() && GetCXXStdlibType(Args) == ToolChain::CST_Libstdcxx) {
     const std::string &SysRoot = D.SysRoot;
 
     // libstdc++ resides in /usr/lib, but depends on libgcc which is placed in

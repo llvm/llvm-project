@@ -227,6 +227,7 @@ public:
 
   template <class ELFT> void parse();
   MemoryBufferRef getBuffer();
+  InputFile *fetch();
 
 private:
   std::vector<StringRef> getSymbols();
