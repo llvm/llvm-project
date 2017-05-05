@@ -20944,6 +20944,41 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
                       ISD::TRUNCATE : ISD::ZERO_EXTEND), DL, VT, RetVal);
 }
 
+// Split an unary integer op into 2 half sized ops.
+static SDValue LowerVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  unsigned NumElems = VT.getVectorNumElements();
+  unsigned SizeInBits = VT.getSizeInBits();
+
+  // Extract the Lo/Hi vectors
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  SDValue Lo = extractSubVector(Src, 0, DAG, dl, SizeInBits / 2);
+  SDValue Hi = extractSubVector(Src, NumElems / 2, DAG, dl, SizeInBits / 2);
+
+  MVT EltVT = VT.getVectorElementType();
+  MVT NewVT = MVT::getVectorVT(EltVT, NumElems / 2);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
+                     DAG.getNode(Op.getOpcode(), dl, NewVT, Lo),
+                     DAG.getNode(Op.getOpcode(), dl, NewVT, Hi));
+}
+
+// Decompose 256-bit ops into smaller 128-bit ops.
+static SDValue Lower256IntUnary(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType().is256BitVector() &&
+         Op.getSimpleValueType().isInteger() &&
+         "Only handle AVX 256-bit vector integer operation");
+  return LowerVectorIntUnary(Op, DAG);
+}
+
+// Decompose 512-bit ops into smaller 256-bit ops.
+static SDValue Lower512IntUnary(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType().is512BitVector() &&
+         Op.getSimpleValueType().isInteger() &&
+         "Only handle AVX 512-bit vector integer operation");
+  return LowerVectorIntUnary(Op, DAG);
+}
+
 /// \brief Lower a vector CTLZ using native supported vector CTLZ instruction.
 //
 // 1. i32/i64 128/256-bit vector (native support require VLX) are expended
@@ -20978,20 +21013,11 @@ static SDValue LowerVectorCTLZ_AVX512(SDValue Op, SelectionDAG &DAG) {
   assert((EltVT == MVT::i8 || EltVT == MVT::i16) &&
           "Unsupported element type");
 
-  if (16 < NumElems) {
-    // Split vector, it's Lo and Hi parts will be handled in next iteration.
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitVector(Op.getOperand(0), dl);
-    MVT OutVT = MVT::getVectorVT(EltVT, NumElems/2);
-
-    Lo = DAG.getNode(ISD::CTLZ, dl, OutVT, Lo);
-    Hi = DAG.getNode(ISD::CTLZ, dl, OutVT, Hi);
-
-    return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
-  }
+  // Split vector, it's Lo and Hi parts will be handled in next iteration.
+  if (16 < NumElems)
+    return LowerVectorIntUnary(Op, DAG);
 
   MVT NewVT = MVT::getVectorVT(MVT::i32, NumElems);
-
   assert((NewVT.is256BitVector() || NewVT.is512BitVector()) &&
           "Unsupported value type for operation");
 
@@ -21078,23 +21104,13 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
                                const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-  SDValue Op0 = Op.getOperand(0);
 
   if (Subtarget.hasAVX512())
     return LowerVectorCTLZ_AVX512(Op, DAG);
 
   // Decompose 256-bit ops into smaller 128-bit ops.
-  if (VT.is256BitVector() && !Subtarget.hasInt256()) {
-    unsigned NumElems = VT.getVectorNumElements();
-
-    // Extract each 128-bit vector, perform ctlz and concat the result.
-    SDValue LHS = extract128BitVector(Op0, 0, DAG, DL);
-    SDValue RHS = extract128BitVector(Op0, NumElems / 2, DAG, DL);
-
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                       DAG.getNode(ISD::CTLZ, DL, LHS.getValueType(), LHS),
-                       DAG.getNode(ISD::CTLZ, DL, RHS.getValueType(), RHS));
-  }
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
+    return Lower256IntUnary(Op, DAG);
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
@@ -21258,19 +21274,7 @@ static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getSimpleValueType().is256BitVector() &&
          Op.getSimpleValueType().isInteger() &&
          "Only handle AVX 256-bit vector integer operation");
-  MVT VT = Op.getSimpleValueType();
-  unsigned NumElems = VT.getVectorNumElements();
-
-  SDLoc dl(Op);
-  SDValue Src = Op.getOperand(0);
-  SDValue Lo = extract128BitVector(Src, 0, DAG, dl);
-  SDValue Hi = extract128BitVector(Src, NumElems / 2, DAG, dl);
-
-  MVT EltVT = VT.getVectorElementType();
-  MVT NewVT = MVT::getVectorVT(EltVT, NumElems / 2);
-  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
-                     DAG.getNode(ISD::ABS, dl, NewVT, Lo),
-                     DAG.getNode(ISD::ABS, dl, NewVT, Hi));
+  return Lower256IntUnary(Op, DAG);
 }
 
 static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
@@ -23049,29 +23053,13 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
     return LowerVectorCTPOPBitmath(Op0, DL, Subtarget, DAG);
   }
 
-  if (VT.is256BitVector() && !Subtarget.hasInt256()) {
-    unsigned NumElems = VT.getVectorNumElements();
+  // Decompose 256-bit ops into smaller 128-bit ops.
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
+    return Lower256IntUnary(Op, DAG);
 
-    // Extract each 128-bit vector, compute pop count and concat the result.
-    SDValue LHS = extract128BitVector(Op0, 0, DAG, DL);
-    SDValue RHS = extract128BitVector(Op0, NumElems / 2, DAG, DL);
-
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                       LowerVectorCTPOPInRegLUT(LHS, DL, Subtarget, DAG),
-                       LowerVectorCTPOPInRegLUT(RHS, DL, Subtarget, DAG));
-  }
-
-  if (VT.is512BitVector() && !Subtarget.hasBWI()) {
-    unsigned NumElems = VT.getVectorNumElements();
-
-    // Extract each 256-bit vector, compute pop count and concat the result.
-    SDValue LHS = extract256BitVector(Op0, 0, DAG, DL);
-    SDValue RHS = extract256BitVector(Op0, NumElems / 2, DAG, DL);
-
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                       LowerVectorCTPOPInRegLUT(LHS, DL, Subtarget, DAG),
-                       LowerVectorCTPOPInRegLUT(RHS, DL, Subtarget, DAG));
-  }
+  // Decompose 512-bit ops into smaller 256-bit ops.
+  if (VT.is512BitVector() && !Subtarget.hasBWI())
+    return Lower512IntUnary(Op, DAG);
 
   return LowerVectorCTPOPInRegLUT(Op0, DL, Subtarget, DAG);
 }
@@ -23098,20 +23086,12 @@ static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
                        DAG.getIntPtrConstant(0, DL));
   }
 
-  MVT SVT = VT.getVectorElementType();
   int NumElts = VT.getVectorNumElements();
   int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
 
   // Decompose 256-bit ops into smaller 128-bit ops.
-  if (VT.is256BitVector()) {
-    SDValue Lo = extract128BitVector(In, 0, DAG, DL);
-    SDValue Hi = extract128BitVector(In, NumElts / 2, DAG, DL);
-
-    MVT HalfVT = MVT::getVectorVT(SVT, NumElts / 2);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                       DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Lo),
-                       DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Hi));
-  }
+  if (VT.is256BitVector())
+    return Lower256IntUnary(Op, DAG);
 
   assert(VT.is128BitVector() &&
          "Only 128-bit vector bitreverse lowering supported.");
@@ -23152,14 +23132,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
          "Only byte vector BITREVERSE supported");
 
   // Decompose 256-bit ops into smaller 128-bit ops on pre-AVX2.
-  if (VT.is256BitVector() && !Subtarget.hasInt256()) {
-    MVT HalfVT = MVT::getVectorVT(MVT::i8, NumElts / 2);
-    SDValue Lo = extract128BitVector(In, 0, DAG, DL);
-    SDValue Hi = extract128BitVector(In, NumElts / 2, DAG, DL);
-    Lo = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Lo);
-    Hi = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Hi);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
-  }
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
+    return Lower256IntUnary(Op, DAG);
 
   // Perform BITREVERSE using PSHUFB lookups. Each byte is split into
   // two nibbles and a PSHUFB lookup to find the bitreverse of each

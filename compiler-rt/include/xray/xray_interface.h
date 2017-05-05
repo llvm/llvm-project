@@ -15,6 +15,7 @@
 #define XRAY_XRAY_INTERFACE_H
 
 #include <cstdint>
+#include <stddef.h>
 
 extern "C" {
 
@@ -86,6 +87,14 @@ extern XRayPatchingStatus __xray_patch_function(int32_t FuncId);
 /// result values.
 extern XRayPatchingStatus __xray_unpatch_function(int32_t FuncId);
 
+/// This function returns the address of the function provided a valid function
+/// id. We return 0 if we encounter any error, even if 0 may be a valid function
+/// address.
+extern uintptr_t __xray_function_address(int32_t FuncId);
+
+/// This function returns the maximum valid function id. Returns 0 if we
+/// encounter errors (when there are no instrumented functions, etc.).
+extern size_t __xray_max_function_id();
 
 }
 

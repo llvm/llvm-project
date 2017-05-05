@@ -1541,3 +1541,12 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
   %res = shufflevector <8 x i8> %arg1, <8 x i8> %arg2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   ret <16 x i8> %res
 }
+
+; CHECK-LABEL: test_constant_vector
+; CHECK: [[UNDEF:%[0-9]+]](s16) = IMPLICIT_DEF
+; CHECK: [[F:%[0-9]+]](s16) = G_FCONSTANT half 0xH3C00
+; CHECK: [[M:%[0-9]+]](<4 x s16>) = G_MERGE_VALUES [[UNDEF]](s16), [[UNDEF]](s16), [[UNDEF]](s16), [[F]](s16)
+; CHECK: %d0 = COPY [[M]](<4 x s16>)
+define <4 x half> @test_constant_vector() {
+  ret <4 x half> <half undef, half undef, half undef, half 0xH3C00>
+}

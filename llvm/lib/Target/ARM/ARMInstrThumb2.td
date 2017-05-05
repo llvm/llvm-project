@@ -4706,6 +4706,19 @@ def : t2InstSubst<"and${s}${p} $Rd, $Rn, $imm",
 def : t2InstSubst<"and${s}${p} $Rdn, $imm",
                   (t2BICri rGPR:$Rdn, rGPR:$Rdn, t2_so_imm_not:$imm,
                            pred:$p, cc_out:$s)>;
+// And ORR <--> ORN
+def : t2InstSubst<"orn${s}${p} $Rd, $Rn, $imm",
+                  (t2ORRri rGPR:$Rd, rGPR:$Rn, t2_so_imm_not:$imm,
+                           pred:$p, cc_out:$s)>;
+def : t2InstSubst<"orn${s}${p} $Rdn, $imm",
+                  (t2ORRri rGPR:$Rdn, rGPR:$Rdn, t2_so_imm_not:$imm,
+                           pred:$p, cc_out:$s)>;
+def : t2InstSubst<"orr${s}${p} $Rd, $Rn, $imm",
+                  (t2ORNri rGPR:$Rd, rGPR:$Rn, t2_so_imm_not:$imm,
+                           pred:$p, cc_out:$s)>;
+def : t2InstSubst<"orr${s}${p} $Rdn, $imm",
+                  (t2ORNri rGPR:$Rdn, rGPR:$Rdn, t2_so_imm_not:$imm,
+                           pred:$p, cc_out:$s)>;
 // Likewise, "add Rd, t2_so_imm_neg" -> sub
 def : t2InstSubst<"add${s}${p} $Rd, $Rn, $imm",
                   (t2SUBri GPRnopc:$Rd, GPRnopc:$Rn, t2_so_imm_neg:$imm,

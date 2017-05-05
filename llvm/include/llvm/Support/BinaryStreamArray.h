@@ -115,6 +115,7 @@ public:
     for (unsigned I = 0; I < N; ++I) {
       // We are done with the current record, discard it so that we are
       // positioned at the next record.
+      AbsOffset += ThisLen;
       IterRef = IterRef.drop_front(ThisLen);
       if (IterRef.getLength() == 0) {
         // There is nothing after the current record, we must make this an end
@@ -135,6 +136,8 @@ public:
     return *this;
   }
 
+  uint32_t offset() const { return AbsOffset; }
+
 private:
   void moveToEnd() {
     Array = nullptr;
@@ -152,6 +155,7 @@ private:
   const WrappedCtx *Ctx{nullptr};
   const ArrayType *Array{nullptr};
   uint32_t ThisLen{0};
+  uint32_t AbsOffset{0};
   bool HasError{false};
   bool *HadError{nullptr};
 };

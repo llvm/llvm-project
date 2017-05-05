@@ -1995,11 +1995,11 @@ def REX64_PREFIX : I<0x48, RawFrm, (outs),  (ins), "rex64", []>,
                      Requires<[In64BitMode]>;
 
 // Data16 instruction prefix
-def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>, 
+def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>,
                      Requires<[Not16BitMode]>;
 
 // Data instruction prefix
-def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", []>, 
+def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", []>,
                      Requires<[In16BitMode]>;
 
 // Repeat string operation instruction prefixes
@@ -2518,7 +2518,7 @@ let SchedRW = [ WriteSystem ] in {
   }
 
   let Uses = [ ECX, EAX, EBX ] in {
-    def MWAITXrrr : I<0x01, MRM_FB, (outs), (ins), "mwaitx", 
+    def MWAITXrrr : I<0x01, MRM_FB, (outs), (ins), "mwaitx",
                     [(int_x86_mwaitx ECX, EAX, EBX)], IIC_SSE_MWAITX>,
                     TB, Requires<[ HasMWAITX ]>;
   }

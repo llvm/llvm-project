@@ -227,6 +227,25 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   EXPECT_EQ(-1, A.find_last());
   EXPECT_EQ(0, A.find_first_unset());
   EXPECT_EQ(99, A.find_last_unset());
+
+  // Also test with a vector that is small enough to fit in 1 word.
+  A.resize(20);
+  A.set(3);
+  A.set(4);
+  A.set(16);
+  EXPECT_EQ(16, A.find_last());
+  EXPECT_EQ(3, A.find_first());
+  EXPECT_EQ(3, A.find_next(1));
+  EXPECT_EQ(4, A.find_next(3));
+  EXPECT_EQ(16, A.find_next(4));
+  EXPECT_EQ(-1, A.find_next(16));
+
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(19, A.find_last_unset());
+  EXPECT_EQ(5, A.find_next_unset(3));
+  EXPECT_EQ(5, A.find_next_unset(4));
+  EXPECT_EQ(13, A.find_next_unset(12));
+  EXPECT_EQ(17, A.find_next_unset(15));
 }
 
 TYPED_TEST(BitVectorTest, CompoundAssignment) {

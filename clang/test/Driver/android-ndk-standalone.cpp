@@ -172,6 +172,20 @@
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
 // CHECK-ARMV7THUMB: "-L{{.*}}/sysroot/usr/lib"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -march=armv7-a -mthumb \
+// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
+// RUN:     -print-multi-lib \
+// RUN:   | FileCheck  --check-prefix=CHECK-ARM-MULTILIBS %s
+
+// CHECK-ARM-MULTILIBS:      thumb;@mthumb
+// CHECK-ARM-MULTILIBS-NEXT: armv7-a;@march=armv7-a
+// CHECK-ARM-MULTILIBS-NEXT: armv7-a/thumb;@march=armv7-a@mthumb
+// CHECK-ARM-MULTILIBS-NEXT: .;
+
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target armv7a-none-linux-androideabi -stdlib=libstdc++ \

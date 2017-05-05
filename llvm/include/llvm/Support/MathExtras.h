@@ -214,6 +214,18 @@ template <typename T> T maskLeadingOnes(unsigned N) {
   return ~maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
+/// \brief Create a bitmask with the N right-most bits set to 0, and all other
+/// bits set to 1.  Only unsigned types are allowed.
+template <typename T> T maskTrailingZeros(unsigned N) {
+  return maskLeadingOnes<T>(CHAR_BIT * sizeof(T) - N);
+}
+
+/// \brief Create a bitmask with the N left-most bits set to 0, and all other
+/// bits set to 1.  Only unsigned types are allowed.
+template <typename T> T maskLeadingZeros(unsigned N) {
+  return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
+}
+
 /// \brief Get the index of the last set bit starting from the least
 ///   significant bit.
 ///

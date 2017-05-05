@@ -1521,7 +1521,7 @@ static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
 
 /// Commuted variants are assumed to be handled by calling this function again
 /// with the parameters swapped.
-static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
+static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true))
     return X;
 
@@ -1593,7 +1593,7 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
 
 /// Commuted variants are assumed to be handled by calling this function again
 /// with the parameters swapped.
-static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
+static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false))
     return X;
 
@@ -1641,6 +1641,46 @@ static Value *SimplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
       if (Pred0 == ICmpInst::ICMP_UGT && Pred1 == ICmpInst::ICMP_ULE)
         return getTrue(ITy);
   }
+
+  return nullptr;
+}
+
+static Value *simplifyPossiblyCastedAndOrOfICmps(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                                 bool IsAnd, CastInst *Cast) {
+  Value *V =
+      IsAnd ? simplifyAndOfICmps(Cmp0, Cmp1) : simplifyOrOfICmps(Cmp0, Cmp1);
+  if (!V)
+    return nullptr;
+  if (!Cast)
+    return V;
+
+  // If we looked through casts, we can only handle a constant simplification
+  // because we are not allowed to create a cast instruction here.
+  if (auto *C = dyn_cast<Constant>(V))
+    return ConstantExpr::getCast(Cast->getOpcode(), C, Cast->getType());
+
+  return nullptr;
+}
+
+static Value *simplifyAndOrOfICmps(Value *Op0, Value *Op1, bool IsAnd) {
+  // Look through casts of the 'and' operands to find compares.
+  auto *Cast0 = dyn_cast<CastInst>(Op0);
+  auto *Cast1 = dyn_cast<CastInst>(Op1);
+  if (Cast0 && Cast1 && Cast0->getOpcode() == Cast1->getOpcode() &&
+      Cast0->getSrcTy() == Cast1->getSrcTy()) {
+    Op0 = Cast0->getOperand(0);
+    Op1 = Cast1->getOperand(0);
+  }
+
+  auto *Cmp0 = dyn_cast<ICmpInst>(Op0);
+  auto *Cmp1 = dyn_cast<ICmpInst>(Op1);
+  if (!Cmp0 || !Cmp1)
+    return nullptr;
+
+  if (Value *V = simplifyPossiblyCastedAndOrOfICmps(Cmp0, Cmp1, IsAnd, Cast0))
+    return V;
+  if (Value *V = simplifyPossiblyCastedAndOrOfICmps(Cmp1, Cmp0, IsAnd, Cast0))
+    return V;
 
   return nullptr;
 }
@@ -1695,32 +1735,8 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return Op1;
   }
 
-  if (auto *ICILHS = dyn_cast<ICmpInst>(Op0)) {
-    if (auto *ICIRHS = dyn_cast<ICmpInst>(Op1)) {
-      if (Value *V = SimplifyAndOfICmps(ICILHS, ICIRHS))
-        return V;
-      if (Value *V = SimplifyAndOfICmps(ICIRHS, ICILHS))
-        return V;
-    }
-  }
-
-  // The compares may be hidden behind casts. Look through those and try the
-  // same folds as above.
-  auto *Cast0 = dyn_cast<CastInst>(Op0);
-  auto *Cast1 = dyn_cast<CastInst>(Op1);
-  if (Cast0 && Cast1 && Cast0->getOpcode() == Cast1->getOpcode() &&
-      Cast0->getSrcTy() == Cast1->getSrcTy()) {
-    auto *Cmp0 = dyn_cast<ICmpInst>(Cast0->getOperand(0));
-    auto *Cmp1 = dyn_cast<ICmpInst>(Cast1->getOperand(0));
-    if (Cmp0 && Cmp1) {
-      Instruction::CastOps CastOpc = Cast0->getOpcode();
-      Type *ResultType = Cast0->getType();
-      if (auto *V = dyn_cast_or_null<Constant>(SimplifyAndOfICmps(Cmp0, Cmp1)))
-        return ConstantExpr::getCast(CastOpc, V, ResultType);
-      if (auto *V = dyn_cast_or_null<Constant>(SimplifyAndOfICmps(Cmp1, Cmp0)))
-        return ConstantExpr::getCast(CastOpc, V, ResultType);
-    }
-  }
+  if (Value *V = simplifyAndOrOfICmps(Op0, Op1, true))
+    return V;
 
   // Try some generic simplifications for associative operations.
   if (Value *V = SimplifyAssociativeBinOp(Instruction::And, Op0, Op1, Q,
@@ -1826,14 +1842,8 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
        match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))))
     return Op0;
 
-  if (auto *ICILHS = dyn_cast<ICmpInst>(Op0)) {
-    if (auto *ICIRHS = dyn_cast<ICmpInst>(Op1)) {
-      if (Value *V = SimplifyOrOfICmps(ICILHS, ICIRHS))
-        return V;
-      if (Value *V = SimplifyOrOfICmps(ICIRHS, ICILHS))
-        return V;
-    }
-  }
+  if (Value *V = simplifyAndOrOfICmps(Op0, Op1, false))
+    return V;
 
   // Try some generic simplifications for associative operations.
   if (Value *V = SimplifyAssociativeBinOp(Instruction::Or, Op0, Op1, Q,

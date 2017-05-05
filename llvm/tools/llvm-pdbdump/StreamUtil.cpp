@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -30,14 +31,16 @@ void discoverStreamPurposes(PDBFile &File,
   auto Info = File.getPDBInfoStream();
 
   uint32_t StreamCount = File.getNumStreams();
-  DenseMap<uint16_t, const ModuleInfoEx *> ModStreams;
+  DenseMap<uint16_t, DbiModuleDescriptor> ModStreams;
   DenseMap<uint16_t, std::string> NamedStreams;
 
   if (Dbi) {
-    for (auto &ModI : Dbi->modules()) {
-      uint16_t SN = ModI.Info.getModuleStreamIndex();
+    const DbiModuleList &Modules = Dbi->modules();
+    for (uint32_t I = 0; I < Modules.getModuleCount(); ++I) {
+      DbiModuleDescriptor Descriptor = Modules.getModuleDescriptor(I);
+      uint16_t SN = Descriptor.getModuleStreamIndex();
       if (SN != kInvalidStreamIndex)
-        ModStreams[SN] = &ModI;
+        ModStreams[SN] = Descriptor;
     }
   }
   if (Info) {
@@ -109,7 +112,7 @@ void discoverStreamPurposes(PDBFile &File,
       auto NSIter = NamedStreams.find(StreamIdx);
       if (ModIter != ModStreams.end()) {
         Value = "Module \"";
-        Value += ModIter->second->Info.getModuleName().str();
+        Value += ModIter->second.getModuleName();
         Value += "\"";
       } else if (NSIter != NamedStreams.end()) {
         Value = "Named Stream \"";

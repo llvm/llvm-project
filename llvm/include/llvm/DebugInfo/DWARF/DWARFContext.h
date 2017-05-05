@@ -310,6 +310,9 @@ class DWARFContextInMemory : public DWARFContext {
 
   StringRef *MapSectionToMember(StringRef Name);
 
+  Error maybeDecompress(const object::SectionRef &Sec, StringRef Name,
+                        StringRef &Data);
+
 public:
   DWARFContextInMemory(const object::ObjectFile &Obj,
     const LoadedObjectInfo *L = nullptr);

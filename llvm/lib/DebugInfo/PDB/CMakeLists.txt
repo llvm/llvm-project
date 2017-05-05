@@ -30,6 +30,7 @@ endif()
 add_pdb_impl_folder(Native
   Native/DbiModuleDescriptor.cpp
   Native/DbiModuleDescriptorBuilder.cpp
+  Native/DbiModuleList.cpp
   Native/DbiStream.cpp
   Native/DbiStreamBuilder.cpp
   Native/EnumTables.cpp
