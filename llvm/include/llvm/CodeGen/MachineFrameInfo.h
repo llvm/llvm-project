@@ -520,6 +520,14 @@ public:
   bool hasTailCall() const { return HasTailCall; }
   void setHasTailCall() { HasTailCall = true; }
 
+  /// Computes the maximum size of a callframe and the AdjustsStack property.
+  /// This only works for targets defining
+  /// TargetInstrInfo::getCallFrameSetupOpcode(), getCallFrameDestroyOpcode(),
+  /// and getFrameSize().
+  /// This is usually computed by the prologue epilogue inserter but some
+  /// targets may call this to compute it earlier.
+  void computeMaxCallFrameSize(const MachineFunction &MF);
+
   /// Return the maximum size of a call frame that must be
   /// allocated for an outgoing function call.  This is only available if
   /// CallFrameSetup/Destroy pseudo instructions are used by the target, and

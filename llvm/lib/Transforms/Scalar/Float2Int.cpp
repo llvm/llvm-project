@@ -139,10 +139,11 @@ void Float2IntPass::findRoots(Function &F, SmallPtrSet<Instruction*,8> &Roots) {
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
   DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
-  if (SeenInsts.find(I) != SeenInsts.end())
-    SeenInsts.find(I)->second = R;
+  auto IT = SeenInsts.find(I);
+  if (IT != SeenInsts.end())
+    IT->second = std::move(R);
   else
-    SeenInsts.insert(std::make_pair(I, R));
+    SeenInsts.insert(std::make_pair(I, std::move(R)));
 }
 
 // Helper - get a range representing a poison value.

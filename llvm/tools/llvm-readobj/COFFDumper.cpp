@@ -70,7 +70,7 @@ class COFFDumper : public ObjDumper {
 public:
   friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj), Writer(Writer) {}
+      : ObjDumper(Writer), Obj(Obj), Writer(Writer), TypeDB(100) {}
 
   void printFileHeaders() override;
   void printSections() override;
@@ -1553,7 +1553,7 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
     TypeBuf.append(Record.begin(), Record.end());
   });
 
-  TypeDatabase TypeDB;
+  TypeDatabase TypeDB(CVTypes.records().size());
   {
     ListScope S(Writer, "MergedTypeStream");
     CVTypeDumper CVTD(TypeDB);
@@ -1574,7 +1574,7 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
 
   {
     ListScope S(Writer, "MergedIDStream");
-    TypeDatabase IDDB;
+    TypeDatabase IDDB(IDTable.records().size());
     CVTypeDumper CVTD(IDDB);
     TypeDumpVisitor TDV(TypeDB, &Writer, opts::CodeViewSubsectionBytes);
     TDV.setItemDB(IDDB);

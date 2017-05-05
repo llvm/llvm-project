@@ -82,25 +82,28 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD: {
     // FIXME: Should we be hard coding the size for these mappings?
-    InstructionMapping SSMapping(1, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64)}),
-      2); // Num Operands
-    AltMappings.emplace_back(std::move(SSMapping));
+    const InstructionMapping &SSMapping = getInstructionMapping(
+        1, 1, getOperandsMapping(
+                  {AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size),
+                   AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64)}),
+        2); // Num Operands
+    AltMappings.push_back(&SSMapping);
 
-    InstructionMapping VVMapping(2, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64)}),
-      2); // Num Operands
-    AltMappings.emplace_back(std::move(VVMapping));
+    const InstructionMapping &VVMapping = getInstructionMapping(
+        2, 1, getOperandsMapping(
+                  {AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
+                   AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64)}),
+        2); // Num Operands
+    AltMappings.push_back(&VVMapping);
 
     // FIXME: Should this be the pointer-size (64-bits) or the size of the
     // register that will hold the bufffer resourc (128-bits).
-    InstructionMapping VSMapping(3, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64)}),
-      2); // Num Operands
-    AltMappings.emplace_back(std::move(VSMapping));
+    const InstructionMapping &VSMapping = getInstructionMapping(
+        3, 1, getOperandsMapping(
+                  {AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
+                   AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64)}),
+        2); // Num Operands
+    AltMappings.push_back(&VSMapping);
 
     return AltMappings;
 
@@ -124,13 +127,11 @@ static bool isInstrUniform(const MachineInstr &MI) {
   return AMDGPU::isUniformMMO(MMO);
 }
 
-RegisterBankInfo::InstructionMapping
+const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  RegisterBankInfo::InstructionMapping Mapping =
-      InstructionMapping{1, 1, nullptr, MI.getNumOperands()};
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
   unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
   unsigned PtrSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
@@ -150,32 +151,34 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
   OpdsMapping[0] = ValMapping;
   OpdsMapping[1] = PtrMapping;
-  Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
+  const RegisterBankInfo::InstructionMapping &Mapping = getInstructionMapping(
+      1, 1, getOperandsMapping(OpdsMapping), MI.getNumOperands());
   return Mapping;
 
   // FIXME: Do we want to add a mapping for FLAT load, or should we just
   // handle that during instruction selection?
 }
 
-RegisterBankInfo::InstructionMapping
+const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+  const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
 
   if (Mapping.isValid())
     return Mapping;
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  Mapping = InstructionMapping{1, 1, nullptr, MI.getNumOperands()};
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
 
+  bool IsComplete = true;
   switch (MI.getOpcode()) {
-  default: break;
+  default:
+    IsComplete = false;
+    break;
   case AMDGPU::G_CONSTANT: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-    return Mapping;
+    break;
   }
   case AMDGPU::G_GEP: {
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
@@ -185,8 +188,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Size = MRI.getType(MI.getOperand(i).getReg()).getSizeInBits();
       OpdsMapping[i] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
     }
-    Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-    return Mapping;
+    break;
   }
   case AMDGPU::G_STORE: {
     assert(MI.getOperand(0).isReg());
@@ -203,28 +205,27 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpdsMapping[0] = ValMapping;
     OpdsMapping[1] = PtrMapping;
-    Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-    return Mapping;
+    break;
   }
 
   case AMDGPU::G_LOAD:
     return getInstrMappingForLoad(MI);
   }
 
-  unsigned BankID = AMDGPU::SGPRRegBankID;
+  if (!IsComplete) {
+    unsigned BankID = AMDGPU::SGPRRegBankID;
 
-  Mapping = InstructionMapping{1, 1, nullptr, MI.getNumOperands()};
-  unsigned Size = 0;
-  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
-    // If the operand is not a register default to the size of the previous
-    // operand.
-    // FIXME: Can't we pull the types from the MachineInstr rather than the
-    // operands.
-    if (MI.getOperand(Idx).isReg())
-      Size = getSizeInBits(MI.getOperand(Idx).getReg(), MRI, *TRI);
-    OpdsMapping.push_back(AMDGPU::getValueMapping(BankID, Size));
+    unsigned Size = 0;
+    for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
+      // If the operand is not a register default to the size of the previous
+      // operand.
+      // FIXME: Can't we pull the types from the MachineInstr rather than the
+      // operands.
+      if (MI.getOperand(Idx).isReg())
+        Size = getSizeInBits(MI.getOperand(Idx).getReg(), MRI, *TRI);
+      OpdsMapping.push_back(AMDGPU::getValueMapping(BankID, Size));
+    }
   }
-  Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-
-  return Mapping;
+  return getInstructionMapping(1, 1, getOperandsMapping(OpdsMapping),
+                               MI.getNumOperands());
 }

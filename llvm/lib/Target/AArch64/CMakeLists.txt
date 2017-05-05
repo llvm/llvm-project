@@ -39,7 +39,6 @@ endif()
 
 add_llvm_target(AArch64CodeGen
   AArch64A57FPLoadBalancing.cpp
-  AArch64AddressTypePromotion.cpp
   AArch64AdvSIMDScalarPass.cpp
   AArch64AsmPrinter.cpp
   AArch64CleanupLocalDynamicTLSPass.cpp

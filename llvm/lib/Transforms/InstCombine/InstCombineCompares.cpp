@@ -4050,7 +4050,7 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
     // is set. If the comparison is against zero, then this is a check to see if
     // *that* bit is set.
     APInt Op0KnownZeroInverted = ~Op0Known.Zero;
-    if (~Op1Known.Zero == 0) {
+    if (Op1Known.isZero()) {
       // If the LHS is an AND with the same constant, look through it.
       Value *LHS = nullptr;
       const APInt *LHSC;

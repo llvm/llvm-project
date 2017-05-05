@@ -544,6 +544,8 @@ class InstrItineraryData;
     unsigned getNumInterleavedAccesses(VectorType *VecTy,
                                        const DataLayout &DL) const;
 
+    void finalizeLowering(MachineFunction &MF) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

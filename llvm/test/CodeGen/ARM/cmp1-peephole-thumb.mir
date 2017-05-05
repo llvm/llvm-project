@@ -55,7 +55,6 @@ frameInfo:
 # CHECK-NOT: tCMPi8
 body:             |
   bb.0.entry:
-    successors: %bb.1.entry(0x40000000), %bb.2.entry(0x40000000)
     liveins: %r0, %r1
 
     %1 = COPY %r1
@@ -67,8 +66,6 @@ body:             |
     tBcc %bb.2.entry, 0, %cpsr
 
   bb.1.entry:
-    successors: %bb.2.entry(0x80000000)
-
 
   bb.2.entry:
     %5 = PHI %4, %bb.1.entry, %3, %bb.0.entry

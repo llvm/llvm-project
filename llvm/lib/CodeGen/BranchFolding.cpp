@@ -1850,8 +1850,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     return false;
 
   bool HasDups = false;
-  SmallVector<unsigned, 4> LocalDefs;
-  SmallSet<unsigned, 4> LocalDefsSet;
+  SmallVector<unsigned, 4> LocalDefs, LocalKills;
+  SmallSet<unsigned, 4> ActiveDefsSet, AllDefsSet;
   MachineBasicBlock::iterator TIB = TBB->begin();
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
@@ -1905,7 +1905,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
           IsSafe = false;
           break;
         }
-      } else if (!LocalDefsSet.count(Reg)) {
+      } else if (!ActiveDefsSet.count(Reg)) {
         if (Defs.count(Reg)) {
           // Use is defined by the instruction at the point of insertion.
           IsSafe = false;
@@ -1925,18 +1925,22 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     if (!TIB->isSafeToMove(nullptr, DontMoveAcrossStore))
       break;
 
-    // Remove kills from LocalDefsSet, these registers had short live ranges.
+    // Remove kills from ActiveDefsSet, these registers had short live ranges.
     for (const MachineOperand &MO : TIB->operands()) {
       if (!MO.isReg() || !MO.isUse() || !MO.isKill())
         continue;
       unsigned Reg = MO.getReg();
-      if (!Reg || !LocalDefsSet.count(Reg))
+      if (!Reg)
         continue;
+      if (!AllDefsSet.count(Reg)) {
+        LocalKills.push_back(Reg);
+        continue;
+      }
       if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
         for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-          LocalDefsSet.erase(*AI);
+          ActiveDefsSet.erase(*AI);
       } else {
-        LocalDefsSet.erase(Reg);
+        ActiveDefsSet.erase(Reg);
       }
     }
 
@@ -1948,7 +1952,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (!Reg || TargetRegisterInfo::isVirtualRegister(Reg))
         continue;
       LocalDefs.push_back(Reg);
-      addRegAndItsAliases(Reg, TRI, LocalDefsSet);
+      addRegAndItsAliases(Reg, TRI, ActiveDefsSet);
+      addRegAndItsAliases(Reg, TRI, AllDefsSet);
     }
 
     HasDups = true;
@@ -1963,17 +1968,22 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   FBB->erase(FBB->begin(), FIB);
 
   // Update livein's.
-  bool AddedLiveIns = false;
+  bool ChangedLiveIns = false;
   for (unsigned i = 0, e = LocalDefs.size(); i != e; ++i) {
     unsigned Def = LocalDefs[i];
-    if (LocalDefsSet.count(Def)) {
+    if (ActiveDefsSet.count(Def)) {
       TBB->addLiveIn(Def);
       FBB->addLiveIn(Def);
-      AddedLiveIns = true;
+      ChangedLiveIns = true;
     }
   }
+  for (unsigned K : LocalKills) {
+    TBB->removeLiveIn(K);
+    FBB->removeLiveIn(K);
+    ChangedLiveIns = true;
+  }
 
-  if (AddedLiveIns) {
+  if (ChangedLiveIns) {
     TBB->sortUniqueLiveIns();
     FBB->sortUniqueLiveIns();
   }

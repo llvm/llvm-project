@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 #define DEBUG_TYPE "instruction-select"
@@ -70,8 +71,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
 
-  // FIXME: freezeReservedRegs is now done in IRTranslator, but there are many
-  // other MF/MFI fields we need to initialize.
+  // FIXME: There are many other MF/MFI fields we need to initialize.
 
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
@@ -183,6 +183,9 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
+
+  auto &TLI = *MF.getSubtarget().getTargetLowering();
+  TLI.finalizeLowering(MF);
 
   // FIXME: Should we accurately track changes?
   return true;

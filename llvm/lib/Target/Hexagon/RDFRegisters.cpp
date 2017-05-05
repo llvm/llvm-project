@@ -212,6 +212,21 @@ bool PhysicalRegisterInfo::aliasMM(RegisterRef RM, RegisterRef RN) const {
   return false;
 }
 
+RegisterRef PhysicalRegisterInfo::mapTo(RegisterRef RR, unsigned R) const {
+  if (RR.Reg == R)
+    return RR;
+  if (unsigned Idx = TRI.getSubRegIndex(R, RR.Reg))
+    return RegisterRef(R, TRI.composeSubRegIndexLaneMask(Idx, RR.Mask));
+  if (unsigned Idx = TRI.getSubRegIndex(RR.Reg, R)) {
+    const RegInfo &RI = RegInfos[R];
+    LaneBitmask RCM = RI.RegClass ? RI.RegClass->LaneMask
+                                  : LaneBitmask::getAll();
+    LaneBitmask M = TRI.reverseComposeSubRegIndexLaneMask(Idx, RR.Mask);
+    return RegisterRef(R, M & RCM);
+  }
+  llvm_unreachable("Invalid arguments: unrelated registers?");
+}
+
 
 bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
   if (PhysicalRegisterInfo::isRegMaskId(RR.Reg))

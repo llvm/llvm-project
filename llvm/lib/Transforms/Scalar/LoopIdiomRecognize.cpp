@@ -783,6 +783,11 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   if (NegStride)
     Start = getStartForNegStride(Start, BECount, IntPtr, StoreSize, SE);
 
+  // TODO: ideally we should still be able to generate memset if SCEV expander
+  // is taught to generate the dependencies at the latest point.
+  if (!isSafeToExpand(Start, *SE))
+    return false;
+
   // Okay, we have a strided store "p[i]" of a splattable value.  We can turn
   // this into a memset in the loop preheader now if we want.  However, this
   // would be unsafe to do if there is anything else in the loop that may read
@@ -813,6 +818,11 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NumBytesS = SE->getMulExpr(NumBytesS, SE->getConstant(IntPtr, StoreSize),
                                SCEV::FlagNUW);
   }
+
+  // TODO: ideally we should still be able to generate memset if SCEV expander
+  // is taught to generate the dependencies at the latest point.
+  if (!isSafeToExpand(NumBytesS, *SE))
+    return false;
 
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntPtr, Preheader->getTerminator());

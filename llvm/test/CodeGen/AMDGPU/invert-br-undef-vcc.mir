@@ -53,7 +53,6 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    successors: %bb.2.if, %bb.1.else
     liveins: %sgpr0_sgpr1
 
     %sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed %sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
@@ -62,7 +61,6 @@ body:             |
     S_CBRANCH_VCCNZ %bb.2.if, implicit undef %vcc
 
   bb.1.else:
-    successors: %bb.3.done
     liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
     %vgpr0 = V_MOV_B32_e32 100, implicit %exec
@@ -71,7 +69,6 @@ body:             |
     S_BRANCH %bb.3.done
 
   bb.2.if:
-    successors: %bb.3.done
     liveins: %sgpr6, %sgpr7, %sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
 
     %vgpr0 = V_MOV_B32_e32 9, implicit %exec

@@ -204,6 +204,11 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   EXPECT_EQ(75, A.find_next(13));
   EXPECT_EQ(-1, A.find_next(75));
 
+  EXPECT_EQ(-1, A.find_prev(12));
+  EXPECT_EQ(12, A.find_prev(13));
+  EXPECT_EQ(13, A.find_prev(75));
+  EXPECT_EQ(75, A.find_prev(90));
+
   EXPECT_EQ(0, A.find_first_unset());
   EXPECT_EQ(99, A.find_last_unset());
   EXPECT_EQ(14, A.find_next_unset(11));
@@ -239,6 +244,11 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   EXPECT_EQ(4, A.find_next(3));
   EXPECT_EQ(16, A.find_next(4));
   EXPECT_EQ(-1, A.find_next(16));
+
+  EXPECT_EQ(-1, A.find_prev(3));
+  EXPECT_EQ(3, A.find_prev(4));
+  EXPECT_EQ(4, A.find_prev(16));
+  EXPECT_EQ(16, A.find_prev(18));
 
   EXPECT_EQ(0, A.find_first_unset());
   EXPECT_EQ(19, A.find_last_unset());

@@ -104,6 +104,7 @@ public:
   bool useHVXDblOps() const { return UseHVXOps && UseHVXDblOps; }
   bool useHVXSglOps() const { return UseHVXOps && !UseHVXDblOps; }
   bool useLongCalls() const { return UseLongCalls; }
+  bool usePredicatedCalls() const;
 
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;

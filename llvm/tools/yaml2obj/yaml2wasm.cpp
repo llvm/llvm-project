@@ -27,6 +27,8 @@ public:
   WasmWriter(WasmYAML::Object &Obj) : Obj(Obj) {}
   int writeWasm(raw_ostream &OS);
   int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec);
+  int writeNameSection(raw_ostream &OS, WasmYAML::CustomSection &Section);
+
   int writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::ImportSection &Section);
@@ -65,13 +67,13 @@ static int writeUint8(raw_ostream &OS, uint8_t Value) {
   return 0;
 }
 
-static int writeStringRef(StringRef &Str, raw_ostream &OS) {
+static int writeStringRef(const StringRef &Str, raw_ostream &OS) {
   encodeULEB128(Str.size(), OS);
   OS << Str;
   return 0;
 }
 
-static int writeLimits(WasmYAML::Limits Lim, raw_ostream &OS) {
+static int writeLimits(const WasmYAML::Limits &Lim, raw_ostream &OS) {
   encodeULEB128(Lim.Flags, OS);
   encodeULEB128(Lim.Initial, OS);
   if (Lim.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
@@ -79,7 +81,7 @@ static int writeLimits(WasmYAML::Limits Lim, raw_ostream &OS) {
   return 0;
 }
 
-static int writeInitExpr(wasm::WasmInitExpr InitExpr, raw_ostream &OS) {
+static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
   writeUint8(OS, InitExpr.Opcode);
   switch (InitExpr.Opcode) {
   case wasm::WASM_OPCODE_I32_CONST:
@@ -105,18 +107,42 @@ static int writeInitExpr(wasm::WasmInitExpr InitExpr, raw_ostream &OS) {
   return 0;
 }
 
+int WasmWriter::writeNameSection(raw_ostream &OS,
+                                 WasmYAML::CustomSection &Section) {
+  writeStringRef(Section.Name, OS);
+  if (Section.FunctionNames.size()) {
+    encodeULEB128(wasm::WASM_NAMES_FUNCTION, OS);
+
+    std::string OutString;
+    raw_string_ostream StringStream(OutString);
+
+    encodeULEB128(Section.FunctionNames.size(), StringStream);
+    for (const WasmYAML::NameEntry &NameEntry : Section.FunctionNames) {
+      encodeULEB128(NameEntry.Index, StringStream);
+      writeStringRef(NameEntry.Name, StringStream);
+    }
+
+    StringStream.flush();
+    encodeULEB128(OutString.size(), OS);
+    OS << OutString;
+  }
+  return 0;
+}
+
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CustomSection &Section) {
-  // writeStringRef(Section.Name, OS);
-  // encodeULEB128(Section.Payload.binary_size(), OS);
-  Section.Payload.writeAsBinary(OS);
+  if (Section.Name == "name") {
+    writeNameSection(OS, Section);
+  } else {
+    Section.Payload.writeAsBinary(OS);
+  }
   return 0;
 }
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::TypeSection &Section) {
   encodeULEB128(Section.Signatures.size(), OS);
-  for (auto &Sig : Section.Signatures) {
+  for (const WasmYAML::Signature &Sig : Section.Signatures) {
     encodeSLEB128(Sig.Form, OS);
     encodeULEB128(Sig.ParamTypes.size(), OS);
     for (auto ParamType : Sig.ParamTypes)
@@ -134,7 +160,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::ImportSection &Section) {
   encodeULEB128(Section.Imports.size(), OS);
-  for (auto &Import : Section.Imports) {
+  for (const WasmYAML::Import &Import : Section.Imports) {
     writeStringRef(Import.Module, OS);
     writeStringRef(Import.Field, OS);
     encodeULEB128(Import.Kind, OS);
@@ -166,7 +192,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::ExportSection &Section) {
   encodeULEB128(Section.Exports.size(), OS);
-  for (auto &Export : Section.Exports) {
+  for (const WasmYAML::Export &Export : Section.Exports) {
     writeStringRef(Export.Name, OS);
     encodeULEB128(Export.Kind, OS);
     encodeULEB128(Export.Index, OS);
@@ -193,7 +219,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::MemorySection &Section) {
   encodeULEB128(Section.Memories.size(), OS);
-  for (auto &Mem : Section.Memories) {
+  for (const WasmYAML::Limits &Mem : Section.Memories) {
     writeLimits(Mem, OS);
   }
   return 0;

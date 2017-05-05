@@ -7,20 +7,16 @@ name:            test1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     %x0 = COPY %x1
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -38,20 +34,16 @@ name:            test2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     %x1 = COPY %x0
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -69,7 +61,6 @@ name:            test3
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1, %x2
 
     %x0 = COPY %x1
@@ -77,13 +68,10 @@ body:             |
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -101,7 +89,6 @@ name:            test4
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1, %x2
 
     %x1 = COPY %x0
@@ -109,13 +96,10 @@ body:             |
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -133,7 +117,6 @@ name:            test5
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1, %x2
 
     %x1 = COPY %x0
@@ -141,13 +124,10 @@ body:             |
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -165,7 +145,6 @@ name:            test6
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1, %x2
 
     %x2 = COPY %x0
@@ -173,13 +152,10 @@ body:             |
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -197,7 +173,6 @@ name:            test7
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1, %x2
 
     %x2 = COPY %x0
@@ -206,13 +181,10 @@ body:             |
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
-
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -232,14 +204,12 @@ name:            test8
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     %x1 = COPY %x0
     CBNZX %x1, %bb.2
 
   bb.1:
-    successors: %bb.3
     liveins: %x0, %x2
 
     %x0, %x1 = LDPXi %x2, 0
@@ -248,7 +218,6 @@ body:             |
     B %bb.3
 
   bb.2:
-    successors: %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -267,20 +236,17 @@ name:            test9
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     CBNZX %x0, %bb.2
 
   bb.1:
-    successors: %bb.3
     liveins: %x0, %x2
 
     %x0 = COPY %xzr
     B %bb.3
 
   bb.2:
-    successors: %bb.1, %bb.3
     liveins: %x1
 
     %x0 = LDRXui %x1, 0
@@ -304,7 +270,6 @@ name:            test10
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
@@ -312,7 +277,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7
@@ -332,7 +296,6 @@ name:            test11
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     dead %xzr = SUBSXri killed %x0, 7, 0, implicit-def %nzcv
@@ -340,7 +303,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7, implicit-def %x0
@@ -360,7 +322,6 @@ name:            test12
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     dead %xzr = SUBSXri killed %x0, 7, 0, implicit-def %nzcv
@@ -368,7 +329,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7
@@ -388,7 +348,6 @@ name:            test13
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
@@ -396,7 +355,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7, implicit-def %x0
@@ -413,7 +371,6 @@ name:            test14
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1, %x2
 
     dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
@@ -423,7 +380,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7
@@ -440,7 +396,6 @@ name:            test15
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1, %x2
 
     dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
@@ -448,7 +403,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1, %x2
 
     %w0 = LDRWui %x1, 0
@@ -467,7 +421,6 @@ name:            test16
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = SUBSWri %w0, 7, 0, implicit-def %nzcv
@@ -476,7 +429,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w2 = MOVi32imm 7
@@ -493,7 +445,6 @@ name:            test17
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %w0 = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
@@ -501,7 +452,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 7
@@ -520,14 +470,12 @@ name:            test18
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     CBNZX killed %x0, %bb.2
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %x0 = MOVi64imm 4252017623040
@@ -547,7 +495,6 @@ name:            test19
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = ADDSWri killed %w0, 1, 0, implicit-def %nzcv
@@ -555,7 +502,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm -1
@@ -575,7 +521,6 @@ name:            test20
 tracksRegLiveness: true
 body:             |
   bb.0:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     dead %xzr = ADDSXri killed %x0, 1, 0, implicit-def %nzcv
@@ -583,7 +528,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %x0 = MOVi64imm -1
@@ -603,7 +547,6 @@ name:            test21
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %x0, %x1
 
     dead %xzr = ADDSXri killed %x0, 1, 0, implicit-def %nzcv
@@ -611,7 +554,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm -1
@@ -629,7 +571,6 @@ name:            test22
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = ADDSWri killed %w0, 1, 0, implicit-def %nzcv
@@ -637,7 +578,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %x0 = MOVi64imm -1
@@ -654,7 +594,6 @@ name:            test23
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    successors: %bb.1, %bb.2
     liveins: %w0, %x1
 
     dead %wzr = SUBSWri killed %w0, 1, 12, implicit-def %nzcv
@@ -662,7 +601,6 @@ body:             |
     B %bb.1
 
   bb.1:
-    successors: %bb.2
     liveins: %x1
 
     %w0 = MOVi32imm 4096

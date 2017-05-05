@@ -98,8 +98,8 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   ///
   /// \return An InstructionMappings with a statically allocated
   /// OperandsMapping.
-  static InstructionMapping
-  getSameKindOfOperandsMapping(const MachineInstr &MI);
+  const InstructionMapping &
+  getSameKindOfOperandsMapping(const MachineInstr &MI) const;
 
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
@@ -113,7 +113,8 @@ public:
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
 
-  InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
+  const InstructionMapping &
+  getInstrMapping(const MachineInstr &MI) const override;
 };
 } // End llvm namespace.
 #endif

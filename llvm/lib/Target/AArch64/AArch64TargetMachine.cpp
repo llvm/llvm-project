@@ -109,11 +109,6 @@ EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
                 cl::init(false));
 
 static cl::opt<bool>
-    EnableAddressTypePromotion("aarch64-enable-type-promotion", cl::Hidden,
-                               cl::desc("Enable the type promotion pass"),
-                               cl::init(false));
-
-static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
                  cl::desc("Enable optimizations on complex GEPs"),
                  cl::init(false));
@@ -146,7 +141,6 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeGlobalISel(*PR);
   initializeAArch64A53Fix835769Pass(*PR);
   initializeAArch64A57FPLoadBalancingPass(*PR);
-  initializeAArch64AddressTypePromotionPass(*PR);
   initializeAArch64AdvSIMDScalarPass(*PR);
   initializeAArch64CollectLOHPass(*PR);
   initializeAArch64ConditionalComparesPass(*PR);
@@ -381,9 +375,6 @@ bool AArch64PassConfig::addPreISel() {
                                (EnableGlobalMerge == cl::BOU_UNSET);
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize));
   }
-
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableAddressTypePromotion)
-    addPass(createAArch64AddressTypePromotionPass());
 
   return false;
 }

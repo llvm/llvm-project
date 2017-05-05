@@ -244,7 +244,8 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
-  typedef const Attribute *iterator;
+  using iterator = const Attribute *;
+
   iterator begin() const;
   iterator end() const;
 };
@@ -479,7 +480,7 @@ public:
   /// \brief Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
-  typedef ArrayRef<Attribute>::iterator iterator;
+  using iterator = ArrayRef<Attribute>::iterator;
 
   iterator begin(unsigned Slot) const;
   iterator end(unsigned Slot) const;
@@ -662,11 +663,11 @@ public:
   bool empty() const { return Attrs.none(); }
 
   // Iterators for target-dependent attributes.
-  typedef std::pair<std::string, std::string>                td_type;
-  typedef std::map<std::string, std::string>::iterator       td_iterator;
-  typedef std::map<std::string, std::string>::const_iterator td_const_iterator;
-  typedef iterator_range<td_iterator>                        td_range;
-  typedef iterator_range<td_const_iterator>                  td_const_range;
+  using td_type = std::pair<std::string, std::string>;
+  using td_iterator = std::map<std::string, std::string>::iterator;
+  using td_const_iterator = std::map<std::string, std::string>::const_iterator;
+  using td_range = iterator_range<td_iterator>;
+  using td_const_range = iterator_range<td_const_iterator>;
 
   td_iterator td_begin()             { return TargetDepAttrs.begin(); }
   td_iterator td_end()               { return TargetDepAttrs.end(); }

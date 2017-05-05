@@ -77,19 +77,16 @@ name: div_fmas
 
 body: |
   bb.0:
-    successors: %bb.1
     %vcc = S_MOV_B64 0
     %vgpr0 = V_DIV_FMAS_F32 0, %vgpr1, 0, %vgpr2, 0, %vgpr3, 0, 0, implicit %vcc, implicit %exec
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     implicit %vcc = V_CMP_EQ_I32_e32 %vgpr1, %vgpr2, implicit %exec
     %vgpr0 = V_DIV_FMAS_F32 0, %vgpr1, 0, %vgpr2, 0, %vgpr3, 0, 0, implicit %vcc, implicit %exec
     S_BRANCH %bb.2
 
   bb.2:
-    successors: %bb.3
     %vcc = V_CMP_EQ_I32_e64 %vgpr1, %vgpr2, implicit %exec
     %vgpr0 = V_DIV_FMAS_F32 0, %vgpr1, 0, %vgpr2, 0, %vgpr3, 0, 0, implicit %vcc, implicit %exec
     S_BRANCH %bb.3
@@ -130,19 +127,16 @@ name: s_getreg
 
 body: |
   bb.0:
-    successors: %bb.1
     S_SETREG_B32 %sgpr0, 1
     %sgpr1 = S_GETREG_B32 1
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     S_SETREG_IMM32_B32 0, 1
     %sgpr1 = S_GETREG_B32 1
     S_BRANCH %bb.2
 
   bb.2:
-    successors: %bb.3
     S_SETREG_B32 %sgpr0, 1
     %sgpr1 = S_MOV_B32 0
     %sgpr2 = S_GETREG_B32 1
@@ -178,13 +172,11 @@ name: s_setreg
 
 body: |
   bb.0:
-    successors: %bb.1
     S_SETREG_B32 %sgpr0, 1
     S_SETREG_B32 %sgpr1, 1
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     S_SETREG_B32 %sgpr0, 64
     S_SETREG_B32 %sgpr1, 128
     S_BRANCH %bb.2
@@ -237,7 +229,6 @@ name: vmem_gt_8dw_store
 
 body: |
   bb.0:
-    successors: %bb.1
     BUFFER_STORE_DWORD_OFFSET %vgpr3, %sgpr0_sgpr1_sgpr2_sgpr3, %sgpr4, 0, 0, 0, 0, implicit %exec
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
     BUFFER_STORE_DWORDX3_OFFSET %vgpr2_vgpr3_vgpr4, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec
@@ -310,19 +301,16 @@ name: readwrite_lane
 
 body: |
   bb.0:
-    successors: %bb.1
     %vgpr0,%sgpr0_sgpr1 = V_ADD_I32_e64 %vgpr1, %vgpr2, implicit %vcc, implicit %exec
     %sgpr4 = V_READLANE_B32 %vgpr4, %sgpr0
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     %vgpr0,%sgpr0_sgpr1 = V_ADD_I32_e64 %vgpr1, %vgpr2, implicit %vcc, implicit %exec
     %vgpr4 = V_WRITELANE_B32 %sgpr0, %sgpr0
     S_BRANCH %bb.2
 
   bb.2:
-    successors: %bb.3
     %vgpr0,implicit %vcc = V_ADD_I32_e32 %vgpr1, %vgpr2, implicit %vcc, implicit %exec
     %sgpr4 = V_READLANE_B32 %vgpr4, %vcc_lo
     S_BRANCH %bb.3
@@ -352,7 +340,6 @@ name: rfe
 
 body: |
   bb.0:
-    successors: %bb.1
     S_SETREG_B32 %sgpr0, 3
     S_RFE_B64 %sgpr2_sgpr3
     S_BRANCH %bb.1
@@ -382,7 +369,6 @@ name: s_mov_fed_b32
 
 body: |
   bb.0:
-    successors: %bb.1
     %sgpr0 = S_MOV_FED_B32 %sgpr0
     %sgpr0 = S_MOV_B32 %sgpr0
     S_BRANCH %bb.1
@@ -423,19 +409,16 @@ name: s_movrel
 
 body: |
   bb.0:
-    successors: %bb.1
     %m0 = S_MOV_B32 0
     %sgpr0 = S_MOVRELS_B32 %sgpr0, implicit %m0
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     %m0 = S_MOV_B32 0
     %sgpr0_sgpr1 = S_MOVRELS_B64 %sgpr0_sgpr1, implicit %m0
     S_BRANCH %bb.2
 
   bb.2:
-    successors: %bb.3
     %m0 = S_MOV_B32 0
     %sgpr0 = S_MOVRELD_B32 %sgpr0, implicit %m0
     S_BRANCH %bb.3
@@ -475,19 +458,16 @@ name: v_interp
 
 body: |
   bb.0:
-    successors: %bb.1
     %m0 = S_MOV_B32 0
     %vgpr0 = V_INTERP_P1_F32 %vgpr0, 0, 0, implicit %m0, implicit %exec
     S_BRANCH %bb.1
 
   bb.1:
-    successors: %bb.2
     %m0 = S_MOV_B32 0
     %vgpr0 = V_INTERP_P2_F32 %vgpr0, %vgpr1, 0, 0, implicit %m0, implicit %exec
     S_BRANCH %bb.2
 
   bb.2:
-    successors: %bb.3
     %m0 = S_MOV_B32 0
     %vgpr0 = V_INTERP_P1_F32_16bank %vgpr0, 0, 0, implicit %m0, implicit %exec
     S_BRANCH %bb.3

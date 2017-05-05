@@ -21,17 +21,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Dwarf.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <iterator>
 
 namespace llvm {
-class Module;
+
 class DbgDeclareInst;
 class DbgValueInst;
-template <typename K, typename V, typename KeyInfoT, typename BucketT>
-class DenseMap;
+class Module;
 
 /// \brief Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -95,13 +90,13 @@ private:
   bool addScope(DIScope *Scope);
 
 public:
-  typedef SmallVectorImpl<DICompileUnit *>::const_iterator
-      compile_unit_iterator;
-  typedef SmallVectorImpl<DISubprogram *>::const_iterator subprogram_iterator;
-  typedef SmallVectorImpl<DIGlobalVariableExpression *>::const_iterator
-      global_variable_expression_iterator;
-  typedef SmallVectorImpl<DIType *>::const_iterator type_iterator;
-  typedef SmallVectorImpl<DIScope *>::const_iterator scope_iterator;
+  using compile_unit_iterator =
+      SmallVectorImpl<DICompileUnit *>::const_iterator;
+  using subprogram_iterator = SmallVectorImpl<DISubprogram *>::const_iterator;
+  using global_variable_expression_iterator =
+      SmallVectorImpl<DIGlobalVariableExpression *>::const_iterator;
+  using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
+  using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
 
   iterator_range<compile_unit_iterator> compile_units() const {
     return make_range(CUs.begin(), CUs.end());
@@ -140,4 +135,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_IR_DEBUGINFO_H

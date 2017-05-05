@@ -249,7 +249,7 @@ public:
   void AddLiveOutRegInfo(unsigned Reg, unsigned NumSignBits,
                          const KnownBits &Known) {
     // Only install this information if it tells us something.
-    if (NumSignBits == 1 && Known.Zero == 0 && Known.One == 0)
+    if (NumSignBits == 1 && Known.isUnknown())
       return;
 
     LiveOutRegInfo.grow(Reg);

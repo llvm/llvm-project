@@ -25,7 +25,6 @@ liveins:
 body:             |
   bb.0.entry:
     liveins: %edi
-    successors: %bb.1.false
     NOOP implicit-def %al
 
     ; The bug was triggered only when LivePhysReg is used, which

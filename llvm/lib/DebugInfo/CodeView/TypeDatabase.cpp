@@ -65,6 +65,11 @@ static const SimpleTypeEntry SimpleTypeNames[] = {
     {"__bool64*", SimpleTypeKind::Boolean64},
 };
 
+TypeDatabase::TypeDatabase(uint32_t ExpectedSize) : TypeNameStorage(Allocator) {
+  CVUDTNames.reserve(ExpectedSize);
+  TypeRecords.reserve(ExpectedSize);
+}
+
 /// Gets the type index for the next type record.
 TypeIndex TypeDatabase::getNextTypeIndex() const {
   return TypeIndex(TypeIndex::FirstNonSimpleIndex + CVUDTNames.size());
