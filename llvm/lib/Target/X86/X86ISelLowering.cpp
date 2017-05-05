@@ -6228,7 +6228,7 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 
     Elt = Op->getOperand(EltIdx);
     // By construction, Elt is a EXTRACT_VECTOR_ELT with constant index.
-    EltMaskIdx = cast<ConstantSDNode>(Elt.getOperand(1))->getZExtValue();
+    EltMaskIdx = Elt.getConstantOperandVal(1);
     if (Elt.getOperand(0) != V1 || EltMaskIdx != EltIdx)
       break;
     Mask[EltIdx] = EltIdx;
@@ -6259,8 +6259,7 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
     SDValue SrcVector = Current->getOperand(0);
     if (!V1.getNode())
       V1 = SrcVector;
-    CanFold = SrcVector == V1 &&
-      cast<ConstantSDNode>(Current.getOperand(1))->getZExtValue() == i;
+    CanFold = (SrcVector == V1) && (Current.getConstantOperandVal(1) == i);
   }
 
   if (!CanFold)
@@ -26614,7 +26613,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
 
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
   switch (Opc) {
   default: break;
   case X86ISD::ADD:
@@ -26644,7 +26643,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       if (ShiftImm->getAPIntValue().uge(VT.getScalarSizeInBits())) {
-        Known.Zero.setAllBits();
+        Known.setAllZero();
         break;
       }
 
@@ -31617,10 +31616,9 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
     if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Mask.getOperand(1)))
       if (auto *AmtConst = AmtBV->getConstantSplatNode())
         SraAmt = AmtConst->getZExtValue();
-  } else if (Mask.getOpcode() == X86ISD::VSRAI) {
-    SDValue SraC = Mask.getOperand(1);
-    SraAmt = cast<ConstantSDNode>(SraC)->getZExtValue();
-  }
+  } else if (Mask.getOpcode() == X86ISD::VSRAI)
+    SraAmt = Mask.getConstantOperandVal(1);
+
   if ((SraAmt + 1) != EltBits)
     return SDValue();
 
@@ -34434,8 +34432,7 @@ static SDValue combineX86ADD(SDNode *N, SelectionDAG &DAG,
     if (Carry.getOpcode() == ISD::SETCC ||
         Carry.getOpcode() == X86ISD::SETCC ||
         Carry.getOpcode() == X86ISD::SETCC_CARRY) {
-      auto *Cond = cast<ConstantSDNode>(Carry.getOperand(0));
-      if (Cond->getZExtValue() == X86::COND_B)
+      if (Carry.getConstantOperandVal(0) == X86::COND_B)
         return DCI.CombineTo(N, SDValue(N, 0), Carry.getOperand(1));
     }
   }

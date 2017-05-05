@@ -4,9 +4,19 @@
 // RUN:               value: '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector'}]}" -- -std=c++11
 
 namespace std {
+template <typename>
+class initializer_list
+{
+public:
+  initializer_list() noexcept {}
+};
+
 template <typename T>
 class vector {
 public:
+  vector() = default;
+  vector(initializer_list<T>) {}
+
   void push_back(const T &) {}
   void push_back(T &&) {}
 
@@ -454,4 +464,17 @@ void testWithDtor() {
   v.push_back(WithDtor(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: v.emplace_back(42);
+}
+
+void testInitializerList() {
+  std::vector<std::vector<int>> v;
+  v.push_back(std::vector<int>({1}));
+  // Test against the bug reported in PR32896.
+
+  v.push_back({{2}});
+
+  using PairIntVector = std::pair<int, std::vector<int>>;
+  std::vector<PairIntVector> x;
+  x.push_back(PairIntVector(3, {4}));
+  x.push_back({5, {6}});
 }

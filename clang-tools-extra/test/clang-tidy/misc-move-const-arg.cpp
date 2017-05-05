@@ -158,3 +158,16 @@ void moveToConstReferenceNegatives() {
   // a lambda that is, in turn, an argument to a macro.
   CALL([no_move_semantics] { M3(NoMoveSemantics, no_move_semantics); });
 }
+
+class MoveOnly {
+public:
+  MoveOnly(const MoveOnly &other) = delete;
+  MoveOnly &operator=(const MoveOnly &other) = delete;
+  MoveOnly(MoveOnly &&other) = default;
+  MoveOnly &operator=(MoveOnly &&other) = default;
+};
+template <class T>
+void Q(T);
+void moveOnlyNegatives(MoveOnly val) {
+  Q(std::move(val));
+}

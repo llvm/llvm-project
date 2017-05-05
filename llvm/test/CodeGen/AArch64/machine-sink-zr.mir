@@ -17,7 +17,6 @@ body:             |
   ; CHECK-LABEL: bb.0:
   ; CHECK-NOT: COPY %wzr
   bb.0:
-    successors: %bb.3, %bb.1
     liveins: %w0
 
     %0 = COPY %w0
@@ -28,13 +27,9 @@ body:             |
   ; CHECK: COPY %wzr
 
   bb.1:
-    successors: %bb.2
-
     B %bb.2
 
   bb.2:
-    successors: %bb.3, %bb.2
-
     %2 = PHI %0, %bb.1, %4, %bb.2
     %w0 = COPY %1
     %3 = SUBSWri %2, 1, 0, implicit-def dead %nzcv

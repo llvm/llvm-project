@@ -623,9 +623,13 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
     // For const-qualified captures, emit clang.arc.use to ensure the captured
     // object doesn't get released while we are still depending on its validity
     // within the block.
-    if (VT.isConstQualified() && VT.getObjCLifetime() == Qualifiers::OCL_Strong)
+    if (VT.isConstQualified() &&
+        VT.getObjCLifetime() == Qualifiers::OCL_Strong &&
+        CGF.CGM.getCodeGenOpts().OptimizationLevel != 0) {
+      assert(CGF.CGM.getLangOpts().ObjCAutoRefCount &&
+             "expected ObjC ARC to be enabled");
       destroyer = CodeGenFunction::emitARCIntrinsicUse;
-    else if (dtorKind == QualType::DK_objc_strong_lifetime) {
+    } else if (dtorKind == QualType::DK_objc_strong_lifetime) {
       destroyer = CodeGenFunction::destroyARCStrongImprecise;
     } else {
       destroyer = CGF.getDestroyer(dtorKind);

@@ -49,7 +49,6 @@ registers:
   - { id: 1, class: sreg_128 }
 body: |
   bb.0:
-    successors: %bb.1, %bb.2
     S_NOP 0, implicit-def undef %0.sub2
     S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2

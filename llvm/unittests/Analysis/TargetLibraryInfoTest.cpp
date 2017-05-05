@@ -334,6 +334,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     "declare i32 @vsnprintf(i8*, i64, i8*, %struct*)\n"
     "declare i32 @vsprintf(i8*, i8*, %struct*)\n"
     "declare i32 @vsscanf(i8*, i8*, %struct*)\n"
+    "declare i64 @wcslen(i32*)\n"
 
     // These functions were also extracted from the OS X headers, but they are
     // available with a special name on darwin.

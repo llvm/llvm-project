@@ -20,12 +20,10 @@ body: |
   ; GCN: V_ADD_I32
   bb.0:
     liveins: %vgpr0
-    successors: %bb.1
     %7 = COPY %vgpr0
     %8 = S_MOV_B32 0
 
   bb.1:
-    successors: %bb.1, %bb.2
     %0 = PHI %8, %bb.0, %0, %bb.1, %2, %bb.2
     %9 = V_MOV_B32_e32 9, implicit %exec
     %10 = V_CMP_EQ_U32_e64 %7, %9, implicit %exec
@@ -33,7 +31,6 @@ body: |
     S_BRANCH %bb.1
 
   bb.2:
-    successors: %bb.1
     SI_END_CF %1, implicit-def %exec, implicit-def %scc, implicit %exec
     %11 = S_MOV_B32 1
     %2 = S_ADD_I32 %0, %11, implicit-def %scc

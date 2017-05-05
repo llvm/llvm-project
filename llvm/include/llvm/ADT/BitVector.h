@@ -253,6 +253,33 @@ public:
     return -1;
   }
 
+  /// find_prev - Returns the index of the first set bit that precedes the
+  /// the bit at \p PriorTo.  Returns -1 if all previous bits are unset.
+  int find_prev(unsigned PriorTo) {
+    if (PriorTo == 0)
+      return -1;
+
+    --PriorTo;
+
+    unsigned WordPos = PriorTo / BITWORD_SIZE;
+    unsigned BitPos = PriorTo % BITWORD_SIZE;
+    BitWord Copy = Bits[WordPos];
+    // Mask off next bits.
+    Copy &= maskTrailingOnes<BitWord>(BitPos + 1);
+
+    if (Copy != 0)
+      return (WordPos + 1) * BITWORD_SIZE - countLeadingZeros(Copy) - 1;
+
+    // Check previous words.
+    for (unsigned i = 1; i <= WordPos; ++i) {
+      unsigned Index = WordPos - i;
+      if (Bits[Index] == 0)
+        continue;
+      return (Index + 1) * BITWORD_SIZE - countLeadingZeros(Bits[Index]) - 1;
+    }
+    return -1;
+  }
+
   /// clear - Clear all bits.
   void clear() {
     Size = 0;

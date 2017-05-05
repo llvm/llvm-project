@@ -310,6 +310,8 @@ class DWARFContextInMemory : public DWARFContext {
 
   StringRef *MapSectionToMember(StringRef Name);
 
+  /// If Sec is compressed section, decompresses and updates its contents
+  /// provided by Data. Otherwise leaves it unchanged.
   Error maybeDecompress(const object::SectionRef &Sec, StringRef Name,
                         StringRef &Data);
 

@@ -68,6 +68,8 @@ struct AggregateFloat { float v; };
 
 #else
 
+// expected-no-diagnostics
+
 -(void)takeVector:(float3)v {
 }
 
@@ -84,15 +86,9 @@ struct AggregateFloat { float v; };
 }
 
 -(void)takeVector2:(float3)v AVAILABLE_MACOS_10_10 {
-#ifdef MAC
-// expected-error@-2 {{'float3' (vector of 3 'float' values) parameter type is unsupported}}
-#endif
 }
 
 - (__m128)retM128_2 AVAILABLE_MACOS_10_10 {
-#ifdef MAC
-// expected-error@-2 {{'__m128' (vector of 4 'float' values) return type is unsupported}}
-#endif
   __m128 value;
   return value;
 }
@@ -101,9 +97,6 @@ struct AggregateFloat { float v; };
 }
 
 -(void)takeVector4:(float3)v AVAILABLE_IOS_8 {
-#ifdef IOS
-  // expected-error@-2 {{'float3' (vector of 3 'float' values) parameter type is unsupported}}
-#endif
 }
 
 -(void)takeVector5:(float3)v AVAILABLE_IOS_9 { // no error

@@ -209,7 +209,6 @@ stack:
   - { id: 5, type: spill-slot, offset: -24, size: 4, alignment: 4, callee-saved-register: '%r4' }
 body:             |
   bb.0.entry:
-    successors: %bb.5.if.end, %bb.1.if.then
     liveins: %r0, %r4, %r5, %r6, %r7, %r11, %lr
   
     %sp = frame-setup STMDB_UPD %sp, 14, _, killed %r4, killed %r5, killed %r6, killed %r7, killed %r11, killed %lr
@@ -232,7 +231,6 @@ body:             |
     Bcc %bb.5.if.end, 0, killed %cpsr
   
   bb.1.if.then:
-    successors: %bb.3.for.cond
     liveins: %r4, %r5
   
     %r0 = MOVi 12, 14, _, _, debug-location !26
@@ -245,7 +243,6 @@ body:             |
     B %bb.3.for.cond
   
   bb.2.for.body:
-    successors: %bb.3.for.cond
     liveins: %r4, %r5, %r6, %r7
   
     %r1 = ADDrr %r5, %r7, 14, _, _, debug-location !36
@@ -255,7 +252,6 @@ body:             |
     DBG_VALUE debug-use %r7, debug-use _, !18, !20, debug-location !28
   
   bb.3.for.cond:
-    successors: %bb.2.for.body, %bb.4.for.cond.cleanup
     liveins: %r4, %r5, %r6, %r7
   
     DBG_VALUE debug-use %r7, debug-use _, !18, !20, debug-location !28
@@ -263,7 +259,6 @@ body:             |
     Bcc %bb.2.for.body, 11, killed %cpsr, debug-location !33
   
   bb.4.for.cond.cleanup:
-    successors: %bb.5.if.end
     liveins: %r4, %r5, %r6
   
     %r0 = MOVr %r5, 14, _, _, debug-location !34

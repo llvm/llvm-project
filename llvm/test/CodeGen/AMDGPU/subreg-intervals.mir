@@ -31,17 +31,14 @@ registers:
   - { id: 0, class: sreg_64 }
 body: |
   bb.0:
-    successors: %bb.1, %bb.2
     S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2
 
   bb.1:
-    successors: %bb.3
     S_NOP 0, implicit-def undef %0.sub0
     S_BRANCH %bb.3
 
   bb.2:
-    successors: %bb.3
     S_NOP 0, implicit-def %0
     S_BRANCH %bb.3
 

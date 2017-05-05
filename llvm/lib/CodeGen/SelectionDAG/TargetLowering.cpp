@@ -1303,7 +1303,7 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use MaskedValueIsZero if you don't know whether Op"
          " is a target node!");
-  Known.Zero.clearAllBits(); Known.One.clearAllBits();
+  Known.resetAll();
 }
 
 /// This method can be implemented by targets that want to expose additional

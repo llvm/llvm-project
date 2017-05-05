@@ -59,6 +59,39 @@ public:
     return One;
   }
 
+  /// Returns true if we don't know any bits.
+  bool isUnknown() const { return Zero.isNullValue() && One.isNullValue(); }
+
+  /// Resets the known state of all bits.
+  void resetAll() {
+    Zero.clearAllBits();
+    One.clearAllBits();
+  }
+
+  /// Returns true if value is all zero.
+  bool isZero() const {
+    assert(!hasConflict() && "KnownBits conflict!");
+    return Zero.isAllOnesValue();
+  }
+
+  /// Returns true if value is all one bits.
+  bool isAllOnes() const {
+    assert(!hasConflict() && "KnownBits conflict!");
+    return One.isAllOnesValue();
+  }
+
+  /// Make all bits known to be zero and discard any previous information.
+  void setAllZero() {
+    Zero.setAllBits();
+    One.clearAllBits();
+  }
+
+  /// Make all bits known to be one and discard any previous information.
+  void setAllOnes() {
+    Zero.clearAllBits();
+    One.setAllBits();
+  }
+
   /// Returns true if this value is known to be negative.
   bool isNegative() const { return One.isSignBitSet(); }
 

@@ -76,7 +76,6 @@ stack:
 # CHECK-NEXT: tCMPi8
 body:             |
   bb.0.entry:
-    successors: %bb.1.if.then(0x40000000), %bb.2.if.end(0x40000000)
     liveins: %r0, %r1
 
     %1 = COPY %r1
@@ -88,15 +87,11 @@ body:             |
     tB %bb.1.if.then, 14, _
 
   bb.1.if.then:
-    successors: %bb.3.return(0x80000000)
-
     %4, %cpsr = tMOVi8 42, 14, _
     tSTRspi killed %4, %stack.0.retval, 0, 14, _ :: (store 4 into %ir.retval)
     tB %bb.3.return, 14, _
 
   bb.2.if.end:
-    successors: %bb.3.return(0x80000000)
-
     %3, %cpsr = tMOVi8 1, 14, _
     tSTRspi killed %3, %stack.0.retval, 0, 14, _ :: (store 4 into %ir.retval)
 

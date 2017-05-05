@@ -153,6 +153,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxRecordDecl);
   REGISTER_MATCHER(cxxReinterpretCastExpr);
   REGISTER_MATCHER(cxxStaticCastExpr);
+  REGISTER_MATCHER(cxxStdInitializerListExpr);
   REGISTER_MATCHER(cxxTemporaryObjectExpr);
   REGISTER_MATCHER(cxxThisExpr);
   REGISTER_MATCHER(cxxThrowExpr);

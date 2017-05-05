@@ -1115,6 +1115,9 @@ TLI_DEFINE_STRING_INTERNAL("vsprintf")
 /// int vsscanf(const char *s, const char *format, va_list arg);
 TLI_DEFINE_ENUM_INTERNAL(vsscanf)
 TLI_DEFINE_STRING_INTERNAL("vsscanf")
+/// size_t wcslen (const wchar_t* wcs);
+TLI_DEFINE_ENUM_INTERNAL(wcslen)
+TLI_DEFINE_STRING_INTERNAL("wcslen")
 /// ssize_t write(int fildes, const void *buf, size_t nbyte);
 TLI_DEFINE_ENUM_INTERNAL(write)
 TLI_DEFINE_STRING_INTERNAL("write")

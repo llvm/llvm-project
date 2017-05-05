@@ -23,8 +23,6 @@ class SymbolBody;
 
 class TargetInfo {
 public:
-  virtual bool isTlsInitialExecRel(uint32_t Type) const;
-  virtual bool isTlsLocalDynamicRel(uint32_t Type) const;
   virtual bool isPicRel(uint32_t Type) const { return true; }
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}

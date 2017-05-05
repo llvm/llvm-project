@@ -78,6 +78,8 @@ Simplifying MIR files
 The MIR code coming out of ``-stop-after``/``-stop-before`` is very verbose;
 Tests are more accessible and future proof when simplified:
 
+- Use the ``-simplify-mir`` option with llc.
+
 - Machine function attributes often have default values or the test works just
   as well with default values. Typical candidates for this are: `alignment:`,
   `exposesReturnsTwice`, `legalized`, `regBankSelected`, `selected`.

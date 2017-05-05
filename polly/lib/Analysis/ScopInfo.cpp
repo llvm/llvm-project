@@ -132,11 +132,6 @@ static cl::opt<bool>
                     cl::desc("Abort if an isl error is encountered"),
                     cl::init(true), cl::cat(PollyCategory));
 
-static cl::opt<bool> UnprofitableScalarAccs(
-    "polly-unprofitable-scalar-accs",
-    cl::desc("Count statements with scalar accesses as not optimizable"),
-    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
-
 static cl::opt<bool> PollyPreciseInbounds(
     "polly-precise-inbounds",
     cl::desc("Take more precise inbounds assumptions (do not scale well)"),
@@ -3363,62 +3358,6 @@ void Scop::finalizeAccesses() {
   foldSizeConstantsToRight();
   foldAccessRelations();
   assumeNoOutOfBounds();
-}
-
-void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
-                LoopInfo &LI) {
-  buildInvariantEquivalenceClasses();
-
-  if (!buildDomains(&R, DT, LI))
-    return;
-
-  addUserAssumptions(AC, DT, LI);
-
-  // Remove empty statements.
-  // Exit early in case there are no executable statements left in this scop.
-  simplifySCoP(false);
-  if (Stmts.empty())
-    return;
-
-  // The ScopStmts now have enough information to initialize themselves.
-  for (ScopStmt &Stmt : Stmts)
-    Stmt.init(LI);
-
-  // Check early for a feasible runtime context.
-  if (!hasFeasibleRuntimeContext())
-    return;
-
-  // Check early for profitability. Afterwards it cannot change anymore,
-  // only the runtime context could become infeasible.
-  if (!isProfitable(UnprofitableScalarAccs)) {
-    invalidate(PROFITABLE, DebugLoc());
-    return;
-  }
-
-  buildSchedule(LI);
-
-  finalizeAccesses();
-
-  realignParams();
-  addUserContext();
-
-  // After the context was fully constructed, thus all our knowledge about
-  // the parameters is in there, we add all recorded assumptions to the
-  // assumed/invalid context.
-  addRecordedAssumptions();
-
-  simplifyContexts();
-  if (!buildAliasChecks(AA))
-    return;
-
-  hoistInvariantLoads();
-  verifyInvariantLoads();
-  simplifySCoP(true);
-
-  // Check late for a feasible runtime context because profitability did not
-  // change.
-  if (!hasFeasibleRuntimeContext())
-    return;
 }
 
 Scop::~Scop() {
