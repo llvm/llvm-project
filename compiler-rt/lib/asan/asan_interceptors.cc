@@ -443,6 +443,13 @@ INTERCEPTOR(void, _longjmp, void *env, int val) {
 }
 #endif
 
+#if ASAN_INTERCEPT___LONGJMP_CHK
+INTERCEPTOR(void, __longjmp_chk, void *env, int val) {
+  __asan_handle_no_return();
+  REAL(__longjmp_chk)(env, val);
+}
+#endif
+
 #if ASAN_INTERCEPT_SIGLONGJMP
 INTERCEPTOR(void, siglongjmp, void *env, int val) {
   __asan_handle_no_return();
@@ -757,6 +764,9 @@ void InitializeAsanInterceptors() {
 #endif
 #if ASAN_INTERCEPT__LONGJMP
   ASAN_INTERCEPT_FUNC(_longjmp);
+#endif
+#if ASAN_INTERCEPT___LONGJMP_CHK
+  ASAN_INTERCEPT_FUNC(__longjmp_chk);
 #endif
 #if ASAN_INTERCEPT_SIGLONGJMP
   ASAN_INTERCEPT_FUNC(siglongjmp);

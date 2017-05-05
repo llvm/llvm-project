@@ -58,6 +58,12 @@
 # define ASAN_INTERCEPT_SIGLONGJMP 0
 #endif
 
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+# define ASAN_INTERCEPT___LONGJMP_CHK 1
+#else
+# define ASAN_INTERCEPT___LONGJMP_CHK 0
+#endif
+
 // Android bug: https://code.google.com/p/android/issues/detail?id=61799
 #if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && \
     !(SANITIZER_ANDROID && defined(__i386))

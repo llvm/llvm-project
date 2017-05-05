@@ -9,6 +9,7 @@ set(UBSAN_SOURCES
   )
 
 set(UBSAN_STANDALONE_SOURCES
+  ubsan_diag_standalone.cc
   ubsan_init_standalone.cc
   )
 
