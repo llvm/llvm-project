@@ -29,8 +29,12 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
+// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min=10.10 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // CHECK-VERSION-OSX10: "x86_64-apple-macosx10.10.0"
 // RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min= -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
+// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
 // CHECK-VERSION-MISSING: invalid version number
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
