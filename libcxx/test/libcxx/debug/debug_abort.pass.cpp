@@ -10,6 +10,9 @@
 
 // MODULES_DEFINES: _LIBCPP_DEBUG=0
 
+// Can't test the system lib because this test enables debug mode
+// UNSUPPORTED: with_system_cxx_lib
+
 // Test that the default debug handler aborts the program.
 
 #define _LIBCPP_DEBUG 0

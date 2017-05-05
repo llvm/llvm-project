@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // <istream>
 
 // streamsize readsome(char_type* s, streamsize n);

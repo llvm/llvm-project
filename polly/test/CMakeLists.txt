@@ -1,13 +1,3 @@
-set(POLLY_TEST_DIRECTORIES
-  "AffineIterator"
-  "ScopInfo"
-  "ScheduleOptimizer"
-  "CodeGen"
-  "OpenMP"
-  "polybench"
-  "vect")
-
-
 set(POLLY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(POLLY_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 set(LLVM_SHLIBEXT "${CMAKE_SHARED_MODULE_SUFFIX}")
@@ -59,18 +49,6 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
-
-    foreach(testdir ${POLLY_TEST_DIRECTORIES})
-      add_custom_target(polly-test-${testdir}
-        COMMAND ${LLVM_LIT}
-                    --param polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-                    --param build_config=${CMAKE_CFG_INTDIR}
-                    -sv ${POLLY_TEST_EXTRA_ARGS}
-                    ${CMAKE_CURRENT_BINARY_DIR}/${testdir}
-                    DEPENDS ${POLLY_TEST_DEPS}
-                    COMMENT "Running Polly regression tests in ${testdir}")
-      set_target_properties(polly-test-${testdir} PROPERTIES FOLDER "Polly")
-    endforeach()
 
     add_custom_target(check-polly-tests
       COMMAND ${LLVM_LIT}

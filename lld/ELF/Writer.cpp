@@ -62,7 +62,6 @@ private:
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
-  void fixHeaders();
   void fixSectionAlignments();
   void fixPredefinedSymbols();
   void openFile();
@@ -86,7 +85,6 @@ private:
 
   uint64_t FileSize;
   uint64_t SectionHeaderOff;
-  bool AllocateHeader = true;
 };
 } // anonymous namespace
 
@@ -252,7 +250,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     if (!Script->Opt.HasSections) {
       fixSectionAlignments();
-      Script->fabricateDefaultCommands(AllocateHeader);
+      Script->fabricateDefaultCommands();
     }
     Script->synchronize();
     Script->assignAddresses(Phdrs);
@@ -747,15 +745,12 @@ static bool compareSectionsNonScript(const OutputSection *A,
 // Output section ordering is determined by this function.
 template <class ELFT>
 static bool compareSections(const OutputSection *A, const OutputSection *B) {
-  // For now, put sections mentioned in a linker script first.
-  int AIndex = Script->getSectionIndex(A->Name);
-  int BIndex = Script->getSectionIndex(B->Name);
-  bool AInScript = AIndex != INT_MAX;
-  bool BInScript = BIndex != INT_MAX;
-  if (AInScript != BInScript)
-    return AInScript;
-  // If both are in the script, use that order.
-  if (AInScript)
+  // For now, put sections mentioned in a linker script
+  // first. Sections not on linker script will have a SectionIndex of
+  // INT_MAX.
+  int AIndex = A->SectionIndex;
+  int BIndex = B->SectionIndex;
+  if (AIndex != BIndex)
     return AIndex < BIndex;
 
   return compareSectionsNonScript<ELFT>(A, B);
@@ -1021,9 +1016,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto I = OutputSections.begin();
   auto E = OutputSections.end();
   auto NonScriptI =
-      std::find_if(OutputSections.begin(), E, [](OutputSection *S) {
-        return Script->getSectionIndex(S->Name) == INT_MAX;
-      });
+      std::find_if(OutputSections.begin(), E,
+                   [](OutputSection *S) { return S->SectionIndex == INT_MAX; });
   while (NonScriptI != E) {
     auto BestPos = std::max_element(
         I, NonScriptI, [&](OutputSection *&A, OutputSection *&B) {
@@ -1176,7 +1170,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Config->Relocatable && !Config->OFormatBinary) {
     Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
     addPtArmExid(Phdrs);
-    fixHeaders();
+    Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
 
   // Dynamic section must be the last one in this list and dynamic
@@ -1321,6 +1315,11 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   // Add the first PT_LOAD segment for regular output sections.
   uint64_t Flags = computeFlags(PF_R);
   PhdrEntry *Load = AddHdr(PT_LOAD, Flags);
+
+  // Add the headers. We will remove them if they don't fit.
+  Load->add(Out::ElfHeader);
+  Load->add(Out::ProgramHeaders);
+
   for (OutputSection *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
@@ -1445,64 +1444,6 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     if (needsPtLoad(Sec))
       Sec->PageAlign = true;
   }
-}
-
-bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
-                          ArrayRef<OutputSection *> OutputSections,
-                          uint64_t Min) {
-  auto FirstPTLoad =
-      std::find_if(Phdrs.begin(), Phdrs.end(),
-                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
-  if (FirstPTLoad == Phdrs.end())
-    return false;
-
-  uint64_t HeaderSize = getHeaderSize();
-  if (HeaderSize > Min) {
-    auto PhdrI =
-        std::find_if(Phdrs.begin(), Phdrs.end(),
-                     [](const PhdrEntry &E) { return E.p_type == PT_PHDR; });
-    if (PhdrI != Phdrs.end())
-      Phdrs.erase(PhdrI);
-    return false;
-  }
-  Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
-
-  if (!Script->Opt.HasSections)
-    Config->ImageBase = Min = std::min(Min, Config->ImageBase);
-
-  Out::ElfHeader->Addr = Min;
-  Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
-
-  if (Script->hasPhdrsCommands())
-    return true;
-
-  if (FirstPTLoad->First)
-    for (OutputSection *Sec : OutputSections)
-      if (Sec->FirstInPtLoad == FirstPTLoad->First)
-        Sec->FirstInPtLoad = Out::ElfHeader;
-  FirstPTLoad->First = Out::ElfHeader;
-  if (!FirstPTLoad->Last)
-    FirstPTLoad->Last = Out::ProgramHeaders;
-  return true;
-}
-
-// We should set file offsets and VAs for elf header and program headers
-// sections. These are special, we do not include them into output sections
-// list, but have them to simplify the code.
-template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
-  // If the script has SECTIONS, assignAddresses will compute the values.
-  if (Script->Opt.HasSections)
-    return;
-
-  // When -T<section> option is specified, lower the base to make room for those
-  // sections.
-  uint64_t Min = -1;
-  if (!Config->SectionStartMap.empty())
-    for (const auto &P : Config->SectionStartMap)
-      Min = std::min(Min, P.second);
-
-  AllocateHeader = allocateHeaders(Phdrs, OutputSections, Min);
 }
 
 // Adjusts the file alignment for a given output section and returns

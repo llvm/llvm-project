@@ -14,6 +14,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     KNOWN_HOST_INFO_KEYS = set([
+        "arch",
         "cputype",
         "cpusubtype",
         "distribution_id",

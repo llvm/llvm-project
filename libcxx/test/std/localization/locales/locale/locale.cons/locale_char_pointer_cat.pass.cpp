@@ -9,6 +9,10 @@
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
+// UNSUPPORTED: sanitizer-new-delete
+
+// XFAIL: availability_markup=macosx10.8
+// XFAIL: availability_markup=macosx10.7
 
 // <locale>
 

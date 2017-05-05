@@ -253,7 +253,7 @@ public:
   bool isDefined(StringRef S);
 
   std::vector<OutputSection *> *OutputSections;
-  void fabricateDefaultCommands(bool AllocateHeader);
+  void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
@@ -270,9 +270,8 @@ public:
   void processNonSectionCommands();
   void synchronize();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
-  int getSectionIndex(StringRef Name);
 
-  void writeDataBytes(StringRef Name, uint8_t *Buf);
+  void writeDataBytes(OutputSection *Sec, uint8_t *Buf);
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);
 

@@ -415,18 +415,20 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
         cast<InputSection>(S)->OutSecOff = Pos++;
         Factory.addInputSec(S, Cmd->Name, Cmd->Sec);
       }
+      if (OutputSection *Sec = Cmd->Sec) {
+        assert(Sec->SectionIndex == INT_MAX);
+        Sec->SectionIndex = I;
+      }
     }
   }
   CurOutSec = nullptr;
 }
 
-void LinkerScript::fabricateDefaultCommands(bool AllocateHeader) {
+void LinkerScript::fabricateDefaultCommands() {
   std::vector<BaseCommand *> Commands;
 
   // Define start address
-  uint64_t StartAddr = Config->ImageBase;
-  if (AllocateHeader)
-    StartAddr += elf::getHeaderSize();
+  uint64_t StartAddr = Config->ImageBase + elf::getHeaderSize();
 
   // The Sections with -T<section> have been sorted in order of ascending
   // address. We must lower StartAddr if the lowest -T<section address> as
@@ -488,6 +490,11 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
     } else {
       auto *Cmd = cast<OutputSectionCommand>(*I);
       Factory.addInputSec(S, Name, Cmd->Sec);
+      if (OutputSection *Sec = Cmd->Sec) {
+        unsigned Index = std::distance(Opt.Commands.begin(), I);
+        assert(Sec->SectionIndex == INT_MAX || Sec->SectionIndex == Index);
+        Sec->SectionIndex = Index;
+      }
       auto *ISD = make<InputSectionDescription>("");
       ISD->Sections.push_back(S);
       Cmd->Commands.push_back(ISD);
@@ -676,8 +683,9 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // consequeces and gives us a section to put the symbol in.
   uint64_t Flags = SHF_ALLOC;
   uint32_t Type = SHT_PROGBITS;
-  for (BaseCommand *Base : Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
+
+  for (int I = 0, E = Opt.Commands.size(); I != E; ++I) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I]);
     if (!Cmd)
       continue;
     if (OutputSection *Sec = Cmd->Sec) {
@@ -690,6 +698,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       continue;
 
     auto *OutSec = make<OutputSection>(Cmd->Name, Type, Flags);
+    OutSec->SectionIndex = I;
     OutputSections->push_back(OutSec);
     Cmd->Sec = OutSec;
   }
@@ -892,6 +901,48 @@ void LinkerScript::synchronize() {
   }
 }
 
+static bool allocateHeaders(std::vector<PhdrEntry> &Phdrs,
+                            ArrayRef<OutputSection *> OutputSections,
+                            uint64_t Min) {
+  auto FirstPTLoad =
+      std::find_if(Phdrs.begin(), Phdrs.end(),
+                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
+  if (FirstPTLoad == Phdrs.end())
+    return false;
+
+  uint64_t HeaderSize = getHeaderSize();
+  if (HeaderSize <= Min || Script->hasPhdrsCommands()) {
+    Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
+    Out::ElfHeader->Addr = Min;
+    Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
+    return true;
+  }
+
+  assert(FirstPTLoad->First == Out::ElfHeader);
+  OutputSection *ActualFirst = nullptr;
+  for (OutputSection *Sec : OutputSections) {
+    if (Sec->FirstInPtLoad == Out::ElfHeader) {
+      ActualFirst = Sec;
+      break;
+    }
+  }
+  if (ActualFirst) {
+    for (OutputSection *Sec : OutputSections)
+      if (Sec->FirstInPtLoad == Out::ElfHeader)
+        Sec->FirstInPtLoad = ActualFirst;
+    FirstPTLoad->First = ActualFirst;
+  } else {
+    Phdrs.erase(FirstPTLoad);
+  }
+
+  auto PhdrI = std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry &E) {
+    return E.p_type == PT_PHDR;
+  });
+  if (PhdrI != Phdrs.end())
+    Phdrs.erase(PhdrI);
+  return false;
+}
+
 void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
@@ -992,12 +1043,17 @@ static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
     llvm_unreachable("unsupported Size argument");
 }
 
-void LinkerScript::writeDataBytes(StringRef Name, uint8_t *Buf) {
-  int I = getSectionIndex(Name);
-  if (I == INT_MAX)
+void LinkerScript::writeDataBytes(OutputSection *Sec, uint8_t *Buf) {
+  auto I = std::find_if(Opt.Commands.begin(), Opt.Commands.end(),
+                        [=](BaseCommand *Base) {
+                          if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+                            if (Cmd->Sec == Sec)
+                              return true;
+                          return false;
+                        });
+  if (I == Opt.Commands.end())
     return;
-
-  auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I]);
+  auto *Cmd = cast<OutputSectionCommand>(*I);
   for (BaseCommand *Base : Cmd->Commands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base))
       writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
@@ -1009,18 +1065,6 @@ bool LinkerScript::hasLMA(StringRef Name) {
       if (Cmd->LMAExpr && Cmd->Name == Name)
         return true;
   return false;
-}
-
-// Returns the index of the given section name in linker script
-// SECTIONS commands. Sections are laid out as the same order as they
-// were in the script. If a given name did not appear in the script,
-// it returns INT_MAX, so that it will be laid out at end of file.
-int LinkerScript::getSectionIndex(StringRef Name) {
-  for (int I = 0, E = Opt.Commands.size(); I != E; ++I)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I]))
-      if (Cmd->Name == Name)
-        return I;
-  return INT_MAX;
 }
 
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {

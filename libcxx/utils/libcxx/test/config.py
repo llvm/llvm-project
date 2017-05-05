@@ -123,6 +123,7 @@ class Configuration(object):
         self.configure_cxx()
         self.configure_triple()
         self.configure_deployment()
+        self.configure_availability()
         self.configure_src_root()
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
@@ -285,6 +286,12 @@ class Configuration(object):
         self.lit_config.note(
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
+    def configure_availability(self):
+        # See http://llvm.org/docs/AvailabilityMarkup.html
+        self.with_availability = self.get_lit_bool('with_availability', False)
+        self.lit_config.note(
+            "inferred with_availability as: %r" % self.with_availability)
+
     def configure_cxx_stdlib_under_test(self):
         self.cxx_stdlib_under_test = self.get_lit_conf(
             'cxx_stdlib_under_test', 'libc++')
@@ -306,6 +313,9 @@ class Configuration(object):
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
+        if self.with_availability:
+            self.use_clang_verify = False
+            return
         self.use_clang_verify = self.get_lit_bool('use_clang_verify')
         if self.use_clang_verify is None:
             # NOTE: We do not test for the -verify flag directly because
@@ -346,6 +356,12 @@ class Configuration(object):
             self.cxx.use_ccache = True
             self.lit_config.note('enabling ccache')
 
+    def add_deployment_feature(self, feature):
+        (arch, name, version) = self.config.deployment
+        self.config.available_features.add('%s=%s-%s' % (feature, arch, name))
+        self.config.available_features.add('%s=%s' % (feature, name))
+        self.config.available_features.add('%s=%s%s' % (feature, name, version))
+
     def configure_features(self):
         additional_features = self.get_lit_conf('additional_features')
         if additional_features:
@@ -364,15 +380,31 @@ class Configuration(object):
             self.config.available_features.add(
                 'with_system_cxx_lib=%s' % self.config.target_triple)
 
+            # Add subcomponents individually.
+            target_components = self.config.target_triple.split('-')
+            for component in target_components:
+                self.config.available_features.add(
+                    'with_system_cxx_lib=%s' % component)
+
+            # Add available features for more generic versions of the target
+            # triple attached to  with_system_cxx_lib.
+            if self.use_deployment:
+                self.add_deployment_feature('with_system_cxx_lib')
+
+        # Configure the availability markup checks features.
+        if self.with_availability:
+            self.config.available_features.add('availability_markup')
+            self.add_deployment_feature('availability_markup')
+
+        if self.use_system_cxx_lib or self.with_availability:
+            self.config.available_features.add('availability')
+            self.add_deployment_feature('availability')
+
+        if platform.system() == 'Darwin':
+            self.config.available_features.add('apple-darwin')
+
         # Insert the platform name into the available features as a lower case.
         self.config.available_features.add(target_platform)
-
-        # If we're using deployment, add sub-components of the triple using
-        # "darwin" instead of the platform name.
-        if self.use_deployment:
-            arch, _, _ = self.config.deployment
-            self.config.available_features.add('apple-darwin')
-            self.config.available_features.add(arch + '-apple-darwin')
 
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
@@ -507,6 +539,10 @@ class Configuration(object):
             arch, name, version = self.config.deployment
             self.cxx.flags += ['-arch', arch]
             self.cxx.flags += ['-m' + name + '-version-min=' + version]
+
+        # Disable availability unless explicitely requested
+        if not self.with_availability:
+            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')

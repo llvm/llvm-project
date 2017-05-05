@@ -8,6 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
+
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // <optional>
 
 // constexpr const T& optional<T>::value() const &;

@@ -209,7 +209,8 @@ inline void DoNotOptimize(Tp const& value) {
 #include <intrin.h>
 template <class Tp>
 inline void DoNotOptimize(Tp const& value) {
-  const volatile void* volatile = __builtin_addressof(value);
+  const volatile void* volatile unused = __builtin_addressof(value);
+  static_cast<void>(unused);
   _ReadWriteBarrier();
 }
 #endif

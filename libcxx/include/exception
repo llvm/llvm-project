@@ -127,7 +127,7 @@ _LIBCPP_FUNC_VIS terminate_handler get_terminate() _NOEXCEPT;
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void terminate() _NOEXCEPT;
 
 _LIBCPP_FUNC_VIS bool uncaught_exception() _NOEXCEPT;
-_LIBCPP_FUNC_VIS int uncaught_exceptions() _NOEXCEPT;
+_LIBCPP_FUNC_VIS _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS int uncaught_exceptions() _NOEXCEPT;
 
 class _LIBCPP_TYPE_VIS exception_ptr;
 

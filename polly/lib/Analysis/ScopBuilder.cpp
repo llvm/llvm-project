@@ -18,6 +18,7 @@
 #include "polly/Options.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
+#include "polly/Support/VirtualInstruction.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/IR/DiagnosticInfo.h"
 
@@ -35,6 +36,11 @@ static cl::opt<bool> ModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
     cl::Hidden, cl::ZeroOrMore, cl::init(true), cl::cat(PollyCategory));
+
+static cl::opt<bool> UnprofitableScalarAccs(
+    "polly-unprofitable-scalar-accs",
+    cl::desc("Count statements with scalar accesses as not optimizable"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 void ScopBuilder::buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
@@ -553,54 +559,40 @@ void ScopBuilder::ensureValueWrite(Instruction *Inst) {
 }
 
 void ScopBuilder::ensureValueRead(Value *V, BasicBlock *UserBB) {
-
-  // There cannot be an "access" for literal constants. BasicBlock references
-  // (jump destinations) also never change.
-  if ((isa<Constant>(V) && !isa<GlobalVariable>(V)) || isa<BasicBlock>(V))
-    return;
-
-  // If the instruction can be synthesized and the user is in the region we do
-  // not need to add a value dependences.
-  auto *Scope = LI.getLoopFor(UserBB);
-  if (canSynthesize(V, *scop, &SE, Scope))
-    return;
-
-  // Do not build scalar dependences for required invariant loads as we will
-  // hoist them later on anyway or drop the SCoP if we cannot.
-  auto &ScopRIL = scop->getRequiredInvariantLoads();
-  if (ScopRIL.count(dyn_cast<LoadInst>(V)))
-    return;
-
-  // Determine the ScopStmt containing the value's definition and use. There is
-  // no defining ScopStmt if the value is a function argument, a global value,
-  // or defined outside the SCoP.
-  Instruction *ValueInst = dyn_cast<Instruction>(V);
-  ScopStmt *ValueStmt = ValueInst ? scop->getStmtFor(ValueInst) : nullptr;
-
   ScopStmt *UserStmt = scop->getStmtFor(UserBB);
+  auto *Scope = LI.getLoopFor(UserBB);
+  auto VUse = VirtualUse::create(scop.get(), UserStmt, Scope, V, false);
+  switch (VUse.getKind()) {
+  case VirtualUse::Constant:
+  case VirtualUse::Block:
+  case VirtualUse::Synthesizable:
+  case VirtualUse::Hoisted:
+  case VirtualUse::Intra:
+    // Uses of these kinds do not need a MemoryAccess.
+    break;
 
-  // We do not model uses outside the scop.
-  if (!UserStmt)
-    return;
+  case VirtualUse::ReadOnly:
+    // Add MemoryAccess for invariant values only if requested.
+    if (!ModelReadOnlyScalars)
+      break;
 
-  // Add MemoryAccess for invariant values only if requested.
-  if (!ModelReadOnlyScalars && !ValueStmt)
-    return;
+    LLVM_FALLTHROUGH;
+  case VirtualUse::Inter:
 
-  // Ignore use-def chains within the same ScopStmt.
-  if (ValueStmt == UserStmt)
-    return;
+    // Do not create another MemoryAccess for reloading the value if one already
+    // exists.
+    if (UserStmt->lookupValueReadOf(V))
+      break;
 
-  // Do not create another MemoryAccess for reloading the value if one already
-  // exists.
-  if (UserStmt->lookupValueReadOf(V))
-    return;
+    addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, V, V->getType(), true,
+                    V, ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
+                    MemoryKind::Value);
 
-  addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, V, V->getType(), true, V,
-                  ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  MemoryKind::Value);
-  if (ValueInst)
-    ensureValueWrite(ValueInst);
+    // Inter-statement uses need to write the value in their defining statement.
+    if (VUse.isInter())
+      ensureValueWrite(cast<Instruction>(V));
+    break;
+  }
 }
 
 void ScopBuilder::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
@@ -645,6 +637,76 @@ void ScopBuilder::addPHIReadAccess(PHINode *PHI) {
                   ArrayRef<const SCEV *>(), MemoryKind::PHI);
 }
 
+#ifndef NDEBUG
+static void verifyUse(Scop *S, Use &Op, LoopInfo &LI) {
+  auto PhysUse = VirtualUse::create(S, Op, &LI, false);
+  auto VirtUse = VirtualUse::create(S, Op, &LI, true);
+  assert(PhysUse.getKind() == VirtUse.getKind());
+}
+
+/// Check the consistency of every statement's MemoryAccesses.
+///
+/// The check is carried out by expecting the "physical" kind of use (derived
+/// from the BasicBlocks instructions resides in) to be same as the "virtual"
+/// kind of use (derived from a statement's MemoryAccess).
+///
+/// The "physical" uses are taken by ensureValueRead to determine whether to
+/// create MemoryAccesses. When done, the kind of scalar access should be the
+/// same no matter which way it was derived.
+///
+/// The MemoryAccesses might be changed by later SCoP-modifying passes and hence
+/// can intentionally influence on the kind of uses (not corresponding to the
+/// "physical" anymore, hence called "virtual"). The CodeGenerator therefore has
+/// to pick up the virtual uses. But here in the code generator, this has not
+/// happened yet, such that virtual and physical uses are equivalent.
+static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
+  for (auto *BB : S->getRegion().blocks()) {
+    auto *Stmt = S->getStmtFor(BB);
+    if (!Stmt)
+      continue;
+
+    for (auto &Inst : *BB) {
+      if (isIgnoredIntrinsic(&Inst))
+        continue;
+
+      // Branch conditions are encoded in the statement domains.
+      if (isa<TerminatorInst>(&Inst) && Stmt->isBlockStmt())
+        continue;
+
+      // Verify all uses.
+      for (auto &Op : Inst.operands())
+        verifyUse(S, Op, LI);
+
+      // Stores do not produce values used by other statements.
+      if (isa<StoreInst>(Inst))
+        continue;
+
+      // For every value defined in the block, also check that a use of that
+      // value in the same statement would not be an inter-statement use. It can
+      // still be synthesizable or load-hoisted, but these kind of instructions
+      // are not directly copied in code-generation.
+      auto VirtDef =
+          VirtualUse::create(S, Stmt, Stmt->getSurroundingLoop(), &Inst, true);
+      assert(VirtDef.getKind() == VirtualUse::Synthesizable ||
+             VirtDef.getKind() == VirtualUse::Intra ||
+             VirtDef.getKind() == VirtualUse::Hoisted);
+    }
+  }
+
+  if (S->hasSingleExitEdge())
+    return;
+
+  // PHINodes in the SCoP region's exit block are also uses to be checked.
+  for (auto &Inst : *S->getRegion().getExit()) {
+    if (!isa<PHINode>(Inst))
+      break;
+
+    for (auto &Op : Inst.operands())
+      verifyUse(S, Op, LI);
+  }
+}
+#endif
+
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R)));
 
@@ -669,7 +731,62 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
       addArrayAccess(MemAccInst(GlobalRead), MemoryAccess::READ, BP,
                      BP->getType(), false, {AF}, {nullptr}, GlobalRead);
 
-  scop->init(AA, AC, DT, LI);
+  scop->buildInvariantEquivalenceClasses();
+
+  if (!scop->buildDomains(&R, DT, LI))
+    return;
+
+  scop->addUserAssumptions(AC, DT, LI);
+
+  // Remove empty statements.
+  // Exit early in case there are no executable statements left in this scop.
+  scop->simplifySCoP(false);
+  if (scop->isEmpty())
+    return;
+
+  // The ScopStmts now have enough information to initialize themselves.
+  for (ScopStmt &Stmt : *scop)
+    Stmt.init(LI);
+
+  // Check early for a feasible runtime context.
+  if (!scop->hasFeasibleRuntimeContext())
+    return;
+
+  // Check early for profitability. Afterwards it cannot change anymore,
+  // only the runtime context could become infeasible.
+  if (!scop->isProfitable(UnprofitableScalarAccs)) {
+    scop->invalidate(PROFITABLE, DebugLoc());
+    return;
+  }
+
+  scop->buildSchedule(LI);
+
+  scop->finalizeAccesses();
+
+  scop->realignParams();
+  scop->addUserContext();
+
+  // After the context was fully constructed, thus all our knowledge about
+  // the parameters is in there, we add all recorded assumptions to the
+  // assumed/invalid context.
+  scop->addRecordedAssumptions();
+
+  scop->simplifyContexts();
+  if (!scop->buildAliasChecks(AA))
+    return;
+
+  scop->hoistInvariantLoads();
+  scop->verifyInvariantLoads();
+  scop->simplifySCoP(true);
+
+  // Check late for a feasible runtime context because profitability did not
+  // change.
+  if (!scop->hasFeasibleRuntimeContext())
+    return;
+
+#ifndef NDEBUG
+  verifyUses(scop.get(), LI, DT);
+#endif
 }
 
 ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,

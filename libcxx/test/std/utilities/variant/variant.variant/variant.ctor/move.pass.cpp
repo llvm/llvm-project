@@ -10,6 +10,13 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // <variant>
 
 // template <class ...Types> class variant;
@@ -22,6 +29,7 @@
 #include <variant>
 
 #include "test_macros.h"
+#include "test_workarounds.h"
 
 struct ThrowsMove {
   ThrowsMove(ThrowsMove &&) noexcept(false) {}
@@ -178,9 +186,17 @@ constexpr bool test_constexpr_ctor_extension_imp(
 }
 
 void test_constexpr_move_ctor_extension() {
-#ifdef _LIBCPP_VERSION
+#if defined(_LIBCPP_VER) || defined(_MSVC_STL_VER)
   using V = std::variant<long, void*, const int>;
+#ifdef TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE
+  static_assert(std::is_trivially_destructible<V>::value, "");
+  static_assert(std::is_trivially_copy_constructible<V>::value, "");
+  static_assert(std::is_trivially_move_constructible<V>::value, "");
+  static_assert(!std::is_copy_assignable<V>::value, "");
+  static_assert(!std::is_move_assignable<V>::value, "");
+#else
   static_assert(std::is_trivially_copyable<V>::value, "");
+#endif
   static_assert(std::is_trivially_move_constructible<V>::value, "");
   static_assert(test_constexpr_ctor_extension_imp<0>(V(42l)), "");
   static_assert(test_constexpr_ctor_extension_imp<1>(V(nullptr)), "");

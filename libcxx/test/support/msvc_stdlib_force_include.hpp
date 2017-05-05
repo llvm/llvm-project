@@ -26,6 +26,11 @@
     #error This header may not be used when targeting libc++
 #endif
 
+// Indicates that we are using the MSVC standard library.
+#ifndef _MSVC_STL_VER
+    #define _MSVC_STL_VER 42
+#endif
+
 struct AssertionDialogAvoider {
     AssertionDialogAvoider() {
         _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
