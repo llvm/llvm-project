@@ -1,4 +1,7 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
+; FIXME: For some unknown reason the first test is behaving differently on
+;        differently systems. It is disabled for now to avoid buildbot noise.
+
+; DISABLED: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
 ; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
 ;
 ;    void func(double *A {
