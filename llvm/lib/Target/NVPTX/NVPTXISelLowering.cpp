@@ -490,6 +490,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
   for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::ABS,  Ty, Legal);
     setOperationAction(ISD::SMIN, Ty, Legal);
     setOperationAction(ISD::SMAX, Ty, Legal);
     setOperationAction(ISD::UMIN, Ty, Legal);

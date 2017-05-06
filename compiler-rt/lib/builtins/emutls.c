@@ -98,7 +98,7 @@ static __inline emutls_address_array* emutls_getspecific() {
 
 #else
 
-#include <Windows.h>
+#include <windows.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <assert.h>
