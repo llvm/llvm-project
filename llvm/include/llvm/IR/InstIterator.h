@@ -31,20 +31,20 @@ namespace llvm {
 // inst_iterator and const_inst_iterator's.
 //
 template <class BB_t, class BB_i_t, class BI_t, class II_t> class InstIterator {
-  typedef BB_t BBty;
-  typedef BB_i_t BBIty;
-  typedef BI_t BIty;
-  typedef II_t IIty;
+  using BBty = BB_t;
+  using BBIty = BB_i_t;
+  using BIty = BI_t;
+  using IIty = II_t;
   BB_t *BBs; // BasicBlocksType
   BB_i_t BB; // BasicBlocksType::iterator
   BI_t BI;   // BasicBlock::iterator
 
 public:
-  typedef std::bidirectional_iterator_tag iterator_category;
-  typedef IIty                            value_type;
-  typedef signed                        difference_type;
-  typedef IIty*                           pointer;
-  typedef IIty&                           reference;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type = IIty;
+  using difference_type = signed;
+  using pointer = IIty *;
+  using reference = IIty &;
 
   // Default constructor
   InstIterator() = default;
@@ -119,13 +119,15 @@ private:
   }
 };
 
-typedef InstIterator<SymbolTableList<BasicBlock>, Function::iterator,
-                     BasicBlock::iterator, Instruction> inst_iterator;
-typedef InstIterator<const SymbolTableList<BasicBlock>,
-                     Function::const_iterator, BasicBlock::const_iterator,
-                     const Instruction> const_inst_iterator;
-typedef iterator_range<inst_iterator> inst_range;
-typedef iterator_range<const_inst_iterator> const_inst_range;
+using inst_iterator =
+    InstIterator<SymbolTableList<BasicBlock>, Function::iterator,
+                 BasicBlock::iterator, Instruction>;
+using const_inst_iterator =
+    InstIterator<const SymbolTableList<BasicBlock>,
+                 Function::const_iterator, BasicBlock::const_iterator,
+                 const Instruction>;
+using inst_range = iterator_range<inst_iterator>;
+using const_inst_range = iterator_range<const_inst_iterator>;
 
 inline inst_iterator inst_begin(Function *F) { return inst_iterator(*F); }
 inline inst_iterator inst_end(Function *F)   { return inst_iterator(*F, true); }

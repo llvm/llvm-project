@@ -15902,7 +15902,7 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   VisibleModules.setVisible(Mod, DirectiveLoc);
 }
 
-void Sema::ActOnModuleEnd(SourceLocation EofLoc, Module *Mod) {
+void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
   if (getLangOpts().ModulesLocalVisibility) {
     VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
     // Leaving a module hides namespace names, so our visible namespace cache
@@ -15914,12 +15914,19 @@ void Sema::ActOnModuleEnd(SourceLocation EofLoc, Module *Mod) {
          "left the wrong module scope");
   ModuleScopes.pop_back();
 
-  // We got to the end of processing a #include of a local module. Create an
+  // We got to the end of processing a local module. Create an
   // ImportDecl as we would for an imported module.
-  FileID File = getSourceManager().getFileID(EofLoc);
-  assert(File != getSourceManager().getMainFileID() &&
-         "end of submodule in main source file");
-  SourceLocation DirectiveLoc = getSourceManager().getIncludeLoc(File);
+  FileID File = getSourceManager().getFileID(EomLoc);
+  SourceLocation DirectiveLoc;
+  if (EomLoc == getSourceManager().getLocForEndOfFile(File)) {
+    // We reached the end of a #included module header. Use the #include loc.
+    assert(File != getSourceManager().getMainFileID() &&
+           "end of submodule in main source file");
+    DirectiveLoc = getSourceManager().getIncludeLoc(File);
+  } else {
+    // We reached an EOM pragma. Use the pragma location.
+    DirectiveLoc = EomLoc;
+  }
   BuildModuleInclude(DirectiveLoc, Mod);
 }
 

@@ -68,7 +68,8 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
     : SectionBase(Output, Name, Flags, /*Entsize*/ 0, /*Alignment*/ 1, Type,
                   /*Info*/ 0,
-                  /*Link*/ 0) {}
+                  /*Link*/ 0),
+      SectionIndex(INT_MAX) {}
 
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
   // Synthetic doesn't have link order dependecy, stable_sort will keep it last
@@ -305,7 +306,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script->writeDataBytes(Name, Buf);
+  Script->writeDataBytes(this, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {

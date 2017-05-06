@@ -45,6 +45,10 @@ STATISTIC(NumOperandsMappingsCreated,
           "Number of operands mappings dynamically created");
 STATISTIC(NumOperandsMappingsAccessed,
           "Number of operands mappings dynamically accessed");
+STATISTIC(NumInstructionMappingsCreated,
+          "Number of instruction mappings dynamically created");
+STATISTIC(NumInstructionMappingsAccessed,
+          "Number of instruction mappings dynamically accessed");
 
 const unsigned RegisterBankInfo::DefaultMappingID = UINT_MAX;
 const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
@@ -137,7 +141,7 @@ static bool isCopyLike(const MachineInstr &MI) {
          MI.getOpcode() == TargetOpcode::REG_SEQUENCE;
 }
 
-RegisterBankInfo::InstructionMapping
+const RegisterBankInfo::InstructionMapping &
 RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // For copies we want to walk over the operands and try to find one
   // that has a register bank since the instruction itself will not get
@@ -147,9 +151,6 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // is important. The rest is not constrained.
   unsigned NumOperandsForMapping = IsCopyLike ? 1 : MI.getNumOperands();
 
-  RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
-                                               /*OperandsMapping*/ nullptr,
-                                               NumOperandsForMapping);
   const MachineFunction &MF = *MI.getParent()->getParent();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -190,7 +191,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
 
         if (!IsCopyLike)
           // MI does not carry enough information to guess the mapping.
-          return InstructionMapping();
+          return getInvalidInstructionMapping();
         continue;
       }
     }
@@ -206,11 +207,13 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
 
   if (IsCopyLike && !CompleteMapping)
     // No way to deduce the type from what we have.
-    return InstructionMapping();
+    return getInvalidInstructionMapping();
 
   assert(CompleteMapping && "Setting an uncomplete mapping");
-  Mapping.setOperandsMapping(getOperandsMapping(OperandsMapping));
-  return Mapping;
+  return getInstructionMapping(
+      DefaultMappingID, /*Cost*/ 1,
+      /*OperandsMapping*/ getOperandsMapping(OperandsMapping),
+      NumOperandsForMapping);
 }
 
 /// Hashing function for PartialMapping.
@@ -320,9 +323,44 @@ const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(
   return getOperandsMapping(OpdsMapping.begin(), OpdsMapping.end());
 }
 
-RegisterBankInfo::InstructionMapping
+static hash_code
+hashInstructionMapping(unsigned ID, unsigned Cost,
+                       const RegisterBankInfo::ValueMapping *OperandsMapping,
+                       unsigned NumOperands) {
+  return hash_combine(ID, Cost, OperandsMapping, NumOperands);
+}
+
+const RegisterBankInfo::InstructionMapping &
+RegisterBankInfo::getInstructionMappingImpl(
+    bool IsInvalid, unsigned ID, unsigned Cost,
+    const RegisterBankInfo::ValueMapping *OperandsMapping,
+    unsigned NumOperands) const {
+  assert(((IsInvalid && ID == InvalidMappingID && Cost == 0 &&
+           OperandsMapping == nullptr && NumOperands == 0) ||
+          !IsInvalid) &&
+         "Mismatch argument for invalid input");
+  ++NumInstructionMappingsAccessed;
+
+  hash_code Hash =
+      hashInstructionMapping(ID, Cost, OperandsMapping, NumOperands);
+  const auto &It = MapOfInstructionMappings.find(Hash);
+  if (It != MapOfInstructionMappings.end())
+    return *It->second;
+
+  ++NumInstructionMappingsCreated;
+
+  auto &InstrMapping = MapOfInstructionMappings[Hash];
+  if (IsInvalid)
+    InstrMapping = llvm::make_unique<InstructionMapping>();
+  else
+    InstrMapping = llvm::make_unique<InstructionMapping>(
+        ID, Cost, OperandsMapping, NumOperands);
+  return *InstrMapping;
+}
+
+const RegisterBankInfo::InstructionMapping &
 RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+  const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
   if (Mapping.isValid())
     return Mapping;
   llvm_unreachable("The target must implement this");
@@ -332,14 +370,14 @@ RegisterBankInfo::InstructionMappings
 RegisterBankInfo::getInstrPossibleMappings(const MachineInstr &MI) const {
   InstructionMappings PossibleMappings;
   // Put the default mapping first.
-  PossibleMappings.push_back(getInstrMapping(MI));
+  PossibleMappings.push_back(&getInstrMapping(MI));
   // Then the alternative mapping, if any.
   InstructionMappings AltMappings = getInstrAlternativeMappings(MI);
-  for (InstructionMapping &AltMapping : AltMappings)
-    PossibleMappings.emplace_back(std::move(AltMapping));
+  for (const InstructionMapping *AltMapping : AltMappings)
+    PossibleMappings.push_back(AltMapping);
 #ifndef NDEBUG
-  for (const InstructionMapping &Mapping : PossibleMappings)
-    assert(Mapping.verify(MI) && "Mapping is invalid");
+  for (const InstructionMapping *Mapping : PossibleMappings)
+    assert(Mapping->verify(MI) && "Mapping is invalid");
 #endif
   return PossibleMappings;
 }

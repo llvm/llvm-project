@@ -368,11 +368,12 @@ struct ScudoAllocator {
     void *Ptr;
     uptr Salt;
     uptr AllocationAlignment = FromPrimary ? MinAlignment : Alignment;
-    ScudoThreadContext *ThreadContext = getThreadContext();
+    ScudoThreadContext *ThreadContext = getThreadContextAndLock();
     if (LIKELY(ThreadContext)) {
       Salt = getPrng(ThreadContext)->getNext();
       Ptr = BackendAllocator.Allocate(getAllocatorCache(ThreadContext),
                                       NeededSize, AllocationAlignment);
+      ThreadContext->unlock();
     } else {
       SpinMutexLock l(&FallbackMutex);
       Salt = FallbackPrng.getNext();
@@ -434,9 +435,10 @@ struct ScudoAllocator {
     if (BypassQuarantine) {
       Chunk->eraseHeader();
       void *Ptr = Chunk->getAllocBeg(Header);
-      ScudoThreadContext *ThreadContext = getThreadContext();
+      ScudoThreadContext *ThreadContext = getThreadContextAndLock();
       if (LIKELY(ThreadContext)) {
         getBackendAllocator().Deallocate(getAllocatorCache(ThreadContext), Ptr);
+        ThreadContext->unlock();
       } else {
         SpinMutexLock Lock(&FallbackMutex);
         getBackendAllocator().Deallocate(&FallbackAllocatorCache, Ptr);
@@ -445,12 +447,13 @@ struct ScudoAllocator {
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, Header);
-      ScudoThreadContext *ThreadContext = getThreadContext();
+      ScudoThreadContext *ThreadContext = getThreadContextAndLock();
       if (LIKELY(ThreadContext)) {
         AllocatorQuarantine.Put(getQuarantineCache(ThreadContext),
                                 QuarantineCallback(
                                     getAllocatorCache(ThreadContext)),
                                 Chunk, Size);
+        ThreadContext->unlock();
       } else {
         SpinMutexLock l(&FallbackMutex);
         AllocatorQuarantine.Put(&FallbackQuarantineCache,

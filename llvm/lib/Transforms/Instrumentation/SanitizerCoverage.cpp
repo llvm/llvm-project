@@ -151,6 +151,7 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceGep |= ClGEPTracing;
   Options.TracePC |= ClExperimentalTracePC;
   Options.TracePCGuard |= ClTracePCGuard;
+  Options.NoPrune |= !ClPruneBlocks;
   return Options;
 }
 
@@ -380,8 +381,10 @@ static bool isFullPostDominator(const BasicBlock *BB,
   return true;
 }
 
-static bool shouldInstrumentBlock(const Function& F, const BasicBlock *BB, const DominatorTree *DT,
-                                  const PostDominatorTree *PDT) {
+static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
+                                  const DominatorTree *DT,
+                                  const PostDominatorTree *PDT,
+                                  const SanitizerCoverageOptions &Options) {
   // Don't insert coverage for unreachable blocks: we will never call
   // __sanitizer_cov() for them, so counting them in
   // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
@@ -395,7 +398,7 @@ static bool shouldInstrumentBlock(const Function& F, const BasicBlock *BB, const
   if (BB->getFirstInsertionPt() == BB->end())
     return false;
 
-  if (!ClPruneBlocks || &F.getEntryBlock() == BB)
+  if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
 
   return !(isFullDominator(BB, DT) || isFullPostDominator(BB, PDT));
@@ -434,7 +437,7 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
       &getAnalysis<PostDominatorTreeWrapperPass>(F).getPostDomTree();
 
   for (auto &BB : F) {
-    if (shouldInstrumentBlock(F, &BB, DT, PDT))
+    if (shouldInstrumentBlock(F, &BB, DT, PDT, Options))
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {

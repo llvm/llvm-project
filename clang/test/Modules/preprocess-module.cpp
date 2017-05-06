@@ -1,10 +1,35 @@
 // RUN: rm -rf %t
+// RUN: mkdir %t
 
 // RUN: not %clang_cc1 -fmodules -fmodule-name=file -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -E 2>&1 | FileCheck %s --check-prefix=MISSING-FWD
 // MISSING-FWD: module 'fwd' is needed
 
-// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodules-cache-path=%t -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -E | FileCheck %s --check-prefix=CHECK --check-prefix=NO-REWRITE
-// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodules-cache-path=%t -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -E -frewrite-includes | FileCheck %s --check-prefix=CHECK --check-prefix=REWRITE
+// RUN: %clang_cc1 -fmodules -fmodule-name=fwd -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -emit-module -o %t/fwd.pcm
+
+// Check that we can preprocess modules, and get the expected output.
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -E -o %t/no-rewrite.ii
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -E -frewrite-includes -o %t/rewrite.ii
+//
+// RUN: FileCheck %s --input-file %t/no-rewrite.ii --check-prefix=CHECK --check-prefix=NO-REWRITE
+// RUN: FileCheck %s --input-file %t/rewrite.ii    --check-prefix=CHECK --check-prefix=REWRITE
+
+// Check that we can build a module from the preprocessed output.
+// FIXME: For now, we need the headers to exist.
+// RUN: touch %t/file.h %t/file2.h
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/no-rewrite.ii -emit-module -o %t/no-rewrite.pcm
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/rewrite.ii -emit-module -o %t/rewrite.pcm
+
+// Check the module we built works.
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/no-rewrite.pcm %s -verify
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/rewrite.pcm %s -verify
+
+
+// == module map
+// CHECK: # 1 "{{.*}}module.modulemap"
+// CHECK: module file {
+// CHECK:   header "file.h"
+// CHECK:   header "file2.h"
+// CHECK: }
 
 // == file.h
 // CHECK: # 1 "<module-includes>"
@@ -63,3 +88,14 @@
 // REWRITE: #pragma clang module end
 // CHECK: # 3 "<module-includes>" 2
 // NO-REWRITE: #pragma clang module end
+
+
+// expected-no-diagnostics
+
+// FIXME: This should be rejected: we have not imported the submodule defining it yet.
+__FILE *a;
+
+#pragma clang module import file
+
+FILE *b;
+int x = file2;

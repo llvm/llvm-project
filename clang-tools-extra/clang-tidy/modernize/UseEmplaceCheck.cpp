@@ -20,12 +20,6 @@ AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
   return Node.hasExplicitTemplateArgs();
 }
 
-namespace impl {
-// FIXME: This matcher should be replaced by a matcher from ASTMatcher.h
-const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
-    CXXStdInitializerListExpr> cxxStdInitializerListExpr;
-} // namespace impl
-
 const auto DefaultContainersWithPushBack =
     "::std::vector; ::std::list; ::std::deque";
 const auto DefaultSmartPointers =
@@ -81,9 +75,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto IsPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
 
   auto HasInitList = anyOf(has(ignoringImplicit(initListExpr())),
-                           has(impl::cxxStdInitializerListExpr()));
-  // FIXME: Replace internal C++ initializer list matcher with one from
-  // ASTMatchers.h
+                           has(cxxStdInitializerListExpr()));
 
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.

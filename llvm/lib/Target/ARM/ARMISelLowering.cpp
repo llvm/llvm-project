@@ -14054,3 +14054,8 @@ void ARMTargetLowering::insertCopiesSplitCSR(
           .addReg(NewVR);
   }
 }
+
+void ARMTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
+}

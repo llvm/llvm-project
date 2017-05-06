@@ -1307,7 +1307,7 @@ static bool LexModuleName(
         &ModuleName) {
   while (true) {
     PP.LexUnexpandedToken(Tok);
-    if (Tok.isNot(tok::identifier)) {
+    if (Tok.isAnnotation() || !Tok.getIdentifierInfo()) {
       PP.Diag(Tok.getLocation(), diag::err_pp_expected_module_name)
         << ModuleName.empty();
       return true;

@@ -19,10 +19,16 @@
 #include "scudo_allocator.h"
 #include "scudo_utils.h"
 
+#include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_platform.h"
+
 namespace __scudo {
 
-struct ALIGNED(64) ScudoThreadContext {
- public:
+// Platform specific base thread context definitions.
+#include "scudo_tls_context_android.inc"
+#include "scudo_tls_context_linux.inc"
+
+struct ALIGNED(64) ScudoThreadContext : public ScudoThreadContextPlatform {
   AllocatorCache Cache;
   Xorshift128Plus Prng;
   uptr QuarantineCachePlaceHolder[4];
@@ -32,8 +38,9 @@ struct ALIGNED(64) ScudoThreadContext {
 
 void initThread();
 
-// Fastpath functions are defined in the following platform specific headers.
-#include "scudo_tls_linux.h"
+// Platform specific dastpath functions definitions.
+#include "scudo_tls_android.inc"
+#include "scudo_tls_linux.inc"
 
 }  // namespace __scudo
 

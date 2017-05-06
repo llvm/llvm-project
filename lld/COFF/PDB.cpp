@@ -133,7 +133,7 @@ static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
   if (Data.empty())
     return;
 
-  TypeDatabase TDB;
+  TypeDatabase TDB(0);
   TypeDumpVisitor TDV(TDB, &W, false);
   // Use a default implementation that does not follow type servers and instead
   // just dumps the contents of the TypeServer2 record.
@@ -154,7 +154,7 @@ static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
   if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
     fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
 
-  TypeDatabase TDB;
+  TypeDatabase TDB(0);
   CVSymbolDumper SymbolDumper(W, TDB, nullptr, false);
   if (auto EC = SymbolDumper.dump(Symbols))
     fatal(EC, "CVSymbolDumper::dump failed");
