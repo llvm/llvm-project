@@ -48,7 +48,7 @@ int main()
         assert(c.front() == false);
         assert(c.back() == true);
 #endif
-        c.emplace_back(1 == 1);
+        c.emplace_back(true);
         assert(c.size() == 3);
         assert(c.front() == false);
         assert(c[1] == true);
@@ -82,7 +82,7 @@ int main()
         assert(c.front() == false);
         assert(c.back() == true);
 #endif
-        c.emplace_back(1 == 1);
+        c.emplace_back(true);
         assert(c.size() == 3);
         assert(c.front() == false);
         assert(c[1] == true);

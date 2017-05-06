@@ -142,7 +142,7 @@ public:
     return Val;
   }
 
-  ConstantRange getConstantRange() const {
+  const ConstantRange &getConstantRange() const {
     assert(isConstantRange() &&
            "Cannot get the constant-range of a non-constant-range!");
     return Range;
@@ -250,7 +250,7 @@ public:
     if (NewR.isFullSet())
       markOverdefined();
     else
-      markConstantRange(NewR);
+      markConstantRange(std::move(NewR));
   }
 };
 
@@ -1079,8 +1079,8 @@ bool LazyValueInfoImpl::solveBlockValueSelect(LVILatticeVal &BBLV,
   }
 
   if (TrueVal.isConstantRange() && FalseVal.isConstantRange()) {
-    ConstantRange TrueCR = TrueVal.getConstantRange();
-    ConstantRange FalseCR = FalseVal.getConstantRange();
+    const ConstantRange &TrueCR = TrueVal.getConstantRange();
+    const ConstantRange &FalseCR = FalseVal.getConstantRange();
     Value *LHS = nullptr;
     Value *RHS = nullptr;
     SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
@@ -1649,7 +1649,7 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   if (Result.isConstant())
     return Result.getConstant();
   if (Result.isConstantRange()) {
-    ConstantRange CR = Result.getConstantRange();
+    const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
       return ConstantInt::get(V->getContext(), *SingleVal);
   }
@@ -1686,7 +1686,7 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
   if (Result.isConstant())
     return Result.getConstant();
   if (Result.isConstantRange()) {
-    ConstantRange CR = Result.getConstantRange();
+    const ConstantRange &CR = Result.getConstantRange();
     if (const APInt *SingleVal = CR.getSingleElement())
       return ConstantInt::get(V->getContext(), *SingleVal);
   }
@@ -1712,7 +1712,7 @@ static LazyValueInfo::Tristate getPredicateResult(unsigned Pred, Constant *C,
     ConstantInt *CI = dyn_cast<ConstantInt>(C);
     if (!CI) return LazyValueInfo::Unknown;
 
-    ConstantRange CR = Result.getConstantRange();
+    const ConstantRange &CR = Result.getConstantRange();
     if (Pred == ICmpInst::ICMP_EQ) {
       if (!CR.contains(CI->getValue()))
         return LazyValueInfo::False;
