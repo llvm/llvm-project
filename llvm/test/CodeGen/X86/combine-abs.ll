@@ -27,10 +27,10 @@ define <8 x i16> @combine_v8i16_abs_abs(<8 x i16> %a) {
 ; CHECK-NEXT:    vpabsw %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %a)
-  %n2 = sub <8 x i16> zeroinitializer, %a1
-  %c2 = icmp slt <8 x i16> %a1, zeroinitializer
-  %a2 = select <8 x i1> %c2, <8 x i16> %n2, <8 x i16> %a1
-  ret <8 x i16> %a2
+  %s2 = ashr <8 x i16> %a1, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %a2 = add <8 x i16> %a1, %s2
+  %x2 = xor <8 x i16> %a2, %s2
+  ret <8 x i16> %x2
 }
 
 define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
