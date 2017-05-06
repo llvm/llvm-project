@@ -561,7 +561,7 @@ private:
 
   /// Find the best mapping for \p MI from \p PossibleMappings.
   /// \return a reference on the best mapping in \p PossibleMappings.
-  RegisterBankInfo::InstructionMapping &
+  const RegisterBankInfo::InstructionMapping &
   findBestMapping(MachineInstr &MI,
                   RegisterBankInfo::InstructionMappings &PossibleMappings,
                   SmallVectorImpl<RepairingPlacement> &RepairPts);

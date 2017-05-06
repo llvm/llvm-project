@@ -260,15 +260,15 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     if (MI.getNumOperands() != 3)
       break;
     InstructionMappings AltMappings;
-    InstructionMapping GPRMapping(
+    const InstructionMapping &GPRMapping = getInstructionMapping(
         /*ID*/ 1, /*Cost*/ 1, getValueMapping(PMI_FirstGPR, Size),
         /*NumOperands*/ 3);
-    InstructionMapping FPRMapping(
+    const InstructionMapping &FPRMapping = getInstructionMapping(
         /*ID*/ 2, /*Cost*/ 1, getValueMapping(PMI_FirstFPR, Size),
         /*NumOperands*/ 3);
 
-    AltMappings.emplace_back(std::move(GPRMapping));
-    AltMappings.emplace_back(std::move(FPRMapping));
+    AltMappings.push_back(&GPRMapping);
+    AltMappings.push_back(&FPRMapping);
     return AltMappings;
   }
   case TargetOpcode::G_BITCAST: {
@@ -282,29 +282,29 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
       break;
 
     InstructionMappings AltMappings;
-    InstructionMapping GPRMapping(
+    const InstructionMapping &GPRMapping = getInstructionMapping(
         /*ID*/ 1, /*Cost*/ 1,
         getCopyMapping(AArch64::GPRRegBankID, AArch64::GPRRegBankID, Size),
         /*NumOperands*/ 2);
-    InstructionMapping FPRMapping(
+    const InstructionMapping &FPRMapping = getInstructionMapping(
         /*ID*/ 2, /*Cost*/ 1,
         getCopyMapping(AArch64::FPRRegBankID, AArch64::FPRRegBankID, Size),
         /*NumOperands*/ 2);
-    InstructionMapping GPRToFPRMapping(
+    const InstructionMapping &GPRToFPRMapping = getInstructionMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
         getCopyMapping(AArch64::FPRRegBankID, AArch64::GPRRegBankID, Size),
         /*NumOperands*/ 2);
-    InstructionMapping FPRToGPRMapping(
+    const InstructionMapping &FPRToGPRMapping = getInstructionMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
         getCopyMapping(AArch64::GPRRegBankID, AArch64::FPRRegBankID, Size),
         /*NumOperands*/ 2);
 
-    AltMappings.emplace_back(std::move(GPRMapping));
-    AltMappings.emplace_back(std::move(FPRMapping));
-    AltMappings.emplace_back(std::move(GPRToFPRMapping));
-    AltMappings.emplace_back(std::move(FPRToGPRMapping));
+    AltMappings.push_back(&GPRMapping);
+    AltMappings.push_back(&FPRMapping);
+    AltMappings.push_back(&GPRToFPRMapping);
+    AltMappings.push_back(&FPRToGPRMapping);
     return AltMappings;
   }
   case TargetOpcode::G_LOAD: {
@@ -318,21 +318,21 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
       break;
 
     InstructionMappings AltMappings;
-    InstructionMapping GPRMapping(
+    const InstructionMapping &GPRMapping = getInstructionMapping(
         /*ID*/ 1, /*Cost*/ 1,
         getOperandsMapping({getValueMapping(PMI_FirstGPR, Size),
                             // Addresses are GPR 64-bit.
                             getValueMapping(PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
-    InstructionMapping FPRMapping(
+    const InstructionMapping &FPRMapping = getInstructionMapping(
         /*ID*/ 2, /*Cost*/ 1,
         getOperandsMapping({getValueMapping(PMI_FirstFPR, Size),
                             // Addresses are GPR 64-bit.
                             getValueMapping(PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
 
-    AltMappings.emplace_back(std::move(GPRMapping));
-    AltMappings.emplace_back(std::move(FPRMapping));
+    AltMappings.push_back(&GPRMapping);
+    AltMappings.push_back(&FPRMapping);
     return AltMappings;
   }
   default:
@@ -373,8 +373,9 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   return false;
 }
 
-RegisterBankInfo::InstructionMapping
-AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
+const RegisterBankInfo::InstructionMapping &
+AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
+    const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -411,11 +412,11 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
   }
 #endif // End NDEBUG.
 
-  return InstructionMapping{DefaultMappingID, 1, getValueMapping(RBIdx, Size),
-                            NumOperands};
+  return getInstructionMapping(DefaultMappingID, 1,
+                               getValueMapping(RBIdx, Size), NumOperands);
 }
 
-RegisterBankInfo::InstructionMapping
+const RegisterBankInfo::InstructionMapping &
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
@@ -424,7 +425,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // Try the default logic for non-generic instructions that are either copies
   // or already have some operands assigned to banks.
   if (!isPreISelGenericOpcode(Opc)) {
-    RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+    const RegisterBankInfo::InstructionMapping &Mapping =
+        getInstrMappingImpl(MI);
     if (Mapping.isValid())
       return Mapping;
   }
@@ -462,15 +464,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
-    return InstructionMapping{
+    return getInstructionMapping(
         DefaultMappingID, copyCost(DstRB, SrcRB, Size),
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
-        /*NumOperands*/ 2};
+        /*NumOperands*/ 2);
   }
   case TargetOpcode::G_SEQUENCE:
     // FIXME: support this, but the generic code is really not going to do
     // anything sane.
-    return InstructionMapping();
+    return getInvalidInstructionMapping();
   default:
     break;
   }
@@ -533,19 +535,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   // Finally construct the computed mapping.
-  RegisterBankInfo::InstructionMapping Mapping =
-      InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (MI.getOperand(Idx).isReg() && MI.getOperand(Idx).getReg()) {
       auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
       if (!Mapping->isValid())
-        return InstructionMapping();
+        return getInvalidInstructionMapping();
 
       OpdsMapping[Idx] = Mapping;
     }
   }
 
-  Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
-  return Mapping;
+  return getInstructionMapping(DefaultMappingID, Cost,
+                               getOperandsMapping(OpdsMapping), NumOperands);
 }

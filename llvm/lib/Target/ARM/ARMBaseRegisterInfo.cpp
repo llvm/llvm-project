@@ -245,11 +245,18 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   switch (RC->getID()) {
   default:
     return 0;
-  case ARM::tGPRRegClassID:
-    return TFI->hasFP(MF) ? 4 : 5;
+  case ARM::tGPRRegClassID: {
+    // hasFP ends up calling getMaxCallFrameComputed() which may not be
+    // available when getPressureLimit() is called as part of
+    // ScheduleDAGRRList.
+    bool HasFP = MF.getFrameInfo().isMaxCallFrameSizeComputed()
+                 ? TFI->hasFP(MF) : true;
+    return 5 - HasFP;
+  }
   case ARM::GPRRegClassID: {
-    unsigned FP = TFI->hasFP(MF) ? 1 : 0;
-    return 10 - FP - (STI.isR9Reserved() ? 1 : 0);
+    bool HasFP = MF.getFrameInfo().isMaxCallFrameSizeComputed()
+                 ? TFI->hasFP(MF) : true;
+    return 10 - HasFP - (STI.isR9Reserved() ? 1 : 0);
   }
   case ARM::SPRRegClassID:  // Currently not used as 'rep' register class.
   case ARM::DPRRegClassID:

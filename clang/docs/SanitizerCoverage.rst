@@ -144,8 +144,9 @@ Use these flags together with ``trace-pc-guard`` or ``trace-pc``,
 like this: ``-fsanitize-coverage=func,trace-pc-guard``.
 
 When ``edge`` or ``bb`` is used, some of the edges/blocks may still be left
-uninstrumented if such instrumentation is considered redundant.
-**TODO**: add a user-visible option to disable the optimization.
+uninstrumented (pruned) if such instrumentation is considered redundant.
+Use ``no-prune`` (e.g. ``-fsanitize-coverage=bb,no-prune,trace-pc-guard``)
+to disable pruning. This could be useful for better coverage visualization.
 
 
 Edge coverage

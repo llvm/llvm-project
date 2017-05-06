@@ -95,7 +95,7 @@ public:
     isClobber           // '~x'
   };
 
-  typedef std::vector<std::string> ConstraintCodeVector;
+  using ConstraintCodeVector = std::vector<std::string>;
 
   struct SubConstraintInfo {
     /// MatchingInput - If this is not -1, this is an output constraint where an
@@ -112,9 +112,9 @@ public:
     SubConstraintInfo() = default;
   };
 
-  typedef std::vector<SubConstraintInfo> SubConstraintInfoVector;
+  using SubConstraintInfoVector = std::vector<SubConstraintInfo>;
   struct ConstraintInfo;
-  typedef std::vector<ConstraintInfo> ConstraintInfoVector;
+  using ConstraintInfoVector = std::vector<ConstraintInfo>;
 
   struct ConstraintInfo {
     /// Type - The basic type of the constraint: input/output/clobber

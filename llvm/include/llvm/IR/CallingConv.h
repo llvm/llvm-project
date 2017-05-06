@@ -1,4 +1,4 @@
-//===-- llvm/CallingConv.h - LLVM Calling Conventions -----------*- C++ -*-===//
+//===- llvm/CallingConv.h - LLVM Calling Conventions ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,8 +20,9 @@ namespace llvm {
 /// the well-known calling conventions.
 ///
 namespace CallingConv {
+
   /// LLVM IR allows to use arbitrary numbers as calling convention identifiers.
-  typedef unsigned ID;
+  using ID = unsigned;
 
   /// A set of enums which specify the assigned numeric values for known llvm
   /// calling conventions.
@@ -203,8 +204,9 @@ namespace CallingConv {
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };
-} // End CallingConv namespace
 
-} // End llvm namespace
+} // end namespace CallingConv
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_IR_CALLINGCONV_H

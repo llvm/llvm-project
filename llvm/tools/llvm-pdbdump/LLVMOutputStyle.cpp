@@ -631,7 +631,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   Visitors.push_back(make_unique<TypeDeserializer>());
   if (!StreamDB.hasValue()) {
-    StreamDB.emplace();
+    StreamDB.emplace(Tpi->getNumTypeRecords());
     Visitors.push_back(make_unique<TypeDatabaseVisitor>(*StreamDB));
   }
   // If we're in dump mode, add a dumper with the appropriate detail level.
@@ -722,13 +722,13 @@ Error LLVMOutputStyle::buildTypeDatabase(uint32_t SN) {
   if (DB.hasValue())
     return Error::success();
 
-  DB.emplace();
-
   auto Tpi =
       (SN == StreamTPI) ? File.getPDBTpiStream() : File.getPDBIpiStream();
 
   if (!Tpi)
     return Tpi.takeError();
+
+  DB.emplace(Tpi->getNumTypeRecords());
 
   TypeVisitorCallbackPipeline Pipeline;
   TypeDeserializer Deserializer;

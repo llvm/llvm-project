@@ -772,6 +772,27 @@
                     </tr>
 
 
+                    <tr><td class="header" colspan="2">List the threads in your program.</td></tr>
+                    <tr>
+                        <td class="content">
+                            <b>(gdb)</b> info threads<br>
+                        </td>
+                        <td class="content">
+                            <b>(lldb)</b> thread list<br>
+                        </td>
+                    </tr>
+
+                    <tr><td class="header" colspan="2">Select thread 1 as the default thread for subsequent commands.</td></tr>
+                    <tr>
+                        <td class="content">
+                            <b>(gdb)</b> thread 1<br>
+                        </td>
+                        <td class="content">
+                            <b>(lldb)</b> thread select 1<br>
+                            <b>(lldb)</b> t 1<br>
+                        </td>
+                    </tr>
+
                     <tr><td class="header" colspan="2">Show the stack backtrace for the current thread.</td></tr>
                     <tr>
                         <td class="content">
@@ -1248,6 +1269,16 @@
                     <tr>
                         <td class="hed" width="50%">GDB</td>
                         <td class="hed" width="50%">LLDB</td>
+                    </tr>
+
+                    <tr><td class="header" colspan="2">Search command help for a keyword.</td></tr>
+                    <tr>
+                        <td class="content">
+                            <b>(gdb)</b> apropos keyword<br>
+                        </td>
+                        <td class="content">
+                            <b>(lldb)</b> apropos keyword<br>
+                        </td>
                     </tr>
 
                     <tr><td class="header" colspan="2">Echo text to the screen.</td></tr>

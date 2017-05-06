@@ -469,7 +469,7 @@ void CodeViewDebug::emitTypeInformation() {
     CommentPrefix += ' ';
   }
 
-  TypeDatabase TypeDB;
+  TypeDatabase TypeDB(TypeTable.records().size());
   CVTypeDumper CVTD(TypeDB);
   TypeTable.ForEachRecord([&](TypeIndex Index, ArrayRef<uint8_t> Record) {
     if (OS.isVerboseAsm()) {

@@ -73,6 +73,10 @@ static cl::opt<bool> OverrideLongCalls("hexagon-long-calls",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("If present, forces/disables the use of long calls"));
 
+static cl::opt<bool> EnablePredicatedCalls("hexagon-pred-calls",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Consider calls to be predicable"));
+
 void HexagonSubtarget::initializeEnvironment() {
   UseMemOps = false;
   ModeIEEERndNear = false;
@@ -255,6 +259,10 @@ bool HexagonSubtarget::enableMachineScheduler() const {
   if (DisableHexagonMISched.getNumOccurrences())
     return !DisableHexagonMISched;
   return true;
+}
+
+bool HexagonSubtarget::usePredicatedCalls() const {
+  return EnablePredicatedCalls;
 }
 
 void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,

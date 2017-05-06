@@ -74,7 +74,7 @@ Error AnalysisStyle::dump() {
   if (!Tpi)
     return Tpi.takeError();
 
-  TypeDatabase TypeDB;
+  TypeDatabase TypeDB(Tpi->getNumTypeRecords());
   TypeDatabaseVisitor DBV(TypeDB);
   TypeDeserializer Deserializer;
   TypeVisitorCallbackPipeline Pipeline;

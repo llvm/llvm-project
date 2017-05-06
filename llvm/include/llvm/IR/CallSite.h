@@ -207,7 +207,7 @@ public:
 
   /// The type of iterator to use when looping over actual arguments at this
   /// call site.
-  typedef IterTy arg_iterator;
+  using arg_iterator = IterTy;
 
   iterator_range<IterTy> args() const {
     return make_range(arg_begin(), arg_end());
@@ -231,7 +231,7 @@ public:
 
   /// Type of iterator to use when looping over data operands at this call site
   /// (see below).
-  typedef IterTy data_operand_iterator;
+  using data_operand_iterator = IterTy;
 
   /// data_operands_begin/data_operands_end - Return iterators iterating over
   /// the call / invoke argument list and bundle operands.  For invokes, this is

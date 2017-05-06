@@ -46,8 +46,8 @@ private:
   /// Get an instruction mapping.
   /// \return An InstructionMappings with a statically allocated
   /// OperandsMapping.
-  static InstructionMapping getSameOperandsMapping(const MachineInstr &MI,
-                                                   bool isFP);
+  const InstructionMapping &getSameOperandsMapping(const MachineInstr &MI,
+                                                   bool isFP) const;
 
   /// Track the bank of each instruction operand(register)
   static void
@@ -74,7 +74,8 @@ public:
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 
-  InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
+  const InstructionMapping &
+  getInstrMapping(const MachineInstr &MI) const override;
 };
 
 } // namespace llvm

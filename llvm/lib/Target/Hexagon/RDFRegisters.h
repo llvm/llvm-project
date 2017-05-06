@@ -112,6 +112,7 @@ namespace rdf {
     const BitVector &getMaskUnits(RegisterId MaskId) const {
       return MaskInfos[TargetRegisterInfo::stackSlot2Index(MaskId)].Units;
     }
+    RegisterRef mapTo(RegisterRef RR, unsigned R) const;
 
     const TargetRegisterInfo &getTRI() const { return TRI; }
 

@@ -788,14 +788,6 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     if (HexagonMCInstrInfo::isSubInstruction(MI) ||
         llvm::HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCJ)
       return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);
-    switch(MI.getOpcode()){
-    case Hexagon::A2_tfrrcr:
-    case Hexagon::A2_tfrcrr:
-      if(Reg == Hexagon::M0)
-        Reg = Hexagon::C6;
-      if(Reg == Hexagon::M1)
-        Reg = Hexagon::C7;
-    }
     return MCT.getRegisterInfo()->getEncodingValue(Reg);
   }
 

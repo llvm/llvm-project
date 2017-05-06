@@ -1,4 +1,4 @@
-//===-- scudo_tls_linux.h ---------------------------------------*- C++ -*-===//
+//===-- scudo_tls_linux.inc -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,17 +19,17 @@
 # error "This file must be included inside scudo_tls.h."
 #endif  // SCUDO_TLS_H_
 
-#include "sanitizer_common/sanitizer_platform.h"
-
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 
 enum ThreadState : u8 {
   ThreadNotInitialized = 0,
   ThreadInitialized,
   ThreadTornDown,
 };
-extern thread_local ThreadState ScudoThreadState;
-extern thread_local ScudoThreadContext ThreadLocalContext;
+__attribute__((tls_model("initial-exec")))
+extern THREADLOCAL ThreadState ScudoThreadState;
+__attribute__((tls_model("initial-exec")))
+extern THREADLOCAL ScudoThreadContext ThreadLocalContext;
 
 ALWAYS_INLINE void initThreadMaybe() {
   if (LIKELY(ScudoThreadState != ThreadNotInitialized))
@@ -37,12 +37,12 @@ ALWAYS_INLINE void initThreadMaybe() {
   initThread();
 }
 
-ALWAYS_INLINE ScudoThreadContext *getThreadContext() {
+ALWAYS_INLINE ScudoThreadContext *getThreadContextAndLock() {
   if (UNLIKELY(ScudoThreadState == ThreadTornDown))
     return nullptr;
   return &ThreadLocalContext;
 }
 
-#endif  // SANITIZER_LINUX
+#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 #endif  // SCUDO_TLS_LINUX_H_

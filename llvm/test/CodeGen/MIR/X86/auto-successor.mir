@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -run-pass=none -verify-machineinstrs -simplify-mir | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -o - %s -run-pass=none -verify-machineinstrs -simplify-mir | FileCheck %s
 ---
 # We shouldn't need any explicit successor lists in these examples
 # CHECK-LABEL: name: func0

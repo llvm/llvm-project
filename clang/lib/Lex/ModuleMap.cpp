@@ -1132,14 +1132,17 @@ namespace clang {
     }
     
     bool parseModuleMapFile();
+
+    bool terminatedByDirective() { return false; }
+    SourceLocation getLocation() { return Tok.getLocation(); }
   };
 }
 
 SourceLocation ModuleMapParser::consumeToken() {
-retry:
   SourceLocation Result = Tok.getLocation();
+
+retry:
   Tok.clear();
-  
   Token LToken;
   L.LexFromRawLexer(LToken);
   Tok.Location = LToken.getLocation().getRawEncoding();
@@ -1232,9 +1235,28 @@ retry:
       
   case tok::comment:
     goto retry;
-      
+
+  case tok::hash:
+    // A module map can be terminated prematurely by
+    //   #pragma clang module contents
+    // When building the module, we'll treat the rest of the file as the
+    // contents of the module.
+    {
+      auto NextIsIdent = [&](StringRef Str) -> bool {
+        L.LexFromRawLexer(LToken);
+        return !LToken.isAtStartOfLine() && LToken.is(tok::raw_identifier) &&
+               LToken.getRawIdentifier() == Str;
+      };
+      if (NextIsIdent("pragma") && NextIsIdent("clang") &&
+          NextIsIdent("module") && NextIsIdent("contents")) {
+        Tok.Kind = MMToken::EndOfFile;
+        break;
+      }
+    }
+    LLVM_FALLTHROUGH;
+
   default:
-    Diags.Report(LToken.getLocation(), diag::err_mmap_unknown_token);
+    Diags.Report(Tok.getLocation(), diag::err_mmap_unknown_token);
     HadError = true;
     goto retry;
   }
@@ -1682,7 +1704,8 @@ void ModuleMapParser::parseExternModuleDecl() {
         File, /*IsSystem=*/false,
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
-            : File->getDir(), ExternLoc);
+            : File->getDir(),
+        FileID(), nullptr, ExternLoc);
 }
 
 /// Whether to add the requirement \p Feature to the module \p M.
@@ -2522,27 +2545,44 @@ bool ModuleMapParser::parseModuleMapFile() {
 }
 
 bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                                   const DirectoryEntry *Dir,
+                                   const DirectoryEntry *Dir, FileID ID,
+                                   unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
+  assert(Target && "Missing target information");
   llvm::DenseMap<const FileEntry *, bool>::iterator Known
     = ParsedModuleMap.find(File);
   if (Known != ParsedModuleMap.end())
     return Known->second;
 
+  // If the module map file wasn't already entered, do so now.
+  if (ID.isInvalid()) {
+    auto FileCharacter = IsSystem ? SrcMgr::C_System : SrcMgr::C_User;
+    ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+  }
+
   assert(Target && "Missing target information");
-  auto FileCharacter = IsSystem ? SrcMgr::C_System : SrcMgr::C_User;
-  FileID ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
   const llvm::MemoryBuffer *Buffer = SourceMgr.getBuffer(ID);
   if (!Buffer)
     return ParsedModuleMap[File] = true;
+  assert((!Offset || *Offset <= Buffer->getBufferSize()) &&
+         "invalid buffer offset");
 
   // Parse this module map file.
-  Lexer L(ID, SourceMgr.getBuffer(ID), SourceMgr, MMapLangOpts);
+  Lexer L(SourceMgr.getLocForStartOfFile(ID), MMapLangOpts,
+          Buffer->getBufferStart(),
+          Buffer->getBufferStart() + (Offset ? *Offset : 0),
+          Buffer->getBufferEnd());
   SourceLocation Start = L.getSourceLocation();
   ModuleMapParser Parser(L, SourceMgr, Target, Diags, *this, File, Dir,
                          BuiltinIncludeDir, IsSystem);
   bool Result = Parser.parseModuleMapFile();
   ParsedModuleMap[File] = Result;
+
+  if (Offset) {
+    auto Loc = SourceMgr.getDecomposedLoc(Parser.getLocation());
+    assert(Loc.first == ID && "stopped in a different file?");
+    *Offset = Loc.second;
+  }
 
   // Notify callbacks that we parsed it.
   for (const auto &Cb : Callbacks)

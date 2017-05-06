@@ -297,6 +297,9 @@ def fsanitize_coverage_trace_pc
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
       HelpText<"Enable PC tracing with guard in sanitizer coverage">;
+def fsanitize_coverage_no_prune
+    : Flag<["-"], "fsanitize-coverage-no-prune">,
+      HelpText<"Disable coverage pruning (i.e. instrument all blocks/edges)">;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation. The accepted value is clang, llvm, "
              "or none">;
