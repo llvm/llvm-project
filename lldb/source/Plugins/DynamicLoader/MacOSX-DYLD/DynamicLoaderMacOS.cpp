@@ -434,24 +434,25 @@ Error DynamicLoaderMacOS::CanLoadImage() {
 
   // Default assumption is that it is OK to load images.
   // Only say that we cannot load images if we find the symbol in libdyld and it
-  // indicates that
-  // we cannot.
+  // indicates that we cannot.
 
   if (symbol_address != LLDB_INVALID_ADDRESS) {
     {
       int lock_held =
           m_process->ReadUnsignedIntegerFromMemory(symbol_address, 4, 0, error);
       if (lock_held != 0) {
-        error.SetErrorToGenericError();
+        error.SetErrorString("dyld lock held - unsafe to load images.");
       }
     }
   } else {
     // If we were unable to find _dyld_global_lock_held in any modules, or it is
-    // not loaded into
-    // memory yet, we may be at process startup (sitting at _dyld_start) - so we
-    // should not allow
-    // dlopen calls.
-    error.SetErrorToGenericError();
+    // not loaded into memory yet, we may be at process startup (sitting 
+    // at _dyld_start) - so we should not allow dlopen calls.
+    // But if we found more than one module then we are clearly past _dyld_start
+    // so in that case we'll default to "it's safe".
+    if (num_modules <= 1)
+        error.SetErrorString("could not find the dyld library or "
+                                       "the dyld lock symbol");
   }
   return error;
 }

@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
@@ -173,6 +174,31 @@ unsigned MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
   Offset = (Offset + AlignMask) & ~uint64_t(AlignMask);
 
   return (unsigned)Offset;
+}
+
+void MachineFrameInfo::computeMaxCallFrameSize(const MachineFunction &MF) {
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
+  unsigned FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
+  assert(FrameSetupOpcode != ~0u && FrameDestroyOpcode != ~0u &&
+         "Can only compute MaxCallFrameSize if Setup/Destroy opcode are known");
+
+  MaxCallFrameSize = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      unsigned Opcode = MI.getOpcode();
+      if (Opcode == FrameSetupOpcode || Opcode == FrameDestroyOpcode) {
+        unsigned Size = TII.getFrameSize(MI);
+        MaxCallFrameSize = std::max(MaxCallFrameSize, Size);
+        AdjustsStack = true;
+      } else if (MI.isInlineAsm()) {
+        // Some inline asm's need a stack frame, as indicated by operand 1.
+        unsigned ExtraInfo = MI.getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+        if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
+          AdjustsStack = true;
+      }
+    }
+  }
 }
 
 void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{

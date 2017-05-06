@@ -55,6 +55,7 @@ enum CoverageFeature {
   Coverage8bitCounters = 1 << 8,
   CoverageTracePC = 1 << 9,
   CoverageTracePCGuard = 1 << 10,
+  CoverageNoPrune = 1 << 11,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -629,7 +630,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
     std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
     std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
-    std::make_pair(CoverageTracePCGuard, "-fsanitize-coverage-trace-pc-guard")};
+    std::make_pair(CoverageTracePCGuard, "-fsanitize-coverage-trace-pc-guard"),
+    std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(Args.MakeArgString(F.second));
@@ -786,6 +788,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
         .Case("8bit-counters", Coverage8bitCounters)
         .Case("trace-pc", CoverageTracePC)
         .Case("trace-pc-guard", CoverageTracePCGuard)
+        .Case("no-prune", CoverageNoPrune)
         .Default(0);
     if (F == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

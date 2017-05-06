@@ -136,6 +136,12 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
   CurrentASTUnit = std::move(AST);
 }
 
+Module *FrontendAction::getCurrentModule() const {
+  CompilerInstance &CI = getCompilerInstance();
+  return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
+      CI.getLangOpts().CurrentModule, /*AllowSearch*/false);
+}
+
 std::unique_ptr<ASTConsumer>
 FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
                                          StringRef InFile) {
@@ -188,16 +194,25 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
-// For preprocessed files, if the first line is the linemarker and specifies
-// the original source file name, use that name as the input file name.
-static bool ReadOriginalFileName(CompilerInstance &CI, std::string &InputFile)
-{
-  bool Invalid = false;
+/// For preprocessed files, if the first line is the linemarker and specifies
+/// the original source file name, use that name as the input file name.
+/// Returns the location of the first token after the line marker directive.
+///
+/// \param CI The compiler instance.
+/// \param InputFile Populated with the filename from the line marker.
+/// \param AddLineNote If \c true, add a line note corresponding to this line
+///        directive. Only use this if the directive will not actually be
+///        visited by the preprocessor.
+static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
+                                           std::string &InputFile,
+                                           bool AddLineNote = false) {
   auto &SourceMgr = CI.getSourceManager();
   auto MainFileID = SourceMgr.getMainFileID();
+
+  bool Invalid = false;
   const auto *MainFileBuf = SourceMgr.getBuffer(MainFileID, &Invalid);
   if (Invalid)
-    return false;
+    return SourceLocation();
 
   std::unique_ptr<Lexer> RawLexer(
       new Lexer(MainFileID, MainFileBuf, SourceMgr, CI.getLangOpts()));
@@ -209,19 +224,37 @@ static bool ReadOriginalFileName(CompilerInstance &CI, std::string &InputFile)
   // we use FILENAME as the input file name.
   Token T;
   if (RawLexer->LexFromRawLexer(T) || T.getKind() != tok::hash)
-    return false;
+    return SourceLocation();
   if (RawLexer->LexFromRawLexer(T) || T.isAtStartOfLine() ||
       T.getKind() != tok::numeric_constant)
-    return false;
+    return SourceLocation();
+
+  unsigned LineNo;
+  SourceLocation LineNoLoc = T.getLocation();
+  if (AddLineNote) {
+    llvm::SmallString<16> Buffer;
+    if (Lexer::getSpelling(LineNoLoc, Buffer, SourceMgr, CI.getLangOpts())
+            .getAsInteger(10, LineNo))
+      return SourceLocation();
+  }
+
   RawLexer->LexFromRawLexer(T);
   if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
-    return false;
+    return SourceLocation();
 
   StringLiteralParser Literal(T, CI.getPreprocessor());
   if (Literal.hadError)
-    return false;
+    return SourceLocation();
+  RawLexer->LexFromRawLexer(T);
+  if (T.isNot(tok::eof) && !T.isAtStartOfLine())
+    return SourceLocation();
   InputFile = Literal.GetString().str();
-  return true;
+
+  if (AddLineNote)
+    CI.getSourceManager().AddLineNote(
+        LineNoLoc, LineNo, SourceMgr.getLineTableFilenameID(InputFile));
+
+  return T.getLocation();
 }
 
 static SmallVectorImpl<char> &
@@ -339,42 +372,44 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
   return std::error_code();
 }
 
-/// Parse a module map and compute the corresponding real input buffer that
-/// should be used to build the module described by that module map and the
-/// current module name.
-static std::unique_ptr<llvm::MemoryBuffer>
-getInputBufferForModuleMap(CompilerInstance &CI, StringRef Filename,
-                           bool IsSystem) {
-  // Find the module map file.
-  const FileEntry *ModuleMap =
-      CI.getFileManager().getFile(Filename, /*openFile*/true);
-  if (!ModuleMap)  {
-    CI.getDiagnostics().Report(diag::err_module_map_not_found)
-      << Filename;
-    return nullptr;
+static bool
+loadModuleMapForModuleBuild(CompilerInstance &CI, StringRef Filename,
+                            bool IsSystem, bool IsPreprocessed,
+                            unsigned &Offset) {
+  auto &SrcMgr = CI.getSourceManager();
+  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
+
+  // Map the current input to a file.
+  FileID ModuleMapID = SrcMgr.getMainFileID();
+  const FileEntry *ModuleMap = SrcMgr.getFileEntryForID(ModuleMapID);
+
+  // If the module map is preprocessed, handle the initial line marker;
+  // line directives are not part of the module map syntax in general.
+  Offset = 0;
+  if (IsPreprocessed) {
+    std::string PresumedModuleMapFile;
+    SourceLocation EndOfLineMarker =
+        ReadOriginalFileName(CI, PresumedModuleMapFile, /*AddLineNote*/true);
+    if (EndOfLineMarker.isValid())
+      Offset = CI.getSourceManager().getDecomposedLoc(EndOfLineMarker).second;
+    // FIXME: Use PresumedModuleMapFile as the MODULE_MAP_FILE in the PCM.
   }
 
-  // Find the module map file from which it was generated, if different.
-  const FileEntry *OriginalModuleMap = ModuleMap;
-  StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
-  if (!OriginalModuleMapName.empty()) {
-    OriginalModuleMap = CI.getFileManager().getFile(OriginalModuleMapName,
-                                                    /*openFile*/ true);
-    if (!OriginalModuleMap) {
-      CI.getDiagnostics().Report(diag::err_module_map_not_found)
-        << OriginalModuleMapName;
-      return nullptr;
-    }
-  }
-  
-  // Parse the module map file.
-  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-  if (HS.loadModuleMapFile(ModuleMap, IsSystem))
-    return nullptr;
-  
+  // Load the module map file.
+  if (HS.loadModuleMapFile(ModuleMap, IsSystem, ModuleMapID, &Offset))
+    return true;
+
+  if (SrcMgr.getBuffer(ModuleMapID)->getBufferSize() == Offset)
+    Offset = 0;
+
+  return false;
+}
+
+static Module *prepareToBuildModule(CompilerInstance &CI,
+                                    StringRef ModuleMapFilename) {
   if (CI.getLangOpts().CurrentModule.empty()) {
     CI.getDiagnostics().Report(diag::err_missing_module_name);
-    
+
     // FIXME: Eventually, we could consider asking whether there was just
     // a single module described in the module map, and use that as a 
     // default. Then it would be fairly trivial to just "compile" a module
@@ -382,21 +417,14 @@ getInputBufferForModuleMap(CompilerInstance &CI, StringRef Filename,
     return nullptr;
   }
 
-  // If we're being run from the command-line, the module build stack will not
-  // have been filled in yet, so complete it now in order to allow us to detect
-  // module cycles.
-  SourceManager &SourceMgr = CI.getSourceManager();
-  if (SourceMgr.getModuleBuildStack().empty())
-    SourceMgr.pushModuleBuildStack(CI.getLangOpts().CurrentModule,
-                                   FullSourceLoc(SourceLocation(), SourceMgr));
-
   // Dig out the module definition.
+  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
   Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule,
                               /*AllowSearch=*/false);
   if (!M) {
     CI.getDiagnostics().Report(diag::err_missing_module)
-      << CI.getLangOpts().CurrentModule << Filename;
-    
+      << CI.getLangOpts().CurrentModule << ModuleMapFilename;
+
     return nullptr;
   }
 
@@ -417,11 +445,45 @@ getInputBufferForModuleMap(CompilerInstance &CI, StringRef Filename,
     return nullptr;
   }
 
-  if (OriginalModuleMap != ModuleMap) {
-    M->IsInferred = true;
-    HS.getModuleMap().setInferredModuleAllowedBy(M, OriginalModuleMap);
+  // Inform the preprocessor that includes from within the input buffer should
+  // be resolved relative to the build directory of the module map file.
+  CI.getPreprocessor().setMainFileDir(M->Directory);
+
+  // If the module was inferred from a different module map (via an expanded
+  // umbrella module definition), track that fact.
+  // FIXME: It would be preferable to fill this in as part of processing
+  // the module map, rather than adding it after the fact.
+  StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
+  if (!OriginalModuleMapName.empty()) {
+    auto *OriginalModuleMap =
+        CI.getFileManager().getFile(OriginalModuleMapName,
+                                    /*openFile*/ true);
+    if (!OriginalModuleMap) {
+      CI.getDiagnostics().Report(diag::err_module_map_not_found)
+        << OriginalModuleMapName;
+      return nullptr;
+    }
+    if (OriginalModuleMap != CI.getSourceManager().getFileEntryForID(
+                                 CI.getSourceManager().getMainFileID())) {
+      M->IsInferred = true;
+      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
+        .setInferredModuleAllowedBy(M, OriginalModuleMap);
+    }
   }
 
+  // If we're being run from the command-line, the module build stack will not
+  // have been filled in yet, so complete it now in order to allow us to detect
+  // module cycles.
+  SourceManager &SourceMgr = CI.getSourceManager();
+  if (SourceMgr.getModuleBuildStack().empty())
+    SourceMgr.pushModuleBuildStack(CI.getLangOpts().CurrentModule,
+                                   FullSourceLoc(SourceLocation(), SourceMgr));
+  return M;
+}
+
+/// Compute the input buffer that should be used to build the specified module.
+static std::unique_ptr<llvm::MemoryBuffer>
+getInputBufferForModule(CompilerInstance &CI, Module *M) {
   FileManager &FileMgr = CI.getFileManager();
 
   // Collect the set of #includes we need to build the module.
@@ -441,10 +503,6 @@ getInputBufferForModuleMap(CompilerInstance &CI, StringRef Filename,
     return nullptr;
   }
 
-  // Inform the preprocessor that includes from within the input buffer should
-  // be resolved relative to the build directory of the module map file.
-  CI.getPreprocessor().setMainFileDir(M->Directory);
-
   return llvm::MemoryBuffer::getMemBufferCopy(
       HeaderContents, Module::getModuleInputBufferName());
 }
@@ -457,7 +515,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   setCompilerInstance(&CI);
 
   StringRef InputFile = Input.getFile();
-  FrontendInputFile FileToProcess = Input;
   bool HasBegunSourceFile = false;
   if (!BeginInvocation(CI))
     goto failure;
@@ -597,34 +654,43 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                            &CI.getPreprocessor());
   HasBegunSourceFile = true;
 
+  // Initialize the main file entry.
+  if (!CI.InitializeSourceManager(Input))
+    goto failure;
+
   // For module map files, we first parse the module map and synthesize a
   // "<module-includes>" buffer before more conventional processing.
   if (Input.getKind().getFormat() == InputKind::ModuleMap) {
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
 
-    auto Buffer = getInputBufferForModuleMap(CI, InputFile, Input.isSystem());
-    if (!Buffer)
+    unsigned OffsetToContents;
+    if (loadModuleMapForModuleBuild(CI, Input.getFile(), Input.isSystem(),
+                                    Input.isPreprocessed(), OffsetToContents))
       goto failure;
 
-    Module *CurrentModule =
-        CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-            CI.getLangOpts().CurrentModule,
-            /*AllowSearch=*/false);
-    assert(CurrentModule && "no module info for current module");
+    auto *CurrentModule = prepareToBuildModule(CI, Input.getFile());
+    if (!CurrentModule)
+      goto failure;
 
-    // The input that we end up processing is the generated buffer, not the
-    // module map file itself.
-    FileToProcess = FrontendInputFile(
-        Buffer.release(), Input.getKind().withFormat(InputKind::Source),
-        CurrentModule->IsSystem);
+    if (OffsetToContents)
+      // If the module contents are in the same file, skip to them.
+      CI.getPreprocessor().setSkipMainFilePreamble(OffsetToContents, true);
+    else {
+      // Otherwise, convert the module description to a suitable input buffer.
+      auto Buffer = getInputBufferForModule(CI, CurrentModule);
+      if (!Buffer)
+        goto failure;
+
+      // Reinitialize the main file entry to refer to the new input.
+      if (!CI.InitializeSourceManager(FrontendInputFile(
+              Buffer.release(), Input.getKind().withFormat(InputKind::Source),
+              CurrentModule->IsSystem)))
+        goto failure;
+    }
   }
 
   // Initialize the action.
   if (!BeginSourceFileAction(CI, InputFile))
-    goto failure;
-
-  // Initialize the main file entry.
-  if (!CI.InitializeSourceManager(FileToProcess))
     goto failure;
 
   // Create the AST context and consumer unless this is a preprocessor only
@@ -636,13 +702,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // For preprocessed files, check if the first line specifies the original
     // source file name with a linemarker.
-    std::string OrigFile;
+    std::string PresumedInputFile = InputFile;
     if (Input.isPreprocessed())
-      if (ReadOriginalFileName(CI, OrigFile))
-        InputFile = OrigFile;
+      ReadOriginalFileName(CI, PresumedInputFile);
 
     std::unique_ptr<ASTConsumer> Consumer =
-        CreateWrappedASTConsumer(CI, InputFile);
+        CreateWrappedASTConsumer(CI, PresumedInputFile);
     if (!Consumer)
       goto failure;
 

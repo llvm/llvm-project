@@ -57,7 +57,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
     #pragma warning(disable: 4521) // multiple copy constructors specified
     #pragma warning(disable: 4702) // unreachable code
-    #pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
     #pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.
 #endif // !defined(__clang__)
 

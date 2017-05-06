@@ -280,7 +280,7 @@ public:
     return -1;
   }
 
-  /// clear - Clear all bits.
+  /// clear - Removes all bits from the bitvector. Does not change capacity.
   void clear() {
     Size = 0;
   }

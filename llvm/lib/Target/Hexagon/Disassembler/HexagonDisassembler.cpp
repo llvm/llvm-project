@@ -553,7 +553,7 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   using namespace Hexagon;
   static const MCPhysReg CtrlRegDecoderTable[] = {
     /*  0 */  SA0,        LC0,        SA1,        LC1,
-    /*  4 */  P3_0,       C5,         C6,         C7,
+    /*  4 */  P3_0,       C5,         M0,         M1,
     /*  8 */  USR,        PC,         UGP,        GP,
     /* 12 */  CS0,        CS1,        UPCYCLELO,  UPCYCLEHI,
     /* 16 */  FRAMELIMIT, FRAMEKEY,   PKTCOUNTLO, PKTCOUNTHI,

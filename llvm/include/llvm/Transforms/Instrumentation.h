@@ -177,6 +177,7 @@ struct SanitizerCoverageOptions {
   bool Use8bitCounters = false;
   bool TracePC = false;
   bool TracePCGuard = false;
+  bool NoPrune = false;
 
   SanitizerCoverageOptions() = default;
 };

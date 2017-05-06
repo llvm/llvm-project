@@ -1467,7 +1467,15 @@ bool HexagonInstrInfo::DefinesPredicate(
 }
 
 bool HexagonInstrInfo::isPredicable(const MachineInstr &MI) const {
-  return MI.getDesc().isPredicable();
+  if (!MI.getDesc().isPredicable())
+    return false;
+
+  if (MI.isCall() || isTailCall(MI)) {
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    if (!MF.getSubtarget<HexagonSubtarget>().usePredicatedCalls())
+      return false;
+  }
+  return true;
 }
 
 bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,

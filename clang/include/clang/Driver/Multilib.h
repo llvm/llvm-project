@@ -84,6 +84,7 @@ public:
     return *this;
   }
 
+  LLVM_DUMP_METHOD void dump() const;
   /// \brief print summary of the Multilib
   void print(raw_ostream &OS) const;
 
@@ -157,6 +158,7 @@ public:
 
   unsigned size() const { return Multilibs.size(); }
 
+  LLVM_DUMP_METHOD void dump() const;
   void print(raw_ostream &OS) const;
 
   MultilibSet &setIncludeDirsCallback(IncludeDirsFunc F) {

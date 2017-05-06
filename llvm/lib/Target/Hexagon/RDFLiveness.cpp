@@ -497,26 +497,33 @@ void Liveness::computePhiInfo() {
     //      = R1:0     u6     Not reached by d1 (covered collectively
     //                        by d3 and d5), but following reached
     //                        defs and uses from d1 will lead here.
-    auto InPhiDefs = [&PhiDefs] (NodeAddr<DefNode*> DA) -> bool {
-      return PhiDefs.count(DA.Id);
-    };
     for (auto UI = RealUses.begin(), UE = RealUses.end(); UI != UE; ) {
       // For each reached register UI->first, there is a set UI->second, of
       // uses of it. For each such use, check if it is reached by this phi,
       // i.e. check if the set of its reaching uses intersects the set of
       // this phi's defs.
-      NodeRefSet &Uses = UI->second;
-      for (auto I = Uses.begin(), E = Uses.end(); I != E; ) {
-        auto UA = DFG.addr<UseNode*>(I->first);
+      NodeRefSet Uses = UI->second;
+      UI->second.clear();
+      for (std::pair<NodeId,LaneBitmask> I : Uses) {
+        auto UA = DFG.addr<UseNode*>(I.first);
         // Undef flag is checked above.
         assert((UA.Addr->getFlags() & NodeAttrs::Undef) == 0);
-        RegisterRef R(UI->first, I->second);
-        NodeList RDs = getAllReachingDefs(R, UA);
-        // If none of the reaching defs of R are from this phi, remove this
-        // use of R.
-        I = any_of(RDs, InPhiDefs) ? std::next(I) : Uses.erase(I);
+        RegisterRef R(UI->first, I.second);
+        // Calculate the exposed part of the reached use.
+        RegisterAggr Covered(PRI);
+        for (NodeAddr<DefNode*> DA : getAllReachingDefs(R, UA)) {
+          if (PhiDefs.count(DA.Id))
+            break;
+          Covered.insert(DA.Addr->getRegRef(DFG));
+        }
+        if (RegisterRef RC = Covered.clearIn(R)) {
+          // We are updating the map for register UI->first, so we need
+          // to map RC to be expressed in terms of that register.
+          RegisterRef S = PRI.mapTo(RC, UI->first);
+          UI->second.insert({I.first, S.Mask});
+        }
       }
-      UI = Uses.empty() ? RealUses.erase(UI) : std::next(UI);
+      UI = UI->second.empty() ? RealUses.erase(UI) : std::next(UI);
     }
 
     // If this phi reaches some "real" uses, add it to the queue for upward
@@ -626,7 +633,7 @@ void Liveness::computePhiInfo() {
           const RegisterAggr &DRs = PhiDRs.at(P.first);
           if (!DRs.hasAliasOf(R))
             continue;
-          R = DRs.intersectWith(R);
+          R = PRI.mapTo(DRs.intersectWith(R), T.first);
           for (std::pair<NodeId,LaneBitmask> V : T.second) {
             LaneBitmask M = R.Mask & V.second;
             if (M.none())

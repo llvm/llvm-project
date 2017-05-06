@@ -213,21 +213,23 @@ uint64_t RegBankSelect::getRepairCost(
   return UINT_MAX;
 }
 
-RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
+const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     MachineInstr &MI, RegisterBankInfo::InstructionMappings &PossibleMappings,
     SmallVectorImpl<RepairingPlacement> &RepairPts) {
   assert(!PossibleMappings.empty() &&
          "Do not know how to map this instruction");
 
-  RegisterBankInfo::InstructionMapping *BestMapping = nullptr;
+  const RegisterBankInfo::InstructionMapping *BestMapping = nullptr;
   MappingCost Cost = MappingCost::ImpossibleCost();
   SmallVector<RepairingPlacement, 4> LocalRepairPts;
-  for (RegisterBankInfo::InstructionMapping &CurMapping : PossibleMappings) {
-    MappingCost CurCost = computeMapping(MI, CurMapping, LocalRepairPts, &Cost);
+  for (const RegisterBankInfo::InstructionMapping *CurMapping :
+       PossibleMappings) {
+    MappingCost CurCost =
+        computeMapping(MI, *CurMapping, LocalRepairPts, &Cost);
     if (CurCost < Cost) {
       DEBUG(dbgs() << "New best: " << CurCost << '\n');
       Cost = CurCost;
-      BestMapping = &CurMapping;
+      BestMapping = CurMapping;
       RepairPts.clear();
       for (RepairingPlacement &RepairPt : LocalRepairPts)
         RepairPts.emplace_back(std::move(RepairPt));
@@ -237,7 +239,7 @@ RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     // If none of the mapping worked that means they are all impossible.
     // Thus, pick the first one and set an impossible repairing point.
     // It will trigger the failed isel mode.
-    BestMapping = &(*PossibleMappings.begin());
+    BestMapping = *PossibleMappings.begin();
     RepairPts.emplace_back(
         RepairingPlacement(MI, 0, *TRI, *this, RepairingPlacement::Impossible));
   } else
@@ -543,10 +545,10 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   // Remember the repairing placement for all the operands.
   SmallVector<RepairingPlacement, 4> RepairPts;
 
-  RegisterBankInfo::InstructionMapping BestMapping;
+  const RegisterBankInfo::InstructionMapping *BestMapping;
   if (OptMode == RegBankSelect::Mode::Fast) {
-    BestMapping = RBI->getInstrMapping(MI);
-    MappingCost DefaultCost = computeMapping(MI, BestMapping, RepairPts);
+    BestMapping = &RBI->getInstrMapping(MI);
+    MappingCost DefaultCost = computeMapping(MI, *BestMapping, RepairPts);
     (void)DefaultCost;
     if (DefaultCost == MappingCost::ImpossibleCost())
       return false;
@@ -555,16 +557,16 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
         RBI->getInstrPossibleMappings(MI);
     if (PossibleMappings.empty())
       return false;
-    BestMapping = std::move(findBestMapping(MI, PossibleMappings, RepairPts));
+    BestMapping = &findBestMapping(MI, PossibleMappings, RepairPts);
   }
   // Make sure the mapping is valid for MI.
-  assert(BestMapping.verify(MI) && "Invalid instruction mapping");
+  assert(BestMapping->verify(MI) && "Invalid instruction mapping");
 
-  DEBUG(dbgs() << "Best Mapping: " << BestMapping << '\n');
+  DEBUG(dbgs() << "Best Mapping: " << *BestMapping << '\n');
 
   // After this call, MI may not be valid anymore.
   // Do not use it.
-  return applyMapping(MI, BestMapping, RepairPts);
+  return applyMapping(MI, *BestMapping, RepairPts);
 }
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {

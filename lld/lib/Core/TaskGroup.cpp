@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <stack>
+#include <thread>
 
 #if defined(_MSC_VER) && LLVM_ENABLE_THREADS
 #include <concrt.h>

@@ -60,6 +60,12 @@ void ThreadPlanCallUserExpression::GetDescription(
     ThreadPlanCallFunction::GetDescription(s, level);
 }
 
+void ThreadPlanCallUserExpression::DidPush() {
+  ThreadPlanCallFunction::DidPush();
+  if (m_user_expression_sp)
+    m_user_expression_sp->WillStartExecuting();
+}
+
 void ThreadPlanCallUserExpression::WillPop() {
   ThreadPlanCallFunction::WillPop();
   if (m_user_expression_sp)
@@ -112,4 +118,9 @@ StopInfoSP ThreadPlanCallUserExpression::GetRealStopInfo() {
   }
 
   return stop_info_sp;
+}
+
+void ThreadPlanCallUserExpression::DoTakedown(bool success) {
+  ThreadPlanCallFunction::DoTakedown(success);
+  m_user_expression_sp->DidFinishExecuting();
 }

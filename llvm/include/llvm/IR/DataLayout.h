@@ -1,4 +1,4 @@
-//===--------- llvm/DataLayout.h - Data size & alignment info ---*- C++ -*-===//
+//===- llvm/DataLayout.h - Data size & alignment info -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,27 +20,32 @@
 #ifndef LLVM_IR_DATALAYOUT_H
 #define LLVM_IR_DATALAYOUT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
 
 // This needs to be outside of the namespace, to avoid conflict with llvm-c
 // decl.
-typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
+using LLVMTargetDataRef = struct LLVMOpaqueTargetData *;
 
 namespace llvm {
 
-class Value;
-class StructType;
-class StructLayout;
-class Triple;
 class GlobalVariable;
 class LLVMContext;
-template<typename T>
-class ArrayRef;
+class Module;
+class StructLayout;
+class Triple;
+class Value;
 
 /// Enum used to categorize the alignment types stored by LayoutAlignElem
 enum AlignTypeEnum {
@@ -72,6 +77,7 @@ struct LayoutAlignElem {
 
   static LayoutAlignElem get(AlignTypeEnum align_type, unsigned abi_align,
                              unsigned pref_align, uint32_t bit_width);
+
   bool operator==(const LayoutAlignElem &rhs) const;
 };
 
@@ -90,6 +96,7 @@ struct PointerAlignElem {
   /// Initializer
   static PointerAlignElem get(uint32_t AddressSpace, unsigned ABIAlign,
                               unsigned PrefAlign, uint32_t TypeByteWidth);
+
   bool operator==(const PointerAlignElem &rhs) const;
 };
 
@@ -121,7 +128,7 @@ private:
 
   /// \brief Primitive type alignment data. This is sorted by type and bit
   /// width during construction.
-  typedef SmallVector<LayoutAlignElem, 16> AlignmentsTy;
+  using AlignmentsTy = SmallVector<LayoutAlignElem, 16>;
   AlignmentsTy Alignments;
 
   AlignmentsTy::const_iterator
@@ -136,7 +143,7 @@ private:
   /// \brief The string representation used to create this DataLayout
   std::string StringRepresentation;
 
-  typedef SmallVector<PointerAlignElem, 8> PointersTy;
+  using PointersTy = SmallVector<PointerAlignElem, 8>;
   PointersTy Pointers;
 
   PointersTy::const_iterator
@@ -147,7 +154,7 @@ private:
   PointersTy::iterator findPointerLowerBound(uint32_t AddressSpace);
 
   // The StructType -> StructLayout map.
-  mutable void *LayoutMap;
+  mutable void *LayoutMap = nullptr;
 
   /// Pointers in these address spaces are non-integral, and don't have a
   /// well-defined bitwise representation.
@@ -172,16 +179,16 @@ private:
 
 public:
   /// Constructs a DataLayout from a specification string. See reset().
-  explicit DataLayout(StringRef LayoutDescription) : LayoutMap(nullptr) {
+  explicit DataLayout(StringRef LayoutDescription) {
     reset(LayoutDescription);
   }
 
   /// Initialize target data from properties stored in the module.
   explicit DataLayout(const Module *M);
 
-  void init(const Module *M);
+  DataLayout(const DataLayout &DL) { *this = DL; }
 
-  DataLayout(const DataLayout &DL) : LayoutMap(nullptr) { *this = DL; }
+  ~DataLayout(); // Not virtual, do not subclass this class
 
   DataLayout &operator=(const DataLayout &DL) {
     clear();
@@ -200,7 +207,7 @@ public:
   bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
 
-  ~DataLayout(); // Not virtual, do not subclass this class
+  void init(const Module *M);
 
   /// Parse a data layout string (with fallback to default values).
   void reset(StringRef LayoutDescription);
@@ -489,6 +496,7 @@ class StructLayout {
   unsigned IsPadded : 1;
   unsigned NumElements : 31;
   uint64_t MemberOffsets[1]; // variable sized array!
+
 public:
   uint64_t getSizeInBytes() const { return StructSize; }
 
@@ -515,6 +523,7 @@ public:
 
 private:
   friend class DataLayout; // Only DataLayout can create this class
+
   StructLayout(StructType *ST, const DataLayout &DL);
 };
 
@@ -560,6 +569,6 @@ inline uint64_t DataLayout::getTypeSizeInBits(Type *Ty) const {
   }
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_DATALAYOUT_H
