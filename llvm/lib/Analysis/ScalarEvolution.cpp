@@ -4843,7 +4843,7 @@ ScalarEvolution::getRange(const SCEV *S,
 // argument defines if we treat Step as signed or unsigned.
 static ConstantRange getRangeForAffineARHelper(APInt Step,
                                                ConstantRange StartRange,
-                                               APInt MaxBECount,
+                                               const APInt &MaxBECount,
                                                unsigned BitWidth, bool Signed) {
   // If either Step or MaxBECount is 0, then the expression won't change, and we
   // just need to return the initial range.
@@ -4882,8 +4882,8 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   // if the expression is decreasing and will be increased by Offset otherwise.
   APInt StartLower = StartRange.getLower();
   APInt StartUpper = StartRange.getUpper() - 1;
-  APInt MovedBoundary =
-      Descending ? (StartLower - Offset) : (StartUpper + Offset);
+  APInt MovedBoundary = Descending ? (StartLower - std::move(Offset))
+                                   : (StartUpper + std::move(Offset));
 
   // It's possible that the new minimum/maximum value will fall into the initial
   // range (due to wrap around). This means that the expression can take any
@@ -4891,21 +4891,18 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   if (StartRange.contains(MovedBoundary))
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
-  APInt NewLower, NewUpper;
-  if (Descending) {
-    NewLower = MovedBoundary;
-    NewUpper = StartUpper;
-  } else {
-    NewLower = StartLower;
-    NewUpper = MovedBoundary;
-  }
+  APInt NewLower =
+      Descending ? std::move(MovedBoundary) : std::move(StartLower);
+  APInt NewUpper =
+      Descending ? std::move(StartUpper) : std::move(MovedBoundary);
+  NewUpper += 1;
 
   // If we end up with full range, return a proper full range.
-  if (NewLower == NewUpper + 1)
+  if (NewLower == NewUpper)
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
   // No overflow detected, return [StartLower, StartUpper + Offset + 1) range.
-  return ConstantRange(NewLower, NewUpper + 1);
+  return ConstantRange(std::move(NewLower), std::move(NewUpper));
 }
 
 ConstantRange ScalarEvolution::getRangeForAffineAR(const SCEV *Start,
