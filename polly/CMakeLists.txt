@@ -179,11 +179,25 @@ else()
   set(ISL_TARGET PollyISL)
 endif()
 
+option(POLLY_BUNDLED_JSONCPP "Use the bundled version of jsoncpp included in Polly" ON)
+if (POLLY_BUNDLED_JSONCPP)
+  set(JSONCPP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/lib/External/JSON/include")
+  set(JSONCPP_LIBRARIES)
+  set(POLLY_JSON_FILES
+    External/JSON/json_reader.cpp
+    External/JSON/json_value.cpp
+    External/JSON/json_writer.cpp
+  )
+else ()
+  find_package(Jsoncpp REQUIRED)
+  set(POLLY_JSON_FILES)
+endif ()
+
 include_directories(
   BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${ISL_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/JSON/include
+  ${JSONCPP_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/pet/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External
   ${CMAKE_CURRENT_BINARY_DIR}/include

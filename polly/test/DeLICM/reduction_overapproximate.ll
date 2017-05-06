@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
-; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-overapproximate-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
 ;
 ;    void func(double *A {
 ;      for (int j = -1; j < 3; j += 1) { /* outer */
@@ -69,9 +69,6 @@ return:
   ret void
 }
 
-; TODO: MemRef_phi__phi[] should be mapped to A[j-1] as as well, but it is
-;       occupied by %add. It is actually the same value but DeLICM currently
-;       does not known without the "Known"-extension.
 
 ; APPROX:      After accesses {
 ; APPROX-NEXT:     Stmt_reduction_checkloop
@@ -81,9 +78,11 @@ return:
 ; APPROX-NEXT:     Stmt_reduction_preheader
 ; APPROX-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_preheader[i0] -> MemRef_phi__phi[] };
+; APPROX-NEXT:            new: { Stmt_reduction_preheader[i0] -> MemRef_A[-1 + i0] : 2 <= i0 <= 3 };
 ; APPROX-NEXT:     Stmt_reduction_for
 ; APPROX-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi__phi[] };
+; APPROX-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[-1 + i0] : i0 <= 3 and i1 >= 0 and 2 - 3i0 <= i1 <= 11 - 3i0 and i1 <= 2 and i1 <= -2 + i0 };
 ; APPROX-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi[] };
 ; APPROX-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[-1 + i0] : i0 <= 3 and i1 >= 0 and 2 - 3i0 <= i1 <= 11 - 3i0 and i1 <= 2 and i1 <= -2 + i0 };
@@ -100,6 +99,7 @@ return:
 ; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[-1 + i0] : i0 <= 3 and 0 <= i1 <= -2 + i0 };
 ; APPROX-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_phi__phi[] };
+; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[2] : i0 <= 3 and 0 <= i1 <= -2 + i0 };
 ; APPROX-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_val__phi[] };
 ; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[-1 + i0] : 2 <= i0 <= 3 and 0 <= i1 <= -2 + i0 };
