@@ -1519,6 +1519,46 @@ static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
   return nullptr;
 }
 
+/// Test if a pair of compares with a shared operand and 2 constants has an
+/// empty set intersection, full set union, or if one compare is a superset of
+/// the other.
+static Value *simplifyAndOrOfICmpsWithConstants(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                                bool IsAnd) {
+  // Look for this pattern: {and/or} (icmp X, C0), (icmp X, C1)).
+  if (Cmp0->getOperand(0) != Cmp1->getOperand(0))
+    return nullptr;
+
+  const APInt *C0, *C1;
+  if (!match(Cmp0->getOperand(1), m_APInt(C0)) ||
+      !match(Cmp1->getOperand(1), m_APInt(C1)))
+    return nullptr;
+
+  auto Range0 = ConstantRange::makeExactICmpRegion(Cmp0->getPredicate(), *C0);
+  auto Range1 = ConstantRange::makeExactICmpRegion(Cmp1->getPredicate(), *C1);
+
+  // For and-of-comapares, check if the intersection is empty:
+  // (icmp X, C0) && (icmp X, C1) --> empty set --> false
+  if (IsAnd && Range0.intersectWith(Range1).isEmptySet())
+    return getFalse(Cmp0->getType());
+
+  // For or-of-compares, check if the union is full:
+  // (icmp X, C0) || (icmp X, C1) --> full set --> true
+  if (!IsAnd && Range0.unionWith(Range1).isFullSet())
+    return getTrue(Cmp0->getType());
+
+  // Is one range a superset of the other?
+  // If this is and-of-compares, take the smaller set:
+  // (icmp sgt X, 4) && (icmp sgt X, 42) --> icmp sgt X, 42
+  // If this is or-of-compares, take the larger set:
+  // (icmp sgt X, 4) || (icmp sgt X, 42) --> icmp sgt X, 4
+  if (Range0.contains(Range1))
+    return IsAnd ? Cmp1 : Cmp0;
+  if (Range1.contains(Range0))
+    return IsAnd ? Cmp0 : Cmp1;
+
+  return nullptr;
+}
+
 /// Commuted variants are assumed to be handled by calling this function again
 /// with the parameters swapped.
 static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
@@ -1528,29 +1568,14 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyAndOfICmpsWithSameOperands(Op0, Op1))
     return X;
 
-  // FIXME: This should be shared with or-of-icmps.
-  // Look for this pattern: (icmp V, C0) & (icmp V, C1)).
+  if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
+    return X;
+
+  // (icmp (add V, C0), C1) & (icmp V, C0)
   Type *ITy = Op0->getType();
   ICmpInst::Predicate Pred0, Pred1;
   const APInt *C0, *C1;
   Value *V;
-  if (match(Op0, m_ICmp(Pred0, m_Value(V), m_APInt(C0))) &&
-      match(Op1, m_ICmp(Pred1, m_Specific(V), m_APInt(C1)))) {
-    // Make a constant range that's the intersection of the two icmp ranges.
-    // If the intersection is empty, we know that the result is false.
-    auto Range0 = ConstantRange::makeExactICmpRegion(Pred0, *C0);
-    auto Range1 = ConstantRange::makeExactICmpRegion(Pred1, *C1);
-    if (Range0.intersectWith(Range1).isEmptySet())
-      return getFalse(ITy);
-
-    // If a range is a superset of the other, the smaller set is all we need.
-    if (Range0.contains(Range1))
-      return Op1;
-    if (Range1.contains(Range0))
-      return Op0;
-  }
-
-  // (icmp (add V, C0), C1) & (icmp V, C0)
   if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_APInt(C0)), m_APInt(C1))))
     return nullptr;
 
@@ -1598,6 +1623,9 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
     return X;
 
   if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
     return X;
 
   // (icmp (add V, C0), C1) | (icmp V, C0)
@@ -4066,20 +4094,13 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
   unsigned InVecNumElts = InVecTy->getVectorNumElements();
 
-  auto *Op0Const = dyn_cast<Constant>(Op0);
-  auto *Op1Const = dyn_cast<Constant>(Op1);
-
-  // If all operands are constant, constant fold the shuffle.
-  if (Op0Const && Op1Const)
-    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
-
   SmallVector<int, 32> Indices;
   ShuffleVectorInst::getShuffleMask(Mask, Indices);
   assert(MaskNumElts == Indices.size() &&
          "Size of Indices not same as number of mask elements?");
 
-  // If only one of the operands is constant, constant fold the shuffle if the
-  // mask does not select elements from the variable operand.
+  // Canonicalization: If mask does not select elements from an input vector,
+  // replace that input vector with undef.
   bool MaskSelects0 = false, MaskSelects1 = false;
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     if (Indices[i] == -1)
@@ -4089,23 +4110,41 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
     else
       MaskSelects1 = true;
   }
-  if (!MaskSelects0 && Op1Const)
-    return ConstantFoldShuffleVectorInstruction(UndefValue::get(InVecTy),
-                                                Op1Const, Mask);
-  if (!MaskSelects1 && Op0Const)
-    return ConstantFoldShuffleVectorInstruction(Op0Const,
-                                                UndefValue::get(InVecTy), Mask);
+  if (!MaskSelects0)
+    Op0 = UndefValue::get(InVecTy);
+  if (!MaskSelects1)
+    Op1 = UndefValue::get(InVecTy);
+
+  auto *Op0Const = dyn_cast<Constant>(Op0);
+  auto *Op1Const = dyn_cast<Constant>(Op1);
+
+  // If all operands are constant, constant fold the shuffle.
+  if (Op0Const && Op1Const)
+    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
+
+  // Canonicalization: if only one input vector is constant, it shall be the
+  // second one.
+  if (Op0Const && !Op1Const) {
+    std::swap(Op0, Op1);
+    for (int &Idx : Indices) {
+      if (Idx == -1)
+        continue;
+      Idx = Idx < (int)InVecNumElts ? Idx + InVecNumElts : Idx - InVecNumElts;
+      assert(Idx >= 0 && Idx < (int)InVecNumElts * 2 &&
+             "shufflevector mask index out of range");
+    }
+    Mask = ConstantDataVector::get(
+        Mask->getContext(),
+        makeArrayRef(reinterpret_cast<uint32_t *>(Indices.data()),
+                     MaskNumElts));
+  }
 
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
-    if (!MaskSelects1 && RetTy == InVecTy &&
+    if (isa<UndefValue>(Op1) && RetTy == InVecTy &&
         OpShuf->getMask()->getSplatValue())
       return Op0;
-  if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op1))
-    if (!MaskSelects0 && RetTy == InVecTy &&
-        OpShuf->getMask()->getSplatValue())
-      return Op1;
 
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.

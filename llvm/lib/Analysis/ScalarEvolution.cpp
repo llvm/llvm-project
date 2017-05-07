@@ -4800,7 +4800,7 @@ ScalarEvolution::getRange(const SCEV *S,
       }
     }
 
-    return setRange(AddRec, SignHint, ConservativeResult);
+    return setRange(AddRec, SignHint, std::move(ConservativeResult));
   }
 
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
@@ -4831,10 +4831,10 @@ ScalarEvolution::getRange(const SCEV *S,
                           APInt::getSignedMaxValue(BitWidth).ashr(NS - 1) + 1));
     }
 
-    return setRange(U, SignHint, ConservativeResult);
+    return setRange(U, SignHint, std::move(ConservativeResult));
   }
 
-  return setRange(S, SignHint, ConservativeResult);
+  return setRange(S, SignHint, std::move(ConservativeResult));
 }
 
 // Given a StartRange, Step and MaxBECount for an expression compute a range of
