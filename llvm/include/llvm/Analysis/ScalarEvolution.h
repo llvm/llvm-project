@@ -1569,7 +1569,7 @@ public:
   /// delinearization).
   void findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
                            SmallVectorImpl<const SCEV *> &Sizes,
-                           const SCEV *ElementSize) const;
+                           const SCEV *ElementSize);
 
   void print(raw_ostream &OS) const;
   void verify() const;

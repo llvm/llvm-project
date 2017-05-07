@@ -9626,7 +9626,7 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
 
 void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
                                           SmallVectorImpl<const SCEV *> &Sizes,
-                                          const SCEV *ElementSize) const {
+                                          const SCEV *ElementSize) {
   if (Terms.size() < 1 || !ElementSize)
     return;
 
@@ -9642,7 +9642,7 @@ void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
     });
 
   // Remove duplicates.
-  std::sort(Terms.begin(), Terms.end());
+  array_pod_sort(Terms.begin(), Terms.end());
   Terms.erase(std::unique(Terms.begin(), Terms.end()), Terms.end());
 
   // Put larger terms first.
@@ -9650,13 +9650,11 @@ void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
     return numberOfTerms(LHS) > numberOfTerms(RHS);
   });
 
-  ScalarEvolution &SE = *const_cast<ScalarEvolution *>(this);
-
   // Try to divide all terms by the element size. If term is not divisible by
   // element size, proceed with the original term.
   for (const SCEV *&Term : Terms) {
     const SCEV *Q, *R;
-    SCEVDivision::divide(SE, Term, ElementSize, &Q, &R);
+    SCEVDivision::divide(*this, Term, ElementSize, &Q, &R);
     if (!Q->isZero())
       Term = Q;
   }
@@ -9665,7 +9663,7 @@ void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
 
   // Remove constant factors.
   for (const SCEV *T : Terms)
-    if (const SCEV *NewT = removeConstantFactors(SE, T))
+    if (const SCEV *NewT = removeConstantFactors(*this, T))
       NewTerms.push_back(NewT);
 
   DEBUG({
@@ -9674,8 +9672,7 @@ void ScalarEvolution::findArrayDimensions(SmallVectorImpl<const SCEV *> &Terms,
         dbgs() << *T << "\n";
     });
 
-  if (NewTerms.empty() ||
-      !findArrayDimensionsRec(SE, NewTerms, Sizes)) {
+  if (NewTerms.empty() || !findArrayDimensionsRec(*this, NewTerms, Sizes)) {
     Sizes.clear();
     return;
   }
