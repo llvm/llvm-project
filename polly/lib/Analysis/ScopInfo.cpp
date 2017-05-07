@@ -154,10 +154,12 @@ static cl::opt<bool> PollyPreciseFoldAccesses(
              "(does not scale well)"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
-static cl::opt<bool> UseInstructionNames(
+bool polly::UseInstructionNames;
+static cl::opt<bool, true> XUseInstructionNames(
     "polly-use-llvm-names",
-    cl::desc("Use LLVM-IR names when deriving statement names"), cl::Hidden,
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::desc("Use LLVM-IR names when deriving statement names"),
+    cl::location(UseInstructionNames), cl::Hidden, cl::init(false),
+    cl::ZeroOrMore, cl::cat(PollyCategory));
 
 //===----------------------------------------------------------------------===//
 

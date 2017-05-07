@@ -392,8 +392,10 @@ define void @shuffle_v32i16_to_v8i16(<32 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX512BW-LABEL: shuffle_v32i16_to_v8i16:
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; AVX512BW-NEXT:    vpextrw $4, %xmm0, %eax
-; AVX512BW-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
 ; AVX512BW-NEXT:    vmovd %xmm2, %eax
 ; AVX512BW-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
@@ -416,8 +418,10 @@ define void @shuffle_v32i16_to_v8i16(<32 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v32i16_to_v8i16:
 ; AVX512BWVL:       # BB#0:
 ; AVX512BWVL-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; AVX512BWVL-NEXT:    vpextrw $4, %xmm0, %eax
-; AVX512BWVL-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
 ; AVX512BWVL-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
 ; AVX512BWVL-NEXT:    vmovd %xmm2, %eax
 ; AVX512BWVL-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1

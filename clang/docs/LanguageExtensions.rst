@@ -780,14 +780,14 @@ Use ``__has_feature(cxx_variadic_templates)`` or
 ``__has_extension(cxx_variadic_templates)`` to determine if support for
 variadic templates is enabled.
 
-C++1y
+C++14
 -----
 
-The features listed below are part of the committee draft for the C++1y
-standard.  As a result, all these features are enabled with the ``-std=c++1y``
-or ``-std=gnu++1y`` option when compiling C++ code.
+The features listed below are part of the C++14 standard.  As a result, all
+these features are enabled with the ``-std=C++14`` or ``-std=gnu++14`` option
+when compiling C++ code.
 
-C++1y binary literals
+C++14 binary literals
 ^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_binary_literals)`` or
@@ -795,37 +795,37 @@ Use ``__has_feature(cxx_binary_literals)`` or
 binary literals (for instance, ``0b10010``) are recognized. Clang supports this
 feature as an extension in all language modes.
 
-C++1y contextual conversions
+C++14 contextual conversions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_contextual_conversions)`` or
-``__has_extension(cxx_contextual_conversions)`` to determine if the C++1y rules
+``__has_extension(cxx_contextual_conversions)`` to determine if the C++14 rules
 are used when performing an implicit conversion for an array bound in a
 *new-expression*, the operand of a *delete-expression*, an integral constant
 expression, or a condition in a ``switch`` statement.
 
-C++1y decltype(auto)
+C++14 decltype(auto)
 ^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_decltype_auto)`` or
 ``__has_extension(cxx_decltype_auto)`` to determine if support
 for the ``decltype(auto)`` placeholder type is enabled.
 
-C++1y default initializers for aggregates
+C++14 default initializers for aggregates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_aggregate_nsdmi)`` or
 ``__has_extension(cxx_aggregate_nsdmi)`` to determine if support
 for default initializers in aggregate members is enabled.
 
-C++1y digit separators
+C++14 digit separators
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
 is no corresponding ``__has_feature`` name
 
-C++1y generalized lambda capture
+C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_init_captures)`` or
@@ -833,7 +833,7 @@ Use ``__has_feature(cxx_init_captures)`` or
 lambda captures with explicit initializers is enabled
 (for instance, ``[n(0)] { return ++n; }``).
 
-C++1y generic lambdas
+C++14 generic lambdas
 ^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_generic_lambdas)`` or
@@ -841,7 +841,7 @@ Use ``__has_feature(cxx_generic_lambdas)`` or
 (polymorphic) lambdas is enabled
 (for instance, ``[] (auto x) { return x + 1; }``).
 
-C++1y relaxed constexpr
+C++14 relaxed constexpr
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_relaxed_constexpr)`` or
@@ -849,7 +849,7 @@ Use ``__has_feature(cxx_relaxed_constexpr)`` or
 declarations, local variable modification, and control flow constructs
 are permitted in ``constexpr`` functions.
 
-C++1y return type deduction
+C++14 return type deduction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_return_type_deduction)`` or
@@ -857,7 +857,7 @@ Use ``__has_feature(cxx_return_type_deduction)`` or
 for return type deduction for functions (using ``auto`` as a return type)
 is enabled.
 
-C++1y runtime-sized arrays
+C++14 runtime-sized arrays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_runtime_array)`` or
@@ -866,7 +866,7 @@ for arrays of runtime bound (a restricted form of variable-length arrays)
 is enabled.
 Clang's implementation of this feature is incomplete.
 
-C++1y variable templates
+C++14 variable templates
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_variable_templates)`` or

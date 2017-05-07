@@ -2970,7 +2970,7 @@ static const APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
   else if (ABW < BBW)
     A = A.zext(BBW);
 
-  return APIntOps::GreatestCommonDivisor(A, B);
+  return APIntOps::GreatestCommonDivisor(std::move(A), std::move(B));
 }
 
 /// Get a canonical unsigned division expression, or something simpler if
@@ -4843,7 +4843,7 @@ ScalarEvolution::getRange(const SCEV *S,
 // argument defines if we treat Step as signed or unsigned.
 static ConstantRange getRangeForAffineARHelper(APInt Step,
                                                ConstantRange StartRange,
-                                               APInt MaxBECount,
+                                               const APInt &MaxBECount,
                                                unsigned BitWidth, bool Signed) {
   // If either Step or MaxBECount is 0, then the expression won't change, and we
   // just need to return the initial range.
@@ -4882,8 +4882,8 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   // if the expression is decreasing and will be increased by Offset otherwise.
   APInt StartLower = StartRange.getLower();
   APInt StartUpper = StartRange.getUpper() - 1;
-  APInt MovedBoundary =
-      Descending ? (StartLower - Offset) : (StartUpper + Offset);
+  APInt MovedBoundary = Descending ? (StartLower - std::move(Offset))
+                                   : (StartUpper + std::move(Offset));
 
   // It's possible that the new minimum/maximum value will fall into the initial
   // range (due to wrap around). This means that the expression can take any
@@ -4891,21 +4891,18 @@ static ConstantRange getRangeForAffineARHelper(APInt Step,
   if (StartRange.contains(MovedBoundary))
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
-  APInt NewLower, NewUpper;
-  if (Descending) {
-    NewLower = MovedBoundary;
-    NewUpper = StartUpper;
-  } else {
-    NewLower = StartLower;
-    NewUpper = MovedBoundary;
-  }
+  APInt NewLower =
+      Descending ? std::move(MovedBoundary) : std::move(StartLower);
+  APInt NewUpper =
+      Descending ? std::move(StartUpper) : std::move(MovedBoundary);
+  NewUpper += 1;
 
   // If we end up with full range, return a proper full range.
-  if (NewLower == NewUpper + 1)
+  if (NewLower == NewUpper)
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
   // No overflow detected, return [StartLower, StartUpper + Offset + 1) range.
-  return ConstantRange(NewLower, NewUpper + 1);
+  return ConstantRange(std::move(NewLower), std::move(NewUpper));
 }
 
 ConstantRange ScalarEvolution::getRangeForAffineAR(const SCEV *Start,
@@ -8943,7 +8940,7 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
   if (!Addend)
     return false;
 
-  APInt ConstFoundRHS = cast<SCEVConstant>(FoundRHS)->getAPInt();
+  const APInt &ConstFoundRHS = cast<SCEVConstant>(FoundRHS)->getAPInt();
 
   // `FoundLHSRange` is the range we know `FoundLHS` to be in by virtue of the
   // antecedent "`FoundLHS` `Pred` `FoundRHS`".
@@ -8955,7 +8952,7 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
 
   // We can also compute the range of values for `LHS` that satisfy the
   // consequent, "`LHS` `Pred` `RHS`":
-  APInt ConstRHS = cast<SCEVConstant>(RHS)->getAPInt();
+  const APInt &ConstRHS = cast<SCEVConstant>(RHS)->getAPInt();
   ConstantRange SatisfyingLHSRange =
       ConstantRange::makeSatisfyingICmpRegion(Pred, ConstRHS);
 
@@ -8980,7 +8977,7 @@ bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
                                 .getSignedMax();
 
     // SMaxRHS + SMaxStrideMinusOne > SMaxValue => overflow!
-    return (MaxValue - MaxStrideMinusOne).slt(MaxRHS);
+    return (std::move(MaxValue) - std::move(MaxStrideMinusOne)).slt(MaxRHS);
   }
 
   APInt MaxRHS = getUnsignedRange(RHS).getUnsignedMax();
@@ -8989,7 +8986,7 @@ bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
                               .getUnsignedMax();
 
   // UMaxRHS + UMaxStrideMinusOne > UMaxValue => overflow!
-  return (MaxValue - MaxStrideMinusOne).ult(MaxRHS);
+  return (std::move(MaxValue) - std::move(MaxStrideMinusOne)).ult(MaxRHS);
 }
 
 bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
@@ -9006,7 +9003,7 @@ bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
                                .getSignedMax();
 
     // SMinRHS - SMaxStrideMinusOne < SMinValue => overflow!
-    return (MinValue + MaxStrideMinusOne).sgt(MinRHS);
+    return (std::move(MinValue) + std::move(MaxStrideMinusOne)).sgt(MinRHS);
   }
 
   APInt MinRHS = getUnsignedRange(RHS).getUnsignedMin();
@@ -9015,7 +9012,7 @@ bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
                             .getUnsignedMax();
 
   // UMinRHS - UMaxStrideMinusOne < UMinValue => overflow!
-  return (MinValue + MaxStrideMinusOne).ugt(MinRHS);
+  return (std::move(MinValue) + std::move(MaxStrideMinusOne)).ugt(MinRHS);
 }
 
 const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta, const SCEV *Step,
@@ -9306,9 +9303,8 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
     // the upper value of the range must be the first possible exit value.
     // If A is negative then the lower of the range is the last possible loop
     // value.  Also note that we already checked for a full range.
-    APInt One(BitWidth,1);
     APInt A = cast<SCEVConstant>(getOperand(1))->getAPInt();
-    APInt End = A.sge(One) ? (Range.getUpper() - One) : Range.getLower();
+    APInt End = A.sge(1) ? (Range.getUpper() - 1) : Range.getLower();
 
     // The exit value should be (End+A)/A.
     APInt ExitVal = (End + A).udiv(A);
@@ -9324,7 +9320,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
     // Ensure that the previous value is in the range.  This is a sanity check.
     assert(Range.contains(
            EvaluateConstantChrecAtConstant(this,
-           ConstantInt::get(SE.getContext(), ExitVal - One), SE)->getValue()) &&
+           ConstantInt::get(SE.getContext(), ExitVal - 1), SE)->getValue()) &&
            "Linear scev computation is off in a bad way!");
     return SE.getConstant(ExitValue);
   } else if (isQuadratic()) {
