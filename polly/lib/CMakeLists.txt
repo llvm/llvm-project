@@ -1,11 +1,5 @@
 set(LLVM_NO_RTTI 1)
 
-set(POLLY_JSON_FILES
-    External/JSON/json_reader.cpp
-    External/JSON/json_value.cpp
-    External/JSON/json_writer.cpp
-)
-
 set(ISL_CODEGEN_FILES
     CodeGen/IslAst.cpp
     CodeGen/IslExprBuilder.cpp
@@ -77,6 +71,7 @@ set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
 add_polly_library(Polly $<TARGET_OBJECTS:PollyCore>)
 target_link_libraries(Polly
   ${ISL_TARGET}
+  ${JSONCPP_LIBRARIES}
 )
 
 # Additional dependencies for Polly-ACC.
@@ -158,7 +153,7 @@ else ()
   # hosts. This is not the case for bugpoint. Use LLVM_POLLY_LINK_INTO_TOOLS=ON
   # instead which will automatically resolve the additional dependencies by
   # Polly.
-  target_link_libraries(LLVMPolly ${ISL_TARGET})
+  target_link_libraries(LLVMPolly ${ISL_TARGET} ${JSONCPP_LIBRARIES})
   if (GPU_CODEGEN)
     target_link_libraries(LLVMPolly PollyPPCG)
   endif ()

@@ -1303,70 +1303,39 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ; SSE41-NEXT:    andl $7, %r8d
 ; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $7, %r9d
-; SSE41-NEXT:    movzwl -40(%rsp,%rdi,2), %eax
-; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    pinsrw $1, -24(%rsp,%rsi,2), %xmm1
-; SSE41-NEXT:    pinsrw $2, -40(%rsp,%rdx,2), %xmm1
-; SSE41-NEXT:    pinsrw $3, -24(%rsp,%rcx,2), %xmm1
-; SSE41-NEXT:    pinsrw $4, -40(%rsp,%r8,2), %xmm1
-; SSE41-NEXT:    pinsrw $5, -24(%rsp,%r9,2), %xmm1
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; SSE41-NEXT:    pinsrw $0, -40(%rsp,%rdi,2), %xmm0
+; SSE41-NEXT:    pinsrw $1, -24(%rsp,%rsi,2), %xmm0
+; SSE41-NEXT:    pinsrw $2, -40(%rsp,%rdx,2), %xmm0
+; SSE41-NEXT:    pinsrw $3, -24(%rsp,%rcx,2), %xmm0
+; SSE41-NEXT:    pinsrw $4, -40(%rsp,%r8,2), %xmm0
+; SSE41-NEXT:    pinsrw $5, -24(%rsp,%r9,2), %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    # kill: %R9D<def> %R9D<kill> %R9<def>
-; AVX1-NEXT:    # kill: %R8D<def> %R8D<kill> %R8<def>
-; AVX1-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
-; AVX1-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<def>
-; AVX1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; AVX1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; AVX1-NEXT:    andl $7, %edi
-; AVX1-NEXT:    andl $7, %esi
-; AVX1-NEXT:    andl $7, %edx
-; AVX1-NEXT:    andl $7, %ecx
-; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    andl $7, %r8d
-; AVX1-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    andl $7, %r9d
-; AVX1-NEXT:    movzwl -40(%rsp,%rdi,2), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $2, -40(%rsp,%rdx,2), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $4, -40(%rsp,%r8,2), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $5, -24(%rsp,%r9,2), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    # kill: %R9D<def> %R9D<kill> %R9<def>
-; AVX2-NEXT:    # kill: %R8D<def> %R8D<kill> %R8<def>
-; AVX2-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
-; AVX2-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<def>
-; AVX2-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; AVX2-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; AVX2-NEXT:    andl $7, %edi
-; AVX2-NEXT:    andl $7, %esi
-; AVX2-NEXT:    andl $7, %edx
-; AVX2-NEXT:    andl $7, %ecx
-; AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    andl $7, %r8d
-; AVX2-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    andl $7, %r9d
-; AVX2-NEXT:    movzwl -40(%rsp,%rdi,2), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, -40(%rsp,%rdx,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $4, -40(%rsp,%r8,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $5, -24(%rsp,%r9,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
-; AVX2-NEXT:    retq
+; AVX-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
+; AVX:       # BB#0:
+; AVX-NEXT:    # kill: %R9D<def> %R9D<kill> %R9<def>
+; AVX-NEXT:    # kill: %R8D<def> %R8D<kill> %R8<def>
+; AVX-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
+; AVX-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<def>
+; AVX-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; AVX-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; AVX-NEXT:    andl $7, %edi
+; AVX-NEXT:    andl $7, %esi
+; AVX-NEXT:    andl $7, %edx
+; AVX-NEXT:    andl $7, %ecx
+; AVX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    andl $7, %r8d
+; AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    andl $7, %r9d
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, -40(%rsp,%rdi,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $2, -40(%rsp,%rdx,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $4, -40(%rsp,%r8,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $5, -24(%rsp,%r9,2), %xmm0, %xmm0
+; AVX-NEXT:    retq
   %x0 = extractelement <8 x i16> %x, i16 %i0
   %y1 = extractelement <8 x i16> %y, i16 %i1
   %x2 = extractelement <8 x i16> %x, i16 %i2

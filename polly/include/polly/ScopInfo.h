@@ -66,6 +66,8 @@ class ScopBuilder;
 
 //===---------------------------------------------------------------------===//
 
+extern bool UseInstructionNames;
+
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
   ALIASING,

@@ -182,6 +182,7 @@ static void makeIslCompatible(std::string &str) {
   replace(str, "\"", "_");
   replace(str, " ", "__");
   replace(str, "=>", "TO");
+  replace(str, "+", "_");
 }
 
 std::string polly::getIslCompatibleName(const std::string &Prefix,
