@@ -144,7 +144,7 @@ define i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -153,7 +153,7 @@ declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32, 
 
 ; Function Attrs: nounwind argmemonly
 define i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -161,7 +161,7 @@ define i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) 
 declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapinc(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -169,7 +169,7 @@ define i32 @__atomic_wrapinc(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
 declare i32 @llvm.amdgcn.atomic.inc.i32.p4i32(i32 addrspace(4)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -177,7 +177,7 @@ define i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val)
 declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -185,7 +185,7 @@ define i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) 
 declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #4
 
 define i32 @__atomic_wrapdec(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
-  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 1)
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture %addr, i32 %val, i32 7, i32 1, i1 0)
   ret i32 %ret
 }
 
@@ -213,17 +213,20 @@ define i32 @get_group_segment_size() #0 {
   ret i32 %2
 }
 
-define i8 addrspace(3)* @get_group_segment_base_pointer() #0 {
+define i8 addrspace(4)* @get_group_segment_base_pointer() #0 {
   ; XXX For some reason getreg may return strange values for LDS_BASE
   ; temporary fix as 0 for now
-
+ 
   ;%1 = call i32 @llvm.amdgcn.s.getreg(i32 14342) #0
-  ;%2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
-  ;%3 = inttoptr i32 %2 to i8 addrspace(3)*
-  ;ret i8 addrspace(3)* %3
+  %1 = add i32 0, 0
+  %2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
 
-  %1 = inttoptr i32 0 to i8 addrspace(3)*
-  ret i8 addrspace(3)* %1
+  ; make it a pointer to LDS first...
+  %3 = inttoptr i32 %2 to i8 addrspace(3)*
+
+  ; then convert to generic address space
+  %4 = addrspacecast i8 addrspace(3)* %3 to i8 addrspace(4)*
+  ret i8 addrspace(4)* %4
 }
 
 define i32 @get_static_group_segment_size() #1 {
@@ -231,12 +234,12 @@ define i32 @get_static_group_segment_size() #1 {
   ret i32 %ret
 }
 
-define i8 addrspace(3)* @get_dynamic_group_segment_base_pointer() #0 {
-  %1 = tail call i8 addrspace(3)* @get_group_segment_base_pointer() #0
+define i8 addrspace(4)* @get_dynamic_group_segment_base_pointer() #0 {
+  %1 = tail call i8 addrspace(4)* @get_group_segment_base_pointer() #0
   %2 = tail call i32 @get_static_group_segment_size() #1
   %3 = zext i32 %2 to i64
-  %4 = getelementptr inbounds i8, i8 addrspace(3)* %1, i64 %3
-  ret i8 addrspace(3)* %4
+  %4 = getelementptr inbounds i8, i8 addrspace(4)* %1, i64 %3
+  ret i8 addrspace(4)* %4
 }
 
 declare i32 @llvm.amdgcn.s.getreg(i32) #0
