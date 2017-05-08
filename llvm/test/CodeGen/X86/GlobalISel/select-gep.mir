@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
+
+--- |
+  define i32* @test_gep_i32(i32* %arr) {
+    %arrayidx = getelementptr i32, i32* %arr, i32 5
+    ret i32* %arrayidx
+  }
+...
+---
+name:            test_gep_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            test_gep_i32
+# CHECK: registers:
+# CHECK-NEXT: - { id: 0, class: gr64 }
+# CHECK-NEXT: - { id: 1, class: gr64_nosp }
+# CHECK-NEXT: - { id: 2, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# CHECK:  body:
+# CHECK:       %1 = MOV64ri32 20
+# CHECK-NEXT:  %2 = LEA64r %0, 1, %1, 0, _
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_CONSTANT i64 20
+    %2(p0) = G_GEP %0, %1(s64)
+    %rax = COPY %2(p0)
+    RET 0, implicit %rax
+
+...

@@ -506,6 +506,7 @@ protected:
   bool selectCast(const User *I, unsigned Opcode);
   bool selectExtractValue(const User *I);
   bool selectInsertValue(const User *I);
+  bool selectXRayCustomEvent(const CallInst *II);
 
 private:
   /// \brief Handle PHI nodes in successor blocks.

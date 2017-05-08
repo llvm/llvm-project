@@ -44,6 +44,7 @@
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
@@ -121,6 +122,10 @@ private:
                            uint32_t RelocOffset, uint32_t Offset,
                            StringRef *RelocSym = nullptr);
 
+  void printResourceDirectoryTable(ResourceSectionRef RSF,
+                                   const coff_resource_dir_table &Table,
+                                   StringRef Level);
+
   void printBinaryBlockWithRelocs(StringRef Label, const SectionRef &Sec,
                                   StringRef SectionContents, StringRef Block);
 
@@ -140,6 +145,9 @@ private:
   void printDelayImportedSymbols(
       const DelayImportDirectoryEntryRef &I,
       iterator_range<imported_symbol_iterator> Range);
+  ErrorOr<const coff_resource_dir_entry &>
+  getResourceDirectoryTableEntry(const coff_resource_dir_table &Table,
+                                 uint32_t Index);
 
   typedef DenseMap<const coff_section*, std::vector<RelocationRef> > RelocMapTy;
 
@@ -533,6 +541,29 @@ static const EnumEntry<uint8_t> FileChecksumKindNames[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
 };
+
+static const EnumEntry<COFF::ResourceTypeID> ResourceTypeNames[]{
+    {"kRT_CURSOR (ID 1)", COFF::RID_Cursor},
+    {"kRT_BITMAP (ID 2)", COFF::RID_Bitmap},
+    {"kRT_ICON (ID 3)", COFF::RID_Icon},
+    {"kRT_MENU (ID 4)", COFF::RID_Menu},
+    {"kRT_DIALOG (ID 5)", COFF::RID_Dialog},
+    {"kRT_STRING (ID 6)", COFF::RID_String},
+    {"kRT_FONTDIR (ID 7)", COFF::RID_FontDir},
+    {"kRT_FONT (ID 8)", COFF::RID_Font},
+    {"kRT_ACCELERATOR (ID 9)", COFF::RID_Accelerator},
+    {"kRT_RCDATA (ID 10)", COFF::RID_RCData},
+    {"kRT_MESSAGETABLE (ID 11)", COFF::RID_MessageTable},
+    {"kRT_GROUP_CURSOR (ID 12)", COFF::RID_Group_Cursor},
+    {"kRT_GROUP_ICON (ID 14)", COFF::RID_Group_Icon},
+    {"kRT_VERSION (ID 16)", COFF::RID_Version},
+    {"kRT_DLGINCLUDE (ID 17)", COFF::RID_DLGInclude},
+    {"kRT_PLUGPLAY (ID 19)", COFF::RID_PlugPlay},
+    {"kRT_VXD (ID 20)", COFF::RID_VXD},
+    {"kRT_ANICURSOR (ID 21)", COFF::RID_AniCursor},
+    {"kRT_ANIICON (ID 22)", COFF::RID_AniIcon},
+    {"kRT_HTML (ID 23)", COFF::RID_HTML},
+    {"kRT_MANIFEST (ID 24)", COFF::RID_Manifest}};
 
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
@@ -1503,16 +1534,74 @@ void COFFDumper::printCOFFResources() {
     error(S.getContents(Ref));
 
     if ((Name == ".rsrc") || (Name == ".rsrc$01")) {
-      auto Table =
-          reinterpret_cast<const coff_resource_dir_table *>(Ref.data());
-      char FormattedTime[20];
-      time_t TDS = time_t(Table->TimeDateStamp);
-      strftime(FormattedTime, sizeof(FormattedTime), "%Y-%m-%d %H:%M:%S",
-               gmtime(&TDS));
-      W.printHex("Time/Date Stamp", FormattedTime, Table->TimeDateStamp);
+      ResourceSectionRef RSF(Ref);
+      auto &BaseTable = unwrapOrError(RSF.getBaseTable());
+      printResourceDirectoryTable(RSF, BaseTable, "Type");
     }
-    W.printBinaryBlock(Name.str() + " Data", Ref);
+    if (opts::SectionData)
+      W.printBinaryBlock(Name.str() + " Data", Ref);
   }
+}
+
+void COFFDumper::printResourceDirectoryTable(
+    ResourceSectionRef RSF, const coff_resource_dir_table &Table,
+    StringRef Level) {
+  W.printNumber("String Name Entries", Table.NumberOfNameEntries);
+  W.printNumber("ID Entries", Table.NumberOfIDEntries);
+
+  char FormattedTime[20] = {};
+  time_t TDS = time_t(Table.TimeDateStamp);
+  strftime(FormattedTime, 20, "%Y-%m-%d %H:%M:%S", gmtime(&TDS));
+
+  // Iterate through level in resource directory tree.
+  for (int i = 0; i < Table.NumberOfNameEntries + Table.NumberOfIDEntries;
+       i++) {
+    auto Entry = unwrapOrError(getResourceDirectoryTableEntry(Table, i));
+    StringRef Name;
+    SmallString<20> IDStr;
+    raw_svector_ostream OS(IDStr);
+    if (i < Table.NumberOfNameEntries) {
+      ArrayRef<UTF16> RawEntryNameString = unwrapOrError(RSF.getEntryNameString(Entry));
+      std::string EntryNameString;
+      if (!llvm::convertUTF16ToUTF8String(RawEntryNameString, EntryNameString))
+        error(object_error::parse_failed);
+      OS << ": ";
+      OS << EntryNameString;
+    } else {
+      if (Level == "Type") {
+        ScopedPrinter Printer(OS);
+        Printer.printEnum("", Entry.Identifier.ID,
+                          makeArrayRef(ResourceTypeNames));
+        IDStr = IDStr.slice(0, IDStr.find_first_of(")", 0) + 1);
+      } else {
+        OS << ": (ID " << Entry.Identifier.ID << ")";
+      }
+    }
+    Name = StringRef(IDStr);
+    ListScope ResourceType(W, Level.str() + Name.str());
+    if (Entry.Offset.isSubDir()) {
+      StringRef NextLevel;
+      if (Level == "Name")
+        NextLevel = "Language";
+      else
+        NextLevel = "Name";
+      auto &NextTable = unwrapOrError(RSF.getEntrySubDir(Entry));
+      printResourceDirectoryTable(RSF, NextTable, NextLevel);
+    } else {
+      W.printHex("Time/Date Stamp", FormattedTime, Table.TimeDateStamp);
+      W.printNumber("Major Version", Table.MajorVersion);
+      W.printNumber("Minor Version", Table.MinorVersion);
+    }
+  }
+}
+
+ErrorOr<const coff_resource_dir_entry &>
+COFFDumper::getResourceDirectoryTableEntry(const coff_resource_dir_table &Table,
+                                           uint32_t Index) {
+  if (Index >= (uint32_t)(Table.NumberOfNameEntries + Table.NumberOfIDEntries))
+    return object_error::parse_failed;
+  auto TablePtr = reinterpret_cast<const coff_resource_dir_entry *>(&Table + 1);
+  return TablePtr[Index];
 }
 
 void COFFDumper::printStackMap() const {

@@ -355,7 +355,7 @@ public:
                                             std::move(Deserialize)));
       KeyName = &I->first;
     }
-    
+
     {
       assert(KeyName != nullptr && "No keyname pointer");
       std::lock_guard<std::recursive_mutex> Lock(SerializersMutex);
@@ -370,7 +370,7 @@ public:
         };
     }
   }
-  
+
   static Error serialize(ChannelT &C, Error &&Err) {
     std::lock_guard<std::recursive_mutex> Lock(SerializersMutex);
 

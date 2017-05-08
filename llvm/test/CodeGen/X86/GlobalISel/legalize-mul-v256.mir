@@ -1,0 +1,111 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL
+--- |
+  define <16 x i16> @test_mul_v16i16(<16 x i16> %arg1, <16 x i16> %arg2) #0 {
+    %ret = mul <16 x i16> %arg1, %arg2
+    ret <16 x i16> %ret
+  }
+
+  define <8 x i32> @test_mul_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) #0 {
+    %ret = mul <8 x i32> %arg1, %arg2
+    ret <8 x i32> %ret
+  }
+
+  define <4 x i64> @test_mul_v4i64(<4 x i64> %arg1, <4 x i64> %arg2) #1 {
+    %ret = mul <4 x i64> %arg1, %arg2
+    ret <4 x i64> %ret
+  }
+
+  attributes #0 = { "target-features"="+avx2" }
+  attributes #1 = { "target-features"="+avx2,+avx512vl,+avx512f,+avx512dq" }
+
+...
+---
+name:            test_mul_v16i16
+# ALL-LABEL: name:  test_mul_v16i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _ }
+# ALL-NEXT:   - { id: 1, class: _ }
+# ALL-NEXT:   - { id: 2, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<16 x s16>) = COPY %ymm0
+# ALL-NEXT:     %1(<16 x s16>) = COPY %ymm1
+# ALL-NEXT:     %2(<16 x s16>) = G_MUL %0, %1
+# ALL-NEXT:     %ymm0 = COPY %2(<16 x s16>)
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s16>) = COPY %ymm0
+    %1(<16 x s16>) = COPY %ymm1
+    %2(<16 x s16>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<16 x s16>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v8i32
+# ALL-LABEL: name:  test_mul_v8i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _ }
+# ALL-NEXT:   - { id: 1, class: _ }
+# ALL-NEXT:   - { id: 2, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<8 x s32>) = COPY %ymm0
+# ALL-NEXT:     %1(<8 x s32>) = COPY %ymm1
+# ALL-NEXT:     %2(<8 x s32>) = G_MUL %0, %1
+# ALL-NEXT:     %ymm0 = COPY %2(<8 x s32>)
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<8 x s32>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v4i64
+# ALL-LABEL: name:  test_mul_v4i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _ }
+# ALL-NEXT:   - { id: 1, class: _ }
+# ALL-NEXT:   - { id: 2, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<4 x s64>) = COPY %ymm0
+# ALL-NEXT:     %1(<4 x s64>) = COPY %ymm1
+# ALL-NEXT:     %2(<4 x s64>) = G_MUL %0, %1
+# ALL-NEXT:     %ymm0 = COPY %2(<4 x s64>)
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<4 x s64>) = COPY %ymm0
+    %1(<4 x s64>) = COPY %ymm1
+    %2(<4 x s64>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<4 x s64>)
+    RET 0, implicit %ymm0
+
+...

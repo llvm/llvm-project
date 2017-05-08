@@ -661,17 +661,6 @@ define i1 @test47(i8 signext %c)  {
   ret i1 %or
 }
 
-define i1 @test48(i64 %x, i1 %b) {
-; CHECK-LABEL: @test48(
-; CHECK-NEXT:    ret i1 true
-;
-  %1 = icmp ult i64 %x, 2305843009213693952
-  %2 = icmp ugt i64 %x, 2305843009213693951
-  %.b = or i1 %2, %b
-  %3 = or i1 %1, %.b
-  ret i1 %3
-}
-
 define i32 @test49(i1 %C) {
 ; CHECK-LABEL: @test49(
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], i32 1019, i32 123

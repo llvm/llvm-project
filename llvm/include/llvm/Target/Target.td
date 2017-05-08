@@ -1002,6 +1002,16 @@ def PATCHABLE_TAIL_CALL : Instruction {
   let hasSideEffects = 1;
   let isReturn = 1;
 }
+def PATCHABLE_EVENT_CALL : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptr_rc:$event, i8imm:$size);
+  let AsmString = "# XRay Custom Event Log.";
+  let usesCustomInserter = 1;
+  let isCall = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+}
 def FENTRY_CALL : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);

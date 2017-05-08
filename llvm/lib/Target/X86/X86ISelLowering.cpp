@@ -26517,6 +26517,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
+    
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+    // Do nothing here, handle in xray instrumentation pass.
+    return BB;
 
   case X86::LCMPXCHG8B: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();

@@ -38,6 +38,11 @@ private:
   void setLegalizerInfo64bit();
   void setLegalizerInfoSSE1();
   void setLegalizerInfoSSE2();
+  void setLegalizerInfoSSE41();
+  void setLegalizerInfoAVX2();
+  void setLegalizerInfoAVX512();
+  void setLegalizerInfoAVX512DQ();
+  void setLegalizerInfoAVX512BW();
 };
 } // namespace llvm
 #endif

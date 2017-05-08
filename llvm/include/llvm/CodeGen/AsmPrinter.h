@@ -226,6 +226,7 @@ public:
     FUNCTION_EXIT = 1,
     TAIL_CALL = 2,
     LOG_ARGS_ENTER = 3,
+    CUSTOM_EVENT = 4,
   };
 
   // The table will contain these structs that point to the sled, the function

@@ -2142,4 +2142,23 @@ TEST(APIntTest, sext) {
   EXPECT_EQ(63U, i32_neg1.countPopulation());
 }
 
+TEST(APIntTest, multiply) {
+  APInt i64(64, 1234);
+
+  EXPECT_EQ(7006652, i64 * 5678);
+  EXPECT_EQ(7006652, 5678 * i64);
+
+  APInt i128 = APInt::getOneBitSet(128, 64);
+  APInt i128_1234(128, 1234);
+  i128_1234 <<= 64;
+  EXPECT_EQ(i128_1234, i128 * 1234);
+  EXPECT_EQ(i128_1234, 1234 * i128);
+
+  APInt i96 = APInt::getOneBitSet(96, 64);
+  i96 *= ~0ULL;
+  EXPECT_EQ(32U, i96.countLeadingOnes());
+  EXPECT_EQ(32U, i96.countPopulation());
+  EXPECT_EQ(64U, i96.countTrailingZeros());
+}
+
 } // end anonymous namespace

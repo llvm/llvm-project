@@ -1092,7 +1092,7 @@ Function *FunctionAST::codegen() {
   TheFunction->eraseFromParent();
 
   if (P.isBinaryOp())
-    BinopPrecedence.erase(Proto->getOperatorName());
+    BinopPrecedence.erase(P.getOperatorName());
   return nullptr;
 }
 
