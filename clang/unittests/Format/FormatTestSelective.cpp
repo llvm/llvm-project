@@ -325,7 +325,7 @@ TEST_F(FormatTestSelective, WrongIndent) {
 }
 
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {
-  Style.AlignEscapedNewlinesLeft = true;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   EXPECT_EQ("int  i;\n"
             "#define A \\\n"
             "  int i;  \\\n"
@@ -467,7 +467,7 @@ TEST_F(FormatTestSelective, ReformatRegionAdjustsIndent) {
 TEST_F(FormatTestSelective, UnderstandsTabs) {
   Style.IndentWidth = 8;
   Style.UseTab = FormatStyle::UT_Always;
-  Style.AlignEscapedNewlinesLeft = true;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   EXPECT_EQ("void f() {\n"
             "\tf();\n"
             "\tg();\n"

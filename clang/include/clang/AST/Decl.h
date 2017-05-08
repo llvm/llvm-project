@@ -2478,7 +2478,7 @@ public:
   void setCapturedVLAType(const VariableArrayType *VLAType);
 
   /// getParent - Returns the parent of this field declaration, which
-  /// is the struct in which this method is defined.
+  /// is the struct in which this field is defined.
   const RecordDecl *getParent() const {
     return cast<RecordDecl>(getDeclContext());
   }

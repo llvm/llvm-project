@@ -2261,6 +2261,19 @@ public:
     return Mask;
   }
 
+  /// Change values in a shuffle permute mask assuming the two vector operands
+  /// of length InVecNumElts have swapped position.
+  static void commuteShuffleMask(MutableArrayRef<int> Mask,
+                                 unsigned InVecNumElts) {
+    for (int &Idx : Mask) {
+      if (Idx == -1)
+        continue;
+      Idx = Idx < (int)InVecNumElts ? Idx + InVecNumElts : Idx - InVecNumElts;
+      assert(Idx >= 0 && Idx < (int)InVecNumElts * 2 &&
+             "shufflevector mask index out of range");
+    }
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ShuffleVector;

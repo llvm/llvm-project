@@ -2785,6 +2785,9 @@ Instruction *InstCombiner::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
+/// TODO: A large part of this logic is duplicated in InstSimplify's
+/// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
+/// duplication.
 Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
@@ -2794,7 +2797,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   if (!BO0 && !BO1)
     return nullptr;
 
-  CmpInst::Predicate Pred = I.getPredicate();
+  const CmpInst::Predicate Pred = I.getPredicate();
   bool NoOp0WrapProblem = false, NoOp1WrapProblem = false;
   if (BO0 && isa<OverflowingBinaryOperator>(BO0))
     NoOp0WrapProblem =
@@ -3029,21 +3032,20 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     case Instruction::Sub:
     case Instruction::Xor:
       if (I.isEquality()) // a+x icmp eq/ne b+x --> a icmp b
-        return new ICmpInst(I.getPredicate(), BO0->getOperand(0),
-                            BO1->getOperand(0));
+        return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
       // icmp u/s (a ^ signmask), (b ^ signmask) --> icmp s/u a, b
       if (ConstantInt *CI = dyn_cast<ConstantInt>(BO0->getOperand(1))) {
         if (CI->getValue().isSignMask()) {
-          ICmpInst::Predicate Pred =
+          ICmpInst::Predicate NewPred =
               I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
-          return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
+          return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }
 
         if (BO0->getOpcode() == Instruction::Xor && CI->isMaxValue(true)) {
-          ICmpInst::Predicate Pred =
+          ICmpInst::Predicate NewPred =
               I.isSigned() ? I.getUnsignedPredicate() : I.getSignedPredicate();
-          Pred = I.getSwappedPredicate(Pred);
-          return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
+          NewPred = I.getSwappedPredicate(NewPred);
+          return new ICmpInst(NewPred, BO0->getOperand(0), BO1->getOperand(0));
         }
       }
       break;
@@ -3062,7 +3064,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
                                    AP.getBitWidth() - AP.countTrailingZeros()));
           Value *And1 = Builder->CreateAnd(BO0->getOperand(0), Mask);
           Value *And2 = Builder->CreateAnd(BO1->getOperand(0), Mask);
-          return new ICmpInst(I.getPredicate(), And1, And2);
+          return new ICmpInst(Pred, And1, And2);
         }
       }
       break;
@@ -3075,8 +3077,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     case Instruction::AShr:
       if (!BO0->isExact() || !BO1->isExact())
         break;
-      return new ICmpInst(I.getPredicate(), BO0->getOperand(0),
-                          BO1->getOperand(0));
+      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
     case Instruction::Shl: {
       bool NUW = BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap();
       bool NSW = BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap();
@@ -3084,8 +3085,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
         break;
       if (!NSW && I.isSigned())
         break;
-      return new ICmpInst(I.getPredicate(), BO0->getOperand(0),
-                          BO1->getOperand(0));
+      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
     }
     }
   }
@@ -3096,7 +3096,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     auto BitwiseAnd =
         m_CombineOr(m_And(m_Value(), LSubOne), m_And(LSubOne, m_Value()));
 
-    if (match(BO0, BitwiseAnd) && I.getPredicate() == ICmpInst::ICMP_ULT) {
+    if (match(BO0, BitwiseAnd) && Pred == ICmpInst::ICMP_ULT) {
       auto *Zero = Constant::getNullValue(BO0->getType());
       return new ICmpInst(ICmpInst::ICMP_NE, Op1, Zero);
     }

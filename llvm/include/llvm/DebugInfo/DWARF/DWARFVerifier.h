@@ -60,7 +60,7 @@ class DWARFVerifier {
   /// offset matches. This helps to ensure if a DWARF link phase moved things
   /// around, that it doesn't create invalid references by failing to relocate
   /// CU relative and absolute references.
-  void veifyDebugInfoReferences();
+  void verifyDebugInfoReferences();
 
   /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.

@@ -136,7 +136,7 @@ void DWARFVerifier::verifyDebugInfoForm(DWARFDie &Die,
   }
 }
 
-void DWARFVerifier::veifyDebugInfoReferences() {
+void DWARFVerifier::verifyDebugInfoReferences() {
   // Take all references and make sure they point to an actual DIE by
   // getting the DIE by offset and emitting an error
   OS << "Verifying .debug_info references...\n";

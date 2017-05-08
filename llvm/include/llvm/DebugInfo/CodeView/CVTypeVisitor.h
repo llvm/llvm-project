@@ -26,6 +26,7 @@ public:
 
   void addTypeServerHandler(TypeServerHandler &Handler);
 
+  Error visitTypeRecord(CVType &Record, TypeIndex Index);
   Error visitTypeRecord(CVType &Record);
   Error visitMemberRecord(CVMemberRecord &Record);
 
@@ -37,6 +38,9 @@ public:
   Error visitFieldListMemberStream(BinaryStreamReader Reader);
 
 private:
+  Expected<bool> handleTypeServer(CVType &Record);
+  Error finishVisitation(CVType &Record);
+
   /// The interface to the class that gets notified of each visitation.
   TypeVisitorCallbacks &Callbacks;
 

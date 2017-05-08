@@ -380,3 +380,12 @@ struct NegativeTemplateExisting {
 
 NegativeTemplateExisting<int> ntei(0);
 NegativeTemplateExisting<double> nted(0);
+
+// This resulted in a warning by default.
+#define MACRO() \
+  struct MacroS { \
+    void *P; \
+    MacroS() : P(nullptr) {} \
+  };
+
+MACRO();

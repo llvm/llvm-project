@@ -19,6 +19,11 @@
 // RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/no-rewrite.ii -emit-module -o %t/no-rewrite.pcm
 // RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/rewrite.ii -emit-module -o %t/rewrite.pcm
 
+// Check that we can load the original module map in the same compilation (this
+// could happen if we had a redundant -fmodule-map-file= in the original
+// build).
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -fmodule-map-file=%S/Inputs/preprocess/module.modulemap -x c++-module-map-cpp-output %t/rewrite.ii -emit-module -o /dev/null
+
 // Check the module we built works.
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/no-rewrite.pcm %s -verify
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/rewrite.pcm %s -verify

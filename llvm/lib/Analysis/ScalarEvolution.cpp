@@ -8976,7 +8976,7 @@ bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
                                 .getSignedMax();
 
     // SMaxRHS + SMaxStrideMinusOne > SMaxValue => overflow!
-    return (std::move(MaxValue) - std::move(MaxStrideMinusOne)).slt(MaxRHS);
+    return (std::move(MaxValue) - MaxStrideMinusOne).slt(MaxRHS);
   }
 
   APInt MaxRHS = getUnsignedRange(RHS).getUnsignedMax();
@@ -8985,7 +8985,7 @@ bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
                               .getUnsignedMax();
 
   // UMaxRHS + UMaxStrideMinusOne > UMaxValue => overflow!
-  return (std::move(MaxValue) - std::move(MaxStrideMinusOne)).ult(MaxRHS);
+  return (std::move(MaxValue) - MaxStrideMinusOne).ult(MaxRHS);
 }
 
 bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
@@ -9002,7 +9002,7 @@ bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
                                .getSignedMax();
 
     // SMinRHS - SMaxStrideMinusOne < SMinValue => overflow!
-    return (std::move(MinValue) + std::move(MaxStrideMinusOne)).sgt(MinRHS);
+    return (std::move(MinValue) + MaxStrideMinusOne).sgt(MinRHS);
   }
 
   APInt MinRHS = getUnsignedRange(RHS).getUnsignedMin();
@@ -9011,7 +9011,7 @@ bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
                             .getUnsignedMax();
 
   // UMinRHS - UMaxStrideMinusOne < UMinValue => overflow!
-  return (std::move(MinValue) + std::move(MaxStrideMinusOne)).ugt(MinRHS);
+  return (std::move(MinValue) + MaxStrideMinusOne).ugt(MinRHS);
 }
 
 const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta, const SCEV *Step,
